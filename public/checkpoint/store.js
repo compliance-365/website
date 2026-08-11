@@ -445,6 +445,30 @@ window.DEFAULT_SETTINGS = {
      already handling PROTECTED information, not just pursuing bare
      eligibility. */
   dispTargetLevel: 'L1',
+  /* SOC 2 report type ('Type I'|'Type II') — the AICPA distinction
+     between design effectiveness (a control is suitably designed AS OF
+     a point in time — what every other framework's SoA already shows)
+     and operating effectiveness (the control actually operated that
+     way CONSISTENTLY across a defined observation period, typically
+     3-12 months). Type I is every tenant's default, matching how the
+     rest of this app already works — nothing changes for a Type I
+     tenant. Type II changes the SOC 2 SoA view (see
+     renderSoc2TypeIIRows() in app.js) to show, per automated control,
+     how many posture scans fall inside the observation window and
+     whether every one of them passed — computed from data every scan
+     already records (each Scans list item's Detail JSON keeps its own
+     dated results, not just the latest one — see CheckpointLib.
+     operatingEffectiveness() in lib.js), not a new signal this app
+     didn't already have. */
+  soc2ReportType: 'Type I',
+  /* ISO date string marking when Type II observation began, or '' if
+     unset — every posture scan on or after this date counts as an
+     observation for soc2ReportType's operating-effectiveness view.
+     Meaningless while soc2ReportType is 'Type I'. Left blank, the
+     effectiveness view falls back to the tenant's entire scan history,
+     which almost always overstates the real observation window — set
+     this explicitly once observation actually starts. */
+  soc2ObservationStart: '',
   /* Set once, at the end of the first-run onboarding wizard (see
      Wizard in app.js) — an ISO date string, or '' for a tenant that
      hasn't completed it yet. SpStore.probeOnboardingState() reads this

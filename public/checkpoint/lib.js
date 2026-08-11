@@ -454,6 +454,69 @@
     });
   }
 
+  /* SOC 2 Type II operating-effectiveness — did a posture check keep
+     passing CONSISTENTLY across every scan in an observation window, or
+     did it dip at some point? Type I only ever asks "is this control
+     correctly designed right now" (the latest scan, which is what every
+     SoA in this app already shows); Type II requires evidence the
+     control actually operated that way over a period, which is what
+     this answers — from data every scan already records (each scan's
+     own dated per-check results), not a new signal.
+
+     scanHistory: [{ date: 'YYYY-MM-DD', results: {checkId: 'pass'|
+       'review'|'fail'|'manual'} }, ...] — the CALLER parses each scan's
+     stored Detail JSON into this shape (app.js's job, since that JSON
+     lives in S.scans/Store, not lib.js's concern) and passes it in
+     already-decoded; this function never touches storage or JSON
+     parsing itself, staying as dependency-free as everything else here.
+     sinceDate: an ISO date string (observation start) — scans before it
+     are excluded — or '' to use the entire scan history supplied.
+
+     A scan where this checkId is simply absent from `results` (an older
+     scan predating the check, or one where the underlying capability
+     was unavailable that run) is silently excluded — there's no
+     observation to report for that date, not a failed one. A 'manual'
+     result IS counted as an observation (the scan happened, on that
+     date, for this check) but tracked separately from pass/exception:
+     it means no live Graph signal existed on that specific scan date,
+     which the practitioner still needs manual evidence for — very
+     different from an exception, which means the live signal existed
+     and came back negative.
+
+     Deliberately reports raw counts and dates, never a canned "this is
+     sufficient Type II evidence" verdict — sample-size and coverage
+     adequacy over an observation period is an auditor's judgement call
+     this app has no business making for them. noExceptionsFound is the
+     narrowest true/false fact — every real (non-manual) observation in
+     the window passed, and there was at least one — not a claim about
+     how many observations is "enough". */
+  function operatingEffectiveness(checkId, scanHistory, sinceDate) {
+    var inWindow = (scanHistory || []).filter(function (s) {
+      return s && s.date && s.results && (!sinceDate || s.date >= sinceDate);
+    }).slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+
+    var observations = [];
+    inWindow.forEach(function (s) {
+      var r = s.results[checkId];
+      if (r === undefined) return;
+      observations.push({ date: s.date, result: r });
+    });
+
+    var exceptions = observations.filter(function (o) { return o.result === 'fail' || o.result === 'review'; });
+    var manual = observations.filter(function (o) { return o.result === 'manual'; });
+    var passed = observations.filter(function (o) { return o.result === 'pass'; });
+
+    return {
+      totalObservations: observations.length,
+      passCount: passed.length,
+      manualCount: manual.length,
+      exceptions: exceptions,
+      firstObservedDate: observations.length ? observations[0].date : null,
+      lastObservedDate: observations.length ? observations[observations.length - 1].date : null,
+      noExceptionsFound: observations.length > 0 && exceptions.length === 0 && passed.length > 0
+    };
+  }
+
   /* Deterministic per-control "theme" key for the Control Constellation
      view — grouping is derived purely from the control code's own
      string shape, never from a `cat`/`domain` field, because live
@@ -1865,7 +1928,7 @@
   return {
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
-    controlsForCheck: controlsForCheck,
+    controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,

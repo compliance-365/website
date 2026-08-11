@@ -1152,6 +1152,34 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   a tenant's Controls list at either `nistDepth` setting. NIST CSF's
   categories are broad enough that a larger fraction catch a live
   signal than SOC 2 or ISO 42001's more granular controls.
+- **SOC 2 Type I vs Type II**: a per-client `soc2ReportType` setting
+  (Frameworks view, `Type I` default or `Type II`) plus an optional
+  `soc2ObservationStart` date. Type I is the point-in-time design-
+  effectiveness view every other framework's SoA already shows — nothing
+  changes for a Type I tenant. Type II asks whether a control actually
+  *operated* that way consistently across an observation period (the
+  AICPA's real distinction), which the SOC 2 SoA now answers directly
+  for every control `CHECK_SOC2` automates: `renderSoc2TypeIIRows()` in
+  app.js appends a summary row under each control showing how many
+  posture scans fall inside the observation window and whether any of
+  them found an exception, with dates. This is computed entirely from
+  data every scan already records — each Scans list item's Detail JSON
+  keeps its own dated per-check results, not just the latest one (see
+  `soc2ScanHistory()` in app.js) — nothing about scan capture or storage
+  changed to support this. The aggregation across multiple checks
+  feeding one control (`soc2ControlEffectiveness()`) and the render
+  layer live in app.js; the actual per-check window math
+  (`CheckpointLib.operatingEffectiveness()`) is pure and unit-tested in
+  lib.js/test/lib.test.mjs, same split as `checkResult()`/`score()`.
+  Controls with no live check behind them (most of the COSO governance
+  criteria, Processing Integrity, most Privacy) get an explicit "gather
+  this manually" prompt instead of silently showing nothing — the point
+  is surfacing exactly which controls still carry manual burden for the
+  observation period and which don't, never hiding the gap. Deliberately
+  reports raw scan counts and exception dates, never a canned "this is
+  sufficient Type II evidence" verdict — sample-size and coverage
+  adequacy over an observation period is an auditor's judgement call,
+  not something this app presumes to make for them.
 - **NIST CSF subcategory depth**: a per-client `nistDepth` setting
   (Frameworks view, `category` default or `subcategory`) controls
   whether the Statement of Applicability shows the 22 CSF 2.0 categories

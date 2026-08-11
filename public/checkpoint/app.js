@@ -437,7 +437,7 @@ function showModal(opts) {
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
-    'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
+    'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
     'confirmRffrSuggestion', 'dismissRffrSuggestion', 'confirmIso42001Suggestion', 'dismissIso42001Suggestion',
@@ -3802,6 +3802,107 @@ function showModal(opts) {
     }).join('');
   }
 
+  /* Every recorded scan's OWN dated per-check results, decoded from the
+     Detail JSON every Scans list item already carries (see
+     store.js's reconcileControls-adjacent scan loader — `detail` is
+     preserved on every entry, not just the latest one). This is the
+     entire raw material CheckpointLib.operatingEffectiveness() needs;
+     nothing about how scans are captured or stored changes to support
+     Type II — it was already all there, just never re-read this way.
+     Parsed fresh each call rather than cached: cheap (a few dozen scans
+     at most for any real tenant) and guarantees it can never go stale
+     against S.scans after a new scan lands. */
+  function soc2ScanHistory() {
+    return (S.scans || []).map(function (s) {
+      if (!s.detail) return null;
+      try {
+        var d = JSON.parse(s.detail);
+        return d.results ? { date: s.date, results: d.results } : null;
+      } catch (e) { return null; }
+    }).filter(Boolean);
+  }
+
+  /* Combines every checkId that feeds a given SOC 2 control code (per
+     CHECK_SOC2 — a control can have more than one, e.g. CC6.1 from both
+     'mfa-all' and 'sharing') into one operating-effectiveness picture:
+     the union of every observation date across all of them, and every
+     exception any of them ever showed, each tagged with which check and
+     its human label. Returns null for a control CHECK_SOC2 doesn't
+     cover at all — the caller shows a manual-evidence prompt instead,
+     since there's no scan history to summarise for a control with no
+     live signal in the first place. */
+  function soc2ControlEffectiveness(code, sinceDate) {
+    var checkIds = Object.keys(window.CHECK_SOC2 || {}).filter(function (id) {
+      return (window.CHECK_SOC2[id] || []).indexOf(code) > -1;
+    });
+    if (!checkIds.length) return null;
+    var history = soc2ScanHistory();
+    var byDate = {};
+    var exceptions = [];
+    var anyObservations = false;
+    checkIds.forEach(function (id) {
+      var eff = window.CheckpointLib.operatingEffectiveness(id, history, sinceDate);
+      var def = window.CHECK_DEFS.find(function (d) { return d.id === id; });
+      var label = def ? def.label : id;
+      if (eff.totalObservations) anyObservations = true;
+      eff.exceptions.forEach(function (ex) {
+        exceptions.push({ date: ex.date, result: ex.result, checkLabel: label });
+      });
+      /* union of observation dates across every contributing check —
+         not summed, since two checks observed on the same scan date
+         both point at the same real-world observation, not two. */
+      history.forEach(function (h) {
+        if (h.results[id] !== undefined && (!sinceDate || h.date >= sinceDate)) byDate[h.date] = true;
+      });
+    });
+    var dates = Object.keys(byDate).sort();
+    exceptions.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    return {
+      totalObservations: dates.length,
+      firstObservedDate: dates.length ? dates[0] : null,
+      lastObservedDate: dates.length ? dates[dates.length - 1] : null,
+      exceptions: exceptions,
+      noExceptionsFound: anyObservations && exceptions.length === 0
+    };
+  }
+
+  /* SOC 2 Type II SoA — same rows/columns as the normal table
+     (renderSoaRow unchanged underneath every control) with one extra
+     row per control summarising operating effectiveness across the
+     observation window: which posture scans count as observations,
+     whether any of them found an exception, and — for a control with no
+     live check behind it at all (most of the COSO governance criteria,
+     Processing Integrity, most Privacy) — an explicit prompt that Type
+     II evidence for it has to come from somewhere else, since there's
+     no scan signal this view could ever summarise. Never silently
+     omits a control just because it isn't automatable; the whole point
+     is surfacing exactly which controls still carry manual burden for
+     this observation period and which don't. */
+  function renderSoc2TypeIIRows(rows) {
+    var sinceDate = (S.settings && S.settings.soc2ObservationStart) || '';
+    return rows.map(function (c) {
+      var base = renderSoaRow(c);
+      var eff = soc2ControlEffectiveness(c.id, sinceDate);
+      var summaryHtml;
+      if (!eff) {
+        summaryHtml = '<span class="src">No live posture signal for this control — Type II operating-effectiveness evidence has to be gathered and attested manually across the observation period.</span>';
+      } else if (!eff.totalObservations) {
+        summaryHtml = '<span class="src">' + (sinceDate ? 'No posture scans recorded since ' + fmtDate(sinceDate) + ' yet.' : 'No posture scans recorded yet.') + '</span>';
+      } else {
+        var windowLabel = eff.firstObservedDate === eff.lastObservedDate ? fmtDate(eff.firstObservedDate) : fmtDate(eff.firstObservedDate) + ' – ' + fmtDate(eff.lastObservedDate);
+        if (eff.noExceptionsFound) {
+          summaryHtml = '<span class="verify-ok">' + eff.totalObservations + ' scan' + (eff.totalObservations > 1 ? 's' : '') + ', no exceptions</span><div class="src">Observed ' + windowLabel + '</div>';
+        } else {
+          summaryHtml = '<span class="verify-stale">' + eff.exceptions.length + ' exception' + (eff.exceptions.length > 1 ? 's' : '') + ' of ' + eff.totalObservations + ' scan' + (eff.totalObservations > 1 ? 's' : '') + '</span><div class="src">' +
+            eff.exceptions.slice(0, 3).map(function (ex) { return fmtDate(ex.date) + ' — ' + esc(ex.checkLabel) + ' (' + ex.result + ')'; }).join('<br>') +
+            (eff.exceptions.length > 3 ? '<br>+' + (eff.exceptions.length - 3) + ' more' : '') + '</div>';
+        }
+      }
+      var summaryRow = '<tr class="soa-type2-row"><td></td><td colspan="7"><b>Type II — operating effectiveness:</b> ' + summaryHtml + '</td></tr>';
+      return base + summaryRow;
+    }).join('');
+  }
+
   function renderSoa() {
     var entitled = entitledFrameworks();
     if (!entitled.length) {
@@ -3817,6 +3918,7 @@ function showModal(opts) {
     var isE8 = activeFw === 'essential8';
     var e8Target = isE8 ? e8Lvl(S.settings.e8TargetLevel) : null;
     var isNistSub = activeFw === 'nistcsf' && ((S.settings && S.settings.nistDepth) || 'category') === 'subcategory';
+    var isSoc2TypeII = activeFw === 'soc2' && ((S.settings && S.settings.soc2ReportType) || 'Type I') === 'Type II';
 
     document.getElementById('soaFwTabs').innerHTML = entitled.map(function (fw) {
       return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
@@ -3882,6 +3984,9 @@ function showModal(opts) {
       document.getElementById('soaRows').innerHTML = renderEssential8Rows(rawRows, e8Target);
     } else if (isNistSub) {
       document.getElementById('soaRows').innerHTML = renderNistSubcategoryRows(rawRows);
+    } else if (isSoc2TypeII) {
+      var soc2VisRows = frameworkVisibleRows('soc2');
+      document.getElementById('soaRows').innerHTML = renderSoc2TypeIIRows(soc2VisRows);
     } else {
       var visRows = frameworkVisibleRows(activeFw);
       var tableRows = (cats.length && window._soaCat && window._soaCat !== 'All')
@@ -6247,6 +6352,18 @@ function showModal(opts) {
         '<select class="mini" data-change-action="App.setDispTargetLevel">' +
         ['Entry', 'L1', 'L2', 'L3'].map(function (s) { return '<option value="' + s + '"' + (dispCurrent === s ? ' selected' : '') + '>' + (s === 'Entry' ? 'Entry level' : 'Level ' + s.slice(1)) + '</option>'; }).join('') +
         '</select>';
+    }
+
+    var soc2El = document.getElementById('soc2ReportTypeRow');
+    if (soc2El) {
+      var soc2TypeCurrent = (S.settings && S.settings.soc2ReportType) || 'Type I';
+      var soc2StartCurrent = (S.settings && S.settings.soc2ObservationStart) || '';
+      soc2El.innerHTML = '<div class="fw-admin-row"><div><b>SOC 2 report type</b><p>Type I asks whether a control is correctly designed right now — the same point-in-time view every other framework\'s SoA already shows. Type II asks whether it actually operated that way consistently across an observation period, and changes the SOC 2 SoA to show, per automated control, how many posture scans fall in that window and whether any of them found an exception — computed from your existing scan history, not a new signal.</p></div>' +
+        '<select class="mini" data-change-action="App.setSoc2ReportType">' +
+        ['Type I', 'Type II'].map(function (s) { return '<option value="' + s + '"' + (soc2TypeCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+        '</select></div>' +
+        (soc2TypeCurrent === 'Type II' ? '<div class="fw-admin-row" style="margin-top:10px"><div><b>Observation period start</b><p>Posture scans before this date aren\'t counted as Type II observations. Left blank, the operating-effectiveness view falls back to the tenant\'s entire scan history, which almost always overstates the real window — set this to when observation actually began.</p></div>' +
+          '<input class="mini" type="date" value="' + esc(soc2StartCurrent) + '" data-change-action="App.setSoc2ObservationStart"></div>' : '');
     }
 
     var threshWrap = document.getElementById('thresholdRows');
@@ -9706,6 +9823,28 @@ function showModal(opts) {
       toast('DISP target level set to <b>' + esc(level) + '</b>');
       audit('Setting changed', 'Setting', 'dispTargetLevel', '', level);
       renderFrameworksAdmin(); renderSoa(); renderDash();
+    },
+
+    setSoc2ReportType: async function (type) {
+      var prevType = (S.settings && S.settings.soc2ReportType) || 'Type I';
+      if (type === prevType) return;
+      S.settings.soc2ReportType = type;
+      try { await Store.setSetting('soc2ReportType', type); } catch (e) { warn(e); }
+      log('SOC 2 report type set to <b>' + esc(type) + '</b>.');
+      toast('SOC 2 report type set to <b>' + esc(type) + '</b>');
+      audit('Setting changed', 'Setting', 'soc2ReportType', prevType, type);
+      renderFrameworksAdmin(); renderSoa(); renderDash();
+    },
+
+    setSoc2ObservationStart: async function (dateStr) {
+      var prevDate = (S.settings && S.settings.soc2ObservationStart) || '';
+      if (dateStr === prevDate) return;
+      S.settings.soc2ObservationStart = dateStr;
+      try { await Store.setSetting('soc2ObservationStart', dateStr); } catch (e) { warn(e); }
+      log('SOC 2 Type II observation start set to <b>' + (dateStr ? esc(fmtDate(dateStr)) : 'unset') + '</b>.');
+      toast('Observation start ' + (dateStr ? 'set to ' + esc(fmtDate(dateStr)) : 'cleared'));
+      audit('Setting changed', 'Setting', 'soc2ObservationStart', prevDate, dateStr);
+      renderFrameworksAdmin(); renderSoa();
     },
 
     setNistDepth: async function (depth) {
