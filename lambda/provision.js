@@ -160,13 +160,58 @@ async function resolveSubscription(subscriptionId) {
   return { subscriptionId, status: s.status, frameworks, type, expiry, customerEmail: (s.customer && s.customer.email) || '' };
 }
 
-/* Entry point for a fresh checkout — resolves the subscription behind a
-   checkout transaction id, then defers to resolveSubscription(). */
-async function resolveFromTransaction(transactionId) {
+/* Returns just the subscription id behind a checkout transaction id —
+   the entry point for a fresh checkout. Deliberately doesn't resolve it
+   any further itself: the caller merges this id with whatever
+   subscriptions the tenant already had (a customer buying a second
+   module later gets a NEW, separate Paddle subscription — /start's
+   anonymous overlay checkout has no way to attach a purchase to an
+   existing one — so every subscription this tenant has ever completed
+   needs resolving together, not just the one just bought). */
+async function subscriptionIdFromTransaction(transactionId) {
   const txn = await paddleFetch('/transactions/' + encodeURIComponent(transactionId));
   const subscriptionId = txn.data && txn.data.subscription_id;
   if (!subscriptionId) throw new Error('Transaction has no subscription — not a subscription checkout?');
-  return resolveSubscription(subscriptionId);
+  return subscriptionId;
+}
+
+/* Pure merge over already-resolved subscriptions — no Paddle/network
+   dependency, so this is the one piece of this Lambda's logic that's
+   actually unit-testable (see test/provision-merge.test.mjs). Takes the
+   union of every resolved subscription's frameworks (a customer's total
+   access is everything any of their subscriptions currently grants, not
+   just the most recent one), the LATEST expiry among them (access
+   should run to whichever subscription still has the most runway, not
+   the earliest one to lapse), and 'client' if ANY subscription is
+   'active' — a customer with one module already converted to paid and
+   another still mid-trial should be treated as a paying client
+   overall, not knocked back to 'demo'. Returns null for an empty input
+   (every id failed to resolve, or none were grantable) so the caller
+   can respond with a clear error instead of building a payload with no
+   frameworks in it. */
+export function mergeResolvedSubscriptions(results) {
+  if (!results || !results.length) return null;
+  const frameworks = Array.from(new Set(results.reduce((acc, r) => acc.concat(r.frameworks), [])));
+  const type = results.some((r) => r.status === 'active') ? 'client' : 'demo';
+  const expiry = results.map((r) => r.expiry).sort().slice(-1)[0];
+  const customerEmail = (results.find((r) => r.customerEmail) || {}).customerEmail || '';
+  return { results, subscriptionIds: results.map((r) => r.subscriptionId), frameworks, type, expiry, customerEmail };
+}
+
+/* Resolves every subscription id in the list independently against
+   Paddle, skipping (not failing on) any that no longer resolve to
+   something grantable — deleted, typo'd, or genuinely
+   cancelled/paused/past_due, which resolveSubscription() already
+   throws on. A customer's OTHER subscriptions are still real and
+   should still be honoured even if one has lapsed, so one bad id must
+   never take down the whole refresh. */
+async function resolveManySubscriptions(subscriptionIds) {
+  const results = [];
+  for (const id of subscriptionIds) {
+    try { results.push(await resolveSubscription(id)); }
+    catch (e) { console.error('resolveManySubscriptions: skipping ' + id + ': ' + (e && e.message)); }
+  }
+  return mergeResolvedSubscriptions(results);
 }
 
 /* ============== Entitlement payload ============== */
@@ -227,12 +272,25 @@ async function ownerGraph(token, path, opts = {}) {
 /* Records this issuance on the owner console's own roster.
    - PartnerClients: find-or-create by tenantId; flip Trial→Active when a
      trial converts to paid.
-   - PartnerEntitlements: UPSERT by SubscriptionId, not blind insert. The
-     app re-calls this Lambda on load to keep the customer's entitlement
-     current (see attemptSelfServeActivation / the refresh path), so a
-     blind insert would pile up a duplicate entitlement row on every
-     visit. Keyed on SubscriptionId, repeat calls update the one row
-     (Type/Modules/Expiry/PaddleStatus) instead. */
+   - PartnerEntitlements: UPSERT by SubscriptionId, one row PER Paddle
+     subscription (not one row for the tenant's whole merged access) —
+     purchase.results carries every subscription this call resolved, and
+     each gets its own row with ITS OWN modules/status/expiry, exactly
+     as if each had been issued separately. This is deliberate, not
+     merged like the signed activation payload is: lambda/webhook.js's
+     subscription-lifecycle handler looks up a roster row by a single
+     SubscriptionId from a Paddle event and expects to find exactly the
+     row for THAT subscription — collapsing to one merged row per tenant
+     would break that lookup the moment a tenant has more than one
+     subscription. It also keeps revenue reporting accurate: each
+     subscription is its own line of recurring revenue with its own
+     billing cycle, so the roster should show them separately even
+     though the customer's app sees one combined entitlement. The app
+     re-calls this Lambda on load to keep entitlement current (see
+     attemptSelfServeActivation / the refresh path), so a blind insert
+     would pile up a duplicate row on every visit — keyed on
+     SubscriptionId, repeat calls update the one row each subscription
+     already has instead. */
 async function recordOnOwnerRoster(payload, purchase) {
   const customerEmail = purchase.customerEmail || '';
   const token = await getOwnerGraphToken();
@@ -258,23 +316,23 @@ async function recordOnOwnerRoster(payload, purchase) {
     });
   }
 
-  const entFields = {
-    Title: payload.tenantId, TenantId: payload.tenantId, Type: payload.type,
-    Modules: payload.frameworks.join(','), IssuedAt: payload.issuedAt, Expiry: payload.expiry,
-    SubscriptionId: purchase.subscriptionId || '', PaddleStatus: purchase.status || ''
-  };
   const existingEnts = await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items?$expand=fields&$top=500');
-  const existingEnt = purchase.subscriptionId
-    ? existingEnts.value.find((i) => i.fields.SubscriptionId === purchase.subscriptionId)
-    : null;
-  if (existingEnt) {
-    await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items/' + existingEnt.id + '/fields', {
-      method: 'PATCH', body: entFields
-    });
-  } else {
-    await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items', {
-      method: 'POST', body: { fields: entFields }
-    });
+  for (const r of purchase.results || []) {
+    const entFields = {
+      Title: payload.tenantId, TenantId: payload.tenantId, Type: r.status === 'trialing' ? 'demo' : 'client',
+      Modules: r.frameworks.join(','), IssuedAt: payload.issuedAt, Expiry: r.expiry,
+      SubscriptionId: r.subscriptionId, PaddleStatus: r.status
+    };
+    const existingEnt = existingEnts.value.find((i) => i.fields.SubscriptionId === r.subscriptionId);
+    if (existingEnt) {
+      await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items/' + existingEnt.id + '/fields', {
+        method: 'PATCH', body: entFields
+      });
+    } else {
+      await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items', {
+        method: 'POST', body: { fields: entFields }
+      });
+    }
   }
 }
 
@@ -300,20 +358,39 @@ export const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || '{}');
     const transactionId = (body.transactionId || '').trim();
+    // subscriptionId: single-id refresh, kept for back-compat with any
+    // client that hasn't picked up the multi-subscription app update yet.
+    // subscriptionIds: the current refresh shape — every subscription
+    // this tenant has ever completed self-serve checkout for.
+    // knownSubscriptionIds: sent alongside a fresh transactionId so a
+    // RETURNING customer's Nth purchase merges with their history
+    // immediately, not just on the next page load's refresh.
     const subscriptionId = (body.subscriptionId || '').trim();
+    const subscriptionIdsBody = Array.isArray(body.subscriptionIds) ? body.subscriptionIds.map((s) => String(s || '').trim()).filter(Boolean) : [];
+    const knownSubscriptionIds = Array.isArray(body.knownSubscriptionIds) ? body.knownSubscriptionIds.map((s) => String(s || '').trim()).filter(Boolean) : [];
     const tenantId = (body.tenantId || '').trim();
 
-    // transactionId = fresh checkout (browser has Paddle's _ptxn).
-    // subscriptionId = the app refreshing an existing entitlement on load
-    // (it stored the id the first time — see the refresh path in app.js).
-    // Either identifies the subscription; tenantId is always required.
-    if ((!transactionId && !subscriptionId) || !tenantId) {
-      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId plus one of transactionId or subscriptionId is required.' }) };
+    if ((!transactionId && !subscriptionId && !subscriptionIdsBody.length) || !tenantId) {
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId plus one of transactionId, subscriptionId or subscriptionIds is required.' }) };
     }
 
-    const purchase = subscriptionId
-      ? await resolveSubscription(subscriptionId)
-      : await resolveFromTransaction(transactionId);
+    let purchase;
+    if (transactionId) {
+      // Fresh checkout: resolve the subscription behind it, merged with
+      // whatever subscriptions the browser already knew about — a
+      // returning customer's second purchase must not silently drop
+      // their first (see mergeResolvedSubscriptions()'s comment).
+      const newSubId = await subscriptionIdFromTransaction(transactionId);
+      const allIds = Array.from(new Set([newSubId, ...knownSubscriptionIds]));
+      purchase = await resolveManySubscriptions(allIds);
+    } else {
+      const allIds = subscriptionIdsBody.length ? subscriptionIdsBody : [subscriptionId];
+      purchase = await resolveManySubscriptions(allIds);
+    }
+    if (!purchase) {
+      throw new Error('None of the provided subscription(s) are currently active or trialing.');
+    }
+
     const file = await buildSignedActivation(tenantId, purchase);
 
     try {
@@ -330,9 +407,10 @@ export const handler = async (event) => {
     return {
       statusCode: 200,
       headers: corsHeaders,
-      // subscriptionId is handed back so the app can store it and later
-      // refresh this entitlement (trial→paid) without a transaction id.
-      body: JSON.stringify({ ok: true, subscriptionId: purchase.subscriptionId, activationFile: JSON.stringify(file, null, 2) })
+      // subscriptionIds (every id this activation covers) is handed
+      // back so the app can store the FULL list and later refresh with
+      // all of them, not just the one just bought.
+      body: JSON.stringify({ ok: true, subscriptionIds: purchase.subscriptionIds, activationFile: JSON.stringify(file, null, 2) })
     };
   } catch (err) {
     console.error('Provision handler error:', err);

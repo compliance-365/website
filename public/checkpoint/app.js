@@ -11099,17 +11099,42 @@ function showModal(opts) {
     catch (e) { console.error(e); return false; }
   }
 
-  /* The Paddle subscription id backing a self-serve activation. Kept in
-     localStorage (per tenant) as the always-available bridge, and mirrored
-     into the Settings list (paddleSubscriptionId) once that exists so a
-     second device can refresh too. readPaddleSub() prefers the durable
-     Settings copy, falls back to this browser's local one. */
+  /* The Paddle subscription id(s) backing a self-serve activation —
+     PLURAL: a tenant can accumulate more than one over time. /start's
+     checkout is an anonymous Paddle overlay with no way to attach a
+     purchase to an existing subscription, so a customer buying a second
+     module in a later, separate checkout session gets a brand new
+     subscription id, not a line item added to the first. Every refresh
+     sends the FULL accumulated list to the provisioning Lambda, which
+     resolves each one against Paddle and returns ONE signed file
+     covering the union of everything still active/trialing — see
+     lambda/provision.js's mergeResolvedSubscriptions(). Before this,
+     only the single most-recently-seen subscription id was ever tracked,
+     so a second purchase could silently drop the first module's
+     entitlement (or vice versa, depending on refresh timing) the next
+     time the app refreshed.
+     Kept in localStorage (per tenant) as the always-available bridge,
+     and mirrored into the Settings list (paddleSubscriptionIds) once
+     that exists so a second device can refresh too — comma-joined, same
+     convention as every other multi-value Settings field in this app
+     (e.g. an activation payload's Modules column). readPaddleSubs()
+     prefers the durable Settings copy, falls back to this browser's
+     local one, and also reads the old singular paddleSubscriptionId
+     setting a tenant activated before this change may still have. */
   function paddleSubStorageKey() { return 'cpPaddleSub:v1:' + tenantStorageKey(); }
-  function writePaddleSubLocal(id) { try { localStorage.setItem(paddleSubStorageKey(), id); } catch (e) { /* storage disabled */ } }
-  function readPaddleSub() {
-    var fromSettings = S && S.settings && S.settings.paddleSubscriptionId;
-    if (fromSettings) return fromSettings;
-    try { return localStorage.getItem(paddleSubStorageKey()) || null; } catch (e) { return null; }
+  function parsePaddleSubs(raw) { return String(raw || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
+  function addPaddleSubLocal(id) {
+    if (!id) return;
+    try {
+      var ids = parsePaddleSubs(localStorage.getItem(paddleSubStorageKey()));
+      if (ids.indexOf(id) === -1) ids.push(id);
+      localStorage.setItem(paddleSubStorageKey(), ids.join(','));
+    } catch (e) { /* storage disabled */ }
+  }
+  function readPaddleSubs() {
+    var fromSettings = S && S.settings && (S.settings.paddleSubscriptionIds || S.settings.paddleSubscriptionId);
+    if (fromSettings) return parsePaddleSubs(fromSettings);
+    try { return parsePaddleSubs(localStorage.getItem(paddleSubStorageKey())); } catch (e) { return []; }
   }
 
   /* Loud-failure state for Finding 5 (audit brief): a failed persistence
@@ -11356,29 +11381,41 @@ function showModal(opts) {
      it can never lock a working tenant out. */
   async function refreshSelfServeEntitlementOnLoad(acceptTenantIds) {
     if (!CONFIG.selfServeActivateUrl) return;
-    var subId = readPaddleSub();
-    if (!subId) return;
+    var subIds = readPaddleSubs();
+    if (!subIds.length) return;
     var tenantId = (acceptTenantIds && acceptTenantIds[0]) || null;
     if (!tenantId) return;
     try {
       var res = await fetch(CONFIG.selfServeActivateUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionId: subId, tenantId: tenantId })
+        body: JSON.stringify({ subscriptionIds: subIds, tenantId: tenantId })
       });
-      if (!res.ok) return; // cancelled/paused → Lambda 400; let it lapse naturally
+      /* Only a total failure (every known subscription cancelled/paused/
+         deleted) reaches a non-OK response — the Lambda resolves each id
+         independently and merges whatever's still grantable, so one
+         lapsed subscription among several others doesn't 400 the whole
+         refresh; it's just excluded from the merged frameworks, same as
+         it letting a solo subscription lapse naturally always did. */
+      if (!res.ok) return;
       var data = await res.json().catch(function () { return {}; });
       if (!data.activationFile) return;
       var check = await verifyActivationRaw(data.activationFile, acceptTenantIds);
       if (!check.ok) return; // never overwrite a good file with one that doesn't verify
-      if (data.activationFile === (S.settings && S.settings.entitlementFile)) return; // unchanged
-      writeLocalActivation(data.activationFile);
-      try { await Store.setSetting('entitlementFile', data.activationFile); S.settings.entitlementFile = data.activationFile; } catch (e) { /* Settings write failed — local copy still updated, resolve picks it up */ }
-      /* Mirror the subscription id into Settings for cross-device refresh,
-         once (it lives only in this browser's localStorage until now). */
-      if (!(S.settings && S.settings.paddleSubscriptionId)) {
-        try { await Store.setSetting('paddleSubscriptionId', subId); S.settings.paddleSubscriptionId = subId; } catch (e) { /* non-fatal */ }
+      var mergedSubIds = (data.subscriptionIds && data.subscriptionIds.length) ? data.subscriptionIds : subIds;
+      var mergedSubIdsJoined = mergedSubIds.join(',');
+      var currentSubIdsJoined = (S.settings && (S.settings.paddleSubscriptionIds || S.settings.paddleSubscriptionId)) || '';
+      var fileUnchanged = data.activationFile === (S.settings && S.settings.entitlementFile);
+      var subListUnchanged = mergedSubIdsJoined === currentSubIdsJoined;
+      if (fileUnchanged && subListUnchanged) return;
+      if (!fileUnchanged) {
+        writeLocalActivation(data.activationFile);
+        try { await Store.setSetting('entitlementFile', data.activationFile); S.settings.entitlementFile = data.activationFile; } catch (e) { /* Settings write failed — local copy still updated, resolve picks it up */ }
       }
-      audit('Entitlement refreshed', 'Activation', 'file', '', 'Re-pulled from the self-serve subscription — reflects the current Paddle subscription state.');
+      if (!subListUnchanged) {
+        mergedSubIds.forEach(addPaddleSubLocal);
+        try { await Store.setSetting('paddleSubscriptionIds', mergedSubIdsJoined); S.settings.paddleSubscriptionIds = mergedSubIdsJoined; } catch (e) { /* non-fatal */ }
+      }
+      if (!fileUnchanged) audit('Entitlement refreshed', 'Activation', 'file', '', 'Re-pulled from ' + mergedSubIds.length + ' self-serve subscription(s) — reflects the current Paddle subscription state.');
     } catch (e) { /* network/parse — keep existing file, non-fatal */ }
   }
 
@@ -11736,10 +11773,18 @@ function showModal(opts) {
     if (statusEl) statusEl.textContent = 'Confirming your purchase…';
 
     try {
+      /* knownSubscriptionIds: whatever this browser already remembers
+         from an earlier purchase (localStorage only — S/Store isn't
+         loaded yet at this point, a brand-new tenant hasn't provisioned
+         anything). Sent so an already-onboarded client's SECOND (or
+         third...) module purchase merges with what they already have
+         right away, rather than the new activation file only reflecting
+         this one transaction and dropping everything bought earlier —
+         see lambda/provision.js's mergeResolvedSubscriptions(). */
       var res = await fetch(CONFIG.selfServeActivateUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId: txnId, tenantId: tenantInfo.id })
+        body: JSON.stringify({ transactionId: txnId, tenantId: tenantInfo.id, knownSubscriptionIds: readPaddleSubs() })
       });
       var data = await res.json().catch(function () { return {}; });
       if (!res.ok || !data.activationFile) {
@@ -11747,13 +11792,14 @@ function showModal(opts) {
         busy(false);
         return true; // stayed at step 4 with a clear message — manual paste is still right there as a fallback
       }
-      /* Remember the Paddle subscription this activation came from, so
-         the app can re-pull a fresh signed file on future loads without
-         a checkout transaction id — that's how a trial→paid conversion
-         (7-day demo → 12-month client licence) actually reaches the
-         customer's tenant, since neither the provisioning Lambda nor the
-         webhook can push into it. See refreshSelfServeEntitlementOnLoad(). */
-      if (data.subscriptionId) writePaddleSubLocal(data.subscriptionId);
+      /* Remember every Paddle subscription this (merged) activation
+         came from, so the app can re-pull a fresh signed file on future
+         loads without a checkout transaction id — that's how a
+         trial→paid conversion (7-day demo → 12-month client licence)
+         actually reaches the customer's tenant, since neither the
+         provisioning Lambda nor the webhook can push into it. See
+         refreshSelfServeEntitlementOnLoad(). */
+      (data.subscriptionIds || []).forEach(addPaddleSubLocal);
       var textInput = document.getElementById('wizActPasteInput');
       if (textInput) textInput.value = data.activationFile;
       busy(false);

@@ -649,3 +649,55 @@ describe('S.controls-derived exports and search never surface a framework the cl
     assert.match(fnMatch[1], /S\.entitlements\[fw\]/, 'generateAuditorPack() no longer re-checks S.entitlements[fw] before generating — the #apFramework <select> is populated from entitledFrameworks() at render time, but its value could still be tampered with between render and click, and this document may be shared with a third-party auditor');
   });
 });
+
+/* Static-text coverage for the client-side half of the multi-subscription
+   fix (the Lambda-side merge logic itself is unit-tested directly in
+   test/provision-merge.test.mjs, which doesn't need app.js to be
+   require()'d at all). This app.js half can't run under Node — the
+   self-serve activation path only ever executes against a real,
+   Graph-authenticated SharePoint tenant (Store.kind === 'sharepoint'),
+   which this test environment has no way to stand up — so this checks
+   the deployed text stays wired the way the fix requires, rather than
+   silently regressing back to tracking only a single subscription id
+   (which is exactly the bug: a second, separate purchase would then
+   overwrite the first module's entitlement instead of merging with it).
+   See the fix's commit message / PR description for the live manual
+   verification this was checked against instead. */
+describe('self-serve activation tracks every Paddle subscription a tenant has ever completed checkout for, not just the latest one', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+
+  test('the old singular subscription-id helpers are gone, not left dangling alongside the new plural ones', () => {
+    assert.doesNotMatch(appJs, /function writePaddleSubLocal\(/, 'writePaddleSubLocal() (singular, overwrite-only) should have been replaced by addPaddleSubLocal() (accumulates)');
+    assert.doesNotMatch(appJs, /function readPaddleSub\(\)/, 'readPaddleSub() (singular) should have been replaced by readPaddleSubs() (plural)');
+  });
+
+  test('readPaddleSubs()/addPaddleSubLocal() exist and are actually used by both the refresh path and the fresh-purchase path', () => {
+    assert.match(appJs, /function readPaddleSubs\(\)/, 'readPaddleSubs() not found');
+    assert.match(appJs, /function addPaddleSubLocal\(id\)/, 'addPaddleSubLocal() not found');
+    const refreshFn = appJs.match(/async function refreshSelfServeEntitlementOnLoad\(acceptTenantIds\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(refreshFn, 'refreshSelfServeEntitlementOnLoad() not found — did it get renamed?');
+    assert.match(refreshFn[1], /readPaddleSubs\(\)/, 'refreshSelfServeEntitlementOnLoad() no longer calls readPaddleSubs() — it would only ever refresh a single subscription again');
+    const attemptFn = appJs.match(/async function attemptSelfServeActivation\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(attemptFn, 'attemptSelfServeActivation() not found — did it get renamed?');
+    assert.match(attemptFn[1], /readPaddleSubs\(\)/, 'attemptSelfServeActivation() no longer calls readPaddleSubs() to send its known subscription history alongside a fresh purchase — a returning customer\'s second purchase would stop merging with their first');
+  });
+
+  test('the refresh request sends subscriptionIds (plural) to the Lambda, not the old singular subscriptionId', () => {
+    const refreshFn = appJs.match(/async function refreshSelfServeEntitlementOnLoad\(acceptTenantIds\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(refreshFn, 'refreshSelfServeEntitlementOnLoad() not found');
+    assert.match(refreshFn[1], /body:\s*JSON\.stringify\(\{\s*subscriptionIds:\s*subIds/, 'refreshSelfServeEntitlementOnLoad() no longer sends { subscriptionIds: subIds } — the Lambda would only ever resolve one subscription per refresh again');
+  });
+
+  test('the fresh-purchase request sends knownSubscriptionIds alongside the new transactionId', () => {
+    const attemptFn = appJs.match(/async function attemptSelfServeActivation\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(attemptFn, 'attemptSelfServeActivation() not found');
+    assert.match(attemptFn[1], /knownSubscriptionIds:\s*readPaddleSubs\(\)/, 'attemptSelfServeActivation() no longer sends knownSubscriptionIds — a returning, already-onboarded customer\'s new purchase would stop merging with modules they already have');
+  });
+
+  test('both paths persist the FULL subscriptionIds array the Lambda returns, not just a single id', () => {
+    const refreshFn = appJs.match(/async function refreshSelfServeEntitlementOnLoad\(acceptTenantIds\) \{([\s\S]*?)\n {2}\}/);
+    const attemptFn = appJs.match(/async function attemptSelfServeActivation\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.match(refreshFn[1], /data\.subscriptionIds/, 'refreshSelfServeEntitlementOnLoad() no longer reads data.subscriptionIds from the Lambda response');
+    assert.match(attemptFn[1], /\(data\.subscriptionIds \|\| \[\]\)\.forEach\(addPaddleSubLocal\)/, 'attemptSelfServeActivation() no longer stores every id in data.subscriptionIds — only the most recent purchase\'s subscription would be remembered for future refreshes');
+  });
+});

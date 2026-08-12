@@ -144,12 +144,22 @@ the webhook can push into a customer's tenant:
 - **The app-pull** (built into `public/checkpoint/app.js`,
   `refreshSelfServeEntitlementOnLoad`): the customer's own Checkpoint app
   re-pulls a fresh signed file from the provisioning Lambda on load, using
-  the Paddle subscription id it stored at first activation. This is what
-  actually keeps the *customer's* access current — trialing→7-day demo,
-  active→12-month client, cancelled→the Lambda 400s and the existing file
-  lapses at its own expiry (never yanked mid-term, matching `ISSUANCE.md`
-  §5). Strictly best-effort: it can only ever replace the stored file with
-  a newer validly-signed one for the same tenant, never lock a tenant out.
+  EVERY Paddle subscription id it's ever stored for this tenant — not just
+  the first. `/start`'s checkout is an anonymous Paddle overlay with no way
+  to attach a purchase to an existing subscription, so a customer buying a
+  second module in a later, separate checkout gets a brand new subscription
+  id rather than a line item added to the first; the app tracks the full
+  list (`readPaddleSubs()`/`addPaddleSubLocal()`) and the Lambda resolves
+  and merges all of them (`mergeResolvedSubscriptions()` — union of
+  frameworks, latest expiry, 'client' if any subscription is active) into
+  one signed file, so an earlier purchase is never silently dropped by a
+  later one. This is what actually keeps the *customer's* access current —
+  trialing→7-day demo, active→12-month client, cancelled→that one
+  subscription's frameworks quietly drop out of the merge (the others keep
+  refreshing normally) and the previously-granted access for it lapses at
+  its own expiry (never yanked mid-term, matching `ISSUANCE.md` §5).
+  Strictly best-effort: it can only ever replace the stored file with a
+  newer validly-signed one for the same tenant, never lock a tenant out.
   Requires no deployment — it ships with the app.
 
 - **The webhook** (`lambda/webhook.js`, deploy per `DEPLOY-WEBHOOK.md`):
