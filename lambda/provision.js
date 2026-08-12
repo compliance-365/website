@@ -69,6 +69,17 @@
  *                            used ONLY to write to OUR OWN roster.
  *   OWNER_APP_CLIENT_SECRET   That app registration's client secret.
  *
+ * Optional:
+ *   OWNER_NOTIFY_EMAIL        A real mailbox in the owner tenant (e.g.
+ *                            hello@compliance365.com.au). When set, an
+ *                            email is sent to (and from) this address the
+ *                            moment a FRESH self-serve checkout completes
+ *                            and activates — not on every routine refresh.
+ *                            Unset = feature is off, no behaviour change.
+ *                            Needs one more permission on the SAME app
+ *                            registration: Mail.Send (Application),
+ *                            admin-consented — see SELF-SERVE-SETUP.md.
+ *
  * Dependencies: none — uses the native fetch + crypto.webcrypto available
  * in Node 20, same "no dependencies" convention as chat.js/subscribe.js.
  */
@@ -274,7 +285,11 @@ async function ownerGraph(token, path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
   if (!res.ok) throw new Error('Graph ' + res.status + ': ' + (await res.text()));
-  if (res.status === 204) return null;
+  // 204 (e.g. DELETE, PATCH) and 202 (e.g. /sendMail — accepted for
+  // delivery, no response body) both mean success with nothing to
+  // parse; res.json() on an empty body throws, so both need this same
+  // treatment, not just 204.
+  if (res.status === 204 || res.status === 202) return null;
   return res.json();
 }
 
@@ -365,6 +380,55 @@ async function checkTenantBlocked(tenantId) {
   return { blocked: !!(client && client.fields.Blocked), reason: (client && client.fields.BlockedReason) || '' };
 }
 
+/* ============== New-signup notification (optional) ============== */
+/* Sends the owner an email the moment a fresh self-serve checkout
+   completes and successfully activates — the "someone real just signed
+   up" moment, not every routine refresh (every OTHER live tenant also
+   calls this Lambda, on every page load, to keep its entitlement
+   current; only a genuine new transactionId means a checkout just
+   happened, see the handler's own comment on that distinction).
+   App-only Mail.Send (not the delegated Graph.sendMail the owner
+   console's welcome-pack email uses — there's no interactive owner
+   session here to delegate from) against the SAME app registration
+   already used to write the roster, so the only new setup is one more
+   Graph API permission grant — see SELF-SERVE-SETUP.md. Silent no-op
+   (not an error) when OWNER_NOTIFY_EMAIL isn't set, so this stays
+   entirely opt-in; best-effort and non-blocking either way, same
+   trade-off recordOnOwnerRoster() already makes — a notification
+   failing must never stop the customer's own activation from being
+   handed back. */
+async function notifyOwnerOfSignup(payload, purchase) {
+  const mailbox = process.env.OWNER_NOTIFY_EMAIL;
+  if (!mailbox) return;
+  const token = await getOwnerGraphToken();
+  const moduleNames = payload.frameworks.filter((f) => f !== 'iso27001').join(', ') || 'ISO 27001 only';
+  const kind = payload.type === 'demo' ? 'Trial signup' : 'Paid signup';
+  const subject = kind + ': ' + (purchase.customerEmail || payload.tenantId);
+  const lines = [
+    kind + ' via the self-serve checkout on the website.',
+    '',
+    'Customer email: ' + (purchase.customerEmail || '(not provided by Paddle)'),
+    'Tenant id: ' + payload.tenantId,
+    'Modules: ' + moduleNames,
+    'Type: ' + payload.type + (payload.type === 'demo' ? ' (7-day trial)' : ''),
+    'Expiry: ' + payload.expiry,
+    'Paddle subscription id(s): ' + purchase.subscriptionIds.join(', '),
+    '',
+    'This client now appears on the owner console roster.'
+  ];
+  await ownerGraph(token, '/users/' + encodeURIComponent(mailbox) + '/sendMail', {
+    method: 'POST',
+    body: {
+      message: {
+        subject,
+        body: { contentType: 'text', content: lines.join('\n') },
+        toRecipients: [{ emailAddress: { address: mailbox } }]
+      },
+      saveToSentItems: false
+    }
+  });
+}
+
 /* ============== Handler ============== */
 export const handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || '';
@@ -447,6 +511,19 @@ export const handler = async (event) => {
       // issue-entitlement.mjs's --record makes (falls back to printing
       // the row for manual entry rather than failing the whole issuance).
       console.error('Could not record on owner roster:', rosterErr);
+    }
+
+    // Only a fresh checkout (a real transactionId) means someone just
+    // signed up — every OTHER call to this Lambda is an existing tenant's
+    // routine on-load refresh (see refreshSelfServeEntitlementOnLoad() in
+    // app.js), which happens on every single page load for every live
+    // self-serve customer and would otherwise flood the inbox.
+    if (transactionId) {
+      try {
+        await notifyOwnerOfSignup(file.payload, purchase);
+      } catch (notifyErr) {
+        console.error('Could not send new-signup notification:', notifyErr);
+      }
     }
 
     return {

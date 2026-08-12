@@ -14,6 +14,7 @@
 // merge itself.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { mergeResolvedSubscriptions } from '../lambda/provision.js';
 
 function sub(overrides) {
@@ -98,5 +99,48 @@ describe('mergeResolvedSubscriptions()', () => {
     const inputs = [sub({ subscriptionId: 's1' }), sub({ subscriptionId: 's2', status: 'trialing' })];
     const merged = mergeResolvedSubscriptions(inputs);
     assert.equal(merged.results, inputs);
+  });
+});
+
+/* Static-text coverage for the optional new-signup notification email —
+   the actual send is a live Graph call (app-only Mail.Send), not
+   feasible to exercise without a real tenant and a real mailbox, but two
+   things about it are cheap and important to guard structurally:
+   1. It must only fire on a FRESH checkout (a real transactionId), never
+      on the routine on-load refresh every other live self-serve tenant
+      triggers on every single page load — get this gate wrong and every
+      customer opening the app becomes an email.
+   2. ownerGraph()'s response handling has to treat 202 (what /sendMail
+      actually returns — accepted, empty body) the same as 204, or the
+      very first notification this Lambda ever tries to send throws on
+      res.json() parsing an empty body. Found by reading Graph's own
+      documented response shape for sendMail, not by a failure in this
+      environment — there's no way to trigger a live send here to
+      observe it directly. */
+describe('new-signup notification — structural guards (no live send exercised here)', () => {
+  const src = readFileSync(new URL('../lambda/provision.js', import.meta.url), 'utf8');
+
+  test('notifyOwnerOfSignup() is only called inside the fresh-transaction branch, not on every refresh', () => {
+    const handlerMatch = src.match(/export const handler = async \(event\) => \{([\s\S]*)$/);
+    assert.ok(handlerMatch, 'handler not found');
+    const notifyCallMatch = handlerMatch[0].match(/if \(transactionId\) \{\s*try \{\s*await notifyOwnerOfSignup\(/);
+    assert.ok(notifyCallMatch, 'notifyOwnerOfSignup() is no longer called inside "if (transactionId)" — this would fire on every self-serve tenant\'s routine page-load refresh, not just fresh checkouts, flooding the owner\'s inbox');
+  });
+
+  test('notifyOwnerOfSignup() no-ops silently when OWNER_NOTIFY_EMAIL is unset', () => {
+    const fnMatch = src.match(/async function notifyOwnerOfSignup\(payload, purchase\) \{([\s\S]*?)\n\}/);
+    assert.ok(fnMatch, 'notifyOwnerOfSignup() not found');
+    assert.match(fnMatch[1], /if \(!mailbox\) return;/, 'notifyOwnerOfSignup() no longer no-ops when OWNER_NOTIFY_EMAIL is unset — this feature must stay opt-in');
+  });
+
+  test('the notification failing never blocks the customer\'s own activation response', () => {
+    const handlerMatch = src.match(/if \(transactionId\) \{\s*try \{\s*await notifyOwnerOfSignup\(file\.payload, purchase\);\s*\} catch \(notifyErr\) \{/);
+    assert.ok(handlerMatch, 'notifyOwnerOfSignup() call is no longer wrapped in its own try/catch — an email failure (bad mailbox, missing Graph permission, transient error) would throw the whole handler into its outer catch and fail the customer\'s activation, which just succeeded');
+  });
+
+  test('ownerGraph() treats 202 (sendMail\'s actual response) the same as 204 — no res.json() on an empty body', () => {
+    const fnMatch = src.match(/async function ownerGraph\(token, path, opts = \{\}\) \{([\s\S]*?)\n\}/);
+    assert.ok(fnMatch, 'ownerGraph() not found');
+    assert.match(fnMatch[1], /res\.status === 204 \|\| res\.status === 202/, 'ownerGraph() no longer special-cases 202 alongside 204 — Graph\'s /sendMail endpoint returns 202 with an empty body, and res.json() throws on that, which would make every notification attempt fail even when Graph successfully sent the mail');
   });
 });

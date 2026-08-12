@@ -209,6 +209,50 @@ overwriting the file yourself.
 Deployment: this reuses the *same* provisioning Lambda the multi-subscription
 merge fix already needs redeployed — one deployment covers both.
 
+### Owner notification on new signup (built, opt-in)
+
+Nothing told you a stranger had just paid and signed up — you'd only find
+out by checking the Dashboard yourself. The provisioning Lambda now sends
+itself (well, you) an email the moment a **fresh** self-serve checkout
+completes and activates, so you hear about it in real time instead of
+finding it later.
+
+- **Only fires on a genuine fresh checkout** (`transactionId` present) —
+  never on the routine on-load refresh every live self-serve tenant
+  triggers on every page load, and never on a revocation check. Getting
+  this gate wrong would turn every customer opening the app into an
+  email; there's a static-text test guarding it
+  (`test/provision-merge.test.mjs`).
+- **Opt-in, zero setup by default**: controlled by one new Lambda env var,
+  `OWNER_NOTIFY_EMAIL` — unset (the default) means the feature does
+  nothing at all, no behaviour change. Set it to a real mailbox in your
+  own tenant (e.g. `hello@compliance365.com.au`) to turn it on.
+- **Best-effort, never blocks the customer**: the send is wrapped in its
+  own try/catch — if it fails (bad mailbox, missing permission,
+  transient Graph error) the customer's own activation still succeeds;
+  you just don't get the email that time.
+- **Reuses the same app registration** as the roster-writing permission
+  in §3 above — no new app, no new secret. It needs one additional
+  Application-level Graph permission granted, with admin consent:
+
+  1. Azure Portal → **App registrations** → the same app used for the
+     owner-roster `Sites.Selected`/`Sites.ReadWrite.All` permission → **API
+     permissions** → **Add a permission** → **Microsoft Graph** →
+     **Application permissions** → search for and add **`Mail.Send`**.
+  2. Click **Grant admin consent for [your tenant]** — this permission
+     lets the app send mail as *any* mailbox in the tenant, which is why
+     it needs its own explicit consent even though the app already has
+     other Graph permissions.
+  3. Redeploy `lambda/provision.js` (this is the same file the
+     multi-subscription merge and revocation fixes already need
+     redeployed — one deployment covers all three) and set
+     `OWNER_NOTIFY_EMAIL` on the Lambda's environment variables.
+
+  The mailbox in `OWNER_NOTIFY_EMAIL` is used as both the sender and the
+  recipient — Graph's app-only `/users/{mailbox}/sendMail` sends *as*
+  that mailbox, so the simplest setup points it at your own inbox and it
+  emails itself.
+
 ## 5. Front end (done)
 
 - `src/data/pricing.js`'s `SELF_SERVE.paddleToken`/`priceIds` are set —
@@ -252,6 +296,8 @@ as before.
 | Client appears on owner roster/Dashboard | — | ✅ verified live |
 | Trial → paid conversion (customer access) | — | ✅ app-pull on load |
 | Trial → paid / cancelled (owner roster) | — | ✅ webhook (once deployed) |
+| `Mail.Send` permission grant + `OWNER_NOTIFY_EMAIL` env var | ⬜ optional, see §3 | — |
+| Owner notified of new signup | — | ✅ once opted in above |
 
 Every column-2 checked row is what a customer triggers themselves — no
 CLI, no emailed file, no manual roster entry. That is the whole point of
