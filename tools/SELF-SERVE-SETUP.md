@@ -144,12 +144,22 @@ the webhook can push into a customer's tenant:
 - **The app-pull** (built into `public/checkpoint/app.js`,
   `refreshSelfServeEntitlementOnLoad`): the customer's own Checkpoint app
   re-pulls a fresh signed file from the provisioning Lambda on load, using
-  the Paddle subscription id it stored at first activation. This is what
-  actually keeps the *customer's* access current — trialing→7-day demo,
-  active→12-month client, cancelled→the Lambda 400s and the existing file
-  lapses at its own expiry (never yanked mid-term, matching `ISSUANCE.md`
-  §5). Strictly best-effort: it can only ever replace the stored file with
-  a newer validly-signed one for the same tenant, never lock a tenant out.
+  EVERY Paddle subscription id it's ever stored for this tenant — not just
+  the first. `/start`'s checkout is an anonymous Paddle overlay with no way
+  to attach a purchase to an existing subscription, so a customer buying a
+  second module in a later, separate checkout gets a brand new subscription
+  id rather than a line item added to the first; the app tracks the full
+  list (`readPaddleSubs()`/`addPaddleSubLocal()`) and the Lambda resolves
+  and merges all of them (`mergeResolvedSubscriptions()` — union of
+  frameworks, latest expiry, 'client' if any subscription is active) into
+  one signed file, so an earlier purchase is never silently dropped by a
+  later one. This is what actually keeps the *customer's* access current —
+  trialing→7-day demo, active→12-month client, cancelled→that one
+  subscription's frameworks quietly drop out of the merge (the others keep
+  refreshing normally) and the previously-granted access for it lapses at
+  its own expiry (never yanked mid-term, matching `ISSUANCE.md` §5).
+  Strictly best-effort: it can only ever replace the stored file with a
+  newer validly-signed one for the same tenant, never lock a tenant out.
   Requires no deployment — it ships with the app.
 
 - **The webhook** (`lambda/webhook.js`, deploy per `DEPLOY-WEBHOOK.md`):
@@ -160,6 +170,44 @@ the webhook can push into a customer's tenant:
   Lambda now writes on the entitlement row. Verifies Paddle's signature on
   every request (rejects forgeries with 403). Deploy this once; it's the
   only remaining piece of infrastructure.
+
+### Owner-initiated access revocation (built)
+
+Cancelling a client's subscription in Paddle stops the *next* renewal, but
+by design still honours whatever's already been paid for (never yanked
+mid-term, `ISSUANCE.md` §5) — the right behaviour for an ordinary
+cancellation, not for fraud/abuse/non-payment-for-cause, where you want
+access gone *now*. There was no way to do that at all before this: the
+owner console's `ManualStatus` field is a renewal-pipeline label, not an
+access control, and a manually-issued (non-self-serve) client had no
+revocation path whatsoever short of getting into their tenant and
+overwriting the file yourself.
+
+- **Owner console**: a client's detail drawer has a **Revoke access**
+  button (asks for a reason, kept on your own roster only — never shown
+  to the client) and, once revoked, a **Restore access** button in its
+  place. Writes `Blocked`/`BlockedAt`/`BlockedReason` on that client's
+  `PartnerClients` row — self-heals onto an existing owner console via
+  `PARTNER_COLUMN_RECONCILE`, no re-provisioning needed.
+- **The provisioning Lambda** (`lambda/provision.js`) handles a second,
+  unrelated request shape from the same endpoint —
+  `{ checkRevocation: true, tenantId }` — that just reads that flag back
+  (`checkTenantBlocked()`), no Paddle call, no signing.
+- **The Checkpoint app**: every live tenant (self-serve *and*
+  manually-issued — this is the only revocation path the latter has at
+  all) calls this on load, at every point that can reach the live app
+  (`startLive()`, `retryActivationFromGate()`, `Wizard.finish()` —
+  `checkAccessRevoked()`'s doc comment explains why there are three call
+  sites, not one), and shows a distinct "access revoked" screen instead
+  of the app if blocked — deliberately independent of whatever the
+  signed activation file itself says, since a revoked tenant might still
+  be holding a perfectly-valid, unexpired one. Fails **open** on any
+  network error or when self-serve isn't configured — a Lambda hiccup
+  must never brick a paying customer's access; only an explicit
+  `blocked:true` response ever gates anything.
+
+Deployment: this reuses the *same* provisioning Lambda the multi-subscription
+merge fix already needs redeployed — one deployment covers both.
 
 ## 5. Front end (done)
 

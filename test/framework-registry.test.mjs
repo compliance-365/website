@@ -649,3 +649,207 @@ describe('S.controls-derived exports and search never surface a framework the cl
     assert.match(fnMatch[1], /S\.entitlements\[fw\]/, 'generateAuditorPack() no longer re-checks S.entitlements[fw] before generating — the #apFramework <select> is populated from entitledFrameworks() at render time, but its value could still be tampered with between render and click, and this document may be shared with a third-party auditor');
   });
 });
+
+/* Static-text coverage for the client-side half of the multi-subscription
+   fix (the Lambda-side merge logic itself is unit-tested directly in
+   test/provision-merge.test.mjs, which doesn't need app.js to be
+   require()'d at all). This app.js half can't run under Node — the
+   self-serve activation path only ever executes against a real,
+   Graph-authenticated SharePoint tenant (Store.kind === 'sharepoint'),
+   which this test environment has no way to stand up — so this checks
+   the deployed text stays wired the way the fix requires, rather than
+   silently regressing back to tracking only a single subscription id
+   (which is exactly the bug: a second, separate purchase would then
+   overwrite the first module's entitlement instead of merging with it).
+   See the fix's commit message / PR description for the live manual
+   verification this was checked against instead. */
+describe('self-serve activation tracks every Paddle subscription a tenant has ever completed checkout for, not just the latest one', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+
+  test('the old singular subscription-id helpers are gone, not left dangling alongside the new plural ones', () => {
+    assert.doesNotMatch(appJs, /function writePaddleSubLocal\(/, 'writePaddleSubLocal() (singular, overwrite-only) should have been replaced by addPaddleSubLocal() (accumulates)');
+    assert.doesNotMatch(appJs, /function readPaddleSub\(\)/, 'readPaddleSub() (singular) should have been replaced by readPaddleSubs() (plural)');
+  });
+
+  test('readPaddleSubs()/addPaddleSubLocal() exist and are actually used by both the refresh path and the fresh-purchase path', () => {
+    assert.match(appJs, /function readPaddleSubs\(\)/, 'readPaddleSubs() not found');
+    assert.match(appJs, /function addPaddleSubLocal\(id\)/, 'addPaddleSubLocal() not found');
+    const refreshFn = appJs.match(/async function refreshSelfServeEntitlementOnLoad\(acceptTenantIds\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(refreshFn, 'refreshSelfServeEntitlementOnLoad() not found — did it get renamed?');
+    assert.match(refreshFn[1], /readPaddleSubs\(\)/, 'refreshSelfServeEntitlementOnLoad() no longer calls readPaddleSubs() — it would only ever refresh a single subscription again');
+    const attemptFn = appJs.match(/async function attemptSelfServeActivation\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(attemptFn, 'attemptSelfServeActivation() not found — did it get renamed?');
+    assert.match(attemptFn[1], /readPaddleSubs\(\)/, 'attemptSelfServeActivation() no longer calls readPaddleSubs() to send its known subscription history alongside a fresh purchase — a returning customer\'s second purchase would stop merging with their first');
+  });
+
+  test('the refresh request sends subscriptionIds (plural) to the Lambda, not the old singular subscriptionId', () => {
+    const refreshFn = appJs.match(/async function refreshSelfServeEntitlementOnLoad\(acceptTenantIds\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(refreshFn, 'refreshSelfServeEntitlementOnLoad() not found');
+    assert.match(refreshFn[1], /body:\s*JSON\.stringify\(\{\s*subscriptionIds:\s*subIds/, 'refreshSelfServeEntitlementOnLoad() no longer sends { subscriptionIds: subIds } — the Lambda would only ever resolve one subscription per refresh again');
+  });
+
+  test('the fresh-purchase request sends knownSubscriptionIds alongside the new transactionId', () => {
+    const attemptFn = appJs.match(/async function attemptSelfServeActivation\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(attemptFn, 'attemptSelfServeActivation() not found');
+    assert.match(attemptFn[1], /knownSubscriptionIds:\s*readPaddleSubs\(\)/, 'attemptSelfServeActivation() no longer sends knownSubscriptionIds — a returning, already-onboarded customer\'s new purchase would stop merging with modules they already have');
+  });
+
+  test('both paths persist the FULL subscriptionIds array the Lambda returns, not just a single id', () => {
+    const refreshFn = appJs.match(/async function refreshSelfServeEntitlementOnLoad\(acceptTenantIds\) \{([\s\S]*?)\n {2}\}/);
+    const attemptFn = appJs.match(/async function attemptSelfServeActivation\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.match(refreshFn[1], /data\.subscriptionIds/, 'refreshSelfServeEntitlementOnLoad() no longer reads data.subscriptionIds from the Lambda response');
+    assert.match(attemptFn[1], /\(data\.subscriptionIds \|\| \[\]\)\.forEach\(addPaddleSubLocal\)/, 'attemptSelfServeActivation() no longer stores every id in data.subscriptionIds — only the most recent purchase\'s subscription would be remembered for future refreshes');
+  });
+});
+
+/* Static-text coverage for owner-initiated access revocation. Like the
+   suites above, none of this can run under Node — checkAccessRevoked()
+   only means anything against a real, Graph-authenticated tenant, and
+   the whole point of this feature is that it's independent of whatever
+   the (otherwise perfectly verifiable) signed activation file says, so
+   there's no pure logic to unit-test here the way
+   mergeResolvedSubscriptions() had. What IS worth guarding statically:
+   every distinct code path that can reach a live tenant's app (bootUi())
+   actually performs the check — this feature was built with three call
+   sites for exactly that reason (startLive(), retryActivationFromGate()'s
+   already-loaded-Store branch, and Wizard.finish() for a first-time
+   onboarding), each discovered by tracing bootUi()'s callers by hand
+   rather than a single central choke point. A future bootUi() call site
+   added without this check would be a genuine, silent revocation
+   bypass — exactly the class of bug the second and third call sites
+   here were fixing before this even shipped once. */
+describe('owner-initiated access revocation cannot be bypassed by any path that reaches the live app', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+
+  test('checkAccessRevoked() exists and fails open (never blocks) when self-serve isn\'t configured or the Lambda call fails', () => {
+    const fnMatch = appJs.match(/async function checkAccessRevoked\(tenantId\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'checkAccessRevoked() not found — did it get renamed?');
+    assert.match(fnMatch[1], /if \(!CONFIG\.selfServeActivateUrl \|\| !tenantId\) return \{ blocked: false \}/, 'checkAccessRevoked() no longer fails open when unconfigured — a deployment with no provisioning Lambda wired up would be unable to boot any live tenant at all');
+    assert.match(fnMatch[1], /catch \(e\) \{ return \{ blocked: false \}; \}/, 'checkAccessRevoked() no longer fails open on a network/parse error — a transient Lambda hiccup would lock out a paying customer');
+  });
+
+  test('every one of bootUi()\'s three live-tenant call sites (startLive, retryActivationFromGate, Wizard.finish) checks access revocation first', () => {
+    // Every `bootUi('Live —` call site, found the same way this test's
+    // own comment says the fix was found: by tracing bootUi()'s callers.
+    // A count assertion here is deliberate — a fourth call site being
+    // added (a new onboarding shortcut, a new retry path) should fail
+    // this test until it's confirmed that new site ALSO checks
+    // revocation, not silently pass because the regex still matches the
+    // three sites that already do.
+    const liveBootCalls = appJs.match(/bootUi\('Live —/g) || [];
+    assert.equal(liveBootCalls.length, 3, `expected exactly 3 live-tenant bootUi() call sites (startLive, retryActivationFromGate, Wizard.finish) — found ${liveBootCalls.length}. If this is a deliberate new call site, confirm it checks checkAccessRevoked() before bootUi() and update this count.`);
+
+    const startLiveFn = appJs.match(/async function startLive\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(startLiveFn, 'startLive() not found');
+    assert.match(startLiveFn[1], /checkAccessRevoked\(/, 'startLive() no longer calls checkAccessRevoked() — the primary path for a returning tenant loading the app would no longer honour a revocation');
+
+    const retryFn = appJs.match(/async function retryActivationFromGate\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(retryFn, 'retryActivationFromGate() not found');
+    assert.match(retryFn[1], /checkAccessRevoked\(/, 'retryActivationFromGate() no longer calls checkAccessRevoked() — its "Store && S already loaded" branch calls bootUi() directly without going through startLive(), so a revoked tenant pasting any validly-signed file here would boot straight past the block');
+
+    const finishFn = appJs.match(/finish: async function \(\) \{([\s\S]*?)\n {4}\}/);
+    assert.ok(finishFn, 'Wizard.finish() not found, or is no longer async');
+    assert.match(finishFn[1], /checkAccessRevoked\(/, 'Wizard.finish() no longer calls checkAccessRevoked() — a brand-new tenant already on the owner\'s blocklist would still complete onboarding straight into the live app');
+  });
+
+  test('the client-facing revoked screen never echoes the owner\'s internal BlockedReason note', () => {
+    // The owner console's own "Revoke access" field label says the
+    // reason is "not shown to the client" — this is the other half of
+    // that promise: the app-side call sites must never forward
+    // revocation.reason into showAccessRevokedScreen().
+    const callSites = appJs.match(/showAccessRevokedScreen\([^)]*\)/g) || [];
+    assert.ok(callSites.length > 0, 'showAccessRevokedScreen() is never called anywhere');
+    callSites.forEach((call) => {
+      assert.doesNotMatch(call, /revocation\.reason/, `${call} passes the owner's internal BlockedReason note to the client-facing screen — it's meant to stay owner-only (see the "Revoke access" modal's field label)`);
+    });
+  });
+});
+
+describe('owner console: access revocation writes the fields the Lambda\'s checkTenantBlocked() reads', () => {
+  const ownerJs = readFileSync(new URL('../public/owner/owner.js', import.meta.url), 'utf8');
+  const provisionJs = readFileSync(new URL('../lambda/provision.js', import.meta.url), 'utf8');
+
+  test('checkTenantBlocked() in the Lambda reads fields.Blocked/fields.BlockedReason, matching what the owner console writes', () => {
+    assert.match(provisionJs, /fields\.Blocked/, 'checkTenantBlocked() no longer reads fields.Blocked — the owner console\'s revoke action would have no effect');
+    assert.match(provisionJs, /fields\.BlockedReason/, 'checkTenantBlocked() no longer reads fields.BlockedReason');
+  });
+
+  test('partnerRevokeAccess() sets Blocked/BlockedAt/BlockedReason; partnerRestoreAccess() clears them', () => {
+    const revokeFn = ownerJs.match(/partnerRevokeAccess: async function \(id\) \{([\s\S]*?)\n {4}\},/);
+    assert.ok(revokeFn, 'partnerRevokeAccess() not found');
+    assert.match(revokeFn[1], /c\.blocked = true/, 'partnerRevokeAccess() no longer sets blocked = true');
+    assert.match(revokeFn[1], /c\.blockedReason = v\.reason/, 'partnerRevokeAccess() no longer records the reason');
+
+    const restoreFn = ownerJs.match(/partnerRestoreAccess: async function \(id\) \{([\s\S]*?)\n {4}\},/);
+    assert.ok(restoreFn, 'partnerRestoreAccess() not found');
+    assert.match(restoreFn[1], /c\.blocked = false/, 'partnerRestoreAccess() no longer clears blocked');
+  });
+
+  test('updatePartnerClient() persists Blocked/BlockedAt/BlockedReason to SharePoint — a UI-only flag with no PATCH would never actually revoke anything', () => {
+    const fnMatch = ownerJs.match(/async function updatePartnerClient\(c\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'updatePartnerClient() not found');
+    assert.match(fnMatch[1], /Blocked: !!c\.blocked/, 'updatePartnerClient() no longer writes the Blocked field to SharePoint');
+  });
+
+  test('PartnerClients\' column reconciliation includes Blocked/BlockedAt/BlockedReason, so an existing owner console self-heals the new columns', () => {
+    const reconcileMatch = ownerJs.match(/PartnerClients: \[([^\]]*)\]/);
+    assert.ok(reconcileMatch, 'PARTNER_COLUMN_RECONCILE.PartnerClients not found');
+    ['Blocked', 'BlockedAt', 'BlockedReason'].forEach((col) => {
+      assert.match(reconcileMatch[1], new RegExp("'" + col + "'"), `PARTNER_COLUMN_RECONCILE.PartnerClients is missing '${col}' — an owner console provisioned before this feature shipped would never get the column added, and revocation would silently fail to persist`);
+    });
+  });
+});
+
+/* A control's exclusion justification (ISO 27001 clause 6.1.3(d)
+   requires one for every SoA exclusion) had a fully-wired read path —
+   SharePoint's Justification column, updateControl() persisting it,
+   five separate places displaying it (the SoA row, the CSV export,
+   the Auditor Pack's exclusion summary, the Executive Summary's "what
+   the auditor will ask" section, the Trust Center) — but no write
+   path anywhere in the UI at all. A practitioner could mark a control
+   Not Applicable and would have no way, short of editing the raw
+   SharePoint list directly, to ever record why. Fixed by
+   App.setControlJustification(); this guards both that it exists and
+   that it's wired into the one row renderer every one of those five
+   read sites ultimately depends on for how the data ever gets there
+   in the first place. */
+describe('a control\'s exclusion justification can actually be written, not just displayed', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+
+  test('App.setControlJustification exists, persists via Store.updateControl(), and is in MUTATING_ACTIONS', () => {
+    const fnMatch = appJs.match(/setControlJustification: async function \(key\) \{([\s\S]*?)\n {4}\},/);
+    assert.ok(fnMatch, 'App.setControlJustification not found — was it renamed or removed?');
+    assert.match(fnMatch[1], /c\.just = vals\.just\.trim\(\)/, 'setControlJustification() no longer writes c.just from the modal\'s input');
+    assert.match(fnMatch[1], /Store\.updateControl\(c\)/, 'setControlJustification() no longer persists via Store.updateControl() — the edit would be lost on the next page load');
+    assert.match(appJs, /'setControlJustification'/, 'setControlJustification is missing from MUTATING_ACTIONS — a read-only Viewer session would incorrectly be able to call it, or (if the list is otherwise enforced) a Practitioner might be blocked from a legitimate write');
+    // Found live, not by inspection: App.go('dash') never re-renders the
+    // Dashboard on its own (it only toggles view visibility), so saving
+    // a justification without ALSO calling renderDash() left the new
+    // "Exclusions missing justification" KPI tile showing a stale count
+    // until some unrelated action happened to trigger a fresh render.
+    assert.match(fnMatch[1], /renderDash\(\)/, 'setControlJustification() no longer calls renderDash() — the "Exclusions missing justification" KPI tile would go stale after saving a justification, since App.go(\'dash\') itself never re-renders');
+  });
+
+  test('renderSoaRow() offers the edit action for every excluded (Not Applicable) control, not just ones that already have a justification', () => {
+    const fnMatch = appJs.match(/function renderSoaRow\(c\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'renderSoaRow() not found');
+    assert.match(fnMatch[1], /App\.setControlJustification/, 'renderSoaRow() no longer offers App.setControlJustification anywhere — regressing back to a display-only field');
+    // Specifically: the button must be reachable when c.just is falsy,
+    // not only shown once a value already exists (which would make the
+    // FIRST justification for a given control impossible to enter from
+    // the row itself again).
+    assert.match(fnMatch[1], /No justification recorded/, 'renderSoaRow() no longer flags a Not Applicable control with an empty justification inline — this is what surfaces the gap before report-generation time, not just in the Auditor Pack');
+  });
+
+  test('the Dashboard KPI row surfaces a live count of unjustified exclusions across every entitled framework', () => {
+    const fnMatch = appJs.match(/function renderDash\(\) \{([\s\S]*?)\n  \}/);
+    assert.ok(fnMatch, 'renderDash() not found');
+    // Matches the actual assignment, not just any mention of the name —
+    // a bare reference to an undefined variable in the KPI template
+    // literal would still satisfy a looser "does this string appear
+    // anywhere" check while throwing at render time.
+    assert.match(fnMatch[1], /var unjustifiedExclusions = entitledFrameworks\(\)/, 'renderDash() no longer computes an unjustified-exclusions count — this was added so the gap is an ambient dashboard signal, not something only discovered while generating an Auditor Pack');
+    assert.match(fnMatch[1], /!c\.app && !c\.just/, 'the unjustified-exclusions count no longer filters on "not applicable and no justification" — check the filter predicate wasn\'t changed to something that no longer matches an actual exclusion gap');
+    assert.match(fnMatch[1], /Exclusions missing justification/, 'the Dashboard KPI row no longer shows the "Exclusions missing justification" tile');
+  });
+});
