@@ -16,6 +16,15 @@
  *      Partner Console reads), so it "just appears" there.
  *   4. Return the signed file to the browser as JSON text.
  *
+ * A second, unrelated request shape ({ checkRevocation: true, tenantId })
+ * is also handled here — every LIVE Checkpoint tenant (not just self-serve
+ * ones) calls this on load to check whether the owner console has flagged
+ * it Blocked, independent of whatever activation file it's already
+ * holding. See checkTenantBlocked() below and app.js's
+ * checkAccessRevoked(). Kept in this same Lambda rather than a separate
+ * one purely to avoid a second deployment — it shares nothing with the
+ * purchase flow except the owner-tenant Graph token helpers.
+ *
  * It deliberately does NOT write anything into the customer's own
  * SharePoint. The browser already has everything needed to do that
  * itself — the exact same runWizardActivationCheck() code path a
@@ -336,6 +345,26 @@ async function recordOnOwnerRoster(payload, purchase) {
   }
 }
 
+/* Owner-initiated access revocation — reads the Blocked flag the owner
+   console's "Revoke access" action sets on PartnerClients, deliberately
+   independent of anything Paddle or a signed activation file says. This
+   is what the Checkpoint app's checkAccessRevoked() calls on every
+   live-tenant load (not just self-serve ones — this is the one path
+   that also covers manually-issued/consulting clients, who have no
+   other revocation mechanism at all). No PartnerClients row for this
+   tenant, or the roster not existing yet, is never treated as blocked —
+   only an explicit Blocked=true row counts. */
+async function checkTenantBlocked(tenantId) {
+  const token = await getOwnerGraphToken();
+  const site = await ownerGraph(token, '/sites/root?$select=id');
+  const lists = await ownerGraph(token, '/sites/' + site.id + '/lists?$select=id,displayName&$top=200');
+  const clientsList = lists.value.find((l) => l.displayName === 'Checkpoint Partner PartnerClients');
+  if (!clientsList) return { blocked: false, reason: '' };
+  const clients = await ownerGraph(token, '/sites/' + site.id + '/lists/' + clientsList.id + '/items?$expand=fields&$top=500');
+  const client = clients.value.find((i) => i.fields.TenantId === tenantId);
+  return { blocked: !!(client && client.fields.Blocked), reason: (client && client.fields.BlockedReason) || '' };
+}
+
 /* ============== Handler ============== */
 export const handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || '';
@@ -357,6 +386,22 @@ export const handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
+
+    // Revocation check — a distinct, lightweight request shape from the
+    // purchase/refresh flow below: no Paddle call, no signing, just "is
+    // this tenant on the owner's blocklist right now." Called by every
+    // live Checkpoint tenant on load (see app.js's checkAccessRevoked()),
+    // not only self-serve ones, since this is the only revocation path
+    // manually-issued/consulting clients have at all.
+    if (body.checkRevocation) {
+      const tenantId = (body.tenantId || '').trim();
+      if (!tenantId) {
+        return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId is required.' }) };
+      }
+      const status = await checkTenantBlocked(tenantId);
+      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true, blocked: status.blocked, reason: status.reason }) };
+    }
+
     const transactionId = (body.transactionId || '').trim();
     // subscriptionId: single-id refresh, kept for back-compat with any
     // client that hasn't picked up the multi-subscription app update yet.

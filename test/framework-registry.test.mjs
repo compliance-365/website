@@ -701,3 +701,101 @@ describe('self-serve activation tracks every Paddle subscription a tenant has ev
     assert.match(attemptFn[1], /\(data\.subscriptionIds \|\| \[\]\)\.forEach\(addPaddleSubLocal\)/, 'attemptSelfServeActivation() no longer stores every id in data.subscriptionIds — only the most recent purchase\'s subscription would be remembered for future refreshes');
   });
 });
+
+/* Static-text coverage for owner-initiated access revocation. Like the
+   suites above, none of this can run under Node — checkAccessRevoked()
+   only means anything against a real, Graph-authenticated tenant, and
+   the whole point of this feature is that it's independent of whatever
+   the (otherwise perfectly verifiable) signed activation file says, so
+   there's no pure logic to unit-test here the way
+   mergeResolvedSubscriptions() had. What IS worth guarding statically:
+   every distinct code path that can reach a live tenant's app (bootUi())
+   actually performs the check — this feature was built with three call
+   sites for exactly that reason (startLive(), retryActivationFromGate()'s
+   already-loaded-Store branch, and Wizard.finish() for a first-time
+   onboarding), each discovered by tracing bootUi()'s callers by hand
+   rather than a single central choke point. A future bootUi() call site
+   added without this check would be a genuine, silent revocation
+   bypass — exactly the class of bug the second and third call sites
+   here were fixing before this even shipped once. */
+describe('owner-initiated access revocation cannot be bypassed by any path that reaches the live app', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+
+  test('checkAccessRevoked() exists and fails open (never blocks) when self-serve isn\'t configured or the Lambda call fails', () => {
+    const fnMatch = appJs.match(/async function checkAccessRevoked\(tenantId\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'checkAccessRevoked() not found — did it get renamed?');
+    assert.match(fnMatch[1], /if \(!CONFIG\.selfServeActivateUrl \|\| !tenantId\) return \{ blocked: false \}/, 'checkAccessRevoked() no longer fails open when unconfigured — a deployment with no provisioning Lambda wired up would be unable to boot any live tenant at all');
+    assert.match(fnMatch[1], /catch \(e\) \{ return \{ blocked: false \}; \}/, 'checkAccessRevoked() no longer fails open on a network/parse error — a transient Lambda hiccup would lock out a paying customer');
+  });
+
+  test('every one of bootUi()\'s three live-tenant call sites (startLive, retryActivationFromGate, Wizard.finish) checks access revocation first', () => {
+    // Every `bootUi('Live —` call site, found the same way this test's
+    // own comment says the fix was found: by tracing bootUi()'s callers.
+    // A count assertion here is deliberate — a fourth call site being
+    // added (a new onboarding shortcut, a new retry path) should fail
+    // this test until it's confirmed that new site ALSO checks
+    // revocation, not silently pass because the regex still matches the
+    // three sites that already do.
+    const liveBootCalls = appJs.match(/bootUi\('Live —/g) || [];
+    assert.equal(liveBootCalls.length, 3, `expected exactly 3 live-tenant bootUi() call sites (startLive, retryActivationFromGate, Wizard.finish) — found ${liveBootCalls.length}. If this is a deliberate new call site, confirm it checks checkAccessRevoked() before bootUi() and update this count.`);
+
+    const startLiveFn = appJs.match(/async function startLive\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(startLiveFn, 'startLive() not found');
+    assert.match(startLiveFn[1], /checkAccessRevoked\(/, 'startLive() no longer calls checkAccessRevoked() — the primary path for a returning tenant loading the app would no longer honour a revocation');
+
+    const retryFn = appJs.match(/async function retryActivationFromGate\(\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(retryFn, 'retryActivationFromGate() not found');
+    assert.match(retryFn[1], /checkAccessRevoked\(/, 'retryActivationFromGate() no longer calls checkAccessRevoked() — its "Store && S already loaded" branch calls bootUi() directly without going through startLive(), so a revoked tenant pasting any validly-signed file here would boot straight past the block');
+
+    const finishFn = appJs.match(/finish: async function \(\) \{([\s\S]*?)\n {4}\}/);
+    assert.ok(finishFn, 'Wizard.finish() not found, or is no longer async');
+    assert.match(finishFn[1], /checkAccessRevoked\(/, 'Wizard.finish() no longer calls checkAccessRevoked() — a brand-new tenant already on the owner\'s blocklist would still complete onboarding straight into the live app');
+  });
+
+  test('the client-facing revoked screen never echoes the owner\'s internal BlockedReason note', () => {
+    // The owner console's own "Revoke access" field label says the
+    // reason is "not shown to the client" — this is the other half of
+    // that promise: the app-side call sites must never forward
+    // revocation.reason into showAccessRevokedScreen().
+    const callSites = appJs.match(/showAccessRevokedScreen\([^)]*\)/g) || [];
+    assert.ok(callSites.length > 0, 'showAccessRevokedScreen() is never called anywhere');
+    callSites.forEach((call) => {
+      assert.doesNotMatch(call, /revocation\.reason/, `${call} passes the owner's internal BlockedReason note to the client-facing screen — it's meant to stay owner-only (see the "Revoke access" modal's field label)`);
+    });
+  });
+});
+
+describe('owner console: access revocation writes the fields the Lambda\'s checkTenantBlocked() reads', () => {
+  const ownerJs = readFileSync(new URL('../public/owner/owner.js', import.meta.url), 'utf8');
+  const provisionJs = readFileSync(new URL('../lambda/provision.js', import.meta.url), 'utf8');
+
+  test('checkTenantBlocked() in the Lambda reads fields.Blocked/fields.BlockedReason, matching what the owner console writes', () => {
+    assert.match(provisionJs, /fields\.Blocked/, 'checkTenantBlocked() no longer reads fields.Blocked — the owner console\'s revoke action would have no effect');
+    assert.match(provisionJs, /fields\.BlockedReason/, 'checkTenantBlocked() no longer reads fields.BlockedReason');
+  });
+
+  test('partnerRevokeAccess() sets Blocked/BlockedAt/BlockedReason; partnerRestoreAccess() clears them', () => {
+    const revokeFn = ownerJs.match(/partnerRevokeAccess: async function \(id\) \{([\s\S]*?)\n {4}\},/);
+    assert.ok(revokeFn, 'partnerRevokeAccess() not found');
+    assert.match(revokeFn[1], /c\.blocked = true/, 'partnerRevokeAccess() no longer sets blocked = true');
+    assert.match(revokeFn[1], /c\.blockedReason = v\.reason/, 'partnerRevokeAccess() no longer records the reason');
+
+    const restoreFn = ownerJs.match(/partnerRestoreAccess: async function \(id\) \{([\s\S]*?)\n {4}\},/);
+    assert.ok(restoreFn, 'partnerRestoreAccess() not found');
+    assert.match(restoreFn[1], /c\.blocked = false/, 'partnerRestoreAccess() no longer clears blocked');
+  });
+
+  test('updatePartnerClient() persists Blocked/BlockedAt/BlockedReason to SharePoint — a UI-only flag with no PATCH would never actually revoke anything', () => {
+    const fnMatch = ownerJs.match(/async function updatePartnerClient\(c\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'updatePartnerClient() not found');
+    assert.match(fnMatch[1], /Blocked: !!c\.blocked/, 'updatePartnerClient() no longer writes the Blocked field to SharePoint');
+  });
+
+  test('PartnerClients\' column reconciliation includes Blocked/BlockedAt/BlockedReason, so an existing owner console self-heals the new columns', () => {
+    const reconcileMatch = ownerJs.match(/PartnerClients: \[([^\]]*)\]/);
+    assert.ok(reconcileMatch, 'PARTNER_COLUMN_RECONCILE.PartnerClients not found');
+    ['Blocked', 'BlockedAt', 'BlockedReason'].forEach((col) => {
+      assert.match(reconcileMatch[1], new RegExp("'" + col + "'"), `PARTNER_COLUMN_RECONCILE.PartnerClients is missing '${col}' — an owner console provisioned before this feature shipped would never get the column added, and revocation would silently fail to persist`);
+    });
+  });
+});

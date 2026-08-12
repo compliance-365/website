@@ -11578,11 +11578,66 @@ function showModal(opts) {
     if (reasonEl) reasonEl.textContent = reason || 'No activation file has been applied for this tenant yet.';
   }
 
+  /* Distinct from showNotActivatedScreen() above — see the HTML
+     comment on #accessRevoked for why this needs its own screen rather
+     than reusing that one (no "paste a new file" affordance; a valid
+     file doesn't help here). */
+  function showAccessRevokedScreen(reason) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('wizard').style.display = 'none';
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('notActivated').style.display = 'none';
+    var el = document.getElementById('accessRevoked');
+    el.style.display = 'flex';
+    var reasonEl = document.getElementById('accessRevokedReason');
+    if (reasonEl) reasonEl.textContent = reason || 'Contact your Compliance365 representative if you believe this is a mistake.';
+  }
+
+  /* Owner-initiated revocation check — see lambda/provision.js's
+     checkTenantBlocked() and the owner console's "Revoke access"
+     action. Runs for EVERY live tenant on load, self-serve or
+     manually-issued (manually-issued clients have no OTHER revocation
+     path at all — their signed file is otherwise valid until its own
+     expiry, full stop). Deliberately independent of the activation
+     file's own signature/expiry validity: a revoked tenant might still
+     be holding a perfectly-valid, unexpired file.
+     Fails OPEN on any network/parse error or when self-serve isn't
+     configured at all — a Lambda hiccup, or a deployment with no
+     provisioning Lambda wired up, must never brick a paying customer's
+     access. Only an explicit blocked:true response ever gates
+     anything. */
+  async function checkAccessRevoked(tenantId) {
+    if (!CONFIG.selfServeActivateUrl || !tenantId) return { blocked: false };
+    try {
+      var res = await fetch(CONFIG.selfServeActivateUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkRevocation: true, tenantId: tenantId })
+      });
+      if (!res.ok) return { blocked: false };
+      var data = await res.json().catch(function () { return {}; });
+      return { blocked: !!data.blocked, reason: data.reason || '' };
+    } catch (e) { return { blocked: false }; }
+  }
+
   async function startLive() {
     Store = window.SpStore;
     busy(true);
     var status = document.getElementById('busyMsg');
     var tenantInfo = await Graph.tenantInfo();
+
+    /* Deliberately generic to the client — revocation.reason is the
+       owner's own internal note (see the "Revoke access" modal's field
+       label: "not shown to the client") and S/Store.appendAudit() both
+       need Store.load() to have already run, which hasn't happened yet
+       at this point, so this can't write to the tenant's own audit log
+       either; the owner console's "Revoke access" action already
+       records who/when/why on ITS OWN audit log. */
+    var revocation = await checkAccessRevoked(tenantInfo && tenantInfo.id);
+    if (revocation.blocked) {
+      busy(false);
+      showAccessRevokedScreen();
+      return;
+    }
     var acceptIds = tenantIdsFor(tenantInfo);
 
     /* Pre-load check — authorises ensureLists() to (re)create a MISSING
@@ -11674,6 +11729,24 @@ function showModal(opts) {
 
     busy(true);
     var tenantInfo = await Graph.tenantInfo();
+
+    /* Same check startLive() does, and for the same reason it has to be
+       repeated here rather than relying on that one call: this function
+       is also reachable via the "Store && S already loaded" branch
+       below, which calls reconcileEntitlementsOnLoad() -> bootUi()
+       directly, entirely bypassing startLive() (and therefore its own
+       revocation check) — e.g. a tenant that landed on #notActivated
+       because its activation expired, but whose SharePoint lists were
+       already loaded earlier this session. A revoked tenant pasting any
+       validly-signed file here must not be able to boot straight past
+       the block. */
+    var revocation = await checkAccessRevoked(tenantInfo && tenantInfo.id);
+    if (revocation.blocked) {
+      busy(false);
+      showAccessRevokedScreen();
+      return;
+    }
+
     var acceptIds = tenantIdsFor(tenantInfo);
     var result = await verifyActivationRaw(rawText, acceptIds);
     if (!result.ok) {
@@ -12380,7 +12453,19 @@ function showModal(opts) {
       showWizardStep(8); runWizardProvisioning();
     },
 
-    finish: function () {
+    finish: async function () {
+      /* Same check startLive()/retryActivationFromGate() do — rare here
+         (a brand-new tenant would need to already be on the owner's
+         blocklist before finishing its very first onboarding), but
+         cheap, and every path that reaches bootUi() for a live tenant
+         should honour a revocation consistently. */
+      var tenantInfo = await Graph.tenantInfo().catch(function () { return null; });
+      var revocation = await checkAccessRevoked(tenantInfo && tenantInfo.id);
+      if (revocation.blocked) {
+        document.getElementById('wizard').style.display = 'none';
+        showAccessRevokedScreen();
+        return;
+      }
       document.getElementById('wizard').style.display = 'none';
       bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
     }

@@ -286,6 +286,22 @@
   <button class="btn ghost" data-action="App.startDemo">Explore the demo instead</button>
 </div>
 
+<!-- ACCESS REVOKED — an owner-initiated block (checkAccessRevoked() in
+     app.js), independent of the activation file's own validity. A
+     DIFFERENT screen from #notActivated above on purpose: that one
+     offers "paste a new file" because the problem is a missing/invalid
+     file; here the problem is the client's own tenant being flagged,
+     which no file — however valid — can fix, so that affordance would
+     just be misleading. -->
+<div class="gate" id="accessRevoked" style="display:none">
+  <div class="lockup" style="margin-bottom:26px">
+    <svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="var(--gold)"/></svg>
+    <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
+  </div>
+  <h1>Access to this tenant has been revoked</h1>
+  <p id="accessRevokedReason" style="max-width:56ch;margin:10px 0 26px;color:var(--paper-dim)">Contact your Compliance365 representative if you believe this is a mistake.</p>
+</div>
+
 <!-- APP -->
 <div class="app" id="appShell">
   <button class="nav-toggle" id="navToggleBtn" data-action="App.toggleNav" aria-expanded="false" aria-controls="appSide" aria-label="Menu">☰</button>

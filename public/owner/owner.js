@@ -659,7 +659,20 @@ function showModal(opts) {
          omit the activation file with no error — the recipient just got a
          guide and a promise it'd "arrive separately" that never did. */
       { name: 'LastActivationFileJson', text: { allowMultipleLines: true } },
-      { name: 'LastActivationFileName', text: {} }
+      { name: 'LastActivationFileName', text: {} },
+      /* Owner-initiated revocation — deliberately independent of the
+         signed activation file's own validity/expiry (a revoked client
+         might still be holding a perfectly-valid, unexpired file). Read
+         by lambda/provision.js's checkRevocation branch, which the
+         client's own Checkpoint app calls on every live-tenant load
+         (see app.js's checkAccessRevoked()) — so this is what actually
+         cuts off access, not just a roster label the way ManualStatus
+         on PartnerEntitlements is. Never touched by a sync; set/cleared
+         only from this console's "Revoke access"/"Restore access"
+         actions on the client drawer. */
+      { name: 'Blocked', boolean: {} },
+      { name: 'BlockedAt', text: {} },
+      { name: 'BlockedReason', text: { allowMultipleLines: true } }
     ],
     PartnerEntitlements: [
       { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
@@ -754,7 +767,7 @@ function showModal(opts) {
      as store.js's reconcileColumns() for the client-facing lists. Add a
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
-    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName'],
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName', 'Blocked', 'BlockedAt', 'BlockedReason'],
     PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus']
   };
   async function reconcilePartnerColumns(onStatus) {
@@ -798,7 +811,8 @@ function showModal(opts) {
       scopeNotes: f.ScopeNotes || '',
       rolesConfiguredAt: f.RolesConfiguredAt || '',
       lastActivationFileJson: f.LastActivationFileJson || '',
-      lastActivationFileName: f.LastActivationFileName || ''
+      lastActivationFileName: f.LastActivationFileName || '',
+      blocked: !!f.Blocked, blockedAt: f.BlockedAt || '', blockedReason: f.BlockedReason || ''
     };
   }
   function mapPartnerEntitlement(i) {
@@ -837,7 +851,8 @@ function showModal(opts) {
       ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || '',
       Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '',
       RolesConfiguredAt: c.rolesConfiguredAt || '',
-      LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || ''
+      LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || '',
+      Blocked: !!c.blocked, BlockedAt: c.blockedAt || '', BlockedReason: c.blockedReason || ''
     });
   }
   async function deletePartnerClient(c) {
@@ -2048,6 +2063,57 @@ function showModal(opts) {
       audit('Partner client status changed', 'PartnerClient', id, before, status);
     },
 
+    /* Cuts a client's Checkpoint access off immediately — independent of
+       whatever activation file is currently sitting, perfectly valid,
+       in their tenant. The client's own app checks this flag against
+       the provisioning Lambda on every live-tenant load
+       (checkAccessRevoked() in app.js) and shows a distinct "access
+       revoked" screen instead of the app when set, regardless of
+       signature/expiry. This is a real access control, not a roster
+       label like PartnerEntitlements' ManualStatus — so it asks for a
+       reason (shown back to you on the client drawer, not to the
+       client) and takes effect the next time their app loads, not
+       instantly mid-session for anyone already using it. */
+    partnerRevokeAccess: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var v = await showModal({
+        title: 'Revoke access — ' + (c.name || c.tenantId),
+        message: 'This cuts off Checkpoint access for this tenant the next time anyone there loads the app — regardless of any activation file already applied. It does not affect their Paddle subscription (cancel that separately if relevant) or delete any of their data.',
+        confirmText: 'Revoke access',
+        fields: [{ id: 'reason', label: 'Reason (for your own records — not shown to the client)', type: 'textarea' }],
+        validate: function (vals) { return vals.reason ? null : 'A reason is required.'; }
+      });
+      if (!v) return;
+      var before = { blocked: c.blocked, blockedAt: c.blockedAt, blockedReason: c.blockedReason };
+      c.blocked = true; c.blockedAt = new Date().toISOString(); c.blockedReason = v.reason;
+      try { await updatePartnerClient(c); }
+      catch (e) { warn(e); Object.assign(c, before); toast('Could not revoke access'); return; }
+      audit('Client access revoked', 'PartnerClient', id, '', v.reason);
+      closeDrawerUi();
+      toast('Access revoked for <b>' + esc(c.name || c.tenantId) + '</b>');
+      refreshInsightViews();
+    },
+
+    partnerRestoreAccess: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var ok = await showModal({
+        title: 'Restore access — ' + (c.name || c.tenantId),
+        message: 'This tenant will regain Checkpoint access the next time anyone there loads the app, using whatever activation file already applies to them.',
+        confirmText: 'Restore access'
+      });
+      if (!ok) return;
+      var before = { blocked: c.blocked, blockedAt: c.blockedAt, blockedReason: c.blockedReason };
+      c.blocked = false; c.blockedAt = ''; c.blockedReason = '';
+      try { await updatePartnerClient(c); }
+      catch (e) { warn(e); Object.assign(c, before); toast('Could not restore access'); return; }
+      audit('Client access restored', 'PartnerClient', id, before.blockedReason || '', '');
+      closeDrawerUi();
+      toast('Access restored for <b>' + esc(c.name || c.tenantId) + '</b>');
+      refreshInsightViews();
+    },
+
     partnerEditClient: async function (id) {
       var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
       if (!c) return;
@@ -2197,6 +2263,9 @@ function showModal(opts) {
         '<div class="d-kv"><span>Modules licensed (frameworks subscribed)</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
         (annualCost != null ? '<div class="d-kv"><span>Annual cost</span><b>' + esc(fmtMoneyFull(annualCost)) + '</b></div>' : '') +
         (ent && ent.type === 'client' ? '<div class="d-kv"><span>Payment</span><b>' + renderPaymentCell(ent) + '</b></div>' : '') +
+        (c.blocked
+          ? '<div class="d-kv"><span>Access</span><b style="color:var(--fail)">Revoked' + (c.blockedAt ? ' — ' + fmtDate(c.blockedAt.slice(0, 10)) : '') + '</b></div>' + (c.blockedReason ? '<div class="src" style="margin-top:2px">Reason: ' + esc(c.blockedReason) + '</div>' : '')
+          : '') +
         '</div>' +
         '<div class="d-sec"><h4>Licensing scope</h4>' +
         '<div class="d-kv"><span>Headcount</span><b>' + (c.headcount != null ? c.headcount : '—') + '</b></div>' +
@@ -2223,6 +2292,9 @@ function showModal(opts) {
         (c.rolesConfiguredAt
           ? '<button class="btn ghost sm" data-action="OwnerApp.partnerResetRolesConfigured" data-id="' + esc(c._sp) + '">Roles configured ✓ (undo)</button>'
           : '<button class="btn ghost sm" data-action="OwnerApp.partnerMarkRolesConfigured" data-id="' + esc(c._sp) + '">Mark roles configured</button>') +
+        (c.blocked
+          ? '<button class="btn sm" data-action="OwnerApp.partnerRestoreAccess" data-id="' + esc(c._sp) + '">Restore access</button>'
+          : '<button class="btn ghost sm" style="color:var(--fail);border-color:var(--fail)" data-action="OwnerApp.partnerRevokeAccess" data-id="' + esc(c._sp) + '">Revoke access</button>') +
         '</div>';
       openDrawerUi(c.name);
     },
