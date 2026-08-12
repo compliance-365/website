@@ -253,6 +253,18 @@ finding it later.
   that mailbox, so the simplest setup points it at your own inbox and it
   emails itself.
 
+- **Failed-signup notification, same env var, no extra setup**: a
+  customer can complete a Paddle payment and still hit an error before
+  activation (Paddle rejects the lookup, the subscription isn't
+  active/trialing yet, a signing bug) — without this they'd just see an
+  error on screen and you'd never know a payment attempt happened at
+  all. The same `OWNER_NOTIFY_EMAIL` also arms a `Signup FAILED:`
+  email for exactly that case, armed as soon as a real `transactionId`
+  is seen so it fires even if the failure happens before activation
+  would otherwise succeed. Same opt-in gate, same `Mail.Send`
+  permission, same best-effort trade-off — a failed notification never
+  blocks the customer's own error response.
+
 ## 5. Front end (done)
 
 - `src/data/pricing.js`'s `SELF_SERVE.paddleToken`/`priceIds` are set —
