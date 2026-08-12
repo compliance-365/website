@@ -144,3 +144,37 @@ describe('new-signup notification — structural guards (no live send exercised 
     assert.match(fnMatch[1], /res\.status === 204 \|\| res\.status === 202/, 'ownerGraph() no longer special-cases 202 alongside 204 — Graph\'s /sendMail endpoint returns 202 with an empty body, and res.json() throws on that, which would make every notification attempt fail even when Graph successfully sent the mail');
   });
 });
+
+/* Static-text coverage for the failed-signup notification — the mirror
+   case of the success notification above. A customer can complete a
+   Paddle payment and still hit an error before activation (Paddle
+   rejects the lookup, the subscription isn't active/trialing yet, a
+   signing bug); without a distinct alert for that, the customer sees an
+   error on screen and the owner never finds out a payment attempt
+   happened at all. Two things matter structurally: it has to be armed
+   as soon as a real transactionId is parsed (not only after everything
+   downstream has already succeeded, since the whole point is to survive
+   a downstream failure), and it must never itself throw out of the
+   handler's outer catch. */
+describe('failed-signup notification — structural guards (no live send exercised here)', () => {
+  const src = readFileSync(new URL('../lambda/provision.js', import.meta.url), 'utf8');
+
+  test('a fresh-checkout attempt is recorded (signupAttempt) as soon as transactionId is parsed, before anything downstream can fail', () => {
+    const handlerMatch = src.match(/export const handler = async \(event\) => \{([\s\S]*)$/);
+    assert.ok(handlerMatch, 'handler not found');
+    assert.match(handlerMatch[0], /if \(transactionId\) signupAttempt = \{ tenantId, transactionId \};/, 'signupAttempt is no longer set right after transactionId/tenantId are parsed — a failure in resolveManySubscriptions() or buildSignedActivation() would go unreported to the owner, exactly the case this notification exists for');
+  });
+
+  test('the outer catch notifies the owner of a failed signup only when a fresh checkout was in flight, and never blocks the error response', () => {
+    const handlerMatch = src.match(/\} catch \(err\) \{([\s\S]*)$/);
+    assert.ok(handlerMatch, 'outer catch block not found');
+    assert.match(handlerMatch[1], /if \(signupAttempt\) \{\s*try \{\s*await notifyOwnerOfFailedSignup\(/, 'the outer catch no longer guards the failed-signup notification on signupAttempt — this would fire for every malformed/unrelated request (bad JSON, revocation checks), not just failed purchase attempts');
+    assert.match(handlerMatch[1], /catch \(notifyErr\) \{\s*console\.error\('Could not send failed-signup notification:', notifyErr\);\s*\}/, 'the failed-signup notification call is no longer wrapped in its own try/catch — a second failure here (bad mailbox, Graph error) would throw past the handler\'s own error response entirely, so the customer wouldn\'t even get their 400 back');
+  });
+
+  test('notifyOwnerOfFailedSignup() no-ops silently when OWNER_NOTIFY_EMAIL is unset', () => {
+    const fnMatch = src.match(/async function notifyOwnerOfFailedSignup\(tenantId, transactionId, errorMessage\) \{([\s\S]*?)\n\}/);
+    assert.ok(fnMatch, 'notifyOwnerOfFailedSignup() not found');
+    assert.match(fnMatch[1], /if \(!mailbox\) return;/, 'notifyOwnerOfFailedSignup() no longer no-ops when OWNER_NOTIFY_EMAIL is unset — this feature must stay opt-in, same as the success notification');
+  });
+});

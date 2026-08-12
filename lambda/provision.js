@@ -429,6 +429,47 @@ async function notifyOwnerOfSignup(payload, purchase) {
   });
 }
 
+/* ============== Failed-signup notification (optional) ============== */
+/* The mirror image of notifyOwnerOfSignup() above. A FRESH checkout (a
+   real transactionId) can still fail after Paddle has taken the
+   customer's money — Paddle's API rejecting the lookup, the subscription
+   not (yet) active/trialing, a signing failure — and without this the
+   customer just sees an error on their screen while the owner never
+   learns a payment attempt happened at all. Same opt-in gate, same
+   app-only Mail.Send, same non-negotiable trade-off: this must never
+   throw past its own try/catch in the handler's outer catch block, or a
+   notification failure would just replace one silent failure with
+   another. */
+async function notifyOwnerOfFailedSignup(tenantId, transactionId, errorMessage) {
+  const mailbox = process.env.OWNER_NOTIFY_EMAIL;
+  if (!mailbox) return;
+  const token = await getOwnerGraphToken();
+  const subject = 'Signup FAILED: ' + (tenantId || transactionId);
+  const lines = [
+    'A self-serve checkout on the website reached the activation step and failed.',
+    '',
+    'Tenant id: ' + (tenantId || '(not provided)'),
+    'Paddle transaction id: ' + transactionId,
+    'Error: ' + (errorMessage || '(no message)'),
+    '',
+    'The customer saw an error instead of their app activating. Check ' +
+      'CloudWatch logs for the compliance365-provision Lambda around this ' +
+      'time for the full stack trace, and check Paddle to see whether ' +
+      'they were actually charged.'
+  ];
+  await ownerGraph(token, '/users/' + encodeURIComponent(mailbox) + '/sendMail', {
+    method: 'POST',
+    body: {
+      message: {
+        subject,
+        body: { contentType: 'text', content: lines.join('\n') },
+        toRecipients: [{ emailAddress: { address: mailbox } }]
+      },
+      saveToSentItems: false
+    }
+  });
+}
+
 /* ============== Handler ============== */
 export const handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || '';
@@ -447,6 +488,14 @@ export const handler = async (event) => {
   if (event.requestContext?.http?.method === 'OPTIONS' || event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders, body: '' };
   }
+
+  // Set as soon as a fresh checkout's transactionId is parsed below, so
+  // the outer catch can still tell the owner about a failed PAYMENT
+  // attempt even though the failure happened before activation — the
+  // customer's browser and the owner's inbox are the only two places
+  // this can ever surface, since CloudWatch is invisible to the owner
+  // day-to-day.
+  let signupAttempt = null;
 
   try {
     const body = JSON.parse(event.body || '{}');
@@ -478,6 +527,7 @@ export const handler = async (event) => {
     const subscriptionIdsBody = Array.isArray(body.subscriptionIds) ? body.subscriptionIds.map((s) => String(s || '').trim()).filter(Boolean) : [];
     const knownSubscriptionIds = Array.isArray(body.knownSubscriptionIds) ? body.knownSubscriptionIds.map((s) => String(s || '').trim()).filter(Boolean) : [];
     const tenantId = (body.tenantId || '').trim();
+    if (transactionId) signupAttempt = { tenantId, transactionId };
 
     if ((!transactionId && !subscriptionId && !subscriptionIdsBody.length) || !tenantId) {
       return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId plus one of transactionId, subscriptionId or subscriptionIds is required.' }) };
@@ -536,6 +586,13 @@ export const handler = async (event) => {
     };
   } catch (err) {
     console.error('Provision handler error:', err);
+    if (signupAttempt) {
+      try {
+        await notifyOwnerOfFailedSignup(signupAttempt.tenantId, signupAttempt.transactionId, err.message);
+      } catch (notifyErr) {
+        console.error('Could not send failed-signup notification:', notifyErr);
+      }
+    }
     return {
       statusCode: 400,
       headers: corsHeaders,
