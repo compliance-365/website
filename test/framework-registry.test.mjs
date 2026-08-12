@@ -799,3 +799,57 @@ describe('owner console: access revocation writes the fields the Lambda\'s check
     });
   });
 });
+
+/* A control's exclusion justification (ISO 27001 clause 6.1.3(d)
+   requires one for every SoA exclusion) had a fully-wired read path —
+   SharePoint's Justification column, updateControl() persisting it,
+   five separate places displaying it (the SoA row, the CSV export,
+   the Auditor Pack's exclusion summary, the Executive Summary's "what
+   the auditor will ask" section, the Trust Center) — but no write
+   path anywhere in the UI at all. A practitioner could mark a control
+   Not Applicable and would have no way, short of editing the raw
+   SharePoint list directly, to ever record why. Fixed by
+   App.setControlJustification(); this guards both that it exists and
+   that it's wired into the one row renderer every one of those five
+   read sites ultimately depends on for how the data ever gets there
+   in the first place. */
+describe('a control\'s exclusion justification can actually be written, not just displayed', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+
+  test('App.setControlJustification exists, persists via Store.updateControl(), and is in MUTATING_ACTIONS', () => {
+    const fnMatch = appJs.match(/setControlJustification: async function \(key\) \{([\s\S]*?)\n {4}\},/);
+    assert.ok(fnMatch, 'App.setControlJustification not found — was it renamed or removed?');
+    assert.match(fnMatch[1], /c\.just = vals\.just\.trim\(\)/, 'setControlJustification() no longer writes c.just from the modal\'s input');
+    assert.match(fnMatch[1], /Store\.updateControl\(c\)/, 'setControlJustification() no longer persists via Store.updateControl() — the edit would be lost on the next page load');
+    assert.match(appJs, /'setControlJustification'/, 'setControlJustification is missing from MUTATING_ACTIONS — a read-only Viewer session would incorrectly be able to call it, or (if the list is otherwise enforced) a Practitioner might be blocked from a legitimate write');
+    // Found live, not by inspection: App.go('dash') never re-renders the
+    // Dashboard on its own (it only toggles view visibility), so saving
+    // a justification without ALSO calling renderDash() left the new
+    // "Exclusions missing justification" KPI tile showing a stale count
+    // until some unrelated action happened to trigger a fresh render.
+    assert.match(fnMatch[1], /renderDash\(\)/, 'setControlJustification() no longer calls renderDash() — the "Exclusions missing justification" KPI tile would go stale after saving a justification, since App.go(\'dash\') itself never re-renders');
+  });
+
+  test('renderSoaRow() offers the edit action for every excluded (Not Applicable) control, not just ones that already have a justification', () => {
+    const fnMatch = appJs.match(/function renderSoaRow\(c\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'renderSoaRow() not found');
+    assert.match(fnMatch[1], /App\.setControlJustification/, 'renderSoaRow() no longer offers App.setControlJustification anywhere — regressing back to a display-only field');
+    // Specifically: the button must be reachable when c.just is falsy,
+    // not only shown once a value already exists (which would make the
+    // FIRST justification for a given control impossible to enter from
+    // the row itself again).
+    assert.match(fnMatch[1], /No justification recorded/, 'renderSoaRow() no longer flags a Not Applicable control with an empty justification inline — this is what surfaces the gap before report-generation time, not just in the Auditor Pack');
+  });
+
+  test('the Dashboard KPI row surfaces a live count of unjustified exclusions across every entitled framework', () => {
+    const fnMatch = appJs.match(/function renderDash\(\) \{([\s\S]*?)\n  \}/);
+    assert.ok(fnMatch, 'renderDash() not found');
+    // Matches the actual assignment, not just any mention of the name —
+    // a bare reference to an undefined variable in the KPI template
+    // literal would still satisfy a looser "does this string appear
+    // anywhere" check while throwing at render time.
+    assert.match(fnMatch[1], /var unjustifiedExclusions = entitledFrameworks\(\)/, 'renderDash() no longer computes an unjustified-exclusions count — this was added so the gap is an ambient dashboard signal, not something only discovered while generating an Auditor Pack');
+    assert.match(fnMatch[1], /!c\.app && !c\.just/, 'the unjustified-exclusions count no longer filters on "not applicable and no justification" — check the filter predicate wasn\'t changed to something that no longer matches an actual exclusion gap');
+    assert.match(fnMatch[1], /Exclusions missing justification/, 'the Dashboard KPI row no longer shows the "Exclusions missing justification" tile');
+  });
+});

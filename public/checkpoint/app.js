@@ -423,7 +423,7 @@ function showModal(opts) {
     'closeRisk', 'reopenRisk', 'deleteRisk',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
-    'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
+    'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent',
@@ -2418,6 +2418,17 @@ function showModal(opts) {
       return sum + frameworkAppRows(fw).filter(function (c) { return controlReviewStatus(c).due; }).length;
     }, 0);
 
+    /* Excluded controls with no recorded justification — ISO 27001
+       clause 6.1.3(d) requires one for every SoA exclusion, and this is
+       the one gap that otherwise stays invisible until someone
+       generates an Auditor Pack and reads its exclusion summary. Live-
+       computed like the tile above, not scan-snapshotted — a
+       justification can be added or a control re-scoped any day,
+       independent of when a scan last ran. */
+    var unjustifiedExclusions = entitledFrameworks().reduce(function (sum, fw) {
+      return sum + frameworkVisibleRows(fw).filter(function (c) { return !c.app && !c.just; }).length;
+    }, 0);
+
     /* posture score tile — trend vs last scan + pass/review/fail breakdown,
        not just a bare number with a date */
     var scoreTrendHtml = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
@@ -2455,7 +2466,8 @@ function showModal(opts) {
       '<div class="card kpi" data-action="App.go" data-id="scan"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
       '<div class="card kpi" data-action="App.goRisksSeverity" data-id="HighCritical"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
       '<div class="card kpi" data-action="App.goActionsFilter" data-id="Overdue"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>' +
-      '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
+      '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>' +
+      '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + unjustifiedExclusions + '" style="color:' + (unjustifiedExclusions ? 'var(--fail)' : 'var(--gold-light)') + '">' + unjustifiedExclusions + '</b></div><span>Exclusions missing justification</span><div class="sub">Auditors check this first — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
     runCountUps(document.getElementById('kpiRow'));
     updateFavicon();
 
@@ -3655,7 +3667,18 @@ function showModal(opts) {
        shown under the title so an IRAP assessor can trace straight to
        the relevant ISM guideline without a dedicated table column. */
     var ismLine = (c.fw === 'dispirap' && dispIsmChapterOfCode(c.id)) ? '<div class="src" style="margin-top:2px">ISM: ' + esc(dispIsmChapterOfCode(c.id)) + '</div>' : '';
-    return '<tr data-id="' + key + '"><td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)">' + esc(c.t) + ismLine + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
+    /* An excluded control with no recorded justification is exactly the
+       gap a certification auditor tests first (ISO 27001 clause
+       6.1.3(d) requires it explicitly) — flagged inline, not just in
+       the Auditor Pack's exclusion summary, so it's visible the moment
+       a control is marked Not Applicable rather than discovered for
+       the first time while generating a report for the auditor. */
+    var justificationLine = !c.app
+      ? (c.just
+          ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlJustification" data-id="' + key + '">Edit</button></div>'
+          : '<div style="margin-top:4px"><span class="verify-stale">' + icon('flag') + ' No justification recorded</span> <button class="btn sm" data-action="App.setControlJustification" data-id="' + key + '">Add justification</button></div>')
+      : '';
+    return '<tr data-id="' + key + '"><td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)">' + esc(c.t) + ismLine + justificationLine + '</td>' +
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
@@ -8160,6 +8183,40 @@ function showModal(opts) {
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       audit('Evidence link changed', 'Control', key, prevUrl || '(none)', url || '(none)');
       renderSoa();
+    },
+
+    /* The one place a practitioner can actually record why a control is
+       excluded — ISO 27001 clause 6.1.3(d) requires this for every
+       exclusion in the SoA, and the field already existed end to end
+       (SharePoint's Justification column, updateControl() writing it,
+       every report/export reading it) but had no write path anywhere
+       in the UI until this. Available regardless of current
+       applicability (not just while Not Applicable) so a justification
+       already on record can still be edited or cleared, and so
+       re-including a control doesn't strand an old, no-longer-relevant
+       reason with no way to remove it. */
+    setControlJustification: async function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      var vals = await showModal({
+        title: 'Exclusion justification — ' + c.id,
+        message: 'Why this control is marked Not Applicable — what an auditor reads in the Statement of Applicability. Leave blank to clear.',
+        fields: [{ id: 'just', label: 'Justification', type: 'textarea', value: c.just || '' }],
+        confirmText: 'Save'
+      });
+      if (!vals) return;
+      var prevJust = c.just;
+      c.just = vals.just.trim();
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      audit('Exclusion justification changed', 'Control', key, prevJust || '(none)', c.just || '(none)');
+      /* Also re-renders the Dashboard, not just the SoA — this is what
+         moves the "Exclusions missing justification" KPI tile, and
+         App.go('dash') itself never re-renders on its own (it only
+         toggles view visibility; see its own definition), so without
+         this the tile would show a stale count until some unrelated
+         action happened to trigger a fresh renderDash() first. Same
+         reasoning toggleApp() already applies for the same tile. */
+      renderSoa(); renderDash();
     },
 
     setSharedEvidenceControl: function (key) {
