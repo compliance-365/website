@@ -270,11 +270,22 @@
        existed. */
     var labelColor = opts.palette === 'app' ? 'var(--paper)' : '#0B0B0C';
     var legendColor = opts.palette === 'app' ? 'var(--paper-dim)' : '#4b473e';
+    /* showValues: an itemized count line under each bar ("2 done · 3 in
+       progress · 4 open — 9 total") — deliberately NOT numbers overlaid
+       on the segments themselves. legendDefs' colors are fixed print-
+       safe hex (PAL), not contrast-checked against arbitrary overlaid
+       text, and the hatched "Open"-style segment in particular has no
+       single readable text color against its own pattern. A separate,
+       always-legible line in labelColor sidesteps needing per-segment
+       contrast logic entirely, at the cost of one extra line per row —
+       worth it for a chart meant to be read at a glance in the live
+       app, not just eyeballed as a proportion in a PDF. */
+    var showValues = !!opts.showValues;
     rows = Array.isArray(rows) ? rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); }) : [];
     legendDefs = Array.isArray(legendDefs) ? legendDefs : [];
     if (!rows.length || !legendDefs.length) return placeholderSvg(600, 140, 'Not enough data to compare yet.');
 
-    var labelW = 170, barX = labelW + 10, barW = 600 - barX - 10, rowH = 24, rowGap = 12;
+    var labelW = 170, barX = labelW + 10, barW = 600 - barX - 10, rowH = 24, rowGap = showValues ? 26 : 12;
     var top = 34;
     var barsHtml = rows.map(function (g, i) {
       var values = legendDefs.map(function (_, j) { return Math.max(0, Number(g.values[j]) || 0); });
@@ -289,7 +300,13 @@
         x += w;
         return rect;
       }).join('');
-      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(g.label) + '</text>' + rects;
+      var valuesLine = '';
+      if (showValues) {
+        var parts = legendDefs.map(function (def, j) { return values[j] > 0 ? values[j] + ' ' + def.label.toLowerCase() : ''; }).filter(Boolean);
+        var summary = (parts.length ? parts.join(' · ') : 'none yet') + ' — ' + total + ' total';
+        valuesLine = '<text x="' + barX + '" y="' + (y + rowH + 12) + '" font-family="Manrope,sans-serif" font-size="10" fill="' + legendColor + '">' + escSvgText(summary) + '</text>';
+      }
+      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(g.label) + '</text>' + rects + valuesLine;
     }).join('');
 
     var height = top + rows.length * (rowH + rowGap) + 10;

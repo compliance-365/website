@@ -2442,9 +2442,18 @@ function showModal(opts) {
      Parameterized by target element ids so two independent copies can
      exist in the DOM at once without colliding. No-ops harmlessly if
      either id isn't present on the current view. */
+  /* Every cell is clickable (App.filterRiskByCell, wired via the generic
+     [data-action] delegation — nothing extra to bind here) regardless of
+     which copy is on screen: the Dashboard's and the Risk register's own
+     heatmap share this exact function, so a click on either one drills
+     into the SAME filtered Risk register table. window._riskCellFilter
+     (read here only to render the active cell's outline — renderRisks()
+     owns applying it to the actual row filter) keeps both copies in
+     visual sync with whichever cell is currently selected. */
   function renderResidualHeatmapInto(heatId, legendId) {
     var heatEl = document.getElementById(heatId);
     if (!heatEl) return;
+    var active = window._riskCellFilter;
     var counts = {};
     S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
     var themeInkRgb = currentThemeInkRgb();
@@ -2465,7 +2474,8 @@ function showModal(opts) {
           var cellRgb = window.CheckpointLib.compositeOverBg(sevRgb, alpha, themeInkRgb);
           textColor = 'rgb(' + window.CheckpointLib.pickReadableRgb(cellRgb, LIGHT_TEXT_RGB, DARK_TEXT_RGB).join(',') + ')';
         }
-        h += '<div class="cell" style="background:rgba(' + rgb + ',' + alpha + ');color:' + textColor + '" title="Likelihood ' + L2 + ' × Impact ' + I + ' — ' + sev + (n ? ' — ' + n + ' risk' + (n > 1 ? 's' : '') : '') + '">' + (n || '') + '</div>';
+        var isActive = active && active.L === L2 && active.I === I;
+        h += '<button type="button" class="cell' + (isActive ? ' on' : '') + '" data-action="App.filterRiskByCell" data-id="' + L2 + '-' + I + '" style="background:rgba(' + rgb + ',' + alpha + ');color:' + textColor + '" title="Likelihood ' + L2 + ' × Impact ' + I + ' — ' + sev + (n ? ' — ' + n + ' risk' + (n > 1 ? 's' : '') : '') + ' — click to filter the risk register" aria-pressed="' + (isActive ? 'true' : 'false') + '">' + (n || '') + '</button>';
       }
     }
     heatEl.innerHTML = h;
@@ -3372,9 +3382,18 @@ function showModal(opts) {
       var on = f === x || (f === 'HighCritical' && (x === 'Critical' || x === 'High'));
       return '<button class="f-pill' + (on ? ' on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') + '" data-action="App.filterRisk" data-id="' + x + '">' + x + '</button>';
     }).join('');
+    var cellFilter = window._riskCellFilter;
+    var cellChipEl = document.getElementById('riskCellFilterChip');
+    if (cellChipEl) {
+      cellChipEl.innerHTML = cellFilter
+        ? '<span class="feed-filter-chip">Likelihood ' + cellFilter.L + ' × Impact ' + cellFilter.I + ' only<button type="button" data-action="App.clearRiskCellFilter" aria-label="Clear heatmap cell filter">' + icon('close') + '</button></span>'
+        : '';
+    }
     var rows = S.risks.filter(function (r) {
+      var q = residual(r);
+      if (cellFilter) return q.L === cellFilter.L && q.I === cellFilter.I;
       if (f === 'All') return true;
-      var q = residual(r), rb = band(q.L * q.I);
+      var rb = band(q.L * q.I);
       if (f === 'HighCritical') return rb === 'Critical' || rb === 'High';
       return rb === f;
     }).map(function (r) {
@@ -3384,7 +3403,8 @@ function showModal(opts) {
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
     var riskRowsEl = document.getElementById('riskRows');
-    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No risks in this band. The register builds as scans are approved and workshops are captured.', cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
+    var emptyText = cellFilter ? 'No open risks scored exactly this way. Try a nearby cell, or clear the filter above.' : 'No risks in this band. The register builds as scans are approved and workshops are captured.';
+    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 8, text: emptyText, cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
     revealRows(riskRowsEl);
   }
 
@@ -3408,7 +3428,7 @@ function showModal(opts) {
 
   function renderActions() {
     var breakdownEl = document.getElementById('actBreakdown');
-    if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(actionPriorityBreakdown(), ACTION_STATUS_LEGEND, { palette: 'app' });
+    if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(actionPriorityBreakdown(), ACTION_STATUS_LEGEND, { palette: 'app', showValues: true });
     var f = window._actF || 'Open';
     var tf = window._actTypeF || 'All';
     document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {
@@ -7389,8 +7409,25 @@ function showModal(opts) {
     setRiskView: function (v) { window._riskView = v; renderRiskLandscapeCard(); },
     clearFeedWeekFilter: function () { window._feedWeekFilter = null; renderActivityFeed(); },
 
-    filterRisk: function (f) { window._riskF = f; renderRisks(); },
+    filterRisk: function (f) { window._riskF = f; window._riskCellFilter = null; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
+
+    /* Heatmap-cell drill-down — a finer lens than the severity pills
+       above it (many L×I cells share one severity band), so it's a
+       SEPARATE filter state rather than overloading _riskF, and picking
+       a severity pill afterward clears it (see filterRisk() above) so
+       the two never silently disagree about what's on screen. Works
+       identically whichever heatmap the click came from — the
+       Dashboard's copy and the Risk register's own share this handler,
+       both landing here on the Risk register. */
+    filterRiskByCell: function (id) {
+      var parts = id.split('-');
+      window._riskCellFilter = { L: Number(parts[0]), I: Number(parts[1]) };
+      window._riskF = 'All';
+      renderRisks();
+      App.go('risks');
+    },
+    clearRiskCellFilter: function () { window._riskCellFilter = null; renderRisks(); },
 
     /* Drill-down navigation from a stat tile (Dashboard's kpi row, Board
        view's hero tiles) to the register view that stat is counted from,
@@ -7407,7 +7444,7 @@ function showModal(opts) {
        one case where it DOES change (the filter), so render explicitly
        here too, the same way those handlers do, before switching the
        visible view. */
-    goRisksSeverity: function (sev) { window._riskF = sev; renderRisks(); App.go('risks'); },
+    goRisksSeverity: function (sev) { window._riskF = sev; window._riskCellFilter = null; renderRisks(); App.go('risks'); },
     goActionsFilter: function (f) { window._actF = f; window._actTypeF = 'All'; renderActions(); App.go('actions'); },
     goSoaFw: function (fw) { window._soaFw = fw; window._soaCat = 'All'; renderSoa(); App.go('soa'); },
     filterActType: function (t) { window._actTypeF = t; renderActions(); },
