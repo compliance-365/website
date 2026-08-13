@@ -885,4 +885,14 @@ describe('Controls column reconciliation — self-heal for an already-provisione
     assert.ok(aiSystemsEntry, 'COLUMN_RECONCILE.AISystems not found — a tenant with AI systems already on record before AiActAnswers existed would hit "Field \'AiActAnswers\' is not recognized" the next time they saved one');
     assert.match(aiSystemsEntry[1], /'AiActAnswers'/, 'COLUMN_RECONCILE.AISystems is missing \'AiActAnswers\'');
   });
+
+  test('reconcileColumns() never gates its column-widening on assertActivationAuthorizesProvisioning() — a tenant whose activation happens not to be verified yet at that exact moment must still self-heal, not throw and silently skip every remaining list too', () => {
+    const fnMatch = storeJs.match(/async function reconcileColumns\(onStatus\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'reconcileColumns() not found');
+    // Matches the real call signature (as it always appeared when this
+    // gate was live), not a bare mention of the function's name — the
+    // fix's own explanatory comment legitimately references the name in
+    // prose, which a looser pattern would misfire on.
+    assert.doesNotMatch(fnMatch[1], /assertActivationAuthorizesProvisioning\(listName\(k\)\)/, 'reconcileColumns() calls assertActivationAuthorizesProvisioning(listName(k)) again — this throws (uncaught, aborting the whole for-loop, every other list\'s missing columns included) for any tenant whose activation isn\'t verified at that exact moment, which reproduces the "Field \'...\' is not recognized" bug indefinitely regardless of what COLUMN_RECONCILE lists, since the widening step that would fix it never runs. reconcileColumns() only ever touches lists already confirmed to exist (lists[k] populated by ensureLists() moments earlier in the same session) — this gate belongs to actual list CREATION only, per this function\'s own header comment');
+  });
 });

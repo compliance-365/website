@@ -1771,7 +1771,22 @@ window.SpStore = (function () {
       cols.forEach(function (c) { have[c.name] = true; });
       var missing = want.filter(function (n) { return !have[n]; });
       if (!missing.length) continue;
-      assertActivationAuthorizesProvisioning(listName(k));
+      /* Deliberately NOT gated on assertActivationAuthorizesProvisioning()
+         — that check exists for actual list CREATION (a not-yet-confirmed-
+         real tenant getting a brand-new list), and widening a column
+         doesn't carry that risk: `lists[k]` is only ever populated a few
+         lines above by ensureLists() finding this EXACT list already
+         exists in the tenant, in THIS SAME session. Gating here directly
+         contradicted this function's own header comment ("Deliberately
+         does NOT gate reading/self-healing lists that already exist") —
+         a tenant whose activation happened not to be re-verified yet at
+         the moment reconcileColumns() ran would throw here, abort the
+         whole loop (every other list's missing columns too, not just
+         this one), and never self-heal AT ALL, on any future load either,
+         if that tenant's activation-verification path was ever
+         consistently slow/failing — reproducing the exact "Field
+         '<name>' is not recognized" error indefinitely despite the
+         column now being listed in COLUMN_RECONCILE. */
       for (var i = 0; i < missing.length; i++) {
         var def = DEFS[k].find(function (d) { return d.name === missing[i]; });
         if (!def) continue;
