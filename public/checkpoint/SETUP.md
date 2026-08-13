@@ -1116,15 +1116,31 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   provisioned with by default.
 - **ISO 42001 (AI Management System) automated Annex A subset**: a
   posture scan proposes status changes for the Annex A controls with a
-  genuine live Graph signal (`CHECK_ISO42001` in store.js — access to
-  and monitoring of the systems, tooling and data an AI system depends
-  on (A.4.2-A.4.6), AI system operation monitoring and event logging
-  (A.6.2.6, A.6.2.8), incident communication (A.8.4) and third-party
-  oversight (A.10.3, via `guests`)), same confirm-or-dismiss contract as
-  Essential Eight above. 20 checks across 10 distinct codes. The
+  genuine live Graph signal (`checkIso42001` in `checkpoint-content/
+  iso42001.json`'s `extra` — access to and monitoring of the systems,
+  tooling and data an AI system depends on (AI.4.2-AI.4.6), AI system
+  operation monitoring and event logging (AI.6.2.6, AI.6.2.8), incident
+  communication (AI.8.4) and third-party oversight (AI.10.3, via
+  `guests`)), same confirm-or-dismiss contract as Essential Eight above.
+  21 checks across 10 distinct codes (added `macro` — Office macro
+  settings hardened, secureScore — alongside `wdac` on AI.4.4/AI.4.2;
+  same endpoint-hardening reasoning already applied to `wdac`). The
   governance-heavy Annex A controls — AI policy content, impact
   assessment write-ups, design and use-case documentation — have no
   live signal and stay self-reported by design.
+
+  **Where the automation ceiling actually is**: audited every one of
+  `CHECK_DEFS`' 25 checks against `checkIso42001` while looking for more
+  wins. Of the 21 checks capable of ever firing (`scored:true`), `macro`
+  above was the only one not yet mapped to an ISO 42001 control — every
+  other live signal was already wired in. The remaining ~27 uncovered
+  Annex A controls (AI policy, impact assessment, design/development
+  documentation, most of the data-lifecycle and use-case controls) don't
+  have an existing Graph signal to remap at all; genuinely automating
+  more of them means building entirely new checks (new Graph calls, new
+  scoring thresholds), not just wiring an existing one to a new code.
+  That's a materially bigger project than this one-line addition and
+  hasn't been scoped yet.
 - **ISO 27701 (PIMS) automated subset**: same confirm-or-dismiss
   contract again (`CHECK_ISO27701` in store.js), but a smaller one —
   ISO 27701's own P.7.x/P.8.x controls are the privacy-specific layer
@@ -1402,6 +1418,51 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   granted is also proposed as a risk through the exact same
   proposed-finding pipeline every other scan finding uses — no separate
   approval UI.
+
+  **EU AI Act risk classification (built)**: the risk tier field used to
+  be a bare dropdown — the practitioner guessed. `classifyAiActRisk()`
+  in `lib.js` (shared with the test suite and, via a plain `<script
+  src>`, with the free public classifier on the marketing site — see
+  below) now computes it from a 19-question checklist tied one-for-one
+  to a published clause: Article 5(1)(a-h)'s eight prohibited practices,
+  Annex III(1-8)'s eight high-risk categories, Article 50(1-3)'s three
+  transparency triggers. Tier is the single highest severity matched
+  (Prohibited beats High beats Limited beats Minimal); a Prohibited
+  match short-circuits everything else, since there's nothing to add
+  once a system can't lawfully be deployed at all, but High and Limited
+  obligations *stack* — a high-risk system that also talks directly to
+  users still owes Article 50 transparency on top of its Annex III
+  checklist, not instead of it. Deliberately a screening aid, not a
+  legal engine: every question flags a published criterion and leaves
+  the Act's own fact-specific carve-outs (narrow law-enforcement or
+  medical exceptions to the Article 5 bans, for instance) to counsel
+  rather than guessing at them — the UI says so, twice.
+
+  The questionnaire renders live in the Add/Edit AI system panel
+  (`renderAiActQuestions()`/`recomputeAiActSuggestion()` in app.js),
+  auto-fills the risk tier select as boxes are ticked, but never locks
+  it — a practitioner who disagrees can still override by hand, and
+  re-opening an overridden record shows the saved override, not a
+  silent snap-back to the algorithm's own suggestion (`editAiSystem()`
+  restores `a.riskTier` *after* `renderAiActQuestions()` runs, for
+  exactly this reason). Answers persist as one JSON-blob SharePoint
+  column (`AISystems.AiActAnswers`, self-heals onto existing tenants the
+  same way every other column here does — no migration needed for
+  systems added before this shipped, they just show as unclassified
+  until edited). The AI system drawer shows the live-recomputed reasons
+  and obligations under "EU AI Act obligations" — framed as "why the
+  tool suggested this," since a hand-overridden tier can legitimately
+  disagree with a fresh recompute of the same stored answers, and that's
+  expected, not a bug.
+
+  **The same engine is public** — `src/components/EuAiActClassifier.astro`
+  loads `/checkpoint/lib.js` as a plain script (same tag `index.html`
+  itself uses) and renders the identical 19-question checklist as a
+  free, no-sign-up tool, embedded on the ISO 42001 service page and the
+  ISO 42001/NIST AI RMF/EU AI Act crosswalk resource. One source of
+  truth by construction — the public tool and the in-app one cannot
+  drift apart, because they're loading the same file, not two
+  hand-maintained copies of the same 19 questions.
 - **In-app modals, not native prompt()/confirm()**: every confirmation
   and text-entry dialog in the app (evidence URLs, portfolio add-client,
   email recipients, reset/verify confirmations) is a custom modal

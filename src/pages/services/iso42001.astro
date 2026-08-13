@@ -5,6 +5,7 @@ import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
+import EuAiActClassifier from '../../components/EuAiActClassifier.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -107,6 +108,14 @@ const faqLd = {
       acceptedAnswer: {
         '@type': 'Answer',
         text: 'Your obligation covers how you select, deploy, monitor, and govern AI systems — including third-party tools. Your vendor is responsible for the model; you are responsible for the use case, the oversight, and the impact on people affected by the output. The model inventory and risk assessment makes this distinction explicit for every AI system in scope.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How do I know if my AI system is high-risk under the EU AI Act?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The EU AI Act sorts every AI system into one of four tiers: Prohibited (Article 5 — eight banned practices such as social scoring or real-time public biometric identification by law enforcement), High-risk (Annex III — eight named categories including employment, essential services access, and law enforcement), Limited risk (Article 50 transparency triggers such as chatbots and deepfake generation), and Minimal risk (everything else). We built a free classifier that walks through the actual clauses and gives an instant, plain-English answer with the specific obligations that apply — try it further up this page.'
       }
     }
   ]
@@ -499,6 +508,27 @@ const faqLd = {
           </div>
           <span style="color:#A9812E;font-weight:600;font-size:0.875rem;">Read case study →</span>
         </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- EU AI ACT CLASSIFIER — free tool, differentiation -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <div class="grid-2" style="align-items:start;gap:2.5rem;">
+        <div>
+          <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#A9812E;margin-bottom:1rem;">Why Compliance365</p>
+          <h2>Nobody else gives you a live EU AI Act classifier tied to your actual AI inventory.</h2>
+          <p class="muted">
+            Every AI governance platform will sell you a policy template. Checkpoint — the console included with this engagement — auto-classifies every AI system in your register against Article 5, Annex III and Article 50 the moment you document it, and shows you exactly which ISO 42001 controls it evidences and which EU AI Act obligations apply. Not a static PDF matrix you fill in once before audit and never open again — live, and it updates the moment the system changes.
+          </p>
+          <p class="muted">
+            Try the classifier on the right with a real AI system you use today. It's the same engine, not a marketing simplification of it.
+          </p>
+        </div>
+        <div>
+          <EuAiActClassifier ctaUrl={ctaUrl} />
+        </div>
       </div>
     </div>
   </section>
