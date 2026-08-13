@@ -3603,6 +3603,45 @@ function showModal(opts) {
     return codes;
   }
 
+  /* Reads the EU AI Act questionnaire checkboxes straight from the DOM
+     (rather than tracking state separately) so there's exactly one
+     source of truth for "what's currently ticked" — the checkboxes
+     themselves — same reasoning as aiControlsFor() computing live off
+     the record rather than a cached value. */
+  function currentAiActAnswers() {
+    var answers = {};
+    document.querySelectorAll('#aiActQuestions input[type=checkbox]').forEach(function (cb) {
+      answers[cb.dataset.qid] = cb.checked;
+    });
+    return answers;
+  }
+
+  var AI_ACT_GROUPS = [
+    { tier: 'Prohibited', label: 'Article 5 — prohibited practices (any one bans deployment outright)' },
+    { tier: 'High', label: 'Annex III — high-risk categories' },
+    { tier: 'Limited', label: 'Article 50 — transparency triggers' }
+  ];
+
+  /* Builds the questionnaire checkboxes fresh every time the Add/Edit AI
+     system panel opens, grouped by tier, pre-ticked from whatever was
+     last saved — then immediately triggers the first suggestion so the
+     panel never opens showing stale or blank guidance. */
+  function renderAiActQuestions(existingAnswers) {
+    var wrap = document.getElementById('aiActQuestions');
+    if (!wrap) return;
+    wrap.innerHTML = AI_ACT_GROUPS.map(function (g) {
+      var qs = window.CheckpointLib.AI_ACT_QUESTIONS.filter(function (q) { return q.tier === g.tier; });
+      return '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:var(--paper-dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">' + esc(g.label) + '</div>' +
+        qs.map(function (q) {
+          var checked = existingAnswers && existingAnswers[q.id] ? ' checked' : '';
+          return '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--paper-dim);margin-bottom:4px;cursor:pointer">' +
+            '<input type="checkbox" data-change-action="App.recomputeAiActSuggestion" data-qid="' + q.id + '" style="margin-top:2px"' + checked + '>' +
+            '<span><b style="color:var(--paper)">' + esc(q.clause) + '</b> — ' + esc(q.label) + '</span></label>';
+        }).join('') + '</div>';
+    }).join('');
+    App.recomputeAiActSuggestion();
+  }
+
   function renderAiSystems() {
     var wrap = document.getElementById('aiRows');
     if (!wrap) return;
@@ -7956,10 +7995,27 @@ function showModal(opts) {
         window._editingAiId = null;
         document.getElementById('aiPanelTitle').textContent = 'New AI system';
         ['aiName', 'aiPurpose', 'aiOwner', 'aiModelType', 'aiVendor', 'aiDataSources', 'aiHumanOversight'].forEach(function (id) { document.getElementById(id).value = ''; });
-        document.getElementById('aiRiskTier').value = 'Limited';
         document.getElementById('aiImpactStatus').value = 'Not started';
         document.getElementById('aiLastReviewed').value = '';
+        renderAiActQuestions({});
       }
+    },
+
+    /* Recomputes the suggested EU AI Act tier from whatever's currently
+       ticked and writes it into the (still freely editable) risk tier
+       select — an override, not a lock; a practitioner who disagrees
+       with the screening result can still pick a different tier by
+       hand, same as before this existed. */
+    recomputeAiActSuggestion: function () {
+      var result = window.CheckpointLib.classifyAiActRisk(currentAiActAnswers());
+      var sel = document.getElementById('aiRiskTier');
+      if (sel) sel.value = result.tier;
+      var out = document.getElementById('aiActSuggestion');
+      if (!out) return;
+      out.innerHTML =
+        '<div class="d-kv"><span>Suggested tier</span><b><span class="chip sev-' + result.tier + '">' + esc(result.tier) + '</span></b></div>' +
+        (result.reasons.length ? '<div style="font-size:11.5px;color:var(--paper-dim);margin-top:4px">' + result.reasons.map(esc).join('<br>') + '</div>' : '') +
+        '<div style="font-size:11px;color:var(--paper-dim);margin-top:6px;font-style:italic">Screening aid based on our reading of the EU AI Act — not legal advice. Confirm borderline or high-stakes classifications with counsel.</div>';
     },
 
     editAiSystem: function (id) {
@@ -7970,13 +8026,19 @@ function showModal(opts) {
       document.getElementById('aiName').value = a.name;
       document.getElementById('aiPurpose').value = a.purpose || '';
       document.getElementById('aiOwner').value = a.owner;
-      document.getElementById('aiRiskTier').value = a.riskTier;
       document.getElementById('aiModelType').value = a.modelType || '';
       document.getElementById('aiVendor').value = a.vendor || '';
       document.getElementById('aiDataSources').value = a.dataSources || '';
       document.getElementById('aiImpactStatus').value = a.impactAssessmentStatus;
       document.getElementById('aiLastReviewed').value = a.lastReviewed || '';
       document.getElementById('aiHumanOversight').value = a.humanOversight || '';
+      // renderAiActQuestions() recomputes a fresh suggestion from the
+      // ticked boxes and writes it into aiRiskTier — set the select
+      // back to what was actually SAVED afterward, so re-opening a
+      // record a practitioner deliberately overrode doesn't silently
+      // snap back to the algorithm's own suggestion.
+      renderAiActQuestions(a.aiActAnswers || {});
+      document.getElementById('aiRiskTier').value = a.riskTier;
       App.closeDrawer();
       document.getElementById('addAiSystemPanel').style.display = 'block';
       document.getElementById('addAiSystemPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -7986,6 +8048,7 @@ function showModal(opts) {
       var name = document.getElementById('aiName').value.trim();
       if (!name) { toast('Enter a system name first'); return; }
       var editingId = window._editingAiId;
+      var aiActAnswers = currentAiActAnswers();
       busy(true);
       try {
         if (editingId) {
@@ -7995,6 +8058,7 @@ function showModal(opts) {
           a.name = name; a.purpose = document.getElementById('aiPurpose').value.trim();
           a.owner = document.getElementById('aiOwner').value.trim() || 'Unassigned';
           a.riskTier = document.getElementById('aiRiskTier').value;
+          a.aiActAnswers = aiActAnswers;
           a.modelType = document.getElementById('aiModelType').value.trim();
           a.vendor = document.getElementById('aiVendor').value.trim();
           a.dataSources = document.getElementById('aiDataSources').value.trim();
@@ -8012,6 +8076,7 @@ function showModal(opts) {
             purpose: document.getElementById('aiPurpose').value.trim(),
             owner: document.getElementById('aiOwner').value.trim() || 'Unassigned',
             riskTier: document.getElementById('aiRiskTier').value,
+            aiActAnswers: aiActAnswers,
             modelType: document.getElementById('aiModelType').value.trim(),
             vendor: document.getElementById('aiVendor').value.trim(),
             dataSources: document.getElementById('aiDataSources').value.trim(),
@@ -8038,6 +8103,18 @@ function showModal(opts) {
         var ctl = S.controls.find(function (x) { return x.fw === 'iso42001' && x.id === code; });
         return '<div class="d-kv"><span>' + esc(code) + (ctl ? ' — ' + esc(ctl.t) : '') + '</span><b>' + (ctl ? esc(ctl.st) : '') + '</b></div>';
       }).join('');
+      // Recomputed live from the stored answers, same as aiControlsFor()
+      // above — if a.riskTier was hand-overridden after answering the
+      // questionnaire, this can legitimately disagree with it; framed as
+      // "why the tool suggested this" rather than restated as fact, so
+      // that disagreement reads as expected, not as a bug.
+      var classification = window.CheckpointLib.classifyAiActRisk(a.aiActAnswers || {});
+      var aiActSection = (a.aiActAnswers && Object.keys(a.aiActAnswers).some(function (k) { return a.aiActAnswers[k]; }))
+        ? '<div class="d-sec"><h4>EU AI Act obligations</h4>' +
+          '<div style="font-size:11.5px;color:var(--paper-dim);margin-bottom:6px">Why the tool suggested ' + esc(classification.tier) + ': ' + classification.reasons.map(esc).join('; ') + '</div>' +
+          classification.obligations.map(function (o) { return '<div class="d-kv"><span>' + esc(o) + '</span></div>'; }).join('') +
+          '<div style="font-size:11px;color:var(--paper-dim);margin-top:6px;font-style:italic">Screening aid, not legal advice — confirm borderline or high-stakes classifications with counsel.</div></div>'
+        : '';
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(a.riskTier) + ' risk (EU AI Act)</div><h2>' + esc(a.name) + '</h2>' +
@@ -8050,6 +8127,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Model type</span><b>' + esc(a.modelType || '—') + '</b></div>' +
         '<div class="d-kv"><span>Data sources</span><b>' + esc(a.dataSources || '—') + '</b></div>' +
         '<div class="d-kv"><span>Human oversight</span><b>' + esc(a.humanOversight || 'Not documented') + '</b></div></div>' +
+        aiActSection +
         '<div class="d-sec"><h4>ISO 42001 controls evidenced</h4>' + (linkedControls || '<div class="d-kv"><span>None yet — document more fields to evidence more controls</span></div>') + '</div>' +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
         '<button class="btn sm" data-action="App.advanceAiImpactStatus" data-id="' + a.id + '">Advance impact assessment</button>' +

@@ -1,0 +1,176 @@
+---
+/**
+ * EuAiActClassifier.astro
+ * =======================
+ * A free, public, no-sign-up EU AI Act risk classifier — the same
+ * question set and classification engine (public/checkpoint/lib.js's
+ * classifyAiActRisk()/AI_ACT_QUESTIONS) that drives the live AI Systems
+ * register inside Checkpoint itself, loaded here as a plain <script src>
+ * exactly the way the app does (see public/checkpoint/index.html's own
+ * <script src="lib.js">). Deliberately NOT a re-implementation: the
+ * questions, clauses and obligation text only exist in one place in this
+ * codebase, so the public tool and the in-app one can never drift apart.
+ *
+ * Usage in any .astro file:
+ *   import EuAiActClassifier from '../components/EuAiActClassifier.astro';
+ *   <EuAiActClassifier />
+ *
+ * Optional props:
+ *   <EuAiActClassifier ctaUrl="https://..." />
+ */
+
+interface Props {
+  ctaUrl?: string;
+}
+
+const {
+  ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled',
+} = Astro.props;
+---
+
+<div class="c365-aiact" aria-label="EU AI Act risk classifier" data-cta={ctaUrl}>
+  <div class="c365-aiact__card">
+    <div class="c365-aiact__eyebrow">
+      <span class="c365-aiact__badge">365</span>
+      <span class="c365-aiact__eyebrow-text">Free tool · No sign-up</span>
+    </div>
+    <h3 class="c365-aiact__title">Is your AI system high-risk under the EU AI Act?</h3>
+    <p class="c365-aiact__subtitle">
+      Tick everything that applies. Every question maps to one specific clause of Article 5, Annex III or Article 50 — nothing here is a vague judgement call. Instant tier, plain-English obligations.
+    </p>
+
+    <div id="c365-aiact-questions" aria-live="polite"></div>
+
+    <div id="c365-aiact-result" class="c365-aiact__result">
+      <div class="c365-aiact__result-title">Suggested tier: <span id="c365-aiact-tier">Minimal</span></div>
+      <div id="c365-aiact-reasons" class="c365-aiact__reasons"></div>
+      <div id="c365-aiact-obligations" class="c365-aiact__obligations"></div>
+      <p class="c365-aiact__disclaimer">Screening aid based on our reading of the EU AI Act — not legal advice. Confirm borderline or high-stakes classifications with counsel.</p>
+    </div>
+
+    <div class="c365-aiact__cta-row">
+      <span class="c365-aiact__hint">This exact engine tracks every AI system in your inventory automatically, tied straight to ISO 42001 evidence, inside Checkpoint.</span>
+      <a class="c365-btn c365-btn--primary" href={ctaUrl} target="_blank" rel="noopener">See Checkpoint in action</a>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .c365-aiact { font-family: inherit; color: #0B0B0C; max-width: 100%; box-sizing: border-box; }
+  .c365-aiact *, .c365-aiact *::before, .c365-aiact *::after { box-sizing: border-box; }
+  .c365-aiact__card {
+    background: #ffffff; border: 1px solid #DDD8CF; border-radius: 16px;
+    padding: 28px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  }
+  @media (max-width: 540px) { .c365-aiact__card { padding: 20px; } }
+
+  .c365-aiact__eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .c365-aiact__badge {
+    width: 28px; height: 28px; border-radius: 6px; background: #8B6820; color: #ffffff;
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;
+  }
+  .c365-aiact__eyebrow-text { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #6B6860; text-transform: uppercase; }
+  .c365-aiact__title { font-size: 22px; font-weight: 700; margin: 8px 0 6px; color: #8B6820; line-height: 1.25; }
+  .c365-aiact__subtitle { font-size: 14px; color: #3A3632; margin: 0 0 20px; line-height: 1.6; }
+
+  .c365-aiact__group { margin-bottom: 16px; }
+  .c365-aiact__group-label {
+    font-size: 11px; font-weight: 700; color: #6B6860; text-transform: uppercase;
+    letter-spacing: 0.04em; margin-bottom: 8px;
+  }
+  .c365-aiact__q {
+    display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; font-size: 13px; line-height: 1.45;
+  }
+  .c365-aiact__q:hover { background: #FAF7F1; }
+  .c365-aiact__q input { margin-top: 3px; flex-shrink: 0; accent-color: #A9812E; }
+  .c365-aiact__q b { color: #0B0B0C; }
+  .c365-aiact__q span { color: #3A3632; }
+
+  .c365-aiact__result {
+    margin-top: 20px; padding: 18px; background: #FAF7F1; border: 1px solid #DDD8CF; border-radius: 10px;
+  }
+  .c365-aiact__result-title { font-size: 15px; font-weight: 700; color: #0B0B0C; margin-bottom: 8px; }
+  .c365-aiact__result-title span { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #ffffff; background: #6B6860; }
+  .c365-aiact__result-title span.tier-prohibited { background: #B3261E; }
+  .c365-aiact__result-title span.tier-high { background: #A9812E; }
+  .c365-aiact__result-title span.tier-limited { background: #4B7A8A; }
+  .c365-aiact__result-title span.tier-minimal { background: #4C7A4C; }
+  .c365-aiact__reasons { font-size: 12px; color: #6B6860; line-height: 1.6; margin-bottom: 10px; }
+  .c365-aiact__obligations { font-size: 13px; color: #3A3632; line-height: 1.7; }
+  .c365-aiact__obligations div { padding-left: 16px; position: relative; margin-bottom: 4px; }
+  .c365-aiact__obligations div::before { content: '—'; position: absolute; left: 0; color: #A9812E; }
+  .c365-aiact__disclaimer { font-size: 11.5px; color: #6B6860; font-style: italic; margin: 12px 0 0; }
+
+  .c365-aiact__cta-row {
+    display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 20px;
+    padding-top: 18px; border-top: 1px solid #DDD8CF;
+  }
+  .c365-aiact__hint { font-size: 12.5px; color: #6B6860; flex: 1; min-width: 220px; }
+  .c365-btn {
+    border: none; padding: 10px 20px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+    font-family: inherit; cursor: pointer; text-decoration: none; display: inline-block; white-space: nowrap;
+    transition: all 0.12s ease;
+  }
+  .c365-btn--primary { background: #A9812E; color: #ffffff; }
+  .c365-btn--primary:hover { background: #8B6820; }
+</style>
+
+<script is:inline src="/checkpoint/lib.js"></script>
+<script is:inline>
+  (function () {
+    var GROUPS = [
+      { tier: 'Prohibited', label: 'Article 5 — prohibited practices (any one bans deployment outright)' },
+      { tier: 'High', label: 'Annex III — high-risk categories' },
+      { tier: 'Limited', label: 'Article 50 — transparency triggers' }
+    ];
+
+    function esc(s) {
+      var d = document.createElement('div');
+      d.textContent = String(s == null ? '' : s);
+      return d.innerHTML;
+    }
+
+    function render() {
+      if (!window.CheckpointLib || !window.CheckpointLib.AI_ACT_QUESTIONS) return;
+      var wrap = document.getElementById('c365-aiact-questions');
+      if (!wrap) return;
+      wrap.innerHTML = GROUPS.map(function (g) {
+        var qs = window.CheckpointLib.AI_ACT_QUESTIONS.filter(function (q) { return q.tier === g.tier; });
+        return '<div class="c365-aiact__group"><div class="c365-aiact__group-label">' + esc(g.label) + '</div>' +
+          qs.map(function (q) {
+            return '<label class="c365-aiact__q"><input type="checkbox" data-qid="' + q.id + '">' +
+              '<span><b>' + esc(q.clause) + '</b> — ' + esc(q.label) + '</span></label>';
+          }).join('') + '</div>';
+      }).join('');
+      wrap.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+        cb.addEventListener('change', recompute);
+      });
+      recompute();
+    }
+
+    function recompute() {
+      if (!window.CheckpointLib) return;
+      var wrap = document.getElementById('c365-aiact-questions');
+      var answers = {};
+      wrap.querySelectorAll('input[type=checkbox]').forEach(function (cb) { answers[cb.dataset.qid] = cb.checked; });
+      var result = window.CheckpointLib.classifyAiActRisk(answers);
+
+      var tierEl = document.getElementById('c365-aiact-tier');
+      tierEl.textContent = result.tier;
+      tierEl.className = 'tier-' + result.tier.toLowerCase();
+
+      document.getElementById('c365-aiact-reasons').innerHTML = result.reasons.length
+        ? result.reasons.map(esc).join('<br>') : '';
+
+      document.getElementById('c365-aiact-obligations').innerHTML = result.obligations
+        .map(function (o) { return '<div>' + esc(o) + '</div>'; }).join('');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', render);
+    } else {
+      render();
+    }
+  })();
+</script>

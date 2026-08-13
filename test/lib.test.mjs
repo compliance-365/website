@@ -17,7 +17,8 @@ const { band, residual, checkResult, score, readinessPct, controlsForCheck, oper
   relLuminance, contrastRatio, compositeOverBg, pickReadableRgb,
   mulberry32, sampleTriangular, samplePoisson, riskFinancialInputs,
   simulateRiskLosses, simulatePortfolioLosses, summarizeLossDistribution,
-  lossExceedanceCurve, RISK_FINANCIAL_BANDS } = CheckpointLib;
+  lossExceedanceCurve, RISK_FINANCIAL_BANDS,
+  classifyAiActRisk, AI_ACT_QUESTIONS } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -1796,5 +1797,68 @@ describe('incidentRegisterSummary()', () => {
     const s = incidentRegisterSummary([], today);
     assert.equal(s.total, 0);
     assert.deepEqual(s.overdueList, []);
+  });
+});
+
+describe('classifyAiActRisk()', () => {
+  test('no answers at all, or every answer false, is Minimal with no reasons', () => {
+    for (const input of [undefined, null, {}, { subliminalManipulation: false }]) {
+      const r = classifyAiActRisk(input);
+      assert.equal(r.tier, 'Minimal');
+      assert.deepEqual(r.reasons, []);
+      assert.equal(r.obligations.length, 1);
+    }
+  });
+
+  test('a single Article 5 flag is Prohibited, and short-circuits — no High/Limited obligations leak in even if those flags are also set', () => {
+    const r = classifyAiActRisk({ socialScoring: true, biometricIdentification: true, directInteraction: true });
+    assert.equal(r.tier, 'Prohibited');
+    assert.equal(r.reasons.length, 1);
+    assert.match(r.reasons[0], /Article 5\(1\)\(c\)/);
+    assert.equal(r.obligations.length, 1);
+    assert.match(r.obligations[0], /cannot lawfully be placed on the market/);
+  });
+
+  test('a single Annex III flag is High, with the full Article 9-15/43/49/72 obligation set', () => {
+    const r = classifyAiActRisk({ employmentWorkerManagement: true });
+    assert.equal(r.tier, 'High');
+    assert.equal(r.reasons.length, 1);
+    assert.match(r.reasons[0], /Annex III\(4\)/);
+    assert.ok(r.obligations.some((o) => /Article 9/.test(o)));
+    assert.ok(r.obligations.some((o) => /human oversight/i.test(o)));
+    assert.equal(r.obligations.length, 9, 'High obligations list should be exactly the Article 9-15/43/49/72 set, nothing stacked in from a lower tier');
+  });
+
+  test('a single Article 50 flag alone is Limited, with just the two transparency obligations', () => {
+    const r = classifyAiActRisk({ syntheticContent: true });
+    assert.equal(r.tier, 'Limited');
+    assert.equal(r.obligations.length, 2);
+    assert.ok(r.obligations.every((o) => /Article 50/.test(o)));
+  });
+
+  test('High and Limited together: the tier is High (higher severity wins) but the obligations STACK — Article 50 transparency still applies on top of the Annex III checklist', () => {
+    const r = classifyAiActRisk({ criticalInfrastructure: true, directInteraction: true });
+    assert.equal(r.tier, 'High');
+    assert.equal(r.reasons.length, 2);
+    assert.equal(r.obligations.length, 9 + 2, 'expected the High checklist plus the Limited transparency obligations concatenated, not one replacing the other');
+    assert.ok(r.obligations.some((o) => /Article 9/.test(o)));
+    assert.ok(r.obligations.some((o) => /Article 50/.test(o)));
+  });
+
+  test('multiple High-tier flags all show up as separate reasons, not deduplicated into one', () => {
+    const r = classifyAiActRisk({ criticalInfrastructure: true, lawEnforcement: true });
+    assert.equal(r.tier, 'High');
+    assert.equal(r.reasons.length, 2);
+  });
+
+  test('every question id in AI_ACT_QUESTIONS is unique — a duplicate id would silently make one question overwrite another\'s answer', () => {
+    const ids = AI_ACT_QUESTIONS.map((q) => q.id);
+    assert.equal(new Set(ids).size, ids.length);
+  });
+
+  test('every question has a tier of Prohibited, High or Limited — never Minimal (Minimal is only ever the no-answers fallback)', () => {
+    AI_ACT_QUESTIONS.forEach((q) => {
+      assert.ok(['Prohibited', 'High', 'Limited'].includes(q.tier), `${q.id} has an unexpected tier: ${q.tier}`);
+    });
   });
 });

@@ -1925,6 +1925,98 @@
     return null;
   }
 
+  /* EU AI Act risk classification — Article 5 prohibited practices,
+     Annex III high-risk categories, Article 50 transparency triggers.
+     Every question maps to one specific published clause rather than a
+     vague "is this risky" judgement call, so a practitioner (or their
+     lawyer) can see exactly why a system landed on its tier and
+     challenge any single answer. This is a screening aid over the Act's
+     own published text, not legal advice — carve-outs the Act itself
+     allows (e.g. narrow law-enforcement or medical exceptions to the
+     Article 5 bans) are fact-specific and deliberately NOT modelled
+     here; a "yes" flags the practice and leaves the carve-out judgement
+     to counsel rather than guessing at it. */
+  var AI_ACT_QUESTIONS = [
+    { id: 'subliminalManipulation', tier: 'Prohibited', clause: 'Article 5(1)(a)', label: 'Uses subliminal, manipulative or deceptive techniques to materially distort behaviour and cause harm' },
+    { id: 'exploitsVulnerabilities', tier: 'Prohibited', clause: 'Article 5(1)(b)', label: 'Exploits vulnerabilities of a specific group (age, disability, social or economic situation) to cause harm' },
+    { id: 'socialScoring', tier: 'Prohibited', clause: 'Article 5(1)(c)', label: 'Social scoring — evaluates or classifies people over time and applies unrelated or disproportionate treatment' },
+    { id: 'criminalRiskProfiling', tier: 'Prohibited', clause: 'Article 5(1)(d)', label: 'Predicts an individual’s risk of committing a criminal offence based solely on profiling' },
+    { id: 'facialScraping', tier: 'Prohibited', clause: 'Article 5(1)(e)', label: 'Untargeted scraping of facial images (internet or CCTV) to build or expand a facial recognition database' },
+    { id: 'emotionInferenceWorkEducation', tier: 'Prohibited', clause: 'Article 5(1)(f)', label: 'Infers emotions in the workplace or in education, outside the Act’s narrow medical/safety exceptions' },
+    { id: 'biometricCategorySensitive', tier: 'Prohibited', clause: 'Article 5(1)(g)', label: 'Biometric categorisation inferring race, political opinion, religion, trade union membership or sexual orientation' },
+    { id: 'realtimeBiometricLawEnforcement', tier: 'Prohibited', clause: 'Article 5(1)(h)', label: 'Real-time remote biometric identification in publicly accessible spaces for law enforcement' },
+
+    { id: 'biometricIdentification', tier: 'High', clause: 'Annex III(1)', label: 'Biometric identification or categorisation of natural persons (non-prohibited use)' },
+    { id: 'criticalInfrastructure', tier: 'High', clause: 'Annex III(2)', label: 'Safety component in the management or operation of critical infrastructure (energy, water, digital infra, traffic)' },
+    { id: 'educationVocational', tier: 'High', clause: 'Annex III(3)', label: 'Determines access to education/vocational training, or evaluates learning outcomes or exam integrity' },
+    { id: 'employmentWorkerManagement', tier: 'High', clause: 'Annex III(4)', label: 'Recruitment or candidate screening, or task allocation, monitoring or evaluation of workers' },
+    { id: 'essentialServicesAccess', tier: 'High', clause: 'Annex III(5)', label: 'Eligibility for essential public/private services — credit scoring, insurance pricing, public benefits' },
+    { id: 'lawEnforcement', tier: 'High', clause: 'Annex III(6)', label: 'Used by or on behalf of law enforcement (non-prohibited use, e.g. evaluating evidence reliability)' },
+    { id: 'migrationAsylumBorder', tier: 'High', clause: 'Annex III(7)', label: 'Migration, asylum or border control management (e.g. visa or asylum application assessment)' },
+    { id: 'justiceAndDemocracy', tier: 'High', clause: 'Annex III(8)', label: 'Assists judicial authorities in researching or interpreting facts and law, or influences elections/referenda' },
+
+    { id: 'directInteraction', tier: 'Limited', clause: 'Article 50(1)', label: 'Interacts directly with natural persons (e.g. a chatbot) who may not otherwise realise it’s AI' },
+    { id: 'syntheticContent', tier: 'Limited', clause: 'Article 50(2)', label: 'Generates or manipulates synthetic audio, image, video or text content, including deepfakes' },
+    { id: 'emotionOrBiometricNonProhibited', tier: 'Limited', clause: 'Article 50(3)', label: 'Emotion recognition or biometric categorisation, in a context not covered by the prohibited practices above' }
+  ];
+
+  var AI_ACT_TIER_ORDER = { Prohibited: 3, High: 2, Limited: 1, Minimal: 0 };
+
+  var AI_ACT_OBLIGATIONS = {
+    Prohibited: [
+      'This use case falls under an EU AI Act Article 5 prohibited practice — it cannot lawfully be placed on the market or put into service in the EU. Do not deploy; escalate to legal counsel immediately rather than relying on this screening alone.'
+    ],
+    High: [
+      'Risk management system across the system’s lifecycle (Article 9)',
+      'Data governance — relevant, representative, error-checked training/validation/testing data (Article 10)',
+      'Technical documentation kept current (Article 11, Annex IV)',
+      'Automatic event logging and record-keeping (Article 12)',
+      'Instructions for use and transparency to deployers (Article 13)',
+      'Human oversight measures a person can actually exercise (Article 14)',
+      'Accuracy, robustness and cybersecurity appropriate to the risk (Article 15)',
+      'Conformity assessment before market placement, and EU database registration (Articles 43, 49)',
+      'Post-market monitoring plan (Article 72)'
+    ],
+    Limited: [
+      'Disclose to users that they are interacting with an AI system, unless that’s obvious from the context (Article 50(1))',
+      'Label AI-generated or manipulated audio/image/video/text content as such, machine-readably where feasible (Article 50(2))'
+    ],
+    Minimal: [
+      'No mandatory EU AI Act obligations for this use case as classified — voluntary codes of conduct (Article 95) are still worth adopting.'
+    ]
+  };
+
+  /* answers: { [questionId]: boolean }. The tier is the single highest
+     severity triggered (Prohibited beats High beats Limited beats
+     Minimal); the reasons/obligations are cumulative across every
+     matched question at High/Limited, since those obligations stack —
+     a high-risk system that also talks to users directly still owes
+     Article 50 transparency on top of its Annex III obligations, not
+     instead of them. A Prohibited match short-circuits everything else:
+     there's nothing to add obligations for once a system can't lawfully
+     be deployed at all. */
+  function classifyAiActRisk(answers) {
+    answers = answers || {};
+    var matched = AI_ACT_QUESTIONS.filter(function (q) { return !!answers[q.id]; });
+    if (!matched.length) return { tier: 'Minimal', reasons: [], obligations: AI_ACT_OBLIGATIONS.Minimal };
+
+    var tier = matched.reduce(function (best, q) {
+      return AI_ACT_TIER_ORDER[q.tier] > AI_ACT_TIER_ORDER[best] ? q.tier : best;
+    }, 'Limited');
+
+    if (tier === 'Prohibited') {
+      var prohibitedReasons = matched.filter(function (q) { return q.tier === 'Prohibited'; })
+        .map(function (q) { return q.clause + ' — ' + q.label; });
+      return { tier: 'Prohibited', reasons: prohibitedReasons, obligations: AI_ACT_OBLIGATIONS.Prohibited };
+    }
+
+    var reasons = matched.map(function (q) { return q.tier + ' — ' + q.clause + ': ' + q.label; });
+    var obligations = [];
+    if (matched.some(function (q) { return q.tier === 'High'; })) obligations = obligations.concat(AI_ACT_OBLIGATIONS.High);
+    if (matched.some(function (q) { return q.tier === 'Limited'; })) obligations = obligations.concat(AI_ACT_OBLIGATIONS.Limited);
+    return { tier: tier, reasons: reasons, obligations: obligations };
+  }
+
   return {
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
@@ -1957,6 +2049,7 @@
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
     sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
-    incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary
+    incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
+    classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS
   };
 });

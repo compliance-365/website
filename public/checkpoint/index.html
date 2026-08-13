@@ -651,8 +651,13 @@
           <input class="mini" id="aiName" placeholder="System name" style="grid-column:1/-1">
           <textarea class="mini" id="aiPurpose" placeholder="Purpose" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
           <input class="mini" id="aiOwner" placeholder="Owner">
-          <select class="mini" id="aiRiskTier" aria-label="Risk tier"><option>Prohibited</option><option>High</option><option selected>Limited</option><option>Minimal</option></select>
+          <select class="mini" id="aiRiskTier" aria-label="Risk tier"><option>Prohibited</option><option>High</option><option>Limited</option><option selected>Minimal</option></select>
           <input class="mini" id="aiModelType" placeholder="Model type (e.g. foundation model, fine-tuned classifier)">
+          <div style="grid-column:1/-1;margin-top:2px">
+            <div style="font-size:12px;font-weight:600;color:var(--paper-dim);margin-bottom:6px">Classify this system (EU AI Act) — tick everything that applies; the risk tier above is suggested automatically and can still be overridden</div>
+            <div id="aiActQuestions"></div>
+            <div id="aiActSuggestion" style="margin-top:8px"></div>
+          </div>
           <input class="mini" id="aiVendor" placeholder="Vendor">
           <textarea class="mini" id="aiDataSources" placeholder="Data sources" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
           <select class="mini" id="aiImpactStatus" aria-label="Impact assessment status"><option>Not started</option><option>In progress</option><option>Completed</option></select>

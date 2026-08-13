@@ -1039,7 +1039,7 @@ window.DemoStore = (function () {
         { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '', publicListed: false, dataCategories: ['Company confidential'] }
       ],
       aiSystems: [
-        { id: 'AI-001', name: 'Microsoft 365 Copilot', purpose: 'Drafting and summarisation assistance across Word, Outlook and Teams for all staff', owner: 'K. Patel', dataSources: 'Microsoft Graph-connected tenant content (email, documents, chats) staff already have access to', modelType: 'Foundation model (hosted, Microsoft-operated)', vendor: 'Microsoft', riskTier: 'Limited', impactAssessmentStatus: 'Completed', humanOversight: 'All outputs are drafts reviewed and edited by the staff member before use; no autonomous action is taken.', lastReviewed: daysFrom(-40), spId: '' },
+        { id: 'AI-001', name: 'Microsoft 365 Copilot', purpose: 'Drafting and summarisation assistance across Word, Outlook and Teams for all staff', owner: 'K. Patel', dataSources: 'Microsoft Graph-connected tenant content (email, documents, chats) staff already have access to', modelType: 'Foundation model (hosted, Microsoft-operated)', vendor: 'Microsoft', riskTier: 'Limited', aiActAnswers: { directInteraction: true }, impactAssessmentStatus: 'Completed', humanOversight: 'All outputs are drafts reviewed and edited by the staff member before use; no autonomous action is taken.', lastReviewed: daysFrom(-40), spId: '' },
         { id: 'AI-002', name: 'Clinical Triage Assistant', purpose: 'Suggests a triage priority for inbound patient support tickets based on submitted symptoms text', owner: 'S. Okafor', dataSources: 'Patient-submitted support ticket text (may include health information)', modelType: 'Fine-tuned classifier, hosted on Azure OpenAI', vendor: 'OpenAI (via Azure)', riskTier: 'High', impactAssessmentStatus: 'In progress', humanOversight: 'A human triage nurse confirms every priority suggestion before a ticket is actioned — the model never re-prioritises a ticket unattended.', lastReviewed: daysFrom(-10), spId: '' },
         { id: 'AI-003', name: 'Marketing Copy Generator', purpose: 'Drafts first-pass marketing copy for the website and email campaigns', owner: 'M. Chen', dataSources: 'Public product descriptions and brand style guide only — no customer or patient data', modelType: 'Third-party SaaS (Anthropic Claude via vendor API)', vendor: 'Jasper AI', riskTier: 'Minimal', impactAssessmentStatus: 'Not started', humanOversight: '', lastReviewed: '', spId: '' }
       ],
@@ -1507,7 +1507,13 @@ window.SpStore = (function () {
       { name: 'Owner', text: {} }, { name: 'DataSources', text: { allowMultipleLines: true } },
       { name: 'ModelType', text: {} }, { name: 'Vendor', text: {} }, { name: 'RiskTier', text: {} },
       { name: 'ImpactAssessmentStatus', text: {} }, { name: 'HumanOversight', text: { allowMultipleLines: true } },
-      { name: 'LastReviewed', text: {} }, { name: 'SpId', text: {} }
+      { name: 'LastReviewed', text: {} }, { name: 'SpId', text: {} },
+      // JSON-serialised { [questionId]: bool } from the EU AI Act
+      // questionnaire — same "one text column, JSON blob" shape as
+      // PolicyDrafts' Content column, for the same reason: the question
+      // set can grow (the Act itself is still being amended) without a
+      // schema migration every time it does.
+      { name: 'AiActAnswers', text: { allowMultipleLines: true } }
     ]
   };
 
@@ -2043,11 +2049,14 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         aiSystems: aiItems.map(function (i) {
           var f = i.fields;
+          var aiActAnswers;
+          try { aiActAnswers = JSON.parse(f.AiActAnswers || '{}'); } catch (e) { aiActAnswers = {}; }
           return {
             _sp: i.id, id: f.RefId, name: f.Title, purpose: f.Purpose || '', owner: f.Owner || '',
             dataSources: f.DataSources || '', modelType: f.ModelType || '', vendor: f.Vendor || '',
             riskTier: f.RiskTier || 'Minimal', impactAssessmentStatus: f.ImpactAssessmentStatus || 'Not started',
-            humanOversight: f.HumanOversight || '', lastReviewed: f.LastReviewed || '', spId: f.SpId || ''
+            humanOversight: f.HumanOversight || '', lastReviewed: f.LastReviewed || '', spId: f.SpId || '',
+            aiActAnswers: aiActAnswers
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         policyDrafts: draftItems.map(function (i) {
@@ -2205,7 +2214,7 @@ window.SpStore = (function () {
         Title: a.name, RefId: a.id, Purpose: a.purpose || '', Owner: a.owner, DataSources: a.dataSources || '',
         ModelType: a.modelType || '', Vendor: a.vendor || '', RiskTier: a.riskTier,
         ImpactAssessmentStatus: a.impactAssessmentStatus, HumanOversight: a.humanOversight || '',
-        LastReviewed: a.lastReviewed || '', SpId: a.spId || ''
+        LastReviewed: a.lastReviewed || '', SpId: a.spId || '', AiActAnswers: JSON.stringify(a.aiActAnswers || {})
       });
       S.aiSystems.push(a);
     },
@@ -2214,7 +2223,7 @@ window.SpStore = (function () {
         Title: a.name, Purpose: a.purpose || '', Owner: a.owner, DataSources: a.dataSources || '',
         ModelType: a.modelType || '', Vendor: a.vendor || '', RiskTier: a.riskTier,
         ImpactAssessmentStatus: a.impactAssessmentStatus, HumanOversight: a.humanOversight || '',
-        LastReviewed: a.lastReviewed || '', SpId: a.spId || ''
+        LastReviewed: a.lastReviewed || '', SpId: a.spId || '', AiActAnswers: JSON.stringify(a.aiActAnswers || {})
       });
     },
     /* app.js already unshifts to S.activity — the store only writes the item */

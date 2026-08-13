@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import EuAiActClassifier from '../../components/EuAiActClassifier.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -137,6 +138,43 @@ const pageDesc  = 'ISO 42001, NIST AI RMF and the EU AI Act aren’t competing s
   <p class="muted small" style="margin-top:1rem;max-width:820px;">
     This is a practical mapping to help scope work, not a legal equivalence table — a harmonised-standard presumption of conformity under Article 40 only applies to the specific requirements a standard actually covers, and every EU AI Act obligation still needs its own compliance check.
   </p>
+</section>
+
+<!-- EU AI ACT RISK TIERS -->
+<section class="container section">
+  <h2>The EU AI Act's four risk tiers, and how each one is actually decided</h2>
+  <p class="muted" style="max-width:880px">
+    "High-risk" isn't a vibe — it's a specific list. The Act sorts every AI system into one of four tiers, and which tier a system lands in is decided by matching it against Article 5's banned practices, Annex III's named use-case categories, and Article 50's transparency triggers — not by how sophisticated the model is or how nervous it makes your legal team.
+  </p>
+  <div class="grid-2" style="max-width:960px;margin:1.5rem auto 0;">
+    <div class="card spot">
+      <h3 style="color:#B3261E">Prohibited — Article 5</h3>
+      <p class="muted small">
+        Eight specific practices banned outright: subliminal/manipulative techniques that cause harm, exploiting a group's vulnerabilities, social scoring, predicting criminal risk from profiling alone, untargeted facial-image scraping, emotion inference in workplaces/education, biometric categorisation of sensitive attributes, and real-time remote biometric ID by law enforcement in public. One match here means the system cannot lawfully be deployed in the EU — full stop, no obligations checklist, no path to compliance.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>High-risk — Annex III</h3>
+      <p class="muted small">
+        Eight named categories: biometric ID, critical infrastructure, education/vocational access, employment and worker management, access to essential services (credit, insurance, benefits), law enforcement, migration/border control, and administration of justice or democratic processes. A match here triggers the Act's full Title III obligations — risk management, data governance, technical documentation, logging, human oversight, conformity assessment, EU database registration.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>Limited risk — Article 50</h3>
+      <p class="muted small">
+        Systems that talk directly to people (chatbots), generate synthetic content (deepfakes, AI-written text), or do non-prohibited emotion recognition/biometric categorisation owe transparency obligations — disclose it's AI, label the content — on top of whatever else applies. These stack with High-risk obligations rather than replacing them: a high-risk system that's also a chatbot owes both checklists.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>Minimal risk</h3>
+      <p class="muted small">
+        Everything else. No mandatory obligations under the Act as things stand — though the voluntary codes of conduct under Article 95 are worth adopting anyway, since "minimal risk today" isn't a permanent classification as the Act's annexes get amended.
+      </p>
+    </div>
+  </div>
+  <div style="max-width:640px;margin:2rem auto 0;">
+    <EuAiActClassifier />
+  </div>
 </section>
 
 <!-- WHY BUILD ON ISO 42001 -->
