@@ -3625,19 +3625,31 @@ function showModal(opts) {
   /* Builds the questionnaire checkboxes fresh every time the Add/Edit AI
      system panel opens, grouped by tier, pre-ticked from whatever was
      last saved — then immediately triggers the first suggestion so the
-     panel never opens showing stale or blank guidance. */
+     panel never opens showing stale or blank guidance.
+
+     Each group is a native <details> — collapsed by default, open only
+     if it already has a checked answer, so a form for a typical Minimal-
+     risk system (the common case: nothing ticked anywhere) shows three
+     one-line headers instead of all 19 questions at once. Native <details>
+     rather than a hand-rolled toggle: correct ARIA semantics and keyboard
+     operability for free, and the open/closed state is real DOM state a
+     re-render never has to track or clobber. */
   function renderAiActQuestions(existingAnswers) {
     var wrap = document.getElementById('aiActQuestions');
     if (!wrap) return;
     wrap.innerHTML = AI_ACT_GROUPS.map(function (g) {
       var qs = window.CheckpointLib.AI_ACT_QUESTIONS.filter(function (q) { return q.tier === g.tier; });
-      return '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:var(--paper-dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">' + esc(g.label) + '</div>' +
+      var checkedCount = qs.filter(function (q) { return existingAnswers && existingAnswers[q.id]; }).length;
+      return '<details class="aiact-group"' + (checkedCount ? ' open' : '') + ' style="margin-bottom:6px">' +
+        '<summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--paper-dim);text-transform:uppercase;letter-spacing:.03em;padding:4px 0">' +
+        esc(g.label) + (checkedCount ? ' <span style="color:var(--gold-light);text-transform:none;letter-spacing:normal">— ' + checkedCount + ' checked</span>' : '') +
+        '</summary><div style="padding-top:2px">' +
         qs.map(function (q) {
           var checked = existingAnswers && existingAnswers[q.id] ? ' checked' : '';
           return '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--paper-dim);margin-bottom:4px;cursor:pointer">' +
             '<input type="checkbox" data-change-action="App.recomputeAiActSuggestion" data-qid="' + q.id + '" style="margin-top:2px"' + checked + '>' +
             '<span><b style="color:var(--paper)">' + esc(q.clause) + '</b> — ' + esc(q.label) + '</span></label>';
-        }).join('') + '</div>';
+        }).join('') + '</div></details>';
     }).join('');
     App.recomputeAiActSuggestion();
   }

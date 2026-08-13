@@ -73,11 +73,13 @@ const {
   .c365-aiact__title { font-size: 22px; font-weight: 700; margin: 8px 0 6px; color: #8B6820; line-height: 1.25; }
   .c365-aiact__subtitle { font-size: 14px; color: #3A3632; margin: 0 0 20px; line-height: 1.6; }
 
-  .c365-aiact__group { margin-bottom: 16px; }
+  .c365-aiact__group { margin-bottom: 8px; }
   .c365-aiact__group-label {
+    cursor: pointer;
     font-size: 11px; font-weight: 700; color: #6B6860; text-transform: uppercase;
-    letter-spacing: 0.04em; margin-bottom: 8px;
+    letter-spacing: 0.04em; padding: 6px 0;
   }
+  .c365-aiact__group[open] .c365-aiact__group-label { margin-bottom: 4px; }
   .c365-aiact__q {
     display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px;
     border-radius: 8px; cursor: pointer; font-size: 13px; line-height: 1.45;
@@ -137,11 +139,11 @@ const {
       if (!wrap) return;
       wrap.innerHTML = GROUPS.map(function (g) {
         var qs = window.CheckpointLib.AI_ACT_QUESTIONS.filter(function (q) { return q.tier === g.tier; });
-        return '<div class="c365-aiact__group"><div class="c365-aiact__group-label">' + esc(g.label) + '</div>' +
+        return '<details class="c365-aiact__group"><summary class="c365-aiact__group-label">' + esc(g.label) + '</summary>' +
           qs.map(function (q) {
             return '<label class="c365-aiact__q"><input type="checkbox" data-qid="' + q.id + '">' +
               '<span><b>' + esc(q.clause) + '</b> — ' + esc(q.label) + '</span></label>';
-          }).join('') + '</div>';
+          }).join('') + '</details>';
       }).join('');
       wrap.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
         cb.addEventListener('change', recompute);
