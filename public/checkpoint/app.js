@@ -1340,6 +1340,40 @@ function showModal(opts) {
     { label: 'Open', color: RPAL.neutral, hatch: true }
   ];
 
+  /* Due-date runway — every open action bucketed by how far past (or
+     short of) its due date it is. This is the panel that always carries
+     signal: actionPriorityBreakdown() below compares composition, so it
+     goes blank-looking the moment every action shares one status (a
+     register where nothing has been started yet renders as identical
+     full-width bars), whereas "what is blowing up, and when" is
+     readable from the first action onward and is the thing a
+     practitioner actually acts on.
+
+     Done/Cancelled are excluded — neither is a live commitment. An
+     action with no due date is its own bucket rather than being
+     silently dropped or lumped in with "later": it's a real gap in the
+     register (an auditor will ask when it's due), so it should be
+     visible, not hidden. */
+  function actionDueRunway() {
+    var today = new Date().toISOString().slice(0, 10);
+    var live = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; });
+    function daysUntilDue(a) {
+      return Math.floor((new Date(a.due) - new Date(today)) / 86400000);
+    }
+    var noDue = live.filter(function (a) { return !a.due; }).length;
+    var withDue = live.filter(function (a) { return a.due; });
+    function countWhere(fn) { return withDue.filter(fn).length; }
+    return [
+      { label: 'Overdue 30+ days', value: countWhere(function (a) { return overdueDays(a) > 30; }), color: RPAL.bad, filter: 'Overdue' },
+      { label: 'Overdue 8–30 days', value: countWhere(function (a) { var d = overdueDays(a); return d > 7 && d <= 30; }), color: RPAL.bad, filter: 'Overdue' },
+      { label: 'Overdue up to 7 days', value: countWhere(function (a) { var d = overdueDays(a); return d >= 1 && d <= 7; }), color: RPAL.high, filter: 'Overdue' },
+      { label: 'Due within 7 days', value: countWhere(function (a) { var d = daysUntilDue(a); return d >= 0 && d <= 7; }), color: RPAL.warn, filter: 'Open' },
+      { label: 'Due in 8–30 days', value: countWhere(function (a) { var d = daysUntilDue(a); return d > 7 && d <= 30; }), color: RPAL.gold, filter: 'Open' },
+      { label: 'Due beyond 30 days', value: countWhere(function (a) { return daysUntilDue(a) > 30; }), color: RPAL.good, filter: 'Open' },
+      { label: 'No due date set', value: noDue, sub: 'an auditor will ask', color: RPAL.neutral, filter: 'Open' }
+    ];
+  }
+
   /* One stacked-bar row per priority (most urgent first) — reuses
      stackedBarsChart's existing generic primitive (see its own header
      comment: "the same primitive renders ... an action-throughput-by-
@@ -3426,9 +3460,62 @@ function showModal(opts) {
       : '<div class="src" style="color:var(--warn);margin-top:3px">CAPA: ' + esc(st.nextStep) + '</div>';
   }
 
-  function renderActions() {
+  /* The Actions register's own dashboard strip. Three panels, each
+     answering a different question, because no single one of them
+     covers the register on its own:
+       - KPI tiles: the headline numbers, each a drill-down into the
+         table below (same .card.kpi markup and data-action pattern the
+         Dashboard's own tiles use — consistent, themed, and clickable
+         for free rather than a bespoke widget).
+       - Due runway: where the pain is on the calendar. Always readable,
+         including on a register where nothing has moved yet.
+       - Status by priority: whether the work that matters is actually
+         progressing. Goes flat when everything shares one status, which
+         is exactly why it isn't the only panel.
+     Every count here is derived live from S.actions — nothing cached,
+     so it can never disagree with the table underneath it. */
+  function renderActionsDashboard() {
+    var today = new Date().toISOString().slice(0, 10);
+    var live = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; });
+    var od = live.filter(overdue);
+    var b1 = od.filter(function (a) { return overdueDays(a) <= 7; }).length;
+    var b2 = od.filter(function (a) { var d = overdueDays(a); return d > 7 && d <= 30; }).length;
+    var b3 = od.filter(function (a) { return overdueDays(a) > 30; }).length;
+    var dueSoon = live.filter(function (a) {
+      if (!a.due || a.due < today) return false;
+      return Math.floor((new Date(a.due) - new Date(today)) / 86400000) <= 7;
+    }).length;
+    /* "Recently closed" needs a completion date, and an action only
+       carries its due date — so this counts Done actions whose due date
+       fell in the last 30 days, and says "due" rather than "closed" in
+       the caption so the tile never claims more precision than the data
+       actually supports. */
+    var closedRecent = S.actions.filter(function (a) {
+      if (a.status !== 'Done' || !a.due) return false;
+      var d = Math.floor((new Date(today) - new Date(a.due)) / 86400000);
+      return d >= 0 && d <= 30;
+    }).length;
+    var noOwner = live.filter(function (a) { return !a.owner || !String(a.owner).trim() || a.owner === 'Unassigned'; }).length;
+
+    var kpiEl = document.getElementById('actKpiRow');
+    if (kpiEl) {
+      kpiEl.innerHTML =
+        '<div class="card kpi" data-action="App.goActionsFilter" data-id="Open"><div class="kpi-num"><b data-count="' + live.length + '">' + live.length + '</b></div><span>Open actions</span><div class="sub">' + (noOwner ? noOwner + ' with no owner assigned' : 'every one has an owner') + '</div></div>' +
+        '<div class="card kpi" data-action="App.goActionsFilter" data-id="Overdue"><div class="kpi-num"><b data-count="' + od.length + '" style="color:' + (od.length ? 'var(--fail)' : 'var(--gold-light)') + '">' + od.length + '</b></div><span>Overdue</span><div class="sub">' + (od.length ? '0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3 : 'nothing past its due date') + '</div></div>' +
+        '<div class="card kpi" data-action="App.goActionsFilter" data-id="Open"><div class="kpi-num"><b data-count="' + dueSoon + '" style="color:' + (dueSoon ? 'var(--warn)' : 'var(--gold-light)') + '">' + dueSoon + '</b></div><span>Due within 7 days</span><div class="sub">' + (dueSoon ? 'still time to close these cleanly' : 'nothing falling due this week') + '</div></div>' +
+        '<div class="card kpi" data-action="App.goActionsFilter" data-id="Done"><div class="kpi-num"><b data-count="' + closedRecent + '">' + closedRecent + '</b></div><span>Completed</span><div class="sub">' + (closedRecent ? 'due in the last 30 days, now done' : 'none due in the last 30 days') + '</div></div>';
+      runCountUps(kpiEl);
+    }
+
+    var runwayEl = document.getElementById('actRunway');
+    if (runwayEl) runwayEl.innerHTML = RC.hbars(actionDueRunway(), { palette: 'app' });
+
     var breakdownEl = document.getElementById('actBreakdown');
     if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(actionPriorityBreakdown(), ACTION_STATUS_LEGEND, { palette: 'app', showValues: true });
+  }
+
+  function renderActions() {
+    renderActionsDashboard();
     var f = window._actF || 'Open';
     var tf = window._actTypeF || 'All';
     document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {

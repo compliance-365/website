@@ -323,6 +323,55 @@
       '</svg>';
   }
 
+  /* 3b. Count-scaled horizontal bars — deliberately NOT stackedBars.
+     That one normalises every row to 100% to compare COMPOSITION, which
+     makes it structurally incapable of showing anything when every row
+     sits in a single category (an actions register where nothing has
+     been started yet renders as N identical full-width bars — no
+     signal at all). This compares MAGNITUDE instead: bar length is the
+     count itself, scaled against the largest row, so the shape of the
+     distribution is the message.
+
+     rows: [{ label, value, color?, sub? }] — color defaults to the
+     brand accent; `sub` is an optional dim caption under the label.
+     Rows with value 0 are kept, not filtered, because "zero here" is
+     usually the interesting part of a distribution (nothing overdue
+     30+ days is a real, readable result — dropping the row would
+     silently rewrite the axis). */
+  function hbarsChart(rows, opts) {
+    opts = opts || {};
+    var app = opts.palette === 'app';
+    var labelColor = app ? 'var(--paper)' : '#0B0B0C';
+    var dimColor = app ? 'var(--paper-dim)' : '#4b473e';
+    var trackColor = app ? 'rgba(var(--paper-rgb),.07)' : 'rgba(11,11,12,.06)';
+    rows = Array.isArray(rows) ? rows : [];
+    if (!rows.length) return placeholderSvg(600, 120, 'Nothing to chart yet.');
+
+    var values = rows.map(function (r) { return Math.max(0, Number(r.value) || 0); });
+    var max = Math.max.apply(null, values.concat([0]));
+    var labelW = 150, barX = labelW + 12, barW = 600 - barX - 46, rowH = 20, rowGap = rows.some(function (r) { return r.sub; }) ? 22 : 14;
+    var top = 12;
+
+    var barsHtml = rows.map(function (r, i) {
+      var v = values[i];
+      /* A zero row still draws its track, so the row reads as a real
+         "none" rather than looking like a rendering failure. */
+      var w = max > 0 ? (v / max) * barW : 0;
+      var y = top + i * (rowH + rowGap);
+      var mid = y + rowH / 2 + 4;
+      return '<text x="' + labelW + '" y="' + mid + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(r.label) + '</text>' +
+        (r.sub ? '<text x="' + labelW + '" y="' + (mid + 12) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + dimColor + '">' + escSvgText(r.sub) + '</text>' : '') +
+        '<rect x="' + barX + '" y="' + y + '" width="' + fx(barW) + '" height="' + rowH + '" rx="2" fill="' + trackColor + '"/>' +
+        (w > 0.5 ? '<rect x="' + barX + '" y="' + y + '" width="' + fx(w) + '" height="' + rowH + '" rx="2" fill="' + (r.color || PAL.gold) + '"/>' : '') +
+        '<text x="' + (barX + barW + 8) + '" y="' + mid + '" font-family="Manrope,sans-serif" font-size="11" font-weight="700" fill="' + (v > 0 ? labelColor : dimColor) + '">' + fx(v, 0) + '</text>';
+    }).join('');
+
+    var height = top + rows.length * (rowH + rowGap) + 4;
+    return '<svg viewBox="0 0 600 ' + fx(height, 0) + '" width="100%" role="img" aria-label="' + escSvgText(rows.map(function (r, i) { return r.label + ': ' + values[i]; }).join(', ')) + '">' +
+      barsHtml +
+      '</svg>';
+  }
+
   /* 4. Residual-risk heatmap — residuals: [{L,I}, ...] (already-computed
      residual likelihood/impact pairs; caller filters to open risks).
      Fixed 5x5 grid, severity by L*I (same band() thresholds as
@@ -1002,6 +1051,7 @@
       donut: donutChart,
       trend: trendChart,
       stackedBars: stackedBarsChart,
+      hbars: hbarsChart,
       riskHeatmap: riskHeatmapChart,
       evidenceGauge: evidenceGaugeChart,
       kpiStrip: kpiStripChart,
