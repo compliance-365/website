@@ -853,3 +853,28 @@ describe('a control\'s exclusion justification can actually be written, not just
     assert.match(fnMatch[1], /Exclusions missing justification/, 'the Dashboard KPI row no longer shows the "Exclusions missing justification" tile');
   });
 });
+
+/* Confirmed live on a real tenant: patching a control's LastVerified
+   field threw "Field 'LastVerified' is not recognized". Root cause —
+   Controls' DEFS schema has LastVerified/EvidenceUrl/VerifiedBy, but
+   unlike Risks and Actions, Controls was never added to
+   COLUMN_RECONCILE, so an already-provisioned tenant's Controls list
+   never got the missing column(s) added by reconcileColumns(). This
+   guards the fix: every field DEFS.Controls defines beyond the
+   original baseline (Code/Framework/Applicable/Status/Owner/MapsTo/
+   Justification) must also be listed in COLUMN_RECONCILE.Controls, or
+   the exact same class of bug reappears the next time a Controls field
+   gets added without remembering this table too. */
+describe('Controls column reconciliation — self-heal for an already-provisioned tenant', () => {
+  const storeJs = readFileSync(new URL('../public/checkpoint/store.js', import.meta.url), 'utf8');
+
+  test('COLUMN_RECONCILE.Controls lists LastVerified/EvidenceUrl/VerifiedBy, so a tenant provisioned before they existed self-heals instead of throwing "Field ... is not recognized"', () => {
+    const reconcileBlock = storeJs.match(/var COLUMN_RECONCILE = \{([\s\S]*?)\n {2}\};/);
+    assert.ok(reconcileBlock, 'COLUMN_RECONCILE not found');
+    const controlsEntry = reconcileBlock[1].match(/Controls: \[([^\]]*)\]/);
+    assert.ok(controlsEntry, 'COLUMN_RECONCILE.Controls not found — a tenant provisioned before LastVerified/EvidenceUrl/VerifiedBy existed will hit "Field \'LastVerified\' is not recognized" the moment anything patches a control, exactly the live bug this test exists to catch');
+    ['LastVerified', 'EvidenceUrl', 'VerifiedBy'].forEach((col) => {
+      assert.match(controlsEntry[1], new RegExp("'" + col + "'"), `COLUMN_RECONCILE.Controls is missing '${col}' — an existing tenant's Controls list would never get this column added, and any write touching it throws "Field '${col}' is not recognized" instead of saving`);
+    });
+  });
+});
