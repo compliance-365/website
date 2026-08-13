@@ -436,7 +436,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi b small{font-size:var(--fs-3);color:var(--paper-dim);font-weight:500}
 .kpi .trend{font-size:var(--fs-2);font-weight:800;white-space:nowrap}
 .kpi span{display:block;margin-top:7px;font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
-.kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);white-space:nowrap}
+.kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.4}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%}
 .kpi .dot{margin-right:4px}
 .kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
