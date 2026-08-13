@@ -319,21 +319,33 @@
         <button class="nav-item" data-v="board">Board view</button>
         <button class="nav-item" data-v="constellation">Constellation</button>
       </div>
-      <div class="nav-group">
-        <div class="nav-label">Risk &amp; posture</div>
+      <!-- Groups below are collapsible (native <details>, no custom JS
+           toggle needed for correct ARIA/keyboard semantics) — the nav
+           grew to 27 destinations across these groups, most of them
+           used far less often than Risk & posture or Frameworks. Risk &
+           posture and Frameworks default open (the daily-use groups);
+           the rest default closed. App.go() force-opens whichever group
+           holds the view just navigated to, so jumping there via the
+           command palette or a CTA elsewhere never leaves the active
+           item hidden inside a collapsed section. A practitioner's own
+           manual expand/collapse is persisted per-tenant in
+           localStorage (see applyNavGroupState()) and always wins over
+           these defaults on their next visit. -->
+      <details class="nav-group" data-group="risk" open>
+        <summary class="nav-label">Risk &amp; posture</summary>
         <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
         <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
         <button class="nav-item" data-v="quantrisk">Financial risk analysis</button>
         <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
         <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
         <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
-      </div>
-      <div class="nav-group">
-        <div class="nav-label">Frameworks</div>
+      </details>
+      <details class="nav-group" data-group="frameworks" open>
+        <summary class="nav-label">Frameworks</summary>
         <button class="nav-item" data-v="frameworks">Frameworks</button>
         <button class="nav-item" data-v="soa">Statement of Applicability</button>
         <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
-      </div>
+      </details>
       <!-- "Records" grew to seven items as document control, attestation
            and training landed, which is past the point where a group is
            scannable. Split by what the reader is doing rather than by
@@ -342,33 +354,34 @@
            evidence that the management system is being operated. No
            item changed meaning, and nothing in app.js keys off the
            grouping — the nav is addressed by data-v throughout. -->
-      <div class="nav-group">
-        <div class="nav-label">Documents</div>
+      <details class="nav-group" data-group="documents">
+        <summary class="nav-label">Documents</summary>
         <button class="nav-item" data-v="documents">Documents</button>
         <button class="nav-item" data-v="attestations">Policy attestation <span class="n" id="nAttest"></span></button>
         <button class="nav-item" data-v="training">Training <span class="n" id="nTraining"></span></button>
-      </div>
-      <div class="nav-group">
-        <div class="nav-label">Assurance</div>
+      </details>
+      <details class="nav-group" data-group="assurance">
+        <summary class="nav-label">Assurance</summary>
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
         <button class="nav-item" data-v="incidents">Incidents <span class="n" id="nIncidents"></span></button>
         <button class="nav-item" data-v="auditlog">Audit log</button>
-      </div>
-      <div class="nav-group">
-        <div class="nav-label">Reporting</div>
+      </details>
+      <details class="nav-group" data-group="reporting">
+        <summary class="nav-label">Reporting</summary>
         <button class="nav-item" data-v="reports">Audit reports</button>
         <button class="nav-item" data-v="trustcenter">Trust Center</button>
         <button class="nav-item" data-v="auditorpack">Auditor pack</button>
-      </div>
-      <div class="nav-group">
+      </details>
+      <details class="nav-group" data-group="aitools">
+        <summary class="nav-label">AI tools</summary>
         <button class="nav-item" data-v="aiassistant">AI assistant</button>
         <button class="nav-item" id="navCopilot" data-action="App.openCopilot" style="display:none">Compliance Copilot</button>
         <button class="nav-item" data-v="questionnaire">Questionnaire assistant</button>
         <button class="nav-item" data-v="mockauditor">Mock auditor</button>
         <button class="nav-item" data-v="evidencesim">Evidence request simulator</button>
-      </div>
+      </details>
     </nav>
     <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant.</div>
     <button class="version-tag" id="versionTag" data-action="App.openChangelog">Checkpoint</button>

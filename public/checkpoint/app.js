@@ -2291,6 +2291,19 @@ function showModal(opts) {
     var mineT = myOutstandingTraining().length;
     var tEl = document.getElementById('nTraining');
     if (tEl) { tEl.textContent = mineT || ''; tEl.style.display = mineT ? 'inline-block' : 'none'; }
+
+    /* A collapsed nav group hides its own badges — flag the group's
+       summary instead so nothing overdue goes unnoticed just because
+       its section happens to be closed. Every badge above already set
+       its own visibility this same pass; this just checks what's
+       currently showing, not a second data pass. */
+    document.querySelectorAll('details.nav-group[data-group]').forEach(function (grp) {
+      var alert = Array.prototype.some.call(grp.querySelectorAll('.nav-item .n'), function (badge) {
+        return badge.style.display !== 'none' && badge.textContent.trim() !== '';
+      });
+      var summary = grp.querySelector(':scope > summary');
+      if (summary) summary.classList.toggle('has-alert', alert);
+    });
   }
 
   /* Two governance-card rows fed by data the dashboard doesn't own.
@@ -6572,6 +6585,9 @@ function showModal(opts) {
         n.classList.toggle('on', active);
         if (active) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
       });
+      var activeItem = document.querySelector('.nav-item[data-v="' + v + '"]');
+      var activeGroup = activeItem && activeItem.closest('details.nav-group');
+      if (activeGroup && !activeGroup.open) activeGroup.open = true; /* reveal the destination, never persisted as a manual choice — see the click-only listener above */
       window.scrollTo(0, 0);
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       if (v === 'documents') renderDocuments();
@@ -12058,6 +12074,30 @@ function showModal(opts) {
     } catch (e) { /* localStorage unavailable (private browsing etc.) — config.js default applies */ }
   }
 
+  /* Nav group collapse state — a practitioner's own expand/collapse
+     choice, once made, overrides the HTML-authored defaults (Risk &
+     posture and Frameworks open, everything else closed) for good, same
+     per-tenant storage convention as the site preference above. Only
+     ever written from a genuine click on a group's <summary> (wired
+     near the other document-level listeners below) — App.go()'s
+     auto-open of the active view's group sets .open directly and
+     deliberately doesn't go through that click handler, so navigating
+     around the app never overwrites a deliberate collapse. */
+  function navGroupStorageKey() { return 'cpNavOpen:v1:' + tenantStorageKey(); }
+  function loadNavGroupState() {
+    try { return JSON.parse(localStorage.getItem(navGroupStorageKey()) || '{}'); } catch (e) { return {}; }
+  }
+  function saveNavGroupState(state) {
+    try { localStorage.setItem(navGroupStorageKey(), JSON.stringify(state)); } catch (e) { /* private browsing etc. — the choice just won't survive to a future session */ }
+  }
+  function applyNavGroupState() {
+    var state = loadNavGroupState();
+    document.querySelectorAll('details.nav-group[data-group]').forEach(function (details) {
+      var groupId = details.dataset.group;
+      if (Object.prototype.hasOwnProperty.call(state, groupId)) details.open = !!state[groupId];
+    });
+  }
+
   /* ================= onboarding wizard =================
      Replaces the old cold start (sign in -> straight to a freshly
      auto-provisioned tenant) for any tenant that hasn't completed
@@ -12701,6 +12741,26 @@ function showModal(opts) {
     if (READONLY && isMutatingAction(el.dataset.changeAction)) { toast('Read-only access — ask a practitioner to make this change.'); return; }
     if (el.dataset.id !== undefined) runAction(fn, el.dataset.id, el.value);
     else runAction(fn, el.value);
+  });
+
+  /* Applies whatever nav group collapse state this practitioner already
+     chose (runs before sign-in/demo mode is even picked, so it covers
+     both paths identically — the nav's DOM exists from page load,
+     unlike the rest of the app which only renders after boot). Each
+     group's own click — not the 'toggle' event, which also fires for
+     App.go()'s programmatic auto-open below — is what persists a
+     choice, so navigating around never overwrites a deliberate
+     collapse with the fact that a view was merely visited. */
+  applyNavGroupState();
+  document.querySelectorAll('details.nav-group[data-group] > summary').forEach(function (summary) {
+    summary.addEventListener('click', function () {
+      var details = summary.parentElement;
+      setTimeout(function () {
+        var state = loadNavGroupState();
+        state[details.dataset.group] = details.open;
+        saveNavGroupState(state);
+      }, 0);
+    });
   });
 
   /* The topbar search box is now purely a trigger (readonly,
