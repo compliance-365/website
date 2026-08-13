@@ -1334,6 +1334,30 @@ function showModal(opts) {
     { label: 'Done', color: RPAL.good },
     { label: 'Open', color: RPAL.neutral, hatch: true }
   ];
+  var ACTION_STATUS_LEGEND = [
+    { label: 'Done', color: RPAL.good },
+    { label: 'In progress', color: RPAL.warn },
+    { label: 'Open', color: RPAL.neutral, hatch: true }
+  ];
+
+  /* One stacked-bar row per priority (most urgent first) — reuses
+     stackedBarsChart's existing generic primitive (see its own header
+     comment: "the same primitive renders ... an action-throughput-by-
+     month bar", already designed with exactly this in mind) rather than
+     writing new chart geometry. The question this answers isn't "how
+     many actions are open" (the Dashboard KPI already says that) but
+     "are the actions that MATTER actually moving, or just piling up
+     Open" — cancelled actions are excluded, same reasoning as excluding
+     Closed risks from the heat-map: neither is a live position to plot. */
+  function actionPriorityBreakdown() {
+    return ['Critical', 'High', 'Medium', 'Low'].map(function (p) {
+      var rows = S.actions.filter(function (a) { return a.pr === p && a.status !== 'Cancelled'; });
+      var done = rows.filter(function (a) { return a.status === 'Done'; }).length;
+      var inProgress = rows.filter(function (a) { return a.status === 'In progress'; }).length;
+      var open = rows.filter(function (a) { return a.status === 'Open'; }).length;
+      return { label: p, values: [done, inProgress, open] };
+    });
+  }
 
   function controlStatusCounts(rows) {
     var implemented = 0, inProgress = 0, notStarted = 0, notApplicable = 0;
@@ -2410,6 +2434,49 @@ function showModal(opts) {
       }).join('');
   }
 
+  /* Residual-risk 5×5 heat-map — extracted from renderDash() so the same
+     dark-mode-aware rendering (pickReadableRgb() picking real, AA-contrast
+     text per cell rather than a single hardcoded color — see this
+     function's own header comment further down for why) can also drive a
+     compact copy on the Risk register itself, not just the Dashboard.
+     Parameterized by target element ids so two independent copies can
+     exist in the DOM at once without colliding. No-ops harmlessly if
+     either id isn't present on the current view. */
+  function renderResidualHeatmapInto(heatId, legendId) {
+    var heatEl = document.getElementById(heatId);
+    if (!heatEl) return;
+    var counts = {};
+    S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
+    var themeInkRgb = currentThemeInkRgb();
+    var h = '<div class="lab"></div>';
+    for (var L = 1; L <= 5; L++) h += '<div class="lab">L' + L + '</div>';
+    for (var I = 5; I >= 1; I--) {
+      h += '<div class="lab">I' + I + '</div>';
+      for (var L2 = 1; L2 <= 5; L2++) {
+        var n = counts[L2 + '-' + I] || 0;
+        var sev = band(L2 * I);
+        var rgb = SEV_RGB[sev];
+        var alpha = n === 0 ? 0.12 : n === 1 ? 0.42 : n === 2 ? 0.62 : 0.82;
+        var textColor;
+        if (n === 0) {
+          textColor = 'var(--paper-faint)';
+        } else {
+          var sevRgb = rgb.split(',').map(Number);
+          var cellRgb = window.CheckpointLib.compositeOverBg(sevRgb, alpha, themeInkRgb);
+          textColor = 'rgb(' + window.CheckpointLib.pickReadableRgb(cellRgb, LIGHT_TEXT_RGB, DARK_TEXT_RGB).join(',') + ')';
+        }
+        h += '<div class="cell" style="background:rgba(' + rgb + ',' + alpha + ');color:' + textColor + '" title="Likelihood ' + L2 + ' × Impact ' + I + ' — ' + sev + (n ? ' — ' + n + ' risk' + (n > 1 ? 's' : '') : '') + '">' + (n || '') + '</div>';
+      }
+    }
+    heatEl.innerHTML = h;
+    var legendEl = document.getElementById(legendId);
+    if (legendEl) {
+      legendEl.innerHTML = ['Low', 'Medium', 'High', 'Critical'].map(function (sev) {
+        return '<span><i style="background:rgba(' + SEV_RGB[sev] + ',.75)"></i>' + sev + '</span>';
+      }).join('');
+    }
+  }
+
   function renderDash() {
     renderGettingStarted();
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
@@ -2600,48 +2667,7 @@ function showModal(opts) {
     }
 
 
-    /* heatmap — colored by the cell's own severity band (fixed RAG scale,
-       same meaning everywhere) with fill strength showing risk count,
-       not a single hue whose only signal is density. The on-cell text
-       color is picked, not fixed: the SAME "Critical" cell is mostly
-       page background at n=1 (alpha .42) and mostly the saturated red
-       at n=3+ (alpha .82) — and dark vs. light theme flips which end
-       of that range needs light vs. dark text — so a single hardcoded
-       per-severity color can't stay AA-compliant everywhere (verified:
-       the old fixed values measured as low as 1.96:1 for some
-       severity/alpha/theme combinations). pickReadableRgb() computes
-       the actual composited color and picks whichever of paper/ink
-       genuinely contrasts against it. */
-    var counts = {};
-    S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
-    var themeInkRgb = currentThemeInkRgb();
-    var h = '<div class="lab"></div>';
-    for (var L = 1; L <= 5; L++) h += '<div class="lab">L' + L + '</div>';
-    for (var I = 5; I >= 1; I--) {
-      h += '<div class="lab">I' + I + '</div>';
-      for (var L2 = 1; L2 <= 5; L2++) {
-        var n = counts[L2 + '-' + I] || 0;
-        var sev = band(L2 * I);
-        var rgb = SEV_RGB[sev];
-        var alpha = n === 0 ? 0.12 : n === 1 ? 0.42 : n === 2 ? 0.62 : 0.82;
-        var textColor;
-        if (n === 0) {
-          textColor = 'var(--paper-faint)';
-        } else {
-          var sevRgb = rgb.split(',').map(Number);
-          var cellRgb = window.CheckpointLib.compositeOverBg(sevRgb, alpha, themeInkRgb);
-          textColor = 'rgb(' + window.CheckpointLib.pickReadableRgb(cellRgb, LIGHT_TEXT_RGB, DARK_TEXT_RGB).join(',') + ')';
-        }
-        h += '<div class="cell" style="background:rgba(' + rgb + ',' + alpha + ');color:' + textColor + '" title="Likelihood ' + L2 + ' × Impact ' + I + ' — ' + sev + (n ? ' — ' + n + ' risk' + (n > 1 ? 's' : '') : '') + '">' + (n || '') + '</div>';
-      }
-    }
-    document.getElementById('heat').innerHTML = h;
-    var legendEl = document.getElementById('heatLegend');
-    if (legendEl) {
-      legendEl.innerHTML = ['Low', 'Medium', 'High', 'Critical'].map(function (sev) {
-        return '<span><i style="background:rgba(' + SEV_RGB[sev] + ',.75)"></i>' + sev + '</span>';
-      }).join('');
-    }
+    renderResidualHeatmapInto('heat', 'heatLegend');
     /* spark — posture score (gold) + control readiness (light gold), where
        recorded. The svg stretches non-uniformly (preserveAspectRatio="none")
        so text inside it would distort — value/date labels live in the HTML
@@ -3334,6 +3360,7 @@ function showModal(opts) {
   }
 
   function renderRisks() {
+    renderResidualHeatmapInto('riskHeat', 'riskHeatLegend');
     var f = window._riskF || 'All';
     /* 'HighCritical' is a synthetic filter value, never one of the pills'
        own data-id — it exists only so a drill-down link (Dashboard/Board
@@ -3380,6 +3407,8 @@ function showModal(opts) {
   }
 
   function renderActions() {
+    var breakdownEl = document.getElementById('actBreakdown');
+    if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(actionPriorityBreakdown(), ACTION_STATUS_LEGEND, { palette: 'app' });
     var f = window._actF || 'Open';
     var tf = window._actTypeF || 'All';
     document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {
