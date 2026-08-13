@@ -386,6 +386,21 @@ tr.flash{animation:flashRow 1.8s ease}
 table{width:100%;border-collapse:collapse}
 th{font-size:var(--fs-eyebrow);letter-spacing:.18em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;text-align:left;padding:12px 14px;border-bottom:1px solid var(--line)}
 td{padding:14px;border-bottom:1px solid var(--line);font-size:var(--fs-2);color:var(--paper-dim);vertical-align:middle}
+/* Actions register: 11 columns plus a per-row button cluster (Complete
+   / Corrective action / Edit / Delete, all white-space:nowrap so the
+   buttons themselves never wrap) is more than table{width:100%}'s
+   default auto-layout can fit — with nothing to stop it, the browser
+   crushes the one column that CAN wrap (the action title) down to a
+   handful of characters per line rather than letting the table exceed
+   its container, so a normal title wraps across 4-5 lines and the
+   button cluster on a CAPA row visually overflows past the table edge.
+   A min-width on the title column is the fix: it gives the table a
+   legitimate reason to grow past 100%, and .card's existing
+   overflow-x:auto (unused until now because the table never actually
+   needed to overflow) takes it from there with a normal horizontal
+   scrollbar — the same pattern the Statement of Applicability's much
+   wider table already relies on. */
+.act-title{min-width:240px}
 tr:last-child td{border-bottom:none}
 tbody tr{transition:background .15s var(--ease)}
 tbody tr:hover{background:var(--surface-hover);cursor:pointer}
