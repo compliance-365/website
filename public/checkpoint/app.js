@@ -11544,7 +11544,27 @@ function showModal(opts) {
         if (actualHash !== entry.sha256) throw new Error('pack file does not match the published manifest hash — refusing to decrypt');
 
         var pack = JSON.parse(packText);
-        var content = await window.CheckpointLib.decryptPack(crypto.subtle, key, pack);
+        var content;
+        try {
+          content = await window.CheckpointLib.decryptPack(crypto.subtle, key, pack);
+        } catch (decryptErr) {
+          /* The manifest hash check immediately above already passed, so
+             the pack file itself is intact and is exactly what was
+             published — which leaves the KEY as the only thing that can
+             make AES-GCM's authentication tag fail here. Worth saying
+             plainly: WebCrypto's own message for this is "The operation
+             failed for an operation-specific reason", which tells a
+             practitioner (or whoever they forward it to) nothing at all,
+             and the actual cause is a specific, fixable deployment
+             mismatch — the module keys used to ENCRYPT the packs at
+             build time (the MODULE_KEYS_JSON repo secret) have to be the
+             same set embedded into this tenant's activation file when it
+             was signed (the provisioning Lambda's own MODULE_KEYS_JSON
+             env var, or tools/module-keys.json for a hand-issued one).
+             Rotate one without the other and every premium module fails
+             exactly here, on a pack that is otherwise perfectly valid. */
+          throw new Error('this activation\'s content key does not match the published pack — the module keys used to build the packs and the ones embedded in this activation are from different sets. Re-issue the activation, or rebuild the packs, so both use the same module keys.');
+        }
         var shapeErr = window.CheckpointLib.validatePackShape(moduleId, content);
         if (shapeErr) throw new Error('decrypted content failed validation: ' + shapeErr);
 

@@ -29,10 +29,35 @@ Lambda → Configuration → Environment variables → Edit. Add all of:
 | `PADDLE_API_KEY` | Paddle → Developer Tools → Authentication → **API keys** (not the client-side token) |
 | `PADDLE_ENV` | `sandbox` while testing, `production` once live |
 | `ENTITLEMENT_PRIVATE_KEY_JWK` | The exact contents of `entitlement-private.json`, as one line |
-| `MODULE_KEYS_JSON` | The exact contents of `tools/module-keys.json`, as one line |
+| `MODULE_KEYS_JSON` | The exact contents of `tools/module-keys.json`, as one line — **must be the same key set as the `MODULE_KEYS_JSON` GitHub Actions secret**, see the warning below |
 | `OWNER_TENANT_ID` | Compliance365's own Entra tenant id or verified domain |
 | `OWNER_APP_CLIENT_ID` | See step 4 below |
 | `OWNER_APP_CLIENT_SECRET` | See step 4 below |
+
+> **⚠️ `MODULE_KEYS_JSON` lives in two places and they must match exactly.**
+>
+> These are the same keys used two different ways, and premium content only
+> works when both sides agree:
+>
+> - **This Lambda's env var** — embedded into every activation file the Lambda
+>   signs (`buildSignedActivation()`), so the browser has the key to *decrypt*
+>   premium content packs with.
+> - **The `MODULE_KEYS_JSON` GitHub Actions secret** — written to
+>   `tools/module-keys.json` during the deploy build, where
+>   `scripts/build-content-packs.mjs` uses it to *encrypt* those same packs.
+>
+> Encrypt with one set, decrypt with another, and every premium module fails
+> to load with *"this activation's content key does not match the published
+> pack"* — even though the activation is validly signed, unexpired, and the
+> pack file itself is intact and hash-verified. Nothing else in the app looks
+> broken, which makes this genuinely hard to spot without knowing to check.
+>
+> So: **generate the key set once**
+> (`node tools/issue-entitlement.mjs keygen-modules`), then paste that same
+> value into both places. If you ever rotate them, rotate both together **and**
+> re-issue every activation file already in the field — an existing activation
+> carries the old keys baked in, and will stop decrypting the moment the packs
+> are rebuilt with new ones (see ISSUANCE.md's rotation section).
 
 ## 4. Azure app registration (writes to OUR OWN roster only)
 
