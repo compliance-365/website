@@ -61,12 +61,20 @@ jobs:
         # not an env var — gitignored on purpose (see .gitignore), since it's the
         # decryption key material for every premium framework's content. Written
         # here from a repo secret only for the duration of this job; never
-        # committed. An empty/missing secret is NOT a failure — the script's own
-        # existsSync() check just skips pack-building entirely in that case,
-        # same as a contributor's local checkout with no keys, and the shell app
-        # + ISO 27001 baseline still deploys fine either way.
-        if: ${{ secrets.MODULE_KEYS_JSON != '' }}
-        run: printf '%s' "$MODULE_KEYS_JSON" > tools/module-keys.json
+        # committed. The empty-secret check happens in the shell, not via a step
+        # `if:` — GitHub Actions rejects `secrets.*` referenced directly in a
+        # step's `if:` condition at workflow-parse time (the whole run fails
+        # before any job even schedules, not just this step). An empty/missing
+        # secret is NOT a failure either way — build-content-packs.mjs's own
+        # existsSync() check just skips pack-building entirely when the file
+        # was never written, same as a contributor's local checkout with no
+        # keys, and the shell app + ISO 27001 baseline still deploys fine.
+        run: |
+          if [ -n "$MODULE_KEYS_JSON" ]; then
+            printf '%s' "$MODULE_KEYS_JSON" > tools/module-keys.json
+          else
+            echo "No MODULE_KEYS_JSON secret set — premium content packs will be skipped this build."
+          fi
         env:
           MODULE_KEYS_JSON: ${{ secrets.MODULE_KEYS_JSON }}
 
