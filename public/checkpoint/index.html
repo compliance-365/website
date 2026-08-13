@@ -530,6 +530,12 @@
     <!-- RISKS -->
     <section class="view" id="v-risks">
       <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual scores recalculate automatically as linked actions complete.</p></div>
+      <div class="card" style="margin-bottom:16px;max-width:460px">
+        <h3>Residual risk heatmap</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Every open risk plotted by likelihood × impact — where the register is actually concentrated, at a glance.</p>
+        <div class="heat" id="riskHeat"></div>
+        <div class="heat-legend" id="riskHeatLegend"></div>
+      </div>
       <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button></div>
       <div class="card" id="addRiskPanel" style="margin-bottom:16px;display:none">
         <h3>New risk</h3>
@@ -589,6 +595,11 @@
     <!-- ACTIONS -->
     <section class="view" id="v-actions">
       <div class="vhead"><div class="rule"></div><h1>Actions register</h1><p>Every action traces to a risk and a control. Completing an action prompts evidence capture and updates the linked risk's residual score — the audit trail builds itself. Also the home for non-conformities and observations raised during internal or external audits.</p></div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Status by priority</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Not "how many actions are open" — whether the ones that matter most are actually moving.</p>
+        <div id="actBreakdown"></div>
+      </div>
       <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddAction">+ Add action / finding</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actions">Export CSV</button></div>
       <div class="card" id="addActionPanel" style="margin-bottom:16px;display:none">
         <h3>New action / finding</h3>
