@@ -877,4 +877,12 @@ describe('Controls column reconciliation — self-heal for an already-provisione
       assert.match(controlsEntry[1], new RegExp("'" + col + "'"), `COLUMN_RECONCILE.Controls is missing '${col}' — an existing tenant's Controls list would never get this column added, and any write touching it throws "Field '${col}' is not recognized" instead of saving`);
     });
   });
+
+  test('COLUMN_RECONCILE.AISystems lists AiActAnswers, so a tenant with an AI Systems register from before the EU AI Act classifier shipped self-heals instead of throwing the same "Field ... is not recognized" error', () => {
+    const reconcileBlock = storeJs.match(/var COLUMN_RECONCILE = \{([\s\S]*?)\n {2}\};/);
+    assert.ok(reconcileBlock, 'COLUMN_RECONCILE not found');
+    const aiSystemsEntry = reconcileBlock[1].match(/AISystems: \[([^\]]*)\]/);
+    assert.ok(aiSystemsEntry, 'COLUMN_RECONCILE.AISystems not found — a tenant with AI systems already on record before AiActAnswers existed would hit "Field \'AiActAnswers\' is not recognized" the next time they saved one');
+    assert.match(aiSystemsEntry[1], /'AiActAnswers'/, 'COLUMN_RECONCILE.AISystems is missing \'AiActAnswers\'');
+  });
 });

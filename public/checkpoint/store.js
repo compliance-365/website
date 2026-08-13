@@ -1751,7 +1751,14 @@ window.SpStore = (function () {
        so every updateControl() patch that touches them throws "Field
        '<name>' is not recognized" instead of saving. Confirmed live: a
        user's real tenant hit exactly this on LastVerified. */
-    Controls: ['LastVerified', 'EvidenceUrl', 'VerifiedBy']
+    Controls: ['LastVerified', 'EvidenceUrl', 'VerifiedBy'],
+    /* Same bug, caught before it shipped rather than live: AiActAnswers
+       was added to AISystems' DEFS for the EU AI Act classifier without
+       remembering this table too. Any tenant with an AI Systems
+       register already provisioned before that feature landed would
+       hit the identical "Field 'AiActAnswers' is not recognized" error
+       the next time they saved an AI system. */
+    AISystems: ['AiActAnswers']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
