@@ -1744,7 +1744,14 @@ window.SpStore = (function () {
      tenants pick it up without re-provisioning. */
   var COLUMN_RECONCILE = {
     Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote'],
-    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy']
+    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy'],
+    /* LastVerified/EvidenceUrl/VerifiedBy are in Controls' DEFS (below)
+       but were never added here — a tenant provisioned before all three
+       existed has a Controls list missing whichever one(s) came later,
+       so every updateControl() patch that touches them throws "Field
+       '<name>' is not recognized" instead of saving. Confirmed live: a
+       user's real tenant hit exactly this on LastVerified. */
+    Controls: ['LastVerified', 'EvidenceUrl', 'VerifiedBy']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
