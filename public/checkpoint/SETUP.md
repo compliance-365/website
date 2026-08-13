@@ -1116,15 +1116,31 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   provisioned with by default.
 - **ISO 42001 (AI Management System) automated Annex A subset**: a
   posture scan proposes status changes for the Annex A controls with a
-  genuine live Graph signal (`CHECK_ISO42001` in store.js — access to
-  and monitoring of the systems, tooling and data an AI system depends
-  on (A.4.2-A.4.6), AI system operation monitoring and event logging
-  (A.6.2.6, A.6.2.8), incident communication (A.8.4) and third-party
-  oversight (A.10.3, via `guests`)), same confirm-or-dismiss contract as
-  Essential Eight above. 20 checks across 10 distinct codes. The
+  genuine live Graph signal (`checkIso42001` in `checkpoint-content/
+  iso42001.json`'s `extra` — access to and monitoring of the systems,
+  tooling and data an AI system depends on (AI.4.2-AI.4.6), AI system
+  operation monitoring and event logging (AI.6.2.6, AI.6.2.8), incident
+  communication (AI.8.4) and third-party oversight (AI.10.3, via
+  `guests`)), same confirm-or-dismiss contract as Essential Eight above.
+  21 checks across 10 distinct codes (added `macro` — Office macro
+  settings hardened, secureScore — alongside `wdac` on AI.4.4/AI.4.2;
+  same endpoint-hardening reasoning already applied to `wdac`). The
   governance-heavy Annex A controls — AI policy content, impact
   assessment write-ups, design and use-case documentation — have no
   live signal and stay self-reported by design.
+
+  **Where the automation ceiling actually is**: audited every one of
+  `CHECK_DEFS`' 25 checks against `checkIso42001` while looking for more
+  wins. Of the 21 checks capable of ever firing (`scored:true`), `macro`
+  above was the only one not yet mapped to an ISO 42001 control — every
+  other live signal was already wired in. The remaining ~27 uncovered
+  Annex A controls (AI policy, impact assessment, design/development
+  documentation, most of the data-lifecycle and use-case controls) don't
+  have an existing Graph signal to remap at all; genuinely automating
+  more of them means building entirely new checks (new Graph calls, new
+  scoring thresholds), not just wiring an existing one to a new code.
+  That's a materially bigger project than this one-line addition and
+  hasn't been scoped yet.
 - **ISO 27701 (PIMS) automated subset**: same confirm-or-dismiss
   contract again (`CHECK_ISO27701` in store.js), but a smaller one —
   ISO 27701's own P.7.x/P.8.x controls are the privacy-specific layer

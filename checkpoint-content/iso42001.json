@@ -300,6 +300,7 @@
         "patch",
         "riskyapps",
         "wdac",
+        "macro",
         "labels",
         "dlp",
         "encryption",
@@ -324,7 +325,8 @@
         "pim",
         "admins",
         "riskyapps",
-        "wdac"
+        "wdac",
+        "macro"
       ]
     },
     "AI.4.5": {
@@ -609,6 +611,10 @@
         "AI.4.2"
       ],
       "wdac": [
+        "AI.4.4",
+        "AI.4.2"
+      ],
+      "macro": [
         "AI.4.4",
         "AI.4.2"
       ],
