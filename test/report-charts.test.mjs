@@ -59,6 +59,21 @@ describe('chart function snapshots (fixed fixture data)', () => {
     assert.equal(normalizeHatchIds(svg), "<svg viewBox=\"0 0 600 140\" width=\"100%\" role=\"img\" aria-label=\"Composition by group, 2 group(s)\"><defs><pattern id=\"rpt-hatch-N\" width=\"6\" height=\"6\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><rect width=\"6\" height=\"6\" fill=\"#D9D4C8\"/><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"6\" stroke=\"#8B877D\" stroke-width=\"1.5\"/></pattern></defs><text x=\"170\" y=\"50\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"11\" fill=\"#0B0B0C\">Organizational</text><rect x=\"180\" y=\"34\" width=\"313.88\" height=\"24\" fill=\"#3A7A3A\"/><rect x=\"495.38\" y=\"34\" width=\"61.58\" height=\"24\" fill=\"#B57F2A\"/><rect x=\"558.46\" y=\"34\" width=\"30.04\" height=\"24\" fill=\"url(#rpt-hatch-N)\"/><text x=\"170\" y=\"86\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"11\" fill=\"#0B0B0C\">People</text><rect x=\"180\" y=\"70\" width=\"226.28\" height=\"24\" fill=\"#3A7A3A\"/><rect x=\"407.78\" y=\"70\" width=\"135.17\" height=\"24\" fill=\"url(#rpt-hatch-N)\"/><rect x=\"544.44\" y=\"70\" width=\"44.06\" height=\"24\" fill=\"#D9D4C8\"/><rect x=\"10\" y=\"103\" width=\"10\" height=\"10\" fill=\"#3A7A3A\"/><text x=\"25\" y=\"112\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"#4b473e\">Implemented</text><rect x=\"155\" y=\"103\" width=\"10\" height=\"10\" fill=\"#B57F2A\"/><text x=\"170\" y=\"112\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"#4b473e\">In progress</text><rect x=\"300\" y=\"103\" width=\"10\" height=\"10\" fill=\"url(#rpt-hatch-N)\"/><text x=\"315\" y=\"112\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"#4b473e\">Not started</text><rect x=\"445\" y=\"103\" width=\"10\" height=\"10\" fill=\"#D9D4C8\"/><text x=\"460\" y=\"112\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"#4b473e\">Not applicable</text></svg>");
   });
 
+  test("stackedBars() — a row that's entirely one hatch-flagged status renders solid, not hatched (a brand-new register shouldn't look like an unstyled placeholder)", () => {
+    const svg = C.stackedBars([{"label":"Organizational controls","values":[0,0,37,0]}], [{"label":"Implemented","color":"#3A7A3A"},{"label":"In progress","color":"#B57F2A"},{"label":"Not started","color":"#8B877D","hatch":true},{"label":"Not applicable","color":"#D9D4C8"}], { scaleByCount: true });
+    // The bar segment itself (the wide rect right after the row's track
+    // rect) must be the solid color — legend swatches further down still
+    // reference the hatch pattern to explain what it means when it DOES
+    // appear on a mixed row, so this checks the bar specifically rather
+    // than asserting "rpt-hatch" is absent from the whole string.
+    assert.match(svg, /<rect x="180" y="34" width="408\.5" height="24" fill="#8B877D"\/>/, "the lone 'Not started' segment should render solid in its own color, not url(#rpt-hatch-N)");
+  });
+
+  test("stackedBars() — a MIXED row still hatches its 'Not started' segment (only a solo status skips the texture)", () => {
+    const svg = C.stackedBars([{"label":"Mixed","values":[5,0,3,0]}], [{"label":"Implemented","color":"#3A7A3A"},{"label":"In progress","color":"#B57F2A"},{"label":"Not started","color":"#8B877D","hatch":true},{"label":"Not applicable","color":"#D9D4C8"}]);
+    assert.match(svg, /rpt-hatch/, "a mixed row's 'Not started' segment should still use the hatch pattern to stay distinguishable from the solid 'Implemented' segment beside it");
+  });
+
   test("stackedBars() — no rows/legend renders the placeholder", () => {
     const svg = C.stackedBars([], []);
     assert.equal(svg, "<svg viewBox=\"0 0 600 140\" width=\"100%\" role=\"img\" aria-label=\"Not enough data to compare yet.\"><rect x=\"0.5\" y=\"0.5\" width=\"599\" height=\"139\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"300\" y=\"70\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">Not enough data to compare yet.</text></svg>");

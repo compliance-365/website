@@ -332,11 +332,21 @@
       var y = top + i * (rowH + rowGap);
       var x = barX;
       var track = scaleByCount ? '<rect x="' + fx(barX) + '" y="' + y + '" width="' + fx(barW) + '" height="' + rowH + '" rx="2" fill="' + trackColor + '"/>' : '';
+      /* A row that's ENTIRELY one status (every action still "Open", every
+         control still "Not started" — the normal state for a brand-new
+         register) has nothing to distinguish the hatch texture FROM: the
+         diagonal stripe exists to tell adjacent segments apart, not to
+         decorate a lone one. Filled edge-to-edge, it reads as an
+         unstyled/loading placeholder rather than a deliberate value — see
+         the live report of exactly that reaction. Solid color once a row
+         has only one non-zero segment keeps the hatch meaningful for the
+         mixed-status rows where it's actually doing work. */
+      var soloSegment = values.filter(function (v) { return v > 0; }).length === 1;
       var rects = track + values.map(function (v, j) {
         var w = total ? (v / total) * rowWidth : 0;
         if (w < 0.5) return '';
         var def = legendDefs[j];
-        var rect = '<rect x="' + fx(x) + '" y="' + y + '" width="' + fx(Math.max(0, w - 1.5)) + '" height="' + rowH + '" fill="' + (def.hatch ? hatchFill : def.color) + '"/>';
+        var rect = '<rect x="' + fx(x) + '" y="' + y + '" width="' + fx(Math.max(0, w - 1.5)) + '" height="' + rowH + '" fill="' + (def.hatch && !soloSegment ? hatchFill : def.color) + '"/>';
         x += w;
         return rect;
       }).join('');
