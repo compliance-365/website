@@ -69,6 +69,22 @@ describe('chart function snapshots (fixed fixture data)', () => {
     assert.match(svg, /<rect x="180" y="34" width="408\.5" height="24" fill="#8B877D"\/>/, "the lone 'Not started' segment should render solid in its own color, not url(#rpt-hatch-N)");
   });
 
+  test("stackedBars() with scaleByCount — maxTotal ignores a row's extra values beyond legendDefs' own length (the two must scale consistently)", () => {
+    const legend = [{ "label": "A", "color": "#3A7A3A" }, { "label": "B", "color": "#B57F2A" }];
+    // Row 1 has a THIRD value with no matching legend entry — must not
+    // count toward maxTotal, or row 2 (the real max) would be scaled
+    // down as if row 1 were larger than it actually renders.
+    const rows = [
+      { "label": "Has an extra unmapped value", "values": [5, 0, 100] },
+      { "label": "The real max", "values": [10, 0] }
+    ];
+    const svg = C.stackedBars(rows, legend, { scaleByCount: true });
+    // Row 2's single segment should span the full bar width (barW = 410
+    // in this chart's geometry), not be scaled down as if row 1's total
+    // were 105 instead of the 5 that's actually drawn for it.
+    assert.match(svg, /<rect x="180" y="70" width="408\.5" height="24" fill="#3A7A3A"\/>/, "the actual max row must render at full bar width — maxTotal must come from what's drawn, not from unmapped extra values");
+  });
+
   test("stackedBars() — a MIXED row still hatches its 'Not started' segment (only a solo status skips the texture)", () => {
     const svg = C.stackedBars([{"label":"Mixed","values":[5,0,3,0]}], [{"label":"Implemented","color":"#3A7A3A"},{"label":"In progress","color":"#B57F2A"},{"label":"Not started","color":"#8B877D","hatch":true},{"label":"Not applicable","color":"#D9D4C8"}]);
     assert.match(svg, /rpt-hatch/, "a mixed row's 'Not started' segment should still use the hatch pattern to stay distinguishable from the solid 'Implemented' segment beside it");

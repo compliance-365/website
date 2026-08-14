@@ -319,15 +319,20 @@
 
     var labelW = 170, barX = labelW + 10, barW = 600 - barX - 10, rowH = 24, rowGap = showValues ? 26 : 12;
     var top = 34;
-    var rowTotals = rows.map(function (g) {
-      return (g.values || []).reduce(function (a, v) { return a + Math.max(0, Number(v) || 0); }, 0);
-    });
+    /* Clamp each row's values to legendDefs' own length ONCE, up front —
+       used for both maxTotal (scaleByCount's scale reference) and the
+       actual rendering below. A row whose values array happened to be
+       longer than legendDefs (extra, unmapped entries) must not inflate
+       maxTotal beyond what the bars themselves ever draw, or every row
+       silently under-scales relative to what's actually on screen. */
+    var rowValues = rows.map(function (g) { return legendDefs.map(function (_, j) { return Math.max(0, Number(g.values[j]) || 0); }); });
+    var rowTotals = rowValues.map(function (values) { return values.reduce(function (a, b) { return a + b; }, 0); });
     var maxTotal = Math.max.apply(null, rowTotals.concat([0]));
     var hatch = hatchDefs();
     var hatchFill = 'url(#' + hatch.id + ')';
     var barsHtml = rows.map(function (g, i) {
-      var values = legendDefs.map(function (_, j) { return Math.max(0, Number(g.values[j]) || 0); });
-      var total = values.reduce(function (a, b) { return a + b; }, 0);
+      var values = rowValues[i];
+      var total = rowTotals[i];
       var rowWidth = scaleByCount ? (maxTotal ? (total / maxTotal) * barW : 0) : barW;
       var y = top + i * (rowH + rowGap);
       var x = barX;

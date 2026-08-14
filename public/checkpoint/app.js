@@ -4198,10 +4198,13 @@ function showModal(opts) {
   function renderSoaDashboard(fw, visRows, app) {
     var kpiEl = document.getElementById('soaKpiRow');
     if (kpiEl) {
-      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
-      var inProgress = app.filter(function (c) { return c.st === 'In progress'; }).length;
-      var notStarted = app.length - impl - inProgress;
-      var notApplicable = visRows.length - app.length;
+      /* controlStatusCounts() buckets anything that isn't literally
+         'Implemented'/'In progress' into notStarted via its own "else"
+         branch — safer than deriving notStarted by subtracting from
+         app.length, which would silently assume every applicable
+         control's status is one of exactly those two strings. */
+      var counts = controlStatusCounts(visRows);
+      var impl = counts.implemented, inProgress = counts.inProgress, notStarted = counts.notStarted, notApplicable = counts.notApplicable;
       var overdue = app.filter(function (c) { return controlReviewStatus(c).due; }).length;
       var unjustified = visRows.filter(function (c) { return !c.app && !c.just; }).length;
       kpiEl.innerHTML =
