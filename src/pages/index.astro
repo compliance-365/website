@@ -75,27 +75,18 @@ const faqs = [
 ];
 
 // JSON-LD
-const orgLd = {
-  '@context': 'https://schema.org',
-  '@type': 'ProfessionalService',
-  name: 'Compliance365',
-  url: 'https://www.compliance365.com.au',
-  logo: 'https://www.compliance365.com.au/assets/logo.svg',
-  description: 'Cyber, privacy, and AI governance consulting for Australian mid-market and enterprise organisations. ISO 27001, SOC 2, Essential Eight, ISO 42001, DISP/IRAP — fixed-price, evidence-backed, Microsoft 365-native.',
-  areaServed: [
-    { '@type': 'Country', name: 'Australia' },
-    { '@type': 'City', name: 'Brisbane' },
-    { '@type': 'City', name: 'Melbourne' },
-    { '@type': 'City', name: 'Sydney' },
-    { '@type': 'City', name: 'Canberra' },
-    { '@type': 'City', name: 'Perth' },
-    { '@type': 'City', name: 'Adelaide' },
-  ],
-  address: { '@type': 'PostalAddress', addressLocality: 'Brisbane', addressRegion: 'QLD', addressCountry: 'AU' },
-  contactPoint: { '@type': 'ContactPoint', telephone: '+61-468-752243', contactType: 'customer service' },
-  sameAs: ['https://www.linkedin.com/company/compliance-365/']
-};
-
+// Organization/ProfessionalService/LocalBusiness data used to live here
+// too (as a second, independently-maintained `orgLd` object) — dropped
+// in favour of the one BaseLayout.astro already renders on every page
+// (including this one), which has since grown a proper @id, the full
+// offer catalog, knowsAbout, and now LocalBusiness + opening hours.
+// Having two overlapping ProfessionalService entities on the same page
+// with no shared @id had already drifted (this one's phone number was
+// formatted "+61-468-752243" against BaseLayout's "+61468752243") —
+// exactly the kind of duplicate-entity confusion Google's structured
+// data guidelines warn against, and it would only have kept drifting
+// from here. FAQPage below is page-specific content, not redundant with
+// anything BaseLayout provides, so it stays.
 const faqLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
@@ -544,7 +535,6 @@ const faqLd = {
 <Footer />
 
 <!-- JSON-LD -->
-<script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
 <script type="application/ld+json" set:html={JSON.stringify(faqLd)} />
 
 <style>

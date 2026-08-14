@@ -96,6 +96,14 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
       form.style.display = 'none';
       if (successEl) successEl.style.display = 'flex';
       if (errorEl) errorEl.style.display = 'none';
+
+      // Every other conversion action on the site fires a GA4 event
+      // (checklist_completed, contact_form_submit, free_roadmap_signup,
+      // ...) so it can be marked a conversion and imported into Google
+      // Ads — a successful subscribe here was the one exception.
+      try {
+        if (typeof gtag === 'function') gtag('event', 'newsletter_signup', { source: source, page_location: window.location.href });
+      } catch (_) {}
     } catch (_) {
       btn.disabled = false;
       btn.textContent = 'Subscribe free';
