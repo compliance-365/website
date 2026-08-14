@@ -2047,6 +2047,34 @@ function showModal(opts) {
        colours the rule and section underlines, matching how report.js
        already brands generated reports. */
     var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor : '#A9812E';
+    var accentRgb = [1, 3, 5].map(function (i) { return parseInt(accent.slice(i, i + 2), 16); }).join(',');
+    /* Section icons — a small, self-contained set (not the live app's
+       14px ICONS object, whose currentColor + var(--gold) strokes don't
+       apply outside the app's own CSS, and whose handful of glyphs
+       don't cover "roles", "review", "exceptions", etc. anyway). Same
+       hand-drawn line-icon language as the rest of the product: 20x20
+       grid, 1.4px stroke, currentColor so each one picks up whatever
+       color its wrapping span sets — here always the brand accent, one
+       consistent visual thread from the masthead rule through every
+       section heading. Purely decorative wayfinding, not information on
+       their own, so callers never rely on them meaning anything by
+       themselves — the heading text still says what the section is. */
+    var POLICY_ICONS = {
+      forYou: '<path d="M10 3a5 5 0 0 0-3 9c.6.5 1 1.2 1 2v.5h4V14c0-.8.4-1.5 1-2a5 5 0 0 0-3-9z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8.3 17h3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+      practice: '<rect x="3.5" y="3.5" width="13" height="13" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 10l1.8 1.8L12 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+      purpose: '<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="0.9" fill="currentColor"/>',
+      scope: '<path d="M4 7V4h3M13 4h3v3M16 13v3h-3M7 16H4v-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+      policy: '<path d="M10 3l6 2.2v4.6c0 4.4-2.6 7.2-6 8.4-3.4-1.2-6-4-6-8.4V5.2L10 3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M7 10l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+      roles: '<circle cx="7" cy="7" r="2.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 16c0-2.8 2-4.6 4.5-4.6s4.5 1.8 4.5 4.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="14.5" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12.6 11.7c.5-.2 1.1-.3 1.9-.3 2.1 0 3.8 1.5 3.8 3.9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+      exceptions: '<path d="M5 18V3M5 3h9l-2 3.2L14 9.4H5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+      nonCompliance: '<path d="M10 3.5l8 13.5H2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M10 8.5v4M10 15h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+      related: '<path d="M6 3h6l3 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 3v3h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M7.5 12h5M7.5 15h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+      review: '<rect x="3" y="4.5" width="14" height="12" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3 8.5h14M7 3v3M13 3v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7.2" cy="12.2" r="0.8" fill="currentColor"/><circle cx="10" cy="12.2" r="0.8" fill="currentColor"/><circle cx="12.8" cy="12.2" r="0.8" fill="currentColor"/>',
+      satisfies: '<path d="M8.5 11.5l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M11 6.5l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7L14.5 10.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 13.5l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7L5.5 9.7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+      check: '<path d="M4 10.5l3.5 3.5L16 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+    };
+    function secIcon(key) { return '<svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">' + (POLICY_ICONS[key] || '') + '</svg>'; }
+    function sectionHeading(key, label) { return '<h2><span class="sec-ico">' + secIcon(key) + '</span>' + esc(label) + '</h2>'; }
     var clientMark = (opts.logoUrl && /^data:image\//.test(opts.logoUrl))
       ? '<img src="' + esc(opts.logoUrl) + '" alt="' + esc(opts.clientLabel) + '" style="max-height:46px;max-width:210px;object-fit:contain;display:block">'
       : '<span class="clname">' + esc(opts.clientLabel) + '</span>';
@@ -2059,10 +2087,11 @@ function showModal(opts) {
        than migrating every producer means a tailored draft and a
        rewritten template render through exactly the same code, and an
        old audit-log entry recovered at approval time still works. */
-    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) {
-      if (typeof s === 'string') return '<li>' + esc(s) + '</li>';
-      return '<li>' + esc(s.rule) + (s.because ? '<div class="because">' + esc(s.because) + '</div>' : '') + '</li>';
-    }).join('') + '</ol>';
+    var statementsHtml = '<div class="stmt-list">' + t.policyStatements.map(function (s, i) {
+      var rule = typeof s === 'string' ? s : s.rule;
+      var because = typeof s === 'string' ? '' : (s.because || '');
+      return '<div class="stmt"><span class="stmt-n">' + (i + 1) + '</span><div class="stmt-body"><p class="stmt-rule">' + esc(rule) + '</p>' + (because ? '<p class="because">' + esc(because) + '</p>' : '') + '</div></div>';
+    }).join('') + '</div>';
 
     /* The staff-facing half. Deliberately the only place in the
        document written in second person: the normative sections below
@@ -2074,12 +2103,12 @@ function showModal(opts) {
        not been rewritten yet simply renders as it always did. */
     var readerHtml = '';
     if (t.whyItMatters) {
-      readerHtml += '<h2>What this means for you</h2>' +
-        t.whyItMatters.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('');
+      readerHtml += sectionHeading('forYou', 'What this means for you') +
+        '<div class="callout">' + t.whyItMatters.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('') + '</div>';
     }
     if (t.inPractice && t.inPractice.length) {
-      readerHtml += '<h2>In practice</h2><ul class="prac">' +
-        t.inPractice.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+      readerHtml += sectionHeading('practice', 'In practice') + '<ul class="prac">' +
+        t.inPractice.map(function (p) { return '<li><span class="prac-ck">' + secIcon('check') + '</span>' + esc(p) + '</li>'; }).join('') + '</ul>';
     }
 
     /* The governance apparatus an auditor looks for and staff skip.
@@ -2089,15 +2118,15 @@ function showModal(opts) {
        either quietly ignored or unenforceable. */
     var govHtml = '';
     if (t.roles && t.roles.length) {
-      govHtml += '<h2>Who is responsible</h2><table class="roles"><tbody>' +
+      govHtml += sectionHeading('roles', 'Who is responsible') + '<table class="roles"><tbody>' +
         t.roles.map(function (r) { return '<tr><th>' + esc(r.role) + '</th><td>' + esc(r.responsibility) + '</td></tr>'; }).join('') +
         '</tbody></table>';
     }
-    if (t.exceptions) govHtml += '<h2>Exceptions</h2><p class="intro">' + esc(t.exceptions) + '</p>';
-    if (t.nonCompliance) govHtml += '<h2>If this policy is not followed</h2><p class="intro">' + esc(t.nonCompliance) + '</p>';
+    if (t.exceptions) govHtml += sectionHeading('exceptions', 'Exceptions') + '<p class="intro">' + esc(t.exceptions) + '</p>';
+    if (t.nonCompliance) govHtml += sectionHeading('nonCompliance', 'If this policy is not followed') + '<p class="intro">' + esc(t.nonCompliance) + '</p>';
     if (t.relatedDocuments && t.relatedDocuments.length) {
-      govHtml += '<h2>Related documents</h2><ul class="prac">' +
-        t.relatedDocuments.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>';
+      govHtml += sectionHeading('related', 'Related documents') + '<ul class="prac">' +
+        t.relatedDocuments.map(function (d) { return '<li><span class="prac-dot"></span>' + esc(d) + '</li>'; }).join('') + '</ul>';
     }
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
     /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
@@ -2130,12 +2159,12 @@ function showModal(opts) {
          apparatus sits after the rules where the people who need it
          will look for it. */
       readerHtml +
-      '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
-      '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
-      '<h2>Policy</h2>' + statementsHtml +
+      sectionHeading('purpose', 'Purpose') + '<p class="intro">' + esc(t.purpose) + '</p>' +
+      sectionHeading('scope', 'Scope') + '<p class="intro">' + esc(t.scope) + '</p>' +
+      sectionHeading('policy', 'Policy') + statementsHtml +
       govHtml +
-      '<h2>Review</h2><p class="intro">' + esc(t.reviewCadence) + '</p>' +
-      (t.controls.length ? '<h2>Helps satisfy</h2><p class="intro">' + esc(t.controls.join(', ')) + '</p>' : '');
+      sectionHeading('review', 'Review') + '<p class="intro">' + esc(t.reviewCadence) + '</p>' +
+      (t.controls.length ? sectionHeading('satisfies', 'Helps satisfy') + '<div class="chips">' + t.controls.map(function (c) { return '<span class="chip-ctrl">' + esc(c) + '</span>'; }).join('') + '</div>' : '');
     return '<!DOCTYPE html><html><head><style>' +
       "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
@@ -2143,16 +2172,37 @@ function showModal(opts) {
       '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
       '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Fraunces,serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
       '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
-      'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px}' +
+      'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}' +
+      'h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px;display:flex;align-items:center;gap:9px}' +
+      '.sec-ico{display:inline-flex;flex:none;color:' + accent + '}.sec-ico svg{display:block}' +
       '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
-      'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
+      /* The reader-facing "what this means for you" section gets its own
+         tinted, left-bordered box — visually distinct from the
+         declarative sections around it, the "two registers... kept
+         visibly apart" the surrounding comment already describes, now
+         carried through in the layout, not just the prose voice. */
+      '.callout{background:rgba(' + accentRgb + ',.07);border-left:3px solid ' + accent + ';border-radius:0 6px 6px 0;padding:14px 18px;margin-top:10px}' +
+      '.callout .intro{margin:0 0 8px}.callout .intro:last-child{margin-bottom:0}' +
+      /* Each policy statement as its own card with a numbered badge,
+         rather than a plain <ol> — the thing a reader actually scans
+         for ("how many rules, which one applies to me") is easier to
+         find as distinct blocks than as a wall of numbered sentences. */
+      '.stmt-list{margin-top:14px}' +
+      '.stmt{display:flex;gap:14px;padding:14px 16px;margin-bottom:10px;background:rgba(11,11,12,.02);border:1px solid rgba(11,11,12,.08);border-radius:6px}' +
+      '.stmt-n{flex:none;width:22px;height:22px;border-radius:50%;background:' + accent + ';color:#fff;font-size:11px;font-weight:700;line-height:22px;text-align:center}' +
+      '.stmt-body{flex:1;min-width:0}.stmt-rule{margin:0;font-weight:600}' +
       /* The reason attached to a rule is set apart rather than run into
          it, so the normative sentence still reads as the rule and the
          rationale reads as support for it — not as a qualification
          weakening it. */
-      '.because{color:#6b675e;font-style:italic;margin-top:3px;max-width:70ch}' +
-      'ul.prac{margin:10px 0 0 20px;padding:0}ul.prac li{margin-bottom:9px;max-width:78ch}' +
+      '.because{color:#6b675e;font-style:italic;margin-top:5px;max-width:70ch}' +
+      'ul.prac{list-style:none;margin:10px 0 0;padding:0}' +
+      'ul.prac li{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px;max-width:78ch}' +
+      '.prac-ck{flex:none;width:18px;height:18px;color:#3A7A3A;margin-top:1px}' +
+      '.prac-dot{flex:none;width:6px;height:6px;border-radius:50%;background:' + accent + ';margin:6px 1px 0}' +
+      '.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}' +
+      '.chip-ctrl{display:inline-block;padding:4px 11px;border-radius:20px;background:rgba(11,11,12,.05);border:1px solid rgba(11,11,12,.14);font-size:11px;font-weight:600;color:#4b473e;letter-spacing:.02em}' +
       '.roles{width:100%;border-collapse:collapse;margin:12px 0 0}' +
       '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
       '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
