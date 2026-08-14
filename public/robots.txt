@@ -1,5 +1,34 @@
 User-agent: *
 Disallow:
 
+# GitHub Pages serves the same index.html at both the trailing-slash URL
+# and the bare path with no redirect (e.g. /services and /services/ both
+# return 200 with identical content) — trailingSlash:'always' in
+# astro.config.mjs only controls the links Astro generates internally, it
+# has no effect on what a crawler gets if it requests the bare path some
+# other way (an old backlink, a manually-typed URL, a stale record).
+# A Search Console "Crawled - currently not indexed" export on
+# 2026-08-14 showed this duplicate-URL pattern across nearly every core
+# page, some going back to the site's first crawl in Nov 2025 and never
+# resolving. The $ anchors below match ONLY the exact bare path, not the
+# trailing-slash version that follows it — Google and Bing both support
+# this end-of-string anchor in robots.txt (it's the same syntax used to
+# block file extensions, e.g. Disallow: /*.pdf$).
+Disallow: /services$
+Disallow: /services/iso27001$
+Disallow: /services/iso27701$
+Disallow: /services/soc2$
+Disallow: /services/essential-eight$
+Disallow: /services/nist-csf$
+Disallow: /services/iso42001$
+Disallow: /services/disp-ism-irap$
+Disallow: /about$
+Disallow: /book$
+Disallow: /blog$
+Disallow: /resources$
+Disallow: /resources/ai-governance-readiness$
+Disallow: /case-studies$
+Disallow: /checklist/iso27001$
+
 # Point crawlers to your sitemap
 Sitemap: https://www.compliance365.com.au/sitemap-index.xml
