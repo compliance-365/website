@@ -9478,16 +9478,33 @@ function showModal(opts) {
           cancelText: 'Not now'
         });
         if (link) {
+          var bumped = 0;
           t.controls.forEach(function (code) {
             var c = S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) || S.controls.find(function (x) { return x.id === code; });
             if (!c) return;
             var prevUrl = c.evidenceUrl;
             c.evidenceUrl = doc.url;
+            var key = c.fw + '|' + c.id;
+            /* A policy just written FOR this control is real, visible
+               progress — leaving the control sitting at "Not started"
+               while it now has linked evidence reads as stale/wrong on
+               every chart and KPI that reads status (see the live
+               "why does this look uncoloured" reports this session).
+               Only bumps a control that's still at the untouched
+               default — never overwrites "In progress"/"Implemented"
+               someone already set by hand, and never claims
+               "Implemented" on the strength of a draft policy alone. */
+            if (c.st === 'Not started') {
+              var prevSt = c.st;
+              c.st = 'In progress';
+              audit('Control status changed', 'Control', key, prevSt, 'In progress (policy generated)');
+              bumped++;
+            }
             Store.updateControl(c).catch(function (e) { warn(e); });
-            audit('Evidence link changed', 'Control', c.fw + '|' + c.id, prevUrl || '(none)', doc.url);
+            audit('Evidence link changed', 'Control', key, prevUrl || '(none)', doc.url);
           });
-          renderSoa();
-          toast('Linked as evidence to ' + t.controls.length + ' control' + (t.controls.length > 1 ? 's' : '') + '.');
+          renderSoa(); renderDash();
+          toast('Linked as evidence to ' + t.controls.length + ' control' + (t.controls.length > 1 ? 's' : '') + (bumped ? ', ' + bumped + ' moved to In progress' : '') + '.');
         }
       }
     },
