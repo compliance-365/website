@@ -118,10 +118,28 @@
       '</svg>';
   }
 
-  var HATCH_DEFS = '<defs>' +
-    '<pattern id="rpt-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
-    '<rect width="6" height="6" fill="' + PAL.muted + '"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + PAL.neutral + '" stroke-width="1.5"/>' +
-    '</pattern></defs>';
+  /* Each chart gets its OWN uniquely-id'd hatch pattern rather than a
+     shared "rpt-hatch" — the live app can have several of these charts'
+     SVGs sitting in the DOM at once (one per register view, all built
+     at boot by renderAll(), long before the practitioner navigates to
+     look at any of them). Two-plus <pattern id="rpt-hatch"> elements in
+     one document is invalid HTML/SVG (ids must be document-unique), and
+     in practice it silently breaks the hatch fill on every chart but
+     one — url(#rpt-hatch) resolves to a single element document-wide,
+     and only that element's pattern actually paints; every other
+     "hatched" segment renders fully transparent instead, indistinguishable
+     from a rendering bug. A per-call counter sidesteps the collision
+     entirely. */
+  var hatchIdSeq = 0;
+  function hatchDefs() {
+    var id = 'rpt-hatch-' + (++hatchIdSeq);
+    return {
+      id: id,
+      html: '<defs><pattern id="' + id + '" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
+        '<rect width="6" height="6" fill="' + PAL.muted + '"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + PAL.neutral + '" stroke-width="1.5"/>' +
+        '</pattern></defs>'
+    };
+  }
 
   /* 1. Readiness donut — implemented/inProgress/notStarted/notApplicable
      counts in. Centre label is readiness % over APPLICABLE controls
@@ -138,6 +156,8 @@
     var pct = applicable ? Math.round(implemented / applicable * 100) : 0;
     var cx = 100, cy = 100, r = 70, sw = 30;
     var circumference = 2 * Math.PI * r;
+    var hatch = hatchDefs();
+    var hatchFill = 'url(#' + hatch.id + ')';
     var segments = [
       ['Implemented', implemented, PAL.good, false],
       ['In progress', inProgress, PAL.warn, false],
@@ -149,18 +169,18 @@
       var len = (seg[1] / total) * circumference;
       var gap = total > seg[1] ? 1.5 : 0; /* small surface gap between adjacent segments */
       var dash = Math.max(0, len - gap) + ',' + fx(circumference - len + gap);
-      var circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + (seg[3] ? 'url(#rpt-hatch)' : seg[2]) + '" stroke-width="' + sw + '" stroke-dasharray="' + dash + '" stroke-dashoffset="' + fx(-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>';
+      var circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + (seg[3] ? hatchFill : seg[2]) + '" stroke-width="' + sw + '" stroke-dasharray="' + dash + '" stroke-dashoffset="' + fx(-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>';
       offset += len;
       return circle;
     }).join('');
     var legend = segments.map(function (seg, i) {
       var y = 40 + i * 24;
       var segPct = total ? Math.round(seg[1] / total * 100) : 0;
-      return '<rect x="220" y="' + (y - 10) + '" width="12" height="12" fill="' + (seg[3] ? 'url(#rpt-hatch)' : seg[2]) + '"/>' +
+      return '<rect x="220" y="' + (y - 10) + '" width="12" height="12" fill="' + (seg[3] ? hatchFill : seg[2]) + '"/>' +
         '<text x="238" y="' + y + '" font-family="Manrope,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(seg[0]) + '</text>' +
         '<text x="440" y="' + y + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" font-weight="700" fill="#4b473e">' + seg[1] + ' (' + segPct + '%)</text>';
     }).join('');
-    return '<svg viewBox="0 0 460 200" width="100%" role="img" aria-label="Readiness donut: ' + pct + '% of applicable controls implemented">' + HATCH_DEFS +
+    return '<svg viewBox="0 0 460 200" width="100%" role="img" aria-label="Readiness donut: ' + pct + '% of applicable controls implemented">' + hatch.html +
       arcs +
       '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="28" font-weight="500" fill="#0B0B0C">' + pct + '%</text>' +
       '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="#8b877d">IMPLEMENTED</text>' +
@@ -281,22 +301,42 @@
        worth it for a chart meant to be read at a glance in the live
        app, not just eyeballed as a proportion in a PDF. */
     var showValues = !!opts.showValues;
-    rows = Array.isArray(rows) ? rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); }) : [];
+    /* scaleByCount: bar LENGTH reflects each row's actual total against
+       the largest row (magnitude), same idea as hbarsChart, instead of
+       every row stretching to the same full width regardless of size
+       (composition). Without this, a register where every action shares
+       one status renders as several identical full-width bars — visually
+       indistinguishable, and easy to mistake for a rendering bug rather
+       than "nothing has moved yet". With it, at least the row's size is
+       legible even when its own composition is monochrome. Zero-total
+       rows are kept rather than dropped — a real "none at this priority"
+       is informative, not noise (see hbarsChart's own reasoning). */
+    var scaleByCount = !!opts.scaleByCount;
+    var trackColor = opts.palette === 'app' ? 'rgba(var(--paper-rgb),.07)' : 'rgba(11,11,12,.06)';
+    rows = Array.isArray(rows) ? (scaleByCount ? rows.slice() : rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); })) : [];
     legendDefs = Array.isArray(legendDefs) ? legendDefs : [];
     if (!rows.length || !legendDefs.length) return placeholderSvg(600, 140, 'Not enough data to compare yet.');
 
     var labelW = 170, barX = labelW + 10, barW = 600 - barX - 10, rowH = 24, rowGap = showValues ? 26 : 12;
     var top = 34;
+    var rowTotals = rows.map(function (g) {
+      return (g.values || []).reduce(function (a, v) { return a + Math.max(0, Number(v) || 0); }, 0);
+    });
+    var maxTotal = Math.max.apply(null, rowTotals.concat([0]));
+    var hatch = hatchDefs();
+    var hatchFill = 'url(#' + hatch.id + ')';
     var barsHtml = rows.map(function (g, i) {
       var values = legendDefs.map(function (_, j) { return Math.max(0, Number(g.values[j]) || 0); });
       var total = values.reduce(function (a, b) { return a + b; }, 0);
+      var rowWidth = scaleByCount ? (maxTotal ? (total / maxTotal) * barW : 0) : barW;
       var y = top + i * (rowH + rowGap);
       var x = barX;
-      var rects = values.map(function (v, j) {
-        var w = total ? (v / total) * barW : 0;
+      var track = scaleByCount ? '<rect x="' + fx(barX) + '" y="' + y + '" width="' + fx(barW) + '" height="' + rowH + '" rx="2" fill="' + trackColor + '"/>' : '';
+      var rects = track + values.map(function (v, j) {
+        var w = total ? (v / total) * rowWidth : 0;
         if (w < 0.5) return '';
         var def = legendDefs[j];
-        var rect = '<rect x="' + fx(x) + '" y="' + y + '" width="' + fx(Math.max(0, w - 1.5)) + '" height="' + rowH + '" fill="' + (def.hatch ? 'url(#rpt-hatch)' : def.color) + '"/>';
+        var rect = '<rect x="' + fx(x) + '" y="' + y + '" width="' + fx(Math.max(0, w - 1.5)) + '" height="' + rowH + '" fill="' + (def.hatch ? hatchFill : def.color) + '"/>';
         x += w;
         return rect;
       }).join('');
@@ -314,11 +354,11 @@
     var legendColW = Math.max(120, Math.floor(580 / legendDefs.length));
     var legend = legendDefs.map(function (def, i) {
       var x = 10 + i * legendColW;
-      return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="' + (def.hatch ? 'url(#rpt-hatch)' : def.color) + '"/>' +
+      return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="' + (def.hatch ? hatchFill : def.color) + '"/>' +
         '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="' + legendColor + '">' + escSvgText(def.label) + '</text>';
     }).join('');
 
-    return '<svg viewBox="0 0 600 ' + fx(height + 24, 0) + '" width="100%" role="img" aria-label="Composition by group, ' + rows.length + ' group(s)">' + HATCH_DEFS +
+    return '<svg viewBox="0 0 600 ' + fx(height + 24, 0) + '" width="100%" role="img" aria-label="Composition by group, ' + rows.length + ' group(s)">' + hatch.html +
       barsHtml + legend +
       '</svg>';
   }

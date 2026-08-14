@@ -3511,7 +3511,7 @@ function showModal(opts) {
     if (runwayEl) runwayEl.innerHTML = RC.hbars(actionDueRunway(), { palette: 'app' });
 
     var breakdownEl = document.getElementById('actBreakdown');
-    if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(actionPriorityBreakdown(), ACTION_STATUS_LEGEND, { palette: 'app', showValues: true });
+    if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(actionPriorityBreakdown(), ACTION_STATUS_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
   }
 
   function renderActions() {
@@ -4136,6 +4136,38 @@ function showModal(opts) {
     }).join('');
   }
 
+  /* High-level visual summary for the active SoA framework tab — same
+     "KPI tiles + one chart" pattern as the Risk register and Actions
+     register dashboards, so a practitioner reads implementation posture
+     at a glance instead of scrolling a full control table first. visRows
+     is frameworkVisibleRows(fw) (every displayed row, applicable or
+     not — needed for the exclusions-justification count and the theme
+     chart's Not-applicable segment); app is frameworkAppRows(fw), the
+     applicable-only subset readiness math already uses everywhere
+     else. */
+  function renderSoaDashboard(fw, visRows, app) {
+    var kpiEl = document.getElementById('soaKpiRow');
+    if (kpiEl) {
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var inProgress = app.filter(function (c) { return c.st === 'In progress'; }).length;
+      var notStarted = app.length - impl - inProgress;
+      var notApplicable = visRows.length - app.length;
+      var overdue = app.filter(function (c) { return controlReviewStatus(c).due; }).length;
+      var unjustified = visRows.filter(function (c) { return !c.app && !c.just; }).length;
+      kpiEl.innerHTML =
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + impl + '">' + impl + '</b></div><span>Implemented</span><div class="sub">of ' + app.length + ' applicable controls</div></div>' +
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + inProgress + '" style="color:' + (inProgress ? 'var(--warn)' : 'var(--gold-light)') + '">' + inProgress + '</b></div><span>In progress</span></div>' +
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + notStarted + '">' + notStarted + '</b></div><span>Not started</span></div>' +
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + notApplicable + '">' + notApplicable + '</b></div><span>Excluded (not applicable)</span></div>' +
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + overdue + '" style="color:' + (overdue ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdue + '</b></div><span>Overdue for review</span><div class="sub">not re-verified within cadence</div></div>' +
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + unjustified + '" style="color:' + (unjustified ? 'var(--fail)' : 'var(--gold-light)') + '">' + unjustified + '</b></div><span>Exclusions missing justification</span><div class="sub">an auditor checks this first</div></div>';
+      runCountUps(kpiEl);
+    }
+
+    var themeEl = document.getElementById('soaThemeChart');
+    if (themeEl) themeEl.innerHTML = RC.stackedBars(themeGroupsFor(fw, visRows), CONTROL_STATUS_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
+  }
+
   function renderSoa() {
     var entitled = entitledFrameworks();
     if (!entitled.length) {
@@ -4144,6 +4176,8 @@ function showModal(opts) {
       document.getElementById('soaBarFill').style.width = '0%';
       document.getElementById('soaRows').innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No frameworks purchased yet. Enable one from the <a href="#" data-action="App.go" data-id="frameworks" style="color:var(--gold-light)">Frameworks</a> view.</td></tr>';
       var suggElEmpty = document.getElementById('soaE8Suggestions'); if (suggElEmpty) suggElEmpty.innerHTML = '';
+      var kpiElEmpty = document.getElementById('soaKpiRow'); if (kpiElEmpty) kpiElEmpty.innerHTML = '';
+      var themeElEmpty = document.getElementById('soaThemeChart'); if (themeElEmpty) themeElEmpty.innerHTML = '';
       return;
     }
     if (!window._soaFw || entitled.indexOf(window._soaFw) === -1) window._soaFw = entitled[0];
@@ -4189,10 +4223,13 @@ function showModal(opts) {
        reports and search (see isControlVisible() above). */
     var rawRows = S.controls.filter(function (c) { return c.fw === activeFw; });
     var app = frameworkAppRows(activeFw);
+    var visRows = frameworkVisibleRows(activeFw);
     var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
     var pct = window.CheckpointLib.readinessPct(app);
     document.getElementById('soaPct').textContent = impl + ' / ' + app.length + ' — ' + pct + '%';
     document.getElementById('soaBarFill').style.width = pct + '%';
+
+    renderSoaDashboard(activeFw, visRows, app);
 
     /* Evidence coverage — auto-captured (this scan or a previous one
        populated evidenceUrl itself, tagged via the verifiedBy sentinel
@@ -4221,7 +4258,6 @@ function showModal(opts) {
       var soc2VisRows = frameworkVisibleRows('soc2');
       document.getElementById('soaRows').innerHTML = renderSoc2TypeIIRows(soc2VisRows);
     } else {
-      var visRows = frameworkVisibleRows(activeFw);
       var tableRows = (cats.length && window._soaCat && window._soaCat !== 'All')
         ? visRows.filter(function (c) { return catByCode[c.id] === window._soaCat; })
         : visRows;
