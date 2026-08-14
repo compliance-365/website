@@ -29,7 +29,7 @@ const LOGO_192 = 'https://www.compliance365.com.au/assets/logo-192.png';
 
 // Base organization + website schema
 const ORG = {
-  "@type": ["Organization", "ProfessionalService"],
+  "@type": ["Organization", "ProfessionalService", "LocalBusiness"],
   "@id": "https://www.compliance365.com.au/#org",
   "name": "Compliance365",
   "legalName": "Compliance365 Pty Ltd",
@@ -50,6 +50,16 @@ const ORG = {
     "addressLocality": "Brisbane",
     "addressRegion": "QLD",
     "addressCountry": "AU"
+  },
+  /* No street address by design — Compliance365 operates as a service-area
+     business (visits clients rather than hosting them), matching the
+     Google Business Profile listing this mirrors. Hours confirmed
+     directly against that listing, not guessed. */
+  "openingHoursSpecification": {
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "opens": "08:00",
+    "closes": "17:00"
   },
   "contactPoint": {
     "@type": "ContactPoint",
