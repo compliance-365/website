@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
+const { band, residual, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
@@ -342,6 +342,51 @@ describe('operatingEffectiveness() — SOC 2 Type II observation-window evidence
     assert.doesNotThrow(() => operatingEffectiveness('mfa-all', withGap, ''));
     const r = operatingEffectiveness('mfa-all', withGap, '');
     assert.equal(r.totalObservations, 5, 'the resultless scan contributes nothing, not a crash');
+  });
+});
+
+// runScan() only wrote a new Scan row when the date, score,
+// critical-risk count or overdue-action count moved. Two checks can swap
+// places on the same day (one pass -> fail, another fail -> pass) for an
+// identical score and identical counts — that scan was never persisted,
+// so the next page load silently restored the PREVIOUS scan's per-check
+// results from its stored Detail JSON, losing both the corrected posture
+// and the Type II observation of the check that dipped.
+describe('scanResultsChanged() — did any individual check move since the last scan', () => {
+  test('identical result maps -> no movement', () => {
+    const prev = { 'mfa-all': 'pass', legacy: 'fail', dlp: 'manual' };
+    assert.equal(scanResultsChanged(prev, { ...prev }), false);
+  });
+
+  test('two checks swapping places (same score, same counts) IS movement', () => {
+    const prev = { 'mfa-all': 'pass', legacy: 'fail' };
+    const next = { 'mfa-all': 'fail', legacy: 'pass' };
+    assert.equal(scanResultsChanged(prev, next), true,
+      'the aggregate score is identical here — this is exactly the case the snapshot guard used to miss');
+  });
+
+  test('a single check moving in either direction is movement', () => {
+    assert.equal(scanResultsChanged({ dlp: 'pass' }, { dlp: 'review' }), true);
+    assert.equal(scanResultsChanged({ dlp: 'review' }, { dlp: 'pass' }), true);
+  });
+
+  test('a check appearing for the first time (capability became readable) is movement', () => {
+    assert.equal(scanResultsChanged({ 'mfa-all': 'pass' }, { 'mfa-all': 'pass', pim: 'review' }), true);
+  });
+
+  test('a check disappearing (capability stopped being readable) is movement', () => {
+    assert.equal(scanResultsChanged({ 'mfa-all': 'pass', pim: 'review' }, { 'mfa-all': 'pass' }), true);
+  });
+
+  test('a missing side is "nothing to compare against", never movement', () => {
+    assert.equal(scanResultsChanged(null, { 'mfa-all': 'pass' }), false,
+      'a first-ever scan is handled by its own branch in runScan(); this must not force a snapshot on every seeded/legacy row');
+    assert.equal(scanResultsChanged({ 'mfa-all': 'pass' }, null), false);
+    assert.equal(scanResultsChanged(null, null), false);
+  });
+
+  test('two empty maps -> no movement', () => {
+    assert.equal(scanResultsChanged({}, {}), false);
   });
 });
 

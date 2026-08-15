@@ -997,9 +997,21 @@ window.DemoStore = (function () {
       entitlements: { iso27001: true, soc2: false, essential8: false, is18: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, rffr: false, ai: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
+      /* One list per framework whose SoA statuses runScan() can suggest.
+         All of them are seeded, not just the first three that shipped:
+         renderSoa() reads S.<fw>Proposed for the active framework tab
+         and App.confirm<Fw>Suggestion()/dismiss<Fw>Suggestion() call
+         .find()/.filter() straight on it, so a framework missing from
+         here is one undefined dereference away from a thrown handler
+         the moment the shapes of those two call sites change. */
       e8Proposed: [],
       is18Proposed: [],
       rffrProposed: [],
+      iso42001Proposed: [],
+      iso27701Proposed: [],
+      soc2Proposed: [],
+      nistcsfProposed: [],
+      iso27001Proposed: [],
       handledTpl: [],
       aiCandidates: [],
       audits: [
@@ -2116,7 +2128,12 @@ window.SpStore = (function () {
           };
         }),
         lastResults: null, lastNotes: {},
-        proposed: [], e8Proposed: [], is18Proposed: [], rffrProposed: [], handledTpl: [], aiCandidates: []
+        /* every suggestion list runScan() can populate — see the demo
+           seed's own comment above for why all of them are seeded */
+        proposed: [], e8Proposed: [], is18Proposed: [], rffrProposed: [],
+        iso42001Proposed: [], iso27701Proposed: [], soc2Proposed: [],
+        nistcsfProposed: [], iso27001Proposed: [],
+        handledTpl: [], aiCandidates: []
       };
       /* restore last scan detail (results + handled templates) */
       var last = S.scans[S.scans.length - 1];

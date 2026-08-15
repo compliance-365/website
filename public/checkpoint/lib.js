@@ -517,6 +517,33 @@
     };
   }
 
+  /* Did this scan's per-check results move at all against the ones the
+     previous scan recorded? app.js's runScan() only writes a new Scan
+     row when something a Dashboard tile trends against has changed
+     (date, score, critical-risk count, overdue-action count) — but two
+     checks can swap places (one pass -> fail, another fail -> pass) on
+     the same day for an identical score and identical counts. Without
+     this, that scan was never persisted: the practitioner saw the new
+     results on screen, and the next page load silently restored the
+     PREVIOUS scan's results from its stored Detail JSON, losing both
+     the corrected posture and the SOC 2 Type II observation of the
+     check that dipped.
+
+     Compares the union of both sides' keys, so a check appearing for
+     the first time (a capability that only became readable this run)
+     or disappearing (one that stopped being readable) both count as
+     movement. Either side missing entirely is "no movement" — the
+     caller decides what to do when there is nothing to compare
+     against, since a first-ever scan is already handled by its own
+     branch. */
+  function scanResultsChanged(prevResults, nextResults) {
+    if (!prevResults || !nextResults) return false;
+    var seen = {};
+    Object.keys(prevResults).forEach(function (k) { seen[k] = true; });
+    Object.keys(nextResults).forEach(function (k) { seen[k] = true; });
+    return Object.keys(seen).some(function (k) { return prevResults[k] !== nextResults[k]; });
+  }
+
   /* Deterministic per-control "theme" key for the Control Constellation
      view — grouping is derived purely from the control code's own
      string shape, never from a `cat`/`domain` field, because live
@@ -2021,6 +2048,7 @@
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
+    scanResultsChanged: scanResultsChanged,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,

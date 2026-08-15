@@ -2101,6 +2101,14 @@ user to act as). It writes a normal `Checkpoint Scans` row on every run
 and a `Checkpoint Alerts` row whenever a check that scored **pass** on
 the previous scan scores **fail** on this one.
 
+It scores the same checks the interactive app does, including the
+awareness-training check computed from the `Checkpoint Training` list
+(the one scored check with no Graph signal behind it), so an automated
+scan and a browser scan of the same tenant land on the same number —
+the two used to be computed over different denominators and disagreed.
+Two checks stay interactive-only for auth reasons documented in
+`azure/PostureMonitor/index.js`: `labels` and `sharing`.
+
 Full deploy steps (app registration, the exact application permissions
 and why each is the least-privilege choice for its check, the
 `Sites.Selected` one-site grant, the "Deploy to Azure" button, and how to
