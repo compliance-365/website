@@ -3748,10 +3748,64 @@ function showModal(opts) {
 
   var VENDOR_CRITICALITIES = ['Critical', 'High', 'Medium', 'Low'];
   var VENDOR_REVIEW_STATUSES = ['Not started', 'In progress', 'Reviewed'];
+  var VENDOR_STATUS_LEGEND = [
+    { label: 'Reviewed', color: RPAL.good },
+    { label: 'In progress', color: RPAL.warn },
+    { label: 'Not started', color: RPAL.neutral, hatch: true }
+  ];
+
+  /* One stacked-bar row per criticality (most sensitive first) — same
+     "is the register actually moving, or just sitting there" question
+     actionPriorityBreakdown() answers for Actions, applied to vendor
+     review status. A Critical vendor still showing Not started is the
+     row that matters most, so criticality (not review status) is what
+     groups the chart.
+
+     Buckets via an explicit else (a vendor record can carry a
+     reviewStatus of 'Overdue' — set directly rather than derived from
+     nextReviewDue — which isn't one of VENDOR_REVIEW_STATUSES' three
+     values), same defensive reasoning as controlStatusCounts()'s own
+     else branch: an unrecognised status must still land somewhere,
+     never silently vanish from the chart's total. */
+  function vendorCriticalityBreakdown() {
+    return VENDOR_CRITICALITIES.map(function (crit) {
+      var rows = (S.vendors || []).filter(function (v) { return v.criticality === crit; });
+      var reviewed = 0, inProgress = 0, notStarted = 0;
+      rows.forEach(function (v) {
+        if (v.reviewStatus === 'Reviewed') reviewed++;
+        else if (v.reviewStatus === 'In progress') inProgress++;
+        else notStarted++;
+      });
+      return { label: crit, values: [reviewed, inProgress, notStarted] };
+    });
+  }
+
+  /* Same "KPI tiles + one chart" dashboard pattern as Risk, Actions and
+     the SoA — see renderSoaDashboard()'s own header comment. Every count
+     here is derived live from S.vendors, so it can never disagree with
+     the table underneath it. */
+  function renderVendorsDashboard() {
+    var kpiEl = document.getElementById('vendorKpiRow');
+    if (kpiEl) {
+      var vendors = S.vendors || [];
+      var od = vendors.filter(vendorOverdue);
+      var critHigh = vendors.filter(function (v) { return v.criticality === 'Critical' || v.criticality === 'High'; }).length;
+      var unclassified = vendors.filter(function (v) { return !v.dataCategories || !v.dataCategories.length; }).length;
+      kpiEl.innerHTML =
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + vendors.length + '">' + vendors.length + '</b></div><span>Total vendors</span></div>' +
+        '<div class="card kpi" data-action="App.filterVendorStatus" data-id="Overdue"><div class="kpi-num"><b data-count="' + od.length + '" style="color:' + (od.length ? 'var(--fail)' : 'var(--gold-light)') + '">' + od.length + '</b></div><span>Overdue reviews</span></div>' +
+        '<div class="card kpi" data-action="App.filterVendorCrit" data-id="Critical"><div class="kpi-num"><b data-count="' + critHigh + '">' + critHigh + '</b></div><span>Critical / High criticality</span></div>' +
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + unclassified + '" style="color:' + (unclassified ? 'var(--warn)' : 'var(--gold-light)') + '">' + unclassified + '</b></div><span>Data access not classified</span><div class="sub">' + (unclassified ? 'an auditor checks this first' : 'every vendor classified') + '</div></div>';
+      runCountUps(kpiEl);
+    }
+    var chartEl = document.getElementById('vendorReviewChart');
+    if (chartEl) chartEl.innerHTML = RC.stackedBars(vendorCriticalityBreakdown(), VENDOR_STATUS_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
+  }
 
   function renderVendors() {
     var wrap = document.getElementById('vendorRows');
     if (!wrap) return;
+    renderVendorsDashboard();
     var cf = window._vendorCritF || 'All';
     var sf = window._vendorStatusF || 'All';
     document.getElementById('vendorCritFilters').innerHTML = ['All'].concat(VENDOR_CRITICALITIES).map(function (x) {
@@ -3783,6 +3837,47 @@ function showModal(opts) {
 
   var AI_RISK_TIERS = ['Prohibited', 'High', 'Limited', 'Minimal'];
   var AI_IMPACT_STATUSES = ['Not started', 'In progress', 'Completed'];
+  var AI_IMPACT_LEGEND = [
+    { label: 'Completed', color: RPAL.good },
+    { label: 'In progress', color: RPAL.warn },
+    { label: 'Not started', color: RPAL.neutral, hatch: true }
+  ];
+
+  /* One stacked-bar row per risk tier (most sensitive first) — same
+     shape as vendorCriticalityBreakdown() above: a Prohibited/High-tier
+     system still sitting at Not started is the row an assessor asks
+     about first, so risk tier (not assessment status) groups the chart. */
+  function aiRiskTierBreakdown() {
+    return AI_RISK_TIERS.map(function (tier) {
+      var rows = (S.aiSystems || []).filter(function (a) { return a.riskTier === tier; });
+      var completed = 0, inProgress = 0, notStarted = 0;
+      rows.forEach(function (a) {
+        if (a.impactAssessmentStatus === 'Completed') completed++;
+        else if (a.impactAssessmentStatus === 'In progress') inProgress++;
+        else notStarted++;
+      });
+      return { label: tier, values: [completed, inProgress, notStarted] };
+    });
+  }
+
+  /* Same "KPI tiles + one chart" dashboard pattern as Vendors above. */
+  function renderAiSystemsDashboard() {
+    var kpiEl = document.getElementById('aiKpiRow');
+    if (kpiEl) {
+      var systems = S.aiSystems || [];
+      var highRisk = systems.filter(function (a) { return a.riskTier === 'Prohibited' || a.riskTier === 'High'; }).length;
+      var notStarted = systems.filter(function (a) { return a.impactAssessmentStatus === 'Not started'; }).length;
+      var completed = systems.filter(function (a) { return a.impactAssessmentStatus === 'Completed'; }).length;
+      kpiEl.innerHTML =
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + systems.length + '">' + systems.length + '</b></div><span>Total AI systems</span></div>' +
+        '<div class="card kpi" data-action="App.filterAiTier" data-id="High"><div class="kpi-num"><b data-count="' + highRisk + '" style="color:' + (highRisk ? 'var(--fail)' : 'var(--gold-light)') + '">' + highRisk + '</b></div><span>Prohibited / High risk tier</span></div>' +
+        '<div class="card kpi" data-action="App.filterAiStatus" data-id="Not started"><div class="kpi-num"><b data-count="' + notStarted + '" style="color:' + (notStarted ? 'var(--warn)' : 'var(--gold-light)') + '">' + notStarted + '</b></div><span>Impact assessment not started</span></div>' +
+        '<div class="card kpi" data-action="App.filterAiStatus" data-id="Completed"><div class="kpi-num"><b data-count="' + completed + '">' + completed + '</b></div><span>Impact assessment completed</span></div>';
+      runCountUps(kpiEl);
+    }
+    var chartEl = document.getElementById('aiTierChart');
+    if (chartEl) chartEl.innerHTML = RC.stackedBars(aiRiskTierBreakdown(), AI_IMPACT_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
+  }
 
   /* Which ISO 42001 controls a given AI system currently evidences —
      computed live from what's actually documented on the record, never
@@ -3856,6 +3951,7 @@ function showModal(opts) {
   function renderAiSystems() {
     var wrap = document.getElementById('aiRows');
     if (!wrap) return;
+    renderAiSystemsDashboard();
     var tf = window._aiTierF || 'All';
     var sf = window._aiStatusF || 'All';
     document.getElementById('aiTierFilters').innerHTML = ['All'].concat(AI_RISK_TIERS).map(function (x) {
@@ -8528,9 +8624,24 @@ function showModal(opts) {
          correctly shows it as manually linked, not auto-captured, the
          moment a human touches it */
       if (url && c.verifiedBy === AUTO_EVIDENCE_TAG) c.verifiedBy = '';
+      /* Same reasoning generateTemplate()'s "Link as evidence?" flow
+         already applies: a control that now has real evidence attached
+         is visible progress, and leaving it at "Not started" reads as
+         stale/wrong on every chart and KPI that reads status. Only
+         bumps the untouched default, never overwrites "In progress"/
+         "Implemented" set by hand, and only on a real link — clearing
+         the field doesn't regress the status. */
+      var bumped = false;
+      if (url && c.st === 'Not started') {
+        var prevSt = c.st;
+        c.st = 'In progress';
+        audit('Control status changed', 'Control', key, prevSt, 'In progress (evidence linked)');
+        bumped = true;
+      }
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       audit('Evidence link changed', 'Control', key, prevUrl || '(none)', url || '(none)');
       renderSoa();
+      if (bumped) { renderDash(); toast('<b>' + esc(c.id) + '</b> moved to In progress.'); }
     },
 
     /* The one place a practitioner can actually record why a control is

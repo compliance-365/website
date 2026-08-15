@@ -644,6 +644,12 @@
     <!-- VENDORS -->
     <section class="view" id="v-vendors">
       <div class="vhead"><div class="rule"></div><h1>Vendor risk</h1><p>Third-party suppliers with access to systems or data, reviewed on a cadence proportional to their criticality. Linked to the supplier-related controls (A.5.19–A.5.23, CC9.2, DISP.26) and to the risk register — an overdue review here is a live gap in the Statement of Applicability, not a separate spreadsheet.</p></div>
+      <div class="grid kpis" id="vendorKpiRow" style="margin-bottom:16px"></div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Review status by criticality</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">A Critical or High vendor still sitting at Not started is the row that matters most — not just how many vendors exist.</p>
+        <div id="vendorReviewChart" style="max-width:820px"></div>
+      </div>
       <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddVendor">+ Add vendor</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="vendors">Export CSV</button></div>
       <div class="card" id="addVendorPanel" style="margin-bottom:16px;display:none">
         <h3 id="vendorPanelTitle">New vendor</h3>
@@ -679,6 +685,12 @@
     <!-- AI SYSTEMS (ISO 42001) -->
     <section class="view" id="v-aisystems">
       <div class="vhead"><div class="rule"></div><h1>AI systems</h1><p>Every AI system in use, its impact assessment status, and the ISO 42001 controls it evidences — the register ISO 42001 certification is actually built on, not a slide deck assembled the week before audit. EU AI Act risk tiers (Prohibited/High/Limited/Minimal) drive how much scrutiny each system gets.</p></div>
+      <div class="grid kpis" id="aiKpiRow" style="margin-bottom:16px"></div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Impact assessment status by risk tier</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">A Prohibited or High-tier system with no impact assessment started is the one an assessor asks about first.</p>
+        <div id="aiTierChart" style="max-width:820px"></div>
+      </div>
       <div id="aiCandidatesWrap" style="margin-bottom:16px"></div>
       <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddAiSystem">+ Add AI system</button></div>
       <div class="card" id="addAiSystemPanel" style="margin-bottom:16px;display:none">
