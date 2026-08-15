@@ -444,6 +444,9 @@ function showModal(opts) {
     'confirmIso27701Suggestion', 'dismissIso27701Suggestion',
     'confirmSoc2Suggestion', 'dismissSoc2Suggestion', 'confirmNistCsfSuggestion', 'dismissNistCsfSuggestion',
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
+    /* bulk equivalents of the per-row actions above — same writes, same
+       gating, so a Viewer can't reach them either */
+    'approveAllProposed', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk'
@@ -2363,6 +2366,16 @@ function showModal(opts) {
     var p = S.proposed.length; var el = document.getElementById('nScan');
     el.textContent = p || ''; el.style.display = p ? 'inline-block' : 'none';
 
+    /* Scan-suggested SoA statuses, summed across every entitled
+       framework. Every other register in this sidebar badges what is
+       waiting; the SoA — where a single scan can leave twenty-plus
+       decisions spread over eight framework tabs — badged nothing at
+       all, so the app announced 12 proposed risks and stayed silent
+       about the rest. */
+    var sugg = totalPendingSuggestions();
+    var sEl = document.getElementById('nSoa');
+    if (sEl) { sEl.textContent = sugg || ''; sEl.style.display = sugg ? 'inline-block' : 'none'; }
+
     var today = new Date().toISOString().slice(0, 10);
     var overdueAudits = (S.audits || []).filter(function (a) { return a.status === 'Planned' && a.planned && a.planned < today; }).length;
     var aEl = document.getElementById('nAudits');
@@ -3439,6 +3452,92 @@ function showModal(opts) {
      proposed-finding-related once a scan re-proposes/dismisses. */
   var _riskInsightCache = {};
 
+  /* ---- scan-suggested SoA statuses: one registry, three consumers ----
+     Every framework whose SoA statuses a posture scan can suggest, mapped
+     to its state list and to the App.confirm<X>Suggestion/
+     dismiss<X>Suggestion pair that applies one. The SoA strip, the
+     framework tab counts and the sidebar badge all read this, so they
+     can never disagree about what is pending — the suggestions used to
+     be reachable ONLY by clicking through every framework tab in turn,
+     with nothing anywhere saying which tabs had anything waiting. */
+  var SUGGESTION_SOURCES = {
+    essential8: { action: 'E8', key: 'e8Proposed' },
+    is18: { action: 'Is18', key: 'is18Proposed' },
+    rffr: { action: 'Rffr', key: 'rffrProposed' },
+    iso42001: { action: 'Iso42001', key: 'iso42001Proposed' },
+    iso27701: { action: 'Iso27701', key: 'iso27701Proposed' },
+    soc2: { action: 'Soc2', key: 'soc2Proposed' },
+    nistcsf: { action: 'NistCsf', key: 'nistcsfProposed' },
+    iso27001: { action: 'Iso27001', key: 'iso27001Proposed' }
+  };
+  function suggestionSourceFor(fw) {
+    var src = SUGGESTION_SOURCES[fw];
+    if (!src) return null;
+    return { action: src.action, key: src.key, list: S[src.key] || [] };
+  }
+  function pendingSuggestions(fw) { var s = suggestionSourceFor(fw); return s ? s.list.length : 0; }
+  function totalPendingSuggestions() {
+    return entitledFrameworks().reduce(function (n, fw) { return n + pendingSuggestions(fw); }, 0);
+  }
+  /* A suggestion that moves a control BACKWARDS (Implemented -> Not
+     started, say) is a materially different act from one that records
+     progress: confirming it erases a practitioner's own attestation in
+     the register an auditor reads. Both used to render identically —
+     same gold primary button, direction legible only in the body text —
+     which is exactly how a regression gets applied by muscle memory
+     halfway down a list of eleven. */
+  var SUGGESTION_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+  function isSuggestionDowngrade(p) {
+    var from = SUGGESTION_ST_RANK[p && p.from], to = SUGGESTION_ST_RANK[p && p.to];
+    return typeof from === 'number' && typeof to === 'number' && to < from;
+  }
+
+  /* Creates the risk + treatment actions for one proposed scan finding
+     and records the audit trail — the shared core of App.approve() and
+     App.approveAllProposed(), so approving a queue in bulk produces
+     exactly what approving each card individually would have. Returns
+     { rid, actIds } on success, null if the write failed (already
+     warned). Deliberately does NOT toast or re-render: the caller owns
+     both, which is what lets the bulk path show one summary instead of
+     a dozen toasts that overwrite each other. */
+  async function approveProposedTemplate(tpl) {
+    var t = TPL[tpl];
+    if (!t) return null;
+    var maxR = S.risks.reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    var rid = 'R-' + String(maxR + 1).padStart(3, '0');
+    var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+    var actIds = t.actions.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
+    try {
+      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds, tpl: tpl };
+      await Store.addRisk(newRisk);
+      for (var i = 0; i < t.actions.length; i++) {
+        var a = t.actions[i];
+        await Store.addAction({ id: actIds[i], title: a.t, risk: rid, control: a.control, pr: a.pr, owner: owner, due: daysFrom(a.days), status: 'Open', src: 'Posture scan' });
+      }
+      S.handledTpl.push(tpl);
+      S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
+      delete _riskInsightCache[tpl];
+      log('Risk <b>' + rid + '</b> approved into register from posture scan, with ' + actIds.length + ' action(s) assigned.');
+      audit('Risk approved from scan finding', 'Risk', rid, '(proposed finding: ' + tpl + ')', 'Open — ' + actIds.length + ' action(s) created');
+      return { rid: rid, actIds: actIds };
+    } catch (e) { warn(e); return null; }
+  }
+
+  /* Applies one suggested status to its control and records the audit
+     entry — the shared core of App.confirm<X>Suggestion() and the
+     confirm-all bulk action, so a bulk confirm can never diverge from
+     what confirming each row individually would have done. */
+  async function applySuggestedStatus(fw, p) {
+    var c = S.controls.find(function (x) { return x.fw === fw && x.id === p.code; });
+    if (!c) return false;
+    var prevSt = c.st;
+    c.st = p.to;
+    try { await Store.updateControl(c); } catch (e) { warn(e); return false; }
+    audit('Control status changed', 'Control', fw + '|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+    return true;
+  }
+
   function renderProposed() {
     var w = document.getElementById('proposedWrap');
     if (!S.proposed.length) {
@@ -3446,7 +3545,16 @@ function showModal(opts) {
       return;
     }
     var aiOn = !!(S.entitlements && S.entitlements.ai);
-    w.innerHTML = '<div class="card"><h3>Proposed for the register — practitioner approval required</h3>' + S.proposed.map(function (p) {
+    /* Bulk bar: a single scan can propose a dozen findings, and every one
+       of them used to need its own two-button decision with no way to
+       clear the queue in one go. */
+    var bulkBar = READONLY || S.proposed.length < 2 ? '' :
+      '<div class="bulk-bar">' +
+        '<span class="bulk-count">' + S.proposed.length + ' awaiting a decision</span>' +
+        '<button class="btn sm" data-action="App.approveAllProposed">Approve all ' + S.proposed.length + '</button> ' +
+        '<button class="btn ghost sm" data-action="App.dismissAllProposed">Dismiss all</button>' +
+      '</div>';
+    w.innerHTML = '<div class="card"><h3>Proposed for the register — practitioner approval required</h3>' + bulkBar + S.proposed.map(function (p) {
       var t = TPL[p];
       var insightBtn = aiOn ? '<button class="btn ghost sm" data-action="App.aiInsightProposed" data-id="' + esc(p) + '">AI insight</button> ' : '';
       var cached = _riskInsightCache[p];
@@ -4357,8 +4465,14 @@ function showModal(opts) {
     var isNistSub = activeFw === 'nistcsf' && ((S.settings && S.settings.nistDepth) || 'category') === 'subcategory';
     var isSoc2TypeII = activeFw === 'soc2' && ((S.settings && S.settings.soc2ReportType) || 'Type I') === 'Type II';
 
+    /* Each tab carries its own pending-suggestion count. Without it the
+       only way to find out which frameworks had scan suggestions waiting
+       was to click every tab in turn — a scan across eight modules can
+       leave suggestions sitting behind seven tabs nobody opens. */
     document.getElementById('soaFwTabs').innerHTML = entitled.map(function (fw) {
-      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
+      var pending = pendingSuggestions(fw);
+      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) +
+        (pending ? '<span class="pill-n" title="' + pending + ' scan suggestion' + (pending > 1 ? 's' : '') + ' awaiting review">' + pending + '</span>' : '') + '</button>';
     }).join('');
 
     /* Category lookup is definitional (from the framework registry), not
@@ -4445,20 +4559,28 @@ function showModal(opts) {
        suggestions are ever shown in it. */
     var suggEl = document.getElementById('soaE8Suggestions');
     if (suggEl) {
-      var SUGG_BY_FW = {
-        is18: ['Is18', S.is18Proposed], rffr: ['Rffr', S.rffrProposed],
-        iso42001: ['Iso42001', S.iso42001Proposed], iso27701: ['Iso27701', S.iso27701Proposed],
-        soc2: ['Soc2', S.soc2Proposed], nistcsf: ['NistCsf', S.nistcsfProposed],
-        iso27001: ['Iso27001', S.iso27001Proposed]
-      };
-      var suggList = isE8 ? S.e8Proposed : (SUGG_BY_FW[activeFw] ? SUGG_BY_FW[activeFw][1] : null);
-      var suggAction = isE8 ? 'E8' : (SUGG_BY_FW[activeFw] ? SUGG_BY_FW[activeFw][0] : null);
+      var suggSrc = suggestionSourceFor(activeFw);
+      var suggList = suggSrc ? suggSrc.list : null;
+      var suggAction = suggSrc ? suggSrc.action : null;
+      var downgrades = (suggList || []).filter(isSuggestionDowngrade).length;
+      /* Bulk bar + an explicit count of how many of these move a control
+         backwards, so the shape of the decision is visible before any of
+         it is applied rather than discovered one card at a time. */
+      var suggBulk = (READONLY || !suggList || suggList.length < 2) ? '' :
+        '<div class="bulk-bar">' +
+          '<span class="bulk-count">' + suggList.length + ' suggested' +
+            (downgrades ? ' · <b class="sugg-down-t">' + downgrades + ' move a control backwards</b>' : '') + '</span>' +
+          '<button class="btn sm" data-action="App.confirmAllSuggestions" data-id="' + esc(activeFw) + '">Confirm all ' + suggList.length + '</button> ' +
+          '<button class="btn ghost sm" data-action="App.dismissAllSuggestions" data-id="' + esc(activeFw) + '">Dismiss all</button>' +
+        '</div>';
       suggEl.innerHTML = (suggList && suggList.length)
-        ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' +
+        ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' + suggBulk +
           suggList.map(function (p) {
-            return '<div class="proposed-card"><h4>' + esc(p.code) + ' — ' + esc(p.from) + ' → ' + esc(p.to) + '</h4>' +
+            var down = isSuggestionDowngrade(p);
+            return '<div class="proposed-card' + (down ? ' sugg-down' : '') + '"><h4>' + esc(p.code) + ' — ' + esc(p.from) + ' ' + (down ? '↓' : '→') + ' ' + esc(p.to) + '</h4>' +
+              (down ? '<div class="sugg-down-flag">' + icon('flag') + ' Moves this control backwards — confirming removes an implementation status you recorded, because the live signal no longer supports it.</div>' : '') +
               '<div class="meta">Based on posture check <b>' + esc(p.checkLabel) + '</b></div>' +
-              '<button class="btn sm" data-action="App.confirm' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
+              '<button class="btn ' + (down ? 'ghost ' : '') + 'sm" data-action="App.confirm' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">' + (down ? 'Confirm downgrade' : 'Confirm') + '</button> ' +
               '<button class="btn ghost sm" data-action="App.dismiss' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
           }).join('') + '</div>'
         : '';
@@ -7508,42 +7630,132 @@ function showModal(opts) {
       Store.saveScanState().catch(warn);
       setTimeout(function () {
         renderProposed(); renderNavCounts(); renderDash(); renderSoa();
-        if (S.proposed.length) toast('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting your approval below');
-        if (S.e8Proposed.length) toast('<b>' + S.e8Proposed.length + ' Essential Eight suggestion' + (S.e8Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
-        if (S.is18Proposed.length) toast('<b>' + S.is18Proposed.length + ' IS18 suggestion' + (S.is18Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
-        if (S.rffrProposed.length) toast('<b>' + S.rffrProposed.length + ' RFFR (ISM) suggestion' + (S.rffrProposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
-        if (S.iso42001Proposed.length) toast('<b>' + S.iso42001Proposed.length + ' ISO 42001 suggestion' + (S.iso42001Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
-        if (S.iso27701Proposed.length) toast('<b>' + S.iso27701Proposed.length + ' ISO 27701 suggestion' + (S.iso27701Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
-        if (S.soc2Proposed.length) toast('<b>' + S.soc2Proposed.length + ' SOC 2 suggestion' + (S.soc2Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
-        if (S.nistcsfProposed.length) toast('<b>' + S.nistcsfProposed.length + ' NIST CSF suggestion' + (S.nistcsfProposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
-        if (S.iso27001Proposed.length) toast('<b>' + S.iso27001Proposed.length + ' ISO 27001 suggestion' + (S.iso27001Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        /* ONE summary, not nine toasts.
+           This used to fire a separate toast per framework plus one for
+           the proposed risks — all in this same tick, all into the same
+           single #toast element, each overwriting the last before a
+           frame was ever painted. Only the final message was ever
+           visible, and since the proposals toast went first, the single
+           most actionable line ("N proposed risks awaiting your
+           approval") was the one guaranteed to be destroyed. Measured on
+           a demo tenant with five modules on: nine calls, one message
+           rendered. */
+        var suggTotal = totalPendingSuggestions();
+        var suggFws = entitledFrameworks().filter(function (fw) { return pendingSuggestions(fw); });
+        var parts = [];
+        if (S.proposed.length) parts.push('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting approval below');
+        if (suggTotal) {
+          parts.push('<b>' + suggTotal + ' SoA suggestion' + (suggTotal > 1 ? 's' : '') + '</b> across ' +
+            (suggFws.length > 1 ? suggFws.length + ' frameworks' : esc(fwName(suggFws[0]))));
+        }
+        if (parts.length) toast('Scan complete — ' + parts.join(' · '));
       }, 2600);
     },
 
     approve: async function (tpl) {
-      var t = TPL[tpl];
-      var maxR = S.risks.reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var rid = 'R-' + String(maxR + 1).padStart(3, '0');
-      var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
-      var actIds = t.actions.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
       busy(true);
-      try {
-        var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds, tpl: tpl };
-        await Store.addRisk(newRisk);
-        for (var i = 0; i < t.actions.length; i++) {
-          var a = t.actions[i];
-          await Store.addAction({ id: actIds[i], title: a.t, risk: rid, control: a.control, pr: a.pr, owner: owner, due: daysFrom(a.days), status: 'Open', src: 'Posture scan' });
-        }
-        S.handledTpl.push(tpl);
-        S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
-        delete _riskInsightCache[tpl];
-        log('Risk <b>' + rid + '</b> approved into register from posture scan, with ' + actIds.length + ' action(s) assigned.');
-        toast('<b>' + rid + '</b> added to risk register · ' + actIds.length + ' action(s) created');
-        audit('Risk approved from scan finding', 'Risk', rid, '(proposed finding: ' + tpl + ')', 'Open — ' + actIds.length + ' action(s) created');
-      } catch (e) { warn(e); }
+      var res = await approveProposedTemplate(tpl);
       busy(false);
+      if (res) toast('<b>' + res.rid + '</b> added to risk register · ' + res.actIds.length + ' action(s) created');
       renderAll();
+    },
+
+    /* Bulk approve — one confirmation, one pass, one summary. A scan can
+       propose a dozen findings and every one of them used to need its
+       own decision; approving twelve meant twelve clicks, twelve
+       re-renders and twelve toasts of which only the last was ever
+       visible (see the scan-summary note in runScan()). */
+    approveAllProposed: async function () {
+      var queued = S.proposed.slice();
+      if (!queued.length) return;
+      var actionCount = queued.reduce(function (n, tpl) { return n + ((TPL[tpl] && TPL[tpl].actions.length) || 0); }, 0);
+      var ok = await showModal({
+        title: 'Approve all proposed findings',
+        message: 'Add all ' + queued.length + ' proposed finding' + (queued.length === 1 ? '' : 's') + ' to the risk register, creating ' + actionCount + ' remediation action' + (actionCount === 1 ? '' : 's') + ' assigned to you? Each one can still be edited or closed afterwards.',
+        confirmText: 'Approve all ' + queued.length,
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      busy(true);
+      var added = 0, actionsMade = 0;
+      for (var i = 0; i < queued.length; i++) {
+        var res = await approveProposedTemplate(queued[i]);
+        if (res) { added++; actionsMade += res.actIds.length; }
+      }
+      busy(false);
+      toast('<b>' + added + ' risk' + (added === 1 ? '' : 's') + '</b> added to the register · ' + actionsMade + ' action' + (actionsMade === 1 ? '' : 's') + ' created');
+      renderAll();
+    },
+
+    dismissAllProposed: async function () {
+      var queued = S.proposed.slice();
+      if (!queued.length) return;
+      var ok = await showModal({
+        title: 'Dismiss all proposed findings',
+        message: 'Dismiss all ' + queued.length + ' proposed finding' + (queued.length === 1 ? '' : 's') + '? Each dismissal is recorded in the audit trail, and a finding can be proposed again by a later scan if the underlying check still fails.',
+        confirmText: 'Dismiss all ' + queued.length,
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      queued.forEach(function (tpl) {
+        S.handledTpl.push(tpl);
+        delete _riskInsightCache[tpl];
+        audit('Scan finding dismissed', 'ScanFinding', tpl, 'Proposed', 'Dismissed (bulk)');
+      });
+      S.proposed = [];
+      log('<b>' + queued.length + '</b> scan finding(s) dismissed by practitioner — recorded with rationale.');
+      toast(queued.length + ' finding' + (queued.length === 1 ? '' : 's') + ' dismissed');
+      renderAll();
+    },
+
+    /* Bulk confirm/dismiss for one framework's scan-suggested SoA
+       statuses. The confirmation names how many of them move a control
+       BACKWARDS and shows an example, so applying a batch that includes
+       regressions is a deliberate act — the whole batch still applies,
+       because whether the live signal outranks a recorded attestation is
+       the practitioner's call, not this dialog's. */
+    confirmAllSuggestions: async function (fw) {
+      var src = suggestionSourceFor(fw);
+      if (!src || !src.list.length) return;
+      var list = src.list.slice();
+      var downs = list.filter(isSuggestionDowngrade);
+      var ok = await showModal({
+        title: 'Confirm all suggestions — ' + fwName(fw),
+        /* plain text, no markup — showModal() sets the message with
+           textContent, so any tag here would render as literal characters */
+        message: 'Apply all ' + list.length + ' suggested status change' + (list.length === 1 ? '' : 's') + ' to the ' + fwName(fw) + ' Statement of Applicability?' +
+          (downs.length ? ' ' + downs.length + ' of them move a control BACKWARDS — for example ' + downs[0].code + ' ' + downs[0].from + ' → ' + downs[0].to + ' — because the live posture signal no longer supports the recorded status.' : ''),
+        confirmText: 'Confirm all ' + list.length,
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      busy(true);
+      var applied = 0, appliedCodes = {};
+      for (var i = 0; i < list.length; i++) {
+        if (await applySuggestedStatus(fw, list[i])) { applied++; appliedCodes[list[i].code] = true; }
+      }
+      S[src.key] = (S[src.key] || []).filter(function (p) { return !appliedCodes[p.code]; });
+      busy(false);
+      log('<b>' + applied + '</b> ' + fwName(fw) + ' control status(es) set from posture scan suggestions — practitioner-confirmed in bulk' + (downs.length ? ', including ' + downs.length + ' downgrade(s)' : '') + '.');
+      toast('<b>' + applied + '</b> ' + esc(fwName(fw)) + ' control' + (applied === 1 ? '' : 's') + ' updated');
+      renderSoa(); renderDash(); renderNavCounts();
+    },
+
+    dismissAllSuggestions: async function (fw) {
+      var src = suggestionSourceFor(fw);
+      if (!src || !src.list.length) return;
+      var n = src.list.length;
+      var ok = await showModal({
+        title: 'Dismiss all suggestions — ' + fwName(fw),
+        message: 'Dismiss all ' + n + ' suggested status change' + (n === 1 ? '' : 's') + ' for ' + fwName(fw) + '? Nothing in the SoA changes. A later scan will suggest them again if the live signal still disagrees with what is recorded.',
+        confirmText: 'Dismiss all ' + n,
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      S[src.key] = [];
+      log(n + ' ' + fwName(fw) + ' scan suggestion(s) dismissed by practitioner.');
+      toast(n + ' suggestion' + (n === 1 ? '' : 's') + ' dismissed');
+      renderSoa(); renderNavCounts();
     },
 
     dismiss: function (tpl) {
