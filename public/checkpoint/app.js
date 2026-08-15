@@ -890,6 +890,11 @@ function showModal(opts) {
     var dismissed = window._aiDismissedThisSession || {};
     S.aiCandidates = candidates.filter(function (c) { return !known[c.id] && !dismissed[c.id]; });
 
+    /* Returns the template keys to propose rather than pushing them onto
+       S.proposed directly: runScan() rebuilds that list from scratch
+       after this runs, so anything written to it here was thrown away
+       before the practitioner ever saw it. */
+    var proposedTpl = [];
     S.aiCandidates.forEach(function (c) {
       if (!c.highPrivilegeScopes.length) return;
       var tplKey = 'ai-risk-' + c.id;
@@ -900,8 +905,9 @@ function showModal(opts) {
         },
         actions: [{ t: 'Review and, if appropriate, revoke high-privilege consent for ' + c.name, pr: 'High', days: 21, control: 'AI.9.2' }]
       };
-      if (S.handledTpl.indexOf(tplKey) === -1 && S.proposed.indexOf(tplKey) === -1) S.proposed.push(tplKey);
+      if (S.handledTpl.indexOf(tplKey) === -1 && proposedTpl.indexOf(tplKey) === -1) proposedTpl.push(tplKey);
     });
+    return proposedTpl;
   }
 
   /* band/residual/checkResult/score are thin wrappers around
@@ -4219,11 +4225,13 @@ function showModal(opts) {
     var byDate = {};
     var exceptions = [];
     var anyObservations = false;
+    var anyPassed = false;
     checkIds.forEach(function (id) {
       var eff = window.CheckpointLib.operatingEffectiveness(id, history, sinceDate);
       var def = window.CHECK_DEFS.find(function (d) { return d.id === id; });
       var label = def ? def.label : id;
       if (eff.totalObservations) anyObservations = true;
+      if (eff.passCount) anyPassed = true;
       eff.exceptions.forEach(function (ex) {
         exceptions.push({ date: ex.date, result: ex.result, checkLabel: label });
       });
@@ -4236,12 +4244,23 @@ function showModal(opts) {
     });
     var dates = Object.keys(byDate).sort();
     exceptions.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    /* noExceptionsFound mirrors CheckpointLib.operatingEffectiveness()'s
+       own contract exactly: every REAL (non-'manual') observation in
+       the window passed, and there was at least one. Aggregating on
+       anyObservations alone — as this used to — reported a confident
+       "N scans, no exceptions" for a control whose every observation
+       came back 'manual', i.e. one with no live signal at all on any
+       scan in the window (a tenant with no Secure Score data, say).
+       That is an overstatement of audit evidence, in the one view
+       written to be read by an auditor. A manual-only window is now
+       reported as exactly what it is. */
     return {
       totalObservations: dates.length,
       firstObservedDate: dates.length ? dates[0] : null,
       lastObservedDate: dates.length ? dates[dates.length - 1] : null,
       exceptions: exceptions,
-      noExceptionsFound: anyObservations && exceptions.length === 0
+      noExceptionsFound: anyPassed && exceptions.length === 0,
+      manualOnly: anyObservations && !anyPassed && exceptions.length === 0
     };
   }
 
@@ -4271,6 +4290,8 @@ function showModal(opts) {
         var windowLabel = eff.firstObservedDate === eff.lastObservedDate ? fmtDate(eff.firstObservedDate) : fmtDate(eff.firstObservedDate) + ' – ' + fmtDate(eff.lastObservedDate);
         if (eff.noExceptionsFound) {
           summaryHtml = '<span class="verify-ok">' + eff.totalObservations + ' scan' + (eff.totalObservations > 1 ? 's' : '') + ', no exceptions</span><div class="src">Observed ' + windowLabel + '</div>';
+        } else if (eff.manualOnly) {
+          summaryHtml = '<span class="verify-stale">' + eff.totalObservations + ' scan' + (eff.totalObservations > 1 ? 's' : '') + ', no live signal on any of them</span><div class="src">Observed ' + windowLabel + ' — every scan returned "manual" for the check(s) behind this control (the underlying capability wasn\'t readable), so there is no automated operating-effectiveness evidence here. Gather and attest it manually for this period.</div>';
         } else {
           summaryHtml = '<span class="verify-stale">' + eff.exceptions.length + ' exception' + (eff.exceptions.length > 1 ? 's' : '') + ' of ' + eff.totalObservations + ' scan' + (eff.totalObservations > 1 ? 's' : '') + '</span><div class="src">' +
             eff.exceptions.slice(0, 3).map(function (ex) { return fmtDate(ex.date) + ' — ' + esc(ex.checkLabel) + ' (' + ex.result + ')'; }).join('<br>') +
@@ -7076,6 +7097,15 @@ function showModal(opts) {
       if (checkListEl) checkListEl.innerHTML = skeletonBlocks(6);
 
       var todayIso = new Date().toISOString().slice(0, 10);
+      /* AI-governance findings discovered below, held here until the
+         proposal list is rebuilt further down. discoverAiSystemsFromScan()
+         used to push these straight onto S.proposed — which the
+         templated-check block then reset to [], silently throwing every
+         one of them away, so an AI finding could never reach the
+         approval queue on a live tenant. Collected rather than cleared
+         early so a failed Graph scan still returns with the previous
+         scan's proposals intact. */
+      var aiProposedTpl = [];
       if (Store.kind === 'sharepoint') {
         try {
           var out = await Graph.runPostureChecks(null, S.settings);
@@ -7085,7 +7115,7 @@ function showModal(opts) {
         document.getElementById('gCap').textContent = 'Capturing evidence…';
         try { await captureAutoEvidence(out.raw, todayIso); } catch (e) { warn(e); }
         if (S.entitlements.iso42001) {
-          try { await discoverAiSystemsFromScan(out.raw); } catch (e) { warn(e); }
+          try { aiProposedTpl = (await discoverAiSystemsFromScan(out.raw)) || []; } catch (e) { warn(e); }
         }
       }
       /* demo mode keeps its stored lastResults (with remediation flips via checkResult) */
@@ -7116,13 +7146,15 @@ function showModal(opts) {
       }
       requestAnimationFrame(fr);
 
-      /* queue proposals for unhandled fail/review templated checks */
-      S.proposed = [];
+      /* queue proposals for unhandled fail/review templated checks, on
+         top of whatever AI-system discovery proposed above */
+      S.proposed = aiProposedTpl.slice();
       window.CHECK_DEFS.forEach(function (c) {
         if (!c.tpl) return;
         var r = checkResult(c);
         if (r === 'pass' || r === null) return;
         if (S.handledTpl.indexOf(c.tpl) > -1) return;
+        if (S.proposed.indexOf(c.tpl) > -1) return;
         S.proposed.push(c.tpl);
       });
 
@@ -7405,6 +7437,21 @@ function showModal(opts) {
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
+      /* The per-check results the previous scan actually recorded, so a
+         re-scan whose numbers all land identically but whose CHECKS
+         moved still gets snapshotted (see scanResultsChanged()'s own
+         comment in lib.js). Only consulted when the previous scan
+         carries recorded results at all — a seeded/legacy row without
+         them must not force a snapshot on every single scan. */
+      var prevRecordedResults = null;
+      if (lastScan && lastScan.detail) {
+        try {
+          var prevDetail = JSON.parse(lastScan.detail);
+          if (prevDetail && prevDetail.results && Object.keys(prevDetail.results).length) prevRecordedResults = prevDetail.results;
+        } catch (e) { /* malformed prior detail — treat as "nothing to compare" */ }
+      }
+      var checkResultsMoved = window.CheckpointLib.scanResultsChanged(prevRecordedResults, S.lastResults);
+
       /* snapshot control-implementation readiness (primary framework, for
          the sparkline overlay, plus every entitled framework so its own
          KPI tile can trend), and the risk/overdue counts driving the other
@@ -7425,9 +7472,11 @@ function showModal(opts) {
       /* re-snapshot if anything a Dashboard tile trends against has moved,
          not just the score — otherwise completing an action or closing a
          risk between two same-day, same-score scans would leave every
-         other tile's trend badge silently stuck */
+         other tile's trend badge silently stuck — or if any individual
+         check result moved, which the aggregate numbers above can hide
+         entirely (one check up, another down, same score) */
       if (!lastScan || lastScan.date !== today || lastScan.score !== target ||
-          lastScan.critRisks !== critNow || lastScan.overdueActions !== odNow) {
+          lastScan.critRisks !== critNow || lastScan.overdueActions !== odNow || checkResultsMoved) {
         /* Recompute the Certification Journey's audit-ready projection at
            every scan and snapshot it alongside readiness/critRisks/etc —
            same "extra field lives in Detail's JSON" pattern (see

@@ -21,8 +21,17 @@
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
 /* Most of CHECK_DEFS's scored:true entries in store.js — the
-   scored:false checks (backup, bcp, supplier, policy, training) have
-   no Graph signal at all and are deliberately left out of both files.
+   scored:false checks (backup, bcp, supplier, policy) have no Graph
+   signal at all and are deliberately left out of both files.
+
+   'training' is the one scored:true check with no Graph signal: it is
+   computed from the tenant's own Checkpoint Training list, which this
+   Function reads too (see runTrainingCheck() below). It used to be
+   listed with the scored:false checks and skipped here — which meant
+   the unattended score and the interactive one were computed over
+   different denominators, so every automated scan landed at a
+   different number from a browser scan of the identical tenant and
+   the Dashboard sparkline showed drift that never happened.
    Two scored:true, capability-backed checks are ALSO deliberately not
    mirrored here, both for the same shape of reason — an app-only,
    client-credentials identity can't reuse the delegated call the
@@ -44,7 +53,7 @@ const GRAPH = 'https://graph.microsoft.com/v1.0';
 const SCORED_CHECK_IDS = [
   'mfa-all', 'mfa-priv', 'legacy', 'admins', 'pim', 'guests', 'riskyusers', 'access-review',
   'device', 'compliance-policy', 'patch', 'wdac', 'macro', 'riskyapps', 'dlp', 'encryption',
-  'logging', 'alerts'
+  'logging', 'alerts', 'training'
 ];
 const CHECK_LABELS = {
   'mfa-all': 'MFA enforced — all users',
@@ -64,7 +73,8 @@ const CHECK_LABELS = {
   'dlp': 'Data loss prevention policy coverage',
   'encryption': 'Sensitive content encryption in use',
   'logging': 'Unified audit logging enabled',
-  'alerts': 'Security alerts triaged & threat protection enabled'
+  'alerts': 'Security alerts triaged & threat protection enabled',
+  'training': 'Security awareness training completion'
 };
 
 async function getAppToken(context) {
@@ -139,7 +149,56 @@ async function resolveOptionalLists(g, siteId) {
   const lists = await g(`/sites/${siteId}/lists?$select=id,displayName&$top=200`);
   const byName = {};
   (lists.value || []).forEach(l => { byName[l.displayName] = l.id; });
-  return { Documents: byName[prefix + ' Documents'] || null, Attestations: byName[prefix + ' Attestations'] || null };
+  return {
+    Documents: byName[prefix + ' Documents'] || null,
+    Attestations: byName[prefix + ' Attestations'] || null,
+    Training: byName[prefix + ' Training'] || null
+  };
+}
+
+/* The 'training' posture check — the one scored:true check with no
+   Graph signal behind it. Mirrors CheckpointLib.trainingCheckResult()
+   (public/checkpoint/lib.js) exactly, including its thresholds and its
+   two deliberate rules: Exempt records leave the denominator, and any
+   overdue incomplete assignment caps the result at 'fail' regardless
+   of the completion percentage. No training records at all resolves to
+   'manual', never 'fail' — a client running awareness training in a
+   separate LMS is doing the control properly while leaving no trace
+   here, and "we couldn't measure it" must never be scored as "it
+   failed" (same rule computeScore() applies below).
+
+   Returns null when this tenant has no Training list at all (an older
+   Checkpoint version), so the check is simply absent from the run
+   rather than reported as an unmeasured failure. If you change the
+   thresholds or the rules here, change lib.js too — same
+   mirror-by-hand contract as runPostureChecks() above. */
+const TRAINING_PASS_PCT = 90;
+const TRAINING_REVIEW_PCT = 70;
+
+async function runTrainingCheck(g, context, siteId, trainingListId, today) {
+  if (!trainingListId) return null;
+  let rows = [];
+  try {
+    const items = await g(`/sites/${siteId}/lists/${trainingListId}/items?$expand=fields&$top=999`);
+    rows = (items.value || []).map(i => i.fields || {});
+  } catch (e) {
+    context.log.error('Checkpoint posture monitor: could not read the training register: ' + (e && e.message ? e.message : e));
+    return null;
+  }
+  const list = rows.filter(r => r.Status !== 'Exempt');
+  if (!list.length) {
+    return { result: 'manual', note: 'No training records in Checkpoint — assign a course here, or keep completion evidence in whatever system you use.' };
+  }
+  const completed = list.filter(r => r.Status === 'Completed').length;
+  const overdue = list.filter(r => r.Status !== 'Completed' && r.DueDate && r.DueDate < today).length;
+  const pct = Math.round((completed / list.length) * 100);
+  let result = pct >= TRAINING_PASS_PCT ? 'pass' : pct >= TRAINING_REVIEW_PCT ? 'review' : 'fail';
+  if (overdue) result = 'fail';
+  return {
+    result,
+    note: completed + ' of ' + list.length + ' assigned training records complete (' + pct + '%)' +
+      (overdue ? ' — ' + overdue + ' past their due date' : '') + '.'
+  };
 }
 
 async function readSettings(g, siteId, settingsListId) {
@@ -533,7 +592,24 @@ module.exports = async function (context, myTimer) {
     const lists = await resolveLists(g, siteId);
 
     const settings = await readSettings(g, siteId, lists.Settings);
+    /* Resolved once, up front, and shared by the training check and the
+       governance sweep below — both need the same lenient lookup, and
+       resolving it here means the training result lands in `results`
+       before the score is computed and the scan row written. Failure to
+       resolve is logged, never thrown: these lists are optional, and a
+       posture scan must still run and be recorded for a tenant whose
+       list collection was momentarily unreadable. */
+    let optional = { Documents: null, Attestations: null, Training: null };
+    try {
+      optional = await resolveOptionalLists(g, siteId);
+    } catch (e) {
+      context.log.error('Checkpoint posture monitor: could not resolve the optional lists — training check and governance sweep skipped this run: ' + (e && e.message ? e.message : e));
+    }
     const { results, notes } = await runPostureChecks(g, gAll, settings);
+
+    const training = await runTrainingCheck(g, context, siteId, optional.Training, today);
+    if (training) { results.training = training.result; notes.training = training.note; }
+
     const score = computeScore(results);
 
     /* previous scan, for drift detection — same "read everything, sort
@@ -546,7 +622,7 @@ module.exports = async function (context, myTimer) {
     let prevResults = {};
     if (prev && prev.fields.Detail) { try { prevResults = JSON.parse(prev.fields.Detail).results || {}; } catch (e) { /* ignore malformed prior detail */ } }
 
-    let alertsWritten = 0;
+    const drifted = [];
     for (const id of SCORED_CHECK_IDS) {
       if (prevResults[id] === 'pass' && results[id] === 'fail') {
         await g(`/sites/${siteId}/lists/${lists.Alerts}/items`, {
@@ -562,8 +638,26 @@ module.exports = async function (context, myTimer) {
             Acknowledged: false
           } }
         });
-        alertsWritten++;
+        drifted.push({ label: CHECK_LABELS[id] || id, note: notes[id] || '' });
       }
+    }
+    const alertsWritten = drifted.length;
+
+    /* Drift is emailed on the same NOTIFY_FROM/NOTIFY_TO settings the
+       governance sweep uses. It previously wasn't — only the sweep's
+       findings were — which left the monitor's single most urgent
+       signal (a security control that was passing and is now failing)
+       sitting silently in a SharePoint list until somebody happened to
+       open the Dashboard, while a policy review due in 30 days did
+       reach their inbox. Sent before the scan row is written, so a
+       failure recording the scan can't cost the operator the warning;
+       notify() never throws. */
+    if (drifted.length) {
+      await notify(g, context,
+        'Checkpoint: ' + drifted.length + ' control' + (drifted.length === 1 ? '' : 's') + ' drifted from pass to fail',
+        '<p>The Checkpoint scheduled monitor detected the following on ' + today + ' (tenant posture score ' + score + '/100):</p><ul>' +
+          drifted.map(d => '<li><b>' + d.label + '</b>' + (d.note ? '<br>' + d.note : '') + '</li>').join('') +
+          '</ul><p>Open Checkpoint to acknowledge or action these.</p>');
     }
 
     await g(`/sites/${siteId}/lists/${lists.Scans}/items`, {
@@ -583,7 +677,6 @@ module.exports = async function (context, myTimer) {
        momentarily unreadable. */
     let governanceAlerts = 0;
     try {
-      const optional = await resolveOptionalLists(g, siteId);
       governanceAlerts = await runGovernanceSweep(g, gAll, context, siteId, lists, optional, today);
     } catch (e) {
       context.log.error('Checkpoint governance sweep failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));

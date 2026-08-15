@@ -108,3 +108,41 @@ describe('demo mode populates the same shared registries a real licensed tenant 
     });
   });
 });
+
+// Every framework whose SoA statuses runScan() can suggest keeps its own
+// S.<fw>Proposed list. The five frameworks added after the first three
+// (iso42001, iso27701, soc2, nistcsf, iso27001) were never added to
+// either store's seeded state — runScan() creates them on the fly, so
+// before a tenant's first scan of a session those keys simply did not
+// exist, and renderSoa()/App.confirm<Fw>Suggestion() were one unguarded
+// dereference away from a thrown handler. Asserted against the app's own
+// framework registry rather than a hardcoded list, so a framework added
+// later can't quietly reintroduce the same gap.
+describe('the demo store seeds a suggestion list for every framework the posture scan can suggest for', () => {
+  const SUGGESTION_STATE_KEY = {
+    essential8: 'e8Proposed', is18: 'is18Proposed', rffr: 'rffrProposed',
+    iso42001: 'iso42001Proposed', iso27701: 'iso27701Proposed', soc2: 'soc2Proposed',
+    nistcsf: 'nistcsfProposed', iso27001: 'iso27001Proposed'
+  };
+
+  test('each framework with a scan-suggestion state key has that key seeded as an array', async () => {
+    const S = await window.DemoStore.load();
+    Object.keys(SUGGESTION_STATE_KEY).forEach((fw) => {
+      const key = SUGGESTION_STATE_KEY[fw];
+      assert.ok(Array.isArray(S[key]), `S.${key} is not seeded as an array — renderSoa() reads it for the ${fw} tab and App.confirm/dismiss handlers call .find()/.filter() straight on it`);
+    });
+  });
+
+  test('the generic proposed/handled/candidate lists are seeded too', async () => {
+    const S = await window.DemoStore.load();
+    ['proposed', 'handledTpl', 'aiCandidates'].forEach((key) => {
+      assert.ok(Array.isArray(S[key]), `S.${key} is not seeded as an array`);
+    });
+  });
+
+  test('every framework carrying a demo automation seed has a suggestion state key', () => {
+    Object.keys(window.DEMO_CHECK_SEEDS).forEach((fw) => {
+      assert.ok(SUGGESTION_STATE_KEY[fw], `${fw} has scan-suggestion automation seeded (DEMO_CHECK_SEEDS.${fw}) but no S.<fw>Proposed state key is tracked for it`);
+    });
+  });
+});

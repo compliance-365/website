@@ -179,6 +179,19 @@ SharePoint data rather than in Entra or Intune:
   `Checkpoint Attestations` still incomplete 21 days after launch, with
   the acknowledged/outstanding split. ISO 27001 A.5.1.
 
+The same run also scores the **security awareness training** check from
+the `Checkpoint Training` list. It is the one scored check with no Graph
+signal behind it, and it is computed here with exactly the thresholds
+and rules the browser app uses (`CheckpointLib.trainingCheckResult()` —
+Exempt records leave the denominator, any overdue incomplete assignment
+caps the result at `fail`, and no records at all resolves to `manual`,
+never a failure). Without it the unattended score and the interactive
+score were computed over different denominators, so the two disagreed on
+the same tenant and the Dashboard sparkline showed drift that never
+happened. A tenant with no `Checkpoint Training` list simply has the
+check absent from the run, same as any other check that couldn't be
+measured.
+
 Findings are written to the same `Checkpoint Alerts` list the posture
 drift detection uses, so the Dashboard surfaces them with no extra
 configuration. **Alerts are deduplicated against the list itself**: a
@@ -186,17 +199,19 @@ policy that has been overdue for three weeks produces one alert somebody
 still has to acknowledge, not twenty-one identical ones.
 
 This needs **no additional Graph permission** — `Sites.Selected` on the
-Checkpoint site already covers reading the library and the list. Both
-lists are resolved leniently: a tenant on an older Checkpoint version
-that has neither simply gets its posture scan as before, and a
+Checkpoint site already covers reading the library and the lists. All
+three lists (`Documents`, `Attestations`, `Training`) are resolved
+leniently: a tenant on an older Checkpoint version that has none of them
+simply gets its posture scan as before, and a
 governance-sweep failure is logged without failing the execution, so a
 recorded posture scan is never reported as a failed run because the
 document register was briefly unreadable.
 
 ### Optional: email notification
 
-Off by default. To have new governance findings emailed as they're
-raised, set two app settings on the Function App:
+Off by default. To have new findings emailed as they're raised — both
+pass → fail posture drift and governance-sweep items, each as its own
+message — set two app settings on the Function App:
 
 | Setting | Value |
 | --- | --- |
