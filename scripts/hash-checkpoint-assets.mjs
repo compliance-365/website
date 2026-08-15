@@ -33,7 +33,7 @@
  * is always exactly what VERSION says — see injectVersion() below.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -153,6 +153,65 @@ function rewriteStylesheetTag(html, hrefAttr, newHrefAttr) {
   return { html: replaced, matched: true };
 }
 
+/* Every built .html in dist/ EXCEPT the two Checkpoint/owner pages this
+   script rewrites tag-by-tag above — i.e. the Astro marketing site. */
+function siteHtmlFiles(root) {
+  const out = [];
+  const appIndex = join(root, 'checkpoint', 'index.html');
+  const ownerIndex = join(root, 'owner', 'index.html');
+  (function walk(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (entry.name.endsWith('.html') && p !== appIndex && p !== ownerIndex) out.push(p);
+    }
+  })(root);
+  return out;
+}
+
+/* Site pages can legitimately load a Checkpoint script by absolute path
+   — src/components/EuAiActClassifier.astro loads lib.js so the public EU
+   AI Act tool and the in-app AI Systems register share ONE question set
+   and classification engine rather than drifting as two copies.
+   Those pages are plain Astro output, so nothing above ever rewrote
+   them, and content-hashing renamed the file out from under them: the
+   tag 404'd in production, window.CheckpointLib stayed undefined, and
+   the classifier silently rendered zero questions on every page
+   embedding it — a visibly empty widget, with no error anywhere.
+
+   Rewrites every such reference to the hashed name (global, so a page
+   embedding a component twice is fully handled) and then re-scans for
+   any surviving plain-name reference, throwing if one is left. Same
+   self-verifying contract as the rest of this script: a dangling
+   reference fails the build rather than shipping a dead <script>. */
+export function rewriteSiteReferences(hashedByRel, root = DIST_ROOT) {
+  const rels = Object.keys(hashedByRel);
+  let rewritten = 0, pagesTouched = 0;
+  for (const file of siteHtmlFiles(root)) {
+    let pageHtml = readFileSync(file, 'utf8');
+    const before = pageHtml;
+    for (const rel of rels) {
+      const { newName, integrity } = hashedByRel[rel];
+      const escaped = ('/checkpoint/' + rel).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const tagRe = new RegExp('<script src="' + escaped + '(?:\\?[^"]*)?"([^>]*)></script>', 'g');
+      pageHtml = pageHtml.replace(tagRe, (_m, extraAttrs) => {
+        rewritten++;
+        const attrs = extraAttrs.replace(/\s*integrity="[^"]*"/, '').replace(/\s*crossorigin="[^"]*"/, '');
+        return '<script src="/checkpoint/' + newName + '" integrity="' + integrity + '" crossorigin="anonymous"' + attrs + '></script>';
+      });
+    }
+    if (pageHtml !== before) { writeFileSync(file, pageHtml); pagesTouched++; }
+
+    for (const rel of rels) {
+      if (pageHtml.includes('"/checkpoint/' + rel + '"')) {
+        throw new Error('hash-checkpoint-assets: ' + file + ' still references /checkpoint/' + rel +
+          ', which no longer exists after content hashing — it would 404 in production. Reference it from a <script src="/checkpoint/' + rel + '"></script> tag this script can rewrite, or stop referencing it.');
+      }
+    }
+  }
+  return { rewritten, pagesTouched };
+}
+
 function main() {
   if (!existsSync(INDEX_PATH)) {
     console.log('hash-checkpoint-assets: dist/checkpoint/index.html not found — skipping (did `astro build` run first?)');
@@ -170,6 +229,11 @@ function main() {
   enforceDevBypassOff(DIST_DIR);
 
   let hashedCount = 0;
+  /* rel -> { newName, integrity } for every file physically in
+     dist/checkpoint/, so rewriteSiteReferences() below can fix (and
+     verify) any absolute /checkpoint/<name> reference a marketing page
+     makes. */
+  const hashedByRel = {};
 
   // Client-only scripts: hashed in dist/checkpoint/, rewritten only in
   // dist/checkpoint/index.html — required match.
@@ -181,6 +245,7 @@ function main() {
     const r = rewriteScriptTag(html, rel, newName, integrity);
     if (!r.matched) throw new Error('hash-checkpoint-assets: could not find a <script> tag for ' + rel + ' in dist/checkpoint/index.html — has its markup changed?');
     html = r.html;
+    hashedByRel[rel] = { newName, integrity };
     hashedCount++;
   }
 
@@ -207,6 +272,7 @@ function main() {
       if (!r2.matched) throw new Error('hash-checkpoint-assets: could not find a <script src="' + ownerSrc + '"> tag in dist/owner/index.html — has its markup changed?');
       ownerHtml = r2.html;
     }
+    hashedByRel[rel] = { newName, integrity };
     hashedCount++;
   }
 
@@ -224,6 +290,7 @@ function main() {
       if (!r.matched) throw new Error('hash-checkpoint-assets: could not find a <script src="' + ownerSrc + '"> tag in dist/owner/index.html — has its markup changed?');
       ownerHtml = r.html;
     }
+    hashedByRel[rel] = { newName, integrity };
     hashedCount++;
   }
 
@@ -282,7 +349,11 @@ function main() {
 
   writeFileSync(INDEX_PATH, html);
   if (hasOwnerIndex) writeFileSync(OWNER_INDEX_PATH, ownerHtml);
-  console.log('hash-checkpoint-assets: content-hashed ' + hashedCount + ' script(s), 1 stylesheet + ' + FONT_FILES.length + ' font(s), injected version ' + version + ', refreshed SRI, rewrote index.html' + (hasOwnerIndex ? ' + owner/index.html' : ''));
+
+  const site = rewriteSiteReferences(hashedByRel);
+
+  console.log('hash-checkpoint-assets: content-hashed ' + hashedCount + ' script(s), 1 stylesheet + ' + FONT_FILES.length + ' font(s), injected version ' + version + ', refreshed SRI, rewrote index.html' + (hasOwnerIndex ? ' + owner/index.html' : '') +
+    (site.rewritten ? ' + ' + site.rewritten + ' site reference(s) across ' + site.pagesTouched + ' page(s)' : ''));
 }
 
 /* Only runs main() when this file is executed directly (`node
