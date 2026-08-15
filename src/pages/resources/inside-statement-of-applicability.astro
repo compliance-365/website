@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
@@ -506,6 +507,11 @@ const pageDesc =
         Most organisations build a strong SoA foundation in 2–4 weeks.
       </p>
     </div>
+  </section>
+
+  <!-- Digest signup -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup source="resource-inside-statement-of-applicability" />
   </section>
 
   <Footer />

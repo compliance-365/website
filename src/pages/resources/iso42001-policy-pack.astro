@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -153,6 +154,11 @@ const pageDesc =
     <a class="btn btn-primary" href={ctaUrl} target="_blank" rel="noopener noreferrer">Book a Scoping Call</a>
   </div>
 </section>
+
+  <!-- Digest signup -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup source="resource-iso42001-policy-pack" />
+  </section>
 
   <Footer />
 </Base>

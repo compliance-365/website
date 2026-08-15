@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const pageTitle = 'Ransomware Payment Reporting — Are You Ready?';
@@ -171,6 +172,11 @@ const pageDesc  = 'The Cyber Security Act made ransomware payment reporting mand
     <a class="btn btn-primary" href={`${base}book/`}>Book a Call</a>
   </div>
 </section>
+
+  <!-- Digest signup -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup source="resource-ransomware-reporting-readiness" />
+  </section>
 
   <Footer />
 </Base>
