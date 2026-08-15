@@ -512,6 +512,21 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .proposed-card h4{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-3)}
 .proposed-card .meta{margin:8px 0 12px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.7}
 .proposed-card .meta b{color:var(--gold-light)}
+/* A suggestion that moves a control BACKWARDS reads as a warning, not as
+   progress: confirming it removes an implementation status the
+   practitioner recorded. Gold (the app's "this is good / do this")
+   treatment is deliberately withheld here. */
+.proposed-card.sugg-down{border-color:rgba(224,138,110,.45);background:rgba(224,138,110,.06)}
+.sugg-down-flag{display:flex;align-items:flex-start;gap:7px;margin:10px 0 2px;font-size:var(--fs-1);line-height:1.6;color:var(--fail)}
+.sugg-down-flag svg{flex:none;width:14px;height:14px;margin-top:2px}
+.sugg-down-t{color:var(--fail)}
+/* Bulk decision bar above a queue of proposal/suggestion cards. */
+.bulk-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px;padding:10px 14px;border:1px dashed var(--line);border-radius:6px}
+.bulk-bar .bulk-count{flex:1 1 auto;min-width:150px;font-size:var(--fs-1);color:var(--paper-dim);letter-spacing:.02em}
+/* Pending-suggestion count on a framework tab — same visual language as
+   the sidebar's nav-item badges. */
+.f-pill .pill-n{margin-left:7px;padding:1px 6px;border-radius:99px;font-size:var(--fs-1);font-weight:800;background:rgba(169,129,46,.22);color:var(--gold-light)}
+.f-pill.on .pill-n{background:rgba(20,18,16,.22);color:var(--ink)}
 .soa-group-row td{background:rgba(169,129,46,.07);border-top:2px solid rgba(169,129,46,.25);padding-top:10px}
 
 /* ===== soa ===== */
