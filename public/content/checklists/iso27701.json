@@ -1,0 +1,14 @@
+{
+  "questions": [
+    { "id": "pims-scope", "text": "Is your PIMS scope defined — covering systems, products, regions and teams that handle personal information, with clear in/out boundaries?", "weight": 1 },
+    { "id": "roles-dpo", "text": "Is privacy ownership assigned — a named privacy lead or DPO with documented responsibilities, escalation paths and decision authority?", "weight": 1 },
+    { "id": "ropa", "text": "Is a Record of Processing Activities (ROPA) maintained — covering purpose, data types, systems, vendors, lawful basis and retention?", "weight": 1 },
+    { "id": "dpias", "text": "Is a DPIA (privacy risk assessment) methodology defined and applied before high-impact changes, new processing or vendor onboarding?", "weight": 1 },
+    { "id": "controls", "text": "Are privacy-by-design controls implemented — data minimisation, defined retention periods, role-based access and automated deletion?", "weight": 1 },
+    { "id": "rights", "text": "Are individual rights requests (access, erasure, correction, portability) handled through a defined workflow within a committed timeframe?", "weight": 1 },
+    { "id": "training", "text": "Is privacy training role-based, assigned to all relevant staff, with completion tracked and available for audit?", "weight": 1 },
+    { "id": "processors", "text": "Are third-party processors assessed before onboarding, with privacy obligations (DPAs) in contracts and ongoing reviews documented?", "weight": 1 },
+    { "id": "xfer", "text": "Are cross-border data transfers identified, assessed for risk, documented, and covered by safeguards where required?", "weight": 1 },
+    { "id": "mgmt-review", "text": "Are management reviews held at planned intervals, covering PIMS performance, risks, incidents, KPIs and improvement decisions?", "weight": 1 }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "questions": [
+    { "id": "aims-scope", "text": "Is your AIMS scope defined — AI use cases, systems, models, jurisdictions and clear in/out boundaries?", "weight": 1 },
+    { "id": "roles-oversight", "text": "Are AI governance roles defined — owners, committees and RACI covering key decisions and escalation?", "weight": 1 },
+    { "id": "inventory", "text": "Is an AI use-case inventory maintained — purpose, risks, data types, owners and risk classification?", "weight": 1 },
+    { "id": "risk-method", "text": "Is an AI Impact and Risk Assessment (AIRA) methodology defined and applied before deployment and changes?", "weight": 1 },
+    { "id": "human-loop", "text": "Is human oversight defined — review thresholds, escalation paths and the ability to override or disable AI?", "weight": 1 },
+    { "id": "eval", "text": "Is AI evaluated before release and after changes — fairness, robustness, red-teaming and go/no-go records?", "weight": 1 },
+    { "id": "monitor", "text": "Is runtime monitoring in place — quality, drift, misuse and policy violations with logs and alerts?", "weight": 1 },
+    { "id": "incident", "text": "Are AI incidents formally managed — bias harms, hallucinations and misuse handled with post-incident reviews?", "weight": 1 },
+    { "id": "thirdparty", "text": "Are third-party AI providers assessed — model cards, data handling, SLAs and contractual controls?", "weight": 1 },
+    { "id": "mgmt-review", "text": "Are management reviews held covering AIMS performance, AI risks, incidents and improvements?", "weight": 1 }
+  ]
+}

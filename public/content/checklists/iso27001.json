@@ -1,0 +1,14 @@
+{
+  "questions": [
+    { "id": "isms-scope", "text": "Is your ISMS scope defined and approved — covering locations, systems, services, and explicit exclusions?", "weight": 1 },
+    { "id": "leadership", "text": "Has top management assigned roles, committed resources, and stayed visibly engaged in security governance?", "weight": 1 },
+    { "id": "risk-method", "text": "Is a risk assessment methodology defined and applied consistently, with criteria, scoring, and risk appetite documented?", "weight": 1 },
+    { "id": "risk-register", "text": "Is a live risk register maintained, with named owners, treatment plans, due dates, and a review cadence?", "weight": 1 },
+    { "id": "soa", "text": "Is your Statement of Applicability complete — included/excluded controls, justifications, status, owner, and evidence pointers?", "weight": 1 },
+    { "id": "access", "text": "Is access control governed — joiner/mover/leaver process, role-based access, MFA, and privileged access controls?", "weight": 1 },
+    { "id": "logging", "text": "Is centralised security logging and alerting in place for identity, endpoints, cloud, and critical applications?", "weight": 1 },
+    { "id": "incident", "text": "Is your incident response plan documented, tested, and improved after exercises or real incidents?", "weight": 1 },
+    { "id": "internal-audit", "text": "Are internal ISMS audits performed against a plan, with findings tracked to verified closure?", "weight": 1 },
+    { "id": "management-review", "text": "Are management reviews held at planned intervals, covering risks, incidents, KPIs, audit results, and improvements?", "weight": 1 }
+  ]
+}
