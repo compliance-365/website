@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
@@ -441,6 +442,11 @@ const breadcrumbLd = {
         </a>
       </div>
     </div>
+  </section>
+
+  <!-- Digest signup -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup source="resource-automating-compliance" />
   </section>
 
   <Footer />

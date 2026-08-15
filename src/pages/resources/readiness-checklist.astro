@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 import ReadinessChecklist from '../../components/ReadinessChecklist.astro';
 
 const base = import.meta.env.BASE_URL || '/';
@@ -71,6 +72,11 @@ const base = import.meta.env.BASE_URL || '/';
         </a>
       </div>
     </div>
+  </section>
+
+  <!-- Digest signup -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup source="resource-readiness-checklist" />
   </section>
 
   <Footer />

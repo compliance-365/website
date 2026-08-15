@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import rffr from '../../data/rffr-controls.json';
 
@@ -218,6 +219,11 @@ const articleLd = {
         <a href={`${base}services/rffr/`} class="btn-hdk-ghost">See how we deliver RFFR</a>
       </div>
     </div>
+  </section>
+
+  <!-- Digest signup -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup source="resource-rffr-soa-controls" />
   </section>
 
   <Footer />

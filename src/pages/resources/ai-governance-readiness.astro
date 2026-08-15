@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const pageTitle = 'AI Governance Readiness (ISO 42001): Simple Guide for Leaders';
@@ -313,6 +314,11 @@ const pageDesc  = 'What ISO 42001 is and how to stand up an AI management system
     <a class="btn btn-primary" href={`${base}book/`}>Book a Call</a>
   </div>
 </section>
+
+  <!-- Digest signup -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup source="resource-ai-governance-readiness" />
+  </section>
 
   <Footer />
 </Base>
