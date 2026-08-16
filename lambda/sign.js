@@ -71,8 +71,15 @@
 import { webcrypto, createPublicKey, verify as cryptoVerify } from 'node:crypto';
 
 const GRACE_DAYS = 14; // same standard as tools/issue-entitlement.mjs
-const FRAMEWORK_BUNDLES = { is18: ['iso27001', 'essential8'] }; // IS18 = ISO 27001-aligned ISMS + Essential Eight uplift
-const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'is18', 'ai'];
+/* IS18 = ISO 27001-aligned ISMS + Essential Eight uplift. RFFR (Right Fit
+   For Risk) is, by DEWR's own model, an ISM-based SoA built on an ISO
+   27001 ISMS with Essential Eight uplift — same bundling reasoning, and
+   the same two ids tools/issue-entitlement.mjs bundles it to. This table
+   drifted out of sync with the CLI's once before (rffr was missing here
+   entirely, silently blocking the owner console's "sign via endpoint"
+   fast path for it with no clear error) — keep both in sync. */
+export const FRAMEWORK_BUNDLES = { is18: ['iso27001', 'essential8'], rffr: ['iso27001', 'essential8'] };
+export const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'is18', 'rffr', 'ai'];
 const ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
 
 /* ============== canonicalJson / Ed25519 signing ==============
