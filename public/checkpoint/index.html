@@ -612,7 +612,7 @@
         <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Not "how many actions are open" — whether the ones that matter most are actually moving.</p>
         <div id="actBreakdown" style="max-width:820px"></div>
       </div>
-      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddAction">+ Add action / finding</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actions">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddAction">+ Add action / finding</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actions">Export CSV</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actionUpdates">Export progress log CSV</button></div>
       <div class="card" id="addActionPanel" style="margin-bottom:16px;display:none">
         <h3>New action / finding</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -765,7 +765,7 @@
       </div>
 
       <div class="settings-subhead">Data export</div>
-      <p class="settings-subdesc">Every register can also be exported as a flat CSV file from its own view — see the "Export CSV" button at the top of Risks, Actions, the Statement of Applicability, Vendor risk, Internal audits, Management review, the Compliance calendar and the Audit log. The client's data always stays in their own SharePoint lists regardless — this is a portable copy alongside it, for offboarding, an offline backup, or handing a snapshot to an auditor who wants a spreadsheet.</p>
+      <p class="settings-subdesc">Every register can also be exported as a flat CSV file from its own view — see the "Export CSV" button at the top of Risks, Actions (plus its own progress-log export), the Statement of Applicability, Vendor risk, Internal audits, Management review, the Compliance calendar and the Audit log. The client's data always stays in their own SharePoint lists regardless — this is a portable copy alongside it, for offboarding, an offline backup, or handing a snapshot to an auditor who wants a spreadsheet.</p>
       <div class="card fw-admin-row" style="max-width:680px">
         <div><b>Export all registers (ZIP)</b><p>Every register's CSV in one download, built entirely in this browser — nothing is uploaded anywhere to produce it.</p></div>
         <button class="btn sm" data-action="App.exportAllZip">Export all (zip)</button>

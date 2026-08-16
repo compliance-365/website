@@ -959,6 +959,15 @@ window.DemoStore = (function () {
         { id: 'ACT-007', title: 'Surveillance audit finding: asset inventory missing 12 cloud-only devices', risk: '', control: 'A.5.9', pr: 'High', owner: 'K. Patel', due: daysFrom(10), status: 'Open', src: 'External audit', evidenceUrl: '', type: 'Non-conformity (Minor)' },
         { id: 'ACT-011', title: 'Add a send-delay + recipient-domain warning for external mail (INC-0003 corrective action)', risk: '', control: 'A.5.14', pr: 'High', owner: 'S. Okafor', due: daysFrom(14), status: 'Open', src: 'Incident', evidenceUrl: '', type: 'Action' }
       ],
+      /* Illustrative progress history for the two demo actions already
+         sitting at 'In progress', so a prospect exploring the demo sees
+         the feature actually working, not an empty state. */
+      actionUpdates: [
+        { id: 'UPD-0001', action: 'ACT-001', date: daysFrom(-18), note: 'Drafted the updated security schedule and sent to Legal for review before it goes to suppliers.', evidenceUrl: '', status: 'In progress', author: 'K. Patel' },
+        { id: 'UPD-0002', action: 'ACT-001', date: daysFrom(-4), note: 'Legal review complete, minor wording changes only. Sent to the first 4 of 10 suppliers this week; remainder scheduled next week.', evidenceUrl: '', status: 'In progress', author: 'K. Patel' },
+        { id: 'UPD-0003', action: 'ACT-004', date: daysFrom(-25), note: 'Selected Attack Simulation Training in Defender for the phishing programme. First campaign scheduled.', evidenceUrl: '', status: 'In progress', author: 'M. Chen' },
+        { id: 'UPD-0004', action: 'ACT-004', date: daysFrom(-8), note: 'First simulation sent to all staff — 22% click rate. Awareness module assigned to everyone who clicked; second simulation planned in 6 weeks to measure improvement.', evidenceUrl: '', status: 'In progress', author: 'M. Chen' }
+      ],
       controls: (function () {
         var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
         var i27001 = 0; /* index within iso27001 only, so the demo status pattern is stable regardless of other frameworks' control counts */
@@ -1200,6 +1209,9 @@ window.DemoStore = (function () {
     addAction: async function (a) { S.actions.push(a); persist(); },
     updateAction: async function () { persist(); },
     deleteAction: async function (a) { S.actions = S.actions.filter(function (x) { return x !== a && x._sp !== a._sp && x.id !== a.id; }); persist(); },
+    /* Append-only — no update/delete counterpart, same immutability the
+       audit log already relies on. */
+    addActionUpdate: async function (u) { S.actionUpdates.push(u); persist(); },
     updateControl: async function () { persist(); },
     addScan: async function (sc) { S.scans.push(sc); persist(); },
     saveScanState: async function () { persist(); },
@@ -1333,6 +1345,31 @@ window.SpStore = (function () {
       { name: 'Correction', text: { allowMultipleLines: true } }, { name: 'RootCause', text: { allowMultipleLines: true } },
       { name: 'EffectivenessReview', text: { allowMultipleLines: true } }, { name: 'EffectivenessDate', text: {} }, { name: 'EffectivenessBy', text: {} },
       { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} }
+    ],
+    /* Chronological, append-only progress log — one row per dated update
+       against an action, each with its own note, its own optional
+       evidence link, and the action's status as of that entry. This is
+       the "show an auditor progress" register: the Actions list itself
+       only ever holds the CURRENT status and the LATEST evidence link —
+       a single-slot field that a second update silently overwrites, no
+       different from any other "last write wins" column. An auditor
+       asking "walk me through how this got remediated" needs the story,
+       not just the ending.
+
+       Deliberately its own list rather than a JSON blob on the action
+       (the pattern used for a scan's Detail or a review's Inputs) —
+       every other genuinely GROWING, append-over-time history in this
+       app (AuditLog, Training, Attestations) already gets its own list;
+       the JSON-blob pattern here is only ever used for a single owner's
+       structured content replaced wholesale on edit, never an
+       indefinitely-growing log several different people add to over an
+       action's lifetime. Rows are never edited or deleted once written
+       — same immutability the audit log already relies on for its own
+       credibility; a correction is a new row, not a rewritten one. */
+    ActionUpdates: [
+      { name: 'RefId', text: {} }, { name: 'ActionRef', text: {} }, { name: 'UpdateDate', text: {} },
+      { name: 'Note', text: { allowMultipleLines: true } }, { name: 'EvidenceUrl', text: {} },
+      { name: 'Status', text: {} }, { name: 'Author', text: {} }
     ],
     Controls: [
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
@@ -1989,6 +2026,7 @@ window.SpStore = (function () {
 
       var riskItems = await items('Risks');
       var actItems = await items('Actions');
+      var actUpdItems = await items('ActionUpdates');
       var ctlItems = await items('Controls');
       var scanItems = await items('Scans');
       var actvItems = await items('Activity');
@@ -2017,6 +2055,15 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', correction: f.Correction || '', rootCause: f.RootCause || '', effectivenessReview: f.EffectivenessReview || '', effectivenessDate: f.EffectivenessDate || '', effectivenessBy: f.EffectivenessBy || '', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
         }),
+        /* Sorted oldest-first here, same as every other dated register
+           this store loads (Calendar, Reviews) — callers building a
+           newest-first timeline (the action drawer) reverse it there,
+           so the canonical order in S stays consistent no matter which
+           view reads it. */
+        actionUpdates: actUpdItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, action: f.ActionRef || '', date: f.UpdateDate || '', note: f.Note || '', evidenceUrl: f.EvidenceUrl || '', status: f.Status || '', author: f.Author || '' };
+        }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
@@ -2230,6 +2277,15 @@ window.SpStore = (function () {
     },
     deleteAction: async function (a) {
       await Graph.g('/sites/' + siteId + '/lists/' + lists.Actions + '/items/' + a._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+    },
+    /* Append-only — no update/delete counterpart, same immutability the
+       audit log already relies on for its own credibility. */
+    addActionUpdate: async function (u) {
+      u._sp = await addItem('ActionUpdates', {
+        Title: u.id, RefId: u.id, ActionRef: u.action, UpdateDate: u.date,
+        Note: u.note || '', EvidenceUrl: u.evidenceUrl || '', Status: u.status || '', Author: u.author || ''
+      });
+      S.actionUpdates.push(u);
     },
     updateControl: async function (c) {
       await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });

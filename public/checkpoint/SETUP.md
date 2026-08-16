@@ -147,6 +147,10 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    resolved to, and seeds every registered framework's control set:
    - `Checkpoint Risks`
    - `Checkpoint Actions` (also holds non-conformities & observations — see §8)
+   - `Checkpoint ActionUpdates` (append-only, dated progress log against
+     each action — see §8; the Actions list itself only ever holds an
+     action's CURRENT status and latest evidence link, this is the
+     history behind it)
    - `Checkpoint Controls` (tagged per framework — see §7)
    - `Checkpoint Scans`
    - `Checkpoint Activity`
@@ -1553,6 +1557,23 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   findings that didn't originate from a scan or risk. The Audit
   Readiness report calls out any open non-conformities as a standing
   recommendation.
+- **Action progress log**: a new "Checkpoint ActionUpdates" register —
+  every dated, attributed progress note against an action, with its own
+  optional evidence link and the action's status as of that entry.
+  Previously an action carried exactly one evidence field, silently
+  overwritten every time it was touched, so an auditor asking "walk me
+  through how this got remediated" had nothing but the current status
+  and whatever note happened to be entered last. "Add update" (available
+  from the action's drawer — click its ID in the register) records a
+  note without necessarily changing status, so "still waiting on the
+  vendor" has somewhere to live; "Complete" now asks for both a note and
+  an evidence link and writes the closing entry in the same log. Entries
+  are append-only — a correction is a new entry, never a rewrite, same
+  immutability the audit log already relies on for its own credibility.
+  The register row shows an update count so the history is visible
+  before opening the drawer, and the whole log exports as its own CSV
+  ("Export progress log CSV" on the Actions view) alongside the
+  register's own export.
 - **Internal audit programme** (ISO 27001 clause 9.2): a new "Checkpoint
   Audits" register — schedule an audit per framework with a scope,
   auditor and planned date, then mark it complete with an outcome
