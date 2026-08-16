@@ -80,7 +80,13 @@
        decides ready-vs-missing itself — the caller (app.js) looks that
        code up in the real register and classifies it deterministically.
        See buildEvidenceRequestPrompt()'s own comment below. */
-    evidenceRequestSim: ['soaSummary', 'scanSummary', 'risks', 'actions', 'gaps', 'controlList']
+    evidenceRequestSim: ['soaSummary', 'scanSummary', 'risks', 'actions', 'gaps', 'controlList'],
+    /* Evidence interpretation — needs the tenant's own applicable
+       control codes to map an artefact onto, and nothing else. No
+       risks, no actions, no scan detail: the question is "what does
+       THIS document evidence", and sending a register it has no use for
+       would be sending client data for no reason. */
+    evidenceInterpret: ['controlList', 'soaSummary']
   };
 
   /* Fixed priority order sections are considered in when the character
@@ -590,6 +596,66 @@
     });
   }
 
+  /* ---- Evidence interpretation ----
+     The inverse of the PBC list above: instead of "what should we ask
+     for", this reads an artefact a client already HAS — a supplier's
+     SOC 2 report, a penetration test, a backup job export, an access
+     review sign-off — and proposes which of this tenant's own controls
+     it evidences.
+
+     Two things make this the honest version of a feature that is easy
+     to do dishonestly:
+
+       - The model only ever names control CODES from the tenant's own
+         applicable-control list, supplied in the context. Anything it
+         invents is dropped by the caller, which resolves every code
+         against the real register before showing it (same guardrail
+         evidenceRequestSim uses).
+       - It is asked for what the artefact does NOT cover, and that is
+         shown alongside what it does. An evidence-mapping tool that
+         only ever reports matches quietly trains people to over-claim
+         coverage, which is exactly the habit an audit punishes.
+
+     Nothing is written anywhere from this: the caller renders proposals
+     that a practitioner links one at a time, same confirm-before-apply
+     contract as every other AI feature here. */
+  function buildEvidenceInterpretPrompt(artefactName, artefactText) {
+    return 'Act as a compliance analyst reviewing a piece of evidence a client has provided, and map it to their control set.\n\n' +
+      'ARTEFACT NAME: ' + String(artefactName || 'Untitled') + '\n' +
+      'ARTEFACT CONTENT (may be an extract, and may be truncated):\n"""\n' + String(artefactText || '') + '\n"""\n\n' +
+      'Using ONLY the control codes listed in the CONTEXT\'s "Applicable controls" section, identify which controls this artefact provides evidence for. Be conservative: propose a control only where the artefact genuinely demonstrates that control operating, not where it is merely on the same topic.\n\n' +
+      'Also state the period the evidence covers if the artefact says so, and — importantly — name what a reader might wrongly assume it covers but it does not.\n\n' +
+      'Respond in EXACTLY this format, nothing before or after it:\n' +
+      'SUMMARY: <one sentence on what this artefact is>\n' +
+      'PERIOD: <the period the evidence covers, or "Not stated">\n' +
+      'MAP<n>: <control code from the CONTEXT list>\nWHY: <one sentence on what in the artefact evidences it>\n\n(repeat MAP/WHY per control, up to 10)\n\n' +
+      'GAPS: <what this artefact does NOT evidence, or "None identified">';
+  }
+
+  function parseEvidenceInterpretation(text) {
+    var raw = String(text || '');
+    var top = extractLabelledLines(raw, ['SUMMARY', 'PERIOD', 'GAPS']);
+    var blocks = raw.split(/\n(?=\s*MAP\d+\s*:)/i).filter(function (b) { return /MAP\d+\s*:/i.test(b); });
+    var mappings = blocks.map(function (block, i) {
+      /* Horizontal whitespace only after the colon. `\s*` would match
+         the newline as well, so an empty "MAP1:" line would capture the
+         NEXT line ("WHY: …") as if it were the control code — which then
+         reads as an invented code rather than as the absent one it is. */
+      var codeMatch = block.match(/^[^\S\r\n]*MAP\d+[^\S\r\n]*:[^\S\r\n]*(.*)$/im);
+      var f = extractLabelledLines(block, ['WHY']);
+      return {
+        code: (codeMatch && codeMatch[1].trim()) || '',
+        why: (f.why || '').trim()
+      };
+    }).filter(function (m) { return m.code; });
+    return {
+      summary: (top.summary || '').trim(),
+      period: (top.period || '').trim() || 'Not stated',
+      gaps: (top.gaps || '').trim() || 'None identified',
+      mappings: mappings
+    };
+  }
+
   /* Test-only: drops wiring and resets the concurrency queue between
      test cases. Never called from app.js. */
   function _resetForTests() { _state = null; _queue = null; }
@@ -615,6 +681,8 @@
     parseMockAuditQA: parseMockAuditQA,
     buildEvidenceRequestPrompt: buildEvidenceRequestPrompt,
     parseEvidenceRequestList: parseEvidenceRequestList,
+    buildEvidenceInterpretPrompt: buildEvidenceInterpretPrompt,
+    parseEvidenceInterpretation: parseEvidenceInterpretation,
     _resetForTests: _resetForTests
   };
 });
