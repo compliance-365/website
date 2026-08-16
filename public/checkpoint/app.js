@@ -1679,14 +1679,35 @@ function showModal(opts) {
       var openRisks = risks.filter(function (r) { return r.status !== 'Closed'; });
       var treatCounts = { Mitigate: 0, Accept: 0, Transfer: 0, Avoid: 0 };
       openRisks.forEach(function (r) { if (treatCounts[r.treat] != null) treatCounts[r.treat]++; });
-      var unaccepted = openRisks.filter(function (r) { var q = residual(r); return band(q.L * q.I) !== 'Low' && !r.acceptedBy; });
+      /* A stale acceptance (its snapshotted score no longer matches
+         today's residual) counts here alongside a never-accepted risk —
+         the sign-off on file doesn't cover the current number in either
+         case, so this callout must not go quiet just because SOME
+         acceptance, however outdated, exists on the row. */
+      var unaccepted = openRisks.filter(function (r) {
+        var q = residual(r);
+        if (band(q.L * q.I) === 'Low') return false;
+        return !r.acceptedBy || window.CheckpointLib.residualAcceptanceStale(r, q.L * q.I);
+      });
       var rows = risks.map(function (r) {
         var q = residual(r);
         var acts = (r.actions || []).map(function (id) { return S.actions.find(function (x) { return x.id === id; }); }).filter(Boolean);
         var actHtml = acts.length ? acts.map(function (a) { return a.id + ' — ' + esc(a.title) + ' <i>(' + a.status + (a.owner ? ', ' + esc(a.owner) : '') + (a.due ? ', due ' + fmtDate(a.due) : '') + ')</i>'; }).join('<br>') : '<i>None</i>';
         var ctlHtml = (r.controls || []).length ? esc(r.controls.join(', ')) : '<i>None linked</i>';
-        var accHtml = r.acceptedBy ? esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') : (band(q.L * q.I) !== 'Low' && r.status !== 'Closed' ? '<b style="color:#b91c1c">Not accepted</b>' : '—');
-        return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + r.status + '</div></td><td>' + esc(r.treat) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
+        /* A recorded acceptance whose snapshotted score no longer
+           matches today's residual (the risk was re-scored, or a
+           reopened treatment action pushed it back up) is flagged
+           STALE rather than presented as current sign-off evidence —
+           see residualAcceptanceStale()'s comment in lib.js. This is a
+           document an auditor reads; an acceptance line that quietly
+           covers a different, better number than the one on the same
+           row is exactly the kind of inconsistency that gets a
+           certification questioned. */
+        var stale = window.CheckpointLib.residualAcceptanceStale(r, q.L * q.I);
+        var accHtml = r.acceptedBy
+          ? esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + (stale ? '<br><b style="color:#b91c1c">STALE — accepted at ' + r.acceptedScore + ', now ' + (q.L * q.I) + '</b>' : '')
+          : (band(q.L * q.I) !== 'Low' && r.status !== 'Closed' ? '<b style="color:#b91c1c">Not accepted</b>' : '—');
+        return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + esc(r.status) + '</div></td><td>' + esc(r.treat) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
       }).join('');
       var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Treatment</th><th>Controls</th><th>Treatment actions</th><th>Residual</th><th>Acceptance</th></tr>' + rows + '</table>';
       return {
@@ -1703,8 +1724,13 @@ function showModal(opts) {
           { heading: 'Risk treatment plan', html: tableHtml, pageBreak: true }
         ].concat(unaccepted.length ? [{
           heading: 'Residual risks awaiting acceptance (' + unaccepted.length + ')',
-          html: '<p class="rpt-plain">These residual risks sit at Medium or above with no documented risk-owner acceptance on record — capture acceptance in the risk drawer before the audit.</p><ul class="rpt-plain">' +
-            unaccepted.map(function (r) { var q = residual(r); return '<li>' + r.id + ' — ' + esc(r.title) + ' (residual ' + (q.L * q.I) + ', ' + band(q.L * q.I) + ') — owner: ' + esc(r.owner) + '</li>'; }).join('') + '</ul>',
+          html: '<p class="rpt-plain">These residual risks sit at Medium or above with no CURRENT documented risk-owner acceptance on record — capture (or re-capture) acceptance in the risk drawer before the audit.</p><ul class="rpt-plain">' +
+            unaccepted.map(function (r) {
+              var q = residual(r);
+              var stale = r.acceptedBy && window.CheckpointLib.residualAcceptanceStale(r, q.L * q.I);
+              return '<li>' + r.id + ' — ' + esc(r.title) + ' (residual ' + (q.L * q.I) + ', ' + band(q.L * q.I) + ')' +
+                (stale ? ' — <b>stale acceptance</b>: ' + esc(r.acceptedBy) + ' accepted at ' + r.acceptedScore : ' — owner: ' + esc(r.owner)) + '</li>';
+            }).join('') + '</ul>',
           pageBreak: false
         }] : [])
       };
@@ -1804,11 +1830,21 @@ function showModal(opts) {
       /* Nonconformities & corrective actions (Clause 10.1) — every NC
          with where its CAPA stands, so an auditor sees the corrective-
          action loop, not just that an NC was logged. */
+      /* Actions carry a free-text `control` field (e.g. "A.8.5"), never
+         a framework tag, so an NC raised against one framework's
+         control cannot be reliably filtered out of another framework's
+         report without risking silently DROPPING a real nonconformity
+         over an ambiguous or shared code — worse than the problem this
+         would fix. Instead of guessing, the heading says plainly that
+         this table spans every entitled framework whenever there's more
+         than one, same honesty the risk register report already applies
+         to itself (its own frameworkAgnostic: true). */
       var allNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var ncScopeNote = entitledFrameworks().length > 1 ? ' — all frameworks' : '';
       if (allNcs.length) {
         var ncTableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
-          allNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>';
-        sections.push({ heading: 'Nonconformities & corrective actions (' + allNcs.length + ')', html: ncTableHtml, pageBreak: false });
+          allNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Nonconformities & corrective actions (' + allNcs.length + ')' + ncScopeNote, html: ncTableHtml, pageBreak: false });
       }
 
       var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
@@ -1950,8 +1986,12 @@ function showModal(opts) {
       if (mgmtNotImpl) mgmtRecs.push('Agree owners and target dates for the ' + mgmtNotImpl + ' applicable control' + (mgmtNotImpl > 1 ? 's' : '') + ' not yet implemented, and minute those commitments as decisions of this review.');
       if (lastS && mgmtPrevScan && lastS.score < mgmtPrevScan.score) mgmtRecs.push('Posture score fell from ' + mgmtPrevScan.score + ' to ' + lastS.score + ' since the previous scan — review the failed checks in the Posture Scan view and assign corrective actions before the next cycle.');
       if (mgmtMediumPlus) mgmtRecs.push('Confirm executive risk-acceptance sign-off for the ' + mgmtMediumPlus + ' open risk' + (mgmtMediumPlus > 1 ? 's' : '') + ' still scoring Medium or above after treatment.');
-      if (!S.scans.length) mgmtRecs.push('Run the first security posture scan — this review currently has no technical posture input, which clause 9.3.2 expects.');
-      mgmtRecs.push('Record the decisions and actions arising from this review in the Management Review register so the clause 9.3.3 output trail stays continuous.');
+      /* Same reasoning as the intro above: only ISO 27001 itself numbers
+         this as "clause 9.3.2/9.3.3" — every other framework's pack
+         still uses this app's one review-input model, just described
+         without borrowing a clause number that isn't actually theirs. */
+      if (!S.scans.length) mgmtRecs.push('Run the first security posture scan — this review currently has no technical posture input, which ' + (activeFw === 'iso27001' ? 'clause 9.3.2' : 'the review-input structure') + ' expects.');
+      mgmtRecs.push('Record the decisions and actions arising from this review in the Management Review register so the ' + (activeFw === 'iso27001' ? 'clause 9.3.3 output trail' : 'review-output trail') + ' stays continuous.');
 
       /* Clause 9.3.2 review inputs — the latest recorded review's own
          structured inputs if one exists, otherwise the measurable ones
@@ -1969,22 +2009,37 @@ function showModal(opts) {
             var val = mrParsed[s.key] || '';
             return '<tr><td class="rpt-idc">' + s.clause + '</td><td>' + esc(s.label) + '</td><td>' + (val ? esc(val) : (latestReview ? '<i>Not recorded</i>' : '<i>To be captured at the review</i>')) + '</td></tr>';
           }).join('') + '</table>' +
-          (latestReview ? '<p class="rpt-plain" style="margin-top:6px">From ' + latestReview.id + ' (' + fmtDate(latestReview.date) + '). Attendees: ' + esc(latestReview.attendees) + '.</p>'
+          (latestReview ? '<p class="rpt-plain" style="margin-top:6px">From ' + esc(latestReview.id) + ' (' + fmtDate(latestReview.date) + '). Attendees: ' + esc(latestReview.attendees) + '.</p>'
             : '<p class="rpt-plain" style="margin-top:6px">No management review recorded yet — the measurable inputs above are computed live; record a review to capture the full Clause 9.3.2 set.</p>');
       }
 
       /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.1) —
-         every NC with its root cause and where its CAPA stands. */
+         every NC with its root cause and where its CAPA stands. Same
+         "cannot safely filter free-text control codes by framework"
+         reasoning as the ready builder above — the heading states the
+         scope instead of guessing at it. */
       var mgmtNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var mgmtNcScopeNote = entitledFrameworks().length > 1 ? ' (all frameworks)' : '';
       var ncHtml = mgmtNcs.length
         ? '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
-          mgmtNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>'
+          mgmtNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>'
         : '<p class="rpt-plain">No nonconformities on record.</p>';
 
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
-          intro: 'Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.',
+          /* This app captures every management review's inputs against
+             ONE structure — ISO 27001 Clause 9.3.2's seven inputs —
+             regardless of which framework a given review pack is
+             scoped to; there is no separate SOC 2/NIST/etc review-input
+             model. Said explicitly only for a non-ISO pack, where
+             citing "clause 9.3.2" with no qualification would read as a
+             (wrong) claim that the standard being audited has a clause
+             9.3.2 of its own. */
+          intro: 'Prepared for the quarterly management review.' +
+            (activeFw === 'iso27001'
+              ? ' Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.'
+              : ' Inputs are captured using this app\'s ISO 27001 Clause 9.3.2-based review-input structure — the same structure every framework\'s management review is recorded against — regardless of the framework this pack is scoped to. Minutes and decisions to be appended as the record of review.'),
           /* trend + action-throughput bar + heatmap + projection drift +
              activity pulse — the inputs a management review actually
              works through: is posture trending the right way, is the
@@ -2001,8 +2056,8 @@ function showModal(opts) {
           ]
         },
         sections: [
-          { heading: 'Review inputs — Clause 9.3.2', html: mrInputsHtml, pageBreak: true },
-          { heading: 'Nonconformities & corrective actions', html: ncHtml, pageBreak: false },
+          { heading: 'Review inputs', html: mrInputsHtml, pageBreak: true },
+          { heading: 'Nonconformities & corrective actions' + mgmtNcScopeNote, html: ncHtml, pageBreak: false },
           { heading: 'Top residual risks', html: tableHtml, pageBreak: true },
           { heading: 'Recommendations', html: '<ul class="rpt-plain">' + mgmtRecs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>', pageBreak: false }
         ]
@@ -7897,7 +7952,11 @@ function showModal(opts) {
         '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
         '<div class="d-kv"><span>Treatment</span><b>' + esc(r.treat) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
         (r.acceptedBy
-          ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' + (r.acceptanceNote ? '<div class="src" style="margin-top:4px">' + esc(r.acceptanceNote) + '</div>' : '')
+          ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' +
+            (window.CheckpointLib.residualAcceptanceStale(r, q.L * q.I)
+              ? '<div class="src" style="margin-top:4px;color:var(--fail)">' + icon('flag') + ' This sign-off was recorded against a residual score of ' + r.acceptedScore + ' — the current residual score is ' + (q.L * q.I) + '. Re-accept or re-review before relying on it as current evidence.</div>'
+              : '') +
+            (r.acceptanceNote ? '<div class="src" style="margin-top:4px">' + esc(r.acceptanceNote) + '</div>' : '')
           : (band(q.L * q.I) !== 'Low' ? '<div class="src" style="margin-top:4px;color:var(--warn)">No residual-acceptance sign-off recorded — auditors expect one on any Medium+ residual risk.</div>' : '')) +
         '</div>' +
         '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + (r.controls.length ? r.controls.map(function (c) {
@@ -8219,6 +8278,14 @@ function showModal(opts) {
       busy(true);
       try {
         r.acceptedBy = v.by; r.acceptedDate = v.date || new Date().toISOString().slice(0, 10); r.acceptanceNote = v.note;
+        /* Snapshot of the residual score AT THE MOMENT of acceptance —
+           see residualAcceptanceStale()'s comment in lib.js. Recomputed
+           fresh here rather than reusing `q` from above the modal: the
+           risk's own L/I can't have moved during the modal (nothing
+           else touches this risk while it's open), but this keeps the
+           snapshot visibly tied to what's actually being accepted. */
+        var acceptedQ = residual(r);
+        r.acceptedScore = acceptedQ.L * acceptedQ.I;
         if (r.treat !== 'Accept') r.treat = 'Accept';
         await Store.updateRisk(r);
         audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate);
@@ -11614,10 +11681,26 @@ function showModal(opts) {
     },
 
     report: async function (type) {
-      var activeFw = window._soaFw || entitledFrameworks()[0] || 'iso27001';
-      var fwLabel = fwName(activeFw);
-      var parts = REPORT_BUILDERS[type] && REPORT_BUILDERS[type](activeFw, fwLabel);
+      var entitledNow = entitledFrameworks();
+      var activeFw = (window._soaFw && entitledNow.indexOf(window._soaFw) > -1) ? window._soaFw : (entitledNow[0] || 'iso27001');
+      /* Re-check at the point a framework-scoped report is actually
+         generated, the same defense-in-depth generateAuditorPack()
+         already applies before it hands a document to a third party —
+         window._soaFw tracking a framework this tenant no longer holds
+         (a licence change with no intervening renderSoa() call) must
+         never produce a report full of a framework's own data that
+         isn't entitled. A frameworkAgnostic report (risk register) has
+         no single framework to check against, so this only applies to
+         the rest. */
+      var builder = REPORT_BUILDERS[type];
+      if (!builder) return;
+      var parts = builder(activeFw, fwName(activeFw));
       if (!parts) return;
+      if (!parts.frameworkAgnostic && (!S.entitlements || !S.entitlements[activeFw])) {
+        toast('That framework isn\'t currently entitled on this tenant.');
+        return;
+      }
+      var fwLabel = fwName(activeFw);
 
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       var clientLabel = clientDisplayLabel();

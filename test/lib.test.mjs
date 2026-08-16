@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged,
+const { band, residual, residualAcceptanceStale, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged,
   sharedEvidenceClosure, crossFrameworkStatusSuggestions, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
@@ -73,6 +73,41 @@ describe('residual()', () => {
   test('a risk with no linked actions never gets the all-done impact reduction', () => {
     const r = { L: 3, I: 4, actions: [] };
     assert.deepEqual(residual(r, []), { L: 3, I: 4 });
+  });
+});
+
+// A residual-risk acceptance sign-off (App.acceptRisk() — ISO 27001
+// 6.1.3/8.3) is a historical fact ("X accepted THIS score on THIS date")
+// that must never keep being presented as if it still covers whatever the
+// residual score has drifted to since — an auditor reading a Risk
+// Treatment Plan reads the acceptance column as current evidence.
+describe('residualAcceptanceStale()', () => {
+  test('no acceptance recorded at all -> not stale (a different, already-flagged case)', () => {
+    assert.equal(residualAcceptanceStale({ acceptedBy: '' }, 12), false);
+    assert.equal(residualAcceptanceStale({}, 12), false);
+  });
+
+  test('accepted, score unchanged since -> not stale', () => {
+    assert.equal(residualAcceptanceStale({ acceptedBy: 'K. Patel', acceptedScore: 6 }, 6), false);
+  });
+
+  test('accepted, score has moved since (either direction) -> stale', () => {
+    assert.equal(residualAcceptanceStale({ acceptedBy: 'K. Patel', acceptedScore: 6 }, 9), true, 'residual got worse since acceptance');
+    assert.equal(residualAcceptanceStale({ acceptedBy: 'K. Patel', acceptedScore: 6 }, 2), true, 'residual improved since acceptance — still a different number than what was accepted');
+  });
+
+  test('a risk accepted before acceptedScore existed (null/undefined snapshot) reads as not-stale, never as always-stale', () => {
+    assert.equal(residualAcceptanceStale({ acceptedBy: 'K. Patel', acceptedScore: null }, 9), false);
+    assert.equal(residualAcceptanceStale({ acceptedBy: 'K. Patel' }, 9), false);
+  });
+
+  test('a non-numeric acceptedScore (e.g. corrupted data) is treated the same as no snapshot', () => {
+    assert.equal(residualAcceptanceStale({ acceptedBy: 'K. Patel', acceptedScore: '6' }, 6), false);
+  });
+
+  test('missing risk object does not throw', () => {
+    assert.doesNotThrow(() => residualAcceptanceStale(null, 6));
+    assert.equal(residualAcceptanceStale(null, 6), false);
   });
 });
 
@@ -180,6 +215,26 @@ describe('readinessPct()', () => {
   });
   test('empty controls array -> 0, not NaN or a thrown error', () => {
     assert.equal(readinessPct([]), 0);
+  });
+
+  // A generated report (SoA, Audit Readiness Report, Executive Summary)
+  // reads this number and can also independently list the exact
+  // outstanding controls in its own gaps table — those two must never
+  // disagree. Math.round(99.5) === 100 in JS, so at 200+ applicable
+  // controls with exactly one still outstanding, naive rounding would
+  // print "100% implemented" in one section while the gaps table two
+  // pages later still names a control that isn't done.
+  test('never rounds up to 100% while a control is still outstanding, however close', () => {
+    const controls = Array.from({ length: 199 }, () => ({ app: true, st: 'Implemented' }))
+      .concat([{ app: true, st: 'Not started' }]); // 199/200 = 99.5%
+    assert.equal(readinessPct(controls), 99, 'must clamp below 100, never round up to it, while a gap remains');
+  });
+
+  test('100% is reported only when literally every applicable control is Implemented', () => {
+    const controls = Array.from({ length: 500 }, () => ({ app: true, st: 'Implemented' }));
+    assert.equal(readinessPct(controls), 100);
+    const withOneGap = controls.slice(0, 499).concat([{ app: true, st: 'In progress' }]);
+    assert.notEqual(readinessPct(withOneGap), 100);
   });
 });
 

@@ -30,6 +30,33 @@
     return { L: Math.max(1, r.L - done), I: all ? Math.max(1, r.I - 1) : r.I };
   }
 
+  /* Whether a recorded residual-risk acceptance (App.acceptRisk() —
+     ISO 27001 6.1.3/8.3 sign-off) is still current.
+
+     acceptRisk() snapshots the residual score (L*I) at the MOMENT of
+     acceptance into r.acceptedScore, alongside who accepted it and
+     when. Nothing else in this app clears acceptedBy/acceptedDate when
+     the risk moves afterwards — editing the risk's inherent L/I, or
+     reopening a treatment action that had already brought the residual
+     down — because acceptedBy is a historical fact (X accepted the risk
+     ON THAT DATE) that erasing would itself be dishonest, not a live
+     claim to keep synced. What the app must never do is go on
+     PRESENTING that historical acceptance as if it still covers
+     whatever the residual score happens to be today.
+
+     Returns true only when there IS a recorded acceptance (an
+     unaccepted risk is a different, already-handled case — see the
+     "Not accepted" chip this sits alongside) and its snapshotted score
+     no longer matches the current one. r.acceptedScore is nullable —
+     older risks accepted before this field existed have no snapshot to
+     compare against, so they read as not-stale rather than always
+     staling out retroactively. */
+  function residualAcceptanceStale(r, currentScore) {
+    if (!r || !r.acceptedBy) return false;
+    if (typeof r.acceptedScore !== 'number') return false;
+    return r.acceptedScore !== currentScore;
+  }
+
   /* Posture-check contract: 'pass' | 'review' | 'fail' | 'manual' | null.
      - scored:false checks have no Graph signal at all -> always 'manual'.
      - No scan has ever run -> null (distinct from 'manual': a manual
@@ -85,7 +112,15 @@
   function readinessPct(controls) {
     var applicable = controls.filter(function (c) { return c.app; });
     var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
-    return applicable.length ? Math.round(impl / applicable.length * 100) : 0;
+    if (!applicable.length) return 0;
+    /* Math.round(), not floor: 99.5%+ rounds up to 100 while at least
+       one applicable control still isn't Implemented (reachable once a
+       framework has ~200+ applicable controls and exactly one is
+       outstanding) — a generated report claiming "100% of applicable
+       controls implemented" while its own open-gaps table still lists
+       one is an internally inconsistent document, and "100%" is a
+       claim this app should only ever make when it's exactly true. */
+    return impl === applicable.length ? 100 : Math.min(99, Math.round(impl / applicable.length * 100));
   }
 
   /* Whether an Implemented control is overdue for re-verification —
@@ -2139,7 +2174,7 @@
   }
 
   return {
-    band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

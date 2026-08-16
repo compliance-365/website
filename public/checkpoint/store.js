@@ -1303,6 +1303,16 @@ window.SpStore = (function () {
          reconcileColumns() below, same self-heal idea as the SettingValue
          widening, so no re-provisioning is needed. */
       { name: 'AcceptedBy', text: {} }, { name: 'AcceptedDate', text: {} }, { name: 'AcceptanceNote', text: { allowMultipleLines: true } },
+      /* The residual score (L*I) at the MOMENT acceptance was recorded —
+         compared against the CURRENT residual score by
+         CheckpointLib.residualAcceptanceStale() every time the
+         acceptance is displayed, so an acceptance that no longer
+         matches today's residual (the risk was re-scored, or a
+         previously-Done treatment action was reopened) is shown as
+         stale rather than presented as if it still covers the current
+         number. Nullable: risks accepted before this field existed have
+         no snapshot and read as not-stale, never as always-stale. */
+      { name: 'AcceptedScore', number: {} },
       /* Set only when this risk's statement/L-I/treatment came from an
          AI draft the practitioner reviewed and approved through the
          normal Add/Approve path — never set automatically, never
@@ -1755,7 +1765,7 @@ window.SpStore = (function () {
      whenever a new column is introduced to DEFS, so already-provisioned
      tenants pick it up without re-provisioning. */
   var COLUMN_RECONCILE = {
-    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote'],
+    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore'],
     Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy'],
     /* LastVerified/EvidenceUrl/VerifiedBy are in Controls' DEFS (below)
        but were never added here — a tenant provisioned before all three
@@ -2001,7 +2011,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null) };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -2187,6 +2197,7 @@ window.SpStore = (function () {
         Title: r.title, Category: r.cat, Source: r.src, Status: r.status, Likelihood: r.L, Impact: r.I,
         Controls: csv(r.controls), ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat,
         AcceptedBy: r.acceptedBy || '', AcceptedDate: r.acceptedDate || '', AcceptanceNote: r.acceptanceNote || '',
+        AcceptedScore: (typeof r.acceptedScore === 'number' ? r.acceptedScore : null),
         AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || ''
       });
     },
