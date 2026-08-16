@@ -110,6 +110,49 @@ const PRICE_TO_MODULE = {
 
 const GRACE_DAYS = 14; // same standard as tools/issue-entitlement.mjs
 
+/* Exact copy of public/checkpoint/lib.js's isValidTenantIdentifier() —
+   same single-file-Lambda copy-not-import reason as canonicalJson()
+   below. Accepts either a real Entra tenant GUID or a verified-domain
+   string; rejects free-text junk. This does NOT verify the caller
+   actually controls the tenant named — Paddle proves a real purchase
+   happened, not who it belongs to, and there is currently no
+   server-side proof binding the two together (tracked separately) — it
+   only stops obviously-malformed values from being signed and written
+   into the owner's own roster. */
+export function isValidTenantIdentifier(s) {
+  if (!s) return false;
+  const v = String(s).trim();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return true;
+  return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(v);
+}
+
+/* Same sliding-window per-IP limiter as chat.js/explain.js — see those
+   files' own comments on its limits (resets per cold start, per-
+   container under concurrency, so this is a blunt-abuse deterrent, not
+   a hard cap; the real backstop is an API Gateway throttle configured
+   in the AWS console, same as those two). Two separate buckets, not
+   one: `provision` is the expensive path (a Paddle API call plus an
+   Ed25519 sign plus several Graph writes to the owner's own roster) and
+   should stay tight; `revocation` is called by EVERY live tenant on
+   EVERY page load (see checkTenantBlocked()'s own comment) and a normal
+   user with several tabs open, or a flaky connection retrying, must
+   never be mistaken for abuse. */
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PROVISION = 10;
+const RATE_MAX_REVOCATION = 60;
+const rateBuckets = { provision: new Map(), revocation: new Map() };
+function rateLimited(kind, ip) {
+  const bucket = rateBuckets[kind];
+  const max = kind === 'provision' ? RATE_MAX_PROVISION : RATE_MAX_REVOCATION;
+  const now = Date.now();
+  const hits = (bucket.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (hits.length >= max) { bucket.set(ip, hits); return true; }
+  hits.push(now);
+  bucket.set(ip, hits);
+  if (bucket.size > 5000) bucket.clear(); // cap memory on hot containers
+  return false;
+}
+
 /* ============== canonicalJson / Ed25519 signing ==============
    Exact copies of public/checkpoint/lib.js's canonicalJson(),
    base64ToBytes/bytesToBase64 and signEntitlementPayload() — signing
@@ -489,6 +532,8 @@ export const handler = async (event) => {
     return { statusCode: 204, headers: corsHeaders, body: '' };
   }
 
+  const ip = event.requestContext?.http?.sourceIp || event.requestContext?.identity?.sourceIp || 'unknown';
+
   // Set as soon as a fresh checkout's transactionId is parsed below, so
   // the outer catch can still tell the owner about a failed PAYMENT
   // attempt even though the failure happened before activation — the
@@ -511,8 +556,29 @@ export const handler = async (event) => {
       if (!tenantId) {
         return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId is required.' }) };
       }
+      if (!isValidTenantIdentifier(tenantId)) {
+        return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId is not a recognised tenant identifier.' }) };
+      }
+      if (rateLimited('revocation', ip)) {
+        return { statusCode: 429, headers: corsHeaders, body: JSON.stringify({ error: 'Too many requests.' }) };
+      }
       const status = await checkTenantBlocked(tenantId);
-      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true, blocked: status.blocked, reason: status.reason }) };
+      /* status.reason is the owner's own internal note on the "Revoke
+         access" action (e.g. "fraud suspected", "non-payment") —
+         deliberately never returned to the caller. app.js's own
+         checkAccessRevoked() never surfaces it to the client either
+         (every showAccessRevokedScreen() call site passes no reason),
+         but that was previously enforced only by the client choosing
+         not to display a value the server had already sent it — any
+         direct caller of this endpoint (or a browser devtools Network
+         tab) could read it regardless, for ANY tenantId, with nothing
+         else required. The confidentiality boundary belongs here, not
+         in what the client happens to render. */
+      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true, blocked: status.blocked }) };
+    }
+
+    if (rateLimited('provision', ip)) {
+      return { statusCode: 429, headers: corsHeaders, body: JSON.stringify({ error: 'Too many requests — try again in a minute.' }) };
     }
 
     const transactionId = (body.transactionId || '').trim();
@@ -531,6 +597,9 @@ export const handler = async (event) => {
 
     if ((!transactionId && !subscriptionId && !subscriptionIdsBody.length) || !tenantId) {
       return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId plus one of transactionId, subscriptionId or subscriptionIds is required.' }) };
+    }
+    if (!isValidTenantIdentifier(tenantId)) {
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId is not a recognised tenant identifier.' }) };
     }
 
     let purchase;

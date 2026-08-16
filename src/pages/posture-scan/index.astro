@@ -919,6 +919,16 @@ const SCOPES = ["Policy.Read.All","Directory.Read.All","RoleManagement.Read.Dire
 let scored = {}, activeTab = "e8", tenantOrg = "Your tenant", secureScore = null;
 let prevScores = null, currentSort = "status", showQuickWins = true;
 const $ = id => document.getElementById(id);
+/* Every string dropped into innerHTML below goes through this first —
+   including the AI-generated explainer text from /explain, which must
+   never be trusted as safe HTML just because it came back from our own
+   Lambda. explainerItemHtml() below was the one place on this page that
+   skipped it (gap.title and the explanation text both went in raw); the
+   Lambda's own input validation currently makes that self-XSS at worst
+   (gap.title only ever comes from the hardcoded CONTROLS list below),
+   but "the model only ever echoes trusted input" is not a property
+   worth depending on — the fix belongs on the rendering side. */
+const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 function show(id) { ["ps-intro","ps-loading","ps-results"].forEach(s => $(s).classList.toggle("ps-hidden", s !== id)); }
 
 /* ── trust modal ── */
@@ -1377,11 +1387,11 @@ function explainerItemHtml(gap, text) {
   const statusClass = {fail:"ps-badge-fail",partial:"ps-badge-partial",attest:"ps-badge-attest"}[gap.status]||"ps-badge-attest";
   return `<div class="ps-explainer-item">
     <div class="ps-explainer-item-head">
-      <span class="ps-explainer-item-title">${gap.title}</span>
+      <span class="ps-explainer-item-title">${esc(gap.title)}</span>
       <span class="ps-method-badge ${gap.method==="automated"?"ps-method-auto":"ps-method-attest"}">${gap.method==="automated"?"Automated":"Attested"}</span>
       <span class="ps-status-badge ${statusClass}">${ST[gap.status]||"Attest"}</span>
     </div>
-    <div class="ps-explainer-item-text">${text}</div>
+    <div class="ps-explainer-item-text">${esc(text)}</div>
   </div>`;
 }
 
