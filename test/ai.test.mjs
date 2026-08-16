@@ -484,3 +484,73 @@ describe('buildEvidenceRequestPrompt() / parseEvidenceRequestList() — evidence
     assert.equal(items[0].controlCode, 'General');
   });
 });
+
+// Evidence interpretation — reads an artefact the client already holds
+// (supplier SOC 2 report, pen test, backup job export) and proposes which
+// of THIS tenant's controls it evidences. The parser matters more than
+// most: app.js resolves every proposed code against the real register
+// before rendering, so a mangled parse degrades to "nothing proposed"
+// rather than to a wrong mapping — but a parse that silently drops the
+// GAPS section would remove the one part of the output that argues
+// against over-claiming coverage.
+describe('buildEvidenceInterpretPrompt() / parseEvidenceInterpretation() — evidence interpretation', () => {
+  const wellFormed = [
+    'SUMMARY: A SOC 2 Type II report for Northwind Cloud Hosting covering the FY26 period.',
+    'PERIOD: 1 July 2025 to 30 June 2026',
+    'MAP1: A.5.19',
+    'WHY: Section 3 documents the supplier\'s own access control testing with no exceptions.',
+    'MAP2: A.8.16',
+    'WHY: Continuous monitoring controls are described and tested in CC7.2.',
+    '',
+    'GAPS: Does not evidence your own internal access reviews, or any control operating inside your tenant.'
+  ].join('\n');
+
+  test('the prompt names the artefact and pins the model to the supplied control list', () => {
+    const p = CheckpointAI.buildEvidenceInterpretPrompt('Northwind SOC 2', 'some report text');
+    assert.match(p, /Northwind SOC 2/);
+    assert.match(p, /some report text/);
+    assert.match(p, /ONLY the control codes listed in the CONTEXT/);
+    assert.match(p, /what a reader might wrongly assume it covers but it does not/i);
+  });
+
+  test('parses summary, period, every mapping and the gaps section', () => {
+    const r = CheckpointAI.parseEvidenceInterpretation(wellFormed);
+    assert.match(r.summary, /^A SOC 2 Type II report/);
+    assert.equal(r.period, '1 July 2025 to 30 June 2026');
+    assert.equal(r.mappings.length, 2);
+    assert.deepEqual(r.mappings.map((m) => m.code), ['A.5.19', 'A.8.16']);
+    assert.match(r.mappings[0].why, /access control testing/);
+    assert.match(r.gaps, /internal access reviews/);
+  });
+
+  test('a response with no mappings still yields usable summary and gaps', () => {
+    const r = CheckpointAI.parseEvidenceInterpretation('SUMMARY: An invoice.\nPERIOD: Not stated\nGAPS: Evidences nothing in your control set.');
+    assert.equal(r.mappings.length, 0);
+    assert.match(r.gaps, /Evidences nothing/);
+  });
+
+  test('missing period and gaps fall back to explicit wording, never blank', () => {
+    const r = CheckpointAI.parseEvidenceInterpretation('SUMMARY: Something.\nMAP1: A.5.1\nWHY: Because.');
+    assert.equal(r.period, 'Not stated');
+    assert.equal(r.gaps, 'None identified');
+  });
+
+  test('garbage in does not throw and proposes nothing', () => {
+    assert.doesNotThrow(() => CheckpointAI.parseEvidenceInterpretation('the model rambled without using the format at all'));
+    const r = CheckpointAI.parseEvidenceInterpretation('the model rambled without using the format at all');
+    assert.deepEqual(r.mappings, []);
+    assert.equal(r.summary, '');
+    assert.doesNotThrow(() => CheckpointAI.parseEvidenceInterpretation(''));
+    assert.doesNotThrow(() => CheckpointAI.parseEvidenceInterpretation(null));
+  });
+
+  test('a MAP line with no code is dropped rather than proposing an empty control', () => {
+    const r = CheckpointAI.parseEvidenceInterpretation('SUMMARY: x\nMAP1:\nWHY: nothing\nMAP2: A.5.1\nWHY: real');
+    assert.deepEqual(r.mappings.map((m) => m.code), ['A.5.1']);
+  });
+
+  test('evidenceInterpret is context-restricted to the control list and SoA summary', () => {
+    assert.deepEqual(CheckpointAI.FEATURE_CONTEXT_ALLOW.evidenceInterpret, ['controlList', 'soaSummary'],
+      'an artefact-mapping question has no use for the risk or action registers, so they are never sent');
+  });
+});

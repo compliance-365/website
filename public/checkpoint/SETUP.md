@@ -1741,22 +1741,27 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   email pattern, with a fuller digest: overdue actions, actions due
   within 14 days, upcoming calendar items, open drift alerts, readiness
   % per entitled framework, and the top 3 risks by residual score —
-  every value passed through `esc()`. There's no backend here to send
-  this unattended: like the scan-cadence reminder, it's a nudge on
-  load, not a schedule, and the UI says so plainly. `renderDash()` shows
-  a due banner (`#digestDueBanner`, same treatment as the existing
-  scan-due banner) computed from `digestEnabled`/`digestFrequency`/
+  every value passed through `esc()`. A browser tab can't send mail
+  while it's closed, so in the app itself this is a nudge on load, not a
+  schedule, and the UI says so plainly: `renderDash()` shows a due
+  banner (`#digestDueBanner`, same treatment as the existing scan-due
+  banner) computed from `digestEnabled`/`digestFrequency`/
   `digestLastSent` via the same `daysSince()` arithmetic the scan
-  reminder uses, with a "send it now" link. The scheduled Azure
-  Function (§9 below) only re-runs posture scans as shipped — it
-  doesn't send this digest today — but it already runs unattended with
-  application permissions on a timer, so it's the natural place to add
-  a `Mail.Send` application-permission call later for tenants that want
-  the digest sent without anyone having the Dashboard open; not built
-  here since it's a separate app-registration/permission change of its
-  own. Every send updates `digestLastSent` and logs a `'Compliance
-  digest emailed'` audit entry, same as any other tracked action in
-  this app.
+  reminder uses, with a "send it now" link.
+
+  **The scheduled Azure Function (§9) sends it unattended** — see
+  `azure/README.md` § The periodic digest. It reads the same four
+  Settings keys, evaluates the same cadence, and composes the digest
+  from data its nightly run has already gathered, so the digest costs no
+  extra Graph calls. It needs `NOTIFY_FROM` configured (an app-only
+  identity has no mailbox of its own) and stamps `digestLastSent` only
+  after a successful send, so a failed send retries on the next run
+  rather than silently skipping a period. Until that Function is
+  deployed, the browser banner remains the only reminder and a
+  practitioner still has to click "Send now".
+
+  Every send updates `digestLastSent` and logs a `'Compliance digest
+  emailed'` audit entry, same as any other tracked action in this app.
 - **Versioning and "what's new"**: `public/checkpoint/VERSION` is the
   single source of truth for Checkpoint's own version number (distinct
   from `package.json`'s version, which is the whole marketing site's) —

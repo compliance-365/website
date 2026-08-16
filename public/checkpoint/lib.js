@@ -454,6 +454,100 @@
     });
   }
 
+  /* Every control across every ENTITLED framework that shares the same
+     real-world evidence as `start`. Walks the cross-mapping graph in
+     BOTH directions — forward (start's own "Also satisfies" map field)
+     and backward (any other control whose map field points at start) —
+     because the seed data isn't consistently bidirectional: ISO 27001
+     A.5.15 maps to SOC 2 CC6.1, but CC6.1's own map field also reaches
+     Essential Eight E8.7 and NIST PR.AA that A.5.15 never mentions
+     directly. A one-hop lookup would under-report real matches.
+     Breadth-first over a small (~250-control) graph, so a plain queue is
+     more than fast enough.
+
+     `start` is always included, first. Controls in frameworks this
+     tenant hasn't bought are never traversed or returned — an
+     unlicensed framework's control set must stay invisible.
+
+     ctx: { controls: [...], entitlements: {fw: bool} } */
+  function sharedEvidenceClosure(start, ctx) {
+    if (!start) return [];
+    var controls = (ctx && ctx.controls) || [];
+    var entitlements = (ctx && ctx.entitlements) || {};
+    var key = function (c) { return c.fw + '|' + c.id; };
+    var visited = {};
+    visited[key(start)] = true;
+    var queue = [start], result = [start];
+    while (queue.length) {
+      var cur = queue.shift();
+      parseMapTokens(cur.map).forEach(function (ref) {
+        if (!entitlements[ref.fw]) return;
+        var m = controls.find(function (c) { return c.fw === ref.fw && c.id === ref.code; });
+        if (m && !visited[key(m)]) { visited[key(m)] = true; result.push(m); queue.push(m); }
+      });
+      controls.forEach(function (other) {
+        if (!entitlements[other.fw] || visited[key(other)]) return;
+        var pointsToCur = parseMapTokens(other.map).some(function (e) { return e.fw === cur.fw && e.code === cur.id; });
+        if (pointsToCur) { visited[key(other)] = true; result.push(other); queue.push(other); }
+      });
+    }
+    return result;
+  }
+
+  /* Cross-framework propagation: having just recorded real work against
+     one control, which controls in OTHER entitled frameworks are the
+     same real-world control and haven't caught up?
+
+     This is the multi-framework client's biggest multiplier. Checks
+     already propagate — a posture check's evidence lands on every mapped
+     control (controlsForCheck) — but a practitioner's own work did not:
+     marking ISO 27001 A.5.15 Implemented with evidence said nothing
+     about SOC 2 CC6.1 or Essential Eight E8.7, which are the same
+     control, so the same job was done up to eight times.
+
+     Deliberately narrow, for the same reason the scan's own suggestions
+     are:
+       - Only ever proposes the SOURCE control's status, and only when
+         the target is BEHIND it (rank-wise). Never downgrades anything,
+         never touches a target already at or past the source.
+       - Only from a source that is genuinely evidenced — Implemented
+         with an evidence link. "I ticked a dropdown" is not grounds to
+         tick seven more.
+       - Skips non-applicable targets: a control excluded from a
+         framework's scope with a justification is a deliberate decision,
+         not a gap to fill.
+       - Returns proposals only. Nothing is written until a practitioner
+         confirms, same contract as every other suggestion in this app.
+
+     ctx: { controls, entitlements } — same shape sharedEvidenceClosure
+     takes. Returns [{ fw, code, title, from, to, viaFw, viaCode }]. */
+  var PROPAGATION_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+  function crossFrameworkStatusSuggestions(source, ctx) {
+    var s = source || {};
+    if (!s.app || s.st !== 'Implemented' || !s.evidenceUrl) return [];
+    var out = [];
+    sharedEvidenceClosure(s, ctx).forEach(function (c) {
+      /* Cross-framework ONLY — never propagate within the source's own
+         framework. The mapping graph means two different things
+         depending on which side of a framework boundary you cross: A.5.15
+         mapping to SOC 2 CC6.1 means "the same real-world control
+         expressed in two standards", so one piece of evidence genuinely
+         serves both. A.5.15 cross-referencing ISO 27001 A.8.5 means
+         "these are related requirements of the same standard" — an
+         auditor tests them separately, and carrying a status across
+         would be over-claiming inside the very standard being audited.
+         Same-framework relationships still show in the Shared evidence
+         view (which reports, and never writes); only propagation is
+         restricted. */
+      if (c.fw === s.fw) return;
+      if (!c.app) return;
+      var from = PROPAGATION_ST_RANK[c.st];
+      if (typeof from !== 'number' || from >= PROPAGATION_ST_RANK[s.st]) return;
+      out.push({ fw: c.fw, code: c.id, title: c.t || '', from: c.st, to: s.st, viaFw: s.fw, viaCode: s.id });
+    });
+    return out;
+  }
+
   /* SOC 2 Type II operating-effectiveness — did a posture check keep
      passing CONSISTENTLY across every scan in an observation window, or
      did it dip at some point? Type I only ever asks "is this control
@@ -2047,6 +2141,7 @@
   return {
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
+    sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     scanResultsChanged: scanResultsChanged,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
