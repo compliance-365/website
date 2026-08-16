@@ -207,11 +207,37 @@ governance-sweep failure is logged without failing the execution, so a
 recorded posture scan is never reported as a failed run because the
 document register was briefly unreadable.
 
+The sweep also chases the work itself, not just the paperwork:
+
+- **Overdue remediation actions**, one alert per action (keyed by its
+  RefId, so it is raised once and acknowledged once rather than
+  re-raised every night).
+- **Controls overdue for re-verification** against the tenant's own
+  `controlReviewCadenceDays` — one rolled-up alert naming the oldest
+  few, because a mature tenant carries dozens and thirty individually
+  un-actionable alerts is how an alert list gets ignored.
+- **Privacy-breach assessment deadlines**, raised seven days *before*
+  the date as well as after. Confirm your own jurisdiction's deadline:
+  the date Checkpoint tracks is a configured default, not legal advice.
+
+### The periodic digest
+
+If the tenant has turned the digest on in Checkpoint (Frameworks &
+Settings → Email digest), this Function sends it — the browser app
+cannot, since a closed tab sends no mail. It reads the same four
+Settings keys the app writes (`digestEnabled`, `digestFrequency`,
+`digestRecipients`, `digestLastSent`), composes the digest from data the
+run has already read, and stamps `digestLastSent` **only after a
+successful send**, so a failed send retries on the next run rather than
+silently skipping a period. It needs `NOTIFY_FROM` set (below) — an
+app-only identity has no mailbox of its own to send from.
+
 ### Optional: email notification
 
 Off by default. To have new findings emailed as they're raised — both
 pass → fail posture drift and governance-sweep items, each as its own
-message — set two app settings on the Function App:
+message — and to enable the digest above, set two app settings on the
+Function App:
 
 | Setting | Value |
 | --- | --- |
