@@ -418,7 +418,7 @@ function showModal(opts) {
      something a Viewer needs — SharePoint's own permissions are the
      backstop either way. */
   var MUTATING_ACTIONS = new Set([
-    'approve', 'dismiss', 'complete', 'addManualAction', 'setActionEvidence',
+    'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
@@ -603,9 +603,25 @@ function showModal(opts) {
     },
     {
       key: 'actions', label: 'Actions', filename: 'actions.csv',
-      header: ['ID', 'Title', 'Type', 'Risk', 'Control', 'Priority', 'Owner', 'Due', 'Status', 'Evidence URL'],
+      header: ['ID', 'Title', 'Type', 'Risk', 'Control', 'Priority', 'Owner', 'Due', 'Status', 'Evidence note', 'Evidence URL'],
       rows: function () {
-        return S.actions.map(function (a) { return [a.id, a.title, a.type || 'Action', a.risk, a.control, a.pr, a.owner, a.due, a.status, a.evidenceUrl]; });
+        /* Evidence note added alongside the URL that was already here —
+           a flat export that carries only the link, not the note
+           explaining what it shows, makes an auditor click through
+           every row to get the context the app already has. */
+        return S.actions.map(function (a) { return [a.id, a.title, a.type || 'Action', a.risk, a.control, a.pr, a.owner, a.due, a.status, a.evidence, a.evidenceUrl]; });
+      }
+    },
+    {
+      /* The chronological progress log itself — see store.js's
+         ActionUpdates DEFS comment for why this is a real register and
+         not a field on the action. This is the export an auditor asking
+         "show me the history" actually wants: every dated entry, not
+         just an action's current status. */
+      key: 'actionUpdates', label: 'Action progress log', filename: 'action-updates.csv',
+      header: ['ID', 'Action', 'Date', 'Note', 'Status at update', 'Evidence URL', 'Author'],
+      rows: function () {
+        return (S.actionUpdates || []).map(function (u) { return [u.id, u.action, u.date, u.note, u.status, u.evidenceUrl, u.author]; });
       }
     },
     {
@@ -3825,6 +3841,8 @@ function showModal(opts) {
     document.getElementById('actTypeFilters').innerHTML = ['All'].concat(ACTION_TYPES).map(function (x) {
       return '<button class="f-pill' + (tf === x ? ' on' : '') + '" aria-pressed="' + (tf === x ? 'true' : 'false') + '" data-action="App.filterActType" data-id="' + x + '">' + x + '</button>';
     }).join('');
+    var updateCounts = {};
+    (S.actionUpdates || []).forEach(function (u) { updateCounts[u.action] = (updateCounts[u.action] || 0) + 1; });
     var rows = S.actions.filter(function (a) {
       if (tf !== 'All' && (a.type || 'Action') !== tf) return false;
       if (f === 'All') return true; if (f === 'Done') return a.status === 'Done';
@@ -3837,7 +3855,10 @@ function showModal(opts) {
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
       var capa = window.CheckpointLib.capaStatus(a);
-      return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td class="act-title" style="color:var(--paper)">' + esc(a.title) + '</td>' +
+      var updCount = updateCounts[a.id] || 0;
+      return '<tr data-id="' + a.id + '" data-action="App.openAction"><td class="id-t"><button class="lnk" data-action="App.openAction" data-id="' + a.id + '">' + a.id + '</button>' +
+        (updCount ? '<div class="src">' + updCount + ' update' + (updCount > 1 ? 's' : '') + '</div>' : '') +
+        '</td><td class="act-title" style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
@@ -3929,6 +3950,53 @@ function showModal(opts) {
         if (newR.actions.indexOf(a.id) === -1) newR.actions.push(a.id);
       }
     }
+  }
+
+  function nextActionUpdateSeq() {
+    var max = 0;
+    (S.actionUpdates || []).forEach(function (u) {
+      var m = /^UPD-(\d+)$/.exec(u.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  /* Every progress entry against an action — completing it, recording a
+     status change, just adding a note — goes through here, so the
+     chronological log (App.openAction()'s drawer, the CSV export) can
+     never miss one because a caller wrote to the action directly
+     instead. Writes the append-only ActionUpdates row FIRST: if that
+     fails, nothing else does either, and the action itself is left
+     exactly as it was rather than showing a status the log doesn't back
+     up. `status` is optional — a pure progress note with no status
+     change is a real, common case (e.g. "still waiting on the vendor")
+     and must not force one.
+
+     Returns the update record on success, null on failure (already
+     warned) — callers decide what to do next (toast text, whether to
+     also touch a linked risk) rather than this doing it uniformly,
+     since completing an action's toast differs from a plain note's. */
+  async function recordActionUpdate(a, opts) {
+    var note = (opts && opts.note || '').trim();
+    var evidenceUrl = (opts && opts.evidenceUrl || '').trim();
+    var newStatus = opts && opts.status;
+    var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+    var today = new Date().toISOString().slice(0, 10);
+    var upd = {
+      id: 'UPD-' + String(nextActionUpdateSeq()).padStart(4, '0'),
+      action: a.id, date: today, note: note, evidenceUrl: evidenceUrl,
+      status: newStatus || a.status, author: who
+    };
+    try {
+      await Store.addActionUpdate(upd);
+    } catch (e) { warn(e); return null; }
+
+    var prevStatus = a.status;
+    if (newStatus && newStatus !== a.status) a.status = newStatus;
+    if (evidenceUrl) a.evidenceUrl = evidenceUrl;
+    try { await Store.updateAction(a); } catch (e) { warn(e); }
+    audit('Action progress recorded', 'Action', a.id, prevStatus, (newStatus && newStatus !== prevStatus ? newStatus + ': ' : '') + (note || '(status change only)'));
+    return upd;
   }
 
   function vendorOverdue(v) { return !!(v.nextReviewDue && v.nextReviewDue < new Date().toISOString().slice(0, 10)); }
@@ -7912,33 +7980,120 @@ function showModal(opts) {
 
     complete: async function (id) {
       var a = S.actions.find(function (x) { return x.id === id; });
-      var evVals = await showModal({
+      if (!a) return;
+      var vals = await showModal({
         title: 'Complete action',
-        fields: [{ id: 'ev', label: 'Evidence note for the audit trail', type: 'textarea', value: 'Configuration export captured to Evidence library', placeholder: 'e.g. CA policy export saved to Evidence/A.8.5' }],
-        confirmText: 'Complete'
+        message: 'This is recorded as the final entry in ' + a.id + '\'s progress log — an auditor reading it should see exactly what was done.',
+        fields: [
+          { id: 'ev', label: 'Evidence note for the audit trail', type: 'textarea', value: 'Configuration export captured to Evidence library', placeholder: 'e.g. CA policy export saved to Evidence/A.8.5' },
+          { id: 'url', label: 'Evidence link (optional)', value: a.evidenceUrl || '', placeholder: 'https://…' }
+        ],
+        confirmText: 'Complete',
+        validate: function (v) { return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://'; }
       });
-      if (!evVals) return;
-      var ev = evVals.ev;
-      var prevStatus = a.status;
-      a.status = 'Done'; a.evidence = ev;
+      if (!vals) return;
       var r = risk(a.risk);
       busy(true);
-      try {
-        await Store.updateAction(a);
-        if (r) {
-          var q = residual(r);
-          recomputeRiskStatus(r);
-          await Store.updateRisk(r);
-          log('Action <b>' + id + '</b> completed. Evidence captured. Risk ' + r.id + ' residual now <b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b>.');
-          toast('Evidence captured · <b>' + r.id + '</b> residual recalculated to ' + (q.L * q.I) + ' (' + band(q.L * q.I) + ')');
-        } else {
-          log('Action <b>' + id + '</b> completed. Evidence captured.');
-          toast('Evidence captured for <b>' + id + '</b>');
-        }
-        audit('Action completed', 'Action', id, prevStatus, 'Done: ' + ev);
-      } catch (e) { warn(e); }
+      var upd = await recordActionUpdate(a, { note: vals.ev, evidenceUrl: vals.url, status: 'Done' });
+      if (upd) {
+        try {
+          if (r) {
+            var q = residual(r);
+            recomputeRiskStatus(r);
+            await Store.updateRisk(r);
+            log('Action <b>' + id + '</b> completed. Evidence captured. Risk ' + r.id + ' residual now <b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b>.');
+            toast('Evidence captured · <b>' + r.id + '</b> residual recalculated to ' + (q.L * q.I) + ' (' + band(q.L * q.I) + ')');
+          } else {
+            log('Action <b>' + id + '</b> completed. Evidence captured.');
+            toast('Evidence captured for <b>' + id + '</b>');
+          }
+        } catch (e) { warn(e); }
+      }
       busy(false);
       renderAll();
+    },
+
+    /* Records a progress update without necessarily completing the
+       action — the primary way to build the story a Risk Treatment
+       Plan or an auditor conversation actually needs: what happened,
+       when, and (optionally) a status change and its own evidence link.
+       Defaults the status field to the action's CURRENT status, so
+       "just leave a note, nothing's changed yet" is the path of least
+       resistance, not "complete" being the only prompted flow. */
+    addActionUpdate: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var vals = await showModal({
+        title: 'Add progress update — ' + a.id,
+        fields: [
+          { id: 'note', label: 'What happened', type: 'textarea', value: '', placeholder: 'e.g. Vendor confirmed remediation date of 14 March; following up if it slips.' },
+          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS },
+          { id: 'url', label: 'Evidence link for this update (optional)', value: '', placeholder: 'https://…' }
+        ],
+        confirmText: 'Add update',
+        validate: function (v) {
+          if (!v.note.trim()) return 'Enter what happened.';
+          return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://';
+        }
+      });
+      if (!vals) return;
+      var r = risk(a.risk);
+      var prevStatus = a.status;
+      busy(true);
+      var upd = await recordActionUpdate(a, { note: vals.note, evidenceUrl: vals.url, status: vals.status });
+      if (upd) {
+        try {
+          if (r && vals.status !== prevStatus) { recomputeRiskStatus(r); await Store.updateRisk(r); }
+        } catch (e) { warn(e); }
+        log('Update recorded for <b>' + a.id + '</b>' + (vals.status !== prevStatus ? ' — status now <b>' + esc(vals.status) + '</b>' : '') + '.');
+        toast('Update added to <b>' + a.id + '</b>');
+      }
+      busy(false);
+      renderAll();
+      if (document.getElementById('drawer') && document.getElementById('drawer').classList.contains('open')) App.openAction(id);
+    },
+
+    /* Action detail drawer — same pattern as openRisk(): header, current
+       state, then the full chronological progress log this feature
+       exists to produce. Every entry is immutable once written (see
+       recordActionUpdate()'s own comment); "Add update"/"Complete" are
+       the only ways this list grows. */
+    openAction: function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var r = risk(a.risk);
+      var updates = (S.actionUpdates || []).filter(function (u) { return u.action === id; }).slice().reverse();
+      var capa = window.CheckpointLib.capaStatus(a);
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + a.id + ' · ' + esc(a.type || 'Action') + (r ? ' · Treats ' + r.id : '') + '</div><h2>' + esc(a.title) + '</h2>' +
+        '<div class="d-kv"><span>Status</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(a.status) + '</span></b></div>' +
+        '<div class="d-kv"><span>Priority</span><b>' + esc(a.pr) + '</b></div>' +
+        '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + '</b></div>' +
+        '<div class="d-kv"><span>Due</span><b style="' + (overdue(a) ? 'color:var(--fail)' : '') + '">' + fmtDate(a.due) + (overdue(a) ? ' ' + icon('flag') + ' ' + overdueDays(a) + 'd overdue' : '') + '</b></div>' +
+        (a.control ? '<div class="d-kv"><span>Control</span><b>' + esc(a.control) + '</b></div>' : '') +
+        '<div class="d-kv"><span>Current evidence link</span><b>' + (a.evidenceUrl && isSafeUrl(a.evidenceUrl) ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener">Open ' + icon('external') + '</a>' : '—') + '</b></div>' +
+        (capa.isNc ? '<div class="src" style="margin-top:4px">' + esc(capa.nextStep) + '</div>' : '') +
+        (READONLY ? '' :
+          '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0">' +
+          '<button class="btn sm" data-action="App.addActionUpdate" data-id="' + a.id + '">Add update</button>' +
+          (a.status !== 'Done' ? '<button class="btn ghost sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '') +
+          (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button>' : '') +
+          '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button>' +
+          '</div>') +
+        '<div class="d-sec"><h4>Progress log' + (updates.length ? ' (' + updates.length + ')' : '') + '</h4>' +
+        (updates.length
+          ? updates.map(function (u) {
+              return '<div class="d-kv" style="align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">' +
+                '<span style="min-width:90px">' + fmtDate(u.date) + '<div class="src">' + esc(u.author) + '</div></span>' +
+                '<b style="font-weight:400;text-align:left;color:var(--paper)">' + esc(u.note || '(status change only)') +
+                (u.status ? '<div class="src" style="margin-top:2px">Status at this update: <b>' + esc(u.status) + '</b></div>' : '') +
+                (u.evidenceUrl && isSafeUrl(u.evidenceUrl) ? '<div style="margin-top:2px"><a href="' + esc(u.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a></div>' : '') +
+                '</b></div>';
+            }).join('')
+          : '<p style="color:var(--paper-dim);font-size:12.5px">No updates recorded yet — use "Add update" to start the progress log an auditor would read.</p>') +
+        '</div>';
+      openDrawerUi('Action ' + a.id);
     },
 
     openRisk: function (id) {
