@@ -449,7 +449,12 @@ function showModal(opts) {
     'approveAllProposed', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
-    'aiSaveConfig', 'addManualRisk'
+    'aiSaveConfig', 'addManualRisk',
+    /* Linking an AI-interpreted artefact to a control is a real write to
+       the register; interpreting one is not (it produces a draft in
+       memory) but is gated too, since a Viewer has nothing to do with
+       the result. */
+    'aiInterpretEvidence', 'aiLinkInterpreted'
     /* 'report' itself is deliberately NOT in this set — generating a
        report is exactly the kind of thing a read-only Viewer (a board
        member, say) should still be able to do; the version-number
@@ -751,35 +756,77 @@ function showModal(opts) {
 
   /* Every control across every ENTITLED framework that shares the same
      real-world evidence as `start` — the Shared evidence view's engine.
-     Unlike controlsForCheck() (a fixed check -> canonical-control lookup),
-     this walks the cross-mapping graph from an arbitrary starting
-     control in both directions: forward (start's own "Also satisfies"
-     map field) and backward (any other control whose map field points
-     at start) — the seed data isn't consistently bidirectional (e.g.
-     ISO 27001 A.5.15 maps to SOC2 CC6.1, but CC6.1's own map field also
-     reaches Essential Eight E8.7 and NIST PR.AA that A.5.15's map field
-     never mentions directly), so a one-hop lookup would under-report
-     real matches. Breadth-first over a small (~250-control) graph, so a
-     plain queue is more than fast enough. */
+     Thin wrapper around lib.js's pure implementation (the traversal, its
+     both-directions rationale and its test coverage all live there, see
+     test/lib.test.mjs) — same checkResult()/score() pattern as
+     elsewhere in this file; this just supplies S as context. */
   function sharedEvidenceClosure(start) {
-    var key = function (c) { return c.fw + '|' + c.id; };
-    var visited = {};
-    visited[key(start)] = true;
-    var queue = [start], result = [start];
-    while (queue.length) {
-      var cur = queue.shift();
-      parseMapTokens(cur.map).forEach(function (ref) {
-        if (!S.entitlements[ref.fw]) return;
-        var m = S.controls.find(function (c) { return c.fw === ref.fw && c.id === ref.code; });
-        if (m && !visited[key(m)]) { visited[key(m)] = true; result.push(m); queue.push(m); }
-      });
-      S.controls.forEach(function (other) {
-        if (!S.entitlements[other.fw] || visited[key(other)]) return;
-        var pointsToCur = parseMapTokens(other.map).some(function (e) { return e.fw === cur.fw && e.code === cur.id; });
-        if (pointsToCur) { visited[key(other)] = true; result.push(other); queue.push(other); }
-      });
+    return window.CheckpointLib.sharedEvidenceClosure(start, { controls: S.controls, entitlements: S.entitlements });
+  }
+
+  /* Controls in OTHER entitled frameworks that are the same real-world
+     control as `start` and haven't caught up with it — see lib.js's
+     crossFrameworkStatusSuggestions() for the rules. */
+  function crossFrameworkSuggestionsFor(start) {
+    return window.CheckpointLib.crossFrameworkStatusSuggestions(start, { controls: S.controls, entitlements: S.entitlements });
+  }
+
+  /* Offers to carry a control's newly-recorded status across to the
+     controls in OTHER entitled frameworks that are the same real-world
+     control (lib.js's crossFrameworkStatusSuggestions decides which, and
+     refuses to propose anything from a source that isn't Implemented
+     WITH evidence). This is where the multi-framework promise on the
+     SoA page — "cross-mapped to the others so shared evidence is never
+     duplicated" — stops being only about evidence and starts applying
+     to the work itself.
+
+     Deliberately a prompt at the moment of the change rather than a
+     silent write or another queue to visit later: the practitioner has
+     the context in their head right now, and one dialog answering "you
+     just did this for ISO 27001 — it's the same control in SOC 2 and
+     Essential Eight, apply there too?" is the whole feature. Declining
+     costs one click and nothing is written. Never fires for a Viewer,
+     and never in the middle of a bulk operation (the callers that run
+     in bulk don't call this). */
+  async function offerCrossFrameworkPropagation(source) {
+    if (READONLY) return 0;
+    var proposals = crossFrameworkSuggestionsFor(source);
+    if (!proposals.length) return 0;
+    var byFw = {};
+    proposals.forEach(function (p) { (byFw[p.fw] = byFw[p.fw] || []).push(p.code); });
+    var summary = Object.keys(byFw).map(function (fw) { return fwName(fw) + ' ' + byFw[fw].join(', '); }).join(' · ');
+    var ok = await showModal({
+      title: 'Same control in ' + (Object.keys(byFw).length === 1 ? 'another framework' : Object.keys(byFw).length + ' other frameworks'),
+      message: source.id + ' is cross-mapped to ' + proposals.length + ' control' + (proposals.length === 1 ? '' : 's') +
+        ' you have bought that are behind it: ' + summary + '. They are the same real-world control, so the evidence you just recorded covers them too. Set them to ' + source.st + ' as well?',
+      confirmText: 'Apply to ' + proposals.length,
+      cancelText: 'Not now'
+    });
+    if (!ok) return 0;
+    busy(true);
+    var applied = 0;
+    for (var i = 0; i < proposals.length; i++) {
+      var p = proposals[i];
+      var target = S.controls.find(function (x) { return x.fw === p.fw && x.id === p.code; });
+      if (!target) continue;
+      var prev = target.st;
+      target.st = p.to;
+      /* The evidence link travels with the status — that is the whole
+         point of a shared control — but only onto a target with nothing
+         of its own already attached. A practitioner's own link is never
+         overwritten, same rule captureAutoEvidence() follows. */
+      if (!target.evidenceUrl && source.evidenceUrl) target.evidenceUrl = source.evidenceUrl;
+      try { await Store.updateControl(target); } catch (e) { warn(e); continue; }
+      audit('Control status changed', 'Control', p.fw + '|' + p.code, prev, p.to + ' (cross-framework from ' + p.viaFw + '|' + p.viaCode + ', practitioner-confirmed)');
+      applied++;
     }
-    return result;
+    busy(false);
+    if (applied) {
+      log('<b>' + applied + '</b> cross-mapped control(s) set to ' + esc(source.st) + ' from <b>' + esc(source.id) + '</b> — same real-world control in ' + Object.keys(byFw).map(fwName).join(', ') + '.');
+      toast('<b>' + applied + '</b> cross-mapped control' + (applied === 1 ? '' : 's') + ' updated');
+    }
+    renderSoa(); renderDash(); renderNavCounts();
+    return applied;
   }
 
   /* Turns each Graph-backed check's raw signal (graph.js's
@@ -3443,6 +3490,41 @@ function showModal(opts) {
       return '<tr><td><span class="chip ' + (r.pass ? 'st-Implemented' : 'st-Open') + '">' + (r.pass ? 'Pass' : 'Fail') + '</span></td>' +
         '<td>' + esc(r.group) + '</td><td>' + esc(r.name) + '</td><td style="color:var(--paper-faint);font-size:11.5px">' + esc(r.detail || '') + '</td></tr>';
     }).join('');
+  }
+
+  /* In-memory only, never persisted: the result of the last AI evidence
+     interpretation. Cleared on demand and lost on reload, same as every
+     other AI draft in this app — what persists is only what a
+     practitioner explicitly linked. */
+  var _evidenceInterpretation = null;
+
+  function renderEvidenceInterpretation() {
+    var el = document.getElementById('evidenceInterpretResult');
+    if (!el) return;
+    var d = _evidenceInterpretation;
+    if (!d) { el.innerHTML = ''; return; }
+    var disclaimer = window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '';
+    var mapped = d.mappings.length
+      ? d.mappings.map(function (m) {
+          return '<div class="proposed-card"><h4>' + esc(m.code) + ' — ' + esc(m.title) + '</h4>' +
+            '<div class="meta">' + esc(m.why || 'No rationale given.') + '</div>' +
+            '<div class="meta">Currently <b>' + esc(m.st) + '</b>' + (m.hasEvidence ? ' · evidence already linked' : ' · no evidence linked yet') + '</div>' +
+            (READONLY ? '' : '<button class="btn sm" data-action="App.aiLinkInterpreted" data-id="' + esc(m.code) + '">Link as evidence</button>') +
+            '</div>';
+        }).join('')
+      : '<p style="color:var(--paper-dim);font-size:12.5px">No control in ' + esc(fwName(d.fw)) + ' was proposed for this artefact. That is a real answer, not a failure — evidence that maps to nothing you have in scope is evidence for something else.</p>';
+    el.innerHTML = '<div class="card" style="margin-top:16px">' +
+      '<div class="chip st-Intreatment" style="margin-bottom:8px">' + esc(disclaimer) + '</div>' +
+      '<h3>' + esc(d.name) + '</h3>' +
+      (d.summary ? '<p class="rpt-intro">' + esc(d.summary) + '</p>' : '') +
+      '<div class="d-kv"><span>Period covered</span><b>' + esc(d.period) + '</b></div>' +
+      '<div class="d-kv"><span>Proposed for</span><b>' + d.mappings.length + ' ' + esc(fwName(d.fw)) + ' control' + (d.mappings.length === 1 ? '' : 's') + '</b></div>' +
+      (d.droppedCount ? '<div class="d-kv"><span>Discarded</span><b>' + d.droppedCount + ' proposed code' + (d.droppedCount === 1 ? '' : 's') + ' that do not exist in your register</b></div>' : '') +
+      mapped +
+      '<div class="card" style="margin-top:14px;border-color:rgba(224,138,110,.35)"><h4 style="margin-bottom:6px">What this artefact does NOT evidence</h4>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.7">' + esc(d.gaps) + '</p></div>' +
+      '<button class="btn ghost sm" style="margin-top:12px" data-action="App.aiClearInterpretation">Clear</button>' +
+      '</div>';
   }
 
   /* In-memory only, keyed by proposed template id — advisory AI
@@ -6984,6 +7066,12 @@ function showModal(opts) {
     if (riskAiDraftRow) riskAiDraftRow.style.display = aiAssistantOn ? '' : 'none';
     var tplAiTailorRow = document.getElementById('tplAiTailorRow');
     if (tplAiTailorRow) tplAiTailorRow.style.display = aiAssistantOn ? '' : 'none';
+    /* Evidence interpretation lives in the Documents view rather than
+       behind its own nav item — it belongs next to the library it reads
+       artefacts into — so it's hidden the same way the other in-page AI
+       surfaces above are. */
+    var evidenceInterpretCard = document.getElementById('evidenceInterpretCard');
+    if (evidenceInterpretCard) evidenceInterpretCard.style.display = aiAssistantOn ? '' : 'none';
     ['questionnaire', 'mockauditor', 'evidencesim'].forEach(function (v) {
       var nav = document.querySelector('.nav-item[data-v="' + v + '"]');
       if (!nav) return;
@@ -8843,6 +8931,7 @@ function showModal(opts) {
       log('<b>' + c.id + '</b> ' + esc(c.t) + ' → ' + v + '.');
       audit('Control status changed', 'Control', key, prevSt, v);
       renderSoa(); renderDash();
+      await offerCrossFrameworkPropagation(c);
     },
 
     verifyControl: async function (key) {
@@ -8903,6 +8992,13 @@ function showModal(opts) {
       audit('Evidence link changed', 'Control', key, prevUrl || '(none)', url || '(none)');
       renderSoa();
       if (bumped) { renderDash(); toast('<b>' + esc(c.id) + '</b> moved to In progress.'); }
+      /* Attaching evidence is the other way a control becomes eligible
+         to propagate: the common order is "mark Implemented" (warned
+         about missing evidence, so nothing propagates yet) and then
+         "link evidence" afterwards. Without this the offer would only
+         ever appear for practitioners who happened to work in the other
+         order. */
+      await offerCrossFrameworkPropagation(c);
     },
 
     /* The one place a practitioner can actually record why a control is
@@ -11332,6 +11428,112 @@ function showModal(opts) {
         resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--fail)">' + esc(friendly) + '</div>';
       }
       btn.disabled = false; btn.textContent = 'Generate evidence request list';
+    },
+
+    /* Evidence interpretation — reads an artefact the client already has
+       (a supplier's SOC 2 report, a penetration test, a backup job
+       export, an access review sign-off) and proposes which of THIS
+       tenant's controls it evidences, what period it covers, and what
+       it does not cover.
+
+       Text in, proposals out. The artefact's text is either read
+       directly from a text-shaped file the browser can decode, or
+       pasted by the practitioner — deliberately not a claim to parse
+       PDFs, which this dependency-free bundle cannot do and should not
+       pretend to. Every proposed control code is resolved against the
+       real register here before it is shown; a code the model invented
+       simply doesn't render. Nothing is linked until the practitioner
+       clicks Link on a specific row. */
+    aiInterpretEvidence: async function () {
+      if (!(S.entitlements && S.entitlements.ai)) return;
+      var entitled = entitledFrameworks();
+      if (!entitled.length) { toast('Enable a framework first — there are no controls to map evidence onto.'); return; }
+      var activeFw = (window._soaFw && entitled.indexOf(window._soaFw) > -1) ? window._soaFw : entitled[0];
+      var vals = await showModal({
+        title: 'Interpret evidence with AI',
+        message: 'Paste the text of the artefact — a supplier assurance report, penetration test summary, access review sign-off, backup job report. PDFs cannot be read here: copy the relevant text out of it. The text is sent to this tenant\'s own Azure OpenAI resource and nothing is written to any register without your confirmation.',
+        fields: [
+          { id: 'name', label: 'Artefact name', value: '', placeholder: 'e.g. Northwind Cloud Hosting — SOC 2 Type II FY26' },
+          { id: 'text', label: 'Artefact text', type: 'textarea', value: '', placeholder: 'Paste the report text or the relevant extract…' }
+        ],
+        confirmText: 'Interpret',
+        validate: function (v) { return (v.text && v.text.trim().length >= 80) ? null : 'Paste at least a paragraph — there is nothing to interpret in a line or two.'; }
+      });
+      if (!vals) return;
+      busy(true);
+      try {
+        var bag = aiBuildDataBag();
+        var controlList = aiBuildControlListDataBag(activeFw);
+        var res = await window.CheckpointAI.chat(
+          'evidenceInterpret',
+          window.CheckpointAI.buildEvidenceInterpretPrompt(vals.name || 'Untitled artefact', vals.text),
+          { controlList: controlList, soaSummary: bag.soaSummary }
+        );
+        var parsed = window.CheckpointAI.parseEvidenceInterpretation(res.text);
+        /* Resolve every proposed code against the REAL register — the
+           model's output is a suggestion about this tenant's controls,
+           never a source of truth about which controls exist. */
+        var rows = frameworkAppRows(activeFw);
+        var byCode = {};
+        rows.forEach(function (c) { byCode[c.id] = c; });
+        _evidenceInterpretation = {
+          fw: activeFw,
+          name: vals.name || 'Untitled artefact',
+          summary: parsed.summary,
+          period: parsed.period,
+          gaps: parsed.gaps,
+          mappings: parsed.mappings.filter(function (m) { return byCode[m.code]; }).map(function (m) {
+            return { code: m.code, why: m.why, title: byCode[m.code].t, st: byCode[m.code].st, hasEvidence: !!byCode[m.code].evidenceUrl };
+          }),
+          droppedCount: parsed.mappings.filter(function (m) { return !byCode[m.code]; }).length
+        };
+        audit('Evidence interpreted with AI', 'Document', _evidenceInterpretation.name, '', _evidenceInterpretation.mappings.length + ' control(s) proposed for ' + fwName(activeFw));
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured for this tenant.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not interpret this evidence: ' + (e.message || e));
+        toastError(esc(friendly));
+      }
+      busy(false);
+      renderEvidenceInterpretation();
+    },
+
+    /* Links the interpreted artefact to one proposed control. The URL is
+       asked for here rather than assumed, because the text was pasted —
+       the app never saw the file, so it cannot know where it lives. */
+    aiLinkInterpreted: async function (code) {
+      if (!_evidenceInterpretation) return;
+      var m = _evidenceInterpretation.mappings.find(function (x) { return x.code === code; });
+      if (!m) return;
+      var c = S.controls.find(function (x) { return x.fw === _evidenceInterpretation.fw && x.id === code; });
+      if (!c) return;
+      var vals = await showModal({
+        title: 'Link ' + code + ' to this evidence',
+        message: m.title + '\n\nWhere is "' + _evidenceInterpretation.name + '" stored? Paste its SharePoint/OneDrive link. Upload it to the Documents library first if it is not already there.',
+        fields: [{ id: 'url', label: 'Evidence URL', value: c.evidenceUrl || '', placeholder: 'https://…' }],
+        confirmText: 'Link evidence',
+        validate: function (v) { return isSafeUrl(v.url) ? null : 'Evidence link must start with http:// or https://'; }
+      });
+      if (!vals) return;
+      var prevUrl = c.evidenceUrl;
+      c.evidenceUrl = vals.url;
+      if (c.verifiedBy === AUTO_EVIDENCE_TAG) c.verifiedBy = '';
+      var bumped = false;
+      if (c.st === 'Not started') { c.st = 'In progress'; bumped = true; }
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      audit('Evidence link changed', 'Control', c.fw + '|' + c.id, prevUrl || '(none)', vals.url + ' (AI-interpreted artefact: ' + _evidenceInterpretation.name + ', practitioner-confirmed)');
+      if (bumped) audit('Control status changed', 'Control', c.fw + '|' + c.id, 'Not started', 'In progress (evidence linked)');
+      m.hasEvidence = true; m.st = c.st;
+      log('<b>' + esc(c.id) + '</b> linked to evidence from <b>' + esc(_evidenceInterpretation.name) + '</b>' + (bumped ? ', moved to In progress' : '') + '.');
+      toast('<b>' + esc(code) + '</b> linked' + (bumped ? ' · moved to In progress' : ''));
+      renderEvidenceInterpretation(); renderSoa(); renderDash();
+      await offerCrossFrameworkPropagation(c);
+    },
+
+    aiClearInterpretation: function () {
+      _evidenceInterpretation = null;
+      renderEvidenceInterpretation();
     },
 
     openCopilot: function () {

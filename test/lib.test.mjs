@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
+const { band, residual, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged,
+  sharedEvidenceClosure, crossFrameworkStatusSuggestions, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
@@ -1905,5 +1906,100 @@ describe('classifyAiActRisk()', () => {
     AI_ACT_QUESTIONS.forEach((q) => {
       assert.ok(['Prohibited', 'High', 'Limited'].includes(q.tier), `${q.id} has an unexpected tier: ${q.tier}`);
     });
+  });
+});
+
+// Cross-framework propagation — the multi-framework client's biggest
+// multiplier, and the half of the mapping graph that was never automated.
+// Posture-check evidence already lands on every mapped control
+// (controlsForCheck), but a PRACTITIONER's own work did not: marking
+// ISO 27001 A.5.15 Implemented with evidence said nothing about SOC 2
+// CC6.1 or Essential Eight E8.7, which are the same real-world control,
+// so the same job got done up to eight times over.
+describe('sharedEvidenceClosure() — the same real-world control across frameworks', () => {
+  const controls = [
+    { fw: 'iso27001', id: 'A.5.15', t: 'Access control', app: true, st: 'Implemented', evidenceUrl: 'https://x/e.json', map: 'SOC2 CC6.1' },
+    { fw: 'soc2', id: 'CC6.1', t: 'Logical access', app: true, st: 'Not started', map: 'E8.7 · NIST PR.AA' },
+    { fw: 'essential8', id: 'E8.7', t: 'MFA', app: true, st: 'In progress', map: '' },
+    { fw: 'nistcsf', id: 'PR.AA', t: 'Identity management', app: true, st: 'Not started', map: '' },
+    { fw: 'iso27001', id: 'A.8.1', t: 'Unrelated', app: true, st: 'Not started', map: '' }
+  ];
+  const all = { iso27001: true, soc2: true, essential8: true, nistcsf: true };
+
+  test('walks forward AND backward, reaching controls the start never names directly', () => {
+    const start = controls[0];
+    const got = sharedEvidenceClosure(start, { controls, entitlements: all }).map((c) => c.fw + '|' + c.id);
+    assert.deepEqual(got.sort(), ['essential8|E8.7', 'iso27001|A.5.15', 'nistcsf|PR.AA', 'soc2|CC6.1'].sort(),
+      'A.5.15 only names CC6.1; E8.7 and PR.AA are reachable only by continuing through CC6.1');
+  });
+
+  test('never traverses or returns a framework the tenant has not bought', () => {
+    const got = sharedEvidenceClosure(controls[0], { controls, entitlements: { iso27001: true, soc2: true } }).map((c) => c.fw + '|' + c.id);
+    assert.deepEqual(got.sort(), ['iso27001|A.5.15', 'soc2|CC6.1'].sort());
+  });
+
+  test('an unmapped control closes over itself alone, and a missing start is empty', () => {
+    assert.deepEqual(sharedEvidenceClosure(controls[4], { controls, entitlements: all }).map((c) => c.id), ['A.8.1']);
+    assert.deepEqual(sharedEvidenceClosure(null, { controls, entitlements: all }), []);
+  });
+});
+
+describe('crossFrameworkStatusSuggestions() — propagating a practitioner\'s own work', () => {
+  const mk = (over = {}) => [
+    { fw: 'iso27001', id: 'A.5.15', t: 'Access control', app: true, st: 'Implemented', evidenceUrl: 'https://x/e.json', map: 'SOC2 CC6.1', ...over },
+    { fw: 'soc2', id: 'CC6.1', t: 'Logical access', app: true, st: 'Not started', map: 'E8.7' },
+    { fw: 'essential8', id: 'E8.7', t: 'MFA', app: true, st: 'In progress', map: '' }
+  ];
+  const all = { iso27001: true, soc2: true, essential8: true };
+
+  test('proposes the source status for every mapped control that is behind it', () => {
+    const controls = mk();
+    const got = crossFrameworkStatusSuggestions(controls[0], { controls, entitlements: all });
+    assert.deepEqual(got.map((p) => p.fw + '|' + p.code + ':' + p.from + '->' + p.to).sort(),
+      ['essential8|E8.7:In progress->Implemented', 'soc2|CC6.1:Not started->Implemented'].sort());
+    assert.equal(got[0].viaFw, 'iso27001');
+    assert.equal(got[0].viaCode, 'A.5.15');
+  });
+
+  test('never proposes anything from a source that is not Implemented WITH evidence', () => {
+    const noEvidence = mk({ evidenceUrl: '' });
+    assert.deepEqual(crossFrameworkStatusSuggestions(noEvidence[0], { controls: noEvidence, entitlements: all }), [],
+      'ticking a dropdown with nothing attached is not grounds to tick seven more');
+    const inProgress = mk({ st: 'In progress' });
+    assert.deepEqual(crossFrameworkStatusSuggestions(inProgress[0], { controls: inProgress, entitlements: all }), []);
+    const notApplicable = mk({ app: false });
+    assert.deepEqual(crossFrameworkStatusSuggestions(notApplicable[0], { controls: notApplicable, entitlements: all }), []);
+  });
+
+  test('never downgrades: a target already Implemented is left alone', () => {
+    const controls = mk();
+    controls[1].st = 'Implemented';
+    const got = crossFrameworkStatusSuggestions(controls[0], { controls, entitlements: all });
+    assert.deepEqual(got.map((p) => p.code), ['E8.7'], 'CC6.1 is already there — proposing it again is noise');
+  });
+
+  test('skips a target excluded from scope — an exclusion is a decision, not a gap', () => {
+    const controls = mk();
+    controls[1].app = false;
+    const got = crossFrameworkStatusSuggestions(controls[0], { controls, entitlements: all });
+    assert.deepEqual(got.map((p) => p.code), ['E8.7']);
+  });
+
+  test('never propagates WITHIN the source\'s own framework — related is not the same', () => {
+    const controls = [
+      { fw: 'iso27001', id: 'A.5.15', t: 'Access control', app: true, st: 'Implemented', evidenceUrl: 'https://x/e.json', map: 'ISO27001 A.8.5 · SOC2 CC6.1' },
+      { fw: 'iso27001', id: 'A.8.5', t: 'Secure authentication', app: true, st: 'Not started', map: '' },
+      { fw: 'soc2', id: 'CC6.1', t: 'Logical access', app: true, st: 'Not started', map: '' }
+    ];
+    const got = crossFrameworkStatusSuggestions(controls[0], { controls, entitlements: { iso27001: true, soc2: true } });
+    assert.deepEqual(got.map((p) => p.fw + '|' + p.code), ['soc2|CC6.1'],
+      'A.5.15 and A.8.5 are distinct requirements of the SAME standard, tested separately by an auditor — carrying a status across them is over-claiming inside the standard being audited');
+  });
+
+  test('never proposes against the source itself, or into an unlicensed framework', () => {
+    const controls = mk();
+    const got = crossFrameworkStatusSuggestions(controls[0], { controls, entitlements: { iso27001: true, soc2: true } });
+    assert.deepEqual(got.map((p) => p.fw + '|' + p.code), ['soc2|CC6.1']);
+    assert.ok(!got.some((p) => p.code === 'A.5.15'));
   });
 });
