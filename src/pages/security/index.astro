@@ -202,7 +202,7 @@ const permStages = [
       <p style="margin-top:10px;">Two features outside the core app have their own, separate permission footprints, and are excluded from the claim above by design:</p>
       <ul>
         <li><strong>Partner Console</strong> (for firms managing multiple client tenants) opens its own sign-in and requests two additional delegated, read-only scopes — <code>User.Read</code> and <code>Sites.Read.All</code> — against the partner's own tenant, never a client's.</li>
-        <li><strong>The optional continuous-monitoring add-on</strong> (an Azure Function a client can choose to deploy into their <em>own</em> subscription) uses its own app registration with application (app-only) permissions, because it runs unattended with no signed-in user present. It requires separate admin consent, is entirely optional, and is documented on its own in the deployment guide.</li>
+        <li><strong>The optional continuous-monitoring add-on</strong> (an Azure Function a client can choose to deploy into their <em>own</em> Azure subscription) uses its own app registration with application (app-only) permissions, because it runs unattended with no signed-in user present. Daily, with no browser open, it re-runs the same posture checks, writes the new scan and any regressions straight into the client's own SharePoint lists, chases overdue actions and controls due for re-verification, and — if the tenant has turned it on — sends a periodic email digest. It requires separate admin consent, is entirely optional, and is documented on its own in the deployment guide.</li>
       </ul>
     </div>
   </div>
