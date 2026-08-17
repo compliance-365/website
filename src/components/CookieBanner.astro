@@ -80,13 +80,6 @@ const base = import.meta.env.BASE_URL || '/';
     document.head.appendChild(o);
   })();
 
-  // Load Microsoft Clarity immediately — always-on session analytics, not
-  // gated behind cookie consent (a deliberate choice to see how the site
-  // is used; loadClarity() is a hoisted function declaration below, so
-  // calling it here is fine). The consent-gated call in applyConsent()
-  // remains a harmless no-op thanks to the __clarityLoaded guard.
-  loadClarity();
-
   function getConsent() {
     try { return JSON.parse(localStorage.getItem(CONSENT_KEY)); } catch(_) { return null; }
   }
@@ -105,6 +98,20 @@ const base = import.meta.env.BASE_URL || '/';
     if (analyticsGranted) loadClarity();
   }
 
+  // Only ever called once analytics consent is actually granted (from
+  // applyConsent() below, or the returning-visitor restore in
+  // DOMContentLoaded) — matches what privacy.astro/security.astro already
+  // tell visitors: Clarity is blocked until they accept.
+  //
+  // The explicit clarity('consent') call after the tag loads matters on
+  // its own, separate from when we choose to load the tag: if the Clarity
+  // project has "require consent" turned on (Clarity's own Consent API —
+  // see https://learn.microsoft.com/clarity/setup-and-installation/consent-management),
+  // the script injects fine and sits there recording nothing at all until
+  // something calls clarity('consent') — silently, with no console error
+  // and no CSP violation to notice. That call was missing entirely before
+  // this fix, which is consistent with Clarity going quiet after consent
+  // handling here was last touched.
   function loadClarity() {
     if (window.__clarityLoaded) return;
     window.__clarityLoaded = true;
@@ -113,6 +120,7 @@ const base = import.meta.env.BASE_URL || '/';
       t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
       y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window,document,'clarity','script',CLARITY_ID);
+    window.clarity('consent');
   }
 
   function hideBanner() {
