@@ -184,7 +184,13 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          only anonymised/cookieless pings until consent is granted, Apollo
          (assets.apollo.io: script; aplo-evnt.com: the tracker's own
          intent-pixel API calls) loads immediately as company-level,
-         not personal, identification;
+         not personal, identification. Clarity is *.clarity.ms, not just
+         www.clarity.ms — the tag loader on www. dynamically fetches the
+         actual recording engine from scripts.clarity.ms, and the
+         session-data/ID-sync calls it makes go to other subdomains again
+         (c.clarity.ms among them) — a single-host allowlist here silently
+         breaks recording while the loader script itself still "works";
+
          outlook.office365.com/office.com: Microsoft Bookings iframe;
          MSAL/Graph: posture scan). 'unsafe-inline' is required because
          most page scripts are Astro `is:inline` blocks with no nonce
@@ -194,7 +200,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          /start, and only once SELF_SERVE has a token configured (see
          src/data/pricing.js) — but the CSP is site-wide, so it's
          allowlisted here rather than per-page. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.clarity.ms https://assets.apollo.io https://www.googletagmanager.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://www.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com; frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.clarity.ms https://assets.apollo.io https://www.googletagmanager.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com; frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
     <!-- Discovery -->
     <link rel="canonical" href={canonical} />
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
@@ -225,7 +231,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Third-party prefetch -->
-    <link rel="dns-prefetch" href="https://www.clarity.ms" />
+    <link rel="dns-prefetch" href="https://*.clarity.ms" />
     <link rel="dns-prefetch" href="https://assets.apollo.io" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <!-- Fraunces + Manrope: async load, display=optional prevents LCP delay -->
