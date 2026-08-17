@@ -2643,9 +2643,19 @@ function showModal(opts) {
     var doneCount = steps.filter(function (s) { return s.done; }).length;
     if (doneCount === steps.length) { el.style.display = 'none'; return; }
     el.style.display = '';
+    var firstPending = steps.findIndex(function (s) { return !s.done; });
+    var stepperHtml = '<div class="gs-stepper">' +
+      steps.map(function (s, i) {
+        var state = s.done ? 'done' : (i === firstPending ? 'current' : 'pending');
+        var node = '<div class="gs-node ' + state + '"><span class="gs-node-ic">' + (s.done ? icon('check') : (i + 1)) + '</span><span class="gs-node-label">' + esc(s.label) + '</span></div>';
+        if (i === steps.length - 1) return node;
+        var connCls = (s.done ? 'done' : '') + (i === firstPending - 1 ? ' active' : '');
+        return node + '<span class="gs-conn ' + connCls + '"><i></i></span>';
+      }).join('') +
+      '</div>';
     el.innerHTML = '<h3>Getting started</h3>' +
       '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 14px">' + doneCount + ' of ' + steps.length + ' steps done — this disappears once every step below is complete.</p>' +
-      '<div class="gs-track"><div class="gs-fill" style="width:' + Math.round(doneCount / steps.length * 100) + '%"></div></div>' +
+      stepperHtml +
       steps.map(function (s) {
         return '<div class="gs-row' + (s.done ? ' done' : '') + '">' +
           '<span class="gs-check">' + (s.done ? icon('check') : '') + '</span>' +

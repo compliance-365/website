@@ -34,8 +34,8 @@ const stages = [
   {
     key: 'deploy', num: '02', name: 'Deploy', icon: 'home', actor: 'auto', time: '~15 min, once',
     tagline: 'Your registers provision as SharePoint lists — in your tenant, not ours.',
-    body: "A 15-minute wizard checks what Checkpoint can read in your tenant, lets you choose which SharePoint site your records live in, and provisions every register — risks, actions, controls, evidence, audit log — as native SharePoint lists you already own. There is no database on our side to copy anything into, because there is no our side. The lists inherit your permissions, retention and versioning from the moment they exist.",
-    you: ['Pick which purchased frameworks to start with', 'Choose the SharePoint site (your root site by default)', "Approve write access when it's first requested"],
+    body: "For a brand-new tenant, this starts with your Global Administrator approving a single admin-consent link — one approval that covers the whole organisation, so nobody else is prompted individually afterwards. Then a 15-minute wizard checks what Checkpoint can read in your tenant, lets you choose which SharePoint site your records live in, and provisions every register — risks, actions, controls, evidence, audit log — as native SharePoint lists you already own. There is no database on our side to copy anything into, because there is no our side. The lists inherit your permissions, retention and versioning from the moment they exist.",
+    you: ['Have a Global Admin approve the one-time, org-wide consent link', 'Pick which purchased frameworks to start with', 'Choose the SharePoint site (your root site by default)'],
     auto: ['Provisions every register as a SharePoint list in your tenant', 'Seeds each framework\'s full control set', 'Idempotent — safe to re-run, never double-creates'],
     output: 'Your compliance registers, live as SharePoint lists you own',
     chain: [
@@ -270,6 +270,13 @@ const boundarySvg = buildBoundarySvg();
             </div>
 
             <p class="hiw-output"><span>Output</span> {s.output}</p>
+
+            {s.key === 'deploy' && (
+              <p style="margin-top:14px;font-size:14px;line-height:1.7;color:rgba(11,11,12,.7);">
+                Setup runs from a written guide, not a sales call — the exact admin-consent screen, the SharePoint site step, the permissions table, and the optional Practitioner / Viewer read-only role split.{' '}
+                <a href={`${base}checkpoint/onboarding.html`} target="_blank" rel="noopener" style="color:#A9812E;font-weight:700;text-decoration:none;border-bottom:1px solid rgba(169,129,46,.4);">Read the full setup guide →</a>
+              </p>
+            )}
           </div>
         </article>
       ))}
