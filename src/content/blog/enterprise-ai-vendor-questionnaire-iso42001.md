@@ -6,6 +6,7 @@ date: 2026-07-28
 author: "Compliance365"
 tags: ["ISO 42001", "AI Governance", "Enterprise Sales", "Vendor Risk", "SOC 2", "Australia"]
 image: "/assets/blog-ai-vendor-questionnaire.svg"
+lastModified: 2026-08-21
 ---
 
 <div style="background:#f9fafb;border-radius:12px;padding:24px 28px;margin:24px 0;box-shadow:0 2px 8px rgba(15,23,42,0.04)">
@@ -21,6 +22,10 @@ image: "/assets/blog-ai-vendor-questionnaire.svg"
 <p>Enterprise procurement and GRC teams didn't add an AI section because it's trendy — they added it because <strong>their own customers, regulators and boards started asking them</strong>. A large enterprise buying your SaaS product is, from their risk team's point of view, extending their own AI supply chain into your codebase. If your product embeds a language model, calls a third-party AI API, or uses AI to make any decision that touches their data, that's now their problem too — and they know it.</p>
 
 <p>The EU AI Act's extraterritorial reach, ISO 42001 becoming an actual, auditable standard rather than a set of AI ethics principles, and a run of very public "the AI feature did something nobody signed off on" stories have all pushed this from "nice to ask" to "standard line item" in about eighteen months.</p>
+
+<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px 20px;border-radius:10px;margin:20px 0">
+  <p style="margin:0"><strong>The gap procurement teams are trying to close:</strong> 88% of organisations now use AI in at least one business function — but only 8% have a comprehensive AI governance framework in place. IBM's data is blunter still: 63% of breached organisations either have no AI governance policy, or one that's still being written. Your buyer's risk team isn't guessing at this gap. They're assuming you're in the 92%, and the questionnaire is how they find out.</p>
+</div>
 
 <h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> What's actually being asked</h2>
 
@@ -46,6 +51,8 @@ image: "/assets/blog-ai-vendor-questionnaire.svg"
 
 <p style="margin-top:12px;color:#4b5563">That last question is the one that matters most commercially. Answered "yes, and here's the certificate," the rest of the section closes in one line. Answered with four paragraphs of prose written on the spot by whoever picked up the questionnaire, it turns into a follow-up call, a security review, and weeks added to the deal cycle — if it doesn't quietly become the reason the deal goes to a competitor instead.</p>
 
+<p style="color:#4b5563">This isn't vendor-by-vendor paranoia, either — it's been formalised. The standard vendor risk templates procurement teams actually use, the Cloud Controls Matrix (CAIQ) and SIG Lite, now carry a dedicated AI governance section: model provenance, training data rights, subprocessor transparency, and explicit alignment checks against ISO 42001 and the NIST AI RMF. If you're filling out either of those forms, this is no longer optional wording — it's a named field.</p>
+
 <h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> ISO 42001 is built to answer exactly this</h2>
 
 <p>ISO 42001 is the world's first certifiable AI management system standard — the AI equivalent of what ISO 27001 did for information security. It doesn't ask you to prove your AI is perfect. It asks you to prove it's <strong>governed</strong>: that you know what AI you're running, who's accountable for it, what could go wrong, and how you'd catch it.</p>
@@ -60,7 +67,7 @@ image: "/assets/blog-ai-vendor-questionnaire.svg"
 </ul>
 
 <div style="background:#f0fdfa;border-left:4px solid #10b981;padding:16px;border-radius:10px;margin:24px 0">
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>The shift to notice:</strong> this used to be a differentiator — something you'd mention to stand out. It's rapidly becoming table stakes, the same way SOC 2 went from "nice to have" to "can't get in the door without it" for enterprise SaaS a few years ago. The vendors who get ahead of it now are the ones who won't be scrambling when it's no longer optional.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>The shift to notice:</strong> this used to be a differentiator — something you'd mention to stand out. It's rapidly becoming table stakes, the same way SOC 2 went from "nice to have" to "can't get in the door without it" for enterprise SaaS a few years ago. AWS, Microsoft, Anthropic and KPMG International are already ISO 42001 certified, and Fortune 500 procurement teams are starting to ask smaller vendors for the same certificate — or a credible roadmap to one. The vendors who get ahead of it now are the ones who won't be scrambling when it's no longer optional.
 </div>
 
 <h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">Why this doesn't need to be its own project</h2>

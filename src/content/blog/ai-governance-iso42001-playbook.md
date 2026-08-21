@@ -6,6 +6,7 @@ date: 2025-10-17
 author: "Compliance365"
 tags: ["ISO 42001", "AI Governance", "Risk", "Microsoft 365", "AIMS", "Artificial Intelligence"]
 image: "/assets/blog-iso42001-v2.svg"
+lastModified: 2026-08-21
 ---
 
 <div style="background:#f9fafb;border-radius:12px;padding:24px 28px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
@@ -265,15 +266,19 @@ Most of the work involves organising information, clarifying responsibilities, a
 
 <h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">Why this matters</h2>
 
+<p>The honest version, with real numbers rather than vague reassurance: <strong>88% of organisations now use AI in at least one business function, but only 8% have a comprehensive governance framework</strong>. IBM's breach data puts a sharper edge on that gap — 63% of breached organisations either have no AI governance policy, or one that's still being written. That's the population most companies are sitting in right now, whether or not anyone's said so out loud.</p>
+
+<p style="color:#4b5563">Worth being precise about Australia specifically, since it changes what "regulatory readiness" actually means here: the government's National AI Plan (December 2025) confirmed there will be <strong>no standalone AI Act</strong> — AI is governed through existing law, sector regulators (APRA, ASIC, the OAIC) and the National AI Centre's voluntary guidance instead. So this isn't about a law that's coming for you. It's that enterprise procurement, insurers, and EU-domiciled customers are already asking for exactly this evidence today, law or no law — and vendor questionnaires (CAIQ, SIG Lite) now carry a dedicated AI section that checks alignment to ISO 42001 by name.</p>
+
 <ul>
-  <li><strong>Board confidence:</strong> Demonstrates that AI is being managed, not left to chance.</li>
-  <li><strong>Customer trust:</strong> Helps you answer AI-related questions in RFPs and due diligence.</li>
-  <li><strong>Regulatory readiness:</strong> Positions you for future AI regulation and government expectations.</li>
-  <li><strong>Operational clarity:</strong> Reduces confusion, duplication, and AI “shadow IT”.</li>
+  <li><strong>Board confidence:</strong> Demonstrates that AI is being managed, not left to chance — and that you're not part of the 92% still figuring it out.</li>
+  <li><strong>Customer trust:</strong> Helps you answer AI-related questions in RFPs and due diligence with evidence, not assurances.</li>
+  <li><strong>Procurement readiness:</strong> Positions you for the AI section that's already in your buyers' questionnaires — not a hypothetical future law.</li>
+  <li><strong>Operational clarity:</strong> Reduces confusion, duplication, and AI "shadow IT".</li>
 </ul>
 
 <div style="background:#f0fdfa;border-left:4px solid #10b981;padding:16px;border-radius:10px;margin:24px 0">
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>Bottom line:</strong> ISO 42001 isn’t a technical audit — it’s a trust framework. If your organisation uses AI today, this is the simplest way to stay in control and show responsible governance to customers, regulators, and your own team.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>Bottom line:</strong> ISO 42001 isn't a technical audit — it's a trust framework. If your organisation uses AI today, this is the simplest way to stay in control and show responsible governance to customers, insurers, and your own team, regardless of what any regulator ends up requiring.
 </div>
 
 <h2 style="color:#111827;font-size:1.3rem;font-weight:800;margin-top:2rem">Next steps</h2>
