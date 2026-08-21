@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS } =
+const { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep } =
   require('../public/checkpoint/azure/PostureMonitor/index.js').__test;
 
 const TODAY = '2026-08-15';
@@ -81,6 +81,87 @@ describe('esc() — tenant-controlled text goes into an HTML email body', () => 
     assert.equal(esc(null), '');
     assert.equal(esc(undefined), '');
     assert.equal(esc(0), '0', 'but a real zero still renders');
+  });
+});
+
+describe('htmlToTeamsText() — the email HTML becomes a Teams webhook payload', () => {
+  test('converts <p>/<ul>/<li>/<b> into plain text with markdown bold', () => {
+    var html = '<p>The Checkpoint scheduled monitor raised the following on 2026-01-01:</p><ul>' +
+      '<li><b>Remediation action overdue: ACT-001 Rotate keys</b><br>Owner: Alex. 3 days overdue.</li>' +
+      '</ul><p>Open Checkpoint to acknowledge or action these.</p>';
+    var text = htmlToTeamsText(html);
+    assert.ok(text.indexOf('**Remediation action overdue: ACT-001 Rotate keys**') > -1);
+    assert.ok(text.indexOf('- ') > -1, 'list items become a markdown-style bullet');
+    assert.ok(text.indexOf('<') === -1 && text.indexOf('>') === -1, 'no raw tags survive');
+  });
+
+  test('unescapes the HTML entities esc() would have produced', () => {
+    assert.equal(htmlToTeamsText('<p>Tom &amp; &quot;Jerry&quot; &#39;s place &lt;3&gt;</p>').trim(), 'Tom & "Jerry" \'s place <3>');
+  });
+
+  test('null/undefined/empty render as an empty string, not "null"', () => {
+    assert.equal(htmlToTeamsText(null), '');
+    assert.equal(htmlToTeamsText(undefined), '');
+    assert.equal(htmlToTeamsText(''), '');
+  });
+});
+
+describe('runGovernanceSweep() — vendor review & certification expiry chasing', () => {
+  function fakeGraph(vendors) {
+    const writes = [];
+    async function g(path, opts) {
+      if (/\/lists\/vendors-list\/items/.test(path)) {
+        return { value: vendors.map(v => ({ fields: v })) };
+      }
+      if (/\/lists\/alerts-list\/items/.test(path)) {
+        if (opts && opts.method === 'POST') { writes.push(opts.body.fields); return { id: 'new' }; }
+        return { value: [] }; // openAlertKeys — nothing already raised
+      }
+      throw new Error('unexpected path in test: ' + path);
+    }
+    return { g, writes };
+  }
+
+  const today = '2026-06-15';
+  const lists = { Alerts: 'alerts-list' };
+  const optional = { Vendors: 'vendors-list' };
+
+  // notify()/notifyTeams() no-op without these — clear them so a findings
+  // sweep never actually tries to reach Graph mail or a webhook here.
+  delete process.env.NOTIFY_FROM;
+  delete process.env.NOTIFY_TO;
+  delete process.env.TEAMS_WEBHOOK_URL;
+
+  test('flags an overdue review, a due-soon review, and an expired certification, but not a vendor with nothing due', async () => {
+    const vendors = [
+      { RefId: 'VEN-A', Service: 'Overdue vendor', NextReviewDue: '2026-05-01' },
+      { RefId: 'VEN-B', Service: 'Expired cert vendor', NextReviewDue: '2027-01-01', CertExpiryDate: '2026-06-01', Certifications: 'SOC2' },
+      { RefId: 'VEN-C', Service: 'Review due soon vendor', NextReviewDue: '2026-06-25' },
+      { RefId: 'VEN-D', Service: 'All clear vendor', NextReviewDue: '2027-01-01', CertExpiryDate: '2027-01-01' }
+    ];
+    const { g, writes } = fakeGraph(vendors);
+    const result = await runGovernanceSweep(g, null, { log: Object.assign(() => {}, { error: () => {} }) }, 'site', lists, optional, {}, today);
+
+    assert.equal(result.written, 3, 'exactly the three vendors with something actually due raise a finding');
+    const checkIds = writes.map(w => w.CheckId).sort();
+    assert.deepEqual(checkIds, ['vendor-cert-expired:VEN-B', 'vendor-review-due:VEN-C', 'vendor-review-overdue:VEN-A']);
+    assert.ok(!checkIds.some(id => id.indexOf('VEN-D') > -1), 'the vendor with nothing due raises nothing');
+  });
+
+  test('an already-open alert for the same vendor/check is not raised again', async () => {
+    const vendors = [{ RefId: 'VEN-A', Service: 'Overdue vendor', NextReviewDue: '2026-05-01' }];
+    const writes = [];
+    async function g(path, opts) {
+      if (/\/lists\/vendors-list\/items/.test(path)) return { value: vendors.map(v => ({ fields: v })) };
+      if (/\/lists\/alerts-list\/items/.test(path)) {
+        if (opts && opts.method === 'POST') { writes.push(opts.body.fields); return { id: 'new' }; }
+        return { value: [{ fields: { CheckId: 'vendor-review-overdue:VEN-A', Acknowledged: false } }] };
+      }
+      throw new Error('unexpected path');
+    }
+    const result = await runGovernanceSweep(g, null, { log: Object.assign(() => {}, { error: () => {} }) }, 'site', lists, optional, {}, today);
+    assert.equal(result.written, 0, 'already-open alert is not re-raised');
+    assert.equal(writes.length, 0);
   });
 });
 
