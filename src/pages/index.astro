@@ -4,9 +4,19 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ScopingWidget from '../components/ScopingWidget.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
+import { readFileSync } from 'node:fs';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+
+// Client trust strip. Inlined (not <img>) so currentColor in the source
+// SVGs picks up the CSS color set on .trust-logo-item — an <img> would
+// load each file in its own document context and currentColor would
+// resolve to black regardless of the page's colour scheme.
+const clientLogos = [
+  { name: 'Landcom', svg: readFileSync(new URL('../../public/assets/clients/landcom.svg', import.meta.url), 'utf8') },
+  { name: 'Megaport', svg: readFileSync(new URL('../../public/assets/clients/megaport.svg', import.meta.url), 'utf8') },
+];
 
 // Framework rotator — real destinations, no href="#". Used both by the
 // 3D ring's click handler and as the always-present noscript/no-3D
@@ -221,6 +231,27 @@ const faqLd = {
   .fw-marquee-item{white-space:nowrap;font-family:Manrope,system-ui;font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,241,.4);display:flex;align-items:center;gap:12px;}
   .fw-marquee-item::before{content:"";width:5px;height:5px;border-radius:50%;background:#A9812E;flex-shrink:0;}
   @media (prefers-reduced-motion: reduce){.fw-marquee-track{animation:none;}}
+</style>
+
+<!-- TRUST STRIP -->
+<section class="trust-strip" aria-label="Organisations we have worked with">
+  <div class="container trust-strip-inner">
+    <p class="trust-strip-label">Trusted by teams at</p>
+    <div class="trust-strip-logos">
+      {clientLogos.map(l => (
+        <span class="trust-logo-item" aria-label={l.name} set:html={l.svg} />
+      ))}
+    </div>
+  </div>
+</section>
+<style>
+  .trust-strip{background:#0B0B0C;padding:8px 0 40px;}
+  .trust-strip-inner{display:flex;align-items:center;justify-content:center;gap:clamp(20px,4vw,48px);flex-wrap:wrap;}
+  .trust-strip-label{margin:0;font-family:Manrope,system-ui;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.4);white-space:nowrap;}
+  .trust-strip-logos{display:flex;align-items:center;gap:clamp(28px,4vw,56px);flex-wrap:wrap;}
+  .trust-logo-item{color:rgba(250,247,241,.55);transition:color .2s;display:flex;align-items:center;}
+  .trust-logo-item:hover{color:rgba(250,247,241,.9);}
+  .trust-logo-item :global(svg){height:22px;width:auto;display:block;}
 </style>
 
 <!-- SCOPING TOOL (dark, raised charcoal card) -->
@@ -835,7 +866,12 @@ const faqLd = {
       padding-top: 40px;
     }
     .ring-stage {
-      order: -1;
+      /* No `order: -1` here on purpose — that used to put the decorative
+         ring ahead of the headline in visual order, so a mobile visitor
+         scrolled past nav, the announcement bar, then a 320px graphic
+         before reaching "Certified in weeks. Not quarters." at all. DOM
+         order already puts the copy first; this block only needs to size
+         the ring for the narrower viewport. */
       height: 320px;
       min-height: 320px;
       opacity: .9;
