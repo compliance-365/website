@@ -155,7 +155,8 @@ async function resolveOptionalLists(g, siteId) {
     Training: byName[prefix + ' Training'] || null,
     Actions: byName[prefix + ' Actions'] || null,
     Controls: byName[prefix + ' Controls'] || null,
-    Incidents: byName[prefix + ' Incidents'] || null
+    Incidents: byName[prefix + ' Incidents'] || null,
+    Vendors: byName[prefix + ' Vendors'] || null
   };
 }
 
@@ -401,6 +402,11 @@ const CONTROLLED_DOC_CATEGORIES = ['Policies & Procedures', 'Risk & Treatment'];
    file: an assessment window is statutory, and finding out you missed it
    the day after is worth nothing. */
 const INCIDENT_ASSESSMENT_WARN_DAYS = 7;
+/* How early a vendor's next review or certification/report expiry
+   starts being chased — same 30-day horizon as a controlled document
+   review, since both are "someone needs to go re-confirm something
+   before a date passes" in shape. */
+const VENDOR_WARN_DAYS = 30;
 /* Horizon the digest reports upcoming (not yet overdue) actions over. */
 const DIGEST_DUE_SOON_DAYS = 14;
 /* Default control re-verification cadence — mirrors
@@ -481,33 +487,81 @@ async function writeAlert(g, siteId, alertsListId, alert) {
   });
 }
 
-/* Optional notification email. Requires BOTH the Mail.Send application
-   permission and a NOTIFY_FROM mailbox to send as — an app-only
-   identity has no mailbox of its own. Left entirely off unless
-   configured, so the default deployment needs no mail permission at
-   all; see ../README.md. Never throws: an alert that was written to
-   SharePoint must not be rolled back by a mail failure. */
+/* Optional notification email + Teams message. Email requires BOTH the
+   Mail.Send application permission and a NOTIFY_FROM mailbox to send as
+   — an app-only identity has no mailbox of its own. Teams requires only
+   an Incoming Webhook URL (TEAMS_WEBHOOK_URL) — no Graph permission at
+   all, since it's a plain HTTPS POST to a URL whose secrecy is the only
+   auth. The two channels are independently optional and independently
+   best-effort: a tenant can configure either, both, or neither, and a
+   failure in one never blocks or rolls back the other. Left entirely
+   off unless configured, so the default deployment needs no mail
+   permission and no webhook at all; see ../README.md. Never throws: an
+   alert that was written to SharePoint must not be rolled back by a
+   notification failure. */
 async function notify(g, context, subject, htmlBody) {
+  let sent = false;
   const from = process.env.NOTIFY_FROM;
   const to = process.env.NOTIFY_TO;
-  if (!from || !to) return false;
+  if (from && to) {
+    try {
+      await g(`/users/${encodeURIComponent(from)}/sendMail`, {
+        method: 'POST',
+        body: {
+          message: {
+            subject: subject,
+            body: { contentType: 'HTML', content: htmlBody },
+            toRecipients: to.split(',').map(a => ({ emailAddress: { address: a.trim() } })).filter(r => r.emailAddress.address)
+          },
+          saveToSentItems: false
+        }
+      });
+      sent = true;
+    } catch (e) {
+      context.log.error('Checkpoint governance sweep: notification email failed: ' + (e && e.message ? e.message : e));
+    }
+  }
+  if (await notifyTeams(context, subject, htmlBody)) sent = true;
+  return sent;
+}
+
+/* Posts a plain-text summary to a Microsoft Teams Incoming Webhook, if
+   TEAMS_WEBHOOK_URL is set. Webhooks accept a simple markdown "text"
+   payload, not the HTML built for email, so tags are stripped rather
+   than rendered — see htmlToTeamsText() below. No Graph call and no
+   Graph permission at all, so this works even on a tenant that never
+   grants Mail.Send. */
+async function notifyTeams(context, subject, htmlBody) {
+  const url = process.env.TEAMS_WEBHOOK_URL;
+  if (!url) return false;
   try {
-    await g(`/users/${encodeURIComponent(from)}/sendMail`, {
+    const res = await fetch(url, {
       method: 'POST',
-      body: {
-        message: {
-          subject: subject,
-          body: { contentType: 'HTML', content: htmlBody },
-          toRecipients: to.split(',').map(a => ({ emailAddress: { address: a.trim() } })).filter(r => r.emailAddress.address)
-        },
-        saveToSentItems: false
-      }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '**' + subject + '**\n\n' + htmlToTeamsText(htmlBody) })
     });
+    if (!res.ok) throw new Error('Teams webhook returned ' + res.status);
     return true;
   } catch (e) {
-    context.log.error('Checkpoint governance sweep: notification email failed: ' + (e && e.message ? e.message : e));
+    context.log.error('Checkpoint governance sweep: Teams notification failed: ' + (e && e.message ? e.message : e));
     return false;
   }
+}
+
+/* Crude HTML->text for the Teams payload above. Every htmlBody this file
+   builds is always simple <p>/<ul>/<li>/<b> markup, never arbitrary
+   content, so a full parser would be solving a problem that doesn't
+   exist here — same reasoning as esc() being a plain replace chain
+   rather than a library. */
+function htmlToTeamsText(html) {
+  return String(html || '')
+    .replace(/<li>/gi, '\n- ')
+    .replace(/<\/(p|li)>/gi, '\n')
+    .replace(/<b>/gi, '**').replace(/<\/b>/gi, '**')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, settings, today) {
@@ -706,6 +760,77 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
     });
   }
 
+  /* ---- Vendor review & certification/report expiry ----
+     The Vendors register already has NextReviewDue and Certifications
+     fields, populated by hand from the interactive app — nothing chased
+     either. Two independent checks per vendor, same "warn ahead, then
+     overdue" shape as the document-review check above:
+       - NextReviewDue: the vendor's own reassessment cadence.
+       - CertExpiryDate: expiry of whatever's recorded in Certifications
+         (a SOC 2 report, an ISO 27001 certificate, etc.) — optional,
+         since not every vendor's certifications carry a single expiry
+         a tenant has bothered to record.
+     One alert per vendor per check, not rolled up: unlike stale
+     controls, a mature tenant only has a handful of vendors, and WHICH
+     vendor needs following up is the entire point of the alert. */
+  if (optional.Vendors) {
+    let rows = [];
+    try {
+      const items = await g(`/sites/${siteId}/lists/${optional.Vendors}/items?$expand=fields&$top=999`);
+      rows = (items.value || []).map(i => i.fields || {});
+    } catch (e) { context.log.error('Checkpoint governance sweep: could not read the vendor register: ' + e.message); }
+
+    rows.forEach(v => {
+      const name = v.Service || v.RefId || '(unnamed vendor)';
+
+      if (v.NextReviewDue) {
+        const days = daysBetween(today, v.NextReviewDue);
+        if (days < 0) {
+          findings.push({
+            checkId: 'vendor-review-overdue:' + (v.RefId || name),
+            label: 'Vendor review overdue: ' + name,
+            prev: 'review due ' + v.NextReviewDue, next: Math.abs(days) + ' days overdue',
+            note: (v.Criticality ? v.Criticality + '-criticality vendor. ' : '') +
+              (v.Owner ? 'Owner: ' + v.Owner + '. ' : 'No owner recorded. ') +
+              'Reassessment was due ' + v.NextReviewDue + '.',
+            date: today
+          });
+        } else if (days <= VENDOR_WARN_DAYS) {
+          findings.push({
+            checkId: 'vendor-review-due:' + (v.RefId || name),
+            label: 'Vendor review due in ' + days + ' days: ' + name,
+            prev: 'current', next: 'due ' + v.NextReviewDue,
+            note: (v.Owner ? 'Owner: ' + v.Owner + '. ' : '') + 'Reassess before ' + v.NextReviewDue + ' to keep the register clean.',
+            date: today
+          });
+        }
+      }
+
+      if (v.CertExpiryDate) {
+        const days = daysBetween(today, v.CertExpiryDate);
+        if (days < 0) {
+          findings.push({
+            checkId: 'vendor-cert-expired:' + (v.RefId || name),
+            label: 'Vendor certification/report expired: ' + name,
+            prev: 'expired ' + v.CertExpiryDate, next: Math.abs(days) + ' days ago',
+            note: (v.Certifications ? v.Certifications + ' recorded for this vendor. ' : '') +
+              (v.Owner ? 'Owner: ' + v.Owner + '. ' : 'No owner recorded. ') +
+              'Whatever evidence this tenant relies on for this vendor (a SOC 2 report, an ISO certificate) is now stale.',
+            date: today
+          });
+        } else if (days <= VENDOR_WARN_DAYS) {
+          findings.push({
+            checkId: 'vendor-cert-due:' + (v.RefId || name),
+            label: 'Vendor certification/report expires in ' + days + ' days: ' + name,
+            prev: 'current', next: 'expires ' + v.CertExpiryDate,
+            note: (v.Certifications ? v.Certifications + '. ' : '') + (v.Owner ? 'Owner: ' + v.Owner + '. ' : '') + 'Request the renewed evidence before ' + v.CertExpiryDate + '.',
+            date: today
+          });
+        }
+      }
+    });
+  }
+
   if (!findings.length) return { written: 0, digest: digestData };
 
   const alreadyOpen = await openAlertKeys(g, siteId, lists.Alerts);
@@ -834,7 +959,7 @@ module.exports = async function (context, myTimer) {
        resolve is logged, never thrown: these lists are optional, and a
        posture scan must still run and be recorded for a tenant whose
        list collection was momentarily unreadable. */
-    let optional = { Documents: null, Attestations: null, Training: null };
+    let optional = { Documents: null, Attestations: null, Training: null, Vendors: null };
     try {
       optional = await resolveOptionalLists(g, siteId);
     } catch (e) {
@@ -958,4 +1083,4 @@ module.exports = async function (context, myTimer) {
    off-by-one means a digest sends every night or never at all — be
    covered by test/posture-monitor.test.mjs without standing up a
    Function host or a tenant. */
-module.exports.__test = { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS };
+module.exports.__test = { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep };

@@ -219,6 +219,15 @@ The sweep also chases the work itself, not just the paperwork:
 - **Privacy-breach assessment deadlines**, raised seven days *before*
   the date as well as after. Confirm your own jurisdiction's deadline:
   the date Checkpoint tracks is a configured default, not legal advice.
+- **Vendor reassessment and certification/report expiry**, one alert per
+  vendor per check (not rolled up — unlike stale controls, a tenant
+  usually only has a handful of vendors, and *which* vendor is the
+  entire point of the alert), warned 30 days ahead as well as after:
+  the vendor's own `NextReviewDue`, and — if the tenant has recorded one
+  — `CertExpiryDate` for whatever evidence the vendor register relies on
+  (a SOC 2 report, an ISO 27001 certificate). `CertExpiryDate` is
+  optional per vendor; a vendor with nothing recorded there raises
+  nothing for it.
 
 ### The periodic digest
 
@@ -253,6 +262,23 @@ unset and no mail permission is required at all.
 
 A mail failure never rolls back an alert that was already written to
 SharePoint; it's logged and the run continues.
+
+### Optional: Microsoft Teams notification
+
+Also off by default, and independent of the email setting above — a
+tenant can turn on either, both, or neither. Posts the same governance-
+sweep and drift-alert notifications to a Teams channel, as a plain-text
+summary rather than the HTML built for email:
+
+| Setting | Value |
+| --- | --- |
+| `TEAMS_WEBHOOK_URL` | An [Incoming Webhook](https://learn.microsoft.com/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) URL for the channel that should receive alerts |
+
+This needs no Graph permission at all — it's a plain HTTPS POST to a
+URL whose secrecy is the only auth, so it works even on a tenant that
+never grants `Mail.Send`. Leave the setting unset and nothing is posted.
+Like the mail path, a webhook failure never rolls back an alert already
+written to SharePoint.
 
 ## 5. Deploy the function code
 

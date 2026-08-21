@@ -682,10 +682,10 @@ function showModal(opts) {
     },
     {
       key: 'vendors', label: 'Vendors', filename: 'vendors.csv',
-      header: ['ID', 'Name', 'Service', 'Data categories', 'Criticality', 'Review status', 'Next review due', 'Certifications', 'Owner', 'Questionnaire status'],
+      header: ['ID', 'Name', 'Service', 'Data categories', 'Criticality', 'Review status', 'Next review due', 'Certifications', 'Cert/report expiry', 'Owner', 'Questionnaire status'],
       rows: function () {
         return (S.vendors || []).map(function (v) {
-          return [v.id, v.name, v.service, (v.dataCategories || []).join('; '), v.criticality, v.reviewStatus, v.nextReviewDue, v.certifications, v.owner, v.questionnaireStatus];
+          return [v.id, v.name, v.service, (v.dataCategories || []).join('; '), v.criticality, v.reviewStatus, v.nextReviewDue, v.certifications, v.certExpiryDate, v.owner, v.questionnaireStatus];
         });
       }
     },
@@ -8734,7 +8734,7 @@ function showModal(opts) {
         window._vendorCatSel = [];
         App.renderVendorCategoryPicker();
         document.getElementById('vendorPanelTitle').textContent = 'New vendor';
-        ['vName', 'vService', 'vDataAccessed', 'vOwner', 'vCertifications', 'vContactEmail', 'vControls', 'vRiskRefs', 'vNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
+        ['vName', 'vService', 'vDataAccessed', 'vOwner', 'vCertifications', 'vCertExpiryDate', 'vContactEmail', 'vControls', 'vRiskRefs', 'vNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('vCriticality').value = 'Medium';
         document.getElementById('vReviewStatus').value = 'Not started';
         document.getElementById('vNextReviewDue').value = daysFrom(365);
@@ -8754,6 +8754,7 @@ function showModal(opts) {
       document.getElementById('vNextReviewDue').value = v.nextReviewDue || '';
       document.getElementById('vOwner').value = v.owner;
       document.getElementById('vCertifications').value = v.certifications || '';
+      document.getElementById('vCertExpiryDate').value = v.certExpiryDate || '';
       document.getElementById('vContactEmail').value = v.contactEmail || '';
       document.getElementById('vControls').value = (v.controls || []).join(', ');
       document.getElementById('vRiskRefs').value = (v.riskRefs || []).join(', ');
@@ -8786,6 +8787,7 @@ function showModal(opts) {
           v.nextReviewDue = nextReviewDue;
           v.owner = document.getElementById('vOwner').value.trim() || 'Unassigned';
           v.certifications = document.getElementById('vCertifications').value.trim();
+          v.certExpiryDate = document.getElementById('vCertExpiryDate').value;
           v.contactEmail = document.getElementById('vContactEmail').value.trim();
           v.controls = controls; v.riskRefs = riskRefs;
           v.dataCategories = (window._vendorCatSel || []).slice();
@@ -8806,6 +8808,7 @@ function showModal(opts) {
             lastReviewed: '', nextReviewDue: nextReviewDue,
             owner: document.getElementById('vOwner').value.trim() || 'Unassigned',
             certifications: document.getElementById('vCertifications').value.trim(),
+            certExpiryDate: document.getElementById('vCertExpiryDate').value,
             contactEmail: document.getElementById('vContactEmail').value.trim(),
             controls: controls, riskRefs: riskRefs,
             dataCategories: (window._vendorCatSel || []).slice(),
@@ -8846,6 +8849,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(v.owner) + '</b></div>' +
         '<div class="d-kv"><span>Certifications</span><b>' + esc(v.certifications || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Certification/report expiry</span><b style="' + (v.certExpiryDate && v.certExpiryDate < new Date().toISOString().slice(0, 10) ? 'color:var(--fail)' : '') + '">' + (v.certExpiryDate ? fmtDate(v.certExpiryDate) + (v.certExpiryDate < new Date().toISOString().slice(0, 10) ? ' ' + icon('flag') + ' expired' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Data categories</span><b>' + ((v.dataCategories && v.dataCategories.length)
           ? '<span class="fw-chips">' + v.dataCategories.map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('') + '</span>'
           : '<span style="color:var(--warn)">Not classified — edit this vendor to record what data they access</span>') + '</b></div>' +
