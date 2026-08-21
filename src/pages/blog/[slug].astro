@@ -42,6 +42,12 @@ const dateStr = post.frontmatter?.date ? new Date(post.frontmatter.date).toLocal
 const author = post.frontmatter?.author ?? 'Compliance365';
 const slug = Astro.params.slug;
 const canonical = `https://www.compliance365.com.au/blog/${slug}/`;
+// UTM-tagged variant for the LinkedIn share button only — canonical itself
+// must stay clean for schema/OG. Without this, LinkedIn's in-app browser
+// strips the referrer on click-through, so every reader who arrives via a
+// shared post lands in GA4 as (direct)/(none) with no way to tell that
+// traffic apart from someone typing the URL from memory.
+const linkedinShareUrl = `${canonical}?utm_source=linkedin&utm_medium=social&utm_campaign=blog_share`;
 const dateIso = post.frontmatter?.date ? new Date(post.frontmatter.date).toISOString() : undefined;
 const dateModifiedIso = post.frontmatter?.lastModified
   ? new Date(post.frontmatter.lastModified).toISOString()
@@ -151,7 +157,7 @@ const breadcrumbs = [
       <div style="margin-top:2rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <span class="muted small">Share this article:</span>
         <a
-          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(canonical)}`}
+          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(linkedinShareUrl)}`}
           target="_blank"
           rel="noopener"
           style="display:inline-flex;align-items:center;gap:6px;background:#0a66c2;color:#fff;font-size:.8rem;font-weight:700;padding:6px 14px;border-radius:6px;text-decoration:none;"
