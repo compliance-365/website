@@ -63,7 +63,15 @@ const MERGED_NIST_SUBCATEGORIES = PACKS.nistcsf.extra.subcategories;
    matching anything in Graph.detectCapabilities() at runtime, which
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
+// Capabilities probed against Microsoft Graph (graph.js CAPABILITY_PROBES).
 const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
+// Capabilities that are DERIVED rather than probed, because nothing in
+// Microsoft 365 knows the answer. 'aws' is set by app.js from whether the
+// optional AWS collector has ever written an aws-* result for this tenant.
+// Listed separately so the guard below still catches a genuine typo in a
+// requiresCapability value, rather than being loosened to accept anything.
+const DERIVED_CAPABILITY_KEYS = ['aws'];
+const ALL_CAPABILITY_KEYS = [...KNOWN_CAPABILITY_KEYS, ...DERIVED_CAPABILITY_KEYS];
 
 describe('premium content is not shipped in the bundle', () => {
   test('every premium framework ships with an empty controls array in store.js', () => {
@@ -458,8 +466,19 @@ describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', (
 });
 
 describe('CHECK_DEFS — posture-check definitions', () => {
-  test('has exactly 25 checks (the number the Dashboard\'s "X of 25" coverage line assumes)', () => {
-    assert.equal(CHECK_DEFS.length, 25);
+  test('check count is pinned, so adding one is a deliberate act', () => {
+    // 25 Microsoft + 10 Cloud (AWS). The AWS ten are only ever populated
+    // by the optional collector; app.js drops them from the Dashboard's
+    // coverage denominator for a tenant that has not deployed it, so this
+    // number growing does NOT mean every tenant is suddenly 10 short.
+    assert.equal(CHECK_DEFS.length, 35);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 25);
+  });
+
+  test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {
+    CHECK_DEFS.filter((c) => c.requiresCapability === 'aws')
+      .forEach((c) => assert.ok(c.id.startsWith('aws-'), `${c.id} must start with aws-`));
   });
   test('every check id is unique', () => {
     const seen = new Set();
@@ -473,7 +492,7 @@ describe('CHECK_DEFS — posture-check definitions', () => {
   test('every requiresCapability value is a real capability graph.js knows how to probe', () => {
     CHECK_DEFS.forEach((c) => {
       if (c.requiresCapability) {
-        assert.ok(KNOWN_CAPABILITY_KEYS.includes(c.requiresCapability), `${c.id}'s requiresCapability "${c.requiresCapability}" isn't one of graph.js's CAPABILITY_PROBES keys`);
+        assert.ok(ALL_CAPABILITY_KEYS.includes(c.requiresCapability), `${c.id}'s requiresCapability "${c.requiresCapability}" is neither a graph.js CAPABILITY_PROBES key nor a known derived capability`);
       }
     });
   });
