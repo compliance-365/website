@@ -152,6 +152,43 @@ describe('checkResult()', () => {
   });
 });
 
+describe('score() — a check with no result must not read as a failure', () => {
+  // The trap this guards: score() excludes 'manual' from its denominator
+  // but treats every other value as a scored outcome, so an undefined
+  // result counts as a hard zero. That makes adding a CHECK_DEFS entry
+  // the current scan does not populate -- an AWS collector's checks, for
+  // a tenant with no AWS -- silently drop every existing tenant's
+  // posture score. Verified against live data that nothing is absent
+  // today, so this is a safety net for future checks, not a fix to a
+  // number anyone is currently seeing.
+  const defs = [{ id: 'a', scored: true }, { id: 'b', scored: true }, { id: 'new-1', scored: true }, { id: 'new-2', scored: true }];
+
+  test('checks absent from lastResults are treated as unmeasured, not as fails', () => {
+    assert.equal(score(defs, { lastResults: { a: 'pass', b: 'pass' } }), 100,
+      'two passes and two never-run checks is 100%, not 50%');
+  });
+
+  test('an absent result is equivalent to an explicit manual', () => {
+    const absent = score(defs, { lastResults: { a: 'pass', b: 'fail' } });
+    const explicit = score(defs, { lastResults: { a: 'pass', b: 'fail', 'new-1': 'manual', 'new-2': 'manual' } });
+    assert.equal(absent, explicit);
+  });
+
+  test('checkResult() reports an absent check as manual', () => {
+    assert.equal(checkResult({ id: 'nope', scored: true }, { lastResults: { a: 'pass' } }), 'manual');
+  });
+
+  test('real failures still count against the score', () => {
+    assert.equal(score([{ id: 'a', scored: true }, { id: 'b', scored: true }], { lastResults: { a: 'pass', b: 'fail' } }), 50,
+      'the fix must not turn genuine failures into free passes');
+  });
+
+  test('a check present but failing is never confused with one that is absent', () => {
+    const failing = score(defs, { lastResults: { a: 'pass', b: 'pass', 'new-1': 'fail', 'new-2': 'fail' } });
+    assert.equal(failing, 50, 'four measured checks, two failing');
+  });
+});
+
 describe('score()', () => {
   const CHECK_DEFS = [
     { id: 'a', scored: true }, { id: 'b', scored: true }, { id: 'c', scored: true },
