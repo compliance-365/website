@@ -6573,7 +6573,8 @@ function showModal(opts) {
     documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', incidents: 'Incidents', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
-    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', evidencesim: 'Evidence request simulator'
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', evidencesim: 'Evidence request simulator',
+    settings: 'Settings'
   };
   var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list' };
 
@@ -12958,7 +12959,7 @@ function showModal(opts) {
     return true;
   }
 
-  /* The Licence panel — Frameworks & Settings view (#licensePanel)
+  /* The Licence panel — Frameworks view (#licensePanel)
      calls this with its own container id (a separate, internal-only
      console has its own equivalent panel/container, in its own
      bundle). Shows exactly what the app currently holds
@@ -13746,7 +13747,7 @@ function showModal(opts) {
     var pct = primaryFw ? window.CheckpointLib.readinessPct(frameworkAppRows(primaryFw)) : 0;
     var gaps = primaryFw ? frameworkAppRows(primaryFw).filter(function (c) { return c.st !== 'Implemented'; }).slice(0, 5) : [];
     var nextActions = (S.proposed || []).slice(0, 3).map(function (tpl) { return TPL[tpl] ? TPL[tpl].risk.title : null; }).filter(Boolean);
-    var fillers = ['Review your Statement of Applicability and confirm which controls apply to you', 'Invite your team and assign control owners', 'Set your scan reminder cadence in Frameworks & Settings'];
+    var fillers = ['Review your Statement of Applicability and confirm which controls apply to you', 'Invite your team and assign control owners', 'Set your scan reminder cadence in Settings'];
     for (var i = 0; nextActions.length < 3 && i < fillers.length; i++) {
       if (nextActions.indexOf(fillers[i]) === -1) nextActions.push(fillers[i]);
     }

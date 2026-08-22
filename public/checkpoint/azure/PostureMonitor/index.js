@@ -898,7 +898,7 @@ function buildDigestHtml(d, today) {
     section('Open drift alerts (' + (d.openAlerts || []).length + ')', list(alerts)) +
     section('Controls overdue for re-verification', '<p>' + (d.staleControls || 0) + '</p>') +
     '<p style="color:#666;margin-top:22px">Every figure above is computed from this tenant\'s own Checkpoint registers. ' +
-    'Turn this digest off, or change who receives it, from the Frameworks &amp; Settings view in Checkpoint.</p></div>';
+    'Turn this digest off, or change who receives it, from the Settings view in Checkpoint.</p></div>';
 }
 
 async function setSetting(g, siteId, settingsListId, key, value) {

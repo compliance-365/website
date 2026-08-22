@@ -358,6 +358,10 @@ tr.flash{animation:flashRow 1.8s ease}
 .btn.ghost:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
 .btn.ghost:active{background:rgba(var(--paper-rgb),.08)}
 .btn.sm{padding:6px 12px;font-size:var(--fs-1)}
+/* Square icon button (topbar Settings) — same ghost chrome as its
+   neighbours, sized so the glyph is optically centred rather than
+   sitting in a text-shaped box. */
+.btn.icon-only{padding:6px 9px;display:inline-flex;align-items:center;justify-content:center;line-height:0}
 .view{display:none;padding:36px;max-width:1280px}
 .view.on{display:block}
 .vhead{margin-bottom:31px}
