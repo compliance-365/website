@@ -841,7 +841,7 @@ computed; only the re-verified raw bytes count.
 - **Persistence failures are loud, never silent.** A failed write to
   either store shows a specific toast naming which store failed and
   why, AND sets a standing warning that stays visible in the **Licence
-  panel** (Frameworks & Settings view — the owner console, §7b, has its
+  panel** (Frameworks view — the owner console, §7b, has its
   own equivalent panel for its own tenant's licence) until a later
   write succeeds or the practitioner retries from there — never a
   generic "sync issue" toast that's gone in 3.4 seconds while the app
@@ -1749,7 +1749,7 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   an upsert-by-path, so this replaces the draft in place rather than
   creating a duplicate. `templates.js` is loaded and content-hashed/
   SRI-signed the same way as the other checkpoint scripts.
-- **Organisation profile** (Frameworks & Settings → "Organisation
+- **Organisation profile** (Settings → "Organisation
   profile"): the Clause 4.2/4.3 facts no template can know — industry,
   business units, locations, services, interested parties, regulatory
   obligations and deliberate scope exclusions. Templates write these
@@ -1969,7 +1969,7 @@ key/value mechanism every other per-tenant setting already uses), and
 a classification marking (Settings key `reportClassification`,
 defaults to "Commercial in Confidence"; set it to "OFFICIAL: Sensitive"
 or any other marking for a defence/government client from the
-Frameworks & Settings view's "Client branding" card).
+Settings view's "Client branding" card).
 
 **Client branding (beyond the cover)**: the same Settings card also
 sets `clientDisplayName` (overrides the raw tenant name everywhere a

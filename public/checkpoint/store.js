@@ -1358,7 +1358,13 @@ window.SpStore = (function () {
          reconcileColumns() below, so no re-provisioning is needed. */
       { name: 'Correction', text: { allowMultipleLines: true } }, { name: 'RootCause', text: { allowMultipleLines: true } },
       { name: 'EffectivenessReview', text: { allowMultipleLines: true } }, { name: 'EffectivenessDate', text: {} }, { name: 'EffectivenessBy', text: {} },
-      { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} }
+      { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} },
+      /* Optional address for the person named in Owner, so the scheduled
+         monitor can chase them directly instead of only telling the ISMS
+         manager. Deliberately separate from Owner rather than replacing
+         it: an owner is often a team or an external party with no mailbox
+         in this tenant, and a free-text owner has to keep working. */
+      { name: 'OwnerEmail', text: {} }
     ],
     /* Chronological, append-only progress log — one row per dated update
        against an action, each with its own note, its own optional
@@ -1817,7 +1823,7 @@ window.SpStore = (function () {
      tenants pick it up without re-provisioning. */
   var COLUMN_RECONCILE = {
     Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore'],
-    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy'],
+    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'OwnerEmail'],
     /* LastVerified/EvidenceUrl/VerifiedBy are in Controls' DEFS (below)
        but were never added here — a tenant provisioned before all three
        existed has a Controls list missing whichever one(s) came later,
@@ -2072,7 +2078,7 @@ window.SpStore = (function () {
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', correction: f.Correction || '', rootCause: f.RootCause || '', effectivenessReview: f.EffectivenessReview || '', effectivenessDate: f.EffectivenessDate || '', effectivenessBy: f.EffectivenessBy || '', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', correction: f.Correction || '', rootCause: f.RootCause || '', effectivenessReview: f.EffectivenessReview || '', effectivenessDate: f.EffectivenessDate || '', effectivenessBy: f.EffectivenessBy || '', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', ownerEmail: f.OwnerEmail || '' };
         }),
         /* Sorted oldest-first here, same as every other dated register
            this store loads (Calendar, Reviews) — callers building a
@@ -2277,7 +2283,7 @@ window.SpStore = (function () {
         Owner: a.owner, DueDate: a.due, Status: a.status, Evidence: a.evidence || '', Source: a.src,
         FindingType: a.type || 'Action',
         Correction: a.correction || '', RootCause: a.rootCause || '', EffectivenessReview: a.effectivenessReview || '', EffectivenessDate: a.effectivenessDate || '', EffectivenessBy: a.effectivenessBy || '',
-        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
+        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || '', OwnerEmail: a.ownerEmail || ''
       });
       S.actions.push(a);
     },
@@ -2292,7 +2298,7 @@ window.SpStore = (function () {
         Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, Source: a.src || '',
         EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action',
         Correction: a.correction || '', RootCause: a.rootCause || '', EffectivenessReview: a.effectivenessReview || '', EffectivenessDate: a.effectivenessDate || '', EffectivenessBy: a.effectivenessBy || '',
-        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
+        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || '', OwnerEmail: a.ownerEmail || ''
       });
     },
     deleteAction: async function (a) {

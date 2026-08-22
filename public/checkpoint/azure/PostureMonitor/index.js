@@ -570,6 +570,9 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   /* Raw material for the periodic digest, filled in as each register is
      read below — so the digest costs no extra Graph calls. */
   const digestData = { overdueActions: [], dueSoonActions: [], staleControls: 0 };
+  /* Per-owner overdue chases, filled by the actions sweep below and
+     sent only for findings that survive alert dedup. */
+  const ownerChases = [];
 
   if (optional.Documents) {
     let docs = [];
@@ -674,6 +677,22 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
       }
       const days = Math.abs(daysBetween(today, a.DueDate));
       digestData.overdueActions.push({ ref: a.RefId || '', title: a.Title || '', days: days, owner: a.Owner || '' });
+      /* Chase the owner directly, not just the ISMS manager. Only when
+         the action carries an OwnerEmail: Owner itself is free text
+         ("Facilities team", an external contractor), so there is
+         nothing safe to resolve it to, and guessing an address for a
+         compliance nudge is worse than not sending one. Collected here
+         and sent after the alert-dedup pass below, so an owner is
+         emailed on the run that first raises the alert and not again
+         every night afterwards. */
+      if (a.OwnerEmail) {
+        ownerChases.push({
+          to: String(a.OwnerEmail).trim(),
+          checkId: 'action-overdue:' + (a.RefId || a.Title),
+          ref: a.RefId || '', title: a.Title || '', due: a.DueDate,
+          days: days, priority: a.Priority || '', owner: a.Owner || ''
+        });
+      }
       findings.push({
         checkId: 'action-overdue:' + (a.RefId || a.Title),
         label: 'Remediation action overdue: ' + (a.RefId || '') + ' ' + (a.Title || ''),
@@ -831,7 +850,10 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
     });
   }
 
-  if (!findings.length) return { written: 0, digest: digestData };
+  /* Same shape as the full return below — a caller reading
+     ownersChased must not get undefined just because a quiet night
+     took the early exit. */
+  if (!findings.length) return { written: 0, digest: digestData, ownersChased: 0 };
 
   const alreadyOpen = await openAlertKeys(g, siteId, lists.Alerts);
   const fresh = findings.filter(f => !alreadyOpen.has(f.checkId));
@@ -844,7 +866,53 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
         fresh.map(f => '<li><b>' + esc(f.label) + '</b><br>' + esc(f.note) + '</li>').join('') +
         '</ul><p>Open Checkpoint to acknowledge or action these.</p>');
   }
-  return { written: fresh.length, digest: digestData };
+
+  /* Send the per-owner chases whose alert was raised on THIS run. An
+     owner who has been sitting on an overdue action for three weeks
+     gets one email, not twenty-one — same dedup that keeps the alert
+     list readable. Best-effort per recipient: one bad address must not
+     stop the rest, and none of it can roll back an alert already
+     written to SharePoint. */
+  const chasesToSend = ownerChases.filter(c => fresh.some(f => f.checkId === c.checkId));
+  let chased = 0;
+  for (const c of chasesToSend) {
+    const body = '<p>Hello' + (c.owner ? ' ' + esc(c.owner) : '') + ',</p>' +
+      '<p>A remediation action assigned to you is now <b>' + c.days + ' day' + (c.days === 1 ? '' : 's') + ' overdue</b>.</p>' +
+      '<p><b>' + esc(c.ref) + '</b> ' + esc(c.title) + '<br>' +
+      'Due: ' + esc(c.due) + (c.priority ? ' &middot; Priority: ' + esc(c.priority) : '') + '</p>' +
+      '<p>Open Checkpoint to record progress, attach evidence, or change the date if it is no longer realistic. ' +
+      'Recording a short note counts — an action nobody has updated reads to an auditor exactly like one nobody has worked on.</p>';
+    if (await notifyOwner(g, context, c.to, 'Overdue: ' + (c.ref ? c.ref + ' — ' : '') + (c.title || 'a Checkpoint action'), body)) chased++;
+  }
+  if (chased) context.log('Checkpoint governance sweep: chased ' + chased + ' action owner(s) directly.');
+
+  return { written: fresh.length, digest: digestData, ownersChased: chased };
+}
+
+/* Emails one named action owner. Separate from notify() because that
+   sends to the fixed NOTIFY_TO address list; this addresses whoever the
+   register says owns the work. Shares NOTIFY_FROM (an app-only identity
+   has no mailbox of its own) and the same never-throw contract. */
+async function notifyOwner(g, context, to, subject, htmlBody) {
+  const from = process.env.NOTIFY_FROM;
+  if (!from || !to) return false;
+  try {
+    await g(`/users/${encodeURIComponent(from)}/sendMail`, {
+      method: 'POST',
+      body: {
+        message: {
+          subject: subject,
+          body: { contentType: 'HTML', content: htmlBody },
+          toRecipients: [{ emailAddress: { address: to } }]
+        },
+        saveToSentItems: false
+      }
+    });
+    return true;
+  } catch (e) {
+    context.log.error('Checkpoint governance sweep: could not chase owner ' + to + ': ' + (e && e.message ? e.message : e));
+    return false;
+  }
 }
 
 /* ============================================================
@@ -898,7 +966,7 @@ function buildDigestHtml(d, today) {
     section('Open drift alerts (' + (d.openAlerts || []).length + ')', list(alerts)) +
     section('Controls overdue for re-verification', '<p>' + (d.staleControls || 0) + '</p>') +
     '<p style="color:#666;margin-top:22px">Every figure above is computed from this tenant\'s own Checkpoint registers. ' +
-    'Turn this digest off, or change who receives it, from the Frameworks &amp; Settings view in Checkpoint.</p></div>';
+    'Turn this digest off, or change who receives it, from the Settings view in Checkpoint.</p></div>';
 }
 
 async function setSetting(g, siteId, settingsListId, key, value) {

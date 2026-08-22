@@ -603,13 +603,13 @@ function showModal(opts) {
     },
     {
       key: 'actions', label: 'Actions', filename: 'actions.csv',
-      header: ['ID', 'Title', 'Type', 'Risk', 'Control', 'Priority', 'Owner', 'Due', 'Status', 'Evidence note', 'Evidence URL'],
+      header: ['ID', 'Title', 'Type', 'Risk', 'Control', 'Priority', 'Owner', 'Owner email', 'Due', 'Status', 'Evidence note', 'Evidence URL'],
       rows: function () {
         /* Evidence note added alongside the URL that was already here —
            a flat export that carries only the link, not the note
            explaining what it shows, makes an auditor click through
            every row to get the context the app already has. */
-        return S.actions.map(function (a) { return [a.id, a.title, a.type || 'Action', a.risk, a.control, a.pr, a.owner, a.due, a.status, a.evidence, a.evidenceUrl]; });
+        return S.actions.map(function (a) { return [a.id, a.title, a.type || 'Action', a.risk, a.control, a.pr, a.owner, a.ownerEmail || '', a.due, a.status, a.evidence, a.evidenceUrl]; });
       }
     },
     {
@@ -6573,7 +6573,8 @@ function showModal(opts) {
     documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', incidents: 'Incidents', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
-    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', evidencesim: 'Evidence request simulator'
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', evidencesim: 'Evidence request simulator',
+    settings: 'Settings'
   };
   var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list' };
 
@@ -8177,7 +8178,7 @@ function showModal(opts) {
         '<div class="id-t">' + a.id + ' · ' + esc(a.type || 'Action') + (r ? ' · Treats ' + r.id : '') + '</div><h2>' + esc(a.title) + '</h2>' +
         '<div class="d-kv"><span>Status</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(a.status) + '</span></b></div>' +
         '<div class="d-kv"><span>Priority</span><b>' + esc(a.pr) + '</b></div>' +
-        '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + '</b></div>' +
+        '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + (a.ownerEmail ? ' <span style="color:var(--paper-faint);font-weight:400">&lt;' + esc(a.ownerEmail) + '&gt;</span>' : '') + '</b></div>' +
         '<div class="d-kv"><span>Due</span><b style="' + (overdue(a) ? 'color:var(--fail)' : '') + '">' + fmtDate(a.due) + (overdue(a) ? ' ' + icon('flag') + ' ' + overdueDays(a) + 'd overdue' : '') + '</b></div>' +
         (a.control ? '<div class="d-kv"><span>Control</span><b>' + esc(a.control) + '</b></div>' : '') +
         '<div class="d-kv"><span>Current evidence link</span><b>' + (a.evidenceUrl && isSafeUrl(a.evidenceUrl) ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener">Open ' + icon('external') + '</a>' : '—') + '</b></div>' +
@@ -8657,7 +8658,7 @@ function showModal(opts) {
       var showing = panel.style.display !== 'none';
       panel.style.display = showing ? 'none' : 'block';
       if (!showing) {
-        ['naTitle', 'naControl', 'naOwner'].forEach(function (id) { document.getElementById(id).value = ''; });
+        ['naTitle', 'naControl', 'naOwner', 'naOwnerEmail'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('naDue').value = daysFrom(14);
         fillSelect(document.getElementById('naRisk'), riskLinkOptions(''), '');
       }
@@ -8676,6 +8677,7 @@ function showModal(opts) {
         control: document.getElementById('naControl').value.trim(),
         pr: document.getElementById('naPriority').value,
         owner: document.getElementById('naOwner').value.trim() || 'Unassigned',
+        ownerEmail: document.getElementById('naOwnerEmail').value.trim(),
         due: document.getElementById('naDue').value || daysFrom(14),
         status: 'Open',
         evidenceUrl: '',
@@ -8715,6 +8717,7 @@ function showModal(opts) {
           { id: 'control', label: 'Control code', value: a.control || '', placeholder: 'e.g. A.5.9' },
           { id: 'pr', label: 'Priority', type: 'select', value: a.pr, options: ['Critical', 'High', 'Medium', 'Low'] },
           { id: 'owner', label: 'Owner', value: a.owner },
+          { id: 'ownerEmail', label: 'Owner email (optional — lets the scheduled monitor chase them directly)', type: 'email', value: a.ownerEmail || '', placeholder: 'name@example.com' },
           { id: 'due', label: 'Due date', type: 'date', value: a.due },
           { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS }
         ],
@@ -8726,7 +8729,7 @@ function showModal(opts) {
       busy(true);
       try {
         a.title = v.title; a.type = v.type; a.control = v.control;
-        a.pr = v.pr; a.owner = v.owner || 'Unassigned'; a.due = v.due || a.due; a.status = v.status;
+        a.pr = v.pr; a.owner = v.owner || 'Unassigned'; a.ownerEmail = v.ownerEmail || ''; a.due = v.due || a.due; a.status = v.status;
         await setActionRiskLink(a, v.risk);   /* updates the old risk if the link moved */
         await Store.updateAction(a);
         var r = risk(a.risk);
@@ -12958,7 +12961,7 @@ function showModal(opts) {
     return true;
   }
 
-  /* The Licence panel — Frameworks & Settings view (#licensePanel)
+  /* The Licence panel — Frameworks view (#licensePanel)
      calls this with its own container id (a separate, internal-only
      console has its own equivalent panel/container, in its own
      bundle). Shows exactly what the app currently holds
@@ -13746,7 +13749,7 @@ function showModal(opts) {
     var pct = primaryFw ? window.CheckpointLib.readinessPct(frameworkAppRows(primaryFw)) : 0;
     var gaps = primaryFw ? frameworkAppRows(primaryFw).filter(function (c) { return c.st !== 'Implemented'; }).slice(0, 5) : [];
     var nextActions = (S.proposed || []).slice(0, 3).map(function (tpl) { return TPL[tpl] ? TPL[tpl].risk.title : null; }).filter(Boolean);
-    var fillers = ['Review your Statement of Applicability and confirm which controls apply to you', 'Invite your team and assign control owners', 'Set your scan reminder cadence in Frameworks & Settings'];
+    var fillers = ['Review your Statement of Applicability and confirm which controls apply to you', 'Invite your team and assign control owners', 'Set your scan reminder cadence in Settings'];
     for (var i = 0; nextActions.length < 3 && i < fillers.length; i++) {
       if (nextActions.indexOf(fillers[i]) === -1) nextActions.push(fillers[i]);
     }
