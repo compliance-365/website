@@ -579,6 +579,20 @@ window.DEFAULT_SETTINGS = {
   digestRecipients: '',
   digestFrequency: 'Weekly',
   digestLastSent: '',
+  /* Organisation profile — the Clause 4.2/4.3 facts generated policy
+     documents fill themselves in from (see ORG_PROFILE_FIELDS in
+     templates.js and resolveOrgTokens() in app.js). Empty by default:
+     every token falls back to the generic wording the templates
+     carried before, so a tenant that never opens the wizard is
+     unaffected. Ordinary Settings rows, so no list schema changes and
+     nothing for COLUMN_RECONCILE to heal. */
+  orgIndustry: '',
+  orgBusinessUnits: '',
+  orgLocations: '',
+  orgServices: '',
+  orgInterestedParties: '',
+  orgRegulatory: '',
+  orgExclusions: '',
   /* Cache of the last-verified signed entitlement file — the raw
      {payload, signature} JSON exactly as uploaded, re-verified and
      re-evaluated (expiry checked against "today") on every load rather

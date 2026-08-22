@@ -1749,6 +1749,41 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   an upsert-by-path, so this replaces the draft in place rather than
   creating a duplicate. `templates.js` is loaded and content-hashed/
   SRI-signed the same way as the other checkpoint scripts.
+- **Organisation profile** (Frameworks & Settings → "Organisation
+  profile"): the Clause 4.2/4.3 facts no template can know — industry,
+  business units, locations, services, interested parties, regulatory
+  obligations and deliberate scope exclusions. Templates write these
+  as `{{token}}` (see `window.ORG_PROFILE_FIELDS` in `templates.js`)
+  and `resolveOrgTokens()` in `app.js` substitutes them at every
+  render, so the ISMS Scope Document generates already filled in
+  rather than carrying "to be completed with the organisation's actual
+  business units" as a to-do inside the document. Stored as ordinary
+  Settings rows (`orgIndustry`, `orgBusinessUnits`, …), so there is no
+  new list, no schema migration and nothing for `COLUMN_RECONCILE` to
+  heal on an existing tenant.
+
+  `App.orgProfileWizard()` collects it in two steps: industry first,
+  because that seeds the interested-parties and regulatory fields from
+  `window.INDUSTRY_PROFILES` (ten Australian-market presets — health,
+  finance, government, defence, critical infrastructure and so on)
+  rather than presenting a blank form. Those presets are a starting
+  point the practitioner edits, not an assertion that a given law
+  binds a given client; the wizard says so on the same screen.
+  Re-running it keeps existing answers unless the industry itself
+  changed, so fixing a typo in "locations" never silently discards an
+  edited interested-parties list.
+
+  Every field is optional. An unanswered token falls back to the
+  generic wording the template carried before profiles existed, so a
+  tenant that never opens the wizard generates exactly the document it
+  always did — and an unknown token (a typo in a template) resolves to
+  empty rather than leaking a literal `{{token}}` into an approved
+  policy. `test/content-library.test.mjs` guards both halves: every
+  token a template uses must be a defined field, and every field must
+  carry a fallback. The wizard is offered once, automatically, the
+  first time a profile-dependent document is generated on a tenant —
+  templates with no tokens (most of the Annex A policies are genuinely
+  universal) never trigger it.
 - **Email digest**: opt-in, off by default (Frameworks/Settings view,
   "Email digest" card). Four Settings-list keys —
   `digestEnabled` ('false'), `digestRecipients` (comma-separated,
