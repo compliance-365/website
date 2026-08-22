@@ -9675,6 +9675,68 @@ function showModal(opts) {
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
 
+    /* Verifies the audit log's integrity chain and reports the result
+       in the plain terms an assessor would want, rather than a bare
+       pass/fail. Read-only: it recomputes hashes from the entries
+       already loaded and writes nothing. */
+    verifyAuditChain: async function () {
+      var card = document.getElementById('auditChainCard');
+      if (!card) return;
+      card.style.display = '';
+      card.innerHTML = '<p style="color:var(--paper-dim);margin:0">Verifying…</p>';
+      /* S.auditLog is newest-first; the chain is built oldest-first. */
+      var chrono = (S.auditLog || []).slice().reverse();
+      var r;
+      try { r = await window.CheckpointLib.verifyAuditChain(crypto.subtle, chrono); }
+      catch (e) { warn(e); card.innerHTML = '<p style="color:var(--fail);margin:0">Could not verify: ' + esc(e.message || e) + '</p>'; return; }
+
+      function when(i) {
+        var e = chrono[i];
+        return e && e.entryDateTime ? fmtDate(String(e.entryDateTime).slice(0, 10)) : 'an entry';
+      }
+      var rows = [];
+      rows.push('<div class="d-kv"><span>Entries</span><b>' + r.total + '</b></div>');
+      rows.push('<div class="d-kv"><span>Cryptographically chained</span><b>' + r.chained + '</b></div>');
+      if (r.unchained) {
+        rows.push('<div class="d-kv"><span>Unchained (written before integrity chaining)</span><b>' + r.unchained + '</b></div>');
+      }
+      if (r.verifiedFrom) {
+        rows.push('<div class="d-kv"><span>Verified from</span><b>' + esc(fmtDate(String(r.verifiedFrom).slice(0, 10))) + '</b></div>');
+      }
+      if (r.forked.length) {
+        rows.push('<div class="d-kv"><span>Concurrent appends</span><b>' + r.forked.length + '</b></div>');
+      }
+
+      var head;
+      if (r.ok && r.altered.length === 0 && r.broken.length === 0) {
+        head = '<h3 style="color:var(--pass);margin-top:0">Integrity verified</h3>' +
+          '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 14px">' +
+          (r.unchained
+            ? 'Every chained entry hashes correctly against the one before it. The ' + r.unchained + ' earliest entr' + (r.unchained === 1 ? 'y predates' : 'ies predate') + ' integrity chaining and carry no hash — they are not covered by this proof.'
+            : 'Every entry hashes correctly against the one before it. Nothing in this log has been altered or removed since it was written.') +
+          '</p>';
+      } else {
+        head = '<h3 style="color:var(--fail);margin-top:0">Integrity check failed</h3>' +
+          '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 14px">' +
+          (r.altered.length ? r.altered.length + ' entr' + (r.altered.length === 1 ? 'y has' : 'ies have') + ' been edited since being written (first: ' + esc(when(r.altered[0])) + '). ' : '') +
+          (r.broken.length ? r.broken.length + ' entr' + (r.broken.length === 1 ? 'y refers' : 'ies refer') + ' to a predecessor that is no longer present — the shape a deleted row leaves (first: ' + esc(when(r.broken[0])) + '). ' : '') +
+          'Investigate before relying on this log as evidence.</p>';
+      }
+
+      var note = '<p style="color:var(--paper-faint);font-size:11.5px;margin:14px 0 0;line-height:1.6">' +
+        'Each entry stores the hash of the entry before it, so editing or deleting history breaks every hash that follows. ' +
+        'This proves the log is internally consistent — it cannot, on its own, detect someone who rewrote the whole chain. ' +
+        'Exporting the log (and keeping that copy outside this tenant) is what closes that gap: a rewritten chain no longer matches the copy an auditor already holds.</p>';
+
+      card.innerHTML = head + rows.join('') + note;
+      /* Deliberately NOT audited. Verification recomputes hashes from
+         entries already loaded and writes nothing -- logging it would
+         make a read-only integrity check into a mutation, which would
+         both change the very log being verified and put the check out
+         of reach of a read-only Viewer or an auditor, who are exactly
+         the people who should be able to run it. */
+    },
+
     editPolicyContent: function (docName) { renderPolicyEditor(docName); },
     closePolicyEditor: function () {
       var box = document.getElementById('policyEditor');
