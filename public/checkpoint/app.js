@@ -344,6 +344,75 @@ function showModal(opts) {
      unbranded page. Fonts stay system-stack: these pages are saved to
      SharePoint and opened outside the app's origin, where the app's
      woff2 files aren't reachable. */
+  /* ================= Print treatment for standalone documents =========
+     Generated documents -- policies, the Trust Center page, the Auditor
+     Pack -- are the artefacts that actually get printed and handed to a
+     board or an assessor, and they had no print CSS at all. Three of the
+     gaps were real rather than cosmetic:
+
+       1. The classification marking rendered ONCE, at the top of page
+          one. A document marked "OFFICIAL: Sensitive" is expected to
+          carry that marking on every page under the PSPF, and
+          government and Defence clients are exactly who this product
+          is sold to. Printed page 7 of a sensitive policy carried no
+          marking at all.
+       2. Nothing identified the document on any page but the first --
+          no title, no version. A loose printed page was unattributable.
+       3. The DRAFT indicator used position:fixed / position:sticky,
+          neither of which repeats per printed page in Chrome, so an
+          unapproved policy printed as "DRAFT" on page one and as an
+          apparently final document on every page after it.
+
+     The running header/footer technique -- position:fixed offset into
+     the @page margin band -- is the one report.js already proves works
+     in Chrome and Edge, which implement no @page margin boxes. Reused
+     deliberately rather than invented again. */
+  function standalonePrintCss(opts) {
+    opts = opts || {};
+    var cls = opts.classification ? esc(opts.classification) : '';
+    var draft = opts.draft ? ' &middot; DRAFT — NOT APPROVED' : '';
+    return '@page{size:A4;margin:26mm 16mm 22mm 16mm}' +
+      '.pr-run{display:none}' +
+      '@media print{' +
+        'body{background:#fff;padding:0;max-width:none;font-size:11.5pt}' +
+        /* Repeat the marking and the document identity on every page. */
+        '.pr-run{display:flex;justify-content:space-between;align-items:baseline;position:fixed;left:16mm;right:16mm;font-size:8.5pt;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
+        '.pr-run-top{top:-17mm;border-bottom:1px solid rgba(11,11,12,.2);padding-bottom:4px}' +
+        '.pr-run-bot{bottom:-14mm;border-top:1px solid rgba(11,11,12,.2);padding-top:4px}' +
+        (opts.draft ? '.pr-run{color:#b91c1c}' : '') +
+        /* Keep a rule, a role row or a control row whole rather than
+           splitting one across a page turn, and never strand a heading
+           at the foot of a page away from what it introduces. */
+        '.stmt,.roles tr,.dctl tr,ul.prac li,.tc-card,.callout{break-inside:avoid;page-break-inside:avoid}' +
+        'h1,h2{break-after:avoid;page-break-after:avoid}' +
+        'h2{margin-top:18px}' +
+        'a{color:inherit;text-decoration:none}' +
+        /* The big diagonal watermark is decorative and cannot repeat;
+           the running header carries DRAFT on every page instead. */
+        '.wm{opacity:.5}' +
+        '.db{position:static;margin:0 0 14px}' +
+      '}' +
+      /* Markup for the running header/footer is emitted by
+         standaloneRunningMarks() below and hidden on screen. */
+      '';
+  }
+
+  /* The repeating header/footer pair. `title` identifies the document,
+     `meta` carries version/date. Page numbers are deliberately absent:
+     Chrome exposes no counter to HTML content, and a footer that says
+     "Page 1" on all eight pages is worse than one that does not
+     pretend to number them. */
+  function standaloneRunningMarks(opts) {
+    opts = opts || {};
+    var cls = opts.classification ? esc(opts.classification) : '';
+    var draft = opts.draft ? 'DRAFT — NOT APPROVED' : '';
+    var left = [cls, draft].filter(Boolean).join(' · ');
+    var right = esc(opts.title || '');
+    var metaLeft = esc(opts.meta || '');
+    return '<div class="pr-run pr-run-top"><span>' + left + '</span><span>' + right + '</span></div>' +
+      '<div class="pr-run pr-run-bot"><span>' + metaLeft + '</span><span>' + (cls || right) + '</span></div>';
+  }
+
   function buildStandaloneHtml(opts) {
     var accent = /^#[0-9a-fA-F]{6}$/.test(opts.accent || '') ? opts.accent : '#A9812E';
     var classificationBand = opts.classification
@@ -361,7 +430,10 @@ function showModal(opts) {
       'h2{font-size:19px;margin:32px 0 12px;font-weight:700;border-bottom:2px solid #0B0B0C;padding-bottom:8px}' +
       'p{color:#4b473e}a{color:' + accent + '}' +
       (opts.extraCss || '') +
-      '</style></head><body>' + classificationBand + logoBand + opts.bodyHtml + brandFoot + '</body></html>';
+      standalonePrintCss({ classification: opts.classification, draft: false }) +
+      '</style></head><body>' +
+      standaloneRunningMarks({ classification: opts.classification, title: opts.title, meta: opts.footerLine || '' }) +
+      classificationBand + logoBand + opts.bodyHtml + brandFoot + '</body></html>';
   }
   var STANDALONE_CSS = '.tc-mast{border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
     '.tc-mast p{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:#6b675e;margin:4px 0 0}' +
@@ -2425,7 +2497,13 @@ function showModal(opts) {
       '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
       '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Fraunces,serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
       '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}' +
-      '</style></head><body>' + watermarkHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' + body +
+      standalonePrintCss({ classification: opts.classification, draft: !opts.approved }) +
+      '</style></head><body>' +
+      standaloneRunningMarks({
+        classification: opts.classification, draft: !opts.approved, title: t.title,
+        meta: (opts.version ? 'v' + opts.version : '') + (opts.owner ? ' · ' + opts.owner : '')
+      }) +
+      watermarkHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' + body +
       '<div class="pf"><span>Compliance365 — Checkpoint</span><span>' + (opts.approved ? 'Approved · ' : 'Draft · ') + esc(opts.generatedDate) + '</span></div>' +
       '</body></html>';
   }

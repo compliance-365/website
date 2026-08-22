@@ -1749,6 +1749,35 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   an upsert-by-path, so this replaces the draft in place rather than
   creating a duplicate. `templates.js` is loaded and content-hashed/
   SRI-signed the same way as the other checkpoint scripts.
+- **Print treatment for generated documents**: policies, the Trust
+  Center page and the Auditor Pack are the artefacts that actually get
+  printed and handed to a board or an assessor, and they previously
+  carried no print CSS at all. `standalonePrintCss()` /
+  `standaloneRunningMarks()` in app.js add an A4 `@page`, break-inside
+  protection so a policy statement or a roles row is never split across
+  a page turn, and a running header/footer repeated on every printed
+  page carrying the classification marking, the document title, its
+  version and owner, and `DRAFT — NOT APPROVED` in red while
+  unapproved.
+
+  Three of those were correctness problems rather than polish. The
+  classification marking rendered once, at the top of page one, so
+  printed page 7 of an "OFFICIAL: Sensitive" policy carried no marking
+  — which the PSPF expects on every page, for exactly the government
+  and Defence clients this is sold to. Nothing identified the document
+  on any page but the first, so a loose printed page was
+  unattributable. And the DRAFT indicator used `position:fixed` /
+  `position:sticky`, neither of which repeats per printed page in
+  Chrome, so an unapproved policy printed as DRAFT on page one and as
+  an apparently final document on every page after it.
+
+  The running header/footer technique — `position:fixed` offset into
+  the `@page` margin band — is the one report.js already uses in
+  production, since Chrome and Edge implement no `@page` margin boxes.
+  Reused deliberately rather than invented again. Page numbers are
+  deliberately absent: Chrome exposes no page counter to HTML content,
+  and a footer reading "Page 1" on all eight pages is worse than one
+  that does not pretend to number them.
 - **AWS posture collector** (optional, `public/checkpoint/aws/`): a
   Lambda a client deploys into their **own** AWS account that runs ten
   AWS posture checks and writes them into their **own** SharePoint —
