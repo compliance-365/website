@@ -724,7 +724,7 @@ window.POLICY_TEMPLATES = [
         because: 'Assessment clocks run from suspicion, not confirmation, so time spent deciding whether to start is time already spent.'
       },
       {
-        rule: 'Placeholder — this is a skeleton: insert the organisation’s specific data categories, third-party disclosures, and any jurisdiction-specific requirements (for example the Australian Privacy Principles or GDPR) before publishing.',
+        rule: 'The privacy obligations this organisation operates under include: {{regulatory}}. The specific personal-information categories collected, and every third party they are disclosed to, must be listed here before this policy is published externally.',
         because: 'A published privacy statement is a representation the organisation can be held to, so a generic one is a promise nobody has checked it keeps.'
       }
     ],
@@ -1266,22 +1266,30 @@ window.POLICY_TEMPLATES = [
     id: 'isms-scope',
     title: 'ISMS Scope Document',
     purpose: 'This document defines the scope and boundaries of the organisation’s information security management system (ISMS) — the parts of the business, the locations, the information and the technology it covers, and anything deliberately excluded. It satisfies the ISO/IEC 27001 Clause 4.3 requirement to determine and document the scope of the ISMS.',
-    scope: 'This document describes the ISMS itself: what it does and does not cover. It is a starting draft — the bracketed specifics must be completed with the organisation’s actual business units, locations and services before approval.',
+    scope: 'This document describes the ISMS itself: what it does and does not cover — the business units, locations and services in scope, and anything deliberately excluded.',
     policyStatements: [
       {
-        rule: 'The ISMS covers the organisation’s information and the systems that process it, centred on its Microsoft 365 tenant — to be completed with the specific business units, teams, locations and services in scope.',
+        rule: 'The ISMS covers the organisation’s information and the systems that process it, centred on its Microsoft 365 tenant. In scope are the following business units and teams: {{businessUnits}}.',
         because: 'A scope stated only in general terms cannot be audited, and cannot tell anyone whether a given system is inside it.'
       },
       {
-        rule: 'The needs and requirements of interested parties — customers, regulators, employees and key suppliers — have been identified (Clauses 4.1 and 4.2) and inform the boundaries set here.',
+        rule: 'The ISMS covers work carried out at {{locations}}, in support of {{services}}.',
+        because: 'Scope is bounded by where work happens and what the organisation delivers, not by which systems happen to be easiest to assess.'
+      },
+      {
+        rule: 'The needs and requirements of interested parties — {{interestedParties}} — have been identified (Clauses 4.1 and 4.2) and inform the boundaries set here.',
         because: 'A scope drawn without reference to who depends on the organisation tends to exclude precisely what they care about.'
+      },
+      {
+        rule: 'The obligations the organisation must satisfy within this scope include: {{regulatory}}.',
+        because: 'Clause 4.2 asks not just who the interested parties are but what they require — an obligation nobody has written down is one nobody is demonstrably meeting.'
       },
       {
         rule: 'The scope includes the organisation’s people, its processes, and the technology it controls; reliance on Microsoft 365 and other third-party services is in scope for oversight and managed through the Supplier Security Policy, even though those providers’ internal operations are not the organisation’s to run.',
         because: 'Accountability for outsourced processing stays with the organisation, so excluding suppliers from scope excludes most of the actual risk.'
       },
       {
-        rule: 'Any part of the organisation, or any interface or dependency, excluded from the scope is stated explicitly with a justification, and no exclusion leaves a real information risk unmanaged.',
+        rule: 'Excluded from the scope: {{exclusions}}. Any exclusion is stated explicitly with a justification, and no exclusion leaves a real information risk unmanaged.',
         because: 'An unstated exclusion is indistinguishable from an oversight, and an unjustified one is a finding.'
       },
       {
@@ -2326,5 +2334,141 @@ window.POLICY_TEMPLATES = [
     reviewCadence: 'Annually, or whenever the organisation takes on a new processor engagement or subcontractor arrangement.',
     controls: ['P.8.2.1', 'P.8.2.2', 'P.8.2.3', 'P.8.2.4', 'P.8.2.5', 'P.8.2.6', 'P.8.3.1', 'P.8.4.1', 'P.8.4.2', 'P.8.4.3', 'P.8.5.1', 'P.8.5.2', 'P.8.5.3', 'P.8.5.4', 'P.8.5.5', 'P.8.5.6', 'P.8.5.7', 'P.8.5.8'],
     frameworks: ['iso27701', 'iso42001']
+  }
+];
+
+/* ============================================================
+   Organisation profile — the facts a generated document needs
+   that no template can know.
+
+   Every template above is deliberately generic ("the organisation").
+   That is right for the parts of a policy that are genuinely
+   universal, and wrong for the handful of places ISO 27001 expects
+   an organisation to be specific: Clause 4.3's scope boundaries,
+   Clause 4.2's interested parties, and the regulatory obligations
+   that sit behind both. Those places used to carry wording like
+   "to be completed with the specific business units, teams,
+   locations and services in scope" — a to-do item shipped inside a
+   document, which a practitioner then had to retype into every
+   other document that referenced the same facts.
+
+   ORG_PROFILE_FIELDS defines those facts once. They are stored as
+   ordinary Settings rows (SettingKey/SettingValue), so this needs
+   no new SharePoint list and no schema migration — a tenant
+   provisioned before this existed picks it up with no
+   re-provisioning, same as any other setting.
+
+   `token` is what a template writes as {{token}}; resolveOrgTokens()
+   in app.js substitutes it. A field left blank falls back to its
+   `fallback` text — the original generic wording — so an
+   unanswered profile degrades to exactly the document Checkpoint
+   generated before this feature existed, never to an empty gap or
+   a literal "{{token}}" leaking into an approved policy. */
+window.ORG_PROFILE_FIELDS = [
+  {
+    key: 'orgIndustry', token: 'industry', label: 'Industry',
+    type: 'select',
+    hint: 'Drives the suggested interested parties and regulatory obligations below.',
+    fallback: 'the organisation’s sector'
+  },
+  {
+    key: 'orgBusinessUnits', token: 'businessUnits', label: 'Business units and teams in scope',
+    type: 'textarea',
+    hint: 'The parts of the business the ISMS covers — e.g. "Engineering, Customer Support, Finance". Clause 4.3.',
+    fallback: 'all of them — no business unit or team is excluded'
+  },
+  {
+    key: 'orgLocations', token: 'locations', label: 'Locations in scope',
+    type: 'textarea',
+    hint: 'Offices, sites or "remote-first" — wherever work in scope actually happens.',
+    fallback: 'all locations from which the organisation operates'
+  },
+  {
+    key: 'orgServices', token: 'services', label: 'Products or services in scope',
+    type: 'textarea',
+    hint: 'What the organisation actually delivers to its customers.',
+    fallback: 'the services the organisation delivers'
+  },
+  {
+    key: 'orgInterestedParties', token: 'interestedParties', label: 'Interested parties',
+    type: 'textarea',
+    hint: 'Who depends on the organisation, or has a say in how it handles information. Clause 4.2. Pre-filled from your industry — edit freely.',
+    fallback: 'customers, regulators, employees and key suppliers'
+  },
+  {
+    key: 'orgRegulatory', token: 'regulatory', label: 'Regulatory and contractual obligations',
+    type: 'textarea',
+    hint: 'The laws, standards and contract terms that bind this organisation. Pre-filled from your industry — edit freely.',
+    fallback: 'applicable Australian privacy law and its customer contracts'
+  },
+  {
+    key: 'orgExclusions', token: 'exclusions', label: 'Deliberate exclusions from scope',
+    type: 'textarea',
+    hint: 'Anything explicitly outside the ISMS, and why. Leave blank if nothing is excluded — that is a valid and common answer.',
+    fallback: 'nothing — the ISMS covers the whole of the organisation described above'
+  }
+];
+
+/* Australian-market industry presets. These pre-fill the two fields
+   practitioners most often stall on — interested parties (Clause
+   4.2) and regulatory obligations — with the ones that actually
+   apply to that sector here, rather than a generic list.
+
+   Everything here is a STARTING POINT the practitioner edits, not
+   an assertion that a given law binds a given client: whether the
+   Privacy Act's small-business exemption applies, whether an entity
+   is APRA-regulated, and whether a system is SOCI-critical are all
+   organisation-specific determinations no preset can make. The
+   wizard says so on the same screen. */
+window.INDUSTRY_PROFILES = [
+  {
+    id: 'saas', label: 'Technology / SaaS',
+    interestedParties: 'Enterprise and SMB customers, prospective customers’ procurement and security teams, investors, employees, cloud and sub-processor suppliers, and the regulators of the markets the product is sold into.',
+    regulatory: 'Privacy Act 1988 (Cth) and the Australian Privacy Principles; the Notifiable Data Breaches scheme; customer contractual security schedules and DPAs; where customers are overseas, GDPR or equivalent obligations flowed down by contract.'
+  },
+  {
+    id: 'healthcare', label: 'Healthcare / Medical',
+    interestedParties: 'Patients and their families, treating clinicians and referrers, Medicare and private health insurers, the Australian Digital Health Agency, state health departments, employees, and clinical-system and pathology suppliers.',
+    regulatory: 'Privacy Act 1988 (Cth) — noting health information is sensitive information and the small-business exemption does not apply to health service providers; My Health Records Act 2012; state health records legislation; the Notifiable Data Breaches scheme.'
+  },
+  {
+    id: 'finserv', label: 'Financial services',
+    interestedParties: 'Retail and wholesale customers, APRA and ASIC, AUSTRAC, the board and risk committee, employees, outsourced service providers and material service providers, and scheme or clearing counterparties.',
+    regulatory: 'APRA CPS 234 (Information Security) and CPS 230 (Operational Risk Management) where APRA-regulated; AFSL obligations; AML/CTF Act 2006 and AUSTRAC reporting; Privacy Act 1988 (Cth); the Notifiable Data Breaches scheme.'
+  },
+  {
+    id: 'government', label: 'Government / public sector',
+    interestedParties: 'Citizens and service recipients, the responsible minister and department, the relevant Auditor-General, other agencies sharing data, employees, and contracted service providers.',
+    regulatory: 'The Protective Security Policy Framework (PSPF) and the ISM where applicable; state equivalents such as Queensland’s IS18 or the NSW Cyber Security Policy; Privacy Act 1988 (Cth) or the state privacy act that applies; public-records and archives legislation.'
+  },
+  {
+    id: 'defence', label: 'Defence industry',
+    interestedParties: 'The Department of Defence and its Defence Industry Security Office, prime contractors and their supply chains, security-cleared personnel, the Australian Signals Directorate, and subcontractors handling controlled information.',
+    regulatory: 'Defence Industry Security Program (DISP) membership conditions; the Information Security Manual (ISM); the Defence Security Principles Framework; export-control obligations under the Defence Trade Controls Act 2012; Privacy Act 1988 (Cth).'
+  },
+  {
+    id: 'education', label: 'Education / training',
+    interestedParties: 'Students and, where students are minors, their parents or guardians; academic and professional staff; accrediting and regulatory bodies such as TEQSA or ASQA; funding departments; alumni; and learning-platform suppliers.',
+    regulatory: 'Privacy Act 1988 (Cth) or the applicable state privacy act; the ESOS Act and National Code where international students are enrolled; state child-safety and working-with-children obligations; the Notifiable Data Breaches scheme.'
+  },
+  {
+    id: 'critical-infra', label: 'Critical infrastructure / utilities',
+    interestedParties: 'End consumers and connected communities, the Cyber and Infrastructure Security Centre, sector regulators, state emergency and essential-services bodies, employees, and operational-technology and maintenance suppliers.',
+    regulatory: 'Security of Critical Infrastructure Act 2018 (SOCI) — including the critical infrastructure risk management program and mandatory cyber incident reporting obligations where the entity is a responsible entity; sector-specific licence conditions; Privacy Act 1988 (Cth).'
+  },
+  {
+    id: 'proserv', label: 'Professional services',
+    interestedParties: 'Clients and their own regulators, professional and registration bodies, insurers, employees and contractors, and the platform and hosting suppliers that hold client material.',
+    regulatory: 'Privacy Act 1988 (Cth); professional confidentiality and, where legal services are provided, legal professional privilege obligations; client contractual security and confidentiality terms; the Notifiable Data Breaches scheme.'
+  },
+  {
+    id: 'notforprofit', label: 'Not-for-profit / community',
+    interestedParties: 'Service recipients and their families, donors and members, the ACNC, grant-funding bodies and government departments, volunteers and employees, and service-delivery partners.',
+    regulatory: 'Privacy Act 1988 (Cth) where it applies; ACNC governance standards; grant and funding-agreement security conditions; state child-safety obligations where services are delivered to minors.'
+  },
+  {
+    id: 'other', label: 'Other / general',
+    interestedParties: 'Customers, regulators, employees, shareholders or owners, and key suppliers.',
+    regulatory: 'Privacy Act 1988 (Cth) and the Notifiable Data Breaches scheme where applicable, and the organisation’s customer contractual obligations.'
   }
 ];

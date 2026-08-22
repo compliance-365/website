@@ -277,3 +277,62 @@ describe('training course catalogue', () => {
     });
   });
 });
+
+// ── Organisation profile tokens ──────────────────────────────────────
+// A template writes {{businessUnits}} where ISO 27001 expects the
+// organisation to be specific; app.js's resolveOrgTokens() substitutes
+// it from the tenant's saved profile. The failure mode these guard
+// against is the worst one available here — a literal "{{token}}"
+// rendered into a policy a client then approves and hands an auditor.
+describe('organisation profile tokens — templates and fields stay in sync', () => {
+  const { ORG_PROFILE_FIELDS, INDUSTRY_PROFILES } = window;
+
+  function tokensIn(value) {
+    const found = new Set();
+    JSON.stringify(value).replace(/\{\{(\w+)\}\}/g, (_m, t) => { found.add(t); return _m; });
+    return found;
+  }
+
+  test('every token a template uses is defined in ORG_PROFILE_FIELDS', () => {
+    const known = new Set(ORG_PROFILE_FIELDS.map((f) => f.token));
+    POLICY_TEMPLATES.forEach((t) => {
+      tokensIn(t).forEach((tok) => {
+        assert.ok(known.has(tok),
+          `template "${t.id}" uses {{${tok}}}, which no ORG_PROFILE_FIELDS entry defines — it would render literally into a generated policy`);
+      });
+    });
+  });
+
+  test('every profile field has a fallback, so an unanswered profile never renders an empty gap', () => {
+    ORG_PROFILE_FIELDS.forEach((f) => {
+      assert.ok(f.key && f.token && f.label, `profile field ${JSON.stringify(f)} is missing key/token/label`);
+      assert.ok(typeof f.fallback === 'string' && f.fallback.length > 0,
+        `profile field "${f.token}" has no fallback text`);
+    });
+  });
+
+  test('profile keys are unique and namespaced, so they cannot collide with another setting', () => {
+    const keys = ORG_PROFILE_FIELDS.map((f) => f.key);
+    assert.equal(new Set(keys).size, keys.length, 'duplicate profile setting key');
+    keys.forEach((k) => assert.match(k, /^org[A-Z]/, `"${k}" should be namespaced org*`));
+  });
+
+  test('every industry preset fills both of the fields the wizard seeds', () => {
+    assert.ok(INDUSTRY_PROFILES.length >= 2, 'expected a real set of industry presets');
+    INDUSTRY_PROFILES.forEach((p) => {
+      assert.ok(p.id && p.label, `industry ${JSON.stringify(p)} is missing id/label`);
+      assert.ok(p.interestedParties && p.interestedParties.length > 20,
+        `industry "${p.id}" has no usable interestedParties preset`);
+      assert.ok(p.regulatory && p.regulatory.length > 20,
+        `industry "${p.id}" has no usable regulatory preset`);
+    });
+    const ids = INDUSTRY_PROFILES.map((p) => p.id);
+    assert.equal(new Set(ids).size, ids.length, 'duplicate industry id');
+  });
+
+  test('presets carry no tokens of their own — they are the substituted values, not templates', () => {
+    INDUSTRY_PROFILES.forEach((p) => {
+      assert.equal(tokensIn(p).size, 0, `industry "${p.id}" contains a {{token}}, which would never be resolved`);
+    });
+  });
+});

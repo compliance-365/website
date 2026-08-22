@@ -426,7 +426,7 @@ function showModal(opts) {
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
-    'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent',
+    'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
     /* 'acknowledgeAttestation' is deliberately absent — see the note on
        that action: it is an employee's own act about themselves, and a
        read-only Viewer who cannot record it cannot comply with the
@@ -2145,19 +2145,103 @@ function showModal(opts) {
   var EDITABLE_POLICY_FIELDS = ['purpose', 'scope', 'whyItMatters', 'inPractice',
     'policyStatements', 'roles', 'exceptions', 'nonCompliance', 'relatedDocuments', 'reviewCadence'];
 
+  /* ================= Organisation profile tokens =================
+     A template writes {{businessUnits}} where ISO 27001 expects the
+     organisation to be specific (Clauses 4.2/4.3), and this resolves
+     it from the tenant's saved profile.
+
+     An unanswered field falls back to the field's own `fallback` —
+     the generic wording the template carried before profiles
+     existed — so a tenant that never opens the wizard generates
+     exactly the document it always did. An unknown token (a typo in
+     a template, or one removed from ORG_PROFILE_FIELDS later)
+     resolves to its own fallback-less empty string rather than
+     leaking a literal "{{token}}" into an approved policy, which is
+     the one outcome worse than generic wording. */
+  function orgProfileFieldByToken(token) {
+    return (window.ORG_PROFILE_FIELDS || []).find(function (f) { return f.token === token; }) || null;
+  }
+
+  function orgProfileValue(key) {
+    return ((S.settings && S.settings[key]) || '').trim();
+  }
+
+  /* True once the practitioner has answered anything at all. Used to
+     decide whether Generate should offer the wizard first — asked
+     once, not on every generation forever. */
+  function orgProfileStarted() {
+    return (window.ORG_PROFILE_FIELDS || []).some(function (f) { return !!orgProfileValue(f.key); });
+  }
+
+  function resolveOrgTokens(str) {
+    if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
+    return str.replace(/\{\{(\w+)\}\}/g, function (whole, token) {
+      var f = orgProfileFieldByToken(token);
+      if (!f) return '';
+      return orgProfileValue(f.key) || f.fallback || '';
+    });
+  }
+
+  /* Walks the text-bearing shape of a template. Deliberately explicit
+     about which fields carry prose rather than deep-walking
+     everything: `controls` and `frameworks` are code lists the SoA
+     keys off, and a regex loose enough to rewrite those is a bug
+     waiting to happen. */
+  function applyOrgTokens(t) {
+    if (!t) return t;
+    var out = Object.assign({}, t);
+    ['purpose', 'scope', 'whyItMatters', 'exceptions', 'nonCompliance', 'reviewCadence'].forEach(function (k) {
+      if (typeof out[k] === 'string') out[k] = resolveOrgTokens(out[k]);
+    });
+    ['inPractice', 'relatedDocuments'].forEach(function (k) {
+      if (Array.isArray(out[k])) out[k] = out[k].map(resolveOrgTokens);
+    });
+    if (Array.isArray(out.policyStatements)) {
+      out.policyStatements = out.policyStatements.map(function (s) {
+        if (typeof s === 'string') return resolveOrgTokens(s);
+        return Object.assign({}, s, { rule: resolveOrgTokens(s.rule), because: resolveOrgTokens(s.because) });
+      });
+    }
+    if (Array.isArray(out.roles)) {
+      out.roles = out.roles.map(function (r) {
+        return Object.assign({}, r, { role: resolveOrgTokens(r.role), responsibility: resolveOrgTokens(r.responsibility) });
+      });
+    }
+    return out;
+  }
+
+  /* Whether THIS template actually depends on the profile. The
+     Malware Protection Policy is genuinely universal and has no
+     tokens; prompting for business units before generating it would
+     be the wizard getting in the way rather than helping. */
+  function templateUsesOrgTokens(t) {
+    if (!t) return false;
+    try { return JSON.stringify(t).indexOf('{{') > -1; }
+    catch (e) { return false; }
+  }
+
   /* The content a document should actually be rendered from: the
      shipped template, with any saved edits for THIS document layered
-     over it. Every render path goes through here, which is what makes
-     an edit survive approval, a version bump, a re-brand, and a future
-     improvement to the underlying template. */
+     over it, and organisation-profile tokens resolved last. Every
+     render path goes through here, which is what makes an edit
+     survive approval, a version bump, a re-brand, and a future
+     improvement to the underlying template.
+
+     Tokens resolve AFTER the draft merge on purpose: the policy
+     editor reads through here too, so a practitioner sees and edits
+     the real sentence ("In scope are the following business units:
+     Engineering, Support") rather than raw {{businessUnits}} markup.
+     Once they save that edit it is literal text and stops tracking
+     the profile — which is the right default, because at that point
+     it is their wording, not the template's. */
   function effectivePolicyContent(t, docName) {
     var draft = docName && (S.policyDrafts || []).find(function (d) { return d.docName === docName; });
-    if (!draft || !draft.content) return t;
+    if (!draft || !draft.content) return applyOrgTokens(t);
     var merged = Object.assign({}, t);
     EDITABLE_POLICY_FIELDS.forEach(function (k) {
       if (draft.content[k] !== undefined) merged[k] = draft.content[k];
     });
-    return merged;
+    return applyOrgTokens(merged);
   }
 
   function policyDraftFor(docName) {
@@ -7112,6 +7196,20 @@ function showModal(opts) {
         '<p class="src" style="margin-top:8px">Last sent: ' + (digestLastSentCurrent ? fmtDate(digestLastSentCurrent) : 'Never') + '</p>';
     }
 
+    var orgProfEl = document.getElementById('orgProfileRow');
+    if (orgProfEl) {
+      var orgFilled = (window.ORG_PROFILE_FIELDS || []).filter(function (f) { return !!orgProfileValue(f.key); }).length;
+      var orgTotal = (window.ORG_PROFILE_FIELDS || []).length;
+      var orgIndLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === orgProfileValue('orgIndustry'); }) || {}).label;
+      orgProfEl.innerHTML =
+        '<div><b>Organisation profile</b><p>' +
+        (orgFilled
+          ? esc(orgIndLabel || 'Profile set') + ' · ' + orgFilled + ' of ' + orgTotal + ' answered. Generated documents fill themselves in from these.'
+          : 'Not set yet. Documents generate with generic wording until it is — which is valid, just less specific than an auditor expects for Clause 4.3.') +
+        '</p></div>' +
+        '<button class="btn ' + (orgFilled ? 'ghost ' : '') + 'sm" data-action="App.orgProfileWizard">' + (orgFilled ? 'Review profile' : 'Set up profile') + '</button>';
+    }
+
     var e8El = document.getElementById('e8TargetLevelRow');
     if (e8El) {
       var e8Current = (S.settings && S.settings.e8TargetLevel) || 'ML2';
@@ -10153,6 +10251,87 @@ function showModal(opts) {
       }
     },
 
+    /* ================= Organisation profile wizard =================
+       Two steps on purpose. Step one asks only for the industry,
+       because that is the answer that lets step two arrive
+       pre-filled rather than as a blank form — picking "Healthcare"
+       and immediately seeing My Health Records Act and the sensitive-
+       information rule already written out is the difference between
+       a wizard that saves work and one that just relocates it.
+
+       Everything it writes lands in ordinary Settings rows, so this
+       needs no list provisioning and reaches a tenant that was set up
+       long before the feature existed. */
+    orgProfileWizard: async function (opts) {
+      opts = opts || {};
+      var fields = window.ORG_PROFILE_FIELDS || [];
+      function fld(key) { return fields.find(function (f) { return f.key === key; }); }
+
+      var currentIndustry = orgProfileValue('orgIndustry');
+      var step1 = await showModal({
+        title: opts.title || 'Set up your organisation profile',
+        message: 'Answered once, then reused by every document Checkpoint generates. ISO 27001 expects an organisation to be specific about its scope (Clause 4.3) and who depends on it (Clause 4.2) — these are those answers.\n\nStart with the industry: it pre-fills the two fields practitioners most often stall on.',
+        fields: [{
+          id: 'industry', label: fld('orgIndustry').label, type: 'select',
+          value: currentIndustry || 'other',
+          options: (window.INDUSTRY_PROFILES || []).map(function (p) { return { value: p.id, label: p.label }; })
+        }],
+        confirmText: 'Next'
+      });
+      if (!step1) return false;
+
+      var preset = (window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; })
+        || { interestedParties: '', regulatory: '' };
+      /* An industry change re-seeds the two derived fields; anything
+         the practitioner already wrote for the SAME industry is kept.
+         Re-running the wizard to fix a typo in "locations" must not
+         silently discard a carefully edited interested-parties list. */
+      var industryChanged = currentIndustry && currentIndustry !== step1.industry;
+      function seeded(key, presetText) {
+        var existing = orgProfileValue(key);
+        if (existing && !industryChanged) return existing;
+        return presetText || existing;
+      }
+
+      var step2 = await showModal({
+        title: 'Organisation profile — the specifics',
+        message: 'These fill in the generated ISMS Scope, and any other document that needs them. Anything left blank falls back to the generic wording, so a partial answer is fine.\n\nThe pre-filled obligations are a starting point drawn from your industry, not legal advice — whether a given law binds this organisation is a determination only you can make.',
+        fields: [
+          { id: 'businessUnits', label: fld('orgBusinessUnits').label, type: 'textarea', value: orgProfileValue('orgBusinessUnits'), placeholder: 'e.g. Engineering, Customer Support, Finance' },
+          { id: 'locations', label: fld('orgLocations').label, type: 'textarea', value: orgProfileValue('orgLocations'), placeholder: 'e.g. the Brisbane office, and staff working remotely within Australia' },
+          { id: 'services', label: fld('orgServices').label, type: 'textarea', value: orgProfileValue('orgServices'), placeholder: 'e.g. the hosted claims-processing platform and its support services' },
+          { id: 'interestedParties', label: fld('orgInterestedParties').label, type: 'textarea', value: seeded('orgInterestedParties', preset.interestedParties) },
+          { id: 'regulatory', label: fld('orgRegulatory').label, type: 'textarea', value: seeded('orgRegulatory', preset.regulatory) },
+          { id: 'exclusions', label: fld('orgExclusions').label, type: 'textarea', value: orgProfileValue('orgExclusions'), placeholder: 'Leave blank if nothing is excluded' }
+        ],
+        confirmText: 'Save profile'
+      });
+      if (!step2) return false;
+
+      busy(true);
+      try {
+        await Store.setSetting('orgIndustry', step1.industry);
+        S.settings.orgIndustry = step1.industry;
+        var map = {
+          orgBusinessUnits: step2.businessUnits, orgLocations: step2.locations,
+          orgServices: step2.services, orgInterestedParties: step2.interestedParties,
+          orgRegulatory: step2.regulatory, orgExclusions: step2.exclusions
+        };
+        for (var k in map) {
+          await Store.setSetting(k, map[k]);
+          S.settings[k] = map[k];
+        }
+      } catch (e) { warn(e); toastError('Could not save the profile: ' + esc(e.message || e)); busy(false); return false; }
+      busy(false);
+
+      var industryLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; }) || {}).label || step1.industry;
+      audit('Organisation profile updated', 'Settings', 'orgProfile', '', industryLabel);
+      log('Organisation profile saved — <b>' + esc(industryLabel) + '</b>. Generated documents now use it.');
+      toast('Organisation profile saved');
+      renderFrameworksAdmin();
+      return true;
+    },
+
     /* Personalise the selected POLICY_TEMPLATES entry, open it as a
        print-ready preview (same pattern as App.report()), and — outside
        demo mode — save a copy into Documents under "Policies &
@@ -10166,6 +10345,27 @@ function showModal(opts) {
       if (!t) return;
       var owner = (document.getElementById('tplOwner').value || '').trim();
       if (!owner) { toast('Enter a document owner before generating.'); return; }
+
+      /* First time a profile-dependent document is generated on this
+         tenant, offer the wizard rather than silently producing a
+         document full of "all business units". Offered, not forced:
+         declining generates the same valid generic document as
+         before, and the offer does not come back once any answer
+         exists — a practitioner who deliberately wants the generic
+         wording is not asked again on every generation. */
+      if (templateUsesOrgTokens(t) && !orgProfileStarted()) {
+        var wants = await showModal({
+          title: 'Fill this document in automatically?',
+          message: '“' + t.title + '” asks the organisation to be specific about things no template can know — its business units, locations, interested parties and regulatory obligations.\n\nAnswer them once and every document that needs them is filled in from now on. Skip, and the document generates with generic wording you can edit later.',
+          confirmText: 'Set up the profile',
+          cancelText: 'Skip for now'
+        });
+        if (wants) {
+          var saved = await App.orgProfileWizard({ title: 'Set up your organisation profile' });
+          if (!saved) return; /* cancelled mid-wizard — don't generate behind their back */
+        }
+      }
+
       var reviewDate = document.getElementById('tplReviewDate').value || '';
       var clientLabel = clientDisplayLabel('This organisation');
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
