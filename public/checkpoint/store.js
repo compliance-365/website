@@ -1290,7 +1290,14 @@ window.DemoStore = (function () {
     addReview: async function (r) { S.reviews.push(r); persist(); },
     addCalendarItem: async function (c) { S.calendar.push(c); persist(); },
     updateCalendarItem: async function () { persist(); },
-    appendAudit: async function (entry) { S.auditLog.unshift(entry); persist(); },
+    appendAudit: async function (entry) {
+      try {
+        var prev = (S.auditLog && S.auditLog[0] && S.auditLog[0].entryHash) || '';
+        entry.prevHash = prev;
+        entry.entryHash = await window.CheckpointLib.auditEntryHash(crypto.subtle, entry, prev);
+      } catch (e) { entry.prevHash = ''; entry.entryHash = ''; }
+      S.auditLog.unshift(entry); persist();
+    },
     /* Lazy-seeds the 106 NIST CSF subcategory rows into S.controls the
        first time a client switches nistDepth to 'subcategory' — never
        seeded up front, so a category-depth client's Controls list stays
@@ -1473,7 +1480,13 @@ window.SpStore = (function () {
       { name: 'Actor', text: {} }, { name: 'ActorId', text: {} }, { name: 'Action', text: {} },
       { name: 'TargetType', text: {} }, { name: 'TargetId', text: {} },
       { name: 'Before', text: { allowMultipleLines: true } }, { name: 'After', text: { allowMultipleLines: true } },
-      { name: 'EntryDateTime', text: {} }
+      { name: 'EntryDateTime', text: {} },
+      /* Integrity chain (CheckpointLib.auditEntryHash) -- each entry
+         carries the hash of the one before it, so an entry edited or
+         removed after the fact breaks every hash that follows. Entries
+         written before this existed simply have neither field and are
+         reported as "unchained", never as altered. */
+      { name: 'EntryHash', text: {} }, { name: 'PrevHash', text: {} }
     ],
     /* Written by the browser (Acknowledged only) and by the scheduled
        Azure Function/Logic App monitor (everything else) — see
@@ -1838,6 +1851,7 @@ window.SpStore = (function () {
        hit the identical "Field 'AiActAnswers' is not recognized" error
        the next time they saved an AI system. */
     AISystems: ['AiActAnswers'],
+    AuditLog: ['EntryHash', 'PrevHash'],
     /* CertExpiryDate added for the Azure Function's vendor cert/report
        expiry sweep — a tenant provisioned before it existed has a
        Vendors list missing it, same "Field not recognized" failure
@@ -2152,7 +2166,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }),
         auditLog: logItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, actor: f.Actor || '', actorId: f.ActorId || '', action: f.Action || '', targetType: f.TargetType || '', targetId: f.TargetId || '', before: f.Before || '', after: f.After || '', entryDateTime: f.EntryDateTime || (i.createdDateTime || '') };
+          return { _sp: i.id, actor: f.Actor || '', actorId: f.ActorId || '', action: f.Action || '', targetType: f.TargetType || '', targetId: f.TargetId || '', before: f.Before || '', after: f.After || '', entryDateTime: f.EntryDateTime || (i.createdDateTime || ''), entryHash: f.EntryHash || '', prevHash: f.PrevHash || '' };
         }).sort(function (a, b) { return (b.entryDateTime || '').localeCompare(a.entryDateTime || ''); }),
         alerts: alertItems.map(function (i) {
           var f = i.fields;
@@ -2513,10 +2527,21 @@ window.SpStore = (function () {
       await patchItem('Calendar', c._sp, { NextDue: c.nextDue || '', LastCompleted: c.lastCompleted || '', Status: c.status || 'Active' });
     },
     appendAudit: async function (entry) {
+      /* Chain to the newest entry we currently hold. S.auditLog is
+         newest-first, so [0] is the predecessor. A hashing failure must
+         never block the audit write itself -- an unchained entry is a
+         gap in the proof, a missing entry is a gap in the record, and
+         the second is far worse. */
+      try {
+        var prev = (S.auditLog && S.auditLog[0] && S.auditLog[0].entryHash) || '';
+        entry.prevHash = prev;
+        entry.entryHash = await window.CheckpointLib.auditEntryHash(crypto.subtle, entry, prev);
+      } catch (e) { entry.prevHash = ''; entry.entryHash = ''; }
       entry._sp = await addItem('AuditLog', {
         Title: entry.action, Actor: entry.actor, ActorId: entry.actorId, Action: entry.action,
         TargetType: entry.targetType, TargetId: entry.targetId, Before: entry.before || '',
-        After: entry.after || '', EntryDateTime: entry.entryDateTime
+        After: entry.after || '', EntryDateTime: entry.entryDateTime,
+        EntryHash: entry.entryHash || '', PrevHash: entry.prevHash || ''
       });
       S.auditLog.unshift(entry);
     },

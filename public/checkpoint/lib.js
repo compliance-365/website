@@ -2173,6 +2173,93 @@
     return { tier: tier, reasons: reasons, obligations: obligations };
   }
 
+  /* ================= Audit-log integrity chain =================
+     Each audit entry carries the hash of the entry before it, so the
+     log is a chain rather than a bag of independent rows. Altering or
+     deleting a historical entry breaks every hash after it, which is
+     what turns "here is our audit trail" into "here is our audit
+     trail, and here is proof it has not been edited" -- the question a
+     Defence, government or financial-services assessor actually asks.
+
+     Deliberately NOT a claim of immutability. Anyone with SharePoint
+     access can still edit the list; what they cannot do is edit it
+     *undetectably*, because they would have to recompute every
+     subsequent hash, and the exported chain an auditor already holds
+     would no longer match. That is the same guarantee a git history
+     gives, and it is worth stating plainly rather than overselling.
+
+     canonicalAuditEntry() fixes the field order so the same entry
+     always hashes identically regardless of key insertion order --
+     the same reasoning as canonicalJson() in the entitlement signing
+     chain. */
+  function canonicalAuditEntry(e) {
+    e = e || {};
+    return JSON.stringify([
+      String(e.actor || ''), String(e.actorId || ''), String(e.action || ''),
+      String(e.targetType || ''), String(e.targetId || ''),
+      String(e.before == null ? '' : e.before), String(e.after == null ? '' : e.after),
+      String(e.entryDateTime || '')
+    ]);
+  }
+
+  /* Hash of one entry, bound to its predecessor. The genesis entry
+     chains from the empty string, so a tenant's first ever entry is
+     still verifiable rather than being a special case with no hash. */
+  async function auditEntryHash(subtle, entry, prevHash) {
+    var payload = String(prevHash || '') + '|' + canonicalAuditEntry(entry);
+    return sha256Hex(subtle, new TextEncoder().encode(payload));
+  }
+
+  /* Walks a chronological (oldest-first) list of audit entries and
+     classifies what it finds. Three outcomes are deliberately kept
+     apart, because they mean very different things to an assessor:
+
+       unchained  an entry predating this feature, carrying no hash at
+                  all. NOT evidence of tampering -- evidence only that
+                  the chain started later. Reported so the honest
+                  statement is "verified from <date>", never a silent
+                  implication that the whole history is proven.
+       altered    the entry's own content no longer hashes to the hash
+                  stored against it: its text was edited after the fact.
+       forked     two entries claim the same predecessor. Almost always
+                  two practitioners appending in the same instant
+                  rather than foul play, so it is surfaced as its own
+                  category instead of being reported as tampering.
+       broken     an entry names a predecessor hash that no earlier
+                  entry produced -- the shape a DELETED row leaves.
+
+     Returns counts plus the first index of each problem, so the UI can
+     say exactly where verification stops rather than only that it did. */
+  async function verifyAuditChain(subtle, entries) {
+    var list = Array.isArray(entries) ? entries : [];
+    var out = { total: list.length, chained: 0, unchained: 0, altered: [], forked: [], broken: [], ok: true, verifiedFrom: null };
+    var seenHashes = Object.create(null);
+    var claimedPrev = Object.create(null);
+    var prevHash = '';
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      if (!e || !e.entryHash) { out.unchained++; prevHash = ''; continue; }
+      /* A predecessor that no earlier entry produced is the fingerprint
+         of a removed row (or of a chain that starts mid-list). The
+         genesis entry legitimately claims '' as its predecessor. */
+      var claims = String(e.prevHash || '');
+      if (claims !== '' && !seenHashes[claims]) out.broken.push(i);
+      else if (claims !== '' && claimedPrev[claims]) out.forked.push(i);
+      if (claims !== '') claimedPrev[claims] = true;
+
+      var expected = await auditEntryHash(subtle, e, claims);
+      if (expected !== e.entryHash) out.altered.push(i);
+      else {
+        out.chained++;
+        if (out.verifiedFrom == null) out.verifiedFrom = e.entryDateTime || null;
+      }
+      seenHashes[e.entryHash] = true;
+      prevHash = e.entryHash;
+    }
+    out.ok = !out.altered.length && !out.broken.length;
+    return out;
+  }
+
   return {
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
@@ -2206,7 +2293,8 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
-    sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
+    sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
+    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS
   };

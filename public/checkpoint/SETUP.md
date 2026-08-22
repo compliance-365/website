@@ -1749,6 +1749,31 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   an upsert-by-path, so this replaces the draft in place rather than
   creating a duplicate. `templates.js` is loaded and content-hashed/
   SRI-signed the same way as the other checkpoint scripts.
+- **Audit-log integrity chain**: every `Checkpoint AuditLog` entry
+  carries `EntryHash` (a SHA-256 of its own canonical content bound to
+  its predecessor) and `PrevHash`, so the log is a chain rather than a
+  bag of independent rows. Editing or deleting a historical entry
+  breaks every hash after it. "Verify integrity" in the Audit log view
+  recomputes the chain in-browser and reports four states separately,
+  because they mean very different things to an assessor: *chained*
+  (verified), *unchained* (written before this existed — reported, not
+  treated as tampering), *altered* (content no longer matches its
+  stored hash), and *broken* (an entry names a predecessor no earlier
+  entry produced — the shape a deleted row leaves). Concurrent appends
+  by two practitioners are classified as a *fork* rather than as
+  tampering, since that is ordinary multi-user behaviour.
+
+  Stated honestly in the UI: this proves the log is *internally
+  consistent*. It cannot on its own catch someone who recomputes the
+  entire chain — exporting the log and keeping that copy outside the
+  tenant is what closes that gap, because a rewritten chain no longer
+  matches the copy an auditor already holds. Verification is
+  deliberately **not** audited and not in `MUTATING_ACTIONS`: it writes
+  nothing, so a read-only Viewer or a visiting auditor can run it, and
+  the act of verifying never changes the log being verified. Hashing
+  failures never block the audit write itself — an unchained entry is
+  a gap in the proof, a missing entry is a gap in the record, and the
+  second is worse.
 - **Organisation profile** (Settings → "Organisation
   profile"): the Clause 4.2/4.3 facts no template can know — industry,
   business units, locations, services, interested parties, regulatory

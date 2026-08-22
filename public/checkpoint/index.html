@@ -1109,7 +1109,11 @@
     <!-- AUDIT LOG -->
     <section class="view" id="v-auditlog">
       <div class="vhead"><div class="rule"></div><h1>Audit log</h1><p>An append-only, read-only record of who changed what and when — control status changes, evidence links, verifications, risk approvals, action/audit/review/calendar activity and framework toggles. Evidence for ISO 27001 A.8.15 (logging) and SOC 2 CC7.2, distinct from the plain-English Activity feed on the Dashboard.</p></div>
-      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="auditlog">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="auditlog">Export CSV</button>
+        <button class="btn ghost sm" data-action="App.verifyAuditChain">Verify integrity</button>
+      </div>
+      <div class="card" id="auditChainCard" style="margin-bottom:16px;display:none"></div>
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">When</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Before</th><th scope="col">After</th></tr></thead><tbody id="auditLogRows"></tbody></table></div>
     </section>
 
