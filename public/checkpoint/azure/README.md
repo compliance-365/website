@@ -219,6 +219,16 @@ The sweep also chases the work itself, not just the paperwork:
 - **Privacy-breach assessment deadlines**, raised seven days *before*
   the date as well as after. Confirm your own jurisdiction's deadline:
   the date Checkpoint tracks is a configured default, not legal advice.
+- **Overdue actions are chased with the owner, not just about them.**
+  When an action carries an `OwnerEmail`, the owner is emailed directly
+  the run the alert is first raised — once, not once a night, because
+  the chase list is filtered to findings that survived alert dedup.
+  `Owner` on its own is free text (a team, an external contractor) with
+  nothing safe to resolve to an address, so an action without
+  `OwnerEmail` raises the same ISMS-manager alert as before and chases
+  nobody; a compliance nudge sent to a guessed address is worse than
+  one not sent. Needs `NOTIFY_FROM` (below); without it the sweep still
+  writes every alert and simply sends nothing.
 - **Vendor reassessment and certification/report expiry**, one alert per
   vendor per check (not rolled up — unlike stale controls, a tenant
   usually only has a handful of vendors, and *which* vendor is the

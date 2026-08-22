@@ -106,6 +106,79 @@ describe('htmlToTeamsText() — the email HTML becomes a Teams webhook payload',
   });
 });
 
+describe('runGovernanceSweep() — chasing action owners directly', () => {
+  const today = '2026-06-15';
+  const lists = { Alerts: 'alerts-list' };
+  const optional = { Actions: 'actions-list' };
+  const ctx = () => ({ log: Object.assign(() => {}, { error: () => {} }) });
+
+  // notifyOwner() shares NOTIFY_FROM with notify(); without it nothing sends.
+  function withMailbox(fn) {
+    process.env.NOTIFY_FROM = 'compliance@example.com';
+    return fn().finally(() => { delete process.env.NOTIFY_FROM; });
+  }
+
+  function graph(actions, openAlertKeys = []) {
+    const sent = [], written = [];
+    async function g(path, opts) {
+      if (/\/lists\/actions-list\/items/.test(path)) return { value: actions.map(f => ({ fields: f })) };
+      if (/\/lists\/alerts-list\/items/.test(path)) {
+        if (opts && opts.method === 'POST') { written.push(opts.body.fields); return { id: 'a' }; }
+        return { value: openAlertKeys.map(k => ({ fields: { CheckId: k, Acknowledged: false } })) };
+      }
+      if (/sendMail/.test(path)) { sent.push({ path, body: opts.body }); return null; }
+      throw new Error('unexpected path: ' + path);
+    }
+    return { g, sent, written };
+  }
+
+  const overdue = { RefId: 'ACT-001', Title: 'Rotate keys', Status: 'Open', DueDate: '2026-05-01', Owner: 'K. Patel', OwnerEmail: 'k.patel@example.com', Priority: 'High' };
+
+  test('emails the owner of an overdue action when OwnerEmail is set', async () => {
+    const { g, sent } = graph([overdue]);
+    const res = await withMailbox(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.ownersChased, 1);
+    const to = sent.flatMap(s => s.body.message.toRecipients.map(r => r.emailAddress.address));
+    assert.ok(to.includes('k.patel@example.com'), 'the owner is addressed directly');
+    const subject = sent.map(s => s.body.message.subject).join(' ');
+    assert.match(subject, /ACT-001/, 'subject names the action so it is actionable from a notification list');
+  });
+
+  test('does NOT re-chase an owner whose alert was already open — one email, not one a night', async () => {
+    const { g, sent } = graph([overdue], ['action-overdue:ACT-001']);
+    const res = await withMailbox(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.ownersChased, 0, 'already-open alert means the owner was chased on an earlier run');
+    assert.equal(sent.length, 0);
+  });
+
+  test('an overdue action with no OwnerEmail still raises the alert but chases nobody', async () => {
+    const noEmail = Object.assign({}, overdue, { OwnerEmail: '' });
+    const { g, sent, written } = graph([noEmail]);
+    const res = await withMailbox(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.written, 1, 'the ISMS-manager-facing alert is unaffected');
+    assert.equal(res.ownersChased, 0, 'a free-text owner is never guessed at');
+    assert.equal(sent.length, 0);
+    assert.match(written[0].CheckId, /^action-overdue:ACT-001$/);
+  });
+
+  test('an action that is not yet overdue chases nobody', async () => {
+    const future = Object.assign({}, overdue, { DueDate: '2026-12-01' });
+    const { g, sent } = graph([future]);
+    const res = await withMailbox(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.ownersChased, 0);
+    assert.equal(sent.length, 0);
+  });
+
+  test('without a NOTIFY_FROM mailbox nothing is sent, and the sweep still succeeds', async () => {
+    delete process.env.NOTIFY_FROM;
+    const { g, sent } = graph([overdue]);
+    const res = await runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today);
+    assert.equal(res.written, 1, 'alerts are still written');
+    assert.equal(res.ownersChased, 0);
+    assert.equal(sent.length, 0);
+  });
+});
+
 describe('runGovernanceSweep() — vendor review & certification expiry chasing', () => {
   function fakeGraph(vendors) {
     const writes = [];
