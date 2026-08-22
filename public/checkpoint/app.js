@@ -5213,7 +5213,7 @@ function showModal(opts) {
       version: doc.version || '', approvedBy: doc.approvedBy || '', classification: doc.classification || 'Internal'
     });
     try {
-      var file = new File([new Blob([html], { type: 'text/html' })], docName, { type: 'text/html' });
+      var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], docName, { type: 'text/html;charset=utf-8' });
       await Store.uploadDocument(file, doc.category || 'Policies & Procedures');
     } catch (e) { warn(e); toastError('Content saved, but the document could not be re-rendered: ' + esc(e.message || e)); return; }
     audit('Policy document regenerated', 'Document', docName, '(previous rendering)', 'Re-rendered from edited content');
@@ -9400,7 +9400,7 @@ function showModal(opts) {
         });
 
         var filename = 'trust-center-' + new Date().toISOString().slice(0, 10) + '.html';
-        var file = new File([html], filename, { type: 'text/html' });
+        var file = new File([html], filename, { type: 'text/html;charset=utf-8' });
         var uploaded = await Store.uploadDocument(file, 'Trust Center');
         audit('Trust Center page generated', 'Document', filename, '',
           'certs:' + S.settings.trustCenterShowCerts + ' soaPct:' + S.settings.trustCenterShowSoaPct + ' posture:' + S.settings.trustCenterShowPosture + ' subProcessors:' + S.settings.trustCenterShowSubProcessors);
@@ -9516,7 +9516,7 @@ function showModal(opts) {
         });
 
         var filename = 'auditor-pack-' + fw + '-' + new Date().toISOString().slice(0, 10) + '.html';
-        var file = new File([html], filename, { type: 'text/html' });
+        var file = new File([html], filename, { type: 'text/html;charset=utf-8' });
         var uploaded = await Store.uploadDocument(file, 'Auditor Pack');
         audit('Auditor pack generated', 'Document', filename, '', fwName(fw) + ' · valid until ' + validUntil);
         log('Auditor pack generated: <b>' + esc(filename) + '</b>.');
@@ -10192,7 +10192,7 @@ function showModal(opts) {
       }
       var doc;
       try {
-        var file = new File([new Blob([html], { type: 'text/html' })], filename, { type: 'text/html' });
+        var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], filename, { type: 'text/html;charset=utf-8' });
         /* Registers the document as it's saved (Clause 7.5.2) rather
            than leaving it for someone to fill in later: owner and next
            review are the two fields the practitioner has just typed
@@ -10324,7 +10324,7 @@ function showModal(opts) {
       var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal' });
       var approvedDoc;
       try {
-        var file = new File([new Blob([html], { type: 'text/html' })], name, { type: 'text/html' });
+        var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], name, { type: 'text/html;charset=utf-8' });
         approvedDoc = await Store.uploadDocument(file, category, {
           owner: params.owner, version: vals.version, status: 'Approved',
           approvedBy: vals.approvedBy, approvalDate: new Date().toISOString().slice(0, 10),
