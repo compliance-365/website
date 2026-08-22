@@ -1,0 +1,8 @@
+{
+  "name": "checkpoint-aws-collector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scheduled AWS Lambda that collects Checkpoint's AWS posture checks daily, entirely inside the client's own AWS account, and writes the results into the client's own SharePoint. No dependencies beyond the AWS SDK v3 already present in the Lambda Node 20 runtime.",
+  "engines": { "node": ">=20" },
+  "type": "module"
+}

@@ -82,7 +82,17 @@
         if (allDone) return 'pass';
       }
     }
-    return base;
+    /* A check the scan never wrote a result for was NOT measured, and
+       must read as 'manual' rather than falling through as undefined.
+       score() below excludes 'manual' from its denominator but treats
+       anything else as a scored outcome, so an undefined result would
+       be counted as a hard zero -- i.e. adding a CHECK_DEFS entry that
+       the current scan does not populate would silently drop every
+       existing tenant's posture score. Verified against live data that
+       nothing is absent today, so this changes no current score; it
+       exists so that adding a new check (an AWS collector's, say)
+       cannot quietly rewrite history for tenants that do not run it. */
+    return base === undefined ? 'manual' : base;
   }
 
   /* Overall posture score (0-100, floor 5 once any scan has run). Only

@@ -463,7 +463,30 @@ window.CHECK_DEFS = [
      With no training records at all it still resolves to 'manual', so
      a client tracking awareness training in a separate LMS is never
      scored down for leaving no trace here. */
-  { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: true }
+  { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: true },
+  /* Cloud (AWS) (10) — populated only by the optional AWS collector
+     (public/checkpoint/aws/), a Lambda a client deploys into their OWN
+     AWS account. Every other check here reads Microsoft Graph, which
+     meant a client whose product runs on AWS had a console that could
+     see the corporate tenant and not the production environment.
+
+     A tenant with no AWS collector deployed simply never has results
+     for these ids, and CheckpointLib.checkResult() resolves an absent
+     result to 'manual' -- excluded from the score denominator, exactly
+     like a licence-gated Microsoft check. They are gated in the UI on
+     `requiresCapability: 'aws'`, which app.js derives from whether any
+     aws-* result has ever been seen, so a Microsoft-only tenant sees
+     the console it saw before this existed. */
+  { id: 'aws-root-mfa',       area: 'Cloud (AWS)', label: 'AWS root account protected by MFA',                 tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-user-mfa',       area: 'Cloud (AWS)', label: 'MFA enforced for AWS console users',                tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-key-age',        area: 'Cloud (AWS)', label: 'IAM access keys rotated within policy',             tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-cloudtrail',     area: 'Cloud (AWS)', label: 'CloudTrail enabled and multi-region',               tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-config',         area: 'Cloud (AWS)', label: 'AWS Config recording resource state',               tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-guardduty',      area: 'Cloud (AWS)', label: 'GuardDuty threat detection enabled',                tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-s3-public',      area: 'Cloud (AWS)', label: 'S3 public access blocked account-wide',             tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-ebs-encryption', area: 'Cloud (AWS)', label: 'EBS volumes encrypted by default',                  tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-rds-encryption', area: 'Cloud (AWS)', label: 'RDS instances encrypted at rest',                   tpl: null, scored: true, requiresCapability: 'aws' },
+  { id: 'aws-sg-open',        area: 'Cloud (AWS)', label: 'No security group exposes admin ports to the internet', tpl: null, scored: true, requiresCapability: 'aws' }
 ];
 
 /* Optional dashboard/workflow features — practitioners can switch these

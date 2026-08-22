@@ -687,12 +687,45 @@
     var xFor = function (ms) { return x0 + Math.max(0, Math.min(1, (ms - minMs) / (maxMs - minMs))) * (x1 - x0); };
     var colorFor = function (kind) { return kind === 'today' ? P.today : kind === 'projected' ? P.projected : kind === 'future' ? P.future : P.past; };
 
+    /* Label placement is collision-aware rather than a fixed
+       above/below alternation. Alternating alone is fine when
+       milestones are evenly spread and falls apart the moment two
+       cluster -- which is the normal case early in an engagement, when
+       "Engagement start", "Gap analysis" and "Evidence today" can sit
+       within days of each other. The result was the one chart meant to
+       answer "when are we certified" being the least readable thing on
+       the page.
+
+       Each milestone still alternates side; if it would overlap the
+       previous label on ITS OWN side, it is promoted to an outer tier
+       instead. Markers never move -- only their labels -- so the
+       timeline stays truthful about dates. Width is estimated from
+       character count, which is imprecise but consistently
+       over-estimates for this font, and over-separating is a far
+       cheaper mistake here than overlapping. */
+    var tierOf = {};
+    (function assignTiers() {
+      var ordered = onScale.map(function (m, i) { return { i: i, x: xFor(Date.parse(m.date)), w: String(m.label || '').length * 4.9 }; })
+        .sort(function (a, b) { return a.x - b.x; });
+      var lastOnSide = { true: null, false: null };
+      ordered.forEach(function (item, n) {
+        var above = n % 2 === 0;
+        var prev = lastOnSide[above];
+        var collides = prev && (item.x - prev.x) < ((item.w + prev.w) / 2 + 6);
+        tierOf[item.i] = { above: above, outer: !!collides };
+        /* Only a non-promoted label occupies the near tier, so a run of
+           three tight milestones does not cascade everything outward. */
+        if (!collides) lastOnSide[above] = item;
+      });
+    })();
+
     var markers = onScale.map(function (m, i) {
       var x = fx(xFor(Date.parse(m.date)));
       var color = colorFor(m.kind);
-      var above = i % 2 === 0;
-      var labelY = above ? y - 16 : y + 26;
-      var lineY2 = above ? y - 8 : y + 8;
+      var tier = tierOf[i] || { above: i % 2 === 0, outer: false };
+      var above = tier.above;
+      var labelY = above ? (tier.outer ? y - 40 : y - 16) : (tier.outer ? y + 50 : y + 26);
+      var lineY2 = above ? (tier.outer ? y - 32 : y - 8) : (tier.outer ? y + 42 : y + 8);
       var label = escSvgText(m.label + (m.pct != null ? ' — ' + fx(m.pct, 0) + '%' : '') + ' (' + m.date + ')');
       var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + label + '" data-tip="' + label + '"' : '';
       var isToday = m.kind === 'today';

@@ -3579,7 +3579,15 @@ function showModal(opts) {
   function renderScanChecks(instant) {
     var el = document.getElementById('checkList');
     var areas = [], byArea = {};
-    window.CHECK_DEFS.forEach(function (c) {
+    /* relevantCheckDefs(), not CHECK_DEFS: a capability marked
+       'not-deployed' is optional infrastructure this tenant does not
+       run, and listing its checks would fill the view with rows that
+       can never resolve. A client with no AWS should see the console
+       they saw before AWS checks existed, not ten permanent
+       "Not scanned" rows about a cloud they have never used. A
+       licence-gated Microsoft capability still shows, because that one
+       is a real gap they could close. */
+    relevantCheckDefs().forEach(function (c) {
       if (!byArea[c.area]) { byArea[c.area] = []; areas.push(c.area); }
       byArea[c.area].push(c);
     });
@@ -12406,9 +12414,41 @@ function showModal(opts) {
         accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' },
         sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' }
       };
+      applyAwsCapability();
       return;
     }
     try { CAP = await Graph.detectCapabilities(); } catch (e) { warn(e); CAP = null; }
+    applyAwsCapability();
+  }
+
+  /* The 'aws' capability is not a Graph probe -- there is nothing in
+     Microsoft 365 that knows whether a client runs AWS. It is derived
+     from evidence instead: has the optional AWS collector (see
+     public/checkpoint/aws/) ever written an aws-* result into this
+     tenant's scan history?
+
+     Deriving it means a Microsoft-only tenant sees exactly the console
+     it saw before AWS checks existed -- the ten Cloud (AWS) rows stay
+     hidden rather than appearing permanently greyed out -- and a
+     tenant that deploys the collector gets them the moment its first
+     run lands, with no setting to remember to switch on. */
+  function awsResultsPresent() {
+    if (S.lastResults && Object.keys(S.lastResults).some(function (k) { return k.indexOf('aws-') === 0; })) return true;
+    return (S.scans || []).some(function (sc) {
+      try { return Object.keys((JSON.parse(sc.detail || '{}').results) || {}).some(function (k) { return k.indexOf('aws-') === 0; }); }
+      catch (e) { return false; }
+    });
+  }
+
+  function applyAwsCapability() {
+    var present = awsResultsPresent();
+    CAP = CAP || {};
+    CAP.aws = {
+      key: 'aws', label: 'AWS posture collector',
+      licence: 'Optional — deploy the collector Lambda into the client\'s own AWS account (public/checkpoint/aws/)',
+      available: present, status: present ? 'available' : 'not-deployed',
+      note: present ? '' : 'No AWS collector has reported for this tenant, so the Cloud (AWS) checks are not measured.'
+    };
   }
 
   /* Sets READONLY from Graph.detectRole() (see graph.js — reads Entra ID
@@ -13085,13 +13125,39 @@ function showModal(opts) {
      capability probe yet (CAP null — Graph call failed) every
      capability-gated check is conservatively counted as NOT automatable
      rather than guessing optimistic. */
+  /* A capability whose status is 'not-deployed' describes optional
+     infrastructure this tenant simply does not run -- today, the AWS
+     collector. Its checks leave the denominator entirely rather than
+     counting as coverage the tenant is missing.
+
+     That is a different case from a licence-gated Microsoft capability
+     (Intune, PIM), which stays IN the total: that one is a real gap
+     the client could close by buying a licence for the tenant they
+     already have, and hiding it would flatter the number. A client
+     who runs no AWS at all is not 10 checks short of anything, and
+     telling them "21 of 35" would invent a shortfall. */
+  function relevantCheckDefs() {
+    /* AWS relevance is read straight from the data rather than from
+       CAP. CAP is populated by an async probe, so a render that lands
+       first would briefly show ten AWS rows and then remove them --
+       and the answer is already knowable without any probe at all. */
+    var awsOn = awsResultsPresent();
+    return window.CHECK_DEFS.filter(function (c) {
+      if (c.requiresCapability === 'aws') return awsOn;
+      if (!c.requiresCapability) return true;
+      var cap = CAP && CAP[c.requiresCapability];
+      return !(cap && cap.status === 'not-deployed');
+    });
+  }
+
   function automatableCheckCount() {
-    var scored = window.CHECK_DEFS.filter(function (c) { return c.scored !== false; });
+    var relevant = relevantCheckDefs();
+    var scored = relevant.filter(function (c) { return c.scored !== false; });
     var automatable = scored.filter(function (c) {
       if (!c.requiresCapability) return true;
       return !!(CAP && CAP[c.requiresCapability] && CAP[c.requiresCapability].available);
     });
-    return { automatable: automatable.length, total: window.CHECK_DEFS.length };
+    return { automatable: automatable.length, total: relevant.length };
   }
 
   /* Shows the third top-level screen (alongside #gate and #wizard) —

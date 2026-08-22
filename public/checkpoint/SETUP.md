@@ -1749,6 +1749,31 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   an upsert-by-path, so this replaces the draft in place rather than
   creating a duplicate. `templates.js` is loaded and content-hashed/
   SRI-signed the same way as the other checkpoint scripts.
+- **AWS posture collector** (optional, `public/checkpoint/aws/`): a
+  Lambda a client deploys into their **own** AWS account that runs ten
+  AWS posture checks and writes them into their **own** SharePoint —
+  the same arrangement as the Azure monitor, so adding AWS coverage
+  puts no backend into the architecture. It exists because every other
+  check reads Microsoft Graph, which meant a client whose product runs
+  on AWS had a console that could see the corporate tenant and not
+  production.
+
+  It **merges into** the day's existing scan row rather than writing
+  its own, and recomputes the score over the union — an AWS-only row
+  would blank every Microsoft result for that day and vice versa.
+  Drift alerting is identical to the Microsoft path.
+
+  A tenant with no collector deployed is unaffected: the ten
+  `Cloud (AWS)` checks are never populated, `checkResult()` resolves an
+  absent result to *not measured*, and `relevantCheckDefs()` drops them
+  from both the Posture scan view and the Dashboard coverage
+  denominator. That last point is deliberate — a licence-gated
+  Microsoft capability (Intune, PIM) stays **in** the denominator
+  because it is a real gap the client could close on the tenant they
+  already have, whereas a client who runs no AWS is not ten checks
+  short of anything, and "21 of 35" would invent a shortfall. The
+  checks appear on their own the first time a collector run lands;
+  there is no setting to switch on.
 - **Audit-log integrity chain**: every `Checkpoint AuditLog` entry
   carries `EntryHash` (a SHA-256 of its own canonical content bound to
   its predecessor) and `PrevHash`, so the log is a chain rather than a
