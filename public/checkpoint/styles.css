@@ -423,7 +423,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
 .src{font-size:var(--fs-1);color:var(--paper-faint);letter-spacing:.06em}
 .gold-t{color:var(--gold-light);font-weight:700}
-.id-t{font-size:var(--fs-1);color:var(--paper-faint);font-weight:700;letter-spacing:.04em}
+.id-t{font-size:var(--fs-1);color:var(--paper-faint);font-weight:700;letter-spacing:.04em;white-space:nowrap}
 .id-t .lnk{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color .15s var(--ease),color .15s var(--ease)}
 .id-t .lnk:hover,.id-t .lnk:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
 .id-t .lnk:active{color:var(--gold)}
@@ -477,7 +477,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    tiles were landing five-across, orphaning the sixth alone on a
    second row and making a finished strip look broken. 185px fits all
    six, and auto-fit still steps down cleanly on narrower screens. */
-.kpis{grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
 .kpi .kpi-num{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
 .kpi b{display:block;font-weight:800;font-size:var(--fs-6);color:var(--gold-light);line-height:1.1}
 .kpi b small{font-size:var(--fs-3);color:var(--paper-dim);font-weight:500}
@@ -486,6 +486,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.4}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%}
 .kpi .dot{margin-right:4px}
+.grid-note{margin-top:11px;font-size:var(--fs-1);line-height:1.5;color:var(--paper-faint)}
 .kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
 .kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover)}
 .d-kv.clickable{cursor:pointer;margin:0 -8px;padding:6px 8px;border-radius:4px;transition:background .15s var(--ease)}
@@ -515,7 +516,12 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .feed b{color:var(--gold-light)}
 
 /* ===== scan ===== */
-.scan-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+.scan-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:start}
+/* Coverage — what the tenant's licensing lets Checkpoint check at all —
+   reads as a footnote to the gauge, not a separate section, and stacking
+   it there fills the column the much taller checks list would otherwise
+   leave empty. */
+.scan-side{display:flex;flex-direction:column;gap:19px;min-width:0}
 @media(max-width:1000px){.scan-grid{grid-template-columns:1fr}}
 .gauge{display:flex;align-items:center;gap:24px}
 .gauge svg{width:110px;flex:none}
