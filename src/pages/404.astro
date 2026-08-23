@@ -41,6 +41,8 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
 <Base title="Page not found — Compliance365" description="The page you're looking for doesn't exist. Try these links or search the site." robots="noindex,follow">
   <Header />
 
+  <main id="main-content" tabindex="-1">
+
   <!-- Smart client-side redirects for legacy paths + best-guess -->
   <script is:inline>
     (function(){
@@ -174,6 +176,8 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
       </div>
     </div>
   </section>
+
+  </main>
 
   <Footer />
 </Base>

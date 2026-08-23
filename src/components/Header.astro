@@ -10,6 +10,12 @@ function isActive(path: string) {
 }
 ---
 
+<!-- Skip link. The primary nav is eight items with two dropdowns, and it
+     repeats on all 71 pages — without this, reaching the content by
+     keyboard means tabbing through the whole thing every single time.
+     First focusable element in the document, visible only when focused. -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
 <!-- Thin accent stripe at very top -->
 <div class="accent-stripe" aria-hidden="true"></div>
 
@@ -166,6 +172,34 @@ function isActive(path: string) {
 </header>
 
 <style>
+  /* Skip link: off-screen until focused, then pinned top-left above the
+     sticky header (z-index 100) so it is never covered. */
+  .skip-link {
+    position: absolute;
+    left: 8px;
+    top: -100px;
+    z-index: 200;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 0 0 6px 6px;
+    background: #FAF7F1;
+    color: #0B0B0C;           /* 18.4:1 */
+    border: 2px solid #A9812E;
+    font: 700 .9rem/1 Manrope, system-ui, sans-serif;
+    text-decoration: none;
+    transition: top .15s ease;
+  }
+  .skip-link:focus {
+    top: 0;
+    outline: 2px solid #0B0B0C;
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skip-link { transition: none; }
+  }
+
   /* ── Accent stripe ── */
   .accent-stripe {
     height: 3px;
