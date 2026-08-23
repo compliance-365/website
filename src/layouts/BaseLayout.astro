@@ -663,6 +663,15 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   }
   window.__c365UpdateBottomInset = updateBottomInset;
 
+  /* Pages that exist to convert already put the booking path front and
+     centre, so a floating "book a call" on top of them is redundant.
+     The height threshold below happens to exclude /contact/ today, but
+     only by 5.75 viewports against 6 — too thin a margin to rely on
+     when the page grows. Stating the intent directly instead. */
+  var SELF_EXCLUDED = ['/contact', '/book', '/thank-you'];
+  var here = location.pathname.replace(/\/+$/, '') || '/';
+  if (SELF_EXCLUDED.indexOf(here) !== -1) return;
+
   var shown = false;
   function update() {
     var doc = document.documentElement;

@@ -925,9 +925,19 @@ a.pill:hover {
     border-radius: 12px;
   }
 
+  /* This rule is indented as though it belongs to the @media block
+     above, but that block closed at the ".t-btn" rule — so it applies at
+     every width and beats the .btn-primary defined near the top of this
+     file. The site's primary button is therefore gold, not near-black.
+
+     Keeping the gold (changing it would restyle every CTA on the site)
+     and fixing only the label: white on #A9812E measures 3.58:1, under
+     the AA floor on the most important control on the page. #0B0B0C
+     gives 5.50:1 and matches .btn-hdk-primary, which is the same gold
+     button treatment the homepage and service pages already use. */
   .btn-primary {
     background: var(--primary);
-    color: white;
+    color: #0B0B0C;
     border: none;
     box-shadow: 0 10px 30px rgba(169,129,46,0.3);
     transition: all 0.25s ease;
