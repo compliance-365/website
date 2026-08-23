@@ -10,6 +10,8 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
   robots="index,follow"
 >
   <Header />
+
+  <main id="main-content" tabindex="-1">
   <!-- MSAL (367 KB) is only needed once someone actually starts a scan, which
        is a click away and behind a Microsoft popup. Loading it eagerly put it
        on every visit to what is primarily a marketing page. It is fetched on
@@ -687,6 +689,8 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
 
   <!-- PRINT VIEW (hidden except during print) -->
   <div class="ps-print-view" id="ps-print-view"></div>
+
+  </main>
 
   <Footer />
 
