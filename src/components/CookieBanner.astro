@@ -123,14 +123,48 @@ const base = import.meta.env.BASE_URL || '/';
     window.clarity('consent');
   }
 
+  /* The floating call / message / Ask-AI controls are fixed to the
+     bottom of the viewport, and so is this banner. At 390px the banner
+     is ~146px tall and all three controls sit inside that band — four
+     overlapping layers on first load, with the banner's own buttons
+     among the things being covered.
+
+     Rather than hardcoding an offset that would drift as the banner
+     rewraps at different widths, the banner publishes its measured
+     height and the controls offset themselves by it (see --fab-lift in
+     brand.css). Measured live, so a two-line banner lifts them further
+     than a one-line one. */
+  /* The sticky CTA in BaseLayout owns the shared calculation, since both
+     it and this banner dock to the same edge. Falls back to measuring
+     just this banner if that script has not run. */
+  function refreshFabLift() {
+    if (typeof window.__c365UpdateBottomInset === 'function') {
+      window.__c365UpdateBottomInset();
+      return;
+    }
+    var el = document.getElementById('cookie-banner');
+    var h = el && getComputedStyle(el).display !== 'none' ? el.offsetHeight : 0;
+    document.documentElement.style.setProperty('--fab-lift', h ? (h + 12) + 'px' : '0px');
+  }
+
   function hideBanner() {
     var el = document.getElementById('cookie-banner');
     if (el) el.style.display = 'none';
+    refreshFabLift();
   }
 
   function showBanner() {
     var el = document.getElementById('cookie-banner');
-    if (el) el.style.display = 'block';
+    if (!el) return;
+    el.style.display = 'block';
+    refreshFabLift();
+    /* Re-measure on resize: the banner rewraps between one and two rows
+       as the viewport narrows, changing how far the controls must lift. */
+    if (window.ResizeObserver) {
+      new ResizeObserver(refreshFabLift).observe(el);
+    } else {
+      window.addEventListener('resize', refreshFabLift);
+    }
   }
 
   function saveAndHide(analyticsGranted) {

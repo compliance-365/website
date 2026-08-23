@@ -574,6 +574,124 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   });
 </script>
 
+<!-- ── Sticky CTA (small screens) ───────────────────────────────────
+     Measured on /services/iso27001/ at 390px: scrolled to 6000px, the
+     number of genuinely visible calls-to-action is zero. Desktop keeps
+     "Book a call" in the sticky header the whole way down; below the nav
+     breakpoint that button collapses into the hamburger, so on a page
+     that runs 31 phone screens the only way to act is to scroll back to
+     the top or all the way to the end.
+
+     Shown only below the nav breakpoint, only once the hero has gone by,
+     and only on pages long enough for that to matter. It docks to the
+     bottom and reports its height into the same --fab-lift budget the
+     cookie banner uses, so the floating controls stack above it instead
+     of on top of it. -->
+<div id="sticky-cta" data-hidden aria-hidden="true">
+  <span class="sc-text">Fixed-price. Audit-ready in 8–14 weeks.</span>
+  <a class="sc-btn" href={base + 'book/'}>Book a free call</a>
+</div>
+
+<style is:global>
+  #sticky-cta {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 80;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #0B0B0C;
+    border-top: 1px solid rgba(216,186,120,.35);
+    box-shadow: 0 -8px 28px rgba(0,0,0,.4);
+    transform: translateY(110%);
+    transition: transform .28s cubic-bezier(.22,1,.36,1);
+  }
+  #sticky-cta.is-on { transform: translateY(0); }
+  #sticky-cta .sc-text {
+    font: 600 12.5px/1.35 Manrope, system-ui, sans-serif;
+    color: rgba(250,247,241,.72);   /* 8.6:1 on #0B0B0C */
+    min-width: 0;
+  }
+  #sticky-cta .sc-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 3px;
+    background: #A9812E;
+    color: #0B0B0C;                 /* 5.5:1 on the gold */
+    font: 700 13px/1 Manrope, system-ui, sans-serif;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  /* Only below the nav breakpoint — above it the header CTA is visible
+     the whole way down and a second one would just be noise. */
+  @media (max-width: 1020px) {
+    #sticky-cta:not([data-hidden]) { display: flex; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #sticky-cta { transition: none; }
+  }
+  @media print { #sticky-cta { display: none !important; } }
+</style>
+
+<script is:inline>
+(function () {
+  var el = document.getElementById('sticky-cta');
+  if (!el) return;
+
+  /* One place decides how far the floating controls sit off the bottom:
+     whatever is docked down there right now. The cookie banner calls
+     this too, so the two never have to know about each other. */
+  function updateBottomInset() {
+    var total = 0;
+    ['cookie-banner', 'sticky-cta'].forEach(function (id) {
+      var n = document.getElementById(id);
+      if (!n) return;
+      var cs = getComputedStyle(n);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      if (id === 'sticky-cta' && !n.classList.contains('is-on')) return;
+      total = Math.max(total, n.offsetHeight);
+    });
+    document.documentElement.style.setProperty('--fab-lift', total ? (total + 12) + 'px' : '0px');
+  }
+  window.__c365UpdateBottomInset = updateBottomInset;
+
+  var shown = false;
+  function update() {
+    var doc = document.documentElement;
+    var pageH = doc.scrollHeight;
+    /* Not worth it on a short page — the closing CTA is already
+       reachable. Six viewports rather than four: /contact/ runs about
+       4.1 and is itself the conversion page, so a floating "book a call"
+       there is redundant. The pages this is for run 17 to 31. */
+    var longEnough = pageH > window.innerHeight * 6;
+    var pastHero = window.scrollY > window.innerHeight * 0.9;
+    /* Stand down near the foot of the page so it never sits on top of
+       the real closing CTA it exists to substitute for. */
+    var nearEnd = window.scrollY + window.innerHeight > pageH - 900;
+    var want = longEnough && pastHero && !nearEnd;
+
+    if (want === shown) return;
+    shown = want;
+    el.classList.toggle('is-on', want);
+    el.setAttribute('aria-hidden', want ? 'false' : 'true');
+    updateBottomInset();
+  }
+
+  el.removeAttribute('data-hidden');
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', function () { update(); updateBottomInset(); }, { passive: true });
+  update();
+})();
+</script>
+
 <!-- ── Reading progress bar ─────────────────────────────────────── -->
 <div id="read-bar" style="position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,#8B6820,#D8BA78);z-index:10000;pointer-events:none;will-change:width;"></div>
 

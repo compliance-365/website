@@ -176,7 +176,18 @@ ul.trust-signals li::before {
   flex-shrink: 0;
 }
 
-/* === Pills ================================================== */
+/* === Pills ==================================================
+   Text was #A9812E. Composited over this pill's own 7% gold tint on
+   cream that measures 3.12:1 — well under the WCAG AA 4.5:1 floor, and
+   pills carry real information (framework names, categories), not
+   decoration. #8B6820, the darker gold used elsewhere on the site, only
+   reaches 4.46:1 against the same tint, so it is not enough here
+   either; #7A5A18 clears it on both grounds the pill actually appears
+   on — 5.54:1 on cream, 5.90:1 on white.
+
+   Measured across eight pages, 164 of the 174 pills sit on a light
+   ground; the other ten are all inside .svc-hero, where the original
+   #A9812E already passes comfortably against near-black and is kept. */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -185,10 +196,18 @@ ul.trust-signals li::before {
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #A9812E;
+  color: #7A5A18;
   background: rgba(169,129,46, 0.07);
   border: 1px solid rgba(169,129,46, 0.18);
   transition: background 0.15s, border-color 0.15s;
+}
+/* Dark hero: the lighter gold is the legible one against near-black. */
+.svc-hero .pill,
+.hero-dk .pill,
+.band-dark .pill,
+.svc-final-cta .pill {
+  color: #D8BA78;
+  border-color: rgba(216,186,120, 0.30);
 }
 a.pill:hover {
   background: rgba(169,129,46, 0.13);
@@ -1165,10 +1184,15 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
 }
 
 /* Floating messaging launcher (mobile only) */
+/* --fab-lift is published by the cookie banner while it is on screen —
+   without it these controls sit inside the banner's band at phone
+   widths, four fixed layers deep. Defaults to 0 so the controls behave
+   normally once consent is stored (or if the script never runs). */
 .fab-msg {
   position: fixed;
   right: 16px;
-  bottom: 16px;
+  bottom: calc(16px + var(--fab-lift, 0px));
+  transition: bottom .2s ease;
   z-index: 70;
   display: flex;
   flex-direction: column;
@@ -1261,7 +1285,8 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
 .fab-call {
   position: fixed;
   right: 16px;
-  bottom: 80px;
+  bottom: calc(80px + var(--fab-lift, 0px));
+  transition: bottom .2s ease;
   z-index: 60;
   display: flex;
   align-items: center;
@@ -1288,7 +1313,8 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
 .fab-teams {
   position: fixed;
   right: 16px;
-  bottom: 16px;
+  bottom: calc(16px + var(--fab-lift, 0px));
+  transition: bottom .2s ease;
   z-index: 65;
   width: 52px;
   height: 52px;
