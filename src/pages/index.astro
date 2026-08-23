@@ -255,19 +255,26 @@ const faqLd = {
 </style>
 
 <!-- SCOPING TOOL (dark, raised charcoal card) -->
-<section class="section reveal-section" id="estimate" style="background:#0B0B0C;padding:4rem 0;">
+<section class="section reveal-section band-light" id="estimate" style="padding:4rem 0;">
   <div class="container">
-    <div style="max-width:860px;margin:0 auto;background:#141416;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:2.5rem 2rem;">
-      <p style="font-family:Manrope,system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#A9812E;margin:0 0 1rem;">Free scoping tool</p>
-      <h2 style="color:#FAF7F1;margin:0 0 0.5rem;">Get a realistic scope in 30 seconds.</h2>
-      <p style="color:rgba(250,247,241,.62);margin:0 0 2rem;font-size:0.95rem;line-height:1.65;">Three questions. No email required. We'll tell you which framework fits, the typical timeline, and a ballpark cost range.</p>
+    <div style="max-width:860px;margin:0 auto;background:var(--bd-card);border:1px solid var(--bd-card-bd);border-radius:8px;padding:2.5rem 2rem;">
+      <!-- The ScopingWidget carries its own "Free scoping tool / Get a
+           realistic scope in 30 seconds" eyebrow and h3. This wrapper used
+           to repeat both verbatim — masked while the wrapper was a dark
+           card holding a light widget, glaring once both share a light
+           band. The h2 stays (removing it would skip the page straight
+           from h1 to the widget's h3) but now frames the section instead
+           of duplicating it. -->
+      <p style="font-family:Manrope,system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--bd-eyebrow);margin:0 0 1rem;">Start here</p>
+      <h2 style="margin:0 0 0.5rem;">Scope it yourself, before you talk to anyone.</h2>
+      <p style="color:var(--bd-soft);margin:0 0 2rem;font-size:0.95rem;line-height:1.65;">Which framework fits, the typical timeline, and a ballpark cost range — without a sales call.</p>
       <ScopingWidget calendlyUrl={ctaUrl} />
     </div>
   </div>
 </section>
 
 <!-- POSTURE SCAN — LIVE DEMO -->
-<section class="section reveal-section" id="scan" style="background:#0B0B0C;">
+<section class="section reveal-section band-dark" id="scan">
   <div class="container">
     <div class="scan-wrap">
       <div>
@@ -304,7 +311,7 @@ const faqLd = {
 </section>
 
 <!-- CHECKPOINT TEASER -->
-<section class="section reveal-section" style="background:#0B0B0C;">
+<section class="section reveal-section band-dark">
   <div class="container">
     <div class="ckpt-teaser">
       <div class="ckpt-teaser-visual" aria-hidden="true">
@@ -327,12 +334,12 @@ const faqLd = {
 </section>
 
 <!-- PLATFORM TAX CALCULATOR -->
-<section class="section reveal-section" id="calculator" style="background:#0B0B0C;">
+<section class="section reveal-section band-light" id="calculator">
   <div class="container">
     <div class="gold-rule-26"></div>
     <p class="calc-eyebrow">The third-party platform tax, calculated</p>
-    <h2 style="color:#FAF7F1;max-width:26ch;">What does the third-party GRC-platform route really cost you?</h2>
-    <p style="color:rgba(250,247,241,.62);max-width:640px;margin:18px 0 0;font-size:15px;line-height:1.75;">Vanta, Drata and similar third-party platforms charge a per-seat annual licence on top of the consulting you still need — a fee that outlives the engagement and keeps renewing whether you need it or not. We deliver the same certification inside Microsoft 365, on Checkpoint, our own console — included, fixed-price, nothing to renew. Move the sliders.</p>
+    <h2 style="max-width:26ch;">What does the third-party GRC-platform route really cost you?</h2>
+    <p style="color:var(--bd-soft);max-width:640px;margin:18px 0 0;font-size:15px;line-height:1.75;">Vanta, Drata and similar third-party platforms charge a per-seat annual licence on top of the consulting you still need — a fee that outlives the engagement and keeps renewing whether you need it or not. We deliver the same certification inside Microsoft 365, on Checkpoint, our own console — included, fixed-price, nothing to renew. Move the sliders.</p>
 
     <div class="calc skel" id="calcCard">
       <div class="calc-grid">
@@ -364,7 +371,7 @@ const faqLd = {
 </section>
 
 <!-- CASE STUDY — DOSSIER (one) -->
-<section class="section reveal-section" style="background:#0B0B0C;">
+<section class="section reveal-section band-dark">
   <div class="container">
     <div class="dossier">
       <div class="dossier-head">
@@ -388,11 +395,11 @@ const faqLd = {
 </section>
 
 <!-- HOW WE COMPARE -->
-<section class="section reveal-section" style="background:#0B0B0C;">
+<section class="section reveal-section band-light">
   <div class="container">
     <p class="method-eyebrow">Honest comparison</p>
-    <h2 style="color:#FAF7F1;max-width:26ch;">We compete with three things. Here's how we differ from each.</h2>
-    <p style="color:rgba(250,247,241,.62);max-width:640px;margin:14px 0 0;font-size:15px;line-height:1.75;">Most buyers are evaluating us against Big 4 consulting, a third-party GRC platform, or another Australian boutique.</p>
+    <h2 style="max-width:26ch;">We compete with three things. Here's how we differ from each.</h2>
+    <p style="color:var(--bd-soft);max-width:640px;margin:14px 0 0;font-size:15px;line-height:1.75;">Most buyers are evaluating us against Big 4 consulting, a third-party GRC platform, or another Australian boutique.</p>
 
     <!-- Quick-scan summary -->
     <div class="compare-table" style="margin-top:2.75rem;">
@@ -432,7 +439,7 @@ const faqLd = {
       <div class="comp-card" style="--stagger:0">
         <div class="comp-vs">vs</div>
         <h3>Big 4 consulting</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.68);margin:0 0 14px;">Deloitte, KPMG, PwC, RSM and similar.</p>
+        <p style="font-size:13px;color:var(--bd-soft);margin:0 0 14px;">Deloitte, KPMG, PwC, RSM and similar.</p>
         <ul class="comp-list">
           <li>Same certifications, 60–80% lower fees</li>
           <li>Senior practitioner end-to-end — not juniors learning on your project</li>
@@ -443,7 +450,7 @@ const faqLd = {
       <div class="comp-card comp-hero" style="--stagger:1">
         <div class="comp-vs">vs</div>
         <h3>Third-party GRC platforms — Vanta, Drata &amp; co.</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.68);margin:0 0 14px;">Vanta, Drata, Secureframe, 6clicks and similar.</p>
+        <p style="font-size:13px;color:var(--bd-soft);margin:0 0 14px;">Vanta, Drata, Secureframe, 6clicks and similar.</p>
         <ul class="comp-list">
           <li>No annual third-party platform licence — $90k–$165k saved over 3 years<sup>*</sup></li>
           <li>Checkpoint, our delivery console, is included — not a second SaaS subscription to manage</li>
@@ -454,7 +461,7 @@ const faqLd = {
       <div class="comp-card" style="--stagger:2">
         <div class="comp-vs">vs</div>
         <h3>Australian boutiques</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.68);margin:0 0 14px;">CyberSapiens, Cyber Forte, CyberPulse and similar.</p>
+        <p style="font-size:13px;color:var(--bd-soft);margin:0 0 14px;">CyberSapiens, Cyber Forte, CyberPulse and similar.</p>
         <ul class="comp-list">
           <li>Microsoft 365-native delivery, not framework-agnostic templates</li>
           <li>ISO 42001 early-mover specialisation</li>
@@ -463,13 +470,13 @@ const faqLd = {
         </ul>
       </div>
     </div>
-    <p style="margin-top:1.25rem;font-size:11.5px;color:rgba(250,247,241,.55);max-width:640px;">*Illustrative, computed the same way as the platform-tax calculator below across its 10–500 staff range at a 3-year horizon — see the calculator for your own numbers.</p>
-    <p style="margin-top:1.25rem;"><a href={`${base}security/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See exactly how we handle your data — security &amp; architecture →</a></p>
+    <p style="margin-top:1.25rem;font-size:11.5px;color:var(--bd-faint);max-width:640px;">*Illustrative, computed the same way as the platform-tax calculator below across its 10–500 staff range at a 3-year horizon — see the calculator for your own numbers.</p>
+    <p style="margin-top:1.25rem;"><a href={`${base}security/`} style="color:var(--bd-link);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See exactly how we handle your data — security &amp; architecture →</a></p>
   </div>
 </section>
 
 <!-- METHOD — THE 365 CYCLE -->
-<section class="section reveal-section" id="method" style="background:#0B0B0C;">
+<section class="section reveal-section band-dark" id="method">
   <div class="container">
     <div style="margin-bottom:40px;">
       <p class="method-eyebrow">How we work</p>
@@ -520,25 +527,25 @@ const faqLd = {
 </section>
 
 <!-- FAQ -->
-<section class="section reveal-section" style="background:#0B0B0C;">
+<section class="section reveal-section band-light">
   <div class="container">
-    <h2 class="center" style="color:#FAF7F1;">Common questions</h2>
-    <p style="color:rgba(250,247,241,.62);text-align:center;max-width:680px;margin:1rem auto 3rem;">
+    <h2 class="center">Common questions</h2>
+    <p style="color:var(--bd-soft);text-align:center;max-width:680px;margin:1rem auto 3rem;">
       Answered plainly — no jargon, no evasion.
     </p>
 
     <div class="grid-2" style="margin-top:0;">
       {faqs.map((f, i) => (
-        <div class="card" style={`background:#141416;border-color:rgba(255,255,255,.1);--stagger:${i}`}>
-          <h3 style="color:#FAF7F1;">{f.q}</h3>
-          <p style="color:rgba(250,247,241,.62);">{f.a}</p>
+        <div class="card" style={`background:var(--bd-card);border-color:var(--bd-card-bd);--stagger:${i}`}>
+          <h3>{f.q}</h3>
+          <p style="color:var(--bd-soft);">{f.a}</p>
         </div>
       ))}
     </div>
 
-    <p style="color:rgba(250,247,241,.55);text-align:center;margin-top:2rem;">
+    <p style="color:var(--bd-faint);text-align:center;margin-top:2rem;">
       Still have questions?
-      <a href={ctaUrl} style="color:#D8BA78;font-weight:600;">Ask us on a free call</a> — no obligation.
+      <a href={ctaUrl} style="color:var(--bd-link);font-weight:600;">Ask us on a free call</a> — no obligation.
     </p>
   </div>
 </section>
@@ -571,6 +578,51 @@ const faqLd = {
 <style>
   /* ─── One easing curve, used everywhere on this page ─── */
   :root { --ease: cubic-bezier(.22,1,.36,1); }
+
+  /* ─── Section bands ────────────────────────────────────
+     Every section below the trust strip used to declare
+     background:#0B0B0C — nine consecutive dark sections, so the whole
+     page below the fold read as one unbroken 12,400px slab. Dark works
+     as punctuation; when everything is dark, nothing is emphasised and
+     section boundaries dissolve.
+
+     .band-dark / .band-light set a background AND the text tokens that
+     go with it, so a section flips by changing one class rather than by
+     hunting every hardcoded colour inside it — the same alternating
+     rhythm /services/ and /pricing/ already use.
+
+     Contrast is measured, not assumed. On cream the brand gold #A9812E
+     is only 3.35:1, so it cannot carry small text — --bd-eyebrow drops
+     to #8B6820 (4.79:1) on light bands while staying #A9812E on dark.
+     Every other token clears 4.5:1 on its own ground. */
+  .band-dark, .band-light { background: var(--bd-bg); color: var(--bd-fg); }
+  .band-dark {
+    --bd-bg: #0B0B0C;
+    --bd-fg: #FAF7F1;
+    --bd-soft: rgba(250,247,241,.62);
+    --bd-faint: rgba(250,247,241,.55);
+    --bd-card: #141416;
+    --bd-card-bd: rgba(255,255,255,.1);
+    --bd-eyebrow: #A9812E;
+    --bd-link: #D8BA78;
+    --bd-rule: rgba(255,255,255,.14);
+    --bd-track: rgba(250,247,241,.08);
+    --bd-bar-neutral: rgba(250,247,241,.35);
+  }
+  .band-light {
+    --bd-bg: #FAF7F1;
+    --bd-fg: #0B0B0C;
+    --bd-soft: #57534B;      /* 7.16:1 on cream */
+    --bd-faint: #6B6860;     /* 5.20:1 on cream */
+    --bd-card: #FFFFFF;
+    --bd-card-bd: #DDD8CF;
+    --bd-eyebrow: #8B6820;   /* 4.79:1 — gold #A9812E is only 3.35:1 here */
+    --bd-link: #8B6820;
+    --bd-rule: #DDD8CF;
+    --bd-track: #E4DFD5;
+    --bd-bar-neutral: #A8A296;
+  }
+  .band-dark h2, .band-light h2, .band-dark h3, .band-light h3 { color: var(--bd-fg); }
 
   /* ─── Announcement ─────────────────── */
   .announce {
@@ -880,7 +932,7 @@ const faqLd = {
 </style>
 
 <style is:global>
-  .gold-rule-26{width:26px;height:1px;background:#A9812E;margin-bottom:18px}
+  .gold-rule-26{width:26px;height:1px;background:var(--bd-eyebrow,#A9812E);margin-bottom:18px}
 
   /* ── Skeleton shimmer, used on widgets while JS is still initialising ── */
   .skel { position: relative; overflow: hidden; }
@@ -955,29 +1007,29 @@ const faqLd = {
     .home-cx-pulse{animation:homeCxPulse 3s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
   }
 
-  .calc-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
-  .calc{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:clamp(28px,4vw,50px);box-shadow:0 30px 60px rgba(0,0,0,.35);max-width:1100px;margin:50px auto 0}
+  .calc-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--bd-eyebrow);font-weight:700;margin:0 0 20px}
+  .calc{background:var(--bd-card);border:1px solid var(--bd-card-bd);border-radius:8px;padding:clamp(28px,4vw,50px);box-shadow:0 30px 60px rgba(0,0,0,.12);max-width:1100px;margin:50px auto 0}
   .calc-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(30px,4vw,60px)}
   @media(max-width:820px){.calc-grid{grid-template-columns:1fr}}
-  .calc-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin:24px 0 12px;font-family:Manrope,system-ui,sans-serif}
-  .calc-label b{color:#D8BA78;font-weight:800;font-size:15px;letter-spacing:0;text-transform:none;margin-left:8px;font-variant-numeric:tabular-nums}
+  .calc-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--bd-soft);font-weight:700;margin:24px 0 12px;font-family:Manrope,system-ui,sans-serif}
+  .calc-label b{color:var(--bd-link);font-weight:800;font-size:15px;letter-spacing:0;text-transform:none;margin-left:8px;font-variant-numeric:tabular-nums}
   .calc input[type=range]{width:100%;accent-color:#A9812E;cursor:pointer}
   .yrs{display:flex;gap:8px}
-  .yr{border:1px solid rgba(255,255,255,.14);border-radius:3px;padding:9px 18px;font-size:13px;color:rgba(250,247,241,.62);cursor:pointer;transition:all .2s var(--ease);user-select:none;font-family:Manrope,system-ui,sans-serif}
+  .yr{border:1px solid var(--bd-card-bd);border-radius:3px;padding:9px 18px;font-size:13px;color:var(--bd-soft);cursor:pointer;transition:all .2s var(--ease);user-select:none;font-family:Manrope,system-ui,sans-serif}
   .yr:hover{border-color:#A9812E}
   .yr.sel{background:#A9812E;border-color:#A9812E;color:#0B0B0C;font-weight:700}
   .calc-bars{display:flex;flex-direction:column;gap:26px;justify-content:center}
-  .cbar-cap{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin-bottom:8px;font-family:Manrope,system-ui,sans-serif}
-  .cbar-cap b{font-size:22px;color:#FAF7F1;letter-spacing:0;font-weight:800;font-variant-numeric:tabular-nums}
-  .cbar-cap-gold b{color:#D8BA78}
-  .cbar{height:14px;background:rgba(250,247,241,.08);border-radius:3px;overflow:hidden}
+  .cbar-cap{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-soft);font-weight:700;margin-bottom:8px;font-family:Manrope,system-ui,sans-serif}
+  .cbar-cap b{font-size:22px;color:var(--bd-fg);letter-spacing:0;font-weight:800;font-variant-numeric:tabular-nums}
+  .cbar-cap-gold b{color:var(--bd-link)}
+  .cbar{height:14px;background:var(--bd-track);border-radius:3px;overflow:hidden}
   .cbar i{display:block;height:100%;width:0;transition:width .8s var(--ease)}
-  .cbar-grey i{background:rgba(250,247,241,.35)}
+  .cbar-grey i{background:var(--bd-bar-neutral)}
   .cbar-gold i{background:linear-gradient(90deg,#A9812E,#D8BA78)}
-  .savings{border-top:1px solid rgba(255,255,255,.14);padding-top:22px;display:flex;justify-content:space-between;align-items:baseline}
-  .savings span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;font-family:Manrope,system-ui,sans-serif}
-  .savings b{font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#D8BA78;font-family:Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums}
-  .calc-note{margin-top:18px;font-size:11.5px;color:rgba(250,247,241,.62);line-height:1.7}
+  .savings{border-top:1px solid var(--bd-rule);padding-top:22px;display:flex;justify-content:space-between;align-items:baseline}
+  .savings span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--bd-soft);font-weight:700;font-family:Manrope,system-ui,sans-serif}
+  .savings b{font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:var(--bd-link);font-family:Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+  .calc-note{margin-top:18px;font-size:11.5px;color:var(--bd-faint);line-height:1.7}
 
   .dossier{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.35);max-width:980px}
   .dossier-head{padding:26px 36px;border-bottom:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
@@ -993,33 +1045,33 @@ const faqLd = {
   .d-quote p{font-family:Fraunces,Georgia,serif;font-style:italic;font-size:17px;line-height:1.6;max-width:60ch;color:#FAF7F1;margin:0}
   .d-quote footer{margin-top:12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui,sans-serif}
 
-  .compare-table{border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden;background:#141416;}
-  .ct-row{display:grid;grid-template-columns:1.1fr 1.4fr 1.4fr;gap:16px;padding:16px 22px;border-top:1px solid rgba(255,255,255,.1);align-items:center;font-size:13.5px;}
+  .compare-table{border:1px solid var(--bd-card-bd);border-radius:8px;overflow:hidden;background:var(--bd-card);}
+  .ct-row{display:grid;grid-template-columns:1.1fr 1.4fr 1.4fr;gap:16px;padding:16px 22px;border-top:1px solid var(--bd-card-bd);align-items:center;font-size:13.5px;}
   .ct-row:first-child{border-top:none;}
-  .ct-head{padding-top:14px;padding-bottom:14px;font-family:Manrope,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.45);}
-  .ct-head .ct-us{color:#D8BA78;}
-  .ct-row > div:first-child{color:rgba(250,247,241,.85);font-weight:600;}
-  .ct-neg{color:rgba(250,247,241,.5);}
-  .ct-neg::before{content:"×";color:rgba(250,247,241,.35);margin-right:8px;font-weight:700;}
-  .ct-pos{color:#FAF7F1;font-weight:600;}
-  .ct-pos::before{content:"✓";color:#A9812E;margin-right:8px;font-weight:700;}
+  .ct-head{padding-top:14px;padding-bottom:14px;font-family:Manrope,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);}
+  .ct-head .ct-us{color:var(--bd-link);}
+  .ct-row > div:first-child{color:var(--bd-fg);font-weight:600;}
+  .ct-neg{color:var(--bd-faint);}
+  .ct-neg::before{content:"×";color:var(--bd-bar-neutral);margin-right:8px;font-weight:700;}
+  .ct-pos{color:var(--bd-fg);font-weight:600;}
+  .ct-pos::before{content:"✓";color:var(--bd-eyebrow);margin-right:8px;font-weight:700;}
   @media(max-width:640px){
     .ct-row{grid-template-columns:1fr;gap:4px;padding:16px 20px;}
-    .ct-row > div:first-child{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#A9812E;font-weight:700;}
+    .ct-row > div:first-child{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--bd-eyebrow);font-weight:700;}
     .ct-head{display:none;}
   }
   .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:20px}
-  .comp-card{background:#1B1B1D;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:32px 28px}
+  .comp-card{background:var(--bd-card);border:1px solid var(--bd-card-bd);border-radius:8px;padding:32px 28px}
   .comp-card.comp-hero{border-color:rgba(216,186,120,.45)}
-  .comp-vs{font-family:Manrope,system-ui;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(250,247,241,.68);font-weight:700;margin-bottom:8px}
-  .comp-card h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:19px;color:#D8BA78;margin:0 0 8px}
+  .comp-vs{font-family:Manrope,system-ui;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--bd-soft);font-weight:700;margin-bottom:8px}
+  .comp-card h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:19px;color:var(--bd-link);margin:0 0 8px}
   .comp-list{list-style:none;padding:0;margin:0}
-  .comp-list li{font-size:13.5px;line-height:1.65;color:rgba(250,247,241,.62);padding:10px 0 10px 22px;border-bottom:1px solid rgba(255,255,255,.1);position:relative}
+  .comp-list li{font-size:13.5px;line-height:1.65;color:var(--bd-soft);padding:10px 0 10px 22px;border-bottom:1px solid var(--bd-card-bd);position:relative}
   .comp-list li:last-child{border-bottom:none}
-  .comp-list li::before{content:"";position:absolute;left:0;top:17px;width:9px;height:9px;border:1px solid #A9812E;border-radius:50%}
-  .comp-list li::after{content:"";position:absolute;left:3px;top:20px;width:3px;height:3px;background:#A9812E;border-radius:50%}
+  .comp-list li::before{content:"";position:absolute;left:0;top:17px;width:9px;height:9px;border:1px solid var(--bd-eyebrow);border-radius:50%}
+  .comp-list li::after{content:"";position:absolute;left:3px;top:20px;width:3px;height:3px;background:var(--bd-eyebrow);border-radius:50%}
 
-  .method-eyebrow{font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;margin:0 0 14px}
+  .method-eyebrow{font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--bd-eyebrow,#A9812E);margin:0 0 14px}
   .method-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(30px,5vw,72px);align-items:start}
   .cycle-pane{position:sticky;top:110px;display:flex;flex-direction:column;align-items:center;padding:20px 0 40px}
   .cycle-label{margin-top:18px;text-align:center}
