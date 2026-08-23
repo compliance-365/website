@@ -113,12 +113,9 @@ const GRACE_DAYS = 14; // same standard as tools/issue-entitlement.mjs
 /* Exact copy of public/checkpoint/lib.js's isValidTenantIdentifier() —
    same single-file-Lambda copy-not-import reason as canonicalJson()
    below. Accepts either a real Entra tenant GUID or a verified-domain
-   string; rejects free-text junk. This does NOT verify the caller
-   actually controls the tenant named — Paddle proves a real purchase
-   happened, not who it belongs to, and there is currently no
-   server-side proof binding the two together (tracked separately) — it
-   only stops obviously-malformed values from being signed and written
-   into the owner's own roster. */
+   string; rejects free-text junk. This is a FORMAT check only — see
+   resolveCallerTenantId() below for what actually binds a request to
+   the tenant it claims to be for. */
 export function isValidTenantIdentifier(s) {
   if (!s) return false;
   const v = String(s).trim();
@@ -176,6 +173,75 @@ async function signEntitlementPayload(privateKey, payload) {
   const sig = await webcrypto.subtle.sign('Ed25519', privateKey, data);
   return bytesToBase64(new Uint8Array(sig));
 }
+
+/* ============== Caller tenant resolution ==============
+   THE FIX: this Lambda used to take `tenantId` straight from the
+   request body and sign/record it on nothing more than a format check
+   (isValidTenantIdentifier() above). Paddle proves a real payment
+   happened; it says nothing about who submitted the request or which
+   tenant they actually belong to. Anyone who could complete a real
+   checkout under their own card — even the cheapest available price —
+   could then call this endpoint directly (bypassing the browser
+   entirely) with an arbitrary tenantId and receive back a validly
+   SIGNED activation naming a tenant they have no connection to, and a
+   PartnerClients/PartnerEntitlements roster row would be written
+   claiming that tenant as a customer. It never reaches into the named
+   tenant's own SharePoint (this Lambda has no Graph credential for any
+   customer tenant, ever — see the file header), so this was never a
+   path to another tenant's data, but it was a real path to a poisoned
+   roster, spurious owner-notification emails, and a company receiving
+   a free, genuinely-signed premium activation that was never bought
+   for them.
+
+   The fix: the browser already holds a live Graph access token for
+   its own tenant at the moment it calls this (attemptSelfServeActivation
+   runs right after Microsoft sign-in; refreshSelfServeEntitlementOnLoad
+   runs on every load of an already-onboarded tenant) — see app.js. It
+   now forwards that token as a Bearer header. This Lambda calls
+   Microsoft Graph's own /organization endpoint WITH THAT TOKEN and uses
+   Graph's answer — never the request body — as the tenant id everything
+   downstream is signed and recorded against. A stolen or fabricated
+   tenantId in the JSON body can no longer produce a signed file for a
+   tenant the caller doesn't actually hold a valid token for, because
+   Graph itself refuses the call the instant the token doesn't check
+   out (expired, wrong audience, revoked).
+
+   Requires nothing beyond a scope this app already asks for at sign-in
+   — Directory.Read.All is already in config.js's scopesReadOnly, the
+   same scope Graph.tenantInfo() already uses client-side for the same
+   /organization read. No new consent prompt for any existing customer.
+
+   graphFetch is injectable so the comparison logic below
+   (resolveCallerTenantId itself talks to the network and is therefore,
+   like paddleFetch/resolveSubscription above, exercised by the sandbox
+   walkthrough in DEPLOY-PROVISION.md rather than a unit test) can still
+   be swapped out in test/provision-tenant-auth.test.mjs to unit-test
+   the request-shaping and error-classification around it without a
+   real token or network access. */
+export async function resolveCallerTenantId(bearerToken, graphFetch) {
+  const fetchImpl = graphFetch || defaultGraphFetch;
+  let org;
+  try {
+    org = await fetchImpl('https://graph.microsoft.com/v1.0/organization?$select=id', bearerToken);
+  } catch (e) {
+    throw new AuthError('Could not verify your Microsoft 365 sign-in (' + (e && e.message) + '). Sign in again and retry.');
+  }
+  const id = org && Array.isArray(org.value) && org.value[0] && org.value[0].id;
+  if (!id) throw new AuthError('Your Microsoft 365 sign-in did not resolve to a tenant. Sign in again and retry.');
+  return id;
+}
+async function defaultGraphFetch(url, bearerToken) {
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + bearerToken } });
+  if (!res.ok) throw new Error('Graph ' + res.status + ': ' + (await res.text()));
+  return res.json();
+}
+/* Distinguished from a generic Error so the handler can map it to 401
+   (bad/missing credentials) rather than the 400 every other failure in
+   this file returns (bad Paddle data, malformed input) — a customer
+   whose token just expired needs to be told to sign in again, not shown
+   the same "could not confirm your purchase" message a real payment
+   problem gets. */
+export class AuthError extends Error {}
 
 /* ============== Paddle ============== */
 function paddleBase() {
@@ -524,7 +590,7 @@ export const handler = async (event) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json'
   };
 
@@ -602,6 +668,34 @@ export const handler = async (event) => {
       return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId is not a recognised tenant identifier.' }) };
     }
 
+    // THE FIX — see resolveCallerTenantId()'s own comment above for the
+    // full story. Everything above this point only checks that
+    // `tenantId` is well-formed; nothing yet has checked it belongs to
+    // whoever is calling. This is the one gate that does: the caller
+    // must present a live Graph token, and that token's own tenant —
+    // resolved by asking Microsoft Graph, never trusted from the
+    // request body — must match what was submitted. A request that
+    // reaches buildSignedActivation() below is now guaranteed to be for
+    // the tenant the caller actually holds a valid token for, not
+    // merely a tenant id that happens to be shaped like a GUID.
+    const authHeader = event.headers?.authorization || event.headers?.Authorization || '';
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!bearerToken) {
+      return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: 'Sign in required — no Microsoft 365 credential was sent with this request.' }) };
+    }
+    let callerTenantId;
+    try {
+      callerTenantId = await resolveCallerTenantId(bearerToken);
+    } catch (e) {
+      if (e instanceof AuthError) {
+        return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: e.message }) };
+      }
+      throw e;
+    }
+    if (callerTenantId.toLowerCase() !== tenantId.toLowerCase()) {
+      return { statusCode: 403, headers: corsHeaders, body: JSON.stringify({ error: 'The signed-in Microsoft 365 tenant does not match the tenant this activation is for.' }) };
+    }
+
     let purchase;
     if (transactionId) {
       // Fresh checkout: resolve the subscription behind it, merged with
@@ -619,7 +713,12 @@ export const handler = async (event) => {
       throw new Error('None of the provided subscription(s) are currently active or trialing.');
     }
 
-    const file = await buildSignedActivation(tenantId, purchase);
+    // Signed and recorded against the Graph-verified tenant id, not the
+    // raw request-body value — they've been confirmed equal above
+    // (case-insensitively), but this guarantees the exact casing that
+    // ends up in the signed payload and the roster is always the one
+    // Microsoft's own directory returned, never merely "close enough".
+    const file = await buildSignedActivation(callerTenantId, purchase);
 
     try {
       await recordOnOwnerRoster(file.payload, purchase);

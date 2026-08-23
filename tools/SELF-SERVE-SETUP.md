@@ -40,7 +40,7 @@ of auto-filling it — so it's safe to have shipped ahead of the Lambda.
      │                                                                            │                        │
      │                                          Sign in with Microsoft (MSAL) ────┤                        │
      │                                                                            │                        │
-     │                          POST {transactionId, tenantId} ──────────────────►│  (attemptSelfServeActivation)
+     │              POST {transactionId, tenantId} + Bearer <caller's own Graph token} ►│  (attemptSelfServeActivation)
      │                      ◄── verify subscription is active/trialing ───────────┤                        │
      │                          + sign entitlement (same Ed25519 key as the CLI)  │                        │
      │                          + record on OUR OWN roster ─────────────────────────────────────────────► PartnerClients/

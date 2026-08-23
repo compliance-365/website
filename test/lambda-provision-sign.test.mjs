@@ -1,7 +1,11 @@
 // Unit coverage for the safe hardening added to lambda/provision.js and
 // lambda/sign.js after a security review found provision.js trusted
 // `tenantId` from the request body with no verification it belongs to
-// the caller, and that lambda/sign.js's VALID_FRAMEWORKS/FRAMEWORK_BUNDLES
+// the caller (isValidTenantIdentifier() below is the FORMAT check that
+// review added; the actual caller-binding fix — resolveCallerTenantId(),
+// which verifies the request against Microsoft Graph itself — landed
+// later and is covered separately in test/provision-tenant-auth.test.mjs),
+// and that lambda/sign.js's VALID_FRAMEWORKS/FRAMEWORK_BUNDLES
 // had silently drifted out of sync with tools/issue-entitlement.mjs's
 // canonical copy (missing 'rffr' entirely, silently blocking the owner
 // console's "sign via endpoint" fast path for it with no clear error).
