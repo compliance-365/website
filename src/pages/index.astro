@@ -1025,14 +1025,27 @@ const faqLd = {
   .cycle-label{margin-top:18px;text-align:center}
   .cycle-label b{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:22px;display:block;color:#FAF7F1;transition:opacity .3s var(--ease)}
   .cycle-label span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui}
-  .phase{min-height:52vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid rgba(255,255,255,.14);padding:36px 0;opacity:.28;transition:opacity .5s var(--ease)}
+  /* Inactive phases used to sit at opacity:.28. Compounded with the .62
+     alpha already on .phase p that resolved to ~17% effective opacity —
+     1.58:1 against this section's #0B0B0C, and 1.44:1 for the gold
+     .phase-num. Three of the four phases were unreadable at any moment,
+     and if the scroll observer never fired, all four were.
+
+     Dimming can't be tuned out of this: .phase-num is #A9812E, only
+     5.5:1 at FULL strength, so any opacity below ~.9 puts it under the
+     4.5:1 floor — and at .9 the dim is invisible anyway. So the focus
+     effect moves to a channel that costs no contrast: a gold rule
+     marking the active phase. Everything stays legible, the current
+     phase is signalled more clearly than before, and the no-JS fallback
+     is four readable phases instead of four ghosts. */
+  .phase{min-height:52vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid rgba(255,255,255,.14);border-left:2px solid transparent;padding:36px 0 36px 22px;transition:border-color .5s var(--ease)}
   .phase:last-child{border-bottom:none}
-  .phase.active{opacity:1}
+  .phase.active{border-left-color:#A9812E}
   .phase-num{font-family:Manrope,system-ui;font-size:11px;letter-spacing:.2em;color:#A9812E;font-weight:800;margin-bottom:12px;font-variant-numeric:tabular-nums}
   .phase h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(1.5rem,2.6vw,2.1rem);color:#FAF7F1;margin:0 0 12px}
   .phase p{font-size:14.5px;line-height:1.75;color:rgba(250,247,241,.62);max-width:48ch;margin:0 0 16px}
   .phase-deliver{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui}
-  @media(max-width:900px){.method-grid{grid-template-columns:1fr}.cycle-pane{position:relative;top:0}.phase{min-height:auto;padding:28px 0}}
+  @media(max-width:900px){.method-grid{grid-template-columns:1fr}.cycle-pane{position:relative;top:0}.phase{min-height:auto;padding:28px 0 28px 22px}}
 
   .final-ring-bg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(120vw,760px);opacity:.07;pointer-events:none;animation:slowspin 60s linear infinite}
   @keyframes slowspin{to{transform:translate(-50%,-50%) rotate(360deg)}}

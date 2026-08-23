@@ -137,6 +137,23 @@ function isActive(path: string) {
       <a class={`nav-link${isActive(base + 'about') ? ' active' : ''}`} href={base + 'about/'}>About</a>
       <a class={`nav-link${isActive(base + 'contact') ? ' active' : ''}`} href={base + 'contact/'}>Contact</a>
 
+      <!-- Search — /search/ has always existed and worked, but was linked
+           from neither the header nor the footer, so nothing could reach
+           it. Icon-only on desktop (the nav already carries eight items);
+           expands to a labelled row in the stacked mobile menu, where an
+           unlabelled glyph would read as decoration. -->
+      <a
+        class={`nav-search${isActive(base + 'search') ? ' active' : ''}`}
+        href={base + 'search/'}
+        aria-label="Search this site"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <line x1="16.5" y1="16.5" x2="21" y2="21"/>
+        </svg>
+        <span class="nav-search-label">Search</span>
+      </a>
+
       <!-- CTA -->
       <a href={ctaUrl} class="btn-cta" aria-label="Book a call">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -372,6 +389,30 @@ function isActive(path: string) {
   .nav-dd.open .nav-dd-menu { display: block; }
 
   /* ── CTA button ── */
+  /* Icon-only on desktop, but still a full 44px target rather than a
+     24px glyph with nothing around it. */
+  .nav-search {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 7px 11px;
+    border-radius: 10px;
+    color: #D8D5CD;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-search svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-search:hover { background: rgba(169, 129, 46, 0.1); color: #FAF7F1; }
+  .nav-search.active { color: #D8BA78; }
+  .nav-search-label {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
   .btn-cta {
     display: inline-flex;
     align-items: center;
@@ -470,6 +511,21 @@ function isActive(path: string) {
       background: #1B1B1D;
     }
     .nav-dd.open .nav-dd-menu { display: block; }
+    /* In the stacked menu the icon gets its label back and the row
+       behaves like every other nav link. */
+    .nav-search {
+      width: 100%;
+      justify-content: flex-start;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .nav-search-label {
+      position: static;
+      width: auto; height: auto;
+      margin: 0; overflow: visible;
+      clip: auto; white-space: normal;
+    }
     .btn-cta {
       width: 100%;
       justify-content: center;
