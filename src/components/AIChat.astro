@@ -84,9 +84,11 @@
 <style>
   #c365-chat {
     position: fixed;
-    bottom: 88px;
+    /* Lifts with the cookie banner — see --fab-lift in brand.css. */
+    bottom: calc(88px + var(--fab-lift, 0px));
     left: 20px;
     z-index: 10000;
+    transition: bottom .2s ease;
     font-family: Nunito, system-ui, -apple-system, sans-serif;
   }
 
@@ -99,6 +101,9 @@
     color: #fff;
     border: none;
     border-radius: 28px;
+    /* Was 42px tall — under the 44px touch target both Apple HIG and
+       Material ask for, and this is the primary support entry point. */
+    min-height: 44px;
     padding: 10px 18px 10px 14px;
     font-size: 0.88rem;
     font-weight: 700;
@@ -360,7 +365,9 @@
 
   /* ---- Mobile ---- */
   @media (max-width: 480px) {
-    #c365-chat { left: 12px; bottom: 80px; }
+    /* Must keep the --fab-lift term: this is the width where the cookie
+       banner is tallest and the overlap it causes is worst. */
+    #c365-chat { left: 12px; bottom: calc(80px + var(--fab-lift, 0px)); }
     #c365-panel { width: calc(100vw - 24px); left: 0; }
   }
 </style>

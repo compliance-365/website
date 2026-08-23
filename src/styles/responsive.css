@@ -27,6 +27,80 @@ p, .lead{ font-size: clamp(.98rem, 2.4vw, 1.05rem); }
   padding: 0 16px;
 }
 
+/* ── Tap targets ──────────────────────────────────────────────────────
+   Two different bars apply here and it is worth keeping them apart:
+   WCAG 2.2 SC 2.5.8 (Level AA) asks for 24x24 CSS px, exempting links
+   that sit inline in a sentence; Apple HIG and Material both ask for
+   ~44px, which is what makes a control comfortable rather than merely
+   conformant.
+
+   Measured at 390px across seven pages before this block: 380
+   undersized controls. The dominant group was footer link lists at
+   37x16 — under the AA floor on height, and their ~21px centre-to-
+   centre spacing does not satisfy the spacing exception either, so
+   those are real AA failures rather than just tight ones.
+
+   Only navigational and control targets are raised. Links inline in
+   prose are deliberately left alone: stretching them to 44px would
+   break the line box they sit in, and the criterion exempts them. */
+
+/* Everywhere, including mouse: clear the WCAG AA floor. */
+.link-list a, .loc-list a, .legal-links a,
+.meta-link, .cta-sub-link, .loc-all{
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+/* Touch pointers get the platform comfort standard. Keyed off
+   pointer:coarse rather than a width breakpoint so a small laptop
+   window keeps its density and a large tablet still gets real targets. */
+@media (pointer: coarse){
+  .link-list a, .loc-list a, .legal-links a,
+  .meta-link, .cta-sub-link, .loc-all,
+  .nav-search, .c365-opt, .c365-unsure-link,
+  .scan-replay, .exp-cta{
+    min-height: 44px;
+  }
+  /* The 44px anchors now supply their own separation, so the extra
+     list margin would only stretch the footer for no gain. */
+  .link-list li{ margin: 0; }
+
+  .social-btn, .nav-toggle{ min-width: 44px; min-height: 44px; }
+  .brand{ min-height: 44px; }
+  /* The "Have a question? Ask AI" control in the closing CTA is a button
+     styled as a text link, with inline padding:0 — 17px tall across
+     eight service pages. min-height is not set inline, so this reaches
+     it without needing !important. */
+  .svc-final-cta button, .final-cta button{ min-height: 44px; }
+  .digest-input, input[type="email"], input[type="text"], select, textarea{ min-height: 44px; }
+  /* A range track is ~16px tall; the thumb is the thing being grabbed,
+     so the control needs room around it to be draggable with a thumb. */
+  input[type="range"]{ min-height: 44px; }
+  /* A bare 18px checkbox is under even the AA floor; its label is the
+     comfortable target, so the box only has to clear 24px. */
+  input[type="checkbox"], input[type="radio"]{ min-width: 24px; min-height: 24px; }
+}
+
+/* ── Minimum interface type ───────────────────────────────────────────
+   232 text nodes rendered under 12px at 390px — uppercase micro-labels,
+   pills and captions. The letter-spaced label treatment is a legitimate
+   device, but 10px is below comfortable reading on a phone held at
+   arm's length.
+
+   !important is load-bearing rather than lazy here: most of these sizes
+   come from inline style attributes (the site carries ~3,700 of them),
+   which a stylesheet cannot otherwise reach. Scoped to small viewports
+   so desktop typography is untouched, and to a floor rather than a
+   fixed size, so anything already larger is left alone. */
+@media (max-width: 900px){
+  .col-heading, .pill, .chip, .rf-n, .comp-vs, .dk,
+  .phase-num, .phase-deliver, .q-label, .chev,
+  .c365-opt__desc, .c365-scoper__badge, .c365-scoper__eyebrow-text{
+    font-size: 12px !important;
+  }
+}
+
 /* Hero: stack & give breathing room on mobile */
 .hero-wrap{ padding: 20px 0 10px; }
 @media (max-width: 900px){
