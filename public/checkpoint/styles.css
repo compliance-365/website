@@ -636,7 +636,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
 .modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:31px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:0 30px 80px rgba(0,0,0,.55)}
 .modal-box.open{display:block}
 .modal-box h3{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
-.modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px}
+.modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px;white-space:pre-line}
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px}
 .modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}

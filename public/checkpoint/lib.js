@@ -1272,6 +1272,111 @@
     return rows.map(function (row) { return row.map(cell).join(','); }).join('\r\n');
   }
 
+  /* ================= CSV import =================
+     The export half of the story has existed since the beginning; the
+     import half did not, which meant an enterprise arriving with a risk
+     register in a spreadsheet -- or migrating off another GRC tool --
+     hand-keyed it. That is the difference between a one-day and a
+     three-week onboarding.
+
+     Everything here is deliberately pure and side-effect free: parse,
+     map, validate, and REPORT. Nothing in this module writes. The
+     caller runs the plan past a human first, because this is the only
+     feature in Checkpoint that bulk-writes into a client's real
+     compliance register, and the failure mode of getting it wrong is
+     somebody's risk register quietly filling with junk.
+
+     parseCsv() is the exact inverse of toCsv() above: RFC 4180 quoting,
+     "" for a literal quote inside a quoted field, and embedded commas
+     and newlines preserved. A Checkpoint export therefore round-trips
+     through it unchanged, which is the cheapest possible way for a
+     practitioner to check the format -- export, edit in Excel,
+     re-import. */
+  function parseCsv(text) {
+    var rows = [], row = [], field = '', inQuotes = false;
+    var src = String(text == null ? '' : text);
+    /* A BOM is what Excel writes on "Save as CSV UTF-8", and left in
+       place it corrupts the very first header name -- which then fails
+       to match any known column and silently drops that column. */
+    if (src.charCodeAt(0) === 0xFEFF) src = src.slice(1);
+    for (var i = 0; i < src.length; i++) {
+      var c = src[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (src[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else field += c;
+        continue;
+      }
+      if (c === '"') { inQuotes = true; continue; }
+      if (c === ',') { row.push(field); field = ''; continue; }
+      if (c === '\r') { if (src[i + 1] === '\n') i++; rows.push(row.concat(field)); row = []; field = ''; continue; }
+      if (c === '\n') { rows.push(row.concat(field)); row = []; field = ''; continue; }
+      field += c;
+    }
+    /* A trailing newline must not manufacture a phantom empty row. */
+    if (field !== '' || row.length) rows.push(row.concat(field));
+    return rows;
+  }
+
+  /* Header matching is forgiving on presentation and strict on meaning:
+     case, surrounding whitespace and non-alphanumerics are ignored, so
+     "Due date", "due_date" and "DUE DATE" all match, but an unrecognised
+     column is reported rather than guessed at. */
+  function normaliseHeader(h) {
+    return String(h == null ? '' : h).toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  /* Builds an import plan WITHOUT applying it. `spec` describes the
+     target register: its columns (each {key, aliases, required,
+     validate}) and a `label`. Returns every row classified, so the
+     caller can show a human exactly what would happen before anything
+     is written. */
+  function planCsvImport(text, spec) {
+    var rows = parseCsv(text).filter(function (r) { return r.some(function (c) { return String(c).trim() !== ''; }); });
+    var out = { label: spec.label, columns: [], unknownColumns: [], ready: [], skipped: [], totalRows: 0 };
+    if (!rows.length) { out.error = 'The file is empty.'; return out; }
+
+    var headerRow = rows[0].map(normaliseHeader);
+    var byIndex = {};
+    headerRow.forEach(function (h, i) {
+      var col = spec.columns.find(function (c) {
+        return normaliseHeader(c.key) === h || (c.aliases || []).some(function (a) { return normaliseHeader(a) === h; });
+      });
+      if (col) { byIndex[i] = col; out.columns.push(col.key); }
+      else if (h) out.unknownColumns.push(rows[0][i]);
+    });
+
+    var missingRequired = spec.columns.filter(function (c) { return c.required && out.columns.indexOf(c.key) === -1; });
+    if (missingRequired.length) {
+      out.error = 'The file is missing required column' + (missingRequired.length === 1 ? '' : 's') + ': ' +
+        missingRequired.map(function (c) { return c.key; }).join(', ') + '.';
+      return out;
+    }
+
+    out.totalRows = rows.length - 1;
+    for (var r = 1; r < rows.length; r++) {
+      var raw = rows[r], rec = {}, problems = [];
+      Object.keys(byIndex).forEach(function (idx) {
+        var col = byIndex[idx];
+        rec[col.key] = String(raw[idx] == null ? '' : raw[idx]).trim();
+      });
+      spec.columns.forEach(function (col) {
+        var v = rec[col.key] || '';
+        if (col.required && !v) { problems.push(col.key + ' is required'); return; }
+        if (v && col.validate) {
+          var err = col.validate(v, rec);
+          if (err) problems.push(err);
+        }
+      });
+      /* Row number is the line a human sees in Excel: header is row 1. */
+      var lineNo = r + 1;
+      if (problems.length) out.skipped.push({ line: lineNo, reason: problems.join('; '), raw: rec });
+      else out.ready.push({ line: lineNo, rec: rec });
+    }
+    return out;
+  }
+
   /* Minimal ZIP writer — STORE method (no compression), no external
      dependency. Just enough of PKZIP's format to produce a file every
      major unzip tool (Windows Explorer, macOS Archive Utility, 7-Zip,
@@ -2303,6 +2408,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
+    parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
     encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
