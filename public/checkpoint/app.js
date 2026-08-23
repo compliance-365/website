@@ -512,7 +512,7 @@ function showModal(opts) {
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
-    'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
+    'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
     'confirmRffrSuggestion', 'dismissRffrSuggestion', 'confirmIso42001Suggestion', 'dismissIso42001Suggestion',
@@ -2808,6 +2808,89 @@ function showModal(opts) {
     });
   }
   function warn(e) { console.error(e); toastError('<b>Sync issue:</b> ' + esc(e.message || e)); }
+
+  /* ── Segregation of duties (ISO 27001 A.5.3) ──────────────────────
+     Who originated a record is not stored on the record itself; it is
+     in the audit log, which is exactly what makes it trustworthy —
+     hash-chained (see verifyAuditChain) and never rewritten. The
+     EARLIEST entry for a target is its creation, whatever the action
+     happened to be called at the time, so this survives new creation
+     paths being added later without needing to know their names. */
+  function originatorOf(targetType, targetId) {
+    var entries = (S.auditLog || []).filter(function (e) {
+      return e.targetType === targetType && String(e.targetId) === String(targetId);
+    });
+    if (!entries.length) return null;
+    var first = entries.reduce(function (a, b) {
+      return String(a.entryDateTime || '') <= String(b.entryDateTime || '') ? a : b;
+    });
+    return { id: first.actorId || '', name: first.actor || '' };
+  }
+
+  function currentActor() {
+    var acc = (typeof Graph !== 'undefined' && Graph.getAccount()) || null;
+    return {
+      id: (acc && (acc.homeAccountId || acc.localAccountId)) || '',
+      name: (acc && (acc.name || acc.username)) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner')
+    };
+  }
+
+  /* Returns null when there is no conflict, otherwise a finding the
+     caller can either refuse on or record. Note this compares the
+     SIGNED-IN account against the originator, not the free-text
+     "Approved by"/"Accepted by" field: that field is often a third
+     party whose decision is being transcribed (a CEO's sign-off in a
+     management review), and treating a transcription as a conflict
+     would be wrong. What A.5.3 is actually about here is whether the
+     person operating the app can wave through their own work. */
+  function segregationFinding(targetType, targetId) {
+    var author = originatorOf(targetType, targetId);
+    if (!author) return null;
+    var me = currentActor();
+    var res = window.CheckpointLib.evaluateSegregation({
+      authorId: author.id, authorName: author.name,
+      approverId: me.id, approverName: me.name
+    });
+    if (!res.conflict) return null;
+    return { author: author, approver: me, matchedOn: res.matchedOn, reason: res.reason };
+  }
+
+  function sodEnforced() { return S.settings && S.settings.sodEnforced === 'true'; }
+
+  /* Refused, or allowed-and-recorded. Returns false when the caller
+     must stop. The self-approval is written into the audit entry
+     either way — an auditor asking "did anyone approve their own
+     work?" gets an answer from the log, not from whether a setting
+     happened to be on at the time. */
+  async function segregationGate(finding, what) {
+    if (!finding) return true;
+    if (sodEnforced()) {
+      await showModal({
+        title: 'Separate approver required',
+        message: 'Segregation of duties is switched on for this tenant, so ' + what + ' has to be authorised by someone other than the person who raised it.\n\n' +
+          finding.reason + '\n\nRaised by: ' + finding.author.name + '\nSigned in as: ' + finding.approver.name +
+          '\n\nAsk a colleague with Practitioner access to sign in and authorise it, or turn segregation of duties off in Settings if this tenant has only one practitioner.',
+        confirmText: 'Close', cancelText: 'Cancel'
+      });
+      return false;
+    }
+    var go = await showModal({
+      title: 'You are authorising your own work',
+      message: what.charAt(0).toUpperCase() + what.slice(1) + ' was raised by the account you are signed in as. ISO 27001 A.5.3 expects conflicting duties to be separated, so this will be recorded on the audit log as a self-approval.\n\n' +
+        'Raised by: ' + finding.author.name + '\nSigned in as: ' + finding.approver.name +
+        '\n\nYou can continue — enable segregation of duties in Settings if you would rather Checkpoint refused this.',
+      confirmText: 'Record anyway', cancelText: 'Cancel'
+    });
+    return !!go;
+  }
+
+  /* Appended to the audit entry's `after` field so the fact travels
+     with the record itself, not just the setting's state at the time. */
+  function segregationNote(finding) {
+    return finding ? ' [self-approved — same ' + (finding.matchedOn === 'id' ? 'account' : 'name') + ' raised and authorised]' : '';
+  }
+
+
 
   /* ================= render ================= */
   function renderNavCounts() {
@@ -7418,6 +7501,13 @@ function showModal(opts) {
         '<button class="toggle' + (isLightNow ? ' on' : '') + '" id="themeToggleBtn" role="switch" aria-checked="' + (isLightNow ? 'true' : 'false') + '" aria-label="Light theme" data-action="App.toggleLightTheme"></button>';
     }
 
+    var sodEl = document.getElementById('sodRow');
+    if (sodEl) {
+      var sodOn = sodEnforced();
+      sodEl.innerHTML = '<div><b>Segregation of duties</b><p>ISO 27001 A.5.3. Refuse a policy approval or a residual-risk acceptance when the signed-in account is the one that raised it. Leave this off if this tenant has a single practitioner — a self-approval is recorded on the audit log either way, this only decides whether it is also blocked.</p></div>' +
+        '<button class="btn ghost sm" data-action="App.toggleSod">' + (sodOn ? 'Enforced' : 'Off') + '</button>';
+    }
+
     var appetiteEl = document.getElementById('riskAppetiteRow');
     if (appetiteEl) {
       var current = (S.settings && S.settings.riskAppetite) || 'Medium';
@@ -8782,6 +8872,8 @@ function showModal(opts) {
       var r = risk(id);
       if (!r) return;
       var q = residual(r);
+      var sodFinding = segregationFinding('Risk', r.id);
+      if (!(await segregationGate(sodFinding, 'this risk acceptance'))) return;
       var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var v = await showModal({
         title: 'Accept residual risk — ' + r.id,
@@ -8808,7 +8900,7 @@ function showModal(opts) {
         r.acceptedScore = acceptedQ.L * acceptedQ.I;
         if (r.treat !== 'Accept') r.treat = 'Accept';
         await Store.updateRisk(r);
-        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate);
+        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate + segregationNote(sodFinding));
         toast('Residual risk acceptance recorded for <b>' + r.id + '</b>');
       } catch (e) { warn(e); }
       busy(false);
@@ -10801,6 +10893,10 @@ function showModal(opts) {
       var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
       if (!t) { toastError('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
       var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
+      /* A.5.3 — checked before the approval dialog opens, so a refused
+         approval doesn't waste the practitioner's time filling one in. */
+      var sodFinding = segregationFinding('Document', name);
+      if (!(await segregationGate(sodFinding, 'this document'))) return;
       /* Approval is a named act by a named person on a dated version,
          not a checkbox — Clause 7.5.2 c). The approver defaults to the
          signed-in practitioner but is editable, because the person
@@ -10854,7 +10950,7 @@ function showModal(opts) {
         });
       } catch (e) { warn(e); toastError('Could not save the approved copy: ' + esc(e.message || e)); return; }
       audit('Policy document approved', 'Document', name, 'Draft',
-        'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview);
+        'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview + segregationNote(sodFinding));
       /* An approved policy's review date becomes a real, dated ISMS
          activity — Clause 7.5.2 c) is a commitment to re-review, and a
          date sitting only on a document is a date nobody is reminded
@@ -11391,6 +11487,15 @@ function showModal(opts) {
       try { await Store.setSetting('scanCadenceDays', days); } catch (e) { warn(e); }
       toast('Scan reminder set to every <b>' + esc(days) + '</b> days');
       renderDash();
+    },
+
+    toggleSod: async function () {
+      var next = sodEnforced() ? 'false' : 'true';
+      S.settings.sodEnforced = next;
+      try { await Store.setSetting('sodEnforced', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'sodEnforced', next === 'true' ? 'false' : 'true', next);
+      toast('Segregation of duties ' + (next === 'true' ? 'enforced' : 'switched off'));
+      renderFrameworksAdmin();
     },
 
     toggleDigestEnabled: async function () {
