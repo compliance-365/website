@@ -606,9 +606,23 @@
         '</g>';
     }
 
+    /* The headline number is sized from the hole the rings actually
+       leave, not a fixed 30. The hole grows and shrinks with the number
+       of themes (more rings, tighter pitch), so a constant font-size
+       made the figure look lost inside a wide ring stack — the single
+       most-read number on the dashboard, drawn smaller than the axis
+       labels around it. Width is checked against the digit count too,
+       so a three-digit 100 still fits where a two-digit 45 sits. */
+    var innerR = outerR - (slots - 1) * pitch - pitch / 2;
+    var holeR = Math.max(12, innerR - ringWidth / 2);
+    var centerDigits = String(fx(centerPct, 0)).length;
+    /* 0.62 of the hole's height, or whatever the width allows at ~0.6em
+       per digit — whichever is smaller. */
+    var numSize = Math.min(46, holeR * 2 * 0.62, (holeR * 2 * 0.86) / (centerDigits * 0.6));
+    var capHalf = numSize * 0.36;
     var centerHtml = compact ? '' :
-      '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="30" font-weight="500" fill="' + P.text + '"' + (interactive ? ' class="rpt-fp-num" data-count="' + fx(centerPct, 0) + '"' : '') + '>' + fx(centerPct, 0) + '</text>' +
-      '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="' + P.textDim + '">READINESS</text>';
+      '<text x="' + cx + '" y="' + fx(cy + capHalf - 3) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="' + fx(numSize) + '" font-weight="500" fill="' + P.text + '"' + (interactive ? ' class="rpt-fp-num" data-count="' + fx(centerPct, 0) + '"' : '') + '>' + fx(centerPct, 0) + '</text>' +
+      '<text x="' + cx + '" y="' + fx(cy + capHalf + 12) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="' + P.textDim + '">READINESS</text>';
 
     var ariaLabel = escSvgText('Compliance fingerprint: ' + fx(centerPct, 0) + '% overall readiness across ' + rings.length + ' theme(s)' + (evidencePct != null ? ', ' + fx(evidencePct, 0) + '% evidence coverage' : ''));
     var titleHtml = (!interactive && opts.title) ? '<title>' + escSvgText(opts.title) + '</title>' : '';

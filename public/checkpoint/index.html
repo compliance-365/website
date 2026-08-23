@@ -426,7 +426,7 @@
       <div class="appetite-banner" id="scanDueBanner" style="display:none"></div>
       <div class="appetite-banner" id="digestDueBanner" style="display:none"></div>
       <div class="grid kpis" id="kpiRow"></div>
-      <p id="coverageNote" style="color:var(--paper-faint);font-size:11.5px;margin-top:10px"></p>
+      <p class="grid-note" id="coverageNote"></p>
       <div class="grid dash-2">
         <div class="card fp-card" id="fpCard" style="display:none">
           <div class="fp-head"><h3>Compliance fingerprint</h3><div class="filters" id="fpTabs" role="group" aria-label="Framework"></div></div>
@@ -520,6 +520,7 @@
     <section class="view" id="v-scan">
       <div class="vhead"><div class="rule"></div><h1>Posture scan</h1><p>Reads Conditional Access, directory roles, PIM, Identity Protection, Intune, OAuth app grants and Secure Score via Microsoft Graph — read-only, inside the tenant — across Identity, Devices, Apps &amp; Data, Monitoring, Continuity, Supplier and Governance. Failed and review-grade checks become <b style="color:var(--gold-light)">proposed risks and actions</b> for your approval; checks with no automatable signal show <b style="color:var(--paper-dim)">Manual — verify</b> rather than a false pass. Nothing enters the client register without a practitioner's sign-off.</p></div>
       <div class="grid scan-grid">
+        <div class="scan-side">
         <div class="card">
           <h3>Tenant posture</h3>
           <div class="gauge">
@@ -528,12 +529,13 @@
           </div>
           <div style="margin-top:18px"><button class="btn" data-action="App.runScan">Run scan now</button></div>
         </div>
-        <div class="card"><h3>Checks</h3><div id="checkList"></div></div>
-      </div>
-      <div class="card" id="coverageCard" style="margin-top:22px">
+        <div class="card" id="coverageCard">
         <h3>Coverage</h3>
         <p style="color:var(--paper-dim);font-size:12.5px;margin:4px 0 14px;line-height:1.6">What Checkpoint can check automatically in this tenant, based on the Microsoft 365 licensing and access actually in place — not every tenant has every premium licence, and the checks that need one show as Manual rather than a guess when it's missing.</p>
         <div id="coverageRows"></div>
+        </div>
+        </div>
+        <div class="card"><h3>Checks</h3><div id="checkList"></div></div>
       </div>
       <div id="proposedWrap" style="margin-top:22px"></div>
     </section>
@@ -541,7 +543,7 @@
     <!-- RISKS -->
     <section class="view" id="v-risks">
       <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual scores recalculate automatically as linked actions complete.</p></div>
-      <div class="card" style="margin-bottom:16px;max-width:460px">
+      <div class="card" style="margin-bottom:16px;max-width:560px">
         <h3>Residual risk heatmap</h3>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Every open risk plotted by likelihood × impact — where the register is actually concentrated, at a glance.</p>
         <div class="heat" id="riskHeat"></div>
@@ -782,6 +784,7 @@
 
       <div class="settings-subhead">Automation &amp; cadence</div>
       <p class="settings-subdesc">How often Checkpoint expects work to happen, and who it tells when it hasn't. The scheduled monitor (SETUP.md § Continuous monitoring) acts on these unattended once deployed.</p>
+      <div class="card fw-admin-row" id="sodRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="riskAppetiteRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="scanCadenceRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card" id="digestRow" style="max-width:680px;margin-bottom:16px"></div>

@@ -513,6 +513,16 @@ window.THRESHOLD_DEFS = [
 ];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
+  /* Segregation of duties (ISO 27001 A.5.3) — 'true'|'false'. When on,
+     Checkpoint refuses to let the same person both originate and
+     authorise a policy approval or a residual-risk acceptance.
+     Defaults OFF deliberately: Checkpoint's typical operator is a
+     one- or two-person consultancy where the practitioner legitimately
+     is the only person in the tenant, and defaulting this on would
+     lock them out of approving anything on day one. A self-approval is
+     RECORDED either way (see segregationNote() in app.js) — the
+     setting only decides whether it is also refused. */
+  sodEnforced: 'false',
   scanCadenceDays: '30',
   /* Light "paper" theme — 'true'|'false'. Read once at boot (bootUi()
      in app.js, before the first render) to set the data-theme

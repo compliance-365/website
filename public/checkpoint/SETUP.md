@@ -632,6 +632,50 @@ every campaign permanently short of 100%.
   (`parseCsv()`/`planCsvImport()`, covered by `test/csv-import.test.mjs`)
   and is pure — it reports a plan and never writes.
 
+- **Segregation of duties (A.5.3)**: ISO 27001 A.5.3 asks that
+  conflicting duties be separated so no one person can both perform and
+  authorise the same act. The two places that matters in Checkpoint are
+  approving a policy document and accepting a residual risk — in both, a
+  practitioner is recording a decision that is supposed to have been
+  made by someone with the authority to make it. Before either, the app
+  compares the signed-in account against the record's originator (the
+  earliest audit-log entry for that target — the log is the right source
+  because it is hash-chained and never rewritten, and taking the
+  *earliest* entry means new creation paths added later are covered
+  without this needing to know their names).
+    - Identity matches on the Entra account id first. Display name is a
+      fallback only where one side has no id (demo mode, or entries
+      predating `actorId`), and the audit note says which of the two it
+      was, because a name match is weaker evidence.
+    - Two different account ids are **never** a conflict even if the
+      display names match — two real people called J. Smith is not a
+      segregation failure, and false conflicts are what train people to
+      click through the warning.
+    - A record with no recorded originator (imported, or created before
+      this was tracked) is not a conflict.
+    - The comparison is against the **signed-in account**, not the
+      free-text "Approved by"/"Accepted by" field. That field is often a
+      third party whose decision is being transcribed (a CEO's sign-off
+      recorded in a management review), and treating a transcription as
+      a conflict would be wrong. What A.5.3 is about here is whether the
+      person operating the app can wave through their own work.
+  The `sodEnforced` setting (Settings → Automation & cadence) decides
+  what happens on a conflict: off (the default) warns and continues, on
+  refuses. It defaults **off** deliberately — Checkpoint's typical
+  operator is a one- or two-person consultancy where the practitioner
+  legitimately is the only person in the tenant, and defaulting it on
+  would lock them out of approving anything on day one. Either way the
+  self-approval is written into the audit entry's `after` field, so it
+  is covered by the hash chain and an auditor asking "did anyone approve
+  their own work?" gets an answer from the log rather than from whatever
+  the setting happened to be at the time. The comparison itself is pure
+  and lives in `lib.js` (`evaluateSegregation()`, covered by
+  `test/segregation.test.mjs`).
+  As with the Viewer role (§5a), this is UX and record-keeping, **not**
+  enforcement: SharePoint list permissions are the only real boundary.
+  A determined practitioner can still approve their own work by turning
+  the setting off — but not without that being visible in the log.
+
 ---
 
 ## 7. Selling additional frameworks (ISO 42001, SOC 2, etc.)

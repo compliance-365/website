@@ -1272,6 +1272,51 @@
     return rows.map(function (row) { return row.map(cell).join(','); }).join('\r\n');
   }
 
+  /* ================= Segregation of duties =================
+     ISO 27001 A.5.3 asks that conflicting duties be separated so that
+     no single person can both perform and authorise the same act. The
+     two places that matters most in Checkpoint are approving a policy
+     document and accepting a residual risk: in both, one person is
+     recording a decision that is supposed to have been made by someone
+     with the authority to make it.
+
+     This function decides only ONE thing: is the person authorising
+     this the same person who originated it? It is deliberately pure
+     and returns a finding rather than a verdict, because what the app
+     does about a conflict (warn and record, or refuse) is a policy
+     choice the client makes in Settings, not something to bake in
+     here.
+
+     Identity is matched on the Entra account id first, which is stable
+     and unambiguous. Display name is only a fallback for entries that
+     predate actorId being recorded, or for demo mode, where there is
+     no real account -- and it is reported separately, because a name
+     match is weaker evidence than an id match and an auditor reading
+     this should be able to tell which one it was. */
+  function evaluateSegregation(o) {
+    o = o || {};
+    function norm(v) { return String(v == null ? '' : v).trim().toLowerCase(); }
+    var authorId = norm(o.authorId), approverId = norm(o.approverId);
+    var authorName = norm(o.authorName), approverName = norm(o.approverName);
+
+    /* No recorded originator at all -- an imported record, or one made
+       before this was tracked. Silence is not a conflict; claiming one
+       would train people to click through the warning. */
+    if (!authorId && !authorName) return { conflict: false, matchedOn: null, reason: '' };
+
+    if (authorId && approverId && authorId === approverId) {
+      return { conflict: true, matchedOn: 'id', reason: 'The signed-in account that originated this is the one authorising it.' };
+    }
+    /* Only fall back to names when at least one side has no id to
+       compare -- two different accounts that happen to share a display
+       name are a real possibility, but if both ids are present and
+       differ, they ARE different people and the names do not matter. */
+    if ((!authorId || !approverId) && authorName && approverName && authorName === approverName) {
+      return { conflict: true, matchedOn: 'name', reason: 'The name recorded as originating this matches the name authorising it.' };
+    }
+    return { conflict: false, matchedOn: null, reason: '' };
+  }
+
   /* ================= CSV import =================
      The export half of the story has existed since the beginning; the
      import half did not, which meant an enterprise arriving with a risk
@@ -2408,6 +2453,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
+    evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
     encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
