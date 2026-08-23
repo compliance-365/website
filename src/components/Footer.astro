@@ -186,9 +186,22 @@ const ctaLabel = 'Book a free call';
   }
 
   /* ── Footer shell ── */
+  /* Two text tiers, both measured against this footer's real #111110
+     background rather than the #0B0B0C used elsewhere on the site:
+       --fc-text  #9A968F  6.4:1  running text meant to be read
+       --fc-dim   #8F8A80  5.5:1  chrome and fine print — a visible step
+                                  down, still clear of the WCAG AA 4.5:1
+                                  floor for body copy.
+     Previously the overrides below dimmed text to #5A5650 (2.6:1) and
+     #4A4540 (2.0:1) — under the base colour the shell already sets, and
+     well under AA. The hierarchy those values were reaching for is kept;
+     it just now happens between two passing tones instead of below the
+     legibility floor. */
   .footer {
+    --fc-text: #9A968F;
+    --fc-dim: #8F8A80;
     background: #111110;
-    color: #9A968F;
+    color: var(--fc-text);
     padding: 3.5rem 0 0;
     position: relative;
     overflow: hidden;
@@ -320,7 +333,7 @@ const ctaLabel = 'Book a free call';
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .09em;
-    color: #5A5650;
+    color: var(--fc-dim);
     margin: 0 0 .75rem;
   }
 
@@ -387,7 +400,7 @@ const ctaLabel = 'Book a free call';
 
   .cta-sub {
     font-size: .8rem;
-    color: #5A5650;
+    color: var(--fc-dim);
     margin: .6rem 0 0;
   }
 
@@ -411,7 +424,7 @@ const ctaLabel = 'Book a free call';
 
   .legal-links a {
     font-size: .78rem;
-    color: #5A5650;
+    color: var(--fc-dim);
     text-decoration: none;
     transition: color 0.15s;
   }
@@ -465,13 +478,13 @@ const ctaLabel = 'Book a free call';
 
   .copyright {
     font-size: .78rem;
-    color: #5A5650;
+    color: var(--fc-dim);
     margin: 0;
   }
 
   .acknowledgement {
     font-size: .75rem;
-    color: #4A4540;
+    color: var(--fc-text);
     line-height: 1.7;
     max-width: 720px;
     margin: 0;
@@ -480,7 +493,7 @@ const ctaLabel = 'Book a free call';
   .ack-label {
     display: block;
     font-weight: 700;
-    color: #5A5650;
+    color: var(--fc-text);
     margin-bottom: 2px;
   }
 
