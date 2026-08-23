@@ -81,6 +81,15 @@ window.Graph = (function () {
      acquires a token — it has no MSAL instance of its own. */
   async function aiToken() { return token(CONFIG.scopesAi); }
 
+  /* Bearer token for OUR OWN provisioning Lambda's caller-tenant check
+     (lambda/provision.js's resolveCallerTenantId()) — the same
+     scopesReadOnly token already granted at sign-in, exposed here so
+     app.js can forward it as an Authorization header on the self-serve
+     activation calls without reaching into this closure's private
+     token() itself. Named for the scope it carries, same convention as
+     aiToken()/signingToken() below. */
+  async function readOnlyToken() { return token(CONFIG.scopesReadOnly); }
+
   /* Incremental-consent token for OUR OWN optional signing endpoint
      (CONFIG.scopesSigning) — a small Azure Function in OUR tenant that
      holds the Ed25519 private key in Key Vault and signs an entitlement
@@ -885,6 +894,6 @@ window.Graph = (function () {
     setDriveItemFields: setDriveItemFields, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
-    detectRole: detectRole, aiToken: aiToken, signingToken: signingToken
+    detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken
   };
 })();

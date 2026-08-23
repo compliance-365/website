@@ -13360,8 +13360,12 @@ function showModal(opts) {
     var tenantId = (acceptTenantIds && acceptTenantIds[0]) || null;
     if (!tenantId) return;
     try {
+      /* Same server-side verification as attemptSelfServeActivation()
+         above — this call also mints a signed activation, so it needs
+         the same proof the caller actually holds tenantId. */
+      var callerToken = await Graph.readOnlyToken();
       var res = await fetch(CONFIG.selfServeActivateUrl, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + callerToken },
         body: JSON.stringify({ subscriptionIds: subIds, tenantId: tenantId })
       });
       /* Only a total failure (every known subscription cancelled/paused/
@@ -13854,9 +13858,16 @@ function showModal(opts) {
          right away, rather than the new activation file only reflecting
          this one transaction and dropping everything bought earlier —
          see lambda/provision.js's mergeResolvedSubscriptions(). */
+      /* Forwarded as Authorization: Bearer so the Lambda can verify
+         tenantId server-side against Microsoft Graph itself, rather
+         than trusting this JSON body — see lambda/provision.js's
+         resolveCallerTenantId(). Same scopesReadOnly token
+         Graph.tenantInfo() just used two lines up, so this never
+         prompts for anything new. */
+      var callerToken = await Graph.readOnlyToken();
       var res = await fetch(CONFIG.selfServeActivateUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + callerToken },
         body: JSON.stringify({ transactionId: txnId, tenantId: tenantInfo.id, knownSubscriptionIds: readPaddleSubs() })
       });
       var data = await res.json().catch(function () { return {}; });

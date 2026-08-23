@@ -124,6 +124,23 @@ That's the only front-end change needed — `app.js`'s
    temporarily if anything doesn't line up.
 4. Check the owner console's roster/Dashboard — the new client should
    have appeared automatically.
+5. **Confirm the caller-tenant check actually gates the request.** The
+   Lambda now verifies `tenantId` against Microsoft Graph's own
+   `/organization` endpoint using the caller's own bearer token, rather
+   than trusting the JSON body — see `resolveCallerTenantId()` in
+   `provision.js`. Two quick checks:
+   - Open your browser's Network tab during step 2 above and confirm
+     the `POST` to this Lambda carries an `Authorization: Bearer …`
+     header. If it's missing, the request will 401 and step 2's
+     "Confirming your purchase…" will show that error instead of
+     completing.
+   - Then deliberately try to defeat it: replay the same request with
+     `curl`, keeping the real `Authorization` header but changing
+     `tenantId` in the body to a different (even fictitious, but
+     GUID-shaped) tenant id. It must come back `403` — if it instead
+     signs successfully, the fix isn't wired up correctly and this must
+     not go to production. (A request with the header stripped
+     entirely should 401, not fall through to the old behaviour.)
 
 ## 9. Go live
 Once sandbox testing looks right: switch `PADDLE_ENV` to `production`,
