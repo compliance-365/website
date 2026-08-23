@@ -227,6 +227,64 @@ const POSTS = [
   },
 ];
 
+/* ── Filter tags ──────────────────────────────────────────────────────
+   The library holds 27 items across three content types and had no
+   filter, search or sort — finding "the ISO 42001 one" meant scanning
+   every card.
+
+   The framework each item covers is already written on the card, but as
+   free text in `badge`/`tag` and inconsistently: "ISO 42001",
+   "ISO 42001 · Reporting" and "AI Governance · ISO 42001" all mean the
+   same thing, so filtering on the raw strings would produce eighteen
+   near-duplicate pills. Instead the badge is matched against a
+   canonical list at build time. That keeps one source of truth — the
+   badge already displayed — so a new resource is taggable without a
+   second list to remember to update. */
+const FRAMEWORK_TAGS = [
+  { label: 'ISO 27001',       match: /ISO ?27001/i },
+  { label: 'ISO 27701',       match: /ISO ?27701/i },
+  { label: 'ISO 42001',       match: /ISO ?42001|AI Governance|AI Inventory/i },
+  { label: 'SOC 2',           match: /SOC ?2/i },
+  { label: 'Essential Eight', match: /Essential Eight|Essential 8|\bE8\b/i },
+  { label: 'Privacy Act',     match: /Privacy Act|ROPA/i },
+  { label: 'IS18',            match: /IS ?18/i },
+  { label: 'RFFR',            match: /RFFR/i },
+  { label: 'DISP / ISM / IRAP', match: /DISP|IRAP|\bISM\b/i },
+  { label: 'NIST CSF',        match: /NIST ?CSF|NIST Cybersecurity/i },
+  { label: 'Cyber Essentials', match: /Cyber Essentials/i },
+];
+
+/* Matches the badge AND the title: several items name their framework
+   only in the headline — the CPS 230 article is tagged "APRA · CPS 230"
+   but is squarely about Essential Eight, and would otherwise be
+   unreachable from the Essential Eight filter. */
+function tagsFor(...parts) {
+  const s = parts.filter(Boolean).join(' ');
+  return FRAMEWORK_TAGS.filter(f => f.match.test(s)).map(f => f.label);
+}
+
+/* One flat list of everything filterable, so the pills can be built from
+   what actually exists rather than from a hardcoded menu that drifts. */
+const TAGGED = [
+  ...CHECKLISTS.map(c => ({ type: 'checklist', tags: tagsFor(c.badge, c.title) })),
+  ...GUIDES.map(g => ({ type: 'guide', tags: tagsFor(g.badge, g.title) })),
+  ...POSTS.map(p => ({ type: 'insight', tags: tagsFor(p.tag, p.title) })),
+];
+
+/* Only offer a pill for a framework something is actually filed under,
+   and show the count so an empty result is never a surprise. */
+const ACTIVE_FRAMEWORKS = FRAMEWORK_TAGS
+  .map(f => ({ label: f.label, count: TAGGED.filter(t => t.tags.includes(f.label)).length }))
+  .filter(f => f.count > 0);
+
+const TYPE_FILTERS = [
+  { id: 'checklist', label: 'Checklists', count: CHECKLISTS.length },
+  { id: 'guide',     label: 'Guides',     count: GUIDES.length },
+  { id: 'insight',   label: 'Insights',   count: POSTS.length },
+];
+
+const TOTAL_RESOURCES = TAGGED.length;
+
 // JSON-LD — combined into a single graph
 const pageLd = {
   '@context': 'https://schema.org',
@@ -303,8 +361,46 @@ const pageLd = {
     </div>
   </section>
 
+  <!-- FILTER BAR — narrows all three sections at once. Progressive
+       enhancement: without JS the pills are ordinary links to the section
+       anchors and every card stays visible, so nothing is hidden behind
+       script that has to run first. -->
+  <section class="section-tight" id="filters" style="padding-top:0;">
+    <div class="container">
+      <div class="rf-bar" data-total={TOTAL_RESOURCES}>
+        <div class="rf-row">
+          <span class="rf-legend" id="rf-legend-type">Show</span>
+          <div class="rf-pills" role="group" aria-labelledby="rf-legend-type">
+            <button type="button" class="rf-pill is-on" data-filter="type" data-value="all" aria-pressed="true">
+              Everything <span class="rf-n">{TOTAL_RESOURCES}</span>
+            </button>
+            {TYPE_FILTERS.map(t => (
+              <button type="button" class="rf-pill" data-filter="type" data-value={t.id} aria-pressed="false">
+                {t.label} <span class="rf-n">{t.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div class="rf-row">
+          <span class="rf-legend" id="rf-legend-fw">Framework</span>
+          <div class="rf-pills" role="group" aria-labelledby="rf-legend-fw">
+            <button type="button" class="rf-pill is-on" data-filter="fw" data-value="all" aria-pressed="true">Any</button>
+            {ACTIVE_FRAMEWORKS.map(f => (
+              <button type="button" class="rf-pill" data-filter="fw" data-value={f.label} aria-pressed="false">
+                {f.label} <span class="rf-n">{f.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p class="rf-status" id="rf-status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
   <!-- CHECKLISTS (moved up — this is the highest-conversion content) -->
-  <section class="section" id="checklists">
+  <section class="section" id="checklists" data-rf-section="checklist">
     <div class="container">
       <div style="margin-bottom:2rem;">
         <h2 style="margin:0 0 0.5rem;">Interactive readiness checklists</h2>
@@ -322,6 +418,9 @@ const pageLd = {
             href={c.target}
             style="text-decoration:none;color:inherit;display:flex;gap:1.25rem;align-items:flex-start;"
             class="card"
+            data-rf-item
+            data-rf-type="checklist"
+            data-rf-tags={tagsFor(c.badge, c.title).join('|')}
           >
             <img
               src={c.img}
@@ -345,7 +444,7 @@ const pageLd = {
   </section>
 
   <!-- GUIDES -->
-  <section class="section" style="background:#FAF7F1;" id="guides">
+  <section class="section" style="background:#FAF7F1;" id="guides" data-rf-section="guide">
     <div class="container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
         <div>
@@ -359,6 +458,9 @@ const pageLd = {
         href={`${base}resources/${GUIDES[0].slug}/`}
         style="text-decoration:none;color:inherit;display:grid;grid-template-columns:1fr 1.8fr;gap:2.5rem;align-items:center;background:white;border:1px solid #DDD8CF;border-left:4px solid #A9812E;border-radius:10px;padding:2rem;margin-bottom:1.5rem;"
         class="card"
+        data-rf-item
+        data-rf-type="guide"
+        data-rf-tags={tagsFor(GUIDES[0].badge, GUIDES[0].title).join('|')}
       >
         <img
           src={GUIDES[0].img}
@@ -385,6 +487,9 @@ const pageLd = {
             href={`${base}resources/${g.slug}/`}
             style="text-decoration:none;color:inherit;display:flex;flex-direction:column;"
             class="card"
+            data-rf-item
+            data-rf-type="guide"
+            data-rf-tags={tagsFor(g.badge, g.title).join('|')}
           >
             <img
               src={g.img}
@@ -406,7 +511,7 @@ const pageLd = {
   </section>
 
   <!-- INSIGHTS -->
-  <section class="section" id="insights">
+  <section class="section" id="insights" data-rf-section="insight">
     <div class="container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
         <div>
@@ -422,6 +527,9 @@ const pageLd = {
             href={p.href}
             style="text-decoration:none;color:inherit;display:flex;flex-direction:column;"
             class="card"
+            data-rf-item
+            data-rf-type="insight"
+            data-rf-tags={tagsFor(p.tag, p.title).join('|')}
           >
             <span class="pill" style="font-size:0.65rem;padding:2px 7px;margin-bottom:0.75rem;align-self:flex-start;">{p.tag}</span>
             <h3 style="margin:0 0 0.6rem;font-size:1rem;color:#0B0B0C;line-height:1.4;flex:1;">{p.title}</h3>
@@ -501,3 +609,194 @@ const pageLd = {
 
   <script type="application/ld+json" set:html={JSON.stringify(pageLd)} />
 </Base>
+
+<style>
+  .rf-bar {
+    border: 1px solid #DDD8CF;
+    border-radius: 10px;
+    background: #FFFFFF;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+  }
+  .rf-row { display: flex; gap: .85rem; align-items: baseline; flex-wrap: wrap; }
+  .rf-legend {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: #6B6860;          /* 5.20:1 on white */
+    min-width: 74px;
+    flex-shrink: 0;
+    padding-top: .3rem;
+  }
+  .rf-pills { display: flex; gap: .4rem; flex-wrap: wrap; flex: 1; }
+  .rf-pill {
+    font: 600 .8rem/1 Manrope, system-ui, sans-serif;
+    color: #3A3632;          /* 11.2:1 on white */
+    background: #FAF7F1;
+    border: 1px solid #DDD8CF;
+    border-radius: 999px;
+    padding: 0 .75rem;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .rf-pill:hover { border-color: #A9812E; background: #FFFFFF; }
+  .rf-pill:focus-visible { outline: 2px solid #A9812E; outline-offset: 2px; }
+  .rf-pill.is-on {
+    background: #0B0B0C;
+    border-color: #0B0B0C;
+    color: #FAF7F1;          /* 18.4:1 */
+  }
+  .rf-n {
+    font-size: .7rem;
+    font-variant-numeric: tabular-nums;
+    color: #6B6860;
+  }
+  .rf-pill.is-on .rf-n { color: rgba(250,247,241,.75); }
+  .rf-status {
+    margin: 0;
+    font-size: .8rem;
+    color: #57534B;          /* 7.16:1 on white */
+    min-height: 1.2em;
+  }
+  .rf-empty {
+    border: 1px dashed #C8C3B8;
+    border-radius: 10px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    color: #57534B;
+    font-size: .9rem;
+  }
+  .rf-empty button {
+    font: 600 .85rem/1 Manrope, system-ui, sans-serif;
+    color: #8B6820;          /* 4.79:1 on cream */
+    background: none;
+    border: none;
+    border-bottom: 1px solid currentColor;
+    padding: 0 0 2px;
+    cursor: pointer;
+  }
+  [data-rf-item][hidden] { display: none !important; }
+
+  /* Touch targets get the full 44px; desktop keeps the tighter bar. */
+  @media (max-width: 640px) {
+    .rf-pill { min-height: 44px; }
+    .rf-legend { min-width: 100%; padding-top: 0; }
+  }
+</style>
+
+<script is:inline>
+  /* Filters all three resource sections at once. Cards carry their own
+     type and framework tags (derived at build time from the badge already
+     printed on the card), so this reads the DOM rather than keeping a
+     second copy of the library in JS that could drift out of sync.
+
+     State lives in the URL hash so a filtered view is shareable and
+     survives a back-navigation — "which ISO 42001 resources do you have"
+     becomes a link you can send. */
+  (function () {
+    var bar = document.querySelector('.rf-bar');
+    if (!bar) return;
+
+    var items = Array.prototype.slice.call(document.querySelectorAll('[data-rf-item]'));
+    var sections = Array.prototype.slice.call(document.querySelectorAll('[data-rf-section]'));
+    var statusEl = document.getElementById('rf-status');
+    var state = { type: 'all', fw: 'all' };
+
+    function pillsFor(kind) {
+      return Array.prototype.slice.call(bar.querySelectorAll('[data-filter="' + kind + '"]'));
+    }
+
+    function matches(el) {
+      if (state.type !== 'all' && el.getAttribute('data-rf-type') !== state.type) return false;
+      if (state.fw !== 'all') {
+        var tags = (el.getAttribute('data-rf-tags') || '').split('|');
+        if (tags.indexOf(state.fw) === -1) return false;
+      }
+      return true;
+    }
+
+    function apply(push) {
+      var shown = 0;
+      items.forEach(function (el) {
+        var ok = matches(el);
+        el.hidden = !ok;
+        if (ok) shown++;
+      });
+
+      /* A section whose every card is filtered out hides its heading and
+         blurb too — otherwise the page reads as a run of empty headings. */
+      sections.forEach(function (sec) {
+        var any = sec.querySelector('[data-rf-item]:not([hidden])');
+        sec.hidden = !any;
+      });
+
+      ['type', 'fw'].forEach(function (kind) {
+        pillsFor(kind).forEach(function (p) {
+          var on = p.getAttribute('data-value') === state[kind];
+          p.classList.toggle('is-on', on);
+          p.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+      });
+
+      var filtered = state.type !== 'all' || state.fw !== 'all';
+      if (statusEl) {
+        statusEl.textContent = !filtered
+          ? ''
+          : shown === 0
+            ? 'Nothing matches that combination.'
+            : 'Showing ' + shown + ' of ' + items.length + ' resources.';
+      }
+
+      var empty = document.getElementById('rf-empty');
+      if (shown === 0 && !empty) {
+        empty = document.createElement('div');
+        empty.id = 'rf-empty';
+        empty.className = 'rf-empty container';
+        empty.innerHTML = 'No resources match that combination yet. <button type="button" id="rf-reset">Clear the filters</button>';
+        bar.parentNode.appendChild(empty);
+        document.getElementById('rf-reset').addEventListener('click', function () {
+          state = { type: 'all', fw: 'all' };
+          apply(true);
+        });
+      } else if (shown > 0 && empty) {
+        empty.parentNode.removeChild(empty);
+      }
+
+      if (push) {
+        var parts = [];
+        if (state.type !== 'all') parts.push('type=' + encodeURIComponent(state.type));
+        if (state.fw !== 'all') parts.push('fw=' + encodeURIComponent(state.fw));
+        var hash = parts.length ? '#' + parts.join('&') : ' ';
+        history.replaceState(null, '', hash === ' ' ? location.pathname + location.search : hash);
+      }
+    }
+
+    bar.addEventListener('click', function (e) {
+      var pill = e.target.closest('[data-filter]');
+      if (!pill) return;
+      state[pill.getAttribute('data-filter')] = pill.getAttribute('data-value');
+      apply(true);
+    });
+
+    /* Restore from the hash on load, ignoring anything that isn't a real
+       filter value so a stale or hand-edited link can't blank the page. */
+    var h = (location.hash || '').replace(/^#/, '');
+    if (h) {
+      h.split('&').forEach(function (kv) {
+        var bits = kv.split('=');
+        var k = bits[0], v = decodeURIComponent(bits[1] || '');
+        if (k !== 'type' && k !== 'fw') return;
+        var known = pillsFor(k).some(function (p) { return p.getAttribute('data-value') === v; });
+        if (known) state[k] = v;
+      });
+    }
+    apply(false);
+  })();
+</script>
