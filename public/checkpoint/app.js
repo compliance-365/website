@@ -12700,6 +12700,100 @@ function showModal(opts) {
        per-register downloads sequentially if zip assembly throws for
        any reason (e.g. an unexpectedly huge register), so an export
        never just silently fails. */
+    /* Bulk policy export — the missing half of exportPolicyWord().
+       Getting every policy out of Checkpoint used to mean clicking
+       "Word" on each document in turn and dismissing a confirmation
+       each time, which for a mature ISMS is 20-40 round trips. An
+       organisation that wants its policies in a records system, a
+       different SharePoint site, a DMS, or an offline archive needs
+       them in one action.
+
+       Two format options, because the two reasons to do this want
+       different things: Word (.doc) for a records system or anywhere a
+       human will open and read them, HTML for a wiki/intranet or
+       anything that will re-render them itself. Both carry the same
+       uncontrolled-copy banner exportPolicyWord() applies — a copy
+       taken outside the controlled system genuinely IS uncontrolled,
+       and an ISO auditor finding an unmarked policy in a shared drive
+       is a finding. The banner travels with the file so the copy
+       explains itself wherever it ends up.
+
+       A manifest.csv rides along carrying the same columns as the
+       document control register, so whatever receives these files
+       inherits the version/owner/approval/review metadata instead of
+       just a folder of documents with no provenance.
+
+       Deliberately NOT in MUTATING_ACTIONS: like every other export,
+       this only reads. A Viewer can take an archival copy. */
+    exportAllPolicies: async function () {
+      await refreshDocsForExport('documents');
+      /* Only documents whose template content is actually recoverable —
+         an uploaded evidence PDF in the same library is not a generated
+         policy and has nothing to render. */
+      var candidates = (window._docs || []).map(function (d) {
+        var tplId = d.tplId;
+        if (!tplId) {
+          var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === d.name && e.action === 'Policy template generated'; });
+          try { tplId = genEntry && JSON.parse(genEntry.after).tplId; } catch (e) { tplId = null; }
+        }
+        var t = tplId && window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+        return t ? { doc: d, tpl: t } : null;
+      }).filter(Boolean);
+
+      if (!candidates.length) { toastError('No generated policy documents to export yet.'); return; }
+
+      var vals = await showModal({
+        title: 'Export ' + candidates.length + ' polic' + (candidates.length === 1 ? 'y' : 'ies'),
+        message: 'Bundles every generated policy into one ZIP, with a manifest carrying the version, owner, approval and review date for each.\n\nThese are uncontrolled copies: once a policy leaves Checkpoint its version and approval stop being tracked here, and edits made to the copy will not survive the next regeneration. Every file is watermarked to say so.',
+        fields: [
+          { id: 'format', label: 'Format', type: 'select', value: 'doc', options: [
+            { value: 'doc', label: 'Word (.doc) — for a records system or reading' },
+            { value: 'html', label: 'HTML — for a wiki, intranet or re-rendering' }
+          ] }
+        ],
+        confirmText: 'Export ' + candidates.length + ' file' + (candidates.length === 1 ? '' : 's'),
+        cancelText: 'Cancel'
+      });
+      if (!vals) return;
+      var ext = vals.format === 'html' ? '.html' : '.doc';
+
+      busy(true);
+      var files = [], failed = [];
+      var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      for (var i = 0; i < candidates.length; i++) {
+        var d = candidates[i].doc, t = candidates[i].tpl;
+        try {
+          var html = buildTemplateHtml(effectivePolicyContent(t, d.name), {
+            clientLabel: clientDisplayLabel('This organisation'), owner: d.owner || '',
+            reviewDate: d.nextReview || '', approved: docStatusOf(d) === 'Approved',
+            generatedDate: generatedDate,
+            logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+            version: d.version || '', approvedBy: d.approvedBy || '',
+            classification: d.classification || 'Internal'
+          }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — exported ' + esc(generatedDate) + '. Version and approval are tracked in Checkpoint, not in this file.</div>');
+          files.push({ name: d.name.replace(/\.html?$/i, '').replace(/[\/\\:*?"<>|]/g, '-') + ext, content: html });
+        } catch (e) { failed.push(d.name + ' — ' + (e && e.message ? e.message : 'could not render')); }
+      }
+
+      /* Same columns as the document control register, so the receiving
+         system inherits provenance rather than a bare folder of files. */
+      var reg = EXPORT_REGISTERS.find(function (r) { return r.key === 'documents'; });
+      files.push({ name: 'manifest.csv', content: window.CheckpointLib.toCsv([reg.header].concat(reg.rows())) });
+
+      try {
+        var zipBytes = window.CheckpointLib.buildZip(files);
+        downloadBlob('checkpoint-policies-' + new Date().toISOString().slice(0, 10) + '.zip', new Blob([zipBytes], { type: 'application/zip' }));
+      } catch (e) { busy(false); warn(e); toastError('Could not assemble the ZIP — export policies individually instead.'); return; }
+      busy(false);
+
+      var summary = (files.length - 1) + ' polic' + (files.length - 1 === 1 ? 'y' : 'ies') + ' as ' + ext + (failed.length ? ', ' + failed.length + ' could not be rendered' : '');
+      audit('Policies exported (ZIP)', 'Export', 'policies', '(none)', summary + ' — uncontrolled copies');
+      log('Exported <b>' + esc(summary) + '</b>.');
+      if (failed.length) {
+        await showModal({ title: 'Export finished with errors', message: summary + '\n\nThese could not be rendered:\n' + failed.slice(0, 10).join('\n'), confirmText: 'Close', cancelText: 'Cancel' });
+      } else toast('<b>' + (files.length - 1) + '</b> polic' + (files.length - 1 === 1 ? 'y' : 'ies') + ' exported');
+    },
+
     exportAllZip: async function () {
       try {
         await refreshDocsForExport('documents');
