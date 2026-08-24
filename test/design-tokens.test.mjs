@@ -77,7 +77,7 @@ test('inline raw-hex text colours do not increase', () => {
      meantime — which is what actually holds the line.
 
      Lower BASELINE whenever you convert a batch. Never raise it. */
-  const BASELINE = 606;
+  const BASELINE = 604;
   const total = FILES.reduce((n, f) => n + inlineTextColours(readFileSync(f, 'utf8')).length, 0);
   assert.ok(total <= BASELINE,
     `Inline raw-hex text colours rose to ${total} (baseline ${BASELINE}). ` +
