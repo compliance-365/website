@@ -288,6 +288,84 @@ a.pill:hover {
   stroke-width: 2.5;
 }
 
+/* === Accordion (native details/summary — no JS) ============= */
+.acc-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.acc-item + .acc-item { margin-top: 12px; }
+.acc-item summary {
+  cursor: pointer;
+  padding: 18px 22px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #0B0B0C;
+  list-style: none;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+.acc-item summary::-webkit-details-marker { display: none; }
+.acc-item summary::after {
+  content: '+';
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--gold-ink);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1;
+}
+.acc-item[open] summary::after { content: '\2013'; }
+.acc-item .acc-body {
+  margin: 0;
+  padding: 0 22px 20px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+/* Region toggle — plain radio inputs + labels, CSS-only (no JS). */
+.acc-region { position: relative; }
+.acc-region input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.acc-region-toggle { display: flex; gap: 10px; justify-content: center; margin: 2rem 0 2.5rem; flex-wrap: wrap; }
+.acc-region-toggle label {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.acc-region-panel { display: none; }
+#region-au:checked ~ .acc-region-panel[data-panel="au"],
+#region-usuk:checked ~ .acc-region-panel[data-panel="usuk"] { display: block; }
+#region-au:checked ~ .acc-region-toggle label[for="region-au"],
+#region-usuk:checked ~ .acc-region-toggle label[for="region-usuk"] {
+  background: rgba(169,129,46,0.1);
+  border-color: rgba(169,129,46,0.35);
+  color: var(--gold-ink);
+}
+
+/* A whole section collapsed behind its own heading — for content that
+   narrows to one audience (e.g. "SOC 2 for US-facing companies") rather
+   than being universally relevant, so it doesn't cost everyone the
+   scroll. */
+.acc-section summary { cursor: pointer; list-style: none; }
+.acc-section summary::-webkit-details-marker { display: none; }
+.acc-section summary h2 { display: inline-flex; align-items: center; gap: 12px; }
+.acc-section summary h2::after {
+  content: '+';
+  color: var(--gold-ink);
+  font-weight: 700;
+  font-size: 0.65em;
+}
+.acc-section[open] summary h2::after { content: '\2013'; }
+
 /* === Grids ================================================== */
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
