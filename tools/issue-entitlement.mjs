@@ -130,7 +130,7 @@ const ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
 const DEMO_DEFAULT_TRIAL_DAYS = 30;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr'];
+const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr', 'cps234'];
 /* Framework ids that BUNDLE other frameworks: granting the key implies
    granting every id it lists. is18 (Queensland Government IS18:2018 /
    QGEA) is, by the policy's own definition, an ISO 27001-aligned ISMS

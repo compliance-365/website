@@ -445,6 +445,9 @@
          as an ISO 27001 code). Self-prefixed, same as DISP./E8. */
       if (/^IS18\.\d+/.test(tok)) { lastFw = 'is18'; return { fw: 'is18', code: tok }; }
       if (/^E8\.\d+/.test(tok)) { lastFw = 'essential8'; return { fw: 'essential8', code: tok }; }
+      /* CPS234 — same self-prefixed treatment, and for the same reason
+         as IS18 above: "CPS234.13" matches the bare-code shape too. */
+      if (/^CPS234\.\d+/.test(tok)) { lastFw = 'cps234'; return { fw: 'cps234', code: tok }; }
       if (lastFw && /^[A-Za-z]{1,4}\.?\d/.test(tok)) return { fw: lastFw, code: tok };
       lastFw = null; /* prose like "EU AI Act Art.9" resets the chain */
       return null;
@@ -654,6 +657,125 @@
       lastObservedDate: observations.length ? observations[observations.length - 1].date : null,
       noExceptionsFound: observations.length > 0 && exceptions.length === 0 && passed.length > 0
     };
+  }
+
+  /* ================= Control assurance =================
+     operatingEffectiveness() above answers "did this check pass, over
+     this window" for ONE check. This answers the question a level-4
+     ISMS actually gets asked, for a CONTROL: how much do we really
+     know that this control works, and on what basis?
+
+     The distinction matters because "Implemented" in a Statement of
+     Applicability is an ASSERTION. Someone ticked a box. An auditor —
+     and APRA CPS 234's testing-effectiveness requirement explicitly —
+     wants to know what is behind that tick. Three very different
+     things get reported identically today:
+
+       - a control a live Graph check has passed on every scan for six
+         months (strong: continuously demonstrated),
+       - a control with an evidence link somebody attached once
+         (moderate: evidenced at a point in time),
+       - a control someone marked Implemented with nothing attached at
+         all (weak: an unsupported claim).
+
+     Ranking them is the whole point. Precedence runs strongest-first,
+     because the strongest available basis is the honest answer: a
+     control with BOTH passing automated observations and an evidence
+     link is 'demonstrated', not double-counted.
+
+     `effectiveness` is the roll-up of operatingEffectiveness() across
+     every check feeding this control, or null when no check feeds it
+     at all — a control with no live signal is not thereby failing, it
+     simply has no automated basis and must stand on evidence.
+
+     Flags are computed INDEPENDENTLY of level, not folded into it, so
+     the two most valuable findings stay visible rather than being
+     collapsed into a single label:
+
+       exceptions — the paperwork says implemented and the live signal
+       disagrees. This is the finding an auditor most wants and the one
+       a status-only SoA can never surface.
+
+       stale — the control's own verification has aged past the review
+       cadence, whatever its basis. A control demonstrated by automation
+       is not stale just because nobody re-attested it, so this is
+       reported alongside the level rather than degrading it.
+
+     Deliberately returns a basis and raw counts, never a score out of
+     100. How much assurance is "enough" for a given control is a risk
+     judgement belonging to the practitioner and their auditor, exactly
+     as operatingEffectiveness() refuses to declare a sample size
+     sufficient. */
+  function controlAssurance(o) {
+    o = o || {};
+    var c = o.control || {};
+    var eff = o.effectiveness || null;
+    var cadence = typeof o.cadenceDays === 'number' && o.cadenceDays > 0 ? o.cadenceDays : 365;
+
+    var exceptionCount = eff && eff.exceptions ? eff.exceptions.length : 0;
+    var observations = eff ? (eff.totalObservations || 0) : 0;
+    var passCount = eff ? (eff.passCount || 0) : 0;
+
+    /* Days since the control was last verified by a person. null (not
+       0) when it never has been — "never verified" and "verified today"
+       must not be arithmetically confusable. */
+    var staleDays = null;
+    if (c.lastVerified && o.today) {
+      var then = Date.parse(c.lastVerified + 'T00:00:00Z');
+      var now = Date.parse(o.today + 'T00:00:00Z');
+      if (!isNaN(then) && !isNaN(now)) staleDays = Math.floor((now - then) / 86400000);
+    }
+    var stale = staleDays === null ? true : staleDays > cadence;
+
+    var level, basis;
+    if (c.applicable === false) {
+      level = 'excluded';
+      basis = 'Excluded from scope.';
+    } else if (c.st !== 'Implemented') {
+      level = 'not-implemented';
+      basis = 'Not yet implemented.';
+    } else if (observations > 0 && passCount > 0 && exceptionCount === 0) {
+      level = 'demonstrated';
+      basis = passCount + ' automated observation' + (passCount === 1 ? '' : 's') + ' passed, no exceptions.';
+    } else if (c.evidenceUrl) {
+      level = 'evidenced';
+      basis = 'Evidence attached' + (exceptionCount ? ', but automated checks show ' + exceptionCount + ' exception' + (exceptionCount === 1 ? '' : 's') + '.' : '.');
+    } else if (c.lastVerified) {
+      level = 'asserted';
+      basis = 'Verified by a person, no evidence attached' + (exceptionCount ? '; automated checks show ' + exceptionCount + ' exception' + (exceptionCount === 1 ? '' : 's') + '.' : '.');
+    } else {
+      level = 'unsupported';
+      basis = 'Marked implemented with no evidence, no verification and no automated signal.';
+    }
+
+    return {
+      level: level, basis: basis,
+      observations: observations, passCount: passCount, exceptionCount: exceptionCount,
+      staleDays: staleDays, stale: stale && level !== 'excluded' && level !== 'not-implemented',
+      lastObservedDate: eff ? (eff.lastObservedDate || null) : null
+    };
+  }
+
+  /* Portfolio roll-up: how many controls sit at each assurance level.
+     This is the number a board paper or a CPS 234 attestation actually
+     needs — "68% implemented" says nothing about how much of that is
+     an unsupported claim. Counts only applicable controls, since an
+     excluded control is not a gap. */
+  function assuranceSummary(assurances) {
+    var out = { demonstrated: 0, evidenced: 0, asserted: 0, unsupported: 0, notImplemented: 0, excluded: 0, stale: 0, withExceptions: 0, applicable: 0 };
+    (assurances || []).forEach(function (a) {
+      if (!a) return;
+      if (a.level === 'excluded') { out.excluded++; return; }
+      out.applicable++;
+      if (a.level === 'demonstrated') out.demonstrated++;
+      else if (a.level === 'evidenced') out.evidenced++;
+      else if (a.level === 'asserted') out.asserted++;
+      else if (a.level === 'unsupported') out.unsupported++;
+      else if (a.level === 'not-implemented') out.notImplemented++;
+      if (a.stale) out.stale++;
+      if (a.exceptionCount > 0) out.withExceptions++;
+    });
+    return out;
   }
 
   /* Did this scan's per-check results move at all against the ones the
@@ -2453,6 +2575,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
+    controlAssurance: controlAssurance, assuranceSummary: assuranceSummary,
     evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,

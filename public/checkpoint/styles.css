@@ -486,6 +486,18 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.4}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%}
 .kpi .dot{margin-right:4px}
+/* Assurance basis — deliberately NOT a red/green pass-fail scale.
+   These rank how much is known about a control, and an "asserted"
+   control is not failing, it is simply resting on a weaker basis than a
+   demonstrated one. Colour follows that gradient (gold = strongest
+   evidence, dimming toward unsupported) so the eye reads strength, not
+   alarm; the genuine alarm case (exceptions) is flagged separately in
+   the existing verify-stale red. */
+.assur{display:inline-block;font-size:var(--fs-1);font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid;white-space:nowrap}
+.assur-demonstrated{color:var(--pass);border-color:color-mix(in srgb,var(--pass) 45%,transparent)}
+.assur-evidenced{color:var(--gold-light);border-color:color-mix(in srgb,var(--gold-light) 45%,transparent)}
+.assur-asserted{color:var(--paper-dim);border-color:var(--line)}
+.assur-unsupported{color:var(--fail);border-color:color-mix(in srgb,var(--fail) 45%,transparent)}
 .grid-note{margin-top:11px;font-size:var(--fs-1);line-height:1.5;color:var(--paper-faint)}
 .kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
 .kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover)}

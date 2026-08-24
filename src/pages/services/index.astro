@@ -80,6 +80,14 @@ const services = [
     best_for: 'Defence contractors, government-adjacent technology firms'
   },
   {
+    title: 'APRA CPS 234',
+    subtitle: 'Information Security (Prudential Standard)',
+    summary: 'Mandatory for APRA-regulated entities and evidenced by their providers. All 24 requirements, a systematic control testing program, and both notification clocks — cross-mapped to ISO 27001 so nothing is built twice.',
+    url: `${base}services/cps234`,
+    tags: ['APRA', 'CPS 234', 'Banking', 'Insurance', 'Superannuation'],
+    best_for: 'Banks, insurers, super funds, and providers holding their data'
+  },
+  {
     title: 'NIST CSF',
     subtitle: 'Cybersecurity Framework',
     summary: 'Align to NIST CSF (Identify → Protect → Detect → Respond → Recover) — mapped to ISO 27001 and Essential Eight so work overlaps rather than duplicates.',
@@ -364,6 +372,9 @@ const serviceLd = {
         'DISP / IRAP': { tag: null, who: 'Defence Industry Security Programme, ISM and IRAP readiness. For firms entering <strong>defence panels and government contracts</strong>.', min: 10, max: 16,
           deliver: ['DISP membership readiness', 'ISM mapping on your Microsoft E5 stack', 'IRAP assessment preparation', 'Defence panel entry support'],
           overlap: [['Essential Eight', 65], ['ISO 27001', 55]], u: BASE + 'services/disp-ism-irap/' },
+        'APRA CPS 234': { tag: null, who: 'Binding prudential obligation for <strong>APRA-regulated entities</strong> — banks, insurers, super funds — and evidenced by the providers who hold their data.', min: 8, max: 14,
+          deliver: ['All 24 requirements (\u00b613\u201336)', 'Systematic control testing program', 'Both APRA notification clocks', 'Board and internal audit reporting'],
+          overlap: [['ISO 27001', 80], ['NIST CSF', 60]], u: BASE + 'services/cps234/' },
         'NIST CSF': { tag: null, who: 'Risk framework favoured by <strong>boards and US-aligned partners</strong> — mapped to ISO 27001 and Essential Eight so nothing is done twice.', min: 6, max: 10,
           deliver: ['Current & target profile assessment', 'Prioritised improvement roadmap', 'Cross-mapping to ISO 27001 / E8', 'Board-ready reporting'],
           overlap: [['ISO 27001', 75], ['Essential Eight', 60]], u: BASE + 'services/nist-csf/' }

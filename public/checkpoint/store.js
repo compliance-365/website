@@ -160,6 +160,12 @@ window.FRAMEWORKS = {
     /* Full control set ships as an encrypted content pack (checkpoint-content/nistcsf.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
+  cps234: {
+    id: "cps234", name: "CPS 234", tag: "APRA Regulated",
+    blurb: "APRA Prudential Standard CPS 234 Information Security — all 24 requirements (paragraphs 13-36) across roles and responsibilities, information security capability, policy framework, asset identification and classification, implementation of controls, incident management, testing control effectiveness, internal audit, and APRA notification. Mandatory for every APRA-regulated entity: banks, insurers, superannuation funds and their service providers. Cross-mapped to ISO 27001 and NIST CSF so the prudential obligation and the certification are prepared once, not twice.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/cps234.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
+  },
   rffr: {
     id: "rffr", name: "RFFR (ISM SoA)", tag: "Cth Employment",
     blurb: "Right Fit For Risk — the DEWR cyber-security accreditation for Employment Services providers, delivered as one Statement of Applicability: the 7 program-deed obligations plus all 989 Australian Government ISM (June 2026) controls applicable to Non-Classified and OFFICIAL: Sensitive information, cross-mapped to the ISO 27001 ISMS backbone and Essential Eight so the certification, the E8 uplift and the RFFR SoA are prepared once, not three times. RFFR Core Expectations are flagged for milestone prioritisation.",
@@ -168,7 +174,7 @@ window.FRAMEWORKS = {
   }
 };
 /* Sidebar / tab display order. Add new framework ids here. */
-window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr'];
+window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr', 'cps234'];
 
 /* Purchasable add-on capabilities that are NOT compliance frameworks —
    they never appear in the sidebar's framework list, the Statement of
@@ -929,6 +935,12 @@ window.CHECK_SOC2 = {};
    categories, including GV.SC (supply-chain risk) fed by 'guests'
    rather than the more obvious 'supplier'. */
 window.CHECK_NISTCSF = {};
+
+/* Posture check -> CPS 234 requirement. Ships EMPTY, same as every
+   other premium framework's lookup: the real mapping lives only in the
+   cps234 content pack and is merged in by mergeLicensedPacks() once a
+   verified activation licenses the module. */
+window.CHECK_CPS234 = {};
 
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
