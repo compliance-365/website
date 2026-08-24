@@ -4780,6 +4780,7 @@ function showModal(opts) {
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
+      '<td>' + assuranceCell(assuranceForControl(c)) + '</td>' +
       '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
   }
 
@@ -4943,7 +4944,7 @@ function showModal(opts) {
      Parsed fresh each call rather than cached: cheap (a few dozen scans
      at most for any real tenant) and guarantees it can never go stale
      against S.scans after a new scan lands. */
-  function soc2ScanHistory() {
+  function scanResultHistory() {
     return (S.scans || []).map(function (s) {
       if (!s.detail) return null;
       try {
@@ -4951,6 +4952,86 @@ function showModal(opts) {
         return d.results ? { date: s.date, results: d.results } : null;
       } catch (e) { return null; }
     }).filter(Boolean);
+  }
+
+  /* ── Control assurance, every framework ───────────────────────────
+     The Type II machinery below answers this for SOC 2 only, driven by
+     CHECK_SOC2. The same question — what is actually BEHIND this
+     control's "Implemented" tick — matters for every framework, and
+     APRA CPS 234 asks it directly. This is the framework-agnostic
+     path: it inverts CHECK_CONTROLS through controlsForCheck(), which
+     already resolves a check to its controls across every entitled
+     framework via the ISO 27001 anchor and the cross-mapping graph, so
+     a control inherits automated signal from a check mapped to its
+     ISO equivalent without needing its own entry in any table.
+
+     Built once per render and cached on the render pass, because
+     inverting the map costs a controlsForCheck() call per check and
+     the SoA renders every row through it. */
+  var _assuranceIndex = null;
+  function checkIdsByControl() {
+    if (_assuranceIndex) return _assuranceIndex;
+    var idx = {};
+    (window.CHECK_DEFS || []).forEach(function (def) {
+      var controls = [];
+      try { controls = controlsForCheck(def.id) || []; } catch (e) { controls = []; }
+      controls.forEach(function (c) {
+        var k = c.fw + '|' + c.id;
+        if (!idx[k]) idx[k] = [];
+        if (idx[k].indexOf(def.id) === -1) idx[k].push(def.id);
+      });
+    });
+    _assuranceIndex = idx;
+    return idx;
+  }
+  function resetAssuranceIndex() { _assuranceIndex = null; }
+
+  /* Assurance for one control row. The observation window is the
+     tenant's own control-review cadence rather than all history ever:
+     a check that last passed two years ago is not evidence the control
+     works TODAY, and "demonstrated" has to mean demonstrated recently
+     or it is just a comfortable-sounding label. */
+  function assuranceForControl(c) {
+    var cadence = (S.settings && parseInt(S.settings.controlReviewCadenceDays, 10)) || 365;
+    var key = c.fw + '|' + c.id;
+    var checkIds = checkIdsByControl()[key] || [];
+    var effectiveness = null;
+    if (checkIds.length) {
+      var history = scanResultHistory();
+      var since = new Date(Date.now() - cadence * 86400000).toISOString().slice(0, 10);
+      var totalObservations = 0, passCount = 0, manualCount = 0, exceptions = [], lastObserved = null;
+      var byDate = {};
+      checkIds.forEach(function (id) {
+        var e = window.CheckpointLib.operatingEffectiveness(id, history, since);
+        passCount += e.passCount;
+        manualCount += e.manualCount;
+        exceptions = exceptions.concat(e.exceptions);
+        if (e.lastObservedDate && (!lastObserved || e.lastObservedDate > lastObserved)) lastObserved = e.lastObservedDate;
+        /* Union of observation DATES, not a sum: two checks seen on the
+           same scan date are one real-world observation, not two. */
+        history.forEach(function (h) { if (h.results[id] !== undefined && h.date >= since) byDate[h.date] = true; });
+      });
+      totalObservations = Object.keys(byDate).length;
+      effectiveness = { totalObservations: totalObservations, passCount: passCount, manualCount: manualCount, exceptions: exceptions, lastObservedDate: lastObserved };
+    }
+    return window.CheckpointLib.controlAssurance({
+      control: { st: c.st, applicable: c.app, evidenceUrl: c.evidenceUrl, lastVerified: c.verified },
+      effectiveness: effectiveness,
+      today: new Date().toISOString().slice(0, 10),
+      cadenceDays: cadence
+    });
+  }
+
+  var ASSURANCE_LABELS = {
+    demonstrated: 'Demonstrated', evidenced: 'Evidenced', asserted: 'Asserted',
+    unsupported: 'Unsupported', 'not-implemented': '—', excluded: '—'
+  };
+  function assuranceCell(a) {
+    if (a.level === 'excluded' || a.level === 'not-implemented') return '<span class="src">—</span>';
+    var extra = '';
+    if (a.exceptionCount) extra += '<div class="verify-stale" style="font-size:10.5px">' + icon('flag') + a.exceptionCount + ' exception' + (a.exceptionCount === 1 ? '' : 's') + '</div>';
+    else if (a.level === 'demonstrated') extra += '<div class="src" style="font-size:10.5px">' + a.passCount + ' passing observation' + (a.passCount === 1 ? '' : 's') + '</div>';
+    return '<span class="assur assur-' + a.level + '" title="' + esc(a.basis) + '">' + ASSURANCE_LABELS[a.level] + '</span>' + extra;
   }
 
   /* Combines every checkId that feeds a given SOC 2 control code (per
@@ -4967,7 +5048,7 @@ function showModal(opts) {
       return (window.CHECK_SOC2[id] || []).indexOf(code) > -1;
     });
     if (!checkIds.length) return null;
-    var history = soc2ScanHistory();
+    var history = scanResultHistory();
     var byDate = {};
     var exceptions = [];
     var anyObservations = false;
