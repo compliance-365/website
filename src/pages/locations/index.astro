@@ -96,9 +96,9 @@ const breadcrumbsLd = {
         {cities.map((city) => (
           <a href={`${base}locations/${city.slug}/`} class="card spot" style="text-decoration:none;color:inherit;border-left:4px solid #A9812E;">
             <h3 style="margin:0 0 .25rem;">{city.name}</h3>
-            <p style="margin:0 0 .75rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;">{city.tag}</p>
+            <p style="margin:0 0 .75rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold-ink);">{city.tag}</p>
             <p class="muted small" style="margin:0;">{city.desc}</p>
-            <p style="margin:1rem 0 0;color:#A9812E;font-weight:700;font-size:.875rem;">View {city.name} services →</p>
+            <p style="margin:1rem 0 0;color:var(--gold-ink);font-weight:700;font-size:.875rem;">View {city.name} services →</p>
           </a>
         ))}
       </div>

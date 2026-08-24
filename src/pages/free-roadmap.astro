@@ -46,7 +46,7 @@ const pageDesc  = 'Free compliance starter pack — interactive ISO 27001 and Es
 
       <!-- FORM CARD -->
       <div class="svc-hero-image" style="max-width:420px;">
-      <div class="card" style="padding:2.5rem;">
+      <div class="card band-light" style="padding:2.5rem;">
         <h2 style="font-size:1.35rem;margin-bottom:.5rem;">Get instant access</h2>
         <p class="muted small" style="margin-bottom:1.5rem;">Takes 30 seconds. Unsubscribe any time.</p>
 
@@ -54,7 +54,7 @@ const pageDesc  = 'Free compliance starter pack — interactive ISO 27001 and Es
 
           <div style="display:flex;flex-direction:column;gap:1rem;">
             <div>
-              <label for="starter-email" style="display:block;font-size:.82rem;font-weight:700;color:#374151;margin-bottom:5px;">Work email *</label>
+              <label for="starter-email" style="display:block;font-size:.82rem;font-weight:700;color:var(--text-subtle);margin-bottom:5px;">Work email *</label>
               <input
                 id="starter-email"
                 type="email"
@@ -67,7 +67,7 @@ const pageDesc  = 'Free compliance starter pack — interactive ISO 27001 and Es
             </div>
 
             <div>
-              <label for="starter-org" style="display:block;font-size:.82rem;font-weight:700;color:#374151;margin-bottom:5px;">Organisation name</label>
+              <label for="starter-org" style="display:block;font-size:.82rem;font-weight:700;color:var(--text-subtle);margin-bottom:5px;">Organisation name</label>
               <input
                 id="starter-org"
                 type="text"
@@ -79,7 +79,7 @@ const pageDesc  = 'Free compliance starter pack — interactive ISO 27001 and Es
             </div>
 
             <div>
-              <label style="display:block;font-size:.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Which framework interests you most?</label>
+              <label style="display:block;font-size:.82rem;font-weight:700;color:var(--text-subtle);margin-bottom:8px;">Which framework interests you most?</label>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
                 {[
                   'ISO 27001', 'Essential Eight',
@@ -87,7 +87,7 @@ const pageDesc  = 'Free compliance starter pack — interactive ISO 27001 and Es
                   'SOC 2', 'DISP / ISM',
                   'Not sure yet', 'Multiple',
                 ].map(f => (
-                  <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;color:#374151;cursor:pointer;padding:6px 8px;border:1px solid #DDD8CF;border-radius:7px;transition:background .1s;" class="fw-opt">
+                  <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--text-subtle);cursor:pointer;padding:6px 8px;border:1px solid #DDD8CF;border-radius:7px;transition:background .1s;" class="fw-opt">
                     <input type="radio" name="framework" value={f} style="accent-color:#A9812E;" />
                     {f}
                   </label>
@@ -117,17 +117,17 @@ const pageDesc  = 'Free compliance starter pack — interactive ISO 27001 and Es
     <h2 style="margin-bottom:1.5rem;">What's included</h2>
     <div class="grid-3" style="gap:1.25rem;">
       <div class="card spot">
-        <p style="margin:0 0 .75rem;color:#A9812E;"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-clipboard"/></svg></p>
+        <p style="margin:0 0 .75rem;color:var(--gold-ink);"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-clipboard"/></svg></p>
         <h3 style="margin:0 0 .5rem;">Interactive checklists</h3>
         <p class="muted small" style="margin:0;">Four framework assessments (ISO 27001, Essential Eight, ISO 42001, ISO 27701) — answer questions, see your score, download a prioritised PDF roadmap.</p>
       </div>
       <div class="card spot">
-        <p style="margin:0 0 .75rem;color:#A9812E;"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-books"/></svg></p>
+        <p style="margin:0 0 .75rem;color:var(--gold-ink);"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-books"/></svg></p>
         <h3 style="margin:0 0 .5rem;">Practitioner guides</h3>
         <p class="muted small" style="margin:0;">Deep-dive guides on SoA, ROPA, AI governance, and automating compliance in Microsoft 365 — written for what auditors actually look for.</p>
       </div>
       <div class="card spot">
-        <p style="margin:0 0 .75rem;color:#A9812E;"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-envelope"/></svg></p>
+        <p style="margin:0 0 .75rem;color:var(--gold-ink);"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-envelope"/></svg></p>
         <h3 style="margin:0 0 .5rem;">Monthly digest</h3>
         <p class="muted small" style="margin:0;">Practical updates on Australian compliance — Privacy Act changes, ASD Essential Eight updates, ISO revisions, and real implementation tips. Once a month.</p>
       </div>

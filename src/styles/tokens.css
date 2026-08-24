@@ -1,0 +1,109 @@
+/* =============================================================
+   Design tokens — text colours that are safe on their ground
+   =============================================================
+
+   Why this file exists
+   --------------------
+   A rendered-contrast sweep of eight pages found 175 text nodes below
+   the WCAG AA 4.5:1 floor. They collapsed to only eight distinct colour
+   pairs, and the dominant one — 97 nodes — was a single mistake repeated
+   everywhere: the brand gold #A9812E used as TEXT on a light ground,
+   where it measures 3.35:1.
+
+   #A9812E is a fine FILL (a rule, a chip, a button face). It is not a
+   text colour on cream or white. The distinction was never written down
+   anywhere, so it kept being reintroduced by hand — 435 times in inline
+   style attributes across 51 files.
+
+   How to use it
+   -------------
+   These are semantic, ground-aware names. --gold-ink means "gold, as
+   text, legible against whatever this sits on" — it resolves to a deep
+   gold on light grounds and a pale gold on dark ones, so the same
+   declaration is correct in both places and a section can be flipped
+   from light to dark without hunting colours.
+
+   Every value below is measured, not estimated. Light-ground tokens
+   clear 4.5:1 on all three grounds this site actually uses (#FAF7F1
+   cream, #FFFFFF white, #F7F4EE panel); dark-ground tokens clear it on
+   #0B0B0C.
+
+   Prefer a token over a literal. There is a CI check (npm run
+   check:colours) that fails on new raw hex text colours in src/pages. */
+
+:root {
+  /* Gold as text. Fills keep using #A9812E directly — this is only for
+     glyphs. 5.95:1 cream · 6.36:1 white · 5.79:1 panel */
+  --gold-ink: #7A5A18;
+
+  /* Two steps of secondary text.
+     muted  5.20:1 cream · 5.56:1 white · 5.07:1 panel
+     subtle 7.16:1 cream · 7.65:1 white · 6.97:1 panel */
+  --text-muted: #6B6860;
+  --text-subtle: #57534B;
+
+  /* Semantic states. The site had been reaching for stock Tailwind
+     values here (#059669, #dc2626, #d97706), several of which fail on
+     white — #059669 measured 3.52:1 on the contact form's own success
+     message. These are the warm-palette equivalents that pass.
+     ok 6.18/6.61/6.02 · warn 5.54/5.93/5.40 · danger 7.03/7.51/6.84 */
+  --ok-ink: #046A4E;
+  --warn-ink: #8A5A00;
+  --danger-ink: #A02622;
+
+  /* Text sitting ON a gold fill. White measures 3.58:1 there — this was
+     the .btn-primary defect. Near-black gives 5.50:1. */
+  --on-gold: #0B0B0C;
+}
+
+/* Dark grounds redefine the same names, so a declaration written once
+   stays correct when the section it lives in changes colour.
+
+   This list is enumerated rather than automatic, which is its weakness:
+   a new dark container added later will not be in it, and gold text
+   inside it will render at ~3:1 until it is added. That is a real
+   maintenance cost and the honest reason it is written down here. The
+   list below was built by scanning for containers that set a near-black
+   background; the contrast sweep is what catches anything it misses.
+
+   .band-light is listed explicitly rather than left to inherit: it can
+   nest inside a dark ancestor, and without a reset it would keep the
+   dark values and render pale gold on cream. */
+.band-dark,
+.hero-dk,
+.svc-hero,
+.svc-final-cta,
+.final-cta,
+.footer,
+.announce,
+.trust-strip,
+.fw-marquee,
+.dossier,
+.finder-result,
+.scan-card,
+.explorer,
+.eng-card,
+.ind-card,
+.bd-panel,
+.board-slide,
+.disclosure-card,
+.hiw-power-card,
+.ai-rails,
+.ckpt-ai-rails,
+/* .on-dark is an existing convention in the training page's markup, and
+   the only reliable one: it states the intent directly. Naming the
+   container classes instead turned out to be a trap — several of them
+   (.tr-anat-card, .tr-check) have a LIGHT base with a dark .on-dark
+   variant, so flipping the base class turned their gold text pale on
+   white. Only mark what is unambiguously dark. */
+.on-dark {
+  --gold-ink: #D8BA78;                  /* 10.51:1 on #0B0B0C */
+  --text-muted: rgba(250, 247, 241, .72);  /* 9.60:1 */
+  --text-subtle: rgba(250, 247, 241, .62); /* 7.30:1 */
+}
+
+.band-light {
+  --gold-ink: #7A5A18;
+  --text-muted: #6B6860;
+  --text-subtle: #57534B;
+}

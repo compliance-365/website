@@ -50,30 +50,30 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
           <form id="quickMsgForm" novalidate style="display:grid;gap:12px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
               <div style="display:flex;flex-direction:column;gap:4px">
-                <label for="qName" style="font-size:0.85rem;font-weight:600;color:#374151">Your name <span aria-hidden="true" style="color:#b91c1c">*</span></label>
+                <label for="qName" style="font-size:0.85rem;font-weight:600;color:var(--text-subtle)">Your name <span aria-hidden="true" style="color:#b91c1c">*</span></label>
                 <input id="qName" name="name" placeholder="Jane Smith" required
                        style="padding:10px;border-radius:8px;border:1px solid #ccc;">
               </div>
               <div style="display:flex;flex-direction:column;gap:4px">
-                <label for="qEmail" style="font-size:0.85rem;font-weight:600;color:#374151">Email <span aria-hidden="true" style="color:#b91c1c">*</span></label>
+                <label for="qEmail" style="font-size:0.85rem;font-weight:600;color:var(--text-subtle)">Email <span aria-hidden="true" style="color:#b91c1c">*</span></label>
                 <input id="qEmail" name="email" type="email" placeholder="jane@company.com.au" required
                        style="padding:10px;border-radius:8px;border:1px solid #ccc;">
               </div>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:4px">
-              <label for="qCompany" style="font-size:0.85rem;font-weight:600;color:#374151">Company</label>
+              <label for="qCompany" style="font-size:0.85rem;font-weight:600;color:var(--text-subtle)">Company</label>
               <input id="qCompany" name="company" placeholder="Acme Pty Ltd"
                      style="padding:10px;border-radius:8px;border:1px solid #ccc;">
             </div>
             <div style="display:flex;flex-direction:column;gap:4px">
-              <label for="qMessage" style="font-size:0.85rem;font-weight:600;color:#374151">Message</label>
+              <label for="qMessage" style="font-size:0.85rem;font-weight:600;color:var(--text-subtle)">Message</label>
               <textarea id="qMessage" name="message" placeholder="What do you need help with?" rows="6"
                         style="padding:10px;border-radius:8px;border:1px solid #ccc;"></textarea>
             </div>
 
             <p id="qError" class="small" style="color:#b91c1c;display:none;margin:.4rem 0 0"></p>
-            <p id="qSuccess" class="small" style="color:#059669;display:none;margin:.6rem 0 0"></p>
+            <p id="qSuccess" class="small" style="color:var(--ok-ink);display:none;margin:.6rem 0 0"></p>
 
             <button id="qSubmit" type="submit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
           </form>

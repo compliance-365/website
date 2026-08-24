@@ -156,7 +156,10 @@ const reviewsLd = [
   <!-- RESULTS SUMMARY STRIP — computed from the case studies below,
        not hand-typed. See the frontmatter of each content/case-studies/*.md
        for the readinessWeeks / firstTimePass / dealsUnblocked source data. -->
-  <section style="background:#0B0B0C;">
+  <!-- band-dark carries the dark token values (see src/styles/tokens.css);
+       without it .results-footnote inherited the near-black body colour
+       and rendered #0B0B0C on #0B0B0C — invisible. -->
+  <section class="band-dark" style="background:#0B0B0C;">
     <div class="container">
       <div class="stat-ledger-cs">
         <div class="sl-cs-item"><b>{engagementCount}</b><span>Documented engagements</span></div>
@@ -173,7 +176,7 @@ const reviewsLd = [
   <!-- TESTIMONIALS -->
   <section class="section" style="background:#FAF7F1;">
     <div class="container">
-      <p style="font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;text-align:center;margin:0 0 16px;">What clients say</p>
+      <p style="font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-ink);text-align:center;margin:0 0 16px;">What clients say</p>
       <p class="muted center" style="max-width:640px;margin:0 auto 56px;font-size:0.85rem;">
         Anonymised at these clients' request — but every attribution below is specific: industry, approximate size, city, framework achieved and timeframe.
       </p>
@@ -208,7 +211,7 @@ const reviewsLd = [
   <style>
     .results-num{font-size:2.4rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
     .results-cap{font-size:0.8rem;opacity:0.8;margin-top:0.4rem;text-transform:uppercase;letter-spacing:1px}
-    .results-footnote{max-width:780px;margin:2rem auto 0;font-size:0.8rem;line-height:1.7;opacity:0.82;text-align:center}
+    .results-footnote{max-width:780px;margin:2rem auto 0;font-size:0.8rem;line-height:1.7;color:var(--text-subtle);text-align:center}
     .stat-ledger-cs{display:flex;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
     .sl-cs-item{flex:1 1 200px;padding:34px 30px;border-right:1px solid rgba(255,255,255,.14)}
     .sl-cs-item:last-child{border-right:none}
@@ -246,7 +249,7 @@ const reviewsLd = [
                   type="button"
                   class="pill filter-btn active"
                   data-filter="all"
-                  style="cursor:pointer;border:none;background:#A9812E;color:white;"
+                  style="cursor:pointer;border:none;background:#A9812E;color:var(--on-gold);"
                 >All</button>
                 {allSectors.map(s => (
                   <button
@@ -272,7 +275,7 @@ const reviewsLd = [
                 <!-- Sector + timeline badges -->
                 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
                   {c.sector && (
-                    <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">
+                    <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold-ink);background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">
                       {c.sector.split(',')[0].trim()}
                     </span>
                   )}
@@ -307,14 +310,14 @@ const reviewsLd = [
                   </div>
                 )}
 
-                <span style="color:#A9812E;font-weight:600;font-size:0.875rem;margin-top:auto;">Read case study →</span>
+                <span style="color:var(--gold-ink);font-weight:600;font-size:0.875rem;margin-top:auto;">Read case study →</span>
               </a>
             ))}
           </div>
 
           <!-- Empty state if JS filter hides everything -->
           <div id="no-results" style="display:none;text-align:center;padding:4rem 0;">
-            <p class="muted">No case studies match that filter. <button type="button" data-filter="all" class="filter-btn" style="color:#A9812E;background:none;border:none;cursor:pointer;font-weight:600;text-decoration:underline;">Show all</button></p>
+            <p class="muted">No case studies match that filter. <button type="button" data-filter="all" class="filter-btn" style="color:var(--gold-ink);background:none;border:none;cursor:pointer;font-weight:600;text-decoration:underline;">Show all</button></p>
           </div>
         </>
       )}

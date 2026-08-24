@@ -134,7 +134,7 @@ const systems = [
 </section>
 
 <!-- WHAT IS A MANAGEMENT SYSTEM -->
-<section class="section" style="background:#0B0B0C;">
+<section class="section band-dark" style="background:#0B0B0C;">
   <div class="container">
     <div class="tr-intro-grid">
       <div>
@@ -166,7 +166,7 @@ const systems = [
       <div class="tr-sys-head">
         <span class={`tr-sys-badge${idx % 2 === 0 ? '' : ' on-dark'}`}><svg viewBox="0 0 16 16" aria-hidden="true"><use href={`#ic-${s.icon}`}/></svg></span>
         <div>
-          <p class="tr-eyebrow" style={idx % 2 === 0 ? 'color:#A9812E;' : ''}>{s.acr} · {s.std}</p>
+          <p class={`tr-eyebrow${idx % 2 === 0 ? '' : ' on-dark'}`}>{s.acr} · {s.std}</p>
           <h2 style={idx % 2 === 0 ? '' : 'color:#FAF7F1;'}>{s.name}</h2>
         </div>
       </div>
@@ -210,7 +210,7 @@ const systems = [
 ))}
 
 <!-- HOW CHECKPOINT SUPPORTS -->
-<section class="section" style="background:#0B0B0C;">
+<section class="section band-dark" style="background:#0B0B0C;">
   <div class="container">
     <div class="gold-rule-26" style="margin-left:auto;margin-right:auto;"></div>
     <p class="tr-eyebrow" style="text-align:center;">From theory to running system</p>
@@ -230,7 +230,7 @@ const systems = [
 </section>
 
 <!-- CTA -->
-<section class="section" style="background:#141416;">
+<section class="section band-dark" style="background:#141416;">
   <div class="container center">
     <h2 style="color:#FAF7F1;">Want this delivered to your team?</h2>
     <p style="max-width:640px;margin:1.5rem auto;color:rgba(250,247,241,.68);font-size:15px;line-height:1.8;">
@@ -248,7 +248,7 @@ const systems = [
 <Footer />
 
 <style is:global>
-  .tr-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: #A9812E; margin: 0 0 18px; }
+  .tr-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 18px; }
   .gold-rule-26 { width: 26px; height: 1px; background: #A9812E; margin-bottom: 18px; }
   .tr-lead { max-width: 640px; color: rgba(250,247,241,.66); font-size: 15px; line-height: 1.8; margin: 0 0 1rem; }
   .tr-lead strong { color: #FAF7F1; }
@@ -270,7 +270,7 @@ const systems = [
   .tr-aim.on-dark { color: #FAF7F1; }
   .tr-body { color: var(--muted); font-size: 15px; line-height: 1.8; max-width: 72ch; margin: 0 0 2.25rem; }
   .tr-body.on-dark { color: rgba(250,247,241,.66); }
-  .tr-sub { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #A9812E; margin: 0 0 16px; }
+  .tr-sub { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 16px; }
 
   .tr-anatomy { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 14px; margin-bottom: 2.5rem; }
   .tr-anat-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; border-top: 2px solid #A9812E; }
@@ -297,7 +297,7 @@ const systems = [
   .tr-check summary::-webkit-details-marker { display: none; }
   .tr-check summary::after { content: '+'; margin-left: auto; color: #A9812E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 18px; line-height: 1; }
   .tr-check[open] summary::after { content: '–'; }
-  .tr-q-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1em; color: #A9812E; background: rgba(169,129,46,.1); border-radius: 4px; padding: 3px 7px; flex: none; }
+  .tr-q-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1em; color: var(--gold-ink); background: rgba(169,129,46,.1); border-radius: 4px; padding: 3px 7px; flex: none; }
   .tr-check p { margin: 0; padding: 0 18px 16px 47px; font-size: 13.5px; line-height: 1.75; color: var(--muted); }
   .tr-check.on-dark p { color: rgba(250,247,241,.62); }
 

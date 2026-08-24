@@ -21,7 +21,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> Build a simple, living register of all AI tools</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> Build a simple, living register of all AI tools</h2>
 
 <p>Most organisations don’t actually know:</p>
 
@@ -83,7 +83,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> Use a clear, business-friendly AI risk process</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> Use a clear, business-friendly AI risk process</h2>
 
 <p>ISO 42001 does not require complex risk mathematics or data science. It expects you to:</p>
 
@@ -135,7 +135,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> Make sure humans stay in control</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> Make sure humans stay in control</h2>
 
 <p>ISO 42001 expects you to show where AI is allowed to act on its own and where humans must approve decisions. The principle is simple: <strong>no unsupervised AI for high-impact decisions</strong>.</p>
 
@@ -183,7 +183,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">4</span> Monitor AI behaviour and issues</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">4</span> Monitor AI behaviour and issues</h2>
 
 <p>AI governance is ongoing, not a one-off exercise. ISO 42001 expects you to monitor how AI is used and how it behaves over time.</p>
 
@@ -208,7 +208,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">5</span> Automate evidence using Microsoft 365</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">5</span> Automate evidence using Microsoft 365</h2>
 
 <p>ISO 42001 does not require you to create endless manual documents. Most evidence can be generated automatically from tools you already use.</p>
 
@@ -226,7 +226,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">6</span> Be transparent — internally and externally</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">6</span> Be transparent — internally and externally</h2>
 
 <p>Transparency builds trust and reduces confusion for staff, customers, and regulators.</p>
 
@@ -244,7 +244,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">7</span> A realistic 12-week roadmap to ISO 42001 readiness</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">7</span> A realistic 12-week roadmap to ISO 42001 readiness</h2>
 
 <p>You don’t need a 12-month program to get started. Many organisations can become ISO 42001-ready in around three months.</p>
 

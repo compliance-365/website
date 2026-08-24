@@ -61,7 +61,9 @@ h1 { font: 500 clamp(2.4rem, 4vw, 3.4rem)/1.12 Fraunces, Georgia, serif; }
 h2 { font: 500 clamp(1.8rem, 2.6vw, 2.2rem)/1.12 Fraunces, Georgia, serif; }
 h3 { font: 500 1.25rem/1.12 Fraunces, Georgia, serif; }
 p { margin: 0.3rem 0 1rem; }
-.muted { color: var(--muted); }
+/* --text-muted is ground-aware; --muted was light-ground only and
+   measured 3.54:1 wherever .muted landed on a dark section. */
+.muted { color: var(--text-muted); }
 .small { font-size: 0.95rem; }
 
 /* .center lives here rather than in BaseLayout's <style> block because that
@@ -72,8 +74,11 @@ p { margin: 0.3rem 0 1rem; }
 .center { text-align: center; }
 
 /* === Links ================================================== */
+/* Links are text, so they take the legible gold rather than the fill
+   gold — and --gold-ink flips on dark grounds, so a link in a dark
+   section stays readable without a separate rule. */
 a {
-  color: var(--primary);
+  color: var(--gold-ink);
   text-decoration: none;
 }
 a:hover {
@@ -125,9 +130,14 @@ a:hover {
 }
 .gold-rule { width:26px; height:1px; background:#A9812E; display:block; margin-bottom:18px; }
 
-.btn-ghost {
+/* .btn-outline is listed here too: it had no rule of its own, so an
+   <a class="btn btn-outline"> fell through to the base anchor colour —
+   the brand gold, 3.35:1 on cream. The border keeps the full-strength
+   gold; only the label moves to the legible one. */
+.btn-ghost,
+.btn-outline {
   background: transparent;
-  color: var(--primary);
+  color: var(--gold-ink);
   border: 1px solid var(--primary);
 }
 .btn-ghost:hover {
@@ -948,9 +958,13 @@ a.pill:hover {
     box-shadow: 0 16px 40px rgba(169,129,46,0.4);
   }
 
+  /* Second .btn-outline in this file — like .btn-primary, it sits in a
+     run of rules indented as though scoped to a @media block that had
+     already closed, so it applies at every width and beats the one
+     above. Same token here, so whichever wins is legible. */
   .btn-outline {
     background: transparent;
-    color: var(--primary);
+    color: var(--gold-ink);
     border: 2px solid var(--primary);
   }
 
@@ -1032,11 +1046,6 @@ a.pill:hover {
   box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
-/* Apply to cards */
-.card {
-  @extend .glass; /* Or add class="glass" to HTML cards */
-}
-
 /* Hero glass effect */
 .hero-wrap {
   background: linear-gradient(135deg, rgba(169,129,46,0.1), rgba(216,186,120,0.1), white);
@@ -1078,10 +1087,6 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   background: linear-gradient(135deg, rgba(169,129,46,0.02), white 100%);
 }
 
-/* Card gradients */
-.card {
-  background: linear-gradient(135deg, white 0%, #f9fafc 100%);
-}
 /* Icons */
 .icon {
   width: clamp(60px, 8vw, 80px);

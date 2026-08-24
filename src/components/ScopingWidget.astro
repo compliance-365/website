@@ -282,7 +282,7 @@ const {
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
-    color: #A9812E;
+    color: var(--gold-ink);
     text-decoration: underline;
     cursor: pointer;
   }
@@ -325,7 +325,7 @@ const {
   .c365-opt:focus-visible { outline: 2px solid #A9812E; outline-offset: 2px; }
   .c365-opt.is-active {
     background: #A9812E;
-    color: #ffffff;
+    color:var(--on-gold);
     border-color: #A9812E;
     font-weight: 600;
   }
@@ -360,7 +360,8 @@ const {
   }
   .c365-btn--primary {
     background: #A9812E;
-    color: #ffffff;
+    /* White measures 3.58:1 on this gold. */
+    color: var(--on-gold);
   }
   .c365-btn--primary:hover { background: #8B6820; }
   .c365-btn--ghost {

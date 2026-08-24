@@ -182,13 +182,13 @@ const breadcrumbs = [
       <div class="container">
         <div class="card spot" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #A9812E;max-width:860px;background:#FAF7F1;">
           <div>
-            <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">Ready to take the next step?</p>
+            <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold-ink);margin:0 0 6px;">Ready to take the next step?</p>
             <h3 style="margin:0 0 6px;">{matchedService.name}</h3>
             <p class="muted small" style="margin:0;">{matchedService.desc}</p>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
             <a href={`${base}${matchedService.href}`} class="btn btn-primary" style="white-space:nowrap;text-align:center;">Learn more</a>
-            <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" target="_blank" rel="noopener" class="btn" style="white-space:nowrap;text-align:center;background:white;border:1.5px solid #A9812E;color:#A9812E;font-weight:700;">Book a free call</a>
+            <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" target="_blank" rel="noopener" class="btn" style="white-space:nowrap;text-align:center;background:white;border:1.5px solid #A9812E;color:var(--gold-ink);font-weight:700;">Book a free call</a>
           </div>
         </div>
       </div>
@@ -225,7 +225,7 @@ const breadcrumbs = [
               )}
               <h3 style="margin:0 0 .4rem;font-size:.95rem;line-height:1.4;flex:1;">{r.title}</h3>
               <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;">{r.description.substring(0,110)}{r.description.length > 110 ? '…' : ''}</p>
-              <span style="color:#A9812E;font-weight:700;font-size:.82rem;margin-top:auto;">Read article →</span>
+              <span style="color:var(--gold-ink);font-weight:700;font-size:.82rem;margin-top:auto;">Read article →</span>
             </a>
           ))}
         </div>

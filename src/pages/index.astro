@@ -230,7 +230,7 @@ const faqLd = {
   .fw-marquee-track{display:flex;gap:48px;width:max-content;animation:fwMarquee 34s linear infinite;}
   .fw-marquee:hover .fw-marquee-track{animation-play-state:paused;}
   @keyframes fwMarquee{to{transform:translateX(-50%);}}
-  .fw-marquee-item{white-space:nowrap;font-family:Manrope,system-ui;font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,241,.4);display:flex;align-items:center;gap:12px;}
+  .fw-marquee-item{white-space:nowrap;font-family:Manrope,system-ui;font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,241,.55);display:flex;align-items:center;gap:12px;}
   .fw-marquee-item::before{content:"";width:5px;height:5px;border-radius:50%;background:#A9812E;flex-shrink:0;}
   @media (prefers-reduced-motion: reduce){.fw-marquee-track{animation:none;}}
 </style>
@@ -249,7 +249,7 @@ const faqLd = {
 <style>
   .trust-strip{background:#0B0B0C;padding:8px 0 40px;}
   .trust-strip-inner{display:flex;align-items:center;justify-content:center;gap:clamp(20px,4vw,48px);flex-wrap:wrap;}
-  .trust-strip-label{margin:0;font-family:Manrope,system-ui;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.4);white-space:nowrap;}
+  .trust-strip-label{margin:0;font-family:Manrope,system-ui;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.55);white-space:nowrap;}
   .trust-strip-logos{display:flex;align-items:center;gap:clamp(28px,4vw,56px);flex-wrap:wrap;}
   .trust-logo-item{color:rgba(250,247,241,.55);transition:color .2s;display:flex;align-items:center;}
   .trust-logo-item:hover{color:rgba(250,247,241,.9);}
@@ -553,7 +553,7 @@ const faqLd = {
 </section>
 
 <!-- FINAL CTA -->
-<section class="final-cta" style="background:#0B0B0C;color:#FAF7F1;text-align:center;padding:8rem 0;position:relative;overflow:hidden;">
+<section class="final-cta band-dark" style="background:#0B0B0C;color:#FAF7F1;text-align:center;padding:8rem 0;position:relative;overflow:hidden;">
   <svg class="final-ring-bg" viewBox="0 0 200 200" fill="none" aria-hidden="true">
     <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="4" stroke-linecap="round"/>
     <circle cx="188" cy="100" r="7" fill="#A9812E"/>

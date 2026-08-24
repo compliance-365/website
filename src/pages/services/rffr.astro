@@ -176,7 +176,7 @@ const faqLd = {
       </div>
 
       <p class="center muted small" style="margin-top:2rem;">
-        Not sure whether a subcontract puts you in scope, or which category you fall into? That's the first thing we settle on a call — <a href={ctaUrl} style="color:#A9812E;font-weight:600;">book 30 minutes</a> and we'll tell you plainly, no pitch.
+        Not sure whether a subcontract puts you in scope, or which category you fall into? That's the first thing we settle on a call — <a href={ctaUrl} style="color:var(--gold-ink);font-weight:600;">book 30 minutes</a> and we'll tell you plainly, no pitch.
       </p>
 
       <!-- pre-empted quick questions -->
@@ -211,7 +211,7 @@ const faqLd = {
 
       <div class="grid-3" style="gap:2rem;">
         <div class="card feature spot">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin:0;">{c.deeds}</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin:0;">{c.deeds}</p>
           <h3 style="margin:0.35rem 0 0.75rem;">RFFR Obligations</h3>
           <p class="muted small">
             The program-deed requirements — positive identity confirmation, pre-employment and Working With Vulnerable People checks, right-to-work, IT administrators who are Australian citizens or permanent residents, and Services data that stays onshore. All flagged as RFFR Core Expectations.
@@ -225,7 +225,7 @@ const faqLd = {
           </p>
         </div>
         <div class="card feature spot">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin:0;">93</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin:0;">93</p>
           <h3 style="margin:0.35rem 0 0.75rem;">ISO 27001 Annex A</h3>
           <p class="muted small">
             For Category 1 providers seeking independent certification — the 2022 Annex A control set, delivered as our existing ISO 27001 module. Category 2A providers skip this worksheet unless they choose to certify voluntarily.
@@ -286,11 +286,11 @@ const faqLd = {
           <p class="muted small" style="margin-top:0.5rem;"><strong>auto-assessed today</strong> — controls a live Microsoft Graph check proposes a status for, confirmed with one click. No manual evidence gathering.</p>
         </div>
         <div class="card spot">
-          <p style="font-size:2.5rem;font-weight:800;color:#A9812E;margin:0;">{c.microsoftAssessable}</p>
+          <p style="font-size:2.5rem;font-weight:800;color:var(--gold-ink);margin:0;">{c.microsoftAssessable}</p>
           <p class="muted small" style="margin-top:0.5rem;"><strong>Microsoft-assessable</strong> (~{assessablePct}%) once the {c.e8Mapped} Essential Eight-mapped controls in the bundled E8 module are included.</p>
         </div>
         <div class="card spot">
-          <p style="font-size:2.5rem;font-weight:800;color:#A9812E;margin:0;">{c.rffrCore}</p>
+          <p style="font-size:2.5rem;font-weight:800;color:var(--gold-ink);margin:0;">{c.rffrCore}</p>
           <p class="muted small" style="margin-top:0.5rem;"><strong>RFFR Core Expectations</strong> — prioritised first at every milestone, whether automated or manual.</p>
         </div>
       </div>
@@ -304,7 +304,7 @@ const faqLd = {
               <tr>
                 <td>{g.name.replace('Guidelines for ', '')}</td>
                 <td style="text-align:right;">{g.count}</td>
-                <td style="text-align:right;color:#A9812E;font-weight:700;">{g.automated}</td>
+                <td style="text-align:right;color:var(--gold-ink);font-weight:700;">{g.automated}</td>
               </tr>
             ))}
           </tbody>
@@ -455,7 +455,7 @@ const faqLd = {
   .rffr-fit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
   .rffr-fit-card { position: relative; background: #fff; border: 1px solid #DDD8CF; border-radius: 14px; padding: 1.75rem 1.4rem 1.4rem; }
   .rffr-fit-card h3 { font-size: 1rem; margin: 0.6rem 0 0.6rem; line-height: 1.35; }
-  .rffr-fit-num { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; background: #A9812E; color: #fff; font-weight: 800; font-size: 1rem; }
+  .rffr-fit-num { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; background: #A9812E; color:var(--on-gold); font-weight: 800; font-size: 1rem; }
   .rffr-preempt { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem 2rem; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid #DDD8CF; }
   .rffr-preempt h4 { font-size: 0.92rem; margin: 0 0 0.4rem; color: #2E2B26; }
   .rffr-preempt p { margin: 0; }

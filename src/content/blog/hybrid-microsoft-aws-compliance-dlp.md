@@ -16,13 +16,13 @@ image: "/assets/blog-hybrid-m365-aws-compliance.svg"
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> A control asks "what", never "which vendor"</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> A control asks "what", never "which vendor"</h2>
 
 <p>Take a typical ISO 27001 Annex A control: data loss prevention exists to stop sensitive data leaving the organisation without authorisation. Nowhere does the control — or the auditor assessing it — say that has to be Microsoft Purview. It's a requirement, not a product name. Any organisation still describing its whole control environment in Microsoft-specific tool names is really describing whichever tenant its compliance advisor happened to be most familiar with, not what the standard actually asks for.</p>
 
 <p>Once you separate the requirement from the tool, the fix for a hybrid environment stops being complicated: the requirement stays exactly the same, and you simply record which tool satisfies it <em>for that part of the business</em>.</p>
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> The worked example: DLP in two clouds at once</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> The worked example: DLP in two clouds at once</h2>
 
 <div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
@@ -43,7 +43,7 @@ image: "/assets/blog-hybrid-m365-aws-compliance.svg"
 
 <p style="margin-top:12px;color:#4b5563">Same control. Same Statement of Applicability line. Two tools, because two different parts of the business run on two different platforms — and that's the normal, expected shape of a real SaaS company, not an exception to explain away.</p>
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> Three things to actually do about it</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> Three things to actually do about it</h2>
 
 <ul>
   <li><strong>Say it out loud in the Justification field.</strong> Don't leave an auditor to guess why a "Microsoft-flavoured" control reads oddly for an AWS-hosted product. One sentence — "DLP implemented via AWS Macie for the product's data workloads; Purview covers corporate IT" — closes the question before it's asked.</li>
