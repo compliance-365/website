@@ -79,7 +79,7 @@ const GRACE_DAYS = 14; // same standard as tools/issue-entitlement.mjs
    entirely, silently blocking the owner console's "sign via endpoint"
    fast path for it with no clear error) — keep both in sync. */
 export const FRAMEWORK_BUNDLES = { is18: ['iso27001', 'essential8'], rffr: ['iso27001', 'essential8'] };
-export const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'is18', 'rffr', 'ai'];
+export const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'is18', 'rffr', 'cps234', 'ai'];
 const ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
 
 /* ============== canonicalJson / Ed25519 signing ==============

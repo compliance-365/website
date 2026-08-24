@@ -1,0 +1,433 @@
+{
+ "moduleId": "cps234",
+ "version": 1,
+ "sourceRef": {
+  "publication": "APRA Prudential Standard CPS 234 Information Security",
+  "edition": "July 2019",
+  "lastVerified": "2026-08-24"
+ },
+ "framework": {
+  "id": "cps234",
+  "name": "CPS 234",
+  "tag": "APRA Regulated",
+  "blurb": "APRA Prudential Standard CPS 234 Information Security — all 24 requirements (paragraphs 13–36) across roles and responsibilities, information security capability, policy framework, asset identification and classification, implementation of controls, incident management, testing control effectiveness, internal audit, and APRA notification. Mandatory for every APRA-regulated entity: banks, insurers, superannuation funds and their service providers. Cross-mapped to ISO 27001 and NIST CSF so the prudential obligation and the certification are prepared once, not twice.",
+  "controls": [
+   {
+    "code": "CPS234.13",
+    "t": "Board ultimately responsible for information security",
+    "app": true,
+    "map": "ISO27001 A.5.4 · NIST GV.RR",
+    "cat": "cpsRoles"
+   },
+   {
+    "code": "CPS234.14",
+    "t": "Information security roles and responsibilities clearly defined",
+    "app": true,
+    "map": "ISO27001 A.5.2 · NIST GV.RR",
+    "cat": "cpsRoles"
+   },
+   {
+    "code": "CPS234.15",
+    "t": "Maintain an information security capability",
+    "app": true,
+    "map": "ISO27001 A.5.1 · NIST GV.OC",
+    "cat": "cpsCapability"
+   },
+   {
+    "code": "CPS234.16",
+    "t": "Assess related-party and third-party information security capability",
+    "app": true,
+    "map": "ISO27001 A.5.19 · NIST GV.SC",
+    "cat": "cpsCapability"
+   },
+   {
+    "code": "CPS234.17",
+    "t": "Actively maintain capability as threats and assets change",
+    "app": true,
+    "map": "ISO27001 A.5.7 · NIST ID.RA",
+    "cat": "cpsCapability"
+   },
+   {
+    "code": "CPS234.18",
+    "t": "Maintain an information security policy framework",
+    "app": true,
+    "map": "ISO27001 A.5.1 · NIST GV.PO",
+    "cat": "cpsPolicy"
+   },
+   {
+    "code": "CPS234.19",
+    "t": "Policy framework directs every party with an obligation",
+    "app": true,
+    "map": "ISO27001 A.5.1 · NIST GV.PO",
+    "cat": "cpsPolicy"
+   },
+   {
+    "code": "CPS234.20",
+    "t": "Classify information assets by criticality and sensitivity",
+    "app": true,
+    "map": "ISO27001 A.5.12 · NIST ID.AM",
+    "cat": "cpsAssets"
+   },
+   {
+    "code": "CPS234.21",
+    "t": "Controls commensurate with threat, sensitivity, life-cycle and consequence",
+    "app": true,
+    "map": "ISO27001 A.5.9 · NIST PR.DS",
+    "cat": "cpsControls"
+   },
+   {
+    "code": "CPS234.22",
+    "t": "Evaluate the design of third-party controls",
+    "app": true,
+    "map": "ISO27001 A.5.20 · NIST GV.SC",
+    "cat": "cpsControls"
+   },
+   {
+    "code": "CPS234.23",
+    "t": "Robust mechanisms to detect and respond to incidents",
+    "app": true,
+    "map": "ISO27001 A.5.24 · NIST DE.CM",
+    "cat": "cpsIncident"
+   },
+   {
+    "code": "CPS234.24",
+    "t": "Maintain information security response plans",
+    "app": true,
+    "map": "ISO27001 A.5.26 · NIST RS.MA",
+    "cat": "cpsIncident"
+   },
+   {
+    "code": "CPS234.25",
+    "t": "Response plans cover all stages and Board escalation",
+    "app": true,
+    "map": "ISO27001 A.5.26 · NIST RS.CO",
+    "cat": "cpsIncident"
+   },
+   {
+    "code": "CPS234.26",
+    "t": "Annually review and test response plans",
+    "app": true,
+    "map": "ISO27001 A.5.26 · NIST RS.MA",
+    "cat": "cpsIncident"
+   },
+   {
+    "code": "CPS234.27",
+    "t": "Systematic control testing program",
+    "app": true,
+    "map": "ISO27001 A.5.35 · NIST ID.IM",
+    "cat": "cpsTesting"
+   },
+   {
+    "code": "CPS234.28",
+    "t": "Assess sufficiency of third-party control testing",
+    "app": true,
+    "map": "ISO27001 A.5.22 · NIST GV.SC",
+    "cat": "cpsTesting"
+   },
+   {
+    "code": "CPS234.29",
+    "t": "Escalate unremediated testing deficiencies to the Board",
+    "app": true,
+    "map": "ISO27001 A.5.35 · NIST GV.OV",
+    "cat": "cpsTesting"
+   },
+   {
+    "code": "CPS234.30",
+    "t": "Testing by skilled, functionally independent specialists",
+    "app": true,
+    "map": "ISO27001 A.5.35 · NIST ID.IM",
+    "cat": "cpsTesting"
+   },
+   {
+    "code": "CPS234.31",
+    "t": "Review testing program sufficiency at least annually",
+    "app": true,
+    "map": "ISO27001 A.5.35 · NIST ID.IM",
+    "cat": "cpsTesting"
+   },
+   {
+    "code": "CPS234.32",
+    "t": "Internal audit reviews control design and operating effectiveness",
+    "app": true,
+    "map": "ISO27001 A.5.35 · NIST GV.OV",
+    "cat": "cpsAudit"
+   },
+   {
+    "code": "CPS234.33",
+    "t": "Control assurance by appropriately skilled personnel",
+    "app": true,
+    "map": "ISO27001 A.5.35 · NIST GV.OV",
+    "cat": "cpsAudit"
+   },
+   {
+    "code": "CPS234.34",
+    "t": "Internal audit assesses relied-upon third-party assurance",
+    "app": true,
+    "map": "ISO27001 A.5.22 · NIST GV.SC",
+    "cat": "cpsAudit"
+   },
+   {
+    "code": "CPS234.35",
+    "t": "Notify APRA within 72 hours of a material incident",
+    "app": true,
+    "map": "ISO27001 A.5.5 · NIST RS.CO",
+    "cat": "cpsNotify"
+   },
+   {
+    "code": "CPS234.36",
+    "t": "Notify APRA within 10 business days of an unremediable material control weakness",
+    "app": true,
+    "map": "ISO27001 A.5.5 · NIST GV.OV",
+    "cat": "cpsNotify"
+   }
+  ]
+ },
+ "guidance": {
+  "CPS234.13": {
+   "how": "The Board — not the CISO, not IT — carries ultimate responsibility, and must ensure information security is maintained commensurate with the size and extent of threats to the entity's information assets. In practice this means the Board can evidence it received, challenged and acted on information security reporting, not merely that reporting existed.",
+   "evidence": "Board or Board Risk Committee minutes showing information security papers tabled, questions raised and decisions taken; the Board-approved information security policy; the terms of reference assigning this responsibility.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.14": {
+   "how": "Define, in writing, the information security roles of the Board, senior management, governing bodies and individuals responsible for decision-making, approval, oversight and operations. Ambiguity here is the finding: two people each assuming the other owns a control is the most common root cause APRA sees.",
+   "evidence": "A RACI or equivalent covering Board, executive, security function and asset owners; position descriptions or committee charters carrying the security accountabilities; delegation instruments.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.15": {
+   "how": "Maintain a capability — people, skills, processes and technology — commensurate with the size and extent of threats to information assets, sufficient to keep the entity operating soundly. Capability is judged against your threat environment, not against a generic benchmark.",
+   "evidence": "Security function structure and headcount; skills matrix and training records; capability assessment or maturity assessment against a recognised model, with the resourcing decisions that followed.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.16": {
+   "how": "Where a related party or third party manages your information assets, assess THEIR capability, scaled to the consequences of an incident affecting those assets. A contractual warranty is not an assessment.",
+   "evidence": "Vendor security assessments or due-diligence questionnaires; the third party's own certifications and assurance reports with your review notes; the risk-tiering that determined assessment depth.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": [
+    "guests",
+    "vendor-review"
+   ]
+  },
+  "CPS234.17": {
+   "how": "Capability must move when vulnerabilities and threats move — including changes driven by your own information assets or business environment. The word is ACTIVELY: a capability set once and left is non-compliant even if it was adequate at the time.",
+   "evidence": "Threat intelligence inputs and how they changed priorities; capability re-assessments after material business or technology change; the uplift roadmap with completed milestones.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.18": {
+   "how": "Maintain a policy framework commensurate with your exposure to vulnerabilities and threats — normally a hierarchy of policy, standards and procedures rather than a single document.",
+   "evidence": "The approved policy framework with version and approval history; the policy hierarchy map; evidence of periodic review.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.19": {
+   "how": "The framework must give direction to ALL parties with an obligation to maintain information security — staff, contractors, related parties and third parties. A policy that binds only employees leaves the outsourced estate ungoverned.",
+   "evidence": "Policy sections addressing third parties; contractual clauses flowing policy obligations down to suppliers; acknowledgement records from staff and contractors.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.20": {
+   "how": "Classify information assets — including those held by related and third parties — by criticality and sensitivity, reflecting how badly an incident would affect the entity or its depositors, policyholders, beneficiaries or other customers. The customer-impact lens is explicit in the standard and is what distinguishes this from a generic asset inventory.",
+   "evidence": "The information asset register with classification applied; the classification scheme and its criteria; evidence third-party-held assets are included.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": [
+    "dlp",
+    "labels"
+   ]
+  },
+  "CPS234.21": {
+   "how": "Implement controls, in a timely manner, sized against four explicit factors: vulnerabilities and threats; criticality and sensitivity; the asset's life-cycle stage; and the consequences of an incident. Life-cycle is the one most often missed — decommissioning and disposal are in scope, not just live systems.",
+   "evidence": "Control design documentation traced to asset classification; life-cycle procedures covering commissioning through secure disposal; remediation timeliness records.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": [
+    "mfa-all",
+    "mfa-priv",
+    "legacy",
+    "admins",
+    "pim",
+    "guests",
+    "access-review",
+    "device",
+    "compliance-policy",
+    "patch",
+    "wdac",
+    "macro",
+    "dlp",
+    "encryption",
+    "sharing",
+    "backup"
+   ]
+  },
+  "CPS234.22": {
+   "how": "Where a related or third party manages your assets, evaluate the DESIGN of their controls protecting those assets. Design evaluation is a distinct obligation from the capability assessment at paragraph 16 and from operating-effectiveness testing later.",
+   "evidence": "Control design reviews of key suppliers; SOC 2 Type I/II or ISAE 3402 reports with your own analysis of scope and exceptions; bridging letters covering gaps between report periods.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": [
+    "vendor-review"
+   ]
+  },
+  "CPS234.23": {
+   "how": "Have mechanisms that detect and respond to information security incidents in a timely manner. Detection coverage is the usual gap: an entity that can respond well but only learns of incidents from third parties does not satisfy this.",
+   "evidence": "SIEM or monitoring coverage documentation; alerting and triage procedures; detection-to-response time metrics.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": [
+    "riskyusers",
+    "logging",
+    "alerts"
+   ]
+  },
+  "CPS234.24": {
+   "how": "Maintain response plans for incidents the entity considers could plausibly occur. Plausibility should be reasoned from your own threat and asset profile, and that reasoning should be visible.",
+   "evidence": "The information security response plans; the scenario set they cover and the rationale for it; version and approval history.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.25": {
+   "how": "Plans must include mechanisms for managing every stage from detection to post-incident review, AND for escalating and reporting incidents to the Board, governing bodies and those responsible for oversight. Post-incident review and Board escalation are both named explicitly.",
+   "evidence": "Plan sections covering each stage; the escalation matrix with thresholds and timeframes; completed post-incident reviews with lessons tracked to closure.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.26": {
+   "how": "Review AND test the response plans annually to confirm they remain effective and fit-for-purpose. A desktop walkthrough with no findings is weak evidence; a test that surfaces and closes gaps is strong.",
+   "evidence": "Annual test records — tabletop or simulation — with participants, scenario, findings and remediation; the review that followed and any plan revisions.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.27": {
+   "how": "Test control effectiveness through a SYSTEMATIC program, with nature and frequency commensurate with five named factors: rate of change in threats; asset criticality and sensitivity; incident consequences; risk from environments where you cannot enforce your own policies; and materiality and frequency of change to assets. Ad hoc penetration testing does not meet 'systematic'.",
+   "evidence": "The testing program and schedule showing the five factors driving coverage and cadence; test results across the period; the risk-based rationale for what is tested how often.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": [
+    "access-review"
+   ]
+  },
+  "CPS234.28": {
+   "how": "Where you rely on a related or third party's own control testing, assess whether its nature and frequency are commensurate with the same five factors in paragraph 27. Accepting a supplier's test report without assessing its adequacy against those factors is the gap.",
+   "evidence": "Your assessment of each relied-upon supplier's testing scope, method and frequency against the paragraph 27 factors; gap analyses and any compensating testing you performed.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.29": {
+   "how": "Escalate and report to the Board or senior management any testing result identifying a control deficiency that cannot be remediated in a timely manner. Note the trigger is the deficiency being un-remediable in time — not its severity.",
+   "evidence": "Escalation records and the Board or committee papers carrying them; the deficiency register showing remediation timeframes and which items breached them.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.30": {
+   "how": "Testing must be performed by appropriately skilled AND functionally independent specialists. Functional independence means the tester does not report through the function that owns the control — an internal team can qualify if the reporting line is genuinely separate.",
+   "evidence": "Tester credentials and qualifications; the reporting line or engagement terms evidencing functional independence; scope and independence statements in test reports.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.31": {
+   "how": "Review whether the testing PROGRAM itself is sufficient, at least annually or on material change to information assets or the business environment. This is a review of the program's adequacy, distinct from performing the tests.",
+   "evidence": "The annual program review with its conclusions; trigger-based reviews after material change; resulting changes to scope, method or cadence.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.32": {
+   "how": "Internal audit activities must include review of the DESIGN and OPERATING EFFECTIVENESS of information security controls, including those maintained by related and third parties. Both dimensions are required — design review alone is insufficient.",
+   "evidence": "Internal audit plan showing information security coverage; audit reports addressing design and operating effectiveness; findings tracked to closure.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.33": {
+   "how": "Ensure the information security control assurance is provided by personnel appropriately skilled in providing it. Where internal audit lacks the specialist depth, this is normally met by co-sourcing.",
+   "evidence": "Auditor skills and certifications; co-source or outsource arrangements and the provider's credentials; the capability assessment of the assurance team.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.34": {
+   "how": "Internal audit must assess a related or third party's control assurance where BOTH conditions hold: an incident affecting the assets could materially affect the entity or its customers, AND internal audit intends to rely on that party's assurance. Both limbs must be true before the obligation bites.",
+   "evidence": "Internal audit's assessment of the third party's assurance quality and scope; the reliance decision and its documented basis; materiality determinations per supplier.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.35": {
+   "how": "Notify APRA as soon as possible and no later than 72 HOURS after becoming aware of an incident that materially affected — or had the potential to materially affect — the entity or its depositors, policyholders, beneficiaries or other customers, OR that has been notified to any other regulator in any jurisdiction. The second limb catches incidents you may not judge material yourself.",
+   "evidence": "The notification register with awareness timestamps and submission times; the materiality assessment for each incident; evidence of notifications made to other regulators and the matching APRA notification.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  },
+  "CPS234.36": {
+   "how": "Notify APRA as soon as possible and no later than 10 BUSINESS DAYS after becoming aware of a material information security control weakness the entity expects it will NOT be able to remediate in a timely manner. This is a separate clock from the 72-hour incident obligation and is frequently missed — it is triggered by an unfixable weakness, with no incident required.",
+   "evidence": "The control weakness register with awareness dates, materiality and remediation feasibility assessments; notifications lodged; the reasoning where a weakness was assessed as not notifiable.",
+   "link": "https://www.apra.gov.au/information-security-cps-234",
+   "checks": []
+  }
+ },
+ "extra": {
+  "checkCps234": {
+   "mfa-all": [
+    "CPS234.21"
+   ],
+   "mfa-priv": [
+    "CPS234.21"
+   ],
+   "legacy": [
+    "CPS234.21"
+   ],
+   "admins": [
+    "CPS234.21"
+   ],
+   "pim": [
+    "CPS234.21"
+   ],
+   "guests": [
+    "CPS234.16",
+    "CPS234.21"
+   ],
+   "access-review": [
+    "CPS234.21",
+    "CPS234.27"
+   ],
+   "riskyusers": [
+    "CPS234.23"
+   ],
+   "device": [
+    "CPS234.21"
+   ],
+   "compliance-policy": [
+    "CPS234.21"
+   ],
+   "patch": [
+    "CPS234.21"
+   ],
+   "wdac": [
+    "CPS234.21"
+   ],
+   "macro": [
+    "CPS234.21"
+   ],
+   "logging": [
+    "CPS234.23"
+   ],
+   "alerts": [
+    "CPS234.23"
+   ],
+   "dlp": [
+    "CPS234.20",
+    "CPS234.21"
+   ],
+   "encryption": [
+    "CPS234.21"
+   ],
+   "labels": [
+    "CPS234.20"
+   ],
+   "sharing": [
+    "CPS234.21"
+   ],
+   "backup": [
+    "CPS234.21"
+   ],
+   "vendor-review": [
+    "CPS234.16",
+    "CPS234.22"
+   ]
+  }
+ }
+}

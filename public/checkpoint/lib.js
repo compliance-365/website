@@ -445,6 +445,9 @@
          as an ISO 27001 code). Self-prefixed, same as DISP./E8. */
       if (/^IS18\.\d+/.test(tok)) { lastFw = 'is18'; return { fw: 'is18', code: tok }; }
       if (/^E8\.\d+/.test(tok)) { lastFw = 'essential8'; return { fw: 'essential8', code: tok }; }
+      /* CPS234 — same self-prefixed treatment, and for the same reason
+         as IS18 above: "CPS234.13" matches the bare-code shape too. */
+      if (/^CPS234\.\d+/.test(tok)) { lastFw = 'cps234'; return { fw: 'cps234', code: tok }; }
       if (lastFw && /^[A-Za-z]{1,4}\.?\d/.test(tok)) return { fw: lastFw, code: tok };
       lastFw = null; /* prose like "EU AI Act Art.9" resets the chain */
       return null;

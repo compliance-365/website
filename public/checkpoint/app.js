@@ -457,6 +457,15 @@ function showModal(opts) {
        groupings, so the SoA can be filtered one guideline at a time
        across ~1,000 controls (keys match the `cat` field the rffr
        content pack sets on each control). */
+    /* CPS 234 — the nine domains auditors group the standard's 24
+       requirements into. Prefixed because `roles`/`incidents` are
+       already RFFR's keys below and a bare key would silently render
+       RFFR's label on the CPS 234 SoA. */
+    cpsRoles: 'Roles & responsibilities', cpsCapability: 'Security capability',
+    cpsPolicy: 'Policy framework', cpsAssets: 'Asset identification & classification',
+    cpsControls: 'Implementation of controls', cpsIncident: 'Incident management',
+    cpsTesting: 'Testing control effectiveness', cpsAudit: 'Internal audit',
+    cpsNotify: 'APRA notification',
     deeds: 'RFFR Obligations', roles: 'Cyber security roles', incidents: 'Cyber security incidents',
     procurement: 'Procurement & outsourcing', documentation: 'Documentation', physical: 'Physical security',
     personnel: 'Personnel security', 'comms-infra': 'Communications infrastructure', 'comms-systems': 'Communications systems',
@@ -13507,6 +13516,9 @@ function showModal(opts) {
         }
         if (moduleId === 'nistcsf' && content.extra && content.extra.checkNistCsf) {
           Object.assign(window.CHECK_NISTCSF, content.extra.checkNistCsf);
+        }
+        if (moduleId === 'cps234' && content.extra && content.extra.checkCps234) {
+          Object.assign(window.CHECK_CPS234, content.extra.checkCps234);
         }
         PACKS_MERGED[moduleId] = true;
       } catch (e) {
