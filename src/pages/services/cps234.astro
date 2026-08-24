@@ -1,0 +1,286 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import RelatedResources from '../../components/RelatedResources.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+
+/* The nine domains APRA assessors and internal audit functions group
+   CPS 234's 24 requirements (paragraphs 13-36) into. Paragraph ranges
+   follow the standard itself — the numbering is anchored by CPS 234's
+   own internal cross-reference at paragraph 28, which cites
+   "paragraphs 27(a) to 27(e)" for the systematic testing program. */
+const domains = [
+  { n: 'Roles and responsibilities', p: '¶13–14',
+    d: 'The Board carries ultimate responsibility — not the CISO, not IT. Roles for the Board, senior management, governing bodies and individuals must be defined in writing.' },
+  { n: 'Information security capability', p: '¶15–17',
+    d: 'Capability commensurate with the size and extent of threats, actively maintained as threats change — and assessed for any related or third party managing your assets.' },
+  { n: 'Policy framework', p: '¶18–19',
+    d: 'A policy framework sized to your exposure, giving direction to every party with an obligation — staff, contractors, related parties and third parties alike.' },
+  { n: 'Asset identification and classification', p: '¶20',
+    d: 'Information assets classified by criticality and sensitivity, reflecting the impact on the entity and on depositors, policyholders, beneficiaries or other customers.' },
+  { n: 'Implementation of controls', p: '¶21–22',
+    d: 'Controls sized against four named factors — threat, sensitivity, life-cycle stage and consequence — plus design evaluation of any third party holding your assets.' },
+  { n: 'Incident management', p: '¶23–26',
+    d: 'Detection and response mechanisms, response plans for incidents that could plausibly occur, Board escalation, and an annual review and test of those plans.' },
+  { n: 'Testing control effectiveness', p: '¶27–31',
+    d: 'A systematic testing program — not ad hoc penetration testing — conducted by skilled and functionally independent specialists, with its own sufficiency reviewed annually.' },
+  { n: 'Internal audit', p: '¶32–34',
+    d: 'Internal audit reviews both the design and the operating effectiveness of controls, and assesses third-party assurance it intends to rely on.' },
+  { n: 'APRA notification', p: '¶35–36',
+    d: 'Two separate clocks: 72 hours for a material incident, and 10 business days for a material control weakness you cannot remediate in time.' }
+];
+
+const serviceLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: 'APRA CPS 234 Compliance Support',
+  serviceType: 'APRA CPS 234 Information Security',
+  provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  areaServed: [
+    { '@type': 'Country', name: 'Australia' },
+    { '@type': 'City', name: 'Sydney' },
+    { '@type': 'City', name: 'Melbourne' },
+    { '@type': 'City', name: 'Brisbane' },
+    { '@type': 'City', name: 'Canberra' },
+    { '@type': 'City', name: 'Perth' },
+    { '@type': 'City', name: 'Adelaide' }
+  ],
+  url: 'https://www.compliance365.com.au/services/cps234',
+  description:
+    'APRA CPS 234 Information Security compliance for APRA-regulated entities and their service providers. All 24 requirements, systematic control testing, and evidence of effectiveness — delivered inside your own Microsoft 365 tenant.',
+  offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
+};
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Who does APRA CPS 234 apply to?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'CPS 234 applies to all APRA-regulated entities — authorised deposit-taking institutions, general and life insurers, private health insurers, and registrable superannuation entity licensees. It also reaches service providers indirectly: where a related party or third party manages an APRA-regulated entity’s information assets, that entity must assess the provider’s security capability, evaluate its control design, and assess the sufficiency of its control testing. In practice, providers to the sector are asked to evidence all three.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'What are the CPS 234 notification timeframes?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'There are two separate obligations with different clocks. An entity must notify APRA as soon as possible and no later than 72 hours after becoming aware of an information security incident that materially affected — or had the potential to materially affect — the entity or its customers, or that has been notified to any other regulator. Separately, it must notify APRA no later than 10 business days after becoming aware of a material information security control weakness it expects it will not be able to remediate in a timely manner. The second obligation is frequently missed because no incident is required to trigger it.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How does CPS 234 relate to ISO 27001?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'They overlap heavily but are not interchangeable. ISO 27001 is a voluntary certification of a management system; CPS 234 is a binding prudential obligation with no certificate and no auditor to satisfy other than APRA and your own internal audit function. Most CPS 234 requirements map onto ISO 27001 Annex A controls, so an entity holding ISO 27001 has done much of the underlying work — but CPS 234 adds obligations ISO does not, notably the notification timeframes, the Board accountability wording, and the requirement that control testing be performed by functionally independent specialists.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'What does CPS 234 require for control testing?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'A systematic testing program — not ad hoc penetration testing. Its nature and frequency must be commensurate with five named factors: how fast threats change, the criticality and sensitivity of the asset, the consequences of an incident, risk from environments where you cannot enforce your own policies, and the materiality and frequency of change to assets. Testing must be performed by appropriately skilled and functionally independent specialists, and the sufficiency of the program itself must be reviewed at least annually.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How does Compliance365 deliver CPS 234?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'All 24 requirements are delivered as a live register inside your own Microsoft 365 tenant — no third-party GRC platform licence and no compliance data leaving your environment. Requirements are cross-mapped to ISO 27001 and NIST CSF so evidence is produced once rather than three times, and 21 automated posture checks run against your tenant to provide continuous evidence for the requirements they genuinely bear on.'
+      }
+    }
+  ]
+};
+---
+
+<Base
+  title="APRA CPS 234 Compliance | Compliance365"
+  description="APRA CPS 234 Information Security for regulated entities and their providers. All 24 requirements, systematic control testing and evidence of effectiveness — inside your own Microsoft 365 tenant."
+  schema={[serviceLd, faqLd]}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Services', url: 'https://www.compliance365.com.au/services/' },
+    { name: 'APRA CPS 234', url: 'https://www.compliance365.com.au/services/cps234/' }
+  ]}
+>
+  <Header />
+
+  <main id="main-content" tabindex="-1">
+
+  <!-- HERO -->
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">APRA CPS 234 · Prudential Standard · Banking · Insurance · Superannuation</p>
+        <h1>CPS 234 is not a certification. It is an obligation.</h1>
+        <p class="section-lead">
+          There is no certificate, no auditor to satisfy, and no completion date. There is a binding prudential standard, a Board that carries ultimate responsibility for it, and two notification clocks that start the moment you become aware.
+        </p>
+        <p>
+          We deliver all 24 requirements as a live register inside <em>your</em> Microsoft 365 tenant — cross-mapped to ISO 27001 and NIST CSF so the prudential obligation and the certification are prepared once, not twice.
+        </p>
+
+        <ul class="trust-signals">
+          <li>All 24 requirements (¶13–36)</li>
+          <li>Systematic testing program</li>
+          <li>Evidence of effectiveness, not assertion</li>
+          <li>Data stays in your tenant</li>
+        </ul>
+
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+          <a href={`${base}services/iso27001/`} class="btn-hdk-ghost">See the ISO 27001 overlap →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO IT APPLIES TO -->
+  <section class="section" id="who" style="padding-top:3rem;padding-bottom:3rem;background:rgba(169,129,46,0.06);">
+    <div class="container" style="max-width:960px;">
+      <h2 class="center" style="margin-bottom:0.5rem;">Does CPS 234 apply to us?</h2>
+      <p class="muted center" style="max-width:720px;margin:0.75rem auto 2.5rem;">
+        Directly if you are APRA-regulated. Indirectly — and increasingly in writing — if you hold their data.
+      </p>
+
+      <div style="display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-top:0;">Directly regulated</h3>
+          <p class="small">
+            Authorised deposit-taking institutions, general and life insurers, private health insurers, and registrable superannuation entity licensees. CPS 234 has applied since 1 July 2019 and supports CPS 220 Risk Management.
+          </p>
+        </div>
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-top:0;">Service providers to the sector</h3>
+          <p class="small">
+            You are not regulated by APRA — but your customer is, and CPS 234 requires them to assess your security capability, evaluate the design of your controls, and assess whether your control testing is sufficient. Being able to evidence all three is what keeps you on the panel.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE 24 REQUIREMENTS -->
+  <section class="section" id="requirements">
+    <div class="container" style="max-width:1000px;">
+      <h2 class="center" style="margin-bottom:0.5rem;">The 24 requirements, in the nine domains auditors use</h2>
+      <p class="muted center" style="max-width:760px;margin:0.75rem auto 2.5rem;">
+        CPS 234's substantive obligations run from paragraph 13 to paragraph 36. Internal audit functions and APRA assessors group them like this.
+      </p>
+
+      <div style="display:grid;gap:1rem;">
+        {domains.map((d) => (
+          <div class="card" style="padding:1.25rem 1.5rem;display:grid;gap:0.5rem;grid-template-columns:minmax(0,1fr);">
+            <div style="display:flex;gap:0.75rem;align-items:baseline;flex-wrap:wrap;">
+              <h3 style="margin:0;font-size:1.05rem;">{d.n}</h3>
+              <span class="small muted" style="white-space:nowrap;">{d.p}</span>
+            </div>
+            <p class="small" style="margin:0;">{d.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- THE TWO CLOCKS -->
+  <section class="section" id="notification" style="padding-top:3rem;padding-bottom:3rem;background:rgba(169,129,46,0.06);">
+    <div class="container" style="max-width:960px;">
+      <h2 class="center" style="margin-bottom:0.5rem;">Two notification clocks, not one</h2>
+      <p class="muted center" style="max-width:720px;margin:0.75rem auto 2.5rem;">
+        These are routinely conflated. They have different triggers and different deadlines, and the second one does not require an incident to have happened at all.
+      </p>
+
+      <div style="display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+        <div class="card" style="padding:1.5rem;">
+          <p class="eyebrow" style="margin-top:0;">¶35 · Material incident</p>
+          <h3 style="margin:0.25rem 0 0.75rem;">72 hours</h3>
+          <p class="small">
+            From becoming aware of an incident that materially affected — or had the potential to materially affect — the entity or its depositors, policyholders, beneficiaries or other customers. <strong>Or</strong> that has been notified to any other regulator, in Australia or elsewhere. That second limb catches incidents you might not have judged material yourself.
+          </p>
+        </div>
+        <div class="card" style="padding:1.5rem;">
+          <p class="eyebrow" style="margin-top:0;">¶36 · Material control weakness</p>
+          <h3 style="margin:0.25rem 0 0.75rem;">10 business days</h3>
+          <p class="small">
+            From becoming aware of a material control weakness you expect you will <em>not</em> be able to remediate in a timely manner. No incident is required. This is the obligation entities miss most often, because nothing has visibly gone wrong — you have simply found something you cannot fix in time.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTING EFFECTIVENESS -->
+  <section class="section" id="testing">
+    <div class="container" style="max-width:900px;">
+      <h2 class="center" style="margin-bottom:0.5rem;">"Implemented" is an assertion. CPS 234 asks for effectiveness.</h2>
+      <p class="muted center" style="max-width:740px;margin:0.75rem auto 2rem;">
+        Paragraph 27 requires a <strong>systematic</strong> testing program — not an annual penetration test — with nature and frequency driven by five named factors.
+      </p>
+
+      <ul style="max-width:720px;margin:0 auto 2rem;line-height:1.9;">
+        <li>The rate at which vulnerabilities and threats change</li>
+        <li>The criticality and sensitivity of the information asset</li>
+        <li>The consequences of an information security incident</li>
+        <li>Risk from environments where you cannot enforce your own policies</li>
+        <li>The materiality and frequency of change to information assets</li>
+      </ul>
+
+      <p class="small muted center" style="max-width:740px;margin:0 auto;">
+        Testing must be conducted by appropriately skilled and <strong>functionally independent</strong> specialists (¶30), unremediable deficiencies escalated to the Board or senior management (¶29), and the sufficiency of the program itself reviewed at least annually (¶31). Where you rely on a third party's testing, you must assess whether it is commensurate with the same five factors (¶28).
+      </p>
+    </div>
+  </section>
+
+  <!-- HOW WE DELIVER -->
+  <section class="section" id="delivery" style="padding-top:3rem;padding-bottom:3rem;background:rgba(169,129,46,0.06);">
+    <div class="container" style="max-width:960px;">
+      <h2 class="center" style="margin-bottom:0.5rem;">How we deliver it</h2>
+      <p class="muted center" style="max-width:720px;margin:0.75rem auto 2.5rem;">
+        In your tenant, cross-mapped, and evidenced continuously rather than reconstructed before a review.
+      </p>
+
+      <div style="display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));">
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-top:0;">Your tenant, your data</h3>
+          <p class="small">Every register — requirements, risks, actions, evidence, incidents — lives in SharePoint lists inside your own Microsoft 365 tenant. No third-party GRC platform licence, and no compliance data leaving your environment.</p>
+        </div>
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-top:0;">Cross-mapped, not duplicated</h3>
+          <p class="small">Every CPS 234 requirement is mapped to its ISO 27001 and NIST CSF equivalents. If you hold ISO 27001, most of the underlying work is already done — we evidence it against the prudential obligation rather than rebuilding it.</p>
+        </div>
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-top:0;">Evidence of effectiveness</h3>
+          <p class="small">Automated posture checks run against your tenant and rank each requirement by what actually sits behind it — continuously demonstrated, evidenced, or merely asserted. That distinction is what paragraphs 27 and 32 are asking for.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section center" id="cta">
+    <div class="container" style="max-width:720px;">
+      <h2>Where does your CPS 234 position actually stand?</h2>
+      <p class="muted" style="margin:1rem auto 2rem;">
+        A 30-minute call. We will walk the nine domains, identify which requirements you can evidence today and which rest on assertion, and tell you plainly whether your notification process would survive a real incident.
+      </p>
+      <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+    </div>
+  </section>
+
+  <RelatedResources />
+
+  </main>
+
+  <Footer />
+</Base>
