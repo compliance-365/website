@@ -339,9 +339,9 @@ const TOTAL_Q = QUESTIONS.length;
       </p>
 
       <div style="display:flex;gap:0.5rem;margin-top:2rem;max-width:680px;flex-wrap:wrap;">
-        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#A9812E;color:white;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Environment</div>
-        <div class="stage-pill" data-stage="2" style="flex:1;min-width:140px;background:#DDD8CF;color:#6B6860;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Assessment</div>
-        <div class="stage-pill" data-stage="3" style="flex:1;min-width:140px;background:#DDD8CF;color:#6B6860;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
+        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#A9812E;color:var(--on-gold);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Environment</div>
+        <div class="stage-pill band-light" data-stage="2" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Assessment</div>
+        <div class="stage-pill band-light" data-stage="3" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
       </div>
     </div>
   </section>
@@ -351,15 +351,15 @@ const TOTAL_Q = QUESTIONS.length;
     <div class="container">
       <div class="grid-3" style="gap:1.5rem;">
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
+          <div style="color:var(--gold-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">~20 minutes</strong><p class="muted small" style="margin:2px 0 0;">24 questions across all eight Essential Eight strategies, plus a quick environment context block.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:#16a34a;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
+          <div style="color:var(--ok-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Mapped to ACSC guidance</strong><p class="muted small" style="margin:2px 0 0;">Questions calibrated to the evidence criteria the ACSC and auditors assess for each strategy.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
+          <div style="color:var(--gold-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF report</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top gaps and a prioritised action plan — ready to share with leadership or auditors.</p></div>
         </div>
       </div>
@@ -374,7 +374,7 @@ const TOTAL_Q = QUESTIONS.length;
         <a href={`${base}checklist/iso27001/`} style="padding:5px 12px;border-radius:6px;background:#F5F0E8;color:#3A3632;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 27001</a>
         <a href={`${base}checklist/iso27701/`} style="padding:5px 12px;border-radius:6px;background:#F5F0E8;color:#3A3632;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 27701</a>
         <a href={`${base}checklist/iso42001/`} style="padding:5px 12px;border-radius:6px;background:#F5F0E8;color:#3A3632;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 42001</a>
-        <a href={`${base}checklist/essential-eight/`} style="padding:5px 12px;border-radius:6px;background:#A9812E;color:white;font-size:0.8rem;font-weight:600;text-decoration:none;" aria-current="page">Essential Eight</a>
+        <a href={`${base}checklist/essential-eight/`} style="padding:5px 12px;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.8rem;font-weight:600;text-decoration:none;" aria-current="page">Essential Eight</a>
         <a href={`${base}checklist/soc2/`} style="padding:5px 12px;border-radius:6px;background:#F5F0E8;color:#3A3632;font-size:0.8rem;font-weight:600;text-decoration:none;">SOC 2</a>
         <a href={`${base}checklist/disp-ism-irap/`} style="padding:5px 12px;border-radius:6px;background:#F5F0E8;color:#3A3632;font-size:0.8rem;font-weight:600;text-decoration:none;">DISP / ISM / IRAP</a>
       </div>
@@ -439,25 +439,25 @@ const TOTAL_Q = QUESTIONS.length;
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #DDD8CF;">
                     <div style="flex:1;">
                       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
-                        <span style="width:1.75rem;height:1.75rem;display:inline-flex;align-items:center;justify-content:center;color:#A9812E;flex-shrink:0;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href={`#ic-${grp.icon}`}/></svg></span>
+                        <span style="width:1.75rem;height:1.75rem;display:inline-flex;align-items:center;justify-content:center;color:var(--gold-ink);flex-shrink:0;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href={`#ic-${grp.icon}`}/></svg></span>
                         <h3 style="margin:0;font-size:1.2rem;color:#0B0B0C;">{grp.title}</h3>
                       </div>
                       <p class="muted small" style="margin:0;">{grp.blurb}</p>
                     </div>
                     <div style="text-align:right;flex-shrink:0;">
                       <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#6B6860;font-weight:700;">Progress</div>
-                      <div class="section-count" data-section={grp.key} style="font-size:1.1rem;font-weight:800;color:#A9812E;">0/{grpQs.length}</div>
+                      <div class="section-count" data-section={grp.key} style="font-size:1.1rem;font-weight:800;color:var(--gold-ink);">0/{grpQs.length}</div>
                     </div>
                   </div>
                   {grpQs.map((q, qIdx) => (
                     <div class="question field" data-id={q.id} data-group={grp.key} style="padding:1.25rem 0;border-bottom:1px solid #F5F0E8;">
                       <div style="display:flex;gap:1rem;align-items:flex-start;">
-                        <div style="width:28px;height:28px;background:rgba(169,129,46,0.06);color:#A9812E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;margin-top:2px;">{qIdx + 1}</div>
+                        <div style="width:28px;height:28px;background:rgba(169,129,46,0.06);color:var(--gold-ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;margin-top:2px;">{qIdx + 1}</div>
                         <div style="flex:1;">
                           <div style="font-weight:600;color:#0B0B0C;line-height:1.5;margin-bottom:0.5rem;">{q.label}</div>
                           <p class="muted small" style="margin:0 0 0.75rem;font-size:0.85rem;">{q.hint}</p>
                           <details style="margin-bottom:1rem;">
-                            <summary style="cursor:pointer;color:#A9812E;font-size:0.8rem;font-weight:600;">View evidence examples -></summary>
+                            <summary style="cursor:pointer;color:var(--gold-ink);font-size:0.8rem;font-weight:600;">View evidence examples -></summary>
                             <ul class="muted small" style="padding-left:1.2rem;margin:0.5rem 0 0;line-height:1.7;">
                               {q.examples.map(ex => <li>{ex}</li>)}
                             </ul>
@@ -468,7 +468,7 @@ const TOTAL_Q = QUESTIONS.length;
                               <button type="button" class="opt" data-v="1" style="padding:8px 20px;border:2px solid #C8C3B8;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#9680; Partial</button>
                               <button type="button" class="opt" data-v="0" style="padding:8px 20px;border:2px solid #C8C3B8;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10007; No</button>
                             </div>
-                            <button type="button" class="ask-ai-btn" data-label={q.label} style="padding:7px 14px;border:1.5px solid rgba(169,129,46,0.2);background:rgba(169,129,46,0.06);color:#A9812E;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.78rem;white-space:nowrap;transition:background 0.15s;">Ask AI &#8594;</button>
+                            <button type="button" class="ask-ai-btn" data-label={q.label} style="padding:7px 14px;border:1.5px solid rgba(169,129,46,0.2);background:rgba(169,129,46,0.06);color:var(--gold-ink);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.78rem;white-space:nowrap;transition:background 0.15s;">Ask AI &#8594;</button>
                           </div>
                         </div>
                       </div>
@@ -489,14 +489,14 @@ const TOTAL_Q = QUESTIONS.length;
             <div class="card spot" style="padding:1.5rem;">
               <div style="text-align:center;padding-bottom:1.25rem;border-bottom:1px solid #F5F0E8;margin-bottom:1.25rem;">
                 <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#6B6860;font-weight:700;margin-bottom:0.5rem;">Overall readiness</div>
-                <div id="overall-score" style="font-size:3rem;font-weight:800;color:#A9812E;line-height:1;"> - </div>
+                <div id="overall-score" style="font-size:3rem;font-weight:800;color:var(--gold-ink);line-height:1;"> - </div>
                 <div id="readiness-band" style="font-size:0.85rem;color:#6B6860;margin-top:0.4rem;">Answer questions to score</div>
               </div>
               <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.8rem;">
                 {GROUPS.map(grp => (
                   <div>
                     <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
-                      <span style="color:#374151;font-size:0.78rem;">{grp.title}</span>
+                      <span style="color:var(--text-subtle);font-size:0.78rem;">{grp.title}</span>
                       <span class="domain-percent" data-section={grp.key} style="font-weight:700;color:#C8C3B8;"> - </span>
                     </div>
                     <div style="background:#F5F0E8;height:6px;border-radius:3px;overflow:hidden;">
@@ -515,7 +515,7 @@ const TOTAL_Q = QUESTIONS.length;
               </div>
               <button type="button" id="pdfBtn" class="btn btn-primary" disabled style="width:100%;margin-top:1.5rem;padding:14px;cursor:not-allowed;opacity:0.5;">Generate PDF report</button>
               <p class="muted small" style="text-align:center;margin:0.75rem 0 0;font-size:0.75rem;" id="pdf-helper">Available once all questions are answered</p>
-              <button type="button" id="aiDiscussBtn" disabled style="width:100%;margin-top:0.75rem;padding:11px 14px;border:1.5px solid rgba(169,129,46,0.2);background:rgba(169,129,46,0.06);color:#A9812E;border-radius:8px;cursor:not-allowed;font-weight:700;font-size:0.82rem;opacity:0.5;transition:background 0.15s,opacity 0.15s;">Discuss results with AI &#8594;</button>
+              <button type="button" id="aiDiscussBtn" disabled style="width:100%;margin-top:0.75rem;padding:11px 14px;border:1.5px solid rgba(169,129,46,0.2);background:rgba(169,129,46,0.06);color:var(--gold-ink);border-radius:8px;cursor:not-allowed;font-weight:700;font-size:0.82rem;opacity:0.5;transition:background 0.15s,opacity 0.15s;">Discuss results with AI &#8594;</button>
             </div>
           </div>
         </div>
@@ -605,7 +605,7 @@ const TOTAL_Q = QUESTIONS.length;
           pills.forEach(p => {
             const s = parseInt(p.dataset.stage, 10);
             p.style.background = (s === n) ? '#A9812E' : (s < n ? '#16a34a' : '#DDD8CF');
-            p.style.color = (s <= n) ? 'white' : '#6B6860';
+            p.style.color = (s <= n) ? 'var(--on-gold)' : 'var(--text-subtle)';
           });
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -649,8 +649,8 @@ const TOTAL_Q = QUESTIONS.length;
               o.style.background = 'white'; o.style.color = '#0B0B0C'; o.style.borderColor = '#C8C3B8';
             });
             btn.classList.add('active');
-            if (val === 2) { btn.style.background = '#16a34a'; btn.style.color = 'white'; btn.style.borderColor = '#16a34a'; }
-            else if (val === 1) { btn.style.background = '#d97706'; btn.style.color = 'white'; btn.style.borderColor = '#d97706'; }
+            if (val === 2) { btn.style.background = '#16a34a'; btn.style.color = 'var(--on-gold)'; btn.style.borderColor = '#16a34a'; }
+            else if (val === 1) { btn.style.background = '#d97706'; btn.style.color = 'var(--on-gold)'; btn.style.borderColor = '#d97706'; }
             else { btn.style.background = '#dc2626'; btn.style.color = 'white'; btn.style.borderColor = '#dc2626'; }
             update();
           });

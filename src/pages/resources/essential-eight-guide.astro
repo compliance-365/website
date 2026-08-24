@@ -158,9 +158,9 @@ const breadcrumbSchema = {
   <nav aria-label="Breadcrumb" style="background:#FAF7F1;border-bottom:1px solid #DDD8CF;padding:0.75rem 0;">
     <div class="container">
       <ol style="list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0.25rem 0.5rem;font-size:0.85rem;color:#6B6860;">
-        <li><a href={`${base}`} style="color:#A9812E;text-decoration:none;">Home</a></li>
+        <li><a href={`${base}`} style="color:var(--gold-ink);text-decoration:none;">Home</a></li>
         <li style="color:#6B6860;">/</li>
-        <li><a href={`${base}resources/`} style="color:#A9812E;text-decoration:none;">Resources</a></li>
+        <li><a href={`${base}resources/`} style="color:var(--gold-ink);text-decoration:none;">Resources</a></li>
         <li style="color:#6B6860;">/</li>
         <li style="color:#0B0B0C;font-weight:600;">Essential Eight Guide</li>
       </ol>
@@ -192,7 +192,7 @@ const breadcrumbSchema = {
   <!-- TRANSITION NOTICE -->
   <section style="background:#FEF3C7;border-bottom:1px solid #FDE68A;padding:1rem 0;">
     <div class="container" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <span style="background:#D97706;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:6px;white-space:nowrap;">Heads up</span>
+      <span style="background:#D97706;color:var(--on-gold);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:6px;white-space:nowrap;">Heads up</span>
       <p style="margin:0;font-size:14px;color:#8B6820;line-height:1.5;flex:1;">ASD has announced it will retire the Essential Eight within two years and replace it with the new <strong>Essentials series</strong>. Public consultation on <em>Essentials for enterprise IT</em> closed <strong>12 July 2026</strong>; ASD is reviewing submissions with final guidance still expected late 2026. Existing E8 work maps across — don't stop your programme. <a href={`${base}resources/asd-essentials-framework/`} style="color:#92400E;font-weight:700;text-decoration:underline;">Read our transition guide →</a></p>
     </div>
   </section>
@@ -201,18 +201,18 @@ const breadcrumbSchema = {
   <section class="section" style="padding-top:3rem;padding-bottom:3rem;">
     <div class="container">
       <div class="card" style="border-left:4px solid #A9812E;max-width:760px;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 1rem;">Table of Contents</p>
+        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 1rem;">Table of Contents</p>
         <ol style="margin:0;padding-left:1.25rem;display:grid;gap:0.6rem;">
-          <li><a href="#what-is" style="color:#A9812E;text-decoration:none;font-weight:500;">What is the Essential Eight?</a></li>
-          <li><a href="#history" style="color:#A9812E;text-decoration:none;font-weight:500;">Who developed it and why?</a></li>
-          <li><a href="#who-needs-it" style="color:#A9812E;text-decoration:none;font-weight:500;">Who needs to comply?</a></li>
-          <li><a href="#maturity-levels" style="color:#A9812E;text-decoration:none;font-weight:500;">Understanding the maturity levels (ML0–ML3)</a></li>
-          <li><a href="#controls" style="color:#A9812E;text-decoration:none;font-weight:500;">The eight controls explained</a></li>
-          <li><a href="#vs-iso27001" style="color:#A9812E;text-decoration:none;font-weight:500;">Essential Eight vs ISO 27001</a></li>
-          <li><a href="#how-to-achieve-ml2" style="color:#A9812E;text-decoration:none;font-weight:500;">How to achieve ML2 in practice</a></li>
-          <li><a href="#common-mistakes" style="color:#A9812E;text-decoration:none;font-weight:500;">Common mistakes organisations make</a></li>
-          <li><a href="#getting-started" style="color:#A9812E;text-decoration:none;font-weight:500;">Getting started — your first steps</a></li>
-          <li><a href="#faq" style="color:#A9812E;text-decoration:none;font-weight:500;">Frequently asked questions</a></li>
+          <li><a href="#what-is" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">What is the Essential Eight?</a></li>
+          <li><a href="#history" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">Who developed it and why?</a></li>
+          <li><a href="#who-needs-it" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">Who needs to comply?</a></li>
+          <li><a href="#maturity-levels" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">Understanding the maturity levels (ML0–ML3)</a></li>
+          <li><a href="#controls" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">The eight controls explained</a></li>
+          <li><a href="#vs-iso27001" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">Essential Eight vs ISO 27001</a></li>
+          <li><a href="#how-to-achieve-ml2" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">How to achieve ML2 in practice</a></li>
+          <li><a href="#common-mistakes" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">Common mistakes organisations make</a></li>
+          <li><a href="#getting-started" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">Getting started — your first steps</a></li>
+          <li><a href="#faq" style="color:var(--gold-ink);text-decoration:none;font-weight:500;">Frequently asked questions</a></li>
         </ol>
       </div>
     </div>
@@ -221,7 +221,7 @@ const breadcrumbSchema = {
   <!-- SECTION 1 — What is the Essential Eight? -->
   <section class="section" id="what-is">
     <div class="container" style="max-width:900px;">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 1</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 1</p>
       <h2>What is the Essential Eight?</h2>
       <p class="muted">
         The Essential Eight is a prioritised set of eight cyber security mitigation strategies developed by the Australian Signals Directorate (ASD) and maintained by the Australian Cyber Security Centre (ACSC). It is not a broad management standard — it is a focused, high-impact baseline designed to protect Australian organisations against the attack techniques that cause the most harm in practice.
@@ -244,7 +244,7 @@ const breadcrumbSchema = {
   <!-- SECTION 2 — Who developed it and why? -->
   <section class="section" id="history" style="background:#FAF7F1;">
     <div class="container" style="max-width:900px;">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 2</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 2</p>
       <h2>Who developed it and why?</h2>
       <p class="muted">
         The Essential Eight was developed by ASD (Australian Signals Directorate), Australia's signals intelligence and cyber security agency, through its operational arm the ACSC (Australian Cyber Security Centre). The ACSC is responsible for Australia's national cyber incident coordination, threat intelligence, and cyber security guidance. It publishes the annual <em>Australian Cyber Security Centre Annual Cyber Threat Report</em>, which documents the attack techniques, threat actors, and sectors targeted in Australian incidents each year.
@@ -264,14 +264,14 @@ const breadcrumbSchema = {
   <!-- SECTION 3 — Who needs to comply? -->
   <section class="section" id="who-needs-it">
     <div class="container">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 3</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 3</p>
       <h2>Who needs to comply?</h2>
       <p class="muted" style="max-width:760px;margin-bottom:3rem;">
         The Essential Eight applies more broadly than most organisations realise. While legislative mandates cover a specific subset of entities, commercial and procurement pressures have extended effective requirements across much of the Australian economy.
       </p>
       <div class="grid-2" style="margin-top:2rem;">
         <div class="card" style="border-left:4px solid #A9812E;">
-          <h3 style="color:#A9812E;">Mandatory compliance</h3>
+          <h3 style="color:var(--gold-ink);">Mandatory compliance</h3>
           <p class="muted" style="font-weight:600;margin-bottom:0.5rem;">Non-corporate Commonwealth entities (PSPF)</p>
           <p class="muted small">All federal government departments and most Commonwealth agencies are mandated to achieve Essential Eight ML2 as a baseline under the PSPF. High-risk entities are directed toward ML3. Annual self-assessment reporting to the Australian Government Security Construction and Equipment Committee (ASCSEC) is required.</p>
 
@@ -303,7 +303,7 @@ const breadcrumbSchema = {
   <!-- SECTION 4 — Maturity Levels -->
   <section class="section" id="maturity-levels" style="background:#FAF7F1;">
     <div class="container">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 4</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 4</p>
       <h2>Understanding the maturity levels (ML0–ML3)</h2>
       <p class="muted" style="max-width:760px;margin-bottom:3rem;">
         The Essential Eight uses a four-level maturity model — ML0 through ML3 — to assess how consistently and robustly each control is implemented. Understanding what each level actually means in practice is critical, because many organisations misclassify their maturity by conflating policy existence with control implementation.
@@ -335,7 +335,7 @@ const breadcrumbSchema = {
         </div>
 
         <div class="card" style="border:2px solid #A9812E;">
-          <div style="display:inline-block;background:#A9812E;color:white;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML2 — Recommended baseline</div>
+          <div style="display:inline-block;background:#A9812E;color:var(--on-gold);font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML2 — Recommended baseline</div>
           <h3>Substantially aligned</h3>
           <p class="muted">ML2 means controls are implemented to ASD intent, tested against ASD-specific criteria, and evidenced. This is the ASD-recommended baseline for most Australian organisations, and the level required by insurers, procurement panels, and enterprise due diligence programmes.</p>
           <p class="muted">What ML2 evidence looks like for each control:</p>
@@ -352,7 +352,7 @@ const breadcrumbSchema = {
         </div>
 
         <div class="card">
-          <div style="display:inline-block;background:#0B0B0C;color:white;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML3</div>
+          <div class="band-dark" style="display:inline-block;background:#0B0B0C;color:white;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML3</div>
           <h3>Fully aligned</h3>
           <p class="muted">ML3 represents the most stringent implementation of each control, with stricter requirements designed for high-risk environments. ML3 is appropriate for Commonwealth entities, defence industry organisations, critical infrastructure operators, and organisations facing persistent nation-state threat actors.</p>
           <p class="muted small" style="margin-top:0.75rem;">Key ML3 requirements that go beyond ML2:</p>
@@ -371,7 +371,7 @@ const breadcrumbSchema = {
         <h3 style="margin-bottom:1.5rem;">ML1 vs ML2 vs ML3 — key controls at a glance</h3>
         <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
           <thead>
-            <tr style="background:#A9812E;color:white;">
+            <tr style="background:#A9812E;color:var(--on-gold);">
               <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;">Control</th>
               <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;">ML1</th>
               <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;">ML2</th>
@@ -412,7 +412,7 @@ const breadcrumbSchema = {
   <!-- SECTION 5 — The Eight Controls -->
   <section class="section" id="controls" style="background:#FAF7F1;">
     <div class="container">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 5</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 5</p>
       <h2 class="center">The eight controls explained</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
         Each control addresses a distinct attack vector and has specific implementation requirements at each maturity level. Here is what each control actually prevents, what ML2 requires, how it is delivered in a Microsoft 365 environment, and where organisations most commonly fall short.
@@ -422,7 +422,7 @@ const breadcrumbSchema = {
 
         <!-- 1 Application Control -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 1</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 1</p>
           <h3>Application Control</h3>
           <p class="muted small"><strong>What it prevents:</strong> Malicious executables, ransomware installers, and unapproved software from running on endpoints and servers. Application control is the primary defence against malware that relies on running arbitrary code — including the majority of ransomware attack chains.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Application control enforced on all workstations and servers using an allowlist approach — only approved executables, libraries, and scripts are permitted to run. A documented exception register must exist, with formal approval for all exceptions and evidence of quarterly review.</p>
@@ -432,7 +432,7 @@ const breadcrumbSchema = {
 
         <!-- 2 Patch Applications -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 2</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 2</p>
           <h3>Patch Applications</h3>
           <p class="muted small"><strong>What it prevents:</strong> Exploitation of known vulnerabilities in third-party applications — browsers, PDF readers, productivity tools, Java runtimes, and any other user-installed or vendor-managed software. Unpatched applications are among the most frequently exploited entry points in Australian incidents, particularly for initial access.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Applications with a CVSS score of 9.0 or higher must be patched or mitigated within 48 hours. Other critical patches must be applied within 14 days. Applications that are unsupported (no longer receiving security updates) must be removed or isolated. Evidence requires a vulnerability scan report showing patch compliance rates, not just an assertion that patching is occurring.</p>
@@ -442,7 +442,7 @@ const breadcrumbSchema = {
 
         <!-- 3 Configure Office Macros -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 3</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 3</p>
           <h3>Configure Microsoft Office Macros</h3>
           <p class="muted small"><strong>What it prevents:</strong> Macro-based malware delivered via email attachments. Despite being a decades-old attack vector, malicious Office macros remain one of the most common initial access techniques in Australian phishing campaigns. A single user opening a macro-enabled document from a phishing email can initiate a full ransomware deployment chain.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Macros downloaded from the internet (identified by the Mark of the Web attribute) must be blocked for all users. Macros from trusted locations (internally sourced, digitally signed documents) may be permitted. No individual user should be able to override the macro policy. ML2 also requires that the policy covers all Office applications — Word, Excel, PowerPoint, Outlook, and Access.</p>
@@ -452,7 +452,7 @@ const breadcrumbSchema = {
 
         <!-- 4 User Application Hardening -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 4</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 4</p>
           <h3>User Application Hardening</h3>
           <p class="muted small"><strong>What it prevents:</strong> Exploitation through the attack surface exposed by browsers, PDF readers, Microsoft Office, and other user-facing applications. Web browsers in particular offer enormous attack surface — browser extensions can exfiltrate credentials and data, while unblocked content (Flash, Java browser plugins, web advertisements) have historically been major malware delivery vectors.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Web browsers must be configured to block Flash (now universally deprecated), Java web plugins, web advertisements from untrusted sources, and unapproved browser extensions. Microsoft Office must be hardened to disable ActiveX and OLE package activation from the internet. PDF reader settings must be hardened to disable JavaScript execution and external content loading. All settings must be applied consistently across the fleet.</p>
@@ -462,7 +462,7 @@ const breadcrumbSchema = {
 
         <!-- 5 Restrict Administrative Privileges -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 5</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 5</p>
           <h3>Restrict Administrative Privileges</h3>
           <p class="muted small"><strong>What it prevents:</strong> Privilege escalation — the technique by which an attacker who has gained initial access to a low-privilege account elevates to administrator or domain administrator, enabling them to move laterally across the network, access all data, and deploy ransomware or other destructive tools. The majority of large-scale Australian data breaches involved privilege escalation as a key step in the attack chain.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Privileged accounts must be used only for privileged tasks — no web browsing, email, or general productivity from privileged accounts. Privileged role assignments must be time-limited, not permanent. All privileged role requests, approvals, and activations must be logged. The number of global administrators must be minimised (ASD guidance suggests no more than five for most organisations). Regular review of privileged access assignments is required.</p>
@@ -472,7 +472,7 @@ const breadcrumbSchema = {
 
         <!-- 6 Patch Operating Systems -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 6</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 6</p>
           <h3>Patch Operating Systems</h3>
           <p class="muted small"><strong>What it prevents:</strong> Exploitation of known OS vulnerabilities used for privilege escalation, lateral movement, and initial access. OS-level vulnerabilities — particularly in the Windows kernel, Remote Desktop Protocol, SMB, and print spooler — have been exploited in some of the most significant Australian incidents of recent years. The EternalBlue exploit (underlying WannaCry and NotPetya) remains a live risk in organisations with unpatched legacy Windows systems.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Operating systems with a CVSS score of 9.0 or higher must be patched or mitigated within 48 hours. Other critical OS patches must be applied within 14 days. Unsupported operating systems (Windows 7, Windows Server 2008, end-of-life Linux distributions) must not be in use, or must be isolated behind compensating controls with a documented risk acceptance and remediation plan. Evidence requires patch compliance reporting — not just confirmation that patching is configured.</p>
@@ -482,7 +482,7 @@ const breadcrumbSchema = {
 
         <!-- 7 MFA -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 7</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 7</p>
           <h3>Multi-Factor Authentication</h3>
           <p class="muted small"><strong>What it prevents:</strong> Credential-based attacks — phishing, credential stuffing, password spraying, and adversary-in-the-middle attacks. MFA is the single control with the highest impact across the broadest range of attack scenarios. The ACSC's annual threat report consistently identifies compromised credentials as the most common initial access vector in Australian incidents, and MFA is the most effective preventive control against credential compromise.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> MFA must be enforced for all users accessing all internet-facing services — not just remote access or VPN. This includes Microsoft 365, business applications, cloud platforms (AWS, Azure, GCP), and any other services accessible from the internet. Legacy authentication protocols that bypass MFA (SMTP AUTH, IMAP, POP3, Basic Auth) must be blocked. Sign-in logs must be retained and reviewed. ML2 accepts any form of MFA — SMS, TOTP authenticator apps, or hardware keys.</p>
@@ -492,7 +492,7 @@ const breadcrumbSchema = {
 
         <!-- 8 Regular Backups -->
         <div class="card feature">
-          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .5rem;">Control 8</p>
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .5rem;">Control 8</p>
           <h3>Regular Backups</h3>
           <p class="muted small"><strong>What it prevents:</strong> Permanent data loss from ransomware encryption, accidental deletion, storage failure, and destructive malware. Backups are the last line of defence — if all other controls fail and an attacker encrypts or destroys data, a clean, tested, isolated backup is what determines whether the organisation recovers in days or never. The ACSC has documented cases where organisations paid significant ransoms because their backup environment was also encrypted.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Backups must cover all business-critical data and systems. Backups must be stored in a way that is inaccessible to the primary environment — an attacker who compromises the production environment must not be able to reach and encrypt the backups. Immutable backup copies (cannot be deleted or modified for a defined retention period) are required. Backup restoration must be tested at least quarterly, with documented results. Backups must be encrypted.</p>
@@ -507,14 +507,14 @@ const breadcrumbSchema = {
   <!-- SECTION 6 — E8 vs ISO 27001 -->
   <section class="section" id="vs-iso27001">
     <div class="container">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 6</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 6</p>
       <h2>Essential Eight vs ISO 27001</h2>
       <p class="muted" style="max-width:760px;margin-bottom:3rem;">
         The Essential Eight and ISO 27001 are the two most frequently cited security frameworks in Australian commercial and government contexts. Understanding their differences — and their overlap — is essential for planning an efficient compliance programme.
       </p>
       <div class="grid-2" style="margin-top:2rem;">
         <div class="card" style="border-left:4px solid #A9812E;">
-          <h3 style="color:#A9812E;">Essential Eight</h3>
+          <h3 style="color:var(--gold-ink);">Essential Eight</h3>
           <ul class="muted small" style="padding-left:1.25rem;display:grid;gap:0.6rem;margin-top:0.75rem;">
             <li><strong>Origin:</strong> Australian (ASD / ACSC) — designed specifically for the Australian threat environment</li>
             <li><strong>Approach:</strong> Prescriptive — specific controls with specific implementation requirements at each maturity level</li>
@@ -554,7 +554,7 @@ const breadcrumbSchema = {
   <!-- SECTION 7 — How to achieve ML2 -->
   <section class="section" id="how-to-achieve-ml2" style="background:#FAF7F1;">
     <div class="container">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 7</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 7</p>
       <h2>How to achieve ML2 in practice</h2>
       <p class="muted" style="max-width:760px;margin-bottom:3rem;">
         The pathway from current state to evidenced ML2 follows a consistent four-phase structure. For organisations on Microsoft 365 E5, the 12-16 week timeline below is achievable — 80-85% of ML2 is deliverable through M365 native tooling and requires configuration uplift, not greenfield tooling deployment.
@@ -562,28 +562,28 @@ const breadcrumbSchema = {
 
       <div class="grid-4" style="margin-top:2rem;">
         <div class="card feature center">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin-bottom:0.5rem;">01</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin-bottom:0.5rem;">01</p>
           <h3>Assess</h3>
           <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6B6860;margin-bottom:0.75rem;">Weeks 1–3</p>
           <p class="muted small">Establish current maturity baseline against ASD assessment criteria for all eight controls. This is not a high-level review — each control is assessed against the specific ML2 evidence requirements published by the ASD. Gap analysis produces a prioritised remediation plan, including which controls are close to ML2 (quick wins) and which require significant uplift. The assessment phase also includes asset inventory verification — you cannot evidence patch compliance without knowing what you have.</p>
         </div>
 
         <div class="card feature center">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin-bottom:0.5rem;">02</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin-bottom:0.5rem;">02</p>
           <h3>Design</h3>
           <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6B6860;margin-bottom:0.75rem;">Weeks 4–6</p>
           <p class="muted small">Design each control implementation to meet ASD intent at ML2. This phase covers: Intune policy design (configuration profiles, compliance policies, ADMX templates), Conditional Access policy architecture, PIM configuration, WDAC policy design (publisher-based or hash-based rules), backup platform selection and architecture, and exception management process design. Pilot deployment rings are defined. The exception register template is created. Every configuration decision is documented before implementation begins.</p>
         </div>
 
         <div class="card feature center">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin-bottom:0.5rem;">03</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin-bottom:0.5rem;">03</p>
           <h3>Implement</h3>
           <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6B6860;margin-bottom:0.75rem;">Weeks 7–12</p>
           <p class="muted small">Controls are deployed in audit mode first — application control, ASR rules, and macro policies run in report-only mode to identify what would be blocked before enforcement is enabled. After audit mode review (typically 1-2 weeks per control), enforcement is rolled out through deployment rings: pilot group first, then broad production. Conditional Access policies follow a similar pattern — report-only before enforcement. Backup tooling is deployed and initial backup jobs are configured and verified. Evidence is collected at each step — configuration exports, compliance reports, audit logs.</p>
         </div>
 
         <div class="card feature center">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin-bottom:0.5rem;">04</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin-bottom:0.5rem;">04</p>
           <h3>Evidence</h3>
           <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6B6860;margin-bottom:0.75rem;">Weeks 13–16</p>
           <p class="muted small">The evidence pack is assembled against ASD criteria for each control. Evidence includes: Intune compliance policy exports with device compliance reports, Conditional Access policy configurations with sign-in log samples, PIM activation and approval logs, Defender Vulnerability Management patch compliance reports, backup coverage and restoration test records, WDAC policy exports with event log samples, and the documented exception register. The evidence pack is QA reviewed against current ASD assessment guidance before submission to insurers, procurement panels, or external assessors.</p>
@@ -602,7 +602,7 @@ const breadcrumbSchema = {
   <!-- SECTION 8 — Common Mistakes -->
   <section class="section" id="common-mistakes">
     <div class="container">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 8</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 8</p>
       <h2 class="center">Common mistakes organisations make</h2>
       <p class="muted center" style="max-width:720px;margin:1.5rem auto 3rem;">
         Most Essential Eight implementation failures follow predictable patterns. Avoiding these mistakes is the difference between a defensible ML2 evidence pack and a failed assessment.
@@ -656,7 +656,7 @@ const breadcrumbSchema = {
   <!-- SECTION 9 — Getting Started -->
   <section class="section" id="getting-started" style="background:rgba(169,129,46,0.06);">
     <div class="container" style="max-width:900px;">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Section 9</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">Section 9</p>
       <h2>Getting started — your first steps</h2>
       <p class="muted" style="max-width:720px;margin-bottom:3rem;">
         The fastest way to understand where your organisation actually sits against the Essential Eight is to look at the data. Here are three concrete starting points you can take this week.
@@ -664,21 +664,21 @@ const breadcrumbSchema = {
 
       <div class="grid-3" style="margin-top:2rem;">
         <div class="card feature">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin-bottom:0.5rem;">01</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin-bottom:0.5rem;">01</p>
           <h3>Run a free posture scan</h3>
           <p class="muted small">Our automated posture scan checks your Microsoft 365 environment against the key Essential Eight ML2 criteria — Conditional Access enforcement, MFA coverage, legacy authentication status, Intune compliance policy configuration, privileged role assignments, and audit log retention. It takes 15 minutes to run and produces a prioritised gap report against ML1 and ML2 criteria. No tools to install — it works through a read-only Microsoft Graph API connection.</p>
           <a href={`${base}posture-scan/`} class="btn btn-primary" style="margin-top:1.25rem;display:inline-block;">Run the free posture scan</a>
         </div>
 
         <div class="card feature">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin-bottom:0.5rem;">02</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin-bottom:0.5rem;">02</p>
           <h3>Download the Essential Eight checklist</h3>
           <p class="muted small">Our Essential Eight ML2 checklist maps every ASD assessment criterion to a specific configuration check in Microsoft 365 — including the exact Intune policy setting, Conditional Access configuration, Entra PIM setting, or Defender configuration required. The checklist is organised by control and maturity level, with evidence collection instructions for each check. It is the starting point for both self-assessment and evidence pack assembly.</p>
           <a href={`${base}checklist/essential-eight/`} class="btn btn-outline" style="margin-top:1.25rem;display:inline-block;">Download the checklist</a>
         </div>
 
         <div class="card feature">
-          <p style="font-size:2rem;font-weight:800;color:#A9812E;margin-bottom:0.5rem;">03</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--gold-ink);margin-bottom:0.5rem;">03</p>
           <h3>Book a scoping call</h3>
           <p class="muted small">A 30-minute call gives you a realistic current-state maturity estimate and a clear ML2 pathway — including timeline, effort, and any licensing gaps. We run through the posture scan results with you, identify your three highest-priority controls, and outline what a structured ML2 uplift programme would look like for your environment. There is no obligation and no sales pitch — just a practical assessment of where you stand and what it takes to get to ML2.</p>
           <a href={ctaUrl} class="btn btn-primary" style="margin-top:1.25rem;display:inline-block;">Book a 30-min scoping call</a>
@@ -690,7 +690,7 @@ const breadcrumbSchema = {
   <!-- FAQ SECTION -->
   <section class="section" id="faq">
     <div class="container">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">FAQ</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-ink);margin:0 0 .75rem;">FAQ</p>
       <h2 class="center">Frequently asked questions</h2>
       <p class="muted center" style="max-width:720px;margin:1.5rem auto 3rem;">
         The questions we are most commonly asked about the Essential Eight, compliance timelines, costs, and evidence requirements.

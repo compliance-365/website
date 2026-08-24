@@ -135,7 +135,7 @@ const DEFAULT_SELECTED = ['iso27001', 'soc2'];
     }
     .foc-chip:hover { border-color: #A9812E; }
     .foc-chip:focus-visible { outline: 2px solid #A9812E; outline-offset: 2px; }
-    .foc-chip.is-active { background: #A9812E; color: #fff; border-color: #A9812E; }
+    .foc-chip.is-active { background: #A9812E; color:var(--on-gold); border-color: #A9812E; }
     .foc-hint { margin-top: 12px; font-size: 13px; color: #6B6860; }
     .foc-hint.is-ok { display: none; }
 
@@ -167,13 +167,15 @@ const DEFAULT_SELECTED = ['iso27001', 'soc2'];
     .foc-table tr.foc-row-shared { background: rgba(169,129,46,0.055); }
     .foc-table tr.foc-row-cat td { background: #FAF7F1; font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: #8B6820; position: static; }
     .foc-table td.foc-cell { text-align: center; }
-    .foc-dot-yes { color: #A9812E; font-weight: 800; }
-    .foc-dot-no { color: #DDD8CF; }
+    .foc-dot-yes { color: var(--gold-ink); font-weight: 800; }
+    /* #DDD8CF measured 1.42:1 — this marks "not covered" and is real
+       information, not decoration. */
+    .foc-dot-no { color: var(--text-muted); }
     .foc-domain-title { font-weight: 600; color: #0B0B0C; }
     .foc-domain-cat { display: block; font-size: 11px; color: #6B6860; margin-top: 1px; }
 
-    .foc-disclaimer { font-size: 12px; color: #6B6860; margin-top: 18px; line-height: 1.6; }
-    .foc-disclaimer a { color: #A9812E; }
+    .foc-disclaimer { font-size: 12px; color: var(--text-muted); margin-top: 18px; line-height: 1.6; }
+    .foc-disclaimer a { color: var(--gold-ink); }
 
     @media (max-width: 640px) {
       .foc-picker { padding: 18px; }

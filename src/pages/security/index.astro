@@ -132,7 +132,7 @@ const permStages = [
 </section>
 
 <!-- TENANT BOUNDARY -->
-<section class="section sec-boundary" id="boundary" style="background:#0B0B0C;">
+<section class="section sec-boundary band-dark" id="boundary" style="background:#0B0B0C;">
   <div class="container">
     <div class="gold-rule-26"></div>
     <p class="sec-eyebrow">Architecture</p>
@@ -211,7 +211,7 @@ const permStages = [
 </section>
 
 <!-- ENGINEERING CONTROLS -->
-<section class="section" id="engineering" style="background:#0B0B0C;color:#FAF7F1;">
+<section class="section band-dark" id="engineering" style="background:#0B0B0C;color:#FAF7F1;">
   <div class="container">
     <div class="gold-rule-26"></div>
     <p class="sec-eyebrow">Engineering controls</p>
@@ -263,7 +263,7 @@ object-src 'none'; base-uri 'self'</pre>
 </section>
 
 <!-- AI GOVERNANCE -->
-<section class="section" id="ai" style="background:#141416;color:#FAF7F1;">
+<section class="section band-dark" id="ai" style="background:#141416;color:#FAF7F1;">
   <div class="container">
     <div class="ai-grid">
       <div>
@@ -351,13 +351,13 @@ object-src 'none'; base-uri 'self'</pre>
         <li><b>Google Analytics 4</b> and <b>Microsoft Clarity</b> — both consent-gated behind the cookie banner, both configured with IP anonymisation, both blocked entirely until you accept.</li>
         <li><b>Apollo.io</b> — identifies the <em>organisation</em> visiting the site from its IP address (company-level, never an individual), so we know which businesses are exploring the site. It is not consent-gated the way the two analytics tools are, on the basis that no individual-level data is collected — we're stating that plainly here rather than leaving it for you to discover.</li>
       </ul>
-      <p class="muted" style="margin-top:12px;">Full cookie-by-cookie detail, including exact names and expiry periods, is on the <a href={`${base}cookies/`} style="color:#A9812E;font-weight:600;">cookie policy page</a>.</p>
+      <p class="muted" style="margin-top:12px;">Full cookie-by-cookie detail, including exact names and expiry periods, is on the <a href={`${base}cookies/`} style="color:var(--gold-ink);font-weight:600;">cookie policy page</a>.</p>
     </div>
   </div>
 </section>
 
 <!-- VULNERABILITY DISCLOSURE -->
-<section class="section" id="disclosure" style="background:#0B0B0C;color:#FAF7F1;">
+<section class="section band-dark" id="disclosure" style="background:#0B0B0C;color:#FAF7F1;">
   <div class="container">
     <div class="gold-rule-26"></div>
     <p class="sec-eyebrow">Found a problem?</p>
@@ -447,15 +447,15 @@ object-src 'none'; base-uri 'self'</pre>
   .sec-eyebrow {
     font-family: Manrope, system-ui, sans-serif;
     font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase;
-    color: #A9812E; margin: 0 0 18px;
+    color: var(--gold-ink); margin: 0 0 18px;
   }
-  .sec-eyebrow-light { color: #8B6820; }
+  .sec-eyebrow-light { color: var(--gold-ink); }
   .gold-rule-26 { width: 26px; height: 1px; background: #A9812E; margin-bottom: 18px; }
 
   .sec-jumplinks { display: flex; flex-wrap: wrap; gap: 8px 4px; margin-top: 2rem; }
   .sec-jumplinks a {
     font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 600;
-    color: #A9812E; text-decoration: none; border: 1px solid rgba(169,129,46,.3);
+    color: var(--gold-ink); text-decoration: none; border: 1px solid rgba(169,129,46,.3);
     border-radius: 99px; padding: 8px 16px; transition: background .2s, color .2s;
   }
   .sec-jumplinks a:hover { background: rgba(169,129,46,.08); color: #8B6820; }
@@ -472,7 +472,7 @@ object-src 'none'; base-uri 'self'</pre>
   .bd-svg { width: 100%; height: auto; display: block; }
   .bd-svg-grey { filter: saturate(.7); }
   .bd-caption { margin-top: 14px; font-size: 12.5px; line-height: 1.65; color: rgba(250,247,241,.55); }
-  .bd-caption-grey { color: rgba(250,247,241,.4); }
+  .bd-caption-grey { color: var(--text-subtle); }
   .bd-caption em { color: rgba(250,247,241,.7); font-style: normal; font-weight: 600; }
 
   .bd-boundary, .bd-edge, .bd-node, .bd-hub { transition: none; }
@@ -492,7 +492,7 @@ object-src 'none'; base-uri 'self'</pre>
   .perm-stage { background: white; border: 1px solid #DDD8CF; border-radius: 10px; overflow: hidden; }
   .perm-stage-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 20px; background: #FAF7F1; border-bottom: 1px solid #DDD8CF; }
   .perm-stage-head h3 { margin: 0; font-size: 15px; font-family: Fraunces, Georgia, serif; font-weight: 500; color: #0B0B0C; }
-  .perm-tag { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #A9812E; background: rgba(169,129,46,.08); border: 1px solid rgba(169,129,46,.25); border-radius: 99px; padding: 4px 12px; }
+  .perm-tag { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-ink); background: rgba(169,129,46,.08); border: 1px solid rgba(169,129,46,.25); border-radius: 99px; padding: 4px 12px; }
   .perm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .perm-table th { text-align: left; padding: 10px 20px; font-weight: 600; color: #6B6860; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid #EFEAE0; }
   .perm-table td { padding: 12px 20px; border-bottom: 1px solid #F2EEE5; color: #3A3632; vertical-align: top; }

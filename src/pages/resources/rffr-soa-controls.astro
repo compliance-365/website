@@ -114,7 +114,7 @@ const articleLd = {
             {checkRows.map((r) => (
               <tr>
                 <td>{r.label}</td>
-                <td style="text-align:right;font-weight:700;color:#A9812E;">{r.count}</td>
+                <td style="text-align:right;font-weight:700;color:var(--gold-ink);">{r.count}</td>
                 <td class="muted small">{r.controls.slice(0, 4).join(', ')}{r.controls.length > 4 ? ` +${r.controls.length - 4}` : ''}</td>
               </tr>
             ))}

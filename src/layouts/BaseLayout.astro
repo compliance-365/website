@@ -1,4 +1,7 @@
 ---
+/* Tokens first: everything below may reference them, and they carry no
+   selectors of their own to win or lose a specificity fight. */
+import '../styles/tokens.css';
 import '../styles/responsive.css';
 import '../styles/print.css';
 import AIChat from "../components/AIChat.astro";
@@ -282,7 +285,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:3px;font:700 1rem/1 Manrope,system-ui;text-decoration:none;cursor:pointer;border:2px solid transparent;transition:background .2s,color .2s,border-color .2s}
       .btn-primary{background:#0B0B0C;color:#FAF7F1;border-color:var(--primary)}
       .btn-primary:hover{background:#1B1B1D}
-      .btn-ghost,.btn-outline{background:transparent;color:var(--primary);border-color:var(--primary)}
+      .btn-ghost,.btn-outline{background:transparent;color:var(--gold-ink);border-color:var(--primary)}
       .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
       .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem}
       .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:2rem}

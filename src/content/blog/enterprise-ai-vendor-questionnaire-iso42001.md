@@ -17,7 +17,7 @@ lastModified: 2026-08-21
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> Why this happened so fast</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> Why this happened so fast</h2>
 
 <p>Enterprise procurement and GRC teams didn't add an AI section because it's trendy — they added it because <strong>their own customers, regulators and boards started asking them</strong>. A large enterprise buying your SaaS product is, from their risk team's point of view, extending their own AI supply chain into your codebase. If your product embeds a language model, calls a third-party AI API, or uses AI to make any decision that touches their data, that's now their problem too — and they know it.</p>
 
@@ -27,7 +27,7 @@ lastModified: 2026-08-21
   <p style="margin:0"><strong>The gap procurement teams are trying to close:</strong> 88% of organisations now use AI in at least one business function — but only 8% have a comprehensive AI governance framework in place. IBM's data is blunter still: 63% of breached organisations either have no AI governance policy, or one that's still being written. Your buyer's risk team isn't guessing at this gap. They're assuming you're in the 92%, and the questionnaire is how they find out.</p>
 </div>
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> What's actually being asked</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> What's actually being asked</h2>
 
 <p>Strip away the varying wording and almost every enterprise AI questionnaire section is asking the same five things:</p>
 
@@ -53,7 +53,7 @@ lastModified: 2026-08-21
 
 <p style="color:#4b5563">This isn't vendor-by-vendor paranoia, either — it's been formalised. The standard vendor risk templates procurement teams actually use, the Cloud Controls Matrix (CAIQ) and SIG Lite, now carry a dedicated AI governance section: model provenance, training data rights, subprocessor transparency, and explicit alignment checks against ISO 42001 and the NIST AI RMF. If you're filling out either of those forms, this is no longer optional wording — it's a named field.</p>
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> ISO 42001 is built to answer exactly this</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:var(--on-gold);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> ISO 42001 is built to answer exactly this</h2>
 
 <p>ISO 42001 is the world's first certifiable AI management system standard — the AI equivalent of what ISO 27001 did for information security. It doesn't ask you to prove your AI is perfect. It asks you to prove it's <strong>governed</strong>: that you know what AI you're running, who's accountable for it, what could go wrong, and how you'd catch it.</p>
 

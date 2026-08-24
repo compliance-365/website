@@ -217,7 +217,7 @@
   }
   .c365-msg--user {
     background: #A9812E;
-    color: #fff;
+    color:var(--on-gold);
     border-radius: 14px 4px 14px 14px;
     padding: 10px 12px;
     align-self: flex-end;
@@ -228,7 +228,7 @@
     display: inline-block;
     margin-top: 8px;
     background: #A9812E;
-    color: #fff !important;
+    color:var(--on-gold) !important;
     padding: 6px 14px;
     border-radius: 8px;
     font-size: 0.8rem;
@@ -340,7 +340,7 @@
   #c365-input:focus { border-color: #A9812E; }
   #c365-send {
     background: #A9812E;
-    color: #fff;
+    color:var(--on-gold);
     border: none;
     border-radius: 10px;
     padding: 8px 12px;
@@ -477,7 +477,7 @@
     })
     .catch(function () {
       typing.hidden = true;
-      appendMsg('bot', 'Sorry, I couldn\'t connect. Please try again or <a href="/contact/" class="c365-cta" style="display:inline;background:none;color:#A9812E;padding:0;">contact us directly</a>.');
+      appendMsg('bot', 'Sorry, I couldn\'t connect. Please try again or <a href="/contact/" class="c365-cta" style="display:inline;background:none;color:var(--gold-ink);padding:0;">contact us directly</a>.');
     })
     .finally(function () {
       isBusy = false;

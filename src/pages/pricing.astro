@@ -114,7 +114,7 @@ const live = isSelfServeLive();
     <p style="text-align:center;margin-top:2rem;">
       <a href={ctaUrl} class="btn btn-primary">Talk to us about your estate</a>
     </p>
-    <p style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:var(--muted,#8A8172);">
+    <p style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:var(--muted,var(--text-muted));">
       You'll see the exact annual price and term in writing before anything is invoiced or charged — nothing is billed from this conversation alone.
     </p>
   </div>
@@ -291,15 +291,15 @@ const live = isSelfServeLive();
   }
   .price-flag {
     position: absolute; top: -11px; left: 1.5rem;
-    background: #A9812E; color: #fff; font-size: 10px; font-weight: 800;
+    background: #A9812E; color: var(--on-gold); font-size: 10px; font-weight: 800;
     letter-spacing: .12em; text-transform: uppercase; padding: 4px 10px; border-radius: 5px;
   }
   .price-card h3 { margin: 0 0 .25rem; font-size: 1.35rem; }
-  .price-tag-line { margin: 0 0 1.25rem; font-size: .82rem; color: #8A8172; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  .price-tag-line { margin: 0 0 1.25rem; font-size: .82rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
   .price-tiers { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1.5rem; }
   .price-tier { display: flex; align-items: baseline; gap: .5rem; }
   .pt-amount { font-size: 1.5rem; font-weight: 800; color: #0B0B0C; }
-  .pt-label { font-size: .82rem; color: #8A8172; }
+  .pt-label { font-size: .82rem; color: var(--text-muted); }
   .price-card-contact { justify-content: space-between; }
   .price-contact-line { font-size: .88rem; color: #6b6860; line-height: 1.55; margin-bottom: 1.5rem; }
 
@@ -321,10 +321,10 @@ const live = isSelfServeLive();
      visibly — the kind of bug a scrollWidth check doesn't catch, since
      the page itself never grows past the viewport. */
   .ent-price-amount { font-size: 1.15rem; font-weight: 800; color: #0B0B0C; text-align: right; }
-  .ent-price-period { font-size: .78rem; font-weight: 500; color: #8A8172; margin-left: .25rem; white-space: nowrap; }
-  .ent-billing { font-size: .82rem; color: #8A8172; line-height: 1.6; margin: 1rem 0 0; }
+  .ent-price-period { font-size: .78rem; font-weight: 500; color: var(--text-muted); margin-left: .25rem; white-space: nowrap; }
+  .ent-billing { font-size: .82rem; color: var(--text-muted); line-height: 1.6; margin: 1rem 0 0; }
   .ent-features-block { padding: 1.75rem 1.75rem; background: #FBF7EF; }
-  .ent-features-label { font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #8A8172; margin: 0 0 1rem; }
+  .ent-features-label { font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 1rem; }
   .ent-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .8rem; }
   .ent-features li { position: relative; padding-left: 1.4rem; font-size: .88rem; line-height: 1.55; color: #3A3632; }
   .ent-features li::before { content: '✓'; position: absolute; left: 0; top: 0; color: #A9812E; font-weight: 800; }
@@ -346,7 +346,7 @@ const live = isSelfServeLive();
   /* Configurator */
   .cfg-wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: start; }
   .cfg-block { margin-bottom: 1.5rem; }
-  .cfg-label { display: block; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #8A8172; margin-bottom: .6rem; }
+  .cfg-label { display: block; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .6rem; }
   .cfg-tiers { display: flex; gap: 8px; flex-wrap: wrap; }
   .cfg-tier {
     flex: 1; min-width: 120px; text-align: left; cursor: pointer;
@@ -354,7 +354,7 @@ const live = isSelfServeLive();
     display: flex; flex-direction: column; gap: 2px; transition: border-color .15s, background .15s;
   }
   .cfg-tier b { font-size: .95rem; color: #0B0B0C; }
-  .cfg-tier span { font-size: .78rem; color: #8A8172; }
+  .cfg-tier span { font-size: .78rem; color: var(--text-muted); }
   .cfg-tier.on { border-color: #A9812E; background: #FBF7EF; }
   .cfg-modules { display: flex; flex-direction: column; gap: 8px; }
   .cfg-mod {
@@ -365,7 +365,7 @@ const live = isSelfServeLive();
   .cfg-mod:has(input:checked) { border-color: #A9812E; background: #FBF7EF; }
   .cfg-mod-input, .cfg-addon-input { width: 18px; height: 18px; accent-color: #A9812E; }
   .cfg-mod-name { font-weight: 700; color: #0B0B0C; font-size: .95rem; }
-  .cfg-mod-tag { font-size: .75rem; color: #8A8172; text-align: right; }
+  .cfg-mod-tag { font-size: .75rem; color: var(--text-muted); text-align: right; }
   .cfg-summary { background: #fff; border: 1px solid #E4DFD5; border-radius: 14px; padding: 1.5rem; position: sticky; top: 1rem; }
   .cfg-lines { font-size: .9rem; }
   /* :global — these rows are injected via innerHTML at runtime, so Astro's
@@ -373,11 +373,11 @@ const live = isSelfServeLive();
      wouldn't match. Class names are page-specific, so global is safe. */
   :global(.cfg-line) { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem 0; border-bottom: 1px solid #F0ECE4; }
   :global(.cfg-line.discount) { color: #7A6A2E; font-weight: 700; }
-  :global(.cfg-empty) { color: #8A8172; font-size: .9rem; margin: 0; }
+  :global(.cfg-empty) { color: var(--text-muted); font-size: .9rem; margin: 0; }
   .cfg-total-wrap { margin-top: 1rem; }
   .cfg-total-row { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; font-size: 1.05rem; }
   .cfg-total { font-size: 1.6rem; color: #0B0B0C; }
-  .cfg-total-note { font-size: .78rem; color: #8A8172; margin: .5rem 0 0; }
+  .cfg-total-note { font-size: .78rem; color: var(--text-muted); margin: .5rem 0 0; }
   .cfg-custom p { font-size: .9rem; }
 
   /* Trial steps + FAQ */
