@@ -6,6 +6,21 @@ const tagline = org?.tagline || 'Cyber, AI & Privacy Compliance';
 const abn = org?.abn || '';
 const email = org?.email || 'info@compliance365.com.au';
 const phone = org?.phone || '';
+/* Microsoft Marketplace partner profile. Deliberately renders as plain
+   text when unset rather than as a dead link — the URL lives in
+   content/globals/footer.json so it can be filled in without touching
+   code, and a half-configured deploy must never ship a broken link.
+
+   The wording is "Microsoft Partner", not "Solutions Partner",
+   "Gold" or "Certified": those are specific earned designations with
+   their own criteria, and claiming one we do not hold would be a
+   misrepresentation of a third party's programme. "Microsoft Partner"
+   plus a link to the marketplace profile is verifiable by anyone who
+   clicks it. Note also that the marketplace states partner-selected
+   expertise is not a Microsoft endorsement, so nothing here implies
+   one. */
+const msMarketplace = org?.microsoftMarketplaceUrl || '';
+
 const privacy = org?.privacyUrl || (base + 'privacy/');
 const terms = org?.termsUrl || (base + 'terms/');
 const ctaUrl = base + 'book/';
@@ -43,6 +58,18 @@ const ctaLabel = 'Book a free call';
       )}
       <p class="meta">
         <a href={`mailto:${email}`} class="meta-link">{email}</a>
+      </p>
+
+      <p class="ms-partner">
+        <svg class="ms-partner-mark" viewBox="0 0 23 23" aria-hidden="true" focusable="false">
+          <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+          <rect x="12" y="1" width="10" height="10" fill="#7FBA00"/>
+          <rect x="1" y="12" width="10" height="10" fill="#00A4EF"/>
+          <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+        </svg>
+        {msMarketplace
+          ? <a href={msMarketplace} class="meta-link" rel="noopener" target="_blank">Microsoft Partner &mdash; view our Marketplace profile</a>
+          : <span>Microsoft Partner</span>}
       </p>
 
       <!-- Social icons -->
@@ -461,6 +488,17 @@ const ctaLabel = 'Book a free call';
   .loc-list .loc-all { color: #A9812E; font-weight: 700; }
 
   /* ── Bottom bar ── */
+  .ms-partner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: rgba(250, 247, 241, 0.55);
+  }
+  .ms-partner-mark { width: 14px; height: 14px; flex: 0 0 auto; }
+
   .footer-bottom {
     position: relative;
     z-index: 1;
