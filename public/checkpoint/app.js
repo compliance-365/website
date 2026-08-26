@@ -13259,6 +13259,30 @@ function showModal(opts) {
      prefers the durable Settings copy, falls back to this browser's
      local one, and also reads the old singular paddleSubscriptionId
      setting a tenant activated before this change may still have. */
+  /* Microsoft Marketplace subscription id(s), stored exactly like the
+     Paddle ones above and for the same reason: one plan per framework
+     means a customer buying a second framework gets a SECOND
+     subscription, so the refresh has to ask about all of them or it
+     silently drops whatever it forgot. Separate key from the Paddle
+     one because a tenant could in principle hold both — a Paddle
+     purchase made before we listed on Marketplace, plus a Marketplace
+     purchase after — and merging the two id spaces would send Paddle
+     ids to Microsoft and vice versa. */
+  function marketplaceSubStorageKey() { return 'cpMarketplaceSub:v1:' + tenantStorageKey(); }
+  function addMarketplaceSubLocal(id) {
+    if (!id) return;
+    try {
+      var ids = parsePaddleSubs(localStorage.getItem(marketplaceSubStorageKey()));
+      if (ids.indexOf(id) === -1) ids.push(id);
+      localStorage.setItem(marketplaceSubStorageKey(), ids.join(','));
+    } catch (e) { /* storage disabled */ }
+  }
+  function readMarketplaceSubs() {
+    var fromSettings = S && S.settings && S.settings.marketplaceSubscriptionIds;
+    if (fromSettings) return parsePaddleSubs(fromSettings);
+    try { return parsePaddleSubs(localStorage.getItem(marketplaceSubStorageKey())); } catch (e) { return []; }
+  }
+
   function paddleSubStorageKey() { return 'cpPaddleSub:v1:' + tenantStorageKey(); }
   function parsePaddleSubs(raw) { return String(raw || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
   function addPaddleSubLocal(id) {
@@ -13991,6 +14015,13 @@ function showModal(opts) {
        paid for. The check is gated on ?activate=1 (only ever set by
        /start's own successUrl) plus a transaction id, so it never fires
        for a normal returning sign-in. */
+    /* Marketplace first: its arrival carries ?token= and no
+       ?activate=1, so the two paths never contend, and attempting it
+       is a no-op the moment either the endpoint is unconfigured or
+       there is no token in the URL. */
+    var mpHandled = await attemptMarketplaceActivation();
+    if (mpHandled) return;
+
     if (CONFIG.selfServeActivateUrl && /[?&]activate=1\b/.test(location.search)) {
       var handled = await attemptSelfServeActivation();
       if (handled) return;
@@ -14019,6 +14050,62 @@ function showModal(opts) {
      nothing useful was found and the caller should fall back to the
      normal manual step 3 entirely (e.g. no transaction id in the URL
      at all, so this isn't a self-serve arrival). */
+  /* A buyer arriving from Microsoft Marketplace. Microsoft redirects to
+     the landing page with an opaque ?token=, which is meaningless to us
+     — only Microsoft can say what it represents, which is exactly what
+     lambda/marketplace-fulfillment.js asks it. Deliberately the same
+     shape as attemptSelfServeActivation() below: get a signed file from
+     the endpoint, then hand it to runWizardActivationCheck(), the same
+     verify-and-apply path a manually pasted file goes through. Returns
+     true if it left the UI showing something (success or a clear
+     error), false if this isn't a Marketplace arrival at all. */
+  async function attemptMarketplaceActivation() {
+    if (!CONFIG.marketplaceFulfillmentUrl) return false;
+    var mpToken = new URLSearchParams(location.search).get('token');
+    if (!mpToken) { try { mpToken = sessionStorage.getItem('c365_mstoken'); } catch (e) { /* storage disabled */ } }
+    if (!mpToken) return false;
+    try { sessionStorage.removeItem('c365_mstoken'); } catch (e) { /* ignore */ }
+
+    var tenantInfo;
+    try { tenantInfo = await Graph.tenantInfo(); } catch (e) { tenantInfo = null; }
+    if (!tenantInfo || !tenantInfo.id) return false;
+
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('wizard').style.display = 'flex';
+    if (!W) W = { step: 4, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+    showWizardStep(4);
+    var statusEl = document.getElementById('wizActStatus');
+    if (statusEl) statusEl.textContent = 'Confirming your Microsoft Marketplace purchase…';
+
+    try {
+      /* The caller's own Graph token, so the Lambda can verify which
+         tenant this really is rather than trusting the body — see
+         resolveCallerTenantId() in marketplace-fulfillment.js. */
+      var callerToken = await Graph.readOnlyToken();
+      var res = await fetch(CONFIG.marketplaceFulfillmentUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + callerToken },
+        body: JSON.stringify({ marketplaceToken: mpToken, tenantId: tenantInfo.id, subscriptionIds: readMarketplaceSubs() })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.activationFile) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(data.error || 'Could not confirm your Marketplace purchase automatically.') + ' Paste the activation file below once you receive it by email, or contact us.</span>';
+        busy(false);
+        return true; /* stayed at step 4 with a clear message — manual paste is still available */
+      }
+      (data.subscriptionIds || []).forEach(addMarketplaceSubLocal);
+      var textInput = document.getElementById('wizActPasteInput');
+      if (textInput) textInput.value = data.activationFile;
+      busy(false);
+      await runWizardActivationCheck();
+      return true;
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Could not reach the activation service. Paste your activation file below, or contact us.</span>';
+      busy(false);
+      return true;
+    }
+  }
+
   async function attemptSelfServeActivation() {
     var txnId = new URLSearchParams(location.search).get('_ptxn');
     if (!txnId) { try { txnId = sessionStorage.getItem('c365_ptxn'); } catch (e) { /* storage disabled */ } }
