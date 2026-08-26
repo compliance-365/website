@@ -95,7 +95,17 @@ const GRACE_DAYS = 14; // same standard as provision.js / issue-entitlement.mjs
 
 /* The Fulfillment API's own resource id. Constant across tenants — this
    is Microsoft's marketplace resource, not anything of ours. */
-const MARKETPLACE_RESOURCE = '20e940b3-4c77-48b9-9f0f-d82d6f4c1f3b';
+/* The Marketplace SaaS Fulfillment API's resource id, per Microsoft's
+   own authentication documentation. Verify this against the docs before
+   changing it: an incorrect value does NOT fail with anything that
+   names the resource as the problem. Entra reports it as
+   "AADSTS500011: resource principal not found in the tenant", which
+   reads like a tenant-provisioning fault and sends you looking in the
+   wrong place entirely. This constant was originally wrong by a few
+   characters (the first two segments happen to be identical to the
+   correct value) and cost four wrong diagnoses before anyone checked
+   the id itself. */
+const MARKETPLACE_RESOURCE = '20e940b3-4c77-4b0b-9a53-9e16a1b010a7';
 const API_VERSION = '2018-08-31';
 function apiBase() {
   return process.env.MARKETPLACE_API_BASE || 'https://marketplaceapi.microsoft.com/api/saas';
@@ -135,27 +145,15 @@ async function signEntitlementPayload(privateKey, payload) {
    alone — v2 with `scope={guid}/.default` is equally viable once the
    prerequisite below is met.
 
-   PREREQUISITE, and the thing that will actually bite you:
-   the marketplace resource's service principal must exist in the
-   publisher tenant. Nothing creates it — not Partner Center
-   enrolment, not the app registration, not deploying this Lambda — so
-   on a fresh publisher tenant EVERY call fails with:
-
-     AADSTS500011: The resource principal named
-     20e940b3-4c77-48b9-9f0f-d82d6f4c1f3b was not found in the tenant
-
-   Provision it once, as a Global Admin:
-
-     az ad sp create --id 20e940b3-4c77-48b9-9f0f-d82d6f4c1f3b
-
-   Recorded here because this cost two wrong diagnoses on the first
-   deploy: the tenant id was blamed (it was correct — AADSTS500011
-   means the tenant RESOLVED and the resource was missing; an
-   unresolvable tenant gives AADSTS90002), then the endpoint version
-   was blamed (v1 and v2 fail identically without the service
-   principal). The error message was literally true both times. If you
-   see AADSTS500011 here, the answer is in the tenant, not in this
-   file. */
+   If you see AADSTS500011 ("resource principal not found in the
+   tenant") from this call, check MARKETPLACE_RESOURCE above FIRST.
+   That error names the tenant and reads like a tenant-provisioning
+   fault, but a wrong resource id produces it identically — the
+   resource cannot be found in the tenant because it does not exist
+   anywhere. On the first deploy that misdirection cost four wrong
+   diagnoses: the tenant id, the token endpoint version, a missing
+   service principal, and provisioning one by hand. All four were
+   downstream of a mistyped constant. */
 async function marketplaceToken() {
   const res = await fetch('https://login.microsoftonline.com/' + process.env.MARKETPLACE_TENANT_ID + '/oauth2/token', {
     method: 'POST',
