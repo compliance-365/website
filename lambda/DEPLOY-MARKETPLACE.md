@@ -30,6 +30,32 @@ authorises on the app identity registered against the offer, not on a
 delegated scope — you associate this app ID with the offer in Partner
 Center's Technical configuration step.
 
+### Provision the marketplace service principal (one-time, easy to miss)
+
+Separately from the registration above, the **marketplace resource's own
+service principal** must exist in the publisher tenant. Nothing creates
+it — not Partner Center enrolment, not the app registration, not
+deploying the Lambda. Without it every call fails at the token step:
+
+```
+AADSTS500011: The resource principal named
+20e940b3-4c77-48b9-9f0f-d82d6f4c1f3b was not found in the tenant
+```
+
+Run this once, as a Global Admin (Azure Cloud Shell works — no local
+install needed):
+
+```
+az ad sp create --id 20e940b3-4c77-48b9-9f0f-d82d6f4c1f3b
+```
+
+Two dead ends worth naming, because the first deploy hit both:
+`AADSTS500011` does **not** mean the tenant id is wrong (the tenant
+resolved — an unresolvable one returns `AADSTS90002`), and it is **not**
+fixed by switching the token endpoint between v1 and v2 (both fail
+identically without the service principal). The error means exactly what
+it says: the resource is missing from the tenant.
+
 ## 2. Environment variables
 
 | Variable | Value |
