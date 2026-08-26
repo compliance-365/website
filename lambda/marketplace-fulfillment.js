@@ -130,22 +130,32 @@ async function signEntitlementPayload(privateKey, payload) {
 }
 
 /* ============== Marketplace Fulfillment API ============== */
-/* The v1 token endpoint with `resource`, NOT v2 with `scope`.
-   This is not a stylistic choice — it is what Microsoft's own
-   Fulfillment API documentation and samples use, and the difference is
-   load-bearing.
+/* The v1 token endpoint with `resource`, matching Microsoft's own
+   Fulfillment API documentation and samples. Kept for that reason
+   alone — v2 with `scope={guid}/.default` is equally viable once the
+   prerequisite below is met.
 
-   The v2 endpoint resolves `scope={guid}/.default` by looking for that
-   resource's service principal in the calling tenant, and refuses with
-   AADSTS500011 ("resource principal not found in the tenant") when it
-   is absent. A publisher tenant has no reason to have the marketplace
-   API's service principal provisioned — nothing installs it, and
-   nothing in the Partner Center flow creates it — so on a fresh
-   publisher account v2 fails every time. The first deploy of this
-   Lambda hit exactly that.
+   PREREQUISITE, and the thing that will actually bite you:
+   the marketplace resource's service principal must exist in the
+   publisher tenant. Nothing creates it — not Partner Center
+   enrolment, not the app registration, not deploying this Lambda — so
+   on a fresh publisher tenant EVERY call fails with:
 
-   v1 does not impose that precondition, which is why Microsoft
-   documents it for this API. Do not "modernise" this to v2. */
+     AADSTS500011: The resource principal named
+     20e940b3-4c77-48b9-9f0f-d82d6f4c1f3b was not found in the tenant
+
+   Provision it once, as a Global Admin:
+
+     az ad sp create --id 20e940b3-4c77-48b9-9f0f-d82d6f4c1f3b
+
+   Recorded here because this cost two wrong diagnoses on the first
+   deploy: the tenant id was blamed (it was correct — AADSTS500011
+   means the tenant RESOLVED and the resource was missing; an
+   unresolvable tenant gives AADSTS90002), then the endpoint version
+   was blamed (v1 and v2 fail identically without the service
+   principal). The error message was literally true both times. If you
+   see AADSTS500011 here, the answer is in the tenant, not in this
+   file. */
 async function marketplaceToken() {
   const res = await fetch('https://login.microsoftonline.com/' + process.env.MARKETPLACE_TENANT_ID + '/oauth2/token', {
     method: 'POST',
