@@ -130,16 +130,31 @@ async function signEntitlementPayload(privateKey, payload) {
 }
 
 /* ============== Marketplace Fulfillment API ============== */
+/* The v1 token endpoint with `resource`, NOT v2 with `scope`.
+   This is not a stylistic choice — it is what Microsoft's own
+   Fulfillment API documentation and samples use, and the difference is
+   load-bearing.
+
+   The v2 endpoint resolves `scope={guid}/.default` by looking for that
+   resource's service principal in the calling tenant, and refuses with
+   AADSTS500011 ("resource principal not found in the tenant") when it
+   is absent. A publisher tenant has no reason to have the marketplace
+   API's service principal provisioned — nothing installs it, and
+   nothing in the Partner Center flow creates it — so on a fresh
+   publisher account v2 fails every time. The first deploy of this
+   Lambda hit exactly that.
+
+   v1 does not impose that precondition, which is why Microsoft
+   documents it for this API. Do not "modernise" this to v2. */
 async function marketplaceToken() {
-  const res = await fetch('https://login.microsoftonline.com/' + process.env.MARKETPLACE_TENANT_ID + '/oauth2/v2.0/token', {
+  const res = await fetch('https://login.microsoftonline.com/' + process.env.MARKETPLACE_TENANT_ID + '/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: process.env.MARKETPLACE_CLIENT_ID,
       client_secret: process.env.MARKETPLACE_CLIENT_SECRET,
-      resource: MARKETPLACE_RESOURCE,
-      scope: MARKETPLACE_RESOURCE + '/.default'
+      resource: MARKETPLACE_RESOURCE
     })
   });
   const tok = await res.json();

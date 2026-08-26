@@ -118,7 +118,7 @@ window.CHECKPOINT_CONFIG = {
      buyer staring at a broken activation screen. Fill this in with the
      API Gateway invoke URL once that Lambda is deployed; see
      lambda/DEPLOY-MARKETPLACE.md. */
-  marketplaceFulfillmentUrl: '',
+  marketplaceFulfillmentUrl: 'https://ef6k1tyuhi.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-marketplace',
 
   /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
      as a default in the owner console's welcome-pack email draft —
