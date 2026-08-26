@@ -111,6 +111,15 @@ window.CHECKPOINT_CONFIG = {
      unaudited SharePoint-writing logic lives in the Lambda. */
   selfServeActivateUrl: 'https://rha5tsq48h.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-provision',
 
+  /* Microsoft Marketplace SaaS fulfillment endpoint (lambda/
+     marketplace-fulfillment.js). Empty string = the Marketplace path is
+     simply never attempted, exactly as an empty selfServeActivateUrl
+     disables the Paddle one — a half-configured deploy must not leave a
+     buyer staring at a broken activation screen. Fill this in with the
+     API Gateway invoke URL once that Lambda is deployed; see
+     lambda/DEPLOY-MARKETPLACE.md. */
+  marketplaceFulfillmentUrl: '',
+
   /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
      as a default in the owner console's welcome-pack email draft —
      always editable per-send in that draft, so leaving this blank just
