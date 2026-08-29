@@ -120,7 +120,7 @@ window.GUIDANCE = {
     how: "Add an asset-return step to your offboarding checklist — laptop, access card, security tokens — and confirm it by retiring or wiping the device in Intune the same day access is revoked. Keep a signed checklist per departing employee.",
     evidence: "Completed offboarding checklists showing asset return, matched against Intune device-retirement timestamps.",
     link: "https://intune.microsoft.com",
-    checks: []
+    checks: ["leaver"]
   },
   'A.5.12': {
     how: "Define a small classification scheme — Public / Internal / Confidential / Highly Confidential is typical — and implement it as Purview sensitivity labels, applied by default where practical and by users otherwise. Train staff on what each label actually means for how they can share that content. Checkpoint's labelling check confirms at least one label is published and enabled, but can't confirm the scheme itself is well-designed or actually adopted.",
@@ -162,7 +162,7 @@ window.GUIDANCE = {
     how: "Grant access through group-based role assignment rather than one-off individual grants, require approval for privileged role activation through Entra PIM, and run a periodic access review to catch rights that should have been revoked but weren't. Checkpoint's PIM check verifies privileged roles are held as eligible assignments, not standing access; its access-review check confirms at least one Entra Access Review is actually configured to run that periodic check, though not that a cycle has recently completed.",
     evidence: "The Entra PIM configuration, an access-review report, and Checkpoint's PIM/access-review scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["pim", "access-review"]
+    checks: ["pim", "access-review", "leaver"]
   },
   'A.5.19': {
     how: "Keep a vendor risk register recording what data each supplier can access and their own security posture — Checkpoint's Vendor register is built for exactly this — and require a security review before onboarding any supplier that touches your data. Set a minimum security bar in the supplier contract itself, not just in your own process.",
@@ -309,7 +309,7 @@ window.GUIDANCE = {
     how: "Run a consistent offboarding checklist covering access revocation, asset return and any post-employment obligations (confidentiality survives termination), and complete it on the departure date, not whenever HR gets to it. Disable the Entra account immediately; delete it only after any legal hold requirements are satisfied.",
     evidence: "Completed offboarding checklists showing same-day access revocation, matched against Entra account disable timestamps.",
     link: "https://entra.microsoft.com",
-    checks: []
+    checks: ["leaver"]
   },
   'A.6.6': {
     how: "Require a signed confidentiality or non-disclosure agreement from every employee and relevant contractor before they get access to sensitive information, filed and retrievable — not just referenced as 'standard practice'.",

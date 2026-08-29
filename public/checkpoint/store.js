@@ -442,6 +442,10 @@ window.CHECK_DEFS = [
   { id: 'guests',     area: 'Identity', label: 'External guest user count within threshold',   tpl: null,        scored: true },
   { id: 'riskyusers', area: 'Identity', label: 'Risky sign-ins & risky users addressed',       tpl: 'riskyusers', scored: true, requiresCapability: 'identityProtection' },
   { id: 'access-review', area: 'Identity', label: 'Periodic access-rights review configured',  tpl: 'access-review', scored: true, requiresCapability: 'accessReviews' },
+  /* Leaver hygiene. No capability gate: it reads plain directory data
+     under scopes every tenant already granted, so unlike most of the
+     newer checks this one works at every licence level. */
+  { id: 'leaver',     area: 'Identity', label: 'Departed accounts fully offboarded',           tpl: 'leaver',    scored: true },
   /* Devices (3) */
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
@@ -802,6 +806,7 @@ window.CHECK_CONTROLS = {
   'guests': ['A.5.16'],
   'riskyusers': ['A.5.25', 'A.5.26'],
   'device': ['A.8.1'],
+  'leaver': ['A.5.11', 'A.5.18', 'A.6.5'],
   'device-checkin': ['A.8.1'],
   'device-config': ['A.8.9'],
   'compliance-policy': ['A.8.1'],
@@ -1034,7 +1039,7 @@ window.DemoStore = (function () {
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
       lastResults: {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail',
         'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
@@ -1046,6 +1051,7 @@ window.DemoStore = (function () {
         'compliance-policy': '3 compliance policies configured', 'device-checkin': '14 of 214 device(s) have not checked in for over 30 days (2 never have) — their compliance state is stale evidence', 'device-config': '11 device configuration profiles deployed (showing first page)', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
+        'leaver': '9 disabled account(s); 1 STILL HOLD a privileged directory role; 4 still hold a paid licence — confirm each is a deliberate retention rather than an unfinished offboarding',
         'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',
         'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned',
         'privacy-srr': '3 open request(s); 1 PAST their statutory due date; 1 due within 7 days',

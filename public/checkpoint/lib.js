@@ -480,6 +480,53 @@
      opposite: an incident with no creation date tells us nothing about
      its age, but a managed device with no sync date has demonstrably
      never reported in. */
+  /* Leaver hygiene — A.5.11 (return of assets), A.6.5 (responsibilities
+     after termination) and A.5.18 (access rights removal). These were
+     entirely self-reported: Checkpoint has no HR feed, so it cannot know
+     who left, and "show me your leaver checklist" is not something Graph
+     can answer.
+
+     What it CAN see is the end state of an offboarding, and two parts of
+     that end state say different things:
+
+     A disabled account still holding a PRIVILEGED DIRECTORY ROLE is an
+     unambiguous failure. There is no legitimate reason to leave a
+     departed administrator's role assignment in place — re-enabling the
+     account restores privilege instantly, and the assignment itself is
+     what an auditor tests. This is the only condition here that fails.
+
+     A disabled account still holding a PAID LICENCE is a review, never a
+     failure, and that distinction matters. Plenty of organisations
+     deliberately keep a leaver licensed for a retention period — legal
+     hold, or delegating the mailbox to a manager — and that is good
+     practice, not a gap. Graph does not expose WHEN an account was
+     disabled, so Checkpoint genuinely cannot tell a deliberate 30-day
+     retention from an offboarding everyone forgot two years ago.
+     Reporting it as a failure would be guessing; reporting it as a list
+     to confirm is honest and still useful.
+
+     Guests are excluded throughout — a guest's lifecycle is governed by
+     the external-sharing and guest-count checks, not by an employment
+     termination process. */
+  function leaverHygieneResult(users, privilegedUserIds) {
+    var members = (users || []).filter(function (u) { return u && u.userType !== 'Guest'; });
+    var disabled = members.filter(function (u) { return u.accountEnabled === false; });
+    if (!disabled.length) {
+      return { disabled: 0, licensed: 0, privileged: 0, result: 'pass' };
+    }
+    var priv = privilegedUserIds || {};
+    var stillPrivileged = disabled.filter(function (u) { return u.id && priv[u.id]; });
+    var stillLicensed = disabled.filter(function (u) {
+      return Array.isArray(u.assignedLicenses) && u.assignedLicenses.length > 0;
+    });
+    return {
+      disabled: disabled.length,
+      licensed: stillLicensed.length,
+      privileged: stillPrivileged.length,
+      result: stillPrivileged.length ? 'fail' : (stillLicensed.length ? 'review' : 'pass')
+    };
+  }
+
   function deviceCheckinResult(devices, staleDays, nowMs) {
     var list = (devices || []).filter(function (d) { return d; });
     if (!list.length) return { total: 0, stale: 0, never: 0, result: 'review' };
@@ -2936,7 +2983,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

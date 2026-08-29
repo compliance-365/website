@@ -2318,6 +2318,57 @@ five report types render the exact chart composition above, with zero
 console/page errors, across a demo tenant with every framework
 entitled.
 
+### Leaver hygiene (joiner-mover-leaver)
+
+**"Departed accounts fully offboarded"** covers **A.5.11** (return of
+assets), **A.5.18** (access rights removal) and **A.6.5**
+(responsibilities after termination) — three controls that were
+completely self-reported.
+
+Checkpoint has no HR feed. It cannot know who left, and *"show me your
+leaver checklist"* is not a question Graph can answer. What it **can**
+see is the end state of an offboarding, and the two halves of that state
+say different things:
+
+| Condition | Outcome | Why |
+|---|---|---|
+| Disabled account holds a **privileged directory role** | **Fail** | Unambiguous. Re-enabling the account restores privilege instantly, and the assignment is what an auditor tests. No legitimate retention reason exists. |
+| Disabled account holds a **paid licence** | **Review** | Ambiguous — see below. |
+| Neither | **Pass** | A clean offboarding. |
+
+**Why a retained licence is only ever a review.** Plenty of
+organisations deliberately keep a leaver licensed for a retention period
+— legal hold, or delegating the mailbox to a manager. That is good
+practice, not a gap. Graph does not expose *when* an account was
+disabled, so a deliberate 30-day retention and a two-year-old forgotten
+offboarding are indistinguishable from the outside. Reporting either as
+a failure would be guessing; reporting the list to confirm is honest and
+still useful.
+
+Guests are excluded throughout — a guest's lifecycle is governed by the
+external-sharing and guest-count checks, not an employment termination.
+
+**No new scope and no premium licence.** `Directory.Read.All` and
+`RoleManagement.Read.Directory` are already granted at sign-in, and both
+endpoint shapes are ones the scan already uses (the guest check reads
+`/users` with a `$select`; the admin check reads
+`/directoryRoles/{id}/members`). Unlike the Defender and Purview checks,
+this one works at every licence level.
+
+Role membership is gathered per activated role rather than via
+`$expand`, because that is the shape already proven to work here. A role
+whose members cannot be read is skipped rather than failing the check —
+a partial privileged set can only under-report, never invent a finding.
+
+**Not yet covered:** Entra ID Governance **lifecycle workflows**, which
+would evidence the joiner and mover halves directly rather than
+inferring the leaver half from end state. Available on Graph v1.0 but
+needs the Governance SKU, so it would read Manual on most tenants.
+
+**Tests**: `test/register-checks.test.mjs` — 11 tests covering the
+fail/review precedence, guest exclusion, enabled-admin exclusion, and
+missing/empty licence arrays.
+
 ### Device configuration profiles
 
 **"Device configuration profiles deployed"** reads
