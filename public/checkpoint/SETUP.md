@@ -164,6 +164,9 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Alerts` (drift alerts from the optional continuous monitor — see §9)
    - `Checkpoint Vendors` (third-party vendor risk register — see §8)
    - `Checkpoint AISystems` (AI Governance / ISO 42001 register — see §8, only used while iso42001 is entitled)
+   - `Checkpoint CheckDispositions` (how this tenant covers a posture
+     check Checkpoint can't see — an alternative tool, or not applicable;
+     see §8's "Checks covered outside Microsoft")
    - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is entitled by default going into the wizard's framework
    step; every other framework's control set is seeded either way, just
@@ -2310,6 +2313,53 @@ tests. Verified end to end with headless Chromium (Playwright): all
 five report types render the exact chart composition above, with zero
 console/page errors, across a demo tenant with every framework
 entitled.
+
+### Checks covered outside Microsoft
+
+Checkpoint scores the Microsoft stack. Plenty of tenants meet the same
+control with something else — CrowdStrike rather than Defender, OneTrust
+rather than Priva — and without a way to say so, those checks fail
+forever: the posture score punishes a control the client actually holds,
+and the same risk is re-proposed on every single scan until people learn
+to ignore the proposals entirely.
+
+Every check on the **Posture scan** view therefore carries a **"Not via
+Microsoft?"** button. It records one of three dispositions:
+
+| Disposition | Effect on the check | Effect on the score |
+|---|---|---|
+| **Microsoft** (default) | Scanned and scored normally | Counted |
+| **Covered by another tool** | Reads "Covered — *tool*" | Counted as a pass |
+| **Not applicable** | Reads "Not applicable" | Removed from the denominator |
+
+Both non-default dispositions require a justification and a **review
+date**, and neither suppresses the proposed risk quietly — the scan view
+states plainly that the check is not scored from Microsoft signal.
+
+Three things are deliberate about how this works:
+
+- **It expires.** Once the review date passes the override lapses on its
+  own and the real scan result comes back, so the check starts failing
+  again until someone confirms the alternative control is still in place.
+  An override with no expiry is a permanent blind spot in the posture
+  score that nobody ever revisits, and an auditor will find it long
+  before the client does.
+- **It cannot reach "Demonstrated" assurance.** A dispositioned check is
+  dropped from the observation set behind the SoA's assurance column
+  entirely — not counted as a passing observation, and not counted as an
+  exception either. The control falls back to whatever human evidence
+  supports it: *Evidenced* with an artefact attached, *Asserted* without.
+  Checkpoint observed nothing here and must never imply that it did.
+- **It is a register, not a setting.** Each row carries an owner, a
+  justification and a review date, and an auditor will want to enumerate
+  them as a set — which is why they live in their own
+  `Checkpoint CheckDispositions` list rather than as key/value settings.
+
+**Tests**: `test/check-dispositions.test.mjs` covers the disposition
+lookup (including lapse-on-review-date and the rejection of unrecognised
+values written by hand into SharePoint), `checkResult()`'s precedence
+against `scored:false`, the pre-scan state and the demo remediation flip,
+and `score()`'s pass-versus-excluded-from-denominator arithmetic.
 
 ## 9. Continuous monitoring (optional)
 

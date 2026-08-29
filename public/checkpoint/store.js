@@ -1123,6 +1123,15 @@ window.DemoStore = (function () {
         { id: 'AI-002', name: 'Clinical Triage Assistant', purpose: 'Suggests a triage priority for inbound patient support tickets based on submitted symptoms text', owner: 'S. Okafor', dataSources: 'Patient-submitted support ticket text (may include health information)', modelType: 'Fine-tuned classifier, hosted on Azure OpenAI', vendor: 'OpenAI (via Azure)', riskTier: 'High', impactAssessmentStatus: 'In progress', humanOversight: 'A human triage nurse confirms every priority suggestion before a ticket is actioned — the model never re-prioritises a ticket unattended.', lastReviewed: daysFrom(-10), spId: '' },
         { id: 'AI-003', name: 'Marketing Copy Generator', purpose: 'Drafts first-pass marketing copy for the website and email campaigns', owner: 'M. Chen', dataSources: 'Public product descriptions and brand style guide only — no customer or patient data', modelType: 'Third-party SaaS (Anthropic Claude via vendor API)', vendor: 'Jasper AI', riskTier: 'Minimal', impactAssessmentStatus: 'Not started', humanOversight: '', lastReviewed: '', spId: '' }
       ],
+      /* One disposition, deliberately: the demo tenant runs CrowdStrike
+         rather than Microsoft Defender, so the 'alerts' check (seeded
+         'review' in lastResults above) reads as a pass sourced from an
+         alternative tool instead of a permanent amber mark. It carries a
+         live ReviewDue so the expiry behaviour is visible in the demo
+         too — see lib.js's checkResult(). */
+      checkDispositions: [
+        { checkId: 'alerts', disposition: 'alternative', tool: 'CrowdStrike Falcon', justification: 'Endpoint detection, alert triage and 24/7 SOC monitoring are delivered by CrowdStrike Falcon Complete rather than Microsoft Defender. Monthly SOC reports and the triage runbook are held in Documents.', evidenceUrl: '', owner: 'S. Okafor', lastVerified: daysFrom(-40), reviewDue: daysFrom(140) }
+      ],
       /* Demo-only document-control register. Real tenants read this
          from the SharePoint library's own columns (DOC_META_COLUMNS);
          demo mode has no tenant to store files in, so these rows exist
@@ -1279,6 +1288,22 @@ window.DemoStore = (function () {
     updateVendor: async function () { persist(); },
     addAiSystem: async function (a) { S.aiSystems.push(a); persist(); },
     updateAiSystem: async function () { persist(); },
+    /* Upsert by checkId — a check has at most one disposition, and
+       re-dispositioning it is an edit of that row, never a second row.
+       Two rows for one check would make checkResult()'s lookup
+       order-dependent, which is exactly the kind of silent
+       inconsistency a posture score must not have. */
+    setCheckDisposition: async function (d) {
+      S.checkDispositions = S.checkDispositions || [];
+      var existing = S.checkDispositions.find(function (x) { return x.checkId === d.checkId; });
+      if (existing) Object.assign(existing, d);
+      else S.checkDispositions.push(d);
+      persist();
+    },
+    clearCheckDisposition: async function (checkId) {
+      S.checkDispositions = (S.checkDispositions || []).filter(function (x) { return x.checkId !== checkId; });
+      persist();
+    },
     /* app.js already unshifts to S.activity — the store only persists */
     logActivity: async function () { persist(); },
     setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
@@ -1450,6 +1475,36 @@ window.SpStore = (function () {
     ],
     Scans: [
       { name: 'ScanDate', text: {} }, { name: 'Score', number: {} }, { name: 'Detail', text: { allowMultipleLines: true } }
+    ],
+    /* Per-check disposition — how THIS tenant satisfies a posture check
+       that Checkpoint cannot verify for itself.
+
+       Checkpoint scores the Microsoft stack. A tenant meeting the same
+       control with something else (CrowdStrike rather than Defender,
+       OneTrust rather than Priva) would otherwise fail that check
+       forever, with no way to say so — the score would punish them for
+       a control they actually hold, and the risk proposal would come
+       back on every single scan. This list is how they say so.
+
+       A check with no row here is 'microsoft': scanned normally, scored
+       normally. That's the default and the overwhelming majority.
+
+       Deliberately NOT merged into the Settings key/value list: these
+       rows carry an owner, a justification and a review date, they are
+       read per-check on every score computation, and an auditor will
+       want to enumerate them as a set. That's a register, not a
+       setting. Same reasoning that gave Vendors and AISystems their own
+       lists rather than a JSON blob.
+
+       ReviewDue is what stops this becoming a blindfold. An override
+       with no expiry is a permanent hole in the posture score that
+       nobody revisits — see lib.js's checkResult(), which lapses the
+       override once ReviewDue passes and lets the real scan result
+       through again. */
+    CheckDispositions: [
+      { name: 'CheckId', text: {} }, { name: 'Disposition', text: {} }, { name: 'AlternativeTool', text: {} },
+      { name: 'Justification', text: { allowMultipleLines: true } }, { name: 'EvidenceUrl', text: {} },
+      { name: 'Owner', text: {} }, { name: 'LastVerified', text: {} }, { name: 'ReviewDue', text: {} }
     ],
     Activity: [
       { name: 'Message', text: { allowMultipleLines: true } }, { name: 'EntryDate', text: {} }
@@ -2127,6 +2182,7 @@ window.SpStore = (function () {
       var trnItems = await items('Training');
       var draftItems = await items('PolicyDrafts');
       var incItems = await items('Incidents');
+      var dispItems = await items('CheckDispositions');
 
       S = {
         mode: 'live',
@@ -2242,6 +2298,14 @@ window.SpStore = (function () {
             aiActAnswers: aiActAnswers
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
+        checkDispositions: dispItems.map(function (i) {
+          var f = i.fields;
+          return {
+            _sp: i.id, checkId: f.CheckId || '', disposition: f.Disposition || '', tool: f.AlternativeTool || '',
+            justification: f.Justification || '', evidenceUrl: f.EvidenceUrl || '', owner: f.Owner || '',
+            lastVerified: f.LastVerified || '', reviewDue: f.ReviewDue || ''
+          };
+        }),
         policyDrafts: draftItems.map(function (i) {
           var f = i.fields;
           var content = null;
@@ -2425,6 +2489,34 @@ window.SpStore = (function () {
         ImpactAssessmentStatus: a.impactAssessmentStatus, HumanOversight: a.humanOversight || '',
         LastReviewed: a.lastReviewed || '', SpId: a.spId || '', AiActAnswers: JSON.stringify(a.aiActAnswers || {})
       });
+    },
+    /* Upsert by checkId — see the demo store's copy of this method for
+       why a check may only ever hold one disposition row. */
+    setCheckDisposition: async function (d) {
+      S.checkDispositions = S.checkDispositions || [];
+      var fields = {
+        Title: d.checkId, CheckId: d.checkId, Disposition: d.disposition, AlternativeTool: d.tool || '',
+        Justification: d.justification || '', EvidenceUrl: d.evidenceUrl || '', Owner: d.owner || '',
+        LastVerified: d.lastVerified || '', ReviewDue: d.reviewDue || ''
+      };
+      var existing = S.checkDispositions.find(function (x) { return x.checkId === d.checkId; });
+      if (existing) {
+        await patchItem('CheckDispositions', existing._sp, fields);
+        Object.assign(existing, d);
+      } else {
+        d._sp = await addItem('CheckDispositions', fields);
+        S.checkDispositions.push(d);
+      }
+    },
+    /* Deleted outright rather than flagged inactive: absence of a row IS
+       the 'microsoft' default, so a cleared disposition and a check that
+       never had one must be indistinguishable to checkResult(). The
+       AuditLog carries the history of who set and cleared it. */
+    clearCheckDisposition: async function (checkId) {
+      var existing = (S.checkDispositions || []).find(function (x) { return x.checkId === checkId; });
+      if (!existing) return;
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.CheckDispositions + '/items/' + existing._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+      S.checkDispositions = S.checkDispositions.filter(function (x) { return x.checkId !== checkId; });
     },
     /* app.js already unshifts to S.activity — the store only writes the item */
     logActivity: async function (msg) {

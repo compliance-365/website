@@ -68,9 +68,63 @@
        simulates the same outcome a real re-scan would show.
      ctx: { lastResults: {checkId: result} | null, isDemo: bool,
             risks: [...], actions: [...] } */
+  /* The disposition currently in force for a check, or null.
+
+     Null covers four different situations that all mean "score this
+     check from the Microsoft signal as normal": no row at all (the
+     default for nearly every check), a row with an unrecognised
+     disposition value, and a row whose ReviewDue has passed.
+
+     That last one is the point of the whole mechanism. An override with
+     no expiry is a permanent hole in the posture score that nobody ever
+     revisits, and an auditor will find it long before the tenant does.
+     Lapsing it here — rather than trusting a UI reminder — means the
+     real scan result comes back automatically the day the review falls
+     due, and the check starts failing again until someone re-confirms
+     the alternative control is still in place.
+
+     A row with no ReviewDue at all stays active indefinitely. The UI
+     requires the field, so this is a defensive path rather than an
+     expected one, and lapsing on missing data would silently revert a
+     legitimate disposition over a blank field — a worse failure than
+     leaving it active and visibly flagged in the disposition list.
+
+     Dates are compared as ISO strings, the same way scanResultHistory()
+     and the calendar registers already compare theirs. */
+  function activeDisposition(checkId, dispositions, today) {
+    if (!checkId || !dispositions || !dispositions.length) return null;
+    var d = dispositions.find(function (x) { return x && x.checkId === checkId; });
+    if (!d) return null;
+    if (d.disposition !== 'alternative' && d.disposition !== 'notApplicable') return null;
+    if (d.reviewDue && today && d.reviewDue < today) return null;
+    return d;
+  }
+
   function checkResult(c, ctx) {
     if (c.scored === false) return 'manual';
     if (!ctx.lastResults) return null;
+
+    /* Deliberately after the lastResults guard: before any scan has run
+       there is nothing to override, and a tenant claiming an alternative
+       control still shouldn't read as a pass on a tenant nobody has
+       scanned yet. Deliberately before the demo remediation flip below,
+       because a disposition is the stronger statement — it says this
+       check is not scored from Microsoft signal at all, which makes the
+       flip moot.
+
+       'alternative' scores as a pass: the control is in place, just not
+       via Microsoft. 'notApplicable' returns 'manual', which score()
+       already excludes from its denominator — the check neither helps
+       nor hurts, exactly like a check that could not be measured.
+
+       Neither can reach 'demonstrated' assurance on a mapped control:
+       app.js's assuranceForControl() drops dispositioned checks from
+       the observation set entirely, so the control falls back to
+       whatever human evidence supports it (evidenced or asserted).
+       Checkpoint observed nothing here and must not imply it did. */
+    var disp = activeDisposition(c.id, ctx.checkDispositions, ctx.today);
+    if (disp) return disp.disposition === 'alternative' ? 'pass' : 'manual';
+
     var base = ctx.lastResults[c.id];
     if (ctx.isDemo && c.tpl) {
       var made = (ctx.risks || []).find(function (r) { return r.tpl === c.tpl; });
@@ -2543,7 +2597,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, score: score, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
