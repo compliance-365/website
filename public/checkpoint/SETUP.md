@@ -2318,6 +2318,28 @@ five report types render the exact chart composition above, with zero
 console/page errors, across a demo tenant with every framework
 entitled.
 
+### Device configuration profiles
+
+**"Device configuration profiles deployed"** reads
+`/deviceManagement/deviceConfigurations` and covers **A.8.9
+configuration management**, which previously had no automated signal of
+any kind.
+
+It uses `DeviceManagementConfiguration.Read.All` — a scope this app has
+requested at sign-in for a long time but never actually spent.
+
+**This check can pass or stay Manual, but never fails on an empty
+result**, and that is deliberate rather than timid. Modern Intune
+tenants increasingly configure everything through the **Settings
+Catalog** (`/deviceManagement/configurationPolicies`), which is still
+**beta-only** on Graph and therefore off-limits. A Settings-Catalog-only
+tenant is thoroughly configured and would return zero classic profiles,
+so scoring absence as a failure would be a false accusation against
+exactly the tenants doing it the newer way.
+
+Absence means *"cannot see"*, which is Manual. Revisit when the Settings
+Catalog API reaches v1.0.
+
 ### Device check-in staleness
 
 **"Managed devices checking in with Intune"** counts how many managed

@@ -464,6 +464,8 @@ window.Graph = (function () {
     if (!capabilities.intune.available) {
       set('device', 'manual', capabilities.intune.note);
       set('compliance-policy', 'manual', capabilities.intune.note);
+      set('device-config', 'manual', capabilities.intune.note);
+      set('device-checkin', 'manual', capabilities.intune.note);
     } else {
       try {
         /* lastSyncDateTime is added to the existing $select rather than
@@ -499,6 +501,34 @@ window.Graph = (function () {
       } catch (e) {
         set('device', 'review', 'Could not read Intune devices: ' + e.message);
         set('device-checkin', 'review', 'Could not read Intune devices: ' + e.message);
+      }
+
+      /* --- Device configuration profiles (A.8.9 configuration management)
+
+         Uses DeviceManagementConfiguration.Read.All, which this app has
+         requested at sign-in since long before tonight but never
+         actually spent — a granted permission doing nothing.
+
+         IMPORTANT: this check can pass or stay manual, but it can never
+         FAIL on an empty result, and that is not timidity. Modern Intune
+         tenants increasingly configure everything through the Settings
+         Catalog (/deviceManagement/configurationPolicies), which is
+         still BETA-only on Graph and therefore off-limits here. A
+         Settings-Catalog-only tenant is thoroughly configured and would
+         return zero classic profiles, so scoring absence as a failure
+         would be a false accusation against exactly the tenants doing
+         it the newer way. Absence means "cannot see", which is
+         'manual'. */
+      try {
+        var cfgs = await g('/deviceManagement/deviceConfigurations?$select=id,displayName&$top=50');
+        var cfgCount = (cfgs.value || []).length;
+        raw['device-config'] = { profiles: cfgCount };
+        set('device-config', cfgCount > 0 ? 'pass' : 'manual',
+          cfgCount > 0
+            ? cfgCount + ' device configuration profile' + (cfgCount === 1 ? '' : 's') + ' deployed (showing first page)'
+            : 'No classic device configuration profiles found. Graph v1.0 cannot read Settings Catalog policies, so this is "not visible" rather than "not configured" — record how devices are configured if it is done that way.');
+      } catch (e) {
+        set('device-config', 'review', 'Could not read Intune device configuration profiles: ' + e.message);
       }
 
       try {

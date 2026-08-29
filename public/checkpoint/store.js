@@ -446,6 +446,7 @@ window.CHECK_DEFS = [
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'device-checkin', area: 'Devices', label: 'Managed devices checking in with Intune', tpl: 'device-checkin', scored: true, requiresCapability: 'intune' },
+  { id: 'device-config', area: 'Devices', label: 'Device configuration profiles deployed', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
   /* Apps & Data (7) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
@@ -802,6 +803,7 @@ window.CHECK_CONTROLS = {
   'riskyusers': ['A.5.25', 'A.5.26'],
   'device': ['A.8.1'],
   'device-checkin': ['A.8.1'],
+  'device-config': ['A.8.9'],
   'compliance-policy': ['A.8.1'],
   'patch': ['A.8.8'],
   'wdac': ['A.8.7', 'A.8.19'],
@@ -1033,7 +1035,7 @@ window.DemoStore = (function () {
       ],
       lastResults: {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
-        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'patch': 'review',
+        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
         'privacy-srr': 'fail', 'retention': 'review'
@@ -1041,7 +1043,7 @@ window.DemoStore = (function () {
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
-        'compliance-policy': '3 compliance policies configured', 'device-checkin': '14 of 214 device(s) have not checked in for over 30 days (2 never have) — their compliance state is stale evidence', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
+        'compliance-policy': '3 compliance policies configured', 'device-checkin': '14 of 214 device(s) have not checked in for over 30 days (2 never have) — their compliance state is stale evidence', 'device-config': '11 device configuration profiles deployed (showing first page)', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
         'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',

@@ -471,7 +471,7 @@ window.GUIDANCE = {
     how: "Define and enforce secure configuration baselines for devices and key services — Intune security baselines are a fast way to apply Microsoft-recommended hardening across the fleet — and track configuration drift rather than assuming a one-time setup stays correct.",
     evidence: "The Intune security baseline assignment and a compliance/drift report against it.",
     link: "https://intune.microsoft.com",
-    checks: []
+    checks: ["device-config"]
   },
   'A.8.10': {
     how: "Ensure information is actually deleted when it's no longer needed — Purview retention policies can auto-delete at the end of a retention period, and Intune can remotely wipe a device. Don't rely on 'we'll get to it eventually'; set an automated end state for data that has a defined lifecycle.",
