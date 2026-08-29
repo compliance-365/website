@@ -58,7 +58,18 @@ window.CHECKPOINT_CONFIG = {
        tolerates — so this one commonly shows Manual for a
        security-reader-only scan account, which is expected, not a
        bug; see graph.js's capability note. */
-    'SharePointTenantSettings.Read.All'
+    'SharePointTenantSettings.Read.All',
+    /* Added for the Defender XDR incident-triage check (graph.js's
+       'defenderXdr' capability probe). Same one-time incremental-consent
+       prompt on next sign-in as the two scopes above — never a breaking
+       change to what a tenant has already granted.
+
+       Least privilege for reading incidents: SecurityIncident.Read.All,
+       not the ReadWrite variant. Checkpoint reports on incidents and
+       never touches them — assigning, classifying or resolving an
+       incident is the SOC's job in Defender, and a compliance tool that
+       could quietly close incidents would be a genuinely bad idea. */
+    'SecurityIncident.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

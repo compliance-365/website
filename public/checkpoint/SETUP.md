@@ -75,6 +75,7 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `SensitivityLabels.Read.All` | Read published Purview sensitivity labels (classification/labelling check; requires Purview Information Protection) | Yes |
 | `AccessReview.Read.All` | Whether periodic Entra Access Reviews are configured (access-rights review check; requires Entra ID Governance) | Yes |
 | `SharePointTenantSettings.Read.All` | Tenant-wide external sharing setting (external-sharing check; the signed-in user must hold the SharePoint Administrator or Global Administrator role) | Yes |
+| `SecurityIncident.Read.All` | Read the Defender XDR incident queue (incident-triage check; requires a Defender XDR plan). Read-only by design — Checkpoint never assigns, classifies or resolves an incident | Yes |
 
 **Stage 2 — requested the first time registers are loaded/created**
 (`Store.load()`, i.e. the first time anyone opens Checkpoint in this
@@ -2313,6 +2314,60 @@ tests. Verified end to end with headless Chromium (Playwright): all
 five report types render the exact chart composition above, with zero
 console/page errors, across a demo tenant with every framework
 entitled.
+
+### Defender XDR incident triage
+
+The **"Security incidents triaged within cadence"** check reads the
+Microsoft Defender XDR incident queue through Microsoft Graph
+(`/security/incidents`, GA on v1.0) using the delegated
+`SecurityIncident.Read.All` scope — least privilege, read-only.
+Checkpoint reports on incidents and never modifies them: assigning,
+classifying and resolving are the SOC's job in Defender, and a
+compliance tool that could quietly close incidents would be a bad idea.
+
+Existing tenants hit Entra's incremental-consent prompt once, on the
+next sign-in, for this one scope — the same shape as any other added
+delegated scope, never a breaking change to what is already granted.
+
+**It scores the age of unresolved high-severity incidents, never the
+count.** A tenant with plenty of incidents is not less compliant than
+one with none — often the reverse, since it means detection is working
+and someone is looking. What ISO 27001 A.5.26 and CPS 234 actually ask
+is whether the serious ones get worked within a committed timeframe.
+
+| Outcome | When |
+|---|---|
+| **Pass** | No high-severity incident open beyond the triage window, none unassigned |
+| **Review** | A high-severity incident has no owner, even inside the window |
+| **Fail** | A high-severity incident is open beyond the triage window |
+
+The window is the `incidentTriageDays` setting (default **5 days**, set
+on Frameworks → thresholds). Set it to whatever your own incident
+response plan commits to — the default is a starting point, not a
+standard.
+
+Two deliberate details: resolved and redirected incidents are excluded
+(a resolved incident is evidence the process works; a redirected one is
+merged into another and would double-count), and an incident with an
+unparseable creation date is never counted as overdue — inventing a
+failure out of missing data is how a posture score loses credibility.
+
+Because it reads real records rather than a Secure Score proxy, this is
+the first check that can support **Demonstrated** assurance on the
+controls it maps to (ISO 27001 A.5.25, A.5.26) instead of capping them
+at a practitioner's assertion. The other frameworks' equivalents
+(SOC 2 CC7.x, NIST CSF RS.\*, CPS 234) ship in the encrypted content
+packs and are mapped there, not in this repo.
+
+A tenant with no Defender XDR plan sees the check as **Manual** and
+loses nothing — `score()` excludes an unmeasured check from its
+denominator entirely. A tenant handling incidents in another product
+should record that with the disposition mechanism below.
+
+**Tests**: `test/incident-triage.test.mjs` pins the scoring boundaries —
+the strictly-greater-than window edge, configurable and zero-day
+windows, severity and status filtering, unparseable dates, and that
+volume alone never fails.
 
 ### Checks covered outside Microsoft
 

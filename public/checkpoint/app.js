@@ -284,6 +284,18 @@ function showModal(opts) {
       risk: { title: 'Patch latency leaves known vulnerabilities exploitable', cat: 'Ops', L: 4, I: 4, controls: ['A.8.8'] },
       actions: [{ t: 'Tighten Intune update rings to 7-day deferral with compliance gate', pr: 'High', days: 21, control: 'A.8.8' }]
     },
+    /* A.5.26 is response to incidents; A.5.25 is assessment and
+       decision. Both are the controls an auditor tests when incidents
+       sit open — the gap is the response process, not detection, which
+       is why neither action here is about buying more tooling. */
+    'xdr-incidents': {
+      risk: { title: 'High-severity incidents remain open beyond the committed triage window', cat: 'Ops', L: 4, I: 4, controls: ['A.5.25', 'A.5.26'] },
+      actions: [
+        { t: 'Triage and close the high-severity incidents open beyond the triage window', pr: 'Critical', days: 7, control: 'A.5.26' },
+        { t: 'Assign a named owner to every unassigned high-severity incident', pr: 'High', days: 7, control: 'A.5.25' },
+        { t: 'Confirm the incident response plan states the triage window this check measures against', pr: 'Medium', days: 30, control: 'A.5.24' }
+      ]
+    },
     'backup': {
       risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
@@ -318,7 +330,7 @@ function showModal(opts) {
      site that lists capability areas (the Coverage card, the wizard's
      capability-check step, the report Methodology appendix) reads this
      one array rather than each keeping its own copy in sync by hand. */
-  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
+  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr'];
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -13122,7 +13134,8 @@ function showModal(opts) {
         secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' },
         sensitivityLabels: { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
         accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' },
-        sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' }
+        sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' },
+        defenderXdr: { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', available: true, status: 'available', note: '' }
       };
       applyAwsCapability();
       return;

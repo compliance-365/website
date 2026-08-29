@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.42.0',
+    date: '2026-08-29',
+    entries: [
+      'New posture check: "Security incidents triaged within cadence", reading the Microsoft Defender XDR incident queue directly. Until now the closest thing was an alerts check inferred from Secure Score — a score about a product, not a record of what actually happened. This reads real incidents with real timestamps.',
+      'It scores the age of unresolved high-severity incidents, never the incident count. A tenant with plenty of incidents is not less compliant than one with none — often the reverse, since it means detection is working and people are looking. What an auditor asks is whether the serious ones get worked within a timeframe you have committed to, so that is what is measured. An unassigned high-severity incident is flagged for review even inside the window, because nobody owning it is how it becomes overdue.',
+      'The triage window is a setting (default 5 days) — set it to whatever your own incident response plan commits to rather than treating the default as a standard.',
+      'Because it reads real records, this is the first check able to support "Demonstrated" assurance on ISO 27001 A.5.25 and A.5.26 rather than capping them at a practitioner\'s assertion. Tenants without a Defender XDR plan see it as Manual and lose nothing — an unmeasured check is excluded from the posture score entirely — and anyone handling incidents in another product can say so with the "Not via Microsoft?" button added last release.'
+    ]
+  },
+  {
     version: '1.41.0',
     date: '2026-08-29',
     entries: [

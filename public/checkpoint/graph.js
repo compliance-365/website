@@ -192,7 +192,15 @@ window.Graph = (function () {
     { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', path: '/identityGovernance/accessReviews/definitions?$top=1',
       note: 'Access Reviews requires Entra ID Governance — the periodic access-rights-review check will show as Manual.' },
     { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', path: '/admin/sharepoint/settings?$select=sharingCapability',
-      note: 'Reading tenant-wide SharePoint sharing settings needs the SharePoint Administrator role specifically — the external-sharing check will show as Manual for a Security Reader-level scan account.' }
+      note: 'Reading tenant-wide SharePoint sharing settings needs the SharePoint Administrator role specifically — the external-sharing check will show as Manual for a Security Reader-level scan account.' },
+    /* Microsoft Graph's /security/incidents is GA on v1.0 (it is the
+       Defender XDR incident queue, not the older legacy alerts API).
+       A tenant without a Defender XDR plan has no incident queue to
+       read at all, so this probe distinguishes "no Defender" from
+       "Defender, and genuinely nothing open" — which are the same empty
+       array on the wire but opposite compliance answers. */
+    { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', path: '/security/incidents?$top=1',
+      note: 'No readable Defender XDR incident queue — the incident-triage check will show as Manual. If incidents are handled in another product, record that on the check itself rather than leaving it unanswered.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -297,6 +305,7 @@ window.Graph = (function () {
     var deviceCompliancePassPct = num('deviceCompliancePassPct', 95);
     var deviceComplianceReviewPct = num('deviceComplianceReviewPct', 80);
     var riskyUsersReviewMax = num('riskyUsersReviewMax', 3);
+    var incidentTriageDays = num('incidentTriageDays', 5);
 
     /* Consulted below so a licence/permission gap this tenant genuinely
        has (no Entra ID P2, no Intune, etc.) shows up as a clean,
@@ -630,6 +639,50 @@ window.Graph = (function () {
     fromSecureScore('alerts',     'Verify Defender/Purview threat protection policies and alert triage cadence');
     fromSecureScore('dlp',        'Verify Data Loss Prevention policy coverage in Microsoft Purview');
     fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
+
+    /* --- Defender XDR incident triage ---
+
+       The first check in Checkpoint that reads real incident records
+       rather than inferring from a score. That matters for assurance:
+       ISO 27001 A.5.26 and CPS 234's notification obligations are about
+       whether incidents are actually RESPONDED TO, and until now the
+       only signal for that was a practitioner ticking a box.
+
+       Scored on the age of unresolved high-severity incidents, not on
+       incident COUNT. A tenant with many incidents is not less compliant
+       than one with none — often the opposite, since it means detection
+       is working. What an auditor asks is whether the serious ones get
+       worked within a defined timeframe, which is what this measures.
+
+       Deliberately reads only 'active' incidents. A resolved incident is
+       evidence the process works; a redirected one has been merged into
+       another incident and would double-count. */
+    if (!capabilities.defenderXdr.available) {
+      set('xdr-incidents', 'manual', capabilities.defenderXdr.note);
+    } else {
+      try {
+        var incidents = await gAll("/security/incidents?$filter=status eq 'active'&$select=id,severity,status,createdDateTime,assignedTo,classification&$top=999");
+        /* Scoring lives in lib.js's incidentTriageResult() so it is unit
+           testable without a Graph call; this function keeps the query
+           and the human-readable note.
+
+           This is graph.js's only reference to CheckpointLib, and
+           index.html loads lib.js AFTER graph.js. That is safe because
+           this resolves when a scan RUNS, never at load — but it means
+           nothing in this file may reference CheckpointLib at module
+           scope without moving lib.js earlier in the script order. */
+        var tri = window.CheckpointLib.incidentTriageResult(incidents, incidentTriageDays, Date.now());
+        raw['xdr-incidents'] = { active: tri.active, highOpen: tri.highOpen, overdue: tri.overdue, unassigned: tri.unassigned, triageDays: incidentTriageDays };
+        var incidentNote = tri.active === 0
+          ? 'No active incidents in the Defender XDR queue'
+          : tri.active + ' active incident(s), ' + tri.highOpen + ' high severity' +
+            (tri.overdue ? '; ' + tri.overdue + ' open beyond the ' + incidentTriageDays + '-day triage window' : '') +
+            (tri.unassigned ? '; ' + tri.unassigned + ' high-severity unassigned' : '');
+        set('xdr-incidents', tri.result, incidentNote);
+      } catch (e) {
+        set('xdr-incidents', 'review', 'Defender XDR incidents not readable: ' + e.message);
+      }
+    }
 
     /* --- Checks with no Graph signal at all — always "manual", never
        silently marked pass. Recorded here so the stored scan detail is
