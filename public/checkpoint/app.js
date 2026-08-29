@@ -3093,7 +3093,14 @@ function showModal(opts) {
     if (window._docs) return;
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      /* The policy and bcp checks score from this register, and it was
+         empty when applyRegisterCheckResults() last ran — recompute now
+         that it is loaded, or those two would sit on a first-paint
+         'manual' for the rest of the session. renderScanChecks too, so
+         the Posture scan view reflects it without needing a re-scan. */
+      applyRegisterCheckResults();
       renderDash();
+      renderScanChecks(true);
     }).catch(function (e) { console.error(e); });
   }
 
@@ -6278,11 +6285,23 @@ function showModal(opts) {
     var today = new Date().toISOString().slice(0, 10);
     var L = window.CheckpointLib;
     S.lastNotes = S.lastNotes || {};
+    /* window._docs, NOT S.documents. The document library is a SharePoint
+       drive rather than a list, so a live tenant loads it separately into
+       window._docs (see loadDocumentRegisterInBackground) and S.documents
+       exists only in demo mode. Reading S.documents here worked perfectly
+       in demo and would have returned an empty register — and therefore a
+       permanent 'manual' — on every real tenant. The S.documents fallback
+       is kept only for the window before window._docs is first assigned.
+
+       Because that load is async, this function is called again when it
+       completes; otherwise the policy and bcp checks would be computed
+       against an empty register on the first paint and never revisited. */
+    var docs = window._docs || S.documents || [];
     var out = {
       backup: L.backupCheckResult(S.calendar || [], today),
-      bcp: L.bcpCheckResult(S.calendar || [], S.documents || [], today),
+      bcp: L.bcpCheckResult(S.calendar || [], docs, today),
       supplier: L.supplierCheckResult(S.vendors || [], today),
-      policy: L.policyCheckResult(S.documents || [], today, { warnDays: S.settings && S.settings.docReviewWarnDays })
+      policy: L.policyCheckResult(docs, today, { warnDays: S.settings && S.settings.docReviewWarnDays })
     };
     Object.keys(out).forEach(function (k) {
       S.lastResults[k] = out[k].result;
