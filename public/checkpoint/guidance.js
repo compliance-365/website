@@ -60,7 +60,7 @@ window.GUIDANCE = {
     how: "Publish a single, version-controlled information security policy set (acceptable use, access, incident response and so on) in a Purview or SharePoint policy library with a named owner and a review date. Review it at least annually or after a material change — a new framework, an incident, a restructure — and record when that happened. Make it genuinely discoverable (an intranet link, an onboarding step), not just filed away.",
     evidence: "The current dated policy document with a named approver, a review history showing at least one prior review, and confirmation staff can actually locate it.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["policy"]
   },
   'A.5.2': {
     how: "Document who owns each ISMS responsibility — ISMS manager, control owners, incident responder — in an org chart or RACI matrix, and mirror that in Entra role assignments so accountability is enforced through real access, not just written down. Update it the day a role changes hands, not at the next audit.",
@@ -168,13 +168,13 @@ window.GUIDANCE = {
     how: "Keep a vendor risk register recording what data each supplier can access and their own security posture — Checkpoint's Vendor register is built for exactly this — and require a security review before onboarding any supplier that touches your data. Set a minimum security bar in the supplier contract itself, not just in your own process.",
     evidence: "The vendor risk register with data-access classification recorded, and a pre-onboarding security review for a sample supplier.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["supplier"]
   },
   'A.5.20': {
     how: "Include specific security clauses in supplier agreements — data handling, breach notification timeframes, right-to-audit, subcontractor disclosure — rather than a generic confidentiality clause. Use a standard security schedule template so this doesn't get negotiated away deal by deal.",
     evidence: "A supplier contract or security schedule containing the specific clauses, for a sample of active suppliers.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["supplier"]
   },
   'A.5.21': {
     how: "Review third-party application access into your tenant regularly — Entra's enterprise app and OAuth consent list is the source of truth — and revoke anything with high-privilege scopes that isn't clearly justified. Checkpoint's posture scan already flags risky OAuth grants on every run, so this becomes a triage task rather than a from-scratch audit.",
@@ -186,7 +186,7 @@ window.GUIDANCE = {
     how: "Set a review cadence for existing supplier relationships — annual is typical for critical suppliers — checking their certifications are still current and their access is still appropriate. Checkpoint's Vendor register tracks next-review dates and flags overdue ones on the Dashboard.",
     evidence: "Vendor review records showing the review actually happened on schedule, visible in the vendor register's review-status field.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["supplier"]
   },
   'A.5.23': {
     how: "Govern which cloud services staff can use with Conditional Access app restrictions and, if licensed, Defender for Cloud Apps' app governance and shadow-IT discovery. Require new cloud services to go through the same supplier-review process as any other vendor before adoption.",
@@ -228,13 +228,13 @@ window.GUIDANCE = {
     how: "Define which security controls must keep operating during a disruption (access control and logging shouldn't lapse just because a disaster recovery plan is in effect) and build that into your business continuity plan explicitly, rather than assuming security is someone else's problem during an outage.",
     evidence: "The business continuity plan showing security controls are explicitly addressed for a disruption scenario.",
     link: "https://admin.microsoft.com",
-    checks: []
+    checks: ["bcp"]
   },
   'A.5.30': {
     how: "Confirm your ICT recovery capability actually meets your continuity requirements — Microsoft 365's own service resilience covers the platform, but your own backup/restore capability for mailbox, SharePoint and Teams data (a third-party or Microsoft 365 Backup solution) needs its own tested recovery point and time objectives.",
     evidence: "A documented recovery time/point objective for ICT systems and a record of at least one restore test.",
     link: "https://admin.microsoft.com",
-    checks: []
+    checks: ["bcp"]
   },
   'A.5.31': {
     how: "Maintain a register of the legal, regulatory and contractual requirements that actually apply to you (Privacy Act 1988, sector-specific regulation, client contract terms) and review it when your business or the law changes. This underpins several other controls, so keep it current rather than a one-off exercise.",
@@ -252,13 +252,13 @@ window.GUIDANCE = {
     how: "Define retention periods for the records you're legally or contractually required to keep, and implement them with Purview retention labels and policies so records aren't deleted early or kept indefinitely by default. Review the retention schedule when a new regulatory obligation applies.",
     evidence: "The retention schedule and the corresponding Purview retention labels/policies configured to match it.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["retention"]
   },
   'A.5.34': {
     how: "Assess privacy impact before processing new categories of personal information — Purview's Privacy Risk Management can help identify overshared personal data in the tenant — and align your approach with the Privacy Act 1988's Australian Privacy Principles where personal information of Australian individuals is involved.",
     evidence: "A privacy impact assessment for a new or significant processing activity, and, where used, a Purview Privacy Risk Management report.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["privacy-srr"]
   },
   'A.5.35': {
     how: "Have someone independent of day-to-day operations — an internal audit function, an external consultant, or at minimum a peer from another team — review the ISMS at least annually and record findings. Checkpoint's own internal audit programme and management review registers are built to hold exactly this evidence.",
@@ -423,7 +423,7 @@ window.GUIDANCE = {
     how: "Enrol every endpoint accessing company data into Intune, apply a compliance policy (encryption, OS version, security baseline) and block access from non-compliant devices through Conditional Access. Checkpoint's device-compliance and compliance-policy checks read this configuration directly on every scan.",
     evidence: "The Intune compliance policy configuration, device compliance reporting, and Checkpoint's device/compliance-policy scan results.",
     link: "https://intune.microsoft.com",
-    checks: ["device", "compliance-policy"]
+    checks: ["device", "compliance-policy", "device-checkin"]
   },
   'A.8.2': {
     how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access) — Checkpoint's admin-count and PIM checks both watch this directly, and its access-review check confirms privileged role membership is also reviewed periodically, not just gated by PIM at assignment time.",
@@ -471,13 +471,13 @@ window.GUIDANCE = {
     how: "Define and enforce secure configuration baselines for devices and key services — Intune security baselines are a fast way to apply Microsoft-recommended hardening across the fleet — and track configuration drift rather than assuming a one-time setup stays correct.",
     evidence: "The Intune security baseline assignment and a compliance/drift report against it.",
     link: "https://intune.microsoft.com",
-    checks: []
+    checks: ["device-config"]
   },
   'A.8.10': {
     how: "Ensure information is actually deleted when it's no longer needed — Purview retention policies can auto-delete at the end of a retention period, and Intune can remotely wipe a device. Don't rely on 'we'll get to it eventually'; set an automated end state for data that has a defined lifecycle.",
     evidence: "Purview retention/deletion policy configuration and Intune wipe confirmations for decommissioned devices.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["retention"]
   },
   'A.8.11': {
     how: "Mask or redact sensitive data fields in non-production environments (test/dev databases shouldn't hold real customer data unmasked) — this is more relevant to organisations running their own applications than pure SaaS consumers, and can be scoped down accordingly where it doesn't apply.",
@@ -495,7 +495,7 @@ window.GUIDANCE = {
     how: "Back up business-critical data — Exchange, SharePoint and Teams content isn't fully covered by Microsoft's own retention by default, so a dedicated backup solution (Microsoft 365 Backup or a third party) is usually needed — and actually test a restore periodically rather than trusting the backup job succeeded.",
     evidence: "The backup solution's configuration and a documented restore test with its outcome.",
     link: "https://admin.microsoft.com",
-    checks: []
+    checks: ["backup"]
   },
   'A.8.14': {
     how: "Build redundancy into information-processing facilities proportionate to your availability requirements — Microsoft 365's own service architecture provides substantial redundancy for the platform itself; document what you inherit versus what you're responsible for (e.g. your own line-of-business application hosting).",

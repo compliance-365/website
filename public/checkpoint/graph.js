@@ -200,7 +200,16 @@ window.Graph = (function () {
        "Defender, and genuinely nothing open" — which are the same empty
        array on the wire but opposite compliance answers. */
     { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', path: '/security/incidents?$top=1',
-      note: 'No readable Defender XDR incident queue — the incident-triage check will show as Manual. If incidents are handled in another product, record that on the check itself rather than leaving it unanswered.' }
+      note: 'No readable Defender XDR incident queue — the incident-triage check will show as Manual. If incidents are handled in another product, record that on the check itself rather than leaving it unanswered.' },
+    /* Priva subject rights requests. NOTE the /security path: the older
+       /privacy/subjectRightsRequests node is deprecated and stopped
+       returning data in March 2025, so anything still pointing there
+       reads as an empty tenant rather than erroring — which would look
+       exactly like "no requests" and quietly score a pass. */
+    { key: 'priva', label: 'Microsoft Priva subject rights requests', licence: 'Microsoft Priva (Subject Rights Requests)', path: '/security/subjectRightsRequests?$top=1',
+      note: 'No readable subject rights request queue — the privacy-request check will show as Manual. If data subject requests are tracked in another system, record that on the check itself.' },
+    { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', path: '/security/labels/retentionLabels?$top=1',
+      note: 'No readable retention labels — the retention/disposal check will show as Manual. Delegated access only: this endpoint has no application-permission equivalent, so an unattended scan cannot answer it either.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -306,6 +315,7 @@ window.Graph = (function () {
     var deviceComplianceReviewPct = num('deviceComplianceReviewPct', 80);
     var riskyUsersReviewMax = num('riskyUsersReviewMax', 3);
     var incidentTriageDays = num('incidentTriageDays', 5);
+    var deviceStaleDays = num('deviceStaleDays', 30);
 
     /* Consulted below so a licence/permission gap this tenant genuinely
        has (no Entra ID P2, no Intune, etc.) shows up as a clean,
@@ -454,20 +464,71 @@ window.Graph = (function () {
     if (!capabilities.intune.available) {
       set('device', 'manual', capabilities.intune.note);
       set('compliance-policy', 'manual', capabilities.intune.note);
+      set('device-config', 'manual', capabilities.intune.note);
+      set('device-checkin', 'manual', capabilities.intune.note);
     } else {
       try {
-        var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState&$top=999');
+        /* lastSyncDateTime is added to the existing $select rather than
+           fetched separately — same call, same permission, one more
+           field, and it powers the device-checkin check below. */
+        var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState,lastSyncDateTime&$top=999');
         raw['device'] = { managedDevices: devs };
         if (!devs.length) {
           set('device', 'review', 'No Intune-managed devices found');
+          set('device-checkin', 'review', 'No Intune-managed devices found');
         } else {
           var ok = devs.filter(function (d) { return d.complianceState === 'compliant'; }).length;
           var pct = Math.round(ok / devs.length * 100);
           set('device', pct >= deviceCompliancePassPct ? 'pass' : pct >= deviceComplianceReviewPct ? 'review' : 'fail',
             pct + '% of ' + devs.length + ' devices compliant (target ≥' + deviceCompliancePassPct + '%, review ≥' + deviceComplianceReviewPct + '%)');
+
+          /* A device that has not contacted Intune in weeks is not
+             managed in any meaningful sense — it is not receiving
+             policy, configuration or updates, and its last reported
+             compliance state is stale evidence rather than current
+             evidence. That is a distinct finding from "reported
+             non-compliant", which is why it is its own check: a fleet
+             can read 100% compliant precisely BECAUSE the
+             non-compliant devices stopped checking in. */
+          var dc = window.CheckpointLib.deviceCheckinResult(devs, deviceStaleDays, Date.now());
+          raw['device-checkin'] = { total: dc.total, stale: dc.stale, never: dc.never, staleDays: deviceStaleDays };
+          set('device-checkin', dc.result,
+            dc.stale || dc.never
+              ? dc.stale + ' of ' + dc.total + ' device(s) have not checked in for over ' + deviceStaleDays + ' days' +
+                (dc.never ? ' (' + dc.never + ' never have)' : '') + ' — their compliance state is stale evidence'
+              : 'All ' + dc.total + ' managed device(s) checked in within ' + deviceStaleDays + ' days');
         }
       } catch (e) {
         set('device', 'review', 'Could not read Intune devices: ' + e.message);
+        set('device-checkin', 'review', 'Could not read Intune devices: ' + e.message);
+      }
+
+      /* --- Device configuration profiles (A.8.9 configuration management)
+
+         Uses DeviceManagementConfiguration.Read.All, which this app has
+         requested at sign-in since long before tonight but never
+         actually spent — a granted permission doing nothing.
+
+         IMPORTANT: this check can pass or stay manual, but it can never
+         FAIL on an empty result, and that is not timidity. Modern Intune
+         tenants increasingly configure everything through the Settings
+         Catalog (/deviceManagement/configurationPolicies), which is
+         still BETA-only on Graph and therefore off-limits here. A
+         Settings-Catalog-only tenant is thoroughly configured and would
+         return zero classic profiles, so scoring absence as a failure
+         would be a false accusation against exactly the tenants doing
+         it the newer way. Absence means "cannot see", which is
+         'manual'. */
+      try {
+        var cfgs = await g('/deviceManagement/deviceConfigurations?$select=id,displayName&$top=50');
+        var cfgCount = (cfgs.value || []).length;
+        raw['device-config'] = { profiles: cfgCount };
+        set('device-config', cfgCount > 0 ? 'pass' : 'manual',
+          cfgCount > 0
+            ? cfgCount + ' device configuration profile' + (cfgCount === 1 ? '' : 's') + ' deployed (showing first page)'
+            : 'No classic device configuration profiles found. Graph v1.0 cannot read Settings Catalog policies, so this is "not visible" rather than "not configured" — record how devices are configured if it is done that way.');
+      } catch (e) {
+        set('device-config', 'review', 'Could not read Intune device configuration profiles: ' + e.message);
       }
 
       try {
@@ -636,7 +697,34 @@ window.Graph = (function () {
     fromSecureScore('macro',      'Verify Office macro hardening policy');
     fromSecureScore('logging',    'Verify unified audit logging in Purview');
     fromSecureScore('wdac',       'Verify application control (WDAC / App Control for Business)');
-    fromSecureScore('alerts',     'Verify Defender/Purview threat protection policies and alert triage cadence');
+    /* 'alerts' prefers a DIRECT read of the Defender XDR alert queue and
+       only falls back to the Secure Score proxy below when Defender XDR
+       is not available to this tenant.
+
+       Direct-read-with-proxy-fallback rather than a straight
+       replacement, deliberately: a tenant without Defender XDR keeps
+       exactly the signal it had, so nobody loses coverage, while a
+       licensed tenant stops being scored on a name match against
+       Secure Score control identifiers and starts being scored on
+       whether alerts are actually being worked. Same check, better
+       evidence where the evidence exists. */
+    var alertsScored = false;
+    if (capabilities.defenderXdr.available) {
+      try {
+        var alertRows = await gAll("/security/alerts_v2?$filter=status eq 'newAlert' or status eq 'inProgress'&$select=id,severity,status,createdDateTime,assignedTo,serviceSource&$top=999");
+        var at = window.CheckpointLib.alertTriageResult(alertRows, incidentTriageDays, Date.now());
+        raw['alerts'] = { open: at.open, highUntouched: at.highUntouched, stale: at.stale, triageDays: incidentTriageDays, source: 'defenderXdr' };
+        set('alerts', at.result, at.open === 0
+          ? 'No open Defender XDR alerts awaiting triage'
+          : at.open + ' open alert(s), ' + at.highUntouched + ' high severity never opened' +
+            (at.stale ? '; ' + at.stale + ' untouched beyond the ' + incidentTriageDays + '-day triage window' : ''));
+        alertsScored = true;
+      } catch (e) {
+        /* Fall through to the Secure Score proxy rather than failing the
+           check — an unreadable alert queue is not evidence of anything. */
+      }
+    }
+    if (!alertsScored) fromSecureScore('alerts', 'Verify Defender/Purview threat protection policies and alert triage cadence');
     fromSecureScore('dlp',        'Verify Data Loss Prevention policy coverage in Microsoft Purview');
     fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
 
@@ -666,11 +754,9 @@ window.Graph = (function () {
            testable without a Graph call; this function keeps the query
            and the human-readable note.
 
-           This is graph.js's only reference to CheckpointLib, and
-           index.html loads lib.js AFTER graph.js. That is safe because
-           this resolves when a scan RUNS, never at load — but it means
-           nothing in this file may reference CheckpointLib at module
-           scope without moving lib.js earlier in the script order. */
+           index.html loads lib.js BEFORE graph.js precisely so this and
+           the other CheckpointLib call sites in this file are safe at
+           any point in the lifecycle, not just at scan time. */
         var tri = window.CheckpointLib.incidentTriageResult(incidents, incidentTriageDays, Date.now());
         raw['xdr-incidents'] = { active: tri.active, highOpen: tri.highOpen, overdue: tri.overdue, unassigned: tri.unassigned, triageDays: incidentTriageDays };
         var incidentNote = tri.active === 0
@@ -684,14 +770,63 @@ window.Graph = (function () {
       }
     }
 
-    /* --- Checks with no Graph signal at all — always "manual", never
-       silently marked pass. Recorded here so the stored scan detail is
-       self-consistent even though checkResult() also forces this. --- */
-    set('backup',   'manual', 'Backup coverage and restore testing require manual verification');
-    set('bcp',      'manual', 'Business continuity / disaster recovery plan requires manual verification');
-    set('supplier', 'manual', 'Supplier security assessment currency requires manual verification');
-    set('policy',   'manual', 'Information security policy publication & review cadence require manual verification');
-    set('training', 'manual', 'Security awareness training completion requires manual verification');
+    /* --- Privacy: subject rights requests (Microsoft Priva) --- */
+    if (!capabilities.priva.available) {
+      set('privacy-srr', 'manual', capabilities.priva.note);
+    } else {
+      try {
+        var srrs = await gAll('/security/subjectRightsRequests?$select=id,status,dueDateTime,createdDateTime,type&$top=999');
+        var sr = window.CheckpointLib.subjectRightsResult(srrs, new Date().toISOString().slice(0, 10));
+        raw['privacy-srr'] = sr;
+        set('privacy-srr', sr.result, sr.open === 0
+          ? 'No open subject rights requests'
+          : sr.open + ' open request(s)' +
+            (sr.overdue ? '; ' + sr.overdue + ' PAST their statutory due date' : '') +
+            (sr.dueSoon ? '; ' + sr.dueSoon + ' due within 7 days' : ''));
+      } catch (e) {
+        set('privacy-srr', 'review', 'Subject rights requests not readable: ' + e.message);
+      }
+    }
+
+    /* --- Privacy: retention & disposal (Microsoft Purview) --- */
+    if (!capabilities.recordsManagement.available) {
+      set('retention', 'manual', capabilities.recordsManagement.note);
+    } else {
+      try {
+        var labels = await gAll('/security/labels/retentionLabels?$select=id,displayName,labelStatus,retentionDuration,actionAfterRetentionPeriod&$top=999');
+        var rl = window.CheckpointLib.retentionLabelResult(labels);
+        raw['retention'] = rl;
+        set('retention', rl.result, rl.total === 0
+          ? 'No retention labels configured — content is retained and deleted by nothing but habit'
+          : rl.published + ' of ' + rl.total + ' retention label(s) published' +
+            (rl.withDisposition ? ', ' + rl.withDisposition + ' with an end-of-retention action' : ', none with an end-of-retention action — retained content is never disposed of'));
+      } catch (e) {
+        set('retention', 'review', 'Retention labels not readable: ' + e.message);
+      }
+    }
+
+    /* --- Checks with no MICROSOFT GRAPH signal ---
+
+       These five are not unautomatable — they are scored from
+       Checkpoint's own registers instead (Calendar, Documents, Vendors
+       and Training), by app.js's applyTrainingCheckResult() and
+       applyRegisterCheckResults() immediately after this function
+       returns. See lib.js's backupCheckResult() and friends for the
+       reasoning; the short version is that the evidence an auditor
+       wants for "are backups tested" is a restore-test record, which is
+       a Calendar row rather than anything Graph can answer.
+
+       They are seeded 'manual' here anyway, deliberately, for two
+       reasons. A stored scan detail stays self-consistent if it is ever
+       read without the client-side pass having run; and 'manual' is the
+       right answer for a tenant whose registers are empty, which is
+       exactly what those functions return in that case. Never seeded
+       'pass' — silence is not evidence. --- */
+    set('backup',   'manual', 'Backup restore testing is scored from the Checkpoint calendar');
+    set('bcp',      'manual', 'Continuity plan and failover testing are scored from the Checkpoint document register and calendar');
+    set('supplier', 'manual', 'Supplier assessment currency is scored from the Checkpoint vendor register');
+    set('policy',   'manual', 'Policy publication and review cadence are scored from the Checkpoint document register');
+    set('training', 'manual', 'Security awareness training completion is scored from the Checkpoint training register');
 
     return { results: results, notes: notes, raw: raw, secureScore: ss ? { current: ss.currentScore, max: ss.maxScore } : null };
   }

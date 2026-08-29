@@ -428,6 +428,305 @@
     return { result: result, note: note, pct: pct, completed: completed, total: list.length, overdue: overdue };
   }
 
+  /* Scores the Defender XDR alert queue (graph.js's 'alerts' check when
+     Defender XDR is available). Sibling to incidentTriageResult().
+
+     Alerts and incidents are not the same signal and are not scored the
+     same way. An incident groups related alerts and is meant to be
+     worked; alerts are high-volume and mostly auto-resolve, so scoring
+     on "any unresolved alert" would produce a permanently red check
+     that everyone learns to ignore — the opposite of useful.
+
+     What matters is alerts NOBODY HAS LOOKED AT. Status 'newAlert'
+     means untouched; 'inProgress' means someone is on it. A
+     high-severity alert still sitting at newAlert days later is a
+     genuine gap in the triage process, and that is what this measures.
+
+     Same missing-date rule as incidents: an alert whose createdDateTime
+     will not parse is never counted as stale. */
+  function alertTriageResult(alerts, triageDays, nowMs) {
+    var list = (alerts || []).filter(function (a) {
+      return a && (a.status === 'newAlert' || a.status === 'inProgress');
+    });
+    var highNew = list.filter(function (a) { return a.severity === 'high' && a.status === 'newAlert'; });
+    var staleMs = (typeof triageDays === 'number' && triageDays >= 0 ? triageDays : 5) * 86400000;
+    var stale = highNew.filter(function (a) {
+      var created = Date.parse(a.createdDateTime || '');
+      return !isNaN(created) && (nowMs - created) > staleMs;
+    });
+    return {
+      open: list.length, highUntouched: highNew.length, stale: stale.length,
+      result: stale.length ? 'fail' : (highNew.length ? 'review' : 'pass')
+    };
+  }
+
+  /* Intune device check-in staleness (graph.js's 'device-checkin').
+
+     Distinct from the compliance-percentage check, and deliberately so:
+     a fleet can read 100% compliant precisely BECAUSE the
+     non-compliant devices stopped checking in and their last-known
+     state froze. A device that has not contacted Intune in weeks is not
+     receiving policy, configuration or updates, and its compliance
+     state is stale evidence rather than current evidence.
+
+     This uses lastSyncDateTime, which is added to the existing
+     managedDevices $select — no new Graph permission, no new licence,
+     so it works on every tenant that already has the device check.
+
+     A device with no lastSyncDateTime at all counts as 'never', which
+     is worse than stale, not better. That differs from the
+     missing-date rule elsewhere in this file (where an unparseable
+     date is never counted against a tenant) because the semantics are
+     opposite: an incident with no creation date tells us nothing about
+     its age, but a managed device with no sync date has demonstrably
+     never reported in. */
+  function deviceCheckinResult(devices, staleDays, nowMs) {
+    var list = (devices || []).filter(function (d) { return d; });
+    if (!list.length) return { total: 0, stale: 0, never: 0, result: 'review' };
+    var limit = (typeof staleDays === 'number' && staleDays > 0 ? staleDays : 30) * 86400000;
+    var never = list.filter(function (d) { return !d.lastSyncDateTime; });
+    var stale = list.filter(function (d) {
+      if (!d.lastSyncDateTime) return true;
+      var t = Date.parse(d.lastSyncDateTime);
+      return !isNaN(t) && (nowMs - t) > limit;
+    });
+    /* Proportional, not absolute: one stale laptop in a fleet of 500 is
+       housekeeping, while a fifth of the fleet silently unmanaged is a
+       real finding. */
+    var pct = stale.length / list.length;
+    return {
+      total: list.length, stale: stale.length, never: never.length,
+      result: pct === 0 ? 'pass' : (pct <= 0.1 ? 'review' : 'fail')
+    };
+  }
+
+  /* Subject rights requests (Microsoft Priva) — the privacy equivalent
+     of incident triage, and the one privacy obligation that comes with
+     a statutory clock rather than a policy one.
+
+     Australian Privacy Act APP 12 gives 30 days to respond to an access
+     request; GDPR Article 12 gives one month. Priva carries a
+     dueDateTime per request, so this scores against the tenant's OWN
+     recorded deadline rather than assuming a jurisdiction — a request
+     past its due date is a live compliance breach, not a housekeeping
+     item, and is the only thing here that can fail.
+
+     Zero requests is a PASS, not 'manual', and that is a deliberate
+     difference from the register-derived checks. An empty Priva queue
+     is a real, readable answer from a system the tenant demonstrably
+     has (the capability probe succeeded) — "no outstanding requests" is
+     genuinely compliant. An empty Checkpoint register, by contrast,
+     tells you nothing about whether the activity happens elsewhere. */
+  function subjectRightsResult(requests, today) {
+    var list = (requests || []).filter(function (r) {
+      return r && r.status !== 'closed' && r.status !== 'Closed';
+    });
+    if (!list.length) return { open: 0, overdue: 0, dueSoon: 0, result: 'pass' };
+    var overdue = list.filter(function (r) {
+      var d = (r.dueDateTime || '').slice(0, 10);
+      return d && d < today;
+    });
+    var soon = list.filter(function (r) {
+      var d = (r.dueDateTime || '').slice(0, 10);
+      return d && d >= today && daysBetweenDateStr(today, d) <= 7;
+    });
+    return {
+      open: list.length, overdue: overdue.length, dueSoon: soon.length,
+      result: overdue.length ? 'fail' : (soon.length ? 'review' : 'pass')
+    };
+  }
+
+  /* Retention labels (Microsoft Purview records management) — A.5.33
+     protection of records and A.8.10 information deletion, plus APP 11.2
+     which requires destroying or de-identifying personal information no
+     longer needed.
+
+     Scored on whether retention is CONFIGURED and PUBLISHED, not on
+     coverage: Graph can list the labels but cannot tell how much
+     content carries them, so claiming a coverage percentage would be
+     inventing a number. A published label set is the honest ceiling for
+     what this endpoint can demonstrate.
+
+     A tenant with the licence and no labels at all fails: retention is
+     not optional under either the standard or the Act, and unlike the
+     register checks there is no "maybe they do it elsewhere" — Purview
+     records management IS the place this is done in a Microsoft
+     tenant. */
+  function retentionLabelResult(labels) {
+    var list = (labels || []).filter(function (l) { return l; });
+    if (!list.length) {
+      return { total: 0, published: 0, withDisposition: 0, result: 'fail' };
+    }
+    /* A label that exists but was never published applies to nothing.
+       Graph exposes this inconsistently across tenants, so treat an
+       absent flag as published rather than inventing a failure. */
+    var published = list.filter(function (l) {
+      return l.labelStatus === undefined || l.labelStatus === null || l.labelStatus === 'published' || l.labelStatus === 'InUse';
+    });
+    var withDisposition = list.filter(function (l) {
+      return l.actionAfterRetentionPeriod && l.actionAfterRetentionPeriod !== 'none';
+    });
+    if (!published.length) {
+      return { total: list.length, published: 0, withDisposition: withDisposition.length, result: 'fail' };
+    }
+    /* Retention with no end action keeps content forever, which fails
+       the deletion half of A.8.10 and APP 11.2 just as surely as having
+       no labels fails the retention half. */
+    if (!withDisposition.length) {
+      return { total: list.length, published: published.length, withDisposition: 0, result: 'review' };
+    }
+    return { total: list.length, published: published.length, withDisposition: withDisposition.length, result: 'pass' };
+  }
+
+  /* ============================================================
+     Register-derived posture checks
+     ------------------------------------------------------------
+     Four checks that used to be permanently 'manual' — backup, bcp,
+     supplier and policy — scored from Checkpoint's OWN registers
+     instead. Same idea as trainingCheckResult() above, and the same
+     honesty rule:
+
+       AN EMPTY REGISTER IS 'manual', NEVER 'fail'.
+
+     Checkpoint cannot tell "this organisation does not test its
+     backups" from "this organisation tests its backups and records it
+     somewhere else". Scoring the second as a failure would be inventing
+     a finding, and score() excludes 'manual' from its denominator
+     precisely so an honest "we cannot see this" costs a tenant nothing.
+
+     What makes these worth automating is that they need no Graph scope
+     and no licence: every tenant has these registers the moment it has
+     Checkpoint, so unlike the Defender and Purview reads these work at
+     E3, at Business Premium, everywhere. The store.js note saying
+     backup "stays self-reported until a live Graph signal exists" was
+     looking in the wrong place — the evidence an auditor wants for
+     A.8.13 is a restore TEST, and that is a Calendar row, not a Graph
+     endpoint.
+     ============================================================ */
+
+  /* Shared shape for the two checks that are really "is this recurring
+     assurance activity actually being done?" — backup restore tests and
+     BCP/DR failover tests. Returns null when the tenant has no such
+     activity scheduled at all, so each caller can decide what silence
+     means for its own control. */
+  function recurringActivityState(calendar, category, today) {
+    var rows = (calendar || []).filter(function (c) {
+      return c && c.category === category && c.status !== 'Retired' && c.status !== 'Inactive';
+    });
+    if (!rows.length) return null;
+    var overdue = rows.filter(function (c) { return c.nextDue && c.nextDue < today; });
+    var neverDone = rows.filter(function (c) { return !c.lastCompleted; });
+    return { total: rows.length, overdue: overdue.length, neverDone: neverDone.length, rows: rows };
+  }
+
+  /* A.8.13 — backup. Scored on whether restore tests happen on
+     schedule, not on whether backups are configured: an untested backup
+     is the single most common audit finding in this control, and a
+     configured-but-never-restored backup is exactly what it catches. */
+  function backupCheckResult(calendar, today) {
+    var st = recurringActivityState(calendar, 'Backup restore test', today);
+    if (!st) {
+      return { result: 'manual', note: 'No backup restore test scheduled in Checkpoint\'s calendar — add one, or keep restore-test evidence in whatever system you use.' };
+    }
+    if (st.overdue) {
+      return { result: 'fail', note: st.overdue + ' of ' + st.total + ' scheduled backup restore test(s) overdue — an untested backup is not a demonstrated one.' };
+    }
+    if (st.neverDone) {
+      return { result: 'review', note: st.total + ' backup restore test(s) scheduled, but ' + st.neverDone + ' has never been completed.' };
+    }
+    return { result: 'pass', note: st.total + ' scheduled backup restore test(s), all completed within cadence.' };
+  }
+
+  /* A.5.29/A.5.30 — ICT readiness for business continuity. Two signals,
+     because either alone is a half-answer: a plan document that exists
+     and is in review cadence, AND a failover test actually performed.
+     An untested plan is the classic finding here, so a current plan
+     with an overdue test still fails. */
+  function bcpCheckResult(calendar, docs, today) {
+    var st = recurringActivityState(calendar, 'BCP/DR test', today);
+    var plan = (docs || []).filter(function (d) {
+      return d && d.tplId === 'bcp-dr-plan' && d.status !== 'Superseded';
+    });
+    var planApproved = plan.filter(function (d) { return d.status === 'Approved'; });
+    var planOverdue = planApproved.filter(function (d) { return d.nextReview && d.nextReview < today; });
+
+    if (!st && !plan.length) {
+      return { result: 'manual', note: 'No BCP/DR plan document and no failover test scheduled in Checkpoint — add them, or keep continuity evidence in whatever system you use.' };
+    }
+    if (st && st.overdue) {
+      return { result: 'fail', note: st.overdue + ' BCP/DR failover test(s) overdue' + (planApproved.length ? ' (the plan itself is approved — an untested plan is the finding here)' : ' and no approved plan document') + '.' };
+    }
+    if (plan.length && !planApproved.length) {
+      return { result: 'fail', note: 'A BCP/DR plan exists but is not approved — a draft plan is not an operative one.' };
+    }
+    if (planOverdue.length) {
+      return { result: 'fail', note: 'The BCP/DR plan is past its review date.' };
+    }
+    if (!st) {
+      return { result: 'review', note: 'A BCP/DR plan is approved and current, but no failover test is scheduled — the plan is untested.' };
+    }
+    if (st.neverDone) {
+      return { result: 'review', note: 'A BCP/DR failover test is scheduled but has never been completed.' };
+    }
+    if (!planApproved.length) {
+      return { result: 'review', note: 'Failover tests are current, but there is no approved BCP/DR plan document in the register.' };
+    }
+    return { result: 'pass', note: 'BCP/DR plan approved and in review cadence, with failover testing current.' };
+  }
+
+  /* A.5.19-A.5.22 — supplier relationships. Scored from the Vendor
+     register rather than the calendar, because the register carries
+     criticality: an overdue review of a critical supplier holding
+     production data is a materially different finding from an overdue
+     review of the office stationery account, and a check that treats
+     them identically trains people to ignore it. */
+  function supplierCheckResult(vendors, today) {
+    var list = (vendors || []).filter(function (v) { return v; });
+    if (!list.length) {
+      return { result: 'manual', note: 'No suppliers recorded in Checkpoint\'s vendor register — add them, or keep supplier assurance evidence in whatever system you use.' };
+    }
+    var overdue = list.filter(function (v) { return v.nextReviewDue && v.nextReviewDue < today; });
+    var keyOverdue = overdue.filter(function (v) { return v.criticality === 'Critical' || v.criticality === 'High'; });
+    var neverReviewed = list.filter(function (v) { return !v.lastReviewed; });
+    var keyNeverReviewed = neverReviewed.filter(function (v) { return v.criticality === 'Critical' || v.criticality === 'High'; });
+
+    if (keyOverdue.length || keyNeverReviewed.length) {
+      var n = keyOverdue.length || keyNeverReviewed.length;
+      return { result: 'fail', note: n + ' critical/high-criticality supplier(s) ' + (keyOverdue.length ? 'overdue for review' : 'never reviewed') + ', of ' + list.length + ' recorded.' };
+    }
+    if (overdue.length || neverReviewed.length) {
+      return { result: 'review', note: (overdue.length || neverReviewed.length) + ' lower-criticality supplier(s) ' + (overdue.length ? 'overdue for review' : 'never reviewed') + ', of ' + list.length + ' recorded.' };
+    }
+    return { result: 'pass', note: 'All ' + list.length + ' recorded supplier(s) reviewed within cadence.' };
+  }
+
+  /* A.5.1 and Clause 7.5 — the policy set exists, is approved, and is
+     being reviewed. Deliberately counts only APPROVED documents as
+     satisfying the control: a policy sitting in Draft has not been
+     issued, and Clause 5.2 asks for a policy that is communicated, not
+     one that has been written. */
+  function policyCheckResult(docs, today, opts) {
+    var o = opts || {};
+    var summary = documentRegisterSummary(docs, today, { controlledCategories: o.controlledCategories || ['Policies & Procedures'], warnDays: o.warnDays });
+    if (!summary.controlled) {
+      return { result: 'manual', note: 'No controlled documents in Checkpoint\'s register — generate or upload your policy set here, or keep it in whatever system you use.' };
+    }
+    if (!summary.approved) {
+      return { result: 'fail', note: summary.controlled + ' controlled document(s), none approved — an unapproved policy has not been issued.' };
+    }
+    if (summary.overdue) {
+      return { result: 'fail', note: summary.overdue + ' of ' + summary.approved + ' approved document(s) past their review date.' };
+    }
+    if (summary.noReviewDate || summary.unversioned || summary.unowned) {
+      var gaps = [];
+      if (summary.noReviewDate) gaps.push(summary.noReviewDate + ' with no review date');
+      if (summary.unversioned) gaps.push(summary.unversioned + ' unversioned');
+      if (summary.unowned) gaps.push(summary.unowned + ' with no named owner');
+      return { result: 'review', note: summary.approved + ' approved document(s), but ' + gaps.join(', ') + ' — each fails Clause 7.5.2 on its face.' };
+    }
+    return { result: 'pass', note: 'All ' + summary.approved + ' approved document(s) versioned, owned and within review cadence.' };
+  }
+
   /* Who is missing induction training entirely. Distinct from the
      re-assignment rule a recurring campaign uses: a campaign skips
      anyone with an OPEN record (so an annual refresh reaches people who
@@ -2637,7 +2936,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
@@ -2666,6 +2965,8 @@
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     trainingCheckResult: trainingCheckResult, usersMissingInduction: usersMissingInduction,
+    recurringActivityState: recurringActivityState, backupCheckResult: backupCheckResult,
+    bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

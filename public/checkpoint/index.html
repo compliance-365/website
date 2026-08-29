@@ -1308,13 +1308,21 @@
   crossorigin="anonymous"></script>
 <script src="config.js"></script>
 <script src="version.js"></script>
+<!-- lib.js loads BEFORE graph.js deliberately. graph.js calls
+     CheckpointLib for its scoring helpers (incident/alert triage,
+     subject rights, retention, device check-in), and while those all
+     resolve at scan time rather than load time, depending on that
+     timing is a bug waiting to be introduced the first time someone
+     needs one of them at module scope. lib.js is a self-contained IIFE
+     with no load-time dependency on any other Checkpoint global, so it
+     can sit this early safely. -->
+<script src="lib.js"></script>
 <script src="graph.js"></script>
 <script src="store.js"></script>
 <script src="guidance.js"></script>
 <script src="templates.js"></script>
 <script src="courses.js"></script>
 <script src="changelog.js"></script>
-<script src="lib.js"></script>
 <script src="ai.js"></script>
 <script src="report.js"></script>
 <script src="selftest.js"></script>

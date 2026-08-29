@@ -9,6 +9,30 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.44.0',
+    date: '2026-08-29',
+    entries: [
+      'New: privacy checks. Subject rights requests (Microsoft Priva) and retention & disposal labels (Microsoft Purview) are now scanned. Every privacy obligation in Checkpoint was previously self-reported, so ISO 27701 and Privacy Act controls could only ever be asserted — these are the first automated privacy signals the tool has had.',
+      'Subject rights requests is the one check here with a statutory clock: the Privacy Act gives 30 days to respond, GDPR gives a month. Priva records a due date per request, so the check scores against your own recorded deadline rather than assuming a jurisdiction. A request past its due date fails — that is a live breach, not housekeeping — and one due within seven days shows as a review, so the warning arrives before the deadline rather than after it.',
+      'Retention is scored on whether labels are published and actually dispose of anything. Labels with no end-of-retention action show as a review: retention with no disposal keeps content forever, which fails the deletion half of A.8.10 and APP 11.2 just as surely as having no labels at all fails the retention half.',
+      'The alerts check now reads the Defender XDR alert queue directly where Defender XDR is present, instead of matching names against Secure Score. It falls back to the old signal where it is not, so no tenant loses coverage. Alerts are scored on ones nobody has opened rather than on volume — a busy queue that is being worked is not a compliance failure.',
+      'Both privacy checks need their own licence (Priva, and Purview records management), so most tenants will see Manual rather than a failure. Manual is excluded from your score, so a capability you do not hold never counts against you.',
+      'New: "Managed devices checking in with Intune". A device that has not contacted Intune in a month is not receiving policy, configuration or updates, and its last reported compliance state is stale evidence rather than current evidence. Deliberately separate from the compliance percentage, because a fleet can read 100% compliant precisely because the non-compliant devices stopped checking in. Needs no new permission — it reads a field the device scan already returns.',
+      'New: "Device configuration profiles deployed", covering ISO 27001 A.8.9 configuration management — a control that had no automated signal at all before. It uses a permission Checkpoint has always asked for at sign-in but never actually spent. It can pass or stay Manual but never fails on an empty result: modern tenants increasingly configure everything through the Settings Catalog, which Graph only exposes in beta, so no profiles means "cannot see" rather than "not configured".'
+    ]
+  },
+  {
+    version: '1.43.0',
+    date: '2026-08-29',
+    entries: [
+      'Four checks that could never be anything but "Manual" now score for real: backup restore testing, business continuity, supplier assessments, and policy publication. They read your own Checkpoint registers — the calendar, the document register and the vendor register — rather than Microsoft Graph.',
+      'That means no new permissions and no premium licence. Unlike the Defender and Purview checks, these work on every tenant, and they cover four ISO 27001 controls (A.8.13, A.5.29/A.5.30, A.5.19/A.5.20/A.5.22, A.5.1) that previously had no automated signal at all — so they could only ever be asserted, never demonstrated.',
+      'Backup is scored on whether restore tests actually happen on schedule, not on whether backups are switched on. An untested backup is the most common finding in that control, and "configured" has never been the same thing as "recoverable". Continuity works the same way and needs both halves: an approved, in-date plan AND a completed failover test. A beautifully maintained plan nobody has ever rehearsed still fails.',
+      'Suppliers are scored by criticality. An overdue review of a critical supplier holding production data fails; an overdue review of the stationery account is a review. A check that treats those identically just teaches people to ignore it.',
+      'An empty register reads as Manual, never as a failure — and Manual is excluded from your score entirely. If you keep restore-test evidence or your policy set somewhere other than Checkpoint, nothing here counts against you, and you can say so explicitly with the "Not via Microsoft?" button.'
+    ]
+  },
+  {
     version: '1.42.0',
     date: '2026-08-29',
     entries: [

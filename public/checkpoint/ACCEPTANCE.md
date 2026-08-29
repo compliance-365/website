@@ -101,16 +101,52 @@ Exercises the posture scan and its capability-coverage honesty.
 
 **2.1 — Open Posture scan**
 - Click: sidebar → **"Posture scan"**.
-- Expect: a Coverage card lists the 8 Graph capability probes (Conditional Access, Identity Protection, PIM, Intune device management, Microsoft Secure Score, Purview sensitivity labels, Entra Access Reviews, SharePoint tenant sharing settings), each labelled **Available**, **Not licensed**, or **No access**, matching what this tenant's actual licensing and admin roles support.
+- Expect: a Coverage card lists the 11 Graph capability probes (Conditional Access, Identity Protection, PIM, Intune device management, Microsoft Secure Score, Purview sensitivity labels, Entra Access Reviews, SharePoint tenant sharing settings, Microsoft Defender XDR incidents, Microsoft Priva subject rights requests, Microsoft Purview retention labels), each labelled **Available**, **Not licensed**, or **No access**, matching what this tenant's actual licensing and admin roles support.
 - [ ] Pass  [ ] Fail
 
 **2.2 — Run a scan**
 - Click: **"Run scan now"** (or the top-bar **"Run posture scan"** button from any view).
-- Expect: scan completes; a score (0–100) appears on the Dashboard; the check list below the Coverage card shows each of the 25 checks as Pass / Review / Fail / **"Manual — verify"**, never silently blank.
+- Expect: scan completes; a score (0–100) appears on the Dashboard; the check list below the Coverage card shows each of the 30 non-AWS checks as Pass / Review / Fail / **"Manual — verify"**, never silently blank.
 - [ ] Pass  [ ] Fail
 
 **2.3 — Manual fallback is honest, not optimistic**
 - Expect: any check whose `requiresCapability` probe came back **Not licensed** or **No access** in 2.1 shows **"Manual — verify"**, not a guessed Pass. Cross-check at least one (e.g. if PIM is unlicensed, the privileged-role-assignment check should read Manual).
+- [ ] Pass  [ ] Fail
+
+**2.4 — Register-derived checks read the real registers**
+
+These four score from Checkpoint's own registers rather than Graph, so
+they are the one group that **cannot** be verified in demo mode — demo
+and live do not share a state shape for the document library. Verify on
+a real tenant specifically.
+
+- Expect, on a freshly provisioned tenant with empty registers: **Backup coverage & restore testing**, **Business continuity**, **Supplier security assessments** and **Information security policy published** all read **"Manual — verify"**, never Fail. An empty register is not a finding.
+- [ ] Pass  [ ] Fail
+
+**2.5 — Populate a register, rescan, and watch a check turn over**
+- Click: **Compliance calendar** → add an entry with category **"Backup restore test"**, a `Next due` date in the past, and no `Last completed`. Return to Posture scan and click **"Run scan now"**.
+- Expect: **Backup coverage & restore testing** now reads **Fail**, with a note naming the overdue test. Change the date to the future and set a `Last completed` date, rescan, and it reads **Pass**.
+- [ ] Pass  [ ] Fail
+
+**2.6 — Policy check reflects the document register (live-only path)**
+- Click: **Documents** → confirm at least one policy is present and **Approved** with a version, an owner and a future review date.
+- Expect: **Information security policy published & reviewed** reads **Pass**. Set that document's review date into the past and rescan — it reads **Fail** naming the overdue document.
+- Note: this specifically exercises the `window._docs` path, which demo mode does not use. If it reads "Manual — verify" while approved documents plainly exist in the register, that is a **Fail** — it means the check is looking at the wrong source.
+- [ ] Pass  [ ] Fail
+
+**2.7 — "Not via Microsoft?" disposition**
+- Click: any failing check → **"Not via Microsoft?"** → set Coverage to **"Covered by another tool"**, name a tool, enter a justification, leave the default review date, **Save**.
+- Expect: the check now reads **"Covered — <tool>"** with the note *"Not scored from Microsoft signal · review due …"*, the posture score rises, and the previously proposed risk for that check no longer appears under proposals.
+- [ ] Pass  [ ] Fail
+
+**2.8 — Disposition expiry**
+- Click: the same check → **"Edit coverage"** → set the review date to yesterday → **Save**.
+- Expect: the check reverts to its real scan result (Fail/Review) and the score drops back. An expired override must not keep passing.
+- [ ] Pass  [ ] Fail
+
+**2.9 — Disposition cannot manufacture "Demonstrated" assurance**
+- Click: **Statement of Applicability** → find a control the dispositioned check maps to, with Status **Implemented**.
+- Expect: its assurance reads **Evidenced** (if an evidence link is attached) or **Asserted** — never **Demonstrated**. Checkpoint did not observe the control; it was told about it.
 - [ ] Pass  [ ] Fail
 
 ---
@@ -279,6 +315,18 @@ Exercises management review and the audit trail.
 ## 9. Negative tests
 
 These must all fail *correctly* — a clean rejection with a clear message, never a silent success, a crash, or a vague error.
+
+**9.0 — Incremental consent for the newer scopes**
+- Setup: an account that signed in to Checkpoint **before** the Defender XDR / Priva / retention scopes were added.
+- Click: sign in again.
+- Expect: Entra prompts **once** for the additional permissions (`SecurityIncident.Read.All`, `SecurityAlert.Read.All`, `SubjectRightsRequest.Read.All`, `RecordsManagement.Read.All`), and everything previously granted keeps working. This must be an incremental prompt, never a re-consent to the whole set and never a hard failure.
+- [ ] Pass  [ ] Fail
+
+**9.0b — Unlicensed capability degrades, never fails**
+- Setup: a tenant with **no** Defender XDR, Priva or Purview records management (Business Premium is ideal).
+- Expect: the Coverage card shows those three probes as **Not licensed**, and the checks that depend on them (**Security incidents triaged**, **Subject rights requests**, **Retention & disposal labels**) read **"Manual — verify"**. The posture score must be computed over the remaining checks only — an unlicensed capability must never reduce the score.
+- Cross-check: note the score, then compare against a manual count of Pass/Review/Fail rows. Manual rows must be excluded from the denominator entirely.
+- [ ] Pass  [ ] Fail
 
 **9.1 — Wrong-tenant activation (wizard)**
 - Setup: use a **second, never-onboarded** test tenant (or reset the first back to unprovisioned, if your test plan allows).

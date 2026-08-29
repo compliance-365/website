@@ -300,6 +300,51 @@ function showModal(opts) {
       risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
     },
+    'device-checkin': {
+      risk: { title: 'Managed devices no longer checking in, so their compliance state is stale', cat: 'Ops', L: 3, I: 4, controls: ['A.8.1'] },
+      actions: [
+        { t: 'Investigate devices that have stopped checking in — retire the disposed ones, re-enrol the rest', pr: 'High', days: 21, control: 'A.8.1' }
+      ]
+    },
+    'privacy-srr': {
+      risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', L: 4, I: 4, controls: ['A.5.34'] },
+      actions: [
+        { t: 'Close out every subject rights request past its due date', pr: 'Critical', days: 7, control: 'A.5.34' },
+        { t: 'Assign a named owner and an internal target ahead of the statutory deadline for new requests', pr: 'High', days: 21, control: 'A.5.34' }
+      ]
+    },
+    'retention': {
+      risk: { title: 'No published retention or disposal rules, so data is kept indefinitely by default', cat: 'Data', L: 3, I: 4, controls: ['A.5.33', 'A.8.10'] },
+      actions: [
+        { t: 'Publish retention labels covering each category of personal and business-critical information', pr: 'High', days: 45, control: 'A.5.33' },
+        { t: 'Set an end-of-retention action on every label so retained content is actually disposed of', pr: 'High', days: 45, control: 'A.8.10' }
+      ]
+    },
+    /* The three templates below pair with the register-derived checks
+       added alongside backup's. Each action is something a practitioner
+       does in Checkpoint or in the business — none of them say "buy a
+       product", because none of these controls fail for want of one. */
+    'bcp': {
+      risk: { title: 'Continuity plan untested, so recovery capability is assumed rather than known', cat: 'Ops', L: 3, I: 5, controls: ['A.5.29', 'A.5.30'] },
+      actions: [
+        { t: 'Run a BCP/DR failover test and record the outcome against the calendar entry', pr: 'High', days: 45, control: 'A.5.30' },
+        { t: 'Approve the BCP/DR plan document and set its next review date', pr: 'Medium', days: 21, control: 'A.5.29' }
+      ]
+    },
+    'supplier': {
+      risk: { title: 'Critical suppliers operating without a current security assessment', cat: 'Supplier', L: 4, I: 4, controls: ['A.5.19', 'A.5.20', 'A.5.22'] },
+      actions: [
+        { t: 'Complete security reviews for every critical and high-criticality supplier', pr: 'High', days: 30, control: 'A.5.22' },
+        { t: 'Confirm security requirements are covered in each critical supplier agreement', pr: 'Medium', days: 60, control: 'A.5.20' }
+      ]
+    },
+    'policy': {
+      risk: { title: 'Policy set incomplete, unapproved or past its review date', cat: 'Governance', L: 3, I: 3, controls: ['A.5.1'] },
+      actions: [
+        { t: 'Approve and publish outstanding policy documents', pr: 'High', days: 21, control: 'A.5.1' },
+        { t: 'Review and re-date every policy past its review cadence', pr: 'Medium', days: 45, control: 'A.5.1' }
+      ]
+    },
     'pim': {
       risk: { title: 'Privileged directory roles held as permanent assignments rather than time-bound, approved elevation', cat: 'Access', L: 3, I: 4, controls: ['A.8.2', 'A.5.18'] },
       actions: [{ t: 'Convert permanent privileged role assignments to PIM-eligible with approval workflow', pr: 'High', days: 30, control: 'A.8.2' }]
@@ -330,7 +375,7 @@ function showModal(opts) {
      site that lists capability areas (the Coverage card, the wizard's
      capability-check step, the report Methodology appendix) reads this
      one array rather than each keeping its own copy in sync by hand. */
-  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr'];
+  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement'];
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -3048,7 +3093,14 @@ function showModal(opts) {
     if (window._docs) return;
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      /* The policy and bcp checks score from this register, and it was
+         empty when applyRegisterCheckResults() last ran — recompute now
+         that it is loaded, or those two would sit on a first-paint
+         'manual' for the rest of the session. renderScanChecks too, so
+         the Posture scan view reflects it without needing a re-scan. */
+      applyRegisterCheckResults();
       renderDash();
+      renderScanChecks(true);
     }).catch(function (e) { console.error(e); });
   }
 
@@ -6213,6 +6265,50 @@ function showModal(opts) {
     S.lastNotes.training = r.note;
   }
 
+  /* The other four register-derived checks — backup, bcp, supplier and
+     policy — computed the same way and at the same points in the
+     lifecycle as training above.
+
+     These run CLIENT-side rather than in runPostureChecks() because the
+     registers they read live in SharePoint and are already loaded into
+     S; sending the scan back to Graph for data the browser is holding
+     would be slower and could disagree with what the user is looking
+     at. graph.js still writes a 'manual' placeholder for each so a
+     stored scan is self-consistent on its own, and these overwrite it.
+
+     Every one of them returns 'manual' on an empty register. That is
+     the whole reason this is safe to turn on for existing tenants: a
+     client who has never touched the vendor register sees exactly what
+     they saw before, and only a populated register can move the score. */
+  function applyRegisterCheckResults() {
+    if (!S.lastResults) return;
+    var today = new Date().toISOString().slice(0, 10);
+    var L = window.CheckpointLib;
+    S.lastNotes = S.lastNotes || {};
+    /* window._docs, NOT S.documents. The document library is a SharePoint
+       drive rather than a list, so a live tenant loads it separately into
+       window._docs (see loadDocumentRegisterInBackground) and S.documents
+       exists only in demo mode. Reading S.documents here worked perfectly
+       in demo and would have returned an empty register — and therefore a
+       permanent 'manual' — on every real tenant. The S.documents fallback
+       is kept only for the window before window._docs is first assigned.
+
+       Because that load is async, this function is called again when it
+       completes; otherwise the policy and bcp checks would be computed
+       against an empty register on the first paint and never revisited. */
+    var docs = window._docs || S.documents || [];
+    var out = {
+      backup: L.backupCheckResult(S.calendar || [], today),
+      bcp: L.bcpCheckResult(S.calendar || [], docs, today),
+      supplier: L.supplierCheckResult(S.vendors || [], today),
+      policy: L.policyCheckResult(docs, today, { warnDays: S.settings && S.settings.docReviewWarnDays })
+    };
+    Object.keys(out).forEach(function (k) {
+      S.lastResults[k] = out[k].result;
+      S.lastNotes[k] = out[k].note;
+    });
+  }
+
   function renderTraining() {
     renderMyTraining();
     renderCourseCatalogue();
@@ -7839,7 +7935,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { applyTrainingCheckResult(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -8064,6 +8160,12 @@ function showModal(opts) {
          checks in both live and demo mode so the two agree, and so the
          score picks it up before the scan is snapshotted below. */
       applyTrainingCheckResult();
+      /* Same for backup, bcp, supplier and policy — computed from the
+         Calendar, Documents and Vendors registers. Must run here, before
+         the snapshot, or the stored scan would record graph.js's
+         'manual' placeholders and the assurance history would never see
+         these checks pass. */
+      applyRegisterCheckResults();
 
       renderScanChecks(false);
       var rows2 = document.querySelectorAll('#checkList .check-row');
@@ -13135,7 +13237,9 @@ function showModal(opts) {
         sensitivityLabels: { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
         accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' },
         sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' },
-        defenderXdr: { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', available: true, status: 'available', note: '' }
+        defenderXdr: { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', available: true, status: 'available', note: '' },
+        priva: { key: 'priva', label: 'Microsoft Priva subject rights requests', licence: 'Microsoft Priva (Subject Rights Requests)', available: true, status: 'available', note: '' },
+        recordsManagement: { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' }
       };
       applyAwsCapability();
       return;

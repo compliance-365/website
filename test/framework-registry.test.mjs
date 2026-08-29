@@ -64,7 +64,7 @@ const MERGED_NIST_SUBCATEGORIES = PACKS.nistcsf.extra.subcategories;
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
 // Capabilities probed against Microsoft Graph (graph.js CAPABILITY_PROBES).
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement'];
 // Capabilities that are DERIVED rather than probed, because nothing in
 // Microsoft 365 knows the answer. 'aws' is set by app.js from whether the
 // optional AWS collector has ever written an aws-* result for this tenant.
@@ -476,9 +476,9 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // triage). An unlicensed tenant is unaffected: the defenderXdr
     // capability probe fails, the check degrades to 'manual', and
     // score() excludes 'manual' from its denominator entirely.
-    assert.equal(CHECK_DEFS.length, 36);
+    assert.equal(CHECK_DEFS.length, 40);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 26);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 30);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

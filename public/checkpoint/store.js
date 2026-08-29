@@ -445,6 +445,8 @@ window.CHECK_DEFS = [
   /* Devices (3) */
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
+  { id: 'device-checkin', area: 'Devices', label: 'Managed devices checking in with Intune', tpl: 'device-checkin', scored: true, requiresCapability: 'intune' },
+  { id: 'device-config', area: 'Devices', label: 'Device configuration profiles deployed', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
   /* Apps & Data (7) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
@@ -463,12 +465,19 @@ window.CHECK_DEFS = [
      on the incident-response controls — a real record with real
      timestamps, rather than a score about a product. */
   { id: 'xdr-incidents', area: 'Monitoring', label: 'Security incidents triaged within cadence', tpl: 'xdr-incidents', scored: true, requiresCapability: 'defenderXdr' },
+  /* Privacy (2). The first automated signal Checkpoint has ever had for
+     ISO 27701 / Privacy Act obligations — everything privacy-related was
+     previously self-reported. Both are separately licensed, so most
+     tenants will see Manual rather than a failure, which is the correct
+     answer for a capability they do not hold. */
+  { id: 'privacy-srr', area: 'Privacy', label: 'Subject rights requests answered within statutory deadline', tpl: 'privacy-srr', scored: true, requiresCapability: 'priva' },
+  { id: 'retention',   area: 'Privacy', label: 'Retention & disposal labels published', tpl: 'retention', scored: true, requiresCapability: 'recordsManagement' },
   /* Continuity & Supplier (3) */
-  { id: 'backup',     area: 'Continuity', label: 'Backup coverage & restore testing',          tpl: 'backup',    scored: false },
-  { id: 'bcp',        area: 'Continuity', label: 'Business continuity / disaster recovery plan documented & tested', tpl: null, scored: false },
-  { id: 'supplier',   area: 'Supplier',   label: 'Supplier security assessments current',      tpl: null,        scored: false },
+  { id: 'backup',     area: 'Continuity', label: 'Backup coverage & restore testing',          tpl: 'backup',    scored: true },
+  { id: 'bcp',        area: 'Continuity', label: 'Business continuity / disaster recovery plan documented & tested', tpl: 'bcp', scored: true },
+  { id: 'supplier',   area: 'Supplier',   label: 'Supplier security assessments current',      tpl: 'supplier',  scored: true },
   /* Governance (2) */
-  { id: 'policy',     area: 'Governance', label: 'Information security policy published & reviewed', tpl: null,  scored: false },
+  { id: 'policy',     area: 'Governance', label: 'Information security policy published & reviewed', tpl: 'policy', scored: true },
   /* scored:true since the Training register exists — app.js's
      applyTrainingCheckResult() computes this from real completion data
      at scan time rather than from a Graph signal (there isn't one).
@@ -521,6 +530,7 @@ window.THRESHOLD_DEFS = [
   { key: 'deviceCompliancePassPct', label: 'Device compliance pass %', desc: 'Percentage of Intune-managed devices reporting compliant, at or above which the check passes.', def: '95' },
   { key: 'deviceComplianceReviewPct', label: 'Device compliance review %', desc: 'Below the pass % but at or above this value is a review; below this is a fail.', def: '80' },
   { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' },
+  { key: 'deviceStaleDays', label: 'Device check-in staleness (days)', desc: 'A managed device that has not contacted Intune within this many days is treated as unmanaged — it is not receiving policy or updates, and its last reported compliance state is stale evidence.', def: '30' },
   { key: 'incidentTriageDays', label: 'Incident triage window (days)', desc: 'A high-severity Defender XDR incident still active beyond this many days fails the incident-triage check. Set this to whatever your own incident response plan commits to — the default of 5 days is a starting point, not a standard.', def: '5' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
 ];
@@ -600,6 +610,7 @@ window.DEFAULT_SETTINGS = {
   deviceComplianceReviewPct: '80',
   riskyUsersReviewMax: '3',
   incidentTriageDays: '5',
+  deviceStaleDays: '30',
   controlReviewCadenceDays: '90',
   /* Trust Center — what a generated public page is allowed to show.
      Off by default wherever disclosure is the more sensitive choice
@@ -791,6 +802,8 @@ window.CHECK_CONTROLS = {
   'guests': ['A.5.16'],
   'riskyusers': ['A.5.25', 'A.5.26'],
   'device': ['A.8.1'],
+  'device-checkin': ['A.8.1'],
+  'device-config': ['A.8.9'],
   'compliance-policy': ['A.8.1'],
   'patch': ['A.8.8'],
   'wdac': ['A.8.7', 'A.8.19'],
@@ -810,7 +823,24 @@ window.CHECK_CONTROLS = {
      document, not something an open-incident age can demonstrate, and
      claiming it here would be exactly the kind of unearned coverage the
      assurance ranking exists to prevent. */
-  'xdr-incidents': ['A.5.25', 'A.5.26']
+  'xdr-incidents': ['A.5.25', 'A.5.26'],
+  /* Register-derived checks (see lib.js's backupCheckResult and
+     friends). These map to controls that previously had NO automated
+     signal at all — the checks existed but were scored:false, so the
+     controls could only ever be asserted. They can now reach
+     'demonstrated' from Checkpoint's own registers, with no Graph scope
+     and no licence gate, which is why these four matter more than their
+     size suggests: they work on every tenant, not just E5 ones. */
+  'backup': ['A.8.13'],
+  'bcp': ['A.5.29', 'A.5.30'],
+  'supplier': ['A.5.19', 'A.5.20', 'A.5.22'],
+  'policy': ['A.5.1'],
+  /* Privacy. A.5.34 covers privacy and PII protection; A.5.33/A.8.10 are
+     the records-protection and information-deletion pair that retention
+     labels actually implement. These were entirely self-reported before
+     — Checkpoint had no automated privacy signal of any kind. */
+  'privacy-srr': ['A.5.34'],
+  'retention': ['A.5.33', 'A.8.10']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
@@ -1005,18 +1035,21 @@ window.DemoStore = (function () {
       ],
       lastResults: {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
-        'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
+        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
-        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail'
+        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
+        'privacy-srr': 'fail', 'retention': 'review'
       },
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
-        'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
+        'compliance-policy': '3 compliance policies configured', 'device-checkin': '14 of 214 device(s) have not checked in for over 30 days (2 never have) — their compliance state is stale evidence', 'device-config': '11 device configuration profiles deployed (showing first page)', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
         'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',
-        'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned'
+        'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned',
+        'privacy-srr': '3 open request(s); 1 PAST their statutory due date; 1 due within 7 days',
+        'retention': '4 of 4 retention label(s) published, none with an end-of-retention action — retained content is never disposed of'
       },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-001', 'ACT-002'] },
