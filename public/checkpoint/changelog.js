@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.45.0',
+    date: '2026-08-30',
+    entries: [
+      'New: "Departed accounts fully offboarded" — the first automated signal for the joiner-mover-leaver controls (A.5.11, A.5.18, A.6.5), which were entirely self-reported before. Checkpoint has no HR feed and cannot know who left, but it can see the end state of an offboarding, and the two halves of that state say very different things.',
+      'A disabled account still holding a privileged directory role fails. There is no legitimate reason to leave a departed administrator\'s role assignment in place — re-enabling the account restores that privilege instantly, and the assignment itself is what an auditor tests.',
+      'A disabled account still holding a paid licence is flagged for review, never failed. Plenty of organisations deliberately keep a leaver licensed for a retention period — legal hold, or handing the mailbox to a manager — and that is good practice, not a gap. Microsoft does not record when an account was disabled, so a deliberate 30-day retention and a two-year-old forgotten offboarding look identical from the outside. Reporting either as a failure would be guessing, so you get the list to confirm instead.',
+      'Needs no new permission and no premium licence — it reads plain directory data under scopes every tenant already granted, so unlike the Defender and Purview checks this one works at every licence level.'
+    ]
+  },
+  {
     version: '1.44.0',
     date: '2026-08-29',
     entries: [

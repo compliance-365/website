@@ -306,6 +306,14 @@ function showModal(opts) {
         { t: 'Investigate devices that have stopped checking in — retire the disposed ones, re-enrol the rest', pr: 'High', days: 21, control: 'A.8.1' }
       ]
     },
+    'leaver': {
+      risk: { title: 'Departed staff retain licences or privileged roles after offboarding', cat: 'Access', L: 3, I: 5, controls: ['A.5.11', 'A.5.18', 'A.6.5'] },
+      actions: [
+        { t: 'Remove privileged directory roles from every disabled account', pr: 'Critical', days: 7, control: 'A.5.18' },
+        { t: 'Review disabled accounts still holding licences and confirm each retention is deliberate and time-bound', pr: 'Medium', days: 30, control: 'A.5.11' },
+        { t: 'Add licence and role removal to the documented leaver checklist', pr: 'Medium', days: 45, control: 'A.6.5' }
+      ]
+    },
     'privacy-srr': {
       risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', L: 4, I: 4, controls: ['A.5.34'] },
       actions: [

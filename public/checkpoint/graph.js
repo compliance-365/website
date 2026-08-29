@@ -445,6 +445,46 @@ window.Graph = (function () {
       set('guests', 'review', 'Could not read guest users: ' + e.message);
     }
 
+    /* --- Leaver hygiene (A.5.11 / A.6.5 / A.5.18) ---
+
+       No new scope and no new licence: Directory.Read.All and
+       RoleManagement.Read.Directory are both already granted at sign-in,
+       and both endpoint shapes below are ones this file already calls
+       elsewhere (the guest check reads /users with a $select, the admin
+       check reads /directoryRoles/{...}/members).
+
+       Role membership is gathered per activated role rather than via
+       $expand, because the per-role members call is the shape already
+       proven to work here. Activated directory roles are typically a few
+       dozen at most, and a role whose members cannot be read is skipped
+       rather than failing the whole check — a partial privileged set can
+       only ever under-report, never invent a finding. */
+    try {
+      var allUsers = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,assignedLicenses&$top=999');
+      var privilegedIds = {};
+      try {
+        var roles = await gAll('/directoryRoles?$select=id,displayName');
+        for (var ri = 0; ri < roles.length; ri++) {
+          try {
+            var mem = await gAll('/directoryRoles/' + roles[ri].id + '/members?$select=id&$top=999');
+            for (var mi = 0; mi < mem.length; mi++) if (mem[mi].id) privilegedIds[mem[mi].id] = true;
+          } catch (e) { /* skip this role — see note above on under-reporting */ }
+        }
+      } catch (e) { /* no role data at all: the licence half of the check still stands */ }
+
+      var lh = window.CheckpointLib.leaverHygieneResult(allUsers, privilegedIds);
+      raw['leaver'] = { disabled: lh.disabled, licensed: lh.licensed, privileged: lh.privileged };
+      set('leaver', lh.result,
+        lh.disabled === 0
+          ? 'No disabled member accounts in the directory'
+          : lh.disabled + ' disabled account(s)' +
+            (lh.privileged ? '; ' + lh.privileged + ' STILL HOLD a privileged directory role' : '') +
+            (lh.licensed ? '; ' + lh.licensed + ' still hold a paid licence — confirm each is a deliberate retention rather than an unfinished offboarding' : '') +
+            (!lh.privileged && !lh.licensed ? ', none retaining licences or privileged roles' : ''));
+    } catch (e) {
+      set('leaver', 'review', 'Could not read directory accounts: ' + e.message);
+    }
+
     /* --- Risky users (Identity Protection — requires AAD Premium P2) --- */
     if (!capabilities.identityProtection.available) {
       set('riskyusers', 'manual', capabilities.identityProtection.note);

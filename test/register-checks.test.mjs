@@ -264,3 +264,92 @@ describe('deviceCheckinResult()', () => {
     assert.equal(CheckpointLib.deviceCheckinResult([dev({ lastSyncDateTime: since(45) })], undefined, NOW3).stale, 1);
   });
 });
+
+// ---------------------------------------------------------------------
+// leaverHygieneResult() — A.5.11 / A.5.18 / A.6.5.
+//
+// These controls were entirely self-reported: Checkpoint has no HR feed,
+// so it cannot know who left, and "show me your leaver checklist" is not
+// something Graph can answer. What it CAN see is the end state of an
+// offboarding — and the two halves of that state say different things,
+// which is the whole design of this check.
+//
+// Needs no new scope and no premium licence: Directory.Read.All and
+// RoleManagement.Read.Directory are already granted at sign-in, so this
+// works at every licence level.
+describe('leaverHygieneResult()', () => {
+  const user = (over) => Object.assign({
+    id: 'u1', userType: 'Member', accountEnabled: true, assignedLicenses: []
+  }, over || {});
+
+  test('no disabled accounts at all passes', () => {
+    assert.equal(CheckpointLib.leaverHygieneResult([user(), user({ id: 'u2' })], {}).result, 'pass');
+  });
+
+  test('null/empty input does not throw', () => {
+    assert.equal(CheckpointLib.leaverHygieneResult(null, null).result, 'pass');
+    assert.equal(CheckpointLib.leaverHygieneResult([], {}).result, 'pass');
+  });
+
+  test('a disabled account holding no licence and no role passes — that is a clean offboarding', () => {
+    const r = CheckpointLib.leaverHygieneResult([user({ accountEnabled: false })], {});
+    assert.equal(r.disabled, 1);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('a disabled account still holding a PRIVILEGED ROLE fails', () => {
+    // Unambiguous: re-enabling the account restores privilege instantly,
+    // and there is no legitimate retention reason for the assignment.
+    const r = CheckpointLib.leaverHygieneResult(
+      [user({ id: 'gone', accountEnabled: false })], { gone: true });
+    assert.equal(r.privileged, 1);
+    assert.equal(r.result, 'fail');
+  });
+
+  test('a disabled account still holding a LICENCE is only a review', () => {
+    // Graph does not expose when an account was disabled, so a
+    // deliberate 30-day retention and a two-year-old forgotten
+    // offboarding are indistinguishable. Reporting either as a failure
+    // would be guessing.
+    const r = CheckpointLib.leaverHygieneResult(
+      [user({ accountEnabled: false, assignedLicenses: [{ skuId: 'x' }] })], {});
+    assert.equal(r.licensed, 1);
+    assert.equal(r.result, 'review');
+  });
+
+  test('privileged outranks licensed — the worse finding wins', () => {
+    const r = CheckpointLib.leaverHygieneResult(
+      [user({ id: 'gone', accountEnabled: false, assignedLicenses: [{ skuId: 'x' }] })], { gone: true });
+    assert.equal(r.result, 'fail');
+  });
+
+  test('guests are excluded — their lifecycle is a different control', () => {
+    const r = CheckpointLib.leaverHygieneResult(
+      [user({ userType: 'Guest', accountEnabled: false, assignedLicenses: [{ skuId: 'x' }] })], {});
+    assert.equal(r.disabled, 0);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('an ENABLED account holding a privileged role is not a leaver finding', () => {
+    // That is a working administrator, not an offboarding gap.
+    const r = CheckpointLib.leaverHygieneResult(
+      [user({ id: 'admin', accountEnabled: true, assignedLicenses: [{ skuId: 'x' }] })], { admin: true });
+    assert.equal(r.privileged, 0);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('an empty assignedLicenses array is not counted as licensed', () => {
+    assert.equal(CheckpointLib.leaverHygieneResult(
+      [user({ accountEnabled: false, assignedLicenses: [] })], {}).licensed, 0);
+  });
+
+  test('a missing assignedLicenses property does not throw or count', () => {
+    const u = user({ accountEnabled: false });
+    delete u.assignedLicenses;
+    assert.equal(CheckpointLib.leaverHygieneResult([u], {}).licensed, 0);
+  });
+
+  test('a null entry does not throw', () => {
+    assert.equal(CheckpointLib.leaverHygieneResult([null, user()], {}).result, 'pass');
+  });
+});
