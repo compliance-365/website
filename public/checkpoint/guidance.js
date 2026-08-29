@@ -252,13 +252,13 @@ window.GUIDANCE = {
     how: "Define retention periods for the records you're legally or contractually required to keep, and implement them with Purview retention labels and policies so records aren't deleted early or kept indefinitely by default. Review the retention schedule when a new regulatory obligation applies.",
     evidence: "The retention schedule and the corresponding Purview retention labels/policies configured to match it.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["retention"]
   },
   'A.5.34': {
     how: "Assess privacy impact before processing new categories of personal information — Purview's Privacy Risk Management can help identify overshared personal data in the tenant — and align your approach with the Privacy Act 1988's Australian Privacy Principles where personal information of Australian individuals is involved.",
     evidence: "A privacy impact assessment for a new or significant processing activity, and, where used, a Purview Privacy Risk Management report.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["privacy-srr"]
   },
   'A.5.35': {
     how: "Have someone independent of day-to-day operations — an internal audit function, an external consultant, or at minimum a peer from another team — review the ISMS at least annually and record findings. Checkpoint's own internal audit programme and management review registers are built to hold exactly this evidence.",
@@ -477,7 +477,7 @@ window.GUIDANCE = {
     how: "Ensure information is actually deleted when it's no longer needed — Purview retention policies can auto-delete at the end of a retention period, and Intune can remotely wipe a device. Don't rely on 'we'll get to it eventually'; set an automated end state for data that has a defined lifecycle.",
     evidence: "Purview retention/deletion policy configuration and Intune wipe confirmations for decommissioned devices.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["retention"]
   },
   'A.8.11': {
     how: "Mask or redact sensitive data fields in non-production environments (test/dev databases shouldn't hold real customer data unmasked) — this is more relevant to organisations running their own applications than pure SaaS consumers, and can be scoped down accordingly where it doesn't apply.",

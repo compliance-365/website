@@ -300,6 +300,20 @@ function showModal(opts) {
       risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
     },
+    'privacy-srr': {
+      risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', L: 4, I: 4, controls: ['A.5.34'] },
+      actions: [
+        { t: 'Close out every subject rights request past its due date', pr: 'Critical', days: 7, control: 'A.5.34' },
+        { t: 'Assign a named owner and an internal target ahead of the statutory deadline for new requests', pr: 'High', days: 21, control: 'A.5.34' }
+      ]
+    },
+    'retention': {
+      risk: { title: 'No published retention or disposal rules, so data is kept indefinitely by default', cat: 'Data', L: 3, I: 4, controls: ['A.5.33', 'A.8.10'] },
+      actions: [
+        { t: 'Publish retention labels covering each category of personal and business-critical information', pr: 'High', days: 45, control: 'A.5.33' },
+        { t: 'Set an end-of-retention action on every label so retained content is actually disposed of', pr: 'High', days: 45, control: 'A.8.10' }
+      ]
+    },
     /* The three templates below pair with the register-derived checks
        added alongside backup's. Each action is something a practitioner
        does in Checkpoint or in the business — none of them say "buy a
@@ -355,7 +369,7 @@ function showModal(opts) {
      site that lists capability areas (the Coverage card, the wizard's
      capability-check step, the report Methodology appendix) reads this
      one array rather than each keeping its own copy in sync by hand. */
-  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr'];
+  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement'];
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -13198,7 +13212,9 @@ function showModal(opts) {
         sensitivityLabels: { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
         accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' },
         sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' },
-        defenderXdr: { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', available: true, status: 'available', note: '' }
+        defenderXdr: { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', available: true, status: 'available', note: '' },
+        priva: { key: 'priva', label: 'Microsoft Priva subject rights requests', licence: 'Microsoft Priva (Subject Rights Requests)', available: true, status: 'available', note: '' },
+        recordsManagement: { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' }
       };
       applyAwsCapability();
       return;

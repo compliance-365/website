@@ -200,7 +200,16 @@ window.Graph = (function () {
        "Defender, and genuinely nothing open" — which are the same empty
        array on the wire but opposite compliance answers. */
     { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', path: '/security/incidents?$top=1',
-      note: 'No readable Defender XDR incident queue — the incident-triage check will show as Manual. If incidents are handled in another product, record that on the check itself rather than leaving it unanswered.' }
+      note: 'No readable Defender XDR incident queue — the incident-triage check will show as Manual. If incidents are handled in another product, record that on the check itself rather than leaving it unanswered.' },
+    /* Priva subject rights requests. NOTE the /security path: the older
+       /privacy/subjectRightsRequests node is deprecated and stopped
+       returning data in March 2025, so anything still pointing there
+       reads as an empty tenant rather than erroring — which would look
+       exactly like "no requests" and quietly score a pass. */
+    { key: 'priva', label: 'Microsoft Priva subject rights requests', licence: 'Microsoft Priva (Subject Rights Requests)', path: '/security/subjectRightsRequests?$top=1',
+      note: 'No readable subject rights request queue — the privacy-request check will show as Manual. If data subject requests are tracked in another system, record that on the check itself.' },
+    { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', path: '/security/labels/retentionLabels?$top=1',
+      note: 'No readable retention labels — the retention/disposal check will show as Manual. Delegated access only: this endpoint has no application-permission equivalent, so an unattended scan cannot answer it either.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -636,7 +645,34 @@ window.Graph = (function () {
     fromSecureScore('macro',      'Verify Office macro hardening policy');
     fromSecureScore('logging',    'Verify unified audit logging in Purview');
     fromSecureScore('wdac',       'Verify application control (WDAC / App Control for Business)');
-    fromSecureScore('alerts',     'Verify Defender/Purview threat protection policies and alert triage cadence');
+    /* 'alerts' prefers a DIRECT read of the Defender XDR alert queue and
+       only falls back to the Secure Score proxy below when Defender XDR
+       is not available to this tenant.
+
+       Direct-read-with-proxy-fallback rather than a straight
+       replacement, deliberately: a tenant without Defender XDR keeps
+       exactly the signal it had, so nobody loses coverage, while a
+       licensed tenant stops being scored on a name match against
+       Secure Score control identifiers and starts being scored on
+       whether alerts are actually being worked. Same check, better
+       evidence where the evidence exists. */
+    var alertsScored = false;
+    if (capabilities.defenderXdr.available) {
+      try {
+        var alertRows = await gAll("/security/alerts_v2?$filter=status eq 'newAlert' or status eq 'inProgress'&$select=id,severity,status,createdDateTime,assignedTo,serviceSource&$top=999");
+        var at = window.CheckpointLib.alertTriageResult(alertRows, incidentTriageDays, Date.now());
+        raw['alerts'] = { open: at.open, highUntouched: at.highUntouched, stale: at.stale, triageDays: incidentTriageDays, source: 'defenderXdr' };
+        set('alerts', at.result, at.open === 0
+          ? 'No open Defender XDR alerts awaiting triage'
+          : at.open + ' open alert(s), ' + at.highUntouched + ' high severity never opened' +
+            (at.stale ? '; ' + at.stale + ' untouched beyond the ' + incidentTriageDays + '-day triage window' : ''));
+        alertsScored = true;
+      } catch (e) {
+        /* Fall through to the Secure Score proxy rather than failing the
+           check — an unreadable alert queue is not evidence of anything. */
+      }
+    }
+    if (!alertsScored) fromSecureScore('alerts', 'Verify Defender/Purview threat protection policies and alert triage cadence');
     fromSecureScore('dlp',        'Verify Data Loss Prevention policy coverage in Microsoft Purview');
     fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
 
@@ -681,6 +717,41 @@ window.Graph = (function () {
         set('xdr-incidents', tri.result, incidentNote);
       } catch (e) {
         set('xdr-incidents', 'review', 'Defender XDR incidents not readable: ' + e.message);
+      }
+    }
+
+    /* --- Privacy: subject rights requests (Microsoft Priva) --- */
+    if (!capabilities.priva.available) {
+      set('privacy-srr', 'manual', capabilities.priva.note);
+    } else {
+      try {
+        var srrs = await gAll('/security/subjectRightsRequests?$select=id,status,dueDateTime,createdDateTime,type&$top=999');
+        var sr = window.CheckpointLib.subjectRightsResult(srrs, new Date().toISOString().slice(0, 10));
+        raw['privacy-srr'] = sr;
+        set('privacy-srr', sr.result, sr.open === 0
+          ? 'No open subject rights requests'
+          : sr.open + ' open request(s)' +
+            (sr.overdue ? '; ' + sr.overdue + ' PAST their statutory due date' : '') +
+            (sr.dueSoon ? '; ' + sr.dueSoon + ' due within 7 days' : ''));
+      } catch (e) {
+        set('privacy-srr', 'review', 'Subject rights requests not readable: ' + e.message);
+      }
+    }
+
+    /* --- Privacy: retention & disposal (Microsoft Purview) --- */
+    if (!capabilities.recordsManagement.available) {
+      set('retention', 'manual', capabilities.recordsManagement.note);
+    } else {
+      try {
+        var labels = await gAll('/security/labels/retentionLabels?$select=id,displayName,labelStatus,retentionDuration,actionAfterRetentionPeriod&$top=999');
+        var rl = window.CheckpointLib.retentionLabelResult(labels);
+        raw['retention'] = rl;
+        set('retention', rl.result, rl.total === 0
+          ? 'No retention labels configured — content is retained and deleted by nothing but habit'
+          : rl.published + ' of ' + rl.total + ' retention label(s) published' +
+            (rl.withDisposition ? ', ' + rl.withDisposition + ' with an end-of-retention action' : ', none with an end-of-retention action — retained content is never disposed of'));
+      } catch (e) {
+        set('retention', 'review', 'Retention labels not readable: ' + e.message);
       }
     }
 

@@ -135,3 +135,69 @@ describe('incidentTriageResult() — the triage window', () => {
     assert.equal(incidentTriageResult([inc({ createdDateTime: daysAgo(1) })], undefined, NOW).result, 'pass');
   });
 });
+
+// ---------------------------------------------------------------------
+// alertTriageResult() — the sibling that scores the Defender XDR ALERT
+// queue, used by the 'alerts' check when Defender XDR is available (it
+// falls back to the Secure Score proxy when it is not, so no tenant
+// loses the coverage it had).
+//
+// Alerts are deliberately NOT scored like incidents. An incident groups
+// related alerts and is meant to be worked; alerts are high-volume and
+// mostly auto-resolve, so scoring on "any unresolved alert" would give a
+// permanently red check that everyone learns to ignore. What matters is
+// alerts nobody has looked at — status 'newAlert' means untouched.
+describe('alertTriageResult()', () => {
+  const NOW2 = Date.parse('2026-06-15T12:00:00Z');
+  const ago = (n) => new Date(NOW2 - n * 86400000).toISOString();
+  const alert = (over) => Object.assign({
+    id: 'a1', status: 'newAlert', severity: 'high', createdDateTime: ago(1)
+  }, over || {});
+
+  test('an empty queue passes', () => {
+    assert.equal(CheckpointLib.alertTriageResult([], 5, NOW2).result, 'pass');
+    assert.equal(CheckpointLib.alertTriageResult(null, 5, NOW2).result, 'pass');
+  });
+
+  test('resolved alerts are excluded entirely', () => {
+    const r = CheckpointLib.alertTriageResult([alert({ status: 'resolved', createdDateTime: ago(90) })], 5, NOW2);
+    assert.equal(r.open, 0);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('a high-severity alert nobody has opened is a review while still inside the window', () => {
+    assert.equal(CheckpointLib.alertTriageResult([alert()], 5, NOW2).result, 'review');
+  });
+
+  test('a high-severity alert untouched beyond the window fails', () => {
+    const r = CheckpointLib.alertTriageResult([alert({ createdDateTime: ago(9) })], 5, NOW2);
+    assert.equal(r.result, 'fail');
+    assert.equal(r.stale, 1);
+  });
+
+  test('inProgress means someone is on it — never stale, however old', () => {
+    // The signal is "nobody has looked at this", not "this is taking a
+    // while". A long investigation is not a triage failure.
+    const r = CheckpointLib.alertTriageResult([alert({ status: 'inProgress', createdDateTime: ago(90) })], 5, NOW2);
+    assert.equal(r.open, 1);
+    assert.equal(r.stale, 0);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('lower-severity untouched alerts do not drive the outcome', () => {
+    const rows = ['medium', 'low', 'informational'].map((s, i) => alert({ id: 's' + i, severity: s, createdDateTime: ago(90) }));
+    const r = CheckpointLib.alertTriageResult(rows, 5, NOW2);
+    assert.equal(r.open, 3);
+    assert.equal(r.highUntouched, 0);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('an unparseable createdDateTime is never counted stale', () => {
+    assert.equal(CheckpointLib.alertTriageResult([alert({ createdDateTime: 'nope' })], 5, NOW2).stale, 0);
+  });
+
+  test('volume of untouched low-severity noise never fails the check', () => {
+    const many = Array.from({ length: 200 }, (_, n) => alert({ id: 'n' + n, severity: 'low', createdDateTime: ago(60) }));
+    assert.equal(CheckpointLib.alertTriageResult(many, 5, NOW2).result, 'pass');
+  });
+});

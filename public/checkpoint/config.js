@@ -69,7 +69,22 @@ window.CHECKPOINT_CONFIG = {
        never touches them — assigning, classifying or resolving an
        incident is the SOC's job in Defender, and a compliance tool that
        could quietly close incidents would be a genuinely bad idea. */
-    'SecurityIncident.Read.All'
+    'SecurityIncident.Read.All',
+    /* Paired with SecurityIncident.Read.All above — incidents and alerts
+       are separate Graph permissions even though both come from Defender
+       XDR and both are gated by the same 'defenderXdr' capability probe.
+       Read-only for the same reason: Checkpoint reports on the alert
+       queue and never triages, assigns or closes anything in it. */
+    'SecurityAlert.Read.All',
+    /* Privacy. Both are read-only and both are separately licensed, so
+       most tenants will see their checks degrade to Manual rather than
+       fail — which is the correct answer for a capability they do not
+       have. RecordsManagement.Read.All has no application-permission
+       equivalent at all (delegated only), which is why the retention
+       check can never move into the unattended Azure Function monitor
+       the way the Graph posture checks did. */
+    'SubjectRightsRequest.Read.All',
+    'RecordsManagement.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

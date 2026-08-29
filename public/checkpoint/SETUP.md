@@ -76,6 +76,9 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `AccessReview.Read.All` | Whether periodic Entra Access Reviews are configured (access-rights review check; requires Entra ID Governance) | Yes |
 | `SharePointTenantSettings.Read.All` | Tenant-wide external sharing setting (external-sharing check; the signed-in user must hold the SharePoint Administrator or Global Administrator role) | Yes |
 | `SecurityIncident.Read.All` | Read the Defender XDR incident queue (incident-triage check; requires a Defender XDR plan). Read-only by design — Checkpoint never assigns, classifies or resolves an incident | Yes |
+| `SecurityAlert.Read.All` | Read the Defender XDR alert queue (replaces the Secure Score proxy behind the alerts check where Defender XDR is present) | Yes |
+| `SubjectRightsRequest.Read.All` | Read Priva subject rights requests (privacy-request check; requires Microsoft Priva) | Yes |
+| `RecordsManagement.Read.All` | Read Purview retention labels (retention/disposal check; requires Purview records management). Delegated-only — no application-permission equivalent exists | Yes |
 
 **Stage 2 — requested the first time registers are loaded/created**
 (`Store.load()`, i.e. the first time anyone opens Checkpoint in this
@@ -2315,6 +2318,54 @@ five report types render the exact chart composition above, with zero
 console/page errors, across a demo tenant with every framework
 entitled.
 
+### Privacy checks (Priva and Purview retention)
+
+Two checks covering obligations that were previously **entirely
+self-reported** — Checkpoint had no automated privacy signal of any
+kind, so every ISO 27701 and Privacy Act control could only ever be
+*asserted*.
+
+| Check | Reads | Scope | Controls |
+|---|---|---|---|
+| Subject rights requests | `/security/subjectRightsRequests` | `SubjectRightsRequest.Read.All` | A.5.34 |
+| Retention & disposal | `/security/labels/retentionLabels` | `RecordsManagement.Read.All` | A.5.33, A.8.10 |
+
+**Subject rights requests** is the privacy equivalent of incident triage,
+and the only obligation here with a *statutory* clock: APP 12 gives 30
+days to respond, GDPR Article 12 gives one month. Priva carries a
+`dueDateTime` per request, so the check scores against the tenant's own
+recorded deadline rather than assuming a jurisdiction. A request past
+its due date **fails** — that is a live compliance breach, not
+housekeeping. One due within 7 days is a review, so the warning arrives
+before the deadline rather than after it.
+
+**Retention & disposal** scores on whether retention is configured and
+published, not on coverage: Graph can list the labels but cannot tell
+how much content carries them, and claiming a coverage percentage would
+be inventing a number. Published labels with no end-of-retention action
+are a **review** — retention with no disposal keeps content forever,
+which fails the deletion half of A.8.10 and APP 11.2 just as surely as
+having no labels fails the retention half.
+
+Two things worth knowing:
+
+- **`/privacy/subjectRightsRequests` is deprecated** and stopped
+  returning data in March 2025. Checkpoint uses the `/security` path.
+  This matters more than a normal deprecation: the old node returns an
+  *empty collection* rather than an error, so a tenant with real overdue
+  requests would read as "no requests" and quietly score a pass.
+- **`RecordsManagement.Read.All` is delegated-only.** There is no
+  application-permission equivalent, so the retention check can never
+  move into the unattended Azure Function monitor (§9) the way the other
+  Graph checks could.
+
+Both are separately licensed, so most tenants will see *Manual* rather
+than a failure — the correct answer for a capability they do not hold.
+
+**Tests**: `test/privacy-checks.test.mjs` — 16 tests covering the
+statutory-deadline boundary, closed-request exclusion, missing due
+dates, unpublished labels, and the retention-without-disposal case.
+
 ### Checks scored from Checkpoint's own registers
 
 Four checks — **backup restore testing**, **business continuity**,
@@ -2500,6 +2551,41 @@ This is entirely additive:
 - The Dashboard's "Continuous monitoring" panel shows the last
   automated run and cadence, and lists any open drift alerts with a
   one-click Acknowledge action, once deployed.
+
+### Why three checks still use Secure Score
+
+`patch`, `logging`, `macro`, `wdac`, `dlp` and `encryption` are still
+inferred from Microsoft Secure Score control names rather than read
+directly. That is a genuine limitation, not an oversight — Secure Score
+is a *score about* a product, and its own drift-alert text says "verify
+in portal", which is an admission that it points at where evidence lives
+rather than being evidence. A Secure Score-derived check cannot honestly
+reach **Demonstrated** assurance.
+
+Two of them were investigated properly and the answer was no. Recorded
+here so nobody spends the time again:
+
+**`logging` (unified audit logging) — no Graph surface exists.**
+Whether unified audit logging is *enabled* is an Exchange Online
+PowerShell property (`Get-AdminAuditLogConfig`'s
+`UnifiedAuditLogIngestionEnabled`) with no Graph equivalent. The Purview
+AuditLog Query API (`/security/auditLog/queries`) answers a different
+question — *what happened*, not *is logging on* — and is an
+asynchronous job model: POST to create a query, poll it, then retrieve
+records. That is a write, it is slow, and it is still described as
+preview with intermittent instability. Wrong tool, wrong question.
+
+**`patch` (patch currency) — available, but not on Graph.**
+Device-level Defender Vulnerability Management lives on the Defender for
+Endpoint API (`api.securitycenter.microsoft.com`), a different host
+needing its own `connect-src` entry and a different token audience.
+Graph's `/security/threatIntelligence/vulnerabilities` is Defender
+Threat Intelligence — a separate, narrower paid add-on, not the same
+thing. Intune's `managedDevices` does expose `osVersion`, but scoring it
+would mean hardcoding a minimum build number that rots every Patch
+Tuesday.
+
+Both are worth revisiting; neither has a clean answer today.
 
 ## 10. What to build next (roadmap candidates)
 

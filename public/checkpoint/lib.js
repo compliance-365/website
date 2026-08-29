@@ -428,6 +428,116 @@
     return { result: result, note: note, pct: pct, completed: completed, total: list.length, overdue: overdue };
   }
 
+  /* Scores the Defender XDR alert queue (graph.js's 'alerts' check when
+     Defender XDR is available). Sibling to incidentTriageResult().
+
+     Alerts and incidents are not the same signal and are not scored the
+     same way. An incident groups related alerts and is meant to be
+     worked; alerts are high-volume and mostly auto-resolve, so scoring
+     on "any unresolved alert" would produce a permanently red check
+     that everyone learns to ignore — the opposite of useful.
+
+     What matters is alerts NOBODY HAS LOOKED AT. Status 'newAlert'
+     means untouched; 'inProgress' means someone is on it. A
+     high-severity alert still sitting at newAlert days later is a
+     genuine gap in the triage process, and that is what this measures.
+
+     Same missing-date rule as incidents: an alert whose createdDateTime
+     will not parse is never counted as stale. */
+  function alertTriageResult(alerts, triageDays, nowMs) {
+    var list = (alerts || []).filter(function (a) {
+      return a && (a.status === 'newAlert' || a.status === 'inProgress');
+    });
+    var highNew = list.filter(function (a) { return a.severity === 'high' && a.status === 'newAlert'; });
+    var staleMs = (typeof triageDays === 'number' && triageDays >= 0 ? triageDays : 5) * 86400000;
+    var stale = highNew.filter(function (a) {
+      var created = Date.parse(a.createdDateTime || '');
+      return !isNaN(created) && (nowMs - created) > staleMs;
+    });
+    return {
+      open: list.length, highUntouched: highNew.length, stale: stale.length,
+      result: stale.length ? 'fail' : (highNew.length ? 'review' : 'pass')
+    };
+  }
+
+  /* Subject rights requests (Microsoft Priva) — the privacy equivalent
+     of incident triage, and the one privacy obligation that comes with
+     a statutory clock rather than a policy one.
+
+     Australian Privacy Act APP 12 gives 30 days to respond to an access
+     request; GDPR Article 12 gives one month. Priva carries a
+     dueDateTime per request, so this scores against the tenant's OWN
+     recorded deadline rather than assuming a jurisdiction — a request
+     past its due date is a live compliance breach, not a housekeeping
+     item, and is the only thing here that can fail.
+
+     Zero requests is a PASS, not 'manual', and that is a deliberate
+     difference from the register-derived checks. An empty Priva queue
+     is a real, readable answer from a system the tenant demonstrably
+     has (the capability probe succeeded) — "no outstanding requests" is
+     genuinely compliant. An empty Checkpoint register, by contrast,
+     tells you nothing about whether the activity happens elsewhere. */
+  function subjectRightsResult(requests, today) {
+    var list = (requests || []).filter(function (r) {
+      return r && r.status !== 'closed' && r.status !== 'Closed';
+    });
+    if (!list.length) return { open: 0, overdue: 0, dueSoon: 0, result: 'pass' };
+    var overdue = list.filter(function (r) {
+      var d = (r.dueDateTime || '').slice(0, 10);
+      return d && d < today;
+    });
+    var soon = list.filter(function (r) {
+      var d = (r.dueDateTime || '').slice(0, 10);
+      return d && d >= today && daysBetweenDateStr(today, d) <= 7;
+    });
+    return {
+      open: list.length, overdue: overdue.length, dueSoon: soon.length,
+      result: overdue.length ? 'fail' : (soon.length ? 'review' : 'pass')
+    };
+  }
+
+  /* Retention labels (Microsoft Purview records management) — A.5.33
+     protection of records and A.8.10 information deletion, plus APP 11.2
+     which requires destroying or de-identifying personal information no
+     longer needed.
+
+     Scored on whether retention is CONFIGURED and PUBLISHED, not on
+     coverage: Graph can list the labels but cannot tell how much
+     content carries them, so claiming a coverage percentage would be
+     inventing a number. A published label set is the honest ceiling for
+     what this endpoint can demonstrate.
+
+     A tenant with the licence and no labels at all fails: retention is
+     not optional under either the standard or the Act, and unlike the
+     register checks there is no "maybe they do it elsewhere" — Purview
+     records management IS the place this is done in a Microsoft
+     tenant. */
+  function retentionLabelResult(labels) {
+    var list = (labels || []).filter(function (l) { return l; });
+    if (!list.length) {
+      return { total: 0, published: 0, withDisposition: 0, result: 'fail' };
+    }
+    /* A label that exists but was never published applies to nothing.
+       Graph exposes this inconsistently across tenants, so treat an
+       absent flag as published rather than inventing a failure. */
+    var published = list.filter(function (l) {
+      return l.labelStatus === undefined || l.labelStatus === null || l.labelStatus === 'published' || l.labelStatus === 'InUse';
+    });
+    var withDisposition = list.filter(function (l) {
+      return l.actionAfterRetentionPeriod && l.actionAfterRetentionPeriod !== 'none';
+    });
+    if (!published.length) {
+      return { total: list.length, published: 0, withDisposition: withDisposition.length, result: 'fail' };
+    }
+    /* Retention with no end action keeps content forever, which fails
+       the deletion half of A.8.10 and APP 11.2 just as surely as having
+       no labels fails the retention half. */
+    if (!withDisposition.length) {
+      return { total: list.length, published: published.length, withDisposition: 0, result: 'review' };
+    }
+    return { total: list.length, published: published.length, withDisposition: withDisposition.length, result: 'pass' };
+  }
+
   /* ============================================================
      Register-derived posture checks
      ------------------------------------------------------------
@@ -2786,7 +2896,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

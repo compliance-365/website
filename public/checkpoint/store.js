@@ -463,6 +463,13 @@ window.CHECK_DEFS = [
      on the incident-response controls — a real record with real
      timestamps, rather than a score about a product. */
   { id: 'xdr-incidents', area: 'Monitoring', label: 'Security incidents triaged within cadence', tpl: 'xdr-incidents', scored: true, requiresCapability: 'defenderXdr' },
+  /* Privacy (2). The first automated signal Checkpoint has ever had for
+     ISO 27701 / Privacy Act obligations — everything privacy-related was
+     previously self-reported. Both are separately licensed, so most
+     tenants will see Manual rather than a failure, which is the correct
+     answer for a capability they do not hold. */
+  { id: 'privacy-srr', area: 'Privacy', label: 'Subject rights requests answered within statutory deadline', tpl: 'privacy-srr', scored: true, requiresCapability: 'priva' },
+  { id: 'retention',   area: 'Privacy', label: 'Retention & disposal labels published', tpl: 'retention', scored: true, requiresCapability: 'recordsManagement' },
   /* Continuity & Supplier (3) */
   { id: 'backup',     area: 'Continuity', label: 'Backup coverage & restore testing',          tpl: 'backup',    scored: true },
   { id: 'bcp',        area: 'Continuity', label: 'Business continuity / disaster recovery plan documented & tested', tpl: 'bcp', scored: true },
@@ -821,7 +828,13 @@ window.CHECK_CONTROLS = {
   'backup': ['A.8.13'],
   'bcp': ['A.5.29', 'A.5.30'],
   'supplier': ['A.5.19', 'A.5.20', 'A.5.22'],
-  'policy': ['A.5.1']
+  'policy': ['A.5.1'],
+  /* Privacy. A.5.34 covers privacy and PII protection; A.5.33/A.8.10 are
+     the records-protection and information-deletion pair that retention
+     labels actually implement. These were entirely self-reported before
+     — Checkpoint had no automated privacy signal of any kind. */
+  'privacy-srr': ['A.5.34'],
+  'retention': ['A.5.33', 'A.8.10']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
@@ -1018,7 +1031,8 @@ window.DemoStore = (function () {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
         'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
-        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail'
+        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
+        'privacy-srr': 'fail', 'retention': 'review'
       },
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
@@ -1027,7 +1041,9 @@ window.DemoStore = (function () {
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
         'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',
-        'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned'
+        'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned',
+        'privacy-srr': '3 open request(s); 1 PAST their statutory due date; 1 due within 7 days',
+        'retention': '4 of 4 retention label(s) published, none with an end-of-retention action — retained content is never disposed of'
       },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-001', 'ACT-002'] },

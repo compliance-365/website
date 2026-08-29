@@ -9,6 +9,17 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.44.0',
+    date: '2026-08-29',
+    entries: [
+      'New: privacy checks. Subject rights requests (Microsoft Priva) and retention & disposal labels (Microsoft Purview) are now scanned. Every privacy obligation in Checkpoint was previously self-reported, so ISO 27701 and Privacy Act controls could only ever be asserted — these are the first automated privacy signals the tool has had.',
+      'Subject rights requests is the one check here with a statutory clock: the Privacy Act gives 30 days to respond, GDPR gives a month. Priva records a due date per request, so the check scores against your own recorded deadline rather than assuming a jurisdiction. A request past its due date fails — that is a live breach, not housekeeping — and one due within seven days shows as a review, so the warning arrives before the deadline rather than after it.',
+      'Retention is scored on whether labels are published and actually dispose of anything. Labels with no end-of-retention action show as a review: retention with no disposal keeps content forever, which fails the deletion half of A.8.10 and APP 11.2 just as surely as having no labels at all fails the retention half.',
+      'The alerts check now reads the Defender XDR alert queue directly where Defender XDR is present, instead of matching names against Secure Score. It falls back to the old signal where it is not, so no tenant loses coverage. Alerts are scored on ones nobody has opened rather than on volume — a busy queue that is being worked is not a compliance failure.',
+      'Both privacy checks need their own licence (Priva, and Purview records management), so most tenants will see Manual rather than a failure. Manual is excluded from your score, so a capability you do not hold never counts against you.'
+    ]
+  },
+  {
     version: '1.43.0',
     date: '2026-08-29',
     entries: [
