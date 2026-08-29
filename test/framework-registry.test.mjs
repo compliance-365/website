@@ -476,9 +476,9 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // triage). An unlicensed tenant is unaffected: the defenderXdr
     // capability probe fails, the check degrades to 'manual', and
     // score() excludes 'manual' from its denominator entirely.
-    assert.equal(CHECK_DEFS.length, 38);
+    assert.equal(CHECK_DEFS.length, 39);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 28);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 29);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

@@ -204,3 +204,63 @@ describe('recurringActivityState() — the shared calendar helper', () => {
     assert.equal(recurringActivityState([null, cal()], 'Backup restore test', TODAY).total, 1);
   });
 });
+
+// ---------------------------------------------------------------------
+// deviceCheckinResult() — Intune check-in staleness (A.8.1).
+//
+// Distinct from the device COMPLIANCE percentage, and that distinction
+// is the whole point: a fleet can read 100% compliant precisely because
+// the non-compliant devices stopped checking in and their last-known
+// state froze. A device that has not contacted Intune in weeks is not
+// receiving policy, configuration or updates, and its compliance state
+// is stale evidence rather than current evidence.
+//
+// Needs no new Graph permission — lastSyncDateTime is added to the
+// managedDevices $select the device check already makes.
+describe('deviceCheckinResult()', () => {
+  const NOW3 = Date.parse('2026-06-15T12:00:00Z');
+  const since = (n) => new Date(NOW3 - n * 86400000).toISOString();
+  const dev = (over) => Object.assign({ id: 'd1', lastSyncDateTime: since(1) }, over || {});
+
+  test('no devices is a review, not a pass — nothing to report is not evidence', () => {
+    assert.equal(CheckpointLib.deviceCheckinResult([], 30, NOW3).result, 'review');
+    assert.equal(CheckpointLib.deviceCheckinResult(null, 30, NOW3).result, 'review');
+  });
+
+  test('all devices checked in recently passes', () => {
+    assert.equal(CheckpointLib.deviceCheckinResult([dev(), dev({ id: 'd2' })], 30, NOW3).result, 'pass');
+  });
+
+  test('a device with no sync date at all counts as never, and as stale', () => {
+    // Opposite of the missing-date rule elsewhere in this file, and
+    // deliberately: an incident with no creation date tells us nothing
+    // about its age, but a managed device with no sync date has
+    // demonstrably never reported in.
+    const r = CheckpointLib.deviceCheckinResult([dev({ lastSyncDateTime: '' })], 30, NOW3);
+    assert.equal(r.never, 1);
+    assert.equal(r.stale, 1);
+  });
+
+  test('scoring is proportional — one stale device in a large fleet is only a review', () => {
+    const fleet = Array.from({ length: 50 }, (_, n) => dev({ id: 'd' + n }));
+    fleet[0] = dev({ id: 'd0', lastSyncDateTime: since(90) });
+    const r = CheckpointLib.deviceCheckinResult(fleet, 30, NOW3);
+    assert.equal(r.stale, 1);
+    assert.equal(r.result, 'review');
+  });
+
+  test('a large proportion stale fails', () => {
+    const fleet = Array.from({ length: 10 }, (_, n) => dev({ id: 'd' + n, lastSyncDateTime: since(90) }));
+    assert.equal(CheckpointLib.deviceCheckinResult(fleet, 30, NOW3).result, 'fail');
+  });
+
+  test('the window is configurable', () => {
+    const rows = [dev({ lastSyncDateTime: since(45) })];
+    assert.equal(CheckpointLib.deviceCheckinResult(rows, 30, NOW3).stale, 1);
+    assert.equal(CheckpointLib.deviceCheckinResult(rows, 60, NOW3).stale, 0);
+  });
+
+  test('a missing window falls back to 30 days', () => {
+    assert.equal(CheckpointLib.deviceCheckinResult([dev({ lastSyncDateTime: since(45) })], undefined, NOW3).stale, 1);
+  });
+});

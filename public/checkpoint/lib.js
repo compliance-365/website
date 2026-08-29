@@ -460,6 +460,46 @@
     };
   }
 
+  /* Intune device check-in staleness (graph.js's 'device-checkin').
+
+     Distinct from the compliance-percentage check, and deliberately so:
+     a fleet can read 100% compliant precisely BECAUSE the
+     non-compliant devices stopped checking in and their last-known
+     state froze. A device that has not contacted Intune in weeks is not
+     receiving policy, configuration or updates, and its compliance
+     state is stale evidence rather than current evidence.
+
+     This uses lastSyncDateTime, which is added to the existing
+     managedDevices $select — no new Graph permission, no new licence,
+     so it works on every tenant that already has the device check.
+
+     A device with no lastSyncDateTime at all counts as 'never', which
+     is worse than stale, not better. That differs from the
+     missing-date rule elsewhere in this file (where an unparseable
+     date is never counted against a tenant) because the semantics are
+     opposite: an incident with no creation date tells us nothing about
+     its age, but a managed device with no sync date has demonstrably
+     never reported in. */
+  function deviceCheckinResult(devices, staleDays, nowMs) {
+    var list = (devices || []).filter(function (d) { return d; });
+    if (!list.length) return { total: 0, stale: 0, never: 0, result: 'review' };
+    var limit = (typeof staleDays === 'number' && staleDays > 0 ? staleDays : 30) * 86400000;
+    var never = list.filter(function (d) { return !d.lastSyncDateTime; });
+    var stale = list.filter(function (d) {
+      if (!d.lastSyncDateTime) return true;
+      var t = Date.parse(d.lastSyncDateTime);
+      return !isNaN(t) && (nowMs - t) > limit;
+    });
+    /* Proportional, not absolute: one stale laptop in a fleet of 500 is
+       housekeeping, while a fifth of the fleet silently unmanaged is a
+       real finding. */
+    var pct = stale.length / list.length;
+    return {
+      total: list.length, stale: stale.length, never: never.length,
+      result: pct === 0 ? 'pass' : (pct <= 0.1 ? 'review' : 'fail')
+    };
+  }
+
   /* Subject rights requests (Microsoft Priva) — the privacy equivalent
      of incident triage, and the one privacy obligation that comes with
      a statutory clock rather than a policy one.
@@ -2896,7 +2936,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

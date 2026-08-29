@@ -445,6 +445,7 @@ window.CHECK_DEFS = [
   /* Devices (3) */
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
+  { id: 'device-checkin', area: 'Devices', label: 'Managed devices checking in with Intune', tpl: 'device-checkin', scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
   /* Apps & Data (7) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
@@ -528,6 +529,7 @@ window.THRESHOLD_DEFS = [
   { key: 'deviceCompliancePassPct', label: 'Device compliance pass %', desc: 'Percentage of Intune-managed devices reporting compliant, at or above which the check passes.', def: '95' },
   { key: 'deviceComplianceReviewPct', label: 'Device compliance review %', desc: 'Below the pass % but at or above this value is a review; below this is a fail.', def: '80' },
   { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' },
+  { key: 'deviceStaleDays', label: 'Device check-in staleness (days)', desc: 'A managed device that has not contacted Intune within this many days is treated as unmanaged — it is not receiving policy or updates, and its last reported compliance state is stale evidence.', def: '30' },
   { key: 'incidentTriageDays', label: 'Incident triage window (days)', desc: 'A high-severity Defender XDR incident still active beyond this many days fails the incident-triage check. Set this to whatever your own incident response plan commits to — the default of 5 days is a starting point, not a standard.', def: '5' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
 ];
@@ -607,6 +609,7 @@ window.DEFAULT_SETTINGS = {
   deviceComplianceReviewPct: '80',
   riskyUsersReviewMax: '3',
   incidentTriageDays: '5',
+  deviceStaleDays: '30',
   controlReviewCadenceDays: '90',
   /* Trust Center — what a generated public page is allowed to show.
      Off by default wherever disclosure is the more sensitive choice
@@ -798,6 +801,7 @@ window.CHECK_CONTROLS = {
   'guests': ['A.5.16'],
   'riskyusers': ['A.5.25', 'A.5.26'],
   'device': ['A.8.1'],
+  'device-checkin': ['A.8.1'],
   'compliance-policy': ['A.8.1'],
   'patch': ['A.8.8'],
   'wdac': ['A.8.7', 'A.8.19'],
@@ -1029,7 +1033,7 @@ window.DemoStore = (function () {
       ],
       lastResults: {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
-        'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
+        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
         'privacy-srr': 'fail', 'retention': 'review'
@@ -1037,7 +1041,7 @@ window.DemoStore = (function () {
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
-        'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
+        'compliance-policy': '3 compliance policies configured', 'device-checkin': '14 of 214 device(s) have not checked in for over 30 days (2 never have) — their compliance state is stale evidence', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
         'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',

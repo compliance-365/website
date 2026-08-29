@@ -2318,6 +2318,31 @@ five report types render the exact chart composition above, with zero
 console/page errors, across a demo tenant with every framework
 entitled.
 
+### Device check-in staleness
+
+**"Managed devices checking in with Intune"** counts how many managed
+devices have actually contacted Intune recently, using
+`lastSyncDateTime` on the `managedDevices` call the device check already
+makes — **no new permission, no new licence.**
+
+It is deliberately separate from the device *compliance percentage*,
+because the two can disagree in the worst possible direction: **a fleet
+can read 100% compliant precisely because the non-compliant devices
+stopped checking in** and their last-known state froze. A device that
+has not reported in weeks is not receiving policy, configuration or
+updates, and its compliance state is stale evidence rather than current
+evidence.
+
+Scored **proportionally**, not absolutely — one stale laptop in a fleet
+of 500 is housekeeping; a fifth of the fleet silently unmanaged is a
+finding. The window is the `deviceStaleDays` setting (default 30).
+
+A device with no sync date at all counts as stale. That is the opposite
+of the missing-date rule used for incidents and alerts, and deliberately
+so: an incident with no creation date tells you nothing about its age,
+but a managed device with no sync date has demonstrably never reported
+in.
+
 ### Privacy checks (Priva and Purview retention)
 
 Two checks covering obligations that were previously **entirely
@@ -2585,7 +2610,21 @@ thing. Intune's `managedDevices` does expose `osVersion`, but scoring it
 would mean hardcoding a minimum build number that rots every Patch
 Tuesday.
 
-Both are worth revisiting; neither has a clean answer today.
+**`dlp` — no Graph endpoint exists either.** Microsoft's own
+documentation states there is no supported Graph resource for listing
+DLP policies; management stays in the Purview portal. The Protection
+Scopes and Process Content APIs solve a different problem — enforcing
+DLP inside a custom application, not auditing which policies exist.
+
+All three are worth revisiting; none has a clean answer today.
+
+**Entra ID Governance is a genuine candidate, not a dead end.**
+Entitlement management and lifecycle workflows are both GA on Graph v1.0
+with `EntitlementManagement.Read.All`, and would speak to A.5.16/A.5.18
+and the joiner-mover-leaver controls that are currently entirely
+self-reported. Not built yet only because it needs the Entra ID
+Governance SKU — a costly add-on few SME tenants hold — so it would show
+Manual almost everywhere. Worth doing when the audience justifies it.
 
 ## 10. What to build next (roadmap candidates)
 

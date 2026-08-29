@@ -423,7 +423,7 @@ window.GUIDANCE = {
     how: "Enrol every endpoint accessing company data into Intune, apply a compliance policy (encryption, OS version, security baseline) and block access from non-compliant devices through Conditional Access. Checkpoint's device-compliance and compliance-policy checks read this configuration directly on every scan.",
     evidence: "The Intune compliance policy configuration, device compliance reporting, and Checkpoint's device/compliance-policy scan results.",
     link: "https://intune.microsoft.com",
-    checks: ["device", "compliance-policy"]
+    checks: ["device", "compliance-policy", "device-checkin"]
   },
   'A.8.2': {
     how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access) — Checkpoint's admin-count and PIM checks both watch this directly, and its access-review check confirms privileged role membership is also reviewed periodically, not just gated by PIM at assignment time.",

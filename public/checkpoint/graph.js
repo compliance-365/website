@@ -315,6 +315,7 @@ window.Graph = (function () {
     var deviceComplianceReviewPct = num('deviceComplianceReviewPct', 80);
     var riskyUsersReviewMax = num('riskyUsersReviewMax', 3);
     var incidentTriageDays = num('incidentTriageDays', 5);
+    var deviceStaleDays = num('deviceStaleDays', 30);
 
     /* Consulted below so a licence/permission gap this tenant genuinely
        has (no Entra ID P2, no Intune, etc.) shows up as a clean,
@@ -465,18 +466,39 @@ window.Graph = (function () {
       set('compliance-policy', 'manual', capabilities.intune.note);
     } else {
       try {
-        var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState&$top=999');
+        /* lastSyncDateTime is added to the existing $select rather than
+           fetched separately — same call, same permission, one more
+           field, and it powers the device-checkin check below. */
+        var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState,lastSyncDateTime&$top=999');
         raw['device'] = { managedDevices: devs };
         if (!devs.length) {
           set('device', 'review', 'No Intune-managed devices found');
+          set('device-checkin', 'review', 'No Intune-managed devices found');
         } else {
           var ok = devs.filter(function (d) { return d.complianceState === 'compliant'; }).length;
           var pct = Math.round(ok / devs.length * 100);
           set('device', pct >= deviceCompliancePassPct ? 'pass' : pct >= deviceComplianceReviewPct ? 'review' : 'fail',
             pct + '% of ' + devs.length + ' devices compliant (target ≥' + deviceCompliancePassPct + '%, review ≥' + deviceComplianceReviewPct + '%)');
+
+          /* A device that has not contacted Intune in weeks is not
+             managed in any meaningful sense — it is not receiving
+             policy, configuration or updates, and its last reported
+             compliance state is stale evidence rather than current
+             evidence. That is a distinct finding from "reported
+             non-compliant", which is why it is its own check: a fleet
+             can read 100% compliant precisely BECAUSE the
+             non-compliant devices stopped checking in. */
+          var dc = window.CheckpointLib.deviceCheckinResult(devs, deviceStaleDays, Date.now());
+          raw['device-checkin'] = { total: dc.total, stale: dc.stale, never: dc.never, staleDays: deviceStaleDays };
+          set('device-checkin', dc.result,
+            dc.stale || dc.never
+              ? dc.stale + ' of ' + dc.total + ' device(s) have not checked in for over ' + deviceStaleDays + ' days' +
+                (dc.never ? ' (' + dc.never + ' never have)' : '') + ' — their compliance state is stale evidence'
+              : 'All ' + dc.total + ' managed device(s) checked in within ' + deviceStaleDays + ' days');
         }
       } catch (e) {
         set('device', 'review', 'Could not read Intune devices: ' + e.message);
+        set('device-checkin', 'review', 'Could not read Intune devices: ' + e.message);
       }
 
       try {

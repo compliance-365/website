@@ -300,6 +300,12 @@ function showModal(opts) {
       risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
     },
+    'device-checkin': {
+      risk: { title: 'Managed devices no longer checking in, so their compliance state is stale', cat: 'Ops', L: 3, I: 4, controls: ['A.8.1'] },
+      actions: [
+        { t: 'Investigate devices that have stopped checking in — retire the disposed ones, re-enrol the rest', pr: 'High', days: 21, control: 'A.8.1' }
+      ]
+    },
     'privacy-srr': {
       risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', L: 4, I: 4, controls: ['A.5.34'] },
       actions: [
