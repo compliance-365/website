@@ -33,6 +33,22 @@ throttled separately.
 3. Security: **Open** (CORS is handled in the code)
 4. Click Add
 
+### 5. Raise the timeout — this one is not optional
+1. Lambda → Configuration → General configuration → Edit
+2. **Timeout: 30 sec**
+
+AWS defaults every new function to **3 seconds**. This Lambda waits on
+an Anthropic Messages API completion, which routinely takes five to
+thirty seconds — so on the default it would fail essentially every
+call, and fail *invisibly*: the function is killed mid-request with
+`Task timed out after 3.00 seconds` and no application error, so
+CloudWatch shows nothing that looks like a cause. "Explain this" in the
+posture scan just silently does nothing.
+
+Thirty seconds is chosen to sit above a slow completion while still
+being well under API Gateway's own 29–30s ceiling, so the caller sees a
+clean error rather than a hung request.
+
 ### 5. Enable CORS on the route
 1. Go to API Gateway → your new API → Routes
 2. Click the POST route → CORS

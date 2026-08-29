@@ -75,6 +75,16 @@ do **not** need to provision a service principal for this to work.
    Authorization`. The `Authorization` header matters — the landing
    page sends the caller's Graph token, and without it every real
    request fails the browser's preflight before reaching the Lambda.
+6. **Configuration → General configuration → Edit → Timeout: 15 sec.**
+   Do not skip this. AWS defaults every new function to **3 seconds**,
+   and this one makes up to seven sequential outbound calls on a single
+   invocation — an Entra token, one or more Fulfillment API reads, then
+   an owner-tenant Graph token and the roster writes. Three seconds is
+   not enough for that chain, and the failure is genuinely confusing
+   when it happens: the function is killed mid-flight with
+   `Task timed out after 3.00 seconds` and no application error at all,
+   so the logs point at nothing. This cost a debugging session on the
+   first deploy.
 
 ## 4. Partner Center — Technical configuration
 

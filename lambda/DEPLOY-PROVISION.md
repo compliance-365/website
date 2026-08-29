@@ -86,6 +86,25 @@ not as a signed-in user, because the Lambda runs unattended.
 1. Lambda → Add trigger → API Gateway → **HTTP API**
 2. Security: Open (CORS handled in code)
 3. Route: `POST /provision`
+4. **Configuration → General configuration → Edit → Timeout: 15 sec.**
+
+> **⚠️ Do not skip the timeout.** AWS defaults every new function to
+> **3 seconds**. This one makes five sequential outbound calls on a
+> single invocation — a Paddle API read, an Entra token for our own
+> tenant, then the roster writes to SharePoint — and three seconds is
+> not reliably enough for that chain, especially on a cold start.
+>
+> The failure mode is nastier than a normal error: the function is
+> killed mid-flight with `Task timed out after 3.00 seconds` and no
+> application error at all, so CloudWatch points at nothing and the
+> customer has been charged with no entitlement issued. The identical
+> problem bit the Marketplace Lambda (`DEPLOY-MARKETPLACE.md` §3) on its
+> first deploy and took a session to find, because a timeout looks
+> nothing like the auth and configuration errors you go looking for
+> first.
+>
+> If self-serve provisioning has ever silently failed for a real Paddle
+> customer, check this setting before anything else.
 
 ## 6. Enable CORS on the route
 1. API Gateway → your API → Routes → the POST route → CORS
