@@ -1238,7 +1238,18 @@ function showModal(opts) {
   function risk(id) { return S.risks.find(function (r) { return r.id === id; }); }
   function residual(r) { return window.CheckpointLib.residual(r, S.actions); }
   function checkResult(c) {
-    return window.CheckpointLib.checkResult(c, { lastResults: S.lastResults, isDemo: Store.kind === 'demo', risks: S.risks, actions: S.actions });
+    return window.CheckpointLib.checkResult(c, {
+      lastResults: S.lastResults, isDemo: Store.kind === 'demo', risks: S.risks, actions: S.actions,
+      checkDispositions: S.checkDispositions, today: new Date().toISOString().slice(0, 10)
+    });
+  }
+  /* Shorthand for the three other places that need to know whether a
+     check is dispositioned — the proposal loop, the assurance
+     observation set, and the scan view's own rendering. All four must
+     agree, so they all resolve it through lib.js's one implementation
+     rather than re-deriving "is this overridden, and has it lapsed?". */
+  function dispositionFor(checkId) {
+    return window.CheckpointLib.activeDisposition(checkId, S.checkDispositions, new Date().toISOString().slice(0, 10));
   }
   function score() {
     return window.CheckpointLib.score(window.CHECK_DEFS, null, checkResult);
@@ -3937,11 +3948,30 @@ function showModal(opts) {
         var r = checkResult(c);
         var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : r === 'manual' ? 'st-Proposed' : 'st-Notstarted';
         var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : r === 'manual' ? 'Manual — verify' : 'Not scanned';
+        /* A dispositioned check must never look like a Microsoft pass.
+           The chip says where the result actually came from, because
+           "Pass" on its own would be the single most misleading thing
+           this view could show — the tenant would read it as Checkpoint
+           having verified something it explicitly did not. A lapsed
+           disposition is not shown here at all: activeDisposition()
+           already returned null for it, the raw scan result is back, and
+           the row correctly reads as failing again. */
+        var disp = dispositionFor(c.id);
+        if (disp) {
+          cls = disp.disposition === 'alternative' ? 'st-Implemented' : 'st-Proposed';
+          lbl = disp.disposition === 'alternative' ? 'Covered — ' + (disp.tool || 'other tool') : 'Not applicable';
+        }
         var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
+        if (disp) {
+          var dueSoon = disp.reviewDue && disp.reviewDue < new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+          note += '<div class="src" style="margin-top:2px">Not scored from Microsoft signal' +
+            (disp.reviewDue ? ' · review due ' + esc(disp.reviewDue) + (dueSoon ? ' (soon)' : '') : ' · no review date set') + '</div>';
+        }
+        var dispBtn = '<button class="btn ghost sm" data-action="App.setDisposition" data-id="' + esc(c.id) + '">' + (disp ? 'Edit coverage' : 'Not via Microsoft?') + '</button>';
         var explainBtn = aiOn ? '<button class="btn ghost sm" data-action="App.explainCheck" data-id="' + esc(c.id) + '">Explain this</button>' : '';
         var cached = _checkExplainCache[c.id];
         var explainBlock = cached ? '<div class="card" style="margin:0 2px 10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
-        return '<div class="check-row-group"><div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + lbl + '</span>' + explainBtn + '</div><div id="checkExplain-' + esc(c.id) + '">' + explainBlock + '</div></div>';
+        return '<div class="check-row-group"><div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + esc(lbl) + '</span>' + dispBtn + explainBtn + '</div><div id="checkExplain-' + esc(c.id) + '">' + explainBlock + '</div></div>';
       }).join('');
     }).join('');
   }
@@ -5003,7 +5033,26 @@ function showModal(opts) {
   function assuranceForControl(c) {
     var cadence = (S.settings && parseInt(S.settings.controlReviewCadenceDays, 10)) || 365;
     var key = c.fw + '|' + c.id;
-    var checkIds = checkIdsByControl()[key] || [];
+    /* A dispositioned check contributes NO automated observation to the
+       control it maps to — not a pass, and not an exception either.
+
+       Not a pass, because Checkpoint did not observe anything: the
+       tenant told us another tool covers this. Counting it would let
+       'demonstrated' — the assurance level that specifically means
+       "automated observations passed" — be reached by assertion alone,
+       which is the one thing that ranking exists to prevent.
+
+       Not an exception either, which is the less obvious half. Leaving
+       the raw Defender signal in the observation set would have a
+       CrowdStrike tenant's controls permanently marked as having failed
+       observations, from a product they deliberately do not use. That
+       noise is not evidence of anything.
+
+       Dropping it entirely means the control's assurance falls back to
+       whatever human evidence supports it — 'evidenced' with an
+       attached artefact, 'asserted' with only a verification date. That
+       is the honest ceiling for a control we cannot see. */
+    var checkIds = (checkIdsByControl()[key] || []).filter(function (id) { return !dispositionFor(id); });
     var effectiveness = null;
     if (checkIds.length) {
       var history = scanResultHistory();
@@ -8031,6 +8080,17 @@ function showModal(opts) {
         if (!c.tpl) return;
         var r = checkResult(c);
         if (r === 'pass' || r === null) return;
+        /* An 'alternative' disposition already reads as 'pass' above and
+           never reaches here. 'notApplicable' reads as 'manual', which
+           does NOT short-circuit — a check that merely could not be
+           measured (unlicensed, wrong admin role) still deserves a
+           proposed risk, and that existing behaviour is left alone.
+           This guard separates the two: the tenant has explicitly
+           recorded that this check does not apply to them, with a
+           justification and a review date, so re-proposing the same
+           risk on every scan is exactly the nagging this whole
+           mechanism exists to stop. */
+        if (dispositionFor(c.id)) return;
         if (S.handledTpl.indexOf(c.tpl) > -1) return;
         if (S.proposed.indexOf(c.tpl) > -1) return;
         S.proposed.push(c.tpl);
@@ -12218,6 +12278,71 @@ function showModal(opts) {
        so re-rendering the Coverage/Scan view (e.g. switching tabs)
        doesn't re-call the model for a check already explained this
        session. A fresh scan clears the cache (App.runScan above). */
+    /* "How is this covered?" — records that a check is satisfied by
+       something Checkpoint cannot see, or does not apply at all.
+
+       Scoring consequences are in lib.js's checkResult() and
+       assuranceForControl(); this method only captures the claim. The
+       review date is mandatory on purpose: an override with no expiry
+       is a permanent blind spot in the posture score, and the whole
+       point of lapsing them is that somebody has to look again. */
+    setDisposition: async function (id) {
+      var c = window.CHECK_DEFS.find(function (x) { return x.id === id; });
+      if (!c) return;
+      if (Store.kind === 'demo') { toast('Demo mode keeps dispositions in this browser only — they would be saved to your SharePoint in a real tenant.'); }
+      var cur = (S.checkDispositions || []).find(function (x) { return x.checkId === id; }) || {};
+      var acc = (typeof Graph !== 'undefined' && Graph.getAccount()) || null;
+      var defaultDue = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+      var vals = await showModal({
+        title: 'How is “' + c.label + '” covered?',
+        message: 'Checkpoint scores this check from Microsoft signal. If this control is met another way, record it here so the score reflects reality and the risk stops being re-proposed on every scan.',
+        confirmText: 'Save',
+        fields: [
+          { id: 'disposition', label: 'Coverage', type: 'select', value: cur.disposition || 'microsoft', options: [
+            { value: 'microsoft', label: 'Microsoft — scan and score this check normally' },
+            { value: 'alternative', label: 'Covered by another tool' },
+            { value: 'notApplicable', label: 'Not applicable to this organisation' }
+          ] },
+          { id: 'tool', label: 'Which tool? (for "covered by another tool")', value: cur.tool || '', placeholder: 'e.g. CrowdStrike Falcon' },
+          { id: 'justification', label: 'Justification — an auditor will read this', type: 'textarea', value: cur.justification || '' },
+          { id: 'evidenceUrl', label: 'Evidence link (optional, but raises assurance from Asserted to Evidenced)', value: cur.evidenceUrl || '' },
+          { id: 'owner', label: 'Owner', value: cur.owner || (acc && acc.name) || '' },
+          { id: 'reviewDue', label: 'Review due', type: 'date', value: cur.reviewDue || defaultDue }
+        ],
+        validate: function (v) {
+          if (v.disposition === 'microsoft') return null;
+          if (!v.justification) return 'A justification is required — this is what an auditor will ask for.';
+          if (v.disposition === 'alternative' && !v.tool) return 'Name the tool that covers this control.';
+          if (!v.reviewDue) return 'A review date is required, so this override cannot be forgotten.';
+          return null;
+        }
+      });
+      if (!vals) return;
+      var today = new Date().toISOString().slice(0, 10);
+      try {
+        if (vals.disposition === 'microsoft') {
+          if (!cur.checkId) return;
+          await Store.clearCheckDisposition(id);
+          toast('<b>' + esc(c.label) + '</b> is scored from Microsoft signal again');
+          audit('Check disposition cleared', 'Check', id, cur.disposition + (cur.tool ? ' (' + cur.tool + ')' : ''), 'microsoft');
+        } else {
+          await Store.setCheckDisposition({
+            checkId: id, disposition: vals.disposition, tool: vals.tool, justification: vals.justification,
+            evidenceUrl: vals.evidenceUrl, owner: vals.owner, lastVerified: today, reviewDue: vals.reviewDue,
+            _sp: cur._sp
+          });
+          toast('<b>' + esc(c.label) + '</b> recorded as ' + (vals.disposition === 'alternative' ? 'covered by <b>' + esc(vals.tool) + '</b>' : 'not applicable'));
+          audit('Check disposition set', 'Check', id, cur.disposition || 'microsoft', vals.disposition + (vals.tool ? ' (' + vals.tool + ')' : '') + ', review due ' + vals.reviewDue);
+        }
+      } catch (e) { warn(e); return; }
+      /* The score, the SoA's assurance column and the Dashboard all move
+         when a disposition changes, so this is a full re-render rather
+         than a targeted one. */
+      resetAssuranceIndex();
+      renderScanChecks(true);
+      renderDash();
+    },
+
     explainCheck: async function (id) {
       var c = window.CHECK_DEFS.find(function (x) { return x.id === id; });
       if (!c) return;

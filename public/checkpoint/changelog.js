@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.41.0',
+    date: '2026-08-29',
+    entries: [
+      'New: record how a check is covered when it is not covered by Microsoft. Checkpoint scores the Microsoft stack, so a tenant running CrowdStrike instead of Defender, or OneTrust instead of Priva, used to fail those checks forever — the score punished a control they actually held, and the same risk was re-proposed on every scan until people learned to ignore the proposals. Every check on the Posture scan now has a "Not via Microsoft?" button.',
+      'Mark a check as covered by another tool and it scores as a pass, named after the tool on the scan view so it never reads as something Checkpoint verified itself. Mark it not applicable and it drops out of the score entirely rather than counting against you. Either way the proposed risk stops coming back.',
+      'Both require a justification and a review date, and the override expires on that date by itself — the real scan result comes back and the check starts failing again until someone confirms the alternative control is still in place. An override with no expiry is a permanent blind spot that nobody revisits, and an auditor will find it before you do.',
+      'A check covered this way can never reach "Demonstrated" assurance on the controls it maps to. It is dropped from the observation set entirely — not counted as a passing observation, and not counted as an exception either, so a CrowdStrike tenant is not marked down for Defender signal they deliberately do not use. The control falls back to Evidenced or Asserted, depending on the evidence attached.'
+    ]
+  },
+  {
     version: '1.40.0',
     date: '2026-07-27',
     entries: [
