@@ -464,11 +464,11 @@ window.CHECK_DEFS = [
      timestamps, rather than a score about a product. */
   { id: 'xdr-incidents', area: 'Monitoring', label: 'Security incidents triaged within cadence', tpl: 'xdr-incidents', scored: true, requiresCapability: 'defenderXdr' },
   /* Continuity & Supplier (3) */
-  { id: 'backup',     area: 'Continuity', label: 'Backup coverage & restore testing',          tpl: 'backup',    scored: false },
-  { id: 'bcp',        area: 'Continuity', label: 'Business continuity / disaster recovery plan documented & tested', tpl: null, scored: false },
-  { id: 'supplier',   area: 'Supplier',   label: 'Supplier security assessments current',      tpl: null,        scored: false },
+  { id: 'backup',     area: 'Continuity', label: 'Backup coverage & restore testing',          tpl: 'backup',    scored: true },
+  { id: 'bcp',        area: 'Continuity', label: 'Business continuity / disaster recovery plan documented & tested', tpl: 'bcp', scored: true },
+  { id: 'supplier',   area: 'Supplier',   label: 'Supplier security assessments current',      tpl: 'supplier',  scored: true },
   /* Governance (2) */
-  { id: 'policy',     area: 'Governance', label: 'Information security policy published & reviewed', tpl: null,  scored: false },
+  { id: 'policy',     area: 'Governance', label: 'Information security policy published & reviewed', tpl: 'policy', scored: true },
   /* scored:true since the Training register exists — app.js's
      applyTrainingCheckResult() computes this from real completion data
      at scan time rather than from a Graph signal (there isn't one).
@@ -810,7 +810,18 @@ window.CHECK_CONTROLS = {
      document, not something an open-incident age can demonstrate, and
      claiming it here would be exactly the kind of unearned coverage the
      assurance ranking exists to prevent. */
-  'xdr-incidents': ['A.5.25', 'A.5.26']
+  'xdr-incidents': ['A.5.25', 'A.5.26'],
+  /* Register-derived checks (see lib.js's backupCheckResult and
+     friends). These map to controls that previously had NO automated
+     signal at all — the checks existed but were scored:false, so the
+     controls could only ever be asserted. They can now reach
+     'demonstrated' from Checkpoint's own registers, with no Graph scope
+     and no licence gate, which is why these four matter more than their
+     size suggests: they work on every tenant, not just E5 ones. */
+  'backup': ['A.8.13'],
+  'bcp': ['A.5.29', 'A.5.30'],
+  'supplier': ['A.5.19', 'A.5.20', 'A.5.22'],
+  'policy': ['A.5.1']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.

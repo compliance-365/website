@@ -60,7 +60,7 @@ window.GUIDANCE = {
     how: "Publish a single, version-controlled information security policy set (acceptable use, access, incident response and so on) in a Purview or SharePoint policy library with a named owner and a review date. Review it at least annually or after a material change — a new framework, an incident, a restructure — and record when that happened. Make it genuinely discoverable (an intranet link, an onboarding step), not just filed away.",
     evidence: "The current dated policy document with a named approver, a review history showing at least one prior review, and confirmation staff can actually locate it.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["policy"]
   },
   'A.5.2': {
     how: "Document who owns each ISMS responsibility — ISMS manager, control owners, incident responder — in an org chart or RACI matrix, and mirror that in Entra role assignments so accountability is enforced through real access, not just written down. Update it the day a role changes hands, not at the next audit.",
@@ -168,13 +168,13 @@ window.GUIDANCE = {
     how: "Keep a vendor risk register recording what data each supplier can access and their own security posture — Checkpoint's Vendor register is built for exactly this — and require a security review before onboarding any supplier that touches your data. Set a minimum security bar in the supplier contract itself, not just in your own process.",
     evidence: "The vendor risk register with data-access classification recorded, and a pre-onboarding security review for a sample supplier.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["supplier"]
   },
   'A.5.20': {
     how: "Include specific security clauses in supplier agreements — data handling, breach notification timeframes, right-to-audit, subcontractor disclosure — rather than a generic confidentiality clause. Use a standard security schedule template so this doesn't get negotiated away deal by deal.",
     evidence: "A supplier contract or security schedule containing the specific clauses, for a sample of active suppliers.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["supplier"]
   },
   'A.5.21': {
     how: "Review third-party application access into your tenant regularly — Entra's enterprise app and OAuth consent list is the source of truth — and revoke anything with high-privilege scopes that isn't clearly justified. Checkpoint's posture scan already flags risky OAuth grants on every run, so this becomes a triage task rather than a from-scratch audit.",
@@ -186,7 +186,7 @@ window.GUIDANCE = {
     how: "Set a review cadence for existing supplier relationships — annual is typical for critical suppliers — checking their certifications are still current and their access is still appropriate. Checkpoint's Vendor register tracks next-review dates and flags overdue ones on the Dashboard.",
     evidence: "Vendor review records showing the review actually happened on schedule, visible in the vendor register's review-status field.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["supplier"]
   },
   'A.5.23': {
     how: "Govern which cloud services staff can use with Conditional Access app restrictions and, if licensed, Defender for Cloud Apps' app governance and shadow-IT discovery. Require new cloud services to go through the same supplier-review process as any other vendor before adoption.",
@@ -228,13 +228,13 @@ window.GUIDANCE = {
     how: "Define which security controls must keep operating during a disruption (access control and logging shouldn't lapse just because a disaster recovery plan is in effect) and build that into your business continuity plan explicitly, rather than assuming security is someone else's problem during an outage.",
     evidence: "The business continuity plan showing security controls are explicitly addressed for a disruption scenario.",
     link: "https://admin.microsoft.com",
-    checks: []
+    checks: ["bcp"]
   },
   'A.5.30': {
     how: "Confirm your ICT recovery capability actually meets your continuity requirements — Microsoft 365's own service resilience covers the platform, but your own backup/restore capability for mailbox, SharePoint and Teams data (a third-party or Microsoft 365 Backup solution) needs its own tested recovery point and time objectives.",
     evidence: "A documented recovery time/point objective for ICT systems and a record of at least one restore test.",
     link: "https://admin.microsoft.com",
-    checks: []
+    checks: ["bcp"]
   },
   'A.5.31': {
     how: "Maintain a register of the legal, regulatory and contractual requirements that actually apply to you (Privacy Act 1988, sector-specific regulation, client contract terms) and review it when your business or the law changes. This underpins several other controls, so keep it current rather than a one-off exercise.",
@@ -495,7 +495,7 @@ window.GUIDANCE = {
     how: "Back up business-critical data — Exchange, SharePoint and Teams content isn't fully covered by Microsoft's own retention by default, so a dedicated backup solution (Microsoft 365 Backup or a third party) is usually needed — and actually test a restore periodically rather than trusting the backup job succeeded.",
     evidence: "The backup solution's configuration and a documented restore test with its outcome.",
     link: "https://admin.microsoft.com",
-    checks: []
+    checks: ["backup"]
   },
   'A.8.14': {
     how: "Build redundancy into information-processing facilities proportionate to your availability requirements — Microsoft 365's own service architecture provides substantial redundancy for the platform itself; document what you inherit versus what you're responsible for (e.g. your own line-of-business application hosting).",

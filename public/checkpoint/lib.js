@@ -428,6 +428,155 @@
     return { result: result, note: note, pct: pct, completed: completed, total: list.length, overdue: overdue };
   }
 
+  /* ============================================================
+     Register-derived posture checks
+     ------------------------------------------------------------
+     Four checks that used to be permanently 'manual' — backup, bcp,
+     supplier and policy — scored from Checkpoint's OWN registers
+     instead. Same idea as trainingCheckResult() above, and the same
+     honesty rule:
+
+       AN EMPTY REGISTER IS 'manual', NEVER 'fail'.
+
+     Checkpoint cannot tell "this organisation does not test its
+     backups" from "this organisation tests its backups and records it
+     somewhere else". Scoring the second as a failure would be inventing
+     a finding, and score() excludes 'manual' from its denominator
+     precisely so an honest "we cannot see this" costs a tenant nothing.
+
+     What makes these worth automating is that they need no Graph scope
+     and no licence: every tenant has these registers the moment it has
+     Checkpoint, so unlike the Defender and Purview reads these work at
+     E3, at Business Premium, everywhere. The store.js note saying
+     backup "stays self-reported until a live Graph signal exists" was
+     looking in the wrong place — the evidence an auditor wants for
+     A.8.13 is a restore TEST, and that is a Calendar row, not a Graph
+     endpoint.
+     ============================================================ */
+
+  /* Shared shape for the two checks that are really "is this recurring
+     assurance activity actually being done?" — backup restore tests and
+     BCP/DR failover tests. Returns null when the tenant has no such
+     activity scheduled at all, so each caller can decide what silence
+     means for its own control. */
+  function recurringActivityState(calendar, category, today) {
+    var rows = (calendar || []).filter(function (c) {
+      return c && c.category === category && c.status !== 'Retired' && c.status !== 'Inactive';
+    });
+    if (!rows.length) return null;
+    var overdue = rows.filter(function (c) { return c.nextDue && c.nextDue < today; });
+    var neverDone = rows.filter(function (c) { return !c.lastCompleted; });
+    return { total: rows.length, overdue: overdue.length, neverDone: neverDone.length, rows: rows };
+  }
+
+  /* A.8.13 — backup. Scored on whether restore tests happen on
+     schedule, not on whether backups are configured: an untested backup
+     is the single most common audit finding in this control, and a
+     configured-but-never-restored backup is exactly what it catches. */
+  function backupCheckResult(calendar, today) {
+    var st = recurringActivityState(calendar, 'Backup restore test', today);
+    if (!st) {
+      return { result: 'manual', note: 'No backup restore test scheduled in Checkpoint\'s calendar — add one, or keep restore-test evidence in whatever system you use.' };
+    }
+    if (st.overdue) {
+      return { result: 'fail', note: st.overdue + ' of ' + st.total + ' scheduled backup restore test(s) overdue — an untested backup is not a demonstrated one.' };
+    }
+    if (st.neverDone) {
+      return { result: 'review', note: st.total + ' backup restore test(s) scheduled, but ' + st.neverDone + ' has never been completed.' };
+    }
+    return { result: 'pass', note: st.total + ' scheduled backup restore test(s), all completed within cadence.' };
+  }
+
+  /* A.5.29/A.5.30 — ICT readiness for business continuity. Two signals,
+     because either alone is a half-answer: a plan document that exists
+     and is in review cadence, AND a failover test actually performed.
+     An untested plan is the classic finding here, so a current plan
+     with an overdue test still fails. */
+  function bcpCheckResult(calendar, docs, today) {
+    var st = recurringActivityState(calendar, 'BCP/DR test', today);
+    var plan = (docs || []).filter(function (d) {
+      return d && d.tplId === 'bcp-dr-plan' && d.status !== 'Superseded';
+    });
+    var planApproved = plan.filter(function (d) { return d.status === 'Approved'; });
+    var planOverdue = planApproved.filter(function (d) { return d.nextReview && d.nextReview < today; });
+
+    if (!st && !plan.length) {
+      return { result: 'manual', note: 'No BCP/DR plan document and no failover test scheduled in Checkpoint — add them, or keep continuity evidence in whatever system you use.' };
+    }
+    if (st && st.overdue) {
+      return { result: 'fail', note: st.overdue + ' BCP/DR failover test(s) overdue' + (planApproved.length ? ' (the plan itself is approved — an untested plan is the finding here)' : ' and no approved plan document') + '.' };
+    }
+    if (plan.length && !planApproved.length) {
+      return { result: 'fail', note: 'A BCP/DR plan exists but is not approved — a draft plan is not an operative one.' };
+    }
+    if (planOverdue.length) {
+      return { result: 'fail', note: 'The BCP/DR plan is past its review date.' };
+    }
+    if (!st) {
+      return { result: 'review', note: 'A BCP/DR plan is approved and current, but no failover test is scheduled — the plan is untested.' };
+    }
+    if (st.neverDone) {
+      return { result: 'review', note: 'A BCP/DR failover test is scheduled but has never been completed.' };
+    }
+    if (!planApproved.length) {
+      return { result: 'review', note: 'Failover tests are current, but there is no approved BCP/DR plan document in the register.' };
+    }
+    return { result: 'pass', note: 'BCP/DR plan approved and in review cadence, with failover testing current.' };
+  }
+
+  /* A.5.19-A.5.22 — supplier relationships. Scored from the Vendor
+     register rather than the calendar, because the register carries
+     criticality: an overdue review of a critical supplier holding
+     production data is a materially different finding from an overdue
+     review of the office stationery account, and a check that treats
+     them identically trains people to ignore it. */
+  function supplierCheckResult(vendors, today) {
+    var list = (vendors || []).filter(function (v) { return v; });
+    if (!list.length) {
+      return { result: 'manual', note: 'No suppliers recorded in Checkpoint\'s vendor register — add them, or keep supplier assurance evidence in whatever system you use.' };
+    }
+    var overdue = list.filter(function (v) { return v.nextReviewDue && v.nextReviewDue < today; });
+    var keyOverdue = overdue.filter(function (v) { return v.criticality === 'Critical' || v.criticality === 'High'; });
+    var neverReviewed = list.filter(function (v) { return !v.lastReviewed; });
+    var keyNeverReviewed = neverReviewed.filter(function (v) { return v.criticality === 'Critical' || v.criticality === 'High'; });
+
+    if (keyOverdue.length || keyNeverReviewed.length) {
+      var n = keyOverdue.length || keyNeverReviewed.length;
+      return { result: 'fail', note: n + ' critical/high-criticality supplier(s) ' + (keyOverdue.length ? 'overdue for review' : 'never reviewed') + ', of ' + list.length + ' recorded.' };
+    }
+    if (overdue.length || neverReviewed.length) {
+      return { result: 'review', note: (overdue.length || neverReviewed.length) + ' lower-criticality supplier(s) ' + (overdue.length ? 'overdue for review' : 'never reviewed') + ', of ' + list.length + ' recorded.' };
+    }
+    return { result: 'pass', note: 'All ' + list.length + ' recorded supplier(s) reviewed within cadence.' };
+  }
+
+  /* A.5.1 and Clause 7.5 — the policy set exists, is approved, and is
+     being reviewed. Deliberately counts only APPROVED documents as
+     satisfying the control: a policy sitting in Draft has not been
+     issued, and Clause 5.2 asks for a policy that is communicated, not
+     one that has been written. */
+  function policyCheckResult(docs, today, opts) {
+    var o = opts || {};
+    var summary = documentRegisterSummary(docs, today, { controlledCategories: o.controlledCategories || ['Policies & Procedures'], warnDays: o.warnDays });
+    if (!summary.controlled) {
+      return { result: 'manual', note: 'No controlled documents in Checkpoint\'s register — generate or upload your policy set here, or keep it in whatever system you use.' };
+    }
+    if (!summary.approved) {
+      return { result: 'fail', note: summary.controlled + ' controlled document(s), none approved — an unapproved policy has not been issued.' };
+    }
+    if (summary.overdue) {
+      return { result: 'fail', note: summary.overdue + ' of ' + summary.approved + ' approved document(s) past their review date.' };
+    }
+    if (summary.noReviewDate || summary.unversioned || summary.unowned) {
+      var gaps = [];
+      if (summary.noReviewDate) gaps.push(summary.noReviewDate + ' with no review date');
+      if (summary.unversioned) gaps.push(summary.unversioned + ' unversioned');
+      if (summary.unowned) gaps.push(summary.unowned + ' with no named owner');
+      return { result: 'review', note: summary.approved + ' approved document(s), but ' + gaps.join(', ') + ' — each fails Clause 7.5.2 on its face.' };
+    }
+    return { result: 'pass', note: 'All ' + summary.approved + ' approved document(s) versioned, owned and within review cadence.' };
+  }
+
   /* Who is missing induction training entirely. Distinct from the
      re-assignment rule a recurring campaign uses: a campaign skips
      anyone with an OPEN record (so an annual refresh reaches people who
@@ -2666,6 +2815,8 @@
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     trainingCheckResult: trainingCheckResult, usersMissingInduction: usersMissingInduction,
+    recurringActivityState: recurringActivityState, backupCheckResult: backupCheckResult,
+    bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

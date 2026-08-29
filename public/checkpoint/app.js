@@ -300,6 +300,31 @@ function showModal(opts) {
       risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
     },
+    /* The three templates below pair with the register-derived checks
+       added alongside backup's. Each action is something a practitioner
+       does in Checkpoint or in the business — none of them say "buy a
+       product", because none of these controls fail for want of one. */
+    'bcp': {
+      risk: { title: 'Continuity plan untested, so recovery capability is assumed rather than known', cat: 'Ops', L: 3, I: 5, controls: ['A.5.29', 'A.5.30'] },
+      actions: [
+        { t: 'Run a BCP/DR failover test and record the outcome against the calendar entry', pr: 'High', days: 45, control: 'A.5.30' },
+        { t: 'Approve the BCP/DR plan document and set its next review date', pr: 'Medium', days: 21, control: 'A.5.29' }
+      ]
+    },
+    'supplier': {
+      risk: { title: 'Critical suppliers operating without a current security assessment', cat: 'Supplier', L: 4, I: 4, controls: ['A.5.19', 'A.5.20', 'A.5.22'] },
+      actions: [
+        { t: 'Complete security reviews for every critical and high-criticality supplier', pr: 'High', days: 30, control: 'A.5.22' },
+        { t: 'Confirm security requirements are covered in each critical supplier agreement', pr: 'Medium', days: 60, control: 'A.5.20' }
+      ]
+    },
+    'policy': {
+      risk: { title: 'Policy set incomplete, unapproved or past its review date', cat: 'Governance', L: 3, I: 3, controls: ['A.5.1'] },
+      actions: [
+        { t: 'Approve and publish outstanding policy documents', pr: 'High', days: 21, control: 'A.5.1' },
+        { t: 'Review and re-date every policy past its review cadence', pr: 'Medium', days: 45, control: 'A.5.1' }
+      ]
+    },
     'pim': {
       risk: { title: 'Privileged directory roles held as permanent assignments rather than time-bound, approved elevation', cat: 'Access', L: 3, I: 4, controls: ['A.8.2', 'A.5.18'] },
       actions: [{ t: 'Convert permanent privileged role assignments to PIM-eligible with approval workflow', pr: 'High', days: 30, control: 'A.8.2' }]
@@ -6213,6 +6238,38 @@ function showModal(opts) {
     S.lastNotes.training = r.note;
   }
 
+  /* The other four register-derived checks — backup, bcp, supplier and
+     policy — computed the same way and at the same points in the
+     lifecycle as training above.
+
+     These run CLIENT-side rather than in runPostureChecks() because the
+     registers they read live in SharePoint and are already loaded into
+     S; sending the scan back to Graph for data the browser is holding
+     would be slower and could disagree with what the user is looking
+     at. graph.js still writes a 'manual' placeholder for each so a
+     stored scan is self-consistent on its own, and these overwrite it.
+
+     Every one of them returns 'manual' on an empty register. That is
+     the whole reason this is safe to turn on for existing tenants: a
+     client who has never touched the vendor register sees exactly what
+     they saw before, and only a populated register can move the score. */
+  function applyRegisterCheckResults() {
+    if (!S.lastResults) return;
+    var today = new Date().toISOString().slice(0, 10);
+    var L = window.CheckpointLib;
+    S.lastNotes = S.lastNotes || {};
+    var out = {
+      backup: L.backupCheckResult(S.calendar || [], today),
+      bcp: L.bcpCheckResult(S.calendar || [], S.documents || [], today),
+      supplier: L.supplierCheckResult(S.vendors || [], today),
+      policy: L.policyCheckResult(S.documents || [], today, { warnDays: S.settings && S.settings.docReviewWarnDays })
+    };
+    Object.keys(out).forEach(function (k) {
+      S.lastResults[k] = out[k].result;
+      S.lastNotes[k] = out[k].note;
+    });
+  }
+
   function renderTraining() {
     renderMyTraining();
     renderCourseCatalogue();
@@ -7839,7 +7896,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { applyTrainingCheckResult(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -8064,6 +8121,12 @@ function showModal(opts) {
          checks in both live and demo mode so the two agree, and so the
          score picks it up before the scan is snapshotted below. */
       applyTrainingCheckResult();
+      /* Same for backup, bcp, supplier and policy — computed from the
+         Calendar, Documents and Vendors registers. Must run here, before
+         the snapshot, or the stored scan would record graph.js's
+         'manual' placeholders and the assurance history would never see
+         these checks pass. */
+      applyRegisterCheckResults();
 
       renderScanChecks(false);
       var rows2 = document.querySelectorAll('#checkList .check-row');

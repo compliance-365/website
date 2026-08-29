@@ -2315,6 +2315,54 @@ five report types render the exact chart composition above, with zero
 console/page errors, across a demo tenant with every framework
 entitled.
 
+### Checks scored from Checkpoint's own registers
+
+Four checks — **backup restore testing**, **business continuity**,
+**supplier assessments** and **policy publication** — score from the
+Calendar, Documents and Vendors registers rather than Microsoft Graph.
+
+They were previously `scored: false`, meaning permanently *Manual*, on
+the assumption that no automatable signal existed. That was looking in
+the wrong place: the evidence an auditor wants for "are backups tested"
+is a **restore-test record**, and that is a calendar row, not a Graph
+endpoint.
+
+| Check | Reads | Controls |
+|---|---|---|
+| Backup restore testing | Calendar → *Backup restore test* | A.8.13 |
+| Business continuity | Calendar → *BCP/DR test* + the `bcp-dr-plan` document | A.5.29, A.5.30 |
+| Supplier assessments | Vendor register | A.5.19, A.5.20, A.5.22 |
+| Policy publication | Document register | A.5.1, Clause 7.5 |
+
+**These need no Graph scope and no premium licence.** Unlike the
+Defender and Purview reads, they work on every tenant — E3, Business
+Premium, anything — which is why four small checks matter more than
+their size suggests.
+
+Three deliberate scoring decisions:
+
+- **Backup is scored on testing, not configuration.** An untested backup
+  is the most common finding in A.8.13, and "configured" has never been
+  the same thing as "recoverable".
+- **Continuity needs both halves.** An approved, in-date plan *and* a
+  completed failover test. A well-maintained plan nobody has rehearsed
+  still fails — that is the classic finding, not an edge case.
+- **Suppliers are weighted by criticality.** An overdue review of a
+  critical supplier holding production data fails; the same lapse on a
+  low-criticality vendor is a review. A check that treats those
+  identically trains people to ignore it.
+
+**An empty register is always *Manual*, never *Fail*.** Checkpoint
+cannot distinguish "this organisation does not test its backups" from
+"this organisation tests its backups and records it elsewhere", and
+scoring the second as a failure would be inventing a finding. `score()`
+excludes Manual from its denominator, so an honest "we cannot see this"
+costs a tenant nothing — and a client who has never opened the vendor
+register sees exactly what they saw before.
+
+**Tests**: `test/register-checks.test.mjs` — 31 tests, including a
+dedicated block asserting the empty-register rule for all four.
+
 ### Defender XDR incident triage
 
 The **"Security incidents triaged within cadence"** check reads the

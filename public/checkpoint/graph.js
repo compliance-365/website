@@ -684,14 +684,28 @@ window.Graph = (function () {
       }
     }
 
-    /* --- Checks with no Graph signal at all — always "manual", never
-       silently marked pass. Recorded here so the stored scan detail is
-       self-consistent even though checkResult() also forces this. --- */
-    set('backup',   'manual', 'Backup coverage and restore testing require manual verification');
-    set('bcp',      'manual', 'Business continuity / disaster recovery plan requires manual verification');
-    set('supplier', 'manual', 'Supplier security assessment currency requires manual verification');
-    set('policy',   'manual', 'Information security policy publication & review cadence require manual verification');
-    set('training', 'manual', 'Security awareness training completion requires manual verification');
+    /* --- Checks with no MICROSOFT GRAPH signal ---
+
+       These five are not unautomatable — they are scored from
+       Checkpoint's own registers instead (Calendar, Documents, Vendors
+       and Training), by app.js's applyTrainingCheckResult() and
+       applyRegisterCheckResults() immediately after this function
+       returns. See lib.js's backupCheckResult() and friends for the
+       reasoning; the short version is that the evidence an auditor
+       wants for "are backups tested" is a restore-test record, which is
+       a Calendar row rather than anything Graph can answer.
+
+       They are seeded 'manual' here anyway, deliberately, for two
+       reasons. A stored scan detail stays self-consistent if it is ever
+       read without the client-side pass having run; and 'manual' is the
+       right answer for a tenant whose registers are empty, which is
+       exactly what those functions return in that case. Never seeded
+       'pass' — silence is not evidence. --- */
+    set('backup',   'manual', 'Backup restore testing is scored from the Checkpoint calendar');
+    set('bcp',      'manual', 'Continuity plan and failover testing are scored from the Checkpoint document register and calendar');
+    set('supplier', 'manual', 'Supplier assessment currency is scored from the Checkpoint vendor register');
+    set('policy',   'manual', 'Policy publication and review cadence are scored from the Checkpoint document register');
+    set('training', 'manual', 'Security awareness training completion is scored from the Checkpoint training register');
 
     return { results: results, notes: notes, raw: raw, secureScore: ss ? { current: ss.currentScore, max: ss.maxScore } : null };
   }

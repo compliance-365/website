@@ -9,6 +9,17 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.43.0',
+    date: '2026-08-29',
+    entries: [
+      'Four checks that could never be anything but "Manual" now score for real: backup restore testing, business continuity, supplier assessments, and policy publication. They read your own Checkpoint registers — the calendar, the document register and the vendor register — rather than Microsoft Graph.',
+      'That means no new permissions and no premium licence. Unlike the Defender and Purview checks, these work on every tenant, and they cover four ISO 27001 controls (A.8.13, A.5.29/A.5.30, A.5.19/A.5.20/A.5.22, A.5.1) that previously had no automated signal at all — so they could only ever be asserted, never demonstrated.',
+      'Backup is scored on whether restore tests actually happen on schedule, not on whether backups are switched on. An untested backup is the most common finding in that control, and "configured" has never been the same thing as "recoverable". Continuity works the same way and needs both halves: an approved, in-date plan AND a completed failover test. A beautifully maintained plan nobody has ever rehearsed still fails.',
+      'Suppliers are scored by criticality. An overdue review of a critical supplier holding production data fails; an overdue review of the stationery account is a review. A check that treats those identically just teaches people to ignore it.',
+      'An empty register reads as Manual, never as a failure — and Manual is excluded from your score entirely. If you keep restore-test evidence or your policy set somewhere other than Checkpoint, nothing here counts against you, and you can say so explicitly with the "Not via Microsoft?" button.'
+    ]
+  },
+  {
     version: '1.42.0',
     date: '2026-08-29',
     entries: [
