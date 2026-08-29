@@ -171,6 +171,46 @@
     return Math.max(5, Math.round(pts / measured.length * 100));
   }
 
+  /* Scores the Defender XDR incident queue (graph.js's 'xdr-incidents'
+     check). Pure so the compliance-meaningful part is testable without
+     a Graph call — the query that feeds it lives in graph.js.
+
+     Scored on the AGE of unresolved high-severity incidents, never on
+     incident count. A tenant with many incidents is not less compliant
+     than one with none — often the reverse, since it means detection is
+     working and people are looking. What ISO 27001 A.5.26 and CPS 234
+     actually ask is whether the serious ones get worked within a
+     timeframe the organisation has committed to, which is what this
+     measures.
+
+     An unassigned high-severity incident is a 'review' even inside the
+     triage window: nobody owning it is precisely how it becomes overdue,
+     and flagging that before the deadline is the point of a posture
+     check rather than an autopsy.
+
+     Filters on status here as well as in the Graph query — the function
+     has to be honest about its own inputs, and a caller passing an
+     unfiltered queue must not silently score resolved incidents as open
+     ones. */
+  function incidentTriageResult(incidents, triageDays, nowMs) {
+    var active = (incidents || []).filter(function (i) { return i && i.status === 'active'; });
+    var highOpen = active.filter(function (i) { return i.severity === 'high'; });
+    var overdueMs = (typeof triageDays === 'number' && triageDays >= 0 ? triageDays : 5) * 86400000;
+    var overdue = highOpen.filter(function (i) {
+      var created = Date.parse(i.createdDateTime || '');
+      /* An unparseable createdDateTime is NOT counted as overdue. We
+         cannot tell how old it is, and inventing a fail from missing
+         data is how a posture score loses its credibility. */
+      return !isNaN(created) && (nowMs - created) > overdueMs;
+    });
+    var unassigned = highOpen.filter(function (i) { return !i.assignedTo; });
+    return {
+      active: active.length, highOpen: highOpen.length,
+      overdue: overdue.length, unassigned: unassigned.length,
+      result: overdue.length ? 'fail' : (unassigned.length ? 'review' : 'pass')
+    };
+  }
+
   /* % of applicable controls marked Implemented, for a single
      framework's control rows (caller filters by fw first). */
   function readinessPct(controls) {
@@ -2597,7 +2637,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

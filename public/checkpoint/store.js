@@ -457,6 +457,12 @@ window.CHECK_DEFS = [
   /* Monitoring (2) */
   { id: 'logging',    area: 'Monitoring', label: 'Unified audit logging enabled',              tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'alerts',     area: 'Monitoring', label: 'Security alerts triaged & threat protection enabled', tpl: null, scored: true, requiresCapability: 'secureScore' },
+  /* Reads the Defender XDR incident queue directly, unlike 'alerts'
+     above which is still inferred from Secure Score control names. That
+     makes this the first check able to support 'demonstrated' assurance
+     on the incident-response controls — a real record with real
+     timestamps, rather than a score about a product. */
+  { id: 'xdr-incidents', area: 'Monitoring', label: 'Security incidents triaged within cadence', tpl: 'xdr-incidents', scored: true, requiresCapability: 'defenderXdr' },
   /* Continuity & Supplier (3) */
   { id: 'backup',     area: 'Continuity', label: 'Backup coverage & restore testing',          tpl: 'backup',    scored: false },
   { id: 'bcp',        area: 'Continuity', label: 'Business continuity / disaster recovery plan documented & tested', tpl: null, scored: false },
@@ -515,6 +521,7 @@ window.THRESHOLD_DEFS = [
   { key: 'deviceCompliancePassPct', label: 'Device compliance pass %', desc: 'Percentage of Intune-managed devices reporting compliant, at or above which the check passes.', def: '95' },
   { key: 'deviceComplianceReviewPct', label: 'Device compliance review %', desc: 'Below the pass % but at or above this value is a review; below this is a fail.', def: '80' },
   { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' },
+  { key: 'incidentTriageDays', label: 'Incident triage window (days)', desc: 'A high-severity Defender XDR incident still active beyond this many days fails the incident-triage check. Set this to whatever your own incident response plan commits to — the default of 5 days is a starting point, not a standard.', def: '5' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
 ];
 window.DEFAULT_SETTINGS = {
@@ -592,6 +599,7 @@ window.DEFAULT_SETTINGS = {
   deviceCompliancePassPct: '95',
   deviceComplianceReviewPct: '80',
   riskyUsersReviewMax: '3',
+  incidentTriageDays: '5',
   controlReviewCadenceDays: '90',
   /* Trust Center — what a generated public page is allowed to show.
      Off by default wherever disclosure is the more sensitive choice
@@ -794,7 +802,15 @@ window.CHECK_CONTROLS = {
   'dlp': ['A.8.12'],
   'encryption': ['A.8.24'],
   'access-review': ['A.5.18', 'A.8.2'],
-  'sharing': ['A.5.14', 'A.8.3']
+  'sharing': ['A.5.14', 'A.8.3'],
+  /* Same two controls 'riskyusers' maps to, deliberately: both are
+     evidence about assessment and response, and checkIdsByControl()
+     already unions several checks onto one control. Not mapped to
+     A.5.27 (learning from incidents) — post-incident review is a
+     document, not something an open-incident age can demonstrate, and
+     claiming it here would be exactly the kind of unearned coverage the
+     assurance ranking exists to prevent. */
+  'xdr-incidents': ['A.5.25', 'A.5.26']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
@@ -991,7 +1007,7 @@ window.DemoStore = (function () {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
         'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
-        'logging': 'pass', 'alerts': 'review'
+        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail'
       },
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
@@ -999,7 +1015,8 @@ window.DemoStore = (function () {
         'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
-        'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in'
+        'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',
+        'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned'
       },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-001', 'ACT-002'] },

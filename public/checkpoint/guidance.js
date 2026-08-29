@@ -204,13 +204,13 @@ window.GUIDANCE = {
     how: "Triage security events consistently — Microsoft 365 Defender's incident queue is the natural home for this — with a documented severity scale so 'is this actually an incident' is answered the same way every time, not by whoever happens to notice first.",
     evidence: "Defender incident/alert triage records showing a consistent severity assessment applied.",
     link: "https://security.microsoft.com",
-    checks: ["riskyusers"]
+    checks: ["riskyusers", "xdr-incidents"]
   },
   'A.5.26': {
     how: "Run incident response through to resolution with a documented playbook per major incident type (compromised account, ransomware, data exposure), using Microsoft 365 Defender's automated investigation and response where licensed, and record what happened in the Actions register once resolved.",
     evidence: "A completed incident record showing response actions taken and closure, and the corresponding Defender incident log.",
     link: "https://security.microsoft.com",
-    checks: ["riskyusers"]
+    checks: ["riskyusers", "xdr-incidents"]
   },
   'A.5.27': {
     how: "Hold a short post-incident review after any real incident — what happened, what worked, what to change — and turn the findings into concrete actions in your register rather than a report nobody reads again. This is the difference between having an incident process and actually improving it.",
