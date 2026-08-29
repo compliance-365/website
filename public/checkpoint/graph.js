@@ -724,11 +724,9 @@ window.Graph = (function () {
            testable without a Graph call; this function keeps the query
            and the human-readable note.
 
-           This is graph.js's only reference to CheckpointLib, and
-           index.html loads lib.js AFTER graph.js. That is safe because
-           this resolves when a scan RUNS, never at load — but it means
-           nothing in this file may reference CheckpointLib at module
-           scope without moving lib.js earlier in the script order. */
+           index.html loads lib.js BEFORE graph.js precisely so this and
+           the other CheckpointLib call sites in this file are safe at
+           any point in the lifecycle, not just at scan time. */
         var tri = window.CheckpointLib.incidentTriageResult(incidents, incidentTriageDays, Date.now());
         raw['xdr-incidents'] = { active: tri.active, highOpen: tri.highOpen, overdue: tri.overdue, unassigned: tri.unassigned, triageDays: incidentTriageDays };
         var incidentNote = tri.active === 0
