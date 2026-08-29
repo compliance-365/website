@@ -1245,12 +1245,26 @@ const faqLd = {
     'RFFR':          {badge:'RFFR', sub:'DEWR', d:"DEWR's Right Fit For Risk accreditation for Employment Services providers, built on an ISO 27001-aligned ISMS. 10–16 weeks.", u:BASE+'services/rffr/'}
   };
 
-  var s = document.createElement('script');
-  s.crossOrigin = 'anonymous';
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-  s.onload = init3D;
-  s.onerror = function(){ stage.classList.add('no3d'); };
-  document.head.appendChild(s);
+  // Fetching and parsing three.js (~600KB) plus building the scene (nine
+  // canvas-drawn badge sprites, geometry, a raycaster) is real main-thread
+  // work. The static SVG ring + crawlable framework links already render
+  // immediately and cover no-JS/slow-JS visitors, so there's nothing lost
+  // by letting the initial paint (headline, proof ledger) land first and
+  // starting the 3D upgrade once the browser reports idle time — capped at
+  // 2s so it still shows up promptly even on a busy main thread.
+  function loadRing(){
+    var s = document.createElement('script');
+    s.crossOrigin = 'anonymous';
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.onload = init3D;
+    s.onerror = function(){ stage.classList.add('no3d'); };
+    document.head.appendChild(s);
+  }
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(loadRing, { timeout: 2000 });
+  } else {
+    setTimeout(loadRing, 200);
+  }
 
   function init3D(){
     if (typeof THREE === 'undefined') return;
