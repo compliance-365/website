@@ -684,7 +684,15 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
 .cx-lens-row{display:flex;align-items:center;gap:10px;font-size:var(--fs-1);color:var(--paper-dim);letter-spacing:.04em}
 .cx-count{color:var(--paper-faint);font-size:11.5px;margin:6px 0 14px}
 .cx-card{padding:8px}
-.cx-svg{width:100%;height:auto;aspect-ratio:1/1;display:block}
+/* width:100% + aspect-ratio:1/1 alone makes this element as TALL as the
+   content column is wide — on a normal desktop layout that's well over
+   1000px, so the circle's lower half sits far below the fold with no
+   visual cue it's there. min() caps it at a comfortable viewport-relative
+   size instead, and margin:auto keeps it centered now that it's no
+   longer a full-width block; unlike max-height alone (which would only
+   clamp height and stretch the circle into an ellipse), constraining the
+   WIDTH this way lets aspect-ratio keep it a true square at every size. */
+.cx-svg{width:min(100%,62vh,620px);height:auto;aspect-ratio:1/1;display:block;margin:0 auto}
 .cx-edge{fill:none;stroke:var(--gold-light);stroke-width:1;opacity:.08;transition:opacity .15s var(--ease),stroke .15s var(--ease)}
 .cx-edge.cx-dim{opacity:.02}
 .cx-edge.cx-lit{stroke:var(--gold);opacity:.6;stroke-width:1.4}
