@@ -622,8 +622,20 @@ window.Graph = (function () {
       }).length;
       set('riskyapps', riskyGrantCount === 0 ? 'pass' : riskyGrantCount <= 3 ? 'review' : 'fail',
         riskyGrantCount + ' app grant(s) with a high-privilege scope (of ' + grants.length + ' total grants)');
+
+      /* oauth-consent mines consentType from the SAME grants array above
+         — already selected, never scored. See lib.js for why a
+         user-consented high-privilege grant is a distinct, worse
+         signal than an admin-consented one. */
+      raw['oauth-consent'] = { oauthGrants: grants };
+      var consentRisk = window.CheckpointLib.oauthConsentRiskResult(grants);
+      set('oauth-consent', consentRisk.result,
+        consentRisk.userConsented === 0
+          ? 'No high-privilege OAuth grant was consented to by an end user without admin review'
+          : consentRisk.userConsented + ' high-privilege OAuth grant(s) consented to directly by an end user, with no admin review (' + consentRisk.adminConsented + ' other high-privilege grant(s) were admin-consented)');
     } catch (e) {
       set('riskyapps', 'review', 'Could not read OAuth app grants: ' + e.message);
+      set('oauth-consent', 'review', 'Could not read OAuth app grants: ' + e.message);
     }
 
     /* --- Sensitivity labels (Microsoft Purview Information Protection) —

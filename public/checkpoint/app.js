@@ -376,6 +376,17 @@ function showModal(opts) {
       risk: { title: 'Third-party OAuth app grants with high-privilege scopes have not been reviewed', cat: 'Supplier', L: 3, I: 4, controls: ['A.5.21', 'A.8.3'] },
       actions: [{ t: 'Review and revoke unnecessary high-privilege OAuth application consents', pr: 'Medium', days: 30, control: 'A.5.21' }]
     },
+    /* Distinct from riskyapps: this is specifically a grant no admin
+       ever reviewed, which is the shape of a consent-phishing attack,
+       not just accumulated app sprawl — hence Critical rather than
+       Medium and a much shorter remediation window. */
+    'oauth-consent': {
+      risk: { title: 'A high-privilege OAuth app grant was consented to by an end user with no admin review', cat: 'Access', L: 4, I: 4, controls: ['A.8.3', 'A.5.15'] },
+      actions: [
+        { t: 'Investigate the user-consented high-privilege app grant and revoke it if unjustified', pr: 'Critical', days: 3, control: 'A.8.3' },
+        { t: 'Restrict user consent to Microsoft-verified publishers / require admin consent for high-privilege scopes', pr: 'High', days: 14, control: 'A.5.15' }
+      ]
+    },
     'labels': {
       risk: { title: 'Information is not classified or labelled, undermining handling rules and DLP controls that depend on it', cat: 'Data', L: 3, I: 3, controls: ['A.5.12', 'A.5.13'] },
       actions: [{ t: 'Publish a sensitivity label taxonomy in Microsoft Purview and roll it out tenant-wide', pr: 'Medium', days: 30, control: 'A.5.12' }]

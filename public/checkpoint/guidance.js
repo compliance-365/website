@@ -141,10 +141,10 @@ window.GUIDANCE = {
     checks: ["sharing"]
   },
   'A.5.15': {
-    how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA, legacy-authentication, device-compliance and (where licensed) risk-based pieces of this directly on every run.",
-    evidence: "The exported Conditional Access policy set, an access-review record, and Checkpoint's own MFA/legacy-authentication/ca-device/ca-risk scan results.",
+    how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, restrict end-user OAuth consent to high-privilege scopes so it requires admin approval, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA, legacy-authentication, device-compliance, (where licensed) risk-based, and user-consent pieces of this directly on every run.",
+    evidence: "The exported Conditional Access policy set, the tenant's user-consent settings, an access-review record, and Checkpoint's own MFA/legacy-authentication/ca-device/ca-risk/oauth-consent scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["mfa-all", "legacy", "ca-device", "ca-risk"]
+    checks: ["mfa-all", "legacy", "ca-device", "ca-risk", "oauth-consent"]
   },
   'A.5.16': {
     how: "Use Entra ID as the single identity source for every system that supports it — no local or shadow accounts — with one identity per person, deactivated promptly on departure. Keep guest accounts to a genuine business need and review them periodically; Checkpoint's guest-count check flags when that count drifts beyond your set threshold.",
@@ -432,10 +432,10 @@ window.GUIDANCE = {
     checks: ["mfa-priv", "admins", "pim", "access-review"]
   },
   'A.8.3': {
-    how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails, and keep the tenant's default SharePoint/OneDrive external sharing setting no more permissive than intended — an anyone-with-a-link default silently overrides careful per-site permissions.",
-    evidence: "The access-control policy, corresponding SharePoint/Teams permission configuration, Checkpoint's risky-app scan result, and Checkpoint's sharing scan result.",
+    how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails, restrict end-user consent so a high-privilege scope requires admin approval rather than a user's own click-through, and keep the tenant's default SharePoint/OneDrive external sharing setting no more permissive than intended — an anyone-with-a-link default silently overrides careful per-site permissions.",
+    evidence: "The access-control policy, corresponding SharePoint/Teams permission configuration, the tenant's user-consent settings, Checkpoint's risky-app/oauth-consent scan results, and Checkpoint's sharing scan result.",
     link: "https://entra.microsoft.com",
-    checks: ["riskyapps", "sharing"]
+    checks: ["riskyapps", "oauth-consent", "sharing"]
   },
   'A.8.4': {
     how: "Restrict source code access to the developers and systems that need it — Azure DevOps or GitHub repository permissions, branch protection rules, and no shared credentials for source control. Log and review access to production-facing repositories periodically.",

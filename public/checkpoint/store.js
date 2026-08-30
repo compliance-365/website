@@ -457,10 +457,14 @@ window.CHECK_DEFS = [
   { id: 'device-checkin', area: 'Devices', label: 'Managed devices checking in with Intune', tpl: 'device-checkin', scored: true, requiresCapability: 'intune' },
   { id: 'device-config', area: 'Devices', label: 'Device configuration profiles deployed', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
-  /* Apps & Data (7) */
+  /* Apps & Data (8) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
   { id: 'macro',      area: 'Apps & Data', label: 'Office macro settings hardened',            tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'riskyapps',  area: 'Apps & Data', label: 'No high-privilege, unreviewed OAuth app grants', tpl: 'riskyapps', scored: true },
+  /* oauth-consent reads consentType off the SAME oauth2PermissionGrants
+     response riskyapps already fetches — already selected, never
+     scored until now. No new call, no new scope. */
+  { id: 'oauth-consent', area: 'Apps & Data', label: 'No high-privilege app grant consented by an end user', tpl: 'oauth-consent', scored: true },
   { id: 'labels',     area: 'Apps & Data', label: 'Sensitivity labels published & enabled',     tpl: 'labels',    scored: true, requiresCapability: 'sensitivityLabels' },
   { id: 'dlp',        area: 'Apps & Data', label: 'Data loss prevention policy coverage',       tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'encryption', area: 'Apps & Data', label: 'Sensitive content encryption in use',        tpl: null,        scored: true, requiresCapability: 'secureScore' },
@@ -821,6 +825,7 @@ window.CHECK_CONTROLS = {
   'wdac': ['A.8.7', 'A.8.19'],
   'macro': ['A.8.7'],
   'riskyapps': ['A.5.21', 'A.8.3'],
+  'oauth-consent': ['A.8.3', 'A.5.15'],
   'logging': ['A.8.15'],
   'alerts': ['A.8.16'],
   'labels': ['A.5.12', 'A.5.13'],
@@ -1048,7 +1053,7 @@ window.DemoStore = (function () {
       lastResults: {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail',
         'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
-        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
+        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
         'privacy-srr': 'fail', 'retention': 'review'
       },
@@ -1058,6 +1063,7 @@ window.DemoStore = (function () {
         'ca-risk': 'No Conditional Access policy enforces sign-in-risk or user-risk based access controls',
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
         'compliance-policy': '3 compliance policies configured', 'device-checkin': '14 of 214 device(s) have not checked in for over 30 days (2 never have) — their compliance state is stale evidence', 'device-config': '11 device configuration profiles deployed (showing first page)', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
+        'oauth-consent': '1 high-privilege OAuth grant(s) consented to directly by an end user, with no admin review (1 other high-privilege grant(s) were admin-consented)',
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
         'leaver': '9 disabled account(s); 1 STILL HOLD a privileged directory role; 4 still hold a paid licence — confirm each is a deliberate retention rather than an unfinished offboarding',

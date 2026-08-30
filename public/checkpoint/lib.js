@@ -585,6 +585,36 @@
     return { result: 'fail', note: 'No Conditional Access policy enforces sign-in-risk or user-risk based access controls' };
   }
 
+  /* oauthConsentRiskResult() mines a field the 'riskyapps' check already
+     fetches and selects — oauth2PermissionGrants' consentType — but has
+     never scored on. riskyapps treats every high-privilege grant the
+     same regardless of who approved it; this check separates out the
+     ones nobody with authority reviewed at all.
+
+     consentType 'AllPrincipals' means an admin consented for the whole
+     tenant — reviewed, deliberate, whatever else it is. 'Principal'
+     means a single end user clicked "Accept" on an OAuth consent
+     screen themselves, no admin in the loop. For a high-privilege scope
+     (mail, files, directory write) that is exactly the shape of an
+     illicit-consent-grant attack, and it is invisible inside riskyapps'
+     combined count. No new Graph call, no new scope: consentType was
+     already on the wire. */
+  function oauthConsentRiskResult(grants) {
+    var HIGH_PRIV = ['Directory.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All', 'Sites.FullControl.All', 'User.ReadWrite.All'];
+    var isHighPriv = function (g) {
+      var scopes = (g.scope || '').split(' ');
+      return scopes.some(function (s) { return HIGH_PRIV.indexOf(s) > -1; });
+    };
+    var list = (grants || []).filter(function (g) { return g; });
+    var userConsented = list.filter(function (g) { return isHighPriv(g) && g.consentType === 'Principal'; });
+    var adminConsented = list.filter(function (g) { return isHighPriv(g) && g.consentType === 'AllPrincipals'; });
+    return {
+      userConsented: userConsented.length,
+      adminConsented: adminConsented.length,
+      result: userConsented.length === 0 ? 'pass' : userConsented.length === 1 ? 'review' : 'fail'
+    };
+  }
+
   function deviceCheckinResult(devices, staleDays, nowMs) {
     var list = (devices || []).filter(function (d) { return d; });
     if (!list.length) return { total: 0, stale: 0, never: 0, result: 'review' };
@@ -3041,7 +3071,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, oauthConsentRiskResult: oauthConsentRiskResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
