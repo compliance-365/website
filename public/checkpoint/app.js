@@ -287,6 +287,14 @@ function showModal(opts) {
       risk: { title: 'Sign-in and user risk signals from Entra ID Protection are not acted on', cat: 'Access', L: 3, I: 4, controls: ['A.8.5', 'A.5.15'] },
       actions: [{ t: 'Add a Conditional Access policy that blocks or forces re-authentication on high sign-in/user risk', pr: 'High', days: 21, control: 'A.8.5' }]
     },
+    'ca-sif': {
+      risk: { title: 'Privileged admin sessions are not bounded by a re-authentication interval', cat: 'Access', L: 3, I: 4, controls: ['A.8.2', 'A.8.5'] },
+      actions: [{ t: 'Add sign-in frequency to the Conditional Access policy covering privileged directory roles', pr: 'High', days: 21, control: 'A.8.2' }]
+    },
+    'ca-tou': {
+      risk: { title: 'Acceptable-use terms are not technically enforced at sign-in', cat: 'People', L: 2, I: 2, controls: ['A.5.10'] },
+      actions: [{ t: 'Confirm how acceptable-use acknowledgment is captured, or add a Conditional Access Terms of Use policy', pr: 'Low', days: 45, control: 'A.5.10' }]
+    },
     'admins': {
       risk: { title: 'Excess Global Administrator assignments widen the blast radius', cat: 'Access', L: 3, I: 5, controls: ['A.8.2'] },
       actions: [{ t: 'Reduce Global Admins to ≤4; move others to PIM-eligible roles', pr: 'High', days: 14, control: 'A.8.2' }]

@@ -585,6 +585,52 @@
     return { result: 'fail', note: 'No Conditional Access policy enforces sign-in-risk or user-risk based access controls' };
   }
 
+  /* caSignInFrequencyResult() / caTermsOfUseResult() mine two more
+     fields off the SAME Conditional Access policy array — sessionControls
+     and grantControls.termsOfUse — that ca-device/ca-risk did not touch.
+     Still no new Graph call, no new scope.
+
+     Sign-in frequency forces re-authentication after an interval rather
+     than trusting a session token indefinitely. For privileged roles
+     specifically, that bounds how long a stolen or persisted admin
+     session stays useful — the same reasoning as mfa-priv, applied to
+     session lifetime instead of the initial credential. Only presence
+     is graded, not the configured interval itself: Checkpoint has no
+     principled way to say "24 hours is fine but 30 days is not"
+     without a tenant-specific policy to compare against, so grading the
+     value would be inventing a threshold nobody agreed to. */
+  function caSignInFrequencyResult(policies) {
+    var enabled = (policies || []).filter(function (p) { return p && p.state === 'enabled'; });
+    var covers = enabled.some(function (p) {
+      var roles = (p.conditions && p.conditions.users && p.conditions.users.includeRoles) || [];
+      var sif = p.sessionControls && p.sessionControls.signInFrequency;
+      return roles.length > 0 && !!(sif && sif.isEnabled);
+    });
+    if (covers) {
+      return { result: 'pass', note: 'A Conditional Access policy enforces periodic re-authentication (sign-in frequency) for privileged directory roles' };
+    }
+    return { result: 'fail', note: 'No Conditional Access policy enforces sign-in frequency for privileged directory roles — a stolen or persisted admin session can remain valid indefinitely' };
+  }
+
+  /* Terms of Use is a click-through acknowledgment enforced technically
+     at sign-in, not a policy document nobody can prove was read. Unlike
+     the security controls above, though, an organisation's acceptable-use
+     acknowledgment commonly runs through an HR or onboarding system
+     Checkpoint has no visibility into — so absence here is 'review', not
+     'fail': a real gap Checkpoint cannot see is indistinguishable from
+     no gap at all, and only one of those deserves a finding. */
+  function caTermsOfUseResult(policies) {
+    var enabled = (policies || []).filter(function (p) { return p && p.state === 'enabled'; });
+    var covers = enabled.some(function (p) {
+      var tou = (p.grantControls && p.grantControls.termsOfUse) || [];
+      return tou.length > 0;
+    });
+    if (covers) {
+      return { result: 'pass', note: 'A Conditional Access policy requires Terms of Use acceptance at sign-in' };
+    }
+    return { result: 'review', note: 'No Conditional Access policy requires Terms of Use acceptance — confirm acceptable-use acknowledgment is captured another way (e.g. HR onboarding, a signed policy register)' };
+  }
+
   /* oauthConsentRiskResult() mines a field the 'riskyapps' check already
      fetches and selects — oauth2PermissionGrants' consentType — but has
      never scored on. riskyapps treats every high-privilege grant the
@@ -3071,7 +3117,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, oauthConsentRiskResult: oauthConsentRiskResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, oauthConsentRiskResult: oauthConsentRiskResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
