@@ -111,10 +111,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.5.10': {
-    how: "Publish an acceptable-use policy covering email, internet, cloud storage and BYOD if permitted, and require acknowledgement at onboarding. Back it with a technical control (a DLP policy, Conditional Access app restrictions) rather than relying on the policy being read and remembered.",
-    evidence: "The published policy, onboarding acknowledgement records, and evidence of at least one supporting technical control.",
+    how: "Publish an acceptable-use policy covering email, internet, cloud storage and BYOD if permitted, and require acknowledgement at onboarding. Back it with a technical control (a DLP policy, Conditional Access app restrictions, or a Conditional Access Terms of Use policy requiring click-through acceptance at sign-in) rather than relying on the policy being read and remembered.",
+    evidence: "The published policy, onboarding acknowledgement records, and evidence of at least one supporting technical control — Checkpoint's ca-tou scan result confirms the Conditional Access Terms of Use option specifically; other technical controls are not something it can see.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["ca-tou"]
   },
   'A.5.11': {
     how: "Add an asset-return step to your offboarding checklist — laptop, access card, security tokens — and confirm it by retiring or wiping the device in Intune the same day access is revoked. Keep a signed checklist per departing employee.",
@@ -426,10 +426,10 @@ window.GUIDANCE = {
     checks: ["device", "compliance-policy", "device-checkin", "ca-device"]
   },
   'A.8.2': {
-    how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access) — Checkpoint's admin-count and PIM checks both watch this directly, and its access-review check confirms privileged role membership is also reviewed periodically, not just gated by PIM at assignment time.",
-    evidence: "The Entra PIM configuration, current Global Administrator membership, and Checkpoint's admins/PIM/access-review scan results.",
+    how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access), and bound how long an authenticated privileged session stays valid with a Conditional Access sign-in frequency control — Checkpoint's admin-count, PIM and ca-sif checks all watch this directly, and its access-review check confirms privileged role membership is also reviewed periodically, not just gated by PIM at assignment time.",
+    evidence: "The Entra PIM configuration, current Global Administrator membership, the Conditional Access policy enforcing sign-in frequency for privileged roles, and Checkpoint's admins/PIM/ca-sif/access-review scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["mfa-priv", "admins", "pim", "access-review"]
+    checks: ["mfa-priv", "admins", "pim", "ca-sif", "access-review"]
   },
   'A.8.3': {
     how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails, restrict end-user consent so a high-privilege scope requires admin approval rather than a user's own click-through, and keep the tenant's default SharePoint/OneDrive external sharing setting no more permissive than intended — an anyone-with-a-link default silently overrides careful per-site permissions.",
@@ -444,10 +444,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.5': {
-    how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. Where Entra ID Protection (P2) is licensed, add risk-based Conditional Access so a risky sign-in or a compromised-looking account is challenged or blocked automatically rather than relying on someone noticing. This is the control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv, legacy and ca-risk all read your live Conditional Access configuration.",
-    evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth and acting on sign-in/user risk, and Checkpoint's mfa-all/mfa-priv/legacy/ca-risk scan results.",
+    how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. Where Entra ID Protection (P2) is licensed, add risk-based Conditional Access so a risky sign-in or a compromised-looking account is challenged or blocked automatically rather than relying on someone noticing, and bound privileged session lifetime with sign-in frequency so a stolen token doesn't stay useful forever. This is the control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv, legacy, ca-risk and ca-sif all read your live Conditional Access configuration.",
+    evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth, acting on sign-in/user risk and bounding privileged session lifetime, and Checkpoint's mfa-all/mfa-priv/legacy/ca-risk/ca-sif scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["mfa-all", "mfa-priv", "legacy", "ca-risk"]
+    checks: ["mfa-all", "mfa-priv", "legacy", "ca-risk", "ca-sif"]
   },
   'A.8.6': {
     how: "Monitor capacity for systems you're directly responsible for (on-premises servers, Azure resources) with alerting before thresholds are hit, and plan ahead for growth. For fully cloud-hosted Microsoft 365 services, capacity management is largely Microsoft's responsibility — document that scoping decision.",

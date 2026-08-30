@@ -334,6 +334,8 @@ window.Graph = (function () {
       set('legacy', 'manual', capabilities.conditionalAccess.note);
       set('mfa-priv', 'manual', capabilities.conditionalAccess.note);
       set('ca-device', 'manual', capabilities.conditionalAccess.note);
+      set('ca-sif', 'manual', capabilities.conditionalAccess.note);
+      set('ca-tou', 'manual', capabilities.conditionalAccess.note);
     } else {
       try {
         policies = (await g('/identity/conditionalAccess/policies')).value || [];
@@ -398,6 +400,17 @@ window.Graph = (function () {
       raw['ca-device'] = { conditionalAccessPolicies: policies };
       var caDevice = window.CheckpointLib.caDeviceComplianceResult(policies);
       set('ca-device', caDevice.result, caDevice.note);
+
+      /* ca-sif and ca-tou mine sessionControls.signInFrequency and
+         grantControls.termsOfUse off the same policy array — two more
+         fields nothing was reading. No new call, no new scope. */
+      raw['ca-sif'] = { conditionalAccessPolicies: policies };
+      var caSif = window.CheckpointLib.caSignInFrequencyResult(policies);
+      set('ca-sif', caSif.result, caSif.note);
+
+      raw['ca-tou'] = { conditionalAccessPolicies: policies };
+      var caTou = window.CheckpointLib.caTermsOfUseResult(policies);
+      set('ca-tou', caTou.result, caTou.note);
     }
 
     /* ca-risk reads the same policy array for Entra ID Protection's
