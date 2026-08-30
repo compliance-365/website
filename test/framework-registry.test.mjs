@@ -467,21 +467,22 @@ describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', (
 
 describe('CHECK_DEFS — posture-check definitions', () => {
   test('check count is pinned, so adding one is a deliberate act', () => {
-    // 33 Microsoft + 10 Cloud (AWS). The AWS ten are only ever populated
+    // 34 Microsoft + 10 Cloud (AWS). The AWS ten are only ever populated
     // by the optional collector; app.js drops them from the Dashboard's
     // coverage denominator for a tenant that has not deployed it, so this
     // number growing does NOT mean every tenant is suddenly 10 short.
     //
     // 25 -> 26 when 'xdr-incidents' was added (Defender XDR incident
-    // triage). 41 -> 43 when 'ca-device' and 'ca-risk' were added — both
-    // mined from the Conditional Access policy list mfa-all/legacy/
-    // mfa-priv already fetch, so no new Graph call and no new scope.
-    // An unlicensed tenant is unaffected either way: the relevant
+    // triage). 41 -> 43 when 'ca-device' and 'ca-risk' were added. 43 ->
+    // 44 when 'oauth-consent' was added — all three mined from a Graph
+    // response an existing check already fetches (CA policies; OAuth
+    // grants' consentType), so no new Graph call and no new scope. An
+    // unlicensed tenant is unaffected either way: the relevant
     // capability probe fails, the check degrades to 'manual', and
     // score() excludes 'manual' from its denominator entirely.
-    assert.equal(CHECK_DEFS.length, 43);
+    assert.equal(CHECK_DEFS.length, 44);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 33);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 34);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {
