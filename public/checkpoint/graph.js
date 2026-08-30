@@ -328,14 +328,17 @@ window.Graph = (function () {
 
     /* --- Conditional Access driven checks --- */
     var policies = [];
+    var caFetchFailed = false;
     if (!capabilities.conditionalAccess.available) {
       set('mfa-all', 'manual', capabilities.conditionalAccess.note);
       set('legacy', 'manual', capabilities.conditionalAccess.note);
       set('mfa-priv', 'manual', capabilities.conditionalAccess.note);
+      set('ca-device', 'manual', capabilities.conditionalAccess.note);
     } else {
       try {
         policies = (await g('/identity/conditionalAccess/policies')).value || [];
       } catch (e) {
+        caFetchFailed = true;
         set('mfa-all', 'review', 'Could not read Conditional Access policies: ' + e.message);
       }
     }
@@ -388,6 +391,33 @@ window.Graph = (function () {
         privStrong ? 'Authentication-strength policy covers privileged roles'
           : priv ? 'Privileged roles require MFA, but not a phishing-resistant method'
           : 'No CA policy targets privileged directory roles');
+
+      /* ca-device mines the SAME policy array above for a signal nothing
+         was reading: whether cloud app access is gated on a compliant
+         or hybrid-joined device. No new call, no new scope. */
+      raw['ca-device'] = { conditionalAccessPolicies: policies };
+      var caDevice = window.CheckpointLib.caDeviceComplianceResult(policies);
+      set('ca-device', caDevice.result, caDevice.note);
+    }
+
+    /* ca-risk reads the same policy array for Entra ID Protection's
+       risk-based conditions (signInRiskLevels/userRiskLevels) — an
+       Entra ID P2 feature, so it's gated on identityProtection the same
+       way 'riskyusers' already is: a tenant without the licence gets
+       'manual', never an invented failure. */
+    if (!capabilities.identityProtection.available) {
+      set('ca-risk', 'manual', capabilities.identityProtection.note);
+    } else if (!capabilities.conditionalAccess.available) {
+      set('ca-risk', 'manual', capabilities.conditionalAccess.note);
+    } else if (caFetchFailed) {
+      /* The CA policy fetch above failed (mfa-all landed on 'review'
+         from that catch) — an empty policies array here means "we
+         don't know", not "no risk-based policy exists". */
+      set('ca-risk', 'review', 'Could not read Conditional Access policies for risk-based analysis');
+    } else {
+      raw['ca-risk'] = { conditionalAccessPolicies: policies };
+      var caRisk = window.CheckpointLib.caRiskBasedResult(policies);
+      set('ca-risk', caRisk.result, caRisk.note);
     }
 
     /* --- Global admin count --- */

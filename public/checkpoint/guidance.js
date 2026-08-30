@@ -141,10 +141,10 @@ window.GUIDANCE = {
     checks: ["sharing"]
   },
   'A.5.15': {
-    how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA and legacy-authentication pieces of this directly on every run.",
-    evidence: "The exported Conditional Access policy set, an access-review record, and Checkpoint's own MFA/legacy-authentication scan results.",
+    how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA, legacy-authentication, device-compliance and (where licensed) risk-based pieces of this directly on every run.",
+    evidence: "The exported Conditional Access policy set, an access-review record, and Checkpoint's own MFA/legacy-authentication/ca-device/ca-risk scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["mfa-all", "legacy"]
+    checks: ["mfa-all", "legacy", "ca-device", "ca-risk"]
   },
   'A.5.16': {
     how: "Use Entra ID as the single identity source for every system that supports it — no local or shadow accounts — with one identity per person, deactivated promptly on departure. Keep guest accounts to a genuine business need and review them periodically; Checkpoint's guest-count check flags when that count drifts beyond your set threshold.",
@@ -420,10 +420,10 @@ window.GUIDANCE = {
   /* ================= ISO 27001 — A.8 Technological (34) ================= */
 
   'A.8.1': {
-    how: "Enrol every endpoint accessing company data into Intune, apply a compliance policy (encryption, OS version, security baseline) and block access from non-compliant devices through Conditional Access. Checkpoint's device-compliance and compliance-policy checks read this configuration directly on every scan.",
-    evidence: "The Intune compliance policy configuration, device compliance reporting, and Checkpoint's device/compliance-policy scan results.",
+    how: "Enrol every endpoint accessing company data into Intune, apply a compliance policy (encryption, OS version, security baseline) and block access from non-compliant devices through Conditional Access. Checkpoint's device-compliance and compliance-policy checks read the Intune side of this directly on every scan; its ca-device check separately confirms Conditional Access is actually enforcing that compliance requirement at sign-in, not just recording it in Intune.",
+    evidence: "The Intune compliance policy configuration, device compliance reporting, the Conditional Access policy gating cloud app access on device compliance, and Checkpoint's device/compliance-policy/ca-device scan results.",
     link: "https://intune.microsoft.com",
-    checks: ["device", "compliance-policy", "device-checkin"]
+    checks: ["device", "compliance-policy", "device-checkin", "ca-device"]
   },
   'A.8.2': {
     how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access) — Checkpoint's admin-count and PIM checks both watch this directly, and its access-review check confirms privileged role membership is also reviewed periodically, not just gated by PIM at assignment time.",
@@ -444,10 +444,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.5': {
-    how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. This is the single control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv and legacy all read your live Conditional Access configuration.",
-    evidence: "The Conditional Access policy set enforcing MFA and blocking legacy auth, and Checkpoint's mfa-all/mfa-priv/legacy scan results.",
+    how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. Where Entra ID Protection (P2) is licensed, add risk-based Conditional Access so a risky sign-in or a compromised-looking account is challenged or blocked automatically rather than relying on someone noticing. This is the control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv, legacy and ca-risk all read your live Conditional Access configuration.",
+    evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth and acting on sign-in/user risk, and Checkpoint's mfa-all/mfa-priv/legacy/ca-risk scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["mfa-all", "mfa-priv", "legacy"]
+    checks: ["mfa-all", "mfa-priv", "legacy", "ca-risk"]
   },
   'A.8.6': {
     how: "Monitor capacity for systems you're directly responsible for (on-premises servers, Azure resources) with alerting before thresholds are hit, and plan ahead for growth. For fully cloud-hosted Microsoft 365 services, capacity management is largely Microsoft's responsibility — document that scoping decision.",
