@@ -661,6 +661,19 @@
     };
   }
 
+  /* describeServicePrincipal() formats one resolved servicePrincipal
+     into the label riskyapps/oauth-consent show next to a grant — a
+     bare clientId GUID otherwise. Pulled out as pure, testable logic;
+     the actual /servicePrincipals/{id} lookups (one per distinct risky
+     clientId, under the Directory.Read.All this app already holds — no
+     new scope) live in graph.js, wrapped so a failed lookup is skipped,
+     never invented: a missing name falls back to the id, not a guess. */
+  function describeServicePrincipal(sp) {
+    if (!sp || !sp.displayName) return null;
+    var verified = sp.verifiedPublisher && sp.verifiedPublisher.displayName;
+    return sp.displayName + (verified ? ' (verified: ' + verified + ')' : ' (unverified publisher)');
+  }
+
   function deviceCheckinResult(devices, staleDays, nowMs) {
     var list = (devices || []).filter(function (d) { return d; });
     if (!list.length) return { total: 0, stale: 0, never: 0, result: 'review' };
@@ -3117,7 +3130,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, oauthConsentRiskResult: oauthConsentRiskResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

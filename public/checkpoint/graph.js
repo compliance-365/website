@@ -627,25 +627,56 @@ window.Graph = (function () {
     /* --- Risky OAuth app grants (high-privilege scopes) --- */
     try {
       var grants = await gAll('/oauth2PermissionGrants?$select=clientId,resourceId,scope,consentType&$top=999');
-      raw['riskyapps'] = { oauthGrants: grants };
       var highPriv = ['Directory.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All', 'Sites.FullControl.All', 'User.ReadWrite.All'];
-      var riskyGrantCount = grants.filter(function (g2) {
+      var riskyGrants = grants.filter(function (g2) {
         var scopes = (g2.scope || '').split(' ');
         return scopes.some(function (s) { return highPriv.indexOf(s) > -1; });
-      }).length;
+      });
+      var riskyGrantCount = riskyGrants.length;
+
+      /* Resolve the app NAME behind each risky grant — otherwise a
+         finding names nothing but a clientId GUID, which is useless to
+         whoever has to act on it. Only the risky subset is resolved
+         (a handful of grants, not all of them: most tenants have dozens
+         of low-privilege consents nobody needs named), one direct
+         GET /servicePrincipals/{id} per distinct clientId under the
+         Directory.Read.All this app already holds — no new scope, no
+         batch $filter query (and its ConsistencyLevel header
+         requirements) to get wrong. A failed lookup is skipped, never
+         invented: an unresolved app shows its id, not a guessed name. */
+      var appNames = {};
+      var riskyClientIds = riskyGrants.map(function (g2) { return g2.clientId; })
+        .filter(function (id, i, arr) { return id && arr.indexOf(id) === i; });
+      for (var ci = 0; ci < riskyClientIds.length; ci++) {
+        try {
+          var sp = await g('/servicePrincipals/' + riskyClientIds[ci] + '?$select=id,displayName,verifiedPublisher');
+          var desc = window.CheckpointLib.describeServicePrincipal(sp);
+          if (desc) appNames[riskyClientIds[ci]] = desc;
+        } catch (e) { /* skip this app — under-report, never invent */ }
+      }
+      var namesFor = function (list) {
+        return list.map(function (g2) { return appNames[g2.clientId]; }).filter(Boolean)
+          .filter(function (n, i, arr) { return arr.indexOf(n) === i; });
+      };
+
+      raw['riskyapps'] = { oauthGrants: grants, appNames: appNames };
+      var riskyNames = namesFor(riskyGrants);
       set('riskyapps', riskyGrantCount === 0 ? 'pass' : riskyGrantCount <= 3 ? 'review' : 'fail',
-        riskyGrantCount + ' app grant(s) with a high-privilege scope (of ' + grants.length + ' total grants)');
+        riskyGrantCount + ' app grant(s) with a high-privilege scope (of ' + grants.length + ' total grants)' +
+        (riskyNames.length ? ': ' + riskyNames.join(', ') : ''));
 
       /* oauth-consent mines consentType from the SAME grants array above
          — already selected, never scored. See lib.js for why a
          user-consented high-privilege grant is a distinct, worse
          signal than an admin-consented one. */
-      raw['oauth-consent'] = { oauthGrants: grants };
+      raw['oauth-consent'] = { oauthGrants: grants, appNames: appNames };
       var consentRisk = window.CheckpointLib.oauthConsentRiskResult(grants);
+      var userConsentedNames = namesFor(riskyGrants.filter(function (g2) { return g2.consentType === 'Principal'; }));
       set('oauth-consent', consentRisk.result,
         consentRisk.userConsented === 0
           ? 'No high-privilege OAuth grant was consented to by an end user without admin review'
-          : consentRisk.userConsented + ' high-privilege OAuth grant(s) consented to directly by an end user, with no admin review (' + consentRisk.adminConsented + ' other high-privilege grant(s) were admin-consented)');
+          : consentRisk.userConsented + ' high-privilege OAuth grant(s) consented to directly by an end user, with no admin review (' + consentRisk.adminConsented + ' other high-privilege grant(s) were admin-consented)' +
+            (userConsentedNames.length ? ': ' + userConsentedNames.join(', ') : ''));
     } catch (e) {
       set('riskyapps', 'review', 'Could not read OAuth app grants: ' + e.message);
       set('oauth-consent', 'review', 'Could not read OAuth app grants: ' + e.message);
