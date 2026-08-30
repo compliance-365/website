@@ -527,6 +527,64 @@
     };
   }
 
+  /* caDeviceComplianceResult() / caRiskBasedResult() — mined from the
+     SAME Conditional Access policy array graph.js already fetches for
+     mfa-all/legacy/mfa-priv. No new Graph call, no new scope: the
+     policies were already on the wire, these two checks just read
+     fields of the response nothing was previously looking at.
+
+     caDeviceComplianceResult() asks whether cloud app access is gated
+     on a compliant or hybrid-joined device — the CA-enforced half of
+     endpoint control, distinct from the 'device' check which reads
+     Intune's own compliance-policy evaluation. A policy requiring the
+     control for only some apps is a review, not a pass: the gap is
+     real, just narrower than "no control at all". */
+  function caDeviceComplianceResult(policies) {
+    var enabled = (policies || []).filter(function (p) { return p && p.state === 'enabled'; });
+    var deviceGate = function (p) {
+      var grants = (p.grantControls && p.grantControls.builtInControls) || [];
+      return grants.indexOf('compliantDevice') > -1 || grants.indexOf('domainJoinedDevice') > -1;
+    };
+    var coversAllApps = enabled.some(function (p) {
+      var apps = (p.conditions && p.conditions.applications && p.conditions.applications.includeApplications) || [];
+      return apps.indexOf('All') > -1 && deviceGate(p);
+    });
+    if (coversAllApps) {
+      return { result: 'pass', note: 'A Conditional Access policy requires a compliant or hybrid-joined device for all cloud apps' };
+    }
+    var coversSomeApps = enabled.some(deviceGate);
+    if (coversSomeApps) {
+      return { result: 'review', note: 'Device compliance is required by at least one Conditional Access policy, but not for all cloud apps' };
+    }
+    return { result: 'fail', note: 'No Conditional Access policy requires a compliant or hybrid-joined device for cloud app access' };
+  }
+
+  /* Risk-based CA (Entra ID Protection's signInRiskLevels/userRiskLevels
+     conditions) is gated at the call site behind the same
+     identityProtection capability probe the 'riskyusers' check already
+     uses (Entra ID P2) — a tenant without the licence sees 'manual'
+     here exactly as it does there, never an invented failure. */
+  function caRiskBasedResult(policies) {
+    var enabled = (policies || []).filter(function (p) { return p && p.state === 'enabled'; });
+    var signInRisk = enabled.some(function (p) {
+      var levels = (p.conditions && p.conditions.signInRiskLevels) || [];
+      var grants = (p.grantControls && p.grantControls.builtInControls) || [];
+      return levels.length > 0 && (grants.indexOf('block') > -1 || grants.indexOf('mfa') > -1);
+    });
+    var userRisk = enabled.some(function (p) {
+      var levels = (p.conditions && p.conditions.userRiskLevels) || [];
+      var grants = (p.grantControls && p.grantControls.builtInControls) || [];
+      return levels.length > 0 && (grants.indexOf('block') > -1 || grants.indexOf('passwordChange') > -1);
+    });
+    if (signInRisk && userRisk) {
+      return { result: 'pass', note: 'Conditional Access enforces both sign-in-risk and user-risk based access controls' };
+    }
+    if (signInRisk || userRisk) {
+      return { result: 'review', note: (signInRisk ? 'Sign-in-risk' : 'User-risk') + ' is enforced by Conditional Access, but not both' };
+    }
+    return { result: 'fail', note: 'No Conditional Access policy enforces sign-in-risk or user-risk based access controls' };
+  }
+
   function deviceCheckinResult(devices, staleDays, nowMs) {
     var list = (devices || []).filter(function (d) { return d; });
     if (!list.length) return { total: 0, stale: 0, never: 0, result: 'review' };
@@ -2983,7 +3041,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

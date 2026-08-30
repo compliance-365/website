@@ -276,6 +276,17 @@ function showModal(opts) {
       risk: { title: 'Privileged accounts protected by phishable MFA methods', cat: 'Access', L: 4, I: 5, controls: ['A.8.2', 'A.8.5'] },
       actions: [{ t: 'Enforce FIDO2/passkey sign-in for all privileged roles', pr: 'Critical', days: 21, control: 'A.8.2' }]
     },
+    'ca-device': {
+      risk: { title: 'Cloud apps are reachable from unmanaged, non-compliant devices', cat: 'Access', L: 4, I: 4, controls: ['A.8.1', 'A.5.15'] },
+      actions: [{ t: 'Require a compliant or hybrid-joined device in the Conditional Access policy covering all cloud apps', pr: 'High', days: 21, control: 'A.8.1' }]
+    },
+    /* Risk-based CA is an Entra ID P2 feature — this template only ever
+       fires for a tenant the capability probe already confirmed holds
+       the licence, so the action is genuinely actionable, not aspirational. */
+    'ca-risk': {
+      risk: { title: 'Sign-in and user risk signals from Entra ID Protection are not acted on', cat: 'Access', L: 3, I: 4, controls: ['A.8.5', 'A.5.15'] },
+      actions: [{ t: 'Add a Conditional Access policy that blocks or forces re-authentication on high sign-in/user risk', pr: 'High', days: 21, control: 'A.8.5' }]
+    },
     'admins': {
       risk: { title: 'Excess Global Administrator assignments widen the blast radius', cat: 'Access', L: 3, I: 5, controls: ['A.8.2'] },
       actions: [{ t: 'Reduce Global Admins to ≤4; move others to PIM-eligible roles', pr: 'High', days: 14, control: 'A.8.2' }]
