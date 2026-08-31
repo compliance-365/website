@@ -358,6 +358,16 @@ tr.flash{animation:flashRow 1.8s ease}
 .btn.ghost:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
 .btn.ghost:active{background:rgba(var(--paper-rgb),.08)}
 .btn.sm{padding:6px 12px;font-size:var(--fs-1)}
+/* No border, no fill, low-contrast text until hover/focus — for an
+   affordance that needs to stay on every row of a long list (the
+   posture scan's "Not via Microsoft?") without visually competing with
+   the pass/fail/review result next to it. Unlike .btn.ghost, this reads
+   as part of the row's quiet metadata rather than a call to action;
+   :focus-visible keeps it discoverable via keyboard even though hover
+   is the only cue for a mouse user scanning the list. */
+.btn.quiet{background:none;border:1px solid transparent;color:var(--paper-faint);padding:6px 8px}
+.btn.quiet:hover,.btn.quiet:focus-visible{color:var(--gold-light);background:var(--surface-hover)}
+.btn.quiet:active{background:rgba(var(--paper-rgb),.08)}
 /* Square icon button (topbar Settings) — same ghost chrome as its
    neighbours, sized so the glyph is optically centred rather than
    sitting in a text-shaped box. */
