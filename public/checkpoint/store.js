@@ -2040,19 +2040,22 @@ window.SpStore = (function () {
      whenever a new column is introduced to DEFS, so already-provisioned
      tenants pick it up without re-provisioning. */
   var COLUMN_RECONCILE = {
-    /* AiAssisted/AiReviewer on both lists have the same bug class as
-       Controls' three fields below: they're in Risks/Actions' own DEFS
-       (so a freshly-provisioned tenant has them), addRisk/updateRisk/
-       addAction/updateAction all write them unconditionally, but they
-       were never added to either list's reconcile entry here — so a
-       tenant provisioned before this AI-assisted-risk feature shipped
-       had a Risks/Actions list silently missing both, and every single
-       add/update against either list threw "Field 'AiAssisted' is not
-       recognized". Confirmed live on a real tenant: approving a
-       proposed risk (which both adds a risk AND adds its action) is
-       exactly the path that surfaced it. */
-    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer'],
-    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'OwnerEmail', 'AiAssisted', 'AiReviewer'],
+    /* Risks and Actions had accumulated more than one of these gaps —
+       AiAssisted/AiReviewer (this reconcile entry previously omitted
+       them, confirmed live: approving a proposed risk threw "Field
+       'AiAssisted' is not recognized") turned out not to be the only
+       one. The very next live check on the SAME tenant hit "Field
+       'FindingType' is not recognized" too — a column added back when
+       CAPA support shipped, also never reconciled. Rather than keep
+       finding these one live incident at a time, both entries below
+       are the FULL column list from these two lists' own DEFS above,
+       not a hand-picked "columns added later" subset — reconcileColumns()
+       already no-ops on any column a tenant already has, so listing
+       every column costs nothing for an up-to-date tenant and closes
+       this bug class completely for whichever tenant is still missing
+       one from years of incremental additions. */
+    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer'],
+    Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
     /* LastVerified/EvidenceUrl/VerifiedBy are in Controls' DEFS (below)
        but were never added here — a tenant provisioned before all three
        existed has a Controls list missing whichever one(s) came later,
