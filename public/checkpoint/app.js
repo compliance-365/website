@@ -4096,6 +4096,17 @@ function showModal(opts) {
      against this scan's fresh result. */
   var _checkExplainCache = {};
 
+  /* Guards against two overlapping runScan() calls — the header's "Run
+     posture scan" button has no disabled state of its own, so a double
+     click (or clicking it again mid-scan from another view) used to
+     kick off two concurrent scans. Both walk the same check list and
+     both PATCH the same Controls rows in captureAutoEvidence(), and
+     SharePoint's list-item update endpoint rejects the second PATCH to
+     land on a row with "the resource has changed since the caller last
+     read it" (a 412) — surfaced to the practitioner as a "Sync issue"
+     toast even though the scan itself completes. See runScan(). */
+  var _scanBusy = false;
+
   /* "Coverage" card — what CAP (see detectAppCapabilities()) found this
      tenant can and can't answer automatically. Available/Not licensed/
      No access per area, each with the same plain-language note
@@ -8174,6 +8185,8 @@ function showModal(opts) {
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
 
     runScan: async function () {
+      if (_scanBusy) { toast('A scan is already running — hang tight.'); return; }
+      _scanBusy = true;
       _checkExplainCache = {}; /* a fresh scan means a fresh result/note per check — never show a stale explanation */
       document.getElementById('gCap').textContent = Store.kind === 'demo'
         ? 'Scanning demo tenant…' : 'Scanning tenant via Microsoft Graph…';
@@ -8195,7 +8208,7 @@ function showModal(opts) {
           var out = await Graph.runPostureChecks(null, S.settings);
           S.lastResults = out.results;
           S.lastNotes = out.notes;
-        } catch (e) { warn(e); document.getElementById('gCap').textContent = 'Scan failed'; return; }
+        } catch (e) { warn(e); document.getElementById('gCap').textContent = 'Scan failed'; _scanBusy = false; return; }
         document.getElementById('gCap').textContent = 'Capturing evidence…';
         try { await captureAutoEvidence(out.raw, todayIso); } catch (e) { warn(e); }
         if (S.entitlements.iso42001) {
@@ -8629,6 +8642,7 @@ function showModal(opts) {
         }
         if (parts.length) toast('Scan complete — ' + parts.join(' · '));
       }, 2600);
+      _scanBusy = false;
     },
 
     approve: async function (tpl) {
