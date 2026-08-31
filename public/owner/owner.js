@@ -1805,30 +1805,47 @@ function showModal(opts) {
     var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs, controlRows: [] };
     try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
 
-    try {
-      /* The client's Checkpoint lists live wherever their onboarding
-         wizard put them — the tenant root site by default, or the
-         server-relative path recorded on the roster row (SitePath).
-         Resolving root-then-host mirrors store.js's own resolveSiteId()
-         so both apps agree on what a path like '/sites/compliance'
-         means. A wrong/stale path fails loudly here (Graph 404) rather
-         than silently reporting the client as not onboarded. */
-      var site;
-      var path = String(sitePath || '').trim();
-      if (!path || path === 'root') {
-        site = await g('/sites/root?$select=id');
-      } else {
-        var rootSite = await g('/sites/root?$select=webUrl');
-        var host = String(rootSite.webUrl || '').replace(/^https:\/\//, '').split('/')[0];
-        if (!host) throw new Error('Could not resolve the tenant\'s SharePoint hostname to look up site path "' + path + '"');
-        site = await g('/sites/' + host + ':' + path + '?$select=id');
-      }
-      var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
-      function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
-      var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
+    /* The client's Checkpoint lists live wherever their onboarding
+       wizard put them — the tenant root site by default, or the
+       server-relative path recorded on the roster row (SitePath).
+       Resolving root-then-host mirrors store.js's own resolveSiteId()
+       so both apps agree on what a path like '/sites/compliance'
+       means.
 
-      if (ctlList) {
-        out.onboarded = true;
+       Deliberately OUTSIDE any try/catch here, unlike the per-list reads
+       below: the tenant root site always resolves for a real tenant, so
+       a failure at this step is never "this client hasn't onboarded
+       yet" (that case just means siteLists below won't contain any
+       "Checkpoint ..." list — no exception at all). It can only mean a
+       wrong/stale SitePath on our OWN roster row, a permissions problem,
+       or a typo'd tenant — every one of those is a real fault the
+       partner needs to see and fix, not something that should read
+       identically to "client hasn't started" in the roster. Letting it
+       throw here hands it to partnerSyncClient's own catch, which
+       already surfaces "Sync failed: <message>" and records syncError —
+       exactly the right place for this, not silence. */
+    var site;
+    var path = String(sitePath || '').trim();
+    if (!path || path === 'root') {
+      site = await g('/sites/root?$select=id');
+    } else {
+      var rootSite = await g('/sites/root?$select=webUrl');
+      var host = String(rootSite.webUrl || '').replace(/^https:\/\//, '').split('/')[0];
+      if (!host) throw new Error('Could not resolve the tenant\'s SharePoint hostname to look up site path "' + path + '"');
+      site = await g('/sites/' + host + ':' + path + '?$select=id');
+    }
+    var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
+    function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
+    var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
+
+    /* Each list's item read stays in its OWN try/catch, though: once the
+       site itself is confirmed reachable, a single list failing (renamed,
+       a permissions quirk on just that list, a transient Graph error)
+       should degrade that one section, never wipe out everything else
+       already fetched or flip onboarded back to false. */
+    if (ctlList) {
+      out.onboarded = true;
+      try {
         var ctlItems = (await g('/sites/' + site.id + '/lists/' + ctlList.id + '/items?$expand=fields&$top=400')).value || [];
         var byFw = {};
         ctlItems.forEach(function (i) {
@@ -1847,27 +1864,35 @@ function showModal(opts) {
         out.controlRows = ctlItems.map(function (i) {
           return { applicable: !!i.fields.Applicable, status: i.fields.Status || '', mapsTo: i.fields.MapsTo || '' };
         });
-      }
-      if (entList) {
+      } catch (e) { /* Controls list exists but the read failed partway — onboarded stays true, readiness/controlRows stay at their defaults */ }
+    }
+    if (entList) {
+      try {
         var entItems = (await g('/sites/' + site.id + '/lists/' + entList.id + '/items?$expand=fields&$top=200')).value || [];
         out.modules = entItems.filter(function (i) { return i.fields.Enabled; }).map(function (i) { return i.fields.FrameworkId; }).filter(Boolean);
-      }
-      if (scanList) {
+      } catch (e) { /* best-effort — modules stays [] */ }
+    }
+    if (scanList) {
+      try {
         var scanItems = (await g('/sites/' + site.id + '/lists/' + scanList.id + '/items?$expand=fields&$top=200')).value || [];
         scanItems.sort(function (a, b) { return (a.fields.ScanDate || '').localeCompare(b.fields.ScanDate || ''); });
         var last = scanItems[scanItems.length - 1];
         if (last) { out.score = last.fields.Score || 0; out.scanDate = last.fields.ScanDate || null; }
-      }
-      if (setList) {
+      } catch (e) { /* best-effort — score/scanDate stay null */ }
+    }
+    if (setList) {
+      try {
         var setItems = (await g('/sites/' + site.id + '/lists/' + setList.id + '/items?$expand=fields&$top=200')).value || [];
         var verRow = setItems.find(function (i) { return i.fields.SettingKey === 'lastSeenVersion'; });
         out.appVersion = (verRow && verRow.fields.SettingValue) || '';
-      }
-      if (alertList) {
+      } catch (e) { /* best-effort — appVersion stays '' */ }
+    }
+    if (alertList) {
+      try {
         var alertItems = (await g('/sites/' + site.id + '/lists/' + alertList.id + '/items?$expand=fields&$top=200')).value || [];
         out.driftAlerts = alertItems.filter(function (i) { return !i.fields.Acknowledged; }).length;
-      }
-    } catch (e) { /* Checkpoint not provisioned in this tenant yet (or a specific list read failed) */ }
+      } catch (e) { /* best-effort — driftAlerts stays 0 */ }
+    }
 
     try { await msalApp.clearCache(); } catch (e) { /* best-effort teardown only */ }
     return out;
