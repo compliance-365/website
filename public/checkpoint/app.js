@@ -4920,8 +4920,16 @@ function showModal(opts) {
       : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
       : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
     var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
+    /* Auto-captured evidence is a raw JSON file — a plain link to it
+       just downloads the file, which reads as broken to a practitioner
+       reviewing the SoA. Opens the in-app viewer (App.viewEvidence)
+       instead. A human-linked URL can be any file type, so it keeps
+       opening directly — there's nothing to usefully preview. */
+    var evidenceLink = isAutoEvidence
+      ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + key + '">View evidence</button>'
+      : (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' : '');
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+      ? evidenceLink + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
       : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
     /* DISP ICT controls carry an ISM chapter reference, looked up
        definitionally (same treatment as maturity level/parent above) —
@@ -8992,10 +9000,61 @@ function showModal(opts) {
         '<div class="d-kv"><span>Status</span><b>' + (c.app ? c.st : 'N/A') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + '</b></div>' +
         '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) : '—') + '</b></div>' +
-        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ' + icon('external') + '</a>' : '—') + '</b></div></div>' +
+        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl)
+          ? (c.verifiedBy === AUTO_EVIDENCE_TAG
+            ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + esc(key) + '">View evidence</button>'
+            : '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ' + icon('external') + '</a>')
+          : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         guidanceHtml;
       openDrawerUi('Control ' + c.id);
+    },
+
+    /* Auto-captured evidence is a raw JSON file this app itself wrote
+       (captureAutoEvidence() — see app.js's top) — opening evidenceUrl
+       directly just downloads that file, which tells a practitioner
+       nothing mid-review. This resolves the same webUrl through
+       Graph's /shares API (no stored driveItem id needed — Controls
+       only ever persisted the webUrl the upload returned) and renders
+       it in the same drawer every other control detail uses, with a
+       link to the raw file for anyone who genuinely wants it.
+       Human-linked evidence (setControlEvidence) keeps opening
+       directly — it can be any file type, and there's nothing
+       structured here to render. */
+    viewEvidence: async function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c || !c.evidenceUrl) return;
+      if (Store.kind === 'demo') { toast('Evidence preview isn\'t available in demo mode.'); return; }
+      var drawerEl = document.getElementById('drawer');
+      drawerEl.innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + esc(c.id) + '</div><h2>Evidence</h2>' +
+        '<div class="d-sec"><p style="font-size:12.5px;color:var(--paper-dim)">Loading…</p></div>';
+      openDrawerUi('Evidence — ' + c.id);
+      try {
+        var content = await Graph.fetchSharedFileJson(c.evidenceUrl);
+        var resultLabel = content.result === 'pass' ? 'Pass' : content.result === 'review' ? 'Review' : content.result === 'fail' ? 'Fail' : (content.result || 'Unknown');
+        var resultCls = content.result === 'pass' ? 'st-Implemented' : content.result === 'review' ? 'st-Intreatment' : content.result === 'fail' ? 'st-Open' : 'st-Proposed';
+        drawerEl.innerHTML =
+          '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+          '<div class="id-t">' + esc(c.id) + '</div><h2>Evidence</h2>' +
+          '<div class="d-sec">' +
+          '<div class="d-kv"><span>Check</span><b>' + esc(content.label || content.checkId || '') + '</b></div>' +
+          '<div class="d-kv"><span>Result</span><b><span class="chip ' + resultCls + '">' + esc(resultLabel) + '</span></b></div>' +
+          '<div class="d-kv"><span>Captured</span><b>' + (content.generatedAt ? fmtDate(String(content.generatedAt).slice(0, 10)) : '—') + '</b></div>' +
+          (content.note ? '<div class="d-kv"><span>Note</span><b>' + esc(content.note) + '</b></div>' : '') +
+          '</div>' +
+          '<div class="d-sec"><h4>Raw scan data</h4>' +
+          '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;line-height:1.6;color:var(--paper-dim);background:var(--surface-hover);border-radius:8px;padding:10px;max-height:340px;overflow:auto">' + esc(JSON.stringify(content.data, null, 2)) + '</pre></div>' +
+          '<p style="margin-top:4px"><a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Open raw file ' + icon('external') + '</a></p>';
+      } catch (e) {
+        console.error(e);
+        drawerEl.innerHTML =
+          '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+          '<div class="id-t">' + esc(c.id) + '</div><h2>Evidence</h2>' +
+          '<div class="d-sec"><p style="font-size:12.5px;color:var(--fail)">Could not load a preview: ' + esc(e.message || e) + '</p>' +
+          '<p style="margin-top:8px"><a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Open the raw file instead ' + icon('external') + '</a></p></div>';
+      }
     },
 
     /* Pins `key` ("fw|id") as the Constellation's selected node — the

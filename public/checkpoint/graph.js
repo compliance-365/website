@@ -1160,6 +1160,32 @@ window.Graph = (function () {
     });
   }
 
+  /* Encodes a sharing URL (any SharePoint/OneDrive webUrl) into the
+     token Graph's /shares API expects — documented, GA on v1.0:
+     base64, converted to unpadded base64url, prefixed "u!". Lets a
+     caller resolve a webUrl straight to a DriveItem without ever
+     having stored that item's id — see fetchSharedFileJson() below,
+     which is exactly why this exists: Controls only ever persisted
+     evidenceUrl (the webUrl captureAutoEvidence() got back from the
+     upload), never the underlying driveItem id. */
+  function encodeSharingUrl(url) {
+    var b64 = btoa(unescape(encodeURIComponent(url)));
+    var b64url = b64.replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
+    return 'u!' + b64url;
+  }
+
+  /* Reads back a small JSON file this app itself uploaded (currently
+     only the auto-evidence documents captureAutoEvidence() writes —
+     see app.js's viewEvidence()), given nothing but its webUrl. g()
+     already JSON.parses every response body, and the auto-evidence
+     files ARE JSON, so no separate content-type branch is needed here
+     — a non-JSON file would simply fail to parse and this throws,
+     which the caller treats as "can't preview, fall back to opening
+     the raw link" rather than a hard error. */
+  async function fetchSharedFileJson(url) {
+    return g('/shares/' + encodeSharingUrl(url) + '/driveItem/content', { scopes: CONFIG.scopesProvision });
+  }
+
   /* Status update email — sent as the signed-in user, via their own
      delegated token. No backend, no service account: Graph's sendMail
      returns 202 with no body, so this uses its own fetch rather than
@@ -1238,7 +1264,7 @@ window.Graph = (function () {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
-    setDriveItemFields: setDriveItemFields, sendMail: sendMail,
+    setDriveItemFields: setDriveItemFields, fetchSharedFileJson: fetchSharedFileJson, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken
