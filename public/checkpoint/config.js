@@ -84,7 +84,21 @@ window.CHECKPOINT_CONFIG = {
        check can never move into the unattended Azure Function monitor
        the way the Graph posture checks did. */
     'SubjectRightsRequest.Read.All',
-    'RecordsManagement.Read.All'
+    'RecordsManagement.Read.All',
+    /* Entra ID Governance's Lifecycle Workflows (graph.js's
+       'lifecycleWorkflows' capability probe) — read-only visibility
+       into whether joiner/mover/leaver automation is actually
+       configured and enabled, never provisioning a workflow on the
+       tenant's behalf. Separately licensed (Entra ID Governance —
+       P2 + the Governance add-on, or Microsoft Entra Suite), so most
+       tenants degrade to Manual here too. Reading this endpoint also
+       needs the signed-in user to hold Global Reader, Lifecycle
+       Workflows Administrator, or Global Administrator specifically —
+       Global Administrator is a superset of Global Reader for this
+       API, so the common "admin runs the scan" case is unaffected;
+       a security-reader-only scan account will see Manual here,
+       same expected shape as the SharePoint settings check above. */
+    'LifecycleWorkflows.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

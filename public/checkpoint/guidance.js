@@ -147,10 +147,10 @@ window.GUIDANCE = {
     checks: ["mfa-all", "legacy", "ca-device", "ca-risk", "oauth-consent"]
   },
   'A.5.16': {
-    how: "Use Entra ID as the single identity source for every system that supports it — no local or shadow accounts — with one identity per person, deactivated promptly on departure. Keep guest accounts to a genuine business need and review them periodically; Checkpoint's guest-count check flags when that count drifts beyond your set threshold.",
-    evidence: "Entra's user and guest list, an offboarding record showing prompt deactivation, and Checkpoint's guest-count scan result.",
+    how: "Use Entra ID as the single identity source for every system that supports it — no local or shadow accounts — with one identity per person, deactivated promptly on departure. Keep guest accounts to a genuine business need and review them periodically, and where Entra ID Governance is licensed, automate joiner/leaver processing with Lifecycle Workflows rather than relying on someone remembering; Checkpoint's guest-count check flags guest drift and its lifecycle-workflows check confirms that automation is actually configured and enabled.",
+    evidence: "Entra's user and guest list, an offboarding record showing prompt deactivation, the Lifecycle Workflows configuration where licensed, and Checkpoint's guests/lifecycle-workflows scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["guests"]
+    checks: ["guests", "lifecycle-workflows"]
   },
   'A.5.17': {
     how: "Enforce a real authentication policy through Entra — a sensible password policy or, better, passwordless/FIDO2 where feasible, banned-password lists, and MFA as the actual control rather than password complexity alone. Never share credentials for any account; use PIM or a password vault where an account genuinely must be shared.",
@@ -306,10 +306,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.6.5': {
-    how: "Run a consistent offboarding checklist covering access revocation, asset return and any post-employment obligations (confidentiality survives termination), and complete it on the departure date, not whenever HR gets to it. Disable the Entra account immediately; delete it only after any legal hold requirements are satisfied.",
-    evidence: "Completed offboarding checklists showing same-day access revocation, matched against Entra account disable timestamps.",
+    how: "Run a consistent offboarding checklist covering access revocation, asset return and any post-employment obligations (confidentiality survives termination), and complete it on the departure date, not whenever HR gets to it. Disable the Entra account immediately; delete it only after any legal hold requirements are satisfied. Where Entra ID Governance is licensed, a Lifecycle Workflow enforces same-day disablement technically rather than depending on the checklist being followed.",
+    evidence: "Completed offboarding checklists showing same-day access revocation, matched against Entra account disable timestamps, and Checkpoint's leaver/lifecycle-workflows scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["leaver"]
+    checks: ["leaver", "lifecycle-workflows"]
   },
   'A.6.6': {
     how: "Require a signed confidentiality or non-disclosure agreement from every employee and relevant contractor before they get access to sensitive information, filed and retrievable — not just referenced as 'standard practice'.",
