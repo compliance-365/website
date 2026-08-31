@@ -2040,8 +2040,19 @@ window.SpStore = (function () {
      whenever a new column is introduced to DEFS, so already-provisioned
      tenants pick it up without re-provisioning. */
   var COLUMN_RECONCILE = {
-    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore'],
-    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'OwnerEmail'],
+    /* AiAssisted/AiReviewer on both lists have the same bug class as
+       Controls' three fields below: they're in Risks/Actions' own DEFS
+       (so a freshly-provisioned tenant has them), addRisk/updateRisk/
+       addAction/updateAction all write them unconditionally, but they
+       were never added to either list's reconcile entry here — so a
+       tenant provisioned before this AI-assisted-risk feature shipped
+       had a Risks/Actions list silently missing both, and every single
+       add/update against either list threw "Field 'AiAssisted' is not
+       recognized". Confirmed live on a real tenant: approving a
+       proposed risk (which both adds a risk AND adds its action) is
+       exactly the path that surfaced it. */
+    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer'],
+    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'OwnerEmail', 'AiAssisted', 'AiReviewer'],
     /* LastVerified/EvidenceUrl/VerifiedBy are in Controls' DEFS (below)
        but were never added here — a tenant provisioned before all three
        existed has a Controls list missing whichever one(s) came later,
