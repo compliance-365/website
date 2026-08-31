@@ -4069,7 +4069,14 @@ function showModal(opts) {
           note += '<div class="src" style="margin-top:2px">Not scored from Microsoft signal' +
             (disp.reviewDue ? ' · review due ' + esc(disp.reviewDue) + (dueSoon ? ' (soon)' : '') : ' · no review date set') + '</div>';
         }
-        var dispBtn = '<button class="btn ghost sm" data-action="App.setDisposition" data-id="' + esc(c.id) + '">' + (disp ? 'Edit coverage' : 'Not via Microsoft?') + '</button>';
+        /* Quiet by default: on a 40+ row list this button appears on
+           EVERY check, and in the overwhelming majority of cases there's
+           nothing to set — full ghost-button weight next to every single
+           pass/fail/review result competed with the one signal that
+           actually matters. Once a disposition IS set, though, that's
+           exactly the state a reader most needs to notice (this row's
+           result isn't a real scan), so it keeps the fuller treatment. */
+        var dispBtn = '<button class="btn ' + (disp ? 'ghost sm' : 'quiet sm') + '" data-action="App.setDisposition" data-id="' + esc(c.id) + '">' + (disp ? 'Edit coverage' : 'Not via Microsoft?') + '</button>';
         var explainBtn = aiOn ? '<button class="btn ghost sm" data-action="App.explainCheck" data-id="' + esc(c.id) + '">Explain this</button>' : '';
         var cached = _checkExplainCache[c.id];
         var explainBlock = cached ? '<div class="card" style="margin:0 2px 10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
