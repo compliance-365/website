@@ -433,7 +433,7 @@ window.nistSubcategorySeeds = nistSubcategorySeeds;
    changes (eight capability areas, seventeen checks between them — small
    enough that a single source of truth isn't worth the indirection). */
 window.CHECK_DEFS = [
-  /* Identity (12) */
+  /* Identity (13) */
   { id: 'mfa-all',    area: 'Identity', label: 'MFA enforced — all users',                    tpl: null,        scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'mfa-priv',   area: 'Identity', label: 'Phishing-resistant MFA — privileged roles',    tpl: 'mfa-priv',  scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'legacy',     area: 'Identity', label: 'Legacy authentication blocked',                tpl: 'legacy',    scored: true, requiresCapability: 'conditionalAccess' },
@@ -453,6 +453,12 @@ window.CHECK_DEFS = [
      under scopes every tenant already granted, so unlike most of the
      newer checks this one works at every licence level. */
   { id: 'leaver',     area: 'Identity', label: 'Departed accounts fully offboarded',           tpl: 'leaver',    scored: true },
+  /* The technically-enforced counterpart to leaver above: not "were
+     departed accounts cleaned up" but "is that offboarding (and
+     onboarding) automated at all, rather than left to whoever
+     remembers". Entra ID Governance add-on — most tenants will see
+     Manual, same as access-review and pim above. */
+  { id: 'lifecycle-workflows', area: 'Identity', label: 'Joiner/leaver processing automated (Lifecycle Workflows)', tpl: 'lifecycle-workflows', scored: true, requiresCapability: 'lifecycleWorkflows' },
   /* Devices (3) */
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
@@ -822,6 +828,7 @@ window.CHECK_CONTROLS = {
   'riskyusers': ['A.5.25', 'A.5.26'],
   'device': ['A.8.1'],
   'leaver': ['A.5.11', 'A.5.18', 'A.6.5'],
+  'lifecycle-workflows': ['A.5.16', 'A.6.5'],
   'device-checkin': ['A.8.1'],
   'device-config': ['A.8.9'],
   'compliance-policy': ['A.8.1'],
@@ -1055,7 +1062,7 @@ window.DemoStore = (function () {
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
       lastResults: {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail',
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
         'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
@@ -1073,6 +1080,7 @@ window.DemoStore = (function () {
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
         'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
         'leaver': '9 disabled account(s); 1 STILL HOLD a privileged directory role; 4 still hold a paid licence — confirm each is a deliberate retention rather than an unfinished offboarding',
+        'lifecycle-workflows': '1 of 2 workflow(s) enabled — joiner not automated, leaver automated, mover not automated',
         'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',
         'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned',
         'privacy-srr': '3 open request(s); 1 PAST their statutory due date; 1 due within 7 days',

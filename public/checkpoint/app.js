@@ -333,6 +333,10 @@ function showModal(opts) {
         { t: 'Add licence and role removal to the documented leaver checklist', pr: 'Medium', days: 45, control: 'A.6.5' }
       ]
     },
+    'lifecycle-workflows': {
+      risk: { title: 'Joiner and leaver processing is manual, not technically enforced', cat: 'Access', L: 3, I: 4, controls: ['A.5.16', 'A.6.5'] },
+      actions: [{ t: 'Configure and enable a Lifecycle Workflow covering whichever of joiner/leaver is not yet automated', pr: 'High', days: 30, control: 'A.5.16' }]
+    },
     'privacy-srr': {
       risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', L: 4, I: 4, controls: ['A.5.34'] },
       actions: [
@@ -13284,7 +13288,8 @@ function showModal(opts) {
         sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' },
         defenderXdr: { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', available: true, status: 'available', note: '' },
         priva: { key: 'priva', label: 'Microsoft Priva subject rights requests', licence: 'Microsoft Priva (Subject Rights Requests)', available: true, status: 'available', note: '' },
-        recordsManagement: { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' }
+        recordsManagement: { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
+        lifecycleWorkflows: { key: 'lifecycleWorkflows', label: 'Entra ID Governance Lifecycle Workflows', licence: 'Microsoft Entra ID Governance (Entra ID P2 + the Governance add-on, or Microsoft Entra Suite)', available: true, status: 'available', note: '' }
       };
       applyAwsCapability();
       return;

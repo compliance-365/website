@@ -209,7 +209,16 @@ window.Graph = (function () {
     { key: 'priva', label: 'Microsoft Priva subject rights requests', licence: 'Microsoft Priva (Subject Rights Requests)', path: '/security/subjectRightsRequests?$top=1',
       note: 'No readable subject rights request queue — the privacy-request check will show as Manual. If data subject requests are tracked in another system, record that on the check itself.' },
     { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', path: '/security/labels/retentionLabels?$top=1',
-      note: 'No readable retention labels — the retention/disposal check will show as Manual. Delegated access only: this endpoint has no application-permission equivalent, so an unattended scan cannot answer it either.' }
+      note: 'No readable retention labels — the retention/disposal check will show as Manual. Delegated access only: this endpoint has no application-permission equivalent, so an unattended scan cannot answer it either.' },
+    /* Entra ID Governance's Lifecycle Workflows — GA on v1.0. Reading
+       this also needs the signed-in user to hold Global Reader,
+       Lifecycle Workflows Administrator, or Global Administrator
+       specifically (Global Administrator is a superset of Global
+       Reader for this API, so the common "admin runs the scan" case is
+       unaffected); a Security Reader-level scan account sees Manual
+       here, same shape as the SharePoint settings probe above. */
+    { key: 'lifecycleWorkflows', label: 'Entra ID Governance Lifecycle Workflows', licence: 'Microsoft Entra ID Governance (Entra ID P2 + the Governance add-on, or Microsoft Entra Suite)', path: '/identityGovernance/lifecycleWorkflows/workflows?$top=1',
+      note: 'Lifecycle Workflows requires Entra ID Governance — the joiner/leaver automation check will show as Manual.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -731,6 +740,30 @@ window.Graph = (function () {
             : 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval');
       } catch (e) {
         set('access-review', 'review', 'Could not read Access Reviews: ' + e.message);
+      }
+    }
+
+    /* --- Lifecycle Workflows (Entra ID Governance) — joiner/leaver
+       automation, ISO 27001 A.5.11/A.5.18/A.6.5, the same controls the
+       leaver check reads Directory.Read.All for. This is the
+       technically-enforced counterpart: leaver checks whether departed
+       accounts were actually disabled and de-privileged; this checks
+       whether that offboarding (and onboarding) is automated at all,
+       rather than left to whoever remembers on the day. */
+    if (!capabilities.lifecycleWorkflows.available) {
+      set('lifecycle-workflows', 'manual', capabilities.lifecycleWorkflows.note);
+    } else {
+      try {
+        var workflows = await gAll('/identityGovernance/lifecycleWorkflows/workflows?$select=id,displayName,isEnabled,category');
+        raw['lifecycle-workflows'] = { workflows: workflows };
+        var lw = window.CheckpointLib.lifecycleWorkflowsResult(workflows);
+        set('lifecycle-workflows', lw.result,
+          lw.total === 0
+            ? 'No Lifecycle Workflows configured — joiner/leaver processing is not automated'
+            : lw.enabled + ' of ' + lw.total + ' workflow(s) enabled — joiner ' + (lw.joiner ? 'automated' : 'not automated') +
+              ', leaver ' + (lw.leaver ? 'automated' : 'not automated') + ', mover ' + (lw.mover ? 'automated' : 'not automated'));
+      } catch (e) {
+        set('lifecycle-workflows', 'review', 'Could not read Lifecycle Workflows: ' + e.message);
       }
     }
 

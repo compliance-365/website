@@ -64,7 +64,7 @@ const MERGED_NIST_SUBCATEGORIES = PACKS.nistcsf.extra.subcategories;
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
 // Capabilities probed against Microsoft Graph (graph.js CAPABILITY_PROBES).
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement', 'lifecycleWorkflows'];
 // Capabilities that are DERIVED rather than probed, because nothing in
 // Microsoft 365 knows the answer. 'aws' is set by app.js from whether the
 // optional AWS collector has ever written an aws-* result for this tenant.
@@ -467,7 +467,7 @@ describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', (
 
 describe('CHECK_DEFS — posture-check definitions', () => {
   test('check count is pinned, so adding one is a deliberate act', () => {
-    // 36 Microsoft + 10 Cloud (AWS). The AWS ten are only ever populated
+    // 37 Microsoft + 10 Cloud (AWS). The AWS ten are only ever populated
     // by the optional collector; app.js drops them from the Dashboard's
     // coverage denominator for a tenant that has not deployed it, so this
     // number growing does NOT mean every tenant is suddenly 10 short.
@@ -477,13 +477,17 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // 44 when 'oauth-consent' was added. 44 -> 46 when 'ca-sif' and
     // 'ca-tou' were added — all five mined from a Graph response an
     // existing check already fetches (CA policies; OAuth grants'
-    // consentType), so no new Graph call and no new scope. An unlicensed
-    // tenant is unaffected either way: the relevant capability probe
-    // fails, the check degrades to 'manual', and score() excludes
-    // 'manual' from its denominator entirely.
-    assert.equal(CHECK_DEFS.length, 46);
+    // consentType), so no new Graph call and no new scope. 46 -> 47 when
+    // 'lifecycle-workflows' was added (Entra ID Governance's Lifecycle
+    // Workflows, GA v1.0) — a genuinely new scope this time
+    // (LifecycleWorkflows.Read.All), capability-gated the same as
+    // access-review/pim. An unlicensed tenant is unaffected either way:
+    // the relevant capability probe fails, the check degrades to
+    // 'manual', and score() excludes 'manual' from its denominator
+    // entirely.
+    assert.equal(CHECK_DEFS.length, 47);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 36);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 37);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

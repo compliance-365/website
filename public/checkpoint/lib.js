@@ -674,6 +674,33 @@
     return sp.displayName + (verified ? ' (verified: ' + verified + ')' : ' (unverified publisher)');
   }
 
+  /* lifecycleWorkflowsResult() scores Entra ID Governance's Lifecycle
+     Workflows — read-only visibility into whether joiner/leaver
+     automation is actually configured and turned on, never provisioning
+     a workflow itself (Checkpoint reads, a practitioner acts, same as
+     every other check).
+
+     Only joiner and leaver drive the result. Mover is real and worth
+     surfacing in the note, but it is the least universally adopted of
+     the three and gating a pass on it would penalize tenants for not
+     automating a lower-stakes HR event (an internal transfer) the same
+     way as failing to automate offboarding. A workflow that exists but
+     is disabled (isEnabled: false — the common "built it, never flipped
+     it on" state) does not count; a draft nobody activated protects
+     nobody. */
+  function lifecycleWorkflowsResult(workflows) {
+    var list = (workflows || []).filter(function (w) { return w; });
+    var enabled = list.filter(function (w) { return w.isEnabled === true; });
+    var hasEnabledCategory = function (cat) { return enabled.some(function (w) { return w.category === cat; }); };
+    var joiner = hasEnabledCategory('joiner');
+    var leaver = hasEnabledCategory('leaver');
+    var mover = hasEnabledCategory('mover');
+    return {
+      total: list.length, enabled: enabled.length, joiner: joiner, leaver: leaver, mover: mover,
+      result: (joiner && leaver) ? 'pass' : (joiner || leaver) ? 'review' : 'fail'
+    };
+  }
+
   function deviceCheckinResult(devices, staleDays, nowMs) {
     var list = (devices || []).filter(function (d) { return d; });
     if (!list.length) return { total: 0, stale: 0, never: 0, result: 'review' };
@@ -3130,7 +3157,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
