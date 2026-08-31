@@ -1236,7 +1236,16 @@ function showModal(opts) {
         var json = JSON.stringify(content, null, 2);
         var filename = id + '-' + today + '.json';
         var file = new File([json], filename, { type: 'application/json' });
-        var uploaded = await Store.uploadDocument(file, 'Auto-evidence');
+        /* The same JSON also goes onto the file's DocEvidenceJson column
+           (extraFields, not meta) — App.viewEvidence() reads it back
+           from there. Graph's /content endpoint (what reading the file
+           itself back would require) redirects to a storage URL with no
+           CORS grant for this app's origin, so it can never be fetched
+           from the browser — a normal field read doesn't have that
+           problem. The uploaded FILE remains the durable, hashed
+           evidence artifact either way; this is purely so it can be
+           previewed in-app without ever leaving Checkpoint. */
+        var uploaded = await Store.uploadDocument(file, 'Auto-evidence', null, { DocEvidenceJson: json });
 
         var hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(json));
         var hashHex = Array.prototype.map.call(new Uint8Array(hashBuf), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
@@ -9013,11 +9022,20 @@ function showModal(opts) {
     /* Auto-captured evidence is a raw JSON file this app itself wrote
        (captureAutoEvidence() — see app.js's top) — opening evidenceUrl
        directly just downloads that file, which tells a practitioner
-       nothing mid-review. This resolves the same webUrl through
-       Graph's /shares API (no stored driveItem id needed — Controls
-       only ever persisted the webUrl the upload returned) and renders
-       it in the same drawer every other control detail uses, with a
-       link to the raw file for anyone who genuinely wants it.
+       nothing mid-review. captureAutoEvidence() also mirrors the same
+       JSON onto the file's DocEvidenceJson column, which this reads
+       back through Graph's /shares API (no stored driveItem id needed
+       — Controls only ever persisted the webUrl the upload returned)
+       and renders in the same drawer every other control detail uses,
+       with a link to the raw file for anyone who genuinely wants it.
+       Deliberately reads the COLUMN, not the file's own content: Graph's
+       /content endpoint redirects to a storage URL with no CORS grant
+       for this app's origin, so it can never be fetched from the
+       browser (confirmed live — it fails with an opaque "Load failed"/
+       "Failed to fetch" network error, not a real HTTP response).
+       Evidence captured before this column existed has nothing to read
+       here and falls through to the catch below — expected, not a bug;
+       the next scan re-captures it with the column populated.
        Human-linked evidence (setControlEvidence) keeps opening
        directly — it can be any file type, and there's nothing
        structured here to render. */
@@ -9032,7 +9050,8 @@ function showModal(opts) {
         '<div class="d-sec"><p style="font-size:12.5px;color:var(--paper-dim)">Loading…</p></div>';
       openDrawerUi('Evidence — ' + c.id);
       try {
-        var content = await Graph.fetchSharedFileJson(c.evidenceUrl);
+        var rawField = await Graph.fetchSharedItemField(c.evidenceUrl, 'DocEvidenceJson');
+        var content = JSON.parse(rawField);
         var resultLabel = content.result === 'pass' ? 'Pass' : content.result === 'review' ? 'Review' : content.result === 'fail' ? 'Fail' : (content.result || 'Unknown');
         var resultCls = content.result === 'pass' ? 'st-Implemented' : content.result === 'review' ? 'st-Intreatment' : content.result === 'fail' ? 'st-Open' : 'st-Proposed';
         drawerEl.innerHTML =

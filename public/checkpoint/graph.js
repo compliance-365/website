@@ -1164,7 +1164,7 @@ window.Graph = (function () {
      token Graph's /shares API expects — documented, GA on v1.0:
      base64, converted to unpadded base64url, prefixed "u!". Lets a
      caller resolve a webUrl straight to a DriveItem without ever
-     having stored that item's id — see fetchSharedFileJson() below,
+     having stored that item's id — see fetchSharedItemField() below,
      which is exactly why this exists: Controls only ever persisted
      evidenceUrl (the webUrl captureAutoEvidence() got back from the
      upload), never the underlying driveItem id. */
@@ -1174,16 +1174,24 @@ window.Graph = (function () {
     return 'u!' + b64url;
   }
 
-  /* Reads back a small JSON file this app itself uploaded (currently
-     only the auto-evidence documents captureAutoEvidence() writes —
-     see app.js's viewEvidence()), given nothing but its webUrl. g()
-     already JSON.parses every response body, and the auto-evidence
-     files ARE JSON, so no separate content-type branch is needed here
-     — a non-JSON file would simply fail to parse and this throws,
-     which the caller treats as "can't preview, fall back to opening
-     the raw link" rather than a hard error. */
-  async function fetchSharedFileJson(url) {
-    return g('/shares/' + encodeSharingUrl(url) + '/driveItem/content', { scopes: CONFIG.scopesProvision });
+  /* Reads one custom SharePoint column back off the list item behind a
+     webUrl — used by app.js's viewEvidence() to read the JSON
+     Store.uploadDocument()'s meta param wrote alongside the
+     auto-evidence file itself (see docFieldsFrom() in store.js).
+     Deliberately NOT /driveItem/content: confirmed against a real
+     tenant, that endpoint redirects to a storage URL that does not
+     grant CORS to this app's origin, so a browser fetch() of it fails
+     with an opaque network error ("Load failed"/"Failed to fetch")
+     before any HTTP response is even seen — a structural limitation of
+     reading file BYTES client-side via Graph, not something a retry or
+     a header fixes. The driveItem's own JSON representation (this
+     call) is a normal Graph resource with no such redirect, same as
+     every other Graph call this app already makes successfully. */
+  async function fetchSharedItemField(url, fieldName) {
+    var j = await g('/shares/' + encodeSharingUrl(url) + '/driveItem?$expand=listItem($expand=fields)', { scopes: CONFIG.scopesProvision });
+    var value = j.listItem && j.listItem.fields && j.listItem.fields[fieldName];
+    if (!value) throw new Error('No ' + fieldName + ' recorded on this item — it may predate this feature.');
+    return value;
   }
 
   /* Status update email — sent as the signed-in user, via their own
@@ -1264,7 +1272,7 @@ window.Graph = (function () {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
-    setDriveItemFields: setDriveItemFields, fetchSharedFileJson: fetchSharedFileJson, sendMail: sendMail,
+    setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken

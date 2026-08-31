@@ -780,7 +780,19 @@ window.DOC_META_COLUMNS = [
      lets the approval path and the attestation campaign builder recover
      which template (and therefore which controls) a file came from
      without parsing the audit log. Blank for an ordinary upload. */
-  { name: 'DocTplId', text: {} }
+  { name: 'DocTplId', text: {} },
+  /* Set only on an auto-evidence document (captureAutoEvidence() in
+     app.js) — the same JSON the uploaded file itself contains, mirrored
+     onto this column so the in-app evidence viewer (App.viewEvidence())
+     can read it back via Graph.fetchSharedItemField(). Deliberately not
+     the file's own content: Graph's /content endpoint redirects to a
+     storage URL with no CORS grant for this app's origin, so a browser
+     fetch() of it always fails — this column is a normal Graph field
+     read, which works the same as every other read in this app.
+     Created wide from the start (never narrow, unlike the older Doc*
+     columns above) since it only ever holds this JSON, never a short
+     value a practitioner might type by hand. */
+  { name: 'DocEvidenceJson', text: { allowMultipleLines: true } }
 ];
 
 /* Lifecycle states. "Superseded" exists so a replaced policy can be kept
@@ -1995,6 +2007,14 @@ window.SpStore = (function () {
      actually present on `meta` are sent, so a partial update — say,
      approving a document — patches exactly those fields and leaves the
      rest of the row alone rather than blanking them. */
+  /* DocEvidenceJson is deliberately NOT in this map — it's written via
+     uploadDocument()'s extraFields param (see below), never through
+     meta/docFieldsFrom. Every key here also flows back out through
+     docMetaFrom() into every row listDocuments() returns (the
+     Documents register), and that full evidence payload has no
+     business riding along on every document list load — it's read
+     back individually, on demand, only when App.viewEvidence() asks
+     for it. */
   var DOC_FIELD_MAP = {
     owner: 'DocOwner', version: 'DocVersion', status: 'DocStatus',
     approvedBy: 'DocApprovedBy', approvalDate: 'DocApprovalDate',
@@ -2647,16 +2667,23 @@ window.SpStore = (function () {
       });
     },
     /* meta (optional) is a partial document-control record — see
-       DOC_FIELD_MAP. The file is uploaded first and the register fields
-       patched second, so a metadata failure never loses the upload: the
-       returned object carries `metaError` instead, and the caller
-       decides how loudly to say "saved, but its details didn't stick". */
-    uploadDocument: async function (file, category, meta) {
+       DOC_FIELD_MAP. extraFields (optional) is raw SharePoint column
+       names, bypassing that map entirely — currently only used to
+       write DocEvidenceJson (captureAutoEvidence() in app.js), which
+       has no business being part of the document-control record every
+       other Documents-view read pulls back via docMetaFrom(). The file
+       is uploaded first and the fields patched second (one combined
+       PATCH covering both meta and extraFields), so a metadata failure
+       never loses the upload: the returned object carries `metaError`
+       instead, and the caller decides how loudly to say "saved, but
+       its details didn't stick". */
+    uploadDocument: async function (file, category, meta, extraFields) {
       if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
       var item = await Graph.uploadSmallFile(docDriveId, category || 'Other', file.name, file);
       var doc = { id: item.id, name: item.name, url: item.webUrl };
-      if (meta) {
-        try { await Graph.setDriveItemFields(docDriveId, item.id, docFieldsFrom(meta)); }
+      var fields = Object.assign({}, meta ? docFieldsFrom(meta) : {}, extraFields || {});
+      if (Object.keys(fields).length) {
+        try { await Graph.setDriveItemFields(docDriveId, item.id, fields); }
         catch (e) { doc.metaError = e.message || String(e); }
       }
       return doc;
