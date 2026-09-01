@@ -5352,6 +5352,27 @@ function showModal(opts) {
       '</div>';
   }
 
+  /* Every open risk register entry whose own `controls` list names this
+     control — the reverse of Risks' Controls column, computed at render
+     time rather than stored (same approach assuranceForControl already
+     takes for exceptions): the risk register already carries this link
+     in one direction (risk -> controls it's mitigated by), but a
+     practitioner looking at a CONTROL in the SoA had no way to see which
+     risk(s) it exists to treat — exactly the trace an auditor asks for
+     ("why does this control exist?"), silently absent until now. */
+  function risksForControl(c) {
+    return (S.risks || []).filter(function (r) { return (r.controls || []).indexOf(c.id) > -1; });
+  }
+  function linkedRisksHtml(c) {
+    var rs = risksForControl(c);
+    if (!rs.length) return '';
+    return '<div class="d-sec"><h4>Linked risks</h4>' +
+      rs.map(function (r) {
+        return '<div class="d-kv"><span><button class="lnk" data-action="App.openRisk" data-id="' + esc(r.id) + '">' + esc(r.id) + '</button> — ' + esc(r.title) + '</span><b><span class="chip st-' + r.status.replace(/ /g, '') + '">' + esc(r.status) + '</span></b></div>';
+      }).join('') +
+      '</div>';
+  }
+
   /* Combines every checkId that feeds a given SOC 2 control code (per
      CHECK_SOC2 — a control can have more than one, e.g. CC6.1 from both
      'mfa-all' and 'sharing') into one operating-effectiveness picture:
@@ -9229,6 +9250,7 @@ function showModal(opts) {
             : '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + esc(key) + '">Link ' + icon('external') + '</button>')
           : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
+        linkedRisksHtml(c) +
         assuranceExceptionsHtml(c) +
         guidanceHtml;
       openDrawerUi('Control ' + c.id);
