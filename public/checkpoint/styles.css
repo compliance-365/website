@@ -616,6 +616,14 @@ select.mini,input.mini,textarea.mini{background:var(--surface-raised);color:var(
 select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(169,129,46,.6)}
 select.mini:focus,input.mini:focus,textarea.mini:focus{outline:none;border-color:var(--gold)}
 select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;cursor:not-allowed}
+/* SoA Status dropdown colour-coding — reuses the same .st-* status
+   tokens the chips elsewhere already use, so red/amber/green reads at
+   a glance without scanning every row's text. Kept to a faint tint,
+   not a full-saturation fill, so the table stays readable. */
+select.mini.st-Open{color:var(--fail);border-color:rgba(201,122,122,.5);background:rgba(201,122,122,.1)}
+select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.5);background:rgba(216,186,120,.1)}
+select.mini.st-Implemented{color:var(--pass);border-color:rgba(143,191,154,.5);background:rgba(143,191,154,.1)}
+select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);background:var(--surface-raised)}
 .toggle{width:34px;height:19px;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
 .toggle::after{content:"";position:absolute;top:2.5px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--paper);transition:left .2s var(--ease),width .1s var(--ease)}
 .toggle:hover{background:rgba(var(--paper-rgb),.24)}
