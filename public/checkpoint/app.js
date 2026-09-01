@@ -5260,9 +5260,15 @@ function showModal(opts) {
       var byDate = {};
       checkIds.forEach(function (id) {
         var e = window.CheckpointLib.operatingEffectiveness(id, history, since);
+        var def = window.CHECK_DEFS.find(function (d) { return d.id === id; });
+        var checkLabel = def ? def.label : id;
         passCount += e.passCount;
         manualCount += e.manualCount;
-        exceptions = exceptions.concat(e.exceptions);
+        /* Tagged with which check produced it — a control fed by more
+           than one check (A.5.15's five, say) would otherwise merge
+           into one undifferentiated list an auditor can't trace back
+           to a specific finding. */
+        e.exceptions.forEach(function (ex) { exceptions.push({ date: ex.date, result: ex.result, checkLabel: checkLabel }); });
         if (e.lastObservedDate && (!lastObserved || e.lastObservedDate > lastObserved)) lastObserved = e.lastObservedDate;
         /* Union of observation DATES, not a sum: two checks seen on the
            same scan date are one real-world observation, not two. */
@@ -5271,12 +5277,21 @@ function showModal(opts) {
       totalObservations = Object.keys(byDate).length;
       effectiveness = { totalObservations: totalObservations, passCount: passCount, manualCount: manualCount, exceptions: exceptions, lastObservedDate: lastObserved };
     }
-    return window.CheckpointLib.controlAssurance({
+    var assurance = window.CheckpointLib.controlAssurance({
       control: { st: c.st, applicable: c.app, evidenceUrl: c.evidenceUrl, lastVerified: c.verified },
       effectiveness: effectiveness,
       today: new Date().toISOString().slice(0, 10),
       cadenceDays: cadence
     });
+    /* controlAssurance() (lib.js) only ever returns exceptionCount — a
+       number, deliberately, since it's a pure/tested function and the
+       raw per-exception list is an app.js-level presentation concern
+       (which check, when — see App.openControlGuidance's "Assurance"
+       section). Attached here rather than widening controlAssurance's
+       own contract, same reasoning app.js already keeps S/Store out of
+       lib.js for. */
+    assurance.exceptions = effectiveness ? effectiveness.exceptions : [];
+    return assurance;
   }
 
   var ASSURANCE_LABELS = {
@@ -5289,6 +5304,32 @@ function showModal(opts) {
     if (a.exceptionCount) extra += '<div class="verify-stale" style="font-size:10.5px">' + icon('flag') + a.exceptionCount + ' exception' + (a.exceptionCount === 1 ? '' : 's') + '</div>';
     else if (a.level === 'demonstrated') extra += '<div class="src" style="font-size:10.5px">' + a.passCount + ' passing observation' + (a.passCount === 1 ? '' : 's') + '</div>';
     return '<span class="assur assur-' + a.level + '" title="' + esc(a.basis) + '">' + ASSURANCE_LABELS[a.level] + '</span>' + extra;
+  }
+
+  /* The SoA table's Assurance column (assuranceCell above) shows only
+     an exception COUNT — a flag and a number, no detail — because a
+     table row has no room for a list. Reported live: a practitioner
+     could see "3 exceptions" and had no way to find out what they
+     were. This is the detail App.openControlGuidance's drawer shows
+     underneath it, using the same assuranceForControl(c) call the SoA
+     row already made — the two can never disagree about the count.
+     Capped and newest-first, same shape as every other "+N more" list
+     in this app; the full history is what the scan history itself
+     already is. */
+  function assuranceExceptionsHtml(c) {
+    var a = assuranceForControl(c);
+    if (!a.exceptionCount) return '';
+    var sorted = (a.exceptions || []).slice().sort(function (x, y) { return x.date < y.date ? 1 : x.date > y.date ? -1 : 0; });
+    var shown = sorted.slice(0, 10);
+    return '<div class="d-sec"><h4>Assurance exceptions</h4>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">' + esc(a.basis) + '</p>' +
+      shown.map(function (ex) {
+        var lbl = ex.result === 'fail' ? 'Fail' : ex.result === 'review' ? 'Review' : ex.result;
+        var cls = ex.result === 'fail' ? 'st-Open' : 'st-Intreatment';
+        return '<div class="d-kv"><span>' + fmtDate(ex.date) + ' — ' + esc(ex.checkLabel) + '</span><b><span class="chip ' + cls + '">' + esc(lbl) + '</span></b></div>';
+      }).join('') +
+      (sorted.length > shown.length ? '<p class="src" style="margin-top:4px">+ ' + (sorted.length - shown.length) + ' more in the scan history.</p>' : '') +
+      '</div>';
   }
 
   /* Combines every checkId that feeds a given SOC 2 control code (per
@@ -9161,6 +9202,7 @@ function showModal(opts) {
             : '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + esc(key) + '">Link ' + icon('external') + '</button>')
           : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
+        assuranceExceptionsHtml(c) +
         guidanceHtml;
       openDrawerUi('Control ' + c.id);
     },
@@ -11579,6 +11621,46 @@ function showModal(opts) {
       renderDash();
       if (approvedDoc && approvedDoc.metaError) toastError('<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.');
       else toast('<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
+
+      /* Offers to close the loop the "Link as evidence?" prompt in
+         generateTemplate() opened: a control whose CURRENT evidence is
+         this exact document (linked at generation, or since by hand)
+         and is still short of "Implemented" now has an APPROVED
+         document behind it, not just a draft — the moment that
+         distinction actually matters for controls where the policy
+         itself IS most of what the control asks for. Deliberately a
+         prompt, never silent: for a control where the written policy
+         is necessary but not sufficient (an access-control policy
+         still needs real enforcement, say), only the practitioner
+         knows whether "Implemented" is honestly true yet. Scoped to
+         controls that already carry THIS document as evidence — never
+         proposes "Implemented" for a control with no evidence trail
+         at all, which would be a worse claim than the "In progress"
+         it starts at. */
+      if (t.controls.length && approvedDoc && approvedDoc.url) {
+        var eligible = t.controls.map(function (code) {
+          return S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) || S.controls.find(function (x) { return x.id === code; });
+        }).filter(function (c) { return c && c.app && c.st !== 'Implemented' && c.evidenceUrl === approvedDoc.url; });
+        if (eligible.length) {
+          var markImpl = await showModal({
+            title: 'Mark as Implemented?',
+            message: 'This approved policy is the evidence ' + eligible.length + ' control' + (eligible.length > 1 ? 's' : '') + ' ' + (eligible.length > 1 ? 'were' : 'was') + ' waiting on: ' + eligible.map(function (c) { return c.id; }).join(', ') + '. Mark ' + (eligible.length > 1 ? 'them' : 'it') + ' as Implemented?',
+            confirmText: 'Mark Implemented',
+            cancelText: 'Not yet'
+          });
+          if (markImpl) {
+            eligible.forEach(function (c) {
+              var ckey = c.fw + '|' + c.id;
+              var prevSt = c.st;
+              c.st = 'Implemented';
+              audit('Control status changed', 'Control', ckey, prevSt, 'Implemented (policy approved)');
+              Store.updateControl(c).catch(function (e) { warn(e); });
+            });
+            renderSoa(); renderDash();
+            toast(eligible.length + ' control' + (eligible.length > 1 ? 's' : '') + ' marked Implemented.');
+          }
+        }
+      }
     },
 
     emailStatusUpdate: async function () {
