@@ -8075,6 +8075,93 @@ function showModal(opts) {
     }
   }
 
+  /* camelCase Graph field name -> a human-readable label, e.g.
+     "conditionalAccessPolicies" -> "Conditional access policies",
+     "guestUsers" -> "Guest users". Used only for evidence-drawer
+     section headings and table columns (renderEvidenceData below) —
+     never for anything an auditor treats as the record of truth,
+     where the original field name matters. */
+  function humanizeKey(k) {
+    var s = String(k).replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  }
+  function evidenceCellValue(v) {
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    var s = String(v);
+    return s.length > 60 ? s.slice(0, 57) + '…' : s;
+  }
+  var EVIDENCE_TABLE_ROW_CAP = 20;
+  var EVIDENCE_TABLE_COL_CAP = 6;
+  /* Renders an auto-evidence payload's `data` object as readable
+     tables/lists rather than a raw JSON dump — see App.viewEvidence()
+     below. captureAutoEvidence() (top of this file) always writes
+     `data` as an object whose values are either an array (usually of
+     similarly-shaped objects — CA policies, guest users, OAuth
+     grants) or a plain scalar/summary field, never arbitrary deep
+     nesting at the top level, so one generic rule covers every
+     check's shape without per-check curation: an array of objects
+     becomes a table of its SCALAR fields only (a nested object/array
+     within an item — conditions/grantControls on a CA policy, say —
+     is real Graph API structure too deep to usefully flatten into a
+     table cell, so it's simply omitted rather than guessed at); an
+     array of primitives becomes a plain comma list; anything else
+     becomes a plain key/value line. Rows/columns are capped so one
+     check with an unusually large payload can't produce an unreadable
+     wall — "Open raw file" next to this is the actual complete
+     record, this is a summary of it. */
+  function renderEvidenceData(data) {
+    if (!data || typeof data !== 'object') return '<p style="font-size:12.5px;color:var(--paper-faint)">No data.</p>';
+    var keys = Object.keys(data);
+    if (!keys.length) return '<p style="font-size:12.5px;color:var(--paper-faint)">No data.</p>';
+    /* Scalar top-level fields (device-checkin's total/stale/never,
+       say) are grouped into one compact block rather than a heading
+       per number — the common shape for a simple count-based check,
+       where a heading-per-field reads as far heavier than 3-4 short
+       numbers deserve. Arrays/objects still get their own section,
+       since those are the shapes actually worth a heading. */
+    var scalarKeys = keys.filter(function (k) { return data[k] === null || typeof data[k] !== 'object'; });
+    var scalarHtml = scalarKeys.length
+      ? scalarKeys.map(function (k) { return '<div class="d-kv"><span>' + esc(humanizeKey(k)) + '</span><b>' + esc(evidenceCellValue(data[k])) + '</b></div>'; }).join('')
+      : '';
+    var structuredHtml = keys.filter(function (k) { return scalarKeys.indexOf(k) === -1; }).map(function (key) {
+      var v = data[key];
+      var heading = '<h5 style="margin:14px 0 6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">' + esc(humanizeKey(key)) + '</h5>';
+      if (Array.isArray(v)) {
+        if (!v.length) return heading + '<p style="font-size:12.5px;color:var(--paper-faint)">None.</p>';
+        var allObjects = v.every(function (x) { return x && typeof x === 'object' && !Array.isArray(x); });
+        if (allObjects) {
+          var cols = [];
+          v.forEach(function (item) {
+            Object.keys(item).forEach(function (k) {
+              if (item[k] !== null && typeof item[k] === 'object') return;
+              if (cols.indexOf(k) === -1 && cols.length < EVIDENCE_TABLE_COL_CAP) cols.push(k);
+            });
+          });
+          var shown = v.slice(0, EVIDENCE_TABLE_ROW_CAP);
+          var more = v.length - shown.length;
+          return heading +
+            '<table class="evidence-table"><thead><tr>' + cols.map(function (c) { return '<th>' + esc(humanizeKey(c)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+            shown.map(function (item) { return '<tr>' + cols.map(function (c) { return '<td>' + esc(evidenceCellValue(item[c])) + '</td>'; }).join('') + '</tr>'; }).join('') +
+            '</tbody></table>' +
+            (more > 0 ? '<p class="src" style="margin-top:4px">+ ' + more + ' more — see the raw file for the full list.</p>' : '');
+        }
+        return heading + '<p style="font-size:12.5px;color:var(--paper-dim)">' +
+          v.slice(0, EVIDENCE_TABLE_ROW_CAP).map(function (x) { return esc(evidenceCellValue(x)); }).join(', ') +
+          (v.length > EVIDENCE_TABLE_ROW_CAP ? ', …' : '') + '</p>';
+      }
+      if (v !== null && typeof v === 'object') {
+        var objKeys = Object.keys(v);
+        if (!objKeys.length) return '';
+        return heading + objKeys.slice(0, 15).map(function (k) {
+          return '<div class="d-kv"><span>' + esc(humanizeKey(k)) + '</span><b>' + esc(evidenceCellValue(v[k])) + '</b></div>';
+        }).join('');
+      }
+      return heading + '<p style="font-size:12.5px;color:var(--paper-dim)">' + esc(evidenceCellValue(v)) + '</p>';
+    }).join('');
+    return scalarHtml + structuredHtml;
+  }
+
   /* ================= app actions ================= */
   window.App = {
     go: function (v) {
@@ -9032,7 +9119,8 @@ function showModal(opts) {
       var guidanceHtml = '';
       if (g) {
         var linkHtml = (g.link && isSafeUrl(g.link))
-          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ' + icon('external') + '</a></p>' : '';
+          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ' + icon('external') + '</a>' +
+            (g.path ? '<span class="src" style="display:block;margin-top:2px">Then: ' + esc(g.path) + '</span>' : '') + '</p>' : '';
         var checksHtml = '';
         if (g.checks && g.checks.length) {
           checksHtml = '<div class="d-sec"><h4>Latest scan signal</h4>' + g.checks.map(function (cid) {
@@ -9108,7 +9196,8 @@ function showModal(opts) {
            data already exists in GUIDANCE for exactly this purpose. */
         var g = window.GUIDANCE && window.GUIDANCE[c.id];
         var liveLinkHtml = (g && g.link && isSafeUrl(g.link))
-          ? '<p style="margin-top:4px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">View live in Microsoft admin center ' + icon('external') + '</a></p>' : '';
+          ? '<p style="margin-top:4px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">View live in Microsoft admin center ' + icon('external') + '</a>' +
+            (g.path ? '<span class="src" style="display:block;margin-top:2px">Then: ' + esc(g.path) + '</span>' : '') + '</p>' : '';
         drawerEl.innerHTML =
           '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
           '<div class="id-t">' + esc(c.id) + '</div><h2>Evidence</h2>' +
@@ -9119,14 +9208,14 @@ function showModal(opts) {
           (content.note ? '<div class="d-kv"><span>Note</span><b>' + esc(content.note) + '</b></div>' : '') +
           '</div>' +
           liveLinkHtml +
-          '<div class="d-sec"><h4>Raw scan data</h4>' +
-          '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;line-height:1.6;color:var(--paper-dim);background:var(--surface-hover);border-radius:8px;padding:10px;max-height:340px;overflow:auto">' + esc(JSON.stringify(content.data, null, 2)) + '</pre></div>' +
+          '<div class="d-sec"><h4>Scan evidence</h4>' + renderEvidenceData(content.data) + '</div>' +
           '<p style="margin-top:4px"><a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Open raw file ' + icon('external') + '</a></p>';
       } catch (e) {
         console.error(e);
         var gErr = window.GUIDANCE && window.GUIDANCE[c.id];
         var liveLinkErrHtml = (gErr && gErr.link && isSafeUrl(gErr.link))
-          ? '<p style="margin-top:8px"><a href="' + esc(gErr.link) + '" target="_blank" rel="noopener" class="evidence-link">View live in Microsoft admin center ' + icon('external') + '</a></p>' : '';
+          ? '<p style="margin-top:8px"><a href="' + esc(gErr.link) + '" target="_blank" rel="noopener" class="evidence-link">View live in Microsoft admin center ' + icon('external') + '</a>' +
+            (gErr.path ? '<span class="src" style="display:block;margin-top:2px">Then: ' + esc(gErr.path) + '</span>' : '') + '</p>' : '';
         drawerEl.innerHTML =
           '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
           '<div class="id-t">' + esc(c.id) + '</div><h2>Evidence</h2>' +
