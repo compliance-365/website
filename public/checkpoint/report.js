@@ -361,7 +361,17 @@
         var summary = (parts.length ? parts.join(' · ') : 'none yet') + ' — ' + total + ' total';
         valuesLine = '<text x="' + barX + '" y="' + (y + rowH + 12) + '" font-family="Manrope,sans-serif" font-size="10" fill="' + legendColor + '">' + escSvgText(summary) + '</text>';
       }
-      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(g.label) + '</text>' + rects + valuesLine;
+      /* Per-row label colour is opt-in (g.labelColor) — every existing
+         caller (control-status-by-theme, risk severity, action
+         throughput-by-month) leaves it unset and keeps the exact same
+         output as before (including no font-weight, to match pinned
+         snapshot tests byte-for-byte); only actionPriorityBreakdown()
+         supplies one, to distinguish Critical/High/Medium/Low rows from
+         each other without touching the segment colours, which already
+         carry a DIFFERENT signal (done/in-progress/open) this chart
+         exists to show. */
+      var labelWeight = g.labelColor ? ' font-weight="700"' : '';
+      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11"' + labelWeight + ' fill="' + (g.labelColor || labelColor) + '">' + escSvgText(g.label) + '</text>' + rects + valuesLine;
     }).join('');
 
     var height = top + rows.length * (rowH + rowGap) + 10;
