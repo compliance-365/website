@@ -1559,7 +1559,8 @@ function showModal(opts) {
     external: '<path d="M6 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13h7a1.5 1.5 0 0 0 1.5-1.5V9M9 2h4v4M12.5 2.5L7 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
     up: '<path d="M2.5 9.5L7 4l4.5 5.5M7 4.5v9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
     down: '<path d="M2.5 4.5L7 10l4.5-5.5M7 9.5v-9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-    close: '<path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
+    close: '<path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+    chevron: '<path d="M3 5.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
   };
   function icon(name, opts) {
     opts = opts || {};
@@ -4042,6 +4043,44 @@ function showModal(opts) {
     });
   }
 
+  /* One check's display state, shared by the row renderer and the
+     category roll-up below so the two can never disagree about what a
+     given check currently reads as. A dispositioned check must never
+     look like a Microsoft pass — the chip says where the result
+     actually came from, because "Pass" on its own would be the single
+     most misleading thing this view could show. A lapsed disposition
+     is not shown here at all: activeDisposition() already returned
+     null for it, the raw scan result is back, and the row correctly
+     reads as failing again. rag is the coarse red/amber/green bucket
+     a category summary needs: fail is always red; review is amber
+     only when nothing in the category has already failed; everything
+     else (pass, manual, a disposition) is green — 'manual' never
+     drags a category into amber/red, same as it never drags the
+     posture score down. */
+  function checkDisplay(c) {
+    var r = checkResult(c);
+    var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : r === 'manual' ? 'st-Proposed' : 'st-Notstarted';
+    var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : r === 'manual' ? 'Manual — verify' : 'Not scanned';
+    var rag = r === 'fail' ? 'red' : r === 'review' ? 'amber' : 'green';
+    var disp = dispositionFor(c.id);
+    if (disp) {
+      cls = disp.disposition === 'alternative' ? 'st-Implemented' : 'st-Proposed';
+      lbl = disp.disposition === 'alternative' ? 'Covered — ' + (disp.tool || 'other tool') : 'Not applicable';
+      rag = 'green';
+    }
+    return { r: r, cls: cls, lbl: lbl, rag: rag, disp: disp };
+  }
+
+  /* Collapsed/expanded state per category — in-memory only, same
+     convention as every other view filter in this app (_riskF,
+     _soaFw, etc.), not persisted across reloads. A category with no
+     entry here defaults to open if it has anything red/amber and
+     closed if it's clean (see renderScanChecks below) — the dashboard
+     surfaces what needs attention and tucks away what doesn't, rather
+     than making a practitioner open all 8+ categories by hand on
+     every single visit to find the two that matter. */
+  var _scanCatOpen = {};
+
   function renderScanChecks(instant) {
     var el = document.getElementById('checkList');
     var areas = [], byArea = {};
@@ -4058,29 +4097,20 @@ function showModal(opts) {
       byArea[c.area].push(c);
     });
     var aiOn = !!(S.entitlements && S.entitlements.ai);
-    el.innerHTML = areas.map(function (area) {
-      return '<div class="check-area">' + esc(area) + '</div>' + byArea[area].map(function (c) {
-        var r = checkResult(c);
-        var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : r === 'manual' ? 'st-Proposed' : 'st-Notstarted';
-        var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : r === 'manual' ? 'Manual — verify' : 'Not scanned';
-        /* A dispositioned check must never look like a Microsoft pass.
-           The chip says where the result actually came from, because
-           "Pass" on its own would be the single most misleading thing
-           this view could show — the tenant would read it as Checkpoint
-           having verified something it explicitly did not. A lapsed
-           disposition is not shown here at all: activeDisposition()
-           already returned null for it, the raw scan result is back, and
-           the row correctly reads as failing again. */
-        var disp = dispositionFor(c.id);
-        if (disp) {
-          cls = disp.disposition === 'alternative' ? 'st-Implemented' : 'st-Proposed';
-          lbl = disp.disposition === 'alternative' ? 'Covered — ' + (disp.tool || 'other tool') : 'Not applicable';
-        }
+    var toolbar = areas.length > 1
+      ? '<div class="scan-cat-toolbar"><button class="btn ghost sm" data-action="App.setAllScanCategories" data-id="1">Expand all</button><button class="btn ghost sm" data-action="App.setAllScanCategories" data-id="0">Collapse all</button></div>'
+      : '';
+    el.innerHTML = toolbar + areas.map(function (area) {
+      var checks = byArea[area];
+      var counts = { red: 0, amber: 0, green: 0 };
+      var rows = checks.map(function (c) {
+        var d = checkDisplay(c);
+        counts[d.rag]++;
         var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
-        if (disp) {
-          var dueSoon = disp.reviewDue && disp.reviewDue < new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        if (d.disp) {
+          var dueSoon = d.disp.reviewDue && d.disp.reviewDue < new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
           note += '<div class="src" style="margin-top:2px">Not scored from Microsoft signal' +
-            (disp.reviewDue ? ' · review due ' + esc(disp.reviewDue) + (dueSoon ? ' (soon)' : '') : ' · no review date set') + '</div>';
+            (d.disp.reviewDue ? ' · review due ' + esc(d.disp.reviewDue) + (dueSoon ? ' (soon)' : '') : ' · no review date set') + '</div>';
         }
         /* Quiet by default: on a 40+ row list this button appears on
            EVERY check, and in the overwhelming majority of cases there's
@@ -4089,12 +4119,28 @@ function showModal(opts) {
            actually matters. Once a disposition IS set, though, that's
            exactly the state a reader most needs to notice (this row's
            result isn't a real scan), so it keeps the fuller treatment. */
-        var dispBtn = '<button class="btn ' + (disp ? 'ghost sm' : 'quiet sm') + '" data-action="App.setDisposition" data-id="' + esc(c.id) + '">' + (disp ? 'Edit coverage' : 'Not via Microsoft?') + '</button>';
+        var dispBtn = '<button class="btn ' + (d.disp ? 'ghost sm' : 'quiet sm') + '" data-action="App.setDisposition" data-id="' + esc(c.id) + '">' + (d.disp ? 'Edit coverage' : 'Not via Microsoft?') + '</button>';
         var explainBtn = aiOn ? '<button class="btn ghost sm" data-action="App.explainCheck" data-id="' + esc(c.id) + '">Explain this</button>' : '';
         var cached = _checkExplainCache[c.id];
         var explainBlock = cached ? '<div class="card" style="margin:0 2px 10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
-        return '<div class="check-row-group"><div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + esc(lbl) + '</span>' + dispBtn + explainBtn + '</div><div id="checkExplain-' + esc(c.id) + '">' + explainBlock + '</div></div>';
+        return '<div class="check-row-group"><div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + d.cls + '">' + esc(d.lbl) + '</span>' + dispBtn + explainBtn + '</div><div id="checkExplain-' + esc(c.id) + '">' + explainBlock + '</div></div>';
       }).join('');
+      var catRag = counts.red ? 'red' : counts.amber ? 'amber' : 'green';
+      var open = _scanCatOpen[area];
+      if (open === undefined) open = catRag !== 'green';
+      var summaryParts = [];
+      if (counts.red) summaryParts.push(counts.red + ' need attention');
+      if (counts.amber) summaryParts.push(counts.amber + ' to review');
+      if (!counts.red && !counts.amber) summaryParts.push(checks.length + ' check' + (checks.length === 1 ? '' : 's') + ' clear');
+      return '<div class="check-area-group">' +
+        '<button class="check-area-toggle" data-action="App.toggleScanCategory" data-id="' + esc(area) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+        '<span class="rag-dot rag-' + catRag + '" aria-hidden="true"></span>' +
+        '<span class="check-area-name">' + esc(area) + '</span>' +
+        '<span class="check-area-summary">' + esc(summaryParts.join(' · ')) + '</span>' +
+        '<span class="check-area-chevron" style="' + (open ? 'transform:rotate(180deg)' : '') + '">' + icon('chevron') + '</span>' +
+        '</button>' +
+        '<div class="check-area-body"' + (open ? '' : ' hidden') + '>' + rows + '</div>' +
+        '</div>';
     }).join('');
   }
 
@@ -9054,6 +9100,15 @@ function showModal(opts) {
         var content = JSON.parse(rawField);
         var resultLabel = content.result === 'pass' ? 'Pass' : content.result === 'review' ? 'Review' : content.result === 'fail' ? 'Fail' : (content.result || 'Unknown');
         var resultCls = content.result === 'pass' ? 'st-Implemented' : content.result === 'review' ? 'st-Intreatment' : content.result === 'fail' ? 'st-Open' : 'st-Proposed';
+        /* Same admin-portal deep link the SoA's own guidance panel uses
+           (openControlGuidance() above) — this control's evidence was
+           read from Graph, not eyeballed in a portal, so there is no
+           screenshot to show; a live link to where a human can go look
+           at the setting themselves is the honest equivalent, and the
+           data already exists in GUIDANCE for exactly this purpose. */
+        var g = window.GUIDANCE && window.GUIDANCE[c.id];
+        var liveLinkHtml = (g && g.link && isSafeUrl(g.link))
+          ? '<p style="margin-top:4px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">View live in Microsoft admin center ' + icon('external') + '</a></p>' : '';
         drawerEl.innerHTML =
           '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
           '<div class="id-t">' + esc(c.id) + '</div><h2>Evidence</h2>' +
@@ -9063,16 +9118,21 @@ function showModal(opts) {
           '<div class="d-kv"><span>Captured</span><b>' + (content.generatedAt ? fmtDate(String(content.generatedAt).slice(0, 10)) : '—') + '</b></div>' +
           (content.note ? '<div class="d-kv"><span>Note</span><b>' + esc(content.note) + '</b></div>' : '') +
           '</div>' +
+          liveLinkHtml +
           '<div class="d-sec"><h4>Raw scan data</h4>' +
           '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;line-height:1.6;color:var(--paper-dim);background:var(--surface-hover);border-radius:8px;padding:10px;max-height:340px;overflow:auto">' + esc(JSON.stringify(content.data, null, 2)) + '</pre></div>' +
           '<p style="margin-top:4px"><a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Open raw file ' + icon('external') + '</a></p>';
       } catch (e) {
         console.error(e);
+        var gErr = window.GUIDANCE && window.GUIDANCE[c.id];
+        var liveLinkErrHtml = (gErr && gErr.link && isSafeUrl(gErr.link))
+          ? '<p style="margin-top:8px"><a href="' + esc(gErr.link) + '" target="_blank" rel="noopener" class="evidence-link">View live in Microsoft admin center ' + icon('external') + '</a></p>' : '';
         drawerEl.innerHTML =
           '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
           '<div class="id-t">' + esc(c.id) + '</div><h2>Evidence</h2>' +
           '<div class="d-sec"><p style="font-size:12.5px;color:var(--fail)">Could not load a preview: ' + esc(e.message || e) + '</p>' +
-          '<p style="margin-top:8px"><a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Open the raw file instead ' + icon('external') + '</a></p></div>';
+          '<p style="margin-top:8px"><a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Open the raw file instead ' + icon('external') + '</a></p>' +
+          liveLinkErrHtml + '</div>';
       }
     },
 
@@ -9098,6 +9158,25 @@ function showModal(opts) {
     },
     filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; window._cxSelected = null; renderConstellation(); },
     toggleConstellationLens: function () { window._cxLens = !window._cxLens; renderConstellation(); },
+
+    /* Posture scan's category dashboard — see _scanCatOpen/renderScanChecks
+       above. A category with no entry yet defaults per its own RAG
+       state (open if red/amber, closed if green), so the FIRST click
+       on any category has to explicitly resolve that same default
+       before flipping it, or a category that opened by default would
+       appear to do nothing on its first click. */
+    toggleScanCategory: function (area) {
+      var checks = relevantCheckDefs().filter(function (c) { return c.area === area; });
+      var wasOpen = _scanCatOpen[area];
+      if (wasOpen === undefined) wasOpen = checks.some(function (c) { return checkDisplay(c).rag !== 'green'; });
+      _scanCatOpen[area] = !wasOpen;
+      renderScanChecks(true);
+    },
+    setAllScanCategories: function (val) {
+      var open = val === '1';
+      relevantCheckDefs().forEach(function (c) { _scanCatOpen[c.area] = open; });
+      renderScanChecks(true);
+    },
 
     setFingerprintFw: function (fw) { window._fpFw = fw; renderComplianceFingerprint(); },
 

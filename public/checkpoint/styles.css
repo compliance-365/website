@@ -549,8 +549,25 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .gauge svg{width:110px;flex:none}
 .gauge-num{font-weight:800;font-size:var(--fs-hero);color:var(--gold-light);line-height:1}
 .gauge-num small{font-size:var(--fs-3);color:var(--paper-dim);font-weight:500}
-.check-area{font-size:var(--fs-eyebrow);letter-spacing:.18em;color:var(--gold);text-transform:uppercase;font-weight:700;margin:16px 0 4px}
-.check-area:first-child{margin-top:0}
+/* Posture scan's per-category dashboard header — see renderScanChecks()
+   in app.js. A plain full-width button rather than a <summary>/<details>
+   pair: this app's existing drawer/toast/modal machinery already all
+   run on data-action + a JS render pass, and a native <details> would
+   be a second, inconsistent way of holding UI state alongside
+   _scanCatOpen for no real benefit. */
+.check-area-group{margin:16px 0 4px}
+.check-area-group:first-child{margin-top:0}
+.check-area-toggle{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;padding:9px 6px;margin:0 -6px;cursor:pointer;text-align:left;border-radius:6px;font:inherit}
+.check-area-toggle:hover,.check-area-toggle:focus-visible{background:var(--surface-hover)}
+.rag-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.rag-dot.rag-red{background:var(--fail)}
+.rag-dot.rag-amber{background:var(--warn)}
+.rag-dot.rag-green{background:var(--pass)}
+.check-area-name{font-size:var(--fs-eyebrow);letter-spacing:.18em;color:var(--gold);text-transform:uppercase;font-weight:700}
+.check-area-summary{flex:1;color:var(--paper-faint);font-size:var(--fs-2);text-align:right}
+.check-area-chevron{color:var(--paper-faint);flex:none;transition:transform .2s var(--ease)}
+.check-area-body{padding-top:2px}
+.scan-cat-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
 .check-row-group{border-bottom:1px solid var(--line)}
 .check-row-group:last-child{border-bottom:none}
 .check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;font-size:var(--fs-2);opacity:.25;transition:opacity .4s var(--ease)}
