@@ -5002,7 +5002,14 @@ function showModal(opts) {
           ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlJustification" data-id="' + key + '">Edit</button></div>'
           : '<div style="margin-top:4px"><span class="verify-stale">' + icon('flag') + ' No justification recorded</span> <button class="btn sm" data-action="App.setControlJustification" data-id="' + key + '">Add justification</button></div>')
       : '';
-    return '<tr data-id="' + key + '"><td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)">' + esc(c.t) + ismLine + justificationLine + '</td>' +
+    /* The control code alone used to be the only way into the guidance
+       drawer, and with no visible affordance at rest (the .lnk
+       underline only appears on hover) — a practitioner scanning
+       titles, not three-character codes, had no visual cue there was
+       anything to click. The title is now the SAME button, so the
+       thing someone actually reads is the thing that opens "how to
+       implement this / what evidence" — see App.openControlGuidance. */
+    return '<tr data-id="' + key + '"><td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + esc(c.t) + '</button>' + ismLine + justificationLine + '</td>' +
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +

@@ -441,9 +441,15 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .src{font-size:var(--fs-1);color:var(--paper-faint);letter-spacing:.06em}
 .gold-t{color:var(--gold-light);font-weight:700}
 .id-t{font-size:var(--fs-1);color:var(--paper-faint);font-weight:700;letter-spacing:.04em;white-space:nowrap}
-.id-t .lnk{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color .15s var(--ease),color .15s var(--ease)}
-.id-t .lnk:hover,.id-t .lnk:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
-.id-t .lnk:active{color:var(--gold)}
+/* Unscoped from .id-t (its only home until now) so the SoA's title
+   cell can reuse the exact same link-button look — see renderSoaRow()
+   in app.js. Every existing .lnk usage (Risks/Actions/Vendors/AI
+   Systems id cells) already sits inside a .id-t td, so this widens
+   where the rule can be reused without changing how any of those
+   still look. */
+.lnk{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color .15s var(--ease),color .15s var(--ease)}
+.lnk:hover,.lnk:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
+.lnk:active{color:var(--gold)}
 
 /* ===== dashboard ===== */
 .appetite-banner{background:rgba(201,122,122,.1);border:1px solid rgba(201,122,122,.4);border-radius:6px;padding:14px 18px;margin-bottom:16px;font-size:var(--fs-2);color:var(--paper);line-height:1.6}
