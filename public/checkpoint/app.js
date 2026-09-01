@@ -5352,16 +5352,24 @@ function showModal(opts) {
       '</div>';
   }
 
-  /* Every open risk register entry whose own `controls` list names this
-     control — the reverse of Risks' Controls column, computed at render
-     time rather than stored (same approach assuranceForControl already
-     takes for exceptions): the risk register already carries this link
-     in one direction (risk -> controls it's mitigated by), but a
-     practitioner looking at a CONTROL in the SoA had no way to see which
-     risk(s) it exists to treat — exactly the trace an auditor asks for
-     ("why does this control exist?"), silently absent until now. */
+  /* Every risk register entry linked to this control, via EITHER of the
+     two places that link lives: the risk's own `controls` list (set
+     directly on Edit Risk, or by a scan-triggered risk template), OR a
+     treatment action on that risk tagged with this control code — the
+     latter because mapping controls to risks through the actions
+     register, not the risk record itself, turns out to be how this got
+     used in practice (a risk with several treatment actions can address
+     several different controls one action at a time). Computed at
+     render time rather than stored, same approach assuranceForControl
+     already takes for exceptions — no sync to keep consistent, no write
+     path that could disagree with what the actions register actually
+     says. Deduplicated: a risk matching both ways is only listed once. */
   function risksForControl(c) {
-    return (S.risks || []).filter(function (r) { return (r.controls || []).indexOf(c.id) > -1; });
+    var direct = (S.risks || []).filter(function (r) { return (r.controls || []).indexOf(c.id) > -1; });
+    var viaActions = (S.risks || []).filter(function (r) {
+      return direct.indexOf(r) === -1 && (S.actions || []).some(function (a) { return a.risk === r.id && a.control === c.id; });
+    });
+    return direct.concat(viaActions);
   }
   function linkedRisksHtml(c) {
     var rs = risksForControl(c);
