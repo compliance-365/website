@@ -2062,13 +2062,17 @@ window.SpStore = (function () {
        one from years of incremental additions. */
     Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer'],
     Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
-    /* LastVerified/EvidenceUrl/VerifiedBy are in Controls' DEFS (below)
-       but were never added here — a tenant provisioned before all three
-       existed has a Controls list missing whichever one(s) came later,
-       so every updateControl() patch that touches them throws "Field
-       '<name>' is not recognized" instead of saving. Confirmed live: a
-       user's real tenant hit exactly this on LastVerified. */
-    Controls: ['LastVerified', 'EvidenceUrl', 'VerifiedBy'],
+    /* Same incomplete-subset mistake as Risks/Actions above, caught the
+       same way: this used to list only LastVerified/EvidenceUrl/
+       VerifiedBy (added reactively after a live "Field 'LastVerified'
+       is not recognized" incident), leaving Applicable/Status/Owner/
+       MapsTo/Justification/Code/Framework unreconciled on any tenant
+       provisioned before they existed — silently breaking toggleApp()
+       (its Store.updateControl() failure is caught and only
+       console.warn'd, never surfaced) on a tenant missing 'Applicable'
+       specifically. Now the full column list from Controls' own DEFS
+       above, not a hand-picked subset. */
+    Controls: ['Code', 'Framework', 'Applicable', 'Status', 'Owner', 'MapsTo', 'Justification', 'LastVerified', 'EvidenceUrl', 'VerifiedBy'],
     /* Same bug, caught before it shipped rather than live: AiActAnswers
        was added to AISystems' DEFS for the EU AI Act classifier without
        remembering this table too. Any tenant with an AI Systems
