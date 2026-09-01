@@ -880,7 +880,13 @@ window.CHECK_CONTROLS = {
      labels actually implement. These were entirely self-reported before
      — Checkpoint had no automated privacy signal of any kind. */
   'privacy-srr': ['A.5.34'],
-  'retention': ['A.5.33', 'A.8.10']
+  'retention': ['A.5.33', 'A.8.10'],
+  /* 'training' (CHECK_DEFS above) is scored:true with a real result from
+     applyTrainingCheckResult() — already used by CHECK_SOC2's CC1.4 — but
+     was never mapped here, so it has been computing a genuine signal on
+     every scan that no ISO 27001 control ever saw. A.6.3 (security
+     awareness training) is exactly what it measures. */
+  'training': ['A.6.3']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.

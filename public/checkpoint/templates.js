@@ -361,7 +361,15 @@ window.POLICY_TEMPLATES = [
       'Privacy Policy'
     ],
     reviewCadence: 'Annually, and after every incident classified as major, incorporating the lessons learned from it.',
-    controls: ['A.5.24', 'A.5.25', 'A.5.26'],
+    /* A.5.27/A.5.28/A.6.8 added — each has its own explicit statement
+       here: "All suspected security incidents are reported immediately
+       through the defined channel" is A.6.8 (event reporting), "Evidence
+       is preserved before remediation... logs, messages and affected
+       files are captured rather than deleted" is A.5.28 (collection of
+       evidence), and "Every incident is reviewed after closure, with
+       lessons recorded and corrective actions raised" is A.5.27
+       (learning from incidents). */
+    controls: ['A.5.24', 'A.5.25', 'A.5.26', 'A.5.27', 'A.5.28', 'A.6.8'],
     frameworks: ['iso27001', 'iso27701', 'nistcsf', 'dispirap']
   },
   {
@@ -617,7 +625,13 @@ window.POLICY_TEMPLATES = [
       'Information Security Policy'
     ],
     reviewCadence: 'Annually, or when the development toolchain or hosting environment changes materially.',
-    controls: ['A.8.25', 'A.8.28', 'A.8.31'],
+    /* A.8.26/A.8.27/A.8.33 added — each has its own explicit statement
+       here, not just a family resemblance to A.8.25/A.8.28/A.8.31:
+       "Security requirements are defined at design time" is A.8.26,
+       "significant changes are threat-modelled before implementation"
+       is A.8.27, and "production data is not used in lower environments
+       without de-identification" is A.8.33 (test information). */
+    controls: ['A.8.25', 'A.8.26', 'A.8.27', 'A.8.28', 'A.8.31', 'A.8.33'],
     frameworks: ['iso27001', 'iso27701', 'iso42001', 'soc2']
   },
   {
@@ -1075,7 +1089,10 @@ window.POLICY_TEMPLATES = [
       'Information Security Policy'
     ],
     reviewCadence: 'Annually, or when the organisation’s employment, onboarding or offboarding processes change materially.',
-    controls: ['A.6.1', 'A.6.2', 'A.6.4', 'A.6.5', 'A.6.6'],
+    /* A.6.3 added — this document's own policyStatements commit to
+       "Security awareness training... completed at induction... and
+       refreshed at least annually", which is A.6.3 verbatim. */
+    controls: ['A.6.1', 'A.6.2', 'A.6.3', 'A.6.4', 'A.6.5', 'A.6.6'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap']
   },
   {
@@ -1264,7 +1281,11 @@ window.POLICY_TEMPLATES = [
       'Business Continuity & Disaster Recovery Plan'
     ],
     reviewCadence: 'Annually, or after any change to the organisation’s premises, or a physical security incident.',
-    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.7'],
+    /* A.7.5 added — "Equipment is protected against environmental risk
+       appropriate to its criticality, including power, temperature and
+       water" is A.7.5's own definition (protecting against physical and
+       environmental threats), not just a paraphrase of A.7.1/A.7.2/A.7.7. */
+    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.5', 'A.7.7'],
     frameworks: ['iso27001', 'iso27701', 'dispirap']
   },
   {
