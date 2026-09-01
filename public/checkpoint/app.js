@@ -1841,13 +1841,19 @@ function showModal(opts) {
      "are the actions that MATTER actually moving, or just piling up
      Open" — cancelled actions are excluded, same reasoning as excluding
      Closed risks from the heat-map: neither is a live position to plot. */
+  /* Same Low/Medium/High/Critical colour language SEVERITY_LEGEND above
+     already uses for risk severity — reused on the row LABEL here (not
+     the bar segments, which stay status-coloured; see stackedBarsChart's
+     own note on why) so "Critical" reads as urgent at a glance instead
+     of requiring the reader to notice it's the top row. */
+  var PRIORITY_LABEL_COLOR = { Critical: RPAL.bad, High: RPAL.high, Medium: RPAL.warn, Low: RPAL.good };
   function actionPriorityBreakdown() {
     return ['Critical', 'High', 'Medium', 'Low'].map(function (p) {
       var rows = S.actions.filter(function (a) { return a.pr === p && a.status !== 'Cancelled'; });
       var done = rows.filter(function (a) { return a.status === 'Done'; }).length;
       var inProgress = rows.filter(function (a) { return a.status === 'In progress'; }).length;
       var open = rows.filter(function (a) { return a.status === 'Open'; }).length;
-      return { label: p, values: [done, inProgress, open] };
+      return { label: p, values: [done, inProgress, open], labelColor: PRIORITY_LABEL_COLOR[p] };
     });
   }
 
