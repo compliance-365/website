@@ -72,11 +72,17 @@
    page — so `path` (a plain-English breadcrumb, not a URL) is the
    only "get closer than the home page" mechanism this file uses.
 
-   Not every control in the registry has an entry — every premium
-   framework beyond soc2 (essential8, iso42001, iso27701, dispirap,
-   nistcsf) has no GUIDANCE entries yet at all, in this file or a pack.
-   A missing key must fail soft either way: the SoA drawer simply omits
-   the guidance panel, no error.
+   Every framework in FRAMEWORK_ORDER now has full guidance coverage —
+   this file for iso27001, each other framework's own content pack
+   (checkpoint-content/<id>.json's `guidance` field, merged into this
+   same window.GUIDANCE object at runtime by mergeLicensedPacks()) for
+   the rest — with ONE deliberate exception: rffr (the ISM) covers
+   only its curated 48-control automatable subset out of the 989 total
+   ISM controls in scope (see checkpoint-content/rffr.json's own
+   `blurb`), the rest staying self-reported by design. A missing key
+   still fails soft regardless: the SoA drawer simply omits the
+   guidance panel, no error — so a future framework added without
+   guidance yet, or a not-yet-written rffr control, degrades cleanly.
    ============================================================ */
 window.GUIDANCE = {
 
