@@ -336,7 +336,15 @@
       var rowWidth = scaleByCount ? (maxTotal ? (total / maxTotal) * barW : 0) : barW;
       var y = top + i * (rowH + rowGap);
       var x = barX;
-      var track = scaleByCount ? '<rect x="' + fx(barX) + '" y="' + y + '" width="' + fx(barW) + '" height="' + rowH + '" rx="2" fill="' + trackColor + '"/>' : '';
+      /* Same labelColor opt-in tints the track too — a row that's
+         entirely one status (every Critical action still "Open", say)
+         would otherwise render as a flat neutral bar indistinguishable
+         from every other all-Open row regardless of priority, losing
+         the one signal a reader actually wants at a glance. Kept to a
+         faint wash (12%), not a solid fill, so the status segments
+         drawn on top stay the dominant, legible signal. */
+      var rowTrackColor = g.labelColor ? 'rgba(' + hexToRgb(g.labelColor) + ',.12)' : trackColor;
+      var track = scaleByCount ? '<rect x="' + fx(barX) + '" y="' + y + '" width="' + fx(barW) + '" height="' + rowH + '" rx="2" fill="' + rowTrackColor + '"/>' : '';
       /* A row that's ENTIRELY one status (every action still "Open", every
          control still "Not started" — the normal state for a brand-new
          register) has nothing to distinguish the hatch texture FROM: the
@@ -347,11 +355,33 @@
          has only one non-zero segment keeps the hatch meaningful for the
          mixed-status rows where it's actually doing work. */
       var soloSegment = values.filter(function (v) { return v > 0; }).length === 1;
+      /* labelColor tokens are shared with SEVERITY_LEGEND, which reuses
+         the very same "good"/"warn" colours ACTION_STATUS_LEGEND already
+         uses for Done/In-progress (Low's severity green === Done's
+         status green, Medium's amber === In-progress's amber) — so
+         swapping labelColor onto the neutral segment below is only safe
+         when it can't be mistaken for one of THIS chart's own other
+         segment colours. Checked once per row, not assumed from the
+         legend's shape, since a future caller's legendDefs could collide
+         differently. */
+      var labelColorCollides = g.labelColor && legendDefs.some(function (def) { return !def.hatch && def.color.toLowerCase() === g.labelColor.toLowerCase(); });
       var rects = track + values.map(function (v, j) {
         var w = total ? (v / total) * rowWidth : 0;
         if (w < 0.5) return '';
         var def = legendDefs[j];
-        var rect = '<rect x="' + fx(x) + '" y="' + y + '" width="' + fx(Math.max(0, w - 1.5)) + '" height="' + rowH + '" fill="' + (def.hatch && !soloSegment ? hatchFill : def.color) + '"/>';
+        /* A row that's entirely the neutral/hatch-flagged status (every
+           Critical action still "Open", say) is the common real case,
+           not an edge case — and status-neutral-grey is the ONE thing
+           worth overriding with the row's own labelColor here: Done and
+           In-progress segments already carry real, non-neutral colour
+           (green/amber) that would be actively misleading to replace
+           with a severity tint (a fully-Done Critical row must not
+           render red), so this only ever swaps in labelColor for the
+           "nothing has happened yet" segment — exactly where knowing
+           the priority is more useful than re-stating "still open".
+           Skipped entirely when labelColorCollides, per the note above. */
+        var fill = (soloSegment && def.hatch && g.labelColor && !labelColorCollides) ? g.labelColor : (def.hatch && !soloSegment ? hatchFill : def.color);
+        var rect = '<rect x="' + fx(x) + '" y="' + y + '" width="' + fx(Math.max(0, w - 1.5)) + '" height="' + rowH + '" fill="' + fill + '"/>';
         x += w;
         return rect;
       }).join('');
