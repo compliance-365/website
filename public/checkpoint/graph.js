@@ -1194,6 +1194,26 @@ window.Graph = (function () {
     return value;
   }
 
+  /* Resolves a webUrl (any evidence link this app itself generated —
+     a policy document, an uploaded file) to its @microsoft.graph.
+     downloadUrl: confirmed via Microsoft's own Graph documentation, a
+     short-lived, PRE-AUTHENTICATED URL — once Graph hands it back, no
+     further sign-in is required to open it, unlike the document's own
+     webUrl. That distinction is the whole point of using this: opening
+     a bare SharePoint webUrl in a brand-new tab makes the browser do a
+     fresh Microsoft sign-in handshake with SharePoint, and confirmed
+     live, Safari's cross-site cookie blocking can strand that handshake
+     on a blank page. A downloadUrl has no such handshake to strand —
+     it serves the file directly. Callers fall back to the original
+     webUrl on any failure (a non-Microsoft URL a human pasted in, a
+     document this Graph session can't reach, ...), same as today. */
+  async function fetchDownloadUrl(url) {
+    var j = await g('/shares/' + encodeSharingUrl(url) + '/driveItem?$select=id,@microsoft.graph.downloadUrl', { scopes: CONFIG.scopesProvision });
+    var downloadUrl = j['@microsoft.graph.downloadUrl'];
+    if (!downloadUrl) throw new Error('Could not resolve a direct link for this file.');
+    return downloadUrl;
+  }
+
   /* Status update email — sent as the signed-in user, via their own
      delegated token. No backend, no service account: Graph's sendMail
      returns 202 with no body, so this uses its own fetch rather than
@@ -1272,7 +1292,7 @@ window.Graph = (function () {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
-    setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, sendMail: sendMail,
+    setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken
