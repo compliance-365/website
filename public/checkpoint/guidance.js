@@ -333,7 +333,7 @@ window.GUIDANCE = {
     how: "Deliver security awareness training at induction and refresh it at least annually — Microsoft Defender's Attack Simulation Training runs realistic phishing simulations with built-in training assignment for anyone who falls for one, which is a strong, low-effort way to satisfy this control with real data behind it.",
     evidence: "Training completion records for staff, and, where used, Attack Simulation Training campaign results.",
     link: "https://security.microsoft.com",
-    checks: []
+    checks: ["training"]
   },
   'A.6.4': {
     how: "Have a documented disciplinary process for security policy violations, proportionate to the severity, and make sure staff know it exists — this is usually already covered by an HR policy, so the control is often just about explicitly cross-referencing security violations in it.",
