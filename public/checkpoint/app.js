@@ -603,7 +603,7 @@ function showModal(opts) {
     'closeRisk', 'reopenRisk', 'deleteRisk',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
-    'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'applySharedEvidence',
+    'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
@@ -711,6 +711,21 @@ function showModal(opts) {
     if (_drawerKeyHandler) { document.removeEventListener('keydown', _drawerKeyHandler); _drawerKeyHandler = null; }
     if (_drawerReturnFocus && document.body.contains(_drawerReturnFocus)) _drawerReturnFocus.focus();
     _drawerReturnFocus = null;
+  }
+
+  /* Refreshes the control drawer in place after an edit made FROM one
+     of its own buttons (owner, justification, evidence, verify) — the
+     drawer previously just sat there showing the pre-edit value until
+     closed and reopened, which reads as "the edit didn't save" even
+     though the SoA row behind it updated correctly. Only fires while
+     #drawer is actually open: the same buttons also exist on the SoA
+     row itself, and .overlay.open's pointer-events:auto means the row
+     is inert whenever ANY drawer (control, risk, action, …) is open —
+     so an open drawer here can only ever be showing THIS same control,
+     never a different one. */
+  function refreshControlDrawer(key) {
+    var drawer = document.getElementById('drawer');
+    if (drawer && drawer.classList.contains('open')) App.openControlGuidance(key);
   }
 
   /* Mobile-only off-canvas sidebar (<=860px — see index.html's own
@@ -5021,7 +5036,8 @@ function showModal(opts) {
          here on the <select> itself so the dropdown is colour-coded at
          rest, not just readable after opening it. */
       '<td>' + (c.app ? '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
-      '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
+      '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td>' +
+      '<td><button class="lnk" data-action="App.setControlOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
       '<td>' + assuranceCell(assuranceForControl(c)) + '</td>' +
       '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
   }
@@ -9198,7 +9214,14 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Status</h4>' +
         '<div class="d-kv"><span>Applicable</span><b>' + (c.app ? 'Yes' : 'No') + '</b></div>' +
         '<div class="d-kv"><span>Status</span><b>' + (c.app ? c.st : 'N/A') + '</b></div>' +
-        '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + '</b></div>' +
+        /* Only shown while excluded — same condition renderSoaRow()'s
+           justificationLine already uses, and the same field: an SoA
+           auditors read control-by-control, so the drawer for an
+           excluded control is exactly where its clause 6.1.3(d)
+           justification needs to be visible, not just flagged in the
+           row behind it. */
+        (!c.app ? '<div class="d-kv"><span>Justification</span><b>' + (c.just ? esc(c.just) : '<span class="verify-stale">' + icon('flag') + ' None recorded</span>') + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlJustification" data-id="' + esc(key) + '">' + (c.just ? 'Edit' : 'Add') + '</button></b></div>' : '') +
+        '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlOwner" data-id="' + esc(key) + '">Edit</button></b></div>' +
         '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) : '—') + '</b></div>' +
         '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl)
           ? (c.verifiedBy === AUTO_EVIDENCE_TAG
@@ -10383,6 +10406,33 @@ function showModal(opts) {
          action happened to trigger a fresh renderDash() first. Same
          reasoning toggleApp() already applies for the same tile. */
       renderSoa(); renderDash();
+      refreshControlDrawer(key);
+    },
+
+    /* Same gap as setControlJustification above, same fix shape: Owner
+       already existed end to end (SharePoint's Owner column,
+       updateControl() writing it, every report/export and the drawer
+       reading it — c.own is displayed in the SoA row, the CSV export
+       and the control drawer) but had no write path anywhere in the
+       UI. An SoA control with nobody accountable for it is exactly the
+       kind of gap an auditor asks about, so this closes it the same
+       way justification was closed. */
+    setControlOwner: async function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      var vals = await showModal({
+        title: 'Control owner — ' + c.id,
+        message: 'Who is accountable for this control being implemented and kept evidenced. Leave blank to clear.',
+        fields: [{ id: 'own', label: 'Owner', value: c.own || '', placeholder: 'e.g. S. Okafor' }],
+        confirmText: 'Save'
+      });
+      if (!vals) return;
+      var prevOwn = c.own;
+      c.own = vals.own.trim();
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      audit('Control owner changed', 'Control', key, prevOwn || '(none)', c.own || '(none)');
+      renderSoa(); renderDash();
+      refreshControlDrawer(key);
     },
 
     setSharedEvidenceControl: function (key) {
