@@ -13,12 +13,21 @@
    given key arrived from here or from a decrypted pack.
 
    window.GUIDANCE, keyed by control code, each entry:
-     { how: '...', evidence: '...', link: '...', checks: [...] }
+     { how: '...', evidence: '...', link: '...', path: '...', checks: [...] }
    - how: 2-4 sentences of practical guidance for implementing this
      control in a Microsoft 365 environment.
    - evidence: what an auditor typically accepts as evidence.
    - link: a deep link to the relevant Microsoft admin portal or a
      Microsoft Learn page.
+   - path (optional): the click-path from that portal's home page to
+     the specific settings screen this control's checks actually read
+     — e.g. "Identity → Protection → Conditional Access → Policies".
+     Only present on the small set of controls whose checks map
+     cleanly to ONE specific screen (see LINK VERIFICATION NOTE below
+     for why this is a breadcrumb, not a URL). Rendered as a hint next
+     to the link wherever it's shown (App.openControlGuidance,
+     App.viewEvidence) — most entries have no path and just show the
+     bare portal-home link, same as before.
    - checks: related window.CHECK_DEFS ids, where the posture scan can
      speak to this control directly — cross-referenced from the
      existing window.CHECK_CONTROLS map in store.js so the two never
@@ -45,6 +54,23 @@
    documentation paths periodically. Spot-check the Learn links (a
    handful, not the admin-portal home links) before relying on this in
    front of a client, and route around any that have moved.
+
+   Deliberately NEVER a deep link straight to the specific blade
+   (e.g. the Conditional Access policies list, or a named guest-users
+   view) — checked directly against a web search: unlike this app's
+   Graph API calls, which are all documented, versioned endpoints,
+   Microsoft's admin-portal SPAs (entra.microsoft.com,
+   intune.microsoft.com, ...) route through internal blade IDs that
+   are not part of any published, stable API and are not consistently
+   documented even by Microsoft's own support content — several
+   searches for "direct URL" to a specific blade turned up only
+   click-path instructions, never a citable URL, the one confirmed
+   exception being Secure Score's own dedicated page (see A.8.7/A.8.8
+   below). A guessed blade URL can silently 404 or land on the wrong
+   screen the next time Microsoft reshuffles a portal, which is a far
+   worse failure than one extra click from a portal's stable home
+   page — so `path` (a plain-English breadcrumb, not a URL) is the
+   only "get closer than the home page" mechanism this file uses.
 
    Not every control in the registry has an entry — every premium
    framework beyond soc2 (essential8, iso42001, iso27701, dispirap,
@@ -126,12 +152,14 @@ window.GUIDANCE = {
     how: "Define a small classification scheme — Public / Internal / Confidential / Highly Confidential is typical — and implement it as Purview sensitivity labels, applied by default where practical and by users otherwise. Train staff on what each label actually means for how they can share that content. Checkpoint's labelling check confirms at least one label is published and enabled, but can't confirm the scheme itself is well-designed or actually adopted.",
     evidence: "The published classification scheme, the corresponding sensitivity labels in Purview, label-usage reporting showing real adoption, and Checkpoint's labelling scan result.",
     link: "https://purview.microsoft.com",
+    path: "Solutions → Information Protection → Labels",
     checks: ["labels"]
   },
   'A.5.13': {
     how: "Configure Purview sensitivity labels to apply a visible marking (a header, footer or watermark) for sensitive classifications, and set a default label for new SharePoint/OneDrive documents so labelling doesn't depend on a user remembering to apply it. Checkpoint's labelling check shares its signal with A.5.12 — it confirms labels exist and are published, not that markings or defaults are configured correctly.",
     evidence: "The label configuration showing visual markings, a sample of documents carrying the correct label, and Checkpoint's labelling scan result.",
     link: "https://purview.microsoft.com",
+    path: "Solutions → Information Protection → Labels",
     checks: ["labels"]
   },
   'A.5.14': {
@@ -144,12 +172,14 @@ window.GUIDANCE = {
     how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, restrict end-user OAuth consent to high-privilege scopes so it requires admin approval, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA, legacy-authentication, device-compliance, (where licensed) risk-based, and user-consent pieces of this directly on every run.",
     evidence: "The exported Conditional Access policy set, the tenant's user-consent settings, an access-review record, and Checkpoint's own MFA/legacy-authentication/ca-device/ca-risk/oauth-consent scan results.",
     link: "https://entra.microsoft.com",
+    path: "Identity → Protection → Conditional Access → Policies",
     checks: ["mfa-all", "legacy", "ca-device", "ca-risk", "oauth-consent"]
   },
   'A.5.16': {
     how: "Use Entra ID as the single identity source for every system that supports it — no local or shadow accounts — with one identity per person, deactivated promptly on departure. Keep guest accounts to a genuine business need and review them periodically, and where Entra ID Governance is licensed, automate joiner/leaver processing with Lifecycle Workflows rather than relying on someone remembering; Checkpoint's guest-count check flags guest drift and its lifecycle-workflows check confirms that automation is actually configured and enabled.",
     evidence: "Entra's user and guest list, an offboarding record showing prompt deactivation, the Lifecycle Workflows configuration where licensed, and Checkpoint's guests/lifecycle-workflows scan results.",
     link: "https://entra.microsoft.com",
+    path: "Identity → Users → All users (filter: User type = Guest)",
     checks: ["guests", "lifecycle-workflows"]
   },
   'A.5.17': {
@@ -423,12 +453,14 @@ window.GUIDANCE = {
     how: "Enrol every endpoint accessing company data into Intune, apply a compliance policy (encryption, OS version, security baseline) and block access from non-compliant devices through Conditional Access. Checkpoint's device-compliance and compliance-policy checks read the Intune side of this directly on every scan; its ca-device check separately confirms Conditional Access is actually enforcing that compliance requirement at sign-in, not just recording it in Intune.",
     evidence: "The Intune compliance policy configuration, device compliance reporting, the Conditional Access policy gating cloud app access on device compliance, and Checkpoint's device/compliance-policy/ca-device scan results.",
     link: "https://intune.microsoft.com",
+    path: "Devices → Compliance → Policies",
     checks: ["device", "compliance-policy", "device-checkin", "ca-device"]
   },
   'A.8.2': {
     how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access), and bound how long an authenticated privileged session stays valid with a Conditional Access sign-in frequency control — Checkpoint's admin-count, PIM and ca-sif checks all watch this directly, and its access-review check confirms privileged role membership is also reviewed periodically, not just gated by PIM at assignment time.",
     evidence: "The Entra PIM configuration, current Global Administrator membership, the Conditional Access policy enforcing sign-in frequency for privileged roles, and Checkpoint's admins/PIM/ca-sif/access-review scan results.",
     link: "https://entra.microsoft.com",
+    path: "Identity → Roles & admins → Roles & admins (Global Administrator)",
     checks: ["mfa-priv", "admins", "pim", "ca-sif", "access-review"]
   },
   'A.8.3': {
@@ -447,6 +479,7 @@ window.GUIDANCE = {
     how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. Where Entra ID Protection (P2) is licensed, add risk-based Conditional Access so a risky sign-in or a compromised-looking account is challenged or blocked automatically rather than relying on someone noticing, and bound privileged session lifetime with sign-in frequency so a stolen token doesn't stay useful forever. This is the control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv, legacy, ca-risk and ca-sif all read your live Conditional Access configuration.",
     evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth, acting on sign-in/user risk and bounding privileged session lifetime, and Checkpoint's mfa-all/mfa-priv/legacy/ca-risk/ca-sif scan results.",
     link: "https://entra.microsoft.com",
+    path: "Identity → Protection → Conditional Access → Policies",
     checks: ["mfa-all", "mfa-priv", "legacy", "ca-risk", "ca-sif"]
   },
   'A.8.6': {
@@ -458,7 +491,11 @@ window.GUIDANCE = {
   'A.8.7': {
     how: "Enable Microsoft Defender's anti-malware protection across endpoints and email, keep signatures updating automatically, and harden Office macro settings tenant-wide (block macros from the internet by default, allow only from trusted locations). Checkpoint's wdac and macro checks read your live Secure Score signal for both of these.",
     evidence: "Defender configuration showing real-time protection enabled, the Office macro-hardening policy, and Checkpoint's wdac/macro scan results.",
-    link: "https://security.microsoft.com",
+    /* Verified stable direct URL (not a home page + click-path like the
+       other entries above) — confirmed via web search, and unlike a
+       blade deep link this one IS a documented, dedicated page of the
+       Defender portal, not an internal SPA route. */
+    link: "https://security.microsoft.com/securescore",
     checks: ["wdac", "macro"]
   },
   'A.8.8': {
