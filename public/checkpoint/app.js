@@ -4978,11 +4978,16 @@ function showModal(opts) {
     /* Auto-captured evidence is a raw JSON file — a plain link to it
        just downloads the file, which reads as broken to a practitioner
        reviewing the SoA. Opens the in-app viewer (App.viewEvidence)
-       instead. A human-linked URL can be any file type, so it keeps
-       opening directly — there's nothing to usefully preview. */
+       instead. A human-linked URL (a generated policy, an uploaded
+       file) opens via App.openEvidenceDoc — confirmed live, a plain
+       `<a target=_blank>` straight to the document's webUrl can strand
+       a brand-new tab on a blank page (Safari blocking the cross-site
+       cookies a fresh SharePoint sign-in handshake needs);
+       openEvidenceDoc resolves the same file to a pre-authenticated
+       download link first, which has no handshake to strand. */
     var evidenceLink = isAutoEvidence
       ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + key + '">View evidence</button>'
-      : (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' : '');
+      : (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button>' : '');
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
       ? evidenceLink + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
       : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
@@ -9153,7 +9158,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl)
           ? (c.verifiedBy === AUTO_EVIDENCE_TAG
             ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + esc(key) + '">View evidence</button>'
-            : '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ' + icon('external') + '</a>')
+            : '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + esc(key) + '">Link ' + icon('external') + '</button>')
           : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         guidanceHtml;
@@ -9229,6 +9234,40 @@ function showModal(opts) {
           '<div class="d-sec"><p style="font-size:12.5px;color:var(--fail)">Could not load a preview: ' + esc(e.message || e) + '</p>' +
           '<p style="margin-top:8px"><a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Open the raw file instead ' + icon('external') + '</a></p>' +
           liveLinkErrHtml + '</div>';
+      }
+    },
+
+    /* Opens a control's HUMAN-linked evidence (a real document — a
+       generated policy, an uploaded file — as opposed to the
+       auto-captured JSON App.viewEvidence handles above). A plain
+       `<a href target=_blank>` to the document's webUrl used to be
+       the whole implementation, and it still degrades to exactly that
+       on any failure below — but confirmed live, a brand-new tab
+       navigating straight to a SharePoint webUrl makes the browser do
+       a fresh Microsoft sign-in handshake with SharePoint, and
+       Safari's cross-site cookie blocking can strand that handshake
+       on a blank page. Graph.fetchDownloadUrl() resolves the SAME
+       file to its pre-authenticated download URL instead, which has
+       no handshake to strand.
+       The tab is opened SYNCHRONOUSLY, before the first await, so the
+       browser still counts it as a direct response to the click (the
+       usual popup-blocker rule) even though the actual destination
+       isn't known yet; `win.opener = null` from this side severs the
+       new tab's ability to reach back into this one, the standard
+       substitute for `noopener` when the caller needs to keep its own
+       handle to later set `.location`. */
+    openEvidenceDoc: async function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;
+      if (Store.kind === 'demo') { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
+      var win = window.open('', '_blank');
+      if (win) win.opener = null;
+      try {
+        var downloadUrl = await Graph.fetchDownloadUrl(c.evidenceUrl);
+        if (win) win.location.href = downloadUrl; else window.open(downloadUrl, '_blank', 'noopener');
+      } catch (e) {
+        console.error(e);
+        if (win) win.location.href = c.evidenceUrl; else window.open(c.evidenceUrl, '_blank', 'noopener');
       }
     },
 
