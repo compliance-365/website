@@ -157,7 +157,12 @@ window.POLICY_TEMPLATES = [
       'ISMS Scope Document'
     ],
     reviewCadence: 'Annually, or immediately following a material change to the organisation’s structure, technology estate or risk profile — whichever comes first.',
-    controls: ['A.5.1', 'A.5.4'],
+    /* A.5.2 added alongside A.5.1/A.5.4 — this is the one template
+       whose generated document actually contains a named roles/
+       responsibilities section (see the `roles` array above), so
+       linking it as A.5.2's evidence too is earned, not claimed: any
+       OTHER policy template with no roles section stays unmapped. */
+    controls: ['A.5.1', 'A.5.2', 'A.5.4'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
