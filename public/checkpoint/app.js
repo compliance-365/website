@@ -976,7 +976,32 @@ function showModal(opts) {
     if (m) return m[3] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[1]).padStart(2, '0');
     return '';
   }
-  var RISK_TREATMENTS = ['Mitigate', 'Accept', 'Transfer', 'Avoid'];
+  /* ISO 27005's "4 Ts" — replaced Mitigate/Accept/Transfer/Avoid, which
+     were Checkpoint's own earlier wording for the same four decisions.
+     LEGACY_TREATMENT_TERMS lets a re-imported older export (or a CSV a
+     client already has on hand from before this change) still validate
+     and import correctly; normalizeTreatment() below does the actual
+     old-name -> new-name translation, also used by store.js's read path
+     for existing SharePoint data under the old names. */
+  var RISK_TREATMENTS = ['Treat', 'Tolerate', 'Transfer', 'Terminate'];
+  var LEGACY_TREATMENT_TERMS = ['Mitigate', 'Accept', 'Avoid'];
+  var LEGACY_TREATMENT_MAP = { mitigate: 'Treat', accept: 'Tolerate', avoid: 'Terminate' };
+  function normalizeTreatment(t) {
+    var key = String(t || '').toLowerCase();
+    if (LEGACY_TREATMENT_MAP[key]) return LEGACY_TREATMENT_MAP[key];
+    var hit = RISK_TREATMENTS.find(function (x) { return x.toLowerCase() === key; });
+    return hit || 'Treat';
+  }
+  /* Same short examples shown on both the "new risk" panel (index.html's
+     static #nrTreatment options) and here, in the Edit Risk modal — a
+     practitioner picking a treatment should see what each one means
+     without having to already know the framework. */
+  var TREATMENT_DESCRIPTIONS = {
+    Treat: 'reduce it with controls / actions',
+    Tolerate: 'accept the residual risk within appetite',
+    Transfer: 'shift it to a third party — e.g. insurance, an outsourced provider',
+    Terminate: 'stop or change the activity that causes it'
+  };
   var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
   var ACTION_PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
@@ -1031,7 +1056,7 @@ function showModal(opts) {
         { key: 'Likelihood', aliases: ['L', 'Inherent likelihood'], required: true, validate: scale1to5('Likelihood') },
         { key: 'Impact', aliases: ['I', 'Inherent impact'], required: true, validate: scale1to5('Impact') },
         { key: 'Owner', aliases: ['Risk owner'] },
-        { key: 'Treatment', aliases: ['Treat'], validate: oneOf('Treatment', RISK_TREATMENTS) }
+        { key: 'Treatment', aliases: ['Treat'], validate: oneOf('Treatment', RISK_TREATMENTS.concat(LEGACY_TREATMENT_TERMS)) }
       ],
       maxId: function () { return S.risks.reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0); },
       /* Mirrors addManualRisk() exactly, minus the DOM: same ID scheme,
@@ -1047,7 +1072,7 @@ function showModal(opts) {
           L: parseInt(rec.Likelihood, 10),
           I: parseInt(rec.Impact, 10),
           controls: [], owner: rec.Owner || 'Unassigned', status: 'Open',
-          treat: pick(rec.Treatment, RISK_TREATMENTS, 'Mitigate'), actions: []
+          treat: normalizeTreatment(rec.Treatment), actions: []
         };
         await Store.addRisk(r);
         return r.id;
@@ -2085,7 +2110,7 @@ function showModal(opts) {
     rtp: function () {
       var risks = S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); });
       var openRisks = risks.filter(function (r) { return r.status !== 'Closed'; });
-      var treatCounts = { Mitigate: 0, Accept: 0, Transfer: 0, Avoid: 0 };
+      var treatCounts = { Treat: 0, Tolerate: 0, Transfer: 0, Terminate: 0 };
       openRisks.forEach(function (r) { if (treatCounts[r.treat] != null) treatCounts[r.treat]++; });
       /* A stale acceptance (its snapshotted score no longer matches
          today's residual) counts here alongside a never-accepted risk —
@@ -2122,7 +2147,7 @@ function showModal(opts) {
         title: 'Risk Treatment Plan',
         dashboard: {
           intro: 'The risk treatment plan (ISO 27001 6.1.3 e/f): every risk, its treatment decision, the controls and actions treating it, its residual score, and — for anything left at Medium or above — documented risk-owner acceptance. ' +
-            openRisks.length + ' open risk(s): ' + treatCounts.Mitigate + ' mitigate, ' + treatCounts.Accept + ' accept, ' + treatCounts.Transfer + ' transfer, ' + treatCounts.Avoid + ' avoid.' +
+            openRisks.length + ' open risk(s): ' + treatCounts.Treat + ' treat, ' + treatCounts.Tolerate + ' tolerate, ' + treatCounts.Transfer + ' transfer, ' + treatCounts.Terminate + ' terminate.' +
             (unaccepted.length ? ' ' + unaccepted.length + ' Medium+ residual risk(s) still lack documented acceptance.' : ' All Medium+ residual risks carry documented acceptance.'),
           charts: [
             { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
@@ -4334,7 +4359,7 @@ function showModal(opts) {
     var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
     var actIds = t.actions.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
     try {
-      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds, tpl: tpl };
+      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl };
       await Store.addRisk(newRisk);
       for (var i = 0; i < t.actions.length; i++) {
         var a = t.actions[i];
@@ -4559,7 +4584,10 @@ function showModal(opts) {
      whether an action was raised by a scan or by hand. */
   var LIKELIHOOD_OPTS = [{ value: 1, label: '1 — Rare' }, { value: 2, label: '2 — Unlikely' }, { value: 3, label: '3 — Possible' }, { value: 4, label: '4 — Likely' }, { value: 5, label: '5 — Almost certain' }];
   var IMPACT_OPTS = [{ value: 1, label: '1 — Negligible' }, { value: 2, label: '2 — Minor' }, { value: 3, label: '3 — Moderate' }, { value: 4, label: '4 — Major' }, { value: 5, label: '5 — Severe' }];
-  var TREATMENT_OPTS = ['Mitigate', 'Accept', 'Transfer', 'Avoid'];
+  /* {value,label} form (showModal's select renderer supports both) so
+     Edit Risk shows the same short example each option gets on the "new
+     risk" panel, not just the bare word. */
+  var TREATMENT_OPTS = RISK_TREATMENTS.map(function (t) { return { value: t, label: t + ' — ' + TREATMENT_DESCRIPTIONS[t] }; });
   var RISK_STATUS_OPTS = ['Open', 'In treatment', 'Monitored', 'Closed'];
   var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
 
@@ -9480,7 +9508,7 @@ function showModal(opts) {
         ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('nrLikelihood').value = '3';
         document.getElementById('nrImpact').value = '3';
-        document.getElementById('nrTreatment').value = 'Mitigate';
+        document.getElementById('nrTreatment').value = 'Treat';
         document.getElementById('riskAiDraftStatus').textContent = '';
         window._riskDraftFromAi = false;
       }
@@ -9539,7 +9567,7 @@ function showModal(opts) {
         var newRisk = {
           id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
           L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
-          controls: [], owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Mitigate', actions: actIds,
+          controls: [], owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Treat', actions: actIds,
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
@@ -9627,7 +9655,7 @@ function showModal(opts) {
            snapshot visibly tied to what's actually being accepted. */
         var acceptedQ = residual(r);
         r.acceptedScore = acceptedQ.L * acceptedQ.I;
-        if (r.treat !== 'Accept') r.treat = 'Accept';
+        if (r.treat !== 'Tolerate') r.treat = 'Tolerate';
         await Store.updateRisk(r);
         audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate + segregationNote(sodFinding));
         toast('Residual risk acceptance recorded for <b>' + r.id + '</b>');

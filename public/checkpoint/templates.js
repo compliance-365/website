@@ -1376,7 +1376,7 @@ window.POLICY_TEMPLATES = [
         because: 'A risk owned by a committee or a department is owned by nobody, and will still be open at the next review.'
       },
       {
-        rule: 'Risks above the acceptance threshold are treated by one of the recognised options — modifying the risk with controls, avoiding the activity, sharing the risk (for example through insurance or contract), or, only with documented management sign-off, accepting it.',
+        rule: 'Risks above the acceptance threshold are treated by one of the four recognised options — Treat (reduce it with controls), Terminate (stop or change the activity), Transfer (shift it to a third party, for example through insurance or an outsourced provider), or, only with documented management sign-off, Tolerate (accept the residual risk).',
         because: 'Naming the four options prevents "we are monitoring it" being recorded as though it were a treatment.'
       },
       {
