@@ -169,17 +169,17 @@ window.GUIDANCE = {
     checks: ["labels"]
   },
   'A.5.14': {
-    how: "Control how information leaves the tenant with Purview DLP policies across email and endpoints, Conditional Access restricting unmanaged-device access to sensitive apps, a tenant-wide SharePoint/OneDrive external sharing setting no more permissive than your risk appetite allows, and a documented secure-transfer method — Purview Message Encryption is a straightforward option — for anything shared externally. Checkpoint's sharing check reads the tenant-wide SharePoint setting directly; its DLP check is a lower-confidence, best-effort signal (see A.8.12).",
+    how: "Control how information leaves the tenant with Purview DLP policies across email and endpoints, Conditional Access restricting unmanaged-device access to sensitive apps, a tenant-wide SharePoint/OneDrive external sharing setting no more permissive than your risk appetite allows, and a documented secure-transfer method — Purview Message Encryption is a straightforward option — for anything shared externally. Checkpoint's sharing check reads the tenant-wide SharePoint setting directly; its DLP check is a lower-confidence, best-effort signal (see A.8.12). Where AWS is in scope, S3's account-level Block Public Access setting is the equivalent control for data leaving via a public bucket.",
     evidence: "The DLP policy configuration, a Conditional Access policy restricting unmanaged access, the tenant's SharePoint external sharing setting, and a documented secure-transfer method for external sharing.",
     link: "https://purview.microsoft.com",
-    checks: ["sharing"]
+    checks: ["sharing", "aws-s3-public"]
   },
   'A.5.15': {
     how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, restrict end-user OAuth consent to high-privilege scopes so it requires admin approval, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA, legacy-authentication, device-compliance, (where licensed) risk-based, and user-consent pieces of this directly on every run.",
     evidence: "The exported Conditional Access policy set, the tenant's user-consent settings, an access-review record, and Checkpoint's own MFA/legacy-authentication/ca-device/ca-risk/oauth-consent scan results.",
     link: "https://entra.microsoft.com",
     path: "Identity → Protection → Conditional Access → Policies",
-    checks: ["mfa-all", "legacy", "ca-device", "ca-risk", "oauth-consent"]
+    checks: ["mfa-all", "legacy", "ca-device", "ca-risk", "oauth-consent", "aws-user-mfa"]
   },
   'A.5.16': {
     how: "Use Entra ID as the single identity source for every system that supports it — no local or shadow accounts — with one identity per person, deactivated promptly on departure. Keep guest accounts to a genuine business need and review them periodically, and where Entra ID Governance is licensed, automate joiner/leaver processing with Lifecycle Workflows rather than relying on someone remembering; Checkpoint's guest-count check flags guest drift and its lifecycle-workflows check confirms that automation is actually configured and enabled.",
@@ -189,10 +189,10 @@ window.GUIDANCE = {
     checks: ["guests", "lifecycle-workflows"]
   },
   'A.5.17': {
-    how: "Enforce a real authentication policy through Entra — a sensible password policy or, better, passwordless/FIDO2 where feasible, banned-password lists, and MFA as the actual control rather than password complexity alone. Never share credentials for any account; use PIM or a password vault where an account genuinely must be shared.",
+    how: "Enforce a real authentication policy through Entra — a sensible password policy or, better, passwordless/FIDO2 where feasible, banned-password lists, and MFA as the actual control rather than password complexity alone. Never share credentials for any account; use PIM or a password vault where an account genuinely must be shared. Where AWS is in scope, IAM access keys are the equivalent long-lived credential — Checkpoint checks they're rotated within policy.",
     evidence: "The Entra authentication methods policy configuration and an MFA registration/coverage report.",
     link: "https://entra.microsoft.com",
-    checks: []
+    checks: ["aws-key-age"]
   },
   'A.5.18': {
     how: "Grant access through group-based role assignment rather than one-off individual grants, require approval for privileged role activation through Entra PIM, and run a periodic access review to catch rights that should have been revoked but weren't. Checkpoint's PIM check verifies privileged roles are held as eligible assignments, not standing access; its access-review check confirms at least one Entra Access Review is actually configured to run that periodic check, though not that a cycle has recently completed.",
@@ -467,13 +467,13 @@ window.GUIDANCE = {
     evidence: "The Entra PIM configuration, current Global Administrator membership, the Conditional Access policy enforcing sign-in frequency for privileged roles, and Checkpoint's admins/PIM/ca-sif/access-review scan results.",
     link: "https://entra.microsoft.com",
     path: "Identity → Roles & admins → Roles & admins (Global Administrator)",
-    checks: ["mfa-priv", "admins", "pim", "ca-sif", "access-review"]
+    checks: ["mfa-priv", "admins", "pim", "ca-sif", "access-review", "aws-root-mfa"]
   },
   'A.8.3': {
     how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails, restrict end-user consent so a high-privilege scope requires admin approval rather than a user's own click-through, and keep the tenant's default SharePoint/OneDrive external sharing setting no more permissive than intended — an anyone-with-a-link default silently overrides careful per-site permissions.",
     evidence: "The access-control policy, corresponding SharePoint/Teams permission configuration, the tenant's user-consent settings, Checkpoint's risky-app/oauth-consent scan results, and Checkpoint's sharing scan result.",
     link: "https://entra.microsoft.com",
-    checks: ["riskyapps", "oauth-consent", "sharing"]
+    checks: ["riskyapps", "oauth-consent", "sharing", "aws-s3-public"]
   },
   'A.8.4': {
     how: "Restrict source code access to the developers and systems that need it — Azure DevOps or GitHub repository permissions, branch protection rules, and no shared credentials for source control. Log and review access to production-facing repositories periodically.",
@@ -486,7 +486,7 @@ window.GUIDANCE = {
     evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth, acting on sign-in/user risk and bounding privileged session lifetime, and Checkpoint's mfa-all/mfa-priv/legacy/ca-risk/ca-sif scan results.",
     link: "https://entra.microsoft.com",
     path: "Identity → Protection → Conditional Access → Policies",
-    checks: ["mfa-all", "mfa-priv", "legacy", "ca-risk", "ca-sif"]
+    checks: ["mfa-all", "mfa-priv", "legacy", "ca-risk", "ca-sif", "aws-root-mfa", "aws-user-mfa"]
   },
   'A.8.6': {
     how: "Monitor capacity for systems you're directly responsible for (on-premises servers, Azure resources) with alerting before thresholds are hit, and plan ahead for growth. For fully cloud-hosted Microsoft 365 services, capacity management is largely Microsoft's responsibility — document that scoping decision.",
@@ -511,10 +511,10 @@ window.GUIDANCE = {
     checks: ["patch"]
   },
   'A.8.9': {
-    how: "Define and enforce secure configuration baselines for devices and key services — Intune security baselines are a fast way to apply Microsoft-recommended hardening across the fleet — and track configuration drift rather than assuming a one-time setup stays correct.",
+    how: "Define and enforce secure configuration baselines for devices and key services — Intune security baselines are a fast way to apply Microsoft-recommended hardening across the fleet — and track configuration drift rather than assuming a one-time setup stays correct. Where AWS is in scope, AWS Config is the equivalent: it records resource configuration state so drift is detectable rather than assumed away.",
     evidence: "The Intune security baseline assignment and a compliance/drift report against it.",
     link: "https://intune.microsoft.com",
-    checks: ["device-config"]
+    checks: ["device-config", "aws-config"]
   },
   'A.8.10': {
     how: "Ensure information is actually deleted when it's no longer needed — Purview retention policies can auto-delete at the end of a retention period, and Intune can remotely wipe a device. Don't rely on 'we'll get to it eventually'; set an automated end state for data that has a defined lifecycle.",
@@ -547,16 +547,16 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.15': {
-    how: "Enable unified audit logging across Microsoft 365 and set a retention period appropriate to your investigative and compliance needs. Checkpoint's logging check verifies this is switched on via your Secure Score signal — an unlicensed or disabled audit log is one of the most common gaps found in a first scan.",
+    how: "Enable unified audit logging across Microsoft 365 and set a retention period appropriate to your investigative and compliance needs. Checkpoint's logging check verifies this is switched on via your Secure Score signal — an unlicensed or disabled audit log is one of the most common gaps found in a first scan. Where AWS is in scope, CloudTrail is the equivalent record — without it there's no history of who did what in the account.",
     evidence: "Purview audit log configuration showing logging enabled and the retention period set, plus Checkpoint's logging scan result.",
     link: "https://purview.microsoft.com",
-    checks: ["logging"]
+    checks: ["logging", "aws-cloudtrail"]
   },
   'A.8.16': {
-    how: "Actively monitor security alerts rather than just collecting logs — Microsoft 365 Defender's alert and incident queue needs an assigned owner checking it regularly, with a documented triage process. Checkpoint's alerts check looks at whether threat-protection monitoring is genuinely in place via Secure Score.",
+    how: "Actively monitor security alerts rather than just collecting logs — Microsoft 365 Defender's alert and incident queue needs an assigned owner checking it regularly, with a documented triage process. Checkpoint's alerts check looks at whether threat-protection monitoring is genuinely in place via Secure Score. Where AWS is in scope, GuardDuty is the equivalent managed threat detection.",
     evidence: "Defender alert triage records showing regular review, and Checkpoint's alerts scan result.",
     link: "https://security.microsoft.com",
-    checks: ["alerts"]
+    checks: ["alerts", "aws-guardduty"]
   },
   'A.8.17': {
     how: "Confirm systems use a consistent, accurate time source (NTP) so that logs from different systems can be correlated during an investigation — this is on by default for Microsoft 365 and Azure-hosted infrastructure and mainly needs verifying for any on-premises systems you still operate.",
@@ -577,16 +577,16 @@ window.GUIDANCE = {
     checks: ["wdac"]
   },
   'A.8.20': {
-    how: "Protect network boundaries and internal segments appropriate to your architecture — for a Microsoft 365-centric SME this is largely Conditional Access acting as the real network boundary (identity as the new perimeter), supplemented by Azure Network Security Groups for any Azure-hosted infrastructure.",
-    evidence: "The Conditional Access policy set and, where applicable, Azure NSG configuration.",
+    how: "Protect network boundaries and internal segments appropriate to your architecture — for a Microsoft 365-centric SME this is largely Conditional Access acting as the real network boundary (identity as the new perimeter), supplemented by Azure Network Security Groups for any Azure-hosted infrastructure. Where AWS is in scope, a security group exposing an administrative port (SSH, RDP, a database port) to the whole internet is exactly this control failing — Checkpoint's aws-sg-open check reads this directly.",
+    evidence: "The Conditional Access policy set and, where applicable, Azure NSG configuration, plus Checkpoint's aws-sg-open scan result where AWS is in scope.",
     link: "https://entra.microsoft.com",
-    checks: []
+    checks: ["aws-sg-open"]
   },
   'A.8.21': {
-    how: "Secure network services with appropriate authentication and encryption (no anonymous or unencrypted service access), and review exposed network services periodically for anything that shouldn't still be reachable.",
+    how: "Secure network services with appropriate authentication and encryption (no anonymous or unencrypted service access), and review exposed network services periodically for anything that shouldn't still be reachable. An AWS security group open to the internet on a database or remote-administration port is the same finding as an unsecured network service — Checkpoint's aws-sg-open check covers both A.8.20 and this control together.",
     evidence: "A network service inventory with the security configuration for each, and a periodic review record.",
     link: "https://portal.azure.com",
-    checks: []
+    checks: ["aws-sg-open"]
   },
   'A.8.22': {
     how: "Segment networks so a compromise in one area doesn't automatically reach everything else — Azure Virtual Network segmentation with Network Security Groups for cloud-hosted infrastructure, and VLAN segmentation for anything still on-premises.",
@@ -601,10 +601,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.24': {
-    how: "Use encryption appropriate to the sensitivity of the data — BitLocker for device encryption (enforced via Intune), TLS for data in transit, sensitivity-label encryption or Purview Message Encryption for sensitive content, and Azure Key Vault for managing any application-level encryption keys and certificates rather than storing them in code or config files. Like the DLP check, Checkpoint's encryption check is a best-effort Secure Score correlation, not a direct read of encryption configuration — verify in the Purview/Intune portals rather than trusting it alone.",
-    evidence: "Intune BitLocker enforcement reporting, Azure Key Vault configuration for managed keys/certificates, and Checkpoint's encryption scan result (a hint, not confirmation).",
+    how: "Use encryption appropriate to the sensitivity of the data — BitLocker for device encryption (enforced via Intune), TLS for data in transit, sensitivity-label encryption or Purview Message Encryption for sensitive content, and Azure Key Vault for managing any application-level encryption keys and certificates rather than storing them in code or config files. Like the DLP check, Checkpoint's encryption check is a best-effort Secure Score correlation, not a direct read of encryption configuration — verify in the Purview/Intune portals rather than trusting it alone. Where AWS is in scope, EBS default encryption and RDS storage encryption are direct reads, not a correlation — Checkpoint checks both.",
+    evidence: "Intune BitLocker enforcement reporting, Azure Key Vault configuration for managed keys/certificates, and Checkpoint's encryption scan result (a hint, not confirmation) — plus its aws-ebs-encryption/aws-rds-encryption results, which are direct, where AWS is in scope.",
     link: "https://portal.azure.com",
-    checks: ["encryption"]
+    checks: ["encryption", "aws-ebs-encryption", "aws-rds-encryption"]
   },
   'A.8.25': {
     how: "Follow a defined secure development life cycle for any software you build — security requirements gathered up front, code review before merge, security testing before release — rather than security being an afterthought. Organisations with no in-house development can scope this control as not applicable and record why.",
