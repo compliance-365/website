@@ -886,7 +886,31 @@ window.CHECK_CONTROLS = {
      was never mapped here, so it has been computing a genuine signal on
      every scan that no ISO 27001 control ever saw. A.6.3 (security
      awareness training) is exactly what it measures. */
-  'training': ['A.6.3']
+  'training': ['A.6.3'],
+  /* The AWS check pack (aws/collector/checks.mjs) — ten scored:true
+     checks with zero framework mapping until now, each earning its
+     control the same way as every check above, mirroring whichever
+     Microsoft-side check already covers the equivalent control: root/
+     console MFA maps like mfa-priv/mfa-all, GuardDuty like alerts,
+     S3 public-access blocking like sharing, EBS/RDS encryption like
+     encryption. Two are called out by name in the check functions'
+     own comments (cloudTrailCheck: "fails ISO 27001 A.8.15";
+     openAdminPortsCheck: "ISO 27001 A.8.20/A.8.21"), so those aren't
+     even a judgement call. IAM access-key rotation (aws-key-age) and
+     AWS Config's resource-state recording (aws-config) had no existing
+     Microsoft-side equivalent to mirror — A.5.17 (authentication
+     information) and A.8.9 (configuration management) are their own
+     direct title match instead. */
+  'aws-root-mfa': ['A.8.2', 'A.8.5'],
+  'aws-user-mfa': ['A.5.15', 'A.8.5'],
+  'aws-key-age': ['A.5.17'],
+  'aws-cloudtrail': ['A.8.15'],
+  'aws-config': ['A.8.9'],
+  'aws-guardduty': ['A.8.16'],
+  'aws-s3-public': ['A.5.14', 'A.8.3'],
+  'aws-ebs-encryption': ['A.8.24'],
+  'aws-rds-encryption': ['A.8.24'],
+  'aws-sg-open': ['A.8.20', 'A.8.21']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
