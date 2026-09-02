@@ -4526,7 +4526,6 @@ function showModal(opts) {
       var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
-      var capa = window.CheckpointLib.capaStatus(a);
       var updCount = updateCounts[a.id] || 0;
       return '<tr data-id="' + a.id + '" data-action="App.openAction"><td class="id-t"><button class="lnk" data-action="App.openAction" data-id="' + a.id + '">' + a.id + '</button>' +
         (updCount ? '<div class="src">' + updCount + ' update' + (updCount > 1 ? 's' : '') + '</div>' : '') +
@@ -4537,11 +4536,16 @@ function showModal(opts) {
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
+        /* Was up to four buttons wide (Complete, Corrective action, Edit,
+           Delete) — the biggest single reason this table couldn't fit a
+           normal screen without horizontal scroll. The row itself already
+           opens the same action's drawer (data-action on the <tr> above),
+           which already carries Complete/Corrective action/Edit (see
+           openAction()) plus Delete, added there for exactly this — so
+           only the single most-reached-for action stays inline; the rest
+           are one click into the drawer, not gone. */
         '<td style="white-space:nowrap">' +
-        (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button> ' : '<span class="src" style="margin-right:6px">Done ' + icon('check') + '</span>') +
-        (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button> ' : '') +
-        '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button> ' +
-        '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
+        (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ' + icon('check') + '</span>') +
         '</td></tr>';
     }).join('');
     var actRowsEl = document.getElementById('actRows');
@@ -9120,6 +9124,7 @@ function showModal(opts) {
           (a.status !== 'Done' ? '<button class="btn ghost sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '') +
           (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button>' : '') +
           '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button>' +
+          '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
           '</div>') +
         '<div class="d-sec"><h4>Progress log' + (updates.length ? ' (' + updates.length + ')' : '') + '</h4>' +
         (updates.length
@@ -9832,6 +9837,10 @@ function showModal(opts) {
         toast('<b>' + id + '</b> deleted');
       } catch (e) { warn(e); }
       busy(false);
+      /* Now reachable from the action's own drawer (Delete), not just the
+         row — same reasoning deleteRisk() already closes its drawer for:
+         a deleted record's drawer must not sit open showing stale content. */
+      closeDrawerUi();
       renderAll();
     },
 
