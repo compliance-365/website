@@ -101,10 +101,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.5.3': {
-    how: "Identify duties that conflict if held by one person — who can both approve and process a payment, or both request and grant access — and separate them with Entra role-based access and approval workflows. Where a small team genuinely can't separate a pair of duties, document a compensating control (peer review, logging) instead; auditors accept a documented compensating control where true segregation isn't practical.",
+    how: "Identify duties that conflict if held by one person — who can both approve and process a payment, or both request and grant access — and separate them with Entra role-based access and approval workflows. Where a small team genuinely can't separate a pair of duties, document a compensating control (peer review, logging) instead; auditors accept a documented compensating control where true segregation isn't practical. Checkpoint's own signal here is narrow by design: it only flags a Privileged Role Administrator who also holds another directory role, since that combination can grant itself any further access and is a conflict regardless of how you define the rest — everything else is for you to define.",
     evidence: "A segregation-of-duties analysis for key processes, current Entra role assignments matching it, and evidence of any compensating controls used.",
     link: "https://entra.microsoft.com",
-    checks: []
+    checks: ["sod"]
   },
   'A.5.4': {
     how: "Have management formally communicate security expectations — a signed acknowledgement at onboarding, a periodic reminder from leadership, security objectives referenced in performance reviews. The point is a record showing this actually reached staff, not just that a policy exists somewhere.",

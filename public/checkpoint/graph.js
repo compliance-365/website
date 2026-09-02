@@ -511,6 +511,13 @@ window.Graph = (function () {
        dozen at most, and a role whose members cannot be read is skipped
        rather than failing the whole check — a partial privileged set can
        only ever under-report, never invent a finding. */
+    /* roleMembersByUser is gathered once here and reused by BOTH the
+       leaver check below (flattened to a privileged/not-privileged set,
+       its own long-standing shape) and the segregation-of-duties check
+       right after it (which needs the per-role names a flat set can't
+       give it) — same directory-role/members calls either way, so this
+       computes it once rather than twice. */
+    var roleMembersByUser = {};
     try {
       var allUsers = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,assignedLicenses&$top=999');
       var privilegedIds = {};
@@ -518,8 +525,13 @@ window.Graph = (function () {
         var roles = await gAll('/directoryRoles?$select=id,displayName');
         for (var ri = 0; ri < roles.length; ri++) {
           try {
-            var mem = await gAll('/directoryRoles/' + roles[ri].id + '/members?$select=id&$top=999');
-            for (var mi = 0; mi < mem.length; mi++) if (mem[mi].id) privilegedIds[mem[mi].id] = true;
+            var mem = await gAll('/directoryRoles/' + roles[ri].id + '/members?$select=id,displayName,userPrincipalName&$top=999');
+            for (var mi = 0; mi < mem.length; mi++) {
+              if (!mem[mi].id) continue;
+              privilegedIds[mem[mi].id] = true;
+              var entry = roleMembersByUser[mem[mi].id] || (roleMembersByUser[mem[mi].id] = { name: mem[mi].displayName || mem[mi].userPrincipalName || mem[mi].id, roles: [] });
+              entry.roles.push(roles[ri].displayName);
+            }
           } catch (e) { /* skip this role — see note above on under-reporting */ }
         }
       } catch (e) { /* no role data at all: the licence half of the check still stands */ }
@@ -535,6 +547,19 @@ window.Graph = (function () {
             (!lh.privileged && !lh.licensed ? ', none retaining licences or privileged roles' : ''));
     } catch (e) {
       set('leaver', 'review', 'Could not read directory accounts: ' + e.message);
+    }
+
+    /* --- Segregation of duties (A.5.3) — Privileged Role Administrator
+       held alongside any other privileged role. Same roleMembersByUser
+       gathered just above for the leaver check; 'manual' rather than a
+       guessed pass if that gathering came back empty (no role data
+       readable at all, not "checked and found clean"). */
+    if (!Object.keys(roleMembersByUser).length) {
+      set('sod', 'manual', 'Could not read directory role membership — see the leaver check above for the same underlying read.');
+    } else {
+      var sod = window.CheckpointLib.segregationOfDutiesResult(roleMembersByUser);
+      raw['sod'] = { offenders: sod.offenders };
+      set('sod', sod.result, sod.note);
     }
 
     /* --- Risky users (Identity Protection — requires AAD Premium P2) --- */

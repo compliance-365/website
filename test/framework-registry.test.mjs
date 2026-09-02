@@ -481,13 +481,16 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // 'lifecycle-workflows' was added (Entra ID Governance's Lifecycle
     // Workflows, GA v1.0) — a genuinely new scope this time
     // (LifecycleWorkflows.Read.All), capability-gated the same as
-    // access-review/pim. An unlicensed tenant is unaffected either way:
-    // the relevant capability probe fails, the check degrades to
-    // 'manual', and score() excludes 'manual' from its denominator
-    // entirely.
-    assert.equal(CHECK_DEFS.length, 47);
+    // access-review/pim. 47 -> 48 when 'sod' was added (Privileged Role
+    // Administrator also holding another directory role) — mined from the
+    // same /directoryRoles + per-role /members calls the leaver-hygiene
+    // check already makes, so no new Graph call and no new scope. An
+    // unlicensed tenant is unaffected either way: the relevant capability
+    // probe fails, the check degrades to 'manual', and score() excludes
+    // 'manual' from its denominator entirely.
+    assert.equal(CHECK_DEFS.length, 48);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 37);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 38);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

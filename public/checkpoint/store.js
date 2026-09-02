@@ -453,6 +453,13 @@ window.CHECK_DEFS = [
      under scopes every tenant already granted, so unlike most of the
      newer checks this one works at every licence level. */
   { id: 'leaver',     area: 'Identity', label: 'Departed accounts fully offboarded',           tpl: 'leaver',    scored: true },
+  /* A.5.3 — same directory-role read the leaver check above already
+     does (no new scope, no new licence), extended to keep per-role
+     names rather than a flat privileged/not set. See
+     segregationOfDutiesResult()'s own comment in lib.js for why this
+     is scoped to Privileged Role Administrator specifically rather
+     than a broader, invented conflict-pair list. */
+  { id: 'sod',        area: 'Identity', label: 'No Privileged Role Administrator holds another directory role', tpl: 'sod', scored: true },
   /* The technically-enforced counterpart to leaver above: not "were
      departed accounts cleaned up" but "is that offboarding (and
      onboarding) automated at all, rather than left to whoever
@@ -910,7 +917,8 @@ window.CHECK_CONTROLS = {
   'aws-s3-public': ['A.5.14', 'A.8.3'],
   'aws-ebs-encryption': ['A.8.24'],
   'aws-rds-encryption': ['A.8.24'],
-  'aws-sg-open': ['A.8.20', 'A.8.21']
+  'aws-sg-open': ['A.8.20', 'A.8.21'],
+  'sod': ['A.5.3']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
