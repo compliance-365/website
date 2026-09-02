@@ -1011,6 +1011,8 @@ window.Graph = (function () {
     set('supplier', 'manual', 'Supplier assessment currency is scored from the Checkpoint vendor register');
     set('policy',   'manual', 'Policy publication and review cadence are scored from the Checkpoint document register');
     set('training', 'manual', 'Security awareness training completion is scored from the Checkpoint training register');
+    set('audit-review',     'manual', 'Independent review currency is scored from the Checkpoint audit programme');
+    set('incident-lessons', 'manual', 'Post-incident write-up completeness is scored from the Checkpoint incident register');
 
     return { results: results, notes: notes, raw: raw, secureScore: ss ? { current: ss.currentScore, max: ss.maxScore } : null };
   }

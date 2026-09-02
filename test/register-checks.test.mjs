@@ -1,12 +1,12 @@
-// Tests for the four register-derived posture checks — backup, bcp,
-// supplier and policy — which were previously scored:false and could
-// therefore never be anything but 'manual'.
+// Tests for the register-derived posture checks — backup, bcp, supplier,
+// policy, audit-review and incident-lessons — which were previously
+// scored:false and could therefore never be anything but 'manual'.
 //
 // They score from Checkpoint's OWN registers (Calendar, Documents,
-// Vendors) rather than Microsoft Graph. That matters more than it
-// sounds: unlike the Defender and Purview reads, these need no Graph
-// scope and no premium licence, so they work on every tenant — E3,
-// Business Premium, anything.
+// Vendors, Audits, Incidents) rather than Microsoft Graph. That matters
+// more than it sounds: unlike the Defender and Purview reads, these need
+// no Graph scope and no premium licence, so they work on every tenant —
+// E3, Business Premium, anything.
 //
 // The rule every one of them obeys, and the reason this was safe to
 // turn on for existing tenants:
@@ -23,7 +23,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, recurringActivityState } = CheckpointLib;
+const { backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, recurringActivityState, independentReviewResult, incidentLessonsResult } = CheckpointLib;
 
 const TODAY = '2026-06-15';
 const PAST = '2026-01-01';
@@ -44,6 +44,15 @@ const vendor = (over) => Object.assign({
   lastReviewed: PAST, nextReviewDue: FUTURE
 }, over || {});
 
+const audit = (over) => Object.assign({
+  id: 'AUD-1', status: 'Completed', completed: PAST
+}, over || {});
+
+const incident = (over) => Object.assign({
+  id: 'INC-1', status: 'Closed', severity: 'High',
+  rootCause: 'Phishing', lessonsLearned: 'Rolled out phishing-resistant MFA'
+}, over || {});
+
 describe('the empty-register rule — every check degrades to manual, never fail', () => {
   test('backup', () => {
     assert.equal(backupCheckResult([], TODAY).result, 'manual');
@@ -60,6 +69,14 @@ describe('the empty-register rule — every check degrades to manual, never fail
   test('policy', () => {
     assert.equal(policyCheckResult([], TODAY).result, 'manual');
     assert.equal(policyCheckResult(null, TODAY).result, 'manual');
+  });
+  test('audit-review', () => {
+    assert.equal(independentReviewResult([], TODAY).result, 'manual');
+    assert.equal(independentReviewResult(null, TODAY).result, 'manual');
+  });
+  test('incident-lessons', () => {
+    assert.equal(incidentLessonsResult([]).result, 'manual');
+    assert.equal(incidentLessonsResult(null).result, 'manual');
   });
   test('a register holding only unrelated rows is still manual for this check', () => {
     // A tenant with an access-control review scheduled but no backup
@@ -182,6 +199,71 @@ describe('policyCheckResult() — A.5.1 / Clause 7.5', () => {
     // An auto-captured evidence export is not a controlled document and
     // must not drag the policy register's numbers around.
     assert.equal(policyCheckResult([doc({ category: 'Auto-evidence', status: '' })], TODAY).result, 'manual');
+  });
+});
+
+describe('independentReviewResult() — A.5.35', () => {
+  test('a completed audit within cadence passes', () => {
+    assert.equal(independentReviewResult([audit()], TODAY).result, 'pass');
+  });
+
+  test('audits scheduled but none completed is a review, not a fail', () => {
+    // A plan to review is not yet a review that happened, but it is not
+    // silence either — the tenant is doing something, just not done yet.
+    const r = independentReviewResult([audit({ status: 'Planned', completed: '' })], TODAY);
+    assert.equal(r.result, 'review');
+    assert.match(r.note, /none completed/);
+  });
+
+  test('the most recent completed audit past the cadence fails', () => {
+    const r = independentReviewResult([audit({ completed: '2024-01-01' })], TODAY, 365);
+    assert.equal(r.result, 'fail');
+    assert.match(r.note, /not current/);
+  });
+
+  test('only the MOST RECENT completed audit is judged against cadence', () => {
+    const rows = [audit({ id: 'a', completed: '2024-01-01' }), audit({ id: 'b', completed: PAST })];
+    assert.equal(independentReviewResult(rows, TODAY, 365).result, 'pass');
+  });
+
+  test('a custom cadence is honoured', () => {
+    // PAST is 2026-01-01, TODAY is 2026-06-15 — well inside a year, but
+    // outside a 60-day cadence some tenants might set for a higher-risk ISMS.
+    assert.equal(independentReviewResult([audit()], TODAY, 60).result, 'fail');
+  });
+});
+
+describe('incidentLessonsResult() — A.5.27 / A.5.28', () => {
+  test('closed incidents with root cause and lessons learned pass', () => {
+    assert.equal(incidentLessonsResult([incident()]).result, 'pass');
+  });
+
+  test('open/investigating incidents are not judged at all', () => {
+    // Only a CLOSED incident should have a completed write-up — one
+    // still open has not reached the point where that is expected.
+    assert.equal(incidentLessonsResult([incident({ status: 'Open', rootCause: '', lessonsLearned: '' })]).result, 'manual');
+  });
+
+  test('a closed HIGH-severity incident missing the write-up fails', () => {
+    const r = incidentLessonsResult([incident({ severity: 'Critical', rootCause: '', lessonsLearned: '' })]);
+    assert.equal(r.result, 'fail');
+    assert.match(r.note, /Critical\/High/);
+  });
+
+  test('a closed LOW-severity incident missing the write-up is only a review', () => {
+    // Same criticality-based split as supplierCheckResult() — a lapsed
+    // low-severity write-up is a process gap, not a control failure.
+    assert.equal(incidentLessonsResult([incident({ severity: 'Low', rootCause: '', lessonsLearned: '' })]).result, 'review');
+  });
+
+  test('missing only one of root cause / lessons learned still counts as missing', () => {
+    assert.equal(incidentLessonsResult([incident({ lessonsLearned: '' })]).result, 'fail');
+    assert.equal(incidentLessonsResult([incident({ rootCause: '' })]).result, 'fail');
+  });
+
+  test('one incomplete Critical incident outranks many complete ones', () => {
+    const rows = [incident({ id: 'a' }), incident({ id: 'b' }), incident({ id: 'c', severity: 'Critical', rootCause: '', lessonsLearned: '' })];
+    assert.equal(incidentLessonsResult(rows).result, 'fail');
   });
 });
 

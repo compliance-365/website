@@ -380,6 +380,14 @@ function showModal(opts) {
         { t: 'Review and re-date every policy past its review cadence', pr: 'Medium', days: 45, control: 'A.5.1' }
       ]
     },
+    'audit-review': {
+      risk: { title: 'No current independent review of the ISMS, so effectiveness is assumed rather than tested', cat: 'Governance', L: 3, I: 4, controls: ['A.5.35'] },
+      actions: [{ t: 'Complete a scheduled internal audit, or schedule one if none is planned, and record its findings', pr: 'High', days: 45, control: 'A.5.35' }]
+    },
+    'incident-lessons': {
+      risk: { title: 'Incidents closed without a recorded root cause or lessons learned', cat: 'Ops', L: 3, I: 3, controls: ['A.5.27', 'A.5.28'] },
+      actions: [{ t: 'Complete a post-incident review for each affected incident and record its root cause and lessons learned', pr: 'Medium', days: 21, control: 'A.5.27' }]
+    },
     'pim': {
       risk: { title: 'Privileged directory roles held as permanent assignments rather than time-bound, approved elevation', cat: 'Access', L: 3, I: 4, controls: ['A.8.2', 'A.5.18'] },
       actions: [{ t: 'Convert permanent privileged role assignments to PIM-eligible with approval workflow', pr: 'High', days: 30, control: 'A.8.2' }]
@@ -6568,7 +6576,9 @@ function showModal(opts) {
       backup: L.backupCheckResult(S.calendar || [], today),
       bcp: L.bcpCheckResult(S.calendar || [], docs, today),
       supplier: L.supplierCheckResult(S.vendors || [], today),
-      policy: L.policyCheckResult(docs, today, { warnDays: S.settings && S.settings.docReviewWarnDays })
+      policy: L.policyCheckResult(docs, today, { warnDays: S.settings && S.settings.docReviewWarnDays }),
+      'audit-review': L.independentReviewResult(S.audits || [], today),
+      'incident-lessons': L.incidentLessonsResult(S.incidents || [])
     };
     Object.keys(out).forEach(function (k) {
       S.lastResults[k] = out[k].result;

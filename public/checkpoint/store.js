@@ -513,6 +513,13 @@ window.CHECK_DEFS = [
      a client tracking awareness training in a separate LMS is never
      scored down for leaving no trace here. */
   { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: true },
+  /* Two more register-derived checks, same reasoning and same safety
+     property as backup/bcp/supplier/policy above: computed client-side
+     from a Checkpoint register (Audits, Incidents) rather than Graph,
+     and 'manual' on an empty register so an untouched tenant is never
+     scored down for it. */
+  { id: 'audit-review',     area: 'Governance', label: 'Independent internal review completed within cadence', tpl: 'audit-review', scored: true },
+  { id: 'incident-lessons', area: 'Governance', label: 'Closed incidents have a recorded root cause and lessons learned', tpl: 'incident-lessons', scored: true },
   /* Cloud (AWS) (10) — populated only by the optional AWS collector
      (public/checkpoint/aws/), a Lambda a client deploys into their OWN
      AWS account. Every other check here reads Microsoft Graph, which
@@ -882,6 +889,14 @@ window.CHECK_CONTROLS = {
   'bcp': ['A.5.29', 'A.5.30'],
   'supplier': ['A.5.19', 'A.5.20', 'A.5.22'],
   'policy': ['A.5.1'],
+  /* Two more register-derived checks. A.5.35 (independent review) had no
+     automated signal despite its own guidance text naming the Audits
+     register as the intended evidence source. A.5.27/A.5.28 (learning
+     from incidents / evidence collection) share one signal: a closed
+     incident's root cause and lessons-learned fields ARE the
+     post-incident review record both controls ask for. */
+  'audit-review': ['A.5.35'],
+  'incident-lessons': ['A.5.27', 'A.5.28'],
   /* Privacy. A.5.34 covers privacy and PII protection; A.5.33/A.8.10 are
      the records-protection and information-deletion pair that retention
      labels actually implement. These were entirely self-reported before

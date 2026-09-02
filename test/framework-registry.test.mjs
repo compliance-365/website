@@ -484,13 +484,17 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // access-review/pim. 47 -> 48 when 'sod' was added (Privileged Role
     // Administrator also holding another directory role) — mined from the
     // same /directoryRoles + per-role /members calls the leaver-hygiene
-    // check already makes, so no new Graph call and no new scope. An
-    // unlicensed tenant is unaffected either way: the relevant capability
-    // probe fails, the check degrades to 'manual', and score() excludes
-    // 'manual' from its denominator entirely.
-    assert.equal(CHECK_DEFS.length, 48);
+    // check already makes, so no new Graph call and no new scope. 48 -> 50
+    // when 'audit-review' and 'incident-lessons' were added — computed
+    // client-side from Checkpoint's own Audits and Incidents registers
+    // (like backup/bcp/supplier/policy before them), not Graph, so again
+    // no new call and no new scope. An unlicensed tenant is unaffected
+    // either way: the relevant capability probe fails, the check degrades
+    // to 'manual', and score() excludes 'manual' from its denominator
+    // entirely.
+    assert.equal(CHECK_DEFS.length, 50);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 38);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 40);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {
