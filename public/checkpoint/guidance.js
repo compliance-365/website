@@ -249,16 +249,16 @@ window.GUIDANCE = {
     checks: ["riskyusers", "xdr-incidents"]
   },
   'A.5.27': {
-    how: "Hold a short post-incident review after any real incident — what happened, what worked, what to change — and turn the findings into concrete actions in your register rather than a report nobody reads again. This is the difference between having an incident process and actually improving it.",
+    how: "Hold a short post-incident review after any real incident — what happened, what worked, what to change — and turn the findings into concrete actions in your register rather than a report nobody reads again. This is the difference between having an incident process and actually improving it. Checkpoint scores this directly: a closed incident in the register with no recorded root cause or lessons learned was closed without that review, which is exactly the gap this control tests for.",
     evidence: "A post-incident review record with at least one resulting action item tracked to completion.",
     link: "https://security.microsoft.com",
-    checks: []
+    checks: ["incident-lessons"]
   },
   'A.5.28': {
-    how: "Define how evidence gets preserved during an incident — Purview's audit log and eDiscovery hold capabilities can freeze relevant data before it's altered — and document the chain of custody for anything that might support a legal or disciplinary process.",
+    how: "Define how evidence gets preserved during an incident — Purview's audit log and eDiscovery hold capabilities can freeze relevant data before it's altered — and document the chain of custody for anything that might support a legal or disciplinary process. Checkpoint's incident register write-up (root cause and lessons learned) is a lighter-weight version of the same evidence trail, and is what the automated signal here actually checks — it doesn't verify chain of custody for a real legal hold.",
     evidence: "A documented evidence-collection procedure and, for a real incident, the preserved evidence with a chain-of-custody record.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["incident-lessons"]
   },
   'A.5.29': {
     how: "Define which security controls must keep operating during a disruption (access control and logging shouldn't lapse just because a disaster recovery plan is in effect) and build that into your business continuity plan explicitly, rather than assuming security is someone else's problem during an outage.",
@@ -297,10 +297,10 @@ window.GUIDANCE = {
     checks: ["privacy-srr"]
   },
   'A.5.35': {
-    how: "Have someone independent of day-to-day operations — an internal audit function, an external consultant, or at minimum a peer from another team — review the ISMS at least annually and record findings. Checkpoint's own internal audit programme and management review registers are built to hold exactly this evidence.",
+    how: "Have someone independent of day-to-day operations — an internal audit function, an external consultant, or at minimum a peer from another team — review the ISMS at least annually and record findings. Checkpoint's own internal audit programme and management review registers are built to hold exactly this evidence, and score it directly: a completed audit within the last 12 months passes, a planned-but-never-completed or lapsed one does not.",
     evidence: "An independent review record with findings, and any resulting actions tracked to completion.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["audit-review"]
   },
   'A.5.36': {
     how: "Check that your actual practice matches your documented policies on a periodic basis — a control self-assessment or Purview Compliance Manager's improvement-action tracking both work — and record any gap found along with the remediation.",

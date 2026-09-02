@@ -988,6 +988,62 @@
     return { result: 'pass', note: 'All ' + summary.approved + ' approved document(s) versioned, owned and within review cadence.' };
   }
 
+  /* A.5.35 — independent review of the ISMS. Scored from Checkpoint's own
+     internal audit programme (the Audits register) rather than a Graph
+     signal — its own guidance text already points here, and a completed
+     audit entry IS the independent review record an auditor wants.
+     Mirrors backupCheckResult()'s recency logic: a PLANNED audit is not
+     a review that happened, so only a COMPLETED one counts, and it has
+     to be within cadence (default annual) to still be current. */
+  function independentReviewResult(audits, today, cadenceDays) {
+    cadenceDays = cadenceDays > 0 ? cadenceDays : 365;
+    var list = (audits || []).filter(function (a) { return a; });
+    if (!list.length) {
+      return { result: 'manual', note: 'No internal audits recorded in Checkpoint\'s audit programme — schedule one, or keep independent-review evidence in whatever system you use.' };
+    }
+    var completed = list.filter(function (a) { return a.status === 'Completed' && a.completed; });
+    if (!completed.length) {
+      return { result: 'review', note: list.length + ' internal audit(s) scheduled, but none completed yet.' };
+    }
+    var mostRecent = completed.reduce(function (m, a) { return !m || a.completed > m.completed ? a : m; }, null);
+    var age = daysBetweenDateStr(mostRecent.completed, today);
+    if (age > cadenceDays) {
+      return { result: 'fail', note: 'The most recent completed internal audit was ' + age + ' days ago (' + mostRecent.completed + ') — independent review is not current (target ≤' + cadenceDays + ' days).' };
+    }
+    return { result: 'pass', note: completed.length + ' internal audit(s) completed, most recently ' + age + ' day(s) ago, within the ' + cadenceDays + '-day review cadence.' };
+  }
+
+  /* A.5.27 (learning from incidents) and A.5.28 (evidence collection) —
+     scored from Checkpoint's own Incidents register. A closed incident
+     with no recorded root cause or lessons learned was closed without a
+     post-incident review, which is exactly the finding both controls
+     test for. Severity decides whether that is a fail or a review, the
+     same way supplierCheckResult() treats a lapsed critical supplier
+     differently from a lapsed low-criticality one — a Low-severity
+     incident closed without a write-up is a process gap; a High one is
+     a control failure. */
+  function incidentLessonsResult(incidents) {
+    var list = (incidents || []).filter(function (n) { return n; });
+    var closed = list.filter(function (n) { return n.status === 'Closed'; });
+    if (!closed.length) {
+      return {
+        result: 'manual',
+        note: list.length
+          ? list.length + ' incident(s) recorded, none closed out yet — this scores once at least one is.'
+          : 'No incidents recorded in Checkpoint\'s incident register — nothing to review yet.'
+      };
+    }
+    var missing = closed.filter(function (n) { return !n.rootCause || !n.lessonsLearned; });
+    var missingHigh = missing.filter(function (n) { return n.severity === 'Critical' || n.severity === 'High'; });
+    if (missingHigh.length) {
+      return { result: 'fail', note: missingHigh.length + ' Critical/High-severity closed incident(s) have no recorded root cause or lessons learned, of ' + closed.length + ' closed.' };
+    }
+    if (missing.length) {
+      return { result: 'review', note: missing.length + ' lower-severity closed incident(s) have no recorded root cause or lessons learned, of ' + closed.length + ' closed.' };
+    }
+    return { result: 'pass', note: 'All ' + closed.length + ' closed incident(s) have a recorded root cause and lessons learned.' };
+  }
+
   /* Who is missing induction training entirely. Distinct from the
      re-assignment rule a recurring campaign uses: a campaign skips
      anyone with an OPEN record (so an annual refresh reaches people who
@@ -3229,6 +3285,7 @@
     segregationOfDutiesResult: segregationOfDutiesResult,
     recurringActivityState: recurringActivityState, backupCheckResult: backupCheckResult,
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
+    independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
