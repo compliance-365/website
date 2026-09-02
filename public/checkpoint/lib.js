@@ -527,6 +527,46 @@
     };
   }
 
+  /* A.5.3 — segregation of duties, mined from Entra directory role
+     membership (the same per-role /members data the leaver check
+     already gathers, extended here to keep per-user role names rather
+     than a flat privileged/not-privileged set).
+
+     Deliberately narrow: ISO 27001 A.5.3 is about conflicting duties
+     in general, and there is no single fixed list of which role PAIRS
+     conflict — Microsoft's own answer (Entra ID Governance's
+     "incompatible access" feature) is "you define that for your
+     organisation," not a built-in list. Inventing one here would be a
+     guess dressed up as a finding. The one pairing that IS genuinely
+     defensible without a tenant-supplied list: Privileged Role
+     Administrator can grant itself, or anyone, any other directory
+     role — so holding PRA alongside ANY other privileged role is
+     inherently self-escalating the moment both are held by the same
+     person, regardless of which second role it happens to be. That is
+     a structural fact about what PRA can do, not a judgement call
+     about which roles are sensitive.
+
+     roleMembersByUser: { userId: { name, roles: [roleDisplayName,...] } }. */
+  function segregationOfDutiesResult(roleMembersByUser) {
+    var PRA = 'Privileged Role Administrator';
+    var byUser = roleMembersByUser || {};
+    var offenders = [];
+    Object.keys(byUser).forEach(function (id) {
+      var u = byUser[id] || {};
+      var roles = u.roles || [];
+      if (roles.indexOf(PRA) === -1) return;
+      var others = roles.filter(function (r) { return r !== PRA; });
+      if (others.length) offenders.push({ name: u.name || id, roles: others });
+    });
+    if (!offenders.length) return { result: 'pass', note: 'No Privileged Role Administrator also holds another directory role.', offenders: [] };
+    var shown = offenders.slice(0, 5).map(function (o) { return o.name + ' (also: ' + o.roles.join(', ') + ')'; }).join('; ');
+    return {
+      result: 'fail',
+      note: offenders.length + ' Privileged Role Administrator' + (offenders.length === 1 ? '' : 's') + ' also hold another directory role — self-escalating, since Privileged Role Administrator can grant itself any other role: ' + shown + (offenders.length > 5 ? ', +' + (offenders.length - 5) + ' more' : ''),
+      offenders: offenders
+    };
+  }
+
   /* caDeviceComplianceResult() / caRiskBasedResult() — mined from the
      SAME Conditional Access policy array graph.js already fetches for
      mfa-all/legacy/mfa-priv. No new Graph call, no new scope: the
@@ -3186,6 +3226,7 @@
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     trainingCheckResult: trainingCheckResult, usersMissingInduction: usersMissingInduction,
+    segregationOfDutiesResult: segregationOfDutiesResult,
     recurringActivityState: recurringActivityState, backupCheckResult: backupCheckResult,
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,

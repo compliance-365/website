@@ -337,6 +337,10 @@ function showModal(opts) {
       risk: { title: 'Joiner and leaver processing is manual, not technically enforced', cat: 'Access', L: 3, I: 4, controls: ['A.5.16', 'A.6.5'] },
       actions: [{ t: 'Configure and enable a Lifecycle Workflow covering whichever of joiner/leaver is not yet automated', pr: 'High', days: 30, control: 'A.5.16' }]
     },
+    'sod': {
+      risk: { title: 'A Privileged Role Administrator also holds another directory role, able to grant itself further access', cat: 'Access', L: 3, I: 5, controls: ['A.5.3'] },
+      actions: [{ t: 'Remove the Privileged Role Administrator assignment, or the other role(s), from each affected account so no single person can grant themselves further privilege', pr: 'Critical', days: 14, control: 'A.5.3' }]
+    },
     'privacy-srr': {
       risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', L: 4, I: 4, controls: ['A.5.34'] },
       actions: [
