@@ -345,6 +345,7 @@ window.Graph = (function () {
       set('ca-device', 'manual', capabilities.conditionalAccess.note);
       set('ca-sif', 'manual', capabilities.conditionalAccess.note);
       set('ca-tou', 'manual', capabilities.conditionalAccess.note);
+      set('ca-cas', 'manual', capabilities.conditionalAccess.note);
     } else {
       try {
         policies = (await g('/identity/conditionalAccess/policies')).value || [];
@@ -420,6 +421,13 @@ window.Graph = (function () {
       raw['ca-tou'] = { conditionalAccessPolicies: policies };
       var caTou = window.CheckpointLib.caTermsOfUseResult(policies);
       set('ca-tou', caTou.result, caTou.note);
+
+      /* ca-cas (A.5.23 — cloud service governance) mines a fourth field
+         off the same policy array: sessionControls.cloudAppSecurity. No
+         new call, no new scope. */
+      raw['ca-cas'] = { conditionalAccessPolicies: policies };
+      var caCas = window.CheckpointLib.caCloudAppSecurityResult(policies);
+      set('ca-cas', caCas.result, caCas.note);
     }
 
     /* ca-risk reads the same policy array for Entra ID Protection's

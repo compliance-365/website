@@ -488,13 +488,17 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // when 'audit-review' and 'incident-lessons' were added — computed
     // client-side from Checkpoint's own Audits and Incidents registers
     // (like backup/bcp/supplier/policy before them), not Graph, so again
-    // no new call and no new scope. An unlicensed tenant is unaffected
-    // either way: the relevant capability probe fails, the check degrades
-    // to 'manual', and score() excludes 'manual' from its denominator
+    // no new call and no new scope. 50 -> 51 when 'ca-cas' was added
+    // (A.5.23 cloud service governance) — mines a fourth field off the
+    // SAME Conditional Access policy array ca-device/ca-sif/ca-tou
+    // already read (sessionControls.cloudAppSecurity), so again no new
+    // call and no new scope. An unlicensed tenant is unaffected either
+    // way: the relevant capability probe fails, the check degrades to
+    // 'manual', and score() excludes 'manual' from its denominator
     // entirely.
-    assert.equal(CHECK_DEFS.length, 50);
+    assert.equal(CHECK_DEFS.length, 51);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 40);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 41);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

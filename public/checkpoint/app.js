@@ -295,6 +295,10 @@ function showModal(opts) {
       risk: { title: 'Acceptable-use terms are not technically enforced at sign-in', cat: 'People', L: 2, I: 2, controls: ['A.5.10'] },
       actions: [{ t: 'Confirm how acceptable-use acknowledgment is captured, or add a Conditional Access Terms of Use policy', pr: 'Low', days: 45, control: 'A.5.10' }]
     },
+    'ca-cas': {
+      risk: { title: 'Cloud service adoption is not technically governed at sign-in', cat: 'Data', L: 2, I: 3, controls: ['A.5.23'] },
+      actions: [{ t: 'Confirm how cloud service adoption is governed, or add a Conditional Access policy applying Defender for Cloud Apps session control', pr: 'Medium', days: 45, control: 'A.5.23' }]
+    },
     'admins': {
       risk: { title: 'Excess Global Administrator assignments widen the blast radius', cat: 'Access', L: 3, I: 5, controls: ['A.8.2'] },
       actions: [{ t: 'Reduce Global Admins to ≤4; move others to PIM-eligible roles', pr: 'High', days: 14, control: 'A.8.2' }]

@@ -1,15 +1,17 @@
-// Tests for caSignInFrequencyResult() and caTermsOfUseResult() — the
-// scoring behind the 'ca-sif' and 'ca-tou' posture checks.
+// Tests for caSignInFrequencyResult(), caTermsOfUseResult() and
+// caCloudAppSecurityResult() — the scoring behind the 'ca-sif', 'ca-tou'
+// and 'ca-cas' posture checks.
 //
-// Both mine fields off the SAME Conditional Access policy array
+// All three mine fields off the SAME Conditional Access policy array
 // mfa-all/legacy/mfa-priv/ca-device/ca-risk already fetch —
-// sessionControls.signInFrequency and grantControls.termsOfUse — that
-// nothing was previously reading. No new Graph call, no new scope.
+// sessionControls.signInFrequency, grantControls.termsOfUse and
+// sessionControls.cloudAppSecurity — that nothing was previously
+// reading. No new Graph call, no new scope.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { caSignInFrequencyResult, caTermsOfUseResult } = CheckpointLib;
+const { caSignInFrequencyResult, caTermsOfUseResult, caCloudAppSecurityResult } = CheckpointLib;
 
 function policy(over) {
   return Object.assign({
@@ -99,5 +101,33 @@ describe('caTermsOfUseResult() — A.5.10', () => {
     const plain = policy({ grantControls: { builtInControls: ['mfa'] } });
     const withTou = policy({ id: 'p2', grantControls: { termsOfUse: ['tou-guid-1'] } });
     assert.equal(caTermsOfUseResult([plain, withTou]).result, 'pass');
+  });
+});
+
+describe('caCloudAppSecurityResult() — A.5.23', () => {
+  test('no policies at all is a review, not a fail — an out-of-band process may exist', () => {
+    assert.equal(caCloudAppSecurityResult([]).result, 'review');
+    assert.equal(caCloudAppSecurityResult(null).result, 'review');
+  });
+
+  test('a policy applying Defender for Cloud Apps session control passes', () => {
+    const p = policy({ sessionControls: { cloudAppSecurity: { isEnabled: true, cloudAppSecurityType: 'mcasConfigured' } } });
+    assert.equal(caCloudAppSecurityResult([p]).result, 'pass');
+  });
+
+  test('cloudAppSecurity present but isEnabled false does not count', () => {
+    const p = policy({ sessionControls: { cloudAppSecurity: { isEnabled: false, cloudAppSecurityType: 'mcasConfigured' } } });
+    assert.equal(caCloudAppSecurityResult([p]).result, 'review');
+  });
+
+  test('a disabled policy applying cloud app security is ignored', () => {
+    const p = policy({ state: 'disabled', sessionControls: { cloudAppSecurity: { isEnabled: true, cloudAppSecurityType: 'mcasConfigured' } } });
+    assert.equal(caCloudAppSecurityResult([p]).result, 'review');
+  });
+
+  test('one policy with cloud app security among several without still passes', () => {
+    const plain = policy({ grantControls: { builtInControls: ['mfa'] } });
+    const withCas = policy({ id: 'p2', sessionControls: { cloudAppSecurity: { isEnabled: true, cloudAppSecurityType: 'monitorOnly' } } });
+    assert.equal(caCloudAppSecurityResult([plain, withCas]).result, 'pass');
   });
 });

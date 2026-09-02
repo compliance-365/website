@@ -671,6 +671,32 @@
     return { result: 'review', note: 'No Conditional Access policy requires Terms of Use acceptance — confirm acceptable-use acknowledgment is captured another way (e.g. HR onboarding, a signed policy register)' };
   }
 
+  /* A.5.23 — governing which cloud services staff can use. Mines a
+     fourth field off the SAME Conditional Access policy array —
+     sessionControls.cloudAppSecurity — that ca-device/ca-sif/ca-tou did
+     not touch. No new Graph call, no new scope.
+
+     An enabled CA policy applying Defender for Cloud Apps session
+     control IS cloud-app governance technically enforced at sign-in,
+     which is exactly what A.5.23's guidance asks for. Like
+     caTermsOfUseResult(), absence is 'review' rather than 'fail':
+     Defender for Cloud Apps is its own licence, and plenty of tenants
+     govern cloud service adoption through a supplier-review process
+     instead of a technical control Checkpoint can see — a real gap here
+     is indistinguishable from a governed-elsewhere tenant, and only one
+     of those deserves a finding. */
+  function caCloudAppSecurityResult(policies) {
+    var enabled = (policies || []).filter(function (p) { return p && p.state === 'enabled'; });
+    var covers = enabled.some(function (p) {
+      var cas = p.sessionControls && p.sessionControls.cloudAppSecurity;
+      return !!(cas && cas.isEnabled);
+    });
+    if (covers) {
+      return { result: 'pass', note: 'A Conditional Access policy applies Defender for Cloud Apps session control, governing cloud app usage' };
+    }
+    return { result: 'review', note: 'No Conditional Access policy applies Defender for Cloud Apps session control — confirm cloud service adoption is governed another way (e.g. a supplier-review gate, or Defender for Cloud Apps discovery run separately)' };
+  }
+
   /* oauthConsentRiskResult() mines a field the 'riskyapps' check already
      fetches and selects — oauth2PermissionGrants' consentType — but has
      never scored on. riskyapps treats every high-privilege grant the
@@ -3253,7 +3279,7 @@
   }
 
   return {
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
