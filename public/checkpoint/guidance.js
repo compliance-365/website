@@ -225,10 +225,10 @@ window.GUIDANCE = {
     checks: ["supplier"]
   },
   'A.5.23': {
-    how: "Govern which cloud services staff can use with Conditional Access app restrictions and, if licensed, Defender for Cloud Apps' app governance and shadow-IT discovery. Require new cloud services to go through the same supplier-review process as any other vendor before adoption.",
+    how: "Govern which cloud services staff can use with Conditional Access app restrictions and, if licensed, Defender for Cloud Apps' app governance and shadow-IT discovery. Require new cloud services to go through the same supplier-review process as any other vendor before adoption. Checkpoint scores the technical half directly: an enabled Conditional Access policy applying Defender for Cloud Apps session control passes; its absence is a review rather than a fail, since plenty of tenants govern cloud service adoption through the supplier-review process instead — a real gap here looks identical to that from outside.",
     evidence: "The Conditional Access app-restriction policy and, where used, a Defender for Cloud Apps discovery report.",
     link: "https://security.microsoft.com",
-    checks: []
+    checks: ["ca-cas"]
   },
   'A.5.24': {
     how: "Document an incident response plan covering roles, escalation, containment and notification obligations, and rehearse it at least once a year with a tabletop exercise. Keep the plan itself in a location that's still reachable if the primary tenant is compromised.",

@@ -444,6 +444,7 @@ window.CHECK_DEFS = [
   { id: 'ca-risk',    area: 'Identity', label: 'Risk-based Conditional Access enforced',       tpl: 'ca-risk',   scored: true, requiresCapability: 'identityProtection' },
   { id: 'ca-sif',     area: 'Identity', label: 'Sign-in frequency enforced for privileged roles', tpl: 'ca-sif', scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'ca-tou',     area: 'Identity', label: 'Terms of Use required at sign-in',             tpl: 'ca-tou',    scored: true, requiresCapability: 'conditionalAccess' },
+  { id: 'ca-cas',     area: 'Identity', label: 'Cloud app usage governed by Defender for Cloud Apps session control', tpl: 'ca-cas', scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'admins',     area: 'Identity', label: 'Global admin count within threshold',          tpl: 'admins',    scored: true },
   { id: 'pim',        area: 'Identity', label: 'Privileged roles use eligible (PIM) assignment', tpl: 'pim',     scored: true, requiresCapability: 'pim' },
   { id: 'guests',     area: 'Identity', label: 'External guest user count within threshold',   tpl: null,        scored: true },
@@ -848,6 +849,7 @@ window.CHECK_CONTROLS = {
   'ca-risk': ['A.8.5', 'A.5.15'],
   'ca-sif': ['A.8.2', 'A.8.5'],
   'ca-tou': ['A.5.10'],
+  'ca-cas': ['A.5.23'],
   'admins': ['A.8.2'],
   'pim': ['A.8.2', 'A.5.18'],
   'guests': ['A.5.16'],
@@ -1127,7 +1129,7 @@ window.DemoStore = (function () {
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
       lastResults: {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
         'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
@@ -1139,6 +1141,7 @@ window.DemoStore = (function () {
         'ca-risk': 'No Conditional Access policy enforces sign-in-risk or user-risk based access controls',
         'ca-sif': 'No Conditional Access policy enforces sign-in frequency for privileged directory roles — a stolen or persisted admin session can remain valid indefinitely',
         'ca-tou': 'No Conditional Access policy requires Terms of Use acceptance — confirm acceptable-use acknowledgment is captured another way (e.g. HR onboarding, a signed policy register)',
+        'ca-cas': 'No Conditional Access policy applies Defender for Cloud Apps session control — confirm cloud service adoption is governed another way (e.g. a supplier-review gate, or Defender for Cloud Apps discovery run separately)',
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
         'compliance-policy': '3 compliance policies configured', 'device-checkin': '14 of 214 device(s) have not checked in for over 30 days (2 never have) — their compliance state is stale evidence', 'device-config': '11 device configuration profiles deployed (showing first page)', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants): Timesheet Sync Pro (unverified publisher), Contoso CRM Connector (verified: Contoso Software Ltd)',
         'oauth-consent': '1 high-privilege OAuth grant(s) consented to directly by an end user, with no admin review (1 other high-privilege grant(s) were admin-consented): Timesheet Sync Pro (unverified publisher)',
