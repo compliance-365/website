@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.48.0',
+    date: '2026-09-03',
+    entries: [
+      'New: an in-app guided setup for the continuous-monitoring Azure Function, replacing the Dashboard\'s old "see SETUP.md" pointer. The panel fills in what Checkpoint already knows — tenant ID, SharePoint hostname, site path, list prefix, and the resolved Graph site ID — and builds the exact Sites.Selected grant request a tenant admin runs once from Graph Explorer, with a copy button on every value. The thirteen application permissions to add are listed with a copy-all button instead of a markdown table to retype by hand.',
+      'The six deployment steps are tracked as a checklist that remembers your progress in this browser, so leaving and coming back doesn\'t lose your place. The last step — verify — ticks itself the moment an automated scan is actually recorded, since that\'s the one step Checkpoint can observe directly rather than take your word for.',
+      'This does not add a true one-click deploy: the Azure Portal\'s "Deploy to Azure" button has no supported way to pre-fill individual parameter values from a URL, only a much heavier marketplace-style package could do that, and Checkpoint never sees the client secret you create in step 1 regardless. What changed is real friction removed, not a shortcut around Azure\'s own deployment form.'
+    ]
+  },
+  {
     version: '1.47.0',
     date: '2026-09-03',
     entries: [

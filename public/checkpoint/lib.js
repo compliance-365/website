@@ -3115,6 +3115,42 @@
     return days > 0 ? days : 0;
   }
 
+  /* Continuous-monitoring in-app setup guidance — the scheduled Azure
+     Function's own application-permission list and its Sites.Selected
+     grant request, surfaced inline in the Dashboard instead of a "see
+     SETUP.md" pointer. MONITOR_APP_PERMISSIONS must be kept in sync BY
+     HAND with azure/README.md's own permission table (§2) — nothing
+     enforces that automatically, same caveat as the monitor's own
+     hand-mirrored check logic against lib.js. */
+  var MONITOR_APP_PERMISSIONS = [
+    'Policy.Read.All', 'RoleManagement.Read.Directory', 'User.Read.All',
+    'Directory.Read.All', 'IdentityRiskyUser.Read.All', 'AccessReview.Read.All',
+    'DeviceManagementManagedDevices.Read.All', 'DeviceManagementConfiguration.Read.All',
+    'SecurityEvents.Read.All', 'Sites.Selected', 'SecurityIncident.Read.All',
+    'SubjectRightsRequest.Read.All', 'LifecycleWorkflows.Read.All'
+  ];
+
+  /* The exact HTTP request (README.md §3) a tenant admin runs once, from
+     Graph Explorer, to grant the monitor's app registration write access
+     to the one SharePoint site it needs — with siteId/clientId filled in
+     wherever Checkpoint already knows them, so a practitioner isn't
+     hand-assembling this from a markdown snippet. Falls back to a
+     placeholder for whichever value isn't known yet, so the snippet is
+     always valid to display (never throws on missing input). */
+  function monitorGrantSnippet(siteId, clientId, appDisplayName) {
+    var body = {
+      roles: ['write'],
+      grantedToIdentities: [{
+        application: {
+          id: clientId || '<clientId from step 1>',
+          displayName: appDisplayName || 'Checkpoint Posture Monitor'
+        }
+      }]
+    };
+    return 'POST https://graph.microsoft.com/v1.0/sites/' + (siteId || '<siteId — see the Site ID value above>') +
+      '/permissions\nContent-Type: application/json\n\n' + JSON.stringify(body, null, 2);
+  }
+
   /* The seven management-review inputs ISO 27001 Clause 9.3.2 requires
      the review to consider. Drives both the structured capture form and
      the Management Review Pack report, so the two can never list a
@@ -3444,6 +3480,7 @@
     independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
+    MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
     controlAssurance: controlAssurance, assuranceSummary: assuranceSummary,

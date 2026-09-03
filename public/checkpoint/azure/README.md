@@ -166,11 +166,24 @@ without touching anything else this app can do.
 
 ## 4. Deploy the infrastructure
 
+The Checkpoint browser app's Dashboard has a guided version of steps
+1–4 (Continuous monitoring card, once no automated scan has been
+recorded yet) that fills in `tenantId`, `spHostname`, `spSitePath` and
+`listPrefix` from this tenant's own live data, builds the exact step 3
+Sites.Selected request below with the resolved site ID substituted in,
+and tracks which of the six steps is done. This section is the
+underlying reference it's built from — use whichever is more
+convenient; both stay in sync by hand (`MONITOR_APP_PERMISSIONS` in
+lib.js mirrors the table in §2 above).
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fcompliance-365%2Fwebsite%2Fmain%2Fpublic%2Fcheckpoint%2Fazure%2Fazuredeploy.json)
 
 Fill in the parameters from steps 1–3 (`tenantId`, `clientId`,
 `clientSecret`, `spHostname`, `spSitePath`, `listPrefix` — the last two
-must match `config.js` exactly). This provisions:
+must match `config.js` exactly). The Azure Portal's button above has no
+supported way to pre-fill these from a URL — only default values from
+the template itself — so they still need pasting in by hand here or in
+the in-app panel. This provisions:
 
 - a Storage Account (required by Azure Functions itself, not part of
   the posture-check data path),

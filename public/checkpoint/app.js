@@ -3331,6 +3331,90 @@ function showModal(opts) {
     }
   }
 
+  /* Continuous-monitoring in-app setup guide — replaces the old plain-
+     text "see SETUP.md § Continuous monitoring" fallback with the actual
+     values (tenant id, SharePoint site, list prefix, resolved site id)
+     and the exact Sites.Selected grant request a practitioner needs,
+     since Checkpoint already knows or can resolve every one of them
+     except the two values Entra creates fresh (Client ID, Client
+     Secret). The Azure Portal's plain "Deploy to Azure" button has no
+     supported way to pre-fill individual parameter values via URL —
+     only pre-populated defaultValues from the template itself, or a
+     full CreateUIDefinition marketplace package neither of which fits a
+     single-tenant optional deploy — so this stops short of a true
+     one-click deploy. What it removes instead is the real friction:
+     hunting the site id up via Graph Explorer, retyping thirteen
+     permission names by hand from a markdown table, and losing track of
+     which of the six README.md steps is already done. Step 6 (verify)
+     auto-completes itself, since it's the one step this app can
+     actually observe: an automated scan being recorded. */
+  function renderMonitorSetupPanel() {
+    var wrap = document.getElementById('monitorSetupPanel');
+    if (!wrap) return;
+    if (Store.kind !== 'sharepoint') {
+      wrap.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">Demo mode has no tenant to deploy the monitor into — this guide fills itself in from live tenant data once you sign in for real.</p>';
+      return;
+    }
+    var acc = Graph.getAccount();
+    var tenantId = (acc && acc.tenantId) || '';
+    var siteId = (Store.getSiteId && Store.getSiteId()) || '';
+    var hostname = (Store.getSiteHostname && Store.getSiteHostname()) || '';
+    var sitePath = CONFIG.site === 'root' ? '(root site — leave blank)' : CONFIG.site;
+    var listPrefix = CONFIG.listPrefix || 'Checkpoint';
+    var state = loadMonitorSetupState();
+    var autoDone = (S.scans || []).some(function (s) { return s.source === 'automated'; });
+
+    function copyRow(label, value, elId) {
+      return '<div class="d-kv"><span>' + esc(label) + '</span><b><code id="' + elId + '" style="font-size:11px">' + esc(value || '—') + '</code>' +
+        (value ? ' <button class="btn ghost sm" data-action="App.copyEl" data-id="' + elId + '" style="margin-left:6px">Copy</button>' : '') + '</b></div>';
+    }
+
+    var valuesHtml = copyRow('Tenant ID', tenantId, 'msTenantId') +
+      copyRow('SharePoint hostname', hostname, 'msHostname') +
+      copyRow('Site path', sitePath, 'msSitePath') +
+      copyRow('List prefix', listPrefix, 'msListPrefix') +
+      copyRow('Site ID (for the grant request below)', siteId, 'msSiteId');
+
+    var permsHtml = '<pre id="msPerms" style="white-space:pre-wrap;font-size:11px;background:var(--surface-2);border-radius:6px;padding:8px;margin:6px 0">' +
+      esc(window.CheckpointLib.MONITOR_APP_PERMISSIONS.join('\n')) + '</pre>' +
+      '<button class="btn ghost sm" data-action="App.copyEl" data-id="msPerms">Copy permission list</button>';
+
+    var clientId = state.clientId || '';
+    var grantSnippet = window.CheckpointLib.monitorGrantSnippet(siteId, clientId, 'Checkpoint Posture Monitor');
+    var grantHtml =
+      '<div class="d-kv" style="padding:0 0 6px"><span>App registration Client ID (from step 1, once created)</span></div>' +
+      '<input type="text" value="' + esc(clientId) + '" placeholder="paste the Application (client) ID here" data-change-action="App.setMonitorClientId" style="width:100%;margin-bottom:6px">' +
+      '<pre id="msGrant" style="white-space:pre-wrap;font-size:11px;background:var(--surface-2);border-radius:6px;padding:8px;margin:6px 0">' + esc(grantSnippet) + '</pre>' +
+      '<button class="btn ghost sm" data-action="App.copyEl" data-id="msGrant">Copy request</button>';
+
+    var STEPS = [
+      { key: 'step1', label: 'Register the monitor’s app registration in Entra ID (Entra admin center → App registrations → New registration), create a client secret, and note its Application (client) ID and Directory (tenant) ID.' },
+      { key: 'step2', label: 'Add the ' + window.CheckpointLib.MONITOR_APP_PERMISSIONS.length + ' application permissions below to that app registration, then Grant admin consent for the tenant.' },
+      { key: 'step3', label: 'Run the Sites.Selected grant request below once, as a Global/SharePoint admin, from Graph Explorer — it authorises the app on this one SharePoint site only.' },
+      { key: 'step4', label: 'Click “Deploy to Azure” below and fill in the values above, plus the Client ID and Client Secret from step 1.' },
+      { key: 'step5', label: 'Deploy the function code from a terminal: cd public/checkpoint/azure && func azure functionapp publish <functionAppName> (see the full reference link above for the exact command and prerequisites).' },
+      { key: 'step6', label: 'Verify: trigger a test run from the Azure Portal, then check back here — this step ticks itself once an automated scan is recorded.' }
+    ];
+    var stepsHtml = STEPS.map(function (s) {
+      var forced = s.key === 'step6' && autoDone;
+      var checked = forced || !!state[s.key];
+      return '<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0">' +
+        '<input type="checkbox" data-change-action="App.toggleMonitorSetupStep" data-id="' + s.key + '"' + (checked ? ' checked' : '') + (forced ? ' disabled' : '') + ' style="margin-top:3px">' +
+        '<span style="font-size:12.5px;color:' + (checked ? 'var(--paper-dim)' : 'var(--paper)') + ';' + (checked ? 'text-decoration:line-through' : '') + '">' + esc(s.label) + '</span></label>';
+    }).join('');
+
+    var deployUrl = 'https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fcompliance-365%2Fwebsite%2Fmain%2Fpublic%2Fcheckpoint%2Fazure%2Fazuredeploy.json';
+    var readmeUrl = 'https://github.com/compliance-365/website/blob/main/public/checkpoint/azure/README.md';
+
+    wrap.innerHTML =
+      '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">No automated scans recorded yet. Deploying the scheduled monitor keeps posture current in this tenant with nobody signed in — six steps, and Checkpoint fills in what it already knows below. <a href="' + readmeUrl + '" target="_blank" rel="noopener" style="color:var(--gold-light)">Full reference →</a></p>' +
+      '<details><summary style="cursor:pointer;font-size:12.5px;color:var(--gold-light);margin-bottom:8px">Values you’ll need</summary>' + valuesHtml + '</details>' +
+      '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--gold-light);margin-bottom:8px">Permissions to add (step 2)</summary>' + permsHtml + '</details>' +
+      '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--gold-light);margin-bottom:8px">Sites.Selected grant request (step 3)</summary>' + grantHtml + '</details>' +
+      '<div style="margin-top:10px">' + stepsHtml + '</div>' +
+      '<div style="margin-top:10px"><a class="btn sm" href="' + deployUrl + '" target="_blank" rel="noopener">Deploy to Azure →</a></div>';
+  }
+
   function renderDash() {
     renderGettingStarted();
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
@@ -3499,6 +3583,7 @@ function showModal(opts) {
        interactively from this browser, plus any pass -> fail drift it
        has flagged since the previous scan */
     var monitorEl = document.getElementById('monitorStatus');
+    var monitorSetupEl = document.getElementById('monitorSetupPanel');
     if (monitorEl) {
       var autoScans = S.scans.filter(function (s) { return s.source === 'automated'; });
       var lastAuto = autoScans[autoScans.length - 1];
@@ -3508,8 +3593,11 @@ function showModal(opts) {
         var autoOnTrack = sinceAuto < cadence2;
         monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ' + icon('flag') + ' overdue') + '</b></div>' +
           '<div class="d-kv"><span>Reminder cadence</span><b>every ' + cadence2 + ' days</b></div>';
+        monitorEl.style.display = '';
+        if (monitorSetupEl) monitorSetupEl.style.display = 'none';
       } else {
-        monitorEl.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">No automated scans recorded yet. Deploy the scheduled monitor (SETUP.md § Continuous monitoring) to keep posture current in this tenant without anyone signed in.</p>';
+        monitorEl.style.display = 'none';
+        if (monitorSetupEl) { monitorSetupEl.style.display = ''; renderMonitorSetupPanel(); }
       }
     }
     var driftEl = document.getElementById('driftPanel');
@@ -12734,6 +12822,49 @@ function showModal(opts) {
       renderDash();
     },
 
+    /* Copies the text content of one of the continuous-monitoring setup
+       panel's <code>/<pre> blocks (renderMonitorSetupPanel(), below) to
+       the clipboard — a plain DOM read, never a Checkpoint data
+       mutation, so it's fine to run under read-only viewer access. */
+    copyEl: function (elId) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      var text = (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') ? el.value : el.textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { toast('Copied to clipboard.'); }, function () { toastError('Could not copy — select and copy it manually.'); });
+      } else {
+        toastError('Clipboard not available — select and copy it manually.');
+      }
+    },
+
+    /* Persists one setup-panel checklist step's done/not-done state,
+       per tenant, in localStorage — same convention as the sidebar's
+       nav-group collapse state (saveNavGroupState()). Purely a local
+       "where was I" convenience; nothing here is Checkpoint tenant
+       data, so it's never written to SharePoint. */
+    toggleMonitorSetupStep: function (stepKey) {
+      var el = document.querySelector('[data-change-action="App.toggleMonitorSetupStep"][data-id="' + stepKey + '"]');
+      if (!el) return;
+      var state = loadMonitorSetupState();
+      state[stepKey] = el.checked;
+      saveMonitorSetupState(state);
+    },
+
+    setMonitorClientId: function (val) {
+      var state = loadMonitorSetupState();
+      state.clientId = (val || '').trim();
+      saveMonitorSetupState(state);
+      /* Patches the grant snippet in place rather than calling
+         renderDash() — a full re-render would rebuild #monitorSetupPanel
+         from scratch and collapse every open <details> back closed,
+         including the very one the practitioner is filling in. */
+      var grantEl = document.getElementById('msGrant');
+      if (grantEl) {
+        var siteId = (Store.getSiteId && Store.getSiteId()) || '';
+        grantEl.textContent = window.CheckpointLib.monitorGrantSnippet(siteId, state.clientId, 'Checkpoint Posture Monitor');
+      }
+    },
+
     setThreshold: async function (key, value) {
       var def = (window.THRESHOLD_DEFS.find(function (t) { return t.key === key; }) || {}).def;
       value = (value !== undefined && value !== null && value !== '' && !isNaN(Number(value))) ? String(Number(value)) : def;
@@ -15061,6 +15192,18 @@ function showModal(opts) {
      auto-open of the active view's group sets .open directly and
      deliberately doesn't go through that click handler, so navigating
      around the app never overwrites a deliberate collapse. */
+  /* Continuous-monitoring setup panel's checklist progress + the typed
+     Client ID (public half of the monitor's app registration, not a
+     secret) — same per-tenant localStorage convention as the nav-group
+     collapse state just below. See renderMonitorSetupPanel(). */
+  function monitorSetupStorageKey() { return 'cpMonitorSetup:v1:' + tenantStorageKey(); }
+  function loadMonitorSetupState() {
+    try { return JSON.parse(localStorage.getItem(monitorSetupStorageKey()) || '{}'); } catch (e) { return {}; }
+  }
+  function saveMonitorSetupState(state) {
+    try { localStorage.setItem(monitorSetupStorageKey(), JSON.stringify(state)); } catch (e) { /* private browsing etc. — progress just won't survive to a future session */ }
+  }
+
   function navGroupStorageKey() { return 'cpNavOpen:v1:' + tenantStorageKey(); }
   function loadNavGroupState() {
     try { return JSON.parse(localStorage.getItem(navGroupStorageKey()) || '{}'); } catch (e) { return {}; }

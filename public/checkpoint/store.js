@@ -1543,7 +1543,7 @@ window.DemoStore = (function () {
 /* ================= SharePoint store ================= */
 window.SpStore = (function () {
   var CONFIG = window.CHECKPOINT_CONFIG;
-  var siteId = null, lists = {};   /* name → listId */
+  var siteId = null, resolvedHost = null, lists = {};   /* name → listId */
   var S = null;
 
   var DEFS = {
@@ -1876,10 +1876,13 @@ window.SpStore = (function () {
 
   async function resolveSite() {
     if (CONFIG.site === 'root') {
-      siteId = (await Graph.g('/sites/root?$select=id', provisionOpts)).id;
+      var rootSite = await Graph.g('/sites/root?$select=id,webUrl', provisionOpts);
+      siteId = rootSite.id;
+      resolvedHost = rootSite.webUrl.replace(/^https:\/\//, '').split('/')[0];
     } else {
       var host = (await Graph.g('/sites/root?$select=siteCollection,webUrl', provisionOpts)).webUrl.replace(/^https:\/\//, '').split('/')[0];
       siteId = (await Graph.g('/sites/' + host + ':' + CONFIG.site + '?$select=id', provisionOpts)).id;
+      resolvedHost = host;
     }
   }
 
@@ -2349,6 +2352,17 @@ window.SpStore = (function () {
 
   return {
     kind: 'sharepoint',
+    /* Resolved Graph site id ("hostname,guid,guid") and SharePoint
+       hostname for the site this tenant's lists live on — populated the
+       moment resolveSite() first runs (load(), or either read-only probe
+       above), which happens before app.js ever renders. Read by the
+       Dashboard's continuous-monitoring setup panel so a practitioner
+       doesn't have to hunt these up separately (Graph Explorer, or
+       SharePoint site settings) to fill in the Sites.Selected grant
+       request — see README.md §3. null until a site has been resolved
+       at least once this session. */
+    getSiteId: function () { return siteId; },
+    getSiteHostname: function () { return resolvedHost; },
     load: async function (onStatus) {
       if (onStatus) onStatus('Requesting permission to store your compliance registers in this tenant’s SharePoint…');
       await resolveSite();
