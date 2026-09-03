@@ -1418,6 +1418,21 @@ function showModal(opts) {
   function score() {
     return window.CheckpointLib.score(window.CHECK_DEFS, null, checkResult);
   }
+  /* checkId -> current result ('pass'/'review'/'fail'/'manual'/null),
+     for every CHECK_DEFS entry — the shared input both the Dashboard's
+     "Next 3 actions" card (nextBestActions()) and the "ready to close"
+     resolution proposals (resolvableFindings()) rank/match against, so
+     the two never compute a check's live result two different ways. */
+  function allCheckResultsById() {
+    var out = {};
+    (window.CHECK_DEFS || []).forEach(function (c) { out[c.id] = checkResult(c); });
+    return out;
+  }
+  function allCheckLabelsById() {
+    var out = {};
+    (window.CHECK_DEFS || []).forEach(function (c) { out[c.id] = c.label; });
+    return out;
+  }
   /* 'ML1'|'ML2'|'ML3' -> 1|2|3, defaulting to ML2 for any unrecognised value. */
   function e8Lvl(s) { var n = parseInt(String(s || '').replace(/\D/g, ''), 10); return (n >= 1 && n <= 3) ? n : 2; }
   /* kind 'error' styles the toast as a failure and announces it
@@ -3331,6 +3346,90 @@ function showModal(opts) {
     }
   }
 
+  /* Continuous-monitoring in-app setup guide — replaces the old plain-
+     text "see SETUP.md § Continuous monitoring" fallback with the actual
+     values (tenant id, SharePoint site, list prefix, resolved site id)
+     and the exact Sites.Selected grant request a practitioner needs,
+     since Checkpoint already knows or can resolve every one of them
+     except the two values Entra creates fresh (Client ID, Client
+     Secret). The Azure Portal's plain "Deploy to Azure" button has no
+     supported way to pre-fill individual parameter values via URL —
+     only pre-populated defaultValues from the template itself, or a
+     full CreateUIDefinition marketplace package neither of which fits a
+     single-tenant optional deploy — so this stops short of a true
+     one-click deploy. What it removes instead is the real friction:
+     hunting the site id up via Graph Explorer, retyping thirteen
+     permission names by hand from a markdown table, and losing track of
+     which of the six README.md steps is already done. Step 6 (verify)
+     auto-completes itself, since it's the one step this app can
+     actually observe: an automated scan being recorded. */
+  function renderMonitorSetupPanel() {
+    var wrap = document.getElementById('monitorSetupPanel');
+    if (!wrap) return;
+    if (Store.kind !== 'sharepoint') {
+      wrap.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">Demo mode has no tenant to deploy the monitor into — this guide fills itself in from live tenant data once you sign in for real.</p>';
+      return;
+    }
+    var acc = Graph.getAccount();
+    var tenantId = (acc && acc.tenantId) || '';
+    var siteId = (Store.getSiteId && Store.getSiteId()) || '';
+    var hostname = (Store.getSiteHostname && Store.getSiteHostname()) || '';
+    var sitePath = CONFIG.site === 'root' ? '(root site — leave blank)' : CONFIG.site;
+    var listPrefix = CONFIG.listPrefix || 'Checkpoint';
+    var state = loadMonitorSetupState();
+    var autoDone = (S.scans || []).some(function (s) { return s.source === 'automated'; });
+
+    function copyRow(label, value, elId) {
+      return '<div class="d-kv"><span>' + esc(label) + '</span><b><code id="' + elId + '" style="font-size:11px">' + esc(value || '—') + '</code>' +
+        (value ? ' <button class="btn ghost sm" data-action="App.copyEl" data-id="' + elId + '" style="margin-left:6px">Copy</button>' : '') + '</b></div>';
+    }
+
+    var valuesHtml = copyRow('Tenant ID', tenantId, 'msTenantId') +
+      copyRow('SharePoint hostname', hostname, 'msHostname') +
+      copyRow('Site path', sitePath, 'msSitePath') +
+      copyRow('List prefix', listPrefix, 'msListPrefix') +
+      copyRow('Site ID (for the grant request below)', siteId, 'msSiteId');
+
+    var permsHtml = '<pre id="msPerms" style="white-space:pre-wrap;font-size:11px;background:var(--surface-2);border-radius:6px;padding:8px;margin:6px 0">' +
+      esc(window.CheckpointLib.MONITOR_APP_PERMISSIONS.join('\n')) + '</pre>' +
+      '<button class="btn ghost sm" data-action="App.copyEl" data-id="msPerms">Copy permission list</button>';
+
+    var clientId = state.clientId || '';
+    var grantSnippet = window.CheckpointLib.monitorGrantSnippet(siteId, clientId, 'Checkpoint Posture Monitor');
+    var grantHtml =
+      '<div class="d-kv" style="padding:0 0 6px"><span>App registration Client ID (from step 1, once created)</span></div>' +
+      '<input type="text" value="' + esc(clientId) + '" placeholder="paste the Application (client) ID here" data-change-action="App.setMonitorClientId" style="width:100%;margin-bottom:6px">' +
+      '<pre id="msGrant" style="white-space:pre-wrap;font-size:11px;background:var(--surface-2);border-radius:6px;padding:8px;margin:6px 0">' + esc(grantSnippet) + '</pre>' +
+      '<button class="btn ghost sm" data-action="App.copyEl" data-id="msGrant">Copy request</button>';
+
+    var STEPS = [
+      { key: 'step1', label: 'Register the monitor’s app registration in Entra ID (Entra admin center → App registrations → New registration), create a client secret, and note its Application (client) ID and Directory (tenant) ID.' },
+      { key: 'step2', label: 'Add the ' + window.CheckpointLib.MONITOR_APP_PERMISSIONS.length + ' application permissions below to that app registration, then Grant admin consent for the tenant.' },
+      { key: 'step3', label: 'Run the Sites.Selected grant request below once, as a Global/SharePoint admin, from Graph Explorer — it authorises the app on this one SharePoint site only.' },
+      { key: 'step4', label: 'Click “Deploy to Azure” below and fill in the values above, plus the Client ID and Client Secret from step 1.' },
+      { key: 'step5', label: 'Deploy the function code from a terminal: cd public/checkpoint/azure && func azure functionapp publish <functionAppName> (see the full reference link above for the exact command and prerequisites).' },
+      { key: 'step6', label: 'Verify: trigger a test run from the Azure Portal, then check back here — this step ticks itself once an automated scan is recorded.' }
+    ];
+    var stepsHtml = STEPS.map(function (s) {
+      var forced = s.key === 'step6' && autoDone;
+      var checked = forced || !!state[s.key];
+      return '<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0">' +
+        '<input type="checkbox" data-change-action="App.toggleMonitorSetupStep" data-id="' + s.key + '"' + (checked ? ' checked' : '') + (forced ? ' disabled' : '') + ' style="margin-top:3px">' +
+        '<span style="font-size:12.5px;color:' + (checked ? 'var(--paper-dim)' : 'var(--paper)') + ';' + (checked ? 'text-decoration:line-through' : '') + '">' + esc(s.label) + '</span></label>';
+    }).join('');
+
+    var deployUrl = 'https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fcompliance-365%2Fwebsite%2Fmain%2Fpublic%2Fcheckpoint%2Fazure%2Fazuredeploy.json';
+    var readmeUrl = 'https://github.com/compliance-365/website/blob/main/public/checkpoint/azure/README.md';
+
+    wrap.innerHTML =
+      '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">No automated scans recorded yet. Deploying the scheduled monitor keeps posture current in this tenant with nobody signed in — six steps, and Checkpoint fills in what it already knows below. <a href="' + readmeUrl + '" target="_blank" rel="noopener" style="color:var(--gold-light)">Full reference →</a></p>' +
+      '<details><summary style="cursor:pointer;font-size:12.5px;color:var(--gold-light);margin-bottom:8px">Values you’ll need</summary>' + valuesHtml + '</details>' +
+      '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--gold-light);margin-bottom:8px">Permissions to add (step 2)</summary>' + permsHtml + '</details>' +
+      '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--gold-light);margin-bottom:8px">Sites.Selected grant request (step 3)</summary>' + grantHtml + '</details>' +
+      '<div style="margin-top:10px">' + stepsHtml + '</div>' +
+      '<div style="margin-top:10px"><a class="btn sm" href="' + deployUrl + '" target="_blank" rel="noopener">Deploy to Azure →</a></div>';
+  }
+
   function renderDash() {
     renderGettingStarted();
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
@@ -3413,6 +3512,33 @@ function showModal(opts) {
         : '';
     }
 
+    /* "Next 3 actions" — the one question every other Dashboard panel
+       leaves unanswered: given a stack of open actions, which ones
+       actually matter right now. Ranked by nextBestActions() in lib.js —
+       an action whose control sits behind a currently failing or
+       under-review check always outranks one that's merely high-priority
+       or overdue, and the reason text only ever states that present-tense
+       fact, never a projected score. */
+    var nextActionsCardEl = document.getElementById('nextActionsCard');
+    var nextActionsListEl = document.getElementById('nextActionsList');
+    if (nextActionsCardEl && nextActionsListEl) {
+      var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
+      var nextActions = window.CheckpointLib.nextBestActions(S.actions, window.CHECK_CONTROLS, checkResultsById, checkLabelsById, 3);
+      if (nextActions.length) {
+        nextActionsListEl.innerHTML = nextActions.map(function (r) {
+          var a = r.action;
+          var tierColor = r.tier >= 2 ? 'var(--fail)' : r.tier === 1 ? 'var(--warn)' : 'var(--paper-dim)';
+          return '<div class="d-kv" style="align-items:flex-start;padding:9px 0">' +
+            '<span><b style="color:var(--paper)">' + esc(a.title) + '</b><br><span style="color:var(--paper-dim);font-size:11.5px">' + esc(r.reason) + '</span></span>' +
+            '<b style="color:' + tierColor + ';white-space:nowrap;font-size:11.5px">' + esc(a.pr || 'Medium') + '</b>' +
+            '</div>';
+        }).join('') + '<p style="margin:8px 0 0"><a href="#" data-action="App.goActionsFilter" data-id="Open" style="color:var(--gold-light);font-size:12.5px;text-decoration:underline">Open the Actions register →</a></p>';
+        nextActionsCardEl.style.display = '';
+      } else {
+        nextActionsCardEl.style.display = 'none';
+      }
+    }
+
     /* risk appetite breach banner */
     var appetite = (S.settings && S.settings.riskAppetite) || 'Medium';
     var appetiteRank = SEV_RANK[appetite] || 2;
@@ -3468,6 +3594,7 @@ function showModal(opts) {
        interactively from this browser, plus any pass -> fail drift it
        has flagged since the previous scan */
     var monitorEl = document.getElementById('monitorStatus');
+    var monitorSetupEl = document.getElementById('monitorSetupPanel');
     if (monitorEl) {
       var autoScans = S.scans.filter(function (s) { return s.source === 'automated'; });
       var lastAuto = autoScans[autoScans.length - 1];
@@ -3477,8 +3604,11 @@ function showModal(opts) {
         var autoOnTrack = sinceAuto < cadence2;
         monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ' + icon('flag') + ' overdue') + '</b></div>' +
           '<div class="d-kv"><span>Reminder cadence</span><b>every ' + cadence2 + ' days</b></div>';
+        monitorEl.style.display = '';
+        if (monitorSetupEl) monitorSetupEl.style.display = 'none';
       } else {
-        monitorEl.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">No automated scans recorded yet. Deploy the scheduled monitor (SETUP.md § Continuous monitoring) to keep posture current in this tenant without anyone signed in.</p>';
+        monitorEl.style.display = 'none';
+        if (monitorSetupEl) { monitorSetupEl.style.display = ''; renderMonitorSetupPanel(); }
       }
     }
     var driftEl = document.getElementById('driftPanel');
@@ -4430,6 +4560,36 @@ function showModal(opts) {
         '<button class="btn sm" data-action="App.approve" data-id="' + p + '">Approve → register</button> ' +
         '<button class="btn ghost sm" data-action="App.dismiss" data-id="' + p + '">Dismiss</button> ' + insightBtn +
         '<div id="riskInsight-' + esc(p) + '">' + insightBlock + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  /* "Ready to close" — the flip side of renderProposed() above. A risk
+     that was proposed into the register when its check failed or needed
+     review, whose check now scores pass on the latest scan: the issue
+     that created the finding is gone. See resolvableFindings() in
+     lib.js. Never closes anything itself — same "nothing enters or
+     leaves the register without a practitioner's sign-off" rule as
+     every other write path in this app; this only surfaces the
+     candidates and their evidence for App.approveResolution() to act
+     on. */
+  function renderResolvable() {
+    var w = document.getElementById('resolvableWrap');
+    if (!w) return;
+    var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
+    var resolvable = window.CheckpointLib.resolvableFindings(S.risks, S.actions, checkResultsById);
+    if (!resolvable.length) { w.innerHTML = ''; return; }
+    w.innerHTML = '<div class="card"><h3>Ready to close — underlying check now passes</h3>' + resolvable.map(function (item) {
+      var r = item.risk;
+      var label = checkLabelsById[r.tpl] || r.tpl;
+      var actTitles = item.openActionIds.map(function (aid) {
+        var a = S.actions.find(function (x) { return x.id === aid; });
+        return a ? esc(a.title) : aid;
+      });
+      return '<div class="proposed-card"><h4>' + esc(r.id) + ' — ' + esc(r.title) + '</h4>' +
+        '<div class="meta"><b style="color:var(--pass)">' + icon('check') + ' ' + esc(label) + '</b> now passes' +
+        (actTitles.length ? ' · will mark ' + actTitles.length + ' linked action' + (actTitles.length > 1 ? 's' : '') + ' done: ' + actTitles.join(', ') : ' · no open linked actions') + '</div>' +
+        '<button class="btn sm" data-action="App.approveResolution" data-id="' + esc(r.id) + '">Approve → close</button> ' +
+        '<button class="btn ghost sm" data-action="App.dismissResolution" data-id="' + esc(r.id) + '">Not yet</button></div>';
     }).join('') + '</div>';
   }
 
@@ -8216,7 +8376,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -8564,6 +8724,20 @@ function showModal(opts) {
         if (!c.tpl) return;
         var r = checkResult(c);
         if (r === 'pass' || r === null) return;
+        /* A dismissed "ready to close" resolution proposal
+           (resolvableFindings() in lib.js) is a "not yet" about the
+           check's CURRENT pass state — if it regresses back to
+           fail/review/manual here, that pass state is gone, and any
+           future pass is a new event worth proposing again rather than
+           staying silently dismissed forever. Reset right here, in the
+           one place that already walks every check's live result every
+           scan, rather than a second pass over CHECK_DEFS. */
+        S.risks.forEach(function (dr) {
+          if (dr.tpl === c.id && dr.resolutionDismissed) {
+            dr.resolutionDismissed = false;
+            Store.updateRisk(dr).catch(function (e) { warn(e); });
+          }
+        });
         /* An 'alternative' disposition already reads as 'pass' above and
            never reaches here. 'notApplicable' reads as 'manual', which
            does NOT short-circuit — a check that merely could not be
@@ -8929,7 +9103,7 @@ function showModal(opts) {
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
       setTimeout(function () {
-        renderProposed(); renderNavCounts(); renderDash(); renderSoa();
+        renderProposed(); renderResolvable(); renderNavCounts(); renderDash(); renderSoa();
         /* ONE summary, not nine toasts.
            This used to fire a separate toast per framework plus one for
            the proposed risks — all in this same tick, all into the same
@@ -12703,6 +12877,100 @@ function showModal(opts) {
       renderDash();
     },
 
+    /* Approves a "ready to close" resolution proposal (renderResolvable(),
+       resolvableFindings() in lib.js): the risk's originating check now
+       passes, so its still-open linked actions are marked Done — each
+       through the normal recordActionUpdate() evidence-log path, same as
+       a manual App.complete() — and the risk itself is closed. One
+       explicit approval closes both; nothing here is an automatic write,
+       it only fires when a practitioner clicks it. */
+    approveResolution: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
+      var match = window.CheckpointLib.resolvableFindings(S.risks, S.actions, checkResultsById).find(function (x) { return x.risk.id === id; });
+      if (!match) return;
+      var label = checkLabelsById[r.tpl] || r.tpl;
+      var openActs = match.openActionIds.map(function (aid) { return S.actions.find(function (a) { return a.id === aid; }); }).filter(Boolean);
+      var msg = 'The check behind this risk — “' + label + '” — now passes on the latest scan. Close ' + r.id +
+        (openActs.length ? ' and mark ' + openActs.length + ' linked action' + (openActs.length > 1 ? 's' : '') + ' done' : '') + '?';
+      var ok = await showModal({ title: 'Close ' + r.id + '?', message: msg, confirmText: 'Approve → close', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      try {
+        for (var i = 0; i < openActs.length; i++) {
+          await recordActionUpdate(openActs[i], { note: 'Underlying posture check "' + label + '" now passes — closed on practitioner approval of the resolution proposal.', status: 'Done' });
+        }
+        r.status = 'Closed';
+        await Store.updateRisk(r);
+        audit('Risk closed — resolution approved', 'Risk', r.id, '', 'Closed (check "' + label + '" now passes)');
+        toast('<b>' + r.id + '</b> closed' + (openActs.length ? ' · ' + openActs.length + ' action(s) marked done' : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    /* "Not yet" — the practitioner isn't ready to close this one even
+       though its check currently passes (a common reason: they want to
+       watch it hold for another scan cycle first). Persists as a
+       one-way flag so the same proposal doesn't keep resurfacing every
+       scan; automatically cleared the moment the check itself regresses
+       (see the comment in runScan()'s S.proposed rebuild loop), since a
+       dismissal made about this pass state shouldn't silently apply to
+       some future, different pass state. */
+    dismissResolution: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      r.resolutionDismissed = true;
+      try { await Store.updateRisk(r); } catch (e) { warn(e); }
+      audit('Resolution proposal dismissed', 'Risk', r.id, '', 'Not yet');
+      toast('Won\'t propose closing <b>' + r.id + '</b> again unless its check state changes.');
+      renderResolvable();
+    },
+
+    /* Copies the text content of one of the continuous-monitoring setup
+       panel's <code>/<pre> blocks (renderMonitorSetupPanel(), below) to
+       the clipboard — a plain DOM read, never a Checkpoint data
+       mutation, so it's fine to run under read-only viewer access. */
+    copyEl: function (elId) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      var text = (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') ? el.value : el.textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { toast('Copied to clipboard.'); }, function () { toastError('Could not copy — select and copy it manually.'); });
+      } else {
+        toastError('Clipboard not available — select and copy it manually.');
+      }
+    },
+
+    /* Persists one setup-panel checklist step's done/not-done state,
+       per tenant, in localStorage — same convention as the sidebar's
+       nav-group collapse state (saveNavGroupState()). Purely a local
+       "where was I" convenience; nothing here is Checkpoint tenant
+       data, so it's never written to SharePoint. */
+    toggleMonitorSetupStep: function (stepKey) {
+      var el = document.querySelector('[data-change-action="App.toggleMonitorSetupStep"][data-id="' + stepKey + '"]');
+      if (!el) return;
+      var state = loadMonitorSetupState();
+      state[stepKey] = el.checked;
+      saveMonitorSetupState(state);
+    },
+
+    setMonitorClientId: function (val) {
+      var state = loadMonitorSetupState();
+      state.clientId = (val || '').trim();
+      saveMonitorSetupState(state);
+      /* Patches the grant snippet in place rather than calling
+         renderDash() — a full re-render would rebuild #monitorSetupPanel
+         from scratch and collapse every open <details> back closed,
+         including the very one the practitioner is filling in. */
+      var grantEl = document.getElementById('msGrant');
+      if (grantEl) {
+        var siteId = (Store.getSiteId && Store.getSiteId()) || '';
+        grantEl.textContent = window.CheckpointLib.monitorGrantSnippet(siteId, state.clientId, 'Checkpoint Posture Monitor');
+      }
+    },
+
     setThreshold: async function (key, value) {
       var def = (window.THRESHOLD_DEFS.find(function (t) { return t.key === key; }) || {}).def;
       value = (value !== undefined && value !== null && value !== '' && !isNaN(Number(value))) ? String(Number(value)) : def;
@@ -12744,7 +13012,7 @@ function showModal(opts) {
       } catch (e) { warn(e); }
       busy(false);
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
-      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility(); renderScanChecks(true); renderProposed(); renderAiSystems();
+      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility(); renderScanChecks(true); renderProposed(); renderResolvable(); renderAiSystems();
     },
 
     /* Verifies and applies an uploaded/pasted entitlement file (see the
@@ -15030,6 +15298,18 @@ function showModal(opts) {
      auto-open of the active view's group sets .open directly and
      deliberately doesn't go through that click handler, so navigating
      around the app never overwrites a deliberate collapse. */
+  /* Continuous-monitoring setup panel's checklist progress + the typed
+     Client ID (public half of the monitor's app registration, not a
+     secret) — same per-tenant localStorage convention as the nav-group
+     collapse state just below. See renderMonitorSetupPanel(). */
+  function monitorSetupStorageKey() { return 'cpMonitorSetup:v1:' + tenantStorageKey(); }
+  function loadMonitorSetupState() {
+    try { return JSON.parse(localStorage.getItem(monitorSetupStorageKey()) || '{}'); } catch (e) { return {}; }
+  }
+  function saveMonitorSetupState(state) {
+    try { localStorage.setItem(monitorSetupStorageKey(), JSON.stringify(state)); } catch (e) { /* private browsing etc. — progress just won't survive to a future session */ }
+  }
+
   function navGroupStorageKey() { return 'cpNavOpen:v1:' + tenantStorageKey(); }
   function loadNavGroupState() {
     try { return JSON.parse(localStorage.getItem(navGroupStorageKey()) || '{}'); } catch (e) { return {}; }

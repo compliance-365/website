@@ -427,6 +427,11 @@
       <div class="appetite-banner" id="digestDueBanner" style="display:none"></div>
       <div class="grid kpis" id="kpiRow"></div>
       <p class="grid-note" id="coverageNote"></p>
+      <div class="card" id="nextActionsCard" style="margin-bottom:16px;display:none">
+        <h3>Next 3 actions</h3>
+        <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 8px">Ranked by what's actually holding your posture back right now, not by due date alone.</p>
+        <div id="nextActionsList"></div>
+      </div>
       <div class="grid dash-2">
         <div class="card fp-card" id="fpCard" style="display:none">
           <div class="fp-head"><h3>Compliance fingerprint</h3><div class="filters" id="fpTabs" role="group" aria-label="Framework"></div></div>
@@ -439,7 +444,7 @@
           <p class="journey-note" id="journeyNote"></p>
         </div>
       </div>
-      <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="driftPanel" style="margin-top:6px"></div></div>
+      <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="monitorSetupPanel" style="display:none"></div><div id="driftPanel" style="margin-top:6px"></div></div>
       <div class="card ap-card" id="apCard" style="margin-top:16px">
         <h3>Assurance pulse</h3>
         <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">26 weeks of compliance activity — scans, evidence, attestations, reviews and audits. Click a week to filter the Activity feed below.</p>
@@ -538,6 +543,7 @@
         <div class="card"><h3>Checks</h3><div id="checkList"></div></div>
       </div>
       <div id="proposedWrap" style="margin-top:22px"></div>
+      <div id="resolvableWrap" style="margin-top:22px"></div>
     </section>
 
     <!-- RISKS -->

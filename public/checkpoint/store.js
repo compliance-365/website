@@ -1543,7 +1543,7 @@ window.DemoStore = (function () {
 /* ================= SharePoint store ================= */
 window.SpStore = (function () {
   var CONFIG = window.CHECKPOINT_CONFIG;
-  var siteId = null, lists = {};   /* name → listId */
+  var siteId = null, resolvedHost = null, lists = {};   /* name → listId */
   var S = null;
 
   var DEFS = {
@@ -1575,7 +1575,17 @@ window.SpStore = (function () {
          implies the AI wrote it unreviewed. AiReviewer is who approved
          it (same "who" the audit log already records for the add/
          approve action itself). */
-      { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} }
+      { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} },
+      /* Set when a practitioner dismisses a "ready to close" resolution
+         proposal (its underlying check now passes) rather than approving
+         it — a one-way "not yet" so the same risk isn't re-proposed for
+         closing on every subsequent scan. Cleared automatically if the
+         check ever regresses to fail/review again (resolvableFindings()
+         in lib.js only proposes a risk whose check currently passes, so
+         a regressed check simply stops matching — the flag itself is
+         left alone rather than reset, since nothing reads it once the
+         check no longer passes). */
+      { name: 'ResolutionDismissed', boolean: {} }
     ],
     Actions: [
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
@@ -1876,10 +1886,13 @@ window.SpStore = (function () {
 
   async function resolveSite() {
     if (CONFIG.site === 'root') {
-      siteId = (await Graph.g('/sites/root?$select=id', provisionOpts)).id;
+      var rootSite = await Graph.g('/sites/root?$select=id,webUrl', provisionOpts);
+      siteId = rootSite.id;
+      resolvedHost = rootSite.webUrl.replace(/^https:\/\//, '').split('/')[0];
     } else {
       var host = (await Graph.g('/sites/root?$select=siteCollection,webUrl', provisionOpts)).webUrl.replace(/^https:\/\//, '').split('/')[0];
       siteId = (await Graph.g('/sites/' + host + ':' + CONFIG.site + '?$select=id', provisionOpts)).id;
+      resolvedHost = host;
     }
   }
 
@@ -2110,7 +2123,7 @@ window.SpStore = (function () {
        every column costs nothing for an up-to-date tenant and closes
        this bug class completely for whichever tenant is still missing
        one from years of incremental additions. */
-    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer'],
+    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed'],
     Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
     /* Same incomplete-subset mistake as Risks/Actions above, caught the
        same way: this used to list only LastVerified/EvidenceUrl/
@@ -2349,6 +2362,17 @@ window.SpStore = (function () {
 
   return {
     kind: 'sharepoint',
+    /* Resolved Graph site id ("hostname,guid,guid") and SharePoint
+       hostname for the site this tenant's lists live on — populated the
+       moment resolveSite() first runs (load(), or either read-only probe
+       above), which happens before app.js ever renders. Read by the
+       Dashboard's continuous-monitoring setup panel so a practitioner
+       doesn't have to hunt these up separately (Graph Explorer, or
+       SharePoint site settings) to fill in the Sites.Selected grant
+       request — see README.md §3. null until a site has been resolved
+       at least once this session. */
+    getSiteId: function () { return siteId; },
+    getSiteHostname: function () { return resolvedHost; },
     load: async function (onStatus) {
       if (onStatus) onStatus('Requesting permission to store your compliance registers in this tenant’s SharePoint…');
       await resolveSite();
@@ -2381,7 +2405,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null) };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -2586,7 +2610,8 @@ window.SpStore = (function () {
         Controls: csv(r.controls), ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat,
         AcceptedBy: r.acceptedBy || '', AcceptedDate: r.acceptedDate || '', AcceptanceNote: r.acceptanceNote || '',
         AcceptedScore: (typeof r.acceptedScore === 'number' ? r.acceptedScore : null),
-        AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || ''
+        AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '',
+        ResolutionDismissed: !!r.resolutionDismissed
       });
     },
     deleteRisk: async function (r) {
