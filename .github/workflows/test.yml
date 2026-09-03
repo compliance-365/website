@@ -16,6 +16,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
+      # First real install step this workflow has ever needed — every
+      # test before Playwright landed imported only project-local files
+      # (public/checkpoint/lib.js, etc.), never an npm package. Cache the
+      # downloaded browser separately from npm's own dependency cache
+      # above: it's a large (~150-300MB), rarely-changing binary keyed
+      # off the exact Playwright version, not something npm's cache
+      # already covers.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Run tests
         run: npm test
