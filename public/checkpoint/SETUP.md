@@ -2625,21 +2625,30 @@ user to act as). It writes a normal `Checkpoint Scans` row on every run
 and a `Checkpoint Alerts` row whenever a check that scored **pass** on
 the previous scan scores **fail** on this one.
 
-It scores 35 of the checks the interactive app does — every check except
-six — including the awareness-training check computed from the
+It scores 38 of the checks the interactive app does — every check except
+three — including the awareness-training check computed from the
 `Checkpoint Training` list (the one scored check with no Graph signal
 behind it), so an automated scan and a browser scan of the same tenant
-land on close to the same number. Two checks stay interactive-only for
-auth reasons documented in `azure/PostureMonitor/index.js`: `labels`
-(needs a signed-in user) and `sharing` (needs the calling identity to
-hold the SharePoint Administrator role, which has no clean equivalent
-for a client-credentials service principal). Four more —
-`xdr-incidents`, `privacy-srr`, `retention` and `lifecycle-workflows` —
-are interactive-only for a different reason: each needs a genuinely new
-application permission this Function's app registration does not
-request by default (see `azure/README.md`'s permission table), so
-adding them is a deliberate, separate decision rather than something
-this deployment does automatically.
+land on close to the same number. Three checks stay interactive-only
+permanently, for two different reasons documented in
+`azure/PostureMonitor/index.js` and `azure/README.md`'s permission
+table:
+
+- `labels` needs a signed-in user (`/me/security/informationProtection/
+  sensitivityLabels`), and `sharing` needs the calling identity to hold
+  the SharePoint Administrator role — neither has a clean app-only
+  equivalent.
+- `retention` can never move here at all, whatever permission decision
+  gets made: its Graph permission, `RecordsManagement.Read.All`, has no
+  Application permission type in Entra ID — a Microsoft platform
+  limitation, not a scoping choice.
+
+`xdr-incidents`, `privacy-srr` and `lifecycle-workflows` DO run here now
+— each needed a genuinely new application permission
+(`SecurityIncident.Read.All`, `SubjectRightsRequest.Read.All`,
+`LifecycleWorkflows.Read.All`) and a fresh admin-consent decision, which
+is why they were added as a deliberate, separate change from the
+no-new-permission batch above them.
 
 Full deploy steps (app registration, the exact application permissions
 and why each is the least-privilege choice for its check, the
