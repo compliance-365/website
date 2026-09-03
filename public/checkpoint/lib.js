@@ -3151,6 +3151,36 @@
       '/permissions\nContent-Type: application/json\n\n' + JSON.stringify(body, null, 2);
   }
 
+  /* Findings ready to close — a risk whose originating check
+     (CHECK_DEFS' `tpl`, which every check def sets equal to its own
+     `id`) now scores 'pass' on the latest scan, having been proposed
+     into the register on an earlier scan when it failed or needed
+     review. The underlying issue clearing is real evidence, not a
+     guess — but closing the risk and marking its actions Done is still
+     a decision only a practitioner makes (nothing here writes
+     anything); this just identifies the candidates. A risk a
+     practitioner has already said "not yet" to
+     (resolutionDismissed) is excluded until its check state changes —
+     see the ResolutionDismissed column comment in store.js for how
+     that one-way flag behaves if the check later regresses. Risks with
+     no `tpl` (workshop-captured, not scan-derived) never match, since
+     there's no check to have "resolved" them. */
+  function resolvableFindings(risks, actions, checkResultsById) {
+    var actionsById = {};
+    (actions || []).forEach(function (a) { if (a && a.id) actionsById[a.id] = a; });
+    var out = [];
+    (risks || []).forEach(function (r) {
+      if (!r || r.status === 'Closed' || !r.tpl || r.resolutionDismissed) return;
+      if ((checkResultsById || {})[r.tpl] !== 'pass') return;
+      var openActionIds = (r.actions || []).filter(function (aid) {
+        var a = actionsById[aid];
+        return a && a.status !== 'Done' && a.status !== 'Cancelled';
+      });
+      out.push({ risk: r, openActionIds: openActionIds });
+    });
+    return out;
+  }
+
   /* The seven management-review inputs ISO 27001 Clause 9.3.2 requires
      the review to consider. Drives both the structured capture form and
      the Management Review Pack report, so the two can never list a
@@ -3481,6 +3511,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
+    resolvableFindings: resolvableFindings,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
     controlAssurance: controlAssurance, assuranceSummary: assuranceSummary,

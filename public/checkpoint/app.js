@@ -1418,6 +1418,21 @@ function showModal(opts) {
   function score() {
     return window.CheckpointLib.score(window.CHECK_DEFS, null, checkResult);
   }
+  /* checkId -> current result ('pass'/'review'/'fail'/'manual'/null),
+     for every CHECK_DEFS entry — the shared input both the Dashboard's
+     "Next 3 actions" card (nextBestActions()) and the "ready to close"
+     resolution proposals (resolvableFindings()) rank/match against, so
+     the two never compute a check's live result two different ways. */
+  function allCheckResultsById() {
+    var out = {};
+    (window.CHECK_DEFS || []).forEach(function (c) { out[c.id] = checkResult(c); });
+    return out;
+  }
+  function allCheckLabelsById() {
+    var out = {};
+    (window.CHECK_DEFS || []).forEach(function (c) { out[c.id] = c.label; });
+    return out;
+  }
   /* 'ML1'|'ML2'|'ML3' -> 1|2|3, defaulting to ML2 for any unrecognised value. */
   function e8Lvl(s) { var n = parseInt(String(s || '').replace(/\D/g, ''), 10); return (n >= 1 && n <= 3) ? n : 2; }
   /* kind 'error' styles the toast as a failure and announces it
@@ -3507,11 +3522,7 @@ function showModal(opts) {
     var nextActionsCardEl = document.getElementById('nextActionsCard');
     var nextActionsListEl = document.getElementById('nextActionsList');
     if (nextActionsCardEl && nextActionsListEl) {
-      var checkResultsById = {}, checkLabelsById = {};
-      (window.CHECK_DEFS || []).forEach(function (c) {
-        checkResultsById[c.id] = checkResult(c);
-        checkLabelsById[c.id] = c.label;
-      });
+      var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
       var nextActions = window.CheckpointLib.nextBestActions(S.actions, window.CHECK_CONTROLS, checkResultsById, checkLabelsById, 3);
       if (nextActions.length) {
         nextActionsListEl.innerHTML = nextActions.map(function (r) {
@@ -4549,6 +4560,36 @@ function showModal(opts) {
         '<button class="btn sm" data-action="App.approve" data-id="' + p + '">Approve → register</button> ' +
         '<button class="btn ghost sm" data-action="App.dismiss" data-id="' + p + '">Dismiss</button> ' + insightBtn +
         '<div id="riskInsight-' + esc(p) + '">' + insightBlock + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  /* "Ready to close" — the flip side of renderProposed() above. A risk
+     that was proposed into the register when its check failed or needed
+     review, whose check now scores pass on the latest scan: the issue
+     that created the finding is gone. See resolvableFindings() in
+     lib.js. Never closes anything itself — same "nothing enters or
+     leaves the register without a practitioner's sign-off" rule as
+     every other write path in this app; this only surfaces the
+     candidates and their evidence for App.approveResolution() to act
+     on. */
+  function renderResolvable() {
+    var w = document.getElementById('resolvableWrap');
+    if (!w) return;
+    var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
+    var resolvable = window.CheckpointLib.resolvableFindings(S.risks, S.actions, checkResultsById);
+    if (!resolvable.length) { w.innerHTML = ''; return; }
+    w.innerHTML = '<div class="card"><h3>Ready to close — underlying check now passes</h3>' + resolvable.map(function (item) {
+      var r = item.risk;
+      var label = checkLabelsById[r.tpl] || r.tpl;
+      var actTitles = item.openActionIds.map(function (aid) {
+        var a = S.actions.find(function (x) { return x.id === aid; });
+        return a ? esc(a.title) : aid;
+      });
+      return '<div class="proposed-card"><h4>' + esc(r.id) + ' — ' + esc(r.title) + '</h4>' +
+        '<div class="meta"><b style="color:var(--pass)">' + icon('check') + ' ' + esc(label) + '</b> now passes' +
+        (actTitles.length ? ' · will mark ' + actTitles.length + ' linked action' + (actTitles.length > 1 ? 's' : '') + ' done: ' + actTitles.join(', ') : ' · no open linked actions') + '</div>' +
+        '<button class="btn sm" data-action="App.approveResolution" data-id="' + esc(r.id) + '">Approve → close</button> ' +
+        '<button class="btn ghost sm" data-action="App.dismissResolution" data-id="' + esc(r.id) + '">Not yet</button></div>';
     }).join('') + '</div>';
   }
 
@@ -8335,7 +8376,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -8683,6 +8724,20 @@ function showModal(opts) {
         if (!c.tpl) return;
         var r = checkResult(c);
         if (r === 'pass' || r === null) return;
+        /* A dismissed "ready to close" resolution proposal
+           (resolvableFindings() in lib.js) is a "not yet" about the
+           check's CURRENT pass state — if it regresses back to
+           fail/review/manual here, that pass state is gone, and any
+           future pass is a new event worth proposing again rather than
+           staying silently dismissed forever. Reset right here, in the
+           one place that already walks every check's live result every
+           scan, rather than a second pass over CHECK_DEFS. */
+        S.risks.forEach(function (dr) {
+          if (dr.tpl === c.id && dr.resolutionDismissed) {
+            dr.resolutionDismissed = false;
+            Store.updateRisk(dr).catch(function (e) { warn(e); });
+          }
+        });
         /* An 'alternative' disposition already reads as 'pass' above and
            never reaches here. 'notApplicable' reads as 'manual', which
            does NOT short-circuit — a check that merely could not be
@@ -9048,7 +9103,7 @@ function showModal(opts) {
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
       setTimeout(function () {
-        renderProposed(); renderNavCounts(); renderDash(); renderSoa();
+        renderProposed(); renderResolvable(); renderNavCounts(); renderDash(); renderSoa();
         /* ONE summary, not nine toasts.
            This used to fire a separate toast per framework plus one for
            the proposed risks — all in this same tick, all into the same
@@ -12822,6 +12877,57 @@ function showModal(opts) {
       renderDash();
     },
 
+    /* Approves a "ready to close" resolution proposal (renderResolvable(),
+       resolvableFindings() in lib.js): the risk's originating check now
+       passes, so its still-open linked actions are marked Done — each
+       through the normal recordActionUpdate() evidence-log path, same as
+       a manual App.complete() — and the risk itself is closed. One
+       explicit approval closes both; nothing here is an automatic write,
+       it only fires when a practitioner clicks it. */
+    approveResolution: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
+      var match = window.CheckpointLib.resolvableFindings(S.risks, S.actions, checkResultsById).find(function (x) { return x.risk.id === id; });
+      if (!match) return;
+      var label = checkLabelsById[r.tpl] || r.tpl;
+      var openActs = match.openActionIds.map(function (aid) { return S.actions.find(function (a) { return a.id === aid; }); }).filter(Boolean);
+      var msg = 'The check behind this risk — “' + label + '” — now passes on the latest scan. Close ' + r.id +
+        (openActs.length ? ' and mark ' + openActs.length + ' linked action' + (openActs.length > 1 ? 's' : '') + ' done' : '') + '?';
+      var ok = await showModal({ title: 'Close ' + r.id + '?', message: msg, confirmText: 'Approve → close', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      try {
+        for (var i = 0; i < openActs.length; i++) {
+          await recordActionUpdate(openActs[i], { note: 'Underlying posture check "' + label + '" now passes — closed on practitioner approval of the resolution proposal.', status: 'Done' });
+        }
+        r.status = 'Closed';
+        await Store.updateRisk(r);
+        audit('Risk closed — resolution approved', 'Risk', r.id, '', 'Closed (check "' + label + '" now passes)');
+        toast('<b>' + r.id + '</b> closed' + (openActs.length ? ' · ' + openActs.length + ' action(s) marked done' : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    /* "Not yet" — the practitioner isn't ready to close this one even
+       though its check currently passes (a common reason: they want to
+       watch it hold for another scan cycle first). Persists as a
+       one-way flag so the same proposal doesn't keep resurfacing every
+       scan; automatically cleared the moment the check itself regresses
+       (see the comment in runScan()'s S.proposed rebuild loop), since a
+       dismissal made about this pass state shouldn't silently apply to
+       some future, different pass state. */
+    dismissResolution: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      r.resolutionDismissed = true;
+      try { await Store.updateRisk(r); } catch (e) { warn(e); }
+      audit('Resolution proposal dismissed', 'Risk', r.id, '', 'Not yet');
+      toast('Won\'t propose closing <b>' + r.id + '</b> again unless its check state changes.');
+      renderResolvable();
+    },
+
     /* Copies the text content of one of the continuous-monitoring setup
        panel's <code>/<pre> blocks (renderMonitorSetupPanel(), below) to
        the clipboard — a plain DOM read, never a Checkpoint data
@@ -12906,7 +13012,7 @@ function showModal(opts) {
       } catch (e) { warn(e); }
       busy(false);
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
-      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility(); renderScanChecks(true); renderProposed(); renderAiSystems();
+      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility(); renderScanChecks(true); renderProposed(); renderResolvable(); renderAiSystems();
     },
 
     /* Verifies and applies an uploaded/pasted entitlement file (see the

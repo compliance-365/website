@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.49.0',
+    date: '2026-09-03',
+    entries: [
+      'New: the Posture scan view now proposes closing findings whose underlying check has since started passing, right below where it proposes new ones. A risk raised from an earlier scan — say, a failed backup-restore test — that now scores pass gets a "Ready to close" card naming the check and every still-open action it will mark done; approving closes both in one step, with the usual evidence-log entry against each action. Nothing closes on its own — this only surfaces the candidates, same as every other write in Checkpoint.',
+      '"Not yet" dismisses a proposal without closing anything, and won\'t re-nag on the next scan — but only for as long as the check keeps passing. If it ever regresses back to fail or review, the dismissal is cleared automatically, since a "not yet" about the current pass state shouldn\'t silently cover some different, later pass state.'
+    ]
+  },
+  {
     version: '1.48.0',
     date: '2026-09-03',
     entries: [
