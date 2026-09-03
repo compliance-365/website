@@ -711,6 +711,24 @@ function showModal(opts) {
       { name: 'TargetType', text: {} }, { name: 'TargetId', text: {} },
       { name: 'Before', text: { allowMultipleLines: true } }, { name: 'After', text: { allowMultipleLines: true } },
       { name: 'EntryDateTime', text: {} }
+    ],
+    /* Populated by lambda/report-error.js — the ONLY writer this list
+       ever has, since a client tenant's browser has no delegated write
+       access to OUR tenant. Every row is a client-side error from the
+       Checkpoint app itself (window.onerror/unhandledrejection, plus a
+       handful of explicit reportError() calls around genuinely
+       unexpected failures — see app.js), never anything from a client's
+       own posture/risk/compliance data: only the error text/stack, the
+       app's own state (view, version), and the browser's own info. This
+       is the one piece of visibility Compliance365 has into failures
+       happening in a signed-in practitioner's browser, across every
+       client tenant, that nothing else in this app provides. */
+    ErrorReports: [
+      { name: 'TenantId', text: {} }, { name: 'ClientName', text: {} },
+      { name: 'Message', text: { allowMultipleLines: true } }, { name: 'Stack', text: { allowMultipleLines: true } },
+      { name: 'Source', text: {} }, { name: 'Context', text: { allowMultipleLines: true } },
+      { name: 'AppVersion', text: {} }, { name: 'UserAgent', text: {} }, { name: 'Url', text: {} },
+      { name: 'ReportedAt', text: {} }, { name: 'Acknowledged', boolean: {} }
     ]
   };
   function partnerListName(k) { return 'Checkpoint Partner ' + k; }
@@ -829,11 +847,33 @@ function showModal(opts) {
     return { _sp: i.id, moduleId: f.ModuleId || '', annualPrice: typeof f.AnnualPrice === 'number' ? f.AnnualPrice : 0, currency: f.Currency || 'AUD', notes: f.Notes || '' };
   }
 
+  function mapErrorReport(i) {
+    var f = i.fields;
+    return {
+      _sp: i.id, tenantId: f.TenantId || '', clientName: f.ClientName || '',
+      message: f.Message || '', stack: f.Stack || '', source: f.Source || 'unknown',
+      context: f.Context || '', appVersion: f.AppVersion || '', userAgent: f.UserAgent || '',
+      url: f.Url || '', reportedAt: f.ReportedAt || (i.createdDateTime || ''), acknowledged: !!f.Acknowledged
+    };
+  }
+
   async function loadPartnerConsoleData() {
     var clientItems = await items('PartnerClients');
     var entItems = await items('PartnerEntitlements');
     var priceItems = await items('PartnerPrices');
-    return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement), prices: priceItems.map(mapPartnerPrice) };
+    /* ErrorReports is the newest list here and the only one this console
+       never WRITES rows into (lambda/report-error.js is the sole
+       writer) — resolved leniently so a console that hasn't re-run
+       provisioning since this list was added still loads everything
+       else instead of failing the whole load. */
+    var errorItems = lists.ErrorReports ? await items('ErrorReports') : [];
+    return {
+      clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement),
+      prices: priceItems.map(mapPartnerPrice), errorReports: errorItems.map(mapErrorReport)
+    };
+  }
+  async function acknowledgeErrorReport(r) {
+    await patchItem('ErrorReports', r._sp, { Acknowledged: true });
   }
   async function addPartnerClient(c) {
     c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', SitePath: c.sitePath || '', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '', Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '', LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || '' });
@@ -1439,6 +1479,45 @@ function showModal(opts) {
     revealRows(tbody);
   }
 
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* The one view in this console with no client-tenant data behind it
+     at all — every row here is an error the Checkpoint browser app
+     reported about ITSELF (window.onerror/unhandledrejection, or an
+     explicit reportError() call — see app.js), across every client
+     tenant, written by lambda/report-error.js. Sorted newest first;
+     acknowledged rows fade rather than disappear, so a resolved issue
+     stays visible as "seen" instead of vanishing the moment it's
+     triaged. */
+  function renderErrorReports() {
+    var tbody = document.getElementById('errorReportRows');
+    if (!tbody) return;
+    var reports = (PARTNER_DATA && PARTNER_DATA.errorReports) || [];
+    var badgeEl = document.getElementById('errorReportsBadge');
+    var openCount = reports.filter(function (r) { return !r.acknowledged; }).length;
+    if (badgeEl) {
+      badgeEl.textContent = String(openCount);
+      badgeEl.style.display = openCount ? '' : 'none';
+    }
+    if (!reports.length) { tbody.innerHTML = emptyState({ asRow: true, colspan: 5, text: 'No client-side errors reported yet — that\'s either good news or the reporting endpoint isn\'t configured (public/checkpoint/config.js errorReportUrl).' }); return; }
+    var sorted = reports.slice().sort(function (a, b) { return (b.reportedAt || '').localeCompare(a.reportedAt || ''); });
+    tbody.innerHTML = sorted.map(function (r) {
+      return '<tr style="' + (r.acknowledged ? 'opacity:.5' : '') + '">' +
+        '<td style="white-space:nowrap;color:var(--paper-dim)">' + esc(fmtDateTime(r.reportedAt)) + '</td>' +
+        '<td>' + esc(r.clientName || r.tenantId || 'Unknown tenant') + '</td>' +
+        '<td><button class="lnk" data-action="OwnerApp.viewErrorReport" data-id="' + esc(r._sp) + '" style="text-align:left"><b>' + esc(r.message.slice(0, 140)) + '</b></button>' + (r.url ? '<div class="src">' + esc(r.url) + '</div>' : '') + '</td>' +
+        '<td>' + esc(r.source) + '</td>' +
+        '<td style="white-space:nowrap">' + (r.acknowledged ? '<span style="color:var(--paper-dim)">Acknowledged</span>' : '<button class="btn ghost sm" data-action="OwnerApp.ackErrorReport" data-id="' + esc(r._sp) + '">Acknowledge</button>') + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(tbody);
+  }
+
   /* ================= New client (post-purchase issuance flow) =================
      One form for the whole "we just closed a deal" workflow: pick
      modules/term/type, generate the exact issue-entitlement.mjs command
@@ -1762,6 +1841,7 @@ function showModal(opts) {
     renderClientHealthStrip();
     renderPartnerPrices();
     renderNewClientForm();
+    renderErrorReports();
   }
 
   async function renderConsole() {
@@ -2763,6 +2843,40 @@ function showModal(opts) {
       renderPartnerPrices();
       renderRevenueBoard();
       renderRenewalsRunway();
+    },
+
+    ackErrorReport: async function (id) {
+      var r = (PARTNER_DATA.errorReports || []).find(function (x) { return x._sp === id; });
+      if (!r) return;
+      try { await acknowledgeErrorReport(r); } catch (e) { warn(e); toast('Could not acknowledge: ' + esc(e.message || e)); return; }
+      r.acknowledged = true;
+      audit('Error report acknowledged', 'ErrorReport', id, '', r.message.slice(0, 140));
+      toast('Acknowledged');
+      renderErrorReports();
+    },
+
+    viewErrorReport: function (id) {
+      var r = (PARTNER_DATA.errorReports || []).find(function (x) { return x._sp === id; });
+      if (!r) return;
+      var ctxPretty = r.context;
+      try { ctxPretty = JSON.stringify(JSON.parse(r.context), null, 2); } catch (e) { /* not JSON — show as-is */ }
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="OwnerApp.closeDrawer" aria-label="Close">' + icon('close') + '</button>' +
+        '<h3>' + esc(r.message.slice(0, 200)) + '</h3>' +
+        '<div class="d-sec"><h4>Where</h4>' +
+        '<div class="d-kv"><span>Tenant</span><b>' + esc(r.clientName || r.tenantId || 'Unknown') + '</b></div>' +
+        '<div class="d-kv"><span>When</span><b>' + esc(fmtDateTime(r.reportedAt)) + '</b></div>' +
+        '<div class="d-kv"><span>Source</span><b>' + esc(r.source) + '</b></div>' +
+        '<div class="d-kv"><span>App version</span><b>' + esc(r.appVersion || '—') + '</b></div>' +
+        (r.url ? '<div class="d-kv"><span>URL</span><b style="word-break:break-all">' + esc(r.url) + '</b></div>' : '') +
+        '</div>' +
+        (r.stack ? '<div class="d-sec"><h4>Stack</h4><pre style="white-space:pre-wrap;font-size:11.5px;color:var(--paper-dim);background:var(--surface-2);border-radius:6px;padding:8px">' + esc(r.stack) + '</pre></div>' : '') +
+        (r.context ? '<div class="d-sec"><h4>Context</h4><pre style="white-space:pre-wrap;font-size:11.5px;color:var(--paper-dim);background:var(--surface-2);border-radius:6px;padding:8px">' + esc(ctxPretty) + '</pre></div>' : '') +
+        (r.userAgent ? '<div class="d-sec"><h4>Browser</h4><p style="font-size:12px;color:var(--paper-dim);word-break:break-all">' + esc(r.userAgent) + '</p></div>' : '') +
+        '<div style="margin-top:16px">' +
+        (r.acknowledged ? '' : '<button class="btn sm" data-action="OwnerApp.ackErrorReport" data-id="' + esc(r._sp) + '">Acknowledge</button>') +
+        '</div>';
+      openDrawerUi('Error report');
     },
 
     closeDrawer: function () { closeDrawerUi(); }

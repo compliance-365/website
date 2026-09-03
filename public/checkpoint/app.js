@@ -156,6 +156,65 @@ function showModal(opts) {
   var S = null;          /* in-memory state, loaded from Store */
   var Store = null;      /* active store */
   var CONFIG = window.CHECKPOINT_CONFIG;
+
+  /* Client-side error telemetry — see lambda/report-error.js and
+     config.js's own comment on errorReportUrl. The one place
+     Compliance365 gets visibility into a signed-in practitioner hitting
+     a genuine bug, across every client tenant, since nothing else in
+     this app reports failures back. Defined this early — and the two
+     window listeners below attached immediately, not deferred behind
+     Store/Graph initialising — so a crash during boot itself still gets
+     caught, the exact moment a failure is least likely to already be
+     visible to anyone watching. Fire-and-forget: never blocks, never
+     retries, never throws back into whatever triggered it. Off
+     entirely (every call below a silent no-op) until
+     CONFIG.errorReportUrl is set — see warn() below for the other main
+     call site, which routes the ~140 existing "something went wrong,
+     toast it" catch blocks through here for free. Sends only the error
+     text/stack, the app's own state (current view, version), and the
+     browser's own info — never anything from the tenant's posture/risk/
+     compliance data. */
+  var _errorReportCount = 0;
+  var REPORT_ERROR_MAX = 20;
+  function reportError(err, source, extraContext) {
+    try {
+      if (!CONFIG.errorReportUrl) return;
+      if (_errorReportCount >= REPORT_ERROR_MAX) return;
+      _errorReportCount++;
+      var acc = (window.Graph && window.Graph.getAccount && window.Graph.getAccount()) || null;
+      var activeView = document.querySelector('.view.on');
+      var context = Object.assign({ view: activeView ? activeView.id : '' }, extraContext || {});
+      var payload = {
+        tenantId: (acc && acc.tenantId) || '',
+        message: (err && err.message) || String(err),
+        stack: (err && err.stack) || '',
+        source: source || 'unknown',
+        context: JSON.stringify(context),
+        appVersion: window.CHECKPOINT_VERSION || '',
+        userAgent: navigator.userAgent || '',
+        /* Path only, never the full href — a handful of legitimate
+           query params this app reads (?_ptxn=, ?token=, a Marketplace
+           purchase token) are one-time-use transaction identifiers, and
+           the current view id above already says which page this was.
+           No reason to let one ride along into a roster several owner-
+           console users can read. */
+        url: location.origin + location.pathname
+      };
+      fetch(CONFIG.errorReportUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function () { /* fire-and-forget — a failed report isn't itself worth reporting */ });
+    } catch (e) { /* reportError() itself must never throw */ }
+  }
+  window.addEventListener('error', function (e) {
+    reportError(e.error || new Error(e.message || 'Unknown error'), 'window.onerror');
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var reason = e.reason;
+    reportError(reason instanceof Error ? reason : new Error(String(reason)), 'unhandledrejection');
+  });
+
   var W = null;          /* onboarding wizard state — in memory only, never persisted (see the "onboarding wizard" section near the bottom of this file); reset fresh every time Wizard.start()/startAt() runs */
   var CAP = null;        /* capability detection result (see detectAppCapabilities() below) — session-cached, never persisted, re-probed fresh on every page load */
   /* Two-role model — {readOnly, detected} from Graph.detectRole(), or a
@@ -3013,7 +3072,7 @@ function showModal(opts) {
       toastError('<b>Audit log entry not recorded:</b> ' + esc(e.message || e));
     });
   }
-  function warn(e) { console.error(e); toastError('<b>Sync issue:</b> ' + esc(e.message || e)); }
+  function warn(e) { console.error(e); toastError('<b>Sync issue:</b> ' + esc(e.message || e)); reportError(e, 'warn'); }
 
   /* ── Segregation of duties (ISO 27001 A.5.3) ──────────────────────
      Who originated a record is not stored on the record itself; it is
