@@ -2625,13 +2625,21 @@ user to act as). It writes a normal `Checkpoint Scans` row on every run
 and a `Checkpoint Alerts` row whenever a check that scored **pass** on
 the previous scan scores **fail** on this one.
 
-It scores the same checks the interactive app does, including the
-awareness-training check computed from the `Checkpoint Training` list
-(the one scored check with no Graph signal behind it), so an automated
-scan and a browser scan of the same tenant land on the same number —
-the two used to be computed over different denominators and disagreed.
-Two checks stay interactive-only for auth reasons documented in
-`azure/PostureMonitor/index.js`: `labels` and `sharing`.
+It scores 35 of the checks the interactive app does — every check except
+six — including the awareness-training check computed from the
+`Checkpoint Training` list (the one scored check with no Graph signal
+behind it), so an automated scan and a browser scan of the same tenant
+land on close to the same number. Two checks stay interactive-only for
+auth reasons documented in `azure/PostureMonitor/index.js`: `labels`
+(needs a signed-in user) and `sharing` (needs the calling identity to
+hold the SharePoint Administrator role, which has no clean equivalent
+for a client-credentials service principal). Four more —
+`xdr-incidents`, `privacy-srr`, `retention` and `lifecycle-workflows` —
+are interactive-only for a different reason: each needs a genuinely new
+application permission this Function's app registration does not
+request by default (see `azure/README.md`'s permission table), so
+adding them is a deliberate, separate decision rather than something
+this deployment does automatically.
 
 Full deploy steps (app registration, the exact application permissions
 and why each is the least-privilege choice for its check, the

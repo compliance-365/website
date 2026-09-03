@@ -76,21 +76,35 @@ narrowest Graph permission that satisfies the specific check(s) it backs
 
 | Permission | Read/Write | Backs these checks | Why this one, not something broader |
 |---|---|---|---|
-| `Policy.Read.All` | Read | `mfa-all`, `mfa-priv`, `legacy` | Reads Conditional Access policies only. No narrower Graph permission exists for CA policies. |
-| `RoleManagement.Read.Directory` | Read | `admins`, `pim` | Reads directory role membership and PIM eligibility/assignment schedule instances. Doesn't grant any ability to *change* role assignments — that would be `RoleManagement.ReadWrite.Directory`, not requested. |
-| `User.Read.All` | Read | `guests` | Lists guest ( `userType eq 'Guest'` ) accounts. Directory-wide by necessity (guests aren't scoped to a single group), but read-only — no profile or password write capability. |
-| `Directory.Read.All` | Read | `riskyapps` | The only Graph permission that authorizes application-level enumeration of `oauth2PermissionGrants` (existing OAuth consent grants). It's a superset of `User.Read.All` above — listed as its own row for clarity, but the two together don't add any write capability beyond either alone. |
+| `Policy.Read.All` | Read | `mfa-all`, `mfa-priv`, `legacy`, `ca-device`, `ca-risk`, `ca-sif`, `ca-tou`, `ca-cas` | Reads Conditional Access policies only. No narrower Graph permission exists for CA policies. The five checks added later all mine fields off the same policy array `mfa-all`/`legacy`/`mfa-priv` already fetch — no second call, no broader grant. |
+| `RoleManagement.Read.Directory` | Read | `admins`, `pim`, `leaver`, `sod` | Reads directory role membership and PIM eligibility/assignment schedule instances. Doesn't grant any ability to *change* role assignments — that would be `RoleManagement.ReadWrite.Directory`, not requested. `leaver`/`sod` reuse the same `/directoryRoles` + per-role `/members` reads this permission already authorized for `admins`. |
+| `User.Read.All` | Read | `guests`, `leaver` | Lists guest ( `userType eq 'Guest'` ) accounts, and (for `leaver`) every user's `accountEnabled`/`assignedLicenses`. Directory-wide by necessity (guests aren't scoped to a single group), but read-only — no profile or password write capability. |
+| `Directory.Read.All` | Read | `riskyapps`, `oauth-consent` | The only Graph permission that authorizes application-level enumeration of `oauth2PermissionGrants` (existing OAuth consent grants). It's a superset of `User.Read.All` above — listed as its own row for clarity, but the two together don't add any write capability beyond either alone. `oauth-consent` reads the SAME grants array as `riskyapps`, just scoring a field (`consentType`) nothing previously read. |
 | `IdentityRiskyUser.Read.All` | Read | `riskyusers` | Scoped specifically to Identity Protection's risky-user signal — doesn't grant sign-in log or broader security-event access. |
 | `AccessReview.Read.All` | Read | `access-review` | Confirms Entra Access Reviews are configured — read-only, no ability to create, complete or decide a review. |
-| `DeviceManagementManagedDevices.Read.All` | Read | `device` | Reads Intune device compliance state only — not device configuration, not the ability to retire/wipe a device (that's `DeviceManagementManagedDevices.PrivilegedOperations.All`, nowhere near requested). |
-| `DeviceManagementConfiguration.Read.All` | Read | `compliance-policy` | Confirms compliance policies exist — read-only, no ability to author or assign policies. |
+| `DeviceManagementManagedDevices.Read.All` | Read | `device`, `device-checkin` | Reads Intune device compliance state (and, for `device-checkin`, `lastSyncDateTime` off the SAME response) only — not device configuration, not the ability to retire/wipe a device (that's `DeviceManagementManagedDevices.PrivilegedOperations.All`, nowhere near requested). |
+| `DeviceManagementConfiguration.Read.All` | Read | `compliance-policy`, `device-config` | Confirms compliance policies and classic device configuration profiles exist — read-only, no ability to author or assign either. |
 | `SecurityEvents.Read.All` | Read | `patch`, `macro`, `logging`, `wdac`, `alerts`, `dlp`, `encryption` | Reads Microsoft Secure Score control scores — the same heuristic, best-effort mapping the interactive app uses, clearly labelled as such in both places. `dlp`/`encryption` have no verified exact Secure Score control-name match (see the code comment) and run on a lower-confidence substring fallback only. |
-| `Sites.Selected` | Read **and write** | Writing `Checkpoint Scans` / `Checkpoint Alerts`, reading `Checkpoint Settings` | The **only** write-capable permission this identity holds, and it's the narrowest SharePoint permission Graph offers: with `Sites.Selected`, the app has **zero** access to **any** SharePoint site until a tenant admin explicitly grants it a role on one specific site (step 3 below). Compare to `Sites.ReadWrite.All`, which would hand this Function write access to **every** SharePoint site in the tenant — never requested here. |
+| `Sites.Selected` | Read **and write** | Writing `Checkpoint Scans` / `Checkpoint Alerts`, reading `Checkpoint Settings`, `Calendar`, `Documents`, `Vendors`, `Audits`, `Incidents` (`backup`, `bcp`, `supplier`, `policy`, `audit-review`, `incident-lessons`) | The **only** write-capable permission this identity holds, and it's the narrowest SharePoint permission Graph offers: with `Sites.Selected`, the app has **zero** access to **any** SharePoint site until a tenant admin explicitly grants it a role on one specific site (step 3 below). Compare to `Sites.ReadWrite.All`, which would hand this Function write access to **every** SharePoint site in the tenant — never requested here. The six register-derived checks read more lists on that SAME one site already granted — no new site, no new permission, no new admin consent. |
 
 No permission above grants the ability to change a Conditional Access
 policy, role assignment, device compliance policy, or user account —
 only to read those signals and to write to the two SharePoint lists this
 same monitor owns.
+
+Sixteen of the checks above (`ca-device`, `ca-risk`, `ca-sif`, `ca-tou`,
+`ca-cas`, `oauth-consent`, `leaver`, `sod`, `device-checkin`,
+`device-config`, `backup`, `bcp`, `supplier`, `policy`, `audit-review`,
+`incident-lessons`) were added without touching this permission list at
+all — each either mines a field off a Graph response this Function was
+already fetching for another check, or makes a small number of new calls
+under a permission already granted above. `xdr-incidents`, `privacy-srr`,
+`retention` and `lifecycle-workflows` — checks the interactive app scores
+that this Function still does not — are the ones that genuinely need a
+NEW permission (`SecurityIncident.Read.All`, the Priva/records-management
+scopes, `LifecycleWorkflows.Read.All`) and a fresh admin-consent decision;
+adding them is deliberately left as a separate change from the batch
+above.
 
 Two interactive-app checks are deliberately **not** mirrored here:
 
