@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.50.0',
+    date: '2026-09-03',
+    entries: [
+      'New: owner-driven evidence, for tenants running the optional scheduled monitor. When the monitor emails an overdue action\'s owner (Owner email field on the action), the email now carries a personal link that lets them record progress or attach evidence directly — no Checkpoint sign-in, no Microsoft 365 permission consent. Everyone in a tenant could technically sign into the full app via Entra, but that would mean handing out the same broad, sensitive Graph scopes this whole tool works hard to keep narrow, on top of a licensing model built around one practitioner seat. A short-lived, signed link scoped to exactly one action gets the same outcome — the owner reports on their own work directly — without any of that.',
+      'The link is deliberately narrow: an owner can mark their action "In progress" or "Done" with a note and/or an evidence link, and nothing else — never reopen or cancel a finding, never touch its title, owner, priority, due date or control. A submission is recorded exactly like a practitioner\'s own "Complete action" flow, with its provenance clearly marked in the audit trail.',
+      'Needs no new Microsoft Graph permission and no new admin consent — it reuses the monitor\'s existing SharePoint write access. Nothing to configure: the link-signing key generates itself at deployment.'
+    ]
+  },
+  {
     version: '1.49.0',
     date: '2026-09-03',
     entries: [

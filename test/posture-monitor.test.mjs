@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep } =
+const { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep, buildEvidenceLink, EVIDENCE_PAGE_URL } =
   require('../public/checkpoint/azure/PostureMonitor/index.js').__test;
 
 const TODAY = '2026-08-15';
@@ -121,7 +121,7 @@ describe('runGovernanceSweep() — chasing action owners directly', () => {
   function graph(actions, openAlertKeys = []) {
     const sent = [], written = [];
     async function g(path, opts) {
-      if (/\/lists\/actions-list\/items/.test(path)) return { value: actions.map(f => ({ fields: f })) };
+      if (/\/lists\/actions-list\/items/.test(path)) return { value: actions.map((f, i) => ({ id: String(i + 1), fields: f })) };
       if (/\/lists\/alerts-list\/items/.test(path)) {
         if (opts && opts.method === 'POST') { written.push(opts.body.fields); return { id: 'a' }; }
         return { value: openAlertKeys.map(k => ({ fields: { CheckId: k, Acknowledged: false } })) };
@@ -176,6 +176,67 @@ describe('runGovernanceSweep() — chasing action owners directly', () => {
     assert.equal(res.written, 1, 'alerts are still written');
     assert.equal(res.ownersChased, 0);
     assert.equal(sent.length, 0);
+  });
+
+  describe('the chase email — owner-driven evidence link', () => {
+    function withEvidenceEnv(fn) {
+      process.env.NOTIFY_FROM = 'compliance@example.com';
+      process.env.EVIDENCE_LINK_SECRET = 'test-secret';
+      process.env.WEBSITE_HOSTNAME = 'contoso-checkpoint-monitor.azurewebsites.net';
+      return fn().finally(() => {
+        delete process.env.NOTIFY_FROM;
+        delete process.env.EVIDENCE_LINK_SECRET;
+        delete process.env.WEBSITE_HOSTNAME;
+      });
+    }
+
+    test('when EVIDENCE_LINK_SECRET and WEBSITE_HOSTNAME are set, the chase email contains a personal evidence link', async () => {
+      const { g, sent } = graph([overdue]);
+      await withEvidenceEnv(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+      const html = sent[0].body.message.body.content;
+      assert.match(html, new RegExp(EVIDENCE_PAGE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(html, /token=/);
+      assert.match(html, /api=contoso-checkpoint-monitor\.azurewebsites\.net/);
+      assert.match(html, /No Checkpoint sign-in needed/i);
+    });
+
+    test('without EVIDENCE_LINK_SECRET configured, the chase email falls back to the plain "Open Checkpoint" text — never a broken link', async () => {
+      const { g, sent } = graph([overdue]);
+      await withMailbox(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+      const html = sent[0].body.message.body.content;
+      assert.doesNotMatch(html, /token=/);
+      assert.match(html, /Open Checkpoint/);
+    });
+
+    test('buildEvidenceLink() returns null when any prerequisite is missing', () => {
+      delete process.env.EVIDENCE_LINK_SECRET;
+      delete process.env.WEBSITE_HOSTNAME;
+      assert.equal(buildEvidenceLink('42'), null, 'no secret, no hostname');
+      process.env.EVIDENCE_LINK_SECRET = 'test-secret';
+      assert.equal(buildEvidenceLink('42'), null, 'secret but no hostname');
+      delete process.env.EVIDENCE_LINK_SECRET;
+      process.env.WEBSITE_HOSTNAME = 'contoso-checkpoint-monitor.azurewebsites.net';
+      assert.equal(buildEvidenceLink('42'), null, 'hostname but no secret');
+      delete process.env.WEBSITE_HOSTNAME;
+      assert.equal(buildEvidenceLink(''), null, 'no item id, even with everything else set');
+    });
+
+    test('buildEvidenceLink() embeds a token that verifies back to the same action item id', () => {
+      process.env.EVIDENCE_LINK_SECRET = 'test-secret';
+      process.env.WEBSITE_HOSTNAME = 'contoso-checkpoint-monitor.azurewebsites.net';
+      try {
+        const link = buildEvidenceLink('42');
+        const url = new URL(link);
+        const token = url.searchParams.get('token');
+        const { verifyEvidenceToken } = require('../public/checkpoint/azure/lib/evidenceToken.js');
+        const result = verifyEvidenceToken(token, 'test-secret');
+        assert.equal(result.valid, true);
+        assert.equal(result.actionItemId, '42');
+      } finally {
+        delete process.env.EVIDENCE_LINK_SECRET;
+        delete process.env.WEBSITE_HOSTNAME;
+      }
+    });
   });
 });
 
