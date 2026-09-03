@@ -42,6 +42,13 @@ const GRAPH = 'https://graph.microsoft.com/v1.0';
    fetch each one reuses, and ../README.md's permission table for the
    accounting.
 
+   xdr-incidents/privacy-srr/lifecycle-workflows were added in a second
+   batch, each needing a genuinely NEW application permission
+   (SecurityIncident.Read.All, SubjectRightsRequest.Read.All,
+   LifecycleWorkflows.Read.All respectively) this identity did not
+   originally request — see ../README.md's permission table for the
+   accounting and consent steps.
+
    Two scored:true, capability-backed checks are deliberately not
    mirrored here, both for the same shape of reason — an app-only,
    client-credentials identity can't reuse the delegated call the
@@ -56,24 +63,25 @@ const GRAPH = 'https://graph.microsoft.com/v1.0';
        IDENTITY to hold the SharePoint Administrator role — a
        delegated-user role assignment that has no clean equivalent for
        a client-credentials service principal.
-   Three more scored:true checks (xdr-incidents, privacy-srr, retention)
-   and lifecycle-workflows are also not mirrored — each needs a
-   genuinely NEW application permission (SecurityIncident.Read.All,
-   the Priva/records-management scopes, LifecycleWorkflows.Read.All)
-   this identity does not hold, unlike everything added above. Adding
-   them is a deliberate, separate decision — see ../README.md — not an
-   oversight.
+   'retention' is the one check that can NEVER move here, permission
+   decision or not: its Graph permission, RecordsManagement.Read.All,
+   has no Application permission type at all in Entra ID — delegated
+   only, a Microsoft platform limitation, not a scoping choice. See
+   config.js's own comment on this scope and graph.js's capabilities
+   table entry for 'recordsManagement', both of which said so before
+   this Function existed.
    Rather than ship an unattended timer trigger against an endpoint
-   nobody's confident works unattended, all of the above stay
-   interactive-app-only for now; this Function reports them as absent
-   from Detail, same as any other check it doesn't run. */
+   nobody's confident works unattended, 'labels'/'sharing'/'retention'
+   stay interactive-app-only permanently; this Function reports them as
+   absent from Detail, same as any other check it doesn't run. */
 const SCORED_CHECK_IDS = [
   'mfa-all', 'mfa-priv', 'legacy', 'admins', 'pim', 'guests', 'riskyusers', 'access-review',
   'device', 'compliance-policy', 'patch', 'wdac', 'macro', 'riskyapps', 'dlp', 'encryption',
   'logging', 'alerts', 'training',
   'ca-device', 'ca-risk', 'ca-sif', 'ca-tou', 'ca-cas', 'oauth-consent', 'leaver', 'sod',
   'device-checkin', 'device-config',
-  'backup', 'bcp', 'supplier', 'policy', 'audit-review', 'incident-lessons'
+  'backup', 'bcp', 'supplier', 'policy', 'audit-review', 'incident-lessons',
+  'xdr-incidents', 'privacy-srr', 'lifecycle-workflows'
 ];
 const CHECK_LABELS = {
   'mfa-all': 'MFA enforced — all users',
@@ -110,7 +118,10 @@ const CHECK_LABELS = {
   'supplier': 'Supplier security assessments current',
   'policy': 'Information security policy published & reviewed',
   'audit-review': 'Independent internal review completed within cadence',
-  'incident-lessons': 'Closed incidents have a recorded root cause and lessons learned'
+  'incident-lessons': 'Closed incidents have a recorded root cause and lessons learned',
+  'xdr-incidents': 'Security incidents triaged within cadence',
+  'privacy-srr': 'Subject rights requests answered within statutory deadline',
+  'lifecycle-workflows': 'Joiner/leaver processing technically automated'
 };
 
 async function getAppToken(context) {
@@ -828,6 +839,78 @@ async function runPostureChecks(g, gAll, settings) {
   fromSecureScore('alerts', 'Verify Defender/Purview threat protection policies and alert triage cadence');
   fromSecureScore('dlp', 'Verify Data Loss Prevention policy coverage in Microsoft Purview');
   fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
+
+  /* --- xdr-incidents (Defender XDR incident triage) — needs the
+     SecurityIncident.Read.All application permission, added specifically
+     for this check; see README.md. Mirrors graph.js/lib.js's
+     incidentTriageResult() exactly: deliberately reads only 'active'
+     incidents (a resolved one is evidence the process works; a
+     redirected one has been merged into another and would double-count),
+     and never invents an overdue finding from an unparseable
+     createdDateTime. No capability probe here (this Function doesn't do
+     capability probing for any check) — a tenant with no Defender XDR
+     plan gets a 403 caught below as 'review', not the interactive app's
+     'manual'; same pre-existing class of drift as riskyusers/ca-risk
+     above, not new. */
+  try {
+    const incidentTriageDays = numSetting(settings, 'incidentTriageDays', 5);
+    const incidents = await gAll("/security/incidents?$filter=status eq 'active'&$select=id,severity,status,createdDateTime,assignedTo,classification&$top=999");
+    const active = incidents.filter(i => i && i.status === 'active');
+    const highOpen = active.filter(i => i.severity === 'high');
+    const overdueMs = incidentTriageDays * 86400000;
+    const nowMs = Date.now();
+    const overdue = highOpen.filter(i => {
+      const created = Date.parse(i.createdDateTime || '');
+      return !isNaN(created) && (nowMs - created) > overdueMs;
+    });
+    const unassigned = highOpen.filter(i => !i.assignedTo);
+    set('xdr-incidents', overdue.length ? 'fail' : (unassigned.length ? 'review' : 'pass'),
+      active.length === 0
+        ? 'No active incidents in the Defender XDR queue'
+        : active.length + ' active incident(s), ' + highOpen.length + ' high severity' +
+          (overdue.length ? '; ' + overdue.length + ' open beyond the ' + incidentTriageDays + '-day triage window' : '') +
+          (unassigned.length ? '; ' + unassigned.length + ' high-severity unassigned' : ''));
+  } catch (e) { set('xdr-incidents', 'review', 'Defender XDR incidents not readable: ' + e.message); }
+
+  /* --- privacy-srr (Microsoft Priva subject rights requests) — needs
+     the SubjectRightsRequest.Read.All application permission. Mirrors
+     lib.js's subjectRightsResult() exactly: scored against the tenant's
+     OWN recorded dueDateTime rather than assuming a jurisdiction, since
+     Priva carries a due date per request already. */
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const srrs = await gAll('/security/subjectRightsRequests?$select=id,status,dueDateTime,createdDateTime,type&$top=999');
+    const open = srrs.filter(r => r && r.status !== 'closed' && r.status !== 'Closed');
+    const overdue = open.filter(r => { const d = (r.dueDateTime || '').slice(0, 10); return d && d < today; });
+    const soon = open.filter(r => { const d = (r.dueDateTime || '').slice(0, 10); return d && d >= today && daysBetween(today, d) <= 7; });
+    set('privacy-srr', overdue.length ? 'fail' : (soon.length ? 'review' : 'pass'),
+      open.length === 0
+        ? 'No open subject rights requests'
+        : open.length + ' open request(s)' +
+          (overdue.length ? '; ' + overdue.length + ' PAST their statutory due date' : '') +
+          (soon.length ? '; ' + soon.length + ' due within 7 days' : ''));
+  } catch (e) { set('privacy-srr', 'review', 'Subject rights requests not readable: ' + e.message); }
+
+  /* --- lifecycle-workflows (Entra ID Governance) — needs the
+     LifecycleWorkflows.Read.All application permission. Mirrors lib.js's
+     lifecycleWorkflowsResult() exactly: joiner AND leaver both automated
+     and enabled passes; either alone is a review; neither is a fail.
+     Read-only visibility into whether joiner/mover/leaver automation is
+     configured — never provisions a workflow on the tenant's behalf. */
+  try {
+    const workflows = await gAll('/identityGovernance/lifecycleWorkflows/workflows?$select=id,displayName,isEnabled,category');
+    const list = workflows.filter(w => w);
+    const enabled = list.filter(w => w.isEnabled === true);
+    const hasEnabledCategory = cat => enabled.some(w => w.category === cat);
+    const joiner = hasEnabledCategory('joiner');
+    const leaver = hasEnabledCategory('leaver');
+    const mover = hasEnabledCategory('mover');
+    set('lifecycle-workflows', (joiner && leaver) ? 'pass' : (joiner || leaver) ? 'review' : 'fail',
+      list.length === 0
+        ? 'No Lifecycle Workflows configured — joiner/leaver processing is not automated'
+        : enabled.length + ' of ' + list.length + ' workflow(s) enabled — joiner ' + (joiner ? 'automated' : 'not automated') +
+          ', leaver ' + (leaver ? 'automated' : 'not automated') + ', mover ' + (mover ? 'automated' : 'not automated'));
+  } catch (e) { set('lifecycle-workflows', 'review', 'Could not read Lifecycle Workflows: ' + e.message); }
 
   return { results, notes };
 }

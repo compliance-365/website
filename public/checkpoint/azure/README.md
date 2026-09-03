@@ -86,6 +86,9 @@ narrowest Graph permission that satisfies the specific check(s) it backs
 | `DeviceManagementConfiguration.Read.All` | Read | `compliance-policy`, `device-config` | Confirms compliance policies and classic device configuration profiles exist — read-only, no ability to author or assign either. |
 | `SecurityEvents.Read.All` | Read | `patch`, `macro`, `logging`, `wdac`, `alerts`, `dlp`, `encryption` | Reads Microsoft Secure Score control scores — the same heuristic, best-effort mapping the interactive app uses, clearly labelled as such in both places. `dlp`/`encryption` have no verified exact Secure Score control-name match (see the code comment) and run on a lower-confidence substring fallback only. |
 | `Sites.Selected` | Read **and write** | Writing `Checkpoint Scans` / `Checkpoint Alerts`, reading `Checkpoint Settings`, `Calendar`, `Documents`, `Vendors`, `Audits`, `Incidents` (`backup`, `bcp`, `supplier`, `policy`, `audit-review`, `incident-lessons`) | The **only** write-capable permission this identity holds, and it's the narrowest SharePoint permission Graph offers: with `Sites.Selected`, the app has **zero** access to **any** SharePoint site until a tenant admin explicitly grants it a role on one specific site (step 3 below). Compare to `Sites.ReadWrite.All`, which would hand this Function write access to **every** SharePoint site in the tenant — never requested here. The six register-derived checks read more lists on that SAME one site already granted — no new site, no new permission, no new admin consent. |
+| `SecurityIncident.Read.All` | Read | `xdr-incidents` | Reads the Defender XDR incident queue only — Checkpoint reports on incidents and never assigns, classifies or resolves one; that's the SOC's job in Defender. Same scope the interactive app's delegated `SecurityIncident.Read.All` grant already backs. |
+| `SubjectRightsRequest.Read.All` | Read | `privacy-srr` | Reads Microsoft Priva subject rights requests only — no ability to create, action or close one. Scored against each request's own recorded `dueDateTime` rather than assuming a jurisdiction. |
+| `LifecycleWorkflows.Read.All` | Read | `lifecycle-workflows` | Confirms Entra ID Governance's Lifecycle Workflows exist and are enabled — read-only visibility, never provisions a workflow on the tenant's behalf. |
 
 No permission above grants the ability to change a Conditional Access
 policy, role assignment, device compliance policy, or user account —
@@ -95,18 +98,27 @@ same monitor owns.
 Sixteen of the checks above (`ca-device`, `ca-risk`, `ca-sif`, `ca-tou`,
 `ca-cas`, `oauth-consent`, `leaver`, `sod`, `device-checkin`,
 `device-config`, `backup`, `bcp`, `supplier`, `policy`, `audit-review`,
-`incident-lessons`) were added without touching this permission list at
-all — each either mines a field off a Graph response this Function was
-already fetching for another check, or makes a small number of new calls
-under a permission already granted above. `xdr-incidents`, `privacy-srr`,
-`retention` and `lifecycle-workflows` — checks the interactive app scores
-that this Function still does not — are the ones that genuinely need a
-NEW permission (`SecurityIncident.Read.All`, the Priva/records-management
-scopes, `LifecycleWorkflows.Read.All`) and a fresh admin-consent decision;
-adding them is deliberately left as a separate change from the batch
-above.
+`incident-lessons`) were added without touching the original permission
+list at all — each either mines a field off a Graph response this
+Function was already fetching for another check, or makes a small number
+of new calls under a permission already granted. `xdr-incidents`,
+`privacy-srr` and `lifecycle-workflows` each needed a genuinely new
+permission and a fresh admin-consent decision — a real tradeoff (broader
+app-only, unattended access is a bigger ask than the same data via a
+delegated session, even inside the client's own tenant), which is why
+this was a deliberate, separate change rather than bundled into the
+batch above.
 
-Two interactive-app checks are deliberately **not** mirrored here:
+**`retention` can never move here, whatever the permission decision.**
+Its Graph permission, `RecordsManagement.Read.All`, has no Application
+permission type at all in Entra ID — delegated only, a Microsoft
+platform limitation rather than a scoping choice. This is not new
+information: `config.js`'s own comment on this scope, and `graph.js`'s
+capability note for `recordsManagement`, both said so before this
+Function's second permission batch was even considered.
+
+Two interactive-app checks are deliberately **not** mirrored here, for
+the same reason as `retention` — no clean app-only equivalent exists:
 
 - The sensitivity-labels/classification check (`labels`) reads
   `/me/security/informationProtection/sensitivityLabels`, which needs a
@@ -120,9 +132,8 @@ Two interactive-app checks are deliberately **not** mirrored here:
   assignment with no clean equivalent for a client-credentials service
   principal.
 
-Rather than add a permission for an unattended check nobody's watching
-if it silently misbehaves, both stay interactive-only for now; every
-other scored check runs here.
+All three stay interactive-only permanently; every other scored check
+runs here.
 
 ## 3. Grant `Sites.Selected` access to exactly one site
 

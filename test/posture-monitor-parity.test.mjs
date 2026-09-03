@@ -407,6 +407,97 @@ describe('runPostureChecks() — device-checkin, device-config, oauth-consent', 
   });
 });
 
+describe('runPostureChecks() — xdr-incidents, privacy-srr, lifecycle-workflows', () => {
+  function graphWith({ incidents = [], srrs = [], workflows = [] } = {}) {
+    return fakeGraph([
+      [/^\/identity\/conditionalAccess\/policies$/, () => ({ value: [] })],
+      [/^\/users\?\$select=id,displayName,userPrincipalName,accountEnabled/, () => ({ value: [] })],
+      [/^\/directoryRoles\?\$select/, () => ({ value: [] })],
+      [/^\/directoryRoles\(roleTemplateId=/, () => ({ value: [] })],
+      [/^\/roleManagement\/directory\/roleAssignmentScheduleInstances/, () => ({ value: [] })],
+      [/^\/roleManagement\/directory\/roleEligibilityScheduleInstances/, () => ({ value: [] })],
+      [/^\/users\?\$filter=userType/, () => ({ value: [] })],
+      [/^\/identityProtection\/riskyUsers/, () => ({ value: [] })],
+      [/^\/deviceManagement\/managedDevices/, () => ({ value: [] })],
+      [/^\/deviceManagement\/deviceCompliancePolicies/, () => ({ value: [] })],
+      [/^\/deviceManagement\/deviceConfigurations/, () => ({ value: [] })],
+      [/^\/oauth2PermissionGrants/, () => ({ value: [] })],
+      [/^\/identityGovernance\/accessReviews\/definitions/, () => ({ value: [] })],
+      [/^\/security\/secureScores/, () => ({ value: [] })],
+      [/^\/security\/incidents/, () => ({ value: incidents })],
+      [/^\/security\/subjectRightsRequests/, () => ({ value: srrs })],
+      [/^\/identityGovernance\/lifecycleWorkflows\/workflows/, () => ({ value: workflows })]
+    ]);
+  }
+
+  test('no active incidents passes xdr-incidents', async () => {
+    const { g, gAll } = graphWith({ incidents: [] });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['xdr-incidents'], 'pass');
+  });
+
+  test('a high-severity incident overdue its triage window fails xdr-incidents', async () => {
+    const incidents = [{ status: 'active', severity: 'high', createdDateTime: new Date(Date.now() - 10 * 86400000).toISOString(), assignedTo: 'someone' }];
+    const { g, gAll } = graphWith({ incidents });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['xdr-incidents'], 'fail');
+  });
+
+  test('an unassigned high-severity incident within the window is a review, not a fail', async () => {
+    const incidents = [{ status: 'active', severity: 'high', createdDateTime: new Date().toISOString(), assignedTo: '' }];
+    const { g, gAll } = graphWith({ incidents });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['xdr-incidents'], 'review');
+  });
+
+  test('no open subject rights requests passes privacy-srr', async () => {
+    const { g, gAll } = graphWith({ srrs: [] });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['privacy-srr'], 'pass');
+  });
+
+  test('an open request past its due date fails privacy-srr', async () => {
+    const srrs = [{ status: 'active', dueDateTime: PAST }];
+    const { g, gAll } = graphWith({ srrs });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['privacy-srr'], 'fail');
+  });
+
+  test('a closed request past its recorded due date does not count as open', async () => {
+    const srrs = [{ status: 'closed', dueDateTime: PAST }];
+    const { g, gAll } = graphWith({ srrs });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['privacy-srr'], 'pass');
+  });
+
+  test('joiner and leaver both automated and enabled passes lifecycle-workflows', async () => {
+    const workflows = [{ isEnabled: true, category: 'joiner' }, { isEnabled: true, category: 'leaver' }];
+    const { g, gAll } = graphWith({ workflows });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['lifecycle-workflows'], 'pass');
+  });
+
+  test('only one of joiner/leaver automated is a review', async () => {
+    const workflows = [{ isEnabled: true, category: 'joiner' }];
+    const { g, gAll } = graphWith({ workflows });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['lifecycle-workflows'], 'review');
+  });
+
+  test('no Lifecycle Workflows configured fails, not manual — this Function does no capability probing', async () => {
+    const { g, gAll } = graphWith({ workflows: [] });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['lifecycle-workflows'], 'fail');
+  });
+
+  test('a disabled workflow in the right category is ignored', async () => {
+    const workflows = [{ isEnabled: false, category: 'joiner' }, { isEnabled: false, category: 'leaver' }];
+    const { g, gAll } = graphWith({ workflows });
+    const { results } = await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS);
+    assert.equal(results['lifecycle-workflows'], 'fail');
+  });
+});
+
 describe('runRegisterChecks() — end to end against a fake SharePoint site', () => {
   function graphWithLists(listRows) {
     async function g(path) {
@@ -473,17 +564,20 @@ describe('runRegisterChecks() — end to end against a fake SharePoint site', ()
 });
 
 describe('SCORED_CHECK_IDS / CHECK_LABELS', () => {
-  test('the pinned check count reflects the sixteen ids added in this batch', () => {
-    // 19 original + 16 added: five CA-mining checks (ca-device/ca-risk/
-    // ca-sif/ca-tou/ca-cas), oauth-consent, leaver, sod, device-checkin,
-    // device-config, and six register-derived checks (backup/bcp/
-    // supplier/policy/audit-review/incident-lessons) — all no-new-
-    // permission, mining a fetch this Function already made or reusing a
-    // permission already granted. Deliberately pinned, same reasoning as
-    // store.js's CHECK_DEFS.length test — adding a check id here should
-    // be a visible, deliberate diff, not something that silently drifts
-    // out of sync with what the browser app scores.
-    assert.equal(monitor.SCORED_CHECK_IDS.length, 35);
+  test('the pinned check count reflects every batch added so far', () => {
+    // 19 original + 16 no-new-permission (five CA-mining checks,
+    // oauth-consent, leaver, sod, device-checkin, device-config, and six
+    // register-derived checks) + 3 needing a new application permission
+    // (xdr-incidents, privacy-srr, lifecycle-workflows). 'retention' is
+    // deliberately NOT here and never will be — RecordsManagement.Read.All
+    // has no Application permission type at all in Entra ID, a Microsoft
+    // platform limitation rather than a scoping choice. Deliberately
+    // pinned, same reasoning as store.js's CHECK_DEFS.length test —
+    // adding a check id here should be a visible, deliberate diff, not
+    // something that silently drifts out of sync with what the browser
+    // app scores.
+    assert.equal(monitor.SCORED_CHECK_IDS.length, 38);
+    assert.ok(monitor.SCORED_CHECK_IDS.indexOf('retention') === -1, 'retention can never be scored unattended');
   });
 
   test('every scored check id has a drift-alert label', () => {
