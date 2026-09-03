@@ -266,7 +266,10 @@ The sweep also chases the work itself, not just the paperwork:
   `OwnerEmail` raises the same ISMS-manager alert as before and chases
   nobody; a compliance nudge sent to a guessed address is worse than
   one not sent. Needs `NOTIFY_FROM` (below); without it the sweep still
-  writes every alert and simply sends nothing.
+  writes every alert and simply sends nothing. With `EVIDENCE_LINK_SECRET`
+  set (it is, automatically — see below), the chase email also carries a
+  personal, no-sign-in link the owner can use to record progress
+  directly — see "Owner-driven evidence" below.
 - **Vendor reassessment and certification/report expiry**, one alert per
   vendor per check (not rolled up — unlike stale controls, a tenant
   usually only has a handful of vendors, and *which* vendor is the
@@ -276,6 +279,56 @@ The sweep also chases the work itself, not just the paperwork:
   (a SOC 2 report, an ISO 27001 certificate). `CertExpiryDate` is
   optional per vendor; a vendor with nothing recorded there raises
   nothing for it.
+
+### Owner-driven evidence — no sign-in required
+
+Everyone in the client's directory already has, in principle, everything
+Entra needs to sign into the full Checkpoint app — but that's the wrong
+shape of fix for "let the action owner report progress themselves."
+Signing them in means consenting the same broad, sensitive scopes
+(Conditional Access, PIM, Secure Score, directory roles) this whole
+Function's own permission table above exists to keep narrow, on top of a
+per-tenant licensing model built around one practitioner seat, not every
+employee. SharePoint lists also don't give row-level write security for
+free — nothing stops a second signed-in user editing someone else's
+action.
+
+Instead, the overdue-owner chase email (above) carries a personal link
+to a lightweight, static page — `evidence.html`, hosted on
+Compliance365's own public site, **not** this Function App — scoped to
+exactly the one action it was sent about. No MSAL sign-in, no Graph
+scope consent: a short-lived, HMAC-signed token (`EVIDENCE_LINK_SECRET`,
+an app setting **auto-generated at deploy time** — nothing to configure)
+naming that one action item id is the entire authorisation boundary.
+`EvidenceSubmit`, a second HTTP-triggered function in this same Function
+App, verifies the token, reads the action's title/due date/priority for
+the page to display, and — on submission — writes exactly like a
+practitioner's own "Complete action" flow in the browser app: an
+append-only `Checkpoint ActionUpdates` row, plus the action's own
+`Status`/`EvidenceUrl` fields patched to match. The `Author` field and
+the email's own "no sign-in needed" framing keep the provenance visible
+in the audit trail — this was never meant to look indistinguishable from
+a practitioner-authored update.
+
+Deliberately narrower than the browser app's own action editing: an
+owner can report **In progress** or **Done**, with a note and/or an
+evidence link, and nothing else — never reopen a finding, never cancel
+one, never touch title/owner/priority/due date/control. The
+practitioner who put this owner's email on the action already
+authorised them to report on **that** action; nothing here can reach
+any other row, on this action's list or any other.
+
+Needs no new Graph permission at all — it reuses this identity's
+existing `Sites.Selected` write access on the one site Checkpoint
+already owns. `EVIDENCE_LINK_SECRET` is generated once, automatically,
+from `guid(resourceGroup().id, functionAppName, 'evidenceLinkSecret')`
+in `azuredeploy.json`/`main.bicep`; the Function App's CORS setting
+(also part of that template) allows exactly one origin —
+`https://www.compliance365.com.au`, where `evidence.html` is served
+from — never `*`. A tenant that deployed this Function before
+`EVIDENCE_LINK_SECRET` existed simply gets the old plain "Open
+Checkpoint" chase text until redeployed; nothing breaks, and no link is
+ever emitted broken.
 
 ### The periodic digest
 
@@ -342,7 +395,10 @@ func azure functionapp publish <functionAppName>
 ```
 
 (The VS Code Azure Functions extension's "Deploy to Function App" works
-identically if you'd rather not use the CLI.)
+identically if you'd rather not use the CLI.) This deploys **both**
+functions in this folder — the timer-triggered `PostureMonitor` and the
+HTTP-triggered `EvidenceSubmit` (see "Owner-driven evidence" above) —
+in one push; there's nothing to deploy separately.
 
 ## 6. Verify
 
@@ -358,6 +414,12 @@ identically if you'd rather not use the CLI.)
 - The `Checkpoint Scans` and `Checkpoint Alerts` SharePoint lists gain
   a new row each run — inspect them directly in SharePoint if you want
   to confirm without opening the app.
+- To check the owner-driven evidence link specifically: add an
+  `OwnerEmail` to an overdue action, wait for (or trigger) a run, and
+  confirm the chase email lands with a "Record progress or attach
+  evidence" link rather than plain "Open Checkpoint" text — the
+  difference between `EVIDENCE_LINK_SECRET` being set (it is,
+  automatically, from the deploy above) and not.
 
 ## Changing or disabling it
 
@@ -380,3 +442,10 @@ identically if you'd rather not use the CLI.)
   (step 1) and the site permission grant (step 3). The Function App
   will then fail its daily run with an auth error until redeployed with
   a new registration.
+- **Invalidate every outstanding evidence link at once**: change the
+  `EVIDENCE_LINK_SECRET` app setting to any new value (Portal →
+  Configuration, or `az functionapp config appsettings set`). Every
+  token minted under the old secret stops verifying immediately;
+  links emailed after the change use the new one. There's normally no
+  need to do this — links expire on their own after 30 days — but it's
+  there for the rare "an email account was compromised" case.

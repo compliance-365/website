@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Record progress — Checkpoint</title>
+<style>
+  :root{
+    --ink:#0B0B0C; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.4);
+    --gold:#A9812E; --gold-light:#D8BA78; --surface:#1a1a1c; --surface-raised:#232326;
+    --fail:#c97a7a; --pass:#8fbf9a; --border:rgba(250,247,241,.12);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ink);color:var(--paper);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Manrope,sans-serif;margin:0;padding:24px 16px;line-height:1.5}
+  .wrap{max-width:520px;margin:0 auto}
+  .brand{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-light);margin-bottom:18px;font-weight:600}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px}
+  h1{font-size:19px;margin:0 0 6px;color:var(--paper)}
+  .meta{color:var(--paper-dim);font-size:13px;margin:0 0 18px}
+  .meta b{color:var(--paper)}
+  label{display:block;font-size:12.5px;color:var(--paper-dim);margin:14px 0 5px}
+  textarea,input[type=url],select{
+    width:100%;background:var(--surface-raised);border:1px solid var(--border);border-radius:6px;
+    color:var(--paper);padding:9px 10px;font-size:14px;font-family:inherit
+  }
+  textarea{min-height:90px;resize:vertical}
+  textarea:focus,input:focus,select:focus{outline:2px solid var(--gold-light);outline-offset:1px}
+  button{
+    margin-top:18px;background:var(--gold);color:var(--ink);border:none;border-radius:6px;
+    padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;width:100%
+  }
+  button:hover{background:var(--gold-light)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .note{color:var(--paper-faint);font-size:11.5px;margin-top:14px}
+  .error{color:var(--fail);font-size:13.5px;margin-top:14px}
+  .success{color:var(--pass);font-size:14px;text-align:center;padding:20px 0}
+  .skel{color:var(--paper-dim);font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">Checkpoint</div>
+  <div class="card" id="app"><p class="skel">Loading…</p></div>
+</div>
+<script>
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  var params = new URLSearchParams(location.search);
+  var token = params.get('token') || '';
+  var apiHost = params.get('api') || '';
+  var app = document.getElementById('app');
+
+  /* The api hostname travels in plain sight in the URL (it has to — the
+     browser needs to know where to send the request before it can
+     verify anything), so this is a client-side safety net against a
+     tampered/malformed link sending the token somewhere unexpected, not
+     the actual security boundary. The token itself, verified server-side
+     by whichever Function App this points at, is that boundary — see
+     azure/lib/evidenceToken.js. */
+  var VALID_HOST = /^[a-z0-9-]+\.azurewebsites\.net$/i;
+
+  function renderError(msg) {
+    app.innerHTML = '<h1>This link isn’t working</h1><p class="error">' + esc(msg) + '</p>' +
+      '<p class="note">If this link has expired, ask whoever assigned you this task to open it in Checkpoint and re-send it, or update it there directly.</p>';
+  }
+
+  if (!token || !apiHost) { renderError('This link is missing required information.'); return; }
+  if (!VALID_HOST.test(apiHost)) { renderError('This link points somewhere unexpected and has been blocked.'); return; }
+
+  var apiBase = 'https://' + apiHost + '/api/evidence';
+
+  function statusOptions(current) {
+    var opts = [
+      { v: 'In progress', label: 'In progress' },
+      { v: 'Done', label: 'Done' }
+    ];
+    return opts.map(function (o) {
+      return '<option value="' + esc(o.v) + '"' + (current === o.v ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+    }).join('');
+  }
+
+  function renderForm(action) {
+    app.innerHTML =
+      '<h1>' + esc(action.title || action.ref || 'Checkpoint action') + '</h1>' +
+      '<p class="meta">' + (action.ref ? '<b>' + esc(action.ref) + '</b> &middot; ' : '') +
+        (action.due ? 'Due ' + esc(action.due) : 'No due date') +
+        (action.priority ? ' &middot; ' + esc(action.priority) + ' priority' : '') +
+        (action.status ? ' &middot; currently <b>' + esc(action.status) + '</b>' : '') + '</p>' +
+      '<label for="fNote">What happened</label>' +
+      '<textarea id="fNote" placeholder="A short note counts — an action nobody has updated reads to an auditor exactly like one nobody has worked on."></textarea>' +
+      '<label for="fUrl">Evidence link (optional)</label>' +
+      '<input type="url" id="fUrl" placeholder="https://…">' +
+      '<label for="fStatus">Status</label>' +
+      '<select id="fStatus">' + statusOptions('In progress') + '</select>' +
+      '<button id="fSubmit" type="button">Record progress</button>' +
+      '<div id="fMsg"></div>' +
+      '<p class="note">This link is personal to this one action and doesn’t require signing in to Checkpoint. It expires after a while — ask for a fresh one if it stops working.</p>';
+
+    document.getElementById('fSubmit').addEventListener('click', function () { submit(); });
+  }
+
+  function submit() {
+    var btn = document.getElementById('fSubmit');
+    var msgEl = document.getElementById('fMsg');
+    var note = document.getElementById('fNote').value.trim();
+    var evidenceUrl = document.getElementById('fUrl').value.trim();
+    var status = document.getElementById('fStatus').value;
+    if (!note && !evidenceUrl) {
+      msgEl.innerHTML = '<p class="error">Add a short note or an evidence link before submitting.</p>';
+      return;
+    }
+    btn.disabled = true;
+    msgEl.innerHTML = '<p class="skel">Recording…</p>';
+    fetch(apiBase + '?token=' + encodeURIComponent(token), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: note, evidenceUrl: evidenceUrl, status: status })
+    }).then(function (res) {
+      return res.json().then(function (body) { return { ok: res.ok, body: body }; });
+    }).then(function (r) {
+      if (r.ok && r.body && r.body.ok) {
+        app.innerHTML = '<div class="success">&#10003; Recorded. Thank you — this is now visible in Checkpoint.</div>';
+      } else {
+        btn.disabled = false;
+        msgEl.innerHTML = '<p class="error">' + esc((r.body && r.body.error) || 'Something went wrong — try again.') + '</p>';
+      }
+    }).catch(function () {
+      btn.disabled = false;
+      msgEl.innerHTML = '<p class="error">Could not reach Checkpoint right now — check your connection and try again.</p>';
+    });
+  }
+
+  fetch(apiBase + '?token=' + encodeURIComponent(token))
+    .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+    .then(function (r) {
+      if (r.ok && r.body && r.body.ok) { renderForm(r.body); }
+      else { renderError((r.body && r.body.error) || 'This link isn’t valid.'); }
+    })
+    .catch(function () { renderError('Could not reach Checkpoint right now — check your connection and try again.'); });
+})();
+</script>
+</body>
+</html>

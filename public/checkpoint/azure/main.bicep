@@ -42,6 +42,14 @@ param scanCron string = '0 0 17 * * *'
 var storageAccountName = substring(concat('cpmon', uniqueString(resourceGroup().id)), 0, 20)
 var hostingPlanName = '${functionAppName}-plan'
 var appInsightsName = '${functionAppName}-ai'
+// Signs the short-lived, per-action tokens behind the owner-driven
+// evidence links this Function App emails to an overdue action's
+// OwnerEmail (see EvidenceSubmit/index.js and lib/evidenceToken.js).
+// Deployment-derived, not a parameter: nothing here needs the
+// practitioner to type in yet another secret, and guid() is
+// unpredictable enough for an HMAC key nobody outside this deployment
+// ever needs to see or type.
+var evidenceLinkSecret = guid(resourceGroup().id, functionAppName, 'evidenceLinkSecret')
 
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageAccountName
@@ -95,7 +103,20 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         { name: 'SP_SITE_PATH', value: spSitePath }
         { name: 'LIST_PREFIX', value: listPrefix }
         { name: 'SCAN_CRON', value: scanCron }
+        { name: 'EVIDENCE_LINK_SECRET', value: evidenceLinkSecret }
       ]
+      // Lets the browser page at https://www.compliance365.com.au/checkpoint/evidence.html
+      // (Compliance365's own public site — NOT this Function App) call
+      // EvidenceSubmit's HTTP endpoint from a different origin. The page
+      // is static and holds no secrets; the per-action token in its own
+      // URL is the real authorisation boundary (see
+      // lib/evidenceToken.js), so this only needs to allow the ONE
+      // origin the page is actually served from — never '*'.
+      cors: {
+        allowedOrigins: [
+          'https://www.compliance365.com.au'
+        ]
+      }
     }
   }
 }

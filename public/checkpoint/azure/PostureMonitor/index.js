@@ -18,7 +18,34 @@
  * permission this identity holds.
  */
 
-const GRAPH = 'https://graph.microsoft.com/v1.0';
+const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = require('../lib/graph');
+const { mintEvidenceToken } = require('../lib/evidenceToken');
+
+/* Where the owner-driven evidence page lives — Compliance365's own
+   public site (GitHub Pages, per RELEASE.md), the same domain the
+   interactive app is hosted from, NOT this Function App. The page is
+   static and holds no secrets of its own; it calls back into THIS
+   Function App's own EvidenceSubmit endpoint (via the `api` query
+   parameter below) to verify the token and read/write the one action
+   it names. One fixed URL for every tenant — nothing here needs
+   configuring per deployment. */
+const EVIDENCE_PAGE_URL = 'https://www.compliance365.com.au/checkpoint/evidence.html';
+
+/* Builds the personal, no-sign-in evidence link for one action, or null
+   if the prerequisites for it aren't there yet (an older deployment
+   that hasn't been redeployed with the EVIDENCE_LINK_SECRET app
+   setting, or the rare case WEBSITE_HOSTNAME isn't set) — callers fall
+   back to the plain "Open Checkpoint" text in that case, never a
+   broken link. WEBSITE_HOSTNAME is set automatically by Azure App
+   Service to this Function App's own <name>.azurewebsites.net; nothing
+   the practitioner has to configure. */
+function buildEvidenceLink(itemId) {
+  const secret = process.env.EVIDENCE_LINK_SECRET;
+  const apiHost = process.env.WEBSITE_HOSTNAME;
+  if (!secret || !apiHost || !itemId) return null;
+  const token = mintEvidenceToken(itemId, secret, 30);
+  return EVIDENCE_PAGE_URL + '?token=' + encodeURIComponent(token) + '&api=' + encodeURIComponent(apiHost);
+}
 
 /* Most of CHECK_DEFS's scored:true entries in store.js.
 
@@ -124,52 +151,6 @@ const CHECK_LABELS = {
   'lifecycle-workflows': 'Joiner/leaver processing technically automated'
 };
 
-async function getAppToken(context) {
-  const tenantId = process.env.TENANT_ID;
-  const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
-  const body = new URLSearchParams({
-    client_id: process.env.CLIENT_ID,
-    client_secret: process.env.CLIENT_SECRET,
-    scope: 'https://graph.microsoft.com/.default',
-    grant_type: 'client_credentials'
-  });
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
-  if (!res.ok) throw new Error('Token request failed: ' + res.status + ' ' + await res.text());
-  return (await res.json()).access_token;
-}
-
-function graphClient(token) {
-  async function g(path, opts) {
-    opts = opts || {};
-    const res = await fetch(path.indexOf('http') === 0 ? path : GRAPH + path, {
-      method: opts.method || 'GET',
-      headers: Object.assign({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, opts.headers || {}),
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
-    if (!res.ok) { const e = new Error('Graph ' + res.status + ' on ' + path + ': ' + await res.text()); e.status = res.status; throw e; }
-    if (res.status === 204) return null;
-    return res.json();
-  }
-  async function gAll(path) {
-    let out = [], next = path;
-    while (next) {
-      const page = await g(next);
-      out = out.concat(page.value || []);
-      next = page['@odata.nextLink'] || null;
-    }
-    return out;
-  }
-  return { g, gAll };
-}
-
-async function resolveSiteId(g) {
-  const hostname = process.env.SP_HOSTNAME;
-  const sitePath = process.env.SP_SITE_PATH || '';
-  if (!hostname) return (await g('/sites/root?$select=id')).id;
-  const path = sitePath ? `/sites/${hostname}:${sitePath}?$select=id` : `/sites/${hostname}?$select=id`;
-  return (await g(path)).id;
-}
-
 async function resolveLists(g, siteId) {
   const prefix = process.env.LIST_PREFIX || 'Checkpoint';
   const lists = await g(`/sites/${siteId}/lists?$select=id,displayName&$top=200`);
@@ -183,30 +164,6 @@ async function resolveLists(g, siteId) {
     ids[n] = byName[full];
   });
   return ids;
-}
-
-/* Lists the governance sweep uses, resolved WITHOUT throwing. Unlike
-   Scans/Alerts/Settings — whose absence means the browser app was never
-   run and the whole timer trigger is pointless — the document register
-   and the Attestations list only exist on tenants running a Checkpoint
-   version that has them. An older tenant should keep getting its
-   posture scan, not a hard failure every night. */
-async function resolveOptionalLists(g, siteId) {
-  const prefix = process.env.LIST_PREFIX || 'Checkpoint';
-  const lists = await g(`/sites/${siteId}/lists?$select=id,displayName&$top=200`);
-  const byName = {};
-  (lists.value || []).forEach(l => { byName[l.displayName] = l.id; });
-  return {
-    Documents: byName[prefix + ' Documents'] || null,
-    Attestations: byName[prefix + ' Attestations'] || null,
-    Training: byName[prefix + ' Training'] || null,
-    Actions: byName[prefix + ' Actions'] || null,
-    Controls: byName[prefix + ' Controls'] || null,
-    Incidents: byName[prefix + ' Incidents'] || null,
-    Vendors: byName[prefix + ' Vendors'] || null,
-    Calendar: byName[prefix + ' Calendar'] || null,
-    Audits: byName[prefix + ' Audits'] || null
-  };
 }
 
 /* The 'training' posture check — the one scored:true check with no
@@ -1205,7 +1162,11 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
     let rows = [];
     try {
       const items = await g(`/sites/${siteId}/lists/${optional.Actions}/items?$expand=fields&$top=999`);
-      rows = (items.value || []).map(i => i.fields || {});
+      /* Keeps the SharePoint item id (i.id — a numeric "42", not the
+         human RefId like "ACT-003") alongside each row's fields: the
+         owner-evidence token below is minted against this id, since
+         that's what a Graph GET/PATCH on /items/{id} actually needs. */
+      rows = (items.value || []).map(i => Object.assign({}, i.fields, { _itemId: i.id }));
     } catch (e) { context.log.error('Checkpoint governance sweep: could not read the actions register: ' + e.message); }
 
     rows.forEach(a => {
@@ -1233,7 +1194,8 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
           to: String(a.OwnerEmail).trim(),
           checkId: 'action-overdue:' + (a.RefId || a.Title),
           ref: a.RefId || '', title: a.Title || '', due: a.DueDate,
-          days: days, priority: a.Priority || '', owner: a.Owner || ''
+          days: days, priority: a.Priority || '', owner: a.Owner || '',
+          itemId: a._itemId
         });
       }
       findings.push({
@@ -1419,12 +1381,16 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   const chasesToSend = ownerChases.filter(c => fresh.some(f => f.checkId === c.checkId));
   let chased = 0;
   for (const c of chasesToSend) {
+    const link = buildEvidenceLink(c.itemId);
     const body = '<p>Hello' + (c.owner ? ' ' + esc(c.owner) : '') + ',</p>' +
       '<p>A remediation action assigned to you is now <b>' + c.days + ' day' + (c.days === 1 ? '' : 's') + ' overdue</b>.</p>' +
       '<p><b>' + esc(c.ref) + '</b> ' + esc(c.title) + '<br>' +
       'Due: ' + esc(c.due) + (c.priority ? ' &middot; Priority: ' + esc(c.priority) : '') + '</p>' +
-      '<p>Open Checkpoint to record progress, attach evidence, or change the date if it is no longer realistic. ' +
-      'Recording a short note counts — an action nobody has updated reads to an auditor exactly like one nobody has worked on.</p>';
+      (link
+        ? '<p><a href="' + esc(link) + '">Record progress or attach evidence →</a></p>' +
+          '<p style="color:#666;font-size:12px">This link is personal to this one action and expires in 30 days — no Checkpoint sign-in needed. Recording a short note counts: an action nobody has updated reads to an auditor exactly like one nobody has worked on.</p>'
+        : '<p>Open Checkpoint to record progress, attach evidence, or change the date if it is no longer realistic. ' +
+          'Recording a short note counts — an action nobody has updated reads to an auditor exactly like one nobody has worked on.</p>');
     if (await notifyOwner(g, context, c.to, 'Overdue: ' + (c.ref ? c.ref + ' — ' : '') + (c.title || 'a Checkpoint action'), body)) chased++;
   }
   if (chased) context.log('Checkpoint governance sweep: chased ' + chased + ' action owner(s) directly.');
@@ -1557,7 +1523,7 @@ async function sendDigest(g, context, siteId, lists, settings, digestData, today
 module.exports = async function (context, myTimer) {
   const today = new Date().toISOString().slice(0, 10);
   try {
-    const token = await getAppToken(context);
+    const token = await getAppToken();
     const { g, gAll } = graphClient(token);
     const siteId = await resolveSiteId(g);
     const lists = await resolveLists(g, siteId);
@@ -1706,5 +1672,5 @@ module.exports.__test = {
   runPostureChecks, runRegisterChecks, readDocumentRegister,
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,
-  SCORED_CHECK_IDS, CHECK_LABELS
+  SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL
 };

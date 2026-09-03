@@ -10014,7 +10014,7 @@ function showModal(opts) {
           { id: 'control', label: 'Control code', value: a.control || '', placeholder: 'e.g. A.5.9' },
           { id: 'pr', label: 'Priority', type: 'select', value: a.pr, options: ['Critical', 'High', 'Medium', 'Low'] },
           { id: 'owner', label: 'Owner', value: a.owner },
-          { id: 'ownerEmail', label: 'Owner email (optional — lets the scheduled monitor chase them directly)', type: 'email', value: a.ownerEmail || '', placeholder: 'name@example.com' },
+          { id: 'ownerEmail', label: 'Owner email (optional — lets the scheduled monitor chase them directly, with a no-sign-in link to record progress themselves)', type: 'email', value: a.ownerEmail || '', placeholder: 'name@example.com' },
           { id: 'due', label: 'Due date', type: 'date', value: a.due },
           { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS }
         ],
