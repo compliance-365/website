@@ -2985,6 +2985,136 @@
     };
   }
 
+  /* ============================================================
+     Next best action — "what should I actually do today?"
+
+     Every other view in this app answers "what is my current state"
+     (a score, a heatmap, a register). None of them answer the question
+     a non-expert actually has after their first scan: given a dozen
+     open actions, which ones matter most right now? This ranks them.
+
+     Deliberately conservative about what it claims. It does NOT invent
+     a "+3% readiness" number — simulating the effect of one action on
+     the overall score would require assumptions this file has no
+     business making (which OTHER checks might also move, whether the
+     fix is even correctly implemented). What it CAN honestly say: does
+     this action's linked control currently sit behind a FAILING or
+     REVIEW-grade live check? That is real, present-tense evidence that
+     finishing this action is worth more than finishing one whose check
+     already passes (or has no live check behind it at all).
+
+     Ranking, highest first:
+       1. The action's control maps to a currently FAILING check.
+       2. ...to a REVIEW-grade check.
+       3. Critical/High priority, or overdue, with no live-failing
+          check behind it (still worth doing, just not provably
+          moving a check right now).
+       4. Everything else.
+     Ties within a tier break on priority, then overdue days, then due
+     date (soonest first) — never on scan order or insertion order,
+     which would make the same open register produce a different "top
+     3" depending on when each row happened to be created. */
+  var CHECK_RESULT_URGENCY = { fail: 3, review: 2, manual: 1, pass: 0 };
+  var ACTION_PRIORITY_RANK = { Critical: 3, High: 2, Medium: 1, Low: 0 };
+
+  /* Reverse of CHECK_CONTROLS (checkId -> [controlCode,...]): every
+     control code mapped to the check id(s) that speak to it. A control
+     can be evidenced by more than one check (A.8.5 by both mfa-priv and
+     legacy, say), so this returns an array per code. */
+  function controlToCheckIds(checkControls) {
+    var out = {};
+    Object.keys(checkControls || {}).forEach(function (checkId) {
+      (checkControls[checkId] || []).forEach(function (code) {
+        (out[code] = out[code] || []).push(checkId);
+      });
+    });
+    return out;
+  }
+
+  /* One open action's ranking: the worst (most urgent) live result among
+     every check that speaks to its linked control, via checkResultsById
+     (checkId -> 'pass'|'review'|'fail'|'manual'|null, the caller's job
+     to compute — this file never calls checkResult() itself, staying a
+     pure function of data the caller already has). No linked control, or
+     a control no check speaks to, reads as 'manual' — "no live signal
+     either way", the same neutral reading checkResult() itself gives an
+     unscored check. */
+  function actionCheckUrgency(action, controlToChecks, checkResultsById) {
+    var checkIds = (controlToChecks || {})[action.control] || [];
+    if (!checkIds.length) return { result: null, checkId: null };
+    var worst = null, worstId = null;
+    checkIds.forEach(function (id) {
+      var r = (checkResultsById || {})[id];
+      var rank = CHECK_RESULT_URGENCY[r];
+      if (rank === undefined) return;
+      if (worst === null || rank > CHECK_RESULT_URGENCY[worst]) { worst = r; worstId = id; }
+    });
+    return { result: worst, checkId: worstId };
+  }
+
+  /* Returns the top `limit` (default 3) open actions to do next, each
+     with a plain-language `reason` a non-expert can act on without
+     first learning what "A.5.3" means. `actions`: S.actions.
+     `checkControls`: window.CHECK_CONTROLS. `checkResultsById`:
+     {checkId: result}, the caller's current scan results run through
+     checkResult() for every CHECK_DEFS entry. `checkLabelsById`:
+     {checkId: label}, for the reason text — optional, falls back to the
+     checkId itself if omitted. Excludes Done/Cancelled actions; an empty
+     open register returns []. */
+  function nextBestActions(actions, checkControls, checkResultsById, checkLabelsById, limit) {
+    limit = limit > 0 ? Math.round(limit) : 3;
+    var controlToChecks = controlToCheckIds(checkControls);
+    var labels = checkLabelsById || {};
+    var open = (actions || []).filter(function (a) { return a && a.status !== 'Done' && a.status !== 'Cancelled'; });
+
+    var ranked = open.map(function (a) {
+      var urgency = actionCheckUrgency(a, controlToChecks, checkResultsById);
+      var prRank = ACTION_PRIORITY_RANK[a.pr] != null ? ACTION_PRIORITY_RANK[a.pr] : 0;
+      var od = overdueDaysOf(a);
+      /* Tier is the primary sort key — a failing-check action always
+         outranks a passing-check one regardless of priority, because
+         "will this move a live signal" is a stronger claim than a
+         priority label someone typed in. Priority/overdue only break
+         ties inside the same tier. */
+      var tier = urgency.result === 'fail' ? 3 : urgency.result === 'review' ? 2 : (prRank >= 2 || od > 0) ? 1 : 0;
+      var reason;
+      if (urgency.result === 'fail') {
+        reason = 'Clears a currently failing check' + (labels[urgency.checkId] ? ' — ' + labels[urgency.checkId] : '') + '.';
+      } else if (urgency.result === 'review') {
+        reason = 'Addresses a check flagged for review' + (labels[urgency.checkId] ? ' — ' + labels[urgency.checkId] : '') + '.';
+      } else if (od > 0) {
+        reason = (a.pr || 'Medium') + ' priority, ' + od + ' day' + (od === 1 ? '' : 's') + ' overdue.';
+      } else {
+        reason = (a.pr || 'Medium') + ' priority.';
+      }
+      return { action: a, tier: tier, prRank: prRank, overdueDays: od, checkId: urgency.checkId, checkResult: urgency.result, reason: reason };
+    });
+
+    ranked.sort(function (x, y) {
+      if (y.tier !== x.tier) return y.tier - x.tier;
+      if (y.prRank !== x.prRank) return y.prRank - x.prRank;
+      if (y.overdueDays !== x.overdueDays) return y.overdueDays - x.overdueDays;
+      var xd = x.action.due || '9999-99-99', yd = y.action.due || '9999-99-99';
+      return xd < yd ? -1 : xd > yd ? 1 : 0;
+    });
+
+    return ranked.slice(0, limit);
+  }
+
+  /* Whole days an action is overdue by (today implied — this file has
+     no ambient clock, so it derives "today" from the caller's own
+     Date.now() rather than taking a second parameter every caller has
+     to remember to pass). 0 or negative (not yet due, or no due date)
+     reads as not overdue. */
+  function overdueDaysOf(action) {
+    var a = action || {};
+    if (!a.due || a.status === 'Done' || a.status === 'Cancelled') return 0;
+    var due = Date.parse(a.due + 'T00:00:00Z');
+    if (isNaN(due)) return 0;
+    var days = Math.floor((Date.now() - due) / 86400000);
+    return days > 0 ? days : 0;
+  }
+
   /* The seven management-review inputs ISO 27001 Clause 9.3.2 requires
      the review to consider. Drives both the structured capture form and
      the Management Review Pack report, so the two can never list a
@@ -3313,6 +3443,7 @@
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
+    nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
     controlAssurance: controlAssurance, assuranceSummary: assuranceSummary,

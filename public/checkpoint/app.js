@@ -3413,6 +3413,37 @@ function showModal(opts) {
         : '';
     }
 
+    /* "Next 3 actions" — the one question every other Dashboard panel
+       leaves unanswered: given a stack of open actions, which ones
+       actually matter right now. Ranked by nextBestActions() in lib.js —
+       an action whose control sits behind a currently failing or
+       under-review check always outranks one that's merely high-priority
+       or overdue, and the reason text only ever states that present-tense
+       fact, never a projected score. */
+    var nextActionsCardEl = document.getElementById('nextActionsCard');
+    var nextActionsListEl = document.getElementById('nextActionsList');
+    if (nextActionsCardEl && nextActionsListEl) {
+      var checkResultsById = {}, checkLabelsById = {};
+      (window.CHECK_DEFS || []).forEach(function (c) {
+        checkResultsById[c.id] = checkResult(c);
+        checkLabelsById[c.id] = c.label;
+      });
+      var nextActions = window.CheckpointLib.nextBestActions(S.actions, window.CHECK_CONTROLS, checkResultsById, checkLabelsById, 3);
+      if (nextActions.length) {
+        nextActionsListEl.innerHTML = nextActions.map(function (r) {
+          var a = r.action;
+          var tierColor = r.tier >= 2 ? 'var(--fail)' : r.tier === 1 ? 'var(--warn)' : 'var(--paper-dim)';
+          return '<div class="d-kv" style="align-items:flex-start;padding:9px 0">' +
+            '<span><b style="color:var(--paper)">' + esc(a.title) + '</b><br><span style="color:var(--paper-dim);font-size:11.5px">' + esc(r.reason) + '</span></span>' +
+            '<b style="color:' + tierColor + ';white-space:nowrap;font-size:11.5px">' + esc(a.pr || 'Medium') + '</b>' +
+            '</div>';
+        }).join('') + '<p style="margin:8px 0 0"><a href="#" data-action="App.goActionsFilter" data-id="Open" style="color:var(--gold-light);font-size:12.5px;text-decoration:underline">Open the Actions register →</a></p>';
+        nextActionsCardEl.style.display = '';
+      } else {
+        nextActionsCardEl.style.display = 'none';
+      }
+    }
+
     /* risk appetite breach banner */
     var appetite = (S.settings && S.settings.riskAppetite) || 'Medium';
     var appetiteRank = SEV_RANK[appetite] || 2;

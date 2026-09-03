@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.47.0',
+    date: '2026-09-03',
+    entries: [
+      'New: "Next 3 actions" card on the Dashboard. Every other view leaves the same question unanswered once your action register has a dozen open items — which ones actually matter right now. This ranks your open actions by whether they clear a check that is currently failing or flagged for review, ahead of priority label or due date alone, and says so in plain language rather than a projected score.'
+    ]
+  },
+  {
     version: '1.46.0',
     date: '2026-09-02',
     entries: [
