@@ -20,19 +20,29 @@
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
-/* Most of CHECK_DEFS's scored:true entries in store.js — the
-   scored:false checks (backup, bcp, supplier, policy) have no Graph
-   signal at all and are deliberately left out of both files.
+/* Most of CHECK_DEFS's scored:true entries in store.js.
 
-   'training' is the one scored:true check with no Graph signal: it is
-   computed from the tenant's own Checkpoint Training list, which this
-   Function reads too (see runTrainingCheck() below). It used to be
-   listed with the scored:false checks and skipped here — which meant
-   the unattended score and the interactive one were computed over
-   different denominators, so every automated scan landed at a
-   different number from a browser scan of the identical tenant and
-   the Dashboard sparkline showed drift that never happened.
-   Two scored:true, capability-backed checks are ALSO deliberately not
+   'training' is the one original scored:true check with no Graph signal:
+   it is computed from the tenant's own Checkpoint Training list, which
+   this Function reads too (see runTrainingCheck() below). It used to be
+   skipped here entirely — which meant the unattended score and the
+   interactive one were computed over different denominators, so every
+   automated scan landed at a different number from a browser scan of the
+   identical tenant and the Dashboard sparkline showed drift that never
+   happened. The same reasoning is why the sixteen ids below it were
+   added: backup/bcp/supplier/policy/audit-review/incident-lessons read
+   Checkpoint's own SharePoint registers (Calendar, Documents, Vendors,
+   Audits, Incidents) rather than Graph — no licence gate, no new
+   permission, same 'manual' on an empty register the browser app uses —
+   and ca-device/ca-risk/ca-sif/ca-tou/ca-cas/oauth-consent/leaver/sod/
+   device-checkin/device-config all mine fields off Graph responses this
+   Function was already fetching for an older check, or reuse a
+   permission already granted for one. See runRegisterChecks() and the
+   relevant blocks in runPostureChecks() below for exactly which existing
+   fetch each one reuses, and ../README.md's permission table for the
+   accounting.
+
+   Two scored:true, capability-backed checks are deliberately not
    mirrored here, both for the same shape of reason — an app-only,
    client-credentials identity can't reuse the delegated call the
    interactive browser app makes:
@@ -46,14 +56,24 @@ const GRAPH = 'https://graph.microsoft.com/v1.0';
        IDENTITY to hold the SharePoint Administrator role — a
        delegated-user role assignment that has no clean equivalent for
        a client-credentials service principal.
+   Three more scored:true checks (xdr-incidents, privacy-srr, retention)
+   and lifecycle-workflows are also not mirrored — each needs a
+   genuinely NEW application permission (SecurityIncident.Read.All,
+   the Priva/records-management scopes, LifecycleWorkflows.Read.All)
+   this identity does not hold, unlike everything added above. Adding
+   them is a deliberate, separate decision — see ../README.md — not an
+   oversight.
    Rather than ship an unattended timer trigger against an endpoint
-   nobody's confident works unattended, both stay interactive-app-only
-   for now; this Function reports them as absent from Detail, same as
-   any other check it doesn't run. */
+   nobody's confident works unattended, all of the above stay
+   interactive-app-only for now; this Function reports them as absent
+   from Detail, same as any other check it doesn't run. */
 const SCORED_CHECK_IDS = [
   'mfa-all', 'mfa-priv', 'legacy', 'admins', 'pim', 'guests', 'riskyusers', 'access-review',
   'device', 'compliance-policy', 'patch', 'wdac', 'macro', 'riskyapps', 'dlp', 'encryption',
-  'logging', 'alerts', 'training'
+  'logging', 'alerts', 'training',
+  'ca-device', 'ca-risk', 'ca-sif', 'ca-tou', 'ca-cas', 'oauth-consent', 'leaver', 'sod',
+  'device-checkin', 'device-config',
+  'backup', 'bcp', 'supplier', 'policy', 'audit-review', 'incident-lessons'
 ];
 const CHECK_LABELS = {
   'mfa-all': 'MFA enforced — all users',
@@ -74,7 +94,23 @@ const CHECK_LABELS = {
   'encryption': 'Sensitive content encryption in use',
   'logging': 'Unified audit logging enabled',
   'alerts': 'Security alerts triaged & threat protection enabled',
-  'training': 'Security awareness training completion'
+  'training': 'Security awareness training completion',
+  'ca-device': 'Cloud app access requires a managed device',
+  'ca-risk': 'Risk-based Conditional Access enforced',
+  'ca-sif': 'Sign-in frequency enforced for privileged roles',
+  'ca-tou': 'Terms of Use required at sign-in',
+  'ca-cas': 'Cloud app usage governed by Defender for Cloud Apps session control',
+  'oauth-consent': 'No high-privilege app grant consented by an end user',
+  'leaver': 'Departed accounts fully offboarded',
+  'sod': 'No Privileged Role Administrator holds another directory role',
+  'device-checkin': 'Managed devices checking in with Intune',
+  'device-config': 'Device configuration profiles deployed',
+  'backup': 'Backup coverage & restore testing',
+  'bcp': 'Business continuity / disaster recovery plan documented & tested',
+  'supplier': 'Supplier security assessments current',
+  'policy': 'Information security policy published & reviewed',
+  'audit-review': 'Independent internal review completed within cadence',
+  'incident-lessons': 'Closed incidents have a recorded root cause and lessons learned'
 };
 
 async function getAppToken(context) {
@@ -156,7 +192,9 @@ async function resolveOptionalLists(g, siteId) {
     Actions: byName[prefix + ' Actions'] || null,
     Controls: byName[prefix + ' Controls'] || null,
     Incidents: byName[prefix + ' Incidents'] || null,
-    Vendors: byName[prefix + ' Vendors'] || null
+    Vendors: byName[prefix + ' Vendors'] || null,
+    Calendar: byName[prefix + ' Calendar'] || null,
+    Audits: byName[prefix + ' Audits'] || null
   };
 }
 
@@ -203,6 +241,241 @@ async function runTrainingCheck(g, context, siteId, trainingListId, today) {
     note: completed + ' of ' + list.length + ' assigned training records complete (' + pct + '%)' +
       (overdue ? ' — ' + overdue + ' past their due date' : '') + '.'
   };
+}
+
+/* ============================================================
+   Register-derived posture checks — backup, bcp, supplier, policy,
+   audit-review, incident-lessons.
+
+   Same idea as runTrainingCheck() above, computed from Checkpoint's OWN
+   SharePoint registers (Calendar, Documents, Vendors, Audits, Incidents)
+   rather than Graph — no licence gate, no new permission beyond the
+   Sites.Selected grant already needed for Scans/Alerts/Settings, since
+   these are just more lists on that same one site.
+
+   AN EMPTY REGISTER IS 'manual', NEVER 'fail' — same honesty rule as
+   every check in this file: Checkpoint cannot tell "this organisation
+   doesn't do X" from "this organisation does X and records it
+   elsewhere", so an empty register costs a tenant nothing.
+
+   Mirrors lib.js's backupCheckResult()/bcpCheckResult()/
+   supplierCheckResult()/policyCheckResult()/independentReviewResult()/
+   incidentLessonsResult() (and their recurringActivityState()/
+   documentRegisterSummary()/documentReviewState() helpers) exactly — if
+   you change the thresholds or the rules there, change them here too.
+
+   Reads Calendar/Vendors/Audits/Incidents/Documents independently of
+   runGovernanceSweep()'s own reads of Vendors/Incidents/Documents below
+   — a handful of extra GET requests to lists that are typically small,
+   once per day, rather than reworking a function with its own
+   well-covered test suite to share pre-fetched rows across both. */
+
+function recurringActivityState(calendar, category, today) {
+  const rows = (calendar || []).filter(c => c && c.category === category && c.status !== 'Retired' && c.status !== 'Inactive');
+  if (!rows.length) return null;
+  const overdue = rows.filter(c => c.nextDue && c.nextDue < today).length;
+  const neverDone = rows.filter(c => !c.lastCompleted).length;
+  return { total: rows.length, overdue, neverDone };
+}
+
+function backupCheckResult(calendar, today) {
+  const st = recurringActivityState(calendar, 'Backup restore test', today);
+  if (!st) return { result: 'manual', note: 'No backup restore test scheduled in Checkpoint\'s calendar — add one, or keep restore-test evidence in whatever system you use.' };
+  if (st.overdue) return { result: 'fail', note: st.overdue + ' of ' + st.total + ' scheduled backup restore test(s) overdue — an untested backup is not a demonstrated one.' };
+  if (st.neverDone) return { result: 'review', note: st.total + ' backup restore test(s) scheduled, but ' + st.neverDone + ' has never been completed.' };
+  return { result: 'pass', note: st.total + ' scheduled backup restore test(s), all completed within cadence.' };
+}
+
+function bcpCheckResult(calendar, docs, today) {
+  const st = recurringActivityState(calendar, 'BCP/DR test', today);
+  const plan = (docs || []).filter(d => d && d.tplId === 'bcp-dr-plan' && d.status !== 'Superseded');
+  const planApproved = plan.filter(d => d.status === 'Approved');
+  const planOverdue = planApproved.filter(d => d.nextReview && d.nextReview < today);
+
+  if (!st && !plan.length) return { result: 'manual', note: 'No BCP/DR plan document and no failover test scheduled in Checkpoint — add them, or keep continuity evidence in whatever system you use.' };
+  if (st && st.overdue) return { result: 'fail', note: st.overdue + ' BCP/DR failover test(s) overdue' + (planApproved.length ? ' (the plan itself is approved — an untested plan is the finding here)' : ' and no approved plan document') + '.' };
+  if (plan.length && !planApproved.length) return { result: 'fail', note: 'A BCP/DR plan exists but is not approved — a draft plan is not an operative one.' };
+  if (planOverdue.length) return { result: 'fail', note: 'The BCP/DR plan is past its review date.' };
+  if (!st) return { result: 'review', note: 'A BCP/DR plan is approved and current, but no failover test is scheduled — the plan is untested.' };
+  if (st.neverDone) return { result: 'review', note: 'A BCP/DR failover test is scheduled but has never been completed.' };
+  if (!planApproved.length) return { result: 'review', note: 'Failover tests are current, but there is no approved BCP/DR plan document in the register.' };
+  return { result: 'pass', note: 'BCP/DR plan approved and in review cadence, with failover testing current.' };
+}
+
+function supplierCheckResult(vendors, today) {
+  const list = (vendors || []).filter(v => v);
+  if (!list.length) return { result: 'manual', note: 'No suppliers recorded in Checkpoint\'s vendor register — add them, or keep supplier assurance evidence in whatever system you use.' };
+  const overdue = list.filter(v => v.nextReviewDue && v.nextReviewDue < today);
+  const keyOverdue = overdue.filter(v => v.criticality === 'Critical' || v.criticality === 'High');
+  const neverReviewed = list.filter(v => !v.lastReviewed);
+  const keyNeverReviewed = neverReviewed.filter(v => v.criticality === 'Critical' || v.criticality === 'High');
+
+  if (keyOverdue.length || keyNeverReviewed.length) {
+    const n = keyOverdue.length || keyNeverReviewed.length;
+    return { result: 'fail', note: n + ' critical/high-criticality supplier(s) ' + (keyOverdue.length ? 'overdue for review' : 'never reviewed') + ', of ' + list.length + ' recorded.' };
+  }
+  if (overdue.length || neverReviewed.length) {
+    return { result: 'review', note: (overdue.length || neverReviewed.length) + ' lower-criticality supplier(s) ' + (overdue.length ? 'overdue for review' : 'never reviewed') + ', of ' + list.length + ' recorded.' };
+  }
+  return { result: 'pass', note: 'All ' + list.length + ' recorded supplier(s) reviewed within cadence.' };
+}
+
+function documentReviewState(doc, today, warnDays) {
+  const d = doc || {};
+  let warn = (warnDays == null || warnDays === '') ? 30 : Number(warnDays);
+  if (isNaN(warn)) warn = 30;
+  if (d.status === 'Superseded') return { state: 'superseded' };
+  if (!d.nextReview) return { state: 'none' };
+  const days = daysBetween(today, d.nextReview);
+  if (days < 0) return { state: 'overdue' };
+  if (days <= warn) return { state: 'due' };
+  return { state: 'current' };
+}
+
+function documentRegisterSummary(docs, today, opts) {
+  const o = opts || {};
+  const controlledCats = o.controlledCategories || [];
+  const warn = o.warnDays;
+  const out = { total: 0, controlled: 0, approved: 0, overdue: 0, due: 0, noReviewDate: 0, unversioned: 0, unowned: 0 };
+  (docs || []).forEach(d => {
+    out.total++;
+    const isControlled = !!d.status || controlledCats.indexOf(d.category) > -1;
+    if (!isControlled) return;
+    out.controlled++;
+    if (d.status === 'Approved') out.approved++;
+    if (d.status === 'Superseded') return;
+    if (!d.version) out.unversioned++;
+    if (!d.owner) out.unowned++;
+    const rv = documentReviewState(d, today, warn);
+    if (rv.state === 'overdue') out.overdue++;
+    else if (rv.state === 'due') out.due++;
+    else if (rv.state === 'none') out.noReviewDate++;
+  });
+  return out;
+}
+
+function policyCheckResult(docs, today, opts) {
+  const o = opts || {};
+  const summary = documentRegisterSummary(docs, today, { controlledCategories: o.controlledCategories || ['Policies & Procedures'], warnDays: o.warnDays });
+  if (!summary.controlled) return { result: 'manual', note: 'No controlled documents in Checkpoint\'s register — generate or upload your policy set here, or keep it in whatever system you use.' };
+  if (!summary.approved) return { result: 'fail', note: summary.controlled + ' controlled document(s), none approved — an unapproved policy has not been issued.' };
+  if (summary.overdue) return { result: 'fail', note: summary.overdue + ' of ' + summary.approved + ' approved document(s) past their review date.' };
+  if (summary.noReviewDate || summary.unversioned || summary.unowned) {
+    const gaps = [];
+    if (summary.noReviewDate) gaps.push(summary.noReviewDate + ' with no review date');
+    if (summary.unversioned) gaps.push(summary.unversioned + ' unversioned');
+    if (summary.unowned) gaps.push(summary.unowned + ' with no named owner');
+    return { result: 'review', note: summary.approved + ' approved document(s), but ' + gaps.join(', ') + ' — each fails Clause 7.5.2 on its face.' };
+  }
+  return { result: 'pass', note: 'All ' + summary.approved + ' approved document(s) versioned, owned and within review cadence.' };
+}
+
+function independentReviewResult(audits, today, cadenceDays) {
+  cadenceDays = cadenceDays > 0 ? cadenceDays : 365;
+  const list = (audits || []).filter(a => a);
+  if (!list.length) return { result: 'manual', note: 'No internal audits recorded in Checkpoint\'s audit programme — schedule one, or keep independent-review evidence in whatever system you use.' };
+  const completed = list.filter(a => a.status === 'Completed' && a.completed);
+  if (!completed.length) return { result: 'review', note: list.length + ' internal audit(s) scheduled, but none completed yet.' };
+  const mostRecent = completed.reduce((m, a) => (!m || a.completed > m.completed ? a : m), null);
+  const ageDays = daysBetween(mostRecent.completed, today);
+  if (ageDays > cadenceDays) return { result: 'fail', note: 'The most recent completed internal audit was ' + ageDays + ' days ago (' + mostRecent.completed + ') — independent review is not current (target ≤' + cadenceDays + ' days).' };
+  return { result: 'pass', note: completed.length + ' internal audit(s) completed, most recently ' + ageDays + ' day(s) ago, within the ' + cadenceDays + '-day review cadence.' };
+}
+
+function incidentLessonsResult(incidents) {
+  const list = (incidents || []).filter(n => n);
+  const closed = list.filter(n => n.status === 'Closed');
+  if (!closed.length) {
+    return { result: 'manual', note: list.length ? list.length + ' incident(s) recorded, none closed out yet — this scores once at least one is.' : 'No incidents recorded in Checkpoint\'s incident register — nothing to review yet.' };
+  }
+  const missing = closed.filter(n => !n.rootCause || !n.lessonsLearned);
+  const missingHigh = missing.filter(n => n.severity === 'Critical' || n.severity === 'High');
+  if (missingHigh.length) return { result: 'fail', note: missingHigh.length + ' Critical/High-severity closed incident(s) have no recorded root cause or lessons learned, of ' + closed.length + ' closed.' };
+  if (missing.length) return { result: 'review', note: missing.length + ' lower-severity closed incident(s) have no recorded root cause or lessons learned, of ' + closed.length + ' closed.' };
+  return { result: 'pass', note: 'All ' + closed.length + ' closed incident(s) have a recorded root cause and lessons learned.' };
+}
+
+/* Runs the six register-derived checks and merges their results/notes
+   into the caller's `results`/`notes` objects (same set()-writes-in-
+   place contract runPostureChecks() uses). Never throws: a register that
+   is momentarily unreadable degrades that one check to 'review', not the
+   whole scan. */
+async function runRegisterChecks(g, gAll, context, siteId, optional, settings, results, notes, today) {
+  function set(id, r, n) { results[id] = r; notes[id] = n || ''; }
+  const docReviewWarnDays = numSetting(settings, 'docReviewWarnDays', 30);
+
+  let calendar = [];
+  if (optional.Calendar) {
+    try {
+      const items = await g(`/sites/${siteId}/lists/${optional.Calendar}/items?$expand=fields&$top=999`);
+      calendar = (items.value || []).map(i => {
+        const f = i.fields || {};
+        return { category: f.Category || 'Other', status: f.Status || 'Active', nextDue: f.NextDue || '', lastCompleted: f.LastCompleted || '' };
+      });
+    } catch (e) { context.log.error('Checkpoint posture monitor: could not read the calendar: ' + (e && e.message ? e.message : e)); }
+  }
+
+  let docs = [];
+  if (optional.Documents) {
+    try { docs = await readDocumentRegister(g, gAll, siteId, optional.Documents); }
+    catch (e) { context.log.error('Checkpoint posture monitor: could not read the document register: ' + (e && e.message ? e.message : e)); }
+  }
+
+  let vendors = [];
+  if (optional.Vendors) {
+    try {
+      const items = await g(`/sites/${siteId}/lists/${optional.Vendors}/items?$expand=fields&$top=999`);
+      vendors = (items.value || []).map(i => {
+        const f = i.fields || {};
+        return { criticality: f.Criticality || 'Medium', lastReviewed: f.LastReviewed || '', nextReviewDue: f.NextReviewDue || '' };
+      });
+    } catch (e) { context.log.error('Checkpoint posture monitor: could not read the vendor register: ' + (e && e.message ? e.message : e)); }
+  }
+
+  let audits = [];
+  if (optional.Audits) {
+    try {
+      const items = await g(`/sites/${siteId}/lists/${optional.Audits}/items?$expand=fields&$top=999`);
+      audits = (items.value || []).map(i => {
+        const f = i.fields || {};
+        return { status: f.Status || 'Planned', completed: f.CompletedDate || '' };
+      });
+    } catch (e) { context.log.error('Checkpoint posture monitor: could not read the audit programme: ' + (e && e.message ? e.message : e)); }
+  }
+
+  let incidents = [];
+  if (optional.Incidents) {
+    try {
+      const items = await g(`/sites/${siteId}/lists/${optional.Incidents}/items?$expand=fields&$top=999`);
+      incidents = (items.value || []).map(i => {
+        const f = i.fields || {};
+        return { status: f.Status || 'Open', severity: f.Severity || 'Medium', rootCause: f.RootCause || '', lessonsLearned: f.LessonsLearned || '' };
+      });
+    } catch (e) { context.log.error('Checkpoint posture monitor: could not read the incident register: ' + (e && e.message ? e.message : e)); }
+  }
+
+  const backup = backupCheckResult(calendar, today);
+  set('backup', backup.result, backup.note);
+
+  const bcp = bcpCheckResult(calendar, docs, today);
+  set('bcp', bcp.result, bcp.note);
+
+  const supplier = supplierCheckResult(vendors, today);
+  set('supplier', supplier.result, supplier.note);
+
+  const policy = policyCheckResult(docs, today, { warnDays: docReviewWarnDays });
+  set('policy', policy.result, policy.note);
+
+  /* No third argument: independentReviewResult()'s own 365-day default
+     applies, exactly matching app.js's call — there is no separate
+     tenant-configurable setting for this cadence in the browser app
+     either, unlike controlReviewCadenceDays (a different concept: how
+     often an Implemented control needs re-verification). */
+  const auditReview = independentReviewResult(audits, today);
+  set('audit-review', auditReview.result, auditReview.note);
+
+  const incidentLessons = incidentLessonsResult(incidents);
+  set('incident-lessons', incidentLessons.result, incidentLessons.note);
 }
 
 async function readSettings(g, siteId, settingsListId) {
@@ -272,6 +545,69 @@ async function runPostureChecks(g, gAll, settings) {
     });
     set('mfa-priv', privStrong ? 'pass' : priv ? 'review' : 'fail',
       privStrong ? 'Authentication-strength policy covers privileged roles' : priv ? 'Privileged roles require MFA, but not a phishing-resistant method' : 'No CA policy targets privileged directory roles');
+
+    /* ca-device / ca-risk / ca-sif / ca-tou / ca-cas mine five more
+       fields off the SAME `enabled` policy array above — nothing new on
+       the wire, just fields nothing here was reading yet. Mirrors
+       lib.js's caDeviceComplianceResult() / caRiskBasedResult() /
+       caSignInFrequencyResult() / caTermsOfUseResult() /
+       caCloudAppSecurityResult() exactly; change one, change the other.
+
+       ca-risk has no capability gate here (unlike the interactive app's
+       identityProtection probe, which shows 'manual' rather than a
+       computed result on a tenant with no Entra ID P2). This Function
+       does not do capability probing for ANY check — 'riskyusers' below
+       has the identical gap already (a 403 lands in its catch as
+       'review', not 'manual') — so an unlicensed tenant scoring 'fail'
+       here instead of 'manual' is a pre-existing class of drift, not a
+       new one introduced by this check. */
+    const deviceGate = p => {
+      const grants = (p.grantControls && p.grantControls.builtInControls) || [];
+      return grants.indexOf('compliantDevice') > -1 || grants.indexOf('domainJoinedDevice') > -1;
+    };
+    const caDeviceAllApps = enabled.some(p => {
+      const apps = (p.conditions && p.conditions.applications && p.conditions.applications.includeApplications) || [];
+      return apps.indexOf('All') > -1 && deviceGate(p);
+    });
+    const caDeviceSomeApps = enabled.some(deviceGate);
+    set('ca-device', caDeviceAllApps ? 'pass' : caDeviceSomeApps ? 'review' : 'fail',
+      caDeviceAllApps ? 'A Conditional Access policy requires a compliant or hybrid-joined device for all cloud apps'
+        : caDeviceSomeApps ? 'Device compliance is required by at least one Conditional Access policy, but not for all cloud apps'
+        : 'No Conditional Access policy requires a compliant or hybrid-joined device for cloud app access');
+
+    const signInRisk = enabled.some(p => {
+      const levels = (p.conditions && p.conditions.signInRiskLevels) || [];
+      const grants = (p.grantControls && p.grantControls.builtInControls) || [];
+      return levels.length > 0 && (grants.indexOf('block') > -1 || grants.indexOf('mfa') > -1);
+    });
+    const userRisk = enabled.some(p => {
+      const levels = (p.conditions && p.conditions.userRiskLevels) || [];
+      const grants = (p.grantControls && p.grantControls.builtInControls) || [];
+      return levels.length > 0 && (grants.indexOf('block') > -1 || grants.indexOf('passwordChange') > -1);
+    });
+    set('ca-risk', (signInRisk && userRisk) ? 'pass' : (signInRisk || userRisk) ? 'review' : 'fail',
+      (signInRisk && userRisk) ? 'Conditional Access enforces both sign-in-risk and user-risk based access controls'
+        : (signInRisk || userRisk) ? (signInRisk ? 'Sign-in-risk' : 'User-risk') + ' is enforced by Conditional Access, but not both'
+        : 'No Conditional Access policy enforces sign-in-risk or user-risk based access controls');
+
+    const caSif = enabled.some(p => {
+      const roles = (p.conditions && p.conditions.users && p.conditions.users.includeRoles) || [];
+      const sif = p.sessionControls && p.sessionControls.signInFrequency;
+      return roles.length > 0 && !!(sif && sif.isEnabled);
+    });
+    set('ca-sif', caSif ? 'pass' : 'fail',
+      caSif ? 'A Conditional Access policy enforces periodic re-authentication (sign-in frequency) for privileged directory roles'
+        : 'No Conditional Access policy enforces sign-in frequency for privileged directory roles — a stolen or persisted admin session can remain valid indefinitely');
+
+    const caTou = enabled.some(p => ((p.grantControls && p.grantControls.termsOfUse) || []).length > 0);
+    set('ca-tou', caTou ? 'pass' : 'review',
+      caTou ? 'A Conditional Access policy requires Terms of Use acceptance at sign-in'
+        : 'No Conditional Access policy requires Terms of Use acceptance — confirm acceptable-use acknowledgment is captured another way (e.g. HR onboarding, a signed policy register)');
+
+    const caCas = enabled.some(p => !!(p.sessionControls && p.sessionControls.cloudAppSecurity && p.sessionControls.cloudAppSecurity.isEnabled));
+    set('ca-cas', caCas ? 'pass' : 'review',
+      caCas ? 'A Conditional Access policy applies Defender for Cloud Apps session control, governing cloud app usage'
+        : 'No Conditional Access policy applies Defender for Cloud Apps session control — confirm cloud service adoption is governed another way (e.g. a supplier-review gate, or Defender for Cloud Apps discovery run separately)');
   }
 
   try {
@@ -293,6 +629,73 @@ async function runPostureChecks(g, gAll, settings) {
       eligibleCount + ' of ' + total + ' privileged assignment(s) are eligible (PIM); ' + permanentCount + ' remain permanent (target ≤' + maxPermanentPrivileged + ' permanent)');
   } catch (e) { set('pim', 'review', 'PIM not licensed or not readable: ' + e.message); }
 
+  /* leaver (A.5.11/A.5.18/A.6.5) and sod (A.5.3) share one Graph read —
+     every user plus, per activated directory role, that role's members —
+     exactly the shape graph.js's leaver-hygiene block already proved out
+     interactively. No new scope: User.Read.All and
+     RoleManagement.Read.Directory are both already granted above (for
+     guests/admins/pim). A role whose members can't be read is skipped,
+     never invented — a partial privileged set can only under-report,
+     never manufacture a finding. Mirrors lib.js's leaverHygieneResult()
+     and segregationOfDutiesResult() exactly. */
+  try {
+    const allUsers = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,assignedLicenses&$top=999');
+    const privilegedIds = {};
+    const roleMembersByUser = {};
+    try {
+      const roles = await gAll('/directoryRoles?$select=id,displayName');
+      for (const role of roles) {
+        try {
+          const mem = await gAll('/directoryRoles/' + role.id + '/members?$select=id,displayName,userPrincipalName&$top=999');
+          for (const m of mem) {
+            if (!m.id) continue;
+            privilegedIds[m.id] = true;
+            const entry = roleMembersByUser[m.id] || (roleMembersByUser[m.id] = { name: m.displayName || m.userPrincipalName || m.id, roles: [] });
+            entry.roles.push(role.displayName);
+          }
+        } catch (e) { /* skip this one role — see comment above */ }
+      }
+    } catch (e) { /* no role data at all: the leaver check's licence half still stands, sod goes 'manual' below */ }
+
+    const members = allUsers.filter(u => u && u.userType !== 'Guest');
+    const disabled = members.filter(u => u.accountEnabled === false);
+    if (!disabled.length) {
+      set('leaver', 'pass', 'No disabled member accounts in the directory');
+    } else {
+      const stillPrivileged = disabled.filter(u => u.id && privilegedIds[u.id]);
+      const stillLicensed = disabled.filter(u => Array.isArray(u.assignedLicenses) && u.assignedLicenses.length > 0);
+      set('leaver', stillPrivileged.length ? 'fail' : (stillLicensed.length ? 'review' : 'pass'),
+        disabled.length + ' disabled account(s)' +
+          (stillPrivileged.length ? '; ' + stillPrivileged.length + ' STILL HOLD a privileged directory role' : '') +
+          (stillLicensed.length ? '; ' + stillLicensed.length + ' still hold a paid licence — confirm each is a deliberate retention rather than an unfinished offboarding' : '') +
+          (!stillPrivileged.length && !stillLicensed.length ? ', none retaining licences or privileged roles' : ''));
+    }
+
+    if (!Object.keys(roleMembersByUser).length) {
+      set('sod', 'manual', 'Could not read directory role membership — see the leaver check above for the same underlying read.');
+    } else {
+      const PRA = 'Privileged Role Administrator';
+      const offenders = [];
+      Object.keys(roleMembersByUser).forEach(id => {
+        const u = roleMembersByUser[id];
+        if (u.roles.indexOf(PRA) === -1) return;
+        const others = u.roles.filter(r => r !== PRA);
+        if (others.length) offenders.push({ name: u.name || id, roles: others });
+      });
+      if (!offenders.length) {
+        set('sod', 'pass', 'No Privileged Role Administrator also holds another directory role.');
+      } else {
+        const shown = offenders.slice(0, 5).map(o => o.name + ' (also: ' + o.roles.join(', ') + ')').join('; ');
+        set('sod', 'fail', offenders.length + ' Privileged Role Administrator' + (offenders.length === 1 ? '' : 's') +
+          ' also hold another directory role — self-escalating, since Privileged Role Administrator can grant itself any other role: ' + shown +
+          (offenders.length > 5 ? ', +' + (offenders.length - 5) + ' more' : ''));
+      }
+    }
+  } catch (e) {
+    set('leaver', 'review', 'Could not read directory accounts: ' + e.message);
+    set('sod', 'review', 'Could not read directory accounts: ' + e.message);
+  }
+
   try {
     const guests = await gAll("/users?$filter=userType eq 'Guest'&$select=id&$top=999");
     const gn = guests.length;
@@ -306,14 +709,41 @@ async function runPostureChecks(g, gAll, settings) {
   } catch (e) { set('riskyusers', 'review', 'Identity Protection not licensed or not readable: ' + e.message); }
 
   try {
-    const devs = await gAll('/deviceManagement/managedDevices?$select=complianceState&$top=999');
-    if (!devs.length) set('device', 'review', 'No Intune-managed devices found');
-    else {
+    /* lastSyncDateTime added to the existing $select rather than fetched
+       separately — same call, same permission, one more field, powering
+       device-checkin below. Mirrors graph.js exactly. */
+    const devs = await gAll('/deviceManagement/managedDevices?$select=complianceState,lastSyncDateTime&$top=999');
+    if (!devs.length) {
+      set('device', 'review', 'No Intune-managed devices found');
+      set('device-checkin', 'review', 'No Intune-managed devices found');
+    } else {
       const ok = devs.filter(d => d.complianceState === 'compliant').length;
       const pct = Math.round(ok / devs.length * 100);
       set('device', pct >= deviceCompliancePassPct ? 'pass' : pct >= deviceComplianceReviewPct ? 'review' : 'fail', pct + '% of ' + devs.length + ' devices compliant');
+
+      /* device-checkin — mirrors lib.js's deviceCheckinResult() exactly:
+         proportional, not absolute (a fifth of the fleet silently
+         unmanaged is the finding, one stale laptop isn't). */
+      const staleDays = numSetting(settings, 'deviceStaleDays', 30);
+      const staleLimitMs = staleDays * 86400000;
+      const nowMs = Date.now();
+      const neverCheckedIn = devs.filter(d => !d.lastSyncDateTime).length;
+      const stale = devs.filter(d => {
+        if (!d.lastSyncDateTime) return true;
+        const t = Date.parse(d.lastSyncDateTime);
+        return !isNaN(t) && (nowMs - t) > staleLimitMs;
+      }).length;
+      const stalePct = stale / devs.length;
+      set('device-checkin', stalePct === 0 ? 'pass' : (stalePct <= 0.1 ? 'review' : 'fail'),
+        stale || neverCheckedIn
+          ? stale + ' of ' + devs.length + ' device(s) have not checked in for over ' + staleDays + ' days' +
+            (neverCheckedIn ? ' (' + neverCheckedIn + ' never have)' : '') + ' — their compliance state is stale evidence'
+          : 'All ' + devs.length + ' managed device(s) checked in within ' + staleDays + ' days');
     }
-  } catch (e) { set('device', 'review', 'Could not read Intune devices: ' + e.message); }
+  } catch (e) {
+    set('device', 'review', 'Could not read Intune devices: ' + e.message);
+    set('device-checkin', 'review', 'Could not read Intune devices: ' + e.message);
+  }
 
   try {
     const pols = await g('/deviceManagement/deviceCompliancePolicies?$select=id&$top=1');
@@ -322,11 +752,41 @@ async function runPostureChecks(g, gAll, settings) {
   } catch (e) { set('compliance-policy', 'review', 'Could not read Intune compliance policies: ' + e.message); }
 
   try {
-    const grants = await gAll('/oauth2PermissionGrants?$select=scope&$top=999');
+    /* device-config can pass or stay MANUAL, never fail on an empty
+       result — Graph v1.0 cannot read Settings Catalog policies, so a
+       tenant configured entirely through the newer Settings Catalog
+       would return zero classic profiles here and does not deserve a
+       false finding for it. Mirrors graph.js exactly. */
+    const cfgs = await g('/deviceManagement/deviceConfigurations?$select=id&$top=50');
+    const cfgCount = (cfgs.value || []).length;
+    set('device-config', cfgCount > 0 ? 'pass' : 'manual',
+      cfgCount > 0
+        ? cfgCount + ' device configuration profile' + (cfgCount === 1 ? '' : 's') + ' deployed (showing first page)'
+        : 'No classic device configuration profiles found. Graph v1.0 cannot read Settings Catalog policies, so this is "not visible" rather than "not configured" — record how devices are configured if it is done that way.');
+  } catch (e) { set('device-config', 'review', 'Could not read Intune device configuration profiles: ' + e.message); }
+
+  try {
+    const grants = await gAll('/oauth2PermissionGrants?$select=scope,consentType&$top=999');
     const highPriv = ['Directory.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All', 'Sites.FullControl.All', 'User.ReadWrite.All'];
-    const riskyCount = grants.filter(g2 => (g2.scope || '').split(' ').some(s => highPriv.indexOf(s) > -1)).length;
+    const isHighPriv = g2 => (g2.scope || '').split(' ').some(s => highPriv.indexOf(s) > -1);
+    const riskyCount = grants.filter(isHighPriv).length;
     set('riskyapps', riskyCount === 0 ? 'pass' : riskyCount <= 3 ? 'review' : 'fail', riskyCount + ' app grant(s) with a high-privilege scope (of ' + grants.length + ' total grants)');
-  } catch (e) { set('riskyapps', 'review', 'Could not read OAuth app grants: ' + e.message); }
+
+    /* oauth-consent mines the SAME grants array for consentType, a field
+       riskyapps' own $select already fetches above but never scored on.
+       'Principal' means a single end user clicked "Accept" themselves,
+       no admin in the loop — for a high-privilege scope, the shape of an
+       illicit-consent-grant attack, and invisible inside riskyapps'
+       combined count. Mirrors lib.js's oauthConsentRiskResult() exactly. */
+    const userConsented = grants.filter(g2 => isHighPriv(g2) && g2.consentType === 'Principal').length;
+    const adminConsented = grants.filter(g2 => isHighPriv(g2) && g2.consentType === 'AllPrincipals').length;
+    set('oauth-consent', userConsented === 0 ? 'pass' : userConsented === 1 ? 'review' : 'fail',
+      userConsented + ' high-privilege OAuth grant(s) consented to directly by an end user, with no admin review' +
+        (adminConsented ? ' (' + adminConsented + ' other high-privilege grant(s) were admin-consented)' : ''));
+  } catch (e) {
+    set('riskyapps', 'review', 'Could not read OAuth app grants: ' + e.message);
+    set('oauth-consent', 'review', 'Could not read OAuth app grants: ' + e.message);
+  }
 
   try {
     const reviews = await gAll('/identityGovernance/accessReviews/definitions?$select=id&$top=999');
@@ -449,7 +909,7 @@ async function readDocumentRegister(g, gAll, siteId, documentsListId) {
       out.push({
         name: file.name, url: file.webUrl, category: f.name,
         owner: fl.DocOwner || '', version: fl.DocVersion || '', status: fl.DocStatus || '',
-        nextReview: fl.DocNextReview || ''
+        nextReview: fl.DocNextReview || '', tplId: fl.DocTplId || ''
       });
     }
   }
@@ -1027,16 +1487,23 @@ module.exports = async function (context, myTimer) {
        resolve is logged, never thrown: these lists are optional, and a
        posture scan must still run and be recorded for a tenant whose
        list collection was momentarily unreadable. */
-    let optional = { Documents: null, Attestations: null, Training: null, Vendors: null };
+    let optional = { Documents: null, Attestations: null, Training: null, Vendors: null, Calendar: null, Audits: null, Actions: null, Controls: null, Incidents: null };
     try {
       optional = await resolveOptionalLists(g, siteId);
     } catch (e) {
-      context.log.error('Checkpoint posture monitor: could not resolve the optional lists — training check and governance sweep skipped this run: ' + (e && e.message ? e.message : e));
+      context.log.error('Checkpoint posture monitor: could not resolve the optional lists — training check, register-derived checks and governance sweep skipped this run: ' + (e && e.message ? e.message : e));
     }
     const { results, notes } = await runPostureChecks(g, gAll, settings);
 
     const training = await runTrainingCheck(g, context, siteId, optional.Training, today);
     if (training) { results.training = training.result; notes.training = training.note; }
+
+    /* backup/bcp/supplier/policy/audit-review/incident-lessons — same
+       "lands in `results` before the score is computed" contract as
+       training above. Never throws: an unreadable register degrades
+       that one check to a caught error inside runRegisterChecks, not a
+       skipped scan. */
+    await runRegisterChecks(g, gAll, context, siteId, optional, settings, results, notes, today);
 
     const score = computeScore(results);
 
@@ -1151,4 +1618,10 @@ module.exports = async function (context, myTimer) {
    off-by-one means a digest sends every night or never at all — be
    covered by test/posture-monitor.test.mjs without standing up a
    Function host or a tenant. */
-module.exports.__test = { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep };
+module.exports.__test = {
+  digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep,
+  runPostureChecks, runRegisterChecks, readDocumentRegister,
+  backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
+  recurringActivityState, documentRegisterSummary, documentReviewState,
+  SCORED_CHECK_IDS, CHECK_LABELS
+};
