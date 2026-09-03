@@ -160,6 +160,18 @@ window.CHECKPOINT_CONFIG = {
      lambda/DEPLOY-MARKETPLACE.md. */
   marketplaceFulfillmentUrl: 'https://ef6k1tyuhi.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-marketplace',
 
+  /* Optional client-side error reporting endpoint (lambda/
+     report-error.js). Empty string = disabled — app.js's window.onerror/
+     unhandledrejection handlers and its reportError() calls simply
+     never fire a request, exactly like every other optional endpoint
+     above. Never sends anything from a client's own posture/risk/
+     compliance data — only the error text/stack, the app's own state
+     (current view, app version), and the browser's own info, all POSTed
+     to Compliance365's OWN Lambda, never a client's tenant. See
+     lambda/DEPLOY-ERROR-REPORTING.md and the owner console's "Errors"
+     tab, which is the only place this data is ever read back. */
+  errorReportUrl: '',
+
   /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
      as a default in the owner console's welcome-pack email draft —
      always editable per-send in that draft, so leaving this blank just

@@ -102,21 +102,57 @@ window.Graph = (function () {
      only identities in OUR tenant can call it — never a client's. */
   async function signingToken() { return token(CONFIG.scopesSigning); }
 
+  /* Retries `fetchOnce` (a callback performing exactly one HTTP attempt
+     and returning its Response) while the response is throttled/
+     transiently unavailable — isRetryableGraphStatus() (lib.js) — up to
+     GRAPH_MAX_RETRIES times, honouring the server's own Retry-After
+     header via graphRetryDelayMs() (lib.js). A posture scan fires
+     dozens of Graph calls in quick succession, exactly the shape of
+     workload Microsoft Graph throttles (429) — without this, that
+     surfaced to a practitioner as checks silently degrading to "Manual"
+     or a whole scan failing outright, on precisely the largest, busiest
+     tenants most worth getting right. Every other error (400/401/403/
+     404/...) is a real failure and returns on the first attempt,
+     unchanged — retrying those would only repeat them.
+
+     Deliberately generic (the retry MECHANICS don't care what's being
+     fetched or how it's authenticated) rather than inlined into g()
+     below, so this loop's own correctness — does it retry the right
+     number of times, does it honour Retry-After, does it stop on a real
+     error — can be tested directly (see window.Graph.__test) without
+     needing a signed-in MSAL session, which g() itself can't run
+     without. */
+  var GRAPH_MAX_RETRIES = 3;
+  async function fetchWithGraphRetry(fetchOnce) {
+    var res, attempt = 0;
+    for (;;) {
+      res = await fetchOnce();
+      if (!window.CheckpointLib.isRetryableGraphStatus(res.status) || attempt >= GRAPH_MAX_RETRIES) break;
+      var delay = window.CheckpointLib.graphRetryDelayMs(res.headers.get('Retry-After'), attempt);
+      await new Promise(function (resolve) { setTimeout(resolve, delay); });
+      attempt++;
+    }
+    return res;
+  }
+
   /* Minimal Graph fetch. path is relative to v1.0 unless it starts with
      http. opts.scopes overrides the default read-only token scope —
      pass CONFIG.scopesProvision for SharePoint calls, CONFIG.scopesMail
-     for sendMail. */
+     for sendMail. See fetchWithGraphRetry() above for the throttling
+     retry this wraps every call in. */
   async function g(path, opts) {
     opts = opts || {};
-    var t = await token(opts.scopes);
     var url = path.indexOf('http') === 0 ? path : 'https://graph.microsoft.com/v1.0' + path;
-    var res = await fetch(url, {
-      method: opts.method || 'GET',
-      headers: Object.assign(
-        { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
-        opts.headers || {}
-      ),
-      body: opts.body ? JSON.stringify(opts.body) : undefined
+    var res = await fetchWithGraphRetry(async function () {
+      var t = await token(opts.scopes);
+      return fetch(url, {
+        method: opts.method || 'GET',
+        headers: Object.assign(
+          { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+          opts.headers || {}
+        ),
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
     });
     if (res.status === 204) return null;
     /* Graph's error responses are normally JSON ({error:{code,message,
@@ -1330,6 +1366,12 @@ window.Graph = (function () {
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
-    detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken
+    detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
+    /* Test-only surface — never used by the app itself. Lets
+       fetchWithGraphRetry()'s loop mechanics be exercised directly
+       (Playwright, or a browser console) with a fake fetchOnce
+       callback, since g() itself can't run in a test without a real
+       signed-in MSAL session. */
+    __test: { fetchWithGraphRetry: fetchWithGraphRetry, GRAPH_MAX_RETRIES: GRAPH_MAX_RETRIES }
   };
 })();

@@ -25,14 +25,47 @@ async function getAppToken() {
   return (await res.json()).access_token;
 }
 
+/* Whether a Graph HTTP status is a throttling/transient-availability
+   signal worth retrying automatically. Hand-mirrored from
+   isRetryableGraphStatus()/graphRetryDelayMs() in public/checkpoint/
+   lib.js (this Function has no shared module with the browser bundle —
+   see PostureMonitor/index.js's own header comment) — if you change
+   one, change the other. This Function runs unattended, once a day
+   against every check the browser app also makes; getting throttled
+   partway through a run without retrying means a scan silently missing
+   checks, or a governance sweep that never gets to the owner-chase
+   emails, with no signed-in practitioner around to notice or retry by
+   hand. */
+function isRetryableGraphStatus(status) {
+  return status === 429 || status === 503 || status === 504;
+}
+
+function graphRetryDelayMs(retryAfterHeader, attempt) {
+  const fromHeader = parseInt(retryAfterHeader, 10);
+  if (!isNaN(fromHeader) && fromHeader >= 0) return fromHeader * 1000;
+  const base = Math.min(1000 * Math.pow(2, attempt), 16000);
+  const jitter = Math.random() * base * 0.25;
+  return Math.round(base + jitter);
+}
+
+const GRAPH_MAX_RETRIES = 3;
+
 function graphClient(token) {
   async function g(path, opts) {
     opts = opts || {};
-    const res = await fetch(path.indexOf('http') === 0 ? path : GRAPH + path, {
-      method: opts.method || 'GET',
-      headers: Object.assign({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, opts.headers || {}),
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
+    const url = path.indexOf('http') === 0 ? path : GRAPH + path;
+    let res, attempt = 0;
+    for (;;) {
+      res = await fetch(url, {
+        method: opts.method || 'GET',
+        headers: Object.assign({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, opts.headers || {}),
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+      if (!isRetryableGraphStatus(res.status) || attempt >= GRAPH_MAX_RETRIES) break;
+      const delay = graphRetryDelayMs(res.headers.get('Retry-After'), attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      attempt++;
+    }
     if (!res.ok) { const e = new Error('Graph ' + res.status + ' on ' + path + ': ' + await res.text()); e.status = res.status; throw e; }
     if (res.status === 204) return null;
     return res.json();
@@ -83,4 +116,4 @@ async function resolveOptionalLists(g, siteId) {
   };
 }
 
-module.exports = { getAppToken, graphClient, resolveSiteId, resolveOptionalLists };
+module.exports = { getAppToken, graphClient, resolveSiteId, resolveOptionalLists, isRetryableGraphStatus, graphRetryDelayMs };

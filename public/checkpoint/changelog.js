@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.51.0',
+    date: '2026-09-03',
+    entries: [
+      'Reliability: every Microsoft Graph call — interactive scans, SharePoint writes, and the scheduled monitor\'s own unattended runs — now retries automatically when Graph throttles it (429) or is briefly unavailable (503/504), honouring the server\'s own Retry-After header. A busy posture scan on a large tenant used to be exactly the workload most likely to get throttled, which previously surfaced as checks silently degrading to "Manual" or the whole scan failing outright.',
+      'New (internal): client-side error reporting. When something genuinely goes wrong in the browser app, a short, anonymised report — the error and its context, never any tenant posture/risk/compliance data — now reaches Compliance365, visible in the owner console\'s new Errors tab. Off by default until the reporting endpoint is deployed and configured (see lambda/DEPLOY-ERROR-REPORTING.md); nothing changes for a tenant that hasn\'t enabled it.'
+    ]
+  },
+  {
     version: '1.50.0',
     date: '2026-09-03',
     entries: [

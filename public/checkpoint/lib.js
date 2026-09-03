@@ -3181,6 +3181,37 @@
     return out;
   }
 
+  /* Whether a Graph HTTP status is a throttling/transient-availability
+     signal worth retrying automatically, rather than surfacing straight
+     to the caller as a failure. 429 is Graph's explicit "you're being
+     throttled" response; 503/504 are transient service-unavailability
+     Graph itself expects a client to retry the same way. Every other
+     4xx/5xx (400 malformed request, 403 missing consent, 404 not found,
+     ...) is a real failure retrying would only repeat. */
+  function isRetryableGraphStatus(status) {
+    return status === 429 || status === 503 || status === 504;
+  }
+
+  /* How long to wait before retrying a throttled/transient Graph call.
+     Honours the server's own Retry-After header (seconds, per RFC 9110)
+     when present and parseable — Graph tells you exactly how long it
+     wants; guessing our own backoff instead would either wait too
+     little (retried too soon, throttled again) or too long (a needless
+     delay when Graph would have accepted a retry sooner). Falls back to
+     capped exponential backoff with jitter only when the header is
+     absent, non-numeric, or negative. `attempt` is 0-indexed (0 = the
+     first retry, after the original request). Jitter keeps many
+     concurrent calls hitting the same throttled endpoint (a posture
+     scan fires dozens in quick succession) from all retrying in
+     lockstep and re-triggering the same throttle together. */
+  function graphRetryDelayMs(retryAfterHeader, attempt) {
+    var fromHeader = parseInt(retryAfterHeader, 10);
+    if (!isNaN(fromHeader) && fromHeader >= 0) return fromHeader * 1000;
+    var base = Math.min(1000 * Math.pow(2, attempt), 16000);
+    var jitter = Math.random() * base * 0.25;
+    return Math.round(base + jitter);
+  }
+
   /* The seven management-review inputs ISO 27001 Clause 9.3.2 requires
      the review to consider. Drives both the structured capture form and
      the Management Review Pack report, so the two can never list a
@@ -3512,6 +3543,7 @@
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,
+    isRetryableGraphStatus: isRetryableGraphStatus, graphRetryDelayMs: graphRetryDelayMs,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
     controlAssurance: controlAssurance, assuranceSummary: assuranceSummary,
