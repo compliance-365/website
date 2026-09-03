@@ -4,10 +4,25 @@
    dozens of individual commits land between these entries; this file
    is curated by hand to say what changed for a practitioner using the
    app, not a raw commit log. Read by app.js: the sidebar footer shows
-   window.CHECKPOINT_VERSION (version.js) as the current version, and a
-   one-time toast/panel appears when Settings' lastSeenVersion is older
-   than CHANGELOG[0].version — see the "what's new" section in app.js. */
+   window.CHECKPOINT_VERSION (version.js, build-injected from
+   public/checkpoint/VERSION) as the current version, and a one-time
+   toast fires whenever that differs from Settings' lastSeenVersion —
+   see checkForNewVersion() in app.js. This file's own version field is
+   for display only; keep it and VERSION in step by hand on every
+   release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
+  {
+    version: '1.46.0',
+    date: '2026-09-02',
+    entries: [
+      'New: three more automated posture checks, all mining data the app already fetches for other checks — no new Graph scope, no licence gate. A.5.3 (segregation of duties) flags an Entra ID Privileged Role Administrator who also holds another directory role — the one conflict that is a risk regardless of how the rest of a tenant\'s roles are organised. A.5.23 (cloud service governance) reads whether a Conditional Access policy applies Defender for Cloud Apps session control.',
+      'A.5.35 (independent review), A.5.27 (learning from incidents) and A.5.28 (evidence collection) are now scored for real from Checkpoint\'s own Audits and Incidents registers, joining backup/BCP/supplier/policy as checks that work on every tenant with no licence gate at all. A completed internal audit within cadence, and a closed incident with a recorded root cause and lessons learned, are exactly the evidence these controls ask for.',
+      'The ten AWS posture checks (the optional collector a client deploys into their own AWS account) are now mapped to the ISO 27001 controls they demonstrate, so a tenant running it sees those checks count toward Statement of Applicability coverage instead of sitting unmapped.',
+      'Risk treatment renamed to ISO 27005\'s four Ts — Treat, Tolerate, Transfer, Terminate — replacing Mitigate/Accept/Transfer/Avoid, each option with a short worked example (Transfer\'s covers handing risk to a third party). Existing risk records saved under the old names still display correctly; every new save uses the new terms.',
+      'The Actions register\'s priority-breakdown chart is colour-coded by criticality, including the bar itself for a priority that is entirely still Open, not just its label.',
+      'The Actions register table is trimmed to fit a normal screen without horizontal scrolling — each row keeps only the Complete action inline; Edit and Delete moved into the drawer, alongside everything else a row\'s buttons used to duplicate.'
+    ]
+  },
   {
     version: '1.45.0',
     date: '2026-08-30',
