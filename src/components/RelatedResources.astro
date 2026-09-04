@@ -23,6 +23,7 @@ const MAP = {
   iso27001: {
     label: 'ISO 27001',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'ISO 27001 readiness checklist', d: 'Score your gaps in 10 minutes', u: `${base}checklist/iso27001/` },
       { t: 'What ISO 27001 costs in Australia', d: 'Real pricing, no platform tax', u: `${base}resources/iso27001-cost-australia/` },
       { t: 'Inside the Statement of Applicability', d: 'The document auditors open first', u: `${base}resources/inside-statement-of-applicability/` },
@@ -34,6 +35,7 @@ const MAP = {
   soc2: {
     label: 'SOC 2',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'SOC 2 readiness checklist', d: 'Type I & II gaps, scored', u: `${base}checklist/soc2/` },
       { t: 'SOC 2 readiness on Microsoft 365', d: 'The M365-native path for SaaS', u: `${base}blog/soc2-readiness-microsoft-365-saas-australia/` },
       { t: 'ISO 27001 vs SOC 2', d: 'Which certification your buyers want', u: `${base}blog/iso27001-vs-soc2-australia/` },
@@ -44,6 +46,7 @@ const MAP = {
   'essential-eight': {
     label: 'Essential Eight',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'Essential Eight readiness checklist', d: 'ML1–ML3 gaps, scored', u: `${base}checklist/essential-eight/` },
       { t: 'The Essential Eight, explained', d: 'All eight strategies in plain English', u: `${base}resources/essential-eight-guide/` },
       { t: 'ASD Essential Eight framework guide', d: 'How ASD actually assesses maturity', u: `${base}resources/asd-essentials-framework/` },
@@ -56,6 +59,7 @@ const MAP = {
   iso42001: {
     label: 'ISO 42001',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'ISO 42001 (AI governance) checklist', d: 'Assess your AI management system', u: `${base}checklist/iso42001/` },
       { t: 'AI governance readiness guide', d: 'What ISO 42001 asks for', u: `${base}resources/ai-governance-readiness/` },
       { t: 'The ISO 42001 playbook', d: 'AI governance without the theatre', u: `${base}blog/ai-governance-iso42001-playbook/` },
@@ -70,6 +74,7 @@ const MAP = {
   iso27701: {
     label: 'ISO 27701',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'ISO 27701 (privacy) checklist', d: 'PIMS gaps against the standard', u: `${base}checklist/iso27701/` },
       { t: 'What a good ROPA looks like', d: 'Records of processing, done right', u: `${base}resources/what-a-good-ropa-looks-like/` },
       { t: 'ISO 27001 vs ISO 27701', d: 'How privacy extends your ISMS', u: `${base}blog/iso-27001-vs-iso-27701-australia/` },
@@ -81,6 +86,7 @@ const MAP = {
   'disp-ism-irap': {
     label: 'DISP / ISM / IRAP',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'DISP / IRAP readiness checklist', d: 'Defence & ISM gaps, scored', u: `${base}checklist/disp-ism-irap/` },
       { t: 'DISP certification requirements', d: 'What Defence actually requires', u: `${base}blog/disp-certification-requirements-australia/` },
       { t: 'Risk register in SharePoint', d: 'The ISM-aligned build', u: `${base}resources/risk-register-sharepoint/` },
@@ -89,6 +95,7 @@ const MAP = {
   is18: {
     label: 'IS18 (QGEA)',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'IS18 (QGEA) practitioner guide', d: 'The Queensland Government path', u: `${base}resources/is18-guide/` },
       { t: 'Case study: QLD Government IS18', d: 'Annual return, done in the tenant', u: `${base}case-studies/gov-qld-is18/` },
       { t: 'Essential Eight guide', d: 'The E8 layer IS18 requires', u: `${base}resources/essential-eight-guide/` },
@@ -97,6 +104,7 @@ const MAP = {
   'nist-csf': {
     label: 'NIST CSF',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'ISO 27001 readiness checklist', d: 'NIST CSF maps directly to it', u: `${base}checklist/iso27001/` },
       { t: 'Automating compliance evidence', d: 'Continuous monitoring in M365', u: `${base}resources/automating-compliance/` },
       { t: 'ISO 27001 vs SOC 2', d: 'The frameworks NIST aligns with', u: `${base}blog/iso27001-vs-soc2-australia/` },
@@ -105,11 +113,20 @@ const MAP = {
   rffr: {
     label: 'RFFR',
     links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
       { t: 'The full RFFR SoA control library', d: 'Every ISM control, and what automates', u: `${base}resources/rffr-soa-controls/` },
       { t: 'Inside the Statement of Applicability', d: 'The document the department opens first', u: `${base}resources/inside-statement-of-applicability/` },
       { t: 'Essential Eight guide', d: 'The E8 layer RFFR requires', u: `${base}resources/essential-eight-guide/` },
       { t: 'ISO 27001 readiness checklist', d: 'The ISMS backbone RFFR is built on', u: `${base}checklist/iso27001/` },
       { t: 'Automating compliance evidence', d: 'How the ISM baseline self-assesses', u: `${base}resources/automating-compliance/` },
+    ],
+  },
+  cps234: {
+    label: 'APRA CPS 234',
+    links: [
+      { t: 'Free M365 posture scan', d: 'Live scored report in 60 seconds', u: `${base}posture-scan/` },
+      { t: 'ISO 27001 readiness checklist', d: 'The ISMS backbone CPS 234 draws on', u: `${base}checklist/iso27001/` },
+      { t: 'Automating compliance evidence', d: 'Continuous evidence for APRA reporting', u: `${base}resources/automating-compliance/` },
     ],
   },
 };
