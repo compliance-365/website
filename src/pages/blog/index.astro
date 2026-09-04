@@ -76,7 +76,9 @@ function toCuratedSlug(raw: string): string {
 const postsWithMeta = posts.map(post => {
   const filename = post.file.split('/').pop() || '';
   const postSlug = filename.replace(/\.md$/i, '');
-  const href = `${base}blog/${postSlug}`;
+  /* astro.config sets trailingSlash: 'always', so the slash is not optional —
+     without it every card here points at a URL the site does not serve. */
+  const href = `${base}blog/${postSlug}/`;
   const img = coverUrl(post.frontmatter.image);
   const rawTags: string[] = post.frontmatter.tags || [];
   const curatedSlugs = [...new Set(rawTags.map(toCuratedSlug).filter(Boolean))];

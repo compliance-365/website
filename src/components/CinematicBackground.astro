@@ -14,6 +14,38 @@ const { static: isStatic = false } = Astro.props;
   <div class="cinebg-fallback"></div>
   <canvas data-cinebg data-cinebg-static={isStatic ? '1' : undefined}></canvas>
 </div>
+{!isStatic && (
+  /* WCAG 2.2.2 (Pause, Stop, Hide) wants a mechanism to stop motion that
+     runs for more than five seconds, and this loop runs indefinitely.
+     prefers-reduced-motion covers the people who have set it, but it is a
+     preference, not a control, so it does not satisfy the criterion on its
+     own. Deliberately a sibling of .cinebg rather than a child: that
+     container is aria-hidden, and a focusable control inside aria-hidden
+     is reachable by keyboard while invisible to assistive tech.
+
+     Ships hidden and is revealed by the script only once the animated
+     loop is actually running — so it never appears for a reduced-motion
+     visitor, a static instance, or a browser that fell back to the CSS
+     gradient because WebGL was unavailable. A control that does nothing
+     is worse than no control. */
+  <button
+    type="button"
+    class="cinebg-toggle"
+    data-cinebg-toggle
+    data-paused="false"
+    hidden
+    aria-label="Pause background animation"
+    data-label-play="Play background animation"
+    data-label-pause="Pause background animation"
+  >
+    <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+    </svg>
+    <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  </button>
+)}
 
 <style>
   .cinebg {
@@ -39,6 +71,40 @@ const { static: isStatic = false } = Astro.props;
     transition: opacity 1.6s ease 0.15s;
   }
   .cinebg canvas.on { opacity: 1; }
+
+  /* Sits inside the hero (which is position:relative), top-right, clear of
+     both the sticky header above and the fixed chat widgets at the bottom
+     of the viewport. 44px to meet the minimum tap target. */
+  .cinebg-toggle {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(250, 247, 241, 0.25);
+    background: rgba(11, 11, 12, 0.55);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    color: #FAF7F1;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .cinebg-toggle[hidden] { display: none; }
+  .cinebg-toggle:hover,
+  .cinebg-toggle:focus-visible {
+    background: rgba(11, 11, 12, 0.8);
+    border-color: rgba(216, 186, 120, 0.6);
+  }
+  .cinebg-toggle svg { width: 16px; height: 16px; }
+  .cinebg-toggle .icon-play { display: none; }
+  .cinebg-toggle[data-paused="true"] .icon-play { display: block; }
+  .cinebg-toggle[data-paused="true"] .icon-pause { display: none; }
 </style>
 
 <script>
@@ -255,16 +321,50 @@ void main(){
     let visible = true;
     new IntersectionObserver((es) => { visible = es[0].isIntersecting; }).observe(canvas);
 
+    // Pausing stops scheduling frames altogether rather than rendering
+    // nothing each frame, so the GPU genuinely goes idle. `origin` absorbs
+    // the paused interval, so resuming continues the scene from where it
+    // stopped instead of jumping forward by however long it was paused.
+    let paused = false;
+    let origin = t0;
+    let pausedAt = 0;
+    let frame = 0;
+
     function tick(now) {
-      requestAnimationFrame(tick);
+      frame = requestAnimationFrame(tick);
       if (!visible || document.hidden) return;
       mx += (px - mx) * 0.04;
       my += (py - my) * 0.04;
       pulse += (pulseTarget - pulse) * 0.06;
-      render((now - t0) / 1000, pulse, scrollFade());
+      render((now - origin) / 1000, pulse, scrollFade());
     }
-    requestAnimationFrame(tick);
+    frame = requestAnimationFrame(tick);
     canvas.classList.add('on');
+
+    // The control lives beside .cinebg, as a child of the hero.
+    const toggle = canvas.closest('.cinebg')
+      ?.parentElement?.querySelector(':scope > [data-cinebg-toggle]');
+    if (!toggle) return;
+
+    function setPaused(next) {
+      paused = next;
+      toggle.dataset.paused = String(paused);
+      toggle.setAttribute(
+        'aria-label',
+        paused ? toggle.dataset.labelPlay : toggle.dataset.labelPause
+      );
+      if (paused) {
+        pausedAt = performance.now();
+        cancelAnimationFrame(frame);
+      } else {
+        origin += performance.now() - pausedAt;
+        frame = requestAnimationFrame(tick);
+      }
+    }
+
+    toggle.addEventListener('click', () => setPaused(!paused));
+    // Only now that it controls a running loop is it worth showing.
+    toggle.hidden = false;
   }
 
   document.querySelectorAll('canvas[data-cinebg]').forEach((c) => {
