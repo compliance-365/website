@@ -1,0 +1,110 @@
+/* =============================================================
+   Self-hosted brand faces — Manrope (UI) and Fraunces (display)
+   =============================================================
+
+   Why these are self-hosted
+   -------------------------
+   These used to come from Google Fonts as a stylesheet link with
+   `display=optional`. That combination had two problems, and the second
+   one meant the brand type frequently never rendered at all:
+
+   1. Two cross-origin hops before a single font byte arrives — the
+      browser fetches CSS from fonts.googleapis.com, parses it, and only
+      then discovers the actual files on fonts.gstatic.com. Two DNS
+      lookups, two TLS handshakes, serialised.
+
+   2. `display=optional` gives the font roughly a 100ms block period; if
+      it misses that window the browser abandons it *for that page load
+      entirely* and renders the fallback stack. Combined with (1), a
+      first-time visitor on an average connection often saw system-ui
+      and Georgia rather than Manrope and Fraunces — and nothing in our
+      own telemetry would ever have shown it.
+
+   Serving the files from our own origin removes both hops, and the
+   <link rel="preload"> in BaseLayout starts the download at parse time
+   rather than after a stylesheet round-trip. `display=swap` then shows
+   text immediately in the fallback and swaps when the real face lands,
+   so text is never invisible.
+
+   Where the files came from
+   -------------------------
+   Copied verbatim from the @fontsource-variable packages (pinned in
+   package.json — bump the package, re-copy the files):
+     node_modules/@fontsource-variable/manrope/files/
+     node_modules/@fontsource-variable/fraunces/files/
+
+   These are the variable builds, which is why one file covers every
+   weight: Manrope replaces five static weights (300/400/500/700/800)
+   in 24KB, less than two of them would have cost.
+
+   The family names below are deliberately `Manrope` and `Fraunces`,
+   not fontsource's own `Manrope Variable` / `Fraunces Variable`. Every
+   font-family declaration across the site already names the former, and
+   renaming ~40 files to suit a package's convention would be the tail
+   wagging the dog.
+
+   Subsetting
+   ----------
+   Each face declares latin and latin-ext separately with the same
+   unicode-range Google serves. The browser only downloads latin-ext if
+   the page actually contains a character in that range, so the common
+   case costs latin alone. Only the latin files are preloaded.
+
+   Fraunces carries the optical-size axis (opsz), which is what it was
+   already being served with — we never set `font-optical-sizing`, so
+   the browser default of `auto` applies and headline sizes get the
+   display-optimised letterforms. Dropping to the weight-only build
+   would save 30KB but visibly soften large headings, so it is kept.
+   The italic is the weight-only build: it is used in six places, all
+   at ~17px, where the optical axis earns nothing and would cost 36KB. */
+
+/* --- Manrope: UI and body ---------------------------------- */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/assets/fonts/manrope-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/assets/fonts/manrope-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* --- Fraunces: headings and pull quotes -------------------- */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces-latin-opsz-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces-latin-ext-opsz-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces-latin-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
