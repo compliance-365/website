@@ -3556,9 +3556,22 @@ function showModal(opts) {
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
       return '<div class="card kpi" data-action="App.goSoaFw" data-id="' + fw + '"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
+    /* The posture score leads the view on its own, at hero size — it is
+       the number the gauge, the trend chart and the favicon are all
+       built around, and it used to render at exactly the same weight as
+       "exclusions missing justification" three tiles to its right. */
+    var heroEl = document.getElementById('heroScore');
+    if (heroEl) {
+      heroEl.innerHTML = '<div class="card kpi kpi-hero" data-action="App.go" data-id="scan"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>';
+      runCountUps(heroEl);
+    }
+
     document.getElementById('kpiRow').innerHTML = fwTiles +
-      '<div class="card kpi" data-action="App.go" data-id="scan"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
-      '<div class="card kpi" data-action="App.goRisksSeverity" data-id="HighCritical"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
+      /* Same fail colour the three tiles below already use for a non-zero
+         count of something bad. This tile alone used to stay gold however
+         many high/critical risks were open, so the worst number on the
+         strip read as the calmest one. */
+      '<div class="card kpi" data-action="App.goRisksSeverity" data-id="HighCritical"><div class="kpi-num"><b data-count="' + crit + '" style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
       '<div class="card kpi" data-action="App.goActionsFilter" data-id="Overdue"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>' +
       '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>' +
       '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + unjustifiedExclusions + '" style="color:' + (unjustifiedExclusions ? 'var(--fail)' : 'var(--gold-light)') + '">' + unjustifiedExclusions + '</b></div><span>Exclusions missing justification</span><div class="sub">Auditors check this first — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
@@ -3598,6 +3611,10 @@ function showModal(opts) {
       } else {
         nextActionsCardEl.style.display = 'none';
       }
+      /* With nothing to rank, the hero score tile takes the whole row
+         rather than sitting beside an empty half — see .dash-hero.solo. */
+      var heroGridEl = document.getElementById('dashHero');
+      if (heroGridEl) heroGridEl.classList.toggle('solo', !nextActions.length);
     }
 
     /* risk appetite breach banner */
