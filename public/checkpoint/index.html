@@ -317,7 +317,7 @@
       <div class="nav-group">
         <button class="nav-item on" data-v="dash" aria-current="page">Dashboard</button>
         <button class="nav-item" data-v="board">Board view</button>
-        <button class="nav-item" data-v="constellation">Constellation</button>
+        <button class="nav-item" data-v="constellation">Cross-framework mapping</button>
       </div>
       <!-- Groups below are collapsible (native <details>, no custom JS
            toggle needed for correct ARIA/keyboard semantics) — the nav
@@ -453,10 +453,10 @@
         <div class="ap-body" id="apSvgWrap"></div>
       </div>
       <div class="card cx-thumb-card" id="cxThumbCard" style="margin-top:16px;display:none">
-        <a href="#" class="cx-thumb-link" data-action="App.go" data-id="constellation" aria-label="Open the full Control Constellation">
-          <h3>Control Constellation</h3>
-          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">Every applicable control across your entitled frameworks, and how they map to each other. <span style="color:var(--gold-light)">Open the full view →</span></p>
-          <svg class="cx-thumb-svg" id="cxThumbSvg" viewBox="0 0 1000 1000" aria-hidden="true"></svg>
+        <a href="#" class="cx-thumb-link" data-action="App.go" data-id="constellation" aria-label="Open the full cross-framework mapping view">
+          <h3>Cross-framework mapping</h3>
+          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">Controls that also satisfy another entitled framework — implement these first for the most credit per hour of work. <span style="color:var(--gold-light)">Open the full view →</span></p>
+          <div id="cxThumbList"></div>
         </a>
       </div>
       <div class="grid dash-2">
@@ -500,27 +500,19 @@
 
     <!-- CONTROL CONSTELLATION -->
     <section class="view" id="v-constellation">
-      <div class="vhead"><div class="rule"></div><h1>Control Constellation</h1><p>Every applicable — and not-yet-applicable — control across your entitled frameworks, arranged one arc per framework and grouped by theme. Curved lines are the registry's own cross-framework mappings: implement one control, and everything it also satisfies lights up. Hover a control to see its whole mapped cluster; click to pin it and open full detail.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Cross-framework mapping</h1><p>Every applicable — and not-yet-applicable — control across your entitled frameworks, ranked by how much cross-framework credit it earns. "Also satisfies" shows every other framework's control the registry maps it to — implement one, and everything in that row is evidenced too, so the top of this list is the highest-leverage place to start.</p></div>
       <div class="cx-toolbar">
         <div class="filters" id="cxFwPills" role="group" aria-label="Framework filter"></div>
         <div class="cx-lens-row">
-          <span>Size by evidence</span>
-          <button class="toggle" id="cxLensToggle" role="switch" aria-checked="false" aria-label="Size nodes by whether evidence is attached" data-action="App.toggleConstellationLens"></button>
+          <span>Only cross-framework matches</span>
+          <button class="toggle" id="cxLeverageToggle" role="switch" aria-checked="false" aria-label="Show only controls that also satisfy another framework" data-action="App.toggleConstellationLeverageOnly"></button>
         </div>
       </div>
       <p class="cx-count" id="cxCount"></p>
-      <div class="card cx-card">
-        <svg class="cx-svg" id="cxSvg" viewBox="0 0 1000 1000" role="group" aria-label="Control Constellation — hover or tab through controls to see cross-framework mappings"></svg>
-        <p id="cxEmpty" style="display:none;color:var(--paper-faint);font-size:13px">No frameworks purchased yet. Enable one from the <a href="#" data-action="App.go" data-id="frameworks" style="color:var(--gold-light)">Frameworks</a> view.</p>
-        <div class="cx-legend" id="cxLegend">
-          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-pass"></i>Implemented</div>
-          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-warn"></i>In progress</div>
-          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-faint"></i>Not started</div>
-          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-na"></i>Not applicable</div>
-          <div class="cx-legend-item"><i class="cx-lg-line"></i>Cross-framework mapping</div>
-          <div class="cx-legend-item"><i class="cx-lg-line cx-lg-line-lit"></i>Connected to hovered / selected control</div>
-        </div>
+      <div id="cxTableWrap" class="card" style="padding:0 10px;overflow-x:auto">
+        <table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Framework</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Evidence</th></tr></thead><tbody id="cxRows"></tbody></table>
       </div>
+      <p id="cxEmpty" style="display:none;color:var(--paper-faint);font-size:13px">No frameworks purchased yet. Enable one from the <a href="#" data-action="App.go" data-id="frameworks" style="color:var(--gold-light)">Frameworks</a> view.</p>
     </section>
 
     <!-- SCAN -->

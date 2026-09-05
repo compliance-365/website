@@ -12,7 +12,7 @@ const { band, residual, residualAcceptanceStale, checkResult, score, readinessPc
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
-  constellationTheme, constellationEdges, constellationLayout,
+  constellationTheme, constellationEdges, constellationTableRows,
   fingerprintFromRows, remediationVelocityProjection,
   weeklyActivityGrid, riskBubblePoint, riskBubbleLayout,
   relLuminance, contrastRatio, compositeOverBg, pickReadableRgb,
@@ -1083,42 +1083,75 @@ describe('constellationEdges()', () => {
   });
 });
 
-describe('constellationLayout()', () => {
-  test('every node gets a finite, in-bounds position keyed by "fw|id"', () => {
-    var nodes = [
-      { fw: 'iso27001', id: 'A.5.1', theme: 'A.5' },
-      { fw: 'iso27001', id: 'A.6.1', theme: 'A.6' },
-      { fw: 'soc2', id: 'CC1.1', theme: 'CC' }
-    ];
-    var pos = constellationLayout(nodes, ['iso27001', 'soc2']);
-    assert.equal(Object.keys(pos).length, 3);
-    Object.values(pos).forEach((p) => {
-      assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
-      assert.ok(p.radius >= 70 && p.radius <= 470);
-    });
+describe('constellationTableRows() — Cross-framework mapping view', () => {
+  function node(over) {
+    return Object.assign({ fw: 'iso27001', id: 'A.5.1', t: 'Policies for information security', st: 'Not started', app: true, evidenceUrl: '' }, over || {});
+  }
+
+  test('a control with no map partner gets leverageCount 0 and an empty mappedTo', () => {
+    var rows = constellationTableRows([node()], []);
+    assert.equal(rows[0].leverageCount, 0);
+    assert.deepEqual(rows[0].mappedTo, []);
   });
-  test('is deterministic — same input always yields the same output', () => {
+
+  test('an edge between two present nodes gives both a leverageCount of 1, naming each other', () => {
+    var nodes = [node({ id: 'A.5.1' }), node({ fw: 'soc2', id: 'CC1.1', t: 'Control environment' })];
+    var edges = [{ a: 'iso27001|A.5.1', b: 'soc2|CC1.1' }];
+    var rows = constellationTableRows(nodes, edges);
+    var a = rows.find((r) => r.id === 'A.5.1');
+    var b = rows.find((r) => r.id === 'CC1.1');
+    assert.equal(a.leverageCount, 1);
+    assert.deepEqual(a.mappedTo, [{ fw: 'soc2', id: 'CC1.1', t: 'Control environment' }]);
+    assert.equal(b.leverageCount, 1);
+    assert.deepEqual(b.mappedTo, [{ fw: 'iso27001', id: 'A.5.1', t: 'Policies for information security' }]);
+  });
+
+  test('a control mapped to two others gets leverageCount 2', () => {
+    var nodes = [node({ id: 'A.5.1' }), node({ fw: 'soc2', id: 'CC1.1' }), node({ fw: 'nistcsf', id: 'GV.OC' })];
+    var edges = [{ a: 'iso27001|A.5.1', b: 'soc2|CC1.1' }, { a: 'iso27001|A.5.1', b: 'nistcsf|GV.OC' }];
+    var rows = constellationTableRows(nodes, edges);
+    assert.equal(rows.find((r) => r.id === 'A.5.1').leverageCount, 2);
+  });
+
+  test('sorts by leverageCount descending first', () => {
+    var nodes = [node({ id: 'A.5.1' }), node({ fw: 'soc2', id: 'CC1.1' }), node({ fw: 'nistcsf', id: 'GV.OC' })];
+    var edges = [{ a: 'iso27001|A.5.1', b: 'soc2|CC1.1' }]; // only A.5.1/CC1.1 have leverage; GV.OC has none
+    var rows = constellationTableRows(nodes, edges);
+    assert.ok(rows[0].leverageCount >= rows[1].leverageCount);
+    assert.ok(rows[1].leverageCount >= rows[2].leverageCount);
+    assert.equal(rows[2].id, 'GV.OC');
+  });
+
+  test('within the same leverage tier, an applicable not-yet-implemented control ranks ahead of an implemented one', () => {
     var nodes = [
-      { fw: 'iso27001', id: 'A.5.1', theme: 'A.5' },
-      { fw: 'nistcsf', id: 'GV.OC', theme: 'GV' }
+      node({ id: 'A.5.1', st: 'Implemented' }),
+      node({ id: 'A.6.1', st: 'Not started' })
     ];
-    var a = constellationLayout(nodes, ['iso27001', 'nistcsf']);
-    var b = constellationLayout(nodes, ['iso27001', 'nistcsf']);
+    var rows = constellationTableRows(nodes, []); // both leverageCount 0 — same tier
+    assert.equal(rows[0].id, 'A.6.1');
+  });
+
+  test('within the same leverage tier, a not-applicable control ranks behind an actionable one', () => {
+    var nodes = [
+      node({ id: 'A.5.1', app: false }),
+      node({ id: 'A.6.1', app: true, st: 'Not started' })
+    ];
+    var rows = constellationTableRows(nodes, []);
+    assert.equal(rows[0].id, 'A.6.1');
+  });
+
+  test('is deterministic — same input always yields the same order', () => {
+    var nodes = [node({ id: 'A.5.1' }), node({ fw: 'soc2', id: 'CC1.1' })];
+    var edges = [{ a: 'iso27001|A.5.1', b: 'soc2|CC1.1' }];
+    var a = constellationTableRows(nodes, edges);
+    var b = constellationTableRows(nodes, edges);
     assert.deepEqual(a, b);
   });
-  test('frameworks absent from the node set are skipped, not given empty sectors', () => {
-    var nodes = [{ fw: 'soc2', id: 'CC1.1', theme: 'CC' }];
-    var pos = constellationLayout(nodes, ['iso27001', 'soc2', 'nistcsf']);
-    assert.equal(Object.keys(pos).length, 1);
-  });
-  test('a large single theme (many controls) still keeps every node within [innerR, outerR]', () => {
-    var nodes = [];
-    for (var i = 0; i < 37; i++) nodes.push({ fw: 'iso27001', id: 'A.5.' + (i + 1), theme: 'A.5' });
-    var pos = constellationLayout(nodes, ['iso27001']);
-    Object.values(pos).forEach((p) => { assert.ok(p.radius >= 70 && p.radius <= 470); });
-  });
-  test('empty node set returns an empty position map', () => {
-    assert.deepEqual(constellationLayout([], ['iso27001']), {});
+
+  test('tolerates missing/malformed input rather than throwing', () => {
+    assert.deepEqual(constellationTableRows(null, null), []);
+    assert.deepEqual(constellationTableRows([], []), []);
+    assert.doesNotThrow(() => constellationTableRows([node()], [{ a: 'iso27001|A.5.1', b: 'nonexistent|X' }]));
   });
 });
 

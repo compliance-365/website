@@ -1604,70 +1604,51 @@
     return edges;
   }
 
-  /* Deterministic radial-by-framework layout for the Control
-     Constellation — no physics simulation, no iterative relaxation:
-     every position is computed once, straight from each control's own
-     framework/theme/code, so the same node set always lands in the
-     same place. The circle is divided into one angular sector per
-     framework (in `fwOrder`'s order, with a fixed gap between
-     sectors); each sector is then subdivided into per-theme wedges
-     sized proportionally to how many of that framework's controls
-     share the theme; and within a wedge, controls are laid out in
-     concentric rings (a compact "polar grid", perRing ~= sqrt(count))
-     rather than one long spoke, so even a 37-control theme (ISO
-     27001's Organizational controls) stays inside the sector instead
-     of running off the edge. `nodes` is an array of {fw, id, theme};
-     returns a plain object keyed by "fw|id" -> {x, y, angle, radius}. */
-  function constellationLayout(nodes, fwOrder, opts) {
-    opts = opts || {};
-    var cx = opts.cx != null ? opts.cx : 500;
-    var cy = opts.cy != null ? opts.cy : 500;
-    var innerR = opts.innerR != null ? opts.innerR : 70;
-    var outerR = opts.outerR != null ? opts.outerR : 470;
-    var sectorGap = opts.sectorGap != null ? opts.sectorGap : 0.05;
-    var positions = {};
-    var fws = (fwOrder || []).filter(function (fw) {
-      return (nodes || []).some(function (n) { return n.fw === fw; });
+  /* Turns the Cross-framework mapping view's node/edge set (same data a
+     former radial SVG graph used to plot — see app.js's buildConstellation())
+     into ranked table rows. That graph's whole value proposition was
+     "which controls satisfy more than one framework," but it hid the
+     answer behind hovering individual unlabeled dots one at a time, and
+     rendered zero visible edges at all for the common case of a tenant
+     with only one framework entitled. A table needs no interaction to
+     answer the same question: rank by how much cross-framework credit a
+     control earns, so the highest-leverage not-yet-implemented work
+     surfaces at the top by default. Pure: nodes/edges in, ranked rows
+     out, no DOM. `nodes`: [{fw, id, t, st, app, evidenceUrl, ...}].
+     `edges`: [{a, b}] "fw|id" pairs, as returned by constellationEdges(). */
+  function constellationTableRows(nodes, edges) {
+    var list = Array.isArray(nodes) ? nodes : [];
+    var byKey = {};
+    list.forEach(function (n) { byKey[n.fw + '|' + n.id] = n; });
+    var adjacency = {};
+    (Array.isArray(edges) ? edges : []).forEach(function (e) {
+      (adjacency[e.a] = adjacency[e.a] || []).push(e.b);
+      (adjacency[e.b] = adjacency[e.b] || []).push(e.a);
     });
-    var n = fws.length;
-    if (!n) return positions;
-    var sectorSpan = (2 * Math.PI - sectorGap * n) / n;
-    fws.forEach(function (fw, fi) {
-      var sectorStart = fi * (sectorSpan + sectorGap) - Math.PI / 2;
-      var fwNodes = nodes.filter(function (nd) { return nd.fw === fw; })
-        .slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
-      var themeMap = {};
-      fwNodes.forEach(function (nd) { (themeMap[nd.theme] = themeMap[nd.theme] || []).push(nd); });
-      var themeKeys = Object.keys(themeMap).sort();
-      var total = fwNodes.length;
-      var cursor = sectorStart;
-      themeKeys.forEach(function (theme) {
-        var group = themeMap[theme];
-        var wedgeSpan = sectorSpan * (group.length / total);
-        var wedgeStart = cursor;
-        cursor += wedgeSpan;
-        var gn = group.length;
-        var perRing = Math.max(1, Math.ceil(Math.sqrt(gn)));
-        var numRings = Math.ceil(gn / perRing);
-        var ringStep = numRings > 1 ? (outerR - innerR) / numRings : 0;
-        group.forEach(function (nd, i) {
-          var ring = Math.floor(i / perRing);
-          var ringStartIdx = ring * perRing;
-          var ringCount = Math.min(perRing, gn - ringStartIdx);
-          var idxInRing = i - ringStartIdx;
-          var angle = wedgeStart + ((idxInRing + 0.5) / ringCount) * wedgeSpan;
-          var radius = numRings > 1 ? innerR + ring * ringStep : (innerR + outerR) / 2;
-          positions[nd.fw + '|' + nd.id] = {
-            x: cx + radius * Math.cos(angle),
-            y: cy + radius * Math.sin(angle),
-            angle: angle,
-            radius: radius,
-            theme: theme
-          };
-        });
-      });
+    var rows = list.map(function (n) {
+      var key = n.fw + '|' + n.id;
+      var mappedTo = (adjacency[key] || [])
+        .map(function (k) { return byKey[k]; })
+        .filter(Boolean)
+        .map(function (p) { return { fw: p.fw, id: p.id, t: p.t }; });
+      return {
+        fw: n.fw, id: n.id, t: n.t, st: n.st, app: n.app, own: n.own,
+        evidenceUrl: n.evidenceUrl, leverageCount: mappedTo.length, mappedTo: mappedTo
+      };
     });
-    return positions;
+    /* Highest leverage first; within a tie, an applicable control not yet
+       implemented ("do this next") outranks one already done or N/A —
+       there's nothing actionable left to say about those. Final
+       fw+id tiebreak only for a stable, reproducible order. */
+    rows.sort(function (a, b) {
+      if (a.leverageCount !== b.leverageCount) return b.leverageCount - a.leverageCount;
+      var aActionable = a.app && a.st !== 'Implemented';
+      var bActionable = b.app && b.st !== 'Implemented';
+      if (aActionable !== bActionable) return aActionable ? -1 : 1;
+      var ka = a.fw + '|' + a.id, kb = b.fw + '|' + b.id;
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    return rows;
   }
 
   /* Groups applicable-control rows into concentric "rings" for the
@@ -3569,7 +3550,7 @@
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     scanResultsChanged: scanResultsChanged,
-    constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
+    constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationTableRows: constellationTableRows,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
     relLuminance: relLuminance, contrastRatio: contrastRatio, compositeOverBg: compositeOverBg, pickReadableRgb: pickReadableRgb,

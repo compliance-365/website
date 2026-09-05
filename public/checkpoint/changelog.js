@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.53.0',
+    date: '2026-09-05',
+    entries: [
+      'Redesigned: "Control Constellation" is now "Cross-framework mapping" (Risk & posture). The old radial network graph looked distinctive but hid its entire point — which controls also satisfy another framework — behind hovering individual unlabeled dots one at a time, and showed zero visible links at all for a tenant with only one framework entitled. It\'s now a plain, ranked table: every control across your entitled frameworks, sorted so the highest-leverage not-yet-implemented work (controls that satisfy the most other frameworks) surfaces at the top with no interaction required, with an "Also satisfies" column naming exactly what else each one evidences. Click a control\'s title to open the same guidance drawer every other control view already uses.',
+      'The Dashboard\'s Constellation preview is similarly replaced with a short list of the highest-leverage controls still to do, rather than a tiny inert copy of the old graph.'
+    ]
+  },
+  {
     version: '1.52.0',
     date: '2026-09-05',
     entries: [
