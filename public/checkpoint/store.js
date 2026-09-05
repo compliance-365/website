@@ -687,6 +687,14 @@ window.DEFAULT_SETTINGS = {
   orgInterestedParties: '',
   orgRegulatory: '',
   orgExclusions: '',
+  /* Comma-separated ids into window.TECH_STACK_OPTIONS (templates.js) —
+     which of a short, self-declared list of technology categories this
+     tenant actually runs. Drives the "relevant to you" sort in the
+     Threat intel view (renderThreatIntel() in app.js, rankThreatIntelItems()
+     in lib.js) alongside orgIndustry above. Ordinary Settings row, same
+     as the org-profile fields: no list schema changes, nothing for
+     COLUMN_RECONCILE to heal. */
+  orgTechStack: '',
   /* Cache of the last-verified signed entitlement file — the raw
      {payload, signature} JSON exactly as uploaded, re-verified and
      re-evaluated (expiry checked against "today") on every load rather

@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.52.0',
+    date: '2026-09-05',
+    entries: [
+      'New: Threat intel (Risk & posture). A filtered, tagged slice of CISA\'s Known Exploited Vulnerabilities catalog — narrowed to vendors an ordinary Microsoft 365-centric IT estate is actually likely to run, so it stays a few-second scan rather than an unreadable feed of thousands of entries. Re-sorted in your browser against this organisation\'s declared industry and a short, self-ticked technology checklist, so the entries most likely to matter surface first. Off by default until the feed endpoint is deployed and configured (see lambda/DEPLOY-THREAT-INTEL.md); nothing about a tenant\'s industry or stack is ever sent anywhere — the re-sorting happens entirely client-side.',
+      'Demo mode shows a small sample of real, historical advisories (clearly labelled) rather than a live feed, so the view previews meaningfully without a network call.'
+    ]
+  },
+  {
     version: '1.51.0',
     date: '2026-09-03',
     entries: [

@@ -3505,6 +3505,64 @@
     return out;
   }
 
+  /* Threat intel — "customised for industry and technical stack" (see
+     the Threat intel view in app.js) happens entirely here, client-side.
+     lambda/threat-intel.js only tags each CISA KEV entry with a small,
+     generic set of topic tags (independently, since Node can't require()
+     this browser-oriented module); this is what turns those tags into
+     "relevant to you" using facts the Lambda never sees — a tenant's
+     declared industry (orgIndustry) and self-declared tech stack
+     (orgTechStack). Nothing about either is ever sent to the Lambda: the
+     browser fetches the same feed every tenant gets, then re-sorts it
+     locally. */
+  var THREAT_INTEL_INDUSTRY_TAGS = {
+    saas: ['identity', 'microsoft', 'browser'],
+    healthcare: ['microsoft', 'identity'],
+    finserv: ['network-edge', 'identity', 'microsoft'],
+    government: ['network-edge', 'identity', 'ics-ot', 'microsoft'],
+    defence: ['network-edge', 'identity', 'ics-ot', 'microsoft'],
+    education: ['identity', 'microsoft', 'browser'],
+    'critical-infra': ['ics-ot', 'network-edge', 'microsoft'],
+    proserv: ['identity', 'microsoft', 'browser'],
+    notforprofit: ['identity', 'microsoft'],
+    other: ['microsoft', 'identity']
+  };
+
+  /* Pure — exported so both the sort order below and a standalone
+     "why is this flagged" badge can be tested without a DOM. */
+  function threatIntelRelevance(item, opts) {
+    opts = opts || {};
+    var tags = (item && Array.isArray(item.tags)) ? item.tags : [];
+    var stackTags = Array.isArray(opts.stackTags) ? opts.stackTags : [];
+    var industryTags = THREAT_INTEL_INDUSTRY_TAGS[opts.industryId] || [];
+    var matchedStack = tags.some(function (t) { return stackTags.indexOf(t) !== -1; });
+    var matchedIndustry = tags.some(function (t) { return industryTags.indexOf(t) !== -1; });
+    return { matchedStack: matchedStack, matchedIndustry: matchedIndustry, relevant: matchedStack || matchedIndustry };
+  }
+
+  /* Re-sorts (never filters — nothing is hidden, only reordered) a
+     threat-intel item list so entries matching the tenant's declared
+     tech stack come first, then entries matching its industry, then
+     everything else, each group newest-first by dateAdded. A tenant
+     that never fills in either simply sees the feed in its original
+     (already newest-first) order, unrelevance-annotated. */
+  function rankThreatIntelItems(items, opts) {
+    var list = Array.isArray(items) ? items : [];
+    return list.map(function (item) {
+      var r = threatIntelRelevance(item, opts);
+      var withFlags = {};
+      for (var k in item) if (Object.prototype.hasOwnProperty.call(item, k)) withFlags[k] = item[k];
+      withFlags.matchedStack = r.matchedStack;
+      withFlags.matchedIndustry = r.matchedIndustry;
+      withFlags.relevant = r.relevant;
+      return withFlags;
+    }).sort(function (a, b) {
+      if (a.matchedStack !== b.matchedStack) return a.matchedStack ? -1 : 1;
+      if (a.matchedIndustry !== b.matchedIndustry) return a.matchedIndustry ? -1 : 1;
+      return String(b.dateAdded || '').localeCompare(String(a.dateAdded || ''));
+    });
+  }
+
   return {
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
@@ -3552,6 +3610,8 @@
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
     encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
-    classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS
+    classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
+    threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
+    THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS
   };
 });
