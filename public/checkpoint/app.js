@@ -1582,8 +1582,9 @@ function showModal(opts) {
   /* Single reusable SVG tooltip — bound once per container (the
      Compliance Fingerprint and Certification Journey both call this on
      their own SVG root; a second call on the same container is a
-     no-op, same one-time-bind pattern as setupConstellationInteractions()
-     elsewhere in this file). Any element inside the container carrying
+     no-op, guarded the same way any one-time delegated listener in this
+     file is: a flag checked before the first bind). Any element inside
+     the container carrying
      a `data-tip` attribute gets a floating tooltip on hover AND
      keyboard focus (interaction.md's own rule: same details reachable
      without a mouse). The tip text is inserted via textContent, never
@@ -3774,9 +3775,9 @@ function showModal(opts) {
      window.ReportEngine.charts.fingerprint() SVG builder a report
      cover uses (see report.js's own header comment on that function),
      just with the dark app palette and interactive tooltips/count-up
-     turned on. Rings are grouped by constellationTheme() — the same
-     per-framework code-pattern theming the Control Constellation
-     already uses, so "theme" means the same thing in both views. */
+     turned on. Rings are grouped by constellationTheme() — a control's
+     first one or two code segments (e.g. ISO 27001's "A.5", SOC 2's
+     "CC"), the closest thing each framework has to a built-in section. */
   function fingerprintRowsFor(fw) {
     return frameworkAppRows(fw).map(function (c) {
       return {
@@ -4073,226 +4074,128 @@ function showModal(opts) {
     });
   }
 
-  /* ================= Control Constellation =================
-     One SVG network of every applicable-or-not-yet-applicable control
-     across every entitled framework, plus the cross-framework "Also
-     satisfies" relationships between them. Node positions are computed
-     once per render by lib.js's constellationLayout() — a deterministic,
-     seeded-by-code radial layout, never a physics simulation — so
-     re-rendering with the same data always reproduces the same picture.
-     Hover/selection state is plain class toggling on the existing DOM
-     (no per-frame JS, no redraw loop); the drawer on click is the exact
-     same App.openControlGuidance() every other control view already
-     uses. window._cx holds the most-recently-built node/edge/position/
-     adjacency set — rebuilt at each render entry point (view open, dash
-     refresh, filter/lens change), read (not recomputed) by hover. */
-  window._cx = null; /* { nodes, edges, positions, adjacency, byKey } */
+  /* ================= Cross-framework mapping (formerly "Control
+     Constellation") =================
+     Was a radial SVG network graph — visually distinctive, but its
+     whole value proposition (which controls also satisfy another
+     framework) was hidden behind hovering individual unlabeled dots one
+     at a time, and rendered zero visible edges at all for the ordinary
+     case of a tenant with only one framework entitled (a cross-
+     framework link needs a second framework's control to point at).
+     Replaced with a plain, ranked table: same underlying node/edge data
+     (lib.js's constellationEdges()/constellationTableRows()), sorted so
+     the highest-leverage not-yet-implemented work surfaces at the top
+     with no interaction required at all. Row click opens the exact same
+     guidance drawer every other control view already uses
+     (App.openControlGuidance), matching the Statement of Applicability's
+     own "click the title" convention rather than inventing a new one. */
   window._cxFwFilter = null; /* null = all entitled frameworks shown */
-  window._cxLens = false; /* evidence-lens: size nodes by evidence presence */
-  window._cxSelected = null; /* pinned "fw|id" key, or null */
+  window._cxLeverageOnly = false; /* only show controls with at least one cross-framework match */
 
-  function constellationKey(c) { return c.fw + '|' + c.id; }
-
-  function constellationStatusClass(c) {
-    if (!c.app) return 'cx-na';
-    if (c.st === 'Implemented') return 'cx-pass';
-    if (c.st === 'In progress') return 'cx-warn';
-    return 'cx-faint';
-  }
-
-  /* Builds (or returns the cached) node/edge/layout/adjacency set for
-     every entitled framework's visible controls — "visible", not just
-     "applicable", so not-applicable controls still render as their own
-     (dashed) nodes rather than vanishing from the picture entirely. */
+  /* Builds (or returns the cached) node/edge set for every entitled
+     framework's visible controls — "visible", not just "applicable", so
+     not-applicable controls still appear (as N/A) rather than vanishing
+     from the picture entirely. */
   function buildConstellation() {
     var entitled = entitledFrameworks();
     var nodes = [];
     entitled.forEach(function (fw) {
       frameworkVisibleRows(fw).forEach(function (c) {
-        nodes.push({
-          fw: fw, id: c.id, map: c.map, t: c.t, st: c.st, app: c.app,
-          own: c.own, evidenceUrl: c.evidenceUrl,
-          theme: window.CheckpointLib.constellationTheme(fw, c.id)
-        });
+        nodes.push({ fw: fw, id: c.id, map: c.map, t: c.t, st: c.st, app: c.app, own: c.own, evidenceUrl: c.evidenceUrl });
       });
     });
     var edges = window.CheckpointLib.constellationEdges(nodes);
-    var positions = window.CheckpointLib.constellationLayout(nodes, window.FRAMEWORK_ORDER);
-    var byKey = {};
-    nodes.forEach(function (n) { byKey[constellationKey(n)] = n; });
-    var adjacency = {};
-    edges.forEach(function (e) {
-      (adjacency[e.a] = adjacency[e.a] || []).push(e.b);
-      (adjacency[e.b] = adjacency[e.b] || []).push(e.a);
-    });
-    window._cx = { nodes: nodes, edges: edges, positions: positions, adjacency: adjacency, byKey: byKey };
+    window._cx = { nodes: nodes, edges: edges };
     return window._cx;
   }
 
-  /* Shared SVG builder for both the full interactive view and the inert
-     Dashboard thumbnail — `opts.interactive` gates the data-action/
-     data-node-id attributes, labels and legend-worthy detail that only
-     the full view needs; the thumbnail reuses the exact same node set,
-     edges and positions so it's a faithful (if tiny) preview, not a
-     separate mock. */
-  function buildConstellationSvg(cx, opts) {
-    opts = opts || {};
-    var interactive = !!opts.interactive;
-    var fwFilter = opts.fwFilter || null;
-    var lens = !!opts.lens;
-    var selected = opts.selected || null;
-    var evidenceRadii = lens ? { on: 7.5, off: 3.2 } : { on: 5, off: 5 };
-
-    var edgePaths = cx.edges.map(function (e) {
-      var pa = cx.positions[e.a], pb = cx.positions[e.b];
-      if (!pa || !pb) return '';
-      var na = cx.byKey[e.a], nb = cx.byKey[e.b];
-      var dimmed = fwFilter && (na.fw !== fwFilter || nb.fw !== fwFilter);
-      var d = 'M' + pa.x.toFixed(1) + ',' + pa.y.toFixed(1) + ' Q500,500 ' + pb.x.toFixed(1) + ',' + pb.y.toFixed(1);
-      return '<path class="cx-edge' + (dimmed ? ' cx-dim' : '') + '" data-edge-a="' + esc(e.a) + '" data-edge-b="' + esc(e.b) + '" d="' + d + '"/>';
-    }).join('');
-
-    var nodeEls = cx.nodes.map(function (n) {
-      var key = constellationKey(n);
-      var p = cx.positions[key];
-      if (!p) return '';
-      var statusCls = constellationStatusClass(n);
-      var dimmed = fwFilter && n.fw !== fwFilter;
-      var r = n.evidenceUrl ? evidenceRadii.on : evidenceRadii.off;
-      var isSelected = interactive && selected === key;
-      var cls = 'cx-node ' + statusCls + (dimmed ? ' cx-dim' : '') + (isSelected ? ' cx-selected cx-pulse' : '');
-      var attrs = interactive
-        ? ' data-node-id="' + esc(key) + '" data-action="App.pickConstellationNode" data-id="' + esc(key) + '" role="button" tabindex="0" aria-label="' + esc(n.fw + ' ' + n.id + ' — ' + n.t) + '"'
-        : '';
-      var circle = '<circle class="' + cls + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r + '"' + attrs + '></circle>';
-      if (!interactive) return circle;
-      var label = '<text class="cx-label" x="' + p.x.toFixed(1) + '" y="' + (p.y - r - 5).toFixed(1) + '" data-label-for="' + esc(key) + '">' + esc(n.id) + '</text>';
-      return circle + label;
-    }).join('');
-
-    return '<g class="cx-edges">' + edgePaths + '</g><g class="cx-nodes">' + nodeEls + '</g>';
+  function constellationStatusChip(row) {
+    if (!row.app) return '<span class="chip st-Notstarted">N/A</span>';
+    var cls = row.st === 'Implemented' ? 'st-Implemented' : row.st === 'In progress' ? 'st-Intreatment' : 'st-Notstarted';
+    return '<span class="chip ' + cls + '">' + esc(row.st || 'Not started') + '</span>';
   }
 
-  /* The full, interactive Constellation view. */
+  function constellationRowHtml(row) {
+    var key = row.fw + '|' + row.id;
+    var mappedHtml = row.mappedTo.length
+      ? '<div class="fw-chips">' + row.mappedTo.map(function (m) { return '<span>' + esc(fwName(m.fw)) + ' ' + esc(m.id) + '</span>'; }).join('') + '</div>'
+      : '<span class="src">—</span>';
+    return '<tr>' +
+      '<td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + esc(key) + '">' + esc(row.id) + '</button></td>' +
+      '<td style="color:var(--paper)"><button class="lnk" data-action="App.openControlGuidance" data-id="' + esc(key) + '">' + esc(row.t) + '</button></td>' +
+      '<td>' + esc(fwName(row.fw)) + '</td>' +
+      '<td>' + constellationStatusChip(row) + '</td>' +
+      '<td>' + mappedHtml + '</td>' +
+      '<td>' + (row.evidenceUrl ? '<span class="chip st-Implemented">Attached</span>' : '<span class="src">—</span>') + '</td>' +
+      '</tr>';
+  }
+
+  /* The full Cross-framework mapping view. */
   function renderConstellation() {
-    var svgEl = document.getElementById('cxSvg');
-    if (!svgEl) return;
+    var rowsEl = document.getElementById('cxRows');
+    if (!rowsEl) return;
     var entitled = entitledFrameworks();
     var emptyEl = document.getElementById('cxEmpty');
+    var pillsEl = document.getElementById('cxFwPills');
+    var countEl = document.getElementById('cxCount');
+    var leverageToggleEl = document.getElementById('cxLeverageToggle');
+    var tableWrap = document.getElementById('cxTableWrap');
     if (!entitled.length) {
-      svgEl.innerHTML = '';
+      rowsEl.innerHTML = '';
+      if (tableWrap) tableWrap.style.display = 'none';
       if (emptyEl) emptyEl.style.display = 'block';
-      var pillsElEmpty = document.getElementById('cxFwPills');
-      if (pillsElEmpty) pillsElEmpty.innerHTML = '';
-      var countElEmpty = document.getElementById('cxCount');
-      if (countElEmpty) countElEmpty.textContent = '';
+      if (pillsEl) pillsEl.innerHTML = '';
+      if (countEl) countEl.textContent = '';
       return;
     }
+    if (tableWrap) tableWrap.style.display = '';
     if (emptyEl) emptyEl.style.display = 'none';
     if (window._cxFwFilter && entitled.indexOf(window._cxFwFilter) === -1) window._cxFwFilter = null;
 
     var cx = buildConstellation();
-    if (window._cxSelected && !cx.byKey[window._cxSelected]) window._cxSelected = null;
+    var allRows = window.CheckpointLib.constellationTableRows(cx.nodes, cx.edges);
+    var leveragedCount = allRows.filter(function (r) { return r.leverageCount > 0; }).length;
+    var rows = allRows;
+    if (window._cxFwFilter) rows = rows.filter(function (r) { return r.fw === window._cxFwFilter; });
+    if (window._cxLeverageOnly) rows = rows.filter(function (r) { return r.leverageCount > 0; });
 
-    var pillsEl = document.getElementById('cxFwPills');
     if (pillsEl) {
       pillsEl.innerHTML = '<button class="f-pill' + (!window._cxFwFilter ? ' on' : '') + '" aria-pressed="' + (!window._cxFwFilter ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="">All frameworks</button>' +
         entitled.map(function (fw) {
           return '<button class="f-pill' + (window._cxFwFilter === fw ? ' on' : '') + '" aria-pressed="' + (window._cxFwFilter === fw ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
         }).join('');
     }
-    var lensEl = document.getElementById('cxLensToggle');
-    if (lensEl) {
-      lensEl.className = 'toggle' + (window._cxLens ? ' on' : '');
-      lensEl.setAttribute('aria-checked', window._cxLens ? 'true' : 'false');
+    if (leverageToggleEl) {
+      leverageToggleEl.className = 'toggle' + (window._cxLeverageOnly ? ' on' : '');
+      leverageToggleEl.setAttribute('aria-checked', window._cxLeverageOnly ? 'true' : 'false');
     }
-    var countEl = document.getElementById('cxCount');
-    if (countEl) countEl.textContent = cx.nodes.length + ' controls across ' + entitled.length + ' framework' + (entitled.length === 1 ? '' : 's') + ' · ' + cx.edges.length + ' cross-framework link' + (cx.edges.length === 1 ? '' : 's');
+    if (countEl) countEl.textContent = rows.length + ' of ' + allRows.length + ' control' + (allRows.length === 1 ? '' : 's') + ' shown · ' + leveragedCount + ' with cross-framework value';
 
-    svgEl.innerHTML = buildConstellationSvg(cx, { interactive: true, fwFilter: window._cxFwFilter, lens: window._cxLens, selected: window._cxSelected });
-    setupConstellationInteractions();
-    constellationHover(null);
+    rowsEl.innerHTML = rows.length
+      ? rows.map(constellationRowHtml).join('')
+      : '<tr><td colspan="6" style="color:var(--paper-faint)">No controls match this filter.</td></tr>';
   }
 
-  /* Small, non-interactive preview embedded in the Dashboard — same
-     node/edge/layout data as the full view, just without the click/
-     hover attributes or labels, wrapped in a card that links through
-     to the full Constellation. */
+  /* Small preview embedded in the Dashboard — the highest-leverage,
+     not-yet-implemented controls only (the actionable subset of the
+     full table), wrapped in a card that links through to the full
+     view. With a single framework entitled (the common case) there is
+     nothing to rank yet — shown as an explanation, not an empty list
+     that could read as broken. */
   function renderConstellationThumb() {
     var card = document.getElementById('cxThumbCard');
-    var el = document.getElementById('cxThumbSvg');
-    if (!card || !el) return;
+    var listEl = document.getElementById('cxThumbList');
+    if (!card || !listEl) return;
     var entitled = entitledFrameworks();
     if (!entitled.length) { card.style.display = 'none'; return; }
     card.style.display = '';
     var cx = buildConstellation();
-    el.innerHTML = buildConstellationSvg(cx, { interactive: false });
-  }
-
-  /* Delegated hover (mouseover/mouseout bubble; unlike mouseenter/
-     mouseleave they work with a single listener on the container) plus
-     keyboard-focus equivalents for the same nodes the click handler
-     already reaches via [data-action]. Bound once — #cxSvg itself is
-     never replaced, only its innerHTML, so the listener survives every
-     re-render. */
-  function setupConstellationInteractions() {
-    if (window._cxBound) return;
-    window._cxBound = true;
-    var wrap = document.getElementById('cxSvg');
-    if (!wrap) return;
-    wrap.addEventListener('mouseover', function (e) {
-      var el = e.target.closest('circle[data-node-id]');
-      if (el) constellationHover(el.dataset.nodeId);
-    });
-    wrap.addEventListener('mouseout', function (e) {
-      var el = e.target.closest('circle[data-node-id]');
-      if (!el) return;
-      var to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('circle[data-node-id]');
-      if (!to) constellationHover(null);
-    });
-    wrap.addEventListener('focusin', function (e) {
-      var el = e.target.closest('circle[data-node-id]');
-      if (el) constellationHover(el.dataset.nodeId);
-    });
-    wrap.addEventListener('focusout', function (e) {
-      var el = e.target.closest('circle[data-node-id]');
-      if (el) constellationHover(null);
-    });
-    wrap.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      var el = e.target.closest('circle[data-node-id]');
-      if (!el) return;
-      e.preventDefault();
-      App.pickConstellationNode(el.dataset.nodeId);
-    });
-  }
-
-  /* Highlights `key`'s whole mapped cluster (itself + every direct
-     cross-framework edge partner) across every framework sector — or,
-     with no active hover, falls back to the pinned selection so a
-     click leaves the cluster lit after the mouse moves away. Pure
-     class toggling against the already-rendered DOM: no redraw, no
-     recomputation of layout or data. */
-  function constellationHover(hoverKey) {
-    var cx = window._cx;
-    var svgEl = document.getElementById('cxSvg');
-    if (!cx || !svgEl) return;
-    var active = hoverKey || window._cxSelected;
-    var clusterSet = {};
-    if (active) {
-      clusterSet[active] = true;
-      (cx.adjacency[active] || []).forEach(function (k) { clusterSet[k] = true; });
-    }
-    svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
-      c.classList.toggle('cx-hi', !!active && !!clusterSet[c.dataset.nodeId]);
-    });
-    svgEl.querySelectorAll('text.cx-label').forEach(function (t) {
-      t.classList.toggle('cx-show', !!active && !!clusterSet[t.dataset.labelFor]);
-    });
-    svgEl.querySelectorAll('path.cx-edge').forEach(function (p) {
-      var lit = !!active && (p.dataset.edgeA === active || p.dataset.edgeB === active);
-      p.classList.toggle('cx-lit', lit);
-    });
+    var rows = window.CheckpointLib.constellationTableRows(cx.nodes, cx.edges)
+      .filter(function (r) { return r.leverageCount > 0 && r.app && r.st !== 'Implemented'; })
+      .slice(0, 4);
+    listEl.innerHTML = rows.length
+      ? rows.map(function (r) { return '<div class="d-kv"><span>' + esc(fwName(r.fw)) + ' ' + esc(r.id) + '</span><b>+' + r.leverageCount + ' framework' + (r.leverageCount === 1 ? '' : 's') + '</b></div>'; }).join('')
+      : '<p style="color:var(--paper-faint);font-size:12.5px;margin:0">' + (entitled.length > 1 ? 'Every control with cross-framework value is already implemented.' : 'Enable a second framework to see which controls satisfy more than one.') + '</p>';
   }
 
   /* One check's display state, shared by the row renderer and the
@@ -7296,9 +7199,10 @@ function showModal(opts) {
   }
 
   /* Removing then re-adding 'bd-run' forces the CSS animation to
-     restart from 0% (the same "toggle the class off, force a reflow,
-     toggle it back on" trick the Constellation's selection pulse
-     uses) — needed both on slide advance and on manual nav, so a
+     restart from 0% (toggling a class off, forcing a reflow, then
+     toggling it back on is the standard way to restart a CSS animation
+     that re-adding an unchanged class alone won't trigger) — needed
+     both on slide advance and on manual nav, so a
      click/arrow-key always gives the full 12s back rather than
      inheriting whatever was left of the previous slide's bar. */
   function boardroomRestartProgressBar() {
@@ -9747,28 +9651,8 @@ function showModal(opts) {
       }
     },
 
-    /* Pins `key` ("fw|id") as the Constellation's selected node — the
-       cluster stays lit and the pulse restarts (via classList.remove
-       then a forced reflow, since re-adding an unchanged class never
-       restarts a CSS animation) even if the same node is clicked
-       twice — then opens the exact same drawer every other control
-       view already uses. */
-    pickConstellationNode: function (key) {
-      window._cxSelected = key;
-      var svgEl = document.getElementById('cxSvg');
-      if (svgEl) {
-        svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
-          var match = c.dataset.nodeId === key;
-          c.classList.toggle('cx-selected', match);
-          c.classList.remove('cx-pulse');
-          if (match) { void c.offsetWidth; c.classList.add('cx-pulse'); }
-        });
-      }
-      constellationHover(null);
-      App.openControlGuidance(key);
-    },
-    filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; window._cxSelected = null; renderConstellation(); },
-    toggleConstellationLens: function () { window._cxLens = !window._cxLens; renderConstellation(); },
+    filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; renderConstellation(); },
+    toggleConstellationLeverageOnly: function () { window._cxLeverageOnly = !window._cxLeverageOnly; renderConstellation(); },
 
     /* Posture scan's category dashboard — see _scanCatOpen/renderScanChecks
        above. A category with no entry yet defaults per its own RAG

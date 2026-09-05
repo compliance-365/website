@@ -720,58 +720,21 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .f-pill:disabled,.f-pill[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
 .f-pill.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
 
-/* ===== Control Constellation =====
-   Node/edge classes below are applied once per render (buildConstellationSvg
-   in app.js) plus toggled on hover/selection (constellationHover) — no
-   inline styles, so every visual state lives here and nowhere else.
-   Status ring colors reuse the same --pass/--warn/--fail-adjacent tokens
-   the rest of the app already uses for control status (see the Statement
-   of Applicability's own st-* chip classes). */
+/* ===== Cross-framework mapping (formerly "Control Constellation") =====
+   Was a radial SVG network graph — these classes were its node/edge/
+   legend styling, applied per-render and toggled on hover/selection.
+   Replaced with a plain table (app.js's renderConstellation()), which
+   needs none of that: status reuses the same st-* chip classes every
+   other control table in the app already has, and "also satisfies"
+   reuses .fw-chips (below), the same pill style the Statement of
+   Applicability already uses for a control's raw cross-framework map
+   list. Only the toolbar/count layout survives from the old view. */
 .cx-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:4px}
 .cx-toolbar .filters{margin-bottom:0}
 .cx-lens-row{display:flex;align-items:center;gap:10px;font-size:var(--fs-1);color:var(--paper-dim);letter-spacing:.04em}
 .cx-count{color:var(--paper-faint);font-size:11.5px;margin:6px 0 14px}
-.cx-card{padding:8px}
-/* width:100% + aspect-ratio:1/1 alone makes this element as TALL as the
-   content column is wide — on a normal desktop layout that's well over
-   1000px, so the circle's lower half sits far below the fold with no
-   visual cue it's there. min() caps it at a comfortable viewport-relative
-   size instead, and margin:auto keeps it centered now that it's no
-   longer a full-width block; unlike max-height alone (which would only
-   clamp height and stretch the circle into an ellipse), constraining the
-   WIDTH this way lets aspect-ratio keep it a true square at every size. */
-.cx-svg{width:min(100%,62vh,620px);height:auto;aspect-ratio:1/1;display:block;margin:0 auto}
-.cx-edge{fill:none;stroke:var(--gold-light);stroke-width:1;opacity:.08;transition:opacity .15s var(--ease),stroke .15s var(--ease)}
-.cx-edge.cx-dim{opacity:.02}
-.cx-edge.cx-lit{stroke:var(--gold);opacity:.6;stroke-width:1.4}
-.cx-node{stroke-width:2;cursor:pointer;transition:r .15s var(--ease),opacity .15s var(--ease)}
-.cx-node.cx-pass{fill:var(--surface-raised);stroke:var(--pass)}
-.cx-node.cx-warn{fill:var(--surface-raised);stroke:var(--warn)}
-.cx-node.cx-faint{fill:var(--surface-raised);stroke:var(--paper-faint);opacity:.55}
-.cx-node.cx-na{fill:var(--surface-raised);stroke:var(--paper-faint);stroke-dasharray:2.5 2.5;opacity:.45}
-.cx-node.cx-dim{opacity:.12}
-.cx-node.cx-hi{opacity:1;stroke-width:3}
-.cx-node:hover,.cx-node:focus-visible{opacity:1}
-.cx-node:focus-visible{outline:2px solid var(--gold-light);outline-offset:1px}
-.cx-node.cx-selected{stroke:var(--gold);stroke-width:3}
-.cx-label{fill:var(--paper);font-size:9px;font-family:Manrope,sans-serif;text-anchor:middle;opacity:0;pointer-events:none;transition:opacity .15s var(--ease)}
-.cx-label.cx-show{opacity:1}
-@keyframes cxPulse{0%{stroke-width:3;filter:drop-shadow(0 0 0 rgba(169,129,46,0))}50%{stroke-width:5;filter:drop-shadow(0 0 6px rgba(216,186,120,.7))}100%{stroke-width:3;filter:drop-shadow(0 0 0 rgba(169,129,46,0))}}
-.cx-node.cx-pulse{animation:cxPulse 3s var(--ease)}
-.cx-legend{display:flex;flex-wrap:wrap;gap:14px 22px;padding:14px 18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--paper-dim)}
-.cx-legend-item{display:flex;align-items:center;gap:7px}
-.cx-lg-dot{width:10px;height:10px;border-radius:50%;background:var(--surface-raised);border:2px solid var(--paper-faint);flex:none}
-.cx-lg-dot.cx-lg-pass{border-color:var(--pass)}
-.cx-lg-dot.cx-lg-warn{border-color:var(--warn)}
-.cx-lg-dot.cx-lg-faint{border-color:var(--paper-faint);opacity:.55}
-.cx-lg-dot.cx-lg-na{border-style:dashed;opacity:.6}
-.cx-lg-line{width:18px;height:0;border-top:1.5px solid var(--gold-light);opacity:.3;flex:none}
-.cx-lg-line.cx-lg-line-lit{border-top-color:var(--gold);opacity:.9}
 .cx-thumb-card{overflow:hidden}
 .cx-thumb-link{display:block;color:inherit;text-decoration:none}
-.cx-thumb-svg{width:100%;height:150px;display:block;margin-top:4px}
-.cx-thumb-svg .cx-edge{stroke-width:.6}
-.cx-thumb-svg .cx-node{cursor:default}
 
 /* ===== Compliance Fingerprint + Certification Journey =====
    Both cards render window.ReportEngine.charts.fingerprint()/journey()
