@@ -426,14 +426,20 @@
       <div class="appetite-banner" id="appetiteBanner" style="display:none"></div>
       <div class="appetite-banner" id="scanDueBanner" style="display:none"></div>
       <div class="appetite-banner" id="digestDueBanner" style="display:none"></div>
-      <div class="grid kpis" id="kpiRow"></div>
-      <p class="grid-note" id="coverageNote"></p>
-      <section class="automation-centre" id="automationCentre" aria-labelledby="automationCentreTitle"></section>
-      <div class="card" id="nextActionsCard" style="margin-bottom:16px;display:none">
-        <h3>Next 3 actions</h3>
-        <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 8px">Ranked by what's actually holding your posture back right now, not by due date alone.</p>
-        <div id="nextActionsList"></div>
+      <!-- Hero: the two things this view is actually opened to answer —
+           where does posture stand, and what should be done about it. -->
+      <div class="grid dash-hero" id="dashHero">
+        <div class="hero-slot" id="heroScore"></div>
+        <div class="card" id="nextActionsCard" style="display:none">
+          <h3>Next 3 actions</h3>
+          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 8px">Ranked by what's actually holding your posture back right now, not by due date alone.</p>
+          <div id="nextActionsList"></div>
+        </div>
       </div>
+      <div class="grid kpis kpis-compact" id="kpiRow"></div>
+      <p class="grid-note" id="coverageNote"></p>
+
+      <div class="dash-section"><h2>Position</h2><p>Where this tenant stands against its frameworks, and which way it is moving.</p></div>
       <div class="grid dash-2">
         <div class="card fp-card" id="fpCard" style="display:none">
           <div class="fp-head"><h3>Compliance fingerprint</h3><div class="filters" id="fpTabs" role="group" aria-label="Framework"></div></div>
@@ -446,42 +452,50 @@
           <p class="journey-note" id="journeyNote"></p>
         </div>
       </div>
-      <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="monitorSetupPanel" style="display:none"></div><div id="driftPanel" style="margin-top:6px"></div></div>
-      <div class="card ap-card" id="apCard" style="margin-top:16px">
-        <h3>Assurance pulse</h3>
-        <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">26 weeks of compliance activity — scans, evidence, attestations, reviews and audits. Click a week to filter the Activity feed below.</p>
-        <div class="ap-body" id="apSvgWrap"></div>
-      </div>
-      <div class="card cx-thumb-card" id="cxThumbCard" style="margin-top:16px;display:none">
-        <a href="#" class="cx-thumb-link" data-action="App.go" data-id="constellation" aria-label="Open the full cross-framework mapping view">
-          <h3>Cross-framework mapping</h3>
-          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">Controls that also satisfy another entitled framework — implement these first for the most credit per hour of work. <span style="color:var(--gold-light)">Open the full view →</span></p>
-          <div id="cxThumbList"></div>
-        </a>
-      </div>
       <div class="grid dash-2">
-        <div>
-          <div class="card">
-            <div class="rl-head"><h3>Residual risk</h3><div class="filters" id="rlViewToggle" role="group" aria-label="Risk view"></div></div>
-            <div id="rlGridWrap"><div class="heat" id="heat"></div><div class="heat-legend" id="heatLegend"></div></div>
-            <div id="rlLandscapeWrap" style="display:none"></div>
-          </div>
-          <div class="card" style="margin-top:16px">
-            <h3>Posture score trend</h3>
-            <div class="spark-caption" id="sparkCaption"></div>
-            <svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
-            <div class="spark-legend" id="sparkLegend" style="display:none">
-              <span><i style="background:var(--gold)"></i>Posture score</span>
-              <span><i style="background:rgba(var(--gold-light-rgb),.55);border-style:dashed"></i>Control readiness</span>
-            </div>
+        <div class="card">
+          <div class="rl-head"><h3>Residual risk</h3><div class="filters" id="rlViewToggle" role="group" aria-label="Risk view"></div></div>
+          <div id="rlGridWrap"><div class="heat" id="heat"></div><div class="heat-legend" id="heatLegend"></div></div>
+          <div id="rlLandscapeWrap" style="display:none"></div>
+        </div>
+        <div class="card">
+          <h3>Posture score trend</h3>
+          <div class="spark-caption" id="sparkCaption"></div>
+          <svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+          <div class="spark-legend" id="sparkLegend" style="display:none">
+            <span><i style="background:var(--gold)"></i>Posture score</span>
+            <span><i style="background:rgba(var(--gold-light-rgb),.55);border-style:dashed"></i>Control readiness</span>
           </div>
         </div>
-        <div>
-          <div class="card"><h3>Governance</h3><div id="governanceCard"></div></div>
-          <div class="card" style="margin-top:16px">
-            <div class="rl-head"><h3>Activity</h3><span id="feedFilterChip" style="display:none"></span></div>
-            <ul class="feed" id="feed"></ul>
-          </div>
+      </div>
+
+      <div class="dash-section"><h2>Operations</h2><p>What is running automatically, what has moved since the last scan, and what is overdue.</p></div>
+      <!-- Leads Operations, and stays above the monitor card on purpose:
+           its own copy points the reader at "the in-tenant monitor below". -->
+      <section class="automation-centre" id="automationCentre" aria-labelledby="automationCentreTitle"></section>
+      <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="monitorSetupPanel" style="display:none"></div><div id="driftPanel" style="margin-top:6px"></div></div>
+      <!-- Assurance pulse stays above the Activity feed on purpose: its
+           own copy tells the reader to click a week to filter "the
+           Activity feed below". -->
+      <div class="grid dash-2">
+        <div class="card ap-card" id="apCard">
+          <h3>Assurance pulse</h3>
+          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">26 weeks of compliance activity — scans, evidence, attestations, reviews and audits. Click a week to filter the Activity feed below.</p>
+          <div class="ap-body" id="apSvgWrap"></div>
+        </div>
+        <div class="card cx-thumb-card" id="cxThumbCard" style="display:none">
+          <a href="#" class="cx-thumb-link" data-action="App.go" data-id="constellation" aria-label="Open the full cross-framework mapping view">
+            <h3>Cross-framework mapping</h3>
+            <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">Controls that also satisfy another entitled framework — implement these first for the most credit per hour of work. <span style="color:var(--gold-light)">Open the full view →</span></p>
+            <div id="cxThumbList"></div>
+          </a>
+        </div>
+      </div>
+      <div class="grid dash-2">
+        <div class="card"><h3>Governance</h3><div id="governanceCard"></div></div>
+        <div class="card">
+          <div class="rl-head"><h3>Activity</h3><span id="feedFilterChip" style="display:none"></span></div>
+          <ul class="feed" id="feed"></ul>
         </div>
       </div>
     </section>

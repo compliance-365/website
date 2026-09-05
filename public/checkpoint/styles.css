@@ -62,8 +62,9 @@
        (chips, table headers, section eyebrows) is already its own
        consistent micro-type system; folding it up to 11px would make
        every badge/label noticeably larger.
-       --fs-hero (42px) — the two "big scannable number" tiers (the
-       posture-scan gauge, the Board view's hero tiles) were 42px/46px;
+       --fs-hero (42px) — the "big scannable number" tier (the
+       posture-scan gauge, the Board view's hero tiles, and the
+       Dashboard's own hero score) was 42px/46px;
        unified to one shared hero size rather than force-fit to the
        scale's 34px ceiling, which would shrink Board view's whole
        reason for being (a number you can read from across the room). */
@@ -496,10 +497,12 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .verify-stale{color:var(--warn);font-size:var(--fs-1)}
 .evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
 .evidence-link:hover{color:var(--paper);border-color:var(--gold-light)}
-/* 185px, not 200px: at the ~1190px content width the six Dashboard
-   tiles were landing five-across, orphaning the sixth alone on a
-   second row and making a finished strip look broken. 185px fits all
-   six, and auto-fit still steps down cleanly on narrower screens. */
+/* Shared by every view that shows a KPI strip (Financial risk analysis,
+   Actions, AI systems), so the track minimum here is tuned for tiles
+   carrying a full number + caption + detail line. The Dashboard's own
+   strip is deliberately narrower and quieter — see .kpis-compact below,
+   which is what keeps a 5- or 6-tile strip on ONE row rather than
+   orphaning the last tiles onto a second, half-empty one. */
 .kpis{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
 .kpi .kpi-num{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
 .kpi b{display:block;font-weight:800;font-size:var(--fs-6);color:var(--gold-light);line-height:1.1}
@@ -509,6 +512,45 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.4}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%}
 .kpi .dot{margin-right:4px}
+/* ===== Dashboard hierarchy: hero, demoted strip, section tiers =====
+   The Dashboard used to open with six equal-weight KPI tiles — the
+   posture score, the number this whole app is built around, rendered at
+   exactly the same size as "exclusions missing justification" — and then
+   ran three screens of identically-styled cards with nothing marking one
+   as more important than the next. These three pieces give it an
+   entry point and a shape:
+     .dash-hero   the one row a practitioner opens this view for — the
+                  posture score, and what to do about it, side by side.
+     .kpis-compact the remaining KPIs, deliberately smaller and tighter
+                  than the shared .kpis above so they read as supporting
+                  detail. The narrower track also keeps 5-6 tiles on one
+                  row instead of orphaning the last ones onto a second.
+     .dash-section a labelled rule dividing "Position" (where we stand)
+                  from "Operations" (what's moving and what's overdue). */
+.dash-hero{grid-template-columns:minmax(0,4fr) minmax(0,8fr);align-items:stretch;margin-bottom:16px}
+/* Next 3 actions hides itself when there's nothing to rank; the score
+   tile then takes the full width rather than sitting beside a gap. */
+.dash-hero.solo{grid-template-columns:minmax(0,1fr)}
+/* The slot is a plain wrapper JS re-renders into; making it flex is what
+   lets the card inside actually fill the row's height rather than
+   floating at its natural height beside a much taller Next 3 actions. */
+.hero-slot{display:flex}
+.kpi-hero{flex:1;display:flex;flex-direction:column;justify-content:center;padding:30px 26px}
+.kpi-hero b{font-size:var(--fs-hero)}
+.kpi-hero b small{font-size:var(--fs-4)}
+.kpi-hero span{font-size:var(--fs-1);letter-spacing:.18em;margin-top:11px}
+.kpi-hero .sub{font-size:var(--fs-2);margin-top:11px}
+.kpis-compact{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
+.kpis-compact .kpi{padding:19px}
+.kpis-compact .kpi b{font-size:var(--fs-5)}
+.dash-section{margin:36px 0 18px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.dash-section h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);color:var(--paper)}
+.dash-section p{margin:0;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5}
+/* The section header already supplies the separation whatever follows it
+   would otherwise double up on. */
+.dash-section + .grid,.dash-section + .card,.dash-section + .automation-centre{margin-top:0}
+@media(max-width:1000px){.dash-hero{grid-template-columns:1fr}}
+
 /* Automation Centre: the Dashboard's operational answer to "what is
    automatic, what is proven, and what still needs a person?" The deep
    surface and restrained gold signal make it a control-room panel,

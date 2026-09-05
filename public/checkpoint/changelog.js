@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.54.0',
+    date: '2026-09-05',
+    entries: [
+      'Redesigned: the Dashboard now has a hierarchy. It used to open with six equal-weight KPI tiles — the posture score rendered at exactly the same size as "exclusions missing justification" — followed by three screens of identically-styled cards with nothing marking one as more important than the next. The posture score is now a hero tile at the top, sitting beside "Next 3 actions", so the two questions this view is actually opened to answer are both above the fold; the remaining KPIs sit below it as a single compact strip.',
+      'Everything below is grouped under two labelled sections: "Position" (compliance fingerprint, certification journey, residual risk, posture trend) and "Operations" (continuous monitoring, assurance pulse, cross-framework mapping, governance, activity). Three low-density full-width strips are now paired into two-column rows.',
+      'Fixed: the "High / critical residual risks" tile stayed gold no matter how many were open, so the worst number on the strip read as the calmest one. It now uses the same alert colour the overdue-actions, overdue-reviews and missing-justification tiles already did.'
+    ]
+  },
+  {
     version: '1.53.0',
     date: '2026-09-05',
     entries: [
