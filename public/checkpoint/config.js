@@ -172,6 +172,20 @@ window.CHECKPOINT_CONFIG = {
      tab, which is the only place this data is ever read back. */
   errorReportUrl: '',
 
+  /* Optional threat intel feed endpoint (lambda/threat-intel.js) — a
+     filtered, tagged slice of CISA's Known Exploited Vulnerabilities
+     catalog, re-sorted client-side by a tenant's declared industry
+     (orgIndustry) and self-declared tech stack (orgTechStack) so the
+     entries most likely to matter surface first. Empty string =
+     disabled — the Threat intel view (Risk & posture) simply shows its
+     "not configured" state, exactly like every other optional endpoint
+     above. This endpoint is stateless and never tenant-specific: it
+     receives no Graph token, no tenant ID and nothing about a client's
+     industry or stack, so it's safe to point every deployment at the
+     same shared Lambda rather than standing up one per client. See
+     lambda/DEPLOY-THREAT-INTEL.md. */
+  threatIntelUrl: '',
+
   /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
      as a default in the owner console's welcome-pack email draft —
      always editable per-send in that draft, so leaving this blank just

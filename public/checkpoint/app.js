@@ -696,6 +696,7 @@ function showModal(opts) {
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
+    'toggleThreatIntelStack',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
     'confirmRffrSuggestion', 'dismissRffrSuggestion', 'confirmIso42001Suggestion', 'dismissIso42001Suggestion',
@@ -7519,6 +7520,91 @@ function showModal(opts) {
     }
   }
 
+  /* Four real, historical CISA KEV entries — used only in demo mode, so
+     a prospect exploring the app sees a realistic-looking, clearly
+     labelled sample rather than an empty panel or a live network call
+     demo mode otherwise never makes. Shaped exactly like
+     lambda/threat-intel.js's shapeKevResponse() output, so
+     renderThreatIntelItems() below never needs to know which one it's
+     looking at. */
+  var THREAT_INTEL_DEMO_ITEMS = [
+    { cveId: 'CVE-2024-3400', vendor: 'Palo Alto Networks', product: 'PAN-OS GlobalProtect', name: 'PAN-OS Command Injection', description: 'A command injection vulnerability allows an unauthenticated attacker to execute arbitrary code with root privileges.', dateAdded: '2024-04-12', dueDate: '2024-04-19', knownRansomwareUse: false, tags: ['network-edge'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-3400' },
+    { cveId: 'CVE-2023-4966', vendor: 'Citrix', product: 'NetScaler ADC and Gateway', name: 'NetScaler Sensitive Information Disclosure ("Citrix Bleed")', description: 'A buffer-overflow vulnerability leading to sensitive information disclosure, exploited to hijack authenticated sessions.', dateAdded: '2023-11-21', dueDate: '2023-12-12', knownRansomwareUse: true, tags: ['network-edge'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2023-4966' },
+    { cveId: 'CVE-2023-27997', vendor: 'Fortinet', product: 'FortiOS and FortiProxy SSL-VPN', name: 'FortiOS Heap-Based Buffer Overflow', description: 'A heap-based buffer overflow in the SSL-VPN component allows a remote, unauthenticated attacker to execute arbitrary code.', dateAdded: '2023-06-12', dueDate: '2023-07-03', knownRansomwareUse: false, tags: ['network-edge'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2023-27997' },
+    { cveId: 'CVE-2021-34473', vendor: 'Microsoft', product: 'Exchange Server', name: 'Exchange Server Remote Code Execution ("ProxyShell")', description: 'A pre-authentication remote code execution vulnerability chain in on-premises Exchange Server.', dateAdded: '2021-11-03', dueDate: '2021-11-17', knownRansomwareUse: true, tags: ['microsoft'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2021-34473' }
+  ];
+
+  function renderThreatIntelItems(el, rawItems, industryId, stackTags, updatedAt, isSample) {
+    var ranked = window.CheckpointLib.rankThreatIntelItems(rawItems, { industryId: industryId, stackTags: stackTags });
+    if (!ranked.length) {
+      el.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">No current advisories in the tracked vendor list.</div>';
+      return;
+    }
+    var noteHtml = isSample
+      ? '<div class="chip st-Intreatment" style="margin-bottom:10px">Sample data — demo mode. A live tenant shows the actual current feed.</div>'
+      : '<p style="font-size:11.5px;color:var(--paper-faint);margin:0 0 10px">' + (updatedAt ? 'Feed updated ' + esc(String(updatedAt).slice(0, 10)) + ' · ' : '') + 'Source: CISA Known Exploited Vulnerabilities catalog</p>';
+    el.innerHTML = noteHtml + ranked.map(function (item) {
+      var badges = (item.matchedStack || item.matchedIndustry ? '<span class="chip st-Implemented" style="margin-right:6px">Relevant to you</span>' : '') +
+        (item.knownRansomwareUse ? '<span class="chip sev-Critical" style="margin-right:6px">Known ransomware use</span>' : '');
+      return '<div class="card" style="margin-bottom:10px">' +
+        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>' + esc(item.vendor) + ' — ' + esc(item.product) + '</b>' +
+        '<span style="font-size:11.5px;color:var(--paper-faint)">Added ' + esc(fmtDate(item.dateAdded)) + '</span></div>' +
+        '<div style="margin:6px 0">' + badges + '</div>' +
+        '<p style="font-size:12.5px;margin:4px 0;color:var(--paper-dim)">' + esc(item.name) + (item.description ? ' — ' + esc(item.description) : '') + '</p>' +
+        (item.url ? '<a href="' + esc(item.url) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--gold-light)">' + esc(item.cveId) + ' →</a>' : '<span style="font-size:12px;color:var(--paper-faint)">' + esc(item.cveId) + '</span>') +
+        '</div>';
+    }).join('');
+  }
+
+  /* Checkpoint's own posture checks only ever read a tenant's Microsoft
+     365 estate via Graph — there is no way to discover what runs at the
+     network edge or on-premises, so "technical stack" here is a short,
+     practitioner-ticked checklist (window.TECH_STACK_OPTIONS in
+     templates.js), not anything inferred. Both this and orgIndustry stay
+     entirely local to the browser/tenant Settings row — see
+     lambda/threat-intel.js's own header comment on why the feed itself
+     never receives either. */
+  function renderThreatIntel() {
+    var stackEl = document.getElementById('tiStackPanel');
+    var listEl = document.getElementById('tiListWrap');
+    if (!stackEl || !listEl) return;
+
+    var industryId = orgProfileValue('orgIndustry');
+    var stackIds = orgProfileValue('orgTechStack').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    var stackTags = (window.TECH_STACK_OPTIONS || []).filter(function (o) { return stackIds.indexOf(o.id) !== -1; })
+      .reduce(function (acc, o) { return acc.concat(o.tags); }, []);
+
+    stackEl.innerHTML = '<h3>Your technology stack</h3>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Tick what this organisation actually runs — the list below re-sorts around it. Nothing here is sent anywhere; it only changes the sort order in this browser.</p>' +
+      (window.TECH_STACK_OPTIONS || []).map(function (o) {
+        var checked = stackIds.indexOf(o.id) !== -1;
+        return '<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0">' +
+          '<input type="checkbox" data-change-action="App.toggleThreatIntelStack" data-id="' + esc(o.id) + '"' + (checked ? ' checked' : '') + ' style="margin-top:3px">' +
+          '<span style="font-size:12.5px">' + esc(o.label) + '</span></label>';
+      }).join('');
+
+    if (Store.kind === 'demo') {
+      renderThreatIntelItems(listEl, THREAT_INTEL_DEMO_ITEMS, industryId, stackTags, null, true);
+      return;
+    }
+
+    if (!CONFIG.threatIntelUrl) {
+      listEl.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">Threat intel isn\'t configured for this deployment yet — see lambda/DEPLOY-THREAT-INTEL.md.</div>';
+      return;
+    }
+
+    listEl.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">Loading current advisories…</div>';
+    fetch(CONFIG.threatIntelUrl).then(function (res) { return res.json(); }).then(function (data) {
+      var currentListEl = document.getElementById('tiListWrap');
+      if (!currentListEl) return; // navigated away before this resolved
+      renderThreatIntelItems(currentListEl, (data && data.items) || [], industryId, stackTags, data && data.updatedAt, false);
+    }).catch(function () {
+      var currentListEl = document.getElementById('tiListWrap');
+      if (!currentListEl) return;
+      currentListEl.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">Couldn\'t load the live feed right now. Check <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener" style="color:var(--gold-light)">CISA\'s Known Exploited Vulnerabilities catalog</a> or <a href="https://www.cyber.gov.au" target="_blank" rel="noopener" style="color:var(--gold-light)">cyber.gov.au</a> directly.</div>';
+    });
+  }
+
   function renderBoard() {
     var heroEl = document.getElementById('boardHero');
     if (!heroEl) return;
@@ -8574,6 +8660,7 @@ function showModal(opts) {
       if (v === 'evidencesim') renderEvidenceRequestSim();
       if (v === 'constellation') renderConstellation();
       if (v === 'quantrisk') renderQuantRisk();
+      if (v === 'threatintel') renderThreatIntel();
     },
 
     /* ================= Command palette =================
@@ -13028,6 +13115,25 @@ function showModal(opts) {
         var siteId = (Store.getSiteId && Store.getSiteId()) || '';
         grantEl.textContent = window.CheckpointLib.monitorGrantSnippet(siteId, state.clientId, 'Checkpoint Posture Monitor');
       }
+    },
+
+    /* Persists which self-declared tech-stack checkboxes are ticked
+       (Threat intel view) as an ordinary Settings row — orgTechStack,
+       same storage as orgIndustry — then just re-runs renderThreatIntel()
+       to re-sort the list around the new selection. Simpler than
+       maintaining a separate cache of the last-fetched feed just to
+       avoid one extra network call per checkbox click, and the feed
+       itself is cheap and short-TTL-cached server-side. */
+    toggleThreatIntelStack: async function (stackId) {
+      var el = document.querySelector('[data-change-action="App.toggleThreatIntelStack"][data-id="' + stackId + '"]');
+      if (!el) return;
+      var current = orgProfileValue('orgTechStack').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      var idx = current.indexOf(stackId);
+      if (el.checked && idx === -1) current.push(stackId);
+      if (!el.checked && idx !== -1) current.splice(idx, 1);
+      await Store.setSetting('orgTechStack', current.join(','));
+      S.settings.orgTechStack = current.join(',');
+      renderThreatIntel();
     },
 
     setThreshold: async function (key, value) {

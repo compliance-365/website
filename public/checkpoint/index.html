@@ -339,6 +339,7 @@
         <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
         <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
         <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
+        <button class="nav-item" data-v="threatintel">Threat intel</button>
       </details>
       <details class="nav-group" data-group="frameworks" open>
         <summary class="nav-label">Frameworks</summary>
@@ -742,6 +743,13 @@
       <div class="filters" id="aiTierFilters" role="group" aria-label="Filter by risk tier"></div>
       <div class="filters" id="aiStatusFilters" style="margin-top:-8px" role="group" aria-label="Filter by impact assessment status"></div>
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">System</th><th scope="col">Risk tier</th><th scope="col">Impact assessment</th><th scope="col">Vendor</th><th scope="col">Owner</th><th scope="col">Last reviewed</th></tr></thead><tbody id="aiRows"></tbody></table></div>
+    </section>
+
+    <!-- THREAT INTEL -->
+    <section class="view" id="v-threatintel">
+      <div class="vhead"><div class="rule"></div><h1>Threat intel</h1><p>A filtered slice of CISA's Known Exploited Vulnerabilities catalog — vendors an ordinary Microsoft 365-centric IT estate is actually likely to run, re-sorted below by this organisation's declared industry and tech stack. A starting point for "should we care about this," not a vulnerability scanner or a substitute for patch management.</p></div>
+      <div class="card" style="margin-bottom:16px" id="tiStackPanel"></div>
+      <div id="tiListWrap"></div>
     </section>
 
     <!-- FRAMEWORKS (admin — entitlements) -->

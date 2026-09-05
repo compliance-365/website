@@ -2498,3 +2498,23 @@ window.INDUSTRY_PROFILES = [
     regulatory: 'Privacy Act 1988 (Cth) and the Notifiable Data Breaches scheme where applicable, and the organisation’s customer contractual obligations.'
   }
 ];
+
+/* Self-declared technology checklist for the Threat intel view
+   (app.js's renderThreatIntel()). Checkpoint's own posture checks only
+   ever see what Microsoft Graph exposes about a tenant's Microsoft 365
+   estate — it has no way to discover what's running at the network edge
+   or on-premises, so unlike orgIndustry above (which drives real
+   regulatory text), this is a short, practitioner-ticked list rather
+   than anything inferred. Each option's `tags` match the topic tags
+   lambda/threat-intel.js attaches to CISA KEV entries (see its TAG_RULES)
+   — lib.js's rankThreatIntelItems() surfaces an entry first when its
+   tags overlap with whatever's ticked here. */
+window.TECH_STACK_OPTIONS = [
+  { id: 'network-edge', label: 'Firewall / VPN / network edge appliance', tags: ['network-edge'] },
+  { id: 'virtualization', label: 'On-premises virtualization (VMware, Hyper-V)', tags: ['virtualization'] },
+  { id: 'onprem-identity', label: 'On-premises Active Directory / ADFS', tags: ['identity'] },
+  { id: 'storage-nas', label: 'Network storage appliances (NAS/SAN)', tags: ['storage-nas'] },
+  { id: 'ics-ot', label: 'Industrial control / operational technology systems', tags: ['ics-ot'] },
+  { id: 'file-transfer', label: 'Managed file transfer software', tags: ['file-transfer'] },
+  { id: 'collaboration', label: 'Atlassian (Jira/Confluence) or similar collaboration tools', tags: ['collaboration'] }
+];
