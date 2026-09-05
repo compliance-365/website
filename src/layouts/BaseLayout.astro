@@ -1,6 +1,9 @@
 ---
-/* Tokens first: everything below may reference them, and they carry no
-   selectors of their own to win or lose a specificity fight. */
+/* Fonts first: the @font-face rules should be registered before anything
+   asks for the families. Tokens next — everything below may reference
+   them, and they carry no selectors of their own to win or lose a
+   specificity fight. */
+import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/responsive.css';
 import '../styles/print.css';
@@ -203,7 +206,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          /start, and only once SELF_SERVE has a token configured (see
          src/data/pricing.js) — but the CSP is site-wide, so it's
          allowlisted here rather than per-page. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.clarity.ms https://assets.apollo.io https://www.googletagmanager.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com; frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.clarity.ms https://assets.apollo.io https://www.googletagmanager.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://*.paddle.com; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com; frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
     <!-- Discovery -->
     <link rel="canonical" href={canonical} />
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
@@ -230,9 +233,6 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="icon" href="/assets/favicon.ico?v=3" sizes="48x48">
     <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png?v=3">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png?v=3">
-    <!-- Fonts: preconnect then async load with display=optional to prevent late LCP repaint -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Third-party prefetch -->
     <link rel="dns-prefetch" href="https://*.clarity.ms" />
     <link rel="dns-prefetch" href="https://assets.apollo.io" />
@@ -241,16 +241,15 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          paint (see index.astro), so dns-prefetch only, not a full preconnect
          that would compete with connections the critical path needs. -->
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
-    <!-- Fraunces + Manrope: async load, display=optional prevents LCP delay -->
-    <link
-      rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Manrope:wght@300;400;500;700;800&display=optional"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
-    <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Manrope:wght@300;400;500;700;800&display=optional" />
-    </noscript>
+    <!-- Fonts are self-hosted (see src/styles/fonts.css for why). Preloading
+         the woff2 directly starts the fetch at parse time; the previous
+         Google Fonts stylesheet needed a round-trip before the browser even
+         learned the file URLs, and its display=optional meant a font that
+         missed the ~100ms block period was dropped for that page load — so
+         first-time visitors often never saw the brand faces at all. Only the
+         latin subsets are preloaded; latin-ext stays unicode-range gated. -->
+    <link rel="preload" href="/assets/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/fraunces-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin />
     <!-- brand.css: preload + async so it never blocks first paint -->
     <link rel="preload" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} /></noscript>

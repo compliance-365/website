@@ -546,10 +546,40 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .dash-section{margin:36px 0 18px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
 .dash-section h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);color:var(--paper)}
 .dash-section p{margin:0;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5}
-/* The section header already supplies the separation the grid's own
-   top margin would otherwise double up on. */
-.dash-section + .grid,.dash-section + .card{margin-top:0}
+/* The section header already supplies the separation whatever follows it
+   would otherwise double up on. */
+.dash-section + .grid,.dash-section + .card,.dash-section + .automation-centre{margin-top:0}
 @media(max-width:1000px){.dash-hero{grid-template-columns:1fr}}
+
+/* Automation Centre: the Dashboard's operational answer to "what is
+   automatic, what is proven, and what still needs a person?" The deep
+   surface and restrained gold signal make it a control-room panel,
+   without reusing red/green posture colours as a misleading compliance
+   verdict. The three cards are buttons because each leads directly to
+   the relevant working surface; the keyboard focus state is as clear as
+   the hover state. */
+.automation-centre{margin:18px 0 16px;padding:26px;border:1px solid rgba(216,186,120,.26);border-radius:8px;background:radial-gradient(ellipse 75% 120% at 0% 0%,rgba(169,129,46,.16),transparent 56%),linear-gradient(135deg,#181719,#101012);box-shadow:0 18px 42px rgba(0,0,0,.18)}
+.automation-centre-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.automation-eyebrow{display:block;color:var(--gold-light);font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
+.automation-centre h2{font-family:Fraunces,serif;font-size:clamp(1.45rem,2.5vw,2rem);font-weight:500;line-height:1.15;color:var(--paper);margin:0}
+.automation-intro{max-width:76ch;color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin:12px 0 22px}
+.automation-monitor{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;color:var(--paper-faint);font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:7px 9px;border:1px solid var(--line);border-radius:99px;white-space:nowrap}
+.automation-monitor i{width:7px;height:7px;border-radius:50%;background:var(--paper-faint)}
+.automation-monitor.is-active{color:var(--pass);border-color:rgba(143,191,154,.42);background:rgba(143,191,154,.07)}
+.automation-monitor.is-active i{background:var(--pass);box-shadow:0 0 0 4px rgba(143,191,154,.12)}
+.automation-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.automation-card{appearance:none;text-align:left;color:inherit;font:inherit;cursor:pointer;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:18px;transition:transform .18s var(--ease),border-color .18s var(--ease),background .18s var(--ease),box-shadow .18s var(--ease)}
+.automation-card:hover,.automation-card:focus-visible{transform:translateY(-2px);background:rgba(216,186,120,.09);border-color:rgba(216,186,120,.55);box-shadow:0 10px 22px rgba(0,0,0,.18);outline:none}
+.automation-card:focus-visible{box-shadow:0 0 0 3px rgba(216,186,120,.28),0 10px 22px rgba(0,0,0,.18)}
+.automation-card-kicker{display:block;font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+.automation-card>b{display:block;font-family:Fraunces,serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
+.automation-card>b small{font-family:Manrope,sans-serif;font-size:var(--fs-2);font-weight:700;color:var(--gold-light)}
+.automation-card h3{font-size:var(--fs-2);color:var(--paper);margin:11px 0 5px}
+.automation-card p{font-size:var(--fs-1);line-height:1.55;color:var(--paper-dim);margin:0;min-height:3.2em}
+.automation-link{display:block;margin-top:14px;color:var(--gold-light);font-size:var(--fs-1);font-weight:800}
+.automation-footer{display:flex;justify-content:space-between;gap:16px;border-top:1px solid rgba(255,255,255,.1);margin-top:18px;padding-top:13px;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5}
+.automation-footer>span{max-width:56ch}.automation-lock{color:var(--gold-light);font-size:10px;margin-right:5px}
+@media (max-width:780px){.automation-centre{padding:20px}.automation-centre-head{flex-direction:column}.automation-grid{grid-template-columns:1fr}.automation-card p{min-height:0}.automation-footer{flex-direction:column;gap:6px}}
 /* Assurance basis — deliberately NOT a red/green pass-fail scale.
    These rank how much is known about a control, and an "asserted"
    control is not failing, it is simply resting on a weaker basis than a

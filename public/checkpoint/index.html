@@ -469,8 +469,11 @@
         </div>
       </div>
 
-      <div class="dash-section"><h2>Operations</h2><p>What has moved since the last scan, what is overdue, and who did what.</p></div>
-      <div class="card" id="driftCard"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="monitorSetupPanel" style="display:none"></div><div id="driftPanel" style="margin-top:6px"></div></div>
+      <div class="dash-section"><h2>Operations</h2><p>What is running automatically, what has moved since the last scan, and what is overdue.</p></div>
+      <!-- Leads Operations, and stays above the monitor card on purpose:
+           its own copy points the reader at "the in-tenant monitor below". -->
+      <section class="automation-centre" id="automationCentre" aria-labelledby="automationCentreTitle"></section>
+      <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="monitorSetupPanel" style="display:none"></div><div id="driftPanel" style="margin-top:6px"></div></div>
       <!-- Assurance pulse stays above the Activity feed on purpose: its
            own copy tells the reader to click a week to filter "the
            Activity feed below". -->
@@ -543,6 +546,12 @@
         <h3>Coverage</h3>
         <p style="color:var(--paper-dim);font-size:12.5px;margin:4px 0 14px;line-height:1.6">What Checkpoint can check automatically in this tenant, based on the Microsoft 365 licensing and access actually in place — not every tenant has every premium licence, and the checks that need one show as Manual rather than a guess when it's missing.</p>
         <div id="coverageRows"></div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(var(--paper-rgb),.1);font-size:12px;line-height:1.65;color:var(--paper-dim)">
+          <strong style="display:block;margin-bottom:7px;color:var(--paper)">How automation works in Checkpoint</strong>
+          <div><b style="color:var(--gold-light)">Observe automatically.</b> Read-only Microsoft signals and their supporting evidence are collected in your tenant.</div>
+          <div style="margin-top:5px"><b style="color:var(--gold-light)">Propose, never decide.</b> A failed or review-grade check can propose a risk, action or control status; a practitioner must approve it before the register changes.</div>
+          <div style="margin-top:5px"><b style="color:var(--gold-light)">Stay honest where a signal does not exist.</b> Manual — verify means Checkpoint has no defensible technical proxy, not that the control has passed.</div>
+        </div>
         </div>
         </div>
         <div class="card"><h3>Checks</h3><div id="checkList"></div></div>

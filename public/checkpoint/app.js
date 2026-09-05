@@ -3586,6 +3586,56 @@ function showModal(opts) {
         : '';
     }
 
+    /* Automation Centre — a single, deliberately non-scorecard view of
+       the product's automation boundary. The Dashboard already has the
+       raw facts in separate places (Coverage, evidence strip, proposed
+       findings and the monitor card); putting them together here lets a
+       practitioner answer the three questions that matter before an
+       audit: what is being observed, what is already proven, and what
+       still needs a human decision. It never claims a manual-only
+       control is a failure, and it never represents a proposal as a
+       completed register change. */
+    var automationEl = document.getElementById('automationCentre');
+    if (automationEl) {
+      var automationCounts = automatableCheckCount();
+      var manualChecks = Math.max(automationCounts.total - automationCounts.automatable, 0);
+      var automationControls = entitledFrameworks().reduce(function (all, fw) { return all.concat(frameworkAppRows(fw)); }, []);
+      var automationEvidence = evidenceCoverageFor(automationControls);
+      var evidenceLinked = automationEvidence.autoCaptured + automationEvidence.manual;
+      var pendingApprovalCount = (S.proposed || []).length + totalPendingSuggestions();
+      var automatedScans = (S.scans || []).filter(function (s) { return s.source === 'automated'; });
+      var latestAutomatedScan = automatedScans[automatedScans.length - 1];
+      var monitorCadence = parseInt((S.settings && S.settings.scanCadenceDays) || '30', 10) || 30;
+      var monitorFresh = latestAutomatedScan && daysSince(latestAutomatedScan.date) < monitorCadence;
+      var monitorLabel = latestAutomatedScan
+        ? (monitorFresh ? 'Monitoring active' : 'Monitoring needs attention')
+        : 'Scheduled monitor not deployed';
+      var monitorDetail = latestAutomatedScan
+        ? ('Last automated scan ' + fmtDate(latestAutomatedScan.date) + ' · every ' + monitorCadence + ' days')
+        : 'Run scans on demand, or deploy the in-tenant monitor below.';
+      var evidenceDetail = automationEvidence.total
+        ? (evidenceLinked + ' of ' + automationEvidence.total + ' implemented controls have linked evidence')
+        : 'Evidence coverage will appear as controls are implemented';
+      automationEl.innerHTML =
+        '<div class="automation-centre-head">' +
+          '<div><span class="automation-eyebrow">Automation centre</span><h2 id="automationCentreTitle">Continuous assurance, with a human at the controls.</h2></div>' +
+          '<div class="automation-monitor ' + (monitorFresh ? 'is-active' : '') + '"><i></i><span>' + esc(monitorLabel) + '</span></div>' +
+        '</div>' +
+        '<p class="automation-intro">Checkpoint observes live Microsoft 365 signals and captures evidence in this tenant. It proposes work; practitioners decide what enters the register.</p>' +
+        '<div class="automation-grid">' +
+          '<button type="button" class="automation-card" data-action="App.go" data-id="scan">' +
+            '<span class="automation-card-kicker">01 · Observe</span><b>' + automationCounts.automatable + '<small> / ' + automationCounts.total + '</small></b><h3>Live checks available</h3><p>' + manualChecks + ' marked Manual — verify where no defensible technical signal is available.</p><span class="automation-link">Review coverage →</span>' +
+          '</button>' +
+          '<button type="button" class="automation-card" data-action="App.go" data-id="soa">' +
+            '<span class="automation-card-kicker">02 · Prove</span><b>' + automationEvidence.autoCaptured + '<small> auto</small></b><h3>Evidence captured automatically</h3><p>' + esc(evidenceDetail) + '. Evidence remains in the client’s SharePoint library.</p><span class="automation-link">Inspect evidence →</span>' +
+          '</button>' +
+          '<button type="button" class="automation-card" data-action="App.go" data-id="scan">' +
+            '<span class="automation-card-kicker">03 · Decide</span><b>' + pendingApprovalCount + '</b><h3>Human decisions awaiting review</h3><p>Scan findings and control suggestions never change the register until a practitioner confirms them.</p><span class="automation-link">Review proposals →</span>' +
+          '</button>' +
+        '</div>' +
+        '<div class="automation-footer"><span><i class="automation-lock">◆</i> Tenant boundary: posture access is read-only; registers and evidence stay in your Microsoft 365 environment.</span><span>' + esc(monitorDetail) + '</span></div>';
+    }
+
     /* "Next 3 actions" — the one question every other Dashboard panel
        leaves unanswered: given a stack of open actions, which ones
        actually matter right now. Ranked by nextBestActions() in lib.js —

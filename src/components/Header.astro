@@ -8,6 +8,32 @@ function isActive(path: string) {
   if (path === base) return pathname === base || pathname === '/';
   return pathname.startsWith(path);
 }
+
+/* The four newest posts, surfaced in the Free Resources dropdown.
+   Resolved at build time, so this costs nothing at runtime and updates
+   whenever the site is rebuilt.
+
+   The point is internal linking as much as discovery: previously the only
+   route to an article was /blog/ itself, so a new post had exactly one
+   inbound link from anywhere on the site. Listing the latest four in the
+   global nav gives every page a link to them.
+
+   Slug and sort order mirror src/pages/blog/index.astro — filename minus
+   the extension, newest first — so these links cannot drift from the ones
+   the blog index generates. */
+const latestPosts = (await Astro.glob('../content/blog/*.md'))
+  .sort((a, b) =>
+    new Date(b.frontmatter.date || 0).getTime() -
+    new Date(a.frontmatter.date || 0).getTime()
+  )
+  .slice(0, 4)
+  .map(post => ({
+    title: post.frontmatter.title || '',
+    /* Trailing slash is required — astro.config sets trailingSlash: 'always',
+       so /blog/<slug> without it is a 404 rather than a redirect. */
+    href: `${base}blog/${(post.file.split('/').pop() || '').replace(/\.md$/i, '')}/`,
+  }))
+  .filter(p => p.title);
 ---
 
 <!-- Skip link. The primary nav is eight items with two dropdowns, and it
@@ -111,7 +137,8 @@ function isActive(path: string) {
         >
           Free Resources <span class="chev" aria-hidden="true">▾</span>
         </button>
-        <div id="freeResourcesMenu" class="nav-dd-menu" role="menu" aria-label="Free Resources">
+        <div id="freeResourcesMenu" class="nav-dd-menu nav-dd-menu--wide" role="menu" aria-label="Free Resources">
+          <div class="nav-dd-col" role="none">
           <a role="menuitem" href={base + 'free-roadmap/'} style="background:rgba(169,129,46,0.08);border:1px solid rgba(169,129,46,0.2);border-radius:8px;margin-bottom:4px;">
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-gift"/></svg></span> Free starter pack
           </a>
@@ -136,9 +163,19 @@ function isActive(path: string) {
           <a role="menuitem" href={base + 'resources/'}>
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-books"/></svg></span> Guides &amp; resources
           </a>
-          <a role="menuitem" href={base + 'blog/'}>
-            <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-insight"/></svg></span> Insights
-          </a>
+          </div>
+
+          {latestPosts.length > 0 && (
+            <div class="nav-dd-col nav-dd-col--insights" role="group" aria-label="Latest insights">
+              {/* The group is already named for assistive tech, so the visible
+                  heading would only be read twice. */}
+              <p class="nav-dd-title" aria-hidden="true">Latest insights</p>
+              {latestPosts.map(post => (
+                <a role="menuitem" href={post.href} class="dd-insight"><span>{post.title}</span></a>
+              ))}
+              <a role="menuitem" href={base + 'blog/'} class="dd-insight-all">All insights →</a>
+            </div>
+          )}
         </div>
       </div>
 
@@ -412,6 +449,50 @@ function isActive(path: string) {
     height: 16px;
   }
 
+  /* Two-column variant: the tools list on the left, the latest articles on
+     the right. Stacking them in one column instead would push the menu to
+     fourteen rows, which is taller than most laptop viewports leave below
+     the header. Collapses back to one column on mobile (below). */
+  .nav-dd-menu--wide { min-width: 580px; }
+  .nav-dd-col { min-width: 0; }
+  .nav-dd-col--insights {
+    border-left: 1px solid rgba(169, 129, 46, 0.18);
+    padding-left: 10px;
+  }
+  .nav-dd-title {
+    margin: 6px 0 6px 11px;
+    font-family: Manrope, system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold-ink);
+  }
+  /* Titles are real headlines, so they wrap rather than truncate mid-word;
+     two lines is the cap, with the full text still in the DOM.
+
+     The clamp lives on the inner span, not the link. -webkit-line-clamp
+     clips at the padding box, so clamping a padded element lets the third
+     line show through the bottom padding instead of being cut. */
+  .nav-dd-menu a.dd-insight {
+    display: block;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    padding: 7px 11px;
+  }
+  .nav-dd-menu a.dd-insight span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .nav-dd-menu a.dd-insight-all {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--gold-ink);
+    padding-top: 9px;
+  }
+
   .dd-divider {
     margin: 5px 6px;
     border: none;
@@ -424,6 +505,15 @@ function isActive(path: string) {
   }
 
   .nav-dd.open .nav-dd-menu { display: block; }
+  /* Must sit immediately after the rule above rather than beside the other
+     --wide styles: both selectors carry identical specificity, so this only
+     wins on source order. Moved earlier, the dropdown silently reverts to a
+     single column. */
+  .nav-dd.open .nav-dd-menu--wide {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 10px;
+  }
 
   /* ── CTA button ── */
   /* Icon-only on desktop, but still a full 44px target rather than a
@@ -548,6 +638,17 @@ function isActive(path: string) {
       background: #1B1B1D;
     }
     .nav-dd.open .nav-dd-menu { display: block; }
+    /* The two-column split only earns its keep on a wide viewport; stacked,
+       it becomes one column and the insights read as a final group. */
+    .nav-dd-menu--wide { min-width: 0; }
+    .nav-dd.open .nav-dd-menu--wide { display: block; }
+    .nav-dd-col--insights {
+      border-left: none;
+      padding-left: 0;
+      border-top: 1px solid rgba(169, 129, 46, 0.18);
+      margin-top: 6px;
+      padding-top: 4px;
+    }
     /* In the stacked menu the icon gets its label back and the row
        behaves like every other nav link. */
     .nav-search {
