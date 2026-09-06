@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "astro build",
-    "postbuild": "node scripts/hash-checkpoint-assets.mjs && node scripts/build-content-packs.mjs",
+    "postbuild": "node scripts/minify-checkpoint-assets.mjs && node scripts/hash-checkpoint-assets.mjs && node scripts/build-content-packs.mjs",
     "dev": "astro dev",
     "test": "node --test 'test/**/*.test.mjs'",
     "issue-entitlement": "node tools/issue-entitlement.mjs",
@@ -15,6 +15,7 @@
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/manrope": "^5.3.0",
     "astro": "^4.14.1",
+    "esbuild": "0.28.2",
     "playwright": "1.62.1"
   },
   "dependencies": {
