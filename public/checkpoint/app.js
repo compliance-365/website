@@ -5361,9 +5361,17 @@ function showModal(opts) {
     var evidenceLink = isAutoEvidence
       ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + key + '">View evidence</button>'
       : (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button>' : '');
+    /* A quiet link, not a bordered button. Most controls have no
+       evidence yet, so a `btn` here put a boxed, upper-case, tracked-out
+       control on nearly all 93 rows — a column of them outweighing the
+       control titles they sit beside, which is the same "the repeated
+       thing shouts loudest" problem the status chips had. It stays a
+       real <button> (same keyboard and screen-reader semantics, same
+       action) and uses .lnk, the treatment this very table already uses
+       for the control code and title. */
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-      ? evidenceLink + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
-      : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
+      ? evidenceLink + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="lnk src" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+      : '<button class="lnk src" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
     /* DISP ICT controls carry an ISM chapter reference, looked up
        definitionally (same treatment as maturity level/parent above) —
        shown under the title so an IRAP assessor can trace straight to
@@ -5856,11 +5864,21 @@ function showModal(opts) {
       var impl = counts.implemented, inProgress = counts.inProgress, notStarted = counts.notStarted, notApplicable = counts.notApplicable;
       var overdue = app.filter(function (c) { return controlReviewStatus(c).due; }).length;
       var unjustified = visRows.filter(function (c) { return !c.app && !c.just; }).length;
+      /* Three tiles, not six. Implemented / in progress / not started /
+         excluded are four slices of ONE distribution, and this view
+         already draws that distribution twice below: as the "Status by
+         theme" stacked bars (with the same counts written under each
+         bar) and, since the table was grouped, as a per-family
+         "N of M implemented" on every family header. Four sibling tiles
+         restating it made the strip wrap onto a second, half-empty row
+         and gave the two figures that are NOT part of the distribution —
+         both of them exceptions an auditor asks about — no more weight
+         than the parts. The distribution now rides along as one quiet
+         line under the headline count. */
+      var mix = inProgress + ' in progress · ' + notStarted + ' not started' +
+        (notApplicable ? ' · ' + notApplicable + ' excluded' : '');
       kpiEl.innerHTML =
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + impl + '">' + impl + '</b></div><span>Implemented</span><div class="sub">of ' + app.length + ' applicable controls</div></div>' +
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + inProgress + '" style="color:' + (inProgress ? 'var(--warn)' : 'var(--gold-light)') + '">' + inProgress + '</b></div><span>In progress</span></div>' +
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + notStarted + '">' + notStarted + '</b></div><span>Not started</span></div>' +
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + notApplicable + '">' + notApplicable + '</b></div><span>Excluded (not applicable)</span></div>' +
+        '<div class="card kpi"><div class="kpi-num"><b data-count="' + impl + '">' + impl + '</b></div><span>Implemented</span><div class="sub">of ' + app.length + ' applicable controls<br>' + mix + '</div></div>' +
         '<div class="card kpi"><div class="kpi-num"><b data-count="' + overdue + '" style="color:' + (overdue ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdue + '</b></div><span>Overdue for review</span><div class="sub">not re-verified within cadence</div></div>' +
         '<div class="card kpi"><div class="kpi-num"><b data-count="' + unjustified + '" style="color:' + (unjustified ? 'var(--fail)' : 'var(--gold-light)') + '">' + unjustified + '</b></div><span>Exclusions missing justification</span><div class="sub">an auditor checks this first</div></div>';
       runCountUps(kpiEl);

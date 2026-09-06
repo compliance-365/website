@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.57.0',
+    date: '2026-09-06',
+    entries: [
+      'Faster to load: Checkpoint\'s JavaScript is now minified in the deployed build — 2,181 KB down to 1,194 KB, a 45% saving. Nothing about the app changes; it just arrives sooner, which matters most on the corporate networks and VPNs practitioners actually open it over.',
+      'The Statement of Applicability\'s summary is three tiles instead of six. Implemented / in progress / not started / excluded are four slices of one distribution that this view already draws twice below — as the status-by-theme bars and, since the last release, on every control-family header — so restating it as four sibling tiles pushed the two figures that are NOT part of it, and that an auditor actually asks about, onto a second half-empty row. The mix now rides along as one quiet line under the implemented count.',
+      'Linking evidence is a quiet in-row link rather than a bordered button. With most controls not yet evidenced, that button appeared on nearly every one of 93 rows and outweighed the control titles beside it; it behaves identically, it is simply no longer the loudest thing in the table.'
+    ]
+  },
+  {
     version: '1.56.0',
     date: '2026-09-06',
     entries: [
