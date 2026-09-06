@@ -23,9 +23,12 @@ param tenantId string
 @description('Application (client) ID of the app registration created for this monitor.')
 param clientId string
 
-@description('Client secret value for that app registration. For production, replace with a Key Vault reference after deployment.')
+@description('Client secret value for that app registration, stored directly as a Function App setting. Leave BLANK and supply clientSecretKeyVaultSecretUri instead to keep the secret in Key Vault, which is the recommended production path — see README.md.')
 @secure()
-param clientSecret string
+param clientSecret string = ''
+
+@description('Optional. Key Vault secret URI holding the client secret, e.g. https://my-vault.vault.azure.net/secrets/checkpoint-monitor-secret. When set, CLIENT_SECRET becomes a Key Vault reference resolved at runtime by this Function App\'s system-assigned managed identity (grant it \'get\' on the vault\'s secrets) and no secret value is ever stored in app settings or passed through this template. Takes precedence over clientSecret.')
+param clientSecretKeyVaultSecretUri string = ''
 
 @description('SharePoint hostname, e.g. contoso.sharepoint.com — the same tenant the interactive Checkpoint app is configured against.')
 param spHostname string
@@ -81,6 +84,10 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
   name: functionAppName
   location: location
   kind: 'functionapp,linux'
+  // Needed for the Key Vault reference path above: the runtime resolves
+  // @Microsoft.KeyVault(...) as this identity, so it is what gets 'get'
+  // on the vault's secrets. Harmless when the plaintext path is used.
+  identity: { type: 'SystemAssigned' }
   properties: {
     serverFarmId: hostingPlan.id
     httpsOnly: true
@@ -98,7 +105,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         { name: 'APPINSIGHTS_INSTRUMENTATIONKEY', value: appInsights.properties.InstrumentationKey }
         { name: 'TENANT_ID', value: tenantId }
         { name: 'CLIENT_ID', value: clientId }
-        { name: 'CLIENT_SECRET', value: clientSecret }
+        { name: 'CLIENT_SECRET', value: empty(clientSecretKeyVaultSecretUri) ? clientSecret : '@Microsoft.KeyVault(SecretUri=${clientSecretKeyVaultSecretUri})' }
         { name: 'SP_HOSTNAME', value: spHostname }
         { name: 'SP_SITE_PATH', value: spSitePath }
         { name: 'LIST_PREFIX', value: listPrefix }

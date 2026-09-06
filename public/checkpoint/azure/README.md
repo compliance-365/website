@@ -197,11 +197,47 @@ the in-app panel. This provisions:
 by hand from it, since this repo has no Bicep CLI in its pipeline — keep
 both in sync if you edit either) is what the button above deploys.
 
-For production, move `CLIENT_SECRET` out of the plain app setting the
-template creates and into a Key Vault reference
-(`@Microsoft.KeyVault(SecretUri=...)`) once the Function App's managed
-identity has been granted `get` on that secret — the template doesn't
-do this automatically to keep the one-click path dependency-free.
+### Keeping the client secret out of app settings
+
+The template takes the secret **either** way, and the Function App now
+always gets a system-assigned managed identity so the Key Vault path
+works without any post-deployment surgery:
+
+| Parameter | Result |
+|---|---|
+| `clientSecret` | The value is stored directly as the `CLIENT_SECRET` app setting. Simplest, and fine for a trial — but the secret then sits in plain text in the Function App's configuration for as long as it lives there. |
+| `clientSecretKeyVaultSecretUri` | `CLIENT_SECRET` becomes `@Microsoft.KeyVault(SecretUri=…)`, resolved at runtime by the managed identity. **No secret value is stored in app settings, or passed through this template at all.** |
+
+Supplying the Key Vault URI takes precedence, so leave `clientSecret`
+blank when you use it. Recommended for anything beyond a trial:
+
+1. Put the secret in a vault:
+   ```bash
+   az keyvault secret set --vault-name <vault> \
+     --name checkpoint-monitor-secret --value "<the client secret>"
+   ```
+2. Deploy with `clientSecretKeyVaultSecretUri` set to the returned `id`
+   (e.g. `https://<vault>.vault.azure.net/secrets/checkpoint-monitor-secret`)
+   and `clientSecret` left blank.
+3. Grant the Function App's identity read access to that secret:
+   ```bash
+   az keyvault set-policy --name <vault> \
+     --object-id $(az functionapp identity show -g <rg> -n <app> --query principalId -o tsv) \
+     --secret-permissions get
+   ```
+   (On an RBAC-enabled vault, assign **Key Vault Secrets User** to that
+   principal instead.)
+
+Rotating the secret afterwards is then a vault operation — the Function
+App picks up the new value without redeploying or editing app settings.
+
+To move an **existing** deployment across, set the same reference on the
+app it already has and grant the identity as above:
+
+```bash
+az functionapp config appsettings set -g <rg> -n <app> --settings \
+  "CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/checkpoint-monitor-secret)"
+```
 
 ## 4a. Governance sweep — policy reviews and attestation campaigns
 

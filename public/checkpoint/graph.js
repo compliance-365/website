@@ -183,14 +183,24 @@ window.Graph = (function () {
   }
 
   /* Page through a collection */
-  async function gAll(path, opts) {
-    var out = [], url = path;
+  /* Page-following loop, split out from gAll() for the same reason
+     fetchWithGraphRetry() is split out of g(): the MECHANICS (does it
+     follow @odata.nextLink, does it concatenate in order, does it stop)
+     don't care how a page is fetched, and pulling them out lets them be
+     exercised with a fake fetchPage callback instead of a signed-in
+     MSAL session. See window.Graph.__test. */
+  async function collectPages(firstUrl, fetchPage) {
+    var out = [], url = firstUrl;
     while (url) {
-      var j = await g(url, opts);
-      out = out.concat(j.value || []);
-      url = j['@odata.nextLink'] || null;
+      var j = await fetchPage(url);
+      out = out.concat((j && j.value) || []);
+      url = (j && j['@odata.nextLink']) || null;
     }
     return out;
+  }
+
+  async function gAll(path, opts) {
+    return collectPages(path, function (url) { return g(url, opts); });
   }
 
   /* ==========================================================
@@ -1367,11 +1377,18 @@ window.Graph = (function () {
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
-    /* Test-only surface — never used by the app itself. Lets
-       fetchWithGraphRetry()'s loop mechanics be exercised directly
-       (Playwright, or a browser console) with a fake fetchOnce
-       callback, since g() itself can't run in a test without a real
-       signed-in MSAL session. */
-    __test: { fetchWithGraphRetry: fetchWithGraphRetry, GRAPH_MAX_RETRIES: GRAPH_MAX_RETRIES }
+    /* Test-only surface — never used by the app itself. Lets the loop
+       mechanics that don't depend on a signed-in MSAL session be
+       exercised directly (test/graph-layer.test.mjs loads this file in a
+       vm sandbox; Playwright or a browser console work too) with fake
+       fetchOnce/fetchPage callbacks, since g() itself can't run in a
+       test without a real session. encodeSharingUrl is pure and needs
+       no stubbing at all. */
+    __test: {
+      fetchWithGraphRetry: fetchWithGraphRetry,
+      GRAPH_MAX_RETRIES: GRAPH_MAX_RETRIES,
+      collectPages: collectPages,
+      encodeSharingUrl: encodeSharingUrl
+    }
   };
 })();
