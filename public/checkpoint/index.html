@@ -860,7 +860,7 @@
       <!-- Filled by renderSoaFocusBar() when a summary tile is filtering the
            table below; aria-live so a screen reader hears the table narrow,
            since the tile that did it is well above this point on the page. -->
-      <div class="soa-focus-bar" id="soaFocusBar" role="status" aria-live="polite" hidden></div>
+      <div class="focus-bar" id="soaFocusBar" role="status" aria-live="polite" hidden></div>
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Applicable</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
     </section>
 
@@ -923,6 +923,9 @@
         <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button><button class="btn ghost sm" data-action="App.exportAllPolicies">Export all policies (ZIP)</button>
       </div>
       <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
+      <!-- Filled by renderFocusBar() when a summary tile above is filtering
+           the register; aria-live so a screen reader hears it narrow. -->
+      <div class="focus-bar" id="docFocusBar" role="status" aria-live="polite" hidden></div>
       <div class="card" style="padding:0 10px">
         <table><thead><tr><th scope="col">Document</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Next review</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
       </div>

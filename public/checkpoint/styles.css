@@ -706,8 +706,30 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    distribution line it sits in — a link, not a button, because turning
    those three counts into buttons would rebuild the six-tile strip
    1.57.0 deliberately collapsed. */
-.kpi-btn{appearance:none;-webkit-appearance:none;font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
-.kpi-btn:hover{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2);transform:translateY(-3px)}
+/* A tile with nothing behind it cannot be a filter — opening an empty
+   table costs a click and a moment of doubt. It used to be silently
+   identical to one that could be clicked: same card, same weight, just
+   no pointer and no hover, so "inert" was something you discovered by
+   trying. It now reads as an empty state, with the figure and its
+   caption receding to the tone the rest of the app uses for "nothing
+   here". kpiTile() omits the severity colour at zero rather than
+   fighting it with !important, since that colour is set inline. */
+.kpi-empty b,.kpi-empty span,.kpi-empty .sub{color:var(--paper-faint)}
+/* ===== "You can click this" — visible without hovering =====
+   A hover-only cue answers "is this clickable?" only once you have
+   already guessed that it might be, which is exactly the confusion
+   three near-identical strips with three different behaviours caused:
+   the tiles that filter and the tiles that are pure context looked the
+   same until you moved a mouse across them. Interactive summary tiles
+   now carry a small chevron at rest; a total or an empty count simply
+   does not have one, so the difference is legible at a glance and in a
+   screenshot.
+   Deliberately scoped to the summary-tile component rather than every
+   .card[data-action]: the larger content cards that navigate have their
+   own visible link, and several already use their top-right corner. */
+.kpi[data-action],button.kpi,.board-tile[data-action],button.board-tile{position:relative}
+.kpi[data-action]::after,button.kpi::after,.board-tile[data-action]::after,button.board-tile::after{content:'';position:absolute;top:15px;right:15px;width:6px;height:6px;border-right:1.5px solid var(--paper-faint);border-bottom:1.5px solid var(--paper-faint);transform:rotate(-45deg);transition:border-color .15s var(--ease)}
+.kpi[data-action]:hover::after,button.kpi:hover::after,.board-tile[data-action]:hover::after,button.board-tile:hover::after,.kpi-on::after{border-color:var(--gold-light)}
 .kpi-on{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2),inset 3px 0 0 var(--gold)}
 .soa-mix{margin:0 0 16px;font-size:var(--fs-1);color:var(--paper-faint);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
 .soa-slice{font:inherit;color:inherit;padding:0;border:none;background:none;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
@@ -715,9 +737,10 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .soa-slice.on{color:var(--gold-light);font-weight:700;text-decoration-color:currentColor}
 /* Sits directly above the table it describes, so "showing 2 of 93" is
    read at the moment the short table would otherwise look like missing
-   data rather than a filter. */
-.soa-focus-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:11px 16px;border:1px solid rgba(var(--gold-light-rgb),.35);border-left:3px solid var(--gold);border-radius:var(--r-sm);background:rgba(var(--gold-rgb),.07);font-size:var(--fs-2);color:var(--paper-dim)}
-.soa-focus-bar b{color:var(--paper);font-variant-numeric:tabular-nums}
+   data rather than a filter. Shared by every register whose summary
+   tiles filter — was .soa-focus-bar when only one did. */
+.focus-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:11px 16px;border:1px solid rgba(var(--gold-light-rgb),.35);border-left:3px solid var(--gold);border-radius:var(--r-sm);background:rgba(var(--gold-rgb),.07);font-size:var(--fs-2);color:var(--paper-dim)}
+.focus-bar b{color:var(--paper);font-variant-numeric:tabular-nums}
 .status-quiet{display:inline-flex;align-items:center;gap:7px;color:var(--paper-dim);white-space:nowrap}
 .status-quiet i{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 .status-quiet.sq-pass{color:var(--pass)}
@@ -788,13 +811,26 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .assur-asserted{color:var(--paper-dim);border-color:var(--line)}
 .assur-unsupported{color:var(--fail);border-color:color-mix(in srgb,var(--fail) 45%,transparent)}
 .grid-note{margin-top:11px;font-size:var(--fs-1);line-height:1.5;color:var(--paper-faint)}
-/* A tile you can click now says so by rising off the page on hover,
-   not just by tinting: with a real elevation system in place the lift
-   is the cheapest available affordance, and it costs one compositor
-   property. transform is listed in the transition so the blanket
-   prefers-reduced-motion rule at the top of this file kills it. */
-.kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
-.kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2);transform:translateY(-3px)}
+/* ===== One treatment for a card you can act on =====
+   A tile you can click says so by rising off the page on hover: with a
+   real elevation system in place the lift is the cheapest available
+   affordance, and it costs one compositor property. transform is listed
+   in the transition so the blanket prefers-reduced-motion rule at the
+   top of this file kills it.
+
+   This used to be TWO rules — .kpi[data-action] for tiles a view built
+   as divs, .kpi-btn for tiles a view built as buttons — which is
+   exactly how identical-looking tiles ended up hovering in one module
+   and sitting dead in another. It is now keyed on what actually makes a
+   card actionable (it is a button, or it carries data-action) rather
+   than on which class the view that built it happened to reach for, so
+   any clickable card in any module picks this up with nothing to
+   remember. Every .card[data-action] in the app is a filter or a
+   navigation tile — checked — so none of them is a card that merely
+   happens to contain something clickable. */
+.card[data-action],.board-tile[data-action],button.card,button.board-tile{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
+button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inherit;color:inherit;text-align:left;width:100%}
+.card[data-action]:hover,.board-tile[data-action]:hover,button.card:hover,button.board-tile:hover{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2);transform:translateY(-3px)}
 .d-kv.clickable{cursor:pointer;margin:0 -8px;padding:6px 8px;border-radius:4px;transition:background .15s var(--ease)}
 .d-kv.clickable:hover{background:var(--surface-hover)}
 .board-hero{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}

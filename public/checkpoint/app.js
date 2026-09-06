@@ -3093,6 +3093,41 @@ function showModal(opts) {
   function controlReviewStatus(c) {
     return window.CheckpointLib.controlReviewStatus(c, new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
   }
+
+  /* ===== One builder for every register's summary tile =====
+     The Statement of Applicability and Training each grew their own
+     copy of this markup, and the Documents register grew a third that
+     was a plain div — so three strips that look like one component
+     behaved like three, and a tile that highlighted on one page sat
+     dead on another. There is now one function, so a tile cannot drift
+     again: same element, same states, same affordance, wherever it is
+     built.
+
+       key/action  make it a filter. Omitted -> a plain figure.
+       value       the number, and the count-up target.
+       tone        'fail'/'warn' etc. Applied only when value > 0: a
+                   zero painted alert-red says something is wrong when
+                   nothing is.
+       focus       the currently selected key, for the pressed state.
+
+     A tile whose value is 0 is never a filter — it would open an empty
+     table — so it renders as a div with .kpi-empty rather than as a
+     button that looks identical and does nothing. */
+  function kpiTile(opts) {
+    var value = Number(opts.value) || 0;
+    var live = value > 0 && !!opts.action;
+    var on = live && opts.focus === opts.key;
+    var tag = live ? 'button' : 'div';
+    return '<' + tag + ' class="card kpi' + (on ? ' kpi-on' : '') + (value ? '' : ' kpi-empty') + '"' +
+      (live ? ' type="button" aria-pressed="' + (on ? 'true' : 'false') +
+        '" title="' + esc(on ? 'Show everything again' : (opts.title || 'Show only these in the table below')) +
+        '" data-action="' + esc(opts.action) + '" data-id="' + esc(opts.key) + '"' : '') +
+      '><div class="kpi-num"><b data-count="' + value + '"' +
+      (opts.tone && value ? ' style="color:var(--' + opts.tone + ')"' : '') + '>' + value + '</b></div>' +
+      '<span>' + opts.label + '</span>' +
+      (opts.sub ? '<div class="sub">' + opts.sub + '</div>' : '') +
+      '</' + tag + '>';
+  }
   /* Rows behind one Statement of Applicability summary tile. Same wrapper
      reasoning as controlReviewStatus() above — lib.js's soaFocusRows()
      stays pure, this supplies today's date and the tenant's cadence, and
@@ -5132,11 +5167,25 @@ function showModal(opts) {
       var od = vendors.filter(vendorOverdue);
       var critHigh = vendors.filter(function (v) { return v.criticality === 'Critical' || v.criticality === 'High'; }).length;
       var unclassified = vendors.filter(function (v) { return !v.dataCategories || !v.dataCategories.length; }).length;
+      /* A "Total" tile is the denominator, not a filter — clicking it
+         would mean "show all", which is already the default — so it is
+         deliberately static and, since 1.62.0, visibly so. The other
+         three all narrow the table below. */
       kpiEl.innerHTML =
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + vendors.length + '">' + vendors.length + '</b></div><span>Total vendors</span></div>' +
-        '<div class="card kpi" data-action="App.filterVendorStatus" data-id="Overdue"><div class="kpi-num"><b data-count="' + od.length + '" style="color:' + (od.length ? 'var(--fail)' : 'var(--gold-light)') + '">' + od.length + '</b></div><span>Overdue reviews</span></div>' +
-        '<div class="card kpi" data-action="App.filterVendorCrit" data-id="Critical"><div class="kpi-num"><b data-count="' + critHigh + '">' + critHigh + '</b></div><span>Critical / High criticality</span></div>' +
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + unclassified + '" style="color:' + (unclassified ? 'var(--warn)' : 'var(--gold-light)') + '">' + unclassified + '</b></div><span>Data access not classified</span><div class="sub">' + (unclassified ? 'an auditor checks this first' : 'every vendor classified') + '</div></div>';
+        kpiTile({ value: vendors.length, label: 'Total vendors' }) +
+        kpiTile({ key: 'Overdue', value: od.length, label: 'Overdue reviews', tone: 'fail',
+          action: 'App.filterVendorStatus', focus: window._vendorStatusF,
+          title: 'Show only these vendors in the table below' }) +
+        kpiTile({ key: 'Critical', value: critHigh, label: 'Critical / High criticality',
+          action: 'App.filterVendorCrit', focus: window._vendorCritF,
+          title: 'Show only these vendors in the table below' }) +
+        /* Was inert while looking exactly like the two filters beside it,
+           and its own sub-line says an auditor checks it first — so it
+           now filters, via a new Unclassified status pill. */
+        kpiTile({ key: 'Unclassified', value: unclassified, label: 'Data access not classified',
+          tone: 'warn', sub: unclassified ? 'an auditor checks this first' : 'every vendor classified',
+          action: 'App.filterVendorStatus', focus: window._vendorStatusF,
+          title: 'Show only these vendors in the table below' });
       runCountUps(kpiEl);
     }
     var chartEl = document.getElementById('vendorReviewChart');
@@ -5152,12 +5201,13 @@ function showModal(opts) {
     document.getElementById('vendorCritFilters').innerHTML = ['All'].concat(VENDOR_CRITICALITIES).map(function (x) {
       return '<button class="f-pill' + (cf === x ? ' on' : '') + '" aria-pressed="' + (cf === x ? 'true' : 'false') + '" data-action="App.filterVendorCrit" data-id="' + x + '">' + x + '</button>';
     }).join('');
-    document.getElementById('vendorStatusFilters').innerHTML = ['All', 'Overdue'].concat(VENDOR_REVIEW_STATUSES).map(function (x) {
+    document.getElementById('vendorStatusFilters').innerHTML = ['All', 'Overdue', 'Unclassified'].concat(VENDOR_REVIEW_STATUSES).map(function (x) {
       return '<button class="f-pill' + (sf === x ? ' on' : '') + '" aria-pressed="' + (sf === x ? 'true' : 'false') + '" data-action="App.filterVendorStatus" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var vendors = (S.vendors || []).filter(function (v) {
       if (cf !== 'All' && v.criticality !== cf) return false;
       if (sf === 'Overdue') return vendorOverdue(v);
+      if (sf === 'Unclassified') return !v.dataCategories || !v.dataCategories.length;
       if (sf !== 'All' && v.reviewStatus !== sf) return false;
       return true;
     });
@@ -5210,10 +5260,16 @@ function showModal(opts) {
       var notStarted = systems.filter(function (a) { return a.impactAssessmentStatus === 'Not started'; }).length;
       var completed = systems.filter(function (a) { return a.impactAssessmentStatus === 'Completed'; }).length;
       kpiEl.innerHTML =
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + systems.length + '">' + systems.length + '</b></div><span>Total AI systems</span></div>' +
-        '<div class="card kpi" data-action="App.filterAiTier" data-id="High"><div class="kpi-num"><b data-count="' + highRisk + '" style="color:' + (highRisk ? 'var(--fail)' : 'var(--gold-light)') + '">' + highRisk + '</b></div><span>Prohibited / High risk tier</span></div>' +
-        '<div class="card kpi" data-action="App.filterAiStatus" data-id="Not started"><div class="kpi-num"><b data-count="' + notStarted + '" style="color:' + (notStarted ? 'var(--warn)' : 'var(--gold-light)') + '">' + notStarted + '</b></div><span>Impact assessment not started</span></div>' +
-        '<div class="card kpi" data-action="App.filterAiStatus" data-id="Completed"><div class="kpi-num"><b data-count="' + completed + '">' + completed + '</b></div><span>Impact assessment completed</span></div>';
+        kpiTile({ value: systems.length, label: 'Total AI systems' }) +
+        kpiTile({ key: 'High', value: highRisk, label: 'Prohibited / High risk tier', tone: 'fail',
+          action: 'App.filterAiTier', focus: window._aiTierF,
+          title: 'Show only these systems in the table below' }) +
+        kpiTile({ key: 'Not started', value: notStarted, label: 'Impact assessment not started', tone: 'warn',
+          action: 'App.filterAiStatus', focus: window._aiStatusF,
+          title: 'Show only these systems in the table below' }) +
+        kpiTile({ key: 'Completed', value: completed, label: 'Impact assessment completed',
+          action: 'App.filterAiStatus', focus: window._aiStatusF,
+          title: 'Show only these systems in the table below' });
       runCountUps(kpiEl);
     }
     var chartEl = document.getElementById('aiTierChart');
@@ -5911,25 +5967,10 @@ function showModal(opts) {
       var overdue = soaFocusRows('overdue', visRows).length;
       var unjustified = soaFocusRows('unjustified', visRows).length;
       var focus = window._soaFocus || '';
-      /* A tile with nothing behind it is not a filter — "0 overdue" is
-         already the whole answer, and opening an empty table for it just
-         costs a click and a moment of doubt. */
       function tile(key, value, caption, sub, alert) {
-        var live = value > 0, on = focus === key;
-        /* A real <button> when it filters, a <div> when it cannot.
-           The app's action dispatch is a click listener only, so a
-           div carrying role="button" would look operable to a screen
-           reader and do nothing from the keyboard; .automation-card
-           already establishes the button-styled-as-a-card pattern this
-           reuses. aria-pressed makes it a toggle, which is what it is. */
-        var tag = live ? 'button' : 'div';
-        return '<' + tag + ' class="card kpi' + (live ? ' kpi-btn' : '') + (on ? ' kpi-on' : '') + '"' +
-          (live ? ' type="button" aria-pressed="' + (on ? 'true' : 'false') +
-            '" title="' + (on ? 'Show all controls again' : 'Show only these controls in the table below') +
-            '" data-action="App.focusSoa" data-id="' + key + '"' : '') +
-          '><div class="kpi-num"><b data-count="' + value + '"' +
-          (alert ? ' style="color:' + (value ? 'var(--fail)' : 'var(--gold-light)') + '"' : '') + '>' + value + '</b></div>' +
-          '<span>' + caption + '</span><div class="sub">' + sub + '</div></' + tag + '>';
+        return kpiTile({ key: key, value: value, label: caption, sub: sub, focus: focus,
+          action: 'App.focusSoa', tone: alert ? 'fail' : '',
+          title: 'Show only these controls in the table below' });
       }
       /* The distribution stays one quiet line rather than three more
          tiles (see 1.57.0), but each part of it is now the same filter
@@ -5977,18 +6018,18 @@ function showModal(opts) {
     if (themeEl) themeEl.innerHTML = RC.stackedBars(themeGroupsFor(fw, visRows), onScreen(CONTROL_STATUS_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
   }
 
-  /* Says what the table is currently showing and how to leave. Without
-     it a filtered table is indistinguishable from a framework that
-     simply has two controls in it — the tile that filtered is above the
-     fold, the table often is not. */
-  function renderSoaFocusBar(key, rows, total) {
-    var el = document.getElementById('soaFocusBar');
+  /* Says what a table is currently showing and how to leave. Without it
+     a filtered table is indistinguishable from a register that simply
+     has two rows in it — the tile that filtered is above the fold, the
+     table often is not. Shared by every register whose tiles filter. */
+  function renderFocusBar(elId, opts) {
+    var el = document.getElementById(elId);
     if (!el) return;
-    if (!key || !rows) { el.innerHTML = ''; el.hidden = true; return; }
+    if (!opts || !opts.key) { el.innerHTML = ''; el.hidden = true; return; }
     el.hidden = false;
-    el.innerHTML = '<span>Showing <b>' + rows.length + '</b> of ' + total + ' — ' +
-      esc(window.CheckpointLib.soaFocusLabel(key)).toLowerCase() + '</span>' +
-      '<button class="btn ghost sm" data-action="App.focusSoa" data-id="">Show all controls</button>';
+    el.innerHTML = '<span>Showing <b>' + opts.shown + '</b> of ' + opts.total + ' — ' +
+      esc(opts.label).toLowerCase() + '</span>' +
+      '<button class="btn ghost sm" data-action="' + esc(opts.action) + '" data-id="">' + esc(opts.clearLabel) + '</button>';
   }
 
   function renderSoa() {
@@ -6097,7 +6138,11 @@ function showModal(opts) {
        result should look like. */
     var focusKey = window._soaFocus || '';
     var focusRows = focusKey ? soaFocusRows(focusKey, visRows) : null;
-    renderSoaFocusBar(focusKey, focusRows, visRows.length);
+    renderFocusBar('soaFocusBar', focusKey ? {
+      key: focusKey, shown: focusRows.length, total: visRows.length,
+      label: window.CheckpointLib.soaFocusLabel(focusKey),
+      action: 'App.focusSoa', clearLabel: 'Show all controls'
+    } : null);
     if (focusRows) {
       document.getElementById('soaRows').innerHTML = focusRows.length
         ? soaGroupedRowsHtml(activeFw, focusRows)
@@ -6420,16 +6465,24 @@ function showModal(opts) {
           return !d.version || !d.owner || !d.nextReview;
         }).length
       : 0;
-    function tile(value, label, tone) {
-      return '<div class="card kpi"><b' + (tone ? ' style="color:var(--' + tone + ')"' : '') + '>' + value + '</b><span>' + label + '</span></div>';
+    /* These six were plain divs: no .kpi-num wrapper, no data-count (so
+       no count-up like every other strip in the app) and nothing to
+       click, while the identical-looking tiles on the Statement of
+       Applicability and Training both filter. Same component now, and
+       the same behaviour. */
+    var focus = window._docFocus || '';
+    function tile(key, value, label, tone) {
+      return kpiTile({ key: key, value: value, label: label, tone: tone, focus: focus,
+        action: 'App.focusDocs', title: 'Show only these documents in the register below' });
     }
     el.innerHTML =
-      tile(s.controlled, 'Controlled documents') +
-      tile(s.approved, 'Approved') +
-      tile(s.draft + s.inReview, 'Draft / in review', (s.draft + s.inReview) ? 'warn' : '') +
-      tile(s.overdue, 'Review overdue', s.overdue ? 'fail' : '') +
-      tile(s.due, 'Due within ' + window.DOC_REVIEW_WARN_DAYS + ' days', s.due ? 'warn' : '') +
-      tile(gapDocs, 'Incomplete register entry', gapDocs ? 'warn' : '');
+      tile('controlled', s.controlled, 'Controlled documents', '') +
+      tile('approved', s.approved, 'Approved', '') +
+      tile('draft', s.draft + s.inReview, 'Draft / in review', 'warn') +
+      tile('overdue', s.overdue, 'Review overdue', 'fail') +
+      tile('due', s.due, 'Due within ' + window.DOC_REVIEW_WARN_DAYS + ' days', 'warn') +
+      tile('incomplete', gapDocs, 'Incomplete register entry', 'warn');
+    runCountUps(el);
   }
 
   /* ---- policy content editor ----
@@ -6590,7 +6643,24 @@ function showModal(opts) {
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
         return '<button class="f-pill' + (cf === c ? ' on' : '') + '" aria-pressed="' + (cf === c ? 'true' : 'false') + '" data-action="App.filterDocCat" data-id="' + esc(c) + '">' + esc(c) + '</button>';
       }).join('');
-      var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
+      /* Focus wins over the category pills, and they step aside while it
+         is on — two filters over one table would make the number on the
+         tile a lie, the same reasoning the SoA's category row follows. */
+      var docFocus = window._docFocus || '';
+      var filtered;
+      if (docFocus) {
+        document.getElementById('docCatFilters').innerHTML = '';
+        filtered = window.CheckpointLib.documentFocusRows(docFocus, docs, new Date().toISOString().slice(0, 10), {
+          controlledCategories: CONTROLLED_DOC_CATEGORIES, warnDays: window.DOC_REVIEW_WARN_DAYS
+        });
+      } else {
+        filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
+      }
+      renderFocusBar('docFocusBar', docFocus ? {
+        key: docFocus, shown: filtered.length, total: docs.length,
+        label: window.CheckpointLib.documentFocusLabel(docFocus),
+        action: 'App.focusDocs', clearLabel: 'Show all documents'
+      } : null);
       if (!filtered.length) {
         rows.innerHTML = emptyState({
           kind: 'doc', asRow: true, colspan: 6,
@@ -6946,15 +7016,9 @@ function showModal(opts) {
     var sum = window.CheckpointLib.trainingSummary(S.training || [], { today: new Date().toISOString().slice(0, 10) });
     var active = window._trainingF || 'All';
     function tile(key, value, caption, sub, alert) {
-      var live = value > 0, on = active === key;
-      var tag = live ? 'button' : 'div';
-      return '<' + tag + ' class="card kpi' + (live ? ' kpi-btn' : '') + (on ? ' kpi-on' : '') + '"' +
-        (live ? ' type="button" aria-pressed="' + (on ? 'true' : 'false') +
-          '" title="' + (on ? 'Show all training records again' : 'Show only these records in the table below') +
-          '" data-action="App.focusTraining" data-id="' + key + '"' : '') +
-        '><div class="kpi-num"><b data-count="' + value + '"' +
-        (alert ? ' style="color:' + (value ? 'var(--fail)' : 'var(--gold-light)') + '"' : '') + '>' + value + '</b></div>' +
-        '<span>' + caption + '</span><div class="sub">' + sub + '</div></' + tag + '>';
+      return kpiTile({ key: key, value: value, label: caption, sub: sub, focus: active,
+        action: 'App.focusTraining', tone: alert ? 'fail' : '',
+        title: 'Show only these records in the table below' });
     }
     el.innerHTML =
       tile('Completed', sum.completed, 'Completed', 'of ' + sum.total + ' assignment' + (sum.total === 1 ? '' : 's') +
@@ -11411,6 +11475,12 @@ function showModal(opts) {
     },
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
+    /* Same toggle as the SoA's and Training's tiles. */
+    focusDocs: function (key) {
+      window._docFocus = (key && window._docFocus !== key) ? key : '';
+      if (window._docFocus) window._docCatF = 'All';
+      renderDocuments();
+    },
 
     /* Verifies the audit log's integrity chain and reports the result
        in the plain terms an assessor would want, rather than a bare

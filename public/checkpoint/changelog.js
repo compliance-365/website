@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.62.0',
+    date: '2026-09-06',
+    entries: [
+      'Every summary tile in the app now behaves the same way. Five registers had grown their own copy of the same tile, so tiles that looked identical filtered on one page, highlighted but did nothing on another, and sat completely dead on a third — the Documents register\'s six tiles were inert, and two more on Vendors and AI systems did nothing despite looking exactly like the filters beside them. There is one tile now, built in one place, with one hover.',
+      'You can also tell which tiles are clickable without hovering over them. A tile that filters carries a small chevron; a total, or a count of zero, does not — so the difference is visible at a glance instead of being something you find by moving the mouse around. A tile showing zero is drawn as an empty state rather than as a filter that would open an empty table.',
+      'The Documents register\'s tiles are now filters, like the Statement of Applicability\'s and Training\'s: click "Review overdue" to see exactly those documents. Vendors gained an "Unclassified" filter so its "Data access not classified" tile — whose own caption says an auditor checks it first — can finally be opened.'
+    ]
+  },
+  {
     version: '1.61.0',
     date: '2026-09-06',
     entries: [
