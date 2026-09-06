@@ -83,6 +83,24 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
+      - name: Minify Checkpoint's own JavaScript
+        # MUST run before the hashing step below, never after: hashing
+        # computes each file's content hash and the matching SRI digest,
+        # so minifying afterwards would change the bytes the browser
+        # receives and every integrity check would fail.
+        #
+        # This is the third manual re-implementation of a package.json
+        # postbuild step in this job (see the comment on the content-pack
+        # step below): `npx astro build` does not fire npm's postbuild
+        # lifecycle script, so anything added to that script has to be
+        # added here too. It was not when minification landed, which is
+        # why production kept serving ~2.2 MB of unminified source while
+        # local `npm run build` produced 1.2 MB. Nothing was visibly
+        # broken by that — it is purely transfer size — so there was no
+        # symptom to notice; if you add another postbuild step, add it
+        # here as well.
+        run: node scripts/minify-checkpoint-assets.mjs
+
       - name: Content-hash Checkpoint's own assets + regenerate SRI
         run: node scripts/hash-checkpoint-assets.mjs
 
