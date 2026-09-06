@@ -1893,6 +1893,33 @@ function showModal(opts) {
      report.js itself never reads S/Store/Graph directly. */
   var RC = window.ReportEngine.charts;
   var RPAL = window.ReportEngine.palette;
+  var RPAL_APP = window.ReportEngine.paletteApp;
+  /* Every legend and row-colour constant below is written in the PRINT
+     palette, because most of them feed both the exported PDF and the
+     equivalent chart on screen — CONTROL_STATUS_LEGEND, for instance,
+     is passed to RC.stackedBars() twice, once for a report figure and
+     once for the Statement of Applicability's live "status by theme".
+     So the screen palette can't be an edit to these constants; it has
+     to be a projection applied at the render site. onScreen() takes a
+     legend (or any array of rows carrying colour) and returns a copy
+     with each print hue swapped for its screen twin, leaving anything
+     it doesn't recognise alone. Wrap every {palette:'app'} call in it;
+     leave the report calls bare. See PAL_APP in report.js for why the
+     print values are wrong on a dark ground. */
+  var SCREEN_HEX = (function () {
+    var m = {}, k;
+    for (k in RPAL) if (RPAL_APP && RPAL_APP[k]) m[RPAL[k]] = RPAL_APP[k];
+    return m;
+  })();
+  function onScreen(list) {
+    return (list || []).map(function (e) {
+      var out = {}, k;
+      for (k in e) out[k] = e[k];
+      if (out.color && SCREEN_HEX[out.color]) out.color = SCREEN_HEX[out.color];
+      if (out.labelColor && SCREEN_HEX[out.labelColor]) out.labelColor = SCREEN_HEX[out.labelColor];
+      return out;
+    });
+  }
   var CONTROL_STATUS_LEGEND = [
     { label: 'Implemented', color: RPAL.good },
     { label: 'In progress', color: RPAL.warn },
@@ -4801,10 +4828,10 @@ function showModal(opts) {
     }
 
     var runwayEl = document.getElementById('actRunway');
-    if (runwayEl) runwayEl.innerHTML = RC.hbars(actionDueRunway(), { palette: 'app' });
+    if (runwayEl) runwayEl.innerHTML = RC.hbars(onScreen(actionDueRunway()), { palette: 'app' });
 
     var breakdownEl = document.getElementById('actBreakdown');
-    if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(actionPriorityBreakdown(), ACTION_STATUS_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
+    if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(onScreen(actionPriorityBreakdown()), onScreen(ACTION_STATUS_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
   }
 
   function renderActions() {
@@ -5101,7 +5128,7 @@ function showModal(opts) {
       runCountUps(kpiEl);
     }
     var chartEl = document.getElementById('vendorReviewChart');
-    if (chartEl) chartEl.innerHTML = RC.stackedBars(vendorCriticalityBreakdown(), VENDOR_STATUS_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
+    if (chartEl) chartEl.innerHTML = RC.stackedBars(onScreen(vendorCriticalityBreakdown()), onScreen(VENDOR_STATUS_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
   }
 
   function renderVendors() {
@@ -5178,7 +5205,7 @@ function showModal(opts) {
       runCountUps(kpiEl);
     }
     var chartEl = document.getElementById('aiTierChart');
-    if (chartEl) chartEl.innerHTML = RC.stackedBars(aiRiskTierBreakdown(), AI_IMPACT_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
+    if (chartEl) chartEl.innerHTML = RC.stackedBars(onScreen(aiRiskTierBreakdown()), onScreen(AI_IMPACT_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
   }
 
   /* Which ISO 42001 controls a given AI system currently evidences —
@@ -5885,7 +5912,7 @@ function showModal(opts) {
     }
 
     var themeEl = document.getElementById('soaThemeChart');
-    if (themeEl) themeEl.innerHTML = RC.stackedBars(themeGroupsFor(fw, visRows), CONTROL_STATUS_LEGEND, { palette: 'app', showValues: true, scaleByCount: true });
+    if (themeEl) themeEl.innerHTML = RC.stackedBars(themeGroupsFor(fw, visRows), onScreen(CONTROL_STATUS_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
   }
 
   function renderSoa() {
@@ -7370,7 +7397,7 @@ function showModal(opts) {
 
   function boardroomSlideActions() {
     var throughput = actionThroughputByMonth();
-    var svg = window.ReportEngine.charts.stackedBars(throughput, THROUGHPUT_LEGEND, { palette: 'app' });
+    var svg = window.ReportEngine.charts.stackedBars(throughput, onScreen(THROUGHPUT_LEGEND), { palette: 'app' });
     var od = S.actions.filter(overdue).length;
     return '<h2>Action throughput</h2><div class="bd-chart" style="max-width:820px">' + svg + '</div>' +
       '<div class="bd-num" data-count="' + od + '" style="font-size:6vw;color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '<small> overdue action' + (od === 1 ? '' : 's') + '</small></div>';
@@ -14249,7 +14276,7 @@ function showModal(opts) {
     var root = document.documentElement;
     if (isLight) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
     var themeColorMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeColorMeta) themeColorMeta.setAttribute('content', isLight ? '#FAF7F1' : '#0B0B0C');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', isLight ? '#FAF7F1' : '#08080B');
   }
 
   function bootUi(modeLabel, clientLabel) {

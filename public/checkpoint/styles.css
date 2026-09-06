@@ -6,7 +6,22 @@
 @font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;font-display:swap;src:url('fonts/fraunces.woff2') format('woff2')}
 @font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('fonts/manrope.woff2') format('woff2')}
 :root{
-  --ink:#0B0B0C; --ink-2:#141416; --charcoal:#1B1B1D;
+  /* Ground, card, raised — measured as CIE L* steps, not WCAG ratios.
+     Contrast ratio is the wrong instrument down here: its +0.05 floor
+     squashes every near-black pair into "about 1.1:1" whether they are
+     visibly different planes or not. L* is what the eye is actually
+     doing, and two adjacent large fields need roughly 5 L* before they
+     read as separate planes. The old stack was #0B0B0C / #141416 /
+     #1B1B1D — L* 3.0 / 6.4 / 9.8, so 3.3 and 3.4 apart. On a good
+     monitor in a dark room that reads; on a laptop under office light
+     the cards vanished and the 12%-white hairline was left doing all
+     the work of saying "this is a card". Now 2.3 / 7.5 / 12.3 — steps
+     of 5.3 and 4.7.
+     Every text/background pair was re-measured against these three
+     with lib.js's own contrastRatio(): the tightest are --gold on
+     --charcoal at 4.55:1 and --paper-faint on --charcoal at 4.82:1.
+     All still clear the 4.5:1 AA minimum. */
+  --ink:#08080B; --ink-2:#17161B; --charcoal:#211F27;
   /* Bare "R,G,B" triplets alongside the solid hex above — lets any
      rule that needs a translucent wash of paper/ink write
      rgba(var(--paper-rgb),X) instead of re-hardcoding the literal
@@ -14,7 +29,7 @@
      occurrences that silently stayed dark-theme-only; every one below
      now resolves through these two, so the light-theme override block
      flips them all at once). */
-  --paper-rgb:250,247,241; --ink-rgb:11,11,12;
+  --paper-rgb:250,247,241; --ink-rgb:8,8,11;
   /* --paper-faint was rgba(...,.38) — 3.37:1 against --ink, below the
      4.5:1 WCAG 2.1 AA minimum for body text. .5 measures 5.06:1 (verified
      via the standard relative-luminance formula against every dark
@@ -51,6 +66,47 @@
   --surface:var(--ink-2);
   --surface-raised:var(--charcoal);
   --surface-hover:rgba(var(--paper-rgb),.05);
+
+  /* ===== Elevation, as light rather than as a drop shadow =====
+     A black drop shadow on a near-black ground has almost nothing left
+     to darken, which is why "just add a box-shadow" does nothing here
+     and why this file went without one for so long. What actually
+     reads as an object lying on the page is three things at once, so
+     they ship as one token:
+       1. the surface being measurably lighter than the ground (above),
+       2. --edge: a 1px light-catch along the top and a 1px shade along
+          the bottom — the bevel of a physical panel picking up the
+          same overhead light everything else on the page is lit by,
+       3. a wide, soft ambient shadow that darkens the ground
+          immediately around the card, which deepens (2) by contrast.
+     --elev-1 resting card · --elev-2 lifted (hover, hero, the
+     Automation Centre) · --elev-3 floating free of the page (drawer,
+     modal, command palette, toast). --edge is exported on its own for
+     surfaces that want the bevel without the shadow.
+     The light theme redefines all of these: there the ground is the
+     LIGHTEST thing on screen, so the shadow carries the depth and the
+     bevel is nearly nothing. Never hard-code a shadow below — a
+     literal rgba(0,0,0,…) is either invisible in one theme or crude in
+     the other, which is the exact bug these tokens exist to prevent. */
+  --edge:inset 0 1px 0 rgba(255,255,255,.055),inset 0 -1px 0 rgba(0,0,0,.32);
+  --elev-1:var(--edge),0 1px 2px rgba(0,0,0,.44),0 6px 18px rgba(0,0,0,.34);
+  --elev-2:var(--edge),0 2px 4px rgba(0,0,0,.5),0 16px 38px rgba(0,0,0,.44);
+  --elev-3:var(--edge),0 4px 10px rgba(0,0,0,.5),0 30px 80px rgba(0,0,0,.6);
+  /* Ambient accent — one soft gold wash from the top-left corner, as
+     if the panel were lit by the same lamp as the brand mark. Used on
+     the two surfaces that lead a view (the Dashboard's posture hero
+     and the Automation Centre) and nowhere else: it stops meaning
+     "this is the one to read first" the moment a third thing has it. */
+  --glow:radial-gradient(ellipse 80% 130% at 0% 0%,rgba(var(--gold-rgb),.15),transparent 58%);
+
+  /* Corner radius, as three tiers rather than the six ad hoc values
+     this file had grown (3/4/6/8px, chosen per-rule). The step between
+     tiers is what makes nesting legible — a 6px control inside a 10px
+     card inside a 14px panel — and 6px on a full-width card, the old
+     default, is the single most dating detail in a dark UI.
+     sm = controls (buttons, inputs, chips), md = cards and tiles,
+     lg = panels that float above the page. */
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
 
   /* Strict type scale — six steps, everything in the stylesheet below
      now resolves to one of these (nearest-neighbour, consolidating what
@@ -101,6 +157,17 @@
   --pass:#477d54; --warn:#8c6d28; --fail:#b85050; --critical:#ca413f;
   --line:rgba(11,11,12,.14);
   --surface-hover:rgba(var(--paper-rgb),.045);
+  /* Inverted for a light ground: the bevel highlight is near-invisible
+     on white so it drops to a hairline, and the ambient shadow — which
+     had almost nothing to bite on in the dark theme — becomes the thing
+     carrying the depth. The alphas are far lower than the dark theme's:
+     the same .44 black that reads as a soft halo on #08080B reads as
+     dirt on #FAF7F1. */
+  --edge:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(11,11,12,.05);
+  --elev-1:var(--edge),0 1px 2px rgba(11,11,12,.05),0 6px 16px rgba(11,11,12,.05);
+  --elev-2:var(--edge),0 2px 4px rgba(11,11,12,.06),0 14px 32px rgba(11,11,12,.09);
+  --elev-3:var(--edge),0 4px 10px rgba(11,11,12,.08),0 30px 70px rgba(11,11,12,.17);
+  --glow:radial-gradient(ellipse 80% 130% at 0% 0%,rgba(var(--gold-rgb),.1),transparent 58%);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--ink);color:var(--paper);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;font-size:var(--fs-2)}
@@ -253,12 +320,21 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 
 /* ===== topbar / main ===== */
 .main{min-width:0}
+/* Sticky, so content scrolls THROUGH it — at .96 opacity that read as
+   a solid slab that content vanished behind. Where the browser can
+   blur what's behind it, the bar goes properly translucent and the
+   page stays visible underneath; the @supports guard keeps the opaque
+   fallback for engines that can't, where .72 alpha alone would leave
+   text scrolling legibly through the toolbar. */
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(var(--ink-rgb),.96);z-index:20}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .top{background:rgba(var(--ink-rgb),.72);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%)}
+}
 .client{display:flex;align-items:center;gap:10px;font-size:var(--fs-2);color:var(--paper-dim);min-width:0}
 .client .cname{color:var(--paper);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .right{display:flex;gap:10px;align-items:center}
 .gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
-.gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:4px;font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
+.gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:var(--r-sm);font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
 .gsearch input:hover{border-color:rgba(169,129,46,.5)}
 .gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(var(--paper-rgb),.07)}
 /* Row styling shared by the command palette below — one visual
@@ -275,7 +351,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 /* ===== command palette ===== */
 .cmdk-overlay{display:none;position:fixed;inset:0;background:rgba(11,11,12,.75);z-index:90}
 .cmdk-overlay.open{display:block}
-.cmdk{display:none;position:fixed;top:14vh;left:50%;transform:translateX(-50%);width:min(600px,calc(100% - 40px));max-height:70vh;background:var(--surface);border:1px solid var(--line);border-radius:8px;z-index:91;box-shadow:0 30px 80px rgba(0,0,0,.55);flex-direction:column;overflow:hidden}
+.cmdk{display:none;position:fixed;top:14vh;left:50%;transform:translateX(-50%);width:min(600px,calc(100% - 40px));max-height:70vh;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);z-index:91;box-shadow:var(--elev-3);flex-direction:column;overflow:hidden}
 .cmdk.open{display:flex}
 .cmdk-inputwrap{border-bottom:1px solid var(--line);flex:none}
 .cmdk-input{width:100%;background:none;border:none;color:var(--paper);font-family:Manrope;font-size:var(--fs-3);padding:18px 20px}
@@ -316,8 +392,8 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .boardroom-mode .boardroom-exit{display:inline-flex}
 .boardroom-deck{
   display:none;position:fixed;inset:0;z-index:90;
-  --ink:#0B0B0C; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
-  --paper-rgb:250,247,241; --ink-rgb:11,11,12;
+  --ink:#08080B; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
+  --paper-rgb:250,247,241; --ink-rgb:8,8,11;
   --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
   --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
   --line:rgba(255,255,255,.12);
@@ -351,7 +427,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 @media(max-width:860px){.bd-num{font-size:64px}.bd-slide{padding:32px}}
 @keyframes flashRow{0%{background:rgba(216,186,120,.35)}100%{background:transparent}}
 tr.flash{animation:flashRow 1.8s ease}
-.btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:3px;border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
+.btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:var(--r-sm);border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
 .btn:hover{background:var(--gold-light)}
 .btn:active{transform:translateY(1px)}
 .btn:disabled,.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none;transform:none}
@@ -396,7 +472,7 @@ tr.flash{animation:flashRow 1.8s ease}
    on a narrow viewport instead of blowing out the whole page's width.
    A handful of views already set this same rule inline redundantly
    (from before this was global) — harmless, not worth unwinding. */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:26px;overflow-x:auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:26px;overflow-x:auto;box-shadow:var(--elev-1)}
 .grid{display:grid;gap:19px}
 table{width:100%;border-collapse:collapse}
 /* ===== Two label tiers, deliberately =====
@@ -563,7 +639,11 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    lets the card inside actually fill the row's height rather than
    floating at its natural height beside a much taller Next 3 actions. */
 .hero-slot{display:flex}
-.kpi-hero{flex:1;display:flex;flex-direction:column;justify-content:center;padding:30px 26px}
+/* The posture score is the number this app exists to produce, so it
+   gets the ambient accent wash and sits one elevation step above the
+   strip beneath it. background-image (not the background shorthand)
+   so .card's own surface colour stays underneath the glow. */
+.kpi-hero{flex:1;display:flex;flex-direction:column;justify-content:center;padding:30px 26px;background-image:var(--glow);box-shadow:var(--elev-2)}
 .kpi-hero b{font-size:var(--fs-hero)}
 .kpi-hero b small{font-size:var(--fs-4)}
 .kpi-hero span{font-size:var(--fs-1);letter-spacing:.18em;margin-top:11px}
@@ -598,7 +678,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    verdict. The three cards are buttons because each leads directly to
    the relevant working surface; the keyboard focus state is as clear as
    the hover state. */
-.automation-centre{margin:18px 0 16px;padding:26px;border:1px solid rgba(216,186,120,.26);border-radius:8px;background:radial-gradient(ellipse 75% 120% at 0% 0%,rgba(169,129,46,.16),transparent 56%),linear-gradient(135deg,#181719,#101012);box-shadow:0 18px 42px rgba(0,0,0,.18)}
+.automation-centre{margin:18px 0 16px;padding:26px;border:1px solid rgba(var(--gold-light-rgb),.26);border-radius:var(--r-lg);background:var(--glow),linear-gradient(150deg,var(--surface),var(--ink));box-shadow:var(--elev-2)}
 .automation-centre-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
 .automation-eyebrow{display:block;color:var(--gold-light);font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
 .automation-centre h2{font-family:Fraunces,serif;font-size:clamp(1.45rem,2.5vw,2rem);font-weight:500;line-height:1.15;color:var(--paper);margin:0}
@@ -608,16 +688,16 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .automation-monitor.is-active{color:var(--pass);border-color:rgba(143,191,154,.42);background:rgba(143,191,154,.07)}
 .automation-monitor.is-active i{background:var(--pass);box-shadow:0 0 0 4px rgba(143,191,154,.12)}
 .automation-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.automation-card{appearance:none;text-align:left;color:inherit;font:inherit;cursor:pointer;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:18px;transition:transform .18s var(--ease),border-color .18s var(--ease),background .18s var(--ease),box-shadow .18s var(--ease)}
-.automation-card:hover,.automation-card:focus-visible{transform:translateY(-2px);background:rgba(216,186,120,.09);border-color:rgba(216,186,120,.55);box-shadow:0 10px 22px rgba(0,0,0,.18);outline:none}
-.automation-card:focus-visible{box-shadow:0 0 0 3px rgba(216,186,120,.28),0 10px 22px rgba(0,0,0,.18)}
+.automation-card{appearance:none;text-align:left;color:inherit;font:inherit;cursor:pointer;background:rgba(var(--paper-rgb),.035);border:1px solid rgba(var(--paper-rgb),.1);border-radius:var(--r-sm);padding:18px;transition:transform .18s var(--ease),border-color .18s var(--ease),background .18s var(--ease),box-shadow .18s var(--ease)}
+.automation-card:hover,.automation-card:focus-visible{transform:translateY(-2px);background:rgba(var(--gold-light-rgb),.09);border-color:rgba(var(--gold-light-rgb),.55);box-shadow:var(--elev-2);outline:none}
+.automation-card:focus-visible{box-shadow:0 0 0 3px rgba(var(--gold-light-rgb),.28),var(--elev-2)}
 .automation-card-kicker{display:block;font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
 .automation-card>b{display:block;font-family:Fraunces,serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
 .automation-card>b small{font-family:Manrope,sans-serif;font-size:var(--fs-2);font-weight:700;color:var(--gold-light)}
 .automation-card h3{font-size:var(--fs-2);color:var(--paper);margin:11px 0 5px}
 .automation-card p{font-size:var(--fs-1);line-height:1.55;color:var(--paper-dim);margin:0;min-height:3.2em}
 .automation-link{display:block;margin-top:14px;color:var(--gold-light);font-size:var(--fs-1);font-weight:800}
-.automation-footer{display:flex;justify-content:space-between;gap:16px;border-top:1px solid rgba(255,255,255,.1);margin-top:18px;padding-top:13px;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5}
+.automation-footer{display:flex;justify-content:space-between;gap:16px;border-top:1px solid rgba(var(--paper-rgb),.1);margin-top:18px;padding-top:13px;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5}
 .automation-footer>span{max-width:56ch}.automation-lock{color:var(--gold-light);font-size:10px;margin-right:5px}
 @media (max-width:780px){.automation-centre{padding:20px}.automation-centre-head{flex-direction:column}.automation-grid{grid-template-columns:1fr}.automation-card p{min-height:0}.automation-footer{flex-direction:column;gap:6px}}
 /* Assurance basis — deliberately NOT a red/green pass-fail scale.
@@ -633,8 +713,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .assur-asserted{color:var(--paper-dim);border-color:var(--line)}
 .assur-unsupported{color:var(--fail);border-color:color-mix(in srgb,var(--fail) 45%,transparent)}
 .grid-note{margin-top:11px;font-size:var(--fs-1);line-height:1.5;color:var(--paper-faint)}
-.kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
-.kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover)}
+/* A tile you can click now says so by rising off the page on hover,
+   not just by tinting: with a real elevation system in place the lift
+   is the cheapest available affordance, and it costs one compositor
+   property. transform is listed in the transition so the blanket
+   prefers-reduced-motion rule at the top of this file kills it. */
+.kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
+.kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2);transform:translateY(-2px)}
 .d-kv.clickable{cursor:pointer;margin:0 -8px;padding:6px 8px;border-radius:4px;transition:background .15s var(--ease)}
 .d-kv.clickable:hover{background:var(--surface-hover)}
 .board-hero{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
@@ -766,7 +851,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .settings-subdesc{font-size:var(--fs-2);color:var(--paper-dim);max-width:56ch;line-height:1.65;margin-bottom:16px}
 
 /* ===== drawer ===== */
-.drawer{position:fixed;top:0;right:-480px;width:460px;max-width:94vw;height:100vh;background:var(--surface);border-left:1px solid var(--line);z-index:50;transition:right .35s var(--ease);overflow-y:auto;padding:34px}
+.drawer{position:fixed;top:0;right:-480px;width:460px;max-width:94vw;height:100vh;background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--elev-3);z-index:50;transition:right .35s var(--ease);overflow-y:auto;padding:34px}
 .drawer.open{right:0}
 .drawer .x,.side .x{position:absolute;top:18px;right:18px;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;width:30px;height:30px;cursor:pointer;transition:border-color .15s var(--ease),color .15s var(--ease),background .15s var(--ease)}
 .drawer .x:hover,.side .x:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
@@ -798,19 +883,19 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .nav-toggle:active{background:var(--surface-hover)}
 
 /* ===== toast ===== */
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-raised);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:4px;padding:13px 22px;font-size:var(--fs-2);opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:60;pointer-events:none;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-raised);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:var(--r-sm);padding:13px 22px;font-size:var(--fs-2);opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:60;pointer-events:none;box-shadow:var(--elev-3)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* A failure must not look like a success. The default toast reads as
    confirmation — gold accent, quiet border — which is exactly wrong for
    "that didn't save". The error variant borders and accents in the fail
    colour and is announced assertively (see toast() in app.js). */
-.toast.err{border-color:rgba(212,106,106,.65);box-shadow:0 20px 50px rgba(0,0,0,.5),inset 3px 0 0 var(--fail)}
+.toast.err{border-color:rgba(212,106,106,.65);box-shadow:var(--elev-3),inset 3px 0 0 var(--fail)}
 .toast.err b{color:var(--fail)}
 
 /* ===== modal (replaces prompt()/confirm()) ===== */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,11,12,.75);z-index:90}
 .modal-overlay.open{display:block}
-.modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:31px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:31px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:var(--elev-3)}
 .modal-box.open{display:block}
 .modal-box h3{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
 .modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px;white-space:pre-line}
@@ -895,7 +980,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
    one DOM node reused by every SVG viz on the page rather than a
    per-chart tooltip element. Position is set inline (left/top) by JS;
    this only owns appearance + the fade. */
-.svg-tip{position:fixed;z-index:80;background:var(--surface-raised);border:1px solid var(--line);border-radius:4px;padding:6px 10px;font-size:11.5px;color:var(--paper);box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .12s var(--ease);max-width:240px}
+.svg-tip{position:fixed;z-index:80;background:var(--surface-raised);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 10px;font-size:11.5px;color:var(--paper);box-shadow:var(--elev-2);pointer-events:none;opacity:0;transition:opacity .12s var(--ease);max-width:240px}
 .svg-tip.on{opacity:1}
 .pc-fp-glyph{width:60px;height:60px}
 .pc-fp-glyph svg{display:block;width:100%;height:100%}
@@ -934,7 +1019,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
   .nav-toggle{display:flex;position:fixed;top:12px;left:14px;z-index:56}
   .side .nav-close{display:block}
   .side{position:fixed;top:0;left:0;height:100vh;width:min(84vw,300px);z-index:55;transform:translateX(-100%);visibility:hidden;transition:transform .3s var(--ease);box-shadow:0 0 0 transparent}
-  .side.open{transform:translateX(0);visibility:visible;box-shadow:20px 0 50px rgba(0,0,0,.4)}
+  .side.open{transform:translateX(0);visibility:visible;box-shadow:var(--elev-3)}
   .top{flex-wrap:wrap;padding:14px 16px 14px 60px;gap:10px}
   .top .client{min-width:0}
   .top .modenote{display:none}

@@ -244,8 +244,29 @@ describe('chart functions escape every caller-supplied text label', () => {
 
   test("stackedBars() — dark palette swaps the near-black row/legend text for light colors (Boardroom Mode)", () => {
     const svg = C.stackedBars([{"label":"July","values":[3,1]}], [{"label":"Done","color":"#3A7A3A"},{"label":"Open","color":"#D9D4C8","hatch":true}], { palette: 'app' });
-    assert.equal(normalizeHatchIds(svg), "<svg viewBox=\"0 0 600 104\" width=\"100%\" role=\"img\" aria-label=\"Composition by group, 1 group(s)\"><defs><pattern id=\"rpt-hatch-N\" width=\"6\" height=\"6\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><rect width=\"6\" height=\"6\" fill=\"#D9D4C8\"/><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"6\" stroke=\"#8B877D\" stroke-width=\"1.5\"/></pattern></defs><text x=\"170\" y=\"50\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"11\" fill=\"var(--paper)\">July</text><rect x=\"180\" y=\"34\" width=\"306\" height=\"24\" fill=\"#3A7A3A\"/><rect x=\"487.5\" y=\"34\" width=\"101\" height=\"24\" fill=\"url(#rpt-hatch-N)\"/><rect x=\"10\" y=\"67\" width=\"10\" height=\"10\" fill=\"#3A7A3A\"/><text x=\"25\" y=\"76\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"var(--paper-dim)\">Done</text><rect x=\"300\" y=\"67\" width=\"10\" height=\"10\" fill=\"url(#rpt-hatch-N)\"/><text x=\"315\" y=\"76\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"var(--paper-dim)\">Open</text></svg>");
+    assert.equal(normalizeHatchIds(svg), "<svg viewBox=\"0 0 600 104\" width=\"100%\" role=\"img\" aria-label=\"Composition by group, 1 group(s)\"><defs><pattern id=\"rpt-hatch-N\" width=\"6\" height=\"6\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><rect width=\"6\" height=\"6\" fill=\"#5b5666\"/><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"6\" stroke=\"#9a958c\" stroke-width=\"1.5\"/></pattern></defs><text x=\"170\" y=\"50\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"11\" fill=\"var(--paper)\">July</text><rect x=\"180\" y=\"34\" width=\"306\" height=\"24\" fill=\"#3A7A3A\"/><rect x=\"487.5\" y=\"34\" width=\"101\" height=\"24\" fill=\"url(#rpt-hatch-N)\"/><rect x=\"10\" y=\"67\" width=\"10\" height=\"10\" fill=\"#3A7A3A\"/><text x=\"25\" y=\"76\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"var(--paper-dim)\">Done</text><rect x=\"300\" y=\"67\" width=\"10\" height=\"10\" fill=\"url(#rpt-hatch-N)\"/><text x=\"315\" y=\"76\" font-family=\"Manrope,sans-serif\" font-size=\"9.5\" fill=\"var(--paper-dim)\">Open</text></svg>");
     assert.doesNotMatch(svg, /fill="#0B0B0C"|fill="#4b473e"/);
+    /* The hatch ground is the one fill stackedBars() chooses itself
+       rather than being handed, so it is the one that has to follow the
+       palette. On paper it is the near-white PAL.muted; on the app's
+       near-black card that measured 12.2:1 against the surface —
+       brighter than any real status hue on the same bar, which made
+       "not started" the loudest band on a chart whose point was the
+       other segments. */
+    assert.match(svg, /<rect width="6" height="6" fill="#5b5666"\/>/);
+    assert.doesNotMatch(svg, /fill="#D9D4C8"/);
+    /* Legend colours, by contrast, are whatever the CALLER passed —
+       report.js never remaps them, which is why #3A7A3A survives here.
+       app.js projects its own legends through onScreen() before
+       rendering instead. That split is deliberate: the same legend
+       constants feed the printed report, and it must keep print hues. */
+    assert.match(svg, /fill="#3A7A3A"/);
+  });
+
+  test("stackedBars() — the print palette keeps the print hatch", () => {
+    const svg = C.stackedBars([{"label":"July","values":[3,1]}], [{"label":"Done","color":"#3A7A3A"},{"label":"Open","color":"#D9D4C8","hatch":true}], {});
+    assert.match(svg, /<rect width="6" height="6" fill="#D9D4C8"\/>/);
+    assert.doesNotMatch(svg, /fill="#5b5666"/);
   });
 
   test("lossExceedance() — a 4-point curve", () => {

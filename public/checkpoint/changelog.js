@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.58.0',
+    date: '2026-09-06',
+    entries: [
+      'Checkpoint now has depth. Cards, tiles and panels sit on the page as objects — a light-catch along the top edge, a soft shadow beneath, and a surface that is genuinely lighter than the ground behind them — rather than being outlined in a hairline and left flat. The three planes were re-cut by perceptual lightness rather than by contrast ratio (the usual measure says almost nothing this close to black): the step from page to card roughly doubled, so cards stop disappearing on a laptop screen under office light. Clickable tiles now lift under the cursor, corners are softer, and the toolbar is frosted glass over the page instead of a near-solid slab. Every text and background pair was re-measured with the app\'s own contrast maths — the tightest is 4.55:1, still clear of the 4.5:1 AA floor — and the light theme gets its own inverted set of shadows rather than the dark theme\'s.',
+      'Fixed: charts drawn inside the app were using the report\'s printed-page palette. Those colours are chosen to sit on white paper, and on Checkpoint\'s near-black background two things went wrong with them. Severity fills were too dark to meet the 3:1 minimum for a graphic that carries meaning — "Critical" measured 2.2:1. And "Not applicable", the category meant to recede furthest, is a near-white on paper, so on a dark card it rendered as the brightest band on the bar: the one segment nobody needs to read was the one the eye went to first. In-app charts now use a screen-tuned set built from Checkpoint\'s own status colours, so a bar and the KPI tile beside it finally name the same state in the same colour. Exported PDFs and printed reports are unchanged.'
+    ]
+  },
+  {
     version: '1.57.0',
     date: '2026-09-06',
     entries: [
