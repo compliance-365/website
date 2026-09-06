@@ -1997,17 +1997,44 @@ function showModal(opts) {
      framework has no natural sub-grouping defined anywhere else in
      this app, so it falls back to one group covering every control —
      the chart still renders sensibly rather than being empty. */
+  /* Prefix -> human label for a framework's own control families, and the
+     single source of truth for them: the ISO 27001 map below was written
+     out longhand in three places (this chart's groups, the Auditor Pack's
+     theme table, and now the Statement of Applicability's row grouping),
+     which is three places to forget when a framework's own structure
+     changes. Returns null where a framework has no prefix-based family
+     structure — Essential Eight groups by parent control instead (see
+     themeGroupsFor below), and everything else has no natural grouping
+     defined anywhere in this app. */
+  function controlFamilies(fw) {
+    if (fw === 'iso27001') return [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
+    /* order matters: PI before P, CC is its own prefix */
+    if (fw === 'soc2') return [['CC', 'Common Criteria'], ['PI', 'Processing Integrity'], ['A', 'Availability'], ['C', 'Confidentiality'], ['P', 'Privacy']];
+    return null;
+  }
+
+  /* Which family a single control belongs to, by longest-matching prefix.
+     ISO-style codes are dot-segmented ("A.5.10" -> "A.5"); SOC 2's are
+     not, so the match is on the raw prefix and the family list's order
+     disambiguates (PI before P). */
+  function controlFamilyOf(fw, code) {
+    var fams = controlFamilies(fw);
+    if (!fams) return null;
+    var id = String(code || '');
+    var hit = fams.find(function (f) { return id.indexOf(f[0] + '.') === 0 || id.indexOf(f[0]) === 0; });
+    return hit ? hit[1] : null;
+  }
+
   function themeGroupsFor(fw, rows) {
     function group(label, subset) {
       var c = controlStatusCounts(subset);
       return { label: label, values: [c.implemented, c.inProgress, c.notStarted, c.notApplicable] };
     }
     if (fw === 'iso27001') {
-      var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
-      return THEMES.map(function (t) { return group(t[1], rows.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; })); });
+      return controlFamilies(fw).map(function (t) { return group(t[1], rows.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; })); });
     }
     if (fw === 'soc2') {
-      var CATS = [['CC', 'Common Criteria'], ['PI', 'Processing Integrity'], ['A', 'Availability'], ['C', 'Confidentiality'], ['P', 'Privacy']]; /* order matters: PI before P, CC is its own prefix */
+      var CATS = controlFamilies(fw);
       function inferCat(code) { return CATS.find(function (cp) { return code.indexOf(cp[0]) === 0; }); }
       return CATS.map(function (cp) { return group(cp[1], rows.filter(function (c) { var m = inferCat(c.id); return m && m[0] === cp[0]; })); });
     }
@@ -2280,7 +2307,7 @@ function showModal(opts) {
          natural theme prefix (A.5 Organizational / A.6 People /
          A.7 Physical / A.8 Technological) */
       if (activeFw === 'iso27001') {
-        var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
+        var THEMES = controlFamilies(activeFw);
         var themedHtml = '<table class="rpt-table"><thead><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr></thead><tbody>' +
           THEMES.map(function (t) {
             var group = fwControls.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; });
@@ -5270,6 +5297,47 @@ function showModal(opts) {
      the plain per-framework table and (for essential8's ML1-ML3 child
      rows) the strategy-grouped table, so toggle/status/verify/evidence
      behaviour stays identical everywhere. */
+  /* The Statement of Applicability is the longest view in the app — ISO
+     27001 alone is 93 rows, and unbroken they scroll as one undifferen-
+     tiated wall with no way to tell where you are or to find the section
+     you came for. Frameworks already publish their own structure (ISO's
+     A.5-A.8 themes, SOC 2's categories), so the table uses it: a header
+     row per family carrying its own implemented/applicable count, which
+     doubles as a progress readout you cannot get from the rows alone.
+     Frameworks with no family structure (controlFamilies() -> null) and
+     any control whose code matches no family fall through to a flat
+     list exactly as before, so nothing depends on the grouping existing. */
+  function soaGroupedRowsHtml(fw, rows) {
+    var fams = controlFamilies(fw);
+    if (!fams || !rows.length) return rows.map(renderSoaRow).join('');
+
+    var byFamily = {}, ungrouped = [];
+    rows.forEach(function (c) {
+      var fam = controlFamilyOf(fw, c.id);
+      if (fam) (byFamily[fam] = byFamily[fam] || []).push(c);
+      else ungrouped.push(c);
+    });
+
+    function familyHeader(label, subset) {
+      var applicable = subset.filter(function (c) { return c.app; });
+      var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var detail = applicable.length
+        ? impl + ' of ' + applicable.length + ' implemented'
+        : subset.length + ' control' + (subset.length === 1 ? '' : 's') + ', none applicable';
+      return '<tr class="soa-family"><th scope="rowgroup" colspan="9">' +
+        '<span>' + esc(label) + '</span><b>' + esc(detail) + '</b></th></tr>';
+    }
+
+    var out = '';
+    fams.forEach(function (f) {
+      var subset = byFamily[f[1]];
+      if (!subset || !subset.length) return;
+      out += familyHeader(f[1], subset) + subset.map(renderSoaRow).join('');
+    });
+    if (ungrouped.length) out += familyHeader('Other controls', ungrouped) + ungrouped.map(renderSoaRow).join('');
+    return out;
+  }
+
   function renderSoaRow(c) {
     var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
     var key = c.fw + '|' + c.id;
@@ -5901,7 +5969,7 @@ function showModal(opts) {
       var tableRows = (cats.length && window._soaCat && window._soaCat !== 'All')
         ? visRows.filter(function (c) { return catByCode[c.id] === window._soaCat; })
         : visRows;
-      document.getElementById('soaRows').innerHTML = tableRows.map(renderSoaRow).join('');
+      document.getElementById('soaRows').innerHTML = soaGroupedRowsHtml(activeFw, tableRows);
     }
 
     /* Scan-derived suggestions (Essential Eight maturity children, and
