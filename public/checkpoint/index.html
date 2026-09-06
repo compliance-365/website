@@ -439,7 +439,7 @@
       <div class="grid kpis kpis-compact" id="kpiRow"></div>
       <p class="grid-note" id="coverageNote"></p>
 
-      <div class="dash-section"><h2>Position</h2><p>Where this tenant stands against its frameworks, and which way it is moving.</p></div>
+      <div class="section-head"><h2>Position</h2><p>Where this tenant stands against its frameworks, and which way it is moving.</p></div>
       <div class="grid dash-2">
         <div class="card fp-card" id="fpCard" style="display:none">
           <div class="fp-head"><h3>Compliance fingerprint</h3><div class="filters" id="fpTabs" role="group" aria-label="Framework"></div></div>
@@ -469,7 +469,7 @@
         </div>
       </div>
 
-      <div class="dash-section"><h2>Operations</h2><p>What is running automatically, what has moved since the last scan, and what is overdue.</p></div>
+      <div class="section-head"><h2>Operations</h2><p>What is running automatically, what has moved since the last scan, and what is overdue.</p></div>
       <!-- Leads Operations, and stays above the monitor card on purpose:
            its own copy points the reader at "the in-tenant monitor below". -->
       <section class="automation-centre" id="automationCentre" aria-labelledby="automationCentreTitle"></section>
@@ -917,8 +917,7 @@
           <button class="btn sm" data-action="App.uploadDocument" id="docUploadBtn">Upload</button>
         </div>
       </div>
-      <h2 style="margin:26px 0 6px">Document control register</h2>
-      <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px;max-width:80ch">ISO 27001 clause 7.5.2/7.5.3 — every controlled document carries an owner, a version, an approval and a next-review date. These are real SharePoint columns on the library, so the same register is visible natively in SharePoint too.</p>
+      <div class="section-head"><h2>Document control register</h2><p>ISO 27001 clause 7.5.2/7.5.3 — every controlled document carries an owner, a version, an approval and a next-review date. These are real SharePoint columns on the library, so the same register is visible natively in SharePoint too.</p></div>
       <div class="grid kpis" id="docRegisterSummary" style="margin-bottom:16px"></div>
       <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button><button class="btn ghost sm" data-action="App.exportAllPolicies">Export all policies (ZIP)</button>
@@ -968,12 +967,12 @@
           <div id="campaignLaunchStatus" style="font-size:12.5px;margin-top:10px"></div>
         </div>
 
-        <h2 style="margin:26px 0 6px">Campaigns</h2>
+        <div class="section-head"><h2>Campaigns</h2><p>One campaign per policy version. Progress is the share of recipients who have acknowledged it.</p></div>
         <div class="card" style="padding:0 10px;margin-bottom:18px">
           <table><thead><tr><th scope="col">Campaign</th><th scope="col">Policy</th><th scope="col">Launched</th><th scope="col">Progress</th><th scope="col">Outstanding</th><th scope="col"></th></tr></thead><tbody id="campaignRows"></tbody></table>
         </div>
 
-        <h2 style="margin:26px 0 6px">All attestation records</h2>
+        <div class="section-head"><h2>All attestation records</h2><p>Every individual acknowledgement, which is what an auditor samples.</p></div>
         <div class="filters" id="attestFilters" role="group" aria-label="Filter attestations"></div>
         <div class="card" style="padding:0 10px">
           <table><thead><tr><th scope="col">Person</th><th scope="col">Policy</th><th scope="col">Version</th><th scope="col">Assigned</th><th scope="col">Acknowledged</th><th scope="col">Status</th></tr></thead><tbody id="attestRows"></tbody></table>
@@ -990,22 +989,26 @@
       <div id="trainingMain">
         <div class="vhead"><div class="rule"></div><h1>Training</h1><p>ISO 27001 A.6.3 and clause 7.2/7.3 expect awareness and competence to be delivered and demonstrated, not just offered — and an auditor samples individuals. Each course ends in a short comprehension check, and completion is recorded per person against that course version. Phishing simulation is deliberately not duplicated here; Microsoft Defender's Attack Simulation Training does that job.</p></div>
 
+        <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn sm" data-action="App.toggleNewTraining">+ Assign training</button>
+          <button class="btn ghost sm" data-action="App.assignInductionTraining">Catch up new starters</button>
+          <button class="btn ghost sm" data-action="App.exportCsv" data-id="training">Export CSV</button>
+        </div>
+        <!-- The summary strip every other register opens with, and which
+             this view was missing entirely: the Statement of Applicability,
+             Actions, Vendors, AI systems and Documents all lead with one.
+             Tiles filter the records table below, same as the SoA's. -->
+        <div class="grid kpis" id="trainingKpiRow" style="margin:0 0 18px"></div>
+
         <div class="card" id="myTrainingCard" style="margin-bottom:18px">
           <h3>My training</h3>
           <div id="myTrainingBody"></div>
         </div>
 
-        <h2 style="margin:26px 0 6px">Course catalogue</h2>
-        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 14px;max-width:80ch">Filtered to the frameworks this tenant is licensed for. Anyone can read a course at any time — completion is only recorded against an assignment.</p>
-        <div class="grid kpis" id="courseCatalogue" style="margin-bottom:18px"></div>
+        <div class="section-head"><h2>Course catalogue</h2><p>Filtered to the frameworks this tenant is licensed for. Anyone can read a course at any time — completion is only recorded against an assignment.</p></div>
+        <div class="grid card-grid" id="courseCatalogue" style="margin-bottom:18px"></div>
 
         <div id="trainingAdminWrap">
-          <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn sm" data-action="App.toggleNewTraining">+ Assign training</button>
-            <button class="btn ghost sm" data-action="App.assignInductionTraining">Catch up new starters</button>
-            <button class="btn ghost sm" data-action="App.exportCsv" data-id="training">Export CSV</button>
-          </div>
-
           <div class="card" id="newTrainingPanel" style="margin-bottom:18px;display:none">
             <h3>Assign a course</h3>
             <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">One record is created per person, against this exact course version. Anyone who already has an open assignment for this course is skipped rather than duplicated.</p>
@@ -1031,12 +1034,12 @@
             <div id="trainingAssignStatus" style="font-size:12.5px;margin-top:10px"></div>
           </div>
 
-          <h2 style="margin:26px 0 6px">Training campaigns</h2>
+          <div class="section-head"><h2>Training campaigns</h2><p>One campaign per assignment run. Completion is the share of recipients who have passed the comprehension check.</p></div>
           <div class="card" style="padding:0 10px;margin-bottom:18px">
             <table><thead><tr><th scope="col">Campaign</th><th scope="col">Course</th><th scope="col">Assigned</th><th scope="col">Completion</th><th scope="col">Outstanding</th><th scope="col"></th></tr></thead><tbody id="trainingCampaignRows"></tbody></table>
           </div>
 
-          <h2 style="margin:26px 0 6px">All training records</h2>
+          <div class="section-head"><h2>All training records</h2><p>Every individual assignment, which is what an auditor samples.</p></div>
           <div class="filters" id="trainingFilters" role="group" aria-label="Filter training records"></div>
           <div class="card" style="padding:0 10px">
             <table><thead><tr><th scope="col">Person</th><th scope="col">Course</th><th scope="col">Version</th><th scope="col">Assigned</th><th scope="col">Completed</th><th scope="col">Score</th><th scope="col">Status</th></tr></thead><tbody id="trainingRows"></tbody></table>

@@ -6924,7 +6924,45 @@ function showModal(opts) {
     revealRows(rows);
   }
 
-  var TRAINING_FILTERS = ['All', 'Outstanding', 'Completed', 'Exempt'];
+  /* 'Overdue' joins the pills so the tile above can select it — a tile
+     that filters to a state the pill row cannot express would leave the
+     two disagreeing about what the table is showing. */
+  var TRAINING_FILTERS = ['All', 'Outstanding', 'Overdue', 'Completed', 'Exempt'];
+
+  /* Same wrapper reasoning as soaFocusRows(): lib.js stays pure, this
+     supplies today's date, and the tile's number and the table's rows
+     are therefore the same list. */
+  function trainingFocusRows(key) {
+    return window.CheckpointLib.trainingFocusRows(key, S.training || [], { today: new Date().toISOString().slice(0, 10) });
+  }
+
+  /* The summary strip this view never had. Every other register opens
+     with one (see the SoA, Actions, Vendors, AI systems, Documents), and
+     without it Training answered "what courses exist" before "who still
+     owes me one" — which is the only question an audit asks of it. */
+  function renderTrainingSummary() {
+    var el = document.getElementById('trainingKpiRow');
+    if (!el) return;
+    var sum = window.CheckpointLib.trainingSummary(S.training || [], { today: new Date().toISOString().slice(0, 10) });
+    var active = window._trainingF || 'All';
+    function tile(key, value, caption, sub, alert) {
+      var live = value > 0, on = active === key;
+      var tag = live ? 'button' : 'div';
+      return '<' + tag + ' class="card kpi' + (live ? ' kpi-btn' : '') + (on ? ' kpi-on' : '') + '"' +
+        (live ? ' type="button" aria-pressed="' + (on ? 'true' : 'false') +
+          '" title="' + (on ? 'Show all training records again' : 'Show only these records in the table below') +
+          '" data-action="App.focusTraining" data-id="' + key + '"' : '') +
+        '><div class="kpi-num"><b data-count="' + value + '"' +
+        (alert ? ' style="color:' + (value ? 'var(--fail)' : 'var(--gold-light)') + '"' : '') + '>' + value + '</b></div>' +
+        '<span>' + caption + '</span><div class="sub">' + sub + '</div></' + tag + '>';
+    }
+    el.innerHTML =
+      tile('Completed', sum.completed, 'Completed', 'of ' + sum.total + ' assignment' + (sum.total === 1 ? '' : 's') +
+        (sum.exempt ? '<br>' + sum.exempt + ' exempt' : ''), false) +
+      tile('Outstanding', sum.outstanding, 'Outstanding', 'assigned, not yet passed', false) +
+      tile('Overdue', sum.overdue, 'Overdue', 'past their due date', true);
+    runCountUps(el);
+  }
 
   function renderTrainingRecords() {
     var rows = document.getElementById('trainingRows');
@@ -6936,9 +6974,13 @@ function showModal(opts) {
     var all = (S.training || []).slice().sort(function (a, b) {
       return (b.assigned || '').localeCompare(a.assigned || '') || (a.userName || '').localeCompare(b.userName || '');
     });
-    var list = f === 'All' ? all
-      : f === 'Outstanding' ? all.filter(function (t) { return t.status !== 'Completed' && t.status !== 'Exempt'; })
-      : all.filter(function (t) { return t.status === f; });
+    /* One definition behind the pill, the tile and the rows — see
+       trainingFocusRows(). The list is sliced from the already-sorted
+       `all` so filtering never reorders the table under you. */
+    var keep = {};
+    window.CheckpointLib.trainingFocusRows(f, all, { today: new Date().toISOString().slice(0, 10) })
+      .forEach(function (t) { keep[t.id != null ? t.id : (t.upn + '|' + t.courseId + '|' + t.assigned)] = true; });
+    var list = all.filter(function (t) { return keep[t.id != null ? t.id : (t.upn + '|' + t.courseId + '|' + t.assigned)]; });
     if (!list.length) {
       rows.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No training records' + (f === 'All' ? ' yet' : ' matching this filter') + '.</td></tr>';
       return;
@@ -7039,6 +7081,7 @@ function showModal(opts) {
   }
 
   function renderTraining() {
+    renderTrainingSummary();
     renderMyTraining();
     renderCourseCatalogue();
     renderTrainingCampaigns();
@@ -11509,7 +11552,16 @@ function showModal(opts) {
       toast('Exported as an uncontrolled Word copy.');
     },
     filterAttest: function (f) { window._attestF = f; renderAttestationRecords(); },
-    filterTraining: function (f) { window._trainingF = f; renderTrainingRecords(); },
+    filterTraining: function (f) { window._trainingF = f; renderTrainingSummary(); renderTrainingRecords(); },
+    /* Clicking the active tile clears back to All, same toggle the
+       Statement of Applicability's tiles use. */
+    focusTraining: function (key) {
+      window._trainingF = (key && window._trainingF !== key) ? key : 'All';
+      renderTrainingSummary();
+      renderTrainingRecords();
+      var el = document.getElementById('trainingFilters');
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    },
 
     openCourse: function (courseId) { renderCourseReader(courseId); },
     closeCourse: function () {

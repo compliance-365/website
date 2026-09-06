@@ -641,6 +641,11 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    first four are one distribution (implemented/in progress/not
    started/excluded) already drawn as a chart directly beneath them. */
 .kpis{grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:13px}
+/* Content cards, not numbers. The course catalogue used .kpis, whose
+   175px track is sized for a big figure and a caption — a course card
+   carries a title, a meta line, an audience sentence and a button, and
+   at 175px that wraps into a column of fragments. */
+.card-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:13px}
 .kpi .kpi-num{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
 .kpi b{display:block;font-weight:800;font-size:var(--fs-6);color:var(--gold-light);line-height:1.1}
 .kpi b small{font-size:var(--fs-3);color:var(--paper-dim);font-weight:500}
@@ -662,7 +667,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
                   than the shared .kpis above so they read as supporting
                   detail. The narrower track also keeps 5-6 tiles on one
                   row instead of orphaning the last ones onto a second.
-     .dash-section a labelled rule dividing "Position" (where we stand)
+     .section-head a labelled rule dividing "Position" (where we stand)
                   from "Operations" (what's moving and what's overdue). */
 .dash-hero{grid-template-columns:minmax(0,4fr) minmax(0,8fr);align-items:stretch;margin-bottom:16px}
 /* Next 3 actions hides itself when there's nothing to rank; the score
@@ -718,12 +723,27 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .status-quiet.sq-pass{color:var(--pass)}
 .status-quiet.sq-warn{color:var(--warn)}
 .status-quiet.sq-none{color:var(--paper-faint)}
-.dash-section{margin:36px 0 18px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
-.dash-section h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);color:var(--paper)}
-.dash-section p{margin:0;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5}
+/* ===== One section heading for the whole app =====
+   Was .dash-section, used only on the Dashboard. Meanwhile Training,
+   Documents and Attestations divided themselves with bare <h2> tags —
+   and NOTHING in this file matched a bare h2 (every h2 rule here is
+   scoped: .bd-slide h2, .drawer h2, .automation-centre h2, this one).
+   So those six headings rendered at the browser's default: Manrope
+   19.5px/700, against the Dashboard's Fraunces 20px/500. Same size,
+   different family, different weight — near enough to read as a
+   mistake rather than as a decision, which is exactly how it looked.
+   Renamed rather than aliased so there is one name for one thing; the
+   Dashboard's two usages moved with it. */
+.section-head{margin:36px 0 18px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.section-head h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);color:var(--paper);margin:0}
+.section-head p{margin:0;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5;max-width:80ch}
+/* The first section in a view sits right under the .vhead intro, which
+   already separates it — a second rule and 36px of air there reads as a
+   gap rather than as structure. */
+.vhead + .section-head{margin-top:22px;padding-top:0;border-top:none}
 /* The section header already supplies the separation whatever follows it
    would otherwise double up on. */
-.dash-section + .grid,.dash-section + .card,.dash-section + .automation-centre{margin-top:0}
+.section-head + .grid,.section-head + .card,.section-head + .automation-centre,.section-head + .filters{margin-top:0}
 @media(max-width:1000px){.dash-hero{grid-template-columns:1fr}}
 
 /* Automation Centre: the Dashboard's operational answer to "what is

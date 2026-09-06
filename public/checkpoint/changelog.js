@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.61.0',
+    date: '2026-09-06',
+    entries: [
+      'Section headings now look the same everywhere. Training, Documents and Policy attestation divided themselves with headings that nothing in the stylesheet actually styled, so they fell back to the browser default — a bold sans-serif, against the serif the Dashboard uses. Same size, different typeface, which reads as a mistake rather than a decision. All eight section headings across the app now share one treatment: a rule, a serif heading, and a line of explanation beside it.',
+      'Training now opens like every other register. It has the summary strip the Statement of Applicability, Actions, Vendors, AI systems and Documents all lead with — completed, outstanding, and overdue — where before it opened with the course catalogue, answering "what courses exist" ahead of "who still owes me one". The tiles filter the records table, the same way the Statement of Applicability\'s do, and "Overdue" joins the filter row so the tiles and pills always agree. The assign/export buttons moved up under the introduction, where every other register keeps them.',
+      'The course catalogue was laid out on the grid built for numeric summary tiles, whose 175px columns wrapped each course into a column of fragments. It now uses a grid sized for cards.'
+    ]
+  },
+  {
     version: '1.60.0',
     date: '2026-09-06',
     entries: [
