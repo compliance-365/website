@@ -14276,7 +14276,7 @@ function showModal(opts) {
     var root = document.documentElement;
     if (isLight) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
     var themeColorMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeColorMeta) themeColorMeta.setAttribute('content', isLight ? '#FAF7F1' : '#08080B');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', isLight ? '#FAF7F1' : '#06060A');
   }
 
   function bootUi(modeLabel, clientLabel) {

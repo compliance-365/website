@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.59.0',
+    date: '2026-09-06',
+    entries: [
+      'The depth introduced in the last release was too subtle to read on most screens, so it is turned up. The gap between the page and a card is 58% larger, shadows are three layers deep instead of two, corners are rounder, and a tile lifts further when you hover it. Cards now read as objects sitting on the page rather than as outlines drawn on it. This is as far as the palette goes: the brand gold is the darkest colour the app uses as text, and one more step of lightness on the card would take it under the 4.5:1 accessibility minimum, so the ceiling is measured rather than chosen.',
+      'Fixed: in the light theme, the surface used for toasts and tooltips was darker than the cards it floats above — backwards for something meant to sit closer to you — and dark enough that every status colour on it measured about 4.15:1, under the 4.5:1 minimum for text. Those colours had been tuned against the page background and never re-checked against this one. It is now the same white as a card and separates by its shadow instead, which is how the dark theme already handled it. Worst pair on that surface is now 4.84:1.'
+    ]
+  },
+  {
     version: '1.58.0',
     date: '2026-09-06',
     entries: [

@@ -17,11 +17,25 @@
      the cards vanished and the 12%-white hairline was left doing all
      the work of saying "this is a card". Now 2.3 / 7.5 / 12.3 — steps
      of 5.3 and 4.7.
-     Every text/background pair was re-measured against these three
-     with lib.js's own contrastRatio(): the tightest are --gold on
-     --charcoal at 4.55:1 and --paper-faint on --charcoal at 4.82:1.
-     All still clear the 4.5:1 AA minimum. */
-  --ink:#08080B; --ink-2:#17161B; --charcoal:#211F27;
+     Every text/background pair is re-measured against these three with
+     lib.js's own contrastRatio() whenever they move.
+
+     The card tier is now as light as this palette can make it. --gold
+     (#A9812E) is the binding constraint: it is the darkest token the
+     app ever uses AS TEXT (card titles, the CHECKPOINT rail label, the
+     brand mark's "365"), and it measures 4.77:1 on the card and 4.60:1
+     on the raised surface. One more step of lightness on either takes
+     it under 4.5:1, so this is a measured ceiling, not a guess — the
+     only way past it is to change the brand gold, which is a different
+     decision than "more depth".
+
+     That ceiling is spent on the card tier deliberately, because the
+     card is what a practitioner looks at all day. It leaves the raised
+     tier only 1.6 L* above the card, so raised surfaces (toast,
+     tooltip, popover) no longer separate by lightness — they separate
+     by --elev-3, which is what actually reads as "floating free of the
+     page" for something that overlaps other content anyway. */
+  --ink:#06060A; --ink-2:#1C1B22; --charcoal:#201E26;
   /* Bare "R,G,B" triplets alongside the solid hex above — lets any
      rule that needs a translucent wash of paper/ink write
      rgba(var(--paper-rgb),X) instead of re-hardcoding the literal
@@ -29,7 +43,7 @@
      occurrences that silently stayed dark-theme-only; every one below
      now resolves through these two, so the light-theme override block
      flips them all at once). */
-  --paper-rgb:250,247,241; --ink-rgb:8,8,11;
+  --paper-rgb:250,247,241; --ink-rgb:6,6,10;
   /* --paper-faint was rgba(...,.38) — 3.37:1 against --ink, below the
      4.5:1 WCAG 2.1 AA minimum for body text. .5 measures 5.06:1 (verified
      via the standard relative-luminance formula against every dark
@@ -87,17 +101,21 @@
      LIGHTEST thing on screen, so the shadow carries the depth and the
      bevel is nearly nothing. Never hard-code a shadow below — a
      literal rgba(0,0,0,…) is either invisible in one theme or crude in
-     the other, which is the exact bug these tokens exist to prevent. */
-  --edge:inset 0 1px 0 rgba(255,255,255,.055),inset 0 -1px 0 rgba(0,0,0,.32);
-  --elev-1:var(--edge),0 1px 2px rgba(0,0,0,.44),0 6px 18px rgba(0,0,0,.34);
-  --elev-2:var(--edge),0 2px 4px rgba(0,0,0,.5),0 16px 38px rgba(0,0,0,.44);
-  --elev-3:var(--edge),0 4px 10px rgba(0,0,0,.5),0 30px 80px rgba(0,0,0,.6);
+     the other, which is the exact bug these tokens exist to prevent.
+     Each level is three shadows, not one: a tight contact shadow that
+     pins the edge to the page, a mid shadow that gives it thickness,
+     and a wide ambient one. A single blurred shadow reads as a sticker;
+     the three together read as an object with a height. */
+  --edge:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.45);
+  --elev-1:var(--edge),0 1px 2px rgba(0,0,0,.55),0 4px 10px rgba(0,0,0,.42),0 14px 34px rgba(0,0,0,.42);
+  --elev-2:var(--edge),0 2px 4px rgba(0,0,0,.6),0 8px 18px rgba(0,0,0,.5),0 26px 60px rgba(0,0,0,.52);
+  --elev-3:var(--edge),0 4px 10px rgba(0,0,0,.6),0 14px 30px rgba(0,0,0,.55),0 40px 90px rgba(0,0,0,.65);
   /* Ambient accent — one soft gold wash from the top-left corner, as
      if the panel were lit by the same lamp as the brand mark. Used on
      the two surfaces that lead a view (the Dashboard's posture hero
      and the Automation Centre) and nowhere else: it stops meaning
      "this is the one to read first" the moment a third thing has it. */
-  --glow:radial-gradient(ellipse 80% 130% at 0% 0%,rgba(var(--gold-rgb),.15),transparent 58%);
+  --glow:radial-gradient(ellipse 80% 130% at 0% 0%,rgba(var(--gold-rgb),.2),transparent 60%);
 
   /* Corner radius, as three tiers rather than the six ad hoc values
      this file had grown (3/4/6/8px, chosen per-rule). The step between
@@ -106,7 +124,7 @@
      default, is the single most dating detail in a dark UI.
      sm = controls (buttons, inputs, chips), md = cards and tiles,
      lg = panels that float above the page. */
-  --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --r-sm:8px; --r-md:14px; --r-lg:20px;
 
   /* Strict type scale — six steps, everything in the stylesheet below
      now resolves to one of these (nearest-neighbour, consolidating what
@@ -147,7 +165,17 @@
    the same green/gold/red family, just legible as light-theme text
    instead of only as a dark-theme accent. */
 :root[data-theme="light"]{
-  --ink:#FAF7F1; --ink-2:#FFFFFF; --charcoal:#F1EDE3;
+  /* --charcoal (--surface-raised) was #F1EDE3 — DARKER than the card
+     it is supposed to float above, which is backwards, and dark enough
+     that every status hue measured 4.14-4.18:1 on it, under the 4.5:1
+     AA floor. (The light-theme hues below were tuned against --ink,
+     the page ground, and never re-checked against this surface.) It
+     cannot go lighter than the card, since the card is already white,
+     so it matches the card and separates by --elev-3 alone — the same
+     rule the dark theme's raised tier follows, for the same reason:
+     a surface that overlaps other content is read as floating by its
+     shadow, not by its lightness. Worst pair on it is now 4.84:1. */
+  --ink:#FAF7F1; --ink-2:#FFFFFF; --charcoal:#FFFFFF;
   --paper-rgb:11,11,12; --ink-rgb:250,247,241;
   /* .52 (this token's dark-theme alpha) measures only 3.88:1 against
      #FAF7F1 — .6 clears 4.5:1 (verified: 5.09:1). --paper-dim's .68
@@ -161,13 +189,18 @@
      on white so it drops to a hairline, and the ambient shadow — which
      had almost nothing to bite on in the dark theme — becomes the thing
      carrying the depth. The alphas are far lower than the dark theme's:
-     the same .44 black that reads as a soft halo on #08080B reads as
+     the same black that reads as a soft halo on #06060A reads as
      dirt on #FAF7F1. */
-  --edge:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(11,11,12,.05);
-  --elev-1:var(--edge),0 1px 2px rgba(11,11,12,.05),0 6px 16px rgba(11,11,12,.05);
-  --elev-2:var(--edge),0 2px 4px rgba(11,11,12,.06),0 14px 32px rgba(11,11,12,.09);
-  --elev-3:var(--edge),0 4px 10px rgba(11,11,12,.08),0 30px 70px rgba(11,11,12,.17);
-  --glow:radial-gradient(ellipse 80% 130% at 0% 0%,rgba(var(--gold-rgb),.1),transparent 58%);
+  --edge:inset 0 1px 0 rgba(255,255,255,1),inset 0 -1px 0 rgba(11,11,12,.07);
+  --elev-1:var(--edge),0 1px 2px rgba(11,11,12,.07),0 4px 10px rgba(11,11,12,.06),0 12px 28px rgba(11,11,12,.07);
+  --elev-2:var(--edge),0 2px 4px rgba(11,11,12,.08),0 10px 22px rgba(11,11,12,.1),0 24px 50px rgba(11,11,12,.1);
+  --elev-3:var(--edge),0 6px 14px rgba(11,11,12,.1),0 20px 44px rgba(11,11,12,.14),0 44px 90px rgba(11,11,12,.18);
+  --glow:radial-gradient(ellipse 80% 130% at 0% 0%,rgba(var(--gold-rgb),.13),transparent 60%);
+  /* The light theme's GROUND cannot move the way the dark theme's card
+     did, so all of its extra depth is in the shadows above. Measured
+     against #FAF7F1, --gold/--pass/--fail land at 4.56/4.54/4.57:1 —
+     within 0.07 of the AA floor. Darkening the paper even to #F5F1E7
+     drops all three to ~4.3:1 and fails. */
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--ink);color:var(--paper);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;font-size:var(--fs-2)}
@@ -392,8 +425,8 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .boardroom-mode .boardroom-exit{display:inline-flex}
 .boardroom-deck{
   display:none;position:fixed;inset:0;z-index:90;
-  --ink:#08080B; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
-  --paper-rgb:250,247,241; --ink-rgb:8,8,11;
+  --ink:#06060A; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
+  --paper-rgb:250,247,241; --ink-rgb:6,6,10;
   --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
   --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
   --line:rgba(255,255,255,.12);
@@ -719,7 +752,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    property. transform is listed in the transition so the blanket
    prefers-reduced-motion rule at the top of this file kills it. */
 .kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
-.kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2);transform:translateY(-2px)}
+.kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2);transform:translateY(-3px)}
 .d-kv.clickable{cursor:pointer;margin:0 -8px;padding:6px 8px;border-radius:4px;transition:background .15s var(--ease)}
 .d-kv.clickable:hover{background:var(--surface-hover)}
 .board-hero{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
