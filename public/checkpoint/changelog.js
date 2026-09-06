@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.56.0',
+    date: '2026-09-06',
+    entries: [
+      'The Statement of Applicability is now grouped by control family. It is the longest view in the app — ISO 27001 alone runs 93 rows — and unbroken they scrolled as one undifferentiated wall with no way to tell where you were. Each family (Organizational, People, Physical and Technological controls for ISO 27001; the category groups for SOC 2) now gets a sticky header carrying its own "8 of 37 implemented" count, so the structure the framework already publishes is visible while you scroll, and each section reports its own progress.',
+      'Typography: tracked-out small-caps now marks one thing — a boundary. Nav groups, card titles, section eyebrows and buttons keep it; table headers, KPI captions, form field labels, chart legends and timestamps move to sentence case at a slightly larger size. Previously every label in the app carried the same treatment, which meant none of them ranked and the eye had nothing to sort by. Nothing moved, nothing was renamed — the same words are simply easier to read and now sit in a clear order.'
+    ]
+  },
+  {
     version: '1.55.0',
     date: '2026-09-06',
     entries: [

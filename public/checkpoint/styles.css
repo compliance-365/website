@@ -399,7 +399,21 @@ tr.flash{animation:flashRow 1.8s ease}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:26px;overflow-x:auto}
 .grid{display:grid;gap:19px}
 table{width:100%;border-collapse:collapse}
-th{font-size:var(--fs-eyebrow);letter-spacing:.18em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;text-align:left;padding:12px 14px;border-bottom:1px solid var(--line)}
+/* ===== Two label tiers, deliberately =====
+   Tracked-out small-caps is this app's signature, and it was applied to
+   every label in it — nav groups, card titles, table headers, KPI
+   captions, form labels, chart legends, timestamps. When every label is
+   a LABEL, none of them rank, and the treatment stops meaning anything.
+   So it now marks exactly one tier:
+     SMALL-CAPS  a boundary — nav group, card title, section eyebrow,
+                 settings subhead, button. "A new part of the page."
+     SENTENCE    a label ON data — table header, KPI caption, form field,
+                 legend, timestamp. These name a value; they are read,
+                 not scanned, and lowercase is simply faster to read.
+   Sentence-case labels also step up from 9.5px to 11px: lowercase has
+   less presence than caps at the same size, and the tracking that made
+   caps legible is what makes lowercase look loose, so it goes too. */
+th{font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);font-weight:700;text-align:left;padding:12px 14px;border-bottom:1px solid var(--line)}
 td{padding:14px;border-bottom:1px solid var(--line);font-size:var(--fs-2);color:var(--paper-dim);vertical-align:middle}
 /* Evidence drawer's per-check data table (App.viewEvidence/
    renderEvidenceData in app.js) — the drawer is much narrower than a
@@ -458,7 +472,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .spark-caption{display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-1);color:var(--paper-faint);margin-bottom:8px;gap:10px}
 .spark-caption b{color:var(--paper-dim);font-weight:800}
 .spark-caption .gold-t{font-size:var(--fs-3)}
-.spark-legend{display:flex;gap:18px;margin-top:10px;font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint)}
+.spark-legend{display:flex;gap:18px;margin-top:10px;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint)}
 .spark-legend span{display:flex;align-items:center;gap:6px}
 .spark-legend i{width:14px;height:2px;display:inline-block;border-radius:2px}
 .roadmap-label{font-size:var(--fs-1);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:700;margin-bottom:14px}
@@ -522,7 +536,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi b{display:block;font-weight:800;font-size:var(--fs-6);color:var(--gold-light);line-height:1.1}
 .kpi b small{font-size:var(--fs-3);color:var(--paper-dim);font-weight:500}
 .kpi .trend{font-size:var(--fs-2);font-weight:800;white-space:nowrap}
-.kpi span{display:block;margin-top:7px;font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
+.kpi span{display:block;margin-top:7px;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);font-weight:700}
 .kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.4}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%}
 .kpi .dot{margin-right:4px}
@@ -628,7 +642,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .board-tile b{font-size:var(--fs-hero);font-weight:800;color:var(--gold-light);line-height:1;display:block}
 .board-tile b small{font-size:var(--fs-4);color:var(--paper-dim);font-weight:500}
 .board-tile b .trend{font-size:var(--fs-3);margin-left:4px}
-.board-tile span{display:block;margin-top:12px;font-size:var(--fs-1);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
+.board-tile span{display:block;margin-top:12px;font-size:var(--fs-2);letter-spacing:.01em;color:var(--paper-faint);font-weight:700}
 .dash-2{grid-template-columns:minmax(0,7fr) minmax(0,5fr);margin-top:16px;align-items:start}
 @media(max-width:1000px){.dash-2{grid-template-columns:1fr}}
 .card h3{font-size:var(--fs-1);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
@@ -638,13 +652,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .cell:hover{transform:scale(1.06);filter:brightness(1.15)}
 .cell.on{outline:2px solid var(--gold-light);outline-offset:1px}
 .heat-legend{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
-.heat-legend span{display:flex;align-items:center;gap:7px;font-size:var(--fs-eyebrow);letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
+.heat-legend span{display:flex;align-items:center;gap:7px;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);font-weight:700}
 .heat-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
 .spark{width:100%;height:64px;margin-top:4px}
 .feed{list-style:none;max-height:340px;overflow:auto}
 .feed li{padding:11px 0;border-bottom:1px solid var(--line);font-size:var(--fs-2);color:var(--paper-dim);line-height:1.55}
 .feed li:last-child{border-bottom:none}
-.feed time{display:block;font-size:var(--fs-eyebrow);letter-spacing:.12em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:3px}
+.feed time{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:3px}
 .feed b{color:var(--gold-light)}
 
 /* ===== scan ===== */
@@ -766,7 +780,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .score-pair{display:flex;gap:14px}
 .score-box{flex:1;border:1px solid var(--line);border-radius:6px;padding:14px;text-align:center}
 .score-box b{font-size:var(--fs-5);font-weight:800;display:block}
-.score-box span{font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint)}
+.score-box span{font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint)}
 .overlay,.nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
 .overlay.open,.nav-overlay.open{opacity:1;pointer-events:auto}
 
@@ -801,7 +815,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .modal-box h3{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
 .modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px;white-space:pre-line}
 .modal-box .m-field{margin-bottom:12px}
-.modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px}
+.modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:6px}
 .modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
 .modal-box .m-field input:hover,.modal-box .m-field textarea:hover,.modal-box .m-field select:hover{border-color:rgba(169,129,46,.6)}
 .modal-box .m-field input:focus,.modal-box .m-field textarea:focus,.modal-box .m-field select:focus{outline:none;border-color:var(--gold)}
@@ -839,8 +853,15 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .cx-empty a.btn{color:var(--ink)}
 /* The controls with no overlap are still reachable, just not in the way
    of the ones that matter — collapsed by default. */
+/* Statement of Applicability family headers. Sticky, because the whole
+   point is knowing which family you are in 60 rows down; the offset
+   clears the table's own sticky <thead>. Sits ON the table surface
+   rather than in a card of its own so it reads as part of the list. */
+.soa-family th{position:sticky;top:38px;z-index:2;background:var(--surface-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 14px;text-transform:none;letter-spacing:0}
+.soa-family span{color:var(--gold);font-size:var(--fs-2);font-weight:700;letter-spacing:.02em}
+.soa-family b{float:right;color:var(--paper-faint);font-size:var(--fs-1);font-weight:600}
 .cx-rest{margin-top:16px}
-.cx-rest>summary{cursor:pointer;color:var(--paper-faint);font-size:var(--fs-1);letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:10px 0}
+.cx-rest>summary{cursor:pointer;color:var(--paper-faint);font-size:var(--fs-2);letter-spacing:.01em;font-weight:700;padding:10px 0}
 .cx-rest>summary:hover{color:var(--gold-light)}
 .cx-rest[open]>summary{margin-bottom:10px}
 .cx-count{color:var(--paper-faint);font-size:11.5px;margin:6px 0 14px}
