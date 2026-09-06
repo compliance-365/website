@@ -4157,7 +4157,6 @@ function showModal(opts) {
      (App.openControlGuidance), matching the Statement of Applicability's
      own "click the title" convention rather than inventing a new one. */
   window._cxFwFilter = null; /* null = all entitled frameworks shown */
-  window._cxLeverageOnly = false; /* only show controls with at least one cross-framework match */
 
   /* Builds (or returns the cached) node/edge set for every entitled
      framework's visible controls — "visible", not just "applicable", so
@@ -4176,13 +4175,19 @@ function showModal(opts) {
     return window._cx;
   }
 
-  function constellationStatusChip(row) {
-    if (!row.app) return '<span class="chip st-Notstarted">N/A</span>';
-    var cls = row.st === 'Implemented' ? 'st-Implemented' : row.st === 'In progress' ? 'st-Intreatment' : 'st-Notstarted';
-    return '<span class="chip ' + cls + '">' + esc(row.st || 'Not started') + '</span>';
+  /* Status reads down a whole column here, the same three or four values
+     over and over, so it uses the quiet dot treatment rather than a
+     bordered chip per row — see .status-quiet's own note in styles.css. */
+  function constellationStatusHtml(row) {
+    if (!row.app) return '<span class="status-quiet sq-none"><i></i>Not applicable</span>';
+    var cls = row.st === 'Implemented' ? 'sq-pass' : row.st === 'In progress' ? 'sq-warn' : 'sq-none';
+    return '<span class="status-quiet ' + cls + '"><i></i>' + esc(row.st || 'Not started') + '</span>';
   }
 
-  function constellationRowHtml(row) {
+  /* `showFw` is false when every row on screen belongs to the same
+     framework — a column repeating one value down 93 rows is noise, so
+     the framework is stated once in the caption instead. */
+  function constellationRowHtml(row, showFw) {
     var key = row.fw + '|' + row.id;
     var mappedHtml = row.mappedTo.length
       ? '<div class="fw-chips">' + row.mappedTo.map(function (m) { return '<span>' + esc(fwName(m.fw)) + ' ' + esc(m.id) + '</span>'; }).join('') + '</div>'
@@ -4190,57 +4195,98 @@ function showModal(opts) {
     return '<tr>' +
       '<td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + esc(key) + '">' + esc(row.id) + '</button></td>' +
       '<td style="color:var(--paper)"><button class="lnk" data-action="App.openControlGuidance" data-id="' + esc(key) + '">' + esc(row.t) + '</button></td>' +
-      '<td>' + esc(fwName(row.fw)) + '</td>' +
-      '<td>' + constellationStatusChip(row) + '</td>' +
+      (showFw ? '<td>' + esc(fwName(row.fw)) + '</td>' : '') +
+      '<td>' + constellationStatusHtml(row) + '</td>' +
       '<td>' + mappedHtml + '</td>' +
-      '<td>' + (row.evidenceUrl ? '<span class="chip st-Implemented">Attached</span>' : '<span class="src">—</span>') + '</td>' +
+      '<td>' + (row.evidenceUrl ? '<span class="status-quiet sq-pass"><i></i>Attached</span>' : '<span class="src">—</span>') + '</td>' +
       '</tr>';
   }
 
-  /* The full Cross-framework mapping view. */
+  function constellationTableHtml(rows, showFw) {
+    return '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr>' +
+      '<th scope="col">Control</th><th scope="col">Title</th>' +
+      (showFw ? '<th scope="col">Framework</th>' : '') +
+      '<th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Evidence</th>' +
+      '</tr></thead><tbody>' + rows.map(function (r) { return constellationRowHtml(r, showFw); }).join('') + '</tbody></table></div>';
+  }
+
+  /* The full Cross-framework mapping view.
+
+     This view exists to answer one question — which controls earn credit
+     in more than one framework — so it now renders that answer rather
+     than the whole control set every time. With a single framework
+     entitled (much the commonest case) NOTHING can cross-map, and the
+     old table dutifully drew 93 rows whose "Also satisfies" cell read
+     "—" every time, under a caption that said "0 with cross-framework
+     value". That is a wall of nothing pretending to be data. Now:
+       no overlap at all -> an explanation and a way forward, no table;
+       some overlap      -> the controls that overlap, ranked, with the
+                            remainder tucked behind a disclosure. */
   function renderConstellation() {
-    var rowsEl = document.getElementById('cxRows');
-    if (!rowsEl) return;
+    var bodyEl = document.getElementById('cxBody');
+    if (!bodyEl) return;
     var entitled = entitledFrameworks();
-    var emptyEl = document.getElementById('cxEmpty');
     var pillsEl = document.getElementById('cxFwPills');
     var countEl = document.getElementById('cxCount');
-    var leverageToggleEl = document.getElementById('cxLeverageToggle');
-    var tableWrap = document.getElementById('cxTableWrap');
+
+    function setToolbar(html) { if (pillsEl) pillsEl.innerHTML = html || ''; }
+    function setCount(text) { if (countEl) countEl.textContent = text || ''; }
+
     if (!entitled.length) {
-      rowsEl.innerHTML = '';
-      if (tableWrap) tableWrap.style.display = 'none';
-      if (emptyEl) emptyEl.style.display = 'block';
-      if (pillsEl) pillsEl.innerHTML = '';
-      if (countEl) countEl.textContent = '';
+      setToolbar(''); setCount('');
+      bodyEl.innerHTML = '<div class="card cx-empty"><h3>No frameworks yet</h3>' +
+        '<p>Cross-framework credit needs at least one purchased framework. Enable one from the ' +
+        '<a href="#" data-action="App.go" data-id="frameworks">Frameworks</a> view.</p></div>';
       return;
     }
-    if (tableWrap) tableWrap.style.display = '';
-    if (emptyEl) emptyEl.style.display = 'none';
     if (window._cxFwFilter && entitled.indexOf(window._cxFwFilter) === -1) window._cxFwFilter = null;
 
     var cx = buildConstellation();
     var allRows = window.CheckpointLib.constellationTableRows(cx.nodes, cx.edges);
-    var leveragedCount = allRows.filter(function (r) { return r.leverageCount > 0; }).length;
-    var rows = allRows;
-    if (window._cxFwFilter) rows = rows.filter(function (r) { return r.fw === window._cxFwFilter; });
-    if (window._cxLeverageOnly) rows = rows.filter(function (r) { return r.leverageCount > 0; });
+    var rows = window._cxFwFilter ? allRows.filter(function (r) { return r.fw === window._cxFwFilter; }) : allRows;
+    var leveraged = rows.filter(function (r) { return r.leverageCount > 0; });
+    var rest = rows.filter(function (r) { return r.leverageCount === 0; });
 
-    if (pillsEl) {
-      pillsEl.innerHTML = '<button class="f-pill' + (!window._cxFwFilter ? ' on' : '') + '" aria-pressed="' + (!window._cxFwFilter ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="">All frameworks</button>' +
+    /* One framework in view means the Framework column would repeat a
+       single value down every row — stated once below instead. */
+    var fwInView = {};
+    rows.forEach(function (r) { fwInView[r.fw] = true; });
+    var showFw = Object.keys(fwInView).length > 1;
+
+    /* The filter pills are themselves a constant when there is only one
+       framework to filter by, so they only appear once there are two. */
+    setToolbar(entitled.length > 1
+      ? '<button class="f-pill' + (!window._cxFwFilter ? ' on' : '') + '" aria-pressed="' + (!window._cxFwFilter ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="">All frameworks</button>' +
         entitled.map(function (fw) {
           return '<button class="f-pill' + (window._cxFwFilter === fw ? ' on' : '') + '" aria-pressed="' + (window._cxFwFilter === fw ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
-        }).join('');
-    }
-    if (leverageToggleEl) {
-      leverageToggleEl.className = 'toggle' + (window._cxLeverageOnly ? ' on' : '');
-      leverageToggleEl.setAttribute('aria-checked', window._cxLeverageOnly ? 'true' : 'false');
-    }
-    if (countEl) countEl.textContent = rows.length + ' of ' + allRows.length + ' control' + (allRows.length === 1 ? '' : 's') + ' shown · ' + leveragedCount + ' with cross-framework value';
+        }).join('')
+      : '');
 
-    rowsEl.innerHTML = rows.length
-      ? rows.map(constellationRowHtml).join('')
-      : '<tr><td colspan="6" style="color:var(--paper-faint)">No controls match this filter.</td></tr>';
+    if (!leveraged.length) {
+      setCount('');
+      var only = entitled.length === 1 ? fwName(entitled[0]) : null;
+      bodyEl.innerHTML = '<div class="card cx-empty"><h3>Nothing to cross-map yet</h3>' +
+        '<p>' + (only
+          ? 'Every one of this tenant\'s ' + rows.length + ' ' + esc(only) + ' controls is the only place that requirement is tracked, because ' + esc(only) + ' is the only framework enabled.'
+          : 'None of the ' + rows.length + ' controls in view map onto a control in another enabled framework.') +
+        '</p>' +
+        '<p>A control implemented for one framework very often satisfies another — the same access-control evidence answers ISO 27001, SOC 2 and NIST CSF alike. Enable a second framework and this view becomes a worklist ranked by how much credit each piece of work earns.</p>' +
+        '<p><a href="#" class="btn sm" data-action="App.go" data-id="frameworks">Browse frameworks →</a></p></div>';
+      return;
+    }
+
+    var totalCredit = leveraged.reduce(function (sum, r) { return sum + r.leverageCount; }, 0);
+    var actionable = leveraged.filter(function (r) { return r.app && r.st !== 'Implemented'; }).length;
+    setCount(leveraged.length + ' of ' + rows.length + ' controls earn credit in more than one framework' +
+      (showFw ? '' : entitled.length === 1 ? ' · ' + fwName(entitled[0]) : '') +
+      ' · ' + totalCredit + ' cross-framework link' + (totalCredit === 1 ? '' : 's') +
+      (actionable ? ' · ' + actionable + ' still to implement' : ''));
+
+    bodyEl.innerHTML = constellationTableHtml(leveraged, showFw) +
+      (rest.length
+        ? '<details class="cx-rest"><summary>' + rest.length + ' control' + (rest.length === 1 ? '' : 's') +
+          ' with no cross-framework overlap</summary>' + constellationTableHtml(rest, showFw) + '</details>'
+        : '');
   }
 
   /* Small preview embedded in the Dashboard — the highest-leverage,
@@ -9719,7 +9765,6 @@ function showModal(opts) {
     },
 
     filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; renderConstellation(); },
-    toggleConstellationLeverageOnly: function () { window._cxLeverageOnly = !window._cxLeverageOnly; renderConstellation(); },
 
     /* Posture scan's category dashboard — see _scanCatOpen/renderScanChecks
        above. A category with no entry yet defaults per its own RAG

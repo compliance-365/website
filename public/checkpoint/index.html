@@ -512,21 +512,18 @@
       </div>
     </section>
 
-    <!-- CONTROL CONSTELLATION -->
+    <!-- CROSS-FRAMEWORK MAPPING -->
     <section class="view" id="v-constellation">
-      <div class="vhead"><div class="rule"></div><h1>Cross-framework mapping</h1><p>Every applicable — and not-yet-applicable — control across your entitled frameworks, ranked by how much cross-framework credit it earns. "Also satisfies" shows every other framework's control the registry maps it to — implement one, and everything in that row is evidenced too, so the top of this list is the highest-leverage place to start.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Cross-framework mapping</h1><p>Which controls earn credit in more than one framework. Implement one of these and every control in its "Also satisfies" column is evidenced too — so the top of this list is the highest-leverage place to spend an hour.</p></div>
       <div class="cx-toolbar">
         <div class="filters" id="cxFwPills" role="group" aria-label="Framework filter"></div>
-        <div class="cx-lens-row">
-          <span>Only cross-framework matches</span>
-          <button class="toggle" id="cxLeverageToggle" role="switch" aria-checked="false" aria-label="Show only controls that also satisfy another framework" data-action="App.toggleConstellationLeverageOnly"></button>
-        </div>
       </div>
       <p class="cx-count" id="cxCount"></p>
-      <div id="cxTableWrap" class="card" style="padding:0 10px;overflow-x:auto">
-        <table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Framework</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Evidence</th></tr></thead><tbody id="cxRows"></tbody></table>
-      </div>
-      <p id="cxEmpty" style="display:none;color:var(--paper-faint);font-size:13px">No frameworks purchased yet. Enable one from the <a href="#" data-action="App.go" data-id="frameworks" style="color:var(--gold-light)">Frameworks</a> view.</p>
+      <!-- Rendered wholesale by renderConstellation(): the shape of this
+           view changes with the data (an explanation when nothing can
+           cross-map, a ranked table when something can), so there is no
+           fixed table shell to fill in. -->
+      <div id="cxBody"></div>
     </section>
 
     <!-- SCAN -->

@@ -497,13 +497,27 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .verify-stale{color:var(--warn);font-size:var(--fs-1)}
 .evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
 .evidence-link:hover{color:var(--paper);border-color:var(--gold-light)}
-/* Shared by every view that shows a KPI strip (Financial risk analysis,
-   Actions, AI systems), so the track minimum here is tuned for tiles
-   carrying a full number + caption + detail line. The Dashboard's own
-   strip is deliberately narrower and quieter — see .kpis-compact below,
-   which is what keeps a 5- or 6-tile strip on ONE row rather than
-   orphaning the last tiles onto a second, half-empty one. */
-.kpis{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
+/* 175px, not 230px. Shared by every KPI strip in the app (Statement of
+   Applicability, Actions, Vendors, AI systems, Financial risk analysis,
+   Documents, Training); the Dashboard additionally quietens its own
+   strip via .kpis-compact below.
+
+   Measured, because an earlier comment here asserted a value the rule
+   did not carry and nobody caught it. The content column tops out at
+   1208px and the widest track that still yields N columns is:
+       columns   1280px   1440px   1600px+
+         6        151px    177px    190px
+         5        184px    216px    231px
+   At 230px a six-tile strip landed FOUR across, orphaning two on a
+   half-empty second row — the single ugliest thing in the app. 175px
+   fits all six from 1440px up, which is the common desktop case.
+   Below ~1400px six tiles still wrap to 5+1: no single track width
+   avoids that without shrinking tiles past legibility at 1280px, so
+   this is a deliberate trade, not an oversight. The real fix for the
+   worst offender is fewer tiles — the Statement of Applicability's
+   first four are one distribution (implemented/in progress/not
+   started/excluded) already drawn as a chart directly beneath them. */
+.kpis{grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:13px}
 .kpi .kpi-num{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
 .kpi b{display:block;font-weight:800;font-size:var(--fs-6);color:var(--gold-light);line-height:1.1}
 .kpi b small{font-size:var(--fs-3);color:var(--paper-dim);font-weight:500}
@@ -540,9 +554,21 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi-hero b small{font-size:var(--fs-4)}
 .kpi-hero span{font-size:var(--fs-1);letter-spacing:.18em;margin-top:11px}
 .kpi-hero .sub{font-size:var(--fs-2);margin-top:11px}
-.kpis-compact{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
+/* Track width now comes from .kpis itself; this only quietens the type,
+   so the Dashboard's strip reads as support for the hero above it. */
 .kpis-compact .kpi{padding:19px}
 .kpis-compact .kpi b{font-size:var(--fs-5)}
+/* Quiet status, for a column where the same few values repeat down every
+   row. A bordered .chip per row turns a long table into a stack of
+   high-contrast boxes competing for attention with the row content — the
+   dot carries the same colour coding at a fraction of the visual weight,
+   and sentence case stops it shouting. Chips stay where a status is the
+   exception rather than the rule. */
+.status-quiet{display:inline-flex;align-items:center;gap:7px;color:var(--paper-dim);white-space:nowrap}
+.status-quiet i{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.status-quiet.sq-pass{color:var(--pass)}
+.status-quiet.sq-warn{color:var(--warn)}
+.status-quiet.sq-none{color:var(--paper-faint)}
 .dash-section{margin:36px 0 18px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
 .dash-section h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);color:var(--paper)}
 .dash-section p{margin:0;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5}
@@ -802,7 +828,21 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
    list. Only the toolbar/count layout survives from the old view. */
 .cx-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:4px}
 .cx-toolbar .filters{margin-bottom:0}
-.cx-lens-row{display:flex;align-items:center;gap:10px;font-size:var(--fs-1);color:var(--paper-dim);letter-spacing:.04em}
+/* When nothing can cross-map, the view explains why and offers the way
+   forward instead of drawing a table of empty cells. Sized like prose,
+   not like a data panel, because that is what it is. */
+.cx-empty{max-width:70ch}
+.cx-empty h3{margin-bottom:10px}
+.cx-empty p{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.65;margin:0 0 12px}
+.cx-empty p:last-child{margin-bottom:0}
+.cx-empty a{color:var(--gold-light)}
+.cx-empty a.btn{color:var(--ink)}
+/* The controls with no overlap are still reachable, just not in the way
+   of the ones that matter — collapsed by default. */
+.cx-rest{margin-top:16px}
+.cx-rest>summary{cursor:pointer;color:var(--paper-faint);font-size:var(--fs-1);letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:10px 0}
+.cx-rest>summary:hover{color:var(--gold-light)}
+.cx-rest[open]>summary{margin-bottom:10px}
 .cx-count{color:var(--paper-faint);font-size:11.5px;margin:6px 0 14px}
 .cx-thumb-card{overflow:hidden}
 .cx-thumb-link{display:block;color:inherit;text-decoration:none}

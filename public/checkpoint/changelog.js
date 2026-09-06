@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.55.0',
+    date: '2026-09-06',
+    entries: [
+      'Rebuilt: Cross-framework mapping now answers its own question instead of listing everything. With a single framework enabled nothing can cross-map, and the view used to draw all 93 controls anyway — every "Also satisfies" cell reading "—" under a caption that said "0 with cross-framework value". It now explains why there is nothing to map and points at the frameworks catalogue. With two or more frameworks it leads with just the controls that genuinely earn credit twice, ranked, with the remainder tucked behind a collapsed disclosure: on the demo tenant that is 17 rows to read instead of 93.',
+      'The Framework column and the framework filter now appear only when more than one framework is in view — a column repeating a single value down every row is noise, so it is stated once in the caption instead. The "only cross-framework matches" toggle is gone: the view is now organised that way by default.',
+      'Status in that table reads as a small coloured dot and a sentence-case label rather than a bordered upper-case chip on every row. A long table of chips turns into a stack of high-contrast boxes competing with the row content; chips stay where a status is the exception rather than the rule.',
+      'Fixed: KPI strips across Statement of Applicability, Documents, Actions, Vendors, AI systems, Financial risk analysis and Training were laying six tiles out four-across, orphaning two on a half-empty second row. Six now fit on one row from 1440px up.'
+    ]
+  },
+  {
     version: '1.54.0',
     date: '2026-09-05',
     entries: [
