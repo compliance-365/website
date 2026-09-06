@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.60.0',
+    date: '2026-09-06',
+    entries: [
+      'The Statement of Applicability\'s summary tiles are now its filters. Click "7 overdue for review" and the table below shows exactly those seven controls, with a bar naming what you are looking at and a way back. The same applies to "Implemented", "Exclusions missing justification", and the in progress / not started / excluded counts beside them — so a number you want to act on is one click from the list behind it, instead of something to go hunting for. Clicking the same tile again clears it, and switching framework clears it too.',
+      'The number on a tile and the rows it opens now come from one definition rather than being counted separately, so they cannot drift apart. A tile with nothing behind it stays a plain figure rather than a filter that opens an empty table.'
+    ]
+  },
+  {
     version: '1.59.0',
     date: '2026-09-06',
     entries: [

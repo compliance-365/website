@@ -691,6 +691,28 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    dot carries the same colour coding at a fraction of the visual weight,
    and sentence case stops it shouting. Chips stay where a status is the
    exception rather than the rule. */
+/* ===== The SoA's summary tiles, as filters =====
+   .kpi-on marks the tile currently filtering the table. It reuses the
+   gold edge every selected control in this app uses rather than
+   inventing a "selected card" treatment, and adds a filled left bar so
+   the state survives a screenshot, a monochrome display, and the ~8% of
+   men who would not reliably see a gold border against this surface.
+   .soa-slice is the same affordance at the weight of the quiet
+   distribution line it sits in — a link, not a button, because turning
+   those three counts into buttons would rebuild the six-tile strip
+   1.57.0 deliberately collapsed. */
+.kpi-btn{appearance:none;-webkit-appearance:none;font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
+.kpi-btn:hover{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2);transform:translateY(-3px)}
+.kpi-on{border-color:var(--gold-light);background:var(--surface-hover);box-shadow:var(--elev-2),inset 3px 0 0 var(--gold)}
+.soa-mix{margin:0 0 16px;font-size:var(--fs-1);color:var(--paper-faint);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.soa-slice{font:inherit;color:inherit;padding:0;border:none;background:none;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
+.soa-slice:hover,.soa-slice:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
+.soa-slice.on{color:var(--gold-light);font-weight:700;text-decoration-color:currentColor}
+/* Sits directly above the table it describes, so "showing 2 of 93" is
+   read at the moment the short table would otherwise look like missing
+   data rather than a filter. */
+.soa-focus-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:11px 16px;border:1px solid rgba(var(--gold-light-rgb),.35);border-left:3px solid var(--gold);border-radius:var(--r-sm);background:rgba(var(--gold-rgb),.07);font-size:var(--fs-2);color:var(--paper-dim)}
+.soa-focus-bar b{color:var(--paper);font-variant-numeric:tabular-nums}
 .status-quiet{display:inline-flex;align-items:center;gap:7px;color:var(--paper-dim);white-space:nowrap}
 .status-quiet i{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 .status-quiet.sq-pass{color:var(--pass)}

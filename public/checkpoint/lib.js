@@ -254,6 +254,54 @@
     return { due: over > 0, neverVerified: false, daysOverdue: over > 0 ? over : 0 };
   }
 
+  /* ===== Statement of Applicability: the summary tiles ARE the filter =====
+     Each tile on the SoA answers a question ("2 overdue for review") and
+     clicking it should show exactly those rows. That promise only holds
+     if the number and the list come from one predicate, so they do:
+     app.js counts soaFocusRows(...).length for the tile and renders
+     soaFocusRows(...) for the table. Deriving the count one way and the
+     rows another is precisely how a tile ends up promising 2 and
+     delivering 3.
+
+     Every slice is defined over ONE input — the framework's visible rows
+     — and narrows to the applicable subset itself where that is what the
+     slice means. The distinction is not cosmetic: implemented, in
+     progress, not started and overdue are all statements about
+     APPLICABLE controls, while "excluded" and "exclusions missing
+     justification" are by definition about the ones that are not. Taking
+     the base set as a second argument would let a caller pair a slice
+     with the wrong one; it cannot here.
+
+     'notstarted' mirrors controlStatusCounts()'s own else-branch rather
+     than testing for a 'Not started' string: anything applicable that is
+     neither Implemented nor In progress counts, so a row with an empty,
+     legacy or unexpected status is surfaced instead of vanishing from
+     every slice at once. */
+  var SOA_FOCUS_SLICES = {
+    implemented: 'Implemented',
+    inprogress: 'In progress',
+    notstarted: 'Not started',
+    excluded: 'Excluded as not applicable',
+    overdue: 'Overdue for review',
+    unjustified: 'Exclusions missing justification'
+  };
+  function soaFocusLabel(key) { return SOA_FOCUS_SLICES[key] || ''; }
+  function soaFocusRows(key, visRows, opts) {
+    if (!SOA_FOCUS_SLICES[key]) return [];
+    var rows = Array.isArray(visRows) ? visRows : [];
+    var o = opts || {};
+    var applicable = rows.filter(function (c) { return c && c.app; });
+    if (key === 'implemented') return applicable.filter(function (c) { return c.st === 'Implemented'; });
+    if (key === 'inprogress') return applicable.filter(function (c) { return c.st === 'In progress'; });
+    if (key === 'notstarted') return applicable.filter(function (c) { return c.st !== 'Implemented' && c.st !== 'In progress'; });
+    if (key === 'excluded') return rows.filter(function (c) { return c && !c.app; });
+    if (key === 'unjustified') return rows.filter(function (c) { return c && !c.app && !c.just; });
+    /* Same cadence/today the rest of the app measures review staleness
+       with — passed in rather than read here, so this stays pure and a
+       test can pin "today". */
+    return applicable.filter(function (c) { return controlReviewStatus(c, o.today, o.cadenceDays).due; });
+  }
+
   /* Review state of one document-control register row (ISO 27001
      Clause 7.5.2 c) — "review and approval for suitability and
      adequacy" on a defined cadence.
@@ -3593,6 +3641,7 @@
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
     threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
+    soaFocusRows: soaFocusRows, soaFocusLabel: soaFocusLabel,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS
   };
 });

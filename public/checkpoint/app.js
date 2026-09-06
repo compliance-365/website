@@ -3093,6 +3093,18 @@ function showModal(opts) {
   function controlReviewStatus(c) {
     return window.CheckpointLib.controlReviewStatus(c, new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
   }
+  /* Rows behind one Statement of Applicability summary tile. Same wrapper
+     reasoning as controlReviewStatus() above — lib.js's soaFocusRows()
+     stays pure, this supplies today's date and the tenant's cadence, and
+     every caller therefore slices identically. renderSoaDashboard() uses
+     it for the number ON a tile and renderSoa() for the rows that tile
+     opens, so the two cannot disagree. */
+  function soaFocusRows(key, visRows) {
+    return window.CheckpointLib.soaFocusRows(key, visRows, {
+      today: new Date().toISOString().slice(0, 10),
+      cadenceDays: S.settings && S.settings.controlReviewCadenceDays
+    });
+  }
   /* generic trend badge vs a previous snapshot. higherIsBetter flips which
      direction counts as "good" (green) — a rising posture score is good, a
      rising risk/overdue count is not. */
@@ -5887,10 +5899,54 @@ function showModal(opts) {
          branch — safer than deriving notStarted by subtracting from
          app.length, which would silently assume every applicable
          control's status is one of exactly those two strings. */
-      var counts = controlStatusCounts(visRows);
-      var impl = counts.implemented, inProgress = counts.inProgress, notStarted = counts.notStarted, notApplicable = counts.notApplicable;
-      var overdue = app.filter(function (c) { return controlReviewStatus(c).due; }).length;
-      var unjustified = visRows.filter(function (c) { return !c.app && !c.just; }).length;
+      /* Every number below is the LENGTH of the row set its own tile
+         opens — see soaFocusRows(). Counting these independently (which
+         is what this did) is how a tile drifts from the list it filters
+         to, and there is no louder way to lose a practitioner's trust in
+         a compliance tool than a "2 overdue" tile that opens three rows. */
+      var impl = soaFocusRows('implemented', visRows).length;
+      var inProgress = soaFocusRows('inprogress', visRows).length;
+      var notStarted = soaFocusRows('notstarted', visRows).length;
+      var notApplicable = soaFocusRows('excluded', visRows).length;
+      var overdue = soaFocusRows('overdue', visRows).length;
+      var unjustified = soaFocusRows('unjustified', visRows).length;
+      var focus = window._soaFocus || '';
+      /* A tile with nothing behind it is not a filter — "0 overdue" is
+         already the whole answer, and opening an empty table for it just
+         costs a click and a moment of doubt. */
+      function tile(key, value, caption, sub, alert) {
+        var live = value > 0, on = focus === key;
+        /* A real <button> when it filters, a <div> when it cannot.
+           The app's action dispatch is a click listener only, so a
+           div carrying role="button" would look operable to a screen
+           reader and do nothing from the keyboard; .automation-card
+           already establishes the button-styled-as-a-card pattern this
+           reuses. aria-pressed makes it a toggle, which is what it is. */
+        var tag = live ? 'button' : 'div';
+        return '<' + tag + ' class="card kpi' + (live ? ' kpi-btn' : '') + (on ? ' kpi-on' : '') + '"' +
+          (live ? ' type="button" aria-pressed="' + (on ? 'true' : 'false') +
+            '" title="' + (on ? 'Show all controls again' : 'Show only these controls in the table below') +
+            '" data-action="App.focusSoa" data-id="' + key + '"' : '') +
+          '><div class="kpi-num"><b data-count="' + value + '"' +
+          (alert ? ' style="color:' + (value ? 'var(--fail)' : 'var(--gold-light)') + '"' : '') + '>' + value + '</b></div>' +
+          '<span>' + caption + '</span><div class="sub">' + sub + '</div></' + tag + '>';
+      }
+      /* The distribution stays one quiet line rather than three more
+         tiles (see 1.57.0), but each part of it is now the same filter
+         its own tile would have been.
+
+         It renders BESIDE the tile strip, not inside the Implemented
+         tile where it used to sit as text. That tile is now itself a
+         button, and a button cannot contain a button: the parser
+         closes the outer one and re-parents the inner ones as
+         siblings, which in a grid container turns each slice into its
+         own grid cell and tears the strip apart. Nesting them would
+         also be meaningless to a screen reader even if it parsed. */
+      function slice(key, value, label) {
+        if (!value) return '';
+        return '<button class="lnk soa-slice' + (focus === key ? ' on' : '') + '" data-action="App.focusSoa" data-id="' + key + '"' +
+          ' aria-pressed="' + (focus === key ? 'true' : 'false') + '">' + value + ' ' + label + '</button>';
+      }
       /* Three tiles, not six. Implemented / in progress / not started /
          excluded are four slices of ONE distribution, and this view
          already draws that distribution twice below: as the "Status by
@@ -5902,17 +5958,37 @@ function showModal(opts) {
          both of them exceptions an auditor asks about — no more weight
          than the parts. The distribution now rides along as one quiet
          line under the headline count. */
-      var mix = inProgress + ' in progress · ' + notStarted + ' not started' +
-        (notApplicable ? ' · ' + notApplicable + ' excluded' : '');
       kpiEl.innerHTML =
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + impl + '">' + impl + '</b></div><span>Implemented</span><div class="sub">of ' + app.length + ' applicable controls<br>' + mix + '</div></div>' +
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + overdue + '" style="color:' + (overdue ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdue + '</b></div><span>Overdue for review</span><div class="sub">not re-verified within cadence</div></div>' +
-        '<div class="card kpi"><div class="kpi-num"><b data-count="' + unjustified + '" style="color:' + (unjustified ? 'var(--fail)' : 'var(--gold-light)') + '">' + unjustified + '</b></div><span>Exclusions missing justification</span><div class="sub">an auditor checks this first</div></div>';
+        tile('implemented', impl, 'Implemented', 'of ' + app.length + ' applicable controls', false) +
+        tile('overdue', overdue, 'Overdue for review', 'not re-verified within cadence', true) +
+        tile('unjustified', unjustified, 'Exclusions missing justification', 'an auditor checks this first', true);
       runCountUps(kpiEl);
+
+      var mixEl = document.getElementById('soaMixLine');
+      if (mixEl) {
+        var mix = [slice('inprogress', inProgress, 'in progress'), slice('notstarted', notStarted, 'not started'),
+          slice('excluded', notApplicable, 'excluded')].filter(Boolean).join('<span aria-hidden="true"> · </span>');
+        mixEl.innerHTML = mix ? 'Also: ' + mix : '';
+        mixEl.hidden = !mix;
+      }
     }
 
     var themeEl = document.getElementById('soaThemeChart');
     if (themeEl) themeEl.innerHTML = RC.stackedBars(themeGroupsFor(fw, visRows), onScreen(CONTROL_STATUS_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
+  }
+
+  /* Says what the table is currently showing and how to leave. Without
+     it a filtered table is indistinguishable from a framework that
+     simply has two controls in it — the tile that filtered is above the
+     fold, the table often is not. */
+  function renderSoaFocusBar(key, rows, total) {
+    var el = document.getElementById('soaFocusBar');
+    if (!el) return;
+    if (!key || !rows) { el.innerHTML = ''; el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = '<span>Showing <b>' + rows.length + '</b> of ' + total + ' — ' +
+      esc(window.CheckpointLib.soaFocusLabel(key)).toLowerCase() + '</span>' +
+      '<button class="btn ghost sm" data-action="App.focusSoa" data-id="">Show all controls</button>';
   }
 
   function renderSoa() {
@@ -5955,8 +6031,14 @@ function showModal(opts) {
     });
     var catFiltersEl = document.getElementById('soaCatFilters');
     if (catFiltersEl) {
-      if (!cats.length) {
+      /* Category and focus are both filters over the same table, and
+         combining them would break the one promise the tiles make: the
+         number on a tile is the number of rows it opens. Focus wins and
+         the category pills step aside until it is cleared, rather than
+         staying live and quietly making the count a lie. */
+      if (window._soaFocus) {
         catFiltersEl.innerHTML = '';
+      } else if (!cats.length) {
         window._soaCat = 'All';
       } else {
         if (!window._soaCat) window._soaCat = 'All';
@@ -6003,7 +6085,24 @@ function showModal(opts) {
         '<span><i class="dot" style="background:var(--fail)"></i> ' + noneN + ' no evidence</span>';
     }
 
-    if (isE8) {
+    /* A focus is a filtered SUBSET, so it bypasses the four
+       framework-specific renderers below. Those exist to impose
+       structure on a complete control set — Essential Eight's
+       strategy/ML1-ML3 hierarchy, NIST's category/subcategory nesting,
+       SOC 2's Type II test columns — and a hierarchy drawn over an
+       arbitrary subset shows headers for branches whose children were
+       filtered out, which reads as missing data rather than as a
+       filter. The focused list is rendered flat (or family-grouped
+       where the framework has families), which is what a filtered
+       result should look like. */
+    var focusKey = window._soaFocus || '';
+    var focusRows = focusKey ? soaFocusRows(focusKey, visRows) : null;
+    renderSoaFocusBar(focusKey, focusRows, visRows.length);
+    if (focusRows) {
+      document.getElementById('soaRows').innerHTML = focusRows.length
+        ? soaGroupedRowsHtml(activeFw, focusRows)
+        : '<tr><td colspan="9" style="color:var(--paper-faint)">No controls match this filter any more. <button class="lnk" data-action="App.focusSoa" data-id="">Show all controls</button></td></tr>';
+    } else if (isE8) {
       document.getElementById('soaRows').innerHTML = renderEssential8Rows(rawRows, e8Target);
     } else if (isNistSub) {
       document.getElementById('soaRows').innerHTML = renderNistSubcategoryRows(rawRows);
@@ -10788,7 +10887,19 @@ function showModal(opts) {
       renderAiSystems(); renderNavCounts();
     },
 
-    setSoaFw: function (fw) { window._soaFw = fw; window._soaCat = 'All'; renderSoa(); },
+    /* Clicking the active tile again clears the filter, so a tile is a
+       toggle rather than a one-way trip needing the bar below to escape. */
+    focusSoa: function (key) {
+      window._soaFocus = (key && window._soaFocus !== key) ? key : '';
+      if (window._soaFocus) window._soaCat = 'All';
+      renderSoa();
+      var el = document.getElementById('soaFocusBar');
+      if (el && !el.hidden) el.scrollIntoView({ block: 'nearest' });
+    },
+    /* A focus is scoped to the framework it was taken in — ISO 27001's
+       overdue controls are not SOC 2's, and carrying it across a tab
+       switch lands you on a filtered table you did not ask for. */
+    setSoaFw: function (fw) { window._soaFw = fw; window._soaCat = 'All'; window._soaFocus = ''; renderSoa(); },
 
     /* Shares window._soaFw with the SoA view's own framework switcher
        (setSoaFw above) — same tenant-wide "active framework" everything
