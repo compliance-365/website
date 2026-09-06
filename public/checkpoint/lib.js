@@ -302,6 +302,41 @@
     return applicable.filter(function (c) { return controlReviewStatus(c, o.today, o.cadenceDays).due; });
   }
 
+  /* ===== Training register summary, and the slices behind it =====
+     Same shape and the same guarantee as soaFocusRows() above: the
+     number on a tile is the length of the list that tile opens, because
+     both come from here.
+
+     'Outstanding' is anything not yet Completed and not Exempt —
+     matching the existing Outstanding filter pill rather than testing
+     for an 'Assigned' string, so a record with an empty or unexpected
+     status is still chased instead of disappearing from the register's
+     own summary. 'Overdue' is the subset of those past their due date,
+     which is the figure an auditor actually asks for; a record with no
+     due date is outstanding but never overdue, since nothing was
+     promised. Exempt is counted but deliberately not tiled — it is an
+     accepted state, not work. */
+  function trainingFocusRows(key, records, opts) {
+    var rows = (Array.isArray(records) ? records : []).filter(Boolean);
+    var today = (opts && opts.today) || '';
+    function open(t) { return t.status !== 'Completed' && t.status !== 'Exempt'; }
+    if (key === 'Completed') return rows.filter(function (t) { return t.status === 'Completed'; });
+    if (key === 'Exempt') return rows.filter(function (t) { return t.status === 'Exempt'; });
+    if (key === 'Outstanding') return rows.filter(open);
+    if (key === 'Overdue') return rows.filter(function (t) { return open(t) && t.due && today && t.due < today; });
+    if (key === 'All') return rows.slice();
+    return [];
+  }
+  function trainingSummary(records, opts) {
+    return {
+      total: trainingFocusRows('All', records, opts).length,
+      completed: trainingFocusRows('Completed', records, opts).length,
+      outstanding: trainingFocusRows('Outstanding', records, opts).length,
+      overdue: trainingFocusRows('Overdue', records, opts).length,
+      exempt: trainingFocusRows('Exempt', records, opts).length
+    };
+  }
+
   /* Review state of one document-control register row (ISO 27001
      Clause 7.5.2 c) — "review and approval for suitability and
      adequacy" on a defined cadence.
@@ -3642,6 +3677,7 @@
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
     threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
     soaFocusRows: soaFocusRows, soaFocusLabel: soaFocusLabel,
+    trainingFocusRows: trainingFocusRows, trainingSummary: trainingSummary,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS
   };
 });
