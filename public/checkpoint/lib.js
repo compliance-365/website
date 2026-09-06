@@ -414,6 +414,44 @@
     return out;
   }
 
+  /* The documents behind one tile of the register summary above. Every
+     slice is defined by re-walking documentRegisterSummary()'s own
+     branches in the same order, rather than by re-deriving the rules —
+     so the number on a tile and the rows it opens cannot disagree, and
+     a change to what "controlled" or "overdue" means only has to be
+     made once.
+
+     Note the two early returns that summary makes and this must match:
+     a document that is not controlled is in no slice at all, and a
+     Superseded one counts toward `controlled` but is excluded from
+     every review/completeness slice — it has been withdrawn, so
+     chasing its review date would be noise. */
+  function documentFocusRows(key, docs, today, opts) {
+    var o = opts || {};
+    var controlledCats = o.controlledCategories || [];
+    var warn = o.warnDays;
+    var out = [];
+    (docs || []).forEach(function (d) {
+      if (!d) return;
+      var isControlled = !!d.status || controlledCats.indexOf(d.category) > -1;
+      if (!isControlled) return;
+      if (key === 'controlled') { out.push(d); return; }
+      if (key === 'approved') { if (d.status === 'Approved') out.push(d); return; }
+      if (key === 'draft') { if (d.status === 'Draft' || d.status === 'In review') out.push(d); return; }
+      if (d.status === 'Superseded') return;
+      if (key === 'incomplete') { if (!d.version || !d.owner || !d.nextReview) out.push(d); return; }
+      var rv = documentReviewState(d, today, warn);
+      if (key === 'overdue' && rv.state === 'overdue') out.push(d);
+      else if (key === 'due' && rv.state === 'due') out.push(d);
+    });
+    return out;
+  }
+  var DOC_FOCUS_LABELS = {
+    controlled: 'Controlled documents', approved: 'Approved', draft: 'Draft / in review',
+    overdue: 'Review overdue', due: 'Due for review soon', incomplete: 'Incomplete register entry'
+  };
+  function documentFocusLabel(key) { return DOC_FOCUS_LABELS[key] || ''; }
+
   /* ============================================================
      Policy attestation roll-ups (A.5.1 / A.6.3, SOC 2 CC1.4, CC2.2)
      ============================================================ */
@@ -3678,6 +3716,7 @@
     threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
     soaFocusRows: soaFocusRows, soaFocusLabel: soaFocusLabel,
     trainingFocusRows: trainingFocusRows, trainingSummary: trainingSummary,
+    documentFocusRows: documentFocusRows, documentFocusLabel: documentFocusLabel,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS
   };
 });
