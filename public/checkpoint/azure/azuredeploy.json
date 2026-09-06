@@ -21,7 +21,13 @@
     },
     "clientSecret": {
       "type": "securestring",
-      "metadata": { "description": "Client secret value for that app registration. Stored as a Function App setting; for production use, replace with a Key Vault reference after deployment (see README.md)." }
+      "defaultValue": "",
+      "metadata": { "description": "Client secret value for that app registration, stored directly as a Function App setting. Leave BLANK and supply clientSecretKeyVaultSecretUri instead to keep the secret in Key Vault, which is the recommended production path — see README.md." }
+    },
+    "clientSecretKeyVaultSecretUri": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Optional. Key Vault secret URI holding the client secret, e.g. https://my-vault.vault.azure.net/secrets/checkpoint-monitor-secret. When set, CLIENT_SECRET becomes a Key Vault reference resolved at runtime by this Function App's system-assigned managed identity (grant it 'get' on the vault's secrets) and no secret value is ever stored in app settings or passed through this template. Takes precedence over clientSecret." }
     },
     "spHostname": {
       "type": "string",
@@ -82,6 +88,7 @@
       "name": "[parameters('functionAppName')]",
       "location": "[parameters('location')]",
       "kind": "functionapp,linux",
+      "identity": { "type": "SystemAssigned" },
       "dependsOn": [
         "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
@@ -104,7 +111,7 @@
             { "name": "APPINSIGHTS_INSTRUMENTATIONKEY", "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]" },
             { "name": "TENANT_ID", "value": "[parameters('tenantId')]" },
             { "name": "CLIENT_ID", "value": "[parameters('clientId')]" },
-            { "name": "CLIENT_SECRET", "value": "[parameters('clientSecret')]" },
+            { "name": "CLIENT_SECRET", "value": "[if(empty(parameters('clientSecretKeyVaultSecretUri')), parameters('clientSecret'), concat('@Microsoft.KeyVault(SecretUri=', parameters('clientSecretKeyVaultSecretUri'), ')'))]" },
             { "name": "SP_HOSTNAME", "value": "[parameters('spHostname')]" },
             { "name": "SP_SITE_PATH", "value": "[parameters('spSitePath')]" },
             { "name": "LIST_PREFIX", "value": "[parameters('listPrefix')]" },
