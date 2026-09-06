@@ -68,8 +68,8 @@ image: "/assets/blog-hybrid-m365-aws-compliance.svg"
 <p>If your organisation runs Microsoft 365 for the business and something else — AWS, GCP, or both — for the product, and you want a Statement of Applicability that actually reflects that:</p>
 
 <ul>
-  <li>Explore our <a href="/services/iso27001">ISO 27001 services</a></li>
-  <li>Read <a href="/resources/inside-statement-of-applicability">Inside the Statement of Applicability</a> for how SoA mapping works in general</li>
+  <li>Explore our <a href="/services/iso27001/">ISO 27001 services</a></li>
+  <li>Read <a href="/resources/inside-statement-of-applicability/">Inside the Statement of Applicability</a> for how SoA mapping works in general</li>
   <li>Book a <a href="/book/">15-minute intro call</a> to talk through your specific environment</li>
 </ul>
 
