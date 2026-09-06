@@ -103,6 +103,42 @@
     gold: '#A9812E'       /* brand accent only (target band, auto-captured mark) — never a 5th status hue */
   };
 
+  /* The same seven roles, re-tuned for the app's near-black ground.
+     PAL above is a PRINT palette: every hue in it was chosen to sit on
+     white paper. Several of these charts are also rendered live in the
+     app (anything called with {palette:'app'}), and there the print
+     values are wrong in two separate ways.
+
+     Wrong on contrast: measured with lib.js's own contrastRatio()
+     against a card (#17161B), PAL.bad lands at 2.23:1 and PAL.good at
+     3.45:1 — under WCAG 1.4.11's 3:1 floor for a graphic that carries
+     meaning. The values below are 7.3:1 and 8.6:1.
+
+     Wrong on prominence, which is the more visible bug: PAL.muted
+     ("Not applicable", the category meant to recede furthest) is a
+     near-white #D9D4C8. On paper that recedes; on a dark card it
+     measures 12.2:1 — brighter than every real status hue on the same
+     bar, so the one segment nobody needs to read was the one the eye
+     went to first. The screen values restore the intended order —
+     in progress 9.6 > implemented 8.6 > not started 6.0 > not
+     applicable 2.5 — with "not applicable" still 2.1:1 clear of the
+     empty track behind it so it stays visible as a segment.
+
+     GOOD/WARN/BAD are the app's own --pass/--warn/--critical tokens, so
+     a chart and the KPI tile beside it finally name the same state in
+     the same colour. NEUTRAL and MUTED remain deliberately low-chroma
+     and keep the hatch/label treatment described in the header above —
+     they are not trying to pass as categorical hues in either palette. */
+  var PAL_APP = {
+    good: '#8fbf9a',
+    warn: '#D8BA78',
+    high: '#dda07a',
+    bad: '#e0908f',
+    neutral: '#9a958c',
+    muted: '#5b5666',
+    gold: '#D8BA78'
+  };
+
   function chartCard(figure, title, caption, svg) {
     return '<div class="rpt-chart-card">' +
       '<h3 class="rpt-chart-title">Figure ' + fx(figure, 0) + ' — ' + escSvgText(title) + '</h3>' +
@@ -131,12 +167,21 @@
      from a rendering bug. A per-call counter sidesteps the collision
      entirely. */
   var hatchIdSeq = 0;
-  function hatchDefs() {
+  /* `app` picks the screen palette. The pattern is built the same way
+     in both: a recessive ground with the neutral drawn across it, so
+     "not started" stays a TEXTURE — distinguishable from the plain
+     "not applicable" fill without relying on hue — whichever palette
+     is in play. Getting this wrong is very visible: with the print
+     values on a dark card the hatch's near-white ground made "not
+     started" the single brightest band on a bar whose other segments
+     were the real answer. */
+  function hatchDefs(app) {
     var id = 'rpt-hatch-' + (++hatchIdSeq);
+    var P = app ? PAL_APP : PAL;
     return {
       id: id,
       html: '<defs><pattern id="' + id + '" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
-        '<rect width="6" height="6" fill="' + PAL.muted + '"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + PAL.neutral + '" stroke-width="1.5"/>' +
+        '<rect width="6" height="6" fill="' + P.muted + '"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + P.neutral + '" stroke-width="1.5"/>' +
         '</pattern></defs>'
     };
   }
@@ -328,7 +373,7 @@
     var rowValues = rows.map(function (g) { return legendDefs.map(function (_, j) { return Math.max(0, Number(g.values[j]) || 0); }); });
     var rowTotals = rowValues.map(function (values) { return values.reduce(function (a, b) { return a + b; }, 0); });
     var maxTotal = Math.max.apply(null, rowTotals.concat([0]));
-    var hatch = hatchDefs();
+    var hatch = hatchDefs(opts && opts.palette === 'app');
     var hatchFill = 'url(#' + hatch.id + ')';
     var barsHtml = rows.map(function (g, i) {
       var values = rowValues[i];
@@ -1208,6 +1253,7 @@
        legendDefs (severity distribution, action throughput, ...) using
        the exact same validated print-safe colors the charts above
        already use internally — one palette, never redefined twice. */
-    palette: PAL
+    palette: PAL,
+    paletteApp: PAL_APP
   };
 })();
