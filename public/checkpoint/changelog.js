@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.63.2',
+    date: '2026-09-07',
+    entries: [
+      'Threat intel (Risk & posture) now serves a live feed: threatIntelUrl points at the deployed lambda/threat-intel.js, so the view shows CISA\'s actively-exploited-vulnerability catalog instead of its "not configured" state. Deploying it surfaced a real bug in its own setup guide, also fixed here: the doc told you to leave the Lambda on AWS\'s 3-second default timeout, which is not enough to fetch and parse CISA\'s catalog from ap-southeast-2 on a cold start and made every cold invocation fail with a bare 500. Both the deploy doc and the Lambda\'s own header comment now call for 10 seconds.'
+    ]
+  },
+  {
     version: '1.63.1',
     date: '2026-09-07',
     entries: [
