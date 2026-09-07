@@ -6080,6 +6080,15 @@ function showModal(opts) {
       if (window._soaFocus) {
         catFiltersEl.innerHTML = '';
       } else if (!cats.length) {
+        /* Clearing here is not redundant with the branch above: this
+           element persists across framework tabs, so switching from a
+           framework that HAS categories (only SOC 2 does) to one that
+           does not left SOC 2's own pills sitting above an Essential
+           Eight or NIST table, filtering it by a category none of its
+           controls carry. Dropping this line is a regression I shipped
+           in 1.60.0 — invisible until the demo could switch tabs at
+           all, but live for any tenant holding SOC 2 plus anything. */
+        catFiltersEl.innerHTML = '';
         window._soaCat = 'All';
       } else {
         if (!window._soaCat) window._soaCat = 'All';
