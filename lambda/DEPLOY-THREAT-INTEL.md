@@ -25,9 +25,15 @@ Checkpoint client.
    means either widening that pattern or picking a fixed, real region
    label instead — the same trade-off `DEPLOY-PROVISION.md` and
    `DEPLOY-MARKETPLACE.md` already made.
-8. Leave the timeout at AWS's default (3 seconds is plenty — the only
-   work here is one outbound fetch to CISA, cached for 6 hours across
-   warm invocations).
+8. **Configuration → General configuration → Edit → Timeout: 10 sec.**
+   Do not leave this at AWS's 3-second default — fetching and parsing
+   CISA's multi-MB KEV catalog from `ap-southeast-2`, especially on a
+   cold start, does not reliably finish inside 3 seconds and the
+   invocation times out (CloudWatch shows `Status: timeout` at exactly
+   `Duration: 3000.00 ms`, not an error from this file's own code — the
+   handler's own try/catch never even gets a chance to run). Once a
+   warm container has the feed cached (`CACHE_TTL_MS`, 6 hours), the
+   response is effectively instant regardless of the timeout ceiling.
 
 ## 2. Point the app at it
 

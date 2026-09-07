@@ -34,6 +34,11 @@
  *   6. Enable CORS on the route:
  *        Allow-Origin: https://www.compliance365.com.au
  *        Allow-Methods: GET, OPTIONS
+ *   6b. Configuration -> General configuration -> Edit -> Timeout: 10
+ *       sec. AWS's 3-second default is not enough to fetch and parse
+ *       CISA's KEV catalog from ap-southeast-2 on a cold start; left at
+ *       3s the invocation times out before the try/catch below ever
+ *       runs, and API Gateway reports a bare 500 with no detail.
  *   7. Copy the endpoint URL into public/checkpoint/config.js's
  *      threatIntelUrl. Leave it blank and this feature is simply never
  *      attempted — the Threat intel view shows its "not configured"
