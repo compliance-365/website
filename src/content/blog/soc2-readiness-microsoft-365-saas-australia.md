@@ -215,8 +215,8 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach <strong>SOC 2 Type 
 </h2>
 
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
-  <a class="pill" href="/services/soc2" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">SOC 2 Readiness Services</a>
-  <a class="pill" href="/checklist/soc2" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">SOC 2 Checklist</a>
+  <a class="pill" href="/services/soc2/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">SOC 2 Readiness Services</a>
+  <a class="pill" href="/checklist/soc2/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">SOC 2 Checklist</a>
   <a class="pill" href="/book/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">Book a Roadmap Call</a>
 </div>
 
