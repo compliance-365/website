@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.63.1',
+    date: '2026-09-07',
+    entries: [
+      'Fixed: the Checkpoint tab icon was drawn rotated a quarter turn. The app redraws its own icon rather than serving the static file, so that the dot can turn red when you have an open Critical residual risk — and that redrawn copy had the gap in the ring pointing upwards instead of to the right, with the gold dot floating outside the ring rather than sitting in the gap, and the whole mark undersized in its square. It now matches the brand mark exactly, and a test keeps the two in step.'
+    ]
+  },
+  {
     version: '1.63.0',
     date: '2026-09-07',
     entries: [

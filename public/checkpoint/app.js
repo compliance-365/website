@@ -1745,20 +1745,47 @@ function showModal(opts) {
       var q = residual(r);
       return band(q.L * q.I) === 'Critical';
     });
+    /* Geometry is /assets/favicon.svg scaled by 64/200 = 0.32, and it is
+       written that way on purpose: every number below is the SVG's own
+       number times K, so the two marks cannot drift apart again.
+
+       They had. The ring's gap was drawn at 270deg — straight up in
+       canvas coordinates, where y runs downward — instead of the 0deg
+       the real mark uses, so the "C" appeared rotated a quarter turn:
+       lying on its side in the browser tab. The gold dot sat at 0deg
+       with a radius of 24 against a ring radius of 20, which put it
+       outside the ring and on top of the stroke rather than nestled in
+       the gap, and the ring itself was drawn at radius 20 where the
+       scale calls for 28.16, leaving the mark small in its box. Stroke
+       width and dot radius were the only two of the four dimensions
+       that had been scaled correctly.
+
+       The SVG's arc runs from -30deg to +30deg with large-arc set, so
+       it takes the 300deg path and leaves a 60deg gap centred on 0deg
+       with the dot sitting in it. Drawn clockwise from +30 to +330 here
+       for the same result. */
+    var K = 64 / 200;
     var c = document.createElement('canvas');
     c.width = 64; c.height = 64;
     var ctx = c.getContext('2d');
+    var CX = 100 * K, CY = 100 * K, R = 88 * K;
     ctx.fillStyle = '#0B0B0C';
-    ctx.fillRect(0, 0, 64, 64);
+    /* The SVG backdrop is a rounded square (rx=44); a hard-cornered one
+       reads as a different icon at 16px against light browser chrome. */
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath(); ctx.roundRect(0, 0, 64, 64, 44 * K); ctx.fill();
+    } else {
+      ctx.fillRect(0, 0, 64, 64);
+    }
     ctx.strokeStyle = '#FAF7F1';
-    ctx.lineWidth = 7;
+    ctx.lineWidth = 22 * K;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.arc(32, 32, 20, -50 * Math.PI / 180, 230 * Math.PI / 180);
+    ctx.arc(CX, CY, R, 30 * Math.PI / 180, 330 * Math.PI / 180);
     ctx.stroke();
     ctx.fillStyle = hasCritical ? '#c97a7a' : '#A9812E';
     ctx.beginPath();
-    ctx.arc(56, 32, 5.5, 0, Math.PI * 2);
+    ctx.arc(188 * K, 100 * K, 17 * K, 0, Math.PI * 2);
     ctx.fill();
     try { link.href = c.toDataURL('image/png'); } catch (e) { /* canvas tainted or unsupported — static favicon stays as-is */ }
   }
