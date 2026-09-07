@@ -184,7 +184,7 @@ window.CHECKPOINT_CONFIG = {
      industry or stack, so it's safe to point every deployment at the
      same shared Lambda rather than standing up one per client. See
      lambda/DEPLOY-THREAT-INTEL.md. */
-  threatIntelUrl: '',
+  threatIntelUrl: 'https://nwz245iqz4.execute-api.ap-southeast-2.amazonaws.com/default/Compliance365_Threat_Intel',
 
   /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
      as a default in the owner console's welcome-pack email draft —
