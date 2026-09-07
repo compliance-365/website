@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.63.0',
+    date: '2026-09-07',
+    entries: [
+      'Every framework is now switched on in the website demo. SOC 2, Essential Eight, IS18, ISO 42001, ISO 27701, DISP / IRAP, NIST CSF, RFFR and CPS 234 all sit alongside ISO 27001, so anyone trying Checkpoint can see how each one is organised, how the Statement of Applicability handles it, and how controls cross-map between them — instead of being shown a single framework and a list of names. The demo has always carried a small illustrative slice of each of these (roughly ten real controls apiece, never the full published set); they were simply switched off, so nobody could see them.',
+      'Essential Eight\'s maturity model now actually demonstrates. Three strategies carry a complete ML1-ML3 ladder rather than a scattered single level each, so the per-strategy assessment — and changing your target level in Frameworks — visibly does something. CPS 234 gained a demo slice covering each of its nine categories; it was the one framework with none, so switching it on would have shown an empty register.',
+      'Fixed: switching between frameworks on the Statement of Applicability left the previous framework\'s category filters on screen. SOC 2 is the only framework with categories, so its Common Criteria / Availability / Privacy pills stayed above an Essential Eight or NIST table and filtered it by a category none of those controls carry. Introduced in 1.60.0 and reachable by any tenant holding SOC 2 alongside another framework.'
+    ]
+  },
+  {
     version: '1.62.0',
     date: '2026-09-06',
     entries: [

@@ -234,22 +234,36 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "soc2", code: "P2.1", t: "Choice and consent obtained for collection and use of personal information", app: true, map: "ISO27701 P.7.2.3 · P.7.2.4", cat: "P" },
     { fw: "soc2", code: "P8.1", t: "Ongoing monitoring and enforcement of privacy commitments, including complaint handling", app: true, map: "ISO27001 A.5.35", cat: "P" }
   ],
+  /* Three strategies carry their COMPLETE ML1-ML3 ladder; the other
+     five are parent-only, which renders as "Not assessed" — a fair
+     picture of a tenant partway through, and still under half the
+     module's 32 rows.
+     The completeness matters: renderEssential8Rows() draws children
+     only up to the tenant's e8TargetLevel, which defaults to ML2, so
+     the previous slice — scattered single levels, ML3 on strategies
+     with no ML1 or ML2 — drew eight strategies with almost nothing
+     beneath them. The maturity ladder is the single most distinctive
+     thing about this module and it was the one thing the demo could
+     not show. Keeping ML3 on these three also means raising the
+     target in Settings visibly does something. */
   essential8: [
     { fw: "essential8", code: "E8.1", t: "Application control", app: true, map: "ISO27001 A.8.19 · SOC2 CC6.8" },
+    { fw: "essential8", code: "E8.1-ML1", t: "Approved application execution enforced on workstations; rule-set reviewed at least annually", app: true, map: "", lvl: 1 },
+    { fw: "essential8", code: "E8.1-ML2", t: "Coverage extended to internet-facing servers; allowed and blocked execution events logged", app: true, map: "", lvl: 2 },
     { fw: "essential8", code: "E8.1-ML3", t: "Coverage extended to all servers with hash/publisher rules; execution logs centrally analysed", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.2", t: "Patch applications", app: true, map: "ISO27001 A.8.8 · SOC2 CC7.1" },
+    { fw: "essential8", code: "E8.2-ML1", t: "Fortnightly vulnerability scans; internet-facing app patches within 2 weeks (48h if extreme risk)", app: true, map: "", lvl: 1 },
     { fw: "essential8", code: "E8.2-ML2", t: "Weekly scans; extreme-risk patches applied within 48 hours across internet-facing and office apps", app: true, map: "", lvl: 2 },
-    { fw: "essential8", code: "E8.3", t: "Configure Microsoft Office macro settings", app: true, map: "ISO27001 A.8.7" },
-    { fw: "essential8", code: "E8.3-ML2", t: "Macros restricted to vetted, centrally-managed locations or signed by a trusted publisher", app: true, map: "", lvl: 2 },
-    { fw: "essential8", code: "E8.4", t: "User application hardening", app: true, map: "ISO27001 A.8.7 · SOC2 CC6.6" },
-    { fw: "essential8", code: "E8.4-ML1", t: "Browsers do not process Java or web advertisements from the internet; Internet Explorer 11 disabled or removed", app: true, map: "", lvl: 1 },
-    { fw: "essential8", code: "E8.5", t: "Restrict administrative privileges", app: true, map: "ISO27001 A.8.2 · SOC2 CC6.3" },
-    { fw: "essential8", code: "E8.5-ML1", t: "Privileged access validated on request; privileged accounts blocked from email and web browsing", app: true, map: "", lvl: 1 },
-    { fw: "essential8", code: "E8.6", t: "Patch operating systems", app: true, map: "ISO27001 A.8.8 · NIST ID.RA" },
+    { fw: "essential8", code: "E8.2-ML3", t: "Daily scans for internet-facing services; 48-hour extreme-risk patching extended to all applications", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.7", t: "Multi-factor authentication", app: true, map: "ISO27001 A.8.5 · SOC2 CC6.1" },
+    { fw: "essential8", code: "E8.7-ML1", t: "MFA required for the organisation’s online services and third-party services holding its data, and for all remote access", app: true, map: "", lvl: 1 },
+    { fw: "essential8", code: "E8.7-ML2", t: "Phishing-resistant MFA required for privileged users and for workstation logon; MFA on all important data repositories", app: true, map: "", lvl: 2 },
     { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system, including data repositories; MFA events centrally logged and analysed", app: true, map: "", lvl: 3 },
-    { fw: "essential8", code: "E8.8", t: "Regular backups", app: true, map: "ISO27001 A.8.13 · SOC2 A1.2" },
-    { fw: "essential8", code: "E8.8-ML3", t: "Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups", app: true, map: "", lvl: 3 }
+    { fw: "essential8", code: "E8.3", t: "Configure Microsoft Office macro settings", app: true, map: "ISO27001 A.8.7" },
+    { fw: "essential8", code: "E8.4", t: "User application hardening", app: true, map: "ISO27001 A.8.7 · SOC2 CC6.6" },
+    { fw: "essential8", code: "E8.5", t: "Restrict administrative privileges", app: true, map: "ISO27001 A.8.2 · SOC2 CC6.3" },
+    { fw: "essential8", code: "E8.6", t: "Patch operating systems", app: true, map: "ISO27001 A.8.8 · NIST ID.RA" },
+    { fw: "essential8", code: "E8.8", t: "Regular backups", app: true, map: "ISO27001 A.8.13 · SOC2 A1.2" }
   ],
   is18: [
     { fw: "is18", code: "IS18.1.1", t: "ISMS established and maintained, aligned to ISO 27001, covering the agency's information assets and services", app: true, map: "ISO27001 A.5.1 · A.5.35" },
@@ -320,6 +334,22 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "rffr", code: "ISM-0843", t: "Application control is implemented on workstations", app: true, map: "ISO27001 A.8.19 · A.8.7 · E8.1", cat: "hardening" },
     { fw: "rffr", code: "ISM-1876", t: "Patches, updates or other vendor mitigations for vulnerabilities in online services are applied within 48 hours", app: true, map: "ISO27001 A.8.8 · E8.2 · E8.6", cat: "sys-mgmt" },
     { fw: "rffr", code: "ISM-1405", t: "A centralised event logging facility is implemented", app: true, map: "ISO27001 A.8.15", cat: "assurance" }
+  ],
+  /* CPS 234 was the one framework in FRAMEWORK_ORDER with no demo
+     slice, so enabling it would have shown a prospect an empty
+     register. One control from each of its nine categories — the
+     smallest slice that still lets the grouped Statement of
+     Applicability draw the shape APRA actually organises it by. */
+  cps234: [
+    { fw: "cps234", code: "CPS234.13", t: "Board ultimately responsible for information security", app: true, map: "ISO27001 A.5.4 · NIST GV.RR", cat: "cpsRoles" },
+    { fw: "cps234", code: "CPS234.15", t: "Maintain an information security capability", app: true, map: "ISO27001 A.5.1 · NIST GV.OC", cat: "cpsCapability" },
+    { fw: "cps234", code: "CPS234.18", t: "Maintain an information security policy framework", app: true, map: "ISO27001 A.5.1 · NIST GV.PO", cat: "cpsPolicy" },
+    { fw: "cps234", code: "CPS234.20", t: "Classify information assets by criticality and sensitivity", app: true, map: "ISO27001 A.5.12 · NIST ID.AM", cat: "cpsAssets" },
+    { fw: "cps234", code: "CPS234.21", t: "Controls commensurate with threat, sensitivity, life-cycle and consequence", app: true, map: "ISO27001 A.5.9 · NIST PR.DS", cat: "cpsControls" },
+    { fw: "cps234", code: "CPS234.23", t: "Robust mechanisms to detect and respond to incidents", app: true, map: "ISO27001 A.5.24 · NIST DE.CM", cat: "cpsIncident" },
+    { fw: "cps234", code: "CPS234.27", t: "Systematic control testing program", app: true, map: "ISO27001 A.5.35 · NIST ID.IM", cat: "cpsTesting" },
+    { fw: "cps234", code: "CPS234.32", t: "Internal audit reviews control design and operating effectiveness", app: true, map: "ISO27001 A.5.35 · NIST GV.OV", cat: "cpsAudit" },
+    { fw: "cps234", code: "CPS234.35", t: "Notify APRA within 72 hours of a material incident", app: true, map: "ISO27001 A.5.5 · NIST RS.CO", cat: "cpsNotify" }
   ]
 };
 
@@ -1116,7 +1146,7 @@ window.VENDOR_DATA_CATEGORIES = [
 
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
-  var KEY = 'checkpoint-demo-v5'; /* bumped: v4 predates the audit log */
+  var KEY = 'checkpoint-demo-v6'; /* bumped: v5 had every premium framework switched off, so a returning visitor would keep an ISO 27001-only demo tenant and never see the rest */
   var S = null;
 
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -1223,7 +1253,18 @@ window.DemoStore = (function () {
           return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
         });
       })(),
-      entitlements: { iso27001: true, soc2: false, essential8: false, is18: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, rffr: false, ai: false },
+      /* Every framework is switched ON in demo mode. The demo exists to
+         show how each module works, and the control sets behind them are
+         already the deliberately-partial DEMO_FRAMEWORK_SEEDS slices
+         above — never the paid registry, which reaches a browser only as
+         an encrypted pack decrypted with a key that arrives inside a
+         signed activation. So there is nothing to withhold here: leaving
+         these off hid the app's whole breadth from every prospect while
+         protecting content this file does not contain.
+         'ai' stays off — it is a purchasable assistant add-on rather
+         than a framework, so switching it on would light up assistant
+         features instead of demonstrating a control register. */
+      entitlements: { iso27001: true, soc2: true, essential8: true, is18: true, iso42001: true, iso27701: true, dispirap: true, nistcsf: true, rffr: true, cps234: true, ai: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       /* One list per framework whose SoA statuses runScan() can suggest.
