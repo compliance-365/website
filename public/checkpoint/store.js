@@ -992,7 +992,24 @@ window.CHECK_E8 = {
      returns 'manual' for (see the warning above CHECK_ISO42001) — that
      entry could never have fired. No live Graph signal for backup
      verification exists in Checkpoint's current scope, so E8.8 stays
-     self-reported until that changes. */
+     self-reported until that changes.
+
+     E8.4 (User application hardening) is absent for the same reason,
+     checked and rejected rather than simply never attempted. The
+     obvious read is windows10EndpointProtectionConfiguration's
+     defenderAttackSurfaceReductionExcludedPaths -- but that is an
+     EXCLUSION list, not rule state; an empty list is indistinguishable
+     between "every ASR rule is set to Block" and "no ASR rules exist at
+     all", so treating it as a pass would be a false positive, not a
+     weak signal. The place ASR rule state actually lives,
+     deviceManagement/configurationPolicies (Settings Catalog), is
+     beta-only on Graph -- disqualified outright by this app's
+     GA-v1.0-only rule. Secure Score control profiles would technically
+     surface an ASR-related recommendation, but that pattern was
+     deliberately abandoned for the alerts and logging checks in favour
+     of direct signal; reintroducing it here for one strategy would
+     contradict that decision for no good reason. E8.4 stays manual
+     until Microsoft ships ASR rule state on a GA v1.0 endpoint. */
 };
 
 /* Posture check id -> IS18 (QGEA) control code(s) it speaks to — the
