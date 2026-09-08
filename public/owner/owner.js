@@ -1850,6 +1850,18 @@ function showModal(opts) {
     rowsEl.innerHTML = skeletonRows(3, 6);
     try {
       await migrateLegacyPortfolioIfNeeded();
+      /* Self-heal for a whole MISSING list, not just missing columns on
+         one that already exists. provisionPartnerLists() is the same
+         idempotent create-if-missing pass the one-time setup gate uses —
+         but that gate only ever fires once, on a console's very first
+         run, before it holds any data. A console already past it never
+         sees it again, so a list added to PARTNER_DEFS after that
+         point (ErrorReports, provisioned well after most consoles
+         already existed) was never created for them and reconcilePartner
+         Columns() has nothing to reconcile columns ONTO. Re-running the
+         create-if-missing pass on every load closes that gap the same
+         way the column reconcile below already does for its own case. */
+      try { await provisionPartnerLists(); } catch (e) { /* best-effort — a genuine failure surfaces when a later read/write to that list needs it */ }
       try { await reconcilePartnerColumns(); } catch (e) { /* best-effort — see reconcilePartnerColumns()'s own comment */ }
       PARTNER_DATA = await loadPartnerConsoleData();
     } catch (e) {
