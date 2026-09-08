@@ -170,7 +170,7 @@ window.CHECKPOINT_CONFIG = {
      to Compliance365's OWN Lambda, never a client's tenant. See
      lambda/DEPLOY-ERROR-REPORTING.md and the owner console's "Errors"
      tab, which is the only place this data is ever read back. */
-  errorReportUrl: '',
+  errorReportUrl: 'https://chlzljct24.execute-api.ap-southeast-2.amazonaws.com/default/Compliance365-Checkpoint-Error',
 
   /* Optional threat intel feed endpoint (lambda/threat-intel.js) — a
      filtered, tagged slice of CISA's Known Exploited Vulnerabilities

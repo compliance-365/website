@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.63.4',
+    date: '2026-09-08',
+    entries: [
+      'Client-side error reporting is now live. A genuine JS crash in the Checkpoint app -- across any client tenant -- now reaches the owner console\'s Errors tab, the only visibility into a bug hitting a signed-in practitioner\'s browser that this app has ever had. Never sends anything from a client\'s own posture, risk or compliance data, only the error itself and the app\'s own state.',
+      'Fixed a live defect surfaced while deploying it: the Lambda\'s 3-second default timeout was not enough for its four sequential Graph calls and killed the invocation mid-flight -- the same class of mistake as 1.63.3\'s threat-intel timeout, in a different Lambda. Worse here, since the SharePoint write could still land just after the kill, turning a saved report into a 500 for the caller instead of the graceful drop this endpoint is built around.'
+    ]
+  },
+  {
     version: '1.63.3',
     date: '2026-09-08',
     entries: [
