@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.63.3',
+    date: '2026-09-08',
+    entries: [
+      'Fixed: a partner list added to the owner console after a tenant was already provisioned never got created for that tenant. The console has always self-healed a MISSING COLUMN on an existing list (reconcilePartnerColumns, on every load), but nothing did the equivalent for a whole missing LIST — that only ever happened once, behind the one-time first-run setup gate. Checkpoint Partner ErrorReports was added to the list definitions well after most owner consoles, this one included, had already been provisioned, so lambda/report-error.js had nowhere to write and every report silently failed with {ok:false, dropped:"write failed"}. The owner console now re-runs the same idempotent create-if-missing pass on every load, the same way it already does for columns.'
+    ]
+  },
+  {
     version: '1.63.2',
     date: '2026-09-07',
     entries: [
