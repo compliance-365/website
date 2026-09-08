@@ -36,6 +36,14 @@
  *        Allow-Origin: https://www.compliance365.com.au
  *        Allow-Methods: POST, OPTIONS
  *        Allow-Headers: Content-Type
+ *   6b. Configuration -> General configuration -> Edit -> Timeout: 10
+ *       sec. AWS's 3-second default is not enough for this handler's
+ *       four sequential Graph round trips (token, site, list-resolve,
+ *       item POST) from ap-southeast-2. Left at 3s, CloudWatch shows
+ *       the invocation killed mid-flight (Duration: 3000.00 ms, no
+ *       error logged) rather than a caught failure -- and the write
+ *       can still land in SharePoint just after the kill, so the
+ *       caller gets a raw 500 for a report that actually saved.
  *   7. Open the owner console at least once (it provisions the
  *      "Checkpoint Partner ErrorReports" list automatically, same as
  *      every other Partner* list).

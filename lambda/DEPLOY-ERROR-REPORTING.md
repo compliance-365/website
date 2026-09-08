@@ -44,12 +44,16 @@ here.
 5. API Gateway HTTP API trigger, `POST /report-error`.
 6. CORS on the route: Allow-Origin `https://www.compliance365.com.au`,
    Allow-Methods `POST, OPTIONS`, Allow-Headers `Content-Type`.
-7. Leave the timeout at AWS's 3-second default — unlike
-   `marketplace-fulfillment.js`, this makes at most three sequential
-   Graph calls (token, site, list-resolve-and-write) against
-   Compliance365's own tenant, not a chain of external API calls, and a
-   report that can't be written in 3 seconds is dropped rather than
-   retried regardless (see §5 below).
+7. **Configuration → General configuration → Edit → Timeout: 10 sec.**
+   Do not leave this at AWS's 3-second default: this makes four
+   sequential round trips (token, site, list-resolve, item POST)
+   against Graph, and that chain does not reliably finish inside 3
+   seconds from `ap-southeast-2` — CloudWatch shows `Duration: 3000.00
+   ms` with no error logged, i.e. the invocation was killed mid-flight,
+   not a caught failure. Worse, the in-flight write can still land in
+   SharePoint just after the Lambda is killed, so the caller gets a
+   raw `500` for a report that actually saved — the opposite of the
+   graceful-drop behaviour this file is built around (see §6 below).
 
 ## 4. Provision the SharePoint list
 
