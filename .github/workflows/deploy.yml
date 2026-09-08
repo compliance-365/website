@@ -104,6 +104,59 @@ jobs:
       - name: Content-hash Checkpoint's own assets + regenerate SRI
         run: node scripts/hash-checkpoint-assets.mjs
 
+      - name: Checkout premium content (compliance-365/Checkpoint-Content)
+        # Premium framework source (SOC 2, Essential Eight, ISO 42001,
+        # ISO 27701, DISP/IRAP, NIST CSF, RFFR, CPS 234, AI) used to be
+        # plaintext JSON committed right here in checkpoint-content/,
+        # which meant anyone could read licensed content in this public
+        # repo. It now lives in the private compliance-365/Checkpoint-Content
+        # repo instead, checked out here into the exact path
+        # build-content-packs.mjs already reads (join(process.cwd(),
+        # 'checkpoint-content')) — no change to that script needed.
+        #
+        # Unlike the MODULE_KEYS_JSON step below, this is NOT allowed to
+        # fail quietly. That step's graceful skip exists for a
+        # contributor/fork building this repo without Compliance365's
+        # private key material, which is a genuinely supported case —
+        # the shell app still builds. This checkout has no equivalent
+        # excuse: every merge to main on THIS repo, deploying to
+        # production, always had this content available before the
+        # move. A checkout failure here — wrong/missing/expired PAT,
+        # wrong repo — must fail the build loudly, not silently ship
+        # zero premium content to every paying tenant while CI stays
+        # green. See the assertion step immediately below.
+        uses: actions/checkout@v4
+        with:
+          repository: compliance-365/Checkpoint-Content
+          token: ${{ secrets.CHECKPOINT_CONTENT_PAT }}
+          path: checkpoint-content
+
+      - name: Assert premium content checkout is complete
+        # A checkout that "succeeds" but lands 0 or partial files (a
+        # stale/mis-scoped PAT, a sparse-checkout config on the source
+        # repo, a silently-truncated clone) would let the step above go
+        # green while build-content-packs.mjs's own existsSync() guard
+        # treats a merely-empty directory as "nothing to build" and
+        # moves on without error — exactly the silent-failure shape
+        # this step exists to close off. Checking each expected
+        # filename catches a partial checkout a bare file-count would
+        # miss.
+        run: |
+          set -e
+          missing=""
+          for f in ai.json cps234.json dispirap.json essential8.json is18.json iso27701.json iso42001.json nistcsf.json rffr.json soc2.json; do
+            if [ ! -s "checkpoint-content/$f" ]; then
+              missing="$missing $f"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "ERROR: checkpoint-content/ checkout is missing or has empty files:$missing"
+            echo "This means every premium framework would silently ship with no content."
+            echo "Check the CHECKPOINT_CONTENT_PAT secret and the checkout step above."
+            exit 1
+          fi
+          echo "Premium content checkout verified — all 10 framework files present ✅"
+
       - name: Build encrypted premium content packs
         # `npx astro build` above does NOT run npm's postbuild lifecycle script
         # (that only fires for `npm run build`) — this step and the one above

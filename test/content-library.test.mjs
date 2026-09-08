@@ -25,7 +25,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 global.window = global.window || {};
@@ -36,6 +36,16 @@ require('../public/checkpoint/courses.js');
 
 const { POLICY_TEMPLATES, TRAINING_COURSES, FRAMEWORKS, FRAMEWORK_ORDER } = window;
 
+/* checkpoint-content/ is a private repo (compliance-365/Checkpoint-Content),
+   checked out here only in CI that holds the CHECKPOINT_CONTENT_PAT secret
+   (see .github/workflows/deploy.yml and test.yml). Anyone else running
+   `npm test` locally won't have this directory; the two describes below
+   that depend on KNOWN_CODES covering the premium frameworks are marked
+   skip in that case, same "absence fails safe" posture already used for
+   tools/module-keys.json. */
+const CONTENT_AVAILABLE = existsSync(new URL('../checkpoint-content/nistcsf.json', import.meta.url));
+const SKIP = CONTENT_AVAILABLE ? false : 'checkpoint-content/ not present locally — private content repo not checked out';
+
 function loadPack(moduleId) {
   return JSON.parse(readFileSync(new URL(`../checkpoint-content/${moduleId}.json`, import.meta.url)));
 }
@@ -43,10 +53,12 @@ function loadPack(moduleId) {
 // Every control code the app can resolve for a fully-licensed tenant:
 // ISO 27001 from store.js, the rest from their pack sources.
 const KNOWN_CODES = new Set();
-FRAMEWORK_ORDER.forEach((fw) => {
-  const controls = fw === 'iso27001' ? FRAMEWORKS.iso27001.controls : loadPack(fw).framework.controls;
-  (controls || []).forEach((c) => KNOWN_CODES.add(c.code));
-});
+if (CONTENT_AVAILABLE) {
+  FRAMEWORK_ORDER.forEach((fw) => {
+    const controls = fw === 'iso27001' ? FRAMEWORKS.iso27001.controls : loadPack(fw).framework.controls;
+    (controls || []).forEach((c) => KNOWN_CODES.add(c.code));
+  });
+}
 
 /* Documents whose subject is the management system itself rather than a
    control — their audience genuinely is management and the auditor, so
@@ -136,7 +148,7 @@ describe('policy template library — the reader-facing rewrite', () => {
   });
 });
 
-describe('policy template library — mappings resolve to real controls', () => {
+describe('policy template library — mappings resolve to real controls', { skip: SKIP }, () => {
   test('every cited control code exists in a real framework registry', () => {
     const bad = [];
     POLICY_TEMPLATES.forEach((t) => {
@@ -196,7 +208,7 @@ describe('policy template library — mappings resolve to real controls', () => 
   });
 });
 
-describe('training course catalogue', () => {
+describe('training course catalogue', { skip: SKIP }, () => {
   test('the catalogue is non-empty and every id is unique', () => {
     assert.ok(TRAINING_COURSES.length >= 3, `expected at least 3 courses, found ${TRAINING_COURSES.length}`);
     const ids = TRAINING_COURSES.map((c) => c.id);

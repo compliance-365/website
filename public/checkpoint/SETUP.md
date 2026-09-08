@@ -1031,10 +1031,18 @@ activation file for that specific tenant.
 **Build-time**: the real content lives as plaintext JSON in
 `checkpoint-content/*.json` (one file per module — outside `public/`,
 so Astro's build never copies it into `dist/`, and it's `.gitignore`-safe
-to keep locally without it ever reaching a public deploy by accident —
-though unlike the private signing key, these source files themselves
-usually **are** committed, since the pack build re-encrypts them fresh
-every time; only `tools/module-keys.json`, the AES keys, are secret).
+to keep locally without it ever reaching a public deploy by accident).
+These source files themselves used to be committed right in this repo —
+they no longer are: this repo is public, and that meant anyone could
+read licensed content in plaintext. They now live in the private
+`compliance-365/Checkpoint-Content` repo, checked out into this exact
+path by CI (see `.github/workflows/deploy.yml` and `test.yml`, both
+gated on a `CHECKPOINT_CONTENT_PAT` secret scoped read-only to that one
+repo) before the pack build runs. Only `tools/module-keys.json`, the AES
+keys, are ever secret in the older, narrower sense of "must never leave
+this machine" — the content source is secret in the different sense of
+"licensed material a client pays for," which is why it moved rather than
+just staying `.gitignore`d in a repo anyone can already clone.
 `scripts/build-content-packs.mjs` (a `postbuild` step) reads each
 source file, AES-256-GCM encrypts it with that module's key
 (`tools/module-keys.json` — see `tools/ISSUANCE.md` §7 for generating

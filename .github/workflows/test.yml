@@ -12,6 +12,63 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check whether the premium content secret is available
+        # This workflow triggers on pull_request, including PRs from
+        # forks — and GitHub deliberately withholds repository secrets
+        # from fork-triggered pull_request runs (a security boundary,
+        # not a gap to work around). An external contributor's PR must
+        # not fail here just because they correctly don't have
+        # Compliance365's private-content secret. The empty-secret check
+        # happens in the shell, not via a step `if:` on `secrets.*`
+        # directly (matching the MODULE_KEYS_JSON step in deploy.yml) —
+        # this step's own output is what later `if:`s key off instead.
+        id: content-pat
+        run: |
+          if [ -n "$HAS_PAT" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No CHECKPOINT_CONTENT_PAT secret available (expected on a fork PR) — the three test files that read checkpoint-content/ directly will skip gracefully."
+          fi
+        env:
+          HAS_PAT: ${{ secrets.CHECKPOINT_CONTENT_PAT }}
+
+      - name: Checkout premium content (compliance-365/Checkpoint-Content)
+        # Three test files (cps234, framework-registry, content-library)
+        # read this private repo's content directly to validate it for
+        # real — see deploy.yml's identical step for the full story of
+        # why this moved out of the public repo. Those three files each
+        # skip gracefully if this checkout doesn't run (see the step
+        # above) — but when the secret genuinely IS available (any PR or
+        # push within compliance-365/website itself, never a fork), a
+        # broken checkout should be caught as a test failure, not
+        # silently reported as "23 tests skipped, 0 failed". The
+        # assertion step below turns that case into a hard failure, same
+        # reasoning as deploy.yml's equivalent guard.
+        if: steps.content-pat.outputs.available == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: compliance-365/Checkpoint-Content
+          token: ${{ secrets.CHECKPOINT_CONTENT_PAT }}
+          path: checkpoint-content
+
+      - name: Assert premium content checkout is complete
+        if: steps.content-pat.outputs.available == 'true'
+        run: |
+          set -e
+          missing=""
+          for f in ai.json cps234.json dispirap.json essential8.json is18.json iso27701.json iso42001.json nistcsf.json rffr.json soc2.json; do
+            if [ ! -s "checkpoint-content/$f" ]; then
+              missing="$missing $f"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "ERROR: checkpoint-content/ checkout is missing or has empty files:$missing"
+            echo "Check the CHECKPOINT_CONTENT_PAT secret and the checkout step above."
+            exit 1
+          fi
+          echo "Premium content checkout verified — all 10 framework files present ✅"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
