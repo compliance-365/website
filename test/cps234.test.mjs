@@ -9,13 +9,23 @@
 // register stated 72 hours for both.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
-const pack = JSON.parse(readFileSync(new URL('../checkpoint-content/cps234.json', import.meta.url)));
-const controls = pack.framework.controls;
+/* checkpoint-content/ is a private repo (compliance-365/Checkpoint-Content),
+   checked out here only in CI that holds the CHECKPOINT_CONTENT_PAT secret
+   (see .github/workflows/deploy.yml and test.yml). Anyone else running
+   `npm test` locally — a contributor without access to Compliance365's
+   licensed content, most likely — won't have this directory, and that
+   must not fail the whole suite: every describe() below is marked skip
+   in that case, same "absence fails safe" posture already used for
+   tools/module-keys.json. */
+const CONTENT_AVAILABLE = existsSync(new URL('../checkpoint-content/cps234.json', import.meta.url));
+const SKIP = CONTENT_AVAILABLE ? false : 'checkpoint-content/cps234.json not present locally — private content repo not checked out';
+const pack = CONTENT_AVAILABLE ? JSON.parse(readFileSync(new URL('../checkpoint-content/cps234.json', import.meta.url))) : null;
+const controls = pack ? pack.framework.controls : [];
 const byCode = Object.fromEntries(controls.map((c) => [c.code, c]));
 
-describe('CPS 234 — requirement coverage', () => {
+describe('CPS 234 — requirement coverage', { skip: SKIP }, () => {
   test('covers paragraphs 13 to 36 with no gaps and no extras', () => {
     // The standard self-anchors: paragraph 28 cites "paragraphs 27(a) to
     // 27(e)" for the systematic testing program, which fixes 27 and so
@@ -45,7 +55,7 @@ describe('CPS 234 — requirement coverage', () => {
   });
 });
 
-describe('CPS 234 — the two notification clocks are distinct', () => {
+describe('CPS 234 — the two notification clocks are distinct', { skip: SKIP }, () => {
   // Conflating these is the single most consequential error this module
   // could ship. They are different triggers AND different deadlines.
   test('paragraph 35 is the 72-HOUR material incident notification', () => {
@@ -69,7 +79,7 @@ describe('CPS 234 — the two notification clocks are distinct', () => {
   });
 });
 
-describe('CPS 234 — requirements that are commonly mis-scoped', () => {
+describe('CPS 234 — requirements that are commonly mis-scoped', { skip: SKIP }, () => {
   test('paragraph 27 names a SYSTEMATIC testing program, not ad hoc testing', () => {
     assert.match(pack.guidance['CPS234.27'].how, /systematic/i);
     assert.match(pack.guidance['CPS234.27'].how, /five named factors|five factors/i);
@@ -96,7 +106,7 @@ describe('CPS 234 — requirements that are commonly mis-scoped', () => {
   });
 });
 
-describe('CPS 234 — pack integrity', () => {
+describe('CPS 234 — pack integrity', { skip: SKIP }, () => {
   test('declares its source publication and a verification date', () => {
     assert.equal(pack.moduleId, 'cps234');
     assert.match(pack.sourceRef.publication, /CPS 234/);

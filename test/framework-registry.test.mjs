@@ -29,7 +29,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
 const require = createRequire(import.meta.url);
@@ -43,18 +43,33 @@ const { parseMapTokens } = CheckpointLib;
 
 const PREMIUM_FRAMEWORKS = FRAMEWORK_ORDER.filter((fw) => fw !== 'iso27001');
 
+/* checkpoint-content/ is a private repo (compliance-365/Checkpoint-Content),
+   checked out here only in CI that holds the CHECKPOINT_CONTENT_PAT secret
+   (see .github/workflows/deploy.yml and test.yml). Anyone else running
+   `npm test` locally — a contributor without access to Compliance365's
+   licensed content, most likely — won't have this directory, and that
+   must not fail the whole suite: every describe() below that reads
+   PACKS/REGISTRY/MERGED_NIST_SUBCATEGORIES is marked skip in that case,
+   same "absence fails safe" posture already used for
+   tools/module-keys.json. Checked once, off nistcsf.json, since
+   build-content-packs.mjs's own assert step (deploy.yml) already
+   guarantees an all-or-nothing checkout in CI — never some files
+   present and others not. */
+const CONTENT_AVAILABLE = existsSync(new URL('../checkpoint-content/nistcsf.json', import.meta.url));
+const SKIP = CONTENT_AVAILABLE ? false : 'checkpoint-content/ not present locally — private content repo not checked out';
+
 function loadPack(moduleId) {
   return JSON.parse(readFileSync(new URL(`../checkpoint-content/${moduleId}.json`, import.meta.url)));
 }
 
 const PACKS = {};
-PREMIUM_FRAMEWORKS.forEach((fw) => { PACKS[fw] = loadPack(fw); });
+if (CONTENT_AVAILABLE) PREMIUM_FRAMEWORKS.forEach((fw) => { PACKS[fw] = loadPack(fw); });
 
 // The registry as a fully-licensed tenant would see it at runtime, once
 // mergeLicensedPacks() has merged every purchased pack in — see app.js.
 const REGISTRY = { iso27001: FRAMEWORKS.iso27001 };
-PREMIUM_FRAMEWORKS.forEach((fw) => { REGISTRY[fw] = PACKS[fw].framework; });
-const MERGED_NIST_SUBCATEGORIES = PACKS.nistcsf.extra.subcategories;
+if (CONTENT_AVAILABLE) PREMIUM_FRAMEWORKS.forEach((fw) => { REGISTRY[fw] = PACKS[fw].framework; });
+const MERGED_NIST_SUBCATEGORIES = CONTENT_AVAILABLE ? PACKS.nistcsf.extra.subcategories : undefined;
 
 /* Kept in sync BY HAND with graph.js's CAPABILITY_PROBES keys (see the
    comment above CHECK_DEFS in store.js for why this isn't derived from
@@ -73,7 +88,7 @@ const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim',
 const DERIVED_CAPABILITY_KEYS = ['aws'];
 const ALL_CAPABILITY_KEYS = [...KNOWN_CAPABILITY_KEYS, ...DERIVED_CAPABILITY_KEYS];
 
-describe('premium content is not shipped in the bundle', () => {
+describe('premium content is not shipped in the bundle', { skip: SKIP }, () => {
   test('every premium framework ships with an empty controls array in store.js', () => {
     PREMIUM_FRAMEWORKS.forEach((fw) => {
       assert.deepEqual(FRAMEWORKS[fw].controls, [], `${fw} must ship empty in store.js — its real controls belong only in checkpoint-content/${fw}.json's encrypted pack, merged in at runtime by mergeLicensedPacks() for a licensed tenant`);
@@ -101,7 +116,7 @@ describe('premium content is not shipped in the bundle', () => {
   });
 });
 
-describe('FRAMEWORK_ORDER <-> FRAMEWORKS consistency', () => {
+describe('FRAMEWORK_ORDER <-> FRAMEWORKS consistency', { skip: SKIP }, () => {
   test('every id in FRAMEWORK_ORDER has a matching entry in FRAMEWORKS', () => {
     FRAMEWORK_ORDER.forEach((fw) => {
       assert.ok(FRAMEWORKS[fw], `FRAMEWORK_ORDER references unknown framework "${fw}"`);
@@ -119,7 +134,7 @@ describe('FRAMEWORK_ORDER <-> FRAMEWORKS consistency', () => {
   });
 });
 
-describe('control codes', () => {
+describe('control codes', { skip: SKIP }, () => {
   test('every control code is unique across the whole registry', () => {
     // ISO 27001 and ISO 42001 used to collide here (both used their own
     // standard's bare Annex A numbering, e.g. "A.5.2", with no
@@ -158,7 +173,7 @@ describe('control codes', () => {
   });
 });
 
-describe('map field cross-references', () => {
+describe('map field cross-references', { skip: SKIP }, () => {
   test('every internal map reference resolves to a control code that actually exists', () => {
     const codesByFw = {};
     FRAMEWORK_ORDER.forEach((fw) => { codesByFw[fw] = new Set(REGISTRY[fw].controls.map((c) => c.code)); });
@@ -195,7 +210,7 @@ describe('map field cross-references', () => {
   });
 });
 
-describe('allControlSeeds() — shipped (unlicensed) behaviour', () => {
+describe('allControlSeeds() — shipped (unlicensed) behaviour', { skip: SKIP }, () => {
   test('count matches the sum of every framework\'s controls array exactly, including empty premium stubs', () => {
     const seeds = allControlSeeds();
     const expected = FRAMEWORK_ORDER.reduce((n, fw) => n + FRAMEWORKS[fw].controls.length, 0);
@@ -220,7 +235,7 @@ describe('allControlSeeds() — shipped (unlicensed) behaviour', () => {
   });
 });
 
-describe('allControlSeeds() — fully-licensed merge fidelity', () => {
+describe('allControlSeeds() — fully-licensed merge fidelity', { skip: SKIP }, () => {
   test('merging every premium pack in and re-running allControlSeeds() reproduces the old static registry exactly', () => {
     // Simulates mergeLicensedPacks() for a fully-licensed entitlement:
     // replace each empty stub's controls with its pack's, call
@@ -245,7 +260,7 @@ describe('allControlSeeds() — fully-licensed merge fidelity', () => {
   });
 });
 
-describe('SOC 2 — cat field consistency', () => {
+describe('SOC 2 — cat field consistency', { skip: SKIP }, () => {
   const CAT_PREFIXES = [['CC', 'CC'], ['PI', 'PI'], ['A', 'A'], ['C', 'C'], ['P', 'P']]; // order matters: CC before C, PI before P
   function inferCat(code) {
     const hit = CAT_PREFIXES.find(([prefix]) => code.startsWith(prefix));
@@ -264,7 +279,7 @@ describe('SOC 2 — cat field consistency', () => {
   });
 });
 
-describe('Essential Eight — maturity level (lvl) consistency', () => {
+describe('Essential Eight — maturity level (lvl) consistency', { skip: SKIP }, () => {
   function strategyOf(code) { return code.split('-ML')[0]; }
   test('every strategy has exactly one parent row (no lvl) and children at lvl 1, 2, 3', () => {
     const byStrategy = new Map();
@@ -287,7 +302,7 @@ describe('Essential Eight — maturity level (lvl) consistency', () => {
   });
 });
 
-describe('NIST CSF — subcategory/parent consistency', () => {
+describe('NIST CSF — subcategory/parent consistency', { skip: SKIP }, () => {
   test('every subcategory\'s parent is a real nistcsf category code', () => {
     const categoryCodes = new Set(REGISTRY.nistcsf.controls.map((c) => c.code));
     MERGED_NIST_SUBCATEGORIES.forEach((s) => {
@@ -313,7 +328,7 @@ describe('NIST CSF — subcategory/parent consistency', () => {
   });
 });
 
-describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consistency', () => {
+describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consistency', { skip: SKIP }, () => {
   const IS18 = PACKS.is18;
   const is18Codes = new Set(IS18.framework.controls.map((c) => c.code));
   const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
@@ -395,7 +410,7 @@ describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consiste
    status change with no matching "why" shown in guidance is exactly the
    kind of automation-undermining gap this suite exists to catch before
    it ships again. */
-describe('scan-suggest tables never disagree with their guidance.checks panel, across every framework', () => {
+describe('scan-suggest tables never disagree with their guidance.checks panel, across every framework', { skip: SKIP }, () => {
   const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
   const SCAN_SUGGEST_KEY = {
     essential8: 'checkE8', is18: 'checkIs18', rffr: 'checkRffr',
@@ -444,7 +459,7 @@ describe('scan-suggest tables never disagree with their guidance.checks panel, a
   });
 });
 
-describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', () => {
+describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', { skip: SKIP }, () => {
   test('every control has a domain in the valid set', () => {
     const valid = ['Governance', 'Personnel', 'Physical', 'ICT'];
     REGISTRY.dispirap.controls.forEach((c) => {
@@ -596,7 +611,7 @@ describe('CHECK_CONTROLS / GUIDANCE — check-to-control cross-referencing stays
    (the AI-governance template itself now references an ISO 42001
    code), so this checks against every framework's codes combined, not
    just ISO 27001's. */
-describe('app.js\'s TPL risk templates never reference a control code that doesn\'t exist anywhere in the registry', () => {
+describe('app.js\'s TPL risk templates never reference a control code that doesn\'t exist anywhere in the registry', { skip: SKIP }, () => {
   const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
   const allCodes = new Set();
   FRAMEWORK_ORDER.forEach((fw) => { REGISTRY[fw].controls.forEach((c) => allCodes.add(c.code)); });

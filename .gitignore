@@ -19,6 +19,16 @@ tools/module-keys.json
 *-activation.json
 activation.json
 
+# Premium framework content source (SOC 2, Essential Eight, ISO 42001,
+# ISO 27701, DISP/IRAP, NIST CSF, RFFR, CPS 234, AI) — used to be
+# committed here in plaintext, readable by anyone in this public repo.
+# Now lives in the private compliance-365/Checkpoint-Content repo and is
+# checked out into this exact path by CI (see .github/workflows/deploy.yml
+# and test.yml) before scripts/build-content-packs.mjs runs. A local
+# checkout without access to that private repo simply has none of this —
+# same "absence fails safe" posture as tools/module-keys.json above.
+checkpoint-content/
+
 # OS / editor
 .DS_Store
 Thumbs.db
