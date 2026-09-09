@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.63.6',
+    date: '2026-09-09',
+    entries: [
+      'Fixed a live defect: launching a Policy attestation campaign or assigning Training against an Entra group could email -- and create a register row for -- the same person more than once. Microsoft Graph\'s transitiveMembers endpoint (what a group-scoped audience resolves through) can return one person twice when they\'re reachable via more than one nested-group path, and nothing downstream ever checked for that. The audience is now de-duplicated by UPN in the one place both flows share, before any row is written or any email sent.'
+    ]
+  },
+  {
     version: '1.63.5',
     date: '2026-09-09',
     entries: [

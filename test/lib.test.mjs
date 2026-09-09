@@ -1677,7 +1677,7 @@ describe('documentRegisterSummary()', () => {
 // ---------------------------------------------------------------
 // Policy attestation roll-ups — A.5.1 / A.6.3, SOC 2 CC1.4, CC2.2.
 // ---------------------------------------------------------------
-const { attestationCampaigns, outstandingAttestationsFor } = CheckpointLib;
+const { attestationCampaigns, outstandingAttestationsFor, dedupeAudience } = CheckpointLib;
 
 describe('attestationCampaigns()', () => {
   const rows = [
@@ -1772,6 +1772,50 @@ describe('outstandingAttestationsFor()', () => {
   test('an empty UPN returns nothing rather than everything', () => {
     assert.deepEqual(outstandingAttestationsFor(rows, ''), []);
     assert.deepEqual(outstandingAttestationsFor(rows, null), []);
+  });
+});
+
+describe('dedupeAudience() — Graph transitiveMembers can resolve one person twice', () => {
+  test('drops a repeated UPN, keeping the first occurrence', () => {
+    const users = [
+      { id: '1', upn: 'sam@x.example', name: 'Sam' },
+      { id: '2', upn: 'lee@x.example', name: 'Lee' },
+      { id: '3', upn: 'sam@x.example', name: 'Sam (via nested group)' }
+    ];
+    assert.deepEqual(dedupeAudience(users), [
+      { id: '1', upn: 'sam@x.example', name: 'Sam' },
+      { id: '2', upn: 'lee@x.example', name: 'Lee' }
+    ]);
+  });
+
+  test('matches UPNs case-insensitively, same as outstandingAttestationsFor()', () => {
+    const users = [
+      { id: '1', upn: 'Sam.Okafor@X.example', name: 'Sam' },
+      { id: '2', upn: 'sam.okafor@x.example', name: 'Sam (duplicate)' }
+    ];
+    assert.deepEqual(dedupeAudience(users).map((u) => u.id), ['1']);
+  });
+
+  test('a row with no UPN is dropped, not kept', () => {
+    const users = [{ id: '1', upn: '', name: 'No UPN' }, { id: '2', upn: 'lee@x.example', name: 'Lee' }];
+    assert.deepEqual(dedupeAudience(users).map((u) => u.id), ['2']);
+  });
+
+  test('no duplicates in, none created', () => {
+    const users = [{ id: '1', upn: 'sam@x.example' }, { id: '2', upn: 'lee@x.example' }];
+    assert.deepEqual(dedupeAudience(users), users);
+  });
+
+  test('missing input and holes in it are tolerated', () => {
+    assert.deepEqual(dedupeAudience(null), []);
+    assert.deepEqual(dedupeAudience(undefined), []);
+    assert.doesNotThrow(() => dedupeAudience([null, undefined, { upn: 'x@example.com' }]));
+    assert.deepEqual(dedupeAudience([null, undefined, { id: '1', upn: 'x@example.com' }]).map((u) => u.id), ['1']);
+  });
+
+  test('preserves order — first-seen wins, list is not resorted', () => {
+    const users = [{ id: '2', upn: 'b@x.example' }, { id: '1', upn: 'a@x.example' }, { id: '3', upn: 'b@x.example' }];
+    assert.deepEqual(dedupeAudience(users).map((u) => u.id), ['2', '1']);
   });
 });
 

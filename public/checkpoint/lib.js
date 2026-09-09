@@ -452,6 +452,31 @@
   };
   function documentFocusLabel(key) { return DOC_FOCUS_LABELS[key] || ''; }
 
+  /* De-duplicates a resolved audience (attestation campaign OR training
+     assignment -- both funnel through app.js's resolveAudience(), this
+     is the one place that fixes both) by UPN, case-insensitively, same
+     comparison outstandingAttestationsFor() uses. Graph's
+     transitiveMembers endpoint -- what listGroupMembers() calls -- can
+     return the same person more than once when they're reachable
+     through more than one nested-group path, and nothing downstream of
+     it ever checked for that: a person resolved twice got two
+     attestation rows, two emails, and (for training) two assignments,
+     all for one person. First occurrence wins; a row with no UPN at all
+     is dropped rather than kept, since it can't be matched against
+     anything a person would actually receive. */
+  function dedupeAudience(users) {
+    var seen = {};
+    var out = [];
+    (Array.isArray(users) ? users : []).forEach(function (u) {
+      if (!u) return;
+      var key = String(u.upn || '').toLowerCase();
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      out.push(u);
+    });
+    return out;
+  }
+
   /* ============================================================
      Policy attestation roll-ups (A.5.1 / A.6.3, SOC 2 CC1.4, CC2.2)
      ============================================================ */
@@ -3749,6 +3774,7 @@
     soaFocusRows: soaFocusRows, soaFocusLabel: soaFocusLabel,
     trainingFocusRows: trainingFocusRows, trainingSummary: trainingSummary,
     documentFocusRows: documentFocusRows, documentFocusLabel: documentFocusLabel,
+    dedupeAudience: dedupeAudience,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS
   };
 });
