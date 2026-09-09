@@ -295,13 +295,22 @@ SharePoint site).
 Each client's data provisions into **their** SharePoint on first run.
 Nothing multi-tenant is shared: your hosted URL is just static files.
 
-### 5a. Two-role model — Practitioners vs. Viewers (optional, manual setup)
+### 5a. Three-role model — Practitioners, Viewers, and Staff
 
-Checkpoint supports two roles per client tenant: **Practitioners** (full
-edit access — everything in this app) and **Viewers** (read-only — the
+Checkpoint distinguishes three roles per client tenant: **Practitioners**
+(full edit access — everything in this app), **Viewers** (read-only — the
 client's own stakeholders, if you want to give them direct access to the
 Dashboard/Board view/SoA/registers/reports instead of emailing status
-updates and PDFs).
+updates and PDFs), and **Staff** (everyone else — trimmed to just the
+"My attestations"/"My training" cards on the Policy attestation and
+Training views, nothing more).
+
+Practitioner/Viewer is opt-in and manual (below). Staff is **automatic
+and needs no setup at all**: anyone who isn't in either of the two groups
+below, and holds no Entra directory role, gets the trimmed Staff view —
+see "The automatic third role" further down. The manual group setup in
+this section is only for the two roles that need to be explicitly
+elevated above it.
 
 **This is a manual setup step, not something Checkpoint provisions for
 you.** Microsoft Graph's v1.0 API has no endpoint to create a classic
@@ -336,11 +345,26 @@ this is done once per client in the SharePoint UI:
    membership by display name (`Graph.detectRole()`, graph.js) to decide
    which of the two experiences to show.
 
-If neither group exists yet (a fresh tenant, or you've chosen not to set
-this up), Checkpoint shows everyone the full Practitioner experience —
-this is a deliberate fail-open default at the **UI** layer (see below),
-not a security gap: nobody's SharePoint write access changes based on
-whether these groups exist.
+**The automatic third role.** If neither group exists yet — the common
+case, since both are opt-in — Checkpoint no longer defaults everyone to
+the full Practitioner experience. Instead it falls back to a signal that
+needs no Checkpoint-specific setup: does the signed-in user hold **any**
+Entra directory role at all (Global Administrator, Compliance
+Administrator, even a narrow delegated one like Helpdesk Administrator)?
+If yes, full Practitioner access. If no, the trimmed Staff view —
+Policy attestation and Training only, and within those, only each
+view's own "My attestations"/"My training" card. This is still a UI-layer
+default, not a security gap: nobody's SharePoint write access changes
+based on which of the three views they're shown (see "Detection, not
+enforcement" below), and a tenant that has genuinely set up
+`Checkpoint Practitioners`/`Checkpoint Viewers` sees exactly the
+behaviour those groups specify, unaffected by this fallback.
+
+One deliberate trade-off: a client that keeps its GRC/compliance lead
+role-less in Entra for least-privilege reasons will have that person
+land in the Staff view too. If that ever bites a real client, add them
+to `Checkpoint Practitioners` (§ above) — that always wins over the
+automatic fallback.
 
 **Detection, not enforcement — read this before touching the readOnly
 code path.** `Graph.detectRole()` (graph.js) and the `READONLY` flag it
@@ -376,15 +400,25 @@ names are gated — kept as an explicit list rather than a naming-
 convention regex, since a few `toggleAdd*` actions only show/hide a
 form panel and don't themselves write anything.
 
-**Previewing the Viewer experience without real SharePoint groups:**
-append `&role=viewer` to the demo URL — `?demo=1&role=viewer` — which
-drives the same `READONLY` flag from a query-string flag instead of a
-live group-membership check, purely so you can show a client (or QA the
-UI) what their Viewer session looks like without needing a real tenant
-and real SharePoint groups set up first. This has no effect outside
-demo mode.
+**Previewing the Viewer or Staff experience without a real tenant:**
+append `&role=viewer` or `&role=restricted` to the demo URL —
+`?demo=1&role=viewer` / `?demo=1&role=restricted` — which drives the
+same `READONLY`/`RESTRICTED_ACCESS` flags from a query-string flag
+instead of a live group-membership or directory-role check, purely so
+you can show a client (or QA the UI) what either session looks like
+without needing a real tenant, real SharePoint groups, or a role-less
+test account set up first. This has no effect outside demo mode.
 
 ### 5b. Policy attestation — the one list ordinary staff need to write to
+
+Since § 5a's automatic Staff role, an ordinary employee's Checkpoint
+*screen* is already trimmed to just this — no separate UI setup needed
+for that half. This section is about the other half: the SharePoint
+list permissions that let their acknowledgement actually **save**. The
+two are independent. Skip this section and a Staff-role employee still
+sees a clean "My attestations" card and can click "I have read and
+understood" — the write then fails at SharePoint with a permission
+error, because nothing below has granted them Contribute yet.
 
 Everything else in Checkpoint is written by Practitioners. Policy
 attestation is different by design: it records that *each employee* has
@@ -412,9 +446,12 @@ to acknowledge. Nothing else.
    both.
 3. Grant `Checkpoint Staff` **Read** on `Checkpoint Documents`.
 4. Grant nothing else. A member of `Checkpoint Staff` who is not also a
-   Practitioner or Viewer sees the app, can acknowledge their own
-   policies, and every other register fails to load for them — which is
-   the intended outcome, not a bug.
+   Practitioner or Viewer sees only the trimmed Staff view (§ 5a) and can
+   acknowledge their own policies; every other list is Contribute/Read
+   for Practitioners and Viewers only, which is the intended outcome, not
+   a bug — this group only needs to exist at all if the automatic Staff
+   role (§ 5a) somehow doesn't apply to someone it should (e.g. they hold
+   an unrelated Entra directory role for other reasons).
 
 Two consequences worth being explicit about with a client:
 

@@ -217,22 +217,30 @@ function showModal(opts) {
 
   var W = null;          /* onboarding wizard state — in memory only, never persisted (see the "onboarding wizard" section near the bottom of this file); reset fresh every time Wizard.start()/startAt() runs */
   var CAP = null;        /* capability detection result (see detectAppCapabilities() below) — session-cached, never persisted, re-probed fresh on every page load */
-  /* Two-role model — {readOnly, detected} from Graph.detectRole(), or a
-     demo-mode stand-in (see detectAppReadOnly() below). readOnly:true
-     disables/hides mutating UI (see MUTATING_ACTIONS/applyReadOnlyUi()
-     near the bottom of this file) for a Viewer's session.
-     SECURITY: this is UX only, never enforcement. The SharePoint list
+  /* Three-role model — {readOnly, detected, restricted} from
+     Graph.detectRole(), or a demo-mode stand-in (see detectAppReadOnly()
+     below). readOnly:true disables/hides mutating UI (see
+     MUTATING_ACTIONS/applyReadOnlyUi() near the bottom of this file) for
+     a Viewer's session. restricted:true is a different axis entirely —
+     it doesn't touch what's mutable, it trims which VIEWS a session with
+     no directory role and no explicit Checkpoint group even sees, down
+     to Policy attestation and Training (see RESTRICTED_ACCESS,
+     applyRestrictedNav()/applyRestrictedUi() near the bottom of this
+     file). A restricted session still needs full write access to its
+     OWN acknowledgements and training completions — it is never also
+     READONLY on that account.
+     SECURITY: both are UX only, never enforcement. The SharePoint list
      permissions set up per SETUP.md are what actually stop a Viewer
-     from writing — this flag cannot grant or restrict anything by
-     itself, it only decides which buttons this browser tab shows as
-     clickable. Treat every render below as advisory, not a security
-     boundary; if it's ever wrong (stale cache, a bug, a user editing
-     the DOM directly), the worst case is a confusing button, not a
-     data breach, because Store calls still hit SharePoint's own
-     permission check underneath.
-     READONLY itself is the single flag every gating mechanism reads
-     (MUTATING_ACTIONS/applyReadOnlyUi/the delegated dispatch); it's
-     recomputed by recomputeReadOnly() below from TWO independent
+     from writing, or a restricted session from reading a register it
+     isn't shown — neither flag can grant or restrict anything by
+     itself, they only decide what this browser tab renders. Treat every
+     render below as advisory, not a security boundary; if it's ever
+     wrong (stale cache, a bug, a user editing the DOM directly), the
+     worst case is a confusing screen, not a data breach, because Store
+     calls still hit SharePoint's own permission check underneath.
+     READONLY itself is the single flag every write-gating mechanism
+     reads (MUTATING_ACTIONS/applyReadOnlyUi/the delegated dispatch);
+     it's recomputed by recomputeReadOnly() below from TWO independent
      sources — the Viewer role (VIEWER_READONLY) and an expired-past-
      grace activation (ENTITLEMENT_STATE.status === 'expired') — either
      one alone is enough to force it. READONLY_REASON exists purely so
@@ -240,6 +248,7 @@ function showModal(opts) {
      is, without every render site re-deriving that itself. */
   var READONLY = null;
   var VIEWER_READONLY = null;
+  var RESTRICTED_ACCESS = null;
   /* Hidden diagnostics view (see renderSelfTest()) — demo-mode-only by
      design (the checks it runs are pure-logic and never touch a real
      tenant, but there's no reason to expose it outside demo, and
@@ -264,6 +273,11 @@ function showModal(opts) {
   function updateRoleChip() {
     var roleChip = document.getElementById('roleChip');
     if (!roleChip) return;
+    if (RESTRICTED_ACCESS) {
+      roleChip.style.display = 'inline-block';
+      roleChip.textContent = 'Staff access — attestation & training only';
+      return;
+    }
     roleChip.style.display = READONLY ? 'inline-block' : 'none';
     roleChip.textContent = READONLY_REASON === 'expired' ? 'Activation expired — read only' : 'Viewer — read only';
   }
@@ -14607,6 +14621,7 @@ function showModal(opts) {
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
     updateRoleChip();
+    applyRestrictedNav();
     aiInitOnce();
     window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
     renderAll();
@@ -14616,12 +14631,21 @@ function showModal(opts) {
        Viewer, instead of the Dashboard practitioners land on by
        default. Only overrides the view on first boot; a Viewer can
        still navigate anywhere else read-only registers/reports remain
-       visible. */
-    if (READONLY) App.go('board');
+       visible. A restricted session lands on Policy attestation instead
+       — Training is the only other view it can even reach, and between
+       the two, an unacknowledged policy is the more commonly urgent
+       one. Checked first: RESTRICTED_ACCESS and READONLY-via-Viewer
+       never coincide (see the RESTRICTED_ACCESS comment near the top of
+       this file), but READONLY can also come from an expired
+       activation, which says nothing about which view a restricted
+       session should land on. */
+    if (RESTRICTED_ACCESS) App.go('attestations');
+    else if (READONLY) App.go('board');
     SELFTEST_MODE = Store.kind === 'demo' && /[?&]selftest=1\b/.test(location.search);
     if (SELFTEST_MODE) App.go('selftest');
     applyReadOnlyUi();
     startReadOnlyObserver();
+    applyRestrictedUi();
     var versionTag = document.getElementById('versionTag');
     if (versionTag) versionTag.textContent = window.CHECKPOINT_VERSION ? 'Checkpoint v' + window.CHECKPOINT_VERSION : 'Checkpoint';
     checkForNewVersion();
@@ -14713,21 +14737,31 @@ function showModal(opts) {
     };
   }
 
-  /* Sets READONLY from Graph.detectRole() (see graph.js — reads Entra ID
-     group membership, "Checkpoint Viewers"/"Checkpoint Practitioners";
-     never found -> full access, fail open, see the READONLY comment
-     near the top of this file for why that's safe). Demo mode has no
-     real tenant or SharePoint groups to check, so it's driven by a
-     ?role=viewer query-string flag instead — a deliberate, harmless way
-     to preview the Viewer experience without needing a real tenant set
-     up, same spirit as every other demo-mode stand-in in this file. */
+  /* Sets READONLY and RESTRICTED_ACCESS from Graph.detectRole() (see
+     graph.js — reads Entra ID group membership, "Checkpoint
+     Viewers"/"Checkpoint Practitioners" first; if neither matches, falls
+     back to "does this person hold any Entra directory role at all" to
+     decide restricted vs full access, fail open on any error — see the
+     READONLY comment near the top of this file and detectRole()'s own
+     comment for why that's safe). Demo mode has no real tenant, Entra
+     groups or directory roles to check, so it's driven by a
+     ?role=viewer / ?role=restricted query-string flag instead — a
+     deliberate, harmless way to preview either experience without
+     needing a real tenant set up, same spirit as every other demo-mode
+     stand-in in this file. */
   async function detectAppReadOnly() {
     if (Store.kind === 'demo') {
-      VIEWER_READONLY = new URLSearchParams(location.search).get('role') === 'viewer';
+      var demoRole = new URLSearchParams(location.search).get('role');
+      VIEWER_READONLY = demoRole === 'viewer';
+      RESTRICTED_ACCESS = demoRole === 'restricted';
       recomputeReadOnly();
       return;
     }
-    try { VIEWER_READONLY = !!(await Graph.detectRole()).readOnly; } catch (e) { warn(e); VIEWER_READONLY = false; }
+    try {
+      var role = await Graph.detectRole();
+      VIEWER_READONLY = !!role.readOnly;
+      RESTRICTED_ACCESS = !!role.restricted;
+    } catch (e) { warn(e); VIEWER_READONLY = false; RESTRICTED_ACCESS = false; }
     recomputeReadOnly();
   }
 
@@ -14769,6 +14803,51 @@ function showModal(opts) {
       _roObserver._t = setTimeout(applyReadOnlyUi, 30);
     });
     _roObserver.observe(target, { childList: true, subtree: true });
+  }
+
+  /* Hides every nav item except Policy attestation and Training for a
+     restricted session (see RESTRICTED_ACCESS/detectAppReadOnly()) — a
+     regular employee's whole reason for being here. Driven off data-v,
+     not a hardcoded list of the OTHER nav items: anything new added to
+     the sidebar later is hidden automatically rather than needing to be
+     remembered here. A nav-group whose every item ends up hidden is
+     hidden too, so a restricted session never sees an empty expandable
+     section. A no-op, run once at boot, for every other session. */
+  var RESTRICTED_NAV_KEEP = { attestations: true, training: true };
+  function applyRestrictedNav() {
+    if (!RESTRICTED_ACCESS) return;
+    document.querySelectorAll('.nav-item[data-v]').forEach(function (el) {
+      if (!RESTRICTED_NAV_KEEP[el.dataset.v]) el.style.display = 'none';
+    });
+    document.querySelectorAll('.nav-group').forEach(function (grp) {
+      var anyVisible = Array.prototype.some.call(grp.querySelectorAll('.nav-item[data-v]'), function (el) {
+        return el.style.display !== 'none';
+      });
+      if (!anyVisible) grp.style.display = 'none';
+    });
+  }
+
+  /* Trims the Policy attestation and Training views themselves for a
+     restricted session — everything except each view's own "My
+     attestations"/"My training" card: the org-wide summary tiles, the
+     campaign/assignment builder, and the full records table, none of
+     which a regular employee has any reason to see or touch. An
+     explicit id list rather than a wrapper element, matching
+     applyReadOnlyUi()'s own MUTATING_ACTIONS/HIDE_ACTIONS shape — both
+     views already carry these ids for other reasons (attestAdminWrap/
+     trainingAdminWrap already gate the admin-only controls;
+     attestKpiRow/trainingKpiRow are the two summary-tile strips), so
+     this reuses them rather than restructuring either view's markup.
+     trainingActionsRow is the one id added purely for this — the
+     "+ Assign training / Catch up new starters / Export CSV" row had
+     none before. A no-op for every other session. */
+  var RESTRICTED_HIDE_IDS = ['attestKpiRow', 'attestAdminWrap', 'trainingActionsRow', 'trainingKpiRow', 'trainingAdminWrap'];
+  function applyRestrictedUi() {
+    if (!RESTRICTED_ACCESS) return;
+    RESTRICTED_HIDE_IDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
   }
 
   /* ================= signed activation files =================
