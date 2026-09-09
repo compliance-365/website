@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.63.5',
+    date: '2026-09-09',
+    entries: [
+      'Policy attestation now opens with a summary strip -- Outstanding / Acknowledged / Exempt -- matching the Statement of Applicability, Training, Documents, Vendors and AI systems registers, which all got one already. Every other register answered "what needs my attention" before the practitioner scrolled to the table; this one didn\'t. Clicking a tile filters the records table below it, using the same definition of each slice as the existing filter pills, so the number on a tile and the rows it opens can never disagree.'
+    ]
+  },
+  {
     version: '1.63.4',
     date: '2026-09-08',
     entries: [

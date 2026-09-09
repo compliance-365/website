@@ -936,6 +936,13 @@
     <section class="view" id="v-attestations">
       <div class="vhead"><div class="rule"></div><h1>Policy attestation</h1><p>ISO 27001 A.5.1 requires policies to be communicated to — and acknowledged by — relevant personnel, and A.6.3 expects the same of awareness material. An auditor samples individuals, so this records one row per person per policy version, with the date they acknowledged it. Employees see only their own outstanding items.</p></div>
 
+      <!-- The summary strip every other register opens with, and which
+           this view was missing entirely: the Statement of Applicability,
+           Training, Actions, Vendors, AI systems and Documents all lead
+           with one. Tiles filter the records table below, same as
+           Training's. -->
+      <div class="grid kpis" id="attestKpiRow" style="margin:0 0 18px"></div>
+
       <div class="card" id="myAttestCard" style="margin-bottom:18px">
         <h3>My attestations</h3>
         <div id="myAttestBody"></div>

@@ -6850,6 +6850,27 @@ function showModal(opts) {
 
   var ATTEST_FILTERS = ['All', 'Outstanding', 'Acknowledged', 'Exempt'];
 
+  /* The summary strip this view never had. Every other register opens
+     with one (see the SoA, Training, Documents, Vendors, AI systems) —
+     without it, an auditor had to read the full records table to learn
+     how many people still owe an acknowledgement. */
+  function renderAttestationSummary() {
+    var el = document.getElementById('attestKpiRow');
+    if (!el) return;
+    var sum = window.CheckpointLib.attestationSummary(S.attestations || []);
+    var active = window._attestF || 'All';
+    function tile(key, value, caption, sub, alert) {
+      return kpiTile({ key: key, value: value, label: caption, sub: sub, focus: active,
+        action: 'App.focusAttest', tone: alert ? 'fail' : '',
+        title: 'Show only these records in the table below' });
+    }
+    el.innerHTML =
+      tile('Outstanding', sum.outstanding, 'Outstanding', 'not yet acknowledged', true) +
+      tile('Acknowledged', sum.acknowledged, 'Acknowledged', 'of ' + sum.total + ' assignment' + (sum.total === 1 ? '' : 's'), false) +
+      tile('Exempt', sum.exempt, 'Exempt', 'excluded from the chase list', false);
+    runCountUps(el);
+  }
+
   function renderAttestationRecords() {
     var rows = document.getElementById('attestRows');
     if (!rows) return;
@@ -6860,12 +6881,12 @@ function showModal(opts) {
     var all = (S.attestations || []).slice().sort(function (a, b) {
       return (b.assigned || '').localeCompare(a.assigned || '') || (a.userName || '').localeCompare(b.userName || '');
     });
-    /* "Outstanding" is anything not yet resolved either way — including
-       a row with an unrecognised status, which must never disappear
-       from a register an auditor is going to count. */
-    var list = f === 'All' ? all
-      : f === 'Outstanding' ? all.filter(function (r) { return r.status !== 'Acknowledged' && r.status !== 'Exempt'; })
-      : all.filter(function (r) { return r.status === f; });
+    /* One definition behind the pill, the tile and the rows — see
+       attestationFocusRows(). "Outstanding" is anything not yet resolved
+       either way, including a row with an unrecognised status, which
+       must never disappear from a register an auditor is going to
+       count. */
+    var list = window.CheckpointLib.attestationFocusRows(f, all);
     if (!list.length) {
       rows.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No attestation records' + (f === 'All' ? ' yet' : ' matching this filter') + '.</td></tr>';
       return;
@@ -6907,6 +6928,7 @@ function showModal(opts) {
   function renderAttestations() {
     renderMyAttestations();
     renderCampaigns();
+    renderAttestationSummary();
     renderAttestationRecords();
     /* The campaign builder needs the document register, which is
        fetched on demand. Load it once so the policy picker is populated
@@ -11657,7 +11679,16 @@ function showModal(opts) {
       audit('Policy exported to Word', 'Document', docName, '(none)', 'Uncontrolled copy');
       toast('Exported as an uncontrolled Word copy.');
     },
-    filterAttest: function (f) { window._attestF = f; renderAttestationRecords(); },
+    filterAttest: function (f) { window._attestF = f; renderAttestationSummary(); renderAttestationRecords(); },
+    /* Clicking the active tile clears back to All, same toggle the
+       Statement of Applicability's and Training's tiles use. */
+    focusAttest: function (key) {
+      window._attestF = (key && window._attestF !== key) ? key : 'All';
+      renderAttestationSummary();
+      renderAttestationRecords();
+      var el = document.getElementById('attestFilters');
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    },
     filterTraining: function (f) { window._trainingF = f; renderTrainingSummary(); renderTrainingRecords(); },
     /* Clicking the active tile clears back to All, same toggle the
        Statement of Applicability's tiles use. */

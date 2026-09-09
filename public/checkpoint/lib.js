@@ -511,6 +511,37 @@
     });
   }
 
+  /* Register-wide summary strip and the rows behind each of its tiles —
+     same shape and the same guarantee as trainingFocusRows()/
+     trainingSummary() above: the number on a tile is the length of the
+     list that tile opens, because both are read from here, and
+     renderAttestationRecords()'s own "Outstanding" filter pill uses this
+     too so all three can never disagree.
+
+     There is no due-date field on an attestation record (unlike
+     Training), so there is no Overdue slice to add — Outstanding /
+     Acknowledged / Exempt is the complete, mutually exclusive partition,
+     and 'All' is every row regardless of status. An unrecognised status
+     falls into Outstanding, matching outstandingAttestationsFor()'s own
+     rule: a row an auditor is going to count must never simply vanish
+     from the register because its status string doesn't match. */
+  function attestationFocusRows(key, records) {
+    var rows = (Array.isArray(records) ? records : []).filter(Boolean);
+    if (key === 'All') return rows.slice();
+    if (key === 'Acknowledged') return rows.filter(function (r) { return r.status === 'Acknowledged'; });
+    if (key === 'Exempt') return rows.filter(function (r) { return r.status === 'Exempt'; });
+    if (key === 'Outstanding') return rows.filter(function (r) { return r.status !== 'Acknowledged' && r.status !== 'Exempt'; });
+    return [];
+  }
+  function attestationSummary(records) {
+    return {
+      total: attestationFocusRows('All', records).length,
+      outstanding: attestationFocusRows('Outstanding', records).length,
+      acknowledged: attestationFocusRows('Acknowledged', records).length,
+      exempt: attestationFocusRows('Exempt', records).length
+    };
+  }
+
   /* Posture result for the 'training' check (A.6.3 / SOC 2 CC1.4 /
      NIST PR.AT), which until now was scored:false with no signal at
      all — Checkpoint could not tell a client whether awareness
@@ -3694,6 +3725,7 @@
     buildAdminConsentUrl: buildAdminConsentUrl,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
+    attestationFocusRows: attestationFocusRows, attestationSummary: attestationSummary,
     trainingCheckResult: trainingCheckResult, usersMissingInduction: usersMissingInduction,
     segregationOfDutiesResult: segregationOfDutiesResult,
     recurringActivityState: recurringActivityState, backupCheckResult: backupCheckResult,
