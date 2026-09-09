@@ -7339,15 +7339,25 @@ function showModal(opts) {
   function loadCampaignGroups() { return loadAudienceGroups('campaignGroup'); }
   function loadTrainingGroups() { return loadAudienceGroups('trainingGroup'); }
 
+  /* Shared by both the attestation campaign and training assignment
+     audience pickers. Deduped here, once, rather than in each Graph
+     call: listGroupMembers()'s transitiveMembers can resolve the same
+     person more than once when they're reachable through more than one
+     nested-group path, and every caller of this function needs that
+     fixed the same way regardless of which underlying Graph endpoint
+     produced the list. */
   async function resolveAudience(modeSelectId, groupSelectId) {
     if (Store.kind === 'demo') return [];
     var mode = document.getElementById(modeSelectId).value;
+    var users;
     if (mode === 'group') {
       var gid = document.getElementById(groupSelectId).value;
       if (!gid) return [];
-      return Graph.listGroupMembers(gid);
+      users = await Graph.listGroupMembers(gid);
+    } else {
+      users = await Graph.listTenantUsers();
     }
-    return Graph.listTenantUsers();
+    return window.CheckpointLib.dedupeAudience(users);
   }
   function resolveCampaignAudience() { return resolveAudience('campaignAudience', 'campaignGroup'); }
 
