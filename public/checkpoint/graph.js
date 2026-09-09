@@ -292,7 +292,7 @@ window.Graph = (function () {
   }
 
   /* ==========================================================
-     Two-role model — detects whether the signed-in user is a member of
+     Three-role model — detects whether the signed-in user is a member of
      the "Checkpoint Viewers" or "Checkpoint Practitioners" SharePoint
      group set up for this tenant (see SETUP.md — Graph has no v1.0
      endpoint to CREATE or list-scope-assign classic SharePoint site
@@ -302,18 +302,38 @@ window.Graph = (function () {
      incremental consent needed). A cheap, read-only call, same shape as
      detectCapabilities() above: try, cache, fail soft.
 
+     Neither Checkpoint group is anything close to universal — both are
+     an opt-in a practitioner sets up by hand, and most tenants never
+     will. Before the `restricted` branch below existed, that meant
+     EVERY signed-in employee who wasn't explicitly a Viewer landed on
+     the exact same full admin console as the practitioner running the
+     tenant, just to acknowledge a policy or complete a training course.
+     Rather than asking for a third group to maintain, `restricted` falls
+     back to a signal that needs no Checkpoint-specific setup at all:
+     does this person hold ANY Entra directory role? Checkpoint's
+     practitioner console has no tenant-level blast radius — everything
+     it writes goes to Checkpoint's own SharePoint lists, never to the
+     directory — so the bar here is "some administrative footprint in
+     this tenant", not "highly privileged"; a narrow role like Helpdesk
+     Administrator counts, same as Global Administrator. This only runs
+     when neither explicit group matched, so a tenant that HAS set up
+     Viewers/Practitioners keeps exactly today's behaviour unchanged.
+
      SECURITY NOTE — read this before changing anything downstream of
      this function: the result here NEVER grants or restricts access to
-     anything. It only tells app.js which buttons to disable for a
-     nicer Viewer experience. The actual enforcement is, and must always
+     anything. It only tells app.js which nav items and buttons to show
+     for a nicer, less noisy session — for a Viewer, or now for someone
+     with no directory role who most likely isn't running this tenant's
+     compliance programme. The actual enforcement is, and must always
      be, each SharePoint list's own permissions — set by the manual
      steps in SETUP.md, checked by SharePoint itself on every read/write
      Graph call this app makes. If this probe fails, returns stale data,
      or is bypassed entirely (e.g. by calling a Store method directly
      from the console), a genuine Viewer's write attempts still fail at
-     SharePoint, because SharePoint — not this flag — is what's actually
-     protecting the data. Never remove SharePoint-side permissions and
-     rely on this flag instead. */
+     SharePoint, and a "restricted" account can still reach anything
+     SharePoint itself lets them reach — SharePoint, not this flag, is
+     what's actually protecting the data. Never remove SharePoint-side
+     permissions and rely on this flag instead. */
   var roleCache = null;
   async function detectRole(force) {
     if (roleCache && !force) return roleCache;
@@ -322,15 +342,20 @@ window.Graph = (function () {
       var names = groups.map(function (grp) { return grp.displayName; });
       var isViewer = names.indexOf('Checkpoint Viewers') > -1;
       var isPractitioner = names.indexOf('Checkpoint Practitioners') > -1;
-      roleCache = { readOnly: isViewer && !isPractitioner, detected: isViewer || isPractitioner };
+      if (isViewer || isPractitioner) {
+        roleCache = { readOnly: isViewer && !isPractitioner, detected: true, restricted: false };
+        return roleCache;
+      }
+      var roles = await gAll('/me/memberOf/microsoft.graph.directoryRole?$select=id');
+      roleCache = { readOnly: false, detected: false, restricted: !(roles && roles.length) };
     } catch (e) {
       /* Directory.Read.All is already consented (it's in scopesReadOnly,
          requested at sign-in), so a failure here is almost always "this
          tenant hasn't set up the two Checkpoint groups yet" rather than
          a real permission problem — fail OPEN (full access) at this UI
          layer. Safe to fail open: see the note above, this flag only
-         ever hides/disables buttons, it grants nothing. */
-      roleCache = { readOnly: false, detected: false, error: e.message };
+         ever hides/disables buttons and nav items, it grants nothing. */
+      roleCache = { readOnly: false, detected: false, restricted: false, error: e.message };
     }
     return roleCache;
   }

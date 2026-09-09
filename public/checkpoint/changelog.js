@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.64.0',
+    date: '2026-09-09',
+    entries: [
+      'Added a third, automatic role: an employee who signs in but holds no Entra directory role and isn\'t in either of the two existing Checkpoint Practitioners/Viewers groups now sees a trimmed "Staff" view -- just their own outstanding policy acknowledgements and training assignments, nothing else -- instead of the full practitioner console. Before this, every signed-in employee saw the same risk register, vendor list and every other colleague\'s attestation status as the person actually running the compliance programme. No setup required: it needs no new Entra group and no new permission grant, since it reuses the Directory.Read.All scope already consented at sign-in. A tenant that has already set up the Checkpoint Practitioners/Viewers groups keeps exactly today\'s behaviour, unaffected. Previewable in demo mode via ?role=restricted, same as the existing ?role=viewer.'
+    ]
+  },
+  {
     version: '1.63.6',
     date: '2026-09-09',
     entries: [
