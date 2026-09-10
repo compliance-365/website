@@ -1,0 +1,39 @@
+{
+  "artboards": [
+    { "file": "Current.dc.html", "x": 0, "y": 0, "w": 1120, "h": 780, "title": "Today — for comparison" },
+    { "file": "Main.dc.html", "x": 1240, "y": 0, "w": 1120, "h": 780, "title": "A · Instrument (recommended)" },
+    { "file": "DirectionB.dc.html", "x": 2480, "y": 0, "w": 1120, "h": 780, "title": "B · Document" },
+    { "file": "DirectionC.dc.html", "x": 3720, "y": 0, "w": 1120, "h": 780, "title": "C · Console" }
+  ],
+  "annotations": [
+    {
+      "id": "note-current",
+      "x": 0,
+      "y": -230,
+      "w": 460,
+      "text": "TODAY\nWarm near-black + gold, Fraunces serif with an italic gold accent phrase, uppercase letterspaced gold eyebrow, gold-fill button.\n\nAll five of those appear in the Tiger Boards email. Fraunces is also one of the most widely used free display serifs on the web — part of why you keep seeing it."
+    },
+    {
+      "id": "note-a",
+      "x": 1240,
+      "y": -230,
+      "w": 460,
+      "text": "A · INSTRUMENT — my recommendation\nCool near-black (not warm), no serif at all, Archivo display + IBM Plex Sans/Mono. Tabular mono numerals and tick rules carry the emphasis instead of a decorative italic. Mint-cyan signal used small, semantic amber/red reserved for real status.\n\nWhy: reads as measurement, not marketing. Deliverable via your token system — no component rebuild.\nTradeoff: colder. Undersells the senior-practitioner story a CFO buyer may respond to."
+    },
+    {
+      "id": "note-b",
+      "x": 2480,
+      "y": -230,
+      "w": 460,
+      "text": "B · DOCUMENT\nInverts to light-dominant paper — the single fastest way to stop resembling every dark-gold competitor. Newsreader serif, oxblood ink, clause numbering, marginalia, a real SoA extract. No gold anywhere.\n\nWhy: signals rigour and permanence; looks like the auditor's actual world.\nTradeoff: risks reading as a law firm or standards body — trading one costume for another — and least obviously software."
+    },
+    {
+      "id": "note-c",
+      "x": 3720,
+      "y": -230,
+      "w": 460,
+      "text": "C · CONSOLE\nThe marketing page IS the product surface. Neutral app canvas, your existing Manrope + JetBrains Mono, and the status palette (pass/warn/gap) becomes the brand palette.\n\nWhy: the most defensible differentiation — derived from an asset only you own. A newsletter cannot fake a control register.\nTradeoff: the most work, needs real component fidelity, and de-emphasises the human consulting story that currently closes deals."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

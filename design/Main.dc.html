@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #5FE3C0; } a:hover { color: #8CEDD3; }
+  </style>
+</helmet>
+
+<div style="width: 1120px; height: 780px; background: #0C0E10; color: #E9ECEE; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden; position: relative;">
+
+  <!-- measured grid ground: ruled, not glowing -->
+  <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px); background-size: 56px 56px;"></div>
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; border-bottom: 1px solid rgba(255,255,255,0.10); background: rgba(12,14,16,0.9);">
+    <div style="display: flex; align-items: baseline; gap: 9px;">
+      <span style="font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: -0.01em;">Compliance365</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #5FE3C0; letter-spacing: 0.08em;">/ CHECKPOINT</span>
+    </div>
+    <div style="display: flex; gap: 20px; font-size: 12px; color: #9AA2A9;">
+      <span>Frameworks</span><span>Console</span><span>Pricing</span><span>Evidence</span><span>Company</span>
+    </div>
+  </div>
+
+  <div style="position: relative; padding: 92px 36px 0; display: grid; grid-template-columns: minmax(0, 1fr) 404px; gap: 44px; align-items: start;">
+
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 26px;">
+        <span style="width: 6px; height: 6px; background: #5FE3C0;"></span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.16em; color: #9AA2A9; text-transform: uppercase;">Posture computed from your tenant</span>
+      </div>
+
+      <h1 style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 55px; line-height: 1.04; letter-spacing: -0.035em; margin: 0 0 24px; color: #F4F6F7;">
+        Certified in weeks,<br>because the evidence<br>is already there.
+      </h1>
+
+      <p style="font-size: 14.5px; line-height: 1.7; color: #9AA2A9; max-width: 48ch; margin: 0 0 32px;">
+        ISO&nbsp;27001, SOC&nbsp;2, Essential&nbsp;Eight and ISO&nbsp;42001 — built inside the Microsoft&nbsp;365 tenant you already run. We read the signals, map them to controls, and file the proof as it happens.
+      </p>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 44px;">
+        <div style="background: #5FE3C0; color: #06231C; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; padding: 14px 22px;">RUN A POSTURE SCAN</div>
+        <div style="border: 1px solid rgba(255,255,255,0.18); color: #E9ECEE; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 500; letter-spacing: 0.04em; padding: 14px 22px;">SCOPE AN ENGAGEMENT</div>
+      </div>
+
+      <!-- readout strip: tick scale + tabular numerals carry the emphasis -->
+      <div style="border-top: 1px solid rgba(255,255,255,0.14); padding-top: 4px;">
+        <div style="display: flex; gap: 3px; margin-bottom: 16px;">
+          <span style="width: 1px; height: 7px; background: rgba(255,255,255,0.34);"></span>
+          <span style="width: 1px; height: 4px; background: rgba(255,255,255,0.16);"></span>
+          <span style="width: 1px; height: 4px; background: rgba(255,255,255,0.16);"></span>
+          <span style="width: 1px; height: 4px; background: rgba(255,255,255,0.16);"></span>
+          <span style="width: 1px; height: 7px; background: rgba(255,255,255,0.34);"></span>
+          <span style="width: 1px; height: 4px; background: rgba(255,255,255,0.16);"></span>
+          <span style="width: 1px; height: 4px; background: rgba(255,255,255,0.16);"></span>
+          <span style="width: 1px; height: 4px; background: rgba(255,255,255,0.16);"></span>
+          <span style="width: 1px; height: 7px; background: rgba(255,255,255,0.34);"></span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 26px;">
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 27px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: #F4F6F7;">100<span style="font-size: 15px; color: #5FE3C0;">%</span></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #6F777D; margin-top: 6px;">First-time pass</div>
+          </div>
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 27px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: #F4F6F7;">8–14</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #6F777D; margin-top: 6px;">Weeks to ready</div>
+          </div>
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 27px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: #F4F6F7;">19<span style="font-size: 15px; color: #6F777D;">/93</span></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #6F777D; margin-top: 6px;">Controls auto-proposed</div>
+          </div>
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 27px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: #F4F6F7;">$0</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #6F777D; margin-top: 6px;">Platform tax</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- the instrument: a real readout, not an ornament -->
+    <div style="background: #14171A; border: 1px solid rgba(255,255,255,0.11);">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.11);">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #9AA2A9;">Tenant posture</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #5FE3C0;">● LIVE</span>
+      </div>
+
+      <div style="padding: 20px 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.11);">
+        <div style="display: flex; align-items: flex-end; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 46px; font-weight: 500; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: #F4F6F7;">68</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 17px; color: #6F777D; padding-bottom: 5px;">/100</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #5FE3C0; padding-bottom: 9px; margin-left: auto;">▲ 11 this quarter</span>
+        </div>
+        <div style="display: flex; height: 4px; gap: 2px; margin-top: 16px;">
+          <span style="flex: 68; background: #5FE3C0;"></span>
+          <span style="flex: 32; background: rgba(255,255,255,0.10);"></span>
+        </div>
+      </div>
+
+      <div style="padding: 6px 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <span style="font-size: 12.5px; color: #E9ECEE;">ISO 27001</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; height: 3px; width: 74px; gap: 2px;"><span style="flex: 85; background: #5FE3C0;"></span><span style="flex: 15; background: rgba(255,255,255,0.10);"></span></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #9AA2A9; width: 30px; text-align: right;">85%</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <span style="font-size: 12.5px; color: #E9ECEE;">Essential Eight ML2</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; height: 3px; width: 74px; gap: 2px;"><span style="flex: 62; background: #E8A33D;"></span><span style="flex: 38; background: rgba(255,255,255,0.10);"></span></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #9AA2A9; width: 30px; text-align: right;">62%</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <span style="font-size: 12.5px; color: #E9ECEE;">SOC 2 Type II</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; height: 3px; width: 74px; gap: 2px;"><span style="flex: 44; background: #E8A33D;"></span><span style="flex: 56; background: rgba(255,255,255,0.10);"></span></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #9AA2A9; width: 30px; text-align: right;">44%</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 11px 16px;">
+          <span style="font-size: 12.5px; color: #E9ECEE;">ISO 42001</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; height: 3px; width: 74px; gap: 2px;"><span style="flex: 21; background: #E0574E;"></span><span style="flex: 79; background: rgba(255,255,255,0.10);"></span></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #9AA2A9; width: 30px; text-align: right;">21%</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.11); background: rgba(95,227,192,0.04);">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #6F777D; letter-spacing: 0.06em;">SHA-256 evidence chain · SharePoint · your tenant</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
