@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #0B0B0C; } a:hover { color: #6B6860; }
+  </style>
+</helmet>
+
+<div style="width: 1120px; height: 780px; background: #FAF7F1; color: #0B0B0C; font-family: 'Public Sans', system-ui, sans-serif; overflow: hidden; position: relative;">
+
+  <div style="height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 2px solid #0B0B0C;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="20" height="20" viewBox="0 0 200 200" aria-hidden="true">
+        <path d="M176.2,56 A88,88 0 1,0 176.2,144" fill="none" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/>
+        <circle cx="188" cy="100" r="13" fill="#A9812E"/>
+      </svg>
+      <span style="font-size: 14.5px; font-weight: 700; letter-spacing: -0.015em;">Compliance365</span>
+    </div>
+    <div style="display: flex; gap: 22px; font-size: 12.5px; font-weight: 500;">
+      <span>Frameworks</span><span>Checkpoint</span><span>Pricing</span><span>Method</span><span>Practice</span>
+    </div>
+  </div>
+
+  <!-- hard grid: type flush left, one big flat field of colour -->
+  <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0; border-bottom: 1px solid #0B0B0C;">
+
+    <div style="grid-column: span 8; padding: 44px 34px 40px 40px; border-right: 1px solid #0B0B0C;">
+      <h1 style="font-size: 59px; font-weight: 800; line-height: 1.0; letter-spacing: -0.042em; margin: 0 0 22px; text-wrap: pretty;">
+        Certified in weeks,<br>not quarters.
+      </h1>
+      <p style="font-size: 16px; line-height: 1.55; font-weight: 400; color: #3A3632; max-width: 50ch; margin: 0 0 28px;">
+        ISO 27001, SOC 2, Essential Eight and ISO 42001 — built inside the Microsoft 365 tenant you already run. Fixed price. Your registers and evidence never leave it.
+      </p>
+      <div style="display: flex; gap: 0; border: 2px solid #0B0B0C; width: fit-content;">
+        <span style="background: #0B0B0C; color: #FAF7F1; font-size: 13px; font-weight: 700; padding: 13px 22px;">Scope an engagement</span>
+        <span style="font-size: 13px; font-weight: 600; padding: 13px 22px; border-left: 2px solid #0B0B0C;">Run a posture scan</span>
+      </div>
+    </div>
+
+    <!-- gold as a large flat field, not a thin luxury accent -->
+    <div style="grid-column: span 4; background: #A9812E; color: #0B0B0C; padding: 44px 40px 40px 34px; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-size: 76px; font-weight: 800; line-height: 0.9; letter-spacing: -0.05em;">100%</div>
+        <div style="font-size: 13.5px; font-weight: 600; line-height: 1.4; margin-top: 12px; max-width: 22ch;">First-time certification pass rate, every engagement to date.</div>
+      </div>
+      <div style="font-size: 12px; font-weight: 500; border-top: 2px solid #0B0B0C; padding-top: 12px; margin-top: 26px;">Brisbane · national delivery</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); border-bottom: 1px solid #0B0B0C;">
+    <div style="grid-column: span 3; padding: 20px 20px 20px 40px; border-right: 1px solid #0B0B0C;">
+      <div style="font-size: 31px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;">8&ndash;14</div>
+      <div style="font-size: 12px; font-weight: 500; color: #3A3632; margin-top: 7px;">Weeks to audit-ready</div>
+    </div>
+    <div style="grid-column: span 3; padding: 20px; border-right: 1px solid #0B0B0C;">
+      <div style="font-size: 31px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;">60&ndash;80%</div>
+      <div style="font-size: 12px; font-weight: 500; color: #3A3632; margin-top: 7px;">Below Big 4 pricing</div>
+    </div>
+    <div style="grid-column: span 3; padding: 20px; border-right: 1px solid #0B0B0C;">
+      <div style="font-size: 31px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;">19<span style="color: #6B6860;">/93</span></div>
+      <div style="font-size: 12px; font-weight: 500; color: #3A3632; margin-top: 7px;">Controls auto-proposed</div>
+    </div>
+    <div style="grid-column: span 3; padding: 20px 40px 20px 20px;">
+      <div style="font-size: 31px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;">$0</div>
+      <div style="font-size: 12px; font-weight: 500; color: #3A3632; margin-top: 7px;">Third-party platform tax</div>
+    </div>
+  </div>
+
+  <div style="padding: 26px 40px;">
+    <div style="font-size: 11px; font-weight: 700; margin-bottom: 16px;">Frameworks delivered</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0;">
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">ISO 27001</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">SOC 2</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">Essential Eight</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">ISO 42001</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">ISO 27701</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">DISP / IRAP</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">NIST CSF</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">IS18</span>
+      <span style="font-size: 13px; font-weight: 600; border: 1px solid #0B0B0C; padding: 8px 15px; margin: 0 -1px -1px 0;">RFFR</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

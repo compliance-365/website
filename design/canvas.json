@@ -1,38 +1,41 @@
 {
   "artboards": [
     { "file": "Current.dc.html", "x": 0, "y": 0, "w": 1120, "h": 780, "title": "Today — for comparison" },
-    { "file": "Main.dc.html", "x": 1240, "y": 0, "w": 1120, "h": 780, "title": "A · Instrument (recommended)" },
-    { "file": "DirectionB.dc.html", "x": 2480, "y": 0, "w": 1120, "h": 780, "title": "B · Document" },
-    { "file": "DirectionC.dc.html", "x": 3720, "y": 0, "w": 1120, "h": 780, "title": "C · Console" }
+    { "file": "DirectionD.dc.html", "x": 1240, "y": 0, "w": 1120, "h": 780, "title": "D · Swiss Grid (recommended · keeps logo)" },
+    { "file": "DirectionE.dc.html", "x": 2480, "y": 0, "w": 1120, "h": 780, "title": "E · Blueprint (keeps logo)" },
+    { "file": "DirectionF.dc.html", "x": 3720, "y": 0, "w": 1120, "h": 780, "title": "F · Almanac (keeps logo)" },
+    { "file": "Main.dc.html", "x": 1240, "y": 1120, "w": 1120, "h": 780, "title": "A · Instrument — conflicts with the gold logo" },
+    { "file": "DirectionB.dc.html", "x": 2480, "y": 1120, "w": 1120, "h": 780, "title": "B · Document — conflicts with the gold logo" },
+    { "file": "DirectionC.dc.html", "x": 3720, "y": 1120, "w": 1120, "h": 780, "title": "C · Console — conflicts with the gold logo" }
   ],
   "annotations": [
     {
-      "id": "note-current",
+      "id": "note-diagnosis",
       "x": 0,
-      "y": -230,
-      "w": 460,
-      "text": "TODAY\nWarm near-black + gold, Fraunces serif with an italic gold accent phrase, uppercase letterspaced gold eyebrow, gold-fill button.\n\nAll five of those appear in the Tiger Boards email. Fraunces is also one of the most widely used free display serifs on the web — part of why you keep seeing it."
+      "y": -300,
+      "w": 1120,
+      "text": "THE ACTUAL PROBLEM\nIt isn't that you use gold — it's that gold does every job: eyebrow, headline accent, button fill, links, rules, icons. Tiger Boards does exactly the same thing, which is why you collide.\n\nYour logo spends gold in ONE place: a single dot marking a point on an arc — a checkpoint reached. That's a product metaphor, not a luxury one. Demote gold back to a point and the resemblance collapses while the logo still fits.\n\nRow 1 keeps your logo. Row 2 (A/B/C) was drafted before I knew the logo was fixed — each replaces gold with another accent, so each fights the gold dot. Kept for reference, not recommended."
     },
     {
-      "id": "note-a",
+      "id": "note-d",
       "x": 1240,
-      "y": -230,
-      "w": 460,
-      "text": "A · INSTRUMENT — my recommendation\nCool near-black (not warm), no serif at all, Archivo display + IBM Plex Sans/Mono. Tabular mono numerals and tick rules carry the emphasis instead of a decorative italic. Mint-cyan signal used small, semantic amber/red reserved for real status.\n\nWhy: reads as measurement, not marketing. Deliverable via your token system — no component rebuild.\nTradeoff: colder. Undersells the senior-practitioner story a CFO buyer may respond to."
+      "y": -190,
+      "w": 500,
+      "text": "D · SWISS GRID — my pick\nYour own cream and near-black, hard 12-column grid, 2px rules, Public Sans, flush left. No letterspaced gold eyebrow, no italic accent phrase.\n\nThe move: gold becomes one LARGE flat field, not a thin accent. Same pigment, opposite read — confident and institutional instead of luxury.\n\nWhy: biggest break per unit of effort, and it ships through the tokens you already have.\nTradeoff: stark. Needs real copy discipline — weak writing has nowhere to hide on a grid this bare."
     },
     {
-      "id": "note-b",
+      "id": "note-e",
       "x": 2480,
-      "y": -230,
-      "w": 460,
-      "text": "B · DOCUMENT\nInverts to light-dominant paper — the single fastest way to stop resembling every dark-gold competitor. Newsreader serif, oxblood ink, clause numbering, marginalia, a real SoA extract. No gold anywhere.\n\nWhy: signals rigour and permanence; looks like the auditor's actual world.\nTradeoff: risks reading as a law firm or standards body — trading one costume for another — and least obviously software."
+      "y": -190,
+      "w": 500,
+      "text": "E · BLUEPRINT\nDrafting paper, fine grid, dimension lines, orthographic flow, IBM Plex Sans/Mono. Gold survives exactly as the logo uses it: the node dot marking each stage.\n\nWhy: the most on-message of the six — an ISMS IS a system you had built, and this is its drawing. Nobody in the space looks like this.\nTradeoff: the most bespoke work. Schematics have to be drawn per page, and a weak one looks worse than no diagram."
     },
     {
-      "id": "note-c",
+      "id": "note-f",
       "x": 3720,
-      "y": -230,
-      "w": 460,
-      "text": "C · CONSOLE\nThe marketing page IS the product surface. Neutral app canvas, your existing Manrope + JetBrains Mono, and the status palette (pass/warn/gap) becomes the brand palette.\n\nWhy: the most defensible differentiation — derived from an asset only you own. A newsletter cannot fake a control register.\nTradeoff: the most work, needs real component fidelity, and de-emphasises the human consulting story that currently closes deals."
+      "y": -190,
+      "w": 500,
+      "text": "F · ALMANAC — lowest risk\nKeeps cream, near-black and gold exactly where they are. Changes only the typographic voice: Instrument Serif (high contrast, editorial) replaces Fraunces, over your existing Manrope. Double rules, standing sidebar, drop cap.\n\nWhy: most of the sameness is the typeface. Swap the voice, keep every other piece of brand equity.\nTradeoff: still a serif on cream — the family resemblance to the genre is reduced, not severed."
     }
   ],
   "launch": { "view": "canvas" }
