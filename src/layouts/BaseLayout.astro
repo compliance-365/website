@@ -249,7 +249,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          first-time visitors often never saw the brand faces at all. Only the
          latin subsets are preloaded; latin-ext stays unicode-range gated. -->
     <link rel="preload" href="/assets/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/assets/fonts/fraunces-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <!-- brand.css: preload + async so it never blocks first paint -->
     <link rel="preload" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} /></noscript>
@@ -275,10 +275,10 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       img,svg,video{max-width:100%;height:auto;display:block}
       p{margin:0 0 1rem}
       a{color:var(--primary)}
-      h1,h2,h3{line-height:1.12;margin:0 0 .7rem;letter-spacing:-.02em;color:#0B0B0C;font-family:Fraunces,Georgia,serif}
-      h1{font:500 clamp(2.4rem,4vw,3.4rem)/1.12 Fraunces,Georgia,serif}
-      h2{font:500 clamp(1.8rem,2.6vw,2.2rem)/1.12 Fraunces,Georgia,serif}
-      h3{font:500 1.25rem/1.12 Fraunces,Georgia,serif}
+      h1,h2,h3{line-height:1.12;margin:0 0 .7rem;letter-spacing:-.02em;color:#0B0B0C;font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif}
+      h1{font:500 clamp(2.4rem,4vw,3.4rem)/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif}
+      h2{font:500 clamp(1.8rem,2.6vw,2.2rem)/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif}
+      h3{font:500 1.25rem/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif}
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
       .section{padding:5rem 0}
       .section-tight{padding:2.5rem 0}
@@ -375,7 +375,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
         text-transform: uppercase; color: #A9812E; font-weight: 700; margin: 0 0 20px;
       }
       .svc-hero-copy h1 {
-        font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: clamp(2.1rem, 4.2vw, 3.2rem);
+        font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 400; font-size: clamp(2.1rem, 4.2vw, 3.2rem);
         line-height: 1.1; color: #FAF7F1; margin: 0 0 20px;
       }
       .svc-hero-copy .section-lead, .svc-hero-copy p {

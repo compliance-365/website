@@ -30,7 +30,7 @@ function buildPdcaSvg() {
     const ah = (q.a0 + 82) * Math.PI / 180;
     const ax = cx + r * Math.cos(ah), ay = cy + r * Math.sin(ah);
     svg += `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="4" fill="${q.gold ? '#D8BA78' : '#A9812E'}"/>`;
-    svg += `<text x="${lx.toFixed(1)}" y="${(ly - 4).toFixed(1)}" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="17" fill="#FAF7F1">${q.label}</text>`;
+    svg += `<text x="${lx.toFixed(1)}" y="${(ly - 4).toFixed(1)}" text-anchor="middle" font-family="'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#FAF7F1">${q.label}</text>`;
     q.sub.split('\n').forEach((line, li) => {
       svg += `<text x="${lx.toFixed(1)}" y="${(ly + 12 + li * 11).toFixed(1)}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="8.5" fill="rgba(250,247,241,.6)">${line}</text>`;
     });
@@ -266,7 +266,7 @@ const systems = [
   .tr-sys-badge.on-dark { background: rgba(216,186,120,.08); }
   .tr-sys-badge svg { width: 26px; height: 26px; }
   .tr-sys-head h2 { margin: 0; }
-  .tr-aim { font-family: Fraunces, Georgia, serif; font-size: clamp(1.2rem,2.2vw,1.5rem); line-height: 1.35; color: #0B0B0C; max-width: 40ch; margin: 0 0 1.25rem; border-left: 3px solid #A9812E; padding-left: 18px; }
+  .tr-aim { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-size: clamp(1.2rem,2.2vw,1.5rem); line-height: 1.35; color: #0B0B0C; max-width: 40ch; margin: 0 0 1.25rem; border-left: 3px solid #A9812E; padding-left: 18px; }
   .tr-aim.on-dark { color: #FAF7F1; }
   .tr-body { color: var(--muted); font-size: 15px; line-height: 1.8; max-width: 72ch; margin: 0 0 2.25rem; }
   .tr-body.on-dark { color: rgba(250,247,241,.66); }
@@ -275,7 +275,7 @@ const systems = [
   .tr-anatomy { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 14px; margin-bottom: 2.5rem; }
   .tr-anat-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; border-top: 2px solid #A9812E; }
   .tr-anat-card.on-dark { background: #0B0B0C; border-color: rgba(255,255,255,.12); border-top-color: #A9812E; }
-  .tr-anat-card b { display: block; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.05rem; color: #0B0B0C; margin-bottom: 6px; }
+  .tr-anat-card b { display: block; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.05rem; color: #0B0B0C; margin-bottom: 6px; }
   .tr-anat-card.on-dark b { color: #FAF7F1; }
   .tr-anat-card span { display: block; font-size: 13px; line-height: 1.6; color: var(--muted); }
   .tr-anat-card.on-dark span { color: rgba(250,247,241,.6); }
@@ -292,7 +292,7 @@ const systems = [
   .tr-checks { display: flex; flex-direction: column; gap: 10px; max-width: 820px; }
   .tr-check { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 0; overflow: hidden; }
   .tr-check.on-dark { background: #0B0B0C; border-color: rgba(255,255,255,.12); }
-  .tr-check summary { cursor: pointer; padding: 15px 18px; font-size: 14px; font-weight: 500; color: #0B0B0C; font-family: Fraunces, Georgia, serif; list-style: none; display: flex; gap: 12px; align-items: baseline; }
+  .tr-check summary { cursor: pointer; padding: 15px 18px; font-size: 14px; font-weight: 500; color: #0B0B0C; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; list-style: none; display: flex; gap: 12px; align-items: baseline; }
   .tr-check.on-dark summary { color: #FAF7F1; }
   .tr-check summary::-webkit-details-marker { display: none; }
   .tr-check summary::after { content: '+'; margin-left: auto; color: #A9812E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 18px; line-height: 1; }
@@ -305,7 +305,7 @@ const systems = [
   .tr-ckpt { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 16px; max-width: 900px; margin: 0 auto; }
   .tr-ckpt-card { text-decoration: none; background: #141416; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 22px 24px; transition: border-color .2s, transform .2s; display: block; }
   .tr-ckpt-card:hover { border-color: rgba(216,186,120,.5); transform: translateY(-3px); }
-  .tr-ckpt-card b { display: block; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.15rem; color: #FAF7F1; margin-bottom: 8px; }
+  .tr-ckpt-card b { display: block; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.15rem; color: #FAF7F1; margin-bottom: 8px; }
   .tr-ckpt-card span { display: block; font-size: 13px; line-height: 1.6; color: rgba(250,247,241,.6); }
 
   @media (prefers-reduced-motion: no-preference) {

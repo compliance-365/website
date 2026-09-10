@@ -79,7 +79,7 @@ function buildFingerprintSvg() {
       );
     })
     .join('');
-  return `<svg viewBox="0 0 200 200" aria-hidden="true" class="vig-svg">${ringsSvg}<text x="100" y="95" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-weight="500" font-size="32" fill="#FAF7F1">76%</text><text x="100" y="116" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9" letter-spacing="2" fill="#D8BA78">READINESS</text></svg>`;
+  return `<svg viewBox="0 0 200 200" aria-hidden="true" class="vig-svg">${ringsSvg}<text x="100" y="95" text-anchor="middle" font-family="'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="32" fill="#FAF7F1">76%</text><text x="100" y="116" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9" letter-spacing="2" fill="#D8BA78">READINESS</text></svg>`;
 }
 
 // ── Vignette 3: Certification Journey ───────────────────────────────
@@ -549,7 +549,7 @@ const tourPhases = [
   .tour-panel-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr); gap: clamp(30px,4vw,56px); align-items: center; }
   @media (max-width: 780px) { .tour-panel-grid { grid-template-columns: 1fr; } }
   .tour-panel-step { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; font-weight: 700; margin: 0 0 10px; }
-  .tour-panel h3 { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: clamp(1.35rem,2.4vw,1.85rem); color: #FAF7F1; margin: 0; line-height: 1.2; }
+  .tour-panel h3 { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: clamp(1.35rem,2.4vw,1.85rem); color: #FAF7F1; margin: 0; line-height: 1.2; }
   .tour-panel-body { margin-top: 14px; font-size: 14px; line-height: 1.75; color: rgba(250,247,241,.62); max-width: 54ch; }
   .tour-panel-bullets { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
   .tour-panel-bullets li { font-size: 12.5px; line-height: 1.6; color: rgba(250,247,241,.6); padding-left: 20px; position: relative; }
@@ -568,7 +568,7 @@ const tourPhases = [
   .ckpt-ai-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr); gap: clamp(30px,4vw,64px); align-items: start; }
   @media (max-width: 860px) { .ckpt-ai-grid { grid-template-columns: 1fr; } }
   .ckpt-ai-disclaimer {
-    margin-top: 18px; font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 17px;
+    margin-top: 18px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 17px;
     color: #D8BA78; padding: 14px 18px; border-left: 2px solid #A9812E; background: rgba(169,129,46,.06);
     max-width: 52ch;
   }
@@ -593,7 +593,7 @@ const tourPhases = [
   .board-bezel { background: #1B1B1D; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 4px; box-shadow: 0 20px 40px rgba(0,0,0,.4); }
   .board-slide { background: #0B0B0C; border-radius: 6px; padding: 24px 20px 18px; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .board-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; font-weight: 700; }
-  .board-num { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 38px; color: #D8BA78; margin-top: 6px; line-height: 1; }
+  .board-num { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 38px; color: #D8BA78; margin-top: 6px; line-height: 1; }
   .board-cap { font-family: Manrope, system-ui, sans-serif; font-size: 9px; color: rgba(250,247,241,.5); margin-top: 6px; }
   .board-dots { display: flex; gap: 5px; margin-top: 16px; }
   .board-dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(250,247,241,.25); display: block; }

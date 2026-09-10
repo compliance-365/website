@@ -55,11 +55,23 @@ h1, h2, h3 {
   margin: 0 0 0.7rem;
   letter-spacing: -0.015em;
   color: #0B0B0C;
-  font-family: Fraunces, Georgia, serif;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
 }
-h1 { font: 500 clamp(2.4rem, 4vw, 3.4rem)/1.12 Fraunces, Georgia, serif; }
-h2 { font: 500 clamp(1.8rem, 2.6vw, 2.2rem)/1.12 Fraunces, Georgia, serif; }
-h3 { font: 500 1.25rem/1.12 Fraunces, Georgia, serif; }
+h1 { font: 500 clamp(2.4rem, 4vw, 3.4rem)/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; }
+h2 { font: 500 clamp(1.8rem, 2.6vw, 2.2rem)/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; }
+h3 { font: 500 1.25rem/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; }
+/* Bricolage Grotesque ships no italic, so an <em> or <i> inside a heading
+   would render as a browser-synthesised oblique — a mechanically slanted
+   grotesque, which reads as a mistake rather than a choice. Emphasis in
+   display type moves to weight instead. Four headings across the site rely
+   on this (homepage hero, Checkpoint console, posture scan, RFFR), and it
+   also retires the italic-accent-phrase pattern that was the most
+   recognisable single element of the look this replaced. */
+h1 em, h2 em, h3 em,
+h1 i, h2 i, h3 i {
+  font-style: normal;
+  font-weight: 600;
+}
 p { margin: 0.3rem 0 1rem; }
 /* --text-muted is ground-aware; --muted was light-ground only and
    measured 3.54:1 wherever .muted landed on a dark section. */

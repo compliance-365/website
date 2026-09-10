@@ -37,7 +37,7 @@
    used deliberately as a brand anchor on an otherwise lighter page. */
 .dossier{background:#0B0B0C;border:1px solid rgba(255,255,255,.14);border-radius:12px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.25);margin:18px 0}
 .dossier-head{padding:20px 28px;border-bottom:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
-.dossier-head h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:17px;color:#FAF7F1;margin:0}
+.dossier-head h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:17px;color:#FAF7F1;margin:0}
 .dossier-head span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#A9812E;font-weight:700;font-family:Manrope,system-ui,sans-serif}
 .dossier .d-row{display:grid;grid-template-columns:150px 1fr;gap:20px;padding:18px 28px;border-bottom:1px solid rgba(255,255,255,.14);font-size:13.5px;line-height:1.7}
 .dossier .d-row:last-of-type{border-bottom:none}
@@ -72,12 +72,12 @@
 .cs-body { max-width: 740px; margin: 0 auto; padding: 4.5rem 22px 1rem; }
 .prose { color: #0B0B0C; line-height: 1.75; font-size: 1.02rem; }
 .prose h2 {
-  font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: clamp(1.4rem, 2.4vw, 1.7rem);
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: clamp(1.4rem, 2.4vw, 1.7rem);
   line-height: 1.2; margin: 2.75rem 0 1rem; color: #0B0B0C;
 }
 .prose h2:first-child { margin-top: 0; }
 .prose h3 {
-  font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.2rem;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.2rem;
   margin: 1.75rem 0 .75rem; color: #0B0B0C;
 }
 .prose p { margin: 0 0 1.15rem; }
@@ -92,7 +92,7 @@
   background: rgba(169,129,46,.05); border-radius: 0 8px 8px 0;
 }
 .prose blockquote p {
-  font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 1.15rem;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.15rem;
   line-height: 1.6; color: #0B0B0C; margin: 0;
 }
 .prose blockquote em {
@@ -120,7 +120,7 @@
 /* Structured testimonial (optional frontmatter field) */
 .cs-quote { border: 1px solid #DDD8CF; background: #FAF7F1; border-radius: 12px; padding: 2rem; margin: 2.5rem 0; }
 .cs-quote p {
-  font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 1.15rem;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.15rem;
   line-height: 1.6; margin: 0 0 1rem; color: #0B0B0C;
 }
 .cs-quote .who {
@@ -135,5 +135,5 @@
   border-top: 1px solid #DDD8CF;
   display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
 }
-.cs-cta h3 { font-family: Fraunces, Georgia, serif; font-weight: 500; margin: 0 0 6px; color: #0B0B0C; }
+.cs-cta h3 { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; margin: 0 0 6px; color: #0B0B0C; }
 .cs-cta p { margin: 0; color: #6B6860; max-width: 44ch; }

@@ -710,7 +710,7 @@ const faqLd = {
     margin-bottom: 22px;
   }
   .hdk-h1 {
-    font-family: Fraunces, Georgia, serif;
+    font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 400;
     font-size: clamp(2.8rem, 6vw, 5rem);
     line-height: 1.06;
@@ -718,9 +718,14 @@ const faqLd = {
     color: #FAF7F1;
     margin: 0 0 0 0;
   }
+  /* Upright, not italic: Bricolage ships no italic, so this would render as
+     a synthesised oblique. Colour and weight carry the emphasis instead —
+     and the italic accent phrase was the most recognisable single element of
+     the look this replaces. */
   .hdk-accent {
     color: #D8BA78;
-    font-style: italic;
+    font-style: normal;
+    font-weight: 600;
   }
   .hdk-sub {
     margin-top: 26px;
@@ -877,7 +882,7 @@ const faqLd = {
   }
   .fw-chip.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   .fw-rule { width: 26px; height: 1px; background: #A9812E; margin-bottom: 10px; }
-  .fw-chip b { font-family: Fraunces,Georgia,serif; font-weight:500; font-size:17px; display:block; color:#FAF7F1; }
+  .fw-chip b { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight:500; font-size:17px; display:block; color:#FAF7F1; }
   .fw-chip p { font-size: 12px; color: rgba(250,247,241,.62); margin: 5px 0 0; line-height: 1.6; }
   .fw-chip a { display:inline-block; margin-top:9px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#D8BA78; text-decoration:none; font-weight:700; }
   .fw-chip a:hover { text-decoration: underline; }
@@ -1037,7 +1042,7 @@ const faqLd = {
 
   .dossier{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.35);max-width:980px}
   .dossier-head{padding:26px 36px;border-bottom:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
-  .dossier-head h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:20px;color:#FAF7F1;margin:0}
+  .dossier-head h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:20px;color:#FAF7F1;margin:0}
   .dossier-head span{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#A9812E;font-weight:700;font-family:Manrope,system-ui,sans-serif}
   .d-row{display:grid;grid-template-columns:180px 1fr;gap:24px;padding:22px 36px;border-bottom:1px solid rgba(255,255,255,.14);font-size:14px;line-height:1.7}
   .d-row:last-of-type{border-bottom:none}
@@ -1046,7 +1051,7 @@ const faqLd = {
   .d-row .dv strong{color:#FAF7F1;font-weight:700}
   @media(max-width:640px){.d-row{grid-template-columns:1fr;gap:6px}}
   .d-quote{padding:30px 36px;background:rgba(169,129,46,.06)}
-  .d-quote p{font-family:Fraunces,Georgia,serif;font-style:italic;font-size:17px;line-height:1.6;max-width:60ch;color:#FAF7F1;margin:0}
+  .d-quote p{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight: 500;font-size:17px;line-height:1.6;max-width:60ch;color:#FAF7F1;margin:0}
   .d-quote footer{margin-top:12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui,sans-serif}
 
   .compare-table{border:1px solid var(--bd-card-bd);border-radius:8px;overflow:hidden;background:var(--bd-card);}
@@ -1068,7 +1073,7 @@ const faqLd = {
   .comp-card{background:var(--bd-card);border:1px solid var(--bd-card-bd);border-radius:8px;padding:32px 28px}
   .comp-card.comp-hero{border-color:rgba(216,186,120,.45)}
   .comp-vs{font-family:Manrope,system-ui;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--bd-soft);font-weight:700;margin-bottom:8px}
-  .comp-card h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:19px;color:var(--bd-link);margin:0 0 8px}
+  .comp-card h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:19px;color:var(--bd-link);margin:0 0 8px}
   .comp-list{list-style:none;padding:0;margin:0}
   .comp-list li{font-size:13.5px;line-height:1.65;color:var(--bd-soft);padding:10px 0 10px 22px;border-bottom:1px solid var(--bd-card-bd);position:relative}
   .comp-list li:last-child{border-bottom:none}
@@ -1079,7 +1084,7 @@ const faqLd = {
   .method-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(30px,5vw,72px);align-items:start}
   .cycle-pane{position:sticky;top:110px;display:flex;flex-direction:column;align-items:center;padding:20px 0 40px}
   .cycle-label{margin-top:18px;text-align:center}
-  .cycle-label b{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:22px;display:block;color:#FAF7F1;transition:opacity .3s var(--ease)}
+  .cycle-label b{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:22px;display:block;color:#FAF7F1;transition:opacity .3s var(--ease)}
   .cycle-label span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui}
   /* Inactive phases used to sit at opacity:.28. Compounded with the .62
      alpha already on .phase p that resolved to ~17% effective opacity —
@@ -1098,7 +1103,7 @@ const faqLd = {
   .phase:last-child{border-bottom:none}
   .phase.active{border-left-color:#A9812E}
   .phase-num{font-family:Manrope,system-ui;font-size:11px;letter-spacing:.2em;color:#A9812E;font-weight:800;margin-bottom:12px;font-variant-numeric:tabular-nums}
-  .phase h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(1.5rem,2.6vw,2.1rem);color:#FAF7F1;margin:0 0 12px}
+  .phase h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:clamp(1.5rem,2.6vw,2.1rem);color:#FAF7F1;margin:0 0 12px}
   .phase p{font-size:14.5px;line-height:1.75;color:rgba(250,247,241,.62);max-width:48ch;margin:0 0 16px}
   .phase-deliver{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui}
   @media(max-width:900px){.method-grid{grid-template-columns:1fr}.cycle-pane{position:relative;top:0}.phase{min-height:auto;padding:28px 0 28px 22px}}

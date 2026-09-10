@@ -1,9 +1,9 @@
 /* Vendored locally (fonts/), not loaded from Google Fonts at runtime —
-   only the two weight ranges actually used (Fraunces 400/500, Manrope
+   only the two weight ranges actually used ('Bricolage Grotesque' 400/500, Manrope
    300-800), Latin subset only. Re-fetch from Google Fonts' CSS API and
    re-run this same pair of curl commands if new weights/scripts are
    ever needed; see RELEASE.md. */
-@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;font-display:swap;src:url('fonts/fraunces.woff2') format('woff2')}
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;font-display:swap;src:url('fonts/bricolage.woff2') format('woff2-variations')}
 @font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('fonts/manrope.woff2') format('woff2')}
 :root{
   /* Ground, card, raised — measured as CIE L* steps, not WCAG ratios.
@@ -272,7 +272,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 /* ===== sign-in gate ===== */
 .gate{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
 .gate .lockup{display:flex;align-items:center;gap:14px;margin-bottom:10px}
-.gate h1{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-6);margin-top:22px}
+.gate h1{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-6);margin-top:22px}
 .gate p{color:var(--paper-dim);max-width:52ch;line-height:1.7;margin-top:12px;font-size:var(--fs-2)}
 .gate .btns{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;justify-content:center}
 .gate .note{margin-top:26px;font-size:var(--fs-1);color:var(--paper-faint);max-width:56ch;line-height:1.7}
@@ -295,7 +295,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .wizard-dot.on{background:var(--gold);width:20px;border-radius:4px}
 .wizard-dot.done{background:var(--gold-light)}
 .wizard-hero{text-align:center}
-.wizard-hero h1{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-5);margin-top:18px}
+.wizard-hero h1{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-5);margin-top:18px}
 .wizard-hero p{color:var(--paper-dim);max-width:52ch;margin:14px auto 0;line-height:1.7;font-size:var(--fs-2)}
 .wiz-perm-row{display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);align-items:baseline}
 .wiz-perm-row:last-child{border-bottom:none}
@@ -441,8 +441,8 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 @keyframes bdProgress{from{width:0%}to{width:100%}}
 @media(prefers-reduced-motion:reduce){.bd-progress{display:none}}
 .bd-slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:28px;padding:80px;box-sizing:border-box}
-.bd-slide h2{font-family:Fraunces,serif;font-weight:500;font-size:30px;color:var(--paper-dim);letter-spacing:.01em;margin:0}
-.bd-num{font-family:Fraunces,serif;font-weight:500;font-size:11vw;line-height:1;color:var(--paper);font-variant-numeric:tabular-nums}
+.bd-slide h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:30px;color:var(--paper-dim);letter-spacing:.01em;margin:0}
+.bd-num{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:11vw;line-height:1;color:var(--paper);font-variant-numeric:tabular-nums}
 .bd-num small{font-size:.32em;color:var(--paper-faint);font-weight:400;margin-left:10px}
 .bd-sub{font-size:19px;color:var(--paper-dim);max-width:64ch;line-height:1.7}
 .bd-sub .d-kv{font-size:19px;padding:10px 0}
@@ -451,7 +451,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .bd-chart{width:100%;display:flex;justify-content:center}
 .bd-chart svg{width:100%;height:auto}
 .bd-nav{position:fixed;inset:0;display:flex;justify-content:space-between;align-items:center;pointer-events:none;padding:0 28px;z-index:2}
-.bd-arrow{pointer-events:auto;background:none;border:none;color:rgba(var(--paper-rgb),.28);font-family:Fraunces,serif;font-size:52px;line-height:1;cursor:pointer;padding:24px;transition:color .15s var(--ease)}
+.bd-arrow{pointer-events:auto;background:none;border:none;color:rgba(var(--paper-rgb),.28);font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:52px;line-height:1;cursor:pointer;padding:24px;transition:color .15s var(--ease)}
 .bd-arrow:hover,.bd-arrow:focus-visible{color:var(--gold-light)}
 .bd-dots{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:11px;z-index:2}
 .bd-dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--paper-rgb),.25);border:none;cursor:pointer;padding:0;transition:background .15s var(--ease),transform .15s var(--ease)}
@@ -485,7 +485,7 @@ tr.flash{animation:flashRow 1.8s ease}
 .view{display:none;padding:36px;max-width:1280px}
 .view.on{display:block}
 .vhead{margin-bottom:31px}
-.vhead h1{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-5)}
+.vhead h1{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-5)}
 .vhead p{color:var(--paper-dim);margin-top:6px;font-size:var(--fs-2);max-width:70ch;line-height:1.6}
 .rule{width:26px;height:1px;background:var(--gold);margin-bottom:14px}
 .modenote{font-size:var(--fs-1);letter-spacing:.08em;color:var(--paper-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -752,13 +752,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    and NOTHING in this file matched a bare h2 (every h2 rule here is
    scoped: .bd-slide h2, .drawer h2, .automation-centre h2, this one).
    So those six headings rendered at the browser's default: Manrope
-   19.5px/700, against the Dashboard's Fraunces 20px/500. Same size,
+   19.5px/700, against the Dashboard's 'Bricolage Grotesque' 20px/500. Same size,
    different family, different weight — near enough to read as a
    mistake rather than as a decision, which is exactly how it looked.
    Renamed rather than aliased so there is one name for one thing; the
    Dashboard's two usages moved with it. */
 .section-head{margin:36px 0 18px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
-.section-head h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);color:var(--paper);margin:0}
+.section-head h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);color:var(--paper);margin:0}
 .section-head p{margin:0;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5;max-width:80ch}
 /* The first section in a view sits right under the .vhead intro, which
    already separates it — a second rule and 36px of air there reads as a
@@ -779,7 +779,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .automation-centre{margin:18px 0 16px;padding:26px;border:1px solid rgba(var(--gold-light-rgb),.26);border-radius:var(--r-lg);background:var(--glow),linear-gradient(150deg,var(--surface),var(--ink));box-shadow:var(--elev-2)}
 .automation-centre-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
 .automation-eyebrow{display:block;color:var(--gold-light);font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
-.automation-centre h2{font-family:Fraunces,serif;font-size:clamp(1.45rem,2.5vw,2rem);font-weight:500;line-height:1.15;color:var(--paper);margin:0}
+.automation-centre h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:clamp(1.45rem,2.5vw,2rem);font-weight:500;line-height:1.15;color:var(--paper);margin:0}
 .automation-intro{max-width:76ch;color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin:12px 0 22px}
 .automation-monitor{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;color:var(--paper-faint);font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:7px 9px;border:1px solid var(--line);border-radius:99px;white-space:nowrap}
 .automation-monitor i{width:7px;height:7px;border-radius:50%;background:var(--paper-faint)}
@@ -790,7 +790,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .automation-card:hover,.automation-card:focus-visible{transform:translateY(-2px);background:rgba(var(--gold-light-rgb),.09);border-color:rgba(var(--gold-light-rgb),.55);box-shadow:var(--elev-2);outline:none}
 .automation-card:focus-visible{box-shadow:0 0 0 3px rgba(var(--gold-light-rgb),.28),var(--elev-2)}
 .automation-card-kicker{display:block;font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
-.automation-card>b{display:block;font-family:Fraunces,serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
+.automation-card>b{display:block;font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
 .automation-card>b small{font-family:Manrope,sans-serif;font-size:var(--fs-2);font-weight:700;color:var(--gold-light)}
 .automation-card h3{font-size:var(--fs-2);color:var(--paper);margin:11px 0 5px}
 .automation-card p{font-size:var(--fs-1);line-height:1.55;color:var(--paper-dim);margin:0;min-height:3.2em}
@@ -894,7 +894,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .check-row.show{opacity:1}
 .check-row .lbl{flex:1;color:var(--paper-dim)}
 .proposed-card{border:1px solid rgba(216,186,120,.35);border-radius:6px;padding:22px 24px;margin-top:14px;background:rgba(169,129,46,.05)}
-.proposed-card h4{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-3)}
+.proposed-card h4{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
 .proposed-card .meta{margin:8px 0 12px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.7}
 .proposed-card .meta b{color:var(--gold-light)}
 /* A suggestion that moves a control BACKWARDS reads as a warning, not as
@@ -948,13 +948,13 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 
 /* ===== reports ===== */
 .rep-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.rep-card h4{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-3);margin-bottom:8px}
+.rep-card h4{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3);margin-bottom:8px}
 .rep-card p{font-size:var(--fs-2);color:var(--paper-dim);line-height:1.7;margin-bottom:16px}
 .rep-card .tagline{font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
 
 /* ===== frameworks admin ===== */
 .fw-admin-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
-.fw-admin-row b{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-3)}
+.fw-admin-row b{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
 .fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--gold);border:1px solid rgba(169,129,46,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
 .fw-admin-row p{margin-top:6px;font-size:var(--fs-2);color:var(--paper-dim);line-height:1.65;max-width:56ch}
 .fw-admin-row .toggle{flex:none}
@@ -968,7 +968,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .drawer .x:hover,.side .x:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
 .drawer .x:active,.side .x:active{background:rgba(var(--paper-rgb),.08)}
 .side .nav-close{display:none}
-.drawer h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin:6px 40px 4px 0}
+.drawer h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);margin:6px 40px 4px 0}
 .d-sec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
 .d-sec h4{font-size:var(--fs-eyebrow);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px}
 .d-kv{display:flex;justify-content:space-between;font-size:var(--fs-2);padding:6px 0;color:var(--paper-dim);gap:14px}
@@ -1008,7 +1008,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .modal-overlay.open{display:block}
 .modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:31px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:var(--elev-3)}
 .modal-box.open{display:block}
-.modal-box h3{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
+.modal-box h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
 .modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px;white-space:pre-line}
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:6px}
