@@ -47,14 +47,14 @@
     <rect width="160" height="120" rx="12" fill="#0B0B0C"/>
     <text x="80" y="30" text-anchor="middle" fill="#FAF7F1" font-weight="700" font-size="13">Statement of</text>
     <text x="80" y="48" text-anchor="middle" fill="#FAF7F1" font-weight="700" font-size="13">Applicability</text>
-    <line x1="24" y1="64" x2="136" y2="64" stroke="#A9812E" stroke-width="1.5"/>
-    <text x="80" y="84" text-anchor="middle" fill="#D8BA78" font-size="10.5">One control set.</text>
-    <text x="80" y="100" text-anchor="middle" fill="#D8BA78" font-size="10.5">Two tools behind it.</text>
+    <line x1="24" y1="64" x2="136" y2="64" stroke="#BE4A1E" stroke-width="1.5"/>
+    <text x="80" y="84" text-anchor="middle" fill="#F0A97F" font-size="10.5">One control set.</text>
+    <text x="80" y="100" text-anchor="middle" fill="#F0A97F" font-size="10.5">Two tools behind it.</text>
   </g>
 
   <!-- connecting lines -->
-  <path d="M360,190 L400,205" stroke="#A9812E" stroke-width="2" fill="none"/>
-  <path d="M600,205 L640,190" stroke="#A9812E" stroke-width="2" fill="none"/>
+  <path d="M360,190 L400,205" stroke="#BE4A1E" stroke-width="2" fill="none"/>
+  <path d="M600,205 L640,190" stroke="#BE4A1E" stroke-width="2" fill="none"/>
 
   <!-- Right: AWS card -->
   <g transform="translate(600,64)" font-family="Inter, system-ui" font-size="13">
@@ -66,17 +66,17 @@
     <g transform="translate(20,56)">
       <text fill="#111827" font-weight="700" font-size="12">Macie (sensitive data discovery)</text>
       <rect x="0" y="10" width="260" height="8" rx="4" fill="#fff4e0"/>
-      <text x="264" y="8" fill="#A9812E" font-size="10.5" font-weight="700">Manual</text>
+      <text x="264" y="8" fill="#BE4A1E" font-size="10.5" font-weight="700">Manual</text>
     </g>
     <g transform="translate(20,90)">
       <text fill="#111827" font-weight="700" font-size="12">IAM &amp; account access</text>
       <rect x="0" y="10" width="260" height="8" rx="4" fill="#fff4e0"/>
-      <text x="264" y="8" fill="#A9812E" font-size="10.5" font-weight="700">Manual</text>
+      <text x="264" y="8" fill="#BE4A1E" font-size="10.5" font-weight="700">Manual</text>
     </g>
     <g transform="translate(20,124)">
       <text fill="#111827" font-weight="700" font-size="12">CloudTrail / GuardDuty</text>
       <rect x="0" y="10" width="260" height="8" rx="4" fill="#fff4e0"/>
-      <text x="264" y="8" fill="#A9812E" font-size="10.5" font-weight="700">Manual</text>
+      <text x="264" y="8" fill="#BE4A1E" font-size="10.5" font-weight="700">Manual</text>
     </g>
     <text x="20" y="172" fill="#6b7280" font-size="11">Product infrastructure — evidence-based</text>
 

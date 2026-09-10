@@ -23,7 +23,7 @@ pipeline then rewrites the **built output** automatically:
 2. npm's `postbuild` lifecycle hook then runs
    `scripts/hash-checkpoint-assets.mjs` against `dist/checkpoint/` only:
    - renames each of the five scripts and the two self-hosted font files
-     (`fonts/fraunces.woff2`, `fonts/manrope.woff2`) to include a short
+     (`fonts/bricolage.woff2`, `fonts/manrope.woff2`) to include a short
      content hash (e.g. `app.d402a347.js`),
    - computes a fresh SRI `integrity="sha384-…"` attribute for each
      script from its actual built bytes and adds `crossorigin="anonymous"`,

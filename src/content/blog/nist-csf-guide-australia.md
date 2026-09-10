@@ -42,17 +42,17 @@ If someone asks you for "NIST CSF certification," the accurate answer is that it
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0;">
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
-    <div style="margin-bottom:8px;color:#A9812E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-globe"/></svg></div>
+    <div style="margin-bottom:8px;color:#BE4A1E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-globe"/></svg></div>
     <strong style="display:block;margin-bottom:4px;color:#0f172a;">A US parent or investor</strong>
     <p style="margin:0;font-size:0.875rem;color:#64748b;">US-headquartered groups often standardise cyber reporting across every subsidiary on NIST CSF, regardless of where the subsidiary operates.</p>
   </div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
-    <div style="margin-bottom:8px;color:#A9812E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-briefcase"/></svg></div>
+    <div style="margin-bottom:8px;color:#BE4A1E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-briefcase"/></svg></div>
     <strong style="display:block;margin-bottom:4px;color:#0f172a;">Selling into the US market</strong>
     <p style="margin:0;font-size:0.875rem;color:#64748b;">US enterprise procurement teams reach for NIST CSF as their default vendor-risk vocabulary, the way Australian buyers reach for ISO 27001 or Essential Eight.</p>
   </div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
-    <div style="margin-bottom:8px;color:#A9812E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-shield"/></svg></div>
+    <div style="margin-bottom:8px;color:#BE4A1E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-shield"/></svg></div>
     <strong style="display:block;margin-bottom:4px;color:#0f172a;">Cyber insurance underwriting</strong>
     <p style="margin:0;font-size:0.875rem;color:#64748b;">Several insurers now frame renewal questionnaires around the six CSF functions, even for Australian-only policyholders — it's become a convenient common structure.</p>
   </div>

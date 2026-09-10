@@ -1639,10 +1639,10 @@ function showModal(opts) {
      site rather than approximating it — see PDF_COLORS below for the
      same palette translated to 0-1 RGB for pdf-lib. */
   var BRAND = {
-    ink: '#0B0B0C', gold: '#A9812E', goldDark: '#8B6820', goldLight: '#D8BA78',
+    ink: '#0B0B0C', gold: '#BE4A1E', goldDark: '#A63A12', goldLight: '#F0A97F',
     cream: '#FAF7F1', border: '#DDD8CF', muted: '#6B6860',
     fontBody: "Manrope, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
-    fontHeading: "Georgia, 'Times New Roman', serif" /* email-safe stand-in for Fraunces — see the PDF's use of the real font-shape equivalent (Times-Bold) for the same reason */
+    fontHeading: "Georgia, 'Times New Roman', serif" /* email-safe stand-in for Bricolage Grotesque — see the PDF's use of the real font-shape equivalent (Times-Bold) for the same reason */
   };
 
   function buildWelcomeEmailHtml(clientName, onboardingLink, bookingLink, hasActivationFile) {

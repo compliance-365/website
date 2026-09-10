@@ -62,7 +62,7 @@ const OWNER_ONLY_SCRIPTS = ['owner.js', 'pdf-lib.min.js'];
 // Shared stylesheet ("design tokens") — same sharing shape as SHARED_SCRIPTS.
 const SHARED_CSS = 'styles.css';
 
-const FONT_FILES = ['fonts/fraunces.woff2', 'fonts/manrope.woff2'];
+const FONT_FILES = ['fonts/bricolage.woff2', 'fonts/manrope.woff2'];
 
 /* Substitutes the real version number into dist/checkpoint/version.js's
    placeholder BEFORE the hashing loop below runs (so the file's content

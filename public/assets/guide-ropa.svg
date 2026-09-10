@@ -2,7 +2,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#A9812E" stop-opacity=".14"/>
+      <stop offset="0" stop-color="#BE4A1E" stop-opacity=".14"/>
       <stop offset="1" stop-color="#0B0B0C" stop-opacity=".14"/>
     </linearGradient>
   </defs>
@@ -17,7 +17,7 @@
     <!-- Title pill -->
     <g transform="translate(20,16)">
       <rect width="220" height="28" rx="8" fill="#F5F0E8" stroke="#F5F0E8"/>
-      <text x="12" y="19" font-size="13" fill="#A9812E" font-weight="700">ROPA — Record of Processing</text>
+      <text x="12" y="19" font-size="13" fill="#BE4A1E" font-weight="700">ROPA — Record of Processing</text>
     </g>
 
     <!-- Left: big table -->
@@ -89,7 +89,7 @@
 
   <!-- Footer label -->
   <text x="42" y="388" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
-        font-size="16" fill="#A9812E" font-weight="700">
+        font-size="16" fill="#BE4A1E" font-weight="700">
     What a Good ROPA Looks Like — example structure
   </text>
 </svg>

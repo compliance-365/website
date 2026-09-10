@@ -99,7 +99,7 @@ const articleLd = {
 
   <style is:global>
     .rrc-card { background: #ffffff; border: 1px solid #DDD8CF; border-radius: 16px; padding: 32px; }
-    .rrc-progress { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #A9812E; margin-bottom: 18px; }
+    .rrc-progress { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #BE4A1E; margin-bottom: 18px; }
     .rrc-question { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: clamp(1.15rem, 2.4vw, 1.4rem); color: #0B0B0C; line-height: 1.35; margin-bottom: 22px; }
     .rrc-options { display: flex; flex-direction: column; gap: 10px; }
     .rrc-opt {
@@ -107,8 +107,8 @@ const articleLd = {
       padding: 14px 18px; font-family: Manrope, system-ui, sans-serif; font-size: 14.5px; font-weight: 700;
       color: #0B0B0C; cursor: pointer; transition: all .12s ease;
     }
-    .rrc-opt:hover { border-color: #A9812E; background: rgba(169,129,46,0.05); }
-    .rrc-opt:focus-visible { outline: 2px solid #A9812E; outline-offset: 2px; }
+    .rrc-opt:hover { border-color: #BE4A1E; background: rgba(190, 74, 30,0.05); }
+    .rrc-opt:focus-visible { outline: 2px solid #BE4A1E; outline-offset: 2px; }
     .rrc-opt-desc { display: block; font-weight: 400; font-size: 12.5px; color: #6B6860; margin-top: 4px; line-height: 1.5; }
     .rrc-back { margin-top: 22px; background: none; border: none; color: #6B6860; font-size: 13px; font-family: Manrope, system-ui, sans-serif; cursor: pointer; text-decoration: underline; padding: 0; }
     .rrc-back:hover { color: #3A3632; }
@@ -125,24 +125,24 @@ const articleLd = {
     .rrc-result-body { font-size: 14.5px; color: #3A3632; line-height: 1.7; margin-bottom: 18px; }
     .rrc-result-body strong { color: #0B0B0C; }
     .rrc-checklist { background: #FAF7F1; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
-    .rrc-checklist-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #8B6820; margin-bottom: 10px; }
+    .rrc-checklist-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #A63A12; margin-bottom: 10px; }
     .rrc-checklist ul { margin: 0; padding-left: 20px; font-size: 13.5px; color: #3A3632; line-height: 1.8; }
-    .rrc-caveat { font-size: 13px; color: #6B6860; background: rgba(169,129,46,0.06); border-left: 3px solid #A9812E; border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 20px; line-height: 1.6; }
+    .rrc-caveat { font-size: 13px; color: #6B6860; background: rgba(190, 74, 30,0.06); border-left: 3px solid #BE4A1E; border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 20px; line-height: 1.6; }
     .rrc-result-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
     .rrc-btn-primary {
-      background: #A9812E; color:var(--on-gold); font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 13.5px;
+      background: #BE4A1E; color:var(--on-accent); font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 13.5px;
       padding: 12px 22px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
     }
-    .rrc-btn-primary:hover { background: #8B6820; }
+    .rrc-btn-primary:hover { background: #A63A12; }
     .rrc-btn-ghost {
-      border: 1.5px solid #A9812E; color: #A9812E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 13.5px;
+      border: 1.5px solid #BE4A1E; color: #BE4A1E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 13.5px;
       padding: 12px 22px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
     }
-    .rrc-btn-ghost:hover { background: rgba(169,129,46,0.06); }
+    .rrc-btn-ghost:hover { background: rgba(190, 74, 30,0.06); }
     .rrc-restart { margin-top: 18px; background: none; border: none; color: #6B6860; font-size: 13px; font-family: Manrope, system-ui, sans-serif; cursor: pointer; text-decoration: underline; padding: 0; }
 
     .rrc-disclaimer { font-size: 12px; color: #6B6860; margin-top: 18px; line-height: 1.6; }
-    .rrc-disclaimer a { color: #A9812E; }
+    .rrc-disclaimer a { color: #BE4A1E; }
 
     @media (max-width: 640px) {
       .rrc-card { padding: 20px; }

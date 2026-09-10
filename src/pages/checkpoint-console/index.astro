@@ -27,7 +27,7 @@ function buildConstellationSvg() {
     { statuses: ['pass', 'pass', 'pass', 'warn', 'faint', 'pass', 'warn', 'pass'] },
     { statuses: ['warn', 'pass', 'faint', 'pass', 'pass'] },
   ];
-  const colors = { pass: '#8fbf9a', warn: '#D8BA78', faint: 'rgba(250,247,241,.28)' };
+  const colors = { pass: '#8fbf9a', warn: '#F0A97F', faint: 'rgba(250,247,241,.28)' };
   const total = sectors.length;
   const span = (2 * Math.PI - gap * total) / total;
   const nodes = [];
@@ -43,7 +43,7 @@ function buildConstellationSvg() {
   const edgeIdx = [[1, 10], [4, 15], [7, 21], [12, 18], [2, 24]];
   const edgesSvg = edgeIdx
     .filter(([a, b]) => nodes[a] && nodes[b])
-    .map(([a, b]) => `<line x1="${nodes[a].x.toFixed(1)}" y1="${nodes[a].y.toFixed(1)}" x2="${nodes[b].x.toFixed(1)}" y2="${nodes[b].y.toFixed(1)}" stroke="#D8BA78" stroke-width="1" opacity=".16"/>`)
+    .map(([a, b]) => `<line x1="${nodes[a].x.toFixed(1)}" y1="${nodes[a].y.toFixed(1)}" x2="${nodes[b].x.toFixed(1)}" y2="${nodes[b].y.toFixed(1)}" stroke="#F0A97F" stroke-width="1" opacity=".16"/>`)
     .join('');
   const nodesSvg = nodes
     .map((n, idx) => {
@@ -68,7 +68,7 @@ function buildFingerprintSvg() {
     { r: 44, pct: 81 },
     { r: 30, pct: 42 },
   ];
-  const bandColor = (pct) => (pct >= 90 ? '#8fbf9a' : pct >= 50 ? '#D8BA78' : 'rgba(250,247,241,.32)');
+  const bandColor = (pct) => (pct >= 90 ? '#8fbf9a' : pct >= 50 ? '#F0A97F' : 'rgba(250,247,241,.32)');
   const ringsSvg = rings
     .map((rg) => {
       const c = 2 * Math.PI * rg.r;
@@ -79,7 +79,7 @@ function buildFingerprintSvg() {
       );
     })
     .join('');
-  return `<svg viewBox="0 0 200 200" aria-hidden="true" class="vig-svg">${ringsSvg}<text x="100" y="95" text-anchor="middle" font-family="'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="32" fill="#FAF7F1">76%</text><text x="100" y="116" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9" letter-spacing="2" fill="#D8BA78">READINESS</text></svg>`;
+  return `<svg viewBox="0 0 200 200" aria-hidden="true" class="vig-svg">${ringsSvg}<text x="100" y="95" text-anchor="middle" font-family="'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="32" fill="#FAF7F1">76%</text><text x="100" y="116" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9" letter-spacing="2" fill="#F0A97F">READINESS</text></svg>`;
 }
 
 // ── Vignette 3: Certification Journey ───────────────────────────────
@@ -95,7 +95,7 @@ function buildJourneySvg(label) {
     { label: 'Stage 1 audit', status: 'future', t: 0.84 },
     { label: `Certified — ${label}`, status: 'projected', t: 1 },
   ];
-  const colors = { past: 'rgba(250,247,241,.4)', today: '#D8BA78', future: '#A9812E', projected: '#8fbf9a' };
+  const colors = { past: 'rgba(250,247,241,.4)', today: '#F0A97F', future: '#BE4A1E', projected: '#8fbf9a' };
   let svg = `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="rgba(250,247,241,.16)" stroke-width="1.5"/>`;
   milestones.forEach((m, i) => {
     const x = x0 + (x1 - x0) * m.t;
@@ -123,7 +123,7 @@ function buildAssurancePulseSvg() {
     .map((lvl, i) => {
       const x = i * (size + gap);
       if (lvl === 0) return `<rect x="${x}" y="0" width="${size}" height="${size}" rx="3" fill="rgba(250,247,241,.08)"/>`;
-      return `<rect x="${x}" y="0" width="${size}" height="${size}" rx="3" fill="#A9812E" fill-opacity="${opacityRamp[lvl - 1]}" class="vig-pulse-cell" style="animation-delay:${i * 45}ms"/>`;
+      return `<rect x="${x}" y="0" width="${size}" height="${size}" rx="3" fill="#BE4A1E" fill-opacity="${opacityRamp[lvl - 1]}" class="vig-pulse-cell" style="animation-delay:${i * 45}ms"/>`;
     })
     .join('');
   return `<svg viewBox="0 0 ${totalW} ${size}" aria-hidden="true" class="vig-svg" preserveAspectRatio="xMidYMid meet">${cells}</svg>`;
@@ -230,7 +230,7 @@ const tourPhases = [
       <a href={`${base}pricing/`} class="btn-hdk-ghost">See self-serve pricing</a>
       <a href={ctaUrl} class="btn-hdk-ghost">Book a walkthrough</a>
     </div>
-    <p style="margin-top:1rem;font-size:0.9rem;color:rgba(250,247,241,.55);">Unlike Vanta or Drata, nothing here is gated behind a sales call — the demo below is the actual console. Prefer the mechanics first? <a href={`${base}checkpoint-console/how-it-works/`} style="color:#D8BA78;border-bottom:1px solid rgba(216,186,120,.4);text-decoration:none;">See how it works, end to end →</a></p>
+    <p style="margin-top:1rem;font-size:0.9rem;color:rgba(250,247,241,.55);">Unlike Vanta or Drata, nothing here is gated behind a sales call — the demo below is the actual console. Prefer the mechanics first? <a href={`${base}checkpoint-console/how-it-works/`} style="color:#F0A97F;border-bottom:1px solid rgba(240, 169, 127,.4);text-decoration:none;">See how it works, end to end →</a></p>
   </div>
 </section>
 
@@ -269,15 +269,15 @@ const tourPhases = [
     </p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem;">
       <div class="spot" style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
-        <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:var(--gold-ink);flex-shrink:0;"><use href="#ic-home"/></svg> In-tenant by design</h3>
+        <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:var(--accent-ink);flex-shrink:0;"><use href="#ic-home"/></svg> In-tenant by design</h3>
         <p class="muted">Risks, actions, controls, evidence, audit trails — all SharePoint lists in your tenant, inheriting your permissions, retention and versioning. Off-boarding us costs you nothing: the data was always yours.</p>
       </div>
       <div class="spot" style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
-        <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:var(--gold-ink);flex-shrink:0;"><use href="#ic-search"/></svg> Read-only posture scanning</h3>
+        <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:var(--accent-ink);flex-shrink:0;"><use href="#ic-search"/></svg> Read-only posture scanning</h3>
         <p class="muted">Sign-in requests read-only Microsoft Graph access. MFA coverage, Conditional Access, PIM usage, guest accounts, device compliance, risky OAuth grants and Secure Score — measured live, never guessed from a spreadsheet.</p>
       </div>
       <div class="spot" style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
-        <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:var(--gold-ink);flex-shrink:0;"><use href="#ic-note"/></svg> Evidence that collects itself</h3>
+        <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:var(--accent-ink);flex-shrink:0;"><use href="#ic-note"/></svg> Evidence that collects itself</h3>
         <p class="muted">Every scan exports the raw Graph data behind each check as timestamped, SHA-256-hashed JSON into your document library, auto-linked to the controls it satisfies. When the auditor asks "prove it", it's already filed.</p>
       </div>
     </div>
@@ -291,7 +291,7 @@ const tourPhases = [
     <p class="ckpt-tour-eyebrow">Guided tour</p>
     <h2 style="color:#FAF7F1;max-width:30ch;">One cycle, six phases — the same one every engagement runs on.</h2>
     <p class="muted" style="max-width:640px;margin:16px 0 0;color:rgba(250,247,241,.62);font-size:15px;line-height:1.75;">
-      Not a product roadmap slide — this is the actual sequence a Checkpoint-run engagement moves through, from first scan to standing in front of the board. Want the mechanical version — sign in, deploy, scan, report, remediate, certify, with the data-flow at each step? <a href={`${base}checkpoint-console/how-it-works/`} style="color:#D8BA78;border-bottom:1px solid rgba(216,186,120,.4);text-decoration:none;">Follow the full flow →</a>
+      Not a product roadmap slide — this is the actual sequence a Checkpoint-run engagement moves through, from first scan to standing in front of the board. Want the mechanical version — sign in, deploy, scan, report, remediate, certify, with the data-flow at each step? <a href={`${base}checkpoint-console/how-it-works/`} style="color:#F0A97F;border-bottom:1px solid rgba(240, 169, 127,.4);text-decoration:none;">Follow the full flow →</a>
     </p>
 
     <div class="tour-explorer">
@@ -408,7 +408,7 @@ const tourPhases = [
 <!-- ALSO INSIDE -->
 <section class="section" style="background:#FAF7F1;padding:3.5rem 0;">
   <div class="container">
-    <p class="muted center" style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-ink);margin:0 0 1.5rem;">Also inside</p>
+    <p class="muted center" style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 1.5rem;">Also inside</p>
     <div class="ckpt-also-grid">
       <div><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-briefcase"/></svg><span>Vendor risk register with data classification</span></div>
       <div><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-globe"/></svg><span>Trust Center page, shareable with procurement</span></div>
@@ -424,19 +424,19 @@ const tourPhases = [
     <h2 class="center" style="color:#FAF7F1;">Built like the security tool it is</h2>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem;max-width:1000px;margin-left:auto;margin-right:auto;">
       <div>
-        <h3 style="color:#D8BA78;margin:0 0 .4rem;">Least-privilege consent</h3>
+        <h3 style="color:#F0A97F;margin:0 0 .4rem;">Least-privilege consent</h3>
         <p style="color:rgba(250,247,241,.65);margin:0;">Sign-in requests read-only scopes. Write access to your SharePoint is requested separately, the first time it's needed — and an admin consents to each step explicitly.</p>
       </div>
       <div>
-        <h3 style="color:#D8BA78;margin:0 0 .4rem;">No third-party code at runtime</h3>
+        <h3 style="color:#F0A97F;margin:0 0 .4rem;">No third-party code at runtime</h3>
         <p style="color:rgba(250,247,241,.65);margin:0;">Strict Content-Security-Policy, no CDN dependencies, content-hashed assets with subresource integrity, and a tamper-evident append-only audit log.</p>
       </div>
       <div>
-        <h3 style="color:#D8BA78;margin:0 0 .4rem;">Auditable end to end</h3>
+        <h3 style="color:#F0A97F;margin:0 0 .4rem;">Auditable end to end</h3>
         <p style="color:rgba(250,247,241,.65);margin:0;">Every register change is versioned by your own SharePoint, every material action is written to the audit log, and every scan's raw evidence is hashed and filed.</p>
       </div>
     </div>
-    <p style="text-align:center;margin-top:2.5rem;"><a href={`${base}security/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">Full security &amp; architecture page — every Graph permission, the tenant-boundary diagram, disclosure policy →</a></p>
+    <p style="text-align:center;margin-top:2.5rem;"><a href={`${base}security/`} style="color:#F0A97F;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">Full security &amp; architecture page — every Graph permission, the tenant-boundary diagram, disclosure policy →</a></p>
   </div>
 </section>
 
@@ -487,11 +487,11 @@ const tourPhases = [
     font-weight: 700;
     letter-spacing: .2em;
     text-transform: uppercase;
-    color: #A9812E;
+    color: #BE4A1E;
     margin: 0 0 .75rem;
   }
   .ckpt-tour-eyebrow { font-size: 12px; letter-spacing: .28em; margin-bottom: 20px; }
-  .gold-rule-26 { width: 26px; height: 1px; background: #A9812E; margin-bottom: 18px; }
+  .gold-rule-26 { width: 26px; height: 1px; background: #BE4A1E; margin-bottom: 18px; }
 
   /* ── Demo interstitial ── */
   .ckpt-demo-card {
@@ -514,7 +514,7 @@ const tourPhases = [
   .ckpt-demo-list li b { color: #FAF7F1; font-weight: 700; }
   .ckpt-demo-list li::before {
     content: ''; position: absolute; left: 0; top: 6px; width: 8px; height: 8px;
-    border: 1px solid #A9812E; border-radius: 50%;
+    border: 1px solid #BE4A1E; border-radius: 50%;
   }
   .ckpt-demo-visual { display: flex; align-items: center; justify-content: center; }
   .ckpt-demo-visual .vig-svg { width: min(220px,80%); height: auto; }
@@ -537,23 +537,23 @@ const tourPhases = [
     transition: color .2s, background .2s;
   }
   .tour-tab:hover { color: #FAF7F1; }
-  .tour-tab.on { color: #FAF7F1; background: #0B0B0C; box-shadow: inset 3px 0 0 #A9812E; }
-  .tour-tab-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; color: #A9812E; }
-  .tour-tab-ic { width: 16px; height: 16px; flex-shrink: 0; color: #A9812E; display: flex; }
+  .tour-tab.on { color: #FAF7F1; background: #0B0B0C; box-shadow: inset 3px 0 0 #BE4A1E; }
+  .tour-tab-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; color: #BE4A1E; }
+  .tour-tab-ic { width: 16px; height: 16px; flex-shrink: 0; color: #BE4A1E; display: flex; }
   .tour-tab-ic svg { width: 16px; height: 16px; }
-  .tour-tab.on .tour-tab-ic { color: #D8BA78; }
+  .tour-tab.on .tour-tab-ic { color: #F0A97F; }
 
   .tour-panels { position: relative; }
   .tour-panel { display: none; padding: clamp(28px,4vw,48px); }
   .tour-panel.on { display: block; }
   .tour-panel-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr); gap: clamp(30px,4vw,56px); align-items: center; }
   @media (max-width: 780px) { .tour-panel-grid { grid-template-columns: 1fr; } }
-  .tour-panel-step { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; font-weight: 700; margin: 0 0 10px; }
+  .tour-panel-step { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 10px; }
   .tour-panel h3 { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: clamp(1.35rem,2.4vw,1.85rem); color: #FAF7F1; margin: 0; line-height: 1.2; }
   .tour-panel-body { margin-top: 14px; font-size: 14px; line-height: 1.75; color: rgba(250,247,241,.62); max-width: 54ch; }
   .tour-panel-bullets { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
   .tour-panel-bullets li { font-size: 12.5px; line-height: 1.6; color: rgba(250,247,241,.6); padding-left: 20px; position: relative; }
-  .tour-panel-bullets li::before { content: ''; position: absolute; left: 0; top: 6px; width: 7px; height: 7px; border: 1px solid #A9812E; border-radius: 50%; }
+  .tour-panel-bullets li::before { content: ''; position: absolute; left: 0; top: 6px; width: 7px; height: 7px; border: 1px solid #BE4A1E; border-radius: 50%; }
 
   .tour-panel-visual { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0B0B0C; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 28px; min-height: 220px; }
   .tour-panel-visual:has(.vig-frame-wide) { min-height: 0; padding: 36px 20px; }
@@ -562,48 +562,48 @@ const tourPhases = [
   .vig-frame-compact .vig-svg { max-width: 100%; height: 22px; }
   .vig-frame-wide .vig-svg { max-width: 100%; height: auto; }
   .tour-visual-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(250,247,241,.5); font-weight: 600; margin: 0; }
-  .tour-no-visual { color: #A9812E; width: 72px; height: 72px; border: 1px solid rgba(169,129,46,.35); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .tour-no-visual { color: #BE4A1E; width: 72px; height: 72px; border: 1px solid rgba(190, 74, 30,.35); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
   /* ── AI section ── */
   .ckpt-ai-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr); gap: clamp(30px,4vw,64px); align-items: start; }
   @media (max-width: 860px) { .ckpt-ai-grid { grid-template-columns: 1fr; } }
   .ckpt-ai-disclaimer {
     margin-top: 18px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 17px;
-    color: #D8BA78; padding: 14px 18px; border-left: 2px solid #A9812E; background: rgba(169,129,46,.06);
+    color: #F0A97F; padding: 14px 18px; border-left: 2px solid #BE4A1E; background: rgba(190, 74, 30,.06);
     max-width: 52ch;
   }
   .ckpt-ai-rails { background: #0B0B0C; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 28px; }
-  .ckpt-ai-rails-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; font-weight: 700; margin: 0 0 18px; }
+  .ckpt-ai-rails-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 18px; }
   .ckpt-ai-rails-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
   .ckpt-ai-rails-list li { display: flex; gap: 12px; align-items: flex-start; }
-  .ckpt-ai-rails-list svg { width: 16px; height: 16px; flex-shrink: 0; color: #A9812E; margin-top: 2px; }
+  .ckpt-ai-rails-list svg { width: 16px; height: 16px; flex-shrink: 0; color: #BE4A1E; margin-top: 2px; }
   .ckpt-ai-rails-list b { display: block; font-size: 13px; color: #FAF7F1; margin-bottom: 3px; }
   .ckpt-ai-rails-list span { display: block; font-size: 12px; line-height: 1.6; color: rgba(250,247,241,.6); }
   .ckpt-ai-tools { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,.1); }
-  .ckpt-ai-tool { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: rgba(250,247,241,.75); background: rgba(169,129,46,.08); border: 1px solid rgba(169,129,46,.2); border-radius: 99px; padding: 8px 16px; }
-  .ckpt-ai-tool svg { width: 14px; height: 14px; color: #A9812E; }
+  .ckpt-ai-tool { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: rgba(250,247,241,.75); background: rgba(190, 74, 30,.08); border: 1px solid rgba(190, 74, 30,.2); border-radius: 99px; padding: 8px 16px; }
+  .ckpt-ai-tool svg { width: 14px; height: 14px; color: #BE4A1E; }
 
   /* ── Also inside strip ── */
   .ckpt-also-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 14px; max-width: 1000px; margin: 0 auto; }
   .ckpt-also-grid div { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #3A3632; background: white; border: 1px solid #DDD8CF; border-radius: 8px; padding: 12px 16px; }
-  .ckpt-also-grid svg { width: 16px; height: 16px; color: #A9812E; flex-shrink: 0; }
+  .ckpt-also-grid svg { width: 16px; height: 16px; color: #BE4A1E; flex-shrink: 0; }
 
   /* ── Boardroom-mode frame vignette ── */
   .board-frame { width: 100%; max-width: 260px; }
   .board-bezel { background: #1B1B1D; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 4px; box-shadow: 0 20px 40px rgba(0,0,0,.4); }
   .board-slide { background: #0B0B0C; border-radius: 6px; padding: 24px 20px 18px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .board-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; font-weight: 700; }
-  .board-num { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 38px; color: #D8BA78; margin-top: 6px; line-height: 1; }
+  .board-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; }
+  .board-num { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 38px; color: #F0A97F; margin-top: 6px; line-height: 1; }
   .board-cap { font-family: Manrope, system-ui, sans-serif; font-size: 9px; color: rgba(250,247,241,.5); margin-top: 6px; }
   .board-dots { display: flex; gap: 5px; margin-top: 16px; }
   .board-dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(250,247,241,.25); display: block; }
-  .board-dots i.on { background: #A9812E; }
+  .board-dots i.on { background: #BE4A1E; }
   .board-progress { height: 3px; background: rgba(255,255,255,.08); margin: 4px 4px 4px; border-radius: 2px; overflow: hidden; }
-  .board-progress i { display: block; height: 100%; width: 38%; background: #A9812E; border-radius: 2px; }
+  .board-progress i { display: block; height: 100%; width: 38%; background: #BE4A1E; border-radius: 2px; }
 
   /* ── Motion — progressive enhancement, static by default ── */
   @media (prefers-reduced-motion: no-preference) {
-    @keyframes vigCxPulse { 0% { r: 3.6; filter: drop-shadow(0 0 0 rgba(216,186,120,0)); } 50% { r: 5; filter: drop-shadow(0 0 5px rgba(216,186,120,.7)); } 100% { r: 3.6; filter: drop-shadow(0 0 0 rgba(216,186,120,0)); } }
+    @keyframes vigCxPulse { 0% { r: 3.6; filter: drop-shadow(0 0 0 rgba(240, 169, 127,0)); } 50% { r: 5; filter: drop-shadow(0 0 5px rgba(240, 169, 127,.7)); } 100% { r: 3.6; filter: drop-shadow(0 0 0 rgba(240, 169, 127,0)); } }
     .vig-cx-pulse { animation: vigCxPulse 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 
     @keyframes vigJourneyPulse { 0% { r: 6; opacity: 1; } 50% { r: 10; opacity: .55; } 100% { r: 6; opacity: 1; } }

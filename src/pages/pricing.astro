@@ -72,7 +72,7 @@ const live = isSelfServeLive();
     </div>
 
     <p style="text-align:center;margin-top:1.75rem;font-size:0.95rem;color:var(--muted,#555);">
-      Over 250 staff? <a href="#enterprise" style="color:#8B6820;font-weight:600;">See Enterprise pricing</a> below.
+      Over 250 staff? <a href="#enterprise" style="color:#A63A12;font-weight:600;">See Enterprise pricing</a> below.
     </p>
   </div>
 </section>
@@ -176,7 +176,7 @@ const live = isSelfServeLive();
           <p class="cfg-total-note">Billed yearly in AUD, ex GST. {TRIAL_DAYS}-day free trial, cancel anytime.</p>
         </div>
         <div id="cfgCustom" class="cfg-custom" hidden>
-          <p><b>Enterprise scope.</b> Starting from {fmtAud(ENTERPRISE.startingPrice)}/yr per framework ({fmtAud(ENTERPRISE.startingPriceSoc2)}/yr for SOC 2) — see the full <a href="#enterprise" style="color:#8B6820;font-weight:600;">Enterprise pricing and features</a> above. Your exact annual fee is confirmed in writing before anything is charged.</p>
+          <p><b>Enterprise scope.</b> Starting from {fmtAud(ENTERPRISE.startingPrice)}/yr per framework ({fmtAud(ENTERPRISE.startingPriceSoc2)}/yr for SOC 2) — see the full <a href="#enterprise" style="color:#A63A12;font-weight:600;">Enterprise pricing and features</a> above. Your exact annual fee is confirmed in writing before anything is charged.</p>
           <a href={ctaUrl} class="btn btn-primary" style="width:100%;text-align:center;">Talk to us</a>
         </div>
         <a href={startUrl} id="cfgStart" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1rem;" hidden>Start free trial →</a>
@@ -241,7 +241,7 @@ const live = isSelfServeLive();
       </details>
       <details>
         <summary>Do I need a consultant?</summary>
-        <p>No — self-serve Checkpoint is built to be run by your own team. If you'd rather have expert help, the same tool is available as a consulting-led engagement; <a href={ctaUrl} style="color:#8B6820;font-weight:600;">book a call</a> to talk it through.</p>
+        <p>No — self-serve Checkpoint is built to be run by your own team. If you'd rather have expert help, the same tool is available as a consulting-led engagement; <a href={ctaUrl} style="color:#A63A12;font-weight:600;">book a call</a> to talk it through.</p>
       </details>
       <details>
         <summary>How is GST handled?</summary>
@@ -249,7 +249,7 @@ const live = isSelfServeLive();
       </details>
       <details>
         <summary>We're over 250 staff — how does pricing and billing work?</summary>
-        <p>Enterprise pricing starts from {fmtAud(ENTERPRISE.startingPrice)}/yr per framework ({fmtAud(ENTERPRISE.startingPriceSoc2)}/yr for SOC 2), billed annually and invoiced rather than charged automatically to a card — see the full <a href="#enterprise" style="color:#8B6820;font-weight:600;">Enterprise plan</a> above for what's included. Because headcount and entity count vary so much above 250 staff, we confirm your exact annual fee in a written quote first; nothing is invoiced or charged before you've agreed to that number.</p>
+        <p>Enterprise pricing starts from {fmtAud(ENTERPRISE.startingPrice)}/yr per framework ({fmtAud(ENTERPRISE.startingPriceSoc2)}/yr for SOC 2), billed annually and invoiced rather than charged automatically to a card — see the full <a href="#enterprise" style="color:#A63A12;font-weight:600;">Enterprise plan</a> above for what's included. Because headcount and entity count vary so much above 250 staff, we confirm your exact annual fee in a written quote first; nothing is invoiced or charged before you've agreed to that number.</p>
       </details>
     </div>
   </div>
@@ -284,14 +284,14 @@ const live = isSelfServeLive();
     padding: 1.75rem 1.5rem; box-shadow: 0 2px 14px rgba(0,0,0,.04);
     transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
   }
-  .price-card-premium { border-color: #A9812E; box-shadow: 0 8px 30px rgba(169,129,46,.14); position: relative; }
+  .price-card-premium { border-color: #BE4A1E; box-shadow: 0 8px 30px rgba(190, 74, 30,.14); position: relative; }
   @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-    .price-card:hover { transform: translateY(-6px); box-shadow: 0 20px 44px rgba(11,11,12,.12); border-color: #D8BA78; }
-    .price-card-premium:hover { box-shadow: 0 24px 52px rgba(169,129,46,.26); border-color: #A9812E; }
+    .price-card:hover { transform: translateY(-6px); box-shadow: 0 20px 44px rgba(11,11,12,.12); border-color: #F0A97F; }
+    .price-card-premium:hover { box-shadow: 0 24px 52px rgba(190, 74, 30,.26); border-color: #BE4A1E; }
   }
   .price-flag {
     position: absolute; top: -11px; left: 1.5rem;
-    background: #A9812E; color: var(--on-gold); font-size: 10px; font-weight: 800;
+    background: #BE4A1E; color: var(--on-accent); font-size: 10px; font-weight: 800;
     letter-spacing: .12em; text-transform: uppercase; padding: 4px 10px; border-radius: 5px;
   }
   .price-card h3 { margin: 0 0 .25rem; font-size: 1.35rem; }
@@ -327,7 +327,7 @@ const live = isSelfServeLive();
   .ent-features-label { font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 1rem; }
   .ent-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .8rem; }
   .ent-features li { position: relative; padding-left: 1.4rem; font-size: .88rem; line-height: 1.55; color: #3A3632; }
-  .ent-features li::before { content: '✓'; position: absolute; left: 0; top: 0; color: #A9812E; font-weight: 800; }
+  .ent-features li::before { content: '✓'; position: absolute; left: 0; top: 0; color: #BE4A1E; font-weight: 800; }
 
   @media (max-width: 720px) {
     .ent-card { grid-template-columns: 1fr; }
@@ -355,15 +355,15 @@ const live = isSelfServeLive();
   }
   .cfg-tier b { font-size: .95rem; color: #0B0B0C; }
   .cfg-tier span { font-size: .78rem; color: var(--text-muted); }
-  .cfg-tier.on { border-color: #A9812E; background: #FBF7EF; }
+  .cfg-tier.on { border-color: #BE4A1E; background: #FBF7EF; }
   .cfg-modules { display: flex; flex-direction: column; gap: 8px; }
   .cfg-mod {
     display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .7rem;
     background: #fff; border: 1.5px solid #E4DFD5; border-radius: 10px; padding: .7rem .9rem; cursor: pointer;
     transition: border-color .15s;
   }
-  .cfg-mod:has(input:checked) { border-color: #A9812E; background: #FBF7EF; }
-  .cfg-mod-input, .cfg-addon-input { width: 18px; height: 18px; accent-color: #A9812E; }
+  .cfg-mod:has(input:checked) { border-color: #BE4A1E; background: #FBF7EF; }
+  .cfg-mod-input, .cfg-addon-input { width: 18px; height: 18px; accent-color: #BE4A1E; }
   .cfg-mod-name { font-weight: 700; color: #0B0B0C; font-size: .95rem; }
   .cfg-mod-tag { font-size: .75rem; color: var(--text-muted); text-align: right; }
   .cfg-summary { background: #fff; border: 1px solid #E4DFD5; border-radius: 14px; padding: 1.5rem; position: sticky; top: 1rem; }
@@ -372,7 +372,7 @@ const live = isSelfServeLive();
      scoped-style data attribute is never on them; a scoped selector
      wouldn't match. Class names are page-specific, so global is safe. */
   :global(.cfg-line) { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem 0; border-bottom: 1px solid #F0ECE4; }
-  :global(.cfg-line.discount) { color: #7A6A2E; font-weight: 700; }
+  :global(.cfg-line.discount) { color: #A63A12; font-weight: 700; }
   :global(.cfg-empty) { color: var(--text-muted); font-size: .9rem; margin: 0; }
   .cfg-total-wrap { margin-top: 1rem; }
   .cfg-total-row { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; font-size: 1.05rem; }
@@ -391,7 +391,7 @@ const live = isSelfServeLive();
   .faq details { border-bottom: 1px solid #E4DFD5; padding: 1rem 0; }
   .faq summary { cursor: pointer; font-weight: 700; font-size: 1.05rem; color: #0B0B0C; list-style: none; }
   .faq summary::-webkit-details-marker { display: none; }
-  .faq summary::before { content: '+'; color: #A9812E; font-weight: 800; margin-right: .6rem; }
+  .faq summary::before { content: '+'; color: #BE4A1E; font-weight: 800; margin-right: .6rem; }
   .faq details[open] summary::before { content: '–'; }
   .faq p { margin: .8rem 0 0; color: #555; line-height: 1.7; }
 

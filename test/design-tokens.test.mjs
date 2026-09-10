@@ -42,31 +42,48 @@ function inlineTextColours(src) {
   return found;
 }
 
-test('the brand gold is never used as an inline text colour', () => {
-  /* #A9812E measures 3.35:1 on cream and 3.32:1 on white — it is a fill,
-     not a text colour. This exact mistake appeared 434 times across 51
-     files. Use var(--gold-ink), which resolves to a legible gold for
-     whichever ground it lands on. */
+test('the brand accent fill is never used as an inline text colour', () => {
+  /* The accent fill #BE4A1E measures 4.69:1 on cream, 5.01:1 on white and
+     4.57:1 on the panel ground. That technically passes, but the panel
+     margin is thin enough that antialiasing eats it, and the same
+     mistake with the previous accent (gold, 3.35:1) appeared 434 times
+     across 51 files. Use var(--accent-ink) — a step darker, 5.91:1 at
+     worst — which also resolves to the right end of the ramp on dark
+     grounds.
+
+     Compared lowercased: inlineTextColours() lowercases its output, so
+     an uppercase literal here would silently never match and the guard
+     would pass forever. */
   const offenders = [];
   for (const f of FILES) {
-    const hits = inlineTextColours(readFileSync(f, 'utf8')).filter(c => c === '#a9812e');
+    const hits = inlineTextColours(readFileSync(f, 'utf8')).filter(c => c === '#be4a1e');
     if (hits.length) offenders.push(`${f} (${hits.length})`);
   }
   assert.deepEqual(offenders, [],
-    'Use color:var(--gold-ink) instead of the raw brand gold for text:\n  ' + offenders.join('\n  '));
+    'Use color:var(--accent-ink) instead of the raw accent fill for text:\n  ' + offenders.join('\n  '));
 });
 
-test('white is never placed on a gold fill inline', () => {
-  /* White on #A9812E measures 3.58:1. This was the .btn-primary defect
-     and it recurred in 40 inline styles. var(--on-gold) is 5.50:1. */
-  const pat = /background:\s*#A9812E\s*;\s*color:\s*(?:#fff(?:fff)?|white)\b/gi;
+test('near-black is never placed on the accent fill inline', () => {
+  /* This guard inverted when the palette moved from gold to orange, and
+     it is the one change most likely to be undone by muscle memory.
+
+     On the old gold, white was the defect (3.58:1) and near-black was
+     correct (5.50:1). On #BE4A1E it is the other way round: white is
+     5.01:1 and near-black only 3.92:1. Four rules and two stale
+     "5.5:1 on the gold" comments were carried over unchanged during the
+     swap and had to be fixed by hand.
+
+     var(--on-accent) is white and is the right answer here. Note it is
+     NOT the right answer on the green/amber/grey status chips — those
+     take var(--on-status), because white fails on all three. */
+  const pat = /background:\s*#BE4A1E\s*;\s*color:\s*(?:#0B0B0C|#000(?:000)?|black)\b/gi;
   const offenders = [];
   for (const f of FILES) {
     const n = (readFileSync(f, 'utf8').match(pat) || []).length;
     if (n) offenders.push(`${f} (${n})`);
   }
   assert.deepEqual(offenders, [],
-    'Use color:var(--on-gold) on a gold fill:\n  ' + offenders.join('\n  '));
+    'Use color:var(--on-accent) on the accent fill:\n  ' + offenders.join('\n  '));
 });
 
 test('inline raw-hex text colours do not increase', () => {
@@ -94,7 +111,7 @@ test('every token the stylesheets reference is actually defined', () => {
   const tokens = readFileSync('src/styles/tokens.css', 'utf8');
   const defined = new Set([...tokens.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]));
 
-  const OURS = /var\(\s*(--(?:gold-ink|text-muted|text-subtle|ok-ink|warn-ink|danger-ink|on-gold))\s*(\))/g;
+  const OURS = /var\(\s*(--(?:accent-ink|text-muted|text-subtle|ok-ink|warn-ink|danger-ink|on-accent|on-status))\s*(\))/g;
   const missing = new Set();
   for (const f of FILES) {
     for (const m of readFileSync(f, 'utf8').matchAll(OURS)) {

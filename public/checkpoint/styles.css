@@ -21,7 +21,7 @@
      lib.js's own contrastRatio() whenever they move.
 
      The card tier is now as light as this palette can make it. --gold
-     (#A9812E) is the binding constraint: it is the darkest token the
+     (#BE4A1E) is the binding constraint: it is the darkest token the
      app ever uses AS TEXT (card titles, the CHECKPOINT rail label, the
      brand mark's "365"), and it measures 4.77:1 on the card and 4.60:1
      on the raised surface. One more step of lightness on either takes
@@ -50,7 +50,7 @@
      background token this app uses); --paper-dim (.62, 7.3:1) was
      already comfortably passing and is unchanged. */
   --paper:#FAF7F1; --paper-dim:rgba(var(--paper-rgb),.62); --paper-faint:rgba(var(--paper-rgb),.5);
-  --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
+  --gold:#BE4A1E; --gold-light:#F0A97F; --gold-rgb:190,74,30; --gold-light-rgb:240,169,127;
   --line:rgba(255,255,255,.12);
   /* Status/severity hues — pass/warn/fail plus a fourth, --critical,
      distinct from --fail (High vs. Critical residual risk read as two
@@ -61,7 +61,7 @@
      the light-theme block darkens each one to clear 4.5:1 against
      --ink's new near-white value, since a color tuned to sit on near-
      black fails badly on near-white (see that block's own comment). */
-  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
+  --pass:#8fbf9a; --warn:#F0A97F; --fail:#c97a7a; --critical:#e0908f;
 
   /* Canonical easing — every transition in this file uses this curve
      (previously hand-typed 3 separate times, drifting-risk waiting to
@@ -181,7 +181,7 @@
      #FAF7F1 — .6 clears 4.5:1 (verified: 5.09:1). --paper-dim's .68
      alpha was already comfortably passing (6.8:1) and is unchanged. */
   --paper:#0B0B0C; --paper-dim:rgba(var(--paper-rgb),.68); --paper-faint:rgba(var(--paper-rgb),.6);
-  --gold:#8d6c26; --gold-light:#6b5220; --gold-rgb:141,108,38; --gold-light-rgb:107,82,32;
+  --gold:#A63A12; --gold-light:#8A2F0E; --gold-rgb:166,58,18; --gold-light-rgb:138,47,14;
   --pass:#477d54; --warn:#8c6d28; --fail:#b85050; --critical:#ca413f;
   --line:rgba(11,11,12,.14);
   --surface-hover:rgba(var(--paper-rgb),.045);
@@ -215,11 +215,11 @@ button{font-family:Manrope;cursor:pointer}
    idea in both engines. Global rather than per-scrollable-element:
    every scroll surface in this app (nav, drawer, table overflow,
    feed, gsearch results) should read as part of the same system. */
-*{scrollbar-width:thin;scrollbar-color:rgba(169,129,46,.5) var(--ink-2)}
+*{scrollbar-width:thin;scrollbar-color:rgba(190, 74, 30,.5) var(--ink-2)}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track{background:var(--ink-2)}
-::-webkit-scrollbar-thumb{background:rgba(169,129,46,.45);border-radius:99px;border:2px solid var(--ink-2)}
-::-webkit-scrollbar-thumb:hover{background:rgba(169,129,46,.7)}
+::-webkit-scrollbar-thumb{background:rgba(190, 74, 30,.45);border-radius:99px;border:2px solid var(--ink-2)}
+::-webkit-scrollbar-thumb:hover{background:rgba(190, 74, 30,.7)}
 
 /* Skeleton shimmer — async list placeholders (Documents,
    posture-scan checks) swap their text "Loading…" state
@@ -329,7 +329,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .nav-item:active{background:rgba(var(--paper-rgb),.08)}
 .nav-item:disabled,.nav-item[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
 .nav-item.on{color:var(--paper);background:var(--surface-hover);border-left-color:var(--gold)}
-.nav-item .n{background:rgba(169,129,46,.18);color:var(--gold-light);font-size:var(--fs-1);font-weight:800;border-radius:99px;padding:2px 8px}
+.nav-item .n{background:rgba(190, 74, 30,.18);color:var(--gold-light);font-size:var(--fs-1);font-weight:800;border-radius:99px;padding:2px 8px}
 .nav-group{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .nav-group:first-child{margin-top:2px;padding-top:0;border-top:none}
 .nav-label{padding:0 22px 6px;font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
@@ -368,7 +368,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .top .right{display:flex;gap:10px;align-items:center}
 .gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
 .gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:var(--r-sm);font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
-.gsearch input:hover{border-color:rgba(169,129,46,.5)}
+.gsearch input:hover{border-color:rgba(190, 74, 30,.5)}
 .gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(var(--paper-rgb),.07)}
 /* Row styling shared by the command palette below — one visual
    language for "a searchable/selectable row", whether it's a record
@@ -427,8 +427,8 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
   display:none;position:fixed;inset:0;z-index:90;
   --ink:#06060A; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
   --paper-rgb:250,247,241; --ink-rgb:6,6,10;
-  --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
-  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
+  --gold:#BE4A1E; --gold-light:#F0A97F; --gold-rgb:190,74,30; --gold-light-rgb:240,169,127;
+  --pass:#8fbf9a; --warn:#F0A97F; --fail:#c97a7a; --critical:#e0908f;
   --line:rgba(255,255,255,.12);
   background:var(--ink);color:var(--paper);
 }
@@ -458,7 +458,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .bd-dot:hover{background:rgba(var(--paper-rgb),.5)}
 .bd-dot.on{background:var(--gold);transform:scale(1.3)}
 @media(max-width:860px){.bd-num{font-size:64px}.bd-slide{padding:32px}}
-@keyframes flashRow{0%{background:rgba(216,186,120,.35)}100%{background:transparent}}
+@keyframes flashRow{0%{background:rgba(240, 169, 127,.35)}100%{background:transparent}}
 tr.flash{animation:flashRow 1.8s ease}
 .btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:var(--r-sm);border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
 .btn:hover{background:var(--gold-light)}
@@ -496,7 +496,7 @@ tr.flash{animation:flashRow 1.8s ease}
    visible for the life of the trial rather than be dismissed once and
    forgotten) — sits between the topbar and whichever view is active,
    so it's present everywhere without competing with page content. */
-.trial-banner{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 16px;background:rgba(169,129,46,.12);border-bottom:1px solid rgba(169,129,46,.3);color:var(--gold-light);font-size:var(--fs-1);font-weight:700;letter-spacing:.04em}
+.trial-banner{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 16px;background:rgba(190, 74, 30,.12);border-bottom:1px solid rgba(190, 74, 30,.3);color:var(--gold-light);font-size:var(--fs-1);font-weight:700;letter-spacing:.04em}
 
 /* ===== cards / tables ===== */
 /* overflow-x:auto unconditionally — harmless for the many .card uses
@@ -553,13 +553,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .chip{display:inline-block;font-size:var(--fs-eyebrow);letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:4px 10px;border-radius:3px;border:1px solid}
 .sev-Critical{color:var(--critical);border-color:rgba(224,144,143,.45)}
 .sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
-.sev-Medium{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.sev-Medium{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .sev-Prohibited{color:var(--critical);border-color:rgba(224,144,143,.45)}
-.sev-Limited{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.sev-Limited{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .sev-Minimal{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
-.st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .st-Done,.st-Closed,.st-Implemented,.st-Monitored,.st-Reviewed,.st-Completed{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
 .src{font-size:var(--fs-1);color:var(--paper-faint);letter-spacing:.06em}
@@ -589,8 +589,8 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .roadmap-phase{position:relative;background:rgba(var(--paper-rgb),.06);border-radius:4px;padding:10px 12px;overflow:hidden;transition:background .2s var(--ease)}
 .roadmap-phase span{position:relative;font-size:var(--fs-1);color:var(--paper-dim);display:block}
 .roadmap-phase b{position:relative;font-size:var(--fs-4);font-weight:800;color:var(--paper-faint);display:block;margin-top:4px}
-.roadmap-fill{position:absolute;inset:0;background:rgba(169,129,46,.18);width:0;transition:width .8s var(--ease)}
-.roadmap-phase.active .roadmap-fill{background:rgba(169,129,46,.28)}
+.roadmap-fill{position:absolute;inset:0;background:rgba(190, 74, 30,.18);width:0;transition:width .8s var(--ease)}
+.roadmap-phase.active .roadmap-fill{background:rgba(190, 74, 30,.28)}
 .roadmap-phase.active b{color:var(--gold-light)}
 .roadmap-phase.done .roadmap-fill{background:rgba(143,191,154,.22)}
 .roadmap-phase.done b{color:var(--pass)}
@@ -598,13 +598,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .gs-node{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:88px;text-align:center}
 .gs-node-ic{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--line);color:var(--paper-faint);font-size:11px;font-weight:700;margin-bottom:8px;flex-shrink:0;transition:border-color .3s var(--ease),color .3s var(--ease),background .3s var(--ease),box-shadow .3s var(--ease)}
 .gs-node.done .gs-node-ic{background:var(--gold);border-color:var(--gold);color:var(--ink)}
-.gs-node.current .gs-node-ic{border-color:var(--gold);color:var(--gold-light);box-shadow:0 0 0 4px rgba(216,186,120,.15)}
+.gs-node.current .gs-node-ic{border-color:var(--gold);color:var(--gold-light);box-shadow:0 0 0 4px rgba(240, 169, 127,.15)}
 .gs-node-label{font-size:10.5px;line-height:1.3;color:var(--paper-faint)}
 .gs-node.current .gs-node-label{color:var(--paper);font-weight:700}
 .gs-node.done .gs-node-label{color:var(--paper-dim)}
 .gs-conn{flex:1 1 14px;min-width:14px;height:1.5px;background:var(--line);align-self:flex-start;margin:13px -1px 0;position:relative}
 .gs-conn.done{background:var(--gold)}
-.gs-conn i{position:absolute;top:50%;left:0;width:5px;height:5px;border-radius:50%;background:var(--gold);transform:translateY(-50%);box-shadow:0 0 6px rgba(169,129,46,.7);opacity:0}
+.gs-conn i{position:absolute;top:50%;left:0;width:5px;height:5px;border-radius:50%;background:var(--gold);transform:translateY(-50%);box-shadow:0 0 6px rgba(190, 74, 30,.7);opacity:0}
 .gs-conn.active i{animation:gsFlow 1.8s linear infinite}
 @keyframes gsFlow{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
 @media (prefers-reduced-motion: reduce){.gs-conn.active i{animation:none;opacity:1;left:50%}}
@@ -618,7 +618,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .gs-text span{font-size:var(--fs-1);color:var(--paper-faint)}
 .verify-ok{color:var(--pass);font-size:var(--fs-1)}
 .verify-stale{color:var(--warn);font-size:var(--fs-1)}
-.evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
+.evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
 .evidence-link:hover{color:var(--paper);border-color:var(--gold-light)}
 /* 175px, not 230px. Shared by every KPI strip in the app (Statement of
    Applicability, Actions, Vendors, AI systems, Financial risk analysis,
@@ -893,7 +893,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;font-size:var(--fs-2);opacity:.25;transition:opacity .4s var(--ease)}
 .check-row.show{opacity:1}
 .check-row .lbl{flex:1;color:var(--paper-dim)}
-.proposed-card{border:1px solid rgba(216,186,120,.35);border-radius:6px;padding:22px 24px;margin-top:14px;background:rgba(169,129,46,.05)}
+.proposed-card{border:1px solid rgba(240, 169, 127,.35);border-radius:6px;padding:22px 24px;margin-top:14px;background:rgba(190, 74, 30,.05)}
 .proposed-card h4{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
 .proposed-card .meta{margin:8px 0 12px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.7}
 .proposed-card .meta b{color:var(--gold-light)}
@@ -910,9 +910,9 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .bulk-bar .bulk-count{flex:1 1 auto;min-width:150px;font-size:var(--fs-1);color:var(--paper-dim);letter-spacing:.02em}
 /* Pending-suggestion count on a framework tab — same visual language as
    the sidebar's nav-item badges. */
-.f-pill .pill-n{margin-left:7px;padding:1px 6px;border-radius:99px;font-size:var(--fs-1);font-weight:800;background:rgba(169,129,46,.22);color:var(--gold-light)}
+.f-pill .pill-n{margin-left:7px;padding:1px 6px;border-radius:99px;font-size:var(--fs-1);font-weight:800;background:rgba(190, 74, 30,.22);color:var(--gold-light)}
 .f-pill.on .pill-n{background:rgba(20,18,16,.22);color:var(--ink)}
-.soa-group-row td{background:rgba(169,129,46,.07);border-top:2px solid rgba(169,129,46,.25);padding-top:10px}
+.soa-group-row td{background:rgba(190, 74, 30,.07);border-top:2px solid rgba(190, 74, 30,.25);padding-top:10px}
 
 /* ===== soa ===== */
 .soa-bar{height:7px;background:rgba(var(--paper-rgb),.08);border-radius:99px;overflow:hidden;margin:8px 0 20px}
@@ -920,7 +920,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .fw-chips{display:flex;gap:5px;flex-wrap:wrap}
 .fw-chips span{font-size:var(--fs-eyebrow);letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
 select.mini,input.mini,textarea.mini{background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
-select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(169,129,46,.6)}
+select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(190, 74, 30,.6)}
 select.mini:focus,input.mini:focus,textarea.mini:focus{outline:none;border-color:var(--gold)}
 select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;cursor:not-allowed}
 /* SoA Status dropdown colour-coding — reuses the same .st-* status
@@ -928,7 +928,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
    a glance without scanning every row's text. Kept to a faint tint,
    not a full-saturation fill, so the table stays readable. */
 select.mini.st-Open{color:var(--fail);border-color:rgba(201,122,122,.5);background:rgba(201,122,122,.1)}
-select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.5);background:rgba(216,186,120,.1)}
+select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-color:rgba(240, 169, 127,.5);background:rgba(240, 169, 127,.1)}
 select.mini.st-Implemented{color:var(--pass);border-color:rgba(143,191,154,.5);background:rgba(143,191,154,.1)}
 select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);background:var(--surface-raised)}
 .toggle{width:34px;height:19px;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
@@ -955,7 +955,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 /* ===== frameworks admin ===== */
 .fw-admin-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
 .fw-admin-row b{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
-.fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--gold);border:1px solid rgba(169,129,46,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
+.fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--gold);border:1px solid rgba(190, 74, 30,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
 .fw-admin-row p{margin-top:6px;font-size:var(--fs-2);color:var(--paper-dim);line-height:1.65;max-width:56ch}
 .fw-admin-row .toggle{flex:none}
 .settings-subhead{font-size:var(--fs-1);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin:34px 0 6px}
@@ -994,7 +994,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .nav-toggle:active{background:var(--surface-hover)}
 
 /* ===== toast ===== */
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-raised);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:var(--r-sm);padding:13px 22px;font-size:var(--fs-2);opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:60;pointer-events:none;box-shadow:var(--elev-3)}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-raised);border:1px solid rgba(240, 169, 127,.4);color:var(--paper);border-radius:var(--r-sm);padding:13px 22px;font-size:var(--fs-2);opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:60;pointer-events:none;box-shadow:var(--elev-3)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* A failure must not look like a success. The default toast reads as
    confirmation — gold accent, quiet border — which is exactly wrong for
@@ -1013,7 +1013,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:6px}
 .modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
-.modal-box .m-field input:hover,.modal-box .m-field textarea:hover,.modal-box .m-field select:hover{border-color:rgba(169,129,46,.6)}
+.modal-box .m-field input:hover,.modal-box .m-field textarea:hover,.modal-box .m-field select:hover{border-color:rgba(190, 74, 30,.6)}
 .modal-box .m-field input:focus,.modal-box .m-field textarea:focus,.modal-box .m-field select:focus{outline:none;border-color:var(--gold)}
 .modal-box .m-field textarea{min-height:70px;resize:vertical}
 .modal-box .m-error{color:var(--fail);font-size:var(--fs-1);margin-top:4px;display:none}
@@ -1112,7 +1112,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .rpt-rl-bubble{cursor:pointer;transition:opacity .15s var(--ease)}
 .rpt-rl-bubble:hover,.rpt-rl-bubble:focus-visible{opacity:1;outline:none}
 .rpt-rl-trail{opacity:.5}
-.feed-filter-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(169,129,46,.14);border:1px solid rgba(169,129,46,.4);color:var(--gold-light);border-radius:99px;padding:3px 10px 3px 12px;font-size:10.5px;letter-spacing:.04em}
+.feed-filter-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(190, 74, 30,.14);border:1px solid rgba(190, 74, 30,.4);color:var(--gold-light);border-radius:99px;padding:3px 10px 3px 12px;font-size:10.5px;letter-spacing:.04em}
 .feed-filter-chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 4px}
 
 /* ===== mobile (<=860px): sidebar becomes an off-canvas drawer =====

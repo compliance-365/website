@@ -242,7 +242,7 @@ const ctaLabel = 'Book a free call';
     position: absolute;
     inset: 0;
     background-image:
-      radial-gradient(rgba(169, 129, 46, 0.06) 1px, transparent 1px);
+      radial-gradient(rgba(190, 74, 30, 0.06) 1px, transparent 1px);
     background-size: 28px 28px;
     pointer-events: none;
   }
@@ -255,7 +255,7 @@ const ctaLabel = 'Book a free call';
     left: -100px;
     width: 500px;
     height: 400px;
-    background: radial-gradient(ellipse, rgba(169,129,46,0.12) 0%, transparent 70%);
+    background: radial-gradient(ellipse, rgba(190, 74, 30,0.12) 0%, transparent 70%);
     pointer-events: none;
   }
 
@@ -267,7 +267,7 @@ const ctaLabel = 'Book a free call';
     right: -60px;
     width: 380px;
     height: 300px;
-    background: radial-gradient(ellipse, rgba(169,129,46,0.07) 0%, transparent 70%);
+    background: radial-gradient(ellipse, rgba(190, 74, 30,0.07) 0%, transparent 70%);
     pointer-events: none;
   }
 
@@ -303,7 +303,7 @@ const ctaLabel = 'Book a free call';
   }
 
   .brand-365 {
-    color: #A9812E;
+    color: var(--accent-ink);
     font-weight: 800;
     margin-left: 1px;
     letter-spacing: 0.01em;
@@ -345,16 +345,16 @@ const ctaLabel = 'Book a free call';
     height: 36px;
     border-radius: 9px;
     background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(169,129,46,0.2);
+    border: 1px solid rgba(190, 74, 30,0.2);
     color: var(--fc-dim);
     transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
   }
 
   .social-btn:hover {
-    background: rgba(169,129,46,0.15);
-    border-color: rgba(169,129,46,0.45);
-    color: #D8BA78;
-    box-shadow: 0 0 12px rgba(169,129,46,0.15);
+    background: rgba(190, 74, 30,0.15);
+    border-color: rgba(190, 74, 30,0.45);
+    color: #F0A97F;
+    box-shadow: 0 0 12px rgba(190, 74, 30,0.15);
   }
 
   /* ── Nav columns ── */
@@ -397,7 +397,7 @@ const ctaLabel = 'Book a free call';
   }
 
   .link-list a:hover { color: #DDD8CF; }
-  .link-list a:hover::before { background: #A9812E; }
+  .link-list a:hover::before { background: #BE4A1E; }
 
   /* ── CTA col ── */
   .cta-blurb {
@@ -413,19 +413,19 @@ const ctaLabel = 'Book a free call';
     border-radius: 8px;
     font-size: .88rem;
     font-weight: 700;
-    color: #0B0B0C;
+    color: var(--on-accent);
     text-decoration: none;
-    background: #A9812E;
-    border: 1px solid #A9812E;
-    box-shadow: 0 4px 16px -4px rgba(169,129,46,0.4);
+    background: #BE4A1E;
+    border: 1px solid #BE4A1E;
+    box-shadow: 0 4px 16px -4px rgba(190, 74, 30,0.4);
     transition: all 0.2s ease;
   }
 
   .footer-cta-btn:hover {
     transform: translateY(-1px);
-    background: #C49A38;
-    border-color: #C49A38;
-    box-shadow: 0 8px 24px -4px rgba(169,129,46,0.5);
+    background: #A63A12;
+    border-color: #A63A12;
+    box-shadow: 0 8px 24px -4px rgba(190, 74, 30,0.5);
   }
 
   .cta-sub {
@@ -437,11 +437,11 @@ const ctaLabel = 'Book a free call';
   .cta-sub-link {
     color: #9A968F;
     text-decoration: underline;
-    text-decoration-color: rgba(169,129,46,0.3);
+    text-decoration-color: rgba(190, 74, 30,0.3);
     transition: color 0.15s;
   }
 
-  .cta-sub-link:hover { color: #D8BA78; }
+  .cta-sub-link:hover { color: #F0A97F; }
 
   .legal-links {
     display: flex;
@@ -486,8 +486,8 @@ const ctaLabel = 'Book a free call';
     transition: color 0.15s;
   }
 
-  .loc-list a:hover { color: #D8BA78; }
-  .loc-list .loc-all { color: #A9812E; font-weight: 700; }
+  .loc-list a:hover { color: #F0A97F; }
+  .loc-list .loc-all { color: var(--accent-ink); font-weight: 700; }
 
   /* ── Bottom bar ── */
   .ms-partner {

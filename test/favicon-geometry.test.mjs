@@ -20,6 +20,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 
 const svg = readFileSync(new URL('../public/assets/favicon.svg', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
@@ -134,5 +135,43 @@ describe('drawing degrades rather than throws', () => {
 
   test('a tainted or unsupported canvas leaves the static favicon in place', () => {
     assert.match(fn, /try \{ link\.href = c\.toDataURL/);
+  });
+});
+
+/* The mark is drawn inline in twenty places — headers, footers, the
+   Checkpoint and owner shells, the marketing page, the PDF export — and
+   only two of them are the .svg files. Nothing tied the copies together,
+   so the site-wide gold-to-orange palette change recoloured thirteen of
+   them by search and replace and left favicon.svg and logo.svg gold: the
+   browser tab showed one mark and the header another.
+
+   The dot is the one element that stayed gold on purpose. Orange does
+   every working job on the site — buttons, rules, eyebrows, links — and
+   the mark keeps the single gold accent it always had. That only reads
+   as deliberate if it is gold in every copy, which is what this asserts,
+   against favicon.svg rather than a literal written here. */
+describe('every inline copy of the mark uses the same dot colour', () => {
+  const DOT = /cx="188" cy="100" r="\d+" fill="(#[0-9A-Fa-f]{6})"/g;
+  const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n')
+    .filter(Boolean)
+    .filter(f => !f.startsWith('design/'))
+    .filter(f => /\.(svg|html|astro|js|ts|mjs)$/.test(f));
+
+  const found = [];
+  for (const f of files) {
+    let src;
+    try { src = readFileSync(new URL('../' + f, import.meta.url), 'utf8'); } catch { continue; }
+    for (const m of src.matchAll(DOT)) found.push({ f, hex: m[1].toUpperCase() });
+  }
+
+  test('the mark is drawn in more than one place, so this check has something to compare', () => {
+    assert.ok(found.length > 1, 'no inline copies of the mark were found — has its geometry changed?');
+  });
+
+  test(`all ${found.length} copies match favicon.svg's dot`, () => {
+    const want = SVG.gold.toUpperCase();
+    const wrong = found.filter(x => x.hex !== want).map(x => `${x.f} (${x.hex})`);
+    assert.deepEqual(wrong, [],
+      `favicon.svg paints the dot ${want}; these copies disagree:\n  ` + wrong.join('\n  '));
   });
 });

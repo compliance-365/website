@@ -70,7 +70,7 @@ const live = isSelfServeLive();
         <div id="startFallback" class="start-fallback" hidden>
           <p style="margin-top:0;"><b>Self-serve checkout is coming shortly for part of your plan.</b> In the meantime we'll set your trial up for you — it takes minutes.</p>
           <a href={ctaUrl} class="btn-hdk-primary start-checkout-btn">Book a 15-min setup call</a>
-          <p style="font-size:.85rem;color:#8A8172;margin-bottom:0;">Or email <a href="mailto:hello@compliance365.com.au" style="color:#8B6820;">hello@compliance365.com.au</a> with the plan above and we'll send an activation link the same day.</p>
+          <p style="font-size:.85rem;color:#8A8172;margin-bottom:0;">Or email <a href="mailto:hello@compliance365.com.au" style="color:#A63A12;">hello@compliance365.com.au</a> with the plan above and we'll send an activation link the same day.</p>
         </div>
       </div>
 
@@ -79,12 +79,12 @@ const live = isSelfServeLive();
         Activates in your own Microsoft 365 tenant. Your data never leaves it. Cancel any time during the trial and pay nothing.
       </p>
       <p class="start-trust" style="margin-top:.5rem;">
-        By starting a trial you agree to our <a href={`${base}terms/`} style="color:#8B6820;">Terms</a> (including billing, auto-renewal, cancellation and our 14-day refund policy) and <a href={`${base}privacy/`} style="color:#8B6820;">Privacy Policy</a>. Payments are handled by Paddle, our authorised reseller.
+        By starting a trial you agree to our <a href={`${base}terms/`} style="color:#A63A12;">Terms</a> (including billing, auto-renewal, cancellation and our 14-day refund policy) and <a href={`${base}privacy/`} style="color:#A63A12;">Privacy Policy</a>. Payments are handled by Paddle, our authorised reseller.
       </p>
     </div>
 
     <p style="text-align:center;margin-top:1.5rem;font-size:.9rem;">
-      <a href={`${base}pricing/`} style="color:#8B6820;">← Back to pricing</a>
+      <a href={`${base}pricing/`} style="color:#A63A12;">← Back to pricing</a>
     </p>
   </div>
 </section>
@@ -98,7 +98,7 @@ const live = isSelfServeLive();
   .start-lines { font-size: .95rem; }
   /* :global — injected via innerHTML at runtime (see pricing.astro note). */
   :global(.start-line) { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid #F0ECE4; }
-  :global(.start-line.discount) { color: #7A6A2E; font-weight: 700; }
+  :global(.start-line.discount) { color: #A63A12; font-weight: 700; }
   .start-total-wrap { margin: 1.25rem 0; }
   .start-total-row { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; }
   .start-total { font-size: 1.7rem; color: #0B0B0C; }
@@ -122,11 +122,11 @@ const live = isSelfServeLive();
   .btn-hdk-primary.start-checkout-btn {
     display: block; width: 100%; text-align: center;
     font-size: .95rem; padding: 19px 24px; border-radius: 6px;
-    box-shadow: 0 8px 28px rgba(169,129,46,.28);
+    box-shadow: 0 8px 28px rgba(190, 74, 30,.28);
     transition: background .2s, box-shadow .3s, transform .2s;
   }
   .btn-hdk-primary.start-checkout-btn:hover {
-    box-shadow: 0 12px 36px rgba(216,186,120,.4);
+    box-shadow: 0 12px 36px rgba(240, 169, 127,.4);
   }
   @media (prefers-reduced-motion: no-preference) {
     .btn-hdk-primary.start-checkout-btn:hover { transform: translateY(-1px); }
