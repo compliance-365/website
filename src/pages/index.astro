@@ -131,13 +131,23 @@ const faqLd = {
     <div class="hero-dk-copy">
       <p class="hdk-eyebrow hdk-rise" style="--rise:1">Cyber · Privacy · AI Governance</p>
       <h1 class="hdk-h1">
-        <span class="hl"><span class="hl-i" style="--hl:1">Certified in</span></span>
-        <span class="hl"><span class="hl-i" style="--hl:2">weeks.</span></span>
-        <span class="hl"><span class="hl-i" style="--hl:3"><em class="hdk-accent">Not quarters.</em></span></span>
+        <!-- Four lines, not three, and each one has to fit on a single line:
+             .hl is an overflow-hidden mask and .hl-i slides up inside it, so a
+             line that wraps reveals its second row through the mask of the
+             first and the whole effect breaks. "Compliance you own." measures
+             786px against a 639px column at 1280px, and only fits unbroken if
+             the h1 drops to 64px — a fifth off the headline size. Breaking the
+             line is the cheaper trade. Widest line here is "Not compliance" at
+             580px. Re-measure if this copy changes. -->
+        <span class="hl"><span class="hl-i" style="--hl:1">Compliance</span></span>
+        <span class="hl"><span class="hl-i" style="--hl:2">you own.</span></span>
+        <span class="hl"><span class="hl-i" style="--hl:3">Not compliance</span></span>
+        <span class="hl"><span class="hl-i" style="--hl:4"><em class="hdk-accent">you rent.</em></span></span>
       </h1>
       <p class="hdk-sub hdk-rise" style="--rise:2">
-        ISO 27001, SOC 2, Essential Eight and ISO 42001 — delivered inside the Microsoft 365 you already own.
-        Fixed price. No third-party platform holding your data. <strong>Every client we've taken to certification has passed on the first attempt.</strong>
+        ISO 27001, SOC 2, Essential Eight and ISO 42001 — audit-ready in 8–14 weeks, inside the Microsoft 365
+        you already own. Fixed price. No third-party platform holding your data.
+        <strong>Every client we've taken to certification has passed on the first attempt.</strong>
       </p>
       <div class="hdk-ctas hdk-rise" style="--rise:3">
         <a href={ctaUrl} class="btn-hdk-primary">Scope my certification →</a>
@@ -719,7 +729,14 @@ const faqLd = {
   .hdk-h1 {
     font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 400;
-    font-size: clamp(2.8rem, 6vw, 5rem);
+    /* Sized for FOUR lines, not three. At the old clamp(2.8rem, 6vw, 5rem)
+       this headline ran 325px tall at 1280x900, which pushed the primary
+       CTA under the fixed Ask AI launcher and the last KPI off-screen.
+       line-height stays at 1.06 deliberately: .hl is an overflow-hidden
+       mask, so tighter leading clips the descenders in "Compliance",
+       "you own." and "you rent.". The height had to come out of the font
+       size instead. */
+    font-size: clamp(2.6rem, 5vw, 4rem);
     line-height: 1.06;
     letter-spacing: -.01em;
     color: #FAF7F1;
@@ -937,7 +954,8 @@ const faqLd = {
       /* No `order: -1` here on purpose — that used to put the decorative
          ring ahead of the headline in visual order, so a mobile visitor
          scrolled past nav, the announcement bar, then a 320px graphic
-         before reaching "Certified in weeks. Not quarters." at all. DOM
+         before reaching "Compliance you own. Not compliance you rent."
+         at all. DOM
          order already puts the copy first; this block only needs to size
          the ring for the narrower viewport. */
       height: 320px;
