@@ -14,8 +14,8 @@ import { dirname, join, resolve } from 'node:path';
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets');
 
 const INK = '#0B0B0C';
-const GOLD = '#A9812E';
-const GOLD_LIGHT = '#D8BA78';
+const GOLD = '#BE4A1E';
+const GOLD_LIGHT = '#F0A97F';
 const CARD = '#ffffff';
 const CARD_STROKE = '#F5F0E8';
 const MUTED = '#6B6860';

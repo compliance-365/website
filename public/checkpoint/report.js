@@ -100,7 +100,7 @@
     bad: '#8F2E2E',       /* Critical risk / a "bad" trend arrow */
     neutral: '#8B877D',   /* Not started / manual evidence — deliberately low-chroma; see header comment */
     muted: '#D9D4C8',     /* Not applicable — most receded; also low-chroma by design */
-    gold: '#A9812E'       /* brand accent only (target band, auto-captured mark) — never a 5th status hue */
+    gold: '#BE4A1E'       /* brand accent only (target band, auto-captured mark) — never a 5th status hue */
   };
 
   /* The same seven roles, re-tuned for the app's near-black ground.
@@ -131,12 +131,12 @@
      they are not trying to pass as categorical hues in either palette. */
   var PAL_APP = {
     good: '#8fbf9a',
-    warn: '#D8BA78',
+    warn: '#F0A97F',
     high: '#dda07a',
     bad: '#e0908f',
     neutral: '#9a958c',
     muted: '#5b5666',
-    gold: '#D8BA78'
+    gold: '#F0A97F'
   };
 
   function chartCard(figure, title, caption, svg) {
@@ -227,7 +227,7 @@
     }).join('');
     return '<svg viewBox="0 0 460 200" width="100%" role="img" aria-label="Readiness donut: ' + pct + '% of applicable controls implemented">' + hatch.html +
       arcs +
-      '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="28" font-weight="500" fill="#0B0B0C">' + pct + '%</text>' +
+      '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="28" font-weight="500" fill="#0B0B0C">' + pct + '%</text>' +
       '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="#8b877d">IMPLEMENTED</text>' +
       legend +
       '</svg>';
@@ -285,11 +285,11 @@
         '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[0].score, 0) + '</text>';
     } else {
       var line = scorePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
-      var area = '<polygon points="' + line + ' ' + scorePts[n - 1][0] + ',' + y1 + ' ' + scorePts[0][0] + ',' + y1 + '" fill="rgba(169,129,46,.10)"/>';
+      var area = '<polygon points="' + line + ' ' + scorePts[n - 1][0] + ',' + y1 + ' ' + scorePts[0][0] + ',' + y1 + '" fill="rgba(190, 74, 30,.10)"/>';
       scoreLineHtml = area + '<polyline points="' + line + '" fill="none" stroke="' + PAL.gold + '" stroke-width="2"/>';
       pointsHtml = scorePts.map(function (p, i) {
         var isEnd = i === n - 1;
-        return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
+        return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(190, 74, 30,.55)') + '"/>';
       }).join('') +
         '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[n - 1].score, 0) + '</text>';
     }
@@ -577,7 +577,7 @@
     var autoW = (autoCaptured / total) * trackW;
     var manualW = (manual / total) * trackW;
     return '<svg viewBox="0 0 560 90" width="100%" role="img" aria-label="Evidence coverage: ' + pct + '% of implemented controls have linked evidence">' +
-      '<text x="0" y="16" font-family="Fraunces,serif" font-size="16" font-weight="500" fill="#0B0B0C">' + pct + '% evidence-backed</text>' +
+      '<text x="0" y="16" font-family="Bricolage Grotesque,sans-serif" font-size="16" font-weight="500" fill="#0B0B0C">' + pct + '% evidence-backed</text>' +
       '<rect x="' + trackX + '" y="' + trackY + '" width="' + trackW + '" height="' + trackH + '" rx="4" fill="' + PAL.muted + '"/>' +
       (autoW > 0.5 ? '<rect x="' + trackX + '" y="' + trackY + '" width="' + fx(autoW) + '" height="' + trackH + '" rx="4" fill="' + PAL.gold + '"/>' : '') +
       (manualW > 0.5 ? '<rect x="' + fx(trackX + autoW) + '" y="' + trackY + '" width="' + fx(manualW) + '" height="' + trackH + '" fill="' + PAL.neutral + '"/>' : '') +
@@ -603,7 +603,7 @@
       var arrowColor = it.trend ? (it.trendGood ? PAL.good : PAL.bad) : null;
       var arrow = it.trend === 'up' ? '▲' : it.trend === 'down' ? '▼' : '';
       return (i > 0 ? '<line x1="' + x + '" y1="10" x2="' + x + '" y2="' + (h - 10) + '" stroke="rgba(11,11,12,.15)"/>' : '') +
-        '<text x="' + (x + tileW / 2) + '" y="42" text-anchor="middle" font-family="Fraunces,serif" font-size="26" font-weight="500" fill="' + PAL.gold + '">' + escSvgText(it.value) +
+        '<text x="' + (x + tileW / 2) + '" y="42" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="26" font-weight="500" fill="' + PAL.gold + '">' + escSvgText(it.value) +
         (arrow ? '<tspan dx="4" font-family="Manrope,sans-serif" font-size="15" fill="' + arrowColor + '">' + arrow + '</tspan>' : '') + '</text>' +
         '<text x="' + (x + tileW / 2) + '" y="62" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing=".5" fill="#8b877d">' + escSvgText((it.label || '').toUpperCase()) + '</text>';
     }).join('');
@@ -706,7 +706,7 @@
     var numSize = Math.min(46, holeR * 2 * 0.62, (holeR * 2 * 0.86) / (centerDigits * 0.6));
     var capHalf = numSize * 0.36;
     var centerHtml = compact ? '' :
-      '<text x="' + cx + '" y="' + fx(cy + capHalf - 3) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="' + fx(numSize) + '" font-weight="500" fill="' + P.text + '"' + (interactive ? ' class="rpt-fp-num" data-count="' + fx(centerPct, 0) + '"' : '') + '>' + fx(centerPct, 0) + '</text>' +
+      '<text x="' + cx + '" y="' + fx(cy + capHalf - 3) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="' + fx(numSize) + '" font-weight="500" fill="' + P.text + '"' + (interactive ? ' class="rpt-fp-num" data-count="' + fx(centerPct, 0) + '"' : '') + '>' + fx(centerPct, 0) + '</text>' +
       '<text x="' + cx + '" y="' + fx(cy + capHalf + 12) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="' + P.textDim + '">READINESS</text>';
 
     var ariaLabel = escSvgText('Compliance fingerprint: ' + fx(centerPct, 0) + '% overall readiness across ' + rings.length + ' theme(s)' + (evidencePct != null ? ', ' + fx(evidencePct, 0) + '% evidence coverage' : ''));
@@ -738,7 +738,7 @@
     var line = linePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
     var dots = pts.map(function (p, i) {
       var isEnd = i === n - 1;
-      return '<circle cx="' + linePts[i][0] + '" cy="' + linePts[i][1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
+      return '<circle cx="' + linePts[i][0] + '" cy="' + linePts[i][1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(190, 74, 30,.55)') + '"/>';
     }).join('');
     var dateLabels = [0, n - 1].map(function (i) {
       return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(pts[i].dateLabel || '') + '</text>';
@@ -1152,14 +1152,14 @@
      validated and stays fixed, and never the Checkpoint mast (.w2),
      which is the producer's mark, not the client's. */
   function css(fontBase, accent) {
-    return "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
+    return "@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;src:url('" + fontBase + "fonts/bricolage.woff2') format('woff2-variations')}" +
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       '@page{size:A4;margin:34mm 16mm 26mm 16mm}' +
       'html,body{margin:0;padding:0}' +
       'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;font-size:12.5px;line-height:1.6}' +
       '.rpt-doc{max-width:900px;margin:0 auto;padding:28px 40px}' +
-      '.rpt-mast{display:flex;align-items:center;gap:8px;margin-bottom:28px}.w1{font-weight:300;letter-spacing:.13em;font-size:12px}.w2{font-weight:800;color:#A9812E;font-size:12px}' +
-      'h1{font-family:Fraunces,serif;font-weight:500}h2{font-family:Fraunces,serif;font-weight:500;font-size:18px;margin:0 0 4px}h3{font-family:Fraunces,serif;font-weight:500;font-size:14px;margin:22px 0 8px}' +
+      '.rpt-mast{display:flex;align-items:center;gap:8px;margin-bottom:28px}.w1{font-weight:300;letter-spacing:.13em;font-size:12px}.w2{font-weight:800;color:#BE4A1E;font-size:12px}' +
+      'h1{font-family:Bricolage Grotesque,sans-serif;font-weight:500}h2{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:18px;margin:0 0 4px}h3{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:14px;margin:22px 0 8px}' +
       '.rpt-rule{width:26px;height:1px;background:' + accent + ';margin:10px 0 18px}' +
       '.rpt-intro{color:#4b473e;max-width:70ch}' +
       '.rpt-plain{margin:6px 0 0 18px;padding:0}.rpt-plain li{margin-bottom:6px}' +
@@ -1207,7 +1207,7 @@
        again when building the spec, but this engine is also handed
        specs by tests and (per the header comment) a future server-side
        renderer — so it never trusts the field either. */
-    var accent = (spec.client && /^#[0-9a-fA-F]{6}$/.test(spec.client.brandColor || '')) ? spec.client.brandColor : '#A9812E';
+    var accent = (spec.client && /^#[0-9a-fA-F]{6}$/.test(spec.client.brandColor || '')) ? spec.client.brandColor : '#BE4A1E';
     var entries = buildTocEntries(spec);
     var contentEntryStart = spec.dashboard ? 1 : 0;
     var headerLogo = (spec.client && spec.client.logoUrl)

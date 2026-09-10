@@ -1,9 +1,9 @@
 /* Vendored locally (fonts/), not loaded from Google Fonts at runtime —
-   only the two weight ranges actually used (Fraunces 400/500, Manrope
+   only the two weight ranges actually used ('Bricolage Grotesque' 400/500, Manrope
    300-800), Latin subset only. Re-fetch from Google Fonts' CSS API and
    re-run this same pair of curl commands if new weights/scripts are
    ever needed; see RELEASE.md. */
-@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;font-display:swap;src:url('fonts/fraunces.woff2') format('woff2')}
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;font-display:swap;src:url('fonts/bricolage.woff2') format('woff2-variations')}
 @font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('fonts/manrope.woff2') format('woff2')}
 :root{
   /* Ground, card, raised — measured as CIE L* steps, not WCAG ratios.
@@ -21,7 +21,7 @@
      lib.js's own contrastRatio() whenever they move.
 
      The card tier is now as light as this palette can make it. --gold
-     (#A9812E) is the binding constraint: it is the darkest token the
+     (#BE4A1E) is the binding constraint: it is the darkest token the
      app ever uses AS TEXT (card titles, the CHECKPOINT rail label, the
      brand mark's "365"), and it measures 4.77:1 on the card and 4.60:1
      on the raised surface. One more step of lightness on either takes
@@ -50,7 +50,7 @@
      background token this app uses); --paper-dim (.62, 7.3:1) was
      already comfortably passing and is unchanged. */
   --paper:#FAF7F1; --paper-dim:rgba(var(--paper-rgb),.62); --paper-faint:rgba(var(--paper-rgb),.5);
-  --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
+  --gold:#BE4A1E; --gold-light:#F0A97F; --gold-rgb:190,74,30; --gold-light-rgb:240,169,127;
   --line:rgba(255,255,255,.12);
   /* Status/severity hues — pass/warn/fail plus a fourth, --critical,
      distinct from --fail (High vs. Critical residual risk read as two
@@ -61,7 +61,7 @@
      the light-theme block darkens each one to clear 4.5:1 against
      --ink's new near-white value, since a color tuned to sit on near-
      black fails badly on near-white (see that block's own comment). */
-  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
+  --pass:#8fbf9a; --warn:#F0A97F; --fail:#c97a7a; --critical:#e0908f;
 
   /* Canonical easing — every transition in this file uses this curve
      (previously hand-typed 3 separate times, drifting-risk waiting to
@@ -181,7 +181,7 @@
      #FAF7F1 — .6 clears 4.5:1 (verified: 5.09:1). --paper-dim's .68
      alpha was already comfortably passing (6.8:1) and is unchanged. */
   --paper:#0B0B0C; --paper-dim:rgba(var(--paper-rgb),.68); --paper-faint:rgba(var(--paper-rgb),.6);
-  --gold:#8d6c26; --gold-light:#6b5220; --gold-rgb:141,108,38; --gold-light-rgb:107,82,32;
+  --gold:#A63A12; --gold-light:#8A2F0E; --gold-rgb:166,58,18; --gold-light-rgb:138,47,14;
   --pass:#477d54; --warn:#8c6d28; --fail:#b85050; --critical:#ca413f;
   --line:rgba(11,11,12,.14);
   --surface-hover:rgba(var(--paper-rgb),.045);
@@ -215,11 +215,11 @@ button{font-family:Manrope;cursor:pointer}
    idea in both engines. Global rather than per-scrollable-element:
    every scroll surface in this app (nav, drawer, table overflow,
    feed, gsearch results) should read as part of the same system. */
-*{scrollbar-width:thin;scrollbar-color:rgba(169,129,46,.5) var(--ink-2)}
+*{scrollbar-width:thin;scrollbar-color:rgba(190, 74, 30,.5) var(--ink-2)}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track{background:var(--ink-2)}
-::-webkit-scrollbar-thumb{background:rgba(169,129,46,.45);border-radius:99px;border:2px solid var(--ink-2)}
-::-webkit-scrollbar-thumb:hover{background:rgba(169,129,46,.7)}
+::-webkit-scrollbar-thumb{background:rgba(190, 74, 30,.45);border-radius:99px;border:2px solid var(--ink-2)}
+::-webkit-scrollbar-thumb:hover{background:rgba(190, 74, 30,.7)}
 
 /* Skeleton shimmer — async list placeholders (Documents,
    posture-scan checks) swap their text "Loading…" state
@@ -272,7 +272,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 /* ===== sign-in gate ===== */
 .gate{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
 .gate .lockup{display:flex;align-items:center;gap:14px;margin-bottom:10px}
-.gate h1{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-6);margin-top:22px}
+.gate h1{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-6);margin-top:22px}
 .gate p{color:var(--paper-dim);max-width:52ch;line-height:1.7;margin-top:12px;font-size:var(--fs-2)}
 .gate .btns{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;justify-content:center}
 .gate .note{margin-top:26px;font-size:var(--fs-1);color:var(--paper-faint);max-width:56ch;line-height:1.7}
@@ -295,7 +295,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .wizard-dot.on{background:var(--gold);width:20px;border-radius:4px}
 .wizard-dot.done{background:var(--gold-light)}
 .wizard-hero{text-align:center}
-.wizard-hero h1{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-5);margin-top:18px}
+.wizard-hero h1{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-5);margin-top:18px}
 .wizard-hero p{color:var(--paper-dim);max-width:52ch;margin:14px auto 0;line-height:1.7;font-size:var(--fs-2)}
 .wiz-perm-row{display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);align-items:baseline}
 .wiz-perm-row:last-child{border-bottom:none}
@@ -329,7 +329,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .nav-item:active{background:rgba(var(--paper-rgb),.08)}
 .nav-item:disabled,.nav-item[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
 .nav-item.on{color:var(--paper);background:var(--surface-hover);border-left-color:var(--gold)}
-.nav-item .n{background:rgba(169,129,46,.18);color:var(--gold-light);font-size:var(--fs-1);font-weight:800;border-radius:99px;padding:2px 8px}
+.nav-item .n{background:rgba(190, 74, 30,.18);color:var(--gold-light);font-size:var(--fs-1);font-weight:800;border-radius:99px;padding:2px 8px}
 .nav-group{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .nav-group:first-child{margin-top:2px;padding-top:0;border-top:none}
 .nav-label{padding:0 22px 6px;font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
@@ -368,7 +368,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .top .right{display:flex;gap:10px;align-items:center}
 .gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
 .gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:var(--r-sm);font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
-.gsearch input:hover{border-color:rgba(169,129,46,.5)}
+.gsearch input:hover{border-color:rgba(190, 74, 30,.5)}
 .gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(var(--paper-rgb),.07)}
 /* Row styling shared by the command palette below — one visual
    language for "a searchable/selectable row", whether it's a record
@@ -427,8 +427,8 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
   display:none;position:fixed;inset:0;z-index:90;
   --ink:#06060A; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
   --paper-rgb:250,247,241; --ink-rgb:6,6,10;
-  --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
-  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
+  --gold:#BE4A1E; --gold-light:#F0A97F; --gold-rgb:190,74,30; --gold-light-rgb:240,169,127;
+  --pass:#8fbf9a; --warn:#F0A97F; --fail:#c97a7a; --critical:#e0908f;
   --line:rgba(255,255,255,.12);
   background:var(--ink);color:var(--paper);
 }
@@ -441,8 +441,8 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 @keyframes bdProgress{from{width:0%}to{width:100%}}
 @media(prefers-reduced-motion:reduce){.bd-progress{display:none}}
 .bd-slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:28px;padding:80px;box-sizing:border-box}
-.bd-slide h2{font-family:Fraunces,serif;font-weight:500;font-size:30px;color:var(--paper-dim);letter-spacing:.01em;margin:0}
-.bd-num{font-family:Fraunces,serif;font-weight:500;font-size:11vw;line-height:1;color:var(--paper);font-variant-numeric:tabular-nums}
+.bd-slide h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:30px;color:var(--paper-dim);letter-spacing:.01em;margin:0}
+.bd-num{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:11vw;line-height:1;color:var(--paper);font-variant-numeric:tabular-nums}
 .bd-num small{font-size:.32em;color:var(--paper-faint);font-weight:400;margin-left:10px}
 .bd-sub{font-size:19px;color:var(--paper-dim);max-width:64ch;line-height:1.7}
 .bd-sub .d-kv{font-size:19px;padding:10px 0}
@@ -451,14 +451,14 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .bd-chart{width:100%;display:flex;justify-content:center}
 .bd-chart svg{width:100%;height:auto}
 .bd-nav{position:fixed;inset:0;display:flex;justify-content:space-between;align-items:center;pointer-events:none;padding:0 28px;z-index:2}
-.bd-arrow{pointer-events:auto;background:none;border:none;color:rgba(var(--paper-rgb),.28);font-family:Fraunces,serif;font-size:52px;line-height:1;cursor:pointer;padding:24px;transition:color .15s var(--ease)}
+.bd-arrow{pointer-events:auto;background:none;border:none;color:rgba(var(--paper-rgb),.28);font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:52px;line-height:1;cursor:pointer;padding:24px;transition:color .15s var(--ease)}
 .bd-arrow:hover,.bd-arrow:focus-visible{color:var(--gold-light)}
 .bd-dots{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:11px;z-index:2}
 .bd-dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--paper-rgb),.25);border:none;cursor:pointer;padding:0;transition:background .15s var(--ease),transform .15s var(--ease)}
 .bd-dot:hover{background:rgba(var(--paper-rgb),.5)}
 .bd-dot.on{background:var(--gold);transform:scale(1.3)}
 @media(max-width:860px){.bd-num{font-size:64px}.bd-slide{padding:32px}}
-@keyframes flashRow{0%{background:rgba(216,186,120,.35)}100%{background:transparent}}
+@keyframes flashRow{0%{background:rgba(240, 169, 127,.35)}100%{background:transparent}}
 tr.flash{animation:flashRow 1.8s ease}
 .btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:var(--r-sm);border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
 .btn:hover{background:var(--gold-light)}
@@ -485,7 +485,7 @@ tr.flash{animation:flashRow 1.8s ease}
 .view{display:none;padding:36px;max-width:1280px}
 .view.on{display:block}
 .vhead{margin-bottom:31px}
-.vhead h1{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-5)}
+.vhead h1{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-5)}
 .vhead p{color:var(--paper-dim);margin-top:6px;font-size:var(--fs-2);max-width:70ch;line-height:1.6}
 .rule{width:26px;height:1px;background:var(--gold);margin-bottom:14px}
 .modenote{font-size:var(--fs-1);letter-spacing:.08em;color:var(--paper-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -496,7 +496,7 @@ tr.flash{animation:flashRow 1.8s ease}
    visible for the life of the trial rather than be dismissed once and
    forgotten) — sits between the topbar and whichever view is active,
    so it's present everywhere without competing with page content. */
-.trial-banner{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 16px;background:rgba(169,129,46,.12);border-bottom:1px solid rgba(169,129,46,.3);color:var(--gold-light);font-size:var(--fs-1);font-weight:700;letter-spacing:.04em}
+.trial-banner{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 16px;background:rgba(190, 74, 30,.12);border-bottom:1px solid rgba(190, 74, 30,.3);color:var(--gold-light);font-size:var(--fs-1);font-weight:700;letter-spacing:.04em}
 
 /* ===== cards / tables ===== */
 /* overflow-x:auto unconditionally — harmless for the many .card uses
@@ -553,13 +553,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .chip{display:inline-block;font-size:var(--fs-eyebrow);letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:4px 10px;border-radius:3px;border:1px solid}
 .sev-Critical{color:var(--critical);border-color:rgba(224,144,143,.45)}
 .sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
-.sev-Medium{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.sev-Medium{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .sev-Prohibited{color:var(--critical);border-color:rgba(224,144,143,.45)}
-.sev-Limited{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.sev-Limited{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .sev-Minimal{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
-.st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .st-Done,.st-Closed,.st-Implemented,.st-Monitored,.st-Reviewed,.st-Completed{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
 .src{font-size:var(--fs-1);color:var(--paper-faint);letter-spacing:.06em}
@@ -589,8 +589,8 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .roadmap-phase{position:relative;background:rgba(var(--paper-rgb),.06);border-radius:4px;padding:10px 12px;overflow:hidden;transition:background .2s var(--ease)}
 .roadmap-phase span{position:relative;font-size:var(--fs-1);color:var(--paper-dim);display:block}
 .roadmap-phase b{position:relative;font-size:var(--fs-4);font-weight:800;color:var(--paper-faint);display:block;margin-top:4px}
-.roadmap-fill{position:absolute;inset:0;background:rgba(169,129,46,.18);width:0;transition:width .8s var(--ease)}
-.roadmap-phase.active .roadmap-fill{background:rgba(169,129,46,.28)}
+.roadmap-fill{position:absolute;inset:0;background:rgba(190, 74, 30,.18);width:0;transition:width .8s var(--ease)}
+.roadmap-phase.active .roadmap-fill{background:rgba(190, 74, 30,.28)}
 .roadmap-phase.active b{color:var(--gold-light)}
 .roadmap-phase.done .roadmap-fill{background:rgba(143,191,154,.22)}
 .roadmap-phase.done b{color:var(--pass)}
@@ -598,13 +598,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .gs-node{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:88px;text-align:center}
 .gs-node-ic{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--line);color:var(--paper-faint);font-size:11px;font-weight:700;margin-bottom:8px;flex-shrink:0;transition:border-color .3s var(--ease),color .3s var(--ease),background .3s var(--ease),box-shadow .3s var(--ease)}
 .gs-node.done .gs-node-ic{background:var(--gold);border-color:var(--gold);color:var(--ink)}
-.gs-node.current .gs-node-ic{border-color:var(--gold);color:var(--gold-light);box-shadow:0 0 0 4px rgba(216,186,120,.15)}
+.gs-node.current .gs-node-ic{border-color:var(--gold);color:var(--gold-light);box-shadow:0 0 0 4px rgba(240, 169, 127,.15)}
 .gs-node-label{font-size:10.5px;line-height:1.3;color:var(--paper-faint)}
 .gs-node.current .gs-node-label{color:var(--paper);font-weight:700}
 .gs-node.done .gs-node-label{color:var(--paper-dim)}
 .gs-conn{flex:1 1 14px;min-width:14px;height:1.5px;background:var(--line);align-self:flex-start;margin:13px -1px 0;position:relative}
 .gs-conn.done{background:var(--gold)}
-.gs-conn i{position:absolute;top:50%;left:0;width:5px;height:5px;border-radius:50%;background:var(--gold);transform:translateY(-50%);box-shadow:0 0 6px rgba(169,129,46,.7);opacity:0}
+.gs-conn i{position:absolute;top:50%;left:0;width:5px;height:5px;border-radius:50%;background:var(--gold);transform:translateY(-50%);box-shadow:0 0 6px rgba(190, 74, 30,.7);opacity:0}
 .gs-conn.active i{animation:gsFlow 1.8s linear infinite}
 @keyframes gsFlow{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
 @media (prefers-reduced-motion: reduce){.gs-conn.active i{animation:none;opacity:1;left:50%}}
@@ -618,7 +618,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .gs-text span{font-size:var(--fs-1);color:var(--paper-faint)}
 .verify-ok{color:var(--pass);font-size:var(--fs-1)}
 .verify-stale{color:var(--warn);font-size:var(--fs-1)}
-.evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
+.evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
 .evidence-link:hover{color:var(--paper);border-color:var(--gold-light)}
 /* 175px, not 230px. Shared by every KPI strip in the app (Statement of
    Applicability, Actions, Vendors, AI systems, Financial risk analysis,
@@ -752,13 +752,13 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    and NOTHING in this file matched a bare h2 (every h2 rule here is
    scoped: .bd-slide h2, .drawer h2, .automation-centre h2, this one).
    So those six headings rendered at the browser's default: Manrope
-   19.5px/700, against the Dashboard's Fraunces 20px/500. Same size,
+   19.5px/700, against the Dashboard's 'Bricolage Grotesque' 20px/500. Same size,
    different family, different weight — near enough to read as a
    mistake rather than as a decision, which is exactly how it looked.
    Renamed rather than aliased so there is one name for one thing; the
    Dashboard's two usages moved with it. */
 .section-head{margin:36px 0 18px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
-.section-head h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);color:var(--paper);margin:0}
+.section-head h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);color:var(--paper);margin:0}
 .section-head p{margin:0;color:var(--paper-faint);font-size:var(--fs-1);line-height:1.5;max-width:80ch}
 /* The first section in a view sits right under the .vhead intro, which
    already separates it — a second rule and 36px of air there reads as a
@@ -779,7 +779,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .automation-centre{margin:18px 0 16px;padding:26px;border:1px solid rgba(var(--gold-light-rgb),.26);border-radius:var(--r-lg);background:var(--glow),linear-gradient(150deg,var(--surface),var(--ink));box-shadow:var(--elev-2)}
 .automation-centre-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
 .automation-eyebrow{display:block;color:var(--gold-light);font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
-.automation-centre h2{font-family:Fraunces,serif;font-size:clamp(1.45rem,2.5vw,2rem);font-weight:500;line-height:1.15;color:var(--paper);margin:0}
+.automation-centre h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:clamp(1.45rem,2.5vw,2rem);font-weight:500;line-height:1.15;color:var(--paper);margin:0}
 .automation-intro{max-width:76ch;color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin:12px 0 22px}
 .automation-monitor{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;color:var(--paper-faint);font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:7px 9px;border:1px solid var(--line);border-radius:99px;white-space:nowrap}
 .automation-monitor i{width:7px;height:7px;border-radius:50%;background:var(--paper-faint)}
@@ -790,7 +790,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .automation-card:hover,.automation-card:focus-visible{transform:translateY(-2px);background:rgba(var(--gold-light-rgb),.09);border-color:rgba(var(--gold-light-rgb),.55);box-shadow:var(--elev-2);outline:none}
 .automation-card:focus-visible{box-shadow:0 0 0 3px rgba(var(--gold-light-rgb),.28),var(--elev-2)}
 .automation-card-kicker{display:block;font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
-.automation-card>b{display:block;font-family:Fraunces,serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
+.automation-card>b{display:block;font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
 .automation-card>b small{font-family:Manrope,sans-serif;font-size:var(--fs-2);font-weight:700;color:var(--gold-light)}
 .automation-card h3{font-size:var(--fs-2);color:var(--paper);margin:11px 0 5px}
 .automation-card p{font-size:var(--fs-1);line-height:1.55;color:var(--paper-dim);margin:0;min-height:3.2em}
@@ -893,8 +893,8 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;font-size:var(--fs-2);opacity:.25;transition:opacity .4s var(--ease)}
 .check-row.show{opacity:1}
 .check-row .lbl{flex:1;color:var(--paper-dim)}
-.proposed-card{border:1px solid rgba(216,186,120,.35);border-radius:6px;padding:22px 24px;margin-top:14px;background:rgba(169,129,46,.05)}
-.proposed-card h4{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-3)}
+.proposed-card{border:1px solid rgba(240, 169, 127,.35);border-radius:6px;padding:22px 24px;margin-top:14px;background:rgba(190, 74, 30,.05)}
+.proposed-card h4{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
 .proposed-card .meta{margin:8px 0 12px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.7}
 .proposed-card .meta b{color:var(--gold-light)}
 /* A suggestion that moves a control BACKWARDS reads as a warning, not as
@@ -910,9 +910,9 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .bulk-bar .bulk-count{flex:1 1 auto;min-width:150px;font-size:var(--fs-1);color:var(--paper-dim);letter-spacing:.02em}
 /* Pending-suggestion count on a framework tab — same visual language as
    the sidebar's nav-item badges. */
-.f-pill .pill-n{margin-left:7px;padding:1px 6px;border-radius:99px;font-size:var(--fs-1);font-weight:800;background:rgba(169,129,46,.22);color:var(--gold-light)}
+.f-pill .pill-n{margin-left:7px;padding:1px 6px;border-radius:99px;font-size:var(--fs-1);font-weight:800;background:rgba(190, 74, 30,.22);color:var(--gold-light)}
 .f-pill.on .pill-n{background:rgba(20,18,16,.22);color:var(--ink)}
-.soa-group-row td{background:rgba(169,129,46,.07);border-top:2px solid rgba(169,129,46,.25);padding-top:10px}
+.soa-group-row td{background:rgba(190, 74, 30,.07);border-top:2px solid rgba(190, 74, 30,.25);padding-top:10px}
 
 /* ===== soa ===== */
 .soa-bar{height:7px;background:rgba(var(--paper-rgb),.08);border-radius:99px;overflow:hidden;margin:8px 0 20px}
@@ -920,7 +920,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .fw-chips{display:flex;gap:5px;flex-wrap:wrap}
 .fw-chips span{font-size:var(--fs-eyebrow);letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
 select.mini,input.mini,textarea.mini{background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
-select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(169,129,46,.6)}
+select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(190, 74, 30,.6)}
 select.mini:focus,input.mini:focus,textarea.mini:focus{outline:none;border-color:var(--gold)}
 select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;cursor:not-allowed}
 /* SoA Status dropdown colour-coding — reuses the same .st-* status
@@ -928,7 +928,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
    a glance without scanning every row's text. Kept to a faint tint,
    not a full-saturation fill, so the table stays readable. */
 select.mini.st-Open{color:var(--fail);border-color:rgba(201,122,122,.5);background:rgba(201,122,122,.1)}
-select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.5);background:rgba(216,186,120,.1)}
+select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-color:rgba(240, 169, 127,.5);background:rgba(240, 169, 127,.1)}
 select.mini.st-Implemented{color:var(--pass);border-color:rgba(143,191,154,.5);background:rgba(143,191,154,.1)}
 select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);background:var(--surface-raised)}
 .toggle{width:34px;height:19px;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
@@ -948,14 +948,14 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 
 /* ===== reports ===== */
 .rep-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.rep-card h4{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-3);margin-bottom:8px}
+.rep-card h4{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3);margin-bottom:8px}
 .rep-card p{font-size:var(--fs-2);color:var(--paper-dim);line-height:1.7;margin-bottom:16px}
 .rep-card .tagline{font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
 
 /* ===== frameworks admin ===== */
 .fw-admin-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
-.fw-admin-row b{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-3)}
-.fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--gold);border:1px solid rgba(169,129,46,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
+.fw-admin-row b{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
+.fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--gold);border:1px solid rgba(190, 74, 30,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
 .fw-admin-row p{margin-top:6px;font-size:var(--fs-2);color:var(--paper-dim);line-height:1.65;max-width:56ch}
 .fw-admin-row .toggle{flex:none}
 .settings-subhead{font-size:var(--fs-1);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin:34px 0 6px}
@@ -968,7 +968,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .drawer .x:hover,.side .x:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
 .drawer .x:active,.side .x:active{background:rgba(var(--paper-rgb),.08)}
 .side .nav-close{display:none}
-.drawer h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin:6px 40px 4px 0}
+.drawer h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);margin:6px 40px 4px 0}
 .d-sec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
 .d-sec h4{font-size:var(--fs-eyebrow);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px}
 .d-kv{display:flex;justify-content:space-between;font-size:var(--fs-2);padding:6px 0;color:var(--paper-dim);gap:14px}
@@ -994,7 +994,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .nav-toggle:active{background:var(--surface-hover)}
 
 /* ===== toast ===== */
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-raised);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:var(--r-sm);padding:13px 22px;font-size:var(--fs-2);opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:60;pointer-events:none;box-shadow:var(--elev-3)}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-raised);border:1px solid rgba(240, 169, 127,.4);color:var(--paper);border-radius:var(--r-sm);padding:13px 22px;font-size:var(--fs-2);opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:60;pointer-events:none;box-shadow:var(--elev-3)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* A failure must not look like a success. The default toast reads as
    confirmation — gold accent, quiet border — which is exactly wrong for
@@ -1008,12 +1008,12 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .modal-overlay.open{display:block}
 .modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:31px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:var(--elev-3)}
 .modal-box.open{display:block}
-.modal-box h3{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
+.modal-box h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
 .modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px;white-space:pre-line}
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:6px}
 .modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
-.modal-box .m-field input:hover,.modal-box .m-field textarea:hover,.modal-box .m-field select:hover{border-color:rgba(169,129,46,.6)}
+.modal-box .m-field input:hover,.modal-box .m-field textarea:hover,.modal-box .m-field select:hover{border-color:rgba(190, 74, 30,.6)}
 .modal-box .m-field input:focus,.modal-box .m-field textarea:focus,.modal-box .m-field select:focus{outline:none;border-color:var(--gold)}
 .modal-box .m-field textarea{min-height:70px;resize:vertical}
 .modal-box .m-error{color:var(--fail);font-size:var(--fs-1);margin-top:4px;display:none}
@@ -1112,7 +1112,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .rpt-rl-bubble{cursor:pointer;transition:opacity .15s var(--ease)}
 .rpt-rl-bubble:hover,.rpt-rl-bubble:focus-visible{opacity:1;outline:none}
 .rpt-rl-trail{opacity:.5}
-.feed-filter-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(169,129,46,.14);border:1px solid rgba(169,129,46,.4);color:var(--gold-light);border-radius:99px;padding:3px 10px 3px 12px;font-size:10.5px;letter-spacing:.04em}
+.feed-filter-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(190, 74, 30,.14);border:1px solid rgba(190, 74, 30,.4);color:var(--gold-light);border-radius:99px;padding:3px 10px 3px 12px;font-size:10.5px;letter-spacing:.04em}
 .feed-filter-chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 4px}
 
 /* ===== mobile (<=860px): sidebar becomes an off-canvas drawer =====

@@ -592,7 +592,7 @@ every campaign permanently short of 100%.
   in `localStorage` indefinitely.
 - **No third-party CDN dependency**: MSAL.js is vendored locally
   (`public/checkpoint/msal-browser.min.js`, pinned to an exact upstream
-  version), and both fonts (Fraunces, Manrope) are self-hosted
+  version), and both fonts (Bricolage Grotesque, Manrope) are self-hosted
   (`public/checkpoint/fonts/`) — nothing the app depends on to render or
   authenticate is fetched from any third party except Microsoft's own
   endpoints (Graph, Entra sign-in). Bump the vendored MSAL file

@@ -97,7 +97,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #8B6820;
+    background: #A63A12;
     color: #fff;
     border: none;
     border-radius: 28px;
@@ -108,14 +108,14 @@
     font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 18px rgba(169,129,46,0.38);
+    box-shadow: 0 4px 18px rgba(190, 74, 30,0.38);
     transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
     white-space: nowrap;
   }
   #c365-launcher:hover {
-    background: #8B6820;
+    background: #A63A12;
     transform: translateY(-2px);
-    box-shadow: 0 6px 22px rgba(169,129,46,0.45);
+    box-shadow: 0 6px 22px rgba(190, 74, 30,0.45);
   }
   #c365-icon-close { display: none; }
   #c365-chat.open #c365-icon-open  { display: none; }
@@ -150,7 +150,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, #A9812E 0%, #8B6820 100%);
+    background: linear-gradient(135deg, #BE4A1E 0%, #A63A12 100%);
     padding: 12px 14px;
     color: #fff;
   }
@@ -216,8 +216,8 @@
     align-self: flex-start;
   }
   .c365-msg--user {
-    background: #A9812E;
-    color:var(--on-gold);
+    background: #BE4A1E;
+    color:var(--on-accent);
     border-radius: 14px 4px 14px 14px;
     padding: 10px 12px;
     align-self: flex-end;
@@ -227,8 +227,8 @@
   .c365-cta {
     display: inline-block;
     margin-top: 8px;
-    background: #A9812E;
-    color:var(--on-gold) !important;
+    background: #BE4A1E;
+    color:var(--on-accent) !important;
     padding: 6px 14px;
     border-radius: 8px;
     font-size: 0.8rem;
@@ -236,7 +236,7 @@
     text-decoration: none;
     transition: background 0.15s;
   }
-  .c365-cta:hover { background: #8B6820; }
+  .c365-cta:hover { background: #A63A12; }
 
   /* ---- Quick chips ---- */
   .c365-chips {
@@ -246,9 +246,9 @@
     margin-top: 2px;
   }
   .c365-chip {
-    background: rgba(169,129,46,0.06);
-    color: #A9812E;
-    border: 1px solid rgba(169,129,46,0.2);
+    background: rgba(190, 74, 30,0.06);
+    color: #BE4A1E;
+    border: 1px solid rgba(190, 74, 30,0.2);
     border-radius: 20px;
     padding: 4px 11px;
     font-size: 0.76rem;
@@ -257,7 +257,7 @@
     transition: background 0.15s, border-color 0.15s;
     font-family: inherit;
   }
-  .c365-chip:hover { background: rgba(169,129,46,0.1); border-color: rgba(169,129,46,0.5); }
+  .c365-chip:hover { background: rgba(190, 74, 30,0.1); border-color: rgba(190, 74, 30,0.5); }
 
   /* ---- Typing indicator ---- */
   .c365-typing {
@@ -337,10 +337,10 @@
     outline: none;
     transition: border-color 0.15s;
   }
-  #c365-input:focus { border-color: #A9812E; }
+  #c365-input:focus { border-color: #BE4A1E; }
   #c365-send {
-    background: #A9812E;
-    color:var(--on-gold);
+    background: #BE4A1E;
+    color:var(--on-accent);
     border: none;
     border-radius: 10px;
     padding: 8px 12px;
@@ -349,7 +349,7 @@
     display: flex;
     align-items: center;
   }
-  #c365-send:hover { background: #8B6820; }
+  #c365-send:hover { background: #A63A12; }
   #c365-send:disabled { background: #6B6860; cursor: not-allowed; }
 
   /* ---- Footer ---- */
@@ -361,7 +361,7 @@
     background: #fff;
     border-top: 1px solid #F5F0E8;
   }
-  .c365-footer a { color: #A9812E; }
+  .c365-footer a { color: #BE4A1E; }
 
   /* ---- Mobile ---- */
   @media (max-width: 480px) {
@@ -477,7 +477,7 @@
     })
     .catch(function () {
       typing.hidden = true;
-      appendMsg('bot', 'Sorry, I couldn\'t connect. Please try again or <a href="/contact/" class="c365-cta" style="display:inline;background:none;color:var(--gold-ink);padding:0;">contact us directly</a>.');
+      appendMsg('bot', 'Sorry, I couldn\'t connect. Please try again or <a href="/contact/" class="c365-cta" style="display:inline;background:none;color:var(--accent-ink);padding:0;">contact us directly</a>.');
     })
     .finally(function () {
       isBusy = false;

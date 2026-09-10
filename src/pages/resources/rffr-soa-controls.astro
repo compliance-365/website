@@ -114,13 +114,13 @@ const articleLd = {
             {checkRows.map((r) => (
               <tr>
                 <td>{r.label}</td>
-                <td style="text-align:right;font-weight:700;color:var(--gold-ink);">{r.count}</td>
+                <td style="text-align:right;font-weight:700;color:var(--accent-ink);">{r.count}</td>
                 <td class="muted small">{r.controls.slice(0, 4).join(', ')}{r.controls.length > 4 ? ` +${r.controls.length - 4}` : ''}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr><td style="font-weight:700;">{checkRows.length} checks</td><td style="text-align:right;font-weight:800;color:#8B6820;">{c.microsoftAutomated}</td><td class="muted small">distinct ISM controls (~{autoPct}% of the SoA)</td></tr>
+            <tr><td style="font-weight:700;">{checkRows.length} checks</td><td style="text-align:right;font-weight:800;color:#A63A12;">{c.microsoftAutomated}</td><td class="muted small">distinct ISM controls (~{autoPct}% of the SoA)</td></tr>
           </tfoot>
         </table>
       </div>
@@ -286,7 +286,7 @@ const articleLd = {
 <style>
   .rffr-stats { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
   .rffr-stats > div { background: #fff; border: 1px solid #DDD8CF; border-radius: 12px; padding: 1.1rem 1.6rem; text-align: center; min-width: 150px; flex: 1 1 150px; max-width: 220px; }
-  .rffr-stats .n { display: block; font-size: 1.9rem; font-weight: 800; color: #A9812E; line-height: 1.1; }
+  .rffr-stats .n { display: block; font-size: 1.9rem; font-weight: 800; color: #BE4A1E; line-height: 1.1; }
   .rffr-stats .l { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: #6B6860; margin-top: 0.35rem; }
 
   .rffr-table-wrap { overflow-x: auto; max-width: 860px; margin: 0 auto; }
@@ -300,7 +300,7 @@ const articleLd = {
   #rffrGuideline { padding: 0.6rem 0.9rem; border: 1px solid #DDD8CF; border-radius: 8px; font-size: 0.9rem; background: #fff; }
   .rffr-toggles { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .rffr-chip { padding: 0.45rem 0.85rem; border: 1px solid #DDD8CF; background: #fff; border-radius: 20px; font-size: 0.82rem; cursor: pointer; color: #4A473F; }
-  .rffr-chip.on { background: #A9812E; border-color: #A9812E; color: #fff; font-weight: 600; }
+  .rffr-chip.on { background: #BE4A1E; border-color: #BE4A1E; color: #fff; font-weight: 600; }
   .rffr-count { text-align: center; font-size: 0.82rem; color: #6B6860; margin: 0 0 1.5rem; }
 
   .rffr-group-h { border-bottom: 2px solid #DDD8CF; padding-bottom: 0.5rem; margin: 2.5rem 0 1.25rem; font-size: 1.1rem; }
@@ -308,10 +308,10 @@ const articleLd = {
   .rffr-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
   .rffr-ctrl { border: 1px solid #EEE9E0; border-radius: 10px; padding: 1rem 1.1rem; background: #fff; }
   .rffr-ctrl-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
-  .rffr-id { font-weight: 700; font-size: 0.82rem; color: #8B6820; font-family: ui-monospace, monospace; }
+  .rffr-id { font-weight: 700; font-size: 0.82rem; color: #A63A12; font-family: ui-monospace, monospace; }
   .rffr-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; }
   .badge { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 10px; }
-  .badge.core { background: rgba(169,129,46,0.1); color: #8B6820; }
+  .badge.core { background: rgba(190, 74, 30,0.1); color: #A63A12; }
   .badge.e8 { background: #dcfce7; color: #166534; }
   .badge.auto { background: #dbeafe; color: #1e40af; }
   .badge.cls { background: #f1f5f9; color: #475569; }

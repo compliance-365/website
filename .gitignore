@@ -39,3 +39,9 @@ Thumbs.db
 npm-debug.log*
 *.log
 .claude/
+
+# Design canvas: the .dc.html artboards and canvas.json are the sources and are
+# tracked; the seeded page is a ~2.5MB build artifact (the canvas editor is
+# baked into it) and is regenerated from those sources, so it is not.
+design/*.html
+!design/*.dc.html

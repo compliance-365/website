@@ -1,0 +1,54 @@
+{
+  "pages": [
+    { "id": "page-2", "name": "Orange + type" },
+    { "id": "page-1", "name": "Layout directions" }
+  ],
+  "artboards": [
+    { "file": "OrangeNunito.dc.html", "page": "page-2", "x": 0, "y": 0, "w": 1120, "h": 760, "title": "Orange + Nunito — as asked" },
+    { "file": "OrangeNunitoSans.dc.html", "page": "page-2", "x": 1240, "y": 0, "w": 1120, "h": 760, "title": "Orange + Nunito Sans" },
+    { "file": "OrangeBricolage.dc.html", "page": "page-2", "x": 2480, "y": 0, "w": 1120, "h": 760, "title": "Orange + Bricolage Grotesque" },
+
+    { "file": "Current.dc.html", "page": "page-1", "x": 0, "y": 0, "w": 1120, "h": 780, "title": "Today — for comparison" },
+    { "file": "DirectionD.dc.html", "page": "page-1", "x": 1240, "y": 0, "w": 1120, "h": 780, "title": "D · Swiss Grid (keeps logo)" },
+    { "file": "DirectionE.dc.html", "page": "page-1", "x": 2480, "y": 0, "w": 1120, "h": 780, "title": "E · Blueprint (keeps logo)" },
+    { "file": "DirectionF.dc.html", "page": "page-1", "x": 3720, "y": 0, "w": 1120, "h": 780, "title": "F · Almanac (keeps logo)" },
+    { "file": "Main.dc.html", "page": "page-1", "x": 1240, "y": 1120, "w": 1120, "h": 780, "title": "A · Instrument — conflicts with the gold logo" },
+    { "file": "DirectionB.dc.html", "page": "page-1", "x": 2480, "y": 1120, "w": 1120, "h": 780, "title": "B · Document — conflicts with the gold logo" },
+    { "file": "DirectionC.dc.html", "page": "page-1", "x": 3720, "y": 1120, "w": 1120, "h": 780, "title": "C · Console — conflicts with the gold logo" }
+  ],
+  "annotations": [
+    {
+      "id": "note-orange-brief",
+      "page": "page-2",
+      "x": 0,
+      "y": -320,
+      "w": 1120,
+      "text": "ORANGE + TYPE — layout held constant, so type is the only variable\nBrand orange is #BE4A1E, a burnt vermilion rather than a saturated safety-orange (which reads discount retail). Ground stays your cream #FAF7F1 and ink stays #0B0B0C, so your logo drops in untouched — the gold dot is still gold in all three.\n\nWATCH THE STATUS STRIP in the right-hand panel. An orange brand forces your semantic palette to move: your current warn #8A5A00 and danger #A02622 both sit too close to burnt orange to read as distinct states. I shifted warn yellower (#8A6A00) and danger cooler (#9B1C2E). That reshuffle is a real cost of going orange, and it is easier to decide now than after rollout.\n\nAlso note the gold dot sitting beside the orange button — two warm accents competing. Judge whether that reads as intentional or muddy."
+    },
+    {
+      "id": "note-nunito",
+      "page": "page-2",
+      "x": 0,
+      "y": -190,
+      "w": 500,
+      "text": "NUNITO — exactly what you asked for\nRounded terminals, very warm, friendly. Reads approachable and human.\n\nMy honest reservation, twice over: Nunito sits in Google Fonts' most-used tier, so it works against the uniqueness you're after — and its rounded softness pulls toward education, wellness and consumer apps. Selling ISO 27001 and DISP/IRAP to a CFO or a board, friendly-and-rounded can undercut the authority you need. Look at it beside the other two before deciding."
+    },
+    {
+      "id": "note-nunitosans",
+      "page": "page-2",
+      "x": 1240,
+      "y": -190,
+      "w": 500,
+      "text": "NUNITO SANS — the minimal move from your request\nSame family DNA and the same warmth, but squared terminals instead of rounded. Noticeably more institutional while still feeling human, and it keeps the spirit of the choice you made.\n\nIf you like what Nunito does but want it to carry more weight with a board-level buyer, this is the smallest possible step. Still a common face, though — this fixes the tone, not the ubiquity."
+    },
+    {
+      "id": "note-bricolage",
+      "page": "page-2",
+      "x": 2480,
+      "y": -190,
+      "w": 500,
+      "text": "BRICOLAGE GROTESQUE — the uncommon option\nGenuinely characterful: slightly irregular, a bit editorial, still perfectly serious. Self-hostable from Google Fonts, so it fits the pipeline we just built, but far outside the top tier that gets picked by default.\n\nThis is what \"uncommon\" actually buys you — a voice that reads as a deliberate choice rather than a default. Tradeoff: more personality means it has to be handled with care at large sizes, and it is less familiar to a conservative buyer."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-2" }
+}

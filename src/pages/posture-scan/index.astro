@@ -25,7 +25,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       min-height: 60vh;
       font-family: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
       -webkit-font-smoothing: antialiased;
-      --ps-gold:#A9812E; --ps-gold-light:#D8BA78; --ps-green:#10B981; --ps-purple:#8B5CF6;
+      --ps-accent:#BE4A1E; --ps-accent-light:#F0A97F; --ps-green:#10B981; --ps-purple:#8B5CF6;
       --ps-amber:#D97706; --ps-red:#EF4444; --ps-ink:#0F172A; --ps-ink2:#1E293B;
       --ps-slate:#64748B; --ps-muted:#94A3B8; --ps-line:#E2E8F0; --ps-line2:#F1F5F9;
       --ps-bg:#F8FAFC; --ps-card:#FFFFFF;
@@ -40,11 +40,11 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-eyebrow {
       display:inline-flex; align-items:center; gap:8px;
       font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-      color:var(--gold-ink); background:rgba(169,129,46,0.08); border:1px solid rgba(169,129,46,.18);
+      color:var(--accent-ink); background:rgba(190, 74, 30,0.08); border:1px solid rgba(190, 74, 30,.18);
       padding:5px 12px; border-radius:999px; margin-bottom:24px;
     }
     .ps-eyebrow-dot {
-      width:6px; height:6px; border-radius:50%; background:var(--ps-gold-light);
+      width:6px; height:6px; border-radius:50%; background:var(--ps-accent-light);
       animation:ps-pulse 2s ease-in-out infinite;
     }
     @keyframes ps-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
@@ -54,7 +54,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     }
     .ps-intro h1 em {
       font-style:normal;
-      background:linear-gradient(135deg,var(--ps-gold),var(--ps-gold-light));
+      background:linear-gradient(135deg,var(--ps-accent),var(--ps-accent-light));
       -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
     }
     .ps-lede { font-size:17px; color:var(--ps-slate); line-height:1.7; max-width:580px; margin:0 0 32px; }
@@ -84,7 +84,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       overflow:hidden; max-height:90vh; overflow-y:auto;
     }
     .ps-modal-top {
-      background:linear-gradient(135deg,var(--ps-gold) 0%,var(--ps-gold) 60%,var(--ps-gold-light) 100%);
+      background:linear-gradient(135deg,var(--ps-accent) 0%,var(--ps-accent) 60%,var(--ps-accent-light) 100%);
       padding:28px 32px; display:flex; align-items:flex-start; gap:18px;
     }
     .ps-modal-shield {
@@ -117,7 +117,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       border-bottom:1px solid var(--ps-line2); font-size:12px; color:var(--ps-slate); line-height:1.4;
     }
     .ps-mock-perm:last-child { border-bottom:none; }
-    .ps-mock-perm-dot { width:5px; height:5px; border-radius:50%; background:var(--ps-gold-light); flex-shrink:0; margin-top:5px; }
+    .ps-mock-perm-dot { width:5px; height:5px; border-radius:50%; background:var(--ps-accent-light); flex-shrink:0; margin-top:5px; }
     .ps-guarantee-list { display:flex; flex-direction:column; gap:14px; }
     .ps-guarantee {
       display:flex; align-items:flex-start; gap:12px;
@@ -151,7 +151,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-scan-status { font-size:16px; color:var(--ps-ink2); font-weight:600; margin-bottom:6px; }
     .ps-scan-sub { font-size:13px; color:var(--ps-muted); }
     .ps-progress-bar { height:3px; background:var(--ps-line); border-radius:2px; margin-top:24px; overflow:hidden; }
-    .ps-progress-fill { height:100%; background:linear-gradient(90deg,var(--ps-gold),var(--ps-gold-light)); border-radius:2px; transition:width .4s ease; }
+    .ps-progress-fill { height:100%; background:linear-gradient(90deg,var(--ps-accent),var(--ps-accent-light)); border-radius:2px; transition:width .4s ease; }
 
     /* RESULTS */
     .ps-results { padding:8px 0 80px; }
@@ -195,7 +195,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       border:1.5px solid var(--ps-line); background:var(--ps-card); border-radius:9px;
       padding:7px 12px; cursor:pointer; outline:none; transition:border-color .15s;
     }
-    .ps-sort-select:focus { border-color:var(--ps-gold); }
+    .ps-sort-select:focus { border-color:var(--ps-accent); }
 
     /* CONTROLS CARD */
     .ps-controls-card {
@@ -212,12 +212,12 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       padding:10px 28px; background:linear-gradient(90deg,#EFF6FF,#F0FDF4);
       border-bottom:1px solid var(--ps-line); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
     }
-    .ps-quickwins-label { font-size:13px; font-weight:600; color:var(--ps-gold); display:flex; align-items:center; gap:7px; }
+    .ps-quickwins-label { font-size:13px; font-weight:600; color:var(--ps-accent); display:flex; align-items:center; gap:7px; }
     .ps-quickwins-toggle {
-      font-size:12px; font-weight:700; color:var(--ps-gold); background:none; border:1.5px solid rgba(169,129,46,.25);
+      font-size:12px; font-weight:700; color:var(--ps-accent); background:none; border:1.5px solid rgba(190, 74, 30,.25);
       border-radius:7px; padding:5px 12px; cursor:pointer; font-family:inherit; transition:background .12s;
     }
-    .ps-quickwins-toggle:hover { background:rgba(169,129,46,.06); }
+    .ps-quickwins-toggle:hover { background:rgba(190, 74, 30,.06); }
     .ps-control-row { border-bottom:1px solid var(--ps-line2); }
     .ps-control-row:last-child { border-bottom:none; }
     .ps-row-head {
@@ -231,7 +231,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-row-meta { display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap; }
     .ps-row-clause { font-size:11.5px; color:var(--ps-muted); font-weight:500; }
     .ps-method-badge { font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:7px; flex-shrink:0; white-space:nowrap; }
-    .ps-method-auto   { background:rgba(169,129,46,0.08); color:var(--ps-gold); }
+    .ps-method-auto   { background:rgba(190, 74, 30,0.08); color:var(--ps-accent); }
     .ps-method-attest { background:#F5F3FF; color:var(--ps-purple); }
     .ps-status-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:999px; flex-shrink:0; white-space:nowrap; }
     .ps-badge-pass    { background:#F0FDF4; color:#15803D; }
@@ -242,7 +242,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-effort-quick    { background:#F0FDF4; color:#166534; }
     .ps-effort-moderate { background:#FFFBEB; color:#92400E; }
     .ps-effort-project  { background:#FEF2F2; color:#991B1B; }
-    .ps-ml-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:7px; white-space:nowrap; background:rgba(169,129,46,0.08); color:var(--ps-gold); }
+    .ps-ml-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:7px; white-space:nowrap; background:rgba(190, 74, 30,0.08); color:var(--ps-accent); }
     .ps-trend-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:7px; flex-shrink:0; white-space:nowrap; }
     .ps-trend-up   { background:#F0FDF4; color:#15803D; }
     .ps-trend-down { background:#FEF2F2; color:#DC2626; }
@@ -256,10 +256,10 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-detail-text { font-size:14px; color:var(--ps-slate); line-height:1.65; margin-bottom:12px; }
     .ps-detail-fix {
       font-size:14px; color:var(--ps-ink2); line-height:1.65;
-      padding:12px 16px; background:var(--ps-line2); border-radius:10px; border-left:3px solid var(--ps-gold);
+      padding:12px 16px; background:var(--ps-line2); border-radius:10px; border-left:3px solid var(--ps-accent);
       margin-bottom:10px;
     }
-    .ps-detail-fix strong { color:var(--ps-gold); font-weight:700; }
+    .ps-detail-fix strong { color:var(--ps-accent); font-weight:700; }
     .ps-detail-portal {
       display:flex; align-items:center; gap:8px;
       font-size:12px; color:var(--ps-slate); font-weight:500;
@@ -270,8 +270,8 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-detail-portal code { font-family:'SF Mono',SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--ps-ink2); }
     .ps-detail-service-cta {
       display:inline-flex; align-items:center; gap:7px;
-      font-size:12.5px; font-weight:700; color:var(--ps-gold); text-decoration:none;
-      background:rgba(169,129,46,0.08); border:1.5px solid rgba(169,129,46,.2); border-radius:8px;
+      font-size:12.5px; font-weight:700; color:var(--ps-accent); text-decoration:none;
+      background:rgba(190, 74, 30,0.08); border:1.5px solid rgba(190, 74, 30,.2); border-radius:8px;
       padding:7px 14px; transition:background .12s,transform .12s;
     }
     .ps-detail-service-cta:hover { background:#DBEAFE; transform:translateY(-1px); }
@@ -308,8 +308,8 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     /* CTA BAND */
     .ps-cta-band {
       margin-top:28px; border-radius:20px; padding:36px 40px; color:#fff; position:relative; overflow:hidden;
-      background:linear-gradient(135deg,var(--ps-gold) 0%,var(--ps-gold) 55%,var(--ps-gold-light) 100%);
-      box-shadow:0 20px 40px -10px rgba(169,129,46,.4);
+      background:linear-gradient(135deg,var(--ps-accent) 0%,var(--ps-accent) 55%,var(--ps-accent-light) 100%);
+      box-shadow:0 20px 40px -10px rgba(190, 74, 30,.4);
     }
     .ps-cta-band::before { content:''; position:absolute; top:-60px; right:-60px; width:260px; height:260px; border-radius:50%; background:rgba(255,255,255,.05); }
     .ps-cta-band::after  { content:''; position:absolute; bottom:-40px; left:30%; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,.03); }
@@ -317,7 +317,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-cta-body { font-size:15px; opacity:.88; line-height:1.65; margin-bottom:22px; max-width:560px; position:relative; z-index:1; }
     .ps-cta-btns { display:flex; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
     .ps-cta-link {
-      display:inline-flex; align-items:center; gap:8px; background:#fff; color:var(--ps-gold);
+      display:inline-flex; align-items:center; gap:8px; background:#fff; color:var(--ps-accent);
       font-weight:700; font-size:15px; padding:13px 24px; border-radius:11px; text-decoration:none;
       transition:transform .15s,box-shadow .15s; box-shadow:0 4px 14px rgba(0,0,0,.15);
     }
@@ -335,7 +335,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     /* CAPTURE PANEL */
     .ps-capture {
       background:var(--ps-card); border:1px solid var(--ps-line); border-radius:20px;
-      padding:32px 36px; margin-top:28px; box-shadow:var(--ps-shadow-lg); border-left:4px solid var(--ps-gold);
+      padding:32px 36px; margin-top:28px; box-shadow:var(--ps-shadow-lg); border-left:4px solid var(--ps-accent);
     }
     .ps-capture-head { font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--ps-ink); margin-bottom:6px; }
     .ps-capture-sub { font-size:14px; color:var(--ps-slate); line-height:1.6; margin-bottom:22px; }
@@ -348,13 +348,13 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       font-size:14px; font-family:inherit; color:var(--ps-ink); background:var(--ps-bg);
       transition:border-color .15s; outline:none;
     }
-    .ps-capture-input:focus { border-color:var(--ps-gold); background:#fff; }
+    .ps-capture-input:focus { border-color:var(--ps-accent); background:#fff; }
     .ps-capture-submit {
       display:inline-flex; align-items:center; gap:10px;
-      background:var(--ps-gold); color:var(--on-gold); border:none; padding:12px 24px; border-radius:10px;
+      background:var(--ps-accent); color:var(--on-accent); border:none; padding:12px 24px; border-radius:10px;
       font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s,transform .15s; align-self:flex-start;
     }
-    .ps-capture-submit:hover { background:#8B6820; transform:translateY(-1px); }
+    .ps-capture-submit:hover { background:#A63A12; transform:translateY(-1px); }
     .ps-capture-note { font-size:12px; color:var(--ps-muted); margin-top:4px; line-height:1.5; }
     .ps-capture-sent { display:none; align-items:center; gap:10px; background:#F0FDF4; border:1px solid #86EFAC; border-radius:10px; padding:14px 18px; color:#166534; font-size:14px; font-weight:600; }
     .ps-capture-sent.show { display:flex; }
@@ -369,7 +369,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       }
       .pv-header {
         display:flex; align-items:center; justify-content:space-between;
-        padding:24px 32px; background:#A9812E; color:var(--on-gold);
+        padding:24px 32px; background:#BE4A1E; color:var(--on-accent);
         margin-bottom:0;
       }
       .pv-brand { font-size:18pt; font-weight:800; letter-spacing:-.02em; }
@@ -496,8 +496,8 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       <h2 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Scan results</h2>
       <p class="ps-lede">Sign in read-only with Microsoft. We read your Conditional Access, Intune, identity, Purview and audit signals, map them to four frameworks, and show exactly where your gaps are. Nothing leaves your tenant.</p>
       <div class="ps-fw-strip">
-        <span class="ps-fw-chip" style="background:rgba(169,129,46,0.08);color:var(--gold-ink);">Essential Eight</span>
-        <span class="ps-fw-chip" style="background:rgba(169,129,46,0.08);color:#2563EB;">ISO 27001</span>
+        <span class="ps-fw-chip" style="background:rgba(190, 74, 30,0.08);color:var(--accent-ink);">Essential Eight</span>
+        <span class="ps-fw-chip" style="background:rgba(190, 74, 30,0.08);color:#2563EB;">ISO 27001</span>
         <span class="ps-fw-chip" style="background:#F0FDF4;color:var(--ok-ink);">ISO 27701</span>
         <span class="ps-fw-chip" style="background:#F5F3FF;color:#7C3AED;">ISO 42001</span>
       </div>
@@ -519,42 +519,42 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       <div id="ps-cfgwarn" class="ps-errbox ps-hidden"></div>
 
       <!-- Admin consent required panel -->
-      <div id="ps-admin-consent" class="ps-hidden" style="margin-top:16px;background:rgba(169,129,46,0.08);border:1px solid rgba(169,129,46,.25);border-radius:14px;padding:24px 28px;line-height:1.6;">
+      <div id="ps-admin-consent" class="ps-hidden" style="margin-top:16px;background:rgba(190, 74, 30,0.08);border:1px solid rgba(190, 74, 30,.25);border-radius:14px;padding:24px 28px;line-height:1.6;">
         <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:16px;">
-          <div style="width:40px;height:40px;border-radius:10px;background:#A9812E;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="width:40px;height:40px;border-radius:10px;background:#BE4A1E;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div>
-            <strong style="display:block;font-size:15px;color:#8B6820;margin-bottom:4px;">Your IT admin needs to approve this app first</strong>
-            <p style="font-size:13.5px;color:var(--gold-ink);margin:0;">This is a one-time step. Because the posture scan reads security settings (Conditional Access, Intune, audit logs), Microsoft requires an admin in your organisation to approve it once — after that, everyone in your org can use it without seeing this screen.</p>
+            <strong style="display:block;font-size:15px;color:#A63A12;margin-bottom:4px;">Your IT admin needs to approve this app first</strong>
+            <p style="font-size:13.5px;color:var(--accent-ink);margin:0;">This is a one-time step. Because the posture scan reads security settings (Conditional Access, Intune, audit logs), Microsoft requires an admin in your organisation to approve it once — after that, everyone in your org can use it without seeing this screen.</p>
           </div>
         </div>
-        <div style="background:#fff;border:1px solid rgba(169,129,46,.15);border-radius:10px;padding:16px 20px;margin-bottom:16px;">
-          <p style="font-size:11px;font-weight:700;color:#8B6820;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;">Two options</p>
+        <div style="background:#fff;border:1px solid rgba(190, 74, 30,.15);border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+          <p style="font-size:11px;font-weight:700;color:#A63A12;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;">Two options</p>
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div style="display:flex;gap:10px;align-items:flex-start;">
-              <span style="background:#A9812E;color:var(--on-gold);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;">1</span>
-              <div style="font-size:13.5px;color:#8B6820;"><strong>You are the admin</strong> — click the button below to approve the app for your organisation right now.</div>
+              <span style="background:#BE4A1E;color:var(--on-accent);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;">1</span>
+              <div style="font-size:13.5px;color:#A63A12;"><strong>You are the admin</strong> — click the button below to approve the app for your organisation right now.</div>
             </div>
             <div style="display:flex;gap:10px;align-items:flex-start;">
-              <span style="background:#A9812E;color:var(--on-gold);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;">2</span>
-              <div style="font-size:13.5px;color:#8B6820;"><strong>Send to your IT admin</strong> — copy the link below and ask them to open it. Takes 30 seconds. After they approve, come back and run the scan.</div>
+              <span style="background:#BE4A1E;color:var(--on-accent);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;">2</span>
+              <div style="font-size:13.5px;color:#A63A12;"><strong>Send to your IT admin</strong> — copy the link below and ask them to open it. Takes 30 seconds. After they approve, come back and run the scan.</div>
             </div>
           </div>
         </div>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-          <a id="ps-consent-btn" href="#" target="_blank" rel="noopener" style="background:#A9812E;color:var(--on-gold);padding:10px 20px;border-radius:8px;font-size:13.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+          <a id="ps-consent-btn" href="#" target="_blank" rel="noopener" style="background:#BE4A1E;color:var(--on-accent);padding:10px 20px;border-radius:8px;font-size:13.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
             <svg width="15" height="15" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
             Approve as admin
           </a>
-          <button id="ps-copy-consent" style="background:transparent;border:1px solid rgba(169,129,46,.3);color:var(--gold-ink);padding:10px 20px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;">Copy consent link</button>
+          <button id="ps-copy-consent" style="background:transparent;border:1px solid rgba(190, 74, 30,.3);color:var(--accent-ink);padding:10px 20px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;">Copy consent link</button>
           <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" style="color:#6B6860;font-size:13px;text-decoration:underline;">Book a call instead</a>
         </div>
         <p style="font-size:12px;color:#6B6860;margin:14px 0 0;line-height:1.5;">The admin consent approves read-only Graph API access. The app cannot write, modify, or delete anything in your tenant. You can revoke it any time in <strong>Entra ID &rarr; Enterprise applications</strong>.</p>
       </div>
 
       <!-- Popup blocked tip -->
-      <div id="ps-popup-tip" class="ps-hidden" style="margin-top:16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px 20px;font-size:13.5px;line-height:1.6;color:#8B6820;">
+      <div id="ps-popup-tip" class="ps-hidden" style="margin-top:16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px 20px;font-size:13.5px;line-height:1.6;color:#A63A12;">
         <strong style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><use href="#ic-insight"/></svg> Popup blocked?</strong>
         Most browsers block the Microsoft sign-in popup by default. Look for a <strong>"Pop-up blocked"</strong> notice in your browser's address bar and click <strong>Allow</strong>, then try again. In Safari, go to <strong>Settings &rarr; Websites &rarr; Pop-up Windows</strong> and set this site to Allow.
         <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
@@ -567,7 +567,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     <!-- LOADING -->
     <section id="ps-loading" class="ps-wrap ps-loading ps-hidden">
       <div class="ps-scan-progress">
-        <div class="ps-scan-ring"><svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="#E2E8F0" stroke-width="5"/><circle cx="36" cy="36" r="30" fill="none" stroke="url(#psGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="135 54"/><defs><linearGradient id="psGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop stop-color="#A9812E"/><stop offset="1" stop-color="#D8BA78"/></linearGradient></defs></svg></div>
+        <div class="ps-scan-ring"><svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="#E2E8F0" stroke-width="5"/><circle cx="36" cy="36" r="30" fill="none" stroke="url(#psGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="135 54"/><defs><linearGradient id="psGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop stop-color="#BE4A1E"/><stop offset="1" stop-color="#F0A97F"/></linearGradient></defs></svg></div>
         <div class="ps-scan-status" id="ps-loadmsg">Signing in…</div>
         <div class="ps-scan-sub" id="ps-loadsub">Waiting for Microsoft authentication</div>
         <div class="ps-progress-bar"><div class="ps-progress-fill" id="ps-progressbar" style="width:0%"></div></div>
@@ -578,13 +578,13 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     <!-- RESULTS -->
     <section id="ps-results" class="ps-wrap ps-results ps-hidden">
       <!-- Demo mode banner -->
-      <div id="ps-demo-banner" class="ps-hidden" style="background:linear-gradient(135deg,#A9812E,#A9812E);color:#fff;border-radius:14px;padding:18px 24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div id="ps-demo-banner" class="ps-hidden" style="background:linear-gradient(135deg,#BE4A1E,#BE4A1E);color:#fff;border-radius:14px;padding:18px 24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:12px;">
           <span style="background:rgba(255,255,255,.2);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Sample report</span>
           <span style="font-size:14px;opacity:.9;">This is demo data for a typical mid-market Australian organisation — not your real tenant.</span>
         </div>
-        <button onclick="psShowTrust()" style="background:#fff;color:var(--gold-ink);border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">
-          <svg width="14" height="14" viewBox="0 0 23 23" style="vertical-align:middle;margin-right:6px;" aria-hidden="true"><path fill="#A9812E" d="M0 0h11v11H0z"/><path fill="#A9812E" d="M12 0h11v11H12z" opacity=".85"/><path fill="#A9812E" d="M0 12h11v11H0z" opacity=".85"/><path fill="#A9812E" d="M12 12h11v11H12z" opacity=".7"/></svg>
+        <button onclick="psShowTrust()" style="background:#fff;color:var(--accent-ink);border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">
+          <svg width="14" height="14" viewBox="0 0 23 23" style="vertical-align:middle;margin-right:6px;" aria-hidden="true"><path fill="#BE4A1E" d="M0 0h11v11H0z"/><path fill="#BE4A1E" d="M12 0h11v11H12z" opacity=".85"/><path fill="#BE4A1E" d="M0 12h11v11H0z" opacity=".85"/><path fill="#BE4A1E" d="M12 12h11v11H12z" opacity=".7"/></svg>
           Run with my real tenant
         </button>
       </div>
@@ -703,7 +703,7 @@ const LEAD_API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.co
 const EXPLAIN_API_URL = "https://REPLACE_ME.execute-api.ap-southeast-2.amazonaws.com/explain";
 
 const FRAMEWORKS = {
-  e8:      { label:"Essential Eight", color:"#A9812E", dot:"#D8BA78" },
+  e8:      { label:"Essential Eight", color:"#BE4A1E", dot:"#F0A97F" },
   iso27001:{ label:"ISO 27001",       color:"#2563EB", dot:"#60A5FA" },
   iso27701:{ label:"ISO 27701",       color:"#059669", dot:"#34D399" },
   iso42001:{ label:"ISO 42001",       color:"#7C3AED", dot:"#A78BFA" },
@@ -999,7 +999,7 @@ function saveCurrent() {
 /* ── gauge ── */
 function gauge(pct) {
   const r=56, cx=72, cy=72, circ=2*Math.PI*r, off=circ*(1-pct/100);
-  const col = pct>=90?"#10B981":pct>=60?"#A9812E":pct>=30?"#D97706":"#EF4444";
+  const col = pct>=90?"#10B981":pct>=60?"#BE4A1E":pct>=30?"#D97706":"#EF4444";
   return `<svg width="144" height="144" viewBox="0 0 144 144">
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F1F5F9" stroke-width="11"/>
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="11"
@@ -1026,7 +1026,7 @@ function render() {
       <div class="ps-summary-meta">${gaps} of ${allRows.length} controls need attention${secureScore!==null?` &nbsp;·&nbsp; MS Secure Score ${secureScore}%`:""}</div>
       <div class="ps-stat-pills">
         <span class="ps-stat-pill" style="background:#F0FDF4;color:#15803D"><span class="ps-stat-dot" style="background:#10B981"></span>${passCount} met</span>
-        <span class="ps-stat-pill" style="background:rgba(169,129,46,0.08);color:var(--gold-ink)"><span class="ps-stat-dot" style="background:#A9812E"></span>${autoCount} automated</span>
+        <span class="ps-stat-pill" style="background:rgba(190, 74, 30,0.08);color:var(--accent-ink)"><span class="ps-stat-dot" style="background:#BE4A1E"></span>${autoCount} automated</span>
         <span class="ps-stat-pill" style="background:#F5F3FF;color:#7C3AED"><span class="ps-stat-dot" style="background:#8B5CF6"></span>${attestCount} attested</span>
         ${prevScores ? `<span class="ps-stat-pill" style="background:#F1F5F9;color:var(--text-muted)"><span class="ps-stat-dot" style="background:#94A3B8"></span>Re-scan</span>` : ""}
       </div>
@@ -1204,7 +1204,7 @@ window.psRun = async () => {
           copyBtn.style.background = "#166534";
           copyBtn.style.color = "#fff";
           copyBtn.style.borderColor = "#166534";
-          setTimeout(function(){ copyBtn.textContent="Copy consent link"; copyBtn.style.background=""; copyBtn.style.color="#A9812E"; copyBtn.style.borderColor=""; }, 2500);
+          setTimeout(function(){ copyBtn.textContent="Copy consent link"; copyBtn.style.background=""; copyBtn.style.color="#BE4A1E"; copyBtn.style.borderColor=""; }, 2500);
         });
       });
       $("ps-admin-consent").classList.remove("ps-hidden");
@@ -1275,7 +1275,7 @@ window.psPrint = () => {
   const now = new Date().toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"});
   const fwScores = Object.entries(FRAMEWORKS).map(([k,f])=>{
     const s=scoreFor(k);
-    const col=s>=90?"#10B981":s>=60?"#A9812E":s>=30?"#D97706":"#EF4444";
+    const col=s>=90?"#10B981":s>=60?"#BE4A1E":s>=30?"#D97706":"#EF4444";
     return `<div class="pv-score-card"><div class="pv-score-pct" style="color:${col}">${s}%</div><div class="pv-score-fw">${f.label}</div></div>`;
   }).join("");
 

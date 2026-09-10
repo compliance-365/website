@@ -57,7 +57,7 @@ const orgLd = {
 
         <!-- Credentials strip — institutional credibility without revealing the practitioner -->
         <div class="spot" style="margin-top:2.5rem;padding:1.75rem;background:#FAF7F1;border:1px solid #DDD8CF;border-radius:12px;overflow:hidden;">
-          <p class="muted small" style="margin:0 0 0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;color:var(--gold-ink);">Practitioner credentials held</p>
+          <p class="muted small" style="margin:0 0 0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;color:var(--accent-ink);">Practitioner credentials held</p>
 
           <!-- Issuer badges for the two credentials that have them. Rendered at
                100px tall from 2x sources (see scripts/optimise-images.mjs);
@@ -202,11 +202,11 @@ const orgLd = {
     @media (prefers-reduced-motion: reduce) { .reveal-section { opacity: 1; transform: none; transition: none; } }
     .ind-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
     .ind-card{background:#141416;color:#FAF7F1;border-radius:8px;padding:28px;border:1px solid transparent;text-decoration:none;display:flex;flex-direction:column;box-shadow:0 20px 48px rgba(0,0,0,.18);transition:border-color .3s var(--ease),box-shadow .3s var(--ease)}
-    .ind-card:hover{border-color:rgba(216,186,120,.4);box-shadow:0 28px 64px rgba(0,0,0,.28)}
-    .ind-icon{width:36px;height:36px;border:1px solid rgba(255,255,255,.14);border-radius:50%;display:grid;place-items:center;color:#D8BA78;margin-bottom:14px;flex-shrink:0}
-    .ind-card h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:18px;margin:0 0 10px;color:#FAF7F1;line-height:1.25}
+    .ind-card:hover{border-color:rgba(240, 169, 127,.4);box-shadow:0 28px 64px rgba(0,0,0,.28)}
+    .ind-icon{width:36px;height:36px;border:1px solid rgba(255,255,255,.14);border-radius:50%;display:grid;place-items:center;color:#F0A97F;margin-bottom:14px;flex-shrink:0}
+    .ind-card h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:18px;margin:0 0 10px;color:#FAF7F1;line-height:1.25}
     .ind-card p{font-size:13px;line-height:1.7;color:rgba(250,247,241,.62);flex:1;margin:0 0 14px}
-    .ind-link{font-size:12px;font-weight:700;color:#A9812E;letter-spacing:.04em}
+    .ind-link{font-size:12px;font-weight:700;color:var(--accent-ink);letter-spacing:.04em}
   </style>
   <script is:inline>
   (function () {
@@ -288,7 +288,7 @@ const orgLd = {
     .stat-ledger-about{display:flex;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
     .sl-about-item{flex:1 1 200px;padding:34px 30px;text-align:center;border-right:1px solid rgba(255,255,255,.14)}
     .sl-about-item:last-child{border-right:none}
-    .sl-about-item b{display:block;font-family:Manrope,system-ui;font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#D8BA78;line-height:1}
+    .sl-about-item b{display:block;font-family:Manrope,system-ui;font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#F0A97F;line-height:1}
     .sl-about-item span{display:block;margin-top:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:500;font-family:Manrope,system-ui}
     @media(max-width:640px){.sl-about-item{flex:1 1 50%}}
   </style>
@@ -339,7 +339,7 @@ const orgLd = {
   <!-- VALUES — PRIDE framework -->
 <section class="section" style="background:#FAF7F1;">
   <div class="container">
-    <h2 class="center">What we stand for &mdash; <span style="color:var(--gold-ink);">PRIDE</span></h2>
+    <h2 class="center">What we stand for &mdash; <span style="color:var(--accent-ink);">PRIDE</span></h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
       Five principles that govern how we scope, deliver, and hand over every engagement. Each letter is something we'll be held to — not a slogan.
     </p>
@@ -504,15 +504,15 @@ const orgLd = {
   }
   .pride-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 30px -10px rgba(169,129,46, 0.18);
-    border-color: #A9812E;
+    box-shadow: 0 10px 30px -10px rgba(190, 74, 30, 0.18);
+    border-color: #BE4A1E;
   }
   .pride-letter {
     width: 48px;
     height: 48px;
     border-radius: 10px;
-    background: #A9812E;
-    color:var(--on-gold);
+    background: #BE4A1E;
+    color:var(--on-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -523,7 +523,7 @@ const orgLd = {
   }
   .pride-title {
     font-size: 1.1rem;
-    color: #8B6820;
+    color: #A63A12;
     margin: 0 0 0.85rem;
     line-height: 1.35;
   }

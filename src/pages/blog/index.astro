@@ -169,7 +169,7 @@ const blogLd = {
           id="insights-search"
           type="search"
           placeholder="Search — e.g. SOC 2 evidence, DPIA, Annex A…"
-          style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid rgba(216,186,120,.3);background:rgba(255,255,255,.04);color:#FAF7F1;font-size:0.95rem;outline:none;font-family:Manrope,system-ui,sans-serif;"
+          style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid rgba(240, 169, 127,.3);background:rgba(255,255,255,.04);color:#FAF7F1;font-size:0.95rem;outline:none;font-family:Manrope,system-ui,sans-serif;"
           autocomplete="off"
         />
       </div>
@@ -203,7 +203,7 @@ const blogLd = {
   <style>
     /* Filter pills sit on the dark hero — override brand.css's light-mode .pill via ID specificity
        so the JS's inline style.background='' reset (on toggle-off) falls back to this, not the light default */
-    #tag-pills .filter-btn { border: 1px solid rgba(216,186,120,.3); background: rgba(255,255,255,.04); color: #D8BA78; }
+    #tag-pills .filter-btn { border: 1px solid rgba(240, 169, 127,.3); background: rgba(255,255,255,.04); color: #F0A97F; }
     #insights-search::placeholder { color: rgba(250,247,241,.4); }
   </style>
 
@@ -215,7 +215,7 @@ const blogLd = {
         <a
           href={featured.href}
           class="card spot"
-          style="text-decoration:none;color:inherit;display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;border-left:4px solid #A9812E;padding:2rem;"
+          style="text-decoration:none;color:inherit;display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;border-left:4px solid #BE4A1E;padding:2rem;"
           data-tags={featured.dataTags}
           data-title={featured.dataTitle}
           data-desc={featured.dataDesc}
@@ -245,7 +245,7 @@ const blogLd = {
             <p class="muted" style="margin:0 0 1.25rem;line-height:1.6;">{featured.description}</p>
             <div style="display:flex;align-items:center;gap:1.5rem;">
               <span class="muted" style="font-size:0.85rem;">{featured.date}</span>
-              <span style="color:var(--gold-ink);font-weight:600;font-size:0.9rem;">Read article →</span>
+              <span style="color:var(--accent-ink);font-weight:600;font-size:0.9rem;">Read article →</span>
             </div>
           </div>
         </a>
@@ -297,7 +297,7 @@ const blogLd = {
                     </p>
                     <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(10,18,32,0.07);padding-top:0.75rem;margin-top:auto;">
                       <span class="muted" style="font-size:0.8rem;">{post.date}</span>
-                      <a href={post.href} style="color:var(--gold-ink);font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
+                      <a href={post.href} style="color:var(--accent-ink);font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
                     </div>
                   </div>
                 </article>
@@ -343,7 +343,7 @@ const blogLd = {
                     </p>
                     <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(10,18,32,0.07);padding-top:0.75rem;margin-top:auto;">
                       <span class="muted" style="font-size:0.8rem;">{post.date}</span>
-                      <a href={post.href} style="color:var(--gold-ink);font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
+                      <a href={post.href} style="color:var(--accent-ink);font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
                     </div>
                   </div>
                 </article>
@@ -366,8 +366,8 @@ const blogLd = {
     .cat-group { margin-bottom: 2.75rem; }
     .cat-group:last-child { margin-bottom: 0; }
     .cat-group__title {
-      font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.15rem; color: #0B0B0C;
-      margin: 0 0 1.1rem; padding-left: 14px; border-left: 3px solid #A9812E;
+      font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.15rem; color: #0B0B0C;
+      margin: 0 0 1.1rem; padding-left: 14px; border-left: 3px solid #BE4A1E;
     }
     .cat-group__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.75rem; }
   </style>
@@ -477,7 +477,7 @@ const blogLd = {
         filterBtns.forEach(b => {
           const isActive = b.getAttribute('data-tag') === activeTag;
           b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-          b.style.background = isActive ? '#A9812E' : '';
+          b.style.background = isActive ? '#BE4A1E' : '';
           b.style.color = isActive ? 'white' : '';
         });
 

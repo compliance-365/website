@@ -6,10 +6,10 @@
 
 /* === Global Variables (Colors, Shadows, etc.) ============== */
 :root {
-  --primary: #A9812E;           /* Gold – buttons, links, accents */
-  --primary-dark: #8B6820;      /* Darker gold – hover states */
-  --primary-light: #D8BA78;     /* Gold light – gradients, highlights */
-  --accent: #D8BA78;            /* Gold light accent */
+  --primary: #BE4A1E;           /* Gold – buttons, links, accents */
+  --primary-dark: #A63A12;      /* Darker gold – hover states */
+  --primary-light: #F0A97F;     /* Gold light – gradients, highlights */
+  --accent: #F0A97F;            /* Gold light accent */
   --light: #FAF7F1;             /* Warm paper – page background */
   --muted: #6B6860;             /* Warm gray – secondary text */
   --surface: #FAF7F1;           /* Cards, sections */
@@ -23,7 +23,7 @@
 
   /* Consistent icon styles */
   --icon-size: 80px;
-  --icon-bg: linear-gradient(135deg, rgba(169,129,46,0.1), rgba(139,104,32,0.08));
+  --icon-bg: linear-gradient(135deg, rgba(190, 74, 30,0.1), rgba(166, 58, 18,0.08));
   --icon-border: var(--primary);
 }
 
@@ -55,11 +55,23 @@ h1, h2, h3 {
   margin: 0 0 0.7rem;
   letter-spacing: -0.015em;
   color: #0B0B0C;
-  font-family: Fraunces, Georgia, serif;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
 }
-h1 { font: 500 clamp(2.4rem, 4vw, 3.4rem)/1.12 Fraunces, Georgia, serif; }
-h2 { font: 500 clamp(1.8rem, 2.6vw, 2.2rem)/1.12 Fraunces, Georgia, serif; }
-h3 { font: 500 1.25rem/1.12 Fraunces, Georgia, serif; }
+h1 { font: 500 clamp(2.4rem, 4vw, 3.4rem)/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; }
+h2 { font: 500 clamp(1.8rem, 2.6vw, 2.2rem)/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; }
+h3 { font: 500 1.25rem/1.12 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; }
+/* Bricolage Grotesque ships no italic, so an <em> or <i> inside a heading
+   would render as a browser-synthesised oblique — a mechanically slanted
+   grotesque, which reads as a mistake rather than a choice. Emphasis in
+   display type moves to weight instead. Four headings across the site rely
+   on this (homepage hero, Checkpoint console, posture scan, RFFR), and it
+   also retires the italic-accent-phrase pattern that was the most
+   recognisable single element of the look this replaced. */
+h1 em, h2 em, h3 em,
+h1 i, h2 i, h3 i {
+  font-style: normal;
+  font-weight: 600;
+}
 p { margin: 0.3rem 0 1rem; }
 /* --text-muted is ground-aware; --muted was light-ground only and
    measured 3.54:1 wherever .muted landed on a dark section. */
@@ -75,10 +87,10 @@ p { margin: 0.3rem 0 1rem; }
 
 /* === Links ================================================== */
 /* Links are text, so they take the legible gold rather than the fill
-   gold — and --gold-ink flips on dark grounds, so a link in a dark
+   gold — and --accent-ink flips on dark grounds, so a link in a dark
    section stays readable without a separate rule. */
 a {
-  color: var(--gold-ink);
+  color: var(--accent-ink);
   text-decoration: none;
 }
 a:hover {
@@ -128,7 +140,7 @@ a:hover {
   background: #1B1B1D;
   transform: scale(1.03);
 }
-.gold-rule { width:26px; height:1px; background:#A9812E; display:block; margin-bottom:18px; }
+.gold-rule { width:26px; height:1px; background:#BE4A1E; display:block; margin-bottom:18px; }
 
 /* .btn-outline is listed here too: it had no rule of its own, so an
    <a class="btn btn-outline"> fell through to the base anchor colour —
@@ -137,13 +149,13 @@ a:hover {
 .btn-ghost,
 .btn-outline {
   background: transparent;
-  color: var(--gold-ink);
+  color: var(--accent-ink);
   border: 1px solid var(--primary);
 }
 .btn-ghost:hover {
   background: linear-gradient(180deg, #fff, #F0EBE0);
-  border-color: rgba(169,129,46, 0.35);
-  box-shadow: 0 10px 22px -14px rgba(169,129,46, 0.25);
+  border-color: rgba(190, 74, 30, 0.35);
+  box-shadow: 0 10px 22px -14px rgba(190, 74, 30, 0.25);
 }
 
 /* === Trust signals ========================================== */
@@ -163,8 +175,8 @@ ul.trust-signals li {
   font-size: 0.875rem;
   font-weight: 700;
   color: #0B0B0C;
-  background: rgba(169,129,46,0.06);
-  border: 1px solid rgba(169,129,46,0.18);
+  background: rgba(190, 74, 30,0.06);
+  border: 1px solid rgba(190, 74, 30,0.18);
   border-radius: 8px;
   padding: 0.45rem 0.75rem;
   margin: 0 !important;
@@ -177,7 +189,7 @@ ul.trust-signals li::before {
   width: 18px;
   height: 18px;
   min-width: 18px;
-  background: #A9812E;
+  background: #BE4A1E;
   color: #FAF7F1;
   border-radius: 50%;
   font-size: 10px;
@@ -187,17 +199,17 @@ ul.trust-signals li::before {
 }
 
 /* === Pills ==================================================
-   Text was #A9812E. Composited over this pill's own 7% gold tint on
+   Text was #BE4A1E. Composited over this pill's own 7% gold tint on
    cream that measures 3.12:1 — well under the WCAG AA 4.5:1 floor, and
    pills carry real information (framework names, categories), not
-   decoration. #8B6820, the darker gold used elsewhere on the site, only
+   decoration. #A63A12, the darker gold used elsewhere on the site, only
    reaches 4.46:1 against the same tint, so it is not enough here
-   either; #7A5A18 clears it on both grounds the pill actually appears
+   either; #A63A12 clears it on both grounds the pill actually appears
    on — 5.54:1 on cream, 5.90:1 on white.
 
    Measured across eight pages, 164 of the 174 pills sit on a light
    ground; the other ten are all inside .svc-hero, where the original
-   #A9812E already passes comfortably against near-black and is kept. */
+   #BE4A1E already passes comfortably against near-black and is kept. */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -206,9 +218,9 @@ ul.trust-signals li::before {
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #7A5A18;
-  background: rgba(169,129,46, 0.07);
-  border: 1px solid rgba(169,129,46, 0.18);
+  color: #A63A12;
+  background: rgba(190, 74, 30, 0.07);
+  border: 1px solid rgba(190, 74, 30, 0.18);
   transition: background 0.15s, border-color 0.15s;
 }
 /* Dark hero: the lighter gold is the legible one against near-black. */
@@ -216,17 +228,17 @@ ul.trust-signals li::before {
 .hero-dk .pill,
 .band-dark .pill,
 .svc-final-cta .pill {
-  color: #D8BA78;
-  border-color: rgba(216,186,120, 0.30);
+  color: #F0A97F;
+  border-color: rgba(240, 169, 127, 0.30);
 }
 a.pill:hover {
-  background: rgba(169,129,46, 0.13);
-  border-color: rgba(169,129,46, 0.3);
+  background: rgba(190, 74, 30, 0.13);
+  border-color: rgba(190, 74, 30, 0.3);
 }
 .pill.brand {
-  background: rgba(169,129,46, 0.12);
-  border-color: rgba(169,129,46, 0.28);
-  color: #8B6820;
+  background: rgba(190, 74, 30, 0.12);
+  border-color: rgba(190, 74, 30, 0.28);
+  color: #A63A12;
 }
 
 /* === Cards ================================================== */
@@ -255,8 +267,8 @@ a.pill:hover {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: radial-gradient(600px 160px at 10% -10%, rgba(169,129,46,0.06), transparent 60%),
-              radial-gradient(600px 160px at 110% 110%, rgba(216,186,120,0.08), transparent 60%);
+  background: radial-gradient(600px 160px at 10% -10%, rgba(190, 74, 30,0.06), transparent 60%),
+              radial-gradient(600px 160px at 110% 110%, rgba(240, 169, 127,0.08), transparent 60%);
   opacity: 0;
   transition: opacity 0.22s;
 }
@@ -267,7 +279,7 @@ a.pill:hover {
   width: var(--icon-size, 80px);
   height: var(--icon-size, 80px);
   margin: 0 auto 1.4rem;
-  background: var(--icon-bg, linear-gradient(135deg, rgba(169,129,46,0.1), rgba(139,104,32,0.08)));
+  background: var(--icon-bg, linear-gradient(135deg, rgba(190, 74, 30,0.1), rgba(166, 58, 18,0.08)));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -280,7 +292,7 @@ a.pill:hover {
   background: var(--primary);
   color: white;
   transform: scale(1.12);
-  box-shadow: 0 12px 30px rgba(169,129,46,0.3);
+  box-shadow: 0 12px 30px rgba(190, 74, 30,0.3);
 }
 .icon svg {
   width: 48px;
@@ -312,7 +324,7 @@ a.pill:hover {
   content: '+';
   margin-left: auto;
   flex-shrink: 0;
-  color: var(--gold-ink);
+  color: var(--accent-ink);
   font-weight: 700;
   font-size: 19px;
   line-height: 1;
@@ -346,9 +358,9 @@ a.pill:hover {
 #region-usuk:checked ~ .acc-region-panel[data-panel="usuk"] { display: block; }
 #region-au:checked ~ .acc-region-toggle label[for="region-au"],
 #region-usuk:checked ~ .acc-region-toggle label[for="region-usuk"] {
-  background: rgba(169,129,46,0.1);
-  border-color: rgba(169,129,46,0.35);
-  color: var(--gold-ink);
+  background: rgba(190, 74, 30,0.1);
+  border-color: rgba(190, 74, 30,0.35);
+  color: var(--accent-ink);
 }
 
 /* A whole section collapsed behind its own heading — for content that
@@ -360,7 +372,7 @@ a.pill:hover {
 .acc-section summary h2 { display: inline-flex; align-items: center; gap: 12px; }
 .acc-section summary h2::after {
   content: '+';
-  color: var(--gold-ink);
+  color: var(--accent-ink);
   font-weight: 700;
   font-size: 0.65em;
 }
@@ -376,7 +388,7 @@ a.pill:hover {
 /* === Hero (polished & modern) ============================== */
 .hero {
   padding: 10rem 0 8rem;
-  background: linear-gradient(135deg, rgba(169,129,46,0.04), rgba(216,186,120,0.03), #FAF7F1);
+  background: linear-gradient(135deg, rgba(190, 74, 30,0.04), rgba(240, 169, 127,0.03), #FAF7F1);
   text-align: center;
 }
 
@@ -525,7 +537,7 @@ a.pill:hover {
 
 /* Hover effect */
 .compare-row:hover .compare-cell {
-  background: rgba(169,129,46,0.03);
+  background: rgba(190, 74, 30,0.03);
 }
 
 /* Mobile: Stack vertically */
@@ -577,7 +589,7 @@ a.pill:hover {
 .phase-icon {
   width: 72px;
   height: 72px;
-  background: var(--icon-bg, linear-gradient(135deg, rgba(169,129,46,0.1), rgba(139,104,32,0.08)));
+  background: var(--icon-bg, linear-gradient(135deg, rgba(190, 74, 30,0.1), rgba(166, 58, 18,0.08)));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -782,7 +794,7 @@ a.pill:hover {
   }
 
   .summary-banner {
-    background: rgba(169,129,46,0.06);
+    background: rgba(190, 74, 30,0.06);
     padding: 1.2rem 1.5rem;
     border-radius: 10px;
     margin-bottom: 1.5rem;
@@ -933,7 +945,7 @@ a.pill:hover {
 /* === Services Hero – Premium Look & Feel ==================== */
   .hero-wrap {
     padding: 10rem 0 8rem;
-    background: linear-gradient(135deg, rgba(169,129,46,0.04), rgba(216,186,120,0.03), #FAF7F1);
+    background: linear-gradient(135deg, rgba(190, 74, 30,0.04), rgba(240, 169, 127,0.03), #FAF7F1);
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -943,7 +955,7 @@ a.pill:hover {
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(80% 50% at 20% 10%, rgba(169,129,46,0.06), transparent 60%);
+    background: radial-gradient(80% 50% at 20% 10%, rgba(190, 74, 30,0.06), transparent 60%);
     pointer-events: none;
   }
 
@@ -1019,21 +1031,21 @@ a.pill:hover {
      file. The site's primary button is therefore gold, not near-black.
 
      Keeping the gold (changing it would restyle every CTA on the site)
-     and fixing only the label: white on #A9812E measures 3.58:1, under
+     and fixing only the label: white on #BE4A1E measures 3.58:1, under
      the AA floor on the most important control on the page. #0B0B0C
      gives 5.50:1 and matches .btn-hdk-primary, which is the same gold
      button treatment the homepage and service pages already use. */
   .btn-primary {
     background: var(--primary);
-    color: #0B0B0C;
+    color: var(--on-accent);
     border: none;
-    box-shadow: 0 10px 30px rgba(169,129,46,0.3);
+    box-shadow: 0 10px 30px rgba(190, 74, 30,0.3);
     transition: all 0.25s ease;
   }
 
   .btn-primary:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 16px 40px rgba(169,129,46,0.4);
+    box-shadow: 0 16px 40px rgba(190, 74, 30,0.4);
   }
 
   /* Second .btn-outline in this file — like .btn-primary, it sits in a
@@ -1042,12 +1054,12 @@ a.pill:hover {
      above. Same token here, so whichever wins is legible. */
   .btn-outline {
     background: transparent;
-    color: var(--gold-ink);
+    color: var(--accent-ink);
     border: 2px solid var(--primary);
   }
 
   .btn-outline:hover {
-    background: rgba(169,129,46,0.05);
+    background: rgba(190, 74, 30,0.05);
     transform: translateY(-3px);
   }
 
@@ -1126,7 +1138,7 @@ a.pill:hover {
 
 /* Hero glass effect */
 .hero-wrap {
-  background: linear-gradient(135deg, rgba(169,129,46,0.1), rgba(216,186,120,0.1), white);
+  background: linear-gradient(135deg, rgba(190, 74, 30,0.1), rgba(240, 169, 127,0.1), white);
   backdrop-filter: blur(5px); /* Subtle hero bg blur */
 }
 
@@ -1137,12 +1149,12 @@ a.pill:hover {
 
 .card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 20px 40px rgba(169,129,46,0.25);
+  box-shadow: 0 20px 40px rgba(190, 74, 30,0.25);
 }
 
 .btn-primary:hover {
   transform: scale(1.05);
-  box-shadow: 0 12px 30px rgba(169,129,46,0.3);
+  box-shadow: 0 12px 30px rgba(190, 74, 30,0.3);
 }
 
 /* Enhanced Typography */
@@ -1162,14 +1174,14 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
 }
 
 .section:nth-child(even) {
-  background: linear-gradient(135deg, rgba(169,129,46,0.02), white 100%);
+  background: linear-gradient(135deg, rgba(190, 74, 30,0.02), white 100%);
 }
 
 /* Icons */
 .icon {
   width: clamp(60px, 8vw, 80px);
   height: clamp(60px, 8vw, 80px);
-  background: linear-gradient(135deg, rgba(169,129,46,0.12), rgba(139,104,32,0.08));
+  background: linear-gradient(135deg, rgba(190, 74, 30,0.12), rgba(166, 58, 18,0.08));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1183,7 +1195,7 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   background: var(--primary);
   color: white;
   transform: scale(1.1);
-  box-shadow: 0 12px 30px rgba(169,129,46,0.3);
+  box-shadow: 0 12px 30px rgba(190, 74, 30,0.3);
 }
 
 /* Fade-in animation for sections */
@@ -1238,7 +1250,7 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
 }
 
 .soa-table tbody tr:hover {
-  background: rgba(169,129,46,0.05);
+  background: rgba(190, 74, 30,0.05);
   transition: background 0.2s ease;
 }
 
@@ -1252,7 +1264,7 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   color: white;
 }
 
-.framework-badge.iso27001 { background: #A9812E; }
+.framework-badge.iso27001 { background: #BE4A1E; }
 .framework-badge.iso27701 { background: #0284c7; }
 .framework-badge.iso42001 { background: #7c3aed; }
 
@@ -1302,7 +1314,7 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   justify-content: center;
   font-size: 26px;
   cursor: pointer;
-  background: linear-gradient(135deg, #A9812E, #7c3aed);
+  background: linear-gradient(135deg, #BE4A1E, #7c3aed);
   color: #fff;
   box-shadow: 0 12px 30px rgba(15,23,42,.35);
 }
@@ -1360,7 +1372,7 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   width: 18px;
   height: 18px;
   display: block;
-  color: #D8BA78;
+  color: #F0A97F;
 }
 
 .msg-sub {
@@ -1387,7 +1399,7 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   width: 52px;
   height: 52px;
   border-radius: 999px;
-  background: #A9812E;
+  background: #BE4A1E;
   color: #fff !important;
   font-size: 24px;
   box-shadow: 0 10px 30px rgba(15,23,42,.35);

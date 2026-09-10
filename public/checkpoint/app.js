@@ -602,7 +602,7 @@ function showModal(opts) {
   }
 
   function buildStandaloneHtml(opts) {
-    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.accent || '') ? opts.accent : '#A9812E';
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.accent || '') ? opts.accent : '#BE4A1E';
     var classificationBand = opts.classification
       ? '<div style="display:flex;justify-content:flex-end;margin:0 0 18px"><span style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b675e;border:1px solid rgba(11,11,12,.3);padding:4px 10px;border-radius:2px">' + esc(opts.classification) + '</span></div>'
       : '';
@@ -1797,6 +1797,11 @@ function showModal(opts) {
     ctx.beginPath();
     ctx.arc(CX, CY, R, 30 * Math.PI / 180, 330 * Math.PI / 180);
     ctx.stroke();
+    /* Gold, not the site's orange accent. The brand mark keeps its gold
+       dot — it is the one place gold survives the palette change — and
+       favicon-geometry.test.mjs reads favicon.svg to assert this canvas
+       still matches it. The site-wide gold-to-orange pass rewrote this
+       line by search and replace; that test is what caught it. */
     ctx.fillStyle = hasCritical ? '#c97a7a' : '#A9812E';
     ctx.beginPath();
     ctx.arc(188 * K, 100 * K, 17 * K, 0, Math.PI * 2);
@@ -1822,7 +1827,7 @@ function showModal(opts) {
     bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
     var printBtn = w.document.createElement('button');
     printBtn.textContent = 'PRINT / SAVE AS PDF';
-    printBtn.style.cssText = 'background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
+    printBtn.style.cssText = 'background:#BE4A1E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
     bar.appendChild(printBtn);
     wbody.appendChild(bar);
 
@@ -1863,7 +1868,7 @@ function showModal(opts) {
     bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
     var printBtn = w.document.createElement('button');
     printBtn.textContent = 'EXPORT PDF';
-    printBtn.style.cssText = 'background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
+    printBtn.style.cssText = 'background:#BE4A1E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
     bar.appendChild(printBtn);
     wbody.appendChild(bar);
 
@@ -2861,7 +2866,7 @@ function showModal(opts) {
        validated brand accent (falling back to the Checkpoint gold)
        colours the rule and section underlines, matching how report.js
        already brands generated reports. */
-    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor : '#A9812E';
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor : '#BE4A1E';
     var accentRgb = [1, 3, 5].map(function (i) { return parseInt(accent.slice(i, i + 2), 16); }).join(',');
     /* Section icons — a small, self-contained set (not the live app's
        14px ICONS object, whose currentColor + var(--gold) strokes don't
@@ -2981,14 +2986,14 @@ function showModal(opts) {
       sectionHeading('review', 'Review') + '<p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? sectionHeading('satisfies', 'Helps satisfy') + '<div class="chips">' + t.controls.map(function (c) { return '<span class="chip-ctrl">' + esc(c) + '</span>'; }).join('') + '</div>' : '');
     return '<!DOCTYPE html><html><head><style>' +
-      "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
+      "@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;src:url('" + fontBase + "fonts/bricolage.woff2') format('woff2-variations')}" +
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
       '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
-      '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Fraunces,serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
+      '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
       '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
-      'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}' +
-      'h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px;display:flex;align-items:center;gap:9px}' +
+      'h1{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:30px;margin:26px 0 4px}' +
+      'h2{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:19px;margin:30px 0 12px;display:flex;align-items:center;gap:9px}' +
       '.sec-ico{display:inline-flex;flex:none;color:' + accent + '}.sec-ico svg{display:block}' +
       '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
@@ -3027,7 +3032,7 @@ function showModal(opts) {
       '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
       '.dctl tr+tr th,.dctl tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
       '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
-      '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Fraunces,serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
+      '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Bricolage Grotesque,sans-serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
       '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}' +
       standalonePrintCss({ classification: opts.classification, draft: !opts.approved }) +
       '</style></head><body>' +
@@ -7301,7 +7306,7 @@ function showModal(opts) {
           if (st.submitted && picked) tone = oi === q.answer ? 'border-color:var(--pass)' : 'border-color:var(--fail)';
           if (st.submitted && !picked && oi === q.answer) tone = 'border-color:var(--pass);opacity:.75';
           return '<button class="btn ghost sm" style="display:block;width:100%;text-align:left;margin-bottom:7px;white-space:normal;line-height:1.5;' +
-            (picked ? 'background:rgba(169,129,46,.14);' : '') + tone + '" ' +
+            (picked ? 'background:rgba(190, 74, 30,.14);' : '') + tone + '" ' +
             'data-action="App.answerCourseQuestion" data-id="' + i + ':' + oi + '">' + esc(o) + '</button>';
         }).join('') +
         (st.submitted && chosen !== undefined
@@ -8723,7 +8728,7 @@ function showModal(opts) {
 
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Report accent colour</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        '<input type="color" id="clientBrandColorInput" value="' + esc(brandColorCurrent || '#A9812E') + '" style="width:44px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer">' +
+        '<input type="color" id="clientBrandColorInput" value="' + esc(brandColorCurrent || '#BE4A1E') + '" style="width:44px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer">' +
         '<span style="font-size:12.5px;color:var(--paper-dim)">' + (brandColorCurrent ? 'Client colour <b style="font-family:monospace">' + esc(brandColorCurrent) + '</b>' : 'Checkpoint gold (default)') + '</span>' +
         '<button class="btn ghost sm" data-action="App.setClientBrandColor">Save</button>' +
         (brandColorCurrent ? '<button class="btn ghost sm" data-action="App.clearClientBrandColor">Reset to gold</button>' : '') +
@@ -9933,7 +9938,7 @@ function showModal(opts) {
         '<div class="id-t">' + r.id + ' · ' + esc(r.cat) + ' · Source: ' + esc(r.src) + '</div><h2>' + esc(r.title) + '</h2>' +
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
-        '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
+        '<div class="score-box" style="border-color:rgba(240, 169, 127,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
         '<div class="d-kv"><span>Treatment</span><b>' + esc(r.treat) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
         (r.acceptedBy
           ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' +

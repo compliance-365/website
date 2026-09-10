@@ -140,10 +140,10 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
         </button>
         <div id="freeResourcesMenu" class="nav-dd-menu nav-dd-menu--wide" role="menu" aria-label="Free Resources">
           <div class="nav-dd-col" role="none">
-          <a role="menuitem" href={base + 'free-roadmap/'} style="background:rgba(169,129,46,0.08);border:1px solid rgba(169,129,46,0.2);border-radius:8px;margin-bottom:4px;">
+          <a role="menuitem" href={base + 'free-roadmap/'} style="background:rgba(190, 74, 30,0.08);border:1px solid rgba(190, 74, 30,0.2);border-radius:8px;margin-bottom:4px;">
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-gift"/></svg></span> Free starter pack
           </a>
-          <a role="menuitem" href={base + 'posture-scan/'} style="background:rgba(169,129,46,0.08);border:1px solid rgba(169,129,46,0.2);border-radius:8px;margin-bottom:4px;">
+          <a role="menuitem" href={base + 'posture-scan/'} style="background:rgba(190, 74, 30,0.08);border:1px solid rgba(190, 74, 30,0.2);border-radius:8px;margin-bottom:4px;">
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-bolt"/></svg></span> Free posture scan
           </a>
           <a role="menuitem" href={base + 'framework-overlap-calculator/'}>
@@ -227,7 +227,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     border-radius: 0 0 6px 6px;
     background: #FAF7F1;
     color: #0B0B0C;           /* 18.4:1 */
-    border: 2px solid #A9812E;
+    border: 2px solid #BE4A1E;
     font: 700 .9rem/1 Manrope, system-ui, sans-serif;
     text-decoration: none;
     transition: top .15s ease;
@@ -244,7 +244,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   /* ── Accent stripe ── */
   .accent-stripe {
     height: 3px;
-    background: linear-gradient(90deg, #8B6820 0%, #A9812E 50%, #D8BA78 100%);
+    background: linear-gradient(90deg, #A63A12 0%, #BE4A1E 50%, #F0A97F 100%);
     position: fixed;
     top: 0;
     left: 0;
@@ -314,7 +314,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   }
 
   .brand-365 {
-    color: #D8BA78;
+    color: #F0A97F;
     font-weight: 800;
     margin-left: 2px;
     letter-spacing: 0.01em;
@@ -343,15 +343,15 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   }
 
   .nav-link:hover {
-    background: rgba(169, 129, 46, 0.1);
-    color: #D8BA78;
+    background: rgba(190, 74, 30, 0.1);
+    color: #F0A97F;
     opacity: 1;
   }
 
   .nav-link.active {
-    color: #D8BA78;
+    color: #F0A97F;
     opacity: 1;
-    background: rgba(169, 129, 46, 0.12);
+    background: rgba(190, 74, 30, 0.12);
   }
 
   .nav-link.active::after {
@@ -363,23 +363,23 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     width: 16px;
     height: 2px;
     border-radius: 2px;
-    background: linear-gradient(90deg, #A9812E, #D8BA78);
+    background: linear-gradient(90deg, #BE4A1E, #F0A97F);
   }
 
   .nav-link-checkpoint {
-    border: 1px solid rgba(169, 129, 46, 0.3);
+    border: 1px solid rgba(190, 74, 30, 0.3);
   }
 
   .nav-link-checkpoint svg {
     width: 14px;
     height: 14px;
-    color: #A9812E;
+    color: #BE4A1E;
     flex-shrink: 0;
   }
 
   .nav-link-checkpoint:hover svg,
   .nav-link-checkpoint.active svg {
-    color: #D8BA78;
+    color: #F0A97F;
   }
 
   /* ── Dropdown ── */
@@ -408,7 +408,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     left: 0;
     min-width: 240px;
     background: #1B1B1D;
-    border: 1px solid rgba(169, 129, 46, 0.2);
+    border: 1px solid rgba(190, 74, 30, 0.2);
     border-radius: 16px;
     padding: 6px;
     box-shadow:
@@ -432,8 +432,8 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   }
 
   .nav-dd-menu a:hover {
-    background: rgba(169, 129, 46, 0.1);
-    color: #D8BA78;
+    background: rgba(190, 74, 30, 0.1);
+    color: #F0A97F;
   }
 
   .dd-icon {
@@ -442,7 +442,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    color: #A9812E;
+    color: #BE4A1E;
   }
 
   .dd-icon svg {
@@ -457,7 +457,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   .nav-dd-menu--wide { min-width: 580px; }
   .nav-dd-col { min-width: 0; }
   .nav-dd-col--insights {
-    border-left: 1px solid rgba(169, 129, 46, 0.18);
+    border-left: 1px solid rgba(190, 74, 30, 0.18);
     padding-left: 10px;
   }
   .nav-dd-title {
@@ -467,7 +467,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--gold-ink);
+    color: var(--accent-ink);
   }
   /* Titles are real headlines, so they wrap rather than truncate mid-word;
      two lines is the cap, with the full text still in the DOM.
@@ -490,14 +490,14 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   .nav-dd-menu a.dd-insight-all {
     font-size: 0.78rem;
     font-weight: 700;
-    color: var(--gold-ink);
+    color: var(--accent-ink);
     padding-top: 9px;
   }
 
   .dd-divider {
     margin: 5px 6px;
     border: none;
-    border-top: 1px solid rgba(169, 129, 46, 0.2);
+    border-top: 1px solid rgba(190, 74, 30, 0.2);
   }
 
   .dd-secondary {
@@ -533,8 +533,8 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     transition: background 0.15s, color 0.15s;
   }
   .nav-search svg { width: 18px; height: 18px; flex-shrink: 0; }
-  .nav-search:hover { background: rgba(169, 129, 46, 0.1); color: #FAF7F1; }
-  .nav-search.active { color: #D8BA78; }
+  .nav-search:hover { background: rgba(190, 74, 30, 0.1); color: #FAF7F1; }
+  .nav-search.active { color: #F0A97F; }
   .nav-search-label {
     position: absolute; width: 1px; height: 1px;
     padding: 0; margin: -1px; overflow: hidden;
@@ -549,11 +549,11 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     border-radius: 6px;
     font-weight: 700;
     font-size: 0.88rem;
-    color: #D8BA78;
+    color: #F0A97F;
     text-decoration: none;
     white-space: nowrap;
     background: transparent;
-    border: 1px solid #A9812E;
+    border: 1px solid #BE4A1E;
     box-shadow: none;
     transition: all 0.2s ease;
     margin-left: 6px;
@@ -561,10 +561,10 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   }
 
   .btn-cta:hover {
-    background: #A9812E;
-    color: #0B0B0C;
+    background: #BE4A1E;
+    color: var(--on-accent);
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(169,129,46,0.3);
+    box-shadow: 0 8px 20px rgba(190, 74, 30,0.3);
   }
 
   .btn-cta:active { transform: translateY(0); }
@@ -585,7 +585,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     justify-content: center;
     width: 40px;
     height: 40px;
-    border: 1px solid rgba(169, 129, 46, 0.35);
+    border: 1px solid rgba(190, 74, 30, 0.35);
     background: transparent;
     border-radius: 8px;
     cursor: pointer;
@@ -594,9 +594,9 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
   }
 
   .nav-toggle:hover {
-    background: rgba(169, 129, 46, 0.1);
-    border-color: rgba(169, 129, 46, 0.5);
-    color: #D8BA78;
+    background: rgba(190, 74, 30, 0.1);
+    border-color: rgba(190, 74, 30, 0.5);
+    color: #F0A97F;
   }
 
   @media (max-width: 1020px) {
@@ -609,7 +609,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
       display: grid;
       gap: 2px;
       background: #0B0B0C;
-      border-bottom: 1px solid rgba(169, 129, 46, 0.2);
+      border-bottom: 1px solid rgba(190, 74, 30, 0.2);
       box-shadow: 0 16px 40px rgba(0,0,0,0.5);
       padding: 10px 14px;
       transform: translateY(-8px);
@@ -634,7 +634,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
       display: none;
       box-shadow: none;
       border-radius: 10px;
-      border: 1px solid rgba(169, 129, 46, 0.2);
+      border: 1px solid rgba(190, 74, 30, 0.2);
       margin-top: 4px;
       background: #1B1B1D;
     }
@@ -646,7 +646,7 @@ const latestPosts = (await Astro.glob('../content/blog/*.md'))
     .nav-dd-col--insights {
       border-left: none;
       padding-left: 0;
-      border-top: 1px solid rgba(169, 129, 46, 0.18);
+      border-top: 1px solid rgba(190, 74, 30, 0.18);
       margin-top: 6px;
       padding-top: 4px;
     }

@@ -93,7 +93,7 @@ ML3 requires full environment coverage with no unexplained gaps. A legacy system
 
 If you're targeting ML3 for a government tender or SOCI compliance, get your assessor's specific gap list before the formal assessment, not during it.
 
-<div style="background:#FBF0DD;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #A9812E;">
+<div style="background:#FBF0DD;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #BE4A1E;">
   <p><strong>Targeting Essential Eight ML2 or ML3?</strong> We deliver assessments and maturity uplift inside your existing Microsoft 365 environment — fixed-price, evidence-backed, and scoped to what you actually need rather than what looks impressive on paper.</p>
   <p style="margin-bottom:0">A 30-minute call will tell you where you sit today and what genuine ML2 or ML3 readiness looks like for your environment.</p>
 </div>

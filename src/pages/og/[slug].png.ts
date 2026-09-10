@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ props }) => {
       style: flex({ flexDirection: 'column', width: '100%', height: '100%', background: '#ffffff', fontFamily: 'LiberationSans' }),
       children: [
         // Top gold bar
-        { type: 'div', props: { style: { width: '100%', height: 12, background: '#A9812E' } } },
+        { type: 'div', props: { style: { width: '100%', height: 12, background: '#BE4A1E' } } },
 
         // Main content
         {
@@ -69,7 +69,7 @@ export const GET: APIRoute = async ({ props }) => {
                 props: {
                   style: flex({ flexDirection: 'column', gap: 20 }),
                   children: [
-                    { type: 'div', props: { style: { fontSize: 20, color: '#A9812E', fontWeight: 700, letterSpacing: 2 }, children: clamp(eyebrow, 80) } },
+                    { type: 'div', props: { style: { fontSize: 20, color: '#BE4A1E', fontWeight: 700, letterSpacing: 2 }, children: clamp(eyebrow, 80) } },
                     { type: 'div', props: { style: { fontSize: 62, color: '#0B0B0C', fontWeight: 700, lineHeight: 1.1 }, children: clamp(title, 68) } },
                     { type: 'div', props: { style: { fontSize: 27, color: '#475569', lineHeight: 1.45 }, children: clamp(description, 130) } },
                   ],
@@ -96,7 +96,7 @@ export const GET: APIRoute = async ({ props }) => {
                               style: flex({ alignItems: 'baseline', gap: 2 }),
                               children: [
                                 { type: 'div', props: { style: { fontSize: 26, fontWeight: 700, color: '#0B0B0C' }, children: 'Compliance' } },
-                                { type: 'div', props: { style: { fontSize: 26, fontWeight: 700, color: '#A9812E' }, children: '365' } },
+                                { type: 'div', props: { style: { fontSize: 26, fontWeight: 700, color: '#BE4A1E' }, children: '365' } },
                               ],
                             },
                           },
@@ -112,7 +112,7 @@ export const GET: APIRoute = async ({ props }) => {
         },
 
         // Bottom gold bar
-        { type: 'div', props: { style: { width: '100%', height: 8, background: '#A9812E' } } },
+        { type: 'div', props: { style: { width: '100%', height: 8, background: '#BE4A1E' } } },
       ],
     },
   };

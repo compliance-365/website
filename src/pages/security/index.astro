@@ -22,13 +22,13 @@ function buildBoundaryA() {
     { key: 'mail', label: 'Exchange', x: 258, y: 150, w: 82, h: 44 },
   ];
   const hub = { x: 152, y: 150, w: 94, h: 44, label: 'Checkpoint' };
-  const boundary = `<rect class="bd-boundary" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${br}" fill="none" stroke="#A9812E" stroke-width="2" stroke-dasharray="${perim}" stroke-dashoffset="${perim}"/>`;
-  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#A9812E" font-weight="700">YOUR MICROSOFT 365 TENANT</text>`;
+  const boundary = `<rect class="bd-boundary" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${br}" fill="none" stroke="#BE4A1E" stroke-width="2" stroke-dasharray="${perim}" stroke-dashoffset="${perim}"/>`;
+  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#BE4A1E" font-weight="700">YOUR MICROSOFT 365 TENANT</text>`;
   const edges = nodes
     .map((n, i) => {
       const x1 = hub.x + hub.w / 2, y1 = hub.y + hub.h / 2;
       const x2 = n.x + n.w / 2, y2 = n.y + n.h / 2;
-      return `<line class="bd-edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#D8BA78" stroke-width="1.5" opacity="0" style="transition-delay:${380 + i * 90}ms"/>`;
+      return `<line class="bd-edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#F0A97F" stroke-width="1.5" opacity="0" style="transition-delay:${380 + i * 90}ms"/>`;
     })
     .join('');
   const nodeBoxes = nodes
@@ -43,7 +43,7 @@ function buildBoundaryA() {
     .join('');
   const hubBox =
     `<g class="bd-hub" style="transition-delay:250ms">` +
-    `<rect x="${hub.x}" y="${hub.y}" width="${hub.w}" height="${hub.h}" rx="8" fill="#A9812E"/>` +
+    `<rect x="${hub.x}" y="${hub.y}" width="${hub.w}" height="${hub.h}" rx="8" fill="#BE4A1E"/>` +
     `<text x="${hub.x + hub.w / 2}" y="${hub.y + hub.h / 2 + 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="11" font-weight="700" fill="#0B0B0C">${hub.label}</text>` +
     `</g>`;
   return `<svg viewBox="0 0 380 300" aria-hidden="true" class="bd-svg" id="bdSvgA">${boundary}${label}${edges}${hubBox}${nodeBoxes}</svg>`;
@@ -289,7 +289,7 @@ object-src 'none'; base-uri 'self'</pre>
         </ul>
       </div>
     </div>
-    <p style="margin-top:2.5rem;"><a href={`${base}checkpoint-console/#ai`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">More on Checkpoint's AI assistant →</a></p>
+    <p style="margin-top:2.5rem;"><a href={`${base}checkpoint-console/#ai`} style="color:#F0A97F;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">More on Checkpoint's AI assistant →</a></p>
   </div>
 </section>
 
@@ -351,7 +351,7 @@ object-src 'none'; base-uri 'self'</pre>
         <li><b>Google Analytics 4</b> and <b>Microsoft Clarity</b> — both consent-gated behind the cookie banner, both configured with IP anonymisation, both blocked entirely until you accept.</li>
         <li><b>Apollo.io</b> — identifies the <em>organisation</em> visiting the site from its IP address (company-level, never an individual), so we know which businesses are exploring the site. It is not consent-gated the way the two analytics tools are, on the basis that no individual-level data is collected — we're stating that plainly here rather than leaving it for you to discover.</li>
       </ul>
-      <p class="muted" style="margin-top:12px;">Full cookie-by-cookie detail, including exact names and expiry periods, is on the <a href={`${base}cookies/`} style="color:var(--gold-ink);font-weight:600;">cookie policy page</a>.</p>
+      <p class="muted" style="margin-top:12px;">Full cookie-by-cookie detail, including exact names and expiry periods, is on the <a href={`${base}cookies/`} style="color:var(--accent-ink);font-weight:600;">cookie policy page</a>.</p>
     </div>
   </div>
 </section>
@@ -389,7 +389,7 @@ object-src 'none'; base-uri 'self'</pre>
       </div>
       <div class="disclosure-card">
         <h3>How to report</h3>
-        <p>Email <a href={`mailto:${securityEmail}`} style="color:#D8BA78;">{securityEmail}</a> with a description, reproduction steps, and any relevant proof of concept. Encrypt if you'd like — ask and we'll provide a key.</p>
+        <p>Email <a href={`mailto:${securityEmail}`} style="color:#F0A97F;">{securityEmail}</a> with a description, reproduction steps, and any relevant proof of concept. Encrypt if you'd like — ask and we'll provide a key.</p>
       </div>
       <div class="disclosure-card">
         <h3>What to expect</h3>
@@ -405,7 +405,7 @@ object-src 'none'; base-uri 'self'</pre>
       </div>
     </div>
 
-    <p class="muted" style="margin-top:2rem;font-size:13px;">This policy is also published machine-readably at <a href="/.well-known/security.txt" style="color:#D8BA78;">/.well-known/security.txt</a>.</p>
+    <p class="muted" style="margin-top:2rem;font-size:13px;">This policy is also published machine-readably at <a href="/.well-known/security.txt" style="color:#F0A97F;">/.well-known/security.txt</a>.</p>
   </div>
 </section>
 
@@ -447,18 +447,18 @@ object-src 'none'; base-uri 'self'</pre>
   .sec-eyebrow {
     font-family: Manrope, system-ui, sans-serif;
     font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase;
-    color: var(--gold-ink); margin: 0 0 18px;
+    color: var(--accent-ink); margin: 0 0 18px;
   }
-  .sec-eyebrow-light { color: var(--gold-ink); }
-  .gold-rule-26 { width: 26px; height: 1px; background: #A9812E; margin-bottom: 18px; }
+  .sec-eyebrow-light { color: var(--accent-ink); }
+  .gold-rule-26 { width: 26px; height: 1px; background: #BE4A1E; margin-bottom: 18px; }
 
   .sec-jumplinks { display: flex; flex-wrap: wrap; gap: 8px 4px; margin-top: 2rem; }
   .sec-jumplinks a {
     font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 600;
-    color: var(--gold-ink); text-decoration: none; border: 1px solid rgba(169,129,46,.3);
+    color: var(--accent-ink); text-decoration: none; border: 1px solid rgba(190, 74, 30,.3);
     border-radius: 99px; padding: 8px 16px; transition: background .2s, color .2s;
   }
-  .sec-jumplinks a:hover { background: rgba(169,129,46,.08); color: #8B6820; }
+  .sec-jumplinks a:hover { background: rgba(190, 74, 30,.08); color: #A63A12; }
 
   /* ── Boundary diagram ── */
   .bd-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(24px,4vw,48px); margin-top: 3rem; align-items: start; }
@@ -491,38 +491,38 @@ object-src 'none'; base-uri 'self'</pre>
   .perm-stages { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
   .perm-stage { background: white; border: 1px solid #DDD8CF; border-radius: 10px; overflow: hidden; }
   .perm-stage-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 20px; background: #FAF7F1; border-bottom: 1px solid #DDD8CF; }
-  .perm-stage-head h3 { margin: 0; font-size: 15px; font-family: Fraunces, Georgia, serif; font-weight: 500; color: #0B0B0C; }
-  .perm-tag { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-ink); background: rgba(169,129,46,.08); border: 1px solid rgba(169,129,46,.25); border-radius: 99px; padding: 4px 12px; }
+  .perm-stage-head h3 { margin: 0; font-size: 15px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; color: #0B0B0C; }
+  .perm-tag { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); background: rgba(190, 74, 30,.08); border: 1px solid rgba(190, 74, 30,.25); border-radius: 99px; padding: 4px 12px; }
   .perm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .perm-table th { text-align: left; padding: 10px 20px; font-weight: 600; color: #6B6860; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid #EFEAE0; }
   .perm-table td { padding: 12px 20px; border-bottom: 1px solid #F2EEE5; color: #3A3632; vertical-align: top; }
   .perm-table tr:last-child td { border-bottom: none; }
-  .perm-table code { font-family: ui-monospace, monospace; font-size: 12px; color: #8B6820; background: rgba(169,129,46,.08); padding: 2px 6px; border-radius: 4px; }
-  .perm-note { margin-top: 2rem; background: white; border-left: 3px solid #A9812E; border-radius: 0 8px 8px 0; padding: 20px 24px; font-size: 13.5px; line-height: 1.7; color: #3A3632; }
+  .perm-table code { font-family: ui-monospace, monospace; font-size: 12px; color: #A63A12; background: rgba(190, 74, 30,.08); padding: 2px 6px; border-radius: 4px; }
+  .perm-note { margin-top: 2rem; background: white; border-left: 3px solid #BE4A1E; border-radius: 0 8px 8px 0; padding: 20px 24px; font-size: 13.5px; line-height: 1.7; color: #3A3632; }
   .perm-note ul { margin: 10px 0 0; padding-left: 1.2rem; }
   .perm-note li { margin: 6px 0; }
-  .perm-note code { font-family: ui-monospace, monospace; font-size: 12px; color: #8B6820; }
+  .perm-note code { font-family: ui-monospace, monospace; font-size: 12px; color: #A63A12; }
 
   /* ── Engineering controls ── */
   .eng-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 1.5rem; margin-top: 3rem; }
   .eng-card { background: #141416; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 24px; }
   .eng-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .eng-card-head svg { width: 18px; height: 18px; color: #A9812E; flex-shrink: 0; }
-  .eng-card-head h3 { margin: 0; font-size: 15px; font-family: Fraunces, Georgia, serif; font-weight: 500; color: #FAF7F1; }
+  .eng-card-head svg { width: 18px; height: 18px; color: #BE4A1E; flex-shrink: 0; }
+  .eng-card-head h3 { margin: 0; font-size: 15px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; color: #FAF7F1; }
   .eng-card p { font-size: 13px; line-height: 1.7; color: rgba(250,247,241,.62); margin: 0 0 10px; }
-  .eng-card code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #D8BA78; background: rgba(169,129,46,.1); padding: 1px 5px; border-radius: 3px; }
+  .eng-card code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #F0A97F; background: rgba(190, 74, 30,.1); padding: 1px 5px; border-radius: 3px; }
   .eng-code { background: #0B0B0C; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 12px 14px; font-family: ui-monospace, monospace; font-size: 10.5px; line-height: 1.7; color: rgba(250,247,241,.72); white-space: pre-wrap; word-break: break-word; margin: 10px 0; }
   .eng-note { font-size: 11.5px; color: rgba(250,247,241,.68); font-style: italic; }
 
   /* ── AI section ── */
   .ai-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr); gap: clamp(30px,4vw,64px); align-items: start; }
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
-  .ai-disclaimer { margin-top: 18px; font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 17px; color: #D8BA78; padding: 14px 18px; border-left: 2px solid #A9812E; background: rgba(169,129,46,.06); max-width: 52ch; }
+  .ai-disclaimer { margin-top: 18px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 17px; color: #F0A97F; padding: 14px 18px; border-left: 2px solid #BE4A1E; background: rgba(190, 74, 30,.06); max-width: 52ch; }
   .ai-rails { background: #0B0B0C; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 28px; }
-  .ai-rails-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; font-weight: 700; margin: 0 0 18px; }
+  .ai-rails-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 18px; }
   .ai-rails-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
   .ai-rails-list li { display: flex; gap: 12px; align-items: flex-start; }
-  .ai-rails-list svg { width: 16px; height: 16px; flex-shrink: 0; color: #A9812E; margin-top: 2px; }
+  .ai-rails-list svg { width: 16px; height: 16px; flex-shrink: 0; color: #BE4A1E; margin-top: 2px; }
   .ai-rails-list b { display: block; font-size: 13px; color: #FAF7F1; margin-bottom: 3px; }
   .ai-rails-list span { display: block; font-size: 12px; line-height: 1.6; color: rgba(250,247,241,.6); }
 
@@ -534,17 +534,17 @@ object-src 'none'; base-uri 'self'</pre>
   .dont-card strong { color: #0B0B0C; }
 
   .analytics-stance { margin-top: 3rem; background: white; border: 1px solid #DDD8CF; border-radius: 10px; padding: 28px clamp(20px,4vw,32px); max-width: 800px; }
-  .analytics-stance h3 { margin: 0 0 10px; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 18px; color: #0B0B0C; }
+  .analytics-stance h3 { margin: 0 0 10px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 18px; color: #0B0B0C; }
   .analytics-list { margin: 14px 0 0; padding-left: 1.2rem; }
   .analytics-list li { font-size: 13.5px; line-height: 1.7; color: #3A3632; margin: 10px 0; }
 
   /* ── Vulnerability disclosure ── */
   .disclosure-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 1.25rem; margin-top: 2.5rem; }
   .disclosure-card { background: #141416; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 22px 24px; }
-  .disclosure-card h3 { margin: 0 0 10px; font-size: 14px; font-family: Fraunces, Georgia, serif; font-weight: 500; color: #D8BA78; }
+  .disclosure-card h3 { margin: 0 0 10px; font-size: 14px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; color: #F0A97F; }
   .disclosure-card p { font-size: 13px; line-height: 1.7; color: rgba(250,247,241,.62); margin: 0; }
   .disclosure-card ul { margin: 0; padding-left: 1.1rem; }
   .disclosure-card li { font-size: 13px; line-height: 1.65; color: rgba(250,247,241,.62); margin: 4px 0; }
-  .disclosure-card code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #D8BA78; }
+  .disclosure-card code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #F0A97F; }
 </style>
 </Base>

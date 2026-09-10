@@ -5,40 +5,40 @@
 .back-link {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 700;
-  letter-spacing: .08em; text-transform: uppercase; color: #A9812E; text-decoration: none;
+  letter-spacing: .08em; text-transform: uppercase; color: #BE4A1E; text-decoration: none;
   margin: 22px 0 0;
 }
-.back-link:hover { color: #8B6820; }
+.back-link:hover { color: #A63A12; }
 
 /* Hero meta pills — sit on the dark cinematic hero */
 .cs-meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 28px 0 0; }
 .cs-pill {
   display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px;
-  border: 1px solid rgba(216,186,120,.3); background: rgba(255,255,255,.04);
+  border: 1px solid rgba(240, 169, 127,.3); background: rgba(255,255,255,.04);
   font-size: .78rem; font-weight: 600; color: rgba(250,247,241,.85);
   font-family: Manrope, system-ui, sans-serif;
 }
-.cs-pill b { color: #D8BA78; font-weight: 700; }
+.cs-pill b { color: #F0A97F; font-weight: 700; }
 
 /* Outcome KPI strip — sits on the dark cinematic hero */
 .cs-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 32px 0 0; }
 .cs-card {
-  border: 1px solid rgba(216,186,120,.22); border-radius: 10px; padding: 16px 18px;
+  border: 1px solid rgba(240, 169, 127,.22); border-radius: 10px; padding: 16px 18px;
   background: rgba(255,255,255,.03);
 }
 .cs-kpi {
   font-family: Manrope, system-ui, sans-serif; font-weight: 800; font-size: 1.05rem;
   color: #FAF7F1; line-height: 1.35;
 }
-.cs-kpi strong { color: #D8BA78; font-size: 1.3em; display: block; margin-bottom: 2px; }
+.cs-kpi strong { color: #F0A97F; font-size: 1.3em; display: block; margin-bottom: 2px; }
 
 /* ── Structured dossier — situation/constraint/delivery/outcome ──
    Same dark ink/gold treatment as the homepage's case-study teaser,
    used deliberately as a brand anchor on an otherwise lighter page. */
 .dossier{background:#0B0B0C;border:1px solid rgba(255,255,255,.14);border-radius:12px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.25);margin:18px 0}
 .dossier-head{padding:20px 28px;border-bottom:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
-.dossier-head h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:17px;color:#FAF7F1;margin:0}
-.dossier-head span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#A9812E;font-weight:700;font-family:Manrope,system-ui,sans-serif}
+.dossier-head h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:17px;color:#FAF7F1;margin:0}
+.dossier-head span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#BE4A1E;font-weight:700;font-family:Manrope,system-ui,sans-serif}
 .dossier .d-row{display:grid;grid-template-columns:150px 1fr;gap:20px;padding:18px 28px;border-bottom:1px solid rgba(255,255,255,.14);font-size:13.5px;line-height:1.7}
 .dossier .d-row:last-of-type{border-bottom:none}
 .dossier .d-row .dk{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;padding-top:3px;font-family:Manrope,system-ui,sans-serif}
@@ -53,14 +53,14 @@
 .mb-item span{display:block;margin-top:3px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#5a6b88;font-weight:600}
 
 .fw-tags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
-.fw-tag{display:inline-flex;align-items:center;font-size:.8rem;font-weight:700;color:#8B6820;background:rgba(169,129,46,.08);border:1px solid rgba(169,129,46,.3);border-radius:999px;padding:6px 14px;text-decoration:none;transition:background .2s}
-.fw-tag:hover{background:rgba(169,129,46,.16)}
+.fw-tag{display:inline-flex;align-items:center;font-size:.8rem;font-weight:700;color:#A63A12;background:rgba(190, 74, 30,.08);border:1px solid rgba(190, 74, 30,.3);border-radius:999px;padding:6px 14px;text-decoration:none;transition:background .2s}
+.fw-tag:hover{background:rgba(190, 74, 30,.16)}
 
 /* Optional hero image (floats the same way as service-page hero images) */
 .cs-hero-img { position: relative; margin: 32px 0 0; }
 .cs-hero-img::before {
   content: ''; position: absolute; inset: -8%;
-  background: radial-gradient(closest-side, rgba(169,129,46,.18), transparent 72%);
+  background: radial-gradient(closest-side, rgba(190, 74, 30,.18), transparent 72%);
   filter: blur(28px); pointer-events: none;
 }
 .cs-hero-img img {
@@ -72,32 +72,32 @@
 .cs-body { max-width: 740px; margin: 0 auto; padding: 4.5rem 22px 1rem; }
 .prose { color: #0B0B0C; line-height: 1.75; font-size: 1.02rem; }
 .prose h2 {
-  font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: clamp(1.4rem, 2.4vw, 1.7rem);
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: clamp(1.4rem, 2.4vw, 1.7rem);
   line-height: 1.2; margin: 2.75rem 0 1rem; color: #0B0B0C;
 }
 .prose h2:first-child { margin-top: 0; }
 .prose h3 {
-  font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.2rem;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.2rem;
   margin: 1.75rem 0 .75rem; color: #0B0B0C;
 }
 .prose p { margin: 0 0 1.15rem; }
 .prose ul, .prose ol { padding-left: 1.3rem; margin: 0 0 1.15rem; }
 .prose li { margin: .4rem 0; }
 .prose strong { color: #0B0B0C; font-weight: 700; }
-.prose a { color: #A9812E; font-weight: 600; }
+.prose a { color: #BE4A1E; font-weight: 600; }
 
 /* Testimonial blockquotes, written inline as markdown ">" — a gold pull-quote */
 .prose blockquote {
-  margin: 2.25rem 0; padding: 1.6rem 1.9rem; border-left: 3px solid #A9812E;
-  background: rgba(169,129,46,.05); border-radius: 0 8px 8px 0;
+  margin: 2.25rem 0; padding: 1.6rem 1.9rem; border-left: 3px solid #BE4A1E;
+  background: rgba(190, 74, 30,.05); border-radius: 0 8px 8px 0;
 }
 .prose blockquote p {
-  font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 1.15rem;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.15rem;
   line-height: 1.6; color: #0B0B0C; margin: 0;
 }
 .prose blockquote em {
   font-style: normal; font-family: Manrope, system-ui, sans-serif; font-size: .78rem;
-  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #A9812E;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #BE4A1E;
   display: inline-block; margin-top: .85rem;
 }
 
@@ -112,7 +112,7 @@
 .prose th, .prose td { text-align: left; padding: .75rem .9rem; border-bottom: 1px solid #DDD8CF; vertical-align: top; }
 .prose th {
   font-family: Manrope, system-ui, sans-serif; font-size: .68rem; letter-spacing: .1em;
-  text-transform: uppercase; color: #A9812E; font-weight: 700;
+  text-transform: uppercase; color: #BE4A1E; font-weight: 700;
 }
 .prose tr:last-child td { border-bottom: none; }
 .prose td:first-child { color: #6B6860; white-space: nowrap; }
@@ -120,12 +120,12 @@
 /* Structured testimonial (optional frontmatter field) */
 .cs-quote { border: 1px solid #DDD8CF; background: #FAF7F1; border-radius: 12px; padding: 2rem; margin: 2.5rem 0; }
 .cs-quote p {
-  font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 1.15rem;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.15rem;
   line-height: 1.6; margin: 0 0 1rem; color: #0B0B0C;
 }
 .cs-quote .who {
   display: flex; align-items: center; gap: 12px; font-family: Manrope, system-ui, sans-serif;
-  font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #A9812E;
+  font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #BE4A1E;
 }
 .cs-quote .who img { width: 36px; height: 36px; border-radius: 999px; object-fit: cover; }
 
@@ -135,5 +135,5 @@
   border-top: 1px solid #DDD8CF;
   display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
 }
-.cs-cta h3 { font-family: Fraunces, Georgia, serif; font-weight: 500; margin: 0 0 6px; color: #0B0B0C; }
+.cs-cta h3 { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; margin: 0 0 6px; color: #0B0B0C; }
 .cs-cta p { margin: 0; color: #6B6860; max-width: 44ch; }

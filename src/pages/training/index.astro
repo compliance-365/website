@@ -25,18 +25,18 @@ function buildPdcaSvg() {
     const x1 = cx + r * Math.cos(end), y1 = cy + r * Math.sin(end);
     const mid = (q.a0 + 39) * Math.PI / 180;
     const lx = cx + (r * 0.62) * Math.cos(mid), ly = cy + (r * 0.62) * Math.sin(mid);
-    svg += `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${q.gold ? '#D8BA78' : '#A9812E'}" stroke-width="10" stroke-linecap="round" opacity="${q.gold ? 1 : 0.55}"/>`;
+    svg += `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${q.gold ? '#F0A97F' : '#BE4A1E'}" stroke-width="10" stroke-linecap="round" opacity="${q.gold ? 1 : 0.55}"/>`;
     // arrowhead at end
     const ah = (q.a0 + 82) * Math.PI / 180;
     const ax = cx + r * Math.cos(ah), ay = cy + r * Math.sin(ah);
-    svg += `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="4" fill="${q.gold ? '#D8BA78' : '#A9812E'}"/>`;
-    svg += `<text x="${lx.toFixed(1)}" y="${(ly - 4).toFixed(1)}" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="17" fill="#FAF7F1">${q.label}</text>`;
+    svg += `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="4" fill="${q.gold ? '#F0A97F' : '#BE4A1E'}"/>`;
+    svg += `<text x="${lx.toFixed(1)}" y="${(ly - 4).toFixed(1)}" text-anchor="middle" font-family="'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#FAF7F1">${q.label}</text>`;
     q.sub.split('\n').forEach((line, li) => {
       svg += `<text x="${lx.toFixed(1)}" y="${(ly + 12 + li * 11).toFixed(1)}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="8.5" fill="rgba(250,247,241,.6)">${line}</text>`;
     });
   });
-  svg += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#A9812E">CONTINUAL</text>`;
-  svg += `<text x="${cx}" y="${cy + 9}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#A9812E">IMPROVEMENT</text>`;
+  svg += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#F0A97F">CONTINUAL</text>`;
+  svg += `<text x="${cx}" y="${cy + 9}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#F0A97F">IMPROVEMENT</text>`;
   return `<svg viewBox="0 0 300 300" class="pdca-svg" role="img" aria-label="The Plan-Do-Check-Act cycle: Plan (context, scope, risks, objectives), Do (implement controls and actions), Check (scan, audit, measure), Act (correct, improve, management review), repeating for continual improvement.">${svg}</svg>`;
 }
 const pdcaSvg = buildPdcaSvg();
@@ -224,7 +224,7 @@ const systems = [
       <a href={`${base}services/iso27701/`} class="tr-ckpt-card"><b>PIMS → ISO 27701</b><span>ROPA, controller/processor roles, privacy risk, rights handling</span></a>
     </div>
     <p style="text-align:center;margin-top:2.5rem;">
-      <a href={`${base}checkpoint-console/how-it-works/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See how Checkpoint runs it, end to end →</a>
+      <a href={`${base}checkpoint-console/how-it-works/`} style="color:#F0A97F;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See how Checkpoint runs it, end to end →</a>
     </p>
   </div>
 </section>
@@ -248,8 +248,8 @@ const systems = [
 <Footer />
 
 <style is:global>
-  .tr-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 18px; }
-  .gold-rule-26 { width: 26px; height: 1px; background: #A9812E; margin-bottom: 18px; }
+  .tr-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 18px; }
+  .gold-rule-26 { width: 26px; height: 1px; background: #BE4A1E; margin-bottom: 18px; }
   .tr-lead { max-width: 640px; color: rgba(250,247,241,.66); font-size: 15px; line-height: 1.8; margin: 0 0 1rem; }
   .tr-lead strong { color: #FAF7F1; }
 
@@ -262,20 +262,20 @@ const systems = [
 
   /* system section headers */
   .tr-sys-head { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
-  .tr-sys-badge { width: 56px; height: 56px; flex: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: #0B0B0C; color: #D8BA78; border: 1px solid #A9812E; }
-  .tr-sys-badge.on-dark { background: rgba(216,186,120,.08); }
+  .tr-sys-badge { width: 56px; height: 56px; flex: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: #0B0B0C; color: #F0A97F; border: 1px solid #BE4A1E; }
+  .tr-sys-badge.on-dark { background: rgba(240, 169, 127,.08); }
   .tr-sys-badge svg { width: 26px; height: 26px; }
   .tr-sys-head h2 { margin: 0; }
-  .tr-aim { font-family: Fraunces, Georgia, serif; font-size: clamp(1.2rem,2.2vw,1.5rem); line-height: 1.35; color: #0B0B0C; max-width: 40ch; margin: 0 0 1.25rem; border-left: 3px solid #A9812E; padding-left: 18px; }
+  .tr-aim { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-size: clamp(1.2rem,2.2vw,1.5rem); line-height: 1.35; color: #0B0B0C; max-width: 40ch; margin: 0 0 1.25rem; border-left: 3px solid #BE4A1E; padding-left: 18px; }
   .tr-aim.on-dark { color: #FAF7F1; }
   .tr-body { color: var(--muted); font-size: 15px; line-height: 1.8; max-width: 72ch; margin: 0 0 2.25rem; }
   .tr-body.on-dark { color: rgba(250,247,241,.66); }
-  .tr-sub { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 16px; }
+  .tr-sub { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 16px; }
 
   .tr-anatomy { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 14px; margin-bottom: 2.5rem; }
-  .tr-anat-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; border-top: 2px solid #A9812E; }
-  .tr-anat-card.on-dark { background: #0B0B0C; border-color: rgba(255,255,255,.12); border-top-color: #A9812E; }
-  .tr-anat-card b { display: block; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.05rem; color: #0B0B0C; margin-bottom: 6px; }
+  .tr-anat-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; border-top: 2px solid #BE4A1E; }
+  .tr-anat-card.on-dark { background: #0B0B0C; border-color: rgba(255,255,255,.12); border-top-color: #BE4A1E; }
+  .tr-anat-card b { display: block; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.05rem; color: #0B0B0C; margin-bottom: 6px; }
   .tr-anat-card.on-dark b { color: #FAF7F1; }
   .tr-anat-card span { display: block; font-size: 13px; line-height: 1.6; color: var(--muted); }
   .tr-anat-card.on-dark span { color: rgba(250,247,241,.6); }
@@ -285,27 +285,27 @@ const systems = [
   .tr-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .tr-roles li { font-size: 13.5px; line-height: 1.55; color: #3A3632; padding-left: 20px; position: relative; }
   .tr-roles.on-dark li { color: rgba(250,247,241,.66); }
-  .tr-roles li::before { content: ''; position: absolute; left: 0; top: 7px; width: 7px; height: 7px; border-radius: 50%; border: 1px solid #A9812E; }
+  .tr-roles li::before { content: ''; position: absolute; left: 0; top: 7px; width: 7px; height: 7px; border-radius: 50%; border: 1px solid #BE4A1E; }
   .tr-good { font-size: 14px; line-height: 1.8; color: var(--muted); margin: 0; }
   .tr-good.on-dark { color: rgba(250,247,241,.66); }
 
   .tr-checks { display: flex; flex-direction: column; gap: 10px; max-width: 820px; }
   .tr-check { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 0; overflow: hidden; }
   .tr-check.on-dark { background: #0B0B0C; border-color: rgba(255,255,255,.12); }
-  .tr-check summary { cursor: pointer; padding: 15px 18px; font-size: 14px; font-weight: 500; color: #0B0B0C; font-family: Fraunces, Georgia, serif; list-style: none; display: flex; gap: 12px; align-items: baseline; }
+  .tr-check summary { cursor: pointer; padding: 15px 18px; font-size: 14px; font-weight: 500; color: #0B0B0C; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; list-style: none; display: flex; gap: 12px; align-items: baseline; }
   .tr-check.on-dark summary { color: #FAF7F1; }
   .tr-check summary::-webkit-details-marker { display: none; }
-  .tr-check summary::after { content: '+'; margin-left: auto; color: #A9812E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 18px; line-height: 1; }
+  .tr-check summary::after { content: '+'; margin-left: auto; color: #BE4A1E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 18px; line-height: 1; }
   .tr-check[open] summary::after { content: '–'; }
-  .tr-q-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1em; color: var(--gold-ink); background: rgba(169,129,46,.1); border-radius: 4px; padding: 3px 7px; flex: none; }
+  .tr-q-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1em; color: var(--accent-ink); background: rgba(190, 74, 30,.1); border-radius: 4px; padding: 3px 7px; flex: none; }
   .tr-check p { margin: 0; padding: 0 18px 16px 47px; font-size: 13.5px; line-height: 1.75; color: var(--muted); }
   .tr-check.on-dark p { color: rgba(250,247,241,.62); }
 
   /* checkpoint cross-links */
   .tr-ckpt { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 16px; max-width: 900px; margin: 0 auto; }
   .tr-ckpt-card { text-decoration: none; background: #141416; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 22px 24px; transition: border-color .2s, transform .2s; display: block; }
-  .tr-ckpt-card:hover { border-color: rgba(216,186,120,.5); transform: translateY(-3px); }
-  .tr-ckpt-card b { display: block; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.15rem; color: #FAF7F1; margin-bottom: 8px; }
+  .tr-ckpt-card:hover { border-color: rgba(240, 169, 127,.5); transform: translateY(-3px); }
+  .tr-ckpt-card b { display: block; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 1.15rem; color: #FAF7F1; margin-bottom: 8px; }
   .tr-ckpt-card span { display: block; font-size: 13px; line-height: 1.6; color: rgba(250,247,241,.6); }
 
   @media (prefers-reduced-motion: no-preference) {

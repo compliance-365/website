@@ -28,7 +28,7 @@
      reference to that path would 404 once built. This page owns its
      assets outright, same "self-contained, no dependency on another
      app's pipeline" reasoning as everything else about this file. -->
-<link rel="preload" href="/marketing/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/marketing/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/marketing/fonts/manrope.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* ============================================================
@@ -37,14 +37,14 @@
    "practitioner's own preference" to persist). Every color below is
    already WCAG AA-verified against --ink from that same design-system
    pass, reused as-is rather than re-derived. */
-@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;font-display:swap;src:url('/marketing/fonts/fraunces.woff2') format('woff2')}
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;font-display:swap;src:url('/marketing/fonts/bricolage.woff2') format('woff2-variations')}
 @font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('/marketing/fonts/manrope.woff2') format('woff2')}
 :root{
   --ink:#0B0B0C; --ink-2:#141416; --charcoal:#1B1B1D;
   --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.7); --paper-faint:rgba(250,247,241,.58);
-  --gold:#A9812E; --gold-light:#D8BA78;
+  --gold:#BE4A1E; --gold-light:#F0A97F;
   --line:rgba(255,255,255,.13);
-  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a;
+  --pass:#8fbf9a; --warn:#F0A97F; --fail:#c97a7a;
   --surface:var(--ink-2); --surface-raised:var(--charcoal);
   --ease:cubic-bezier(.22,1,.36,1);
   --max:1180px;
@@ -53,7 +53,7 @@
 html{scroll-behavior:smooth}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{margin:0;background:var(--ink);color:var(--paper);font-family:Manrope,system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
-h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;line-height:1.15;margin:0}
+h1,h2,h3{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:500;line-height:1.15;margin:0}
 p{margin:0}
 a{color:inherit}
 img,svg{max-width:100%;display:block}
@@ -77,7 +77,7 @@ img,svg{max-width:100%;display:block}
 /* ---------- topbar ---------- */
 .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:18px 28px;background:rgba(11,11,12,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--paper)}
-.brand .word{font-family:Fraunces,serif;font-size:17px;letter-spacing:.01em}
+.brand .word{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;letter-spacing:.01em}
 .brand .word b{color:var(--gold-light);font-weight:600}
 .topnav{display:flex;align-items:center;gap:28px}
 .topnav a{font-size:13px;color:var(--paper-dim);text-decoration:none;transition:color .15s var(--ease)}
@@ -92,7 +92,7 @@ img,svg{max-width:100%;display:block}
 
 /* ---------- hero ---------- */
 .hero{padding:88px 0 80px;position:relative;overflow:hidden}
-.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 420px at 80% -10%,rgba(169,129,46,.16),transparent 60%);pointer-events:none}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 420px at 80% -10%,rgba(190, 74, 30,.16),transparent 60%);pointer-events:none}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;position:relative}
 .hero-grid>*{min-width:0}
 @media(max-width:980px){.hero-grid{grid-template-columns:1fr;gap:44px}}
@@ -119,7 +119,7 @@ img,svg{max-width:100%;display:block}
 @media(prefers-reduced-motion:reduce){.mini-bd .slide:first-of-type{opacity:1}}
 @keyframes bdCycle{0%{opacity:0}5%{opacity:1}29%{opacity:1}34%{opacity:0}100%{opacity:0}}
 .mini-bd .slide h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);font-family:Manrope;font-weight:700}
-.mini-bd .big-num{font-family:Fraunces,serif;font-size:44px;color:var(--paper)}
+.mini-bd .big-num{font-family:'Bricolage Grotesque',sans-serif;font-size:44px;color:var(--paper)}
 .mini-bd .big-num small{font-size:.4em;color:var(--paper-faint);margin-left:4px}
 .mini-bd .cap{font-size:12px;color:var(--paper-dim)}
 
@@ -166,7 +166,7 @@ img,svg{max-width:100%;display:block}
 .roi-field input[type=range]{width:100%;accent-color:var(--gold);height:20px}
 .roi-results{display:flex;flex-direction:column;justify-content:center;gap:22px;border-left:1px solid var(--line);padding-left:48px}
 @media(max-width:860px){.roi-results{border-left:none;padding-left:0;border-top:1px solid var(--line);padding-top:28px}}
-.roi-stat b{display:block;font-family:Fraunces,serif;font-size:40px;color:var(--gold-light);font-variant-numeric:tabular-nums}
+.roi-stat b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:40px;color:var(--gold-light);font-variant-numeric:tabular-nums}
 .roi-stat span{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--paper-faint)}
 .roi-footnote{max-width:760px;margin:24px auto 0;font-size:11.5px;color:var(--paper-faint);line-height:1.7}
 
@@ -181,7 +181,7 @@ table.scopes td.scope-name{font-family:ui-monospace,Menlo,monospace;font-size:11
 table.scopes tr:last-child td{border-bottom:none}
 .chip{display:inline-block;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;padding:2px 8px;border-radius:3px;border:1px solid}
 .chip.read{color:var(--pass);border-color:rgba(143,191,154,.4)}
-.chip.write{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.chip.write{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .sec-side .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:18px}
 .sec-side .card h3{font-family:Manrope;font-weight:700;font-size:14px}
 .sec-side .card p{font-size:12.5px;color:var(--paper-dim);margin-top:8px;line-height:1.65}
@@ -195,7 +195,7 @@ table.scopes tr:last-child td{border-bottom:none}
 details.ai-note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-top:24px}
 details.ai-note summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--paper);list-style:none;display:flex;justify-content:space-between;align-items:center}
 details.ai-note summary::-webkit-details-marker{display:none}
-details.ai-note summary::after{content:"+";font-family:Fraunces,serif;font-size:20px;color:var(--gold-light)}
+details.ai-note summary::after{content:"+";font-family:'Bricolage Grotesque',sans-serif;font-size:20px;color:var(--gold-light)}
 details.ai-note[open] summary::after{content:"–"}
 details.ai-note .body{margin-top:14px;font-size:13px;color:var(--paper-dim);line-height:1.75}
 .arch-svg-wrap{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px}
@@ -203,7 +203,7 @@ details.ai-note .body{margin-top:14px;font-size:13px;color:var(--paper-dim);line
 /* ---------- footer ---------- */
 footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--surface)}
 .footer-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
-.footer-brand .word{font-family:Fraunces,serif;font-size:16px}
+.footer-brand .word{font-family:'Bricolage Grotesque',sans-serif;font-size:16px}
 .footer-brand p{color:var(--paper-faint);font-size:12.5px;margin-top:10px;max-width:34ch;line-height:1.7}
 .footer-cols{display:flex;gap:60px;flex-wrap:wrap}
 .footer-col h4{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:14px}
@@ -258,10 +258,10 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
                 <h3>Compliance fingerprint</h3>
                 <svg width="120" height="120" viewBox="0 0 120 120">
                   <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(250,247,241,.08)" stroke-width="7"/>
-                  <circle cx="60" cy="60" r="52" fill="none" stroke="#A9812E" stroke-width="7" stroke-linecap="round" stroke-dasharray="235 327" transform="rotate(-90 60 60)"/>
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="#BE4A1E" stroke-width="7" stroke-linecap="round" stroke-dasharray="235 327" transform="rotate(-90 60 60)"/>
                   <circle cx="60" cy="60" r="40" fill="none" stroke="rgba(250,247,241,.08)" stroke-width="7"/>
                   <circle cx="60" cy="60" r="40" fill="none" stroke="#8fbf9a" stroke-width="7" stroke-linecap="round" stroke-dasharray="220 251" transform="rotate(-90 60 60)"/>
-                  <text x="60" y="66" text-anchor="middle" font-family="Fraunces,serif" font-size="26" fill="#FAF7F1">72%</text>
+                  <text x="60" y="66" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="26" fill="#FAF7F1">72%</text>
                 </svg>
                 <p class="cap">ISO 27001 readiness — live, always current</p>
               </div>
@@ -269,8 +269,8 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
                 <h3>Posture score trend</h3>
                 <div class="big-num">45<small>/100</small></div>
                 <svg width="200" height="46" viewBox="0 0 200 46">
-                  <polyline points="4,38 50,30 100,20 150,14 196,8" fill="none" stroke="#A9812E" stroke-width="2.5"/>
-                  <circle cx="196" cy="8" r="4" fill="#D8BA78"/>
+                  <polyline points="4,38 50,30 100,20 150,14 196,8" fill="none" stroke="#BE4A1E" stroke-width="2.5"/>
+                  <circle cx="196" cy="8" r="4" fill="#F0A97F"/>
                 </svg>
                 <p class="cap">Up 12 points over the last quarter</p>
               </div>
@@ -279,8 +279,8 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
                 <svg width="220" height="30" viewBox="0 0 220 30">
                   <line x1="10" y1="15" x2="210" y2="15" stroke="rgba(250,247,241,.2)" stroke-width="1.5"/>
                   <circle cx="20" cy="15" r="5" fill="rgba(250,247,241,.5)"/>
-                  <circle cx="90" cy="15" r="6" fill="#D8BA78"/>
-                  <circle cx="160" cy="15" r="5" fill="#A9812E"/>
+                  <circle cx="90" cy="15" r="6" fill="#F0A97F"/>
+                  <circle cx="160" cy="15" r="5" fill="#BE4A1E"/>
                   <circle cx="205" cy="15" r="5" fill="#8fbf9a"/>
                 </svg>
                 <p class="cap">Projected audit-ready in 4 months</p>
@@ -305,7 +305,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
             <!-- tenant boundary -->
             <rect class="b-boundary-fill" x="40" y="30" width="480" height="380" rx="28"/>
             <rect class="b-boundary-path" x="40" y="30" width="480" height="380" rx="28" stroke-dasharray="8 7"/>
-            <text x="60" y="60" class="b-node-label" font-weight="700" fill="#D8BA78">YOUR MICROSOFT 365 TENANT</text>
+            <text x="60" y="60" class="b-node-label" font-weight="700" fill="#F0A97F">YOUR MICROSOFT 365 TENANT</text>
 
             <!-- nodes inside -->
             <rect class="b-node" x="80" y="120" width="120" height="56" rx="8"/>
@@ -356,8 +356,8 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
       <div class="feature-grid">
         <div class="feature-card">
           <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
-            <g fill="none" stroke="#A9812E" stroke-width="1.2" opacity=".8">
-              <circle cx="44" cy="44" r="6" fill="#A9812E" stroke="none"/>
+            <g fill="none" stroke="#BE4A1E" stroke-width="1.2" opacity=".8">
+              <circle cx="44" cy="44" r="6" fill="#BE4A1E" stroke="none"/>
               <circle cx="20" cy="22" r="3"/><circle cx="66" cy="18" r="3"/>
               <circle cx="14" cy="58" r="3"/><circle cx="70" cy="60" r="3"/>
               <circle cx="44" cy="12" r="3"/><circle cx="44" cy="76" r="3"/>
@@ -370,8 +370,8 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
         <div class="feature-card">
           <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
             <circle cx="44" cy="44" r="36" fill="none" stroke="rgba(250,247,241,.1)" stroke-width="6"/>
-            <circle cx="44" cy="44" r="36" fill="none" stroke="#A9812E" stroke-width="6" stroke-linecap="round" stroke-dasharray="160 226" transform="rotate(-90 44 44)"/>
-            <text x="44" y="50" text-anchor="middle" font-family="Fraunces,serif" font-size="18" fill="#FAF7F1">71%</text>
+            <circle cx="44" cy="44" r="36" fill="none" stroke="#BE4A1E" stroke-width="6" stroke-linecap="round" stroke-dasharray="160 226" transform="rotate(-90 44 44)"/>
+            <text x="44" y="50" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="18" fill="#FAF7F1">71%</text>
           </svg>
           <h3>Compliance Fingerprint</h3>
           <p>One ring per control theme, arc length showing implementation — a single glance answers "how ready are we."</p>
@@ -380,8 +380,8 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
           <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
             <line x1="10" y1="60" x2="78" y2="60" stroke="rgba(250,247,241,.2)" stroke-width="1.5"/>
             <circle cx="16" cy="60" r="4" fill="rgba(250,247,241,.5)"/>
-            <circle cx="38" cy="60" r="5" fill="#D8BA78"/>
-            <circle cx="60" cy="60" r="4" fill="#A9812E"/>
+            <circle cx="38" cy="60" r="5" fill="#F0A97F"/>
+            <circle cx="60" cy="60" r="4" fill="#BE4A1E"/>
             <circle cx="76" cy="60" r="4" fill="#8fbf9a"/>
             <text x="44" y="30" text-anchor="middle" class="b-node-label" font-size="10">Projected audit-ready</text>
           </svg>
@@ -392,12 +392,12 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
           <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
             <g>
               <rect x="8" y="34" width="8" height="8" rx="1.5" fill="rgba(250,247,241,.1)"/>
-              <rect x="19" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.3)"/>
-              <rect x="30" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.55)"/>
-              <rect x="41" y="34" width="8" height="8" rx="1.5" fill="#A9812E"/>
-              <rect x="52" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.55)"/>
+              <rect x="19" y="34" width="8" height="8" rx="1.5" fill="rgba(190, 74, 30,.3)"/>
+              <rect x="30" y="34" width="8" height="8" rx="1.5" fill="rgba(190, 74, 30,.55)"/>
+              <rect x="41" y="34" width="8" height="8" rx="1.5" fill="#BE4A1E"/>
+              <rect x="52" y="34" width="8" height="8" rx="1.5" fill="rgba(190, 74, 30,.55)"/>
               <rect x="63" y="34" width="8" height="8" rx="1.5" fill="rgba(250,247,241,.1)"/>
-              <rect x="74" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.3)"/>
+              <rect x="74" y="34" width="8" height="8" rx="1.5" fill="rgba(190, 74, 30,.3)"/>
             </g>
           </svg>
           <h3>Assurance Pulse</h3>
@@ -480,15 +480,15 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
           <div class="arch-svg-wrap" style="margin-bottom:18px">
             <svg viewBox="0 0 320 200" role="img" aria-label="Architecture: your browser talks to Microsoft Graph and your SharePoint lists, both inside your tenant; Compliance365 never sits in that data path.">
               <rect x="14" y="14" width="292" height="172" rx="14" fill="none" stroke="rgba(250,247,241,.18)" stroke-dasharray="5 5"/>
-              <text x="26" y="32" font-family="Manrope" font-size="9" letter-spacing=".08em" fill="#D8BA78">YOUR TENANT</text>
+              <text x="26" y="32" font-family="Manrope" font-size="9" letter-spacing=".08em" fill="#F0A97F">YOUR TENANT</text>
               <rect x="34" y="70" width="90" height="46" rx="6" fill="#1B1B1D" stroke="rgba(255,255,255,.13)"/>
               <text x="79" y="97" text-anchor="middle" font-family="Manrope" font-size="10" fill="#FAF7F1">Your browser</text>
               <rect x="196" y="46" width="94" height="40" rx="6" fill="#1B1B1D" stroke="rgba(255,255,255,.13)"/>
               <text x="243" y="70" text-anchor="middle" font-family="Manrope" font-size="10" fill="#FAF7F1">Microsoft Graph</text>
               <rect x="196" y="106" width="94" height="40" rx="6" fill="#1B1B1D" stroke="rgba(255,255,255,.13)"/>
               <text x="243" y="130" text-anchor="middle" font-family="Manrope" font-size="10" fill="#FAF7F1">SharePoint lists</text>
-              <path d="M124,88 C155,88 165,66 196,66" fill="none" stroke="#A9812E" stroke-width="1.5"/>
-              <path d="M124,96 C155,96 165,126 196,126" fill="none" stroke="#A9812E" stroke-width="1.5"/>
+              <path d="M124,88 C155,88 165,66 196,66" fill="none" stroke="#BE4A1E" stroke-width="1.5"/>
+              <path d="M124,96 C155,96 165,126 196,126" fill="none" stroke="#BE4A1E" stroke-width="1.5"/>
               <text x="180" y="170" text-anchor="middle" font-family="Manrope" font-size="8.5" fill="rgba(250,247,241,.5)">Compliance365 never sits in this data path.</text>
             </svg>
           </div>
@@ -503,7 +503,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--sur
             <h3>Credentials</h3>
             <div class="badge-row">
               <span class="badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z" stroke="#8fbf9a" stroke-width="1.6"/></svg><b>Microsoft Verified Publisher</b></span>
-              <span class="badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#D8BA78" stroke-width="1.6"/><path d="M8 12l3 3 5-6" stroke="#D8BA78" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><b>ISO 27001-aligned controls</b></span>
+              <span class="badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#F0A97F" stroke-width="1.6"/><path d="M8 12l3 3 5-6" stroke="#F0A97F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><b>ISO 27001-aligned controls</b></span>
             </div>
             <p class="placeholder-note">Placeholder badges — swap for verified credential assets before launch.</p>
           </div>

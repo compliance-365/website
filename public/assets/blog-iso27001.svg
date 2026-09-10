@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#A9812E" stop-opacity=".18"/>
+      <stop offset="0" stop-color="#BE4A1E" stop-opacity=".18"/>
       <stop offset="1" stop-color="#0B0B0C" stop-opacity=".18"/>
     </linearGradient>
   </defs>
@@ -14,7 +14,7 @@
     <rect width="360" height="260" rx="14" fill="#fff" stroke="#F5F0E8"/>
 
     <!-- Dashboard header bar -->
-    <rect x="22" y="26" width="280" height="16" rx="8" fill="#A9812E"/>
+    <rect x="22" y="26" width="280" height="16" rx="8" fill="#BE4A1E"/>
     <rect x="22" y="52" width="220" height="10" rx="5" fill="#F5F0E8"/>
 
     <!-- Trend card -->
@@ -25,9 +25,9 @@
       <line x1="20" y1="18" x2="20" y2="86" stroke="#DDD8CF"/>
       <!-- sparkline (downward trend) -->
       <path d="M20,70 L70,60 L120,58 L170,46 L220,40 L270,28"
-            fill="none" stroke="#A9812E" stroke-width="2.5"/>
+            fill="none" stroke="#BE4A1E" stroke-width="2.5"/>
       <!-- end dot -->
-      <circle cx="270" cy="28" r="4" fill="#A9812E"/>
+      <circle cx="270" cy="28" r="4" fill="#BE4A1E"/>
       <!-- delta chip -->
       <rect x="208" y="14" rx="8" ry="8" width="70" height="20" fill="#ecfdf5" stroke="#d1fae5"/>
       <text x="243" y="28" text-anchor="middle" font-size="12" fill="#065f46" font-weight="700">−38%</text>
@@ -64,9 +64,9 @@
 
     <rect x="22" y="112" width="356" height="112" rx="8" fill="#F5F0E8" stroke="#F5F0E8"/>
     <text x="32" y="136" fill="#6B6860">Policies • Evidence • Monitoring</text>
-    <circle cx="40" cy="156" r="4" fill="#A9812E"/><rect x="50" y="152" width="250" height="8" rx="4" fill="#F5F0E8"/>
-    <circle cx="40" cy="176" r="4" fill="#A9812E"/><rect x="50" y="172" width="220" height="8" rx="4" fill="#F5F0E8"/>
-    <circle cx="40" cy="196" r="4" fill="#A9812E"/><rect x="50" y="192" width="280" height="8" rx="4" fill="#F5F0E8"/>
+    <circle cx="40" cy="156" r="4" fill="#BE4A1E"/><rect x="50" y="152" width="250" height="8" rx="4" fill="#F5F0E8"/>
+    <circle cx="40" cy="176" r="4" fill="#BE4A1E"/><rect x="50" y="172" width="220" height="8" rx="4" fill="#F5F0E8"/>
+    <circle cx="40" cy="196" r="4" fill="#BE4A1E"/><rect x="50" y="192" width="280" height="8" rx="4" fill="#F5F0E8"/>
     <!-- green tick -->
     <circle cx="362" cy="32" r="10" fill="#10B981"/>
     <path d="M357 32l4 4 7-7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>

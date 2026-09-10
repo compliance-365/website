@@ -7,19 +7,19 @@
    A rendered-contrast sweep of eight pages found 175 text nodes below
    the WCAG AA 4.5:1 floor. They collapsed to only eight distinct colour
    pairs, and the dominant one — 97 nodes — was a single mistake repeated
-   everywhere: the brand gold #A9812E used as TEXT on a light ground,
-   where it measures 3.35:1.
+   everywhere: the brand accent used as TEXT on a light ground.
 
-   #A9812E is a fine FILL (a rule, a chip, a button face). It is not a
-   text colour on cream or white. The distinction was never written down
-   anywhere, so it kept being reintroduced by hand — 435 times in inline
-   style attributes across 51 files.
+   A saturated brand colour is a fine FILL (a rule, a chip, a button
+   face). It is usually not a text colour on cream or white. The
+   distinction was never written down anywhere, so it kept being
+   reintroduced by hand — 435 times in inline style attributes across
+   51 files.
 
    How to use it
    -------------
-   These are semantic, ground-aware names. --gold-ink means "gold, as
-   text, legible against whatever this sits on" — it resolves to a deep
-   gold on light grounds and a pale gold on dark ones, so the same
+   These are semantic, ground-aware names. --accent-ink means "the brand
+   accent, as text, legible against whatever this sits on" — it resolves
+   to a deep orange on light grounds and a pale one on dark, so the same
    declaration is correct in both places and a section can be flipped
    from light to dark without hunting colours.
 
@@ -28,13 +28,29 @@
    cream, #FFFFFF white, #F7F4EE panel); dark-ground tokens clear it on
    #0B0B0C.
 
-   Prefer a token over a literal. There is a CI check (npm run
-   check:colours) that fails on new raw hex text colours in src/pages. */
+   Prefer a token over a literal.
+
+   The accent ramp
+   ---------------
+   The palette is three steps, not one colour, because gradients and
+   hover states need somewhere to travel:
+
+     #A63A12  dark  — hover fills, and the accent as text on light
+     #BE4A1E  mid   — the brand fill
+     #F0A97F  pale  — fills and text on dark grounds
+
+   Luminance rises across the ramp, which is what makes it usable in a
+   gradient. The pale step is deliberately unusable as text on light
+   grounds (1.79:1 on panel) — it is the dark-ground counterpart, and
+   --accent-ink below is what picks the right end for you. */
 
 :root {
-  /* Gold as text. Fills keep using #A9812E directly — this is only for
-     glyphs. 5.95:1 cream · 6.36:1 white · 5.79:1 panel */
-  --gold-ink: #7A5A18;
+  /* The accent as text. Fills use #BE4A1E directly — this is only for
+     glyphs, and it is a step darker than the fill for a reason: #BE4A1E
+     itself measures 4.57:1 on the panel ground, a pass so thin that
+     antialiasing eats the margin.
+     6.07:1 cream · 6.49:1 white · 5.91:1 panel */
+  --accent-ink: #A63A12;
 
   /* Two steps of secondary text.
      muted  5.20:1 cream · 5.56:1 white · 5.07:1 panel
@@ -46,21 +62,41 @@
      values here (#059669, #dc2626, #d97706), several of which fail on
      white — #059669 measured 3.52:1 on the contact form's own success
      message. These are the warm-palette equivalents that pass.
-     ok 6.18/6.61/6.02 · warn 5.54/5.93/5.40 · danger 7.03/7.51/6.84 */
-  --ok-ink: #046A4E;
-  --warn-ink: #8A5A00;
-  --danger-ink: #A02622;
 
-  /* Text sitting ON a gold fill. White measures 3.58:1 there — this was
-     the .btn-primary defect. Near-black gives 5.50:1. */
-  --on-gold: #0B0B0C;
+     warn and danger also had to move when the accent became orange, for
+     a reason contrast maths does not catch: hue. The old warn (#8A5A00)
+     sat 22° from the accent and the old danger (#A02622) only 15°, so
+     "caution" and "error" read as two slightly-off shades of the brand
+     colour rather than as distinct states. Both were pushed apart —
+     warn yellower to 46°, danger cooler to 351° — giving 29° and 26° of
+     separation while keeping every ratio above the floor.
+     ok 6.18/6.61/6.02 · warn 5.30/5.67/5.17 · danger 7.56/8.08/7.36 */
+  --ok-ink: #046A4E;
+  --warn-ink: #806300;
+  --danger-ink: #9B1C2E;
+
+  /* Text sitting ON the accent fill. This is the one value that inverted
+     when the palette moved off gold: white on the old gold measured
+     3.58:1 (the .btn-primary defect), so this token used to be
+     near-black. On #BE4A1E white measures 5.01:1 and near-black only
+     3.92:1, so the correct answer is now the opposite one. */
+  --on-accent: #FFFFFF;
+
+  /* Text on the light-to-mid STATUS fills — the green, amber and grey
+     chips in the checklist tools. Separate from --on-accent because
+     these are not the accent: 14 call sites had borrowed the accent's
+     on-colour, which worked only for as long as both answers happened
+     to be near-black. White fails on all of them (3.30:1 green,
+     3.19:1 amber, 1.42:1 grey).
+     5.97:1 on #16a34a · 6.18:1 on #d97706 · 13.86:1 on #DDD8CF */
+  --on-status: #0B0B0C;
 }
 
 /* Dark grounds redefine the same names, so a declaration written once
    stays correct when the section it lives in changes colour.
 
    This list is enumerated rather than automatic, which is its weakness:
-   a new dark container added later will not be in it, and gold text
+   a new dark container added later will not be in it, and accent text
    inside it will render at ~3:1 until it is added. That is a real
    maintenance cost and the honest reason it is written down here. The
    list below was built by scanning for containers that set a near-black
@@ -68,7 +104,7 @@
 
    .band-light is listed explicitly rather than left to inherit: it can
    nest inside a dark ancestor, and without a reset it would keep the
-   dark values and render pale gold on cream. */
+   dark values and render pale orange on cream. */
 .band-dark,
 .hero-dk,
 .svc-hero,
@@ -94,16 +130,16 @@
    the only reliable one: it states the intent directly. Naming the
    container classes instead turned out to be a trap — several of them
    (.tr-anat-card, .tr-check) have a LIGHT base with a dark .on-dark
-   variant, so flipping the base class turned their gold text pale on
+   variant, so flipping the base class turned their accent text pale on
    white. Only mark what is unambiguously dark. */
 .on-dark {
-  --gold-ink: #D8BA78;                  /* 10.51:1 on #0B0B0C */
+  --accent-ink: #F0A97F;                /* 10.01:1 on #0B0B0C */
   --text-muted: rgba(250, 247, 241, .72);  /* 9.60:1 */
   --text-subtle: rgba(250, 247, 241, .62); /* 7.30:1 */
 }
 
 .band-light {
-  --gold-ink: #7A5A18;
+  --accent-ink: #A63A12;
   --text-muted: #6B6860;
   --text-subtle: #57534B;
 }
