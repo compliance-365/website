@@ -693,6 +693,12 @@ function showModal(opts) {
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
+    /* Bulk equivalents of setSt/toggleApp — gated for the same reason
+       the single-row versions are. The selection actions themselves
+       (toggleSoaSel/soaSelectAllShown/clearSoaSel) are deliberately
+       absent: they write nothing, and a Viewer gets no checkboxes
+       rendered anyway. */
+    'bulkSoaStatus', 'bulkSoaApplicable',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
@@ -5675,7 +5681,13 @@ function showModal(opts) {
        anything to click. The title is now the SAME button, so the
        thing someone actually reads is the thing that opens "how to
        implement this / what evidence" — see App.openControlGuidance. */
-    return '<tr data-id="' + key + '"><td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + esc(c.t) + '</button>' + ismLine + justificationLine + '</td>' +
+    /* Checkbox first inside the Control cell — see the _soaSel note. A
+       read-only session gets no checkbox at all rather than a disabled
+       one: there is no bulk action behind it to explain. */
+    var selCell = READONLY ? '' :
+      '<input type="checkbox" class="soa-sel" data-change-action="App.toggleSoaSel" data-id="' + key + '"' +
+      (_soaSel.has(key) ? ' checked' : '') + ' aria-label="Select ' + esc(c.id) + '">';
+    return '<tr data-id="' + key + '"' + (_soaSel.has(key) ? ' class="soa-row-sel"' : '') + '><td class="id-t">' + selCell + '<button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + esc(c.t) + '</button>' + ismLine + justificationLine + '</td>' +
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       /* Same "st-" + status-with-spaces-stripped class already used for
          every status chip elsewhere (Risks/Actions/Vendors/etc) — reused
@@ -6225,6 +6237,87 @@ function showModal(opts) {
       '<button class="btn ghost sm" data-action="' + esc(opts.action) + '" data-id="">' + esc(opts.clearLabel) + '</button>';
   }
 
+  /* ===== Bulk selection on the Statement of Applicability =====
+     The SoA is the highest-volume surface in the app — 92 applicable
+     controls on ISO 27001 alone — and every one of them was a
+     one-row-at-a-time edit. Walking a framework after a gap analysis
+     meant opening 20 dropdowns to set 20 statuses, each firing its own
+     write, its own audit entry and its own full re-render.
+
+     Selection lives in a Set of "fw|id" keys rather than in the DOM, so
+     it survives the re-render every write triggers. It is in-memory
+     only, same convention as every other view filter here (_soaFocus,
+     _riskF): a selection that outlived a reload would be a set of
+     controls someone forgot they had picked, waiting for the next bulk
+     action to land on them.
+
+     The checkbox sits INSIDE the existing Control cell rather than in a
+     new leading column. A column would have to be added to six
+     different row shapes that each hard-code a column count — the
+     standard row, Essential Eight and NIST group headers, the SOC 2
+     Type II summary row, family headers, and two empty states — and
+     any one of them missed leaves the table misaligned. Putting it in
+     a cell that already exists changes no colspan anywhere.
+
+     Only rows rendered by renderSoaRow() get one, which is exactly
+     right: Essential Eight and NIST group rows are computed roll-ups of
+     their children, not independently settable, so they must not be
+     selectable. */
+  var _soaSel = new Set();
+  function soaSelKeys() { return Array.from(_soaSel); }
+  function soaSelControls() {
+    return soaSelKeys().map(function (k) {
+      var parts = k.split('|');
+      return S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+    }).filter(Boolean);
+  }
+  /* Keys currently drawn as selectable rows — the source of truth for
+     "select all shown" and for pruning a selection the filter has moved
+     out from under. Read from the DOM because which rows are on screen
+     is the product of framework, category filter, focus filter and the
+     framework-specific renderers, and re-deriving that here would be a
+     second copy of renderSoa()'s own branching, free to disagree. */
+  function soaShownKeys() {
+    return Array.from(document.querySelectorAll('#soaRows tr[data-id] .soa-sel'))
+      .map(function (cb) { return cb.getAttribute('data-id'); });
+  }
+  function renderSoaBulkBar() {
+    var bar = document.getElementById('soaBulkBar');
+    if (!bar) return;
+    var shown = soaShownKeys();
+    /* Drop anything the current filter/framework no longer shows, so a
+       bulk action can never touch a control the practitioner cannot
+       see. */
+    var shownSet = new Set(shown);
+    soaSelKeys().forEach(function (k) { if (!shownSet.has(k)) _soaSel.delete(k); });
+    var n = _soaSel.size;
+    var view = document.getElementById('v-soa');
+    if (!n || READONLY) {
+      bar.innerHTML = ''; bar.hidden = true;
+      if (view) view.style.removeProperty('--bulk-h');
+      return;
+    }
+    bar.hidden = false;
+    var allShown = shown.length && shown.every(function (k) { return _soaSel.has(k); });
+    bar.innerHTML = '<span class="bulk-count"><b>' + n + '</b> selected</span>' +
+      '<span class="bulk-sep" aria-hidden="true"></span>' +
+      '<label class="bulk-field"><span>Set status</span>' +
+      '<select class="mini" data-change-action="App.bulkSoaStatus" aria-label="Set status on selected controls">' +
+      ['', 'Not started', 'In progress', 'Implemented'].map(function (v) {
+        return '<option value="' + esc(v) + '"' + (v ? '' : ' selected') + '>' + (v || 'Choose…') + '</option>';
+      }).join('') + '</select></label>' +
+      '<button class="btn ghost sm" data-action="App.bulkSoaApplicable" data-id="yes">Mark applicable</button>' +
+      '<button class="btn ghost sm" data-action="App.bulkSoaApplicable" data-id="no">Mark not applicable</button>' +
+      '<span class="bulk-spacer"></span>' +
+      (allShown ? '' : '<button class="lnk" data-action="App.soaSelectAllShown">Select all ' + shown.length + ' shown</button>') +
+      '<button class="lnk" data-action="App.clearSoaSel">Clear selection</button>';
+    /* Publish the bar's real height so the sticky <thead> and family
+       headers below it can offset by it — see the --bulk-h note in
+       styles.css. Read after innerHTML so the measurement is of the bar
+       as it will actually render, wrapped lines included. */
+    if (view) view.style.setProperty('--bulk-h', bar.offsetHeight + 'px');
+  }
+
   function renderSoa() {
     var entitled = entitledFrameworks();
     if (!entitled.length) {
@@ -6362,6 +6455,10 @@ function showModal(opts) {
         : visRows;
       document.getElementById('soaRows').innerHTML = soaGroupedRowsHtml(activeFw, tableRows);
     }
+
+    /* Runs after whichever branch above filled #soaRows, because it
+       reads the rendered rows to know what is currently selectable. */
+    renderSoaBulkBar();
 
     /* Scan-derived suggestions (Essential Eight maturity children, and
        IS18/RFFR/ISO 42001/ISO 27701/SOC 2/NIST CSF/ISO 27001's flat
@@ -11343,6 +11440,97 @@ function showModal(opts) {
       audit('Control status changed', 'Control', key, prevSt, v);
       renderSoa(); renderDash();
       await offerCrossFrameworkPropagation(c);
+    },
+
+    toggleSoaSel: function (key) {
+      var cb = document.querySelector('.soa-sel[data-id="' + CSS.escape(key) + '"]');
+      if (cb && cb.checked) _soaSel.add(key); else _soaSel.delete(key);
+      var row = document.querySelector('#soaRows tr[data-id="' + CSS.escape(key) + '"]');
+      if (row) row.classList.toggle('soa-row-sel', _soaSel.has(key));
+      /* Only the bar is re-rendered, never the table — redrawing 92
+         rows on every tick would lose the checkbox the practitioner is
+         still moving down the list with. */
+      renderSoaBulkBar();
+    },
+    soaSelectAllShown: function () {
+      soaShownKeys().forEach(function (k) { _soaSel.add(k); });
+      renderSoa();
+    },
+    clearSoaSel: function () { _soaSel.clear(); renderSoa(); },
+
+    /* One confirmation for the whole batch, not one per control. setSt()
+       asks before marking a single control Implemented with no linked
+       evidence; asking that 20 times in a row would train a
+       practitioner to click through it, which is worse than not asking.
+       The batch version names how many of the selection it applies to
+       and asks once.
+
+       Writes are sequential rather than Promise.all: Store.updateControl
+       PATCHes a SharePoint list item, and the same concurrency that
+       made two overlapping scans collide with 412s applies here. One
+       audit entry per control is deliberate — the audit log is evidence,
+       and "20 controls changed" is not something an auditor can sample. */
+    /* One argument, not two: the global change dispatcher passes
+       el.value as the FIRST argument for a control with no data-id
+       (see its `runAction(fn, el.value)` branch), and this select
+       deliberately has none — it acts on the selection, not on a row. */
+    bulkSoaStatus: async function (value) {
+      var v = value || '';
+      if (!v) return;
+      var controls = soaSelControls().filter(function (c) { return c.app; });
+      if (!controls.length) { renderSoa(); return; }
+      if (v === 'Implemented') {
+        var noEvidence = controls.filter(function (c) { return !c.evidenceUrl; });
+        if (noEvidence.length) {
+          var proceed = await showModal({
+            title: 'No evidence linked',
+            message: noEvidence.length + ' of the ' + controls.length + ' selected control' +
+              (controls.length === 1 ? '' : 's') + ' would be marked Implemented with no linked evidence. ' +
+              'Auditors typically require evidence for every implemented control — continue anyway?',
+            confirmText: 'Mark ' + controls.length + ' Implemented'
+          });
+          if (!proceed) { renderSoa(); return; }
+        }
+      }
+      busy(true);
+      try {
+        for (var i = 0; i < controls.length; i++) {
+          var c = controls[i];
+          if (c.st === v) continue;
+          var prevSt = c.st;
+          c.st = v;
+          try { await Store.updateControl(c); } catch (e) { warn(e); }
+          audit('Control status changed', 'Control', c.fw + '|' + c.id, prevSt, v);
+        }
+      } finally { busy(false); }
+      log('<b>' + controls.length + ' control' + (controls.length === 1 ? '' : 's') + '</b> set to ' + esc(v) + '.');
+      toast(controls.length + ' control' + (controls.length === 1 ? '' : 's') + ' set to ' + v);
+      _soaSel.clear();
+      renderSoa(); renderDash();
+    },
+    bulkSoaApplicable: async function (yesNo) {
+      var app = yesNo === 'yes';
+      var controls = soaSelControls().filter(function (c) { return !!c.app !== app; });
+      if (!controls.length) { renderSoa(); return; }
+      busy(true);
+      try {
+        for (var i = 0; i < controls.length; i++) {
+          var c = controls[i];
+          var prev = c.app ? 'Applicable' : 'Not applicable';
+          c.app = app;
+          try { await Store.updateControl(c); } catch (e) { warn(e); }
+          audit('Control applicability changed', 'Control', c.fw + '|' + c.id, prev, app ? 'Applicable' : 'Not applicable');
+        }
+      } finally { busy(false); }
+      log('<b>' + controls.length + ' control' + (controls.length === 1 ? '' : 's') + '</b> marked ' + (app ? 'applicable' : 'not applicable') + '.');
+      /* Excluding a control without recording why is the first thing a
+         certification auditor tests (ISO 27001 clause 6.1.3(d)), and the
+         table flags each one inline — so the batch says so once rather
+         than leaving it to be discovered 20 rows later. */
+      toast(controls.length + ' control' + (controls.length === 1 ? '' : 's') + ' marked ' + (app ? 'applicable' : 'not applicable') +
+        (app ? '' : ' — add a justification to each before an audit'));
+      _soaSel.clear();
+      renderSoa(); renderDash();
     },
 
     verifyControl: async function (key) {

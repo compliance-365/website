@@ -874,6 +874,11 @@
            table below; aria-live so a screen reader hears the table narrow,
            since the tile that did it is well above this point on the page. -->
       <div class="focus-bar" id="soaFocusBar" role="status" aria-live="polite" hidden></div>
+      <!-- Bulk action bar. Sits directly above the table it acts on, and
+           between the focus bar and the rows, so "12 selected" is read
+           in the same glance as the rows that are ticked. Rendered by
+           renderSoaBulkBar(); hidden whenever nothing is selected. -->
+      <div class="bulk-bar" id="soaBulkBar" role="region" aria-label="Bulk actions" hidden></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Applicable</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
     </section>
 

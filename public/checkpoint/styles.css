@@ -195,8 +195,23 @@
   /* A sticky <thead> sits directly under the topbar; the Statement of
      Applicability's family headers then sit under BOTH. Kept as a
      derived token so the family offset can never disagree with the
-     header height it is supposed to clear. */
-  --thead-h:38px;
+     header height it is supposed to clear.
+     40px, MEASURED in the browser (th is padding:12px top and bottom
+     around an 11px/--fs-1 line box, which lays out at 16px), not the
+     38px this started as — inherited from the offset of the sticky
+     thead that never actually stuck, so nothing had ever rendered it.
+     Two pixels is enough: at 38px the family header sat under the
+     column names it is supposed to clear, which reads as a rendering
+     glitch rather than an off-by-two. */
+  --thead-h:40px;
+  /* Height of a bulk-action bar sticking above a table, published by
+     renderSoaBulkBar() onto the view element when one is showing so the
+     sticky <thead> and family headers can offset by it. Declared here
+     with the no-bar default rather than relying on a var() fallback:
+     an inline-only custom property is exactly what
+     styles-tokens.test.mjs exists to catch, and 0px is also the right
+     answer for every table that never has a bar. */
+  --bulk-h:0px;
 
   /* Strict type scale — six steps, everything in the stylesheet below
      now resolves to one of these (nearest-neighbour, consolidating what
@@ -890,6 +905,36 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    read at the moment the short table would otherwise look like missing
    data rather than a filter. Shared by every register whose summary
    tiles filter — was .soa-focus-bar when only one did. */
+/* ===== Bulk action bar =====
+   Deliberately the SAME shape as .focus-bar directly above it (both sit
+   between a register's summary and its rows and both describe a subset)
+   but filled rather than tinted, because this one is a mode: while it is
+   showing, a control here writes to every ticked row at once. Sticky, so
+   scrolling 92 rows to tick the last one never leaves the actions the
+   selection is for off-screen. Sits below the sticky <thead> for the
+   same reason the family headers do. */
+.bulk-bar{position:sticky;top:var(--topbar-h);z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:11px 16px;border:1px solid var(--accent-fill);border-radius:var(--r-sm);background:var(--surface-raised);box-shadow:var(--elev-2);font-size:var(--fs-2);color:var(--paper-dim)}
+.bulk-bar .bulk-count{color:var(--paper)}
+.bulk-bar .bulk-count b{font-variant-numeric:tabular-nums;font-size:var(--fs-3);font-weight:800;color:var(--accent-ink);margin-right:4px}
+.bulk-bar .bulk-sep{width:1px;align-self:stretch;background:var(--line)}
+.bulk-bar .bulk-field{display:inline-flex;align-items:center;gap:8px}
+.bulk-bar .bulk-field > span{font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
+/* Pushes the two quiet text actions to the far end, away from the
+   destructive-adjacent buttons, so "Clear selection" is never the thing
+   a hand lands on by accident after "Mark not applicable". */
+.bulk-bar .bulk-spacer{flex:1 1 auto}
+/* The row checkbox and its selected-row wash. The checkbox is inside the
+   Control cell (see _soaSel in app.js), so it needs its own spacing
+   rather than a column's. accent-color paints the native control in the
+   brand fill in both themes without rebuilding it. */
+.soa-sel{accent-color:var(--accent-fill);width:15px;height:15px;margin-right:9px;vertical-align:-2px;cursor:pointer}
+/* A ticked row has to be obvious while scanning a long table — the
+   checkbox alone is 15px of signal in a full-width row. Left bar plus a
+   wash, the same pairing .kpi-on uses, so the state survives a
+   screenshot and a monochrome display. */
+.soa-row-sel > td{background:rgba(var(--gold-rgb),.08);box-shadow:inset 3px 0 0 var(--accent-fill)}
+.soa-row-sel > td:not(:first-child){box-shadow:none}
+@media(max-width:860px){.bulk-bar{position:static}}
 .focus-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:11px 16px;border:1px solid rgba(var(--gold-light-rgb),.35);border-left:3px solid var(--gold);border-radius:var(--r-sm);background:rgba(var(--gold-rgb),.07);font-size:var(--fs-2);color:var(--paper-dim)}
 .focus-bar b{color:var(--paper);font-variant-numeric:tabular-nums}
 .status-quiet{display:inline-flex;align-items:center;gap:7px;color:var(--paper-dim);white-space:nowrap}
@@ -1290,8 +1335,15 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
    above the family rows, which sit above ordinary cells. */
 @media (min-width:1400px){
   .card:has(table){overflow:visible}
-  .card:has(table) thead th{position:sticky;top:var(--topbar-h);z-index:3;background:var(--surface)}
-  .card:has(table) .soa-family th{top:calc(var(--topbar-h) + var(--thead-h))}
+  /* --bulk-h is 0 unless a bulk bar is showing above this table, in
+     which case renderSoaBulkBar() sets it to the bar's measured height
+     on the view. Three sticky things then stack in DOM order rather
+     than landing on each other: topbar, bulk bar, <thead>, family
+     header. Measured rather than a constant because the bar wraps to
+     two lines on a narrow desktop, and a hard-coded height would let
+     the column names slide under it exactly when the bar is tallest. */
+  .card:has(table) thead th{position:sticky;top:calc(var(--topbar-h) + var(--bulk-h));z-index:3;background:var(--surface)}
+  .card:has(table) .soa-family th{top:calc(var(--topbar-h) + var(--bulk-h) + var(--thead-h))}
 }
 .soa-family th{position:sticky;top:var(--thead-h);z-index:2;background:var(--surface-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 14px;text-transform:none;letter-spacing:0}
 .soa-family span{color:var(--accent-ink);font-size:var(--fs-2);font-weight:700;letter-spacing:.02em}
