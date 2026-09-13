@@ -97,9 +97,24 @@ describe('styles.css — sticky header offsets', () => {
       'px — every sticky <thead> is offset by the wrong amount');
   });
 
-  test('the family header clears the sticky thead above it', () => {
-    assert.match(code, /\.soa-family th\{top:calc\(var\(--topbar-h\) \+ var\(--thead-h\)\)\}|\.card:has\(table\) \.soa-family th\{top:calc\(var\(--topbar-h\) \+ var\(--thead-h\)\)\}/,
-      'the SoA family header must offset by topbar + thead, or it overlaps the column names');
+  /* Four things stick at once on the SoA — topbar, an optional bulk
+     bar, the <thead>, then the family headers — and each must clear
+     everything above it. The offsets are what encode that order, and
+     getting one wrong does not throw: it just draws one sticky element
+     on top of another, which reads as a rendering glitch. */
+  test('the family header clears the bulk bar and thead above it', () => {
+    assert.match(code, /\.soa-family th\{top:calc\(var\(--topbar-h\) \+ var\(--bulk-h\) \+ var\(--thead-h\)\)\}/,
+      'the SoA family header must offset by topbar + bulk bar + thead, or it overlaps the column names');
+  });
+
+  test('the sticky thead clears the bulk bar above it', () => {
+    assert.match(code, /thead th\{position:sticky;top:calc\(var\(--topbar-h\) \+ var\(--bulk-h\)\)/,
+      'the sticky <thead> must offset by topbar + bulk bar, or the bar covers the column names');
+  });
+
+  test('the bulk bar sits directly under the topbar', () => {
+    assert.match(code, /\.bulk-bar\{position:sticky;top:var\(--topbar-h\)/,
+      'the bulk bar is the first sticky thing under the topbar');
   });
 
   test('no table card re-declares overflow inline, which would defeat sticky', () => {
