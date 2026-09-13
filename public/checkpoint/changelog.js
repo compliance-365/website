@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.66.0',
+    date: '2026-09-13',
+    entries: [
+      'The Statement of Applicability can now be edited in bulk. Tick any number of controls and set their status, or mark them applicable or not applicable, in one go -- walking a framework after a gap analysis no longer means opening ninety dropdowns one at a time. The evidence warning that appears when you mark a control Implemented without linked evidence is asked once for the whole batch, naming how many it applies to, rather than once per control; each control still gets its own audit-log entry, because that is what an auditor samples. Marking controls not applicable reminds you that each one needs a justification (ISO 27001 clause 6.1.3(d)). Viewers see no checkboxes, as with every other editing control.',
+      'The accent colour now follows the same rules as the Compliance 365 website. Deep orange remains the brand fill on every button, active filter and rule, but text that used to be painted in it -- card headings, section labels -- now uses the legible end of the orange ramp for whichever background it sits on. As text on the dark theme the old value measured 3.41:1, under the 4.5:1 accessibility minimum, and button labels sat at 4.03:1; both now pass, and a sweep across twelve views finds no remaining text below the minimum in either theme.',
+      'The Risk register opens with a summary strip -- open risks, high/critical residual, above risk appetite, and risks with no owner -- matching every other register in the app, and sitting beside the heatmap rather than leaving that half of the page empty. Each tile filters the table below it, and the "above risk appetite" count is now computed in one place shared with the Dashboard banner, so the two can never report different numbers.',
+      'Fixed: every view now redraws when you navigate to it. Eight views, the Dashboard and Risk register among them, were never refreshed on navigation and could show figures computed some time earlier -- most visibly, switching to the light theme left the risk heatmap\'s counts nearly invisible until something else happened to redraw them.',
+      'Fixed: keyboard focus is visible again on the status dropdowns and other compact inputs, which had lost their focus ring; the on/off switches now have a large enough tap target on touch; and the status dropdowns, framework target-level selects and Settings inputs now announce what they control to a screen reader instead of only their current value.'
+    ]
+  },
+  {
     version: '1.65.0',
     date: '2026-09-13',
     entries: [
