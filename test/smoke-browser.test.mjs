@@ -244,7 +244,11 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     const registers = [
       { view: 'soa', rows: '#soaRows', box: '.soa-sel', bar: '#soaBulkBar', value: 'In progress' },
       { view: 'actions', rows: '#actRows', box: '.act-sel', bar: '#actBulkBar', value: 'In progress' },
-      { view: 'vendors', rows: '#vendorRows', box: '.vendor-sel', bar: '#vendorBulkBar', value: 'Low' }
+      { view: 'vendors', rows: '#vendorRows', box: '.vendor-sel', bar: '#vendorBulkBar', value: 'Low' },
+      /* Documents loads its rows from Store.listDocuments() rather than
+         from S, so its checkboxes appear a beat after the view does —
+         the waitForSelector below is what makes that a non-issue. */
+      { view: 'documents', rows: '#docRows', box: '.doc-sel', bar: '#docBulkBar', value: 'Approved' }
     ];
 
     for (const r of registers) {

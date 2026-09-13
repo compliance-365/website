@@ -701,6 +701,7 @@ function showModal(opts) {
     'bulkSoaStatus', 'bulkSoaApplicable',
     'bulkActStatus', 'bulkActPriority', 'bulkActOwner',
     'bulkVendorCriticality', 'bulkVendorOwner', 'bulkVendorReviewed',
+    'bulkDocStatus', 'bulkDocOwner',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
@@ -6485,6 +6486,20 @@ function showModal(opts) {
       renderActions(); renderNavCounts(); renderDash();
     });
   }
+  /* Store.updateDocumentMeta takes (itemId, values) rather than the
+     record, so the write closure rebuilds the value object from the
+     record mutate() has just changed — the same fields the per-document
+     editor sends. */
+  async function applyBulkDocEdit(rows, mutate, message) {
+    await applyBulkEdit(rows, function (d) {
+      var e = mutate(d); e.kind = 'Document'; return e;
+    }, function (d) {
+      return Store.updateDocumentMeta(d.id, { owner: d.owner || '', version: d.version || '', status: d.status || '' });
+    }, message, function () {
+      _docSel.clear();
+      renderDocuments(); renderNavCounts(); renderDash();
+    });
+  }
   async function applyBulkVendorEdit(rows, mutate, message, syncCalendar) {
     await applyBulkEdit(rows, function (v) {
       var e = mutate(v); e.kind = 'Vendor'; return e;
@@ -6497,6 +6512,39 @@ function showModal(opts) {
       _vendorSel.clear();
       renderVendors(); renderNavCounts(); renderDash();
       if (syncCalendar) renderCalendar();
+    });
+  }
+
+  /* Documents. Keyed by the SharePoint item id, and the record lives in
+     window._docs (Store.listDocuments' result) rather than S, so the
+     lookup differs from the registers above — everything else is the
+     same shell.
+
+     Owner and status only. Those are the two practitioner-maintained
+     fields on a controlled document (clause 7.5.2's "owner" and
+     "approval status"), and they are exactly the ones that get set
+     twenty times in a row after a bulk upload. Version is deliberately
+     absent: setting one version string across a selection of unrelated
+     documents is almost always wrong, and the per-document editor
+     already does it properly alongside the approval fields. */
+  var _docSel = new Set();
+  function docShownKeys() {
+    return Array.from(document.querySelectorAll('#docRows tr[data-id] .doc-sel'))
+      .map(function (cb) { return cb.getAttribute('data-id'); });
+  }
+  function selectedDocs() {
+    return Array.from(_docSel).map(function (id) {
+      return (window._docs || []).find(function (d) { return d.id === id; });
+    }).filter(Boolean);
+  }
+  function renderDocBulkBar() {
+    renderBulkBar({
+      barId: 'docBulkBar', viewId: 'v-documents', sel: _docSel, shownKeys: docShownKeys,
+      selectAllAction: 'App.docSelectAllShown', clearAction: 'App.clearDocSel',
+      fields: function () {
+        return bulkSelect('App.bulkDocStatus', 'Set status', window.DOC_STATUSES || []) +
+          '<button class="btn ghost sm" data-action="App.bulkDocOwner">Set owner…</button>';
+      }
     });
   }
 
@@ -7229,8 +7277,9 @@ function showModal(opts) {
             actions.push('<button class="btn ghost sm" data-action="App.exportPolicyWord" data-id="' + esc(d.name) + '">Word</button>');
           }
         }
-        return '<tr>' +
+        return '<tr data-id="' + esc(d.id) + '"' + (_docSel.has(d.id) ? ' class="row-sel"' : '') + '>' +
           '<td style="color:var(--paper)">' +
+            bulkCheckbox('doc-sel', 'App.toggleDocSel', d.id, d.name, _docSel.has(d.id)) +
             (d.url
               ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link" style="font-size:inherit">' + esc(d.name) + ' ' + icon('external') + '</a>'
               : esc(d.name)) +
@@ -7247,6 +7296,7 @@ function showModal(opts) {
              for. */
           '<td style="white-space:nowrap;text-align:right">' + actions.join(' ') + '</td></tr>';
       }).join('');
+      renderDocBulkBar();
       revealRows(rows);
     }).catch(function (e) {
       warn(e);
@@ -11816,6 +11866,43 @@ function showModal(opts) {
     },
 
     /* ===== Vendor risk bulk edits ===== */
+    toggleDocSel: function (id) {
+      var cb = document.querySelector('.doc-sel[data-id="' + CSS.escape(id) + '"]');
+      if (cb && cb.checked) _docSel.add(id); else _docSel.delete(id);
+      var row = document.querySelector('#docRows tr[data-id="' + CSS.escape(id) + '"]');
+      if (row) row.classList.toggle('row-sel', _docSel.has(id));
+      renderDocBulkBar();
+    },
+    docSelectAllShown: function () { docShownKeys().forEach(function (k) { _docSel.add(k); }); renderDocuments(); },
+    clearDocSel: function () { _docSel.clear(); renderDocuments(); },
+    bulkDocStatus: async function (value) {
+      var v = value || '';
+      if (!v) return;
+      var rows = selectedDocs().filter(function (d) { return docStatusOf(d) !== v; });
+      await applyBulkDocEdit(rows, function (d) {
+        var prev = docStatusOf(d) || 'unset'; d.status = v;
+        return { field: 'Document status changed', from: prev, to: v };
+      }, rows.length + ' document' + (rows.length === 1 ? '' : 's') + ' set to ' + v);
+    },
+    bulkDocOwner: async function () {
+      var sel = selectedDocs();
+      if (!sel.length) return;
+      var vals = await showModal({
+        title: 'Set owner on ' + sel.length + ' document' + (sel.length === 1 ? '' : 's'),
+        message: 'ISO 27001 clause 7.5.2 expects every controlled document to carry an owner.',
+        fields: [{ id: 'owner', label: 'Document owner (name or role)', value: '', placeholder: 'e.g. ISMS Manager' }],
+        confirmText: 'Set owner'
+      });
+      if (!vals) return;
+      var owner = String(vals.owner || '').trim();
+      if (!owner) { toastError('Owner cannot be empty.'); return; }
+      var rows = sel.filter(function (d) { return d.owner !== owner; });
+      await applyBulkDocEdit(rows, function (d) {
+        var prev = d.owner; d.owner = owner;
+        return { field: 'Document owner changed', from: prev || 'unassigned', to: owner };
+      }, rows.length + ' document' + (rows.length === 1 ? '' : 's') + ' assigned to ' + owner);
+    },
+
     toggleVendorSel: function (id) {
       var cb = document.querySelector('.vendor-sel[data-id="' + CSS.escape(id) + '"]');
       if (cb && cb.checked) _vendorSel.add(id); else _vendorSel.delete(id);

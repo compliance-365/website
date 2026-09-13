@@ -967,7 +967,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    Control cell (see _soaSel in app.js), so it needs its own spacing
    rather than a column's. accent-color paints the native control in the
    brand fill in both themes without rebuilding it. */
-.soa-sel,.act-sel,.vendor-sel{accent-color:var(--accent-fill);width:15px;height:15px;margin-right:9px;vertical-align:-2px;cursor:pointer}
+.soa-sel,.act-sel,.vendor-sel,.doc-sel{accent-color:var(--accent-fill);width:15px;height:15px;margin-right:9px;vertical-align:-2px;cursor:pointer}
 /* A ticked row has to be obvious while scanning a long table — the
    checkbox alone is 15px of signal in a full-width row. Left bar plus a
    wash, the same pairing .kpi-on uses, so the state survives a
