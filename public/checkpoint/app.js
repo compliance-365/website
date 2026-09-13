@@ -3878,14 +3878,11 @@ function showModal(opts) {
       if (heroGridEl) heroGridEl.classList.toggle('solo', !nextActions.length);
     }
 
-    /* risk appetite breach banner */
+    /* risk appetite breach banner — shares risksAboveAppetite() with the
+       Risk register's own "Above risk appetite" tile, so the two can
+       never report different counts. */
     var appetite = (S.settings && S.settings.riskAppetite) || 'Medium';
-    var appetiteRank = SEV_RANK[appetite] || 2;
-    var breaches = S.risks.filter(function (r) {
-      if (r.status === 'Closed') return false;
-      var q = residual(r);
-      return SEV_RANK[band(q.L * q.I)] > appetiteRank;
-    });
+    var breaches = risksAboveAppetite();
     var bannerEl = document.getElementById('appetiteBanner');
     if (bannerEl) {
       var appetiteFeatOn = featureOn('featAppetite');
@@ -4952,8 +4949,64 @@ function showModal(opts) {
     }).join('') + '</div>';
   }
 
+  /* Open risks scoring above the tenant's stated appetite. One
+     definition, two readers: the Dashboard's appetite banner and the
+     Risk register's own summary tile. They used to be one inline
+     filter with no second caller; making the tile re-derive it would be
+     exactly how a banner saying "4 risks exceed your appetite" ends up
+     next to a tile saying 5. Same reasoning as soaFocusRows(). */
+  function risksAboveAppetite() {
+    var appetiteRank = SEV_RANK[(S.settings && S.settings.riskAppetite) || 'Medium'] || 2;
+    return (S.risks || []).filter(function (r) {
+      if (r.status === 'Closed') return false;
+      var q = residual(r);
+      return SEV_RANK[band(q.L * q.I)] > appetiteRank;
+    });
+  }
+
+  /* Summary strip for the Risk register — the one register that never
+     had one. Every other one (Statement of Applicability, Actions,
+     Vendors, AI systems, Documents, Training, Policy attestation)
+     answers "what needs my attention" before the practitioner reaches
+     the table; this one opened with a 560px heatmap card sitting alone
+     on a 1208px row, so the space that answer belongs in was empty.
+     Same kpiTile() builder and the same filter-the-table-below
+     behaviour as the rest, so it is the established pattern arriving
+     late rather than a new component. */
+  function renderRisksDashboard() {
+    var el = document.getElementById('riskKpiRow');
+    if (!el) return;
+    var open = (S.risks || []).filter(function (r) { return r.status !== 'Closed'; });
+    var highCrit = open.filter(function (r) { var q = residual(r); var b = band(q.L * q.I); return b === 'Critical' || b === 'High'; });
+    var overAppetite = risksAboveAppetite();
+    var unowned = open.filter(function (r) { return !String(r.owner || '').trim(); });
+    var focus = window._riskF || 'All';
+    el.innerHTML =
+      /* The denominator the three meters beside it are drawn against,
+         so it is deliberately static — clicking it would mean "show
+         all", which is what the All pill already does. */
+      kpiTile({ value: open.length, label: 'Open risks',
+        sub: (S.risks || []).length - open.length ? ((S.risks || []).length - open.length) + ' closed' : 'none closed yet' }) +
+      kpiTile({ key: 'HighCritical', value: highCrit.length, label: 'High / critical residual', tone: 'fail',
+        meter: { value: highCrit.length, max: open.length },
+        action: 'App.filterRisk', focus: focus,
+        title: 'Show only these risks in the table below' }) +
+      kpiTile({ key: 'AboveAppetite', value: overAppetite.length, label: 'Above risk appetite', tone: 'warn',
+        sub: 'appetite is ' + esc((S.settings && S.settings.riskAppetite) || 'Medium'),
+        meter: { value: overAppetite.length, max: open.length },
+        action: 'App.filterRisk', focus: focus,
+        title: 'Show only these risks in the table below' }) +
+      kpiTile({ key: 'NoOwner', value: unowned.length, label: 'No risk owner', tone: 'warn',
+        sub: unowned.length ? 'an auditor samples ownership' : 'every open risk is owned',
+        meter: { value: unowned.length, max: open.length },
+        action: 'App.filterRisk', focus: focus,
+        title: 'Show only these risks in the table below' });
+    runCountUps(el);
+  }
+
   function renderRisks() {
     renderResidualHeatmapInto('riskHeat', 'riskHeatLegend');
+    renderRisksDashboard();
     var f = window._riskF || 'All';
     /* 'HighCritical' is a synthetic filter value, never one of the pills'
        own data-id — it exists only so a drill-down link (Dashboard/Board
@@ -4962,6 +5015,11 @@ function showModal(opts) {
        the Critical and High pills show as active for it, and clicking
        either one afterwards narrows to that single band as normal. */
     document.getElementById('riskFilters').innerHTML = ['All', 'Critical', 'High', 'Medium', 'Low'].map(function (x) {
+      /* 'AboveAppetite'/'NoOwner' are tile-only filters that cut across
+         severity, so no severity pill is their equivalent — including
+         'All', which would otherwise read as "nothing is filtered"
+         while the table shows a subset. The focus bar below says what
+         is actually applied. */
       var on = f === x || (f === 'HighCritical' && (x === 'Critical' || x === 'High'));
       return '<button class="f-pill' + (on ? ' on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') + '" data-action="App.filterRisk" data-id="' + x + '">' + x + '</button>';
     }).join('');
@@ -4976,6 +5034,17 @@ function showModal(opts) {
       var q = residual(r);
       if (cellFilter) return q.L === cellFilter.L && q.I === cellFilter.I;
       if (f === 'All') return true;
+      /* Two more synthetic filter values alongside 'HighCritical' — set
+         only by the summary tiles, never by a severity pill, and each
+         resolved through the SAME function its tile counted with so the
+         number on the tile and the rows it opens cannot disagree. Both
+         are about open risks, so a closed one never appears under them
+         however it scores. */
+      if (f === 'AboveAppetite') {
+        if (r.status === 'Closed') return false;
+        return risksAboveAppetite().some(function (x) { return x.id === r.id; });
+      }
+      if (f === 'NoOwner') return r.status !== 'Closed' && !String(r.owner || '').trim();
       var rb = band(q.L * q.I);
       if (f === 'HighCritical') return rb === 'Critical' || rb === 'High';
       return rb === f;

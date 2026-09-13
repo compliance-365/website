@@ -573,11 +573,21 @@
     <!-- RISKS -->
     <section class="view" id="v-risks">
       <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual scores recalculate automatically as linked actions complete.</p></div>
-      <div class="card" style="margin-bottom:16px;max-width:560px">
-        <h3>Residual risk heatmap</h3>
-        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Every open risk plotted by likelihood × impact — where the register is actually concentrated, at a glance.</p>
-        <div class="heat" id="riskHeat"></div>
-        <div class="heat-legend" id="riskHeatLegend"></div>
+      <!-- Heatmap and summary strip share one row. The heatmap is
+           deliberately ~560px (its cells have to stay square, so
+           stretching it to the full 1208px content column would be
+           wrong), which left roughly 650px of empty page beside the
+           lead visual of this register. The summary tiles the other
+           seven registers all have now fill it — see
+           renderRisksDashboard(). -->
+      <div class="grid risk-head">
+        <div class="card">
+          <h3>Residual risk heatmap</h3>
+          <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Every open risk plotted by likelihood × impact — where the register is actually concentrated, at a glance.</p>
+          <div class="heat" id="riskHeat"></div>
+          <div class="heat-legend" id="riskHeatLegend"></div>
+        </div>
+        <div class="grid kpis" id="riskKpiRow"></div>
       </div>
       <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button><button class="btn ghost sm" data-action="App.importCsv" data-id="risks">Import CSV</button></div>
       <div class="card" id="addRiskPanel" style="margin-bottom:16px;display:none">
