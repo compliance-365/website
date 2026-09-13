@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.68.0',
+    date: '2026-09-13',
+    entries: [
+      'Fixed an accessibility defect worth knowing about: after opening and closing any record\'s detail panel, the panel\'s buttons stayed reachable by keyboard even though it was off screen. Tabbing from the top of the page went through five invisible controls, the last of them Delete -- which would prompt to permanently remove a record the user could not see. The panel now leaves the keyboard order when it closes.',
+      'Added a "Skip to content" link. The sidebar has 30 destinations, so anyone navigating by keyboard or screen reader had to tab through all of them to reach the content of the view they were already on, on every view.',
+      'Internal audits, Incidents, Management review and the Compliance calendar now open with a summary strip, matching every other register -- audits past their planned date, incidents still open or with a privacy assessment outstanding, days since the last management review, and calendar activities overdue or due within 30 days. The Audit log deliberately has none: it is an append-only record with nothing to triage.',
+      'Documents can now be bulk-edited -- tick any number and set their status or owner at once, the two fields ISO 27001 clause 7.5.2 expects every controlled document to carry. Training and Policy attestation deliberately do not offer this: those rows record what another person did (acknowledged a policy, passed a comprehension check), and editing them in bulk would mean marking colleagues as trained on their behalf. Chasing outstanding ones stays where it belongs, as a campaign reminder.'
+    ]
+  },
+  {
     version: '1.67.0',
     date: '2026-09-13',
     entries: [

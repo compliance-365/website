@@ -701,6 +701,7 @@ function showModal(opts) {
     'bulkSoaStatus', 'bulkSoaApplicable',
     'bulkActStatus', 'bulkActPriority', 'bulkActOwner',
     'bulkVendorCriticality', 'bulkVendorOwner', 'bulkVendorReviewed',
+    'bulkDocStatus', 'bulkDocOwner',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
@@ -6485,6 +6486,20 @@ function showModal(opts) {
       renderActions(); renderNavCounts(); renderDash();
     });
   }
+  /* Store.updateDocumentMeta takes (itemId, values) rather than the
+     record, so the write closure rebuilds the value object from the
+     record mutate() has just changed — the same fields the per-document
+     editor sends. */
+  async function applyBulkDocEdit(rows, mutate, message) {
+    await applyBulkEdit(rows, function (d) {
+      var e = mutate(d); e.kind = 'Document'; return e;
+    }, function (d) {
+      return Store.updateDocumentMeta(d.id, { owner: d.owner || '', version: d.version || '', status: d.status || '' });
+    }, message, function () {
+      _docSel.clear();
+      renderDocuments(); renderNavCounts(); renderDash();
+    });
+  }
   async function applyBulkVendorEdit(rows, mutate, message, syncCalendar) {
     await applyBulkEdit(rows, function (v) {
       var e = mutate(v); e.kind = 'Vendor'; return e;
@@ -6497,6 +6512,39 @@ function showModal(opts) {
       _vendorSel.clear();
       renderVendors(); renderNavCounts(); renderDash();
       if (syncCalendar) renderCalendar();
+    });
+  }
+
+  /* Documents. Keyed by the SharePoint item id, and the record lives in
+     window._docs (Store.listDocuments' result) rather than S, so the
+     lookup differs from the registers above — everything else is the
+     same shell.
+
+     Owner and status only. Those are the two practitioner-maintained
+     fields on a controlled document (clause 7.5.2's "owner" and
+     "approval status"), and they are exactly the ones that get set
+     twenty times in a row after a bulk upload. Version is deliberately
+     absent: setting one version string across a selection of unrelated
+     documents is almost always wrong, and the per-document editor
+     already does it properly alongside the approval fields. */
+  var _docSel = new Set();
+  function docShownKeys() {
+    return Array.from(document.querySelectorAll('#docRows tr[data-id] .doc-sel'))
+      .map(function (cb) { return cb.getAttribute('data-id'); });
+  }
+  function selectedDocs() {
+    return Array.from(_docSel).map(function (id) {
+      return (window._docs || []).find(function (d) { return d.id === id; });
+    }).filter(Boolean);
+  }
+  function renderDocBulkBar() {
+    renderBulkBar({
+      barId: 'docBulkBar', viewId: 'v-documents', sel: _docSel, shownKeys: docShownKeys,
+      selectAllAction: 'App.docSelectAllShown', clearAction: 'App.clearDocSel',
+      fields: function () {
+        return bulkSelect('App.bulkDocStatus', 'Set status', window.DOC_STATUSES || []) +
+          '<button class="btn ghost sm" data-action="App.bulkDocOwner">Set owner…</button>';
+      }
     });
   }
 
@@ -7229,8 +7277,9 @@ function showModal(opts) {
             actions.push('<button class="btn ghost sm" data-action="App.exportPolicyWord" data-id="' + esc(d.name) + '">Word</button>');
           }
         }
-        return '<tr>' +
+        return '<tr data-id="' + esc(d.id) + '"' + (_docSel.has(d.id) ? ' class="row-sel"' : '') + '>' +
           '<td style="color:var(--paper)">' +
+            bulkCheckbox('doc-sel', 'App.toggleDocSel', d.id, d.name, _docSel.has(d.id)) +
             (d.url
               ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link" style="font-size:inherit">' + esc(d.name) + ' ' + icon('external') + '</a>'
               : esc(d.name)) +
@@ -7247,6 +7296,7 @@ function showModal(opts) {
              for. */
           '<td style="white-space:nowrap;text-align:right">' + actions.join(' ') + '</td></tr>';
       }).join('');
+      renderDocBulkBar();
       revealRows(rows);
     }).catch(function (e) {
       warn(e);
@@ -7948,9 +7998,111 @@ function showModal(opts) {
     return { ok: ok, failed: failed };
   }
 
+  /* ===== Summary strips for the assurance registers =====
+     The Statement of Applicability, Actions, Risk, Vendors, AI systems,
+     Documents, Training and Policy attestation all open with a strip
+     answering "what needs my attention" before the practitioner reaches
+     the table. Internal audits, Incidents, Management review and the
+     Compliance calendar did not, and they are the registers an auditor
+     samples hardest.
+
+     The Audit log deliberately gets none. It is an append-only record
+     with nothing to triage — no status to be overdue, no row to action —
+     so a count tile there would be decoration, which is the same test
+     kpiMeter() applies to itself. A strip is added where it answers a
+     question, not to make eight registers look alike.
+
+     These four are context rather than filters: none of these registers
+     has filter pills to drive, and inventing a filter per register to
+     justify a tile would be the tail wagging the dog. kpiTile() renders
+     a non-filtering tile as a plain div already — the same treatment
+     "Total vendors" gets. */
+  function renderAuditsDashboard() {
+    var el = document.getElementById('auditKpiRow');
+    if (!el) return;
+    var audits = S.audits || [];
+    var today = new Date().toISOString().slice(0, 10);
+    var planned = audits.filter(function (a) { return a.status === 'Planned'; });
+    var overdue = planned.filter(function (a) { return a.planned && a.planned < today; });
+    var completed = audits.filter(function (a) { return a.status === 'Completed'; });
+    el.innerHTML =
+      kpiTile({ value: audits.length, label: 'Audits in programme',
+        sub: audits.length ? 'ISO 27001 clause 9.2' : 'clause 9.2 expects a recurring programme' }) +
+      kpiTile({ value: planned.length, label: 'Planned', meter: { value: planned.length, max: audits.length },
+        sub: planned.length ? 'not yet completed' : 'nothing scheduled' }) +
+      kpiTile({ value: overdue.length, label: 'Past their planned date', tone: 'fail',
+        meter: { value: overdue.length, max: audits.length },
+        sub: overdue.length ? 'an auditor asks why' : 'none overdue' }) +
+      kpiTile({ value: completed.length, label: 'Completed', meter: { value: completed.length, max: audits.length } });
+    runCountUps(el);
+  }
+  function renderIncidentsDashboard() {
+    var el = document.getElementById('incidentKpiRow');
+    if (!el) return;
+    var incidents = S.incidents || [];
+    var open = incidents.filter(function (n) { return n.status !== 'Closed'; });
+    var severe = open.filter(function (n) { return n.severity === 'Critical' || n.severity === 'High'; });
+    /* Outstanding privacy assessment — the same definition
+       incidentAssessmentChip() paints per row, so the tile and the
+       column can never disagree. */
+    var assessPending = incidents.filter(function (n) { return n.assessmentDueDate && !n.assessmentComplete; });
+    el.innerHTML =
+      kpiTile({ value: incidents.length, label: 'Incidents logged',
+        sub: incidents.length ? 'ISO 27001 A.5.24–A.5.28' : 'nothing logged yet' }) +
+      kpiTile({ value: open.length, label: 'Still open', tone: 'warn',
+        meter: { value: open.length, max: incidents.length },
+        sub: open.length ? 'not yet closed out' : 'every incident closed' }) +
+      kpiTile({ value: severe.length, label: 'Open, high or critical', tone: 'fail',
+        meter: { value: severe.length, max: incidents.length } }) +
+      kpiTile({ value: assessPending.length, label: 'Privacy assessment outstanding', tone: 'warn',
+        meter: { value: assessPending.length, max: incidents.length },
+        sub: assessPending.length ? 'a notifiable-breach clock may be running' : 'none outstanding' });
+    runCountUps(el);
+  }
+  function renderReviewsDashboard() {
+    var el = document.getElementById('reviewKpiRow');
+    if (!el) return;
+    var reviews = S.reviews || [];
+    var today = new Date().toISOString().slice(0, 10);
+    var last = reviews.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+    var nextDue = reviews.map(function (r) { return r.nextDue; }).filter(Boolean).sort()[0];
+    var overdue = nextDue && nextDue < today ? 1 : 0;
+    el.innerHTML =
+      kpiTile({ value: reviews.length, label: 'Reviews recorded',
+        sub: reviews.length ? 'ISO 27001 clause 9.3' : 'clause 9.3 expects reviews at planned intervals' }) +
+      kpiTile({ value: last && last.date ? daysSince(last.date) : 0, label: 'Days since the last review',
+        sub: last && last.date ? 'last held ' + fmtDate(last.date) : 'none held yet',
+        tone: last && last.date && daysSince(last.date) > 365 ? 'warn' : '' }) +
+      kpiTile({ value: overdue, label: 'Next review overdue', tone: 'fail',
+        sub: nextDue ? 'next due ' + fmtDate(nextDue) : 'no next review scheduled' });
+    runCountUps(el);
+  }
+  function renderCalendarDashboard() {
+    var el = document.getElementById('calKpiRow');
+    if (!el) return;
+    var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
+    var today = new Date().toISOString().slice(0, 10);
+    var soon = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    var overdue = items.filter(function (c) { return c.nextDue && c.nextDue < today; });
+    var dueSoon = items.filter(function (c) { return c.nextDue && c.nextDue >= today && c.nextDue <= soon; });
+    var noDate = items.filter(function (c) { return !c.nextDue; });
+    el.innerHTML =
+      kpiTile({ value: items.length, label: 'Recurring activities' }) +
+      kpiTile({ value: overdue.length, label: 'Overdue', tone: 'fail',
+        meter: { value: overdue.length, max: items.length },
+        sub: overdue.length ? 'past their next-due date' : 'nothing overdue' }) +
+      kpiTile({ value: dueSoon.length, label: 'Due within 30 days', tone: 'warn',
+        meter: { value: dueSoon.length, max: items.length } }) +
+      kpiTile({ value: noDate.length, label: 'No next date set', tone: 'warn',
+        meter: { value: noDate.length, max: items.length },
+        sub: noDate.length ? 'a recurring activity without one is not recurring' : 'every activity scheduled' });
+    runCountUps(el);
+  }
+
   function renderAudits() {
     var wrap = document.getElementById('auditRows');
     if (!wrap) return;
+    renderAuditsDashboard();
     var fwSelect = document.getElementById('naAuditFw');
     if (fwSelect && !fwSelect.options.length) {
       fwSelect.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) { return '<option value="' + fw + '">' + esc(fwName(fw)) + '</option>'; }).join('');
@@ -7984,6 +8136,7 @@ function showModal(opts) {
   function renderIncidents() {
     var wrap = document.getElementById('incidentRows');
     if (!wrap) return;
+    renderIncidentsDashboard();
     var incidents = S.incidents || [];
     if (!incidents.length) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No incidents logged yet. ISO 27001 A.5.24–A.5.28 expects a planned approach to information security incidents — this register covers everything Microsoft Defender can\'t see, from a lost laptop to a supplier\'s own breach.', cta: { label: '+ Log incident', action: 'App.toggleAddIncident' } });
@@ -8021,6 +8174,7 @@ function showModal(opts) {
   function renderReviews() {
     var wrap = document.getElementById('reviewRows');
     if (!wrap) return;
+    renderReviewsDashboard();
     var reviews = S.reviews || [];
     if (!reviews.length) {
       wrap.innerHTML = emptyState({ kind: 'doc', asRow: true, colspan: 5, text: 'No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.', cta: { label: '+ Record review', action: 'App.toggleAddReview' } });
@@ -8036,6 +8190,7 @@ function showModal(opts) {
   function renderCalendar() {
     var wrap = document.getElementById('calRows');
     if (!wrap) return;
+    renderCalendarDashboard();
     var catSelect = document.getElementById('naCalCategory');
     if (catSelect && !catSelect.options.length) catSelect.innerHTML = window.CALENDAR_CATEGORIES.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
     var freqSelect = document.getElementById('naCalFreq');
@@ -11711,6 +11866,43 @@ function showModal(opts) {
     },
 
     /* ===== Vendor risk bulk edits ===== */
+    toggleDocSel: function (id) {
+      var cb = document.querySelector('.doc-sel[data-id="' + CSS.escape(id) + '"]');
+      if (cb && cb.checked) _docSel.add(id); else _docSel.delete(id);
+      var row = document.querySelector('#docRows tr[data-id="' + CSS.escape(id) + '"]');
+      if (row) row.classList.toggle('row-sel', _docSel.has(id));
+      renderDocBulkBar();
+    },
+    docSelectAllShown: function () { docShownKeys().forEach(function (k) { _docSel.add(k); }); renderDocuments(); },
+    clearDocSel: function () { _docSel.clear(); renderDocuments(); },
+    bulkDocStatus: async function (value) {
+      var v = value || '';
+      if (!v) return;
+      var rows = selectedDocs().filter(function (d) { return docStatusOf(d) !== v; });
+      await applyBulkDocEdit(rows, function (d) {
+        var prev = docStatusOf(d) || 'unset'; d.status = v;
+        return { field: 'Document status changed', from: prev, to: v };
+      }, rows.length + ' document' + (rows.length === 1 ? '' : 's') + ' set to ' + v);
+    },
+    bulkDocOwner: async function () {
+      var sel = selectedDocs();
+      if (!sel.length) return;
+      var vals = await showModal({
+        title: 'Set owner on ' + sel.length + ' document' + (sel.length === 1 ? '' : 's'),
+        message: 'ISO 27001 clause 7.5.2 expects every controlled document to carry an owner.',
+        fields: [{ id: 'owner', label: 'Document owner (name or role)', value: '', placeholder: 'e.g. ISMS Manager' }],
+        confirmText: 'Set owner'
+      });
+      if (!vals) return;
+      var owner = String(vals.owner || '').trim();
+      if (!owner) { toastError('Owner cannot be empty.'); return; }
+      var rows = sel.filter(function (d) { return d.owner !== owner; });
+      await applyBulkDocEdit(rows, function (d) {
+        var prev = d.owner; d.owner = owner;
+        return { field: 'Document owner changed', from: prev || 'unassigned', to: owner };
+      }, rows.length + ' document' + (rows.length === 1 ? '' : 's') + ' assigned to ' + owner);
+    },
+
     toggleVendorSel: function (id) {
       var cb = document.querySelector('.vendor-sel[data-id="' + CSS.escape(id) + '"]');
       if (cb && cb.checked) _vendorSel.add(id); else _vendorSel.delete(id);
