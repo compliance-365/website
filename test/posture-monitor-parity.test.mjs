@@ -590,3 +590,52 @@ describe('SCORED_CHECK_IDS / CHECK_LABELS', () => {
     assert.equal(new Set(monitor.SCORED_CHECK_IDS).size, monitor.SCORED_CHECK_IDS.length);
   });
 });
+
+/* The monitor's drift rule and lib.js's scanDrift() are two hand-ported
+   copies of the same ranking (see isDowngrade()'s comment in index.js).
+   They decide different things — the monitor decides whether to write an
+   acknowledgeable Alert row and email it, the browser decides which
+   group a check appears under on the scan view's drift card — but they
+   must never disagree about the underlying question of whether a control
+   got worse. Asserted across every ordered pair, rather than on a
+   handful of cases, because the pairs that would actually go wrong are
+   the awkward ones: anything involving 'manual', and anything involving
+   a status neither side recognises. */
+describe('drift protection — monitor drift agrees with lib.js scanDrift()', () => {
+  const STATUSES = ['pass', 'review', 'fail', 'manual', 'unknown-status'];
+
+  for (const from of STATUSES) {
+    for (const to of STATUSES) {
+      test(`${from} -> ${to}`, () => {
+        const drift = CheckpointLib.scanDrift({ c: from }, { c: to });
+        const libSaysRegression = drift.regressed.some((d) => d.id === 'c');
+        assert.equal(monitor.isDowngrade(from, to), libSaysRegression,
+          `isDowngrade(${from}, ${to}) must match scanDrift()'s "regressed" grading`);
+      });
+    }
+  }
+
+  test('a check absent from either scan is never a downgrade', () => {
+    // A newly added check has no previous result, and a removed one has
+    // no current result. Alerting on either would fill the queue on the
+    // first run after a release rather than on an actual change.
+    assert.equal(monitor.isDowngrade(undefined, 'fail'), false);
+    assert.equal(monitor.isDowngrade('pass', undefined), false);
+    assert.equal(CheckpointLib.scanDrift({}, { c: 'fail' }).regressed.length, 0);
+    assert.equal(CheckpointLib.scanDrift({ c: 'pass' }, {}).regressed.length, 0);
+  });
+
+  test('the degradations the old pass-only rule missed now alert', () => {
+    // The regression this whole change exists for: before isDowngrade(),
+    // a control could walk pass -> review -> fail across two monitor runs
+    // without raising an alert on either step.
+    assert.equal(monitor.isDowngrade('pass', 'review'), true);
+    assert.equal(monitor.isDowngrade('review', 'fail'), true);
+  });
+
+  test('losing readability is not a degradation in either direction', () => {
+    // A licence lapse or a lost app role, not a control change.
+    assert.equal(monitor.isDowngrade('pass', 'manual'), false);
+    assert.equal(monitor.isDowngrade('manual', 'fail'), false);
+  });
+});

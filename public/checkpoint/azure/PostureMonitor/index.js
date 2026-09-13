@@ -6,8 +6,9 @@
  * no user is present for a timer trigger — re-runs the same posture
  * checks the interactive browser app runs, writes a Scan record to the
  * "Checkpoint Scans" SharePoint list, and appends a row to "Checkpoint
- * Alerts" for every check that scored 'pass' on the previous scan and
- * 'fail' on this one.
+ * Alerts" for every check whose result DEGRADED against the previous
+ * scan — any downgrade along fail < review < pass, not just pass to
+ * fail; see isDowngrade().
  *
  * This intentionally mirrors public/checkpoint/graph.js's
  * runPostureChecks() and public/checkpoint/store.js's CHECK_DEFS/
@@ -872,6 +873,37 @@ async function runPostureChecks(g, gAll, settings) {
   return { results, notes };
 }
 
+/* Does a check's result represent a control getting WORSE?
+ *
+ * Mirrors lib.js's scanDrift()/DRIFT_RANK exactly — same ranking, same
+ * treatment of 'manual', same treatment of unrecognised values — so the
+ * unattended monitor and the browser's drift card never disagree about
+ * what counts as a regression. test/posture-monitor-parity.test.mjs
+ * asserts the two agree across every ordered pair of statuses; change
+ * one and change the other.
+ *
+ * This used to be an inline `prev === 'pass' && next === 'fail'`, which
+ * meant the monitor stayed silent through exactly the degradations a
+ * periodic review is meant to surface: a control slipping from pass to
+ * review, or from review to outright fail. Neither ever reached anyone's
+ * inbox, and neither appeared in the alert queue, so a control could
+ * walk pass -> review -> fail across two runs without raising a single
+ * alert on either step.
+ *
+ * 'manual' is not a downgrade in either direction. A check going manual
+ * means the signal stopped being readable — a licence lapsed, this
+ * identity lost an app role — not that a control changed. Emailing that
+ * with the same urgency as MFA being switched off is how an alert queue
+ * stops being read. */
+const DRIFT_RANK = { fail: 0, review: 1, pass: 2 };
+function isDowngrade(prev, next) {
+  if (prev === undefined || next === undefined || prev === next) return false;
+  if (prev === 'manual' || next === 'manual') return false;
+  const b = DRIFT_RANK[prev], a = DRIFT_RANK[next];
+  if (b === undefined || a === undefined) return false;
+  return a < b;
+}
+
 function computeScore(results) {
   const measured = SCORED_CHECK_IDS.map(id => results[id]).filter(r => r !== undefined && r !== 'manual');
   if (!measured.length) return 100;
@@ -1568,22 +1600,21 @@ module.exports = async function (context, myTimer) {
 
     const drifted = [];
     for (const id of SCORED_CHECK_IDS) {
-      if (prevResults[id] === 'pass' && results[id] === 'fail') {
-        await g(`/sites/${siteId}/lists/${lists.Alerts}/items`, {
-          method: 'POST',
-          body: { fields: {
-            Title: 'Drift: ' + (CHECK_LABELS[id] || id),
-            CheckId: id,
-            CheckLabel: CHECK_LABELS[id] || id,
-            PreviousStatus: 'pass',
-            NewStatus: 'fail',
-            Note: notes[id] || '',
-            DetectedDate: today,
-            Acknowledged: false
-          } }
-        });
-        drifted.push({ label: CHECK_LABELS[id] || id, note: notes[id] || '' });
-      }
+      if (!isDowngrade(prevResults[id], results[id])) continue;
+      await g(`/sites/${siteId}/lists/${lists.Alerts}/items`, {
+        method: 'POST',
+        body: { fields: {
+          Title: 'Drift: ' + (CHECK_LABELS[id] || id),
+          CheckId: id,
+          CheckLabel: CHECK_LABELS[id] || id,
+          PreviousStatus: prevResults[id],
+          NewStatus: results[id],
+          Note: notes[id] || '',
+          DetectedDate: today,
+          Acknowledged: false
+        } }
+      });
+      drifted.push({ label: CHECK_LABELS[id] || id, note: notes[id] || '', from: prevResults[id], to: results[id] });
     }
     const alertsWritten = drifted.length;
 
@@ -1598,9 +1629,9 @@ module.exports = async function (context, myTimer) {
        notify() never throws. */
     if (drifted.length) {
       await notify(g, context,
-        'Checkpoint: ' + drifted.length + ' control' + (drifted.length === 1 ? '' : 's') + ' drifted from pass to fail',
+        'Checkpoint: ' + drifted.length + ' control' + (drifted.length === 1 ? '' : 's') + ' degraded',
         '<p>The Checkpoint scheduled monitor detected the following on ' + today + ' (tenant posture score ' + score + '/100):</p><ul>' +
-          drifted.map(d => '<li><b>' + esc(d.label) + '</b>' + (d.note ? '<br>' + esc(d.note) : '') + '</li>').join('') +
+          drifted.map(d => '<li><b>' + esc(d.label) + '</b> — ' + esc(d.from) + ' &rarr; ' + esc(d.to) + (d.note ? '<br>' + esc(d.note) : '') + '</li>').join('') +
           '</ul><p>Open Checkpoint to acknowledge or action these.</p>');
     }
 
@@ -1672,5 +1703,5 @@ module.exports.__test = {
   runPostureChecks, runRegisterChecks, readDocumentRegister,
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,
-  SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL
+  SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL, isDowngrade
 };

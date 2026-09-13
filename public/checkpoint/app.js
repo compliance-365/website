@@ -3955,12 +3955,20 @@ function showModal(opts) {
       var openAlerts = (S.alerts || []).filter(function (a) { return !a.ack; }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); });
       driftEl.innerHTML = openAlerts.length
         ? openAlerts.map(function (a) {
-            return '<div class="card" style="padding:10px 14px;margin-bottom:8px;border-left:3px solid var(--fail)">' +
+            /* Coloured by where the check LANDED, not uniformly red.
+               The monitor used to raise an alert only on pass -> fail,
+               so red was always right; it now alerts on any downgrade
+               (see isDowngrade() in PostureMonitor/index.js), and a
+               control that slipped to 'review' painted identically to
+               one that outright failed would flatten the distinction
+               the broader detection exists to draw. */
+            var driftColor = a.next === 'fail' ? 'var(--fail)' : 'var(--warn)';
+            return '<div class="card" style="padding:10px 14px;margin-bottom:8px;border-left:3px solid ' + driftColor + '">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">' +
               '<b>' + esc(a.label) + '</b>' +
               '<button class="btn ghost sm" data-action="App.acknowledgeAlert" data-id="' + a.id + '">Acknowledge</button>' +
               '</div>' +
-              '<div class="d-kv" style="padding:2px 0"><span>' + esc(a.prev) + ' → <b style="color:var(--fail)">' + esc(a.next) + '</b></span><span>detected ' + fmtDate(a.detected) + '</span></div>' +
+              '<div class="d-kv" style="padding:2px 0"><span>' + esc(a.prev) + ' → <b style="color:' + driftColor + '">' + esc(a.next) + '</b></span><span>detected ' + fmtDate(a.detected) + '</span></div>' +
               (a.note ? '<div style="color:var(--paper-dim);font-size:11.5px;margin-top:2px">' + esc(a.note) + '</div>' : '') +
             '</div>';
           }).join('')
