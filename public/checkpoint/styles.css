@@ -125,6 +125,19 @@
      sm = controls (buttons, inputs, chips), md = cards and tiles,
      lg = panels that float above the page. */
   --r-sm:8px; --r-md:14px; --r-lg:20px;
+  /* Height of the sticky topbar, as a token because two other sticky
+     things now have to sit below it and a hard-coded 71px in three
+     places is three chances to drift. It is 16px padding top and
+     bottom + a 1px bottom border + the 38px tall control row inside —
+     measured, and asserted in test/styles-tokens.test.mjs so a change
+     to .top's padding that silently slides every sticky header under it
+     fails a test rather than shipping. */
+  --topbar-h:71px;
+  /* A sticky <thead> sits directly under the topbar; the Statement of
+     Applicability's family headers then sit under BOTH. Kept as a
+     derived token so the family offset can never disagree with the
+     header height it is supposed to clear. */
+  --thead-h:38px;
 
   /* Strict type scale — six steps, everything in the stylesheet below
      now resolves to one of these (nearest-neighbour, consolidating what
@@ -652,6 +665,51 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi .trend{font-size:var(--fs-2);font-weight:800;white-space:nowrap}
 .kpi span{display:block;margin-top:7px;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);font-weight:700}
 .kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.4}
+/* ===== Proportion meter — the tile's own dead space, put to work =====
+   Every summary tile in this app is a figure, a caption and an optional
+   sub-line stacked at the TOP of a fixed-height card, which leaves the
+   bottom third of each one empty. On a strip where the figures are
+   proportions that is not just wasted space, it is wasted meaning: the
+   Dashboard's ten framework-readiness tiles rendered "0%" ten times in
+   identical type, and a reader had to compare digits to see that one
+   framework was at 21% and the rest had not started. A 3px bar in the
+   space that was already empty makes that comparison pre-attentive —
+   you see the one long bar in the strip before you read a single label.
+
+   Only ever attached where the number IS a part-of-whole (readiness,
+   implemented-of-applicable, completion). A count with no denominator
+   ("8 open actions") gets no meter, because a bar with nothing to fill
+   against is decoration, and decoration on a compliance figure is how
+   a reader learns to distrust the ones that do mean something.
+
+   Inherits its colour from the tile via currentColor on the fill's own
+   inline tone, so a meter never needs a second copy of the severity
+   logic that already coloured the figure above it. The track is the
+   same 12%-white hairline wash the rest of the app separates planes
+   with, so it disappears into the card until it has something to say.
+
+   margin-top:auto pins it to the bottom of the tile REGARDLESS of how
+   many lines the caption above wrapped to, which is what keeps a strip
+   of six tiles reading as one aligned row rather than six ragged ones
+   — the tiles are already stretch-aligned by the grid, they just had
+   nothing at the bottom to align. */
+.kpi{display:flex;flex-direction:column}
+.kpi-meter{margin-top:auto;padding-top:14px;display:block}
+.kpi-meter i{display:block;height:3px;border-radius:3px;background:rgba(var(--paper-rgb),.12);overflow:hidden;position:relative;--kpi-meter-pct:0%}
+/* --kpi-meter-pct is declared here rather than only passed inline by
+   kpiMeter(): the fill is set per tile via a style attribute, so the
+   token has no :root value, and an inline-only custom property is
+   exactly the kind of thing styles-tokens.test.mjs exists to catch. A
+   0% default is also the right failure mode — a meter whose percentage
+   never arrives reads as empty rather than inheriting a stale width
+   from whatever rendered before it. */
+.kpi-meter i::after{content:'';position:absolute;inset:0 auto 0 0;width:var(--kpi-meter-pct);background:currentColor;border-radius:inherit;transition:width .7s var(--ease)}
+/* The fill colour tracks the figure it belongs to. Default is the same
+   gold-light every unremarkable figure uses; kpiTile() overrides it to
+   the severity tone when (and only when) it coloured the figure too. */
+.kpi-meter{color:var(--gold-light)}
+.kpi-empty .kpi-meter{color:var(--paper-faint)}
+@media (prefers-reduced-motion: reduce){.kpi-meter i::after{transition:none}}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%}
 .kpi .dot{margin-right:4px}
 /* ===== Dashboard hierarchy: hero, demoted strip, section tiers =====
@@ -681,7 +739,21 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    gets the ambient accent wash and sits one elevation step above the
    strip beneath it. background-image (not the background shorthand)
    so .card's own surface colour stays underneath the glow. */
-.kpi-hero{flex:1;display:flex;flex-direction:column;justify-content:center;padding:30px 26px;background-image:var(--glow);box-shadow:var(--elev-2)}
+.kpi-hero{flex:1;display:flex;flex-direction:row;align-items:center;gap:26px;padding:30px 26px;background-image:var(--glow);box-shadow:var(--elev-2)}
+/* Ring beside the figure, not above it: the hero sits in a 4fr column
+   next to "Next 3 actions" in an 8fr one, and that column is wider than
+   it is tall at every desktop width — a stacked ring would push the
+   figure below the fold of the card while leaving the space either side
+   of it empty, which is the problem this ring was added to solve.
+   Below the dash-hero's own stacking breakpoint the row still works:
+   the card goes full-width and the ring simply has more room. */
+.hero-ring{width:118px;flex:none}
+.hero-body{min-width:0}
+/* The hero's caption and sub-line no longer need to reserve the bottom
+   of the card, since the ring sets the card's height — they sit with
+   the figure as one block. */
+.kpi-hero .hero-body{display:flex;flex-direction:column;justify-content:center}
+@media(max-width:560px){.kpi-hero{gap:18px}.hero-ring{width:92px}}
 .kpi-hero b{font-size:var(--fs-hero)}
 .kpi-hero b small{font-size:var(--fs-4)}
 .kpi-hero span{font-size:var(--fs-1);letter-spacing:.18em;margin-top:11px}
@@ -690,6 +762,17 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    so the Dashboard's strip reads as support for the hero above it. */
 .kpis-compact .kpi{padding:19px}
 .kpis-compact .kpi b{font-size:var(--fs-5)}
+/* ===== Strip label — the caption a whole row of tiles shares =====
+   Lighter than .section-head (which draws a rule and opens a new part
+   of the view); this only names the strip directly beneath it, so it
+   reuses the app's existing tracked-out small-caps label tier at
+   --paper-faint rather than introducing a third heading weight.
+   Exists so a tile caption never has to repeat its strip's subject —
+   see the Dashboard's two strips in index.html. */
+.strip-label{font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;margin:22px 0 10px}
+/* The first strip follows the hero row, which already carries its own
+   bottom margin — no need to double it. */
+.dash-hero + .strip-label{margin-top:4px}
 /* Quiet status, for a column where the same few values repeat down every
    row. A bordered .chip per row turns a long table into a stack of
    high-contrast boxes competing for attention with the row content — the
@@ -887,7 +970,24 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .check-area-summary{flex:1;color:var(--paper-faint);font-size:var(--fs-2);text-align:right}
 .check-area-chevron{color:var(--paper-faint);flex:none;transition:transform .2s var(--ease)}
 .check-area-body{padding-top:2px}
-.scan-cat-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
+/* Status pills lead, expand/collapse follows. The toolbar used to hold
+   only the two expand/collapse buttons and sat flush right; with a
+   filter group in it the two jobs separate — triage on the left, where
+   reading starts, and the accordion controls kept where they were. They
+   wrap onto two lines rather than shrinking below a tappable size. */
+.scan-cat-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.scan-cat-expand{display:flex;gap:8px;margin-left:auto}
+/* .filters' own 16px bottom margin is the gap between a filter row and
+   the table under it; inside this toolbar the toolbar's own margin
+   already does that job. */
+.scan-status-filters{margin-bottom:0}
+/* The count carries the weight — the label says which bucket, the
+   number says how much is in it, and on the active pill both invert
+   against the gold fill. */
+.scan-status-filters .f-pill b{font-weight:800;font-variant-numeric:tabular-nums;color:var(--paper)}
+.scan-status-filters .f-pill.on b{color:var(--ink)}
+.scan-status-filters .f-pill:disabled b{color:inherit}
+.scan-empty{color:var(--paper-dim);font-size:var(--fs-2);margin:18px 2px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .check-row-group{border-bottom:1px solid var(--line)}
 .check-row-group:last-child{border-bottom:none}
 .check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;font-size:var(--fs-2);opacity:.25;transition:opacity .4s var(--ease)}
@@ -1053,7 +1153,41 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
    point is knowing which family you are in 60 rows down; the offset
    clears the table's own sticky <thead>. Sits ON the table surface
    rather than in a card of its own so it reads as part of the list. */
-.soa-family th{position:sticky;top:38px;z-index:2;background:var(--surface-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 14px;text-transform:none;letter-spacing:0}
+/* ===== Sticky column headers — why this is behind a media query =====
+   These offsets are relative to the WINDOW, which is what scrolls: the
+   sidebar is sticky/100vh and .main does not scroll on its own.
+
+   .card carries overflow-x:auto so a wide register scrolls inside its
+   own card on a narrow viewport. CSS resolves an overflow of `visible`
+   on one axis to `auto` when the other axis is not visible, so that one
+   declaration silently made every .card a scroll container on BOTH
+   axes — and position:sticky resolves against the nearest scrollport,
+   not the window. Those cards are as tall as their content and
+   therefore never scroll vertically, so a sticky header inside one was
+   pinned to a scrollport that cannot move: inert, in every register, at
+   every width. The family headers below have been sticky (and have
+   never once stuck) since they were written; the 38px offset in that
+   rule was reserving room for a sticky <thead> that was never declared
+   at all.
+
+   Restoring the window as the sticky container means the card must stop
+   being a scroll container, which it can only afford where the table
+   already fits: measured across every register, nothing overflows at
+   1400px and up, the Actions register (11 columns) overflows by ~134px
+   at 1280 and ~390px at 1024. So the trade is made on width — above
+   1400px the headers stick and no table needs to scroll sideways; below
+   it the card keeps its horizontal scroll and the headers behave as
+   they always have. Scoped with :has(table) so only the cards this is
+   about lose their overflow, never the ones wrapping a chart.
+
+   z-index: the topbar is 20 and must stay above both; the <thead> sits
+   above the family rows, which sit above ordinary cells. */
+@media (min-width:1400px){
+  .card:has(table){overflow:visible}
+  .card:has(table) thead th{position:sticky;top:var(--topbar-h);z-index:3;background:var(--surface)}
+  .card:has(table) .soa-family th{top:calc(var(--topbar-h) + var(--thead-h))}
+}
+.soa-family th{position:sticky;top:var(--thead-h);z-index:2;background:var(--surface-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 14px;text-transform:none;letter-spacing:0}
 .soa-family span{color:var(--gold);font-size:var(--fs-2);font-weight:700;letter-spacing:.02em}
 .soa-family b{float:right;color:var(--paper-faint);font-size:var(--fs-1);font-weight:600}
 .cx-rest{margin-top:16px}

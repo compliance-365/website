@@ -65,3 +65,49 @@ describe('styles.css — custom properties resolve', () => {
       '.card must carry --elev-1, or the app has no resting elevation at all');
   });
 });
+
+/* The sticky column headers sit below the topbar by offsetting exactly
+   --topbar-h, so that token is not decorative: if .top's box changes and
+   the token does not, every register's <thead> slides underneath the
+   topbar and the column names are unreadable while scrolling — which
+   looks like a rendering glitch, not a stale constant, and so is easy to
+   chase in the wrong place. This derives the height from .top's own
+   declarations and asserts the token still matches.
+
+   The sticky rules themselves are equally silent when they break: they
+   only work while the card wrapping the table is NOT a scroll container,
+   and .card declares overflow-x:auto (which resolves the other axis to
+   auto too). Ten table cards in index.html and three in app.js used to
+   repeat that same overflow inline, where a stylesheet media query
+   cannot override it — so the last assertion here holds that line. */
+describe('styles.css — sticky header offsets', () => {
+  const code = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  test('--topbar-h matches the height .top actually renders at', () => {
+    const top = /\.top\{([^}]*)\}/.exec(code);
+    assert.ok(top, '.top rule not found');
+    const pad = /padding:(\d+)px/.exec(top[1]);
+    assert.ok(pad, '.top has no padding shorthand to measure');
+    const token = /--topbar-h:(\d+)px/.exec(code);
+    assert.ok(token, '--topbar-h is not declared');
+    /* padding top + bottom + 1px bottom border + the 38px control row. */
+    const expected = Number(pad[1]) * 2 + 1 + 38;
+    assert.equal(Number(token[1]), expected,
+      '--topbar-h is ' + token[1] + 'px but .top now measures ' + expected +
+      'px — every sticky <thead> is offset by the wrong amount');
+  });
+
+  test('the family header clears the sticky thead above it', () => {
+    assert.match(code, /\.soa-family th\{top:calc\(var\(--topbar-h\) \+ var\(--thead-h\)\)\}|\.card:has\(table\) \.soa-family th\{top:calc\(var\(--topbar-h\) \+ var\(--thead-h\)\)\}/,
+      'the SoA family header must offset by topbar + thead, or it overlaps the column names');
+  });
+
+  test('no table card re-declares overflow inline, which would defeat sticky', () => {
+    for (const f of ['../public/checkpoint/index.html', '../public/checkpoint/app.js']) {
+      const src = readFileSync(new URL(f, import.meta.url), 'utf8');
+      assert.equal(src.includes('overflow-x:auto'), false,
+        f + ' sets overflow-x inline; .card already does it, and an inline copy ' +
+        'cannot be overridden by the min-width:1400px rule that makes sticky headers work');
+    }
+  });
+});
