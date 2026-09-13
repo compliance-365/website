@@ -71,6 +71,45 @@
      already comfortably passing and is unchanged. */
   --paper:#FAF7F1; --paper-dim:rgba(var(--paper-rgb),.62); --paper-faint:rgba(var(--paper-rgb),.5);
   --gold:#BE4A1E; --gold-light:#F0A97F; --gold-rgb:190,74,30; --gold-light-rgb:240,169,127;
+  /* Forced-dark scope: same dark-ground end of the ramp as :root. */
+  --accent-ink:#F0A97F; --accent-fill:var(--gold); --accent-fill-hover:#A63A12; --on-accent:#FFFFFF;
+  /* ===== The accent ramp, ported from the website's tokens.css =====
+     Three steps, not one colour, and which step you use depends on
+     whether the accent is a FILL or a GLYPH:
+
+       #A63A12  dark  — hover fills, and the accent as text on LIGHT
+       #BE4A1E  mid   — the brand fill
+       #F0A97F  pale  — the accent as text on DARK
+
+     A saturated brand colour is a fine fill (a rule, a chip, a button
+     face). It is usually not a text colour. This app had been using
+     --gold (#BE4A1E) for both, and as text it measures 3.41:1 on the
+     card and 3.28:1 on the raised surface — under the 4.5:1 AA floor,
+     on every card heading, section eyebrow, .check-area-name, .tagline
+     and .settings-subhead in the product. (The comment at the top of
+     this file used to claim 4.77:1 and 4.60:1; those do not reproduce.)
+
+     --accent-ink is ground-aware: it means "the accent, as text,
+     legible against whatever this sits on", and each theme block below
+     resolves it to the right end of the ramp. So a rule written once
+     stays correct when the surface under it flips.
+
+     --on-accent is text sitting ON the accent fill, and it INVERTS the
+     old answer: buttons and active pills used --ink (near-black), which
+     measures 4.03:1 on #BE4A1E. White measures 5.01:1. Same value in
+     both themes, because the fill is the same in both.
+
+     --accent-fill-hover replaces a hover that went PALER. .btn:hover
+     moved to --gold-light (#F0A97F), which is fine under near-black
+     text and unreadable under white (about 1.75:1) — so the hover has
+     to travel the other way along the ramp. White on #A63A12 is
+     9.53:1, and a darker press state is what the website does too.
+     Measured with lib.js's own contrastRatio(), same as every other
+     number in this file. */
+  --accent-ink:#F0A97F;
+  --accent-fill:var(--gold);
+  --accent-fill-hover:#A63A12;
+  --on-accent:#FFFFFF;
   --line:rgba(255,255,255,.12);
   /* Status/severity hues — pass/warn/fail plus a fourth, --critical,
      distinct from --fail (High vs. Critical residual risk read as two
@@ -215,6 +254,15 @@
      alpha was already comfortably passing (6.8:1) and is unchanged. */
   --paper:#0B0B0C; --paper-dim:rgba(var(--paper-rgb),.68); --paper-faint:rgba(var(--paper-rgb),.6);
   --gold:#A63A12; --gold-light:#8A2F0E; --gold-rgb:166,58,18; --gold-light-rgb:138,47,14;
+  /* Light ground takes the DARK end of the ramp as text — #A63A12 is
+     6.07:1 on cream, 6.49:1 on white, 5.91:1 on the panel ground (the
+     website's own measured figures, same token). The fill and its
+     on-colour do not change with the theme: #BE4A1E under white is
+     5.01:1 on either ground. */
+  --accent-ink:#A63A12;
+  --accent-fill:#BE4A1E;
+  --accent-fill-hover:#8A2F0E;
+  --on-accent:#FFFFFF;
   --pass:#477d54; --warn:#8c6d28; --fail:#b85050; --critical:#ca413f;
   --line:rgba(11,11,12,.14);
   --surface-hover:rgba(var(--paper-rgb),.045);
@@ -355,8 +403,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .nav-scroll{flex:1;min-height:0;overflow-y:auto}
 .word{display:flex;align-items:baseline;line-height:1;font-size:var(--fs-2)}
 .word .c1{font-weight:300;letter-spacing:.13em;color:var(--paper)}
-.word .c2{font-weight:800;color:var(--gold);margin-left:.05em}
-.prod{padding:14px 22px 6px;font-size:var(--fs-1);letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.word .c2{font-weight:800;color:var(--accent-ink);margin-left:.05em}
+.prod{padding:14px 22px 6px;font-size:var(--fs-1);letter-spacing:.24em;text-transform:uppercase;color:var(--accent-ink);font-weight:700}
 .nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--paper-dim);font-size:var(--fs-2);padding:11px 22px;text-align:left;transition:color .15s var(--ease),background .15s var(--ease);border-left:3px solid transparent;cursor:pointer}
 .nav-item:hover{color:var(--paper);background:var(--surface-hover)}
 .nav-item:active{background:rgba(var(--paper-rgb),.08)}
@@ -382,7 +430,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .side .foot b{color:var(--paper-dim);display:block;letter-spacing:.1em;text-transform:uppercase;font-size:var(--fs-eyebrow)}
 .version-tag{margin:10px 22px 16px;background:none;border:none;padding:0;text-align:left;font-family:Manrope,sans-serif;font-size:var(--fs-1);letter-spacing:.06em;color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
 .version-tag:hover,.version-tag:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
-.version-tag:active{color:var(--gold)}
+.version-tag:active{color:var(--accent-ink)}
 
 /* ===== topbar / main ===== */
 .main{min-width:0}
@@ -493,8 +541,8 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 @media(max-width:860px){.bd-num{font-size:64px}.bd-slide{padding:32px}}
 @keyframes flashRow{0%{background:rgba(240, 169, 127,.35)}100%{background:transparent}}
 tr.flash{animation:flashRow 1.8s ease}
-.btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:var(--r-sm);border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
-.btn:hover{background:var(--gold-light)}
+.btn{background:var(--accent-fill);color:var(--on-accent);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:var(--r-sm);border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
+.btn:hover{background:var(--accent-fill-hover)}
 .btn:active{transform:translateY(1px)}
 .btn:disabled,.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none;transform:none}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--paper-dim)}
@@ -606,7 +654,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
    still look. */
 .lnk{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color .15s var(--ease),color .15s var(--ease)}
 .lnk:hover,.lnk:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
-.lnk:active{color:var(--gold)}
+.lnk:active{color:var(--accent-ink)}
 
 /* ===== dashboard ===== */
 .appetite-banner{background:rgba(201,122,122,.1);border:1px solid rgba(201,122,122,.4);border-radius:6px;padding:14px 18px;margin-bottom:16px;font-size:var(--fs-2);color:var(--paper);line-height:1.6}
@@ -630,7 +678,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .gs-stepper{display:flex;align-items:flex-start;gap:0;overflow-x:auto;margin-bottom:20px;padding-bottom:2px}
 .gs-node{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:88px;text-align:center}
 .gs-node-ic{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--line);color:var(--paper-faint);font-size:11px;font-weight:700;margin-bottom:8px;flex-shrink:0;transition:border-color .3s var(--ease),color .3s var(--ease),background .3s var(--ease),box-shadow .3s var(--ease)}
-.gs-node.done .gs-node-ic{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.gs-node.done .gs-node-ic{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
 .gs-node.current .gs-node-ic{border-color:var(--gold);color:var(--gold-light);box-shadow:0 0 0 4px rgba(240, 169, 127,.15)}
 .gs-node-label{font-size:10.5px;line-height:1.3;color:var(--paper-faint)}
 .gs-node.current .gs-node-label{color:var(--paper);font-weight:700}
@@ -888,11 +936,18 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .automation-monitor i{width:7px;height:7px;border-radius:50%;background:var(--paper-faint)}
 .automation-monitor.is-active{color:var(--pass);border-color:rgba(143,191,154,.42);background:rgba(143,191,154,.07)}
 .automation-monitor.is-active i{background:var(--pass);box-shadow:0 0 0 4px rgba(143,191,154,.12)}
+/* --pass is tuned to clear 4.5:1 on the plain card, but this pill lays
+   a 7% green wash under it, which erodes the pair to 4.35:1 in the
+   light theme — the last sub-AA text left in the app after the accent
+   ramp landed. Uses the website's own measured "ok" ink (tokens.css
+   --ok-ink, 6.18:1 on cream) rather than darkening the shared --pass,
+   which would drag every other pass state with it for one pill's sake. */
+:root[data-theme="light"] .automation-monitor.is-active{color:#046A4E}
 .automation-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .automation-card{appearance:none;text-align:left;color:inherit;font:inherit;cursor:pointer;background:rgba(var(--paper-rgb),.035);border:1px solid rgba(var(--paper-rgb),.1);border-radius:var(--r-sm);padding:18px;transition:transform .18s var(--ease),border-color .18s var(--ease),background .18s var(--ease),box-shadow .18s var(--ease)}
 .automation-card:hover,.automation-card:focus-visible{transform:translateY(-2px);background:rgba(var(--gold-light-rgb),.09);border-color:rgba(var(--gold-light-rgb),.55);box-shadow:var(--elev-2);outline:none}
 .automation-card:focus-visible{box-shadow:0 0 0 3px rgba(var(--gold-light-rgb),.28),var(--elev-2)}
-.automation-card-kicker{display:block;font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+.automation-card-kicker{display:block;font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:16px}
 .automation-card>b{display:block;font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
 .automation-card>b small{font-family:Manrope,sans-serif;font-size:var(--fs-2);font-weight:700;color:var(--gold-light)}
 .automation-card h3{font-size:var(--fs-2);color:var(--paper);margin:11px 0 5px}
@@ -944,7 +999,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .board-tile span{display:block;margin-top:12px;font-size:var(--fs-2);letter-spacing:.01em;color:var(--paper-faint);font-weight:700}
 .dash-2{grid-template-columns:minmax(0,7fr) minmax(0,5fr);margin-top:16px;align-items:start}
 @media(max-width:1000px){.dash-2{grid-template-columns:1fr}}
-.card h3{font-size:var(--fs-1);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
+.card h3{font-size:var(--fs-1);letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin-bottom:16px}
 .heat{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px;max-width:430px}
 .heat .lab{font-size:var(--fs-eyebrow);color:var(--paper-faint);display:flex;align-items:center;justify-content:center;letter-spacing:.08em}
 .cell{aspect-ratio:1.6;border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:var(--fs-2);font-variant-numeric:tabular-nums;transition:transform .15s var(--ease),filter .15s var(--ease);border:none;padding:0;width:100%;font-family:inherit;cursor:pointer}
@@ -986,7 +1041,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .rag-dot.rag-red{background:var(--fail)}
 .rag-dot.rag-amber{background:var(--warn)}
 .rag-dot.rag-green{background:var(--pass)}
-.check-area-name{font-size:var(--fs-eyebrow);letter-spacing:.18em;color:var(--gold);text-transform:uppercase;font-weight:700}
+.check-area-name{font-size:var(--fs-eyebrow);letter-spacing:.18em;color:var(--accent-ink);text-transform:uppercase;font-weight:700}
 .check-area-summary{flex:1;color:var(--paper-faint);font-size:var(--fs-2);text-align:right}
 .check-area-chevron{color:var(--paper-faint);flex:none;transition:transform .2s var(--ease)}
 .check-area-body{padding-top:2px}
@@ -1005,7 +1060,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
    number says how much is in it, and on the active pill both invert
    against the gold fill. */
 .scan-status-filters .f-pill b{font-weight:800;font-variant-numeric:tabular-nums;color:var(--paper)}
-.scan-status-filters .f-pill.on b{color:var(--ink)}
+.scan-status-filters .f-pill.on b{color:var(--on-accent)}
 .scan-status-filters .f-pill:disabled b{color:inherit}
 .scan-empty{color:var(--paper-dim);font-size:var(--fs-2);margin:18px 2px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .check-row-group{border-bottom:1px solid var(--line)}
@@ -1031,7 +1086,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 /* Pending-suggestion count on a framework tab — same visual language as
    the sidebar's nav-item badges. */
 .f-pill .pill-n{margin-left:7px;padding:1px 6px;border-radius:99px;font-size:var(--fs-1);font-weight:800;background:rgba(190, 74, 30,.22);color:var(--gold-light)}
-.f-pill.on .pill-n{background:rgba(20,18,16,.22);color:var(--ink)}
+.f-pill.on .pill-n{background:rgba(0,0,0,.22);color:var(--on-accent)}
 .soa-group-row td{background:rgba(190, 74, 30,.07);border-top:2px solid rgba(190, 74, 30,.25);padding-top:10px}
 
 /* ===== soa ===== */
@@ -1101,15 +1156,15 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .rep-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
 .rep-card h4{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3);margin-bottom:8px}
 .rep-card p{font-size:var(--fs-2);color:var(--paper-dim);line-height:1.7;margin-bottom:16px}
-.rep-card .tagline{font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
+.rep-card .tagline{font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin-bottom:10px}
 
 /* ===== frameworks admin ===== */
 .fw-admin-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
 .fw-admin-row b{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
-.fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--gold);border:1px solid rgba(190, 74, 30,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
+.fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--accent-ink);border:1px solid rgba(190, 74, 30,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
 .fw-admin-row p{margin-top:6px;font-size:var(--fs-2);color:var(--paper-dim);line-height:1.65;max-width:56ch}
 .fw-admin-row .toggle{flex:none}
-.settings-subhead{font-size:var(--fs-1);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin:34px 0 6px}
+.settings-subhead{font-size:var(--fs-1);letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:34px 0 6px}
 .settings-subdesc{font-size:var(--fs-2);color:var(--paper-dim);max-width:56ch;line-height:1.65;margin-bottom:16px}
 
 /* ===== drawer ===== */
@@ -1121,7 +1176,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .side .nav-close{display:none}
 .drawer h2{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);margin:6px 40px 4px 0}
 .d-sec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
-.d-sec h4{font-size:var(--fs-eyebrow);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px}
+.d-sec h4{font-size:var(--fs-eyebrow);letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin-bottom:12px}
 .d-kv{display:flex;justify-content:space-between;font-size:var(--fs-2);padding:6px 0;color:var(--paper-dim);gap:14px}
 .d-kv b{color:var(--paper);text-align:right}
 .score-pair{display:flex;gap:14px}
@@ -1176,7 +1231,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .f-pill:hover{border-color:var(--gold);color:var(--gold-light)}
 .f-pill:active{transform:translateY(1px)}
 .f-pill:disabled,.f-pill[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
-.f-pill.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
+.f-pill.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent);font-weight:700}
 
 /* ===== Cross-framework mapping (formerly "Control Constellation") =====
    Was a radial SVG network graph — these classes were its node/edge/
@@ -1197,7 +1252,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .cx-empty p{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.65;margin:0 0 12px}
 .cx-empty p:last-child{margin-bottom:0}
 .cx-empty a{color:var(--gold-light)}
-.cx-empty a.btn{color:var(--ink)}
+.cx-empty a.btn{color:var(--on-accent)}
 /* The controls with no overlap are still reachable, just not in the way
    of the ones that matter — collapsed by default. */
 /* Statement of Applicability family headers. Sticky, because the whole
@@ -1239,7 +1294,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
   .card:has(table) .soa-family th{top:calc(var(--topbar-h) + var(--thead-h))}
 }
 .soa-family th{position:sticky;top:var(--thead-h);z-index:2;background:var(--surface-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 14px;text-transform:none;letter-spacing:0}
-.soa-family span{color:var(--gold);font-size:var(--fs-2);font-weight:700;letter-spacing:.02em}
+.soa-family span{color:var(--accent-ink);font-size:var(--fs-2);font-weight:700;letter-spacing:.02em}
 .soa-family b{float:right;color:var(--paper-faint);font-size:var(--fs-1);font-weight:600}
 .cx-rest{margin-top:16px}
 .cx-rest>summary{cursor:pointer;color:var(--paper-faint);font-size:var(--fs-2);letter-spacing:.01em;font-weight:700;padding:10px 0}

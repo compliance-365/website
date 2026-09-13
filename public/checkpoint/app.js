@@ -9091,6 +9091,72 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
+  /* ===== One renderer per view, looked up rather than listed =====
+     App.go() used to carry a hand-written if-chain naming 21 views. The
+     chain was not the problem; what it OMITTED was. Eight views with
+     renderers — dash, risks, actions, soa, vendors, aisystems,
+     frameworks, settings — were never in it, so navigating to them
+     showed whatever was last rendered into their markup, however stale.
+
+     That is a bug GENERATOR, not one bug. Any state a view derives at
+     render time and bakes into its DOM goes wrong the moment something
+     else changes it: the residual heatmap baked a per-cell text colour
+     for the then-current theme and had no way back, so switching to the
+     light theme left the Risk register's counts at 1.26:1 until a
+     filter click happened to redraw them. Same shape awaits any future
+     render that reads a setting, an entitlement or a role.
+
+     A map makes the omission visible: a view either has a renderer here
+     or is declared static below, and there is no third state that looks
+     like a decision but is an oversight.
+
+     'reports' is genuinely static — its cards are markup in index.html
+     with no derived content — so it is listed as such rather than left
+     absent, which is the same distinction .kpi-empty draws between "no
+     data" and "not wired up". */
+  var VIEW_RENDERERS = {
+    dash: renderDash,
+    board: renderBoard,
+    constellation: renderConstellation,
+    scan: function () { renderCoverage(); renderScanChecks(true); },
+    risks: renderRisks,
+    quantrisk: renderQuantRisk,
+    actions: renderActions,
+    vendors: renderVendors,
+    aisystems: renderAiSystems,
+    threatintel: renderThreatIntel,
+    frameworks: renderFrameworksAdmin,
+    soa: renderSoa,
+    sharedevidence: renderSharedEvidence,
+    documents: renderDocuments,
+    attestations: renderAttestations,
+    training: renderTraining,
+    audits: renderAudits,
+    reviews: renderReviews,
+    calendar: renderCalendar,
+    incidents: renderIncidents,
+    auditlog: renderAuditLog,
+    trustcenter: renderTrustCenter,
+    auditorpack: renderAuditorPack,
+    /* The Settings view's content is built by renderFrameworksAdmin()
+       alongside the Frameworks view's — one function, two destinations. */
+    settings: renderFrameworksAdmin,
+    selftest: renderSelfTest,
+    aiassistant: renderAiAssistant,
+    questionnaire: renderQuestionnaireAssistant,
+    mockauditor: renderMockAuditor,
+    evidencesim: renderEvidenceRequestSim
+  };
+  /* Views whose markup is static in index.html and derives nothing —
+     listed so "absent from VIEW_RENDERERS" always means "static on
+     purpose", never "forgotten". */
+  var STATIC_VIEWS = { reports: true };
+  function renderView(v) {
+    var fn = VIEW_RENDERERS[v];
+    if (fn) { fn(); return; }
+    if (!STATIC_VIEWS[v]) warn('renderView: no renderer registered for view "' + v + '"');
+  }
+
   function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
@@ -9210,27 +9276,7 @@ function showModal(opts) {
       if (activeGroup && !activeGroup.open) activeGroup.open = true; /* reveal the destination, never persisted as a manual choice — see the click-only listener above */
       window.scrollTo(0, 0);
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
-      if (v === 'documents') renderDocuments();
-      if (v === 'attestations') renderAttestations();
-      if (v === 'training') renderTraining();
-      if (v === 'audits') renderAudits();
-      if (v === 'reviews') renderReviews();
-      if (v === 'calendar') renderCalendar();
-      if (v === 'incidents') renderIncidents();
-      if (v === 'auditlog') renderAuditLog();
-      if (v === 'board') renderBoard();
-      if (v === 'sharedevidence') renderSharedEvidence();
-      if (v === 'trustcenter') renderTrustCenter();
-      if (v === 'auditorpack') renderAuditorPack();
-      if (v === 'scan') renderCoverage();
-      if (v === 'selftest') renderSelfTest();
-      if (v === 'aiassistant') renderAiAssistant();
-      if (v === 'questionnaire') renderQuestionnaireAssistant();
-      if (v === 'mockauditor') renderMockAuditor();
-      if (v === 'evidencesim') renderEvidenceRequestSim();
-      if (v === 'constellation') renderConstellation();
-      if (v === 'quantrisk') renderQuantRisk();
-      if (v === 'threatintel') renderThreatIntel();
+      renderView(v);
     },
 
     /* ================= Command palette =================
