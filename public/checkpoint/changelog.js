@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.67.0',
+    date: '2026-09-13',
+    entries: [
+      'Bulk editing now covers the Actions register and Vendor risk as well as the Statement of Applicability. Tick any number of rows and set status, priority or owner across actions; criticality or owner across vendors; or mark a whole selection of vendors reviewed, which asks for the next review date once rather than once per vendor. Every row still gets its own audit-log entry, because that is what an auditor samples. Viewers see no checkboxes, as with every other editing control.',
+      'Column headers now stay put on every screen size, not just on wide desktops. On a narrower screen the register scrolls within its own bounded pane -- the header pinned to the top of it -- rather than the page scrolling sideways; on a wide screen it behaves as before, pinned below the toolbar. The Statement of Applicability\'s control-family headings follow the same rule.',
+      'Fixed: on the Actions and Vendor registers, where clicking a row opens its detail panel, ticking a row\'s selection box no longer also opens that panel over the table you are selecting in.'
+    ]
+  },
+  {
     version: '1.66.0',
     date: '2026-09-13',
     entries: [
