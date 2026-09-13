@@ -5681,7 +5681,7 @@ function showModal(opts) {
          every status chip elsewhere (Risks/Actions/Vendors/etc) — reused
          here on the <select> itself so the dropdown is colour-coded at
          rest, not just readable after opening it. */
-      '<td>' + (c.app ? '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
+      '<td>' + (c.app ? '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + key + '" aria-label="' + esc(c.id) + ' implementation status">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td>' +
       '<td><button class="lnk" data-action="App.setControlOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
       '<td>' + assuranceCell(assuranceForControl(c)) + '</td>' +
@@ -8867,7 +8867,7 @@ function showModal(opts) {
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Client logo</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
         (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain;background:#fff;border-radius:4px;padding:4px">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show the client name only.</span>') +
-        '<input type="file" id="clientLogoFileInput" class="mini" accept="image/*">' +
+        '<input type="file" id="clientLogoFileInput" class="mini" accept="image/*" aria-label="Client logo image file">' +
         '<button class="btn sm" data-action="App.uploadClientLogo">Upload logo</button>' +
         (logoUrl ? '<button class="btn ghost sm" data-action="App.clearClientLogo">Clear</button>' : '') +
         '</div>' +
@@ -8875,7 +8875,7 @@ function showModal(opts) {
 
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Report accent colour</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        '<input type="color" id="clientBrandColorInput" value="' + esc(brandColorCurrent || '#BE4A1E') + '" style="width:44px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer">' +
+        '<input type="color" id="clientBrandColorInput" aria-label="Client brand colour" value="' + esc(brandColorCurrent || '#BE4A1E') + '" style="width:44px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer">' +
         '<span style="font-size:12.5px;color:var(--paper-dim)">' + (brandColorCurrent ? 'Client colour <b style="font-family:monospace">' + esc(brandColorCurrent) + '</b>' : 'Checkpoint gold (default)') + '</span>' +
         '<button class="btn ghost sm" data-action="App.setClientBrandColor">Save</button>' +
         (brandColorCurrent ? '<button class="btn ghost sm" data-action="App.clearClientBrandColor">Reset to gold</button>' : '') +
@@ -8915,7 +8915,7 @@ function showModal(opts) {
     if (appetiteEl) {
       var current = (S.settings && S.settings.riskAppetite) || 'Medium';
       appetiteEl.innerHTML = '<div><b>Risk appetite</b><p>Any residual risk scoring above this level is flagged on the Dashboard and in reports as exceeding tolerance.</p></div>' +
-        '<select class="mini" data-change-action="App.setRiskAppetite">' +
+        '<select class="mini" data-change-action="App.setRiskAppetite" aria-label="Risk appetite">' +
         ['Low', 'Medium', 'High', 'Critical'].map(function (s) { return '<option' + (current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
     }
@@ -8924,7 +8924,7 @@ function showModal(opts) {
     if (cadenceEl) {
       var cadenceCurrent = (S.settings && S.settings.scanCadenceDays) || '30';
       cadenceEl.innerHTML = '<div><b>Posture scan reminder</b><p>The Dashboard flags a scan as overdue after this many days. There\'s no backend to run scans unattended — this is a nudge on load, not a schedule. See SETUP.md for wiring real automation via Power Automate.</p></div>' +
-        '<select class="mini" data-change-action="App.setScanCadence">' +
+        '<select class="mini" data-change-action="App.setScanCadence" aria-label="Posture scan cadence">' +
         ['7', '14', '30', '60', '90'].map(function (s) { return '<option' + (cadenceCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
     }
@@ -8939,7 +8939,7 @@ function showModal(opts) {
         '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. There\'s no backend here to send this unattended: it\'s a nudge on load like the scan reminder above, until the scheduled monitor (SETUP.md § Continuous monitoring) is deployed to send it too.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" role="switch" aria-checked="' + (digestOnCurrent ? 'true' : 'false') + '" aria-label="Email digest enabled" data-action="App.toggleDigestEnabled"></button></div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
         '<input class="mini" id="digestRecipientsInput" placeholder="Recipients — comma-separated" value="' + esc(digestRecipCurrent) + '" style="flex:1;min-width:220px">' +
-        '<select class="mini" data-change-action="App.setDigestFrequency">' + ['Weekly', 'Monthly'].map(function (f) { return '<option' + (digestFreqCurrent === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select>' +
+        '<select class="mini" data-change-action="App.setDigestFrequency" aria-label="Email digest frequency">' + ['Weekly', 'Monthly'].map(function (f) { return '<option' + (digestFreqCurrent === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select>' +
         '<button class="btn ghost sm" data-action="App.saveDigestRecipients">Save recipients</button>' +
         '<button class="btn sm" data-action="App.sendDigestNow">Send digest now</button>' +
         '</div>' +
@@ -8964,7 +8964,7 @@ function showModal(opts) {
     if (e8El) {
       var e8Current = (S.settings && S.settings.e8TargetLevel) || 'ML2';
       e8El.innerHTML = '<div><b>Essential Eight target maturity</b><p>The Statement of Applicability shows only the maturity levels up to this target for each strategy, and Essential Eight readiness % is computed against it — not the full ML1-ML3 model. ML2 is the Commonwealth-entity default.</p></div>' +
-        '<select class="mini" data-change-action="App.setE8TargetLevel">' +
+        '<select class="mini" data-change-action="App.setE8TargetLevel" aria-label="Essential Eight target maturity level">' +
         ['ML1', 'ML2', 'ML3'].map(function (s) { return '<option' + (e8Current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
     }
@@ -8973,7 +8973,7 @@ function showModal(opts) {
     if (nistEl) {
       var nistCurrent = (S.settings && S.settings.nistDepth) || 'category';
       nistEl.innerHTML = '<div><b>NIST CSF depth</b><p>At Category, the Statement of Applicability shows the 22 CSF 2.0 categories, as it always has. At Subcategory it shows all 106 subcategories grouped under their category, with each category\'s status derived from its children. Switching to Subcategory adds those 106 rows to this tenant\'s Controls list the first time — a light-touch client left at Category never gets them.</p></div>' +
-        '<select class="mini" data-change-action="App.setNistDepth">' +
+        '<select class="mini" data-change-action="App.setNistDepth" aria-label="NIST CSF assessment depth">' +
         ['category', 'subcategory'].map(function (s) { return '<option value="' + s + '"' + (nistCurrent === s ? ' selected' : '') + '>' + (s === 'category' ? 'Category (22)' : 'Subcategory (106)') + '</option>'; }).join('') +
         '</select>';
     }
@@ -8982,7 +8982,7 @@ function showModal(opts) {
     if (dispEl) {
       var dispCurrent = (S.settings && S.settings.dispTargetLevel) || 'L1';
       dispEl.innerHTML = '<div><b>DISP target membership level</b><p>The Statement of Applicability shows only DISP/IRAP controls at or below this level, and readiness % is computed against it — the same mechanism as Essential Eight\'s target maturity. Set this to the membership level the client holds or is pursuing.</p></div>' +
-        '<select class="mini" data-change-action="App.setDispTargetLevel">' +
+        '<select class="mini" data-change-action="App.setDispTargetLevel" aria-label="DISP / IRAP target level">' +
         ['Entry', 'L1', 'L2', 'L3'].map(function (s) { return '<option value="' + s + '"' + (dispCurrent === s ? ' selected' : '') + '>' + (s === 'Entry' ? 'Entry level' : 'Level ' + s.slice(1)) + '</option>'; }).join('') +
         '</select>';
     }
@@ -8992,7 +8992,7 @@ function showModal(opts) {
       var soc2TypeCurrent = (S.settings && S.settings.soc2ReportType) || 'Type I';
       var soc2StartCurrent = (S.settings && S.settings.soc2ObservationStart) || '';
       soc2El.innerHTML = '<div class="fw-admin-row"><div><b>SOC 2 report type</b><p>Type I asks whether a control is correctly designed right now — the same point-in-time view every other framework\'s SoA already shows. Type II asks whether it actually operated that way consistently across an observation period, and changes the SOC 2 SoA to show, per automated control, how many posture scans fall in that window and whether any of them found an exception — computed from your existing scan history, not a new signal.</p></div>' +
-        '<select class="mini" data-change-action="App.setSoc2ReportType">' +
+        '<select class="mini" data-change-action="App.setSoc2ReportType" aria-label="SOC 2 report type">' +
         ['Type I', 'Type II'].map(function (s) { return '<option value="' + s + '"' + (soc2TypeCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select></div>' +
         (soc2TypeCurrent === 'Type II' ? '<div class="fw-admin-row" style="margin-top:10px"><div><b>Observation period start</b><p>Posture scans before this date aren\'t counted as Type II observations. Left blank, the operating-effectiveness view falls back to the tenant\'s entire scan history, which almost always overstates the real window — set this to when observation actually began.</p></div>' +
@@ -9344,7 +9344,19 @@ function showModal(opts) {
       try { await Store.setSetting('lightTheme', value); } catch (e) { warn(e); }
       var toggleBtn = document.getElementById('themeToggleBtn');
       if (toggleBtn) { toggleBtn.classList.toggle('on', isLight); toggleBtn.setAttribute('aria-checked', isLight ? 'true' : 'false'); }
+      /* BOTH heatmaps, not just the Dashboard's. There are two —
+         renderDash() draws #heat and renderRisks() draws #riskHeat —
+         and each bakes a per-cell text colour into an inline style at
+         render time. renderDash() alone left the Risk register's copy
+         holding the PREVIOUS theme's text colour, and nothing brought
+         it back: App.go() has no 'risks' branch, so renderRisks() only
+         runs on initial load and on a filter change. Switching to the
+         light theme therefore left near-white counts on the pale cell
+         washes — measured at 1.26:1 against a Medium cell, i.e. the
+         numbers were invisible until the practitioner happened to
+         click a severity pill. */
       renderDash();
+      renderRisks();
     },
 
     /* Boardroom Mode — see the big comment block above boardroomSlides()
