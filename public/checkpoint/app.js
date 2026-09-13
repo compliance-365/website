@@ -341,6 +341,25 @@ function showModal(opts) {
       risk: { title: 'Legacy authentication protocols allow credential-stuffing & MFA bypass', cat: 'Access', L: 5, I: 4, controls: ['A.8.5', 'A.5.15'] },
       actions: [{ t: 'Block legacy authentication via Conditional Access policy', pr: 'Critical', days: 14, control: 'A.8.5' }]
     },
+    /* Only 'legacy-auth-observed' gets a template, and only it should.
+       A successful legacy sign-in is a concrete, remediable finding
+       with a named account behind it. 'priv-role-changes' has no
+       template on purpose: it reports that role changes happened, which
+       is not a defect and has no remediation — proposing a risk every
+       time somebody is promoted would fill the register with noise and
+       train people to reject proposals without reading them.
+
+       A.8.15 rides alongside A.8.5 here because the finding is only
+       visible at all thanks to logging: if the sign-in log were not
+       being kept and read, this check could not exist. */
+    'legacy-auth-observed': {
+      risk: { title: 'Legacy authentication is in live use, bypassing MFA regardless of policy', cat: 'Access', L: 5, I: 5, controls: ['A.8.5', 'A.8.15'] },
+      actions: [
+        { t: 'Identify the accounts and clients still signing in over legacy protocols, and migrate or decommission each', pr: 'Critical', days: 14, control: 'A.8.5' },
+        { t: 'Close the gap that let these sign-ins through — confirm the Conditional Access policy scope covers them, and disable the legacy protocols at the Exchange mailbox level as well', pr: 'Critical', days: 21, control: 'A.8.5' },
+        { t: 'Reset credentials for any account that completed a legacy sign-in — it authenticated without MFA', pr: 'High', days: 7, control: 'A.5.17' }
+      ]
+    },
     'wdac': {
       risk: { title: 'Unhardened endpoints permit untrusted code execution across the fleet', cat: 'Ops', L: 4, I: 4, controls: ['A.8.7', 'A.8.19'] },
       actions: [{ t: 'Deploy WDAC application control baseline via Intune', pr: 'High', days: 30, control: 'A.8.7' }, { t: 'Stand up pilot ring & exception process for app control', pr: 'Medium', days: 45, control: 'A.8.19' }]
@@ -3955,12 +3974,20 @@ function showModal(opts) {
       var openAlerts = (S.alerts || []).filter(function (a) { return !a.ack; }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); });
       driftEl.innerHTML = openAlerts.length
         ? openAlerts.map(function (a) {
-            return '<div class="card" style="padding:10px 14px;margin-bottom:8px;border-left:3px solid var(--fail)">' +
+            /* Coloured by where the check LANDED, not uniformly red.
+               The monitor used to raise an alert only on pass -> fail,
+               so red was always right; it now alerts on any downgrade
+               (see isDowngrade() in PostureMonitor/index.js), and a
+               control that slipped to 'review' painted identically to
+               one that outright failed would flatten the distinction
+               the broader detection exists to draw. */
+            var driftColor = a.next === 'fail' ? 'var(--fail)' : 'var(--warn)';
+            return '<div class="card" style="padding:10px 14px;margin-bottom:8px;border-left:3px solid ' + driftColor + '">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">' +
               '<b>' + esc(a.label) + '</b>' +
               '<button class="btn ghost sm" data-action="App.acknowledgeAlert" data-id="' + a.id + '">Acknowledge</button>' +
               '</div>' +
-              '<div class="d-kv" style="padding:2px 0"><span>' + esc(a.prev) + ' → <b style="color:var(--fail)">' + esc(a.next) + '</b></span><span>detected ' + fmtDate(a.detected) + '</span></div>' +
+              '<div class="d-kv" style="padding:2px 0"><span>' + esc(a.prev) + ' → <b style="color:' + driftColor + '">' + esc(a.next) + '</b></span><span>detected ' + fmtDate(a.detected) + '</span></div>' +
               (a.note ? '<div style="color:var(--paper-dim);font-size:11.5px;margin-top:2px">' + esc(a.note) + '</div>' : '') +
             '</div>';
           }).join('')
@@ -4579,6 +4606,80 @@ function showModal(opts) {
      survived a reload would mean opening the view to a subset without
      having asked for one, which is how a check goes unnoticed. */
   var _scanStatusF = 'all';
+
+  /* ===== What moved between the two most recent scans =====
+     Deliberately NOT the same thing as the Dashboard's "Continuous
+     monitoring" card. That one lists the scheduled monitor's Alert
+     rows: written server-side by the Azure Function, emailed, and
+     persisting until a practitioner acknowledges each one. It also
+     only ever fires on pass -> fail.
+
+     This is the complement, and it exists because of a gap that had
+     nothing covering it: a practitioner who runs a scan by hand gets
+     no drift information at all. runScan() computes whether results
+     moved (scanResultsChanged, used to decide whether to snapshot) and
+     then throws the direction away. Every scan has recorded its full
+     per-check result map in its Detail JSON since the feature existed,
+     so the comparison needs no new Graph call, no new scope and no
+     schema change — the evidence was already there with nothing
+     reading it back.
+
+     It is also broader than pass -> fail:
+       regressed   any downgrade, so pass -> review and review -> fail
+                   are visible too. A control degrading short of
+                   outright failure is exactly what a quarterly review
+                   is supposed to catch, and it was invisible.
+       improved    shown because a practitioner needs to see that the
+                   remediation they did last week actually landed.
+       wentManual  a check that stopped answering — a licence lapsed,
+                   the scan account lost a role. Reported separately
+                   and never as a regression, because filing a
+                   licensing change next to "MFA was switched off"
+                   teaches people to skim the list. */
+  function renderScanDrift() {
+    var card = document.getElementById('scanDriftCard');
+    var body = document.getElementById('scanDriftBody');
+    if (!card || !body) return;
+    var history = scanResultHistory();
+    /* Needs two scans to compare. A first-ever scan has nothing to
+       drift from, and saying so is better than an empty card. */
+    if (history.length < 2) { card.style.display = 'none'; return; }
+    var prev = history[history.length - 2];
+    var curr = history[history.length - 1];
+    var drift = window.CheckpointLib.scanDrift(prev.results, curr.results);
+    card.style.display = '';
+    var labels = allCheckLabelsById();
+    function rows(list, cls, arrowColor) {
+      return list.map(function (d) {
+        return '<div class="drift-row ' + cls + '">' +
+          '<span class="drift-label">' + esc(labels[d.id] || d.id) + '</span>' +
+          '<span class="drift-move"><i>' + esc(d.from) + '</i> → <b style="color:' + arrowColor + '">' + esc(d.to) + '</b></span>' +
+          '</div>';
+      }).join('');
+    }
+    var parts = '';
+    if (drift.regressed.length) {
+      parts += '<div class="drift-group"><div class="drift-head drift-head-bad">' + drift.regressed.length +
+        ' went backwards</div>' + rows(drift.regressed, 'is-bad', 'var(--fail)') + '</div>';
+    }
+    if (drift.wentManual.length) {
+      parts += '<div class="drift-group"><div class="drift-head">' + drift.wentManual.length +
+        ' stopped answering</div><p class="drift-note">No longer readable in this tenant — usually a licence or a role the scan account lost, not a control that changed.</p>' +
+        rows(drift.wentManual, 'is-quiet', 'var(--paper-dim)') + '</div>';
+    }
+    if (drift.improved.length) {
+      parts += '<div class="drift-group"><div class="drift-head drift-head-good">' + drift.improved.length +
+        ' improved</div>' + rows(drift.improved, 'is-good', 'var(--pass)') + '</div>';
+    }
+    if (drift.cameBack.length) {
+      parts += '<div class="drift-group"><div class="drift-head">' + drift.cameBack.length +
+        ' started answering again</div>' + rows(drift.cameBack, 'is-quiet', 'var(--paper-dim)') + '</div>';
+    }
+    var caption = '<p class="drift-caption">' + esc(fmtDate(prev.date)) + ' → ' + esc(fmtDate(curr.date)) +
+      ' · ' + drift.compared + ' check' + (drift.compared === 1 ? '' : 's') + ' compared</p>';
+    body.innerHTML = caption + (parts ||
+      '<p class="drift-none">Nothing moved. Every check answered the same way as it did on ' + esc(fmtDate(prev.date)) + '.</p>');
+  }
 
   function renderScanChecks(instant) {
     var el = document.getElementById('checkList');
@@ -9587,7 +9688,7 @@ function showModal(opts) {
     dash: renderDash,
     board: renderBoard,
     constellation: renderConstellation,
-    scan: function () { renderCoverage(); renderScanChecks(true); },
+    scan: function () { renderCoverage(); renderScanChecks(true); renderScanDrift(); },
     risks: renderRisks,
     quantrisk: renderQuantRisk,
     actions: renderActions,
@@ -9626,7 +9727,7 @@ function showModal(opts) {
     if (!STATIC_VIEWS[v]) warn('renderView: no renderer registered for view "' + v + '"');
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -10347,6 +10448,7 @@ function showModal(opts) {
       Store.saveScanState().catch(warn);
       setTimeout(function () {
         renderProposed(); renderResolvable(); renderNavCounts(); renderDash(); renderSoa();
+        renderScanDrift();
         /* ONE summary, not nine toasts.
            This used to fire a separate toast per framework plus one for
            the proposed risks — all in this same tick, all into the same

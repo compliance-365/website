@@ -98,7 +98,27 @@ window.CHECKPOINT_CONFIG = {
        API, so the common "admin runs the scan" case is unaffected;
        a security-reader-only scan account will see Manual here,
        same expected shape as the SharePoint settings check above. */
-    'LifecycleWorkflows.Read.All'
+    'LifecycleWorkflows.Read.All',
+    /* Entra audit logs — the only scope here that buys visibility into
+       what the tenant DID rather than how it is CONFIGURED. Covers both
+       /auditLogs/signIns (graph.js's 'signInLogs' probe, backing the
+       observed-legacy-authentication check) and
+       /auditLogs/directoryAudits ('directoryAudits', backing the
+       privileged-role-change check) — Graph gates both behind this one
+       scope, so consenting to it enables both checks or neither.
+
+       Read-only, and nothing in Checkpoint ever writes to or purges an
+       audit log; the logs are the evidence, and software that could
+       alter its own evidence would be worthless as an audit input.
+
+       Same one-time incremental-consent prompt on next sign-in as every
+       scope added above it, never a breaking change to what is already
+       granted. Note that the scope alone is not sufficient: reading
+       either log also needs the signed-in user to hold Reports Reader,
+       Security Reader, Security Administrator or Global Reader, and
+       sign-in logs additionally need Entra ID P1 — which is why both
+       checks are capability-probed rather than assumed. */
+    'AuditLog.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

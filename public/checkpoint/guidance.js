@@ -175,11 +175,11 @@ window.GUIDANCE = {
     checks: ["sharing", "aws-s3-public"]
   },
   'A.5.15': {
-    how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, restrict end-user OAuth consent to high-privilege scopes so it requires admin approval, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA, legacy-authentication, device-compliance, (where licensed) risk-based, and user-consent pieces of this directly on every run.",
+    how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, restrict end-user OAuth consent to high-privilege scopes so it requires admin approval, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA, legacy-authentication, device-compliance, (where licensed) risk-based, and user-consent pieces of this directly on every run, and priv-role-changes lists every privileged role change in your review window so the least-privilege claim can be checked against what actually happened rather than against the current snapshot.",
     evidence: "The exported Conditional Access policy set, the tenant's user-consent settings, an access-review record, and Checkpoint's own MFA/legacy-authentication/ca-device/ca-risk/oauth-consent scan results.",
     link: "https://entra.microsoft.com",
     path: "Identity → Protection → Conditional Access → Policies",
-    checks: ["mfa-all", "legacy", "ca-device", "ca-risk", "oauth-consent", "aws-user-mfa"]
+    checks: ["mfa-all", "legacy", "ca-device", "ca-risk", "oauth-consent", "priv-role-changes", "aws-user-mfa"]
   },
   'A.5.16': {
     how: "Use Entra ID as the single identity source for every system that supports it — no local or shadow accounts — with one identity per person, deactivated promptly on departure. Keep guest accounts to a genuine business need and review them periodically, and where Entra ID Governance is licensed, automate joiner/leaver processing with Lifecycle Workflows rather than relying on someone remembering; Checkpoint's guest-count check flags guest drift and its lifecycle-workflows check confirms that automation is actually configured and enabled.",
@@ -195,10 +195,10 @@ window.GUIDANCE = {
     checks: ["aws-key-age"]
   },
   'A.5.18': {
-    how: "Grant access through group-based role assignment rather than one-off individual grants, require approval for privileged role activation through Entra PIM, and run a periodic access review to catch rights that should have been revoked but weren't. Checkpoint's PIM check verifies privileged roles are held as eligible assignments, not standing access; its access-review check confirms at least one Entra Access Review is actually configured to run that periodic check, though not that a cycle has recently completed.",
-    evidence: "The Entra PIM configuration, an access-review report, and Checkpoint's PIM/access-review scan results.",
+    how: "Grant access through group-based role assignment rather than one-off individual grants, require approval for privileged role activation through Entra PIM, and run a periodic access review to catch rights that should have been revoked but weren't. Checkpoint's PIM check verifies privileged roles are held as eligible assignments, not standing access; its access-review check confirms at least one Entra Access Review is actually configured to run that periodic check, though not that a cycle has recently completed. Between reviews, priv-role-changes reads the Entra directory audit log and reports every privileged role change in your window — who granted what, to whom, and when — so a role added the day after a review completed does not sit unnoticed until the next one. Self-service PIM activations are excluded from that list, since a user elevating into a role they are already eligible for is the control working rather than a change to who holds what.",
+    evidence: "The Entra PIM configuration, an access-review report, and Checkpoint's PIM/access-review/priv-role-changes scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["pim", "access-review", "leaver"]
+    checks: ["pim", "access-review", "leaver", "priv-role-changes"]
   },
   'A.5.19': {
     how: "Keep a vendor risk register recording what data each supplier can access and their own security posture — Checkpoint's Vendor register is built for exactly this — and require a security review before onboarding any supplier that touches your data. Set a minimum security bar in the supplier contract itself, not just in your own process.",
@@ -482,11 +482,11 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.5': {
-    how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. Where Entra ID Protection (P2) is licensed, add risk-based Conditional Access so a risky sign-in or a compromised-looking account is challenged or blocked automatically rather than relying on someone noticing, and bound privileged session lifetime with sign-in frequency so a stolen token doesn't stay useful forever. This is the control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv, legacy, ca-risk and ca-sif all read your live Conditional Access configuration.",
-    evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth, acting on sign-in/user risk and bounding privileged session lifetime, and Checkpoint's mfa-all/mfa-priv/legacy/ca-risk/ca-sif scan results.",
+    how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. Where Entra ID Protection (P2) is licensed, add risk-based Conditional Access so a risky sign-in or a compromised-looking account is challenged or blocked automatically rather than relying on someone noticing, and bound privileged session lifetime with sign-in frequency so a stolen token doesn't stay useful forever. This is the control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv, legacy, ca-risk and ca-sif all read your live Conditional Access configuration. Policy alone is not proof, though: legacy-auth-observed reads the Entra sign-in log to check whether any legacy sign-in actually succeeded despite the policy, which is what catches a policy scoped past the one service account that still uses IMAP.",
+    evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth, acting on sign-in/user risk and bounding privileged session lifetime, Checkpoint's mfa-all/mfa-priv/legacy/ca-risk/ca-sif scan results, and the legacy-auth-observed result showing the sign-in log agrees with the policy.",
     link: "https://entra.microsoft.com",
     path: "Identity → Protection → Conditional Access → Policies",
-    checks: ["mfa-all", "mfa-priv", "legacy", "ca-risk", "ca-sif", "aws-root-mfa", "aws-user-mfa"]
+    checks: ["mfa-all", "mfa-priv", "legacy", "legacy-auth-observed", "ca-risk", "ca-sif", "aws-root-mfa", "aws-user-mfa"]
   },
   'A.8.6': {
     how: "Monitor capacity for systems you're directly responsible for (on-premises servers, Azure resources) with alerting before thresholds are hit, and plan ahead for growth. For fully cloud-hosted Microsoft 365 services, capacity management is largely Microsoft's responsibility — document that scoping decision.",
@@ -547,10 +547,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.15': {
-    how: "Enable unified audit logging across Microsoft 365 and set a retention period appropriate to your investigative and compliance needs. Checkpoint's logging check verifies this is switched on via your Secure Score signal — an unlicensed or disabled audit log is one of the most common gaps found in a first scan. Where AWS is in scope, CloudTrail is the equivalent record — without it there's no history of who did what in the account.",
-    evidence: "Purview audit log configuration showing logging enabled and the retention period set, plus Checkpoint's logging scan result.",
+    how: "Enable unified audit logging across Microsoft 365 and set a retention period appropriate to your investigative and compliance needs. Checkpoint's logging check verifies this is switched on via your Secure Score signal — an unlicensed or disabled audit log is one of the most common gaps found in a first scan. Where AWS is in scope, CloudTrail is the equivalent record — without it there's no history of who did what in the account. Logging is only half the control — the logs have to be read. Checkpoint's legacy-auth-observed and priv-role-changes checks do exactly that against the Entra sign-in and directory audit logs on every scan, which is also the evidence that the logs are being reviewed rather than merely retained. Note Entra's own retention limits: sign-in and directory audit logs are kept for 30 days on P1/P2 and 7 days on the free tier, so anything you need beyond that has to be exported to Log Analytics or a SIEM.",
+    evidence: "Purview audit log configuration showing logging enabled and the retention period set, Checkpoint's logging scan result, and the legacy-auth-observed/priv-role-changes results as evidence the logs are actually reviewed.",
     link: "https://purview.microsoft.com",
-    checks: ["logging", "aws-cloudtrail"]
+    checks: ["logging", "legacy-auth-observed", "priv-role-changes", "aws-cloudtrail"]
   },
   'A.8.16': {
     how: "Actively monitor security alerts rather than just collecting logs — Microsoft 365 Defender's alert and incident queue needs an assigned owner checking it regularly, with a documented triage process. Checkpoint's alerts check looks at whether threat-protection monitoring is genuinely in place via Secure Score. Where AWS is in scope, GuardDuty is the equivalent managed threat detection.",

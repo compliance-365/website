@@ -576,7 +576,14 @@ describe('SCORED_CHECK_IDS / CHECK_LABELS', () => {
     // adding a check id here should be a visible, deliberate diff, not
     // something that silently drifts out of sync with what the browser
     // app scores.
-    assert.equal(monitor.SCORED_CHECK_IDS.length, 38);
+    // 38 -> 40 when 'legacy-auth-observed' and 'priv-role-changes' were
+    // added (AuditLog.Read.All) — the first checks here that read what
+    // the tenant DID rather than how it is CONFIGURED. Worth the new
+    // permission precisely in this Function: a legacy sign-in succeeding
+    // overnight is exactly what an unattended monitor should email
+    // about, and it is invisible to every configuration check in the
+    // file.
+    assert.equal(monitor.SCORED_CHECK_IDS.length, 40);
     assert.ok(monitor.SCORED_CHECK_IDS.indexOf('retention') === -1, 'retention can never be scored unattended');
   });
 
@@ -588,5 +595,216 @@ describe('SCORED_CHECK_IDS / CHECK_LABELS', () => {
 
   test('no duplicate ids', () => {
     assert.equal(new Set(monitor.SCORED_CHECK_IDS).size, monitor.SCORED_CHECK_IDS.length);
+  });
+});
+
+/* The monitor's drift rule and lib.js's scanDrift() are two hand-ported
+   copies of the same ranking (see isDowngrade()'s comment in index.js).
+   They decide different things — the monitor decides whether to write an
+   acknowledgeable Alert row and email it, the browser decides which
+   group a check appears under on the scan view's drift card — but they
+   must never disagree about the underlying question of whether a control
+   got worse. Asserted across every ordered pair, rather than on a
+   handful of cases, because the pairs that would actually go wrong are
+   the awkward ones: anything involving 'manual', and anything involving
+   a status neither side recognises. */
+describe('drift protection — monitor drift agrees with lib.js scanDrift()', () => {
+  const STATUSES = ['pass', 'review', 'fail', 'manual', 'unknown-status'];
+
+  for (const from of STATUSES) {
+    for (const to of STATUSES) {
+      test(`${from} -> ${to}`, () => {
+        const drift = CheckpointLib.scanDrift({ c: from }, { c: to });
+        const libSaysRegression = drift.regressed.some((d) => d.id === 'c');
+        assert.equal(monitor.isDowngrade(from, to), libSaysRegression,
+          `isDowngrade(${from}, ${to}) must match scanDrift()'s "regressed" grading`);
+      });
+    }
+  }
+
+  test('a check absent from either scan is never a downgrade', () => {
+    // A newly added check has no previous result, and a removed one has
+    // no current result. Alerting on either would fill the queue on the
+    // first run after a release rather than on an actual change.
+    assert.equal(monitor.isDowngrade(undefined, 'fail'), false);
+    assert.equal(monitor.isDowngrade('pass', undefined), false);
+    assert.equal(CheckpointLib.scanDrift({}, { c: 'fail' }).regressed.length, 0);
+    assert.equal(CheckpointLib.scanDrift({ c: 'pass' }, {}).regressed.length, 0);
+  });
+
+  test('the degradations the old pass-only rule missed now alert', () => {
+    // The regression this whole change exists for: before isDowngrade(),
+    // a control could walk pass -> review -> fail across two monitor runs
+    // without raising an alert on either step.
+    assert.equal(monitor.isDowngrade('pass', 'review'), true);
+    assert.equal(monitor.isDowngrade('review', 'fail'), true);
+  });
+
+  test('losing readability is not a degradation in either direction', () => {
+    // A licence lapse or a lost app role, not a control change.
+    assert.equal(monitor.isDowngrade('pass', 'manual'), false);
+    assert.equal(monitor.isDowngrade('manual', 'fail'), false);
+  });
+});
+
+/* The two Entra audit-log checks, end to end through the monitor's own
+   runPostureChecks() against a fake Graph — and asserted against
+   lib.js's pure functions on the identical fixture, since index.js's
+   copies are hand-ported (the file's own header: "if you change one,
+   change the other"). These are the only checks in the suite whose
+   answer can contradict a passing configuration check, so the grading
+   boundaries and the licence-gap behaviour both matter. */
+describe('runPostureChecks() — legacy-auth-observed, priv-role-changes', () => {
+  const ok = (app, upn) => ({ clientAppUsed: app, status: { errorCode: 0 }, userPrincipalName: upn });
+  const blocked = (app) => ({ clientAppUsed: app, status: { errorCode: 53003 } });
+
+  function graphWith({ signIns = [], audits = [], signInError = null, auditError = null } = {}) {
+    return fakeGraph([
+      [/^\/identity\/conditionalAccess\/policies$/, () => ({ value: [] })],
+      [/^\/users\?\$select=id,displayName,userPrincipalName,accountEnabled/, () => ({ value: [] })],
+      [/^\/directoryRoles\?\$select/, () => ({ value: [] })],
+      [/^\/directoryRoles\(roleTemplateId=/, () => ({ value: [] })],
+      [/^\/roleManagement\/directory\/roleAssignmentScheduleInstances/, () => ({ value: [] })],
+      [/^\/roleManagement\/directory\/roleEligibilityScheduleInstances/, () => ({ value: [] })],
+      [/^\/users\?\$filter=userType/, () => ({ value: [] })],
+      [/^\/identityProtection\/riskyUsers/, () => ({ value: [] })],
+      [/^\/deviceManagement\/managedDevices/, () => ({ value: [] })],
+      [/^\/deviceManagement\/deviceCompliancePolicies/, () => ({ value: [] })],
+      [/^\/deviceManagement\/deviceConfigurations/, () => ({ value: [] })],
+      [/^\/oauth2PermissionGrants/, () => ({ value: [] })],
+      [/^\/identityGovernance\/accessReviews\/definitions/, () => ({ value: [] })],
+      [/^\/security\/secureScores/, () => ({ value: [] })],
+      [/^\/security\/incidents/, () => ({ value: [] })],
+      [/^\/security\/subjectRightsRequests/, () => ({ value: [] })],
+      [/^\/identityGovernance\/lifecycleWorkflows\/workflows/, () => ({ value: [] })],
+      [/^\/auditLogs\/signIns/, (path) => {
+        if (signInError) throw signInError;
+        // The success-only query carries the extra errorCode filter; the
+        // monitor asks for successes SEPARATELY precisely so a capped
+        // scan of all attempts can never decide the fail/not-fail grade.
+        const successOnly = decodeURIComponent(path).includes('status/errorCode eq 0');
+        return { value: successOnly ? signIns.filter((r) => r.status && r.status.errorCode === 0) : signIns };
+      }],
+      [/^\/auditLogs\/directoryAudits/, () => {
+        if (auditError) throw auditError;
+        return { value: audits };
+      }]
+    ]);
+  }
+
+  const run = async (opts) => {
+    const { g, gAll } = graphWith(opts);
+    return (await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS)).results;
+  };
+
+  test('no legacy sign-ins passes, and agrees with lib.js', async () => {
+    const results = await run({ signIns: [] });
+    assert.equal(results['legacy-auth-observed'], 'pass');
+    assert.equal(CheckpointLib.legacyAuthObservedResult([]).result, 'pass');
+  });
+
+  test('a successful legacy sign-in fails, and agrees with lib.js', async () => {
+    const signIns = [ok('IMAP4', 'svc@x.test'), blocked('POP3')];
+    const results = await run({ signIns });
+    assert.equal(results['legacy-auth-observed'], 'fail');
+    assert.equal(CheckpointLib.legacyAuthObservedResult(signIns).result, 'fail');
+  });
+
+  test('blocked attempts alone are review on both sides, never fail', async () => {
+    const signIns = [blocked('Other clients'), blocked('POP3')];
+    const results = await run({ signIns });
+    assert.equal(results['legacy-auth-observed'], 'review');
+    assert.equal(CheckpointLib.legacyAuthObservedResult(signIns).result, 'review');
+  });
+
+  test('a 403 on sign-in logs is manual, not review', async () => {
+    // Sign-in logs need Entra ID P1 AND a reports-reading role. Every
+    // other check in the monitor degrades a permission error to 'review',
+    // which would cost a free-tier tenant half a point every night for a
+    // question it was never able to answer. score() excludes 'manual'
+    // from the denominator; that is the honest answer here.
+    const err = new Error('Graph 403'); err.status = 403;
+    const results = await run({ signInError: err });
+    assert.equal(results['legacy-auth-observed'], 'manual');
+  });
+
+  test('a non-permission error on sign-in logs is still review', async () => {
+    const err = new Error('Graph 500'); err.status = 500;
+    const results = await run({ signInError: err });
+    assert.equal(results['legacy-auth-observed'], 'review');
+  });
+
+  test('no privileged role changes passes, and agrees with lib.js', async () => {
+    const results = await run({ audits: [] });
+    assert.equal(results['priv-role-changes'], 'pass');
+    assert.equal(CheckpointLib.privRoleChangeResult([]).result, 'pass');
+  });
+
+  test('a privileged role change is review, and agrees with lib.js', async () => {
+    const audits = [{
+      activityDisplayName: 'Add member to role',
+      activityDateTime: '2026-06-01T00:00:00Z',
+      initiatedBy: { user: { userPrincipalName: 'admin@x.test' } },
+      targetResources: [{ type: 'User', userPrincipalName: 'b@x.test' }, { type: 'Role', displayName: 'Global Administrator' }]
+    }];
+    const results = await run({ audits });
+    assert.equal(results['priv-role-changes'], 'review');
+    assert.equal(CheckpointLib.privRoleChangeResult(audits).result, 'review');
+  });
+
+  test('self-service PIM activations are excluded on both sides', async () => {
+    const audits = [{
+      activityDisplayName: 'Add member to role completed (PIM activation)',
+      activityDateTime: '2026-06-01T00:00:00Z',
+      initiatedBy: { user: { userPrincipalName: 'a@x.test' } },
+      targetResources: [{ type: 'User', userPrincipalName: 'a@x.test' }, { type: 'Role', displayName: 'Global Administrator' }]
+    }];
+    const results = await run({ audits });
+    assert.equal(results['priv-role-changes'], 'pass');
+    assert.equal(CheckpointLib.privRoleChangeResult(audits).result, 'pass');
+    // The two exclusion regexes are separate hand-ported copies, so
+    // compare them directly rather than trusting that both sides
+    // happened to agree on this one fixture.
+    assert.equal(String(monitor.PRIV_ROLE_ACTIVITY_EXCLUDE), String(CheckpointLib.PRIV_ROLE_ACTIVITY_EXCLUDE));
+  });
+
+  test('a 403 on directory audits is manual, not review', async () => {
+    const err = new Error('Graph 403'); err.status = 403;
+    const results = await run({ auditError: err });
+    assert.equal(results['priv-role-changes'], 'manual');
+  });
+});
+
+describe('gCapped() — the sign-in log is the one unbounded Graph resource here', () => {
+  // The shared client's gAll() follows every nextLink. That is fine for
+  // configuration collections, whose size is bounded by how the tenant is
+  // set up; a sign-in log is bounded by how much TRAFFIC it receives, and
+  // a tenant under a credential-stuffing run against IMAP can have
+  // hundreds of thousands of rows in a 30-day window.
+  const pager = (total, pageSize) => async (url) => {
+    const from = Number(new URL('http://x/' + url.replace(/^\//, '')).searchParams.get('skip') || 0);
+    const rows = Array.from({ length: Math.min(pageSize, total - from) }, (_, i) => ({ id: from + i }));
+    const next = from + rows.length < total ? '/p?skip=' + (from + rows.length) : null;
+    return next ? { value: rows, '@odata.nextLink': next } : { value: rows };
+  };
+
+  test('stops at the cap and says so', async () => {
+    const r = await monitor.gCapped(pager(1000, 100), '/p?skip=0', 250);
+    assert.equal(r.rows.length, 250);
+    assert.equal(r.truncated, true);
+  });
+
+  test('a result that fits is not reported as truncated', async () => {
+    const r = await monitor.gCapped(pager(180, 100), '/p?skip=0', 250);
+    assert.equal(r.rows.length, 180);
+    assert.equal(r.truncated, false);
+  });
+
+  test('a result landing exactly on the cap with nothing after it is not truncated', async () => {
+    // The boundary that would otherwise report a complete result as
+    // partial, sending a misleading "lower bound" caveat into the note.
+    const r = await monitor.gCapped(pager(250, 250), '/p?skip=0', 250);
+    assert.equal(r.rows.length, 250);
+    assert.equal(r.truncated, false);
   });
 });

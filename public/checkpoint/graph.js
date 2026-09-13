@@ -203,6 +203,31 @@ window.Graph = (function () {
     return collectPages(path, function (url) { return g(url, opts); });
   }
 
+  /* gAll with a hard row cap, for the one family of Graph resources in
+     this app that is genuinely unbounded: the Entra sign-in log. Every
+     other gAll() caller reads a configuration collection — policies,
+     devices, labels, role assignments — whose size is bounded by how
+     the tenant is set up, so following every nextLink is safe. A
+     sign-in log is bounded by how much traffic the tenant receives,
+     and a tenant under a credential-stuffing run against IMAP can have
+     hundreds of thousands of rows in a 30-day window. Unbounded paging
+     there would hang the scan on exactly the tenant that most needs
+     the answer.
+
+     Returns { rows, truncated } rather than a bare array, because a
+     caller that cannot tell a complete result from a capped one will
+     eventually report a capped one as complete. */
+  async function gCapped(path, maxRows, opts) {
+    var out = [], url = path, truncated = false;
+    while (url) {
+      var j = await g(url, opts);
+      out = out.concat((j && j.value) || []);
+      if (out.length >= maxRows) { truncated = !!(j && j['@odata.nextLink']); out = out.slice(0, maxRows); break; }
+      url = (j && j['@odata.nextLink']) || null;
+    }
+    return { rows: out, truncated: truncated };
+  }
+
   /* ==========================================================
      Capability detection — so the app is honest about what it can
      check in THIS tenant, rather than a posture check silently
@@ -264,7 +289,26 @@ window.Graph = (function () {
        unaffected); a Security Reader-level scan account sees Manual
        here, same shape as the SharePoint settings probe above. */
     { key: 'lifecycleWorkflows', label: 'Entra ID Governance Lifecycle Workflows', licence: 'Microsoft Entra ID Governance (Entra ID P2 + the Governance add-on, or Microsoft Entra Suite)', path: '/identityGovernance/lifecycleWorkflows/workflows?$top=1',
-      note: 'Lifecycle Workflows requires Entra ID Governance — the joiner/leaver automation check will show as Manual.' }
+      note: 'Lifecycle Workflows requires Entra ID Governance — the joiner/leaver automation check will show as Manual.' },
+    /* Entra sign-in logs. GA on v1.0 (/auditLogs/signIns), but reading
+       them at all requires Entra ID P1 or P2 — a free/E1 tenant gets a
+       clean 403 here rather than an empty list, which is exactly the
+       distinction this probe exists to make: "no licence to see the
+       log" and "a licensed tenant with no legacy sign-ins" are opposite
+       compliance answers that look identical downstream.
+       Deliberately a separate probe from 'conditionalAccess' despite
+       sharing the P1 floor — the CA probe can succeed while this one
+       403s, because reading sign-in logs also needs the signed-in user
+       to hold Reports Reader, Security Reader, Security Administrator
+       or Global Reader specifically. */
+    { key: 'signInLogs', label: 'Entra ID sign-in logs', licence: 'Entra ID P1 or P2, and a role that can read reports (Reports Reader, Security Reader, Security Administrator or Global Reader)', path: '/auditLogs/signIns?$top=1',
+      note: 'Sign-in logs are not readable — the observed-legacy-authentication check will show as Manual. Reading them needs Entra ID P1 and a reports-reading role; without both, the configuration-only legacy-authentication check above is the only answer available.' },
+    /* Directory audit logs. Also GA on v1.0, and unlike sign-in logs
+       these are available on every Entra tier — so a Manual here is
+       almost always a missing role or an unconsented AuditLog.Read.All
+       scope rather than a licensing gap. */
+    { key: 'directoryAudits', label: 'Entra ID directory audit logs', licence: 'Any Entra ID tier, with a role that can read reports (Reports Reader, Security Reader, Security Administrator or Global Reader)', path: '/auditLogs/directoryAudits?$top=1',
+      note: 'Directory audit logs are not readable — the privileged-role-change check will show as Manual. These are available on every Entra tier, so this is usually a missing reports-reading role rather than a licence gap.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -396,6 +440,7 @@ window.Graph = (function () {
     var riskyUsersReviewMax = num('riskyUsersReviewMax', 3);
     var incidentTriageDays = num('incidentTriageDays', 5);
     var deviceStaleDays = num('deviceStaleDays', 30);
+    var auditLogWindowDays = num('auditLogWindowDays', 30);
 
     /* Consulted below so a licence/permission gap this tenant genuinely
        has (no Entra ID P2, no Intune, etc.) shows up as a clean,
@@ -1030,6 +1075,129 @@ window.Graph = (function () {
         set('xdr-incidents', tri.result, incidentNote);
       } catch (e) {
         set('xdr-incidents', 'review', 'Defender XDR incidents not readable: ' + e.message);
+      }
+    }
+
+    /* --- Entra audit logs: what the tenant actually DID ---------------
+       Every other check in this file reads configuration — what the
+       tenant is set up to do. These two read the logs — what it did.
+       That difference is the reason they exist: configuration can be
+       correct and the behaviour still wrong (a CA policy scoped past
+       the one mailbox that matters), and only the log can say so.
+
+       Both are bounded by auditLogWindowDays and by $top, because a
+       sign-in log is the one Graph resource in this app that can be
+       arbitrarily large. The window is a setting rather than a constant
+       because it has to line up with whatever review cadence the
+       organisation actually committed to in its own ISMS. */
+    var auditSince = new Date(Date.now() - auditLogWindowDays * 86400000).toISOString();
+
+    /* legacy-auth-observed — the evidence half of the 'legacy' check
+       above. 'legacy' reads Conditional Access and answers "is legacy
+       authentication blocked"; this reads the sign-in log and answers
+       "did any legacy sign-in get through anyway". A tenant can pass
+       the first and fail this one, and when it does, that contradiction
+       is the single most useful thing either check produces.
+
+       Filtered server-side on clientAppUsed rather than pulled whole
+       and filtered here: the legacy protocols are a known, closed set,
+       and fetching a month of ALL sign-ins to discard 99% of them
+       client-side would be slow enough that people stop scanning. */
+    if (!capabilities.signInLogs.available) {
+      set('legacy-auth-observed', 'manual', capabilities.signInLogs.note);
+    } else {
+      try {
+        var legacyApps = ['Exchange ActiveSync', 'IMAP4', 'POP3', 'Authenticated SMTP', 'MAPI Over HTTP', 'Offline Address Book', 'Exchange Web Services', 'Other clients'];
+        var legacyFilter = "createdDateTime ge " + auditSince + " and (" +
+          legacyApps.map(function (a) { return "clientAppUsed eq '" + a + "'"; }).join(' or ') + ")";
+        var legacySelect = '&$select=id,createdDateTime,userPrincipalName,clientAppUsed,status,appDisplayName&$top=200';
+
+        /* Two queries, not one, and the split is what makes the grade
+           safe under the row cap.
+
+           The SUCCESSES are asked for separately and server-side
+           (status/errorCode eq 0). Successful legacy sign-ins are rare
+           even in a tenant with a problem, so this set is small — but
+           more importantly, a capped scan of all attempts could easily
+           cut off before reaching the one success buried among 50,000
+           blocked attempts, and would then grade 'review' on a tenant
+           whose legacy auth is demonstrably working. Asking Entra for
+           the successes directly means the fail/not-fail decision never
+           depends on where the cap fell.
+
+           The second query is for the breakdown only — which protocols,
+           how many attempts — and truncation there cannot change the
+           grade, because any attempt at all already means at least
+           'review'. */
+        var successFilter = legacyFilter + ' and status/errorCode eq 0';
+        var successPage = await gCapped('/auditLogs/signIns?$filter=' + encodeURIComponent(successFilter) + legacySelect, 200);
+        var attemptPage = await gCapped('/auditLogs/signIns?$filter=' + encodeURIComponent(legacyFilter) + legacySelect, 1000);
+
+        var lao = window.CheckpointLib.legacyAuthObservedResult(attemptPage.rows);
+        if (successPage.rows.length) {
+          /* The server-side answer wins over the capped sample. */
+          var sao = window.CheckpointLib.legacyAuthObservedResult(successPage.rows);
+          lao.result = 'fail';
+          lao.succeeded = Math.max(lao.succeeded, sao.succeeded);
+          lao.users = sao.users;
+          Object.keys(sao.byApp).forEach(function (a) {
+            if (!lao.byApp[a]) lao.byApp[a] = { attempts: 0, succeeded: 0 };
+            lao.byApp[a].succeeded = Math.max(lao.byApp[a].succeeded, sao.byApp[a].succeeded);
+          });
+        }
+        var laoTruncated = attemptPage.truncated || successPage.truncated;
+        raw['legacy-auth-observed'] = { attempts: lao.attempts, succeeded: lao.succeeded, byApp: lao.byApp, users: lao.users, windowDays: auditLogWindowDays, truncated: laoTruncated };
+        var laoApps = Object.keys(lao.byApp).sort();
+        var laoNote;
+        if (!lao.attempts) {
+          laoNote = 'No legacy-authentication sign-ins of any kind in the last ' + auditLogWindowDays + ' days';
+        } else if (lao.succeeded) {
+          laoNote = lao.succeeded + ' legacy sign-in(s) SUCCEEDED in the last ' + auditLogWindowDays + ' days via ' +
+            laoApps.filter(function (a) { return lao.byApp[a].succeeded; }).join(', ') +
+            ' — ' + lao.users.length + ' account(s) affected' +
+            (lao.users.length <= 5 ? ': ' + lao.users.join(', ') : '') +
+            '. These sign-ins bypassed MFA regardless of what policy says.';
+        } else {
+          laoNote = lao.attempts + ' legacy sign-in attempt(s) in the last ' + auditLogWindowDays + ' days via ' +
+            laoApps.join(', ') + ' — all blocked or failed. The control is holding; confirm no real client or service account is still configured this way.';
+        }
+        if (laoTruncated) laoNote += ' (counts are a lower bound — more rows than this scan reads in one pass)';
+        set('legacy-auth-observed', lao.result, laoNote);
+      } catch (e) {
+        set('legacy-auth-observed', 'review', 'Sign-in logs not readable: ' + e.message);
+      }
+    }
+
+    /* priv-role-changes — the audit trail an auditor asks for by name.
+       Never fails (see privRoleChangeResult()'s comment): a role being
+       granted is not a defect, and a check that failed on every
+       promotion would be switched off inside a month. The compliance
+       value is the evidence, not the grade. */
+    if (!capabilities.directoryAudits.available) {
+      set('priv-role-changes', 'manual', capabilities.directoryAudits.note);
+    } else {
+      try {
+        var auditFilter = "activityDateTime ge " + auditSince + " and category eq 'RoleManagement'";
+        /* Capped for the same reason, though RoleManagement activity is
+           far smaller than a sign-in log in any real tenant. Truncation
+           cannot change this grade either: one change already means
+           'review', and the check never fails. */
+        var rolePage = await gCapped('/auditLogs/directoryAudits?$filter=' + encodeURIComponent(auditFilter) + '&$top=200', 1000);
+        var prc = window.CheckpointLib.privRoleChangeResult(rolePage.rows);
+        raw['priv-role-changes'] = { count: prc.count, changes: prc.changes, actors: prc.actors, windowDays: auditLogWindowDays };
+        var prcNote = prc.count
+          ? prc.count + ' privileged role change(s) in the last ' + auditLogWindowDays + ' days, by ' +
+            (prc.actors.length <= 3 ? prc.actors.join(', ') : prc.actors.length + ' different principals') +
+            ' — confirm each was authorised. Most recent: ' +
+            prc.changes.slice(0, 3).map(function (c) {
+              return (c.role || 'a role') + ' → ' + (c.subject || 'unknown') + ' (' + (c.date || '').slice(0, 10) + ')';
+            }).join('; ') +
+            '. Self-service PIM activations are excluded.'
+          : 'No privileged role changes in the last ' + auditLogWindowDays + ' days (self-service PIM activations excluded)';
+        if (rolePage.truncated) prcNote += ' (more changes than this scan reads in one pass — the count is a lower bound)';
+        set('priv-role-changes', prc.result, prcNote);
+      } catch (e) {
+        set('priv-role-changes', 'review', 'Directory audit logs not readable: ' + e.message);
       }
     }
 
