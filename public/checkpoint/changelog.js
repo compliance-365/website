@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.69.0',
+    date: '2026-09-13',
+    entries: [
+      'A posture scan now tells you what moved. Every scan has always recorded how each individual check answered, and the app never read it back -- so a re-scan showed you a score and left you to work out which controls were behind the change. The scan view now opens with what changed since the previous scan, grouped worst first: checks that went backwards, checks that stopped answering, and checks that improved. It covers any downgrade, not just outright failure, so a control slipping from Pass to Review is visible too -- which is exactly the kind of quiet degradation a quarterly review exists to catch. No new permission and no new scan: the evidence was already being recorded.',
+      'The scheduled monitor now raises an alert on any control degradation, not only on a check going from Pass to Fail. Pass to Review and Review to Fail previously reached neither the alert queue nor anyone\'s inbox, so a control could walk Pass to Review to Fail across two nightly runs without raising a single alert on either step. Alerts are now coloured by where the check landed, so a slip to Review is not painted the same red as an outright failure. A check that stops answering -- a lapsed licence, a lost role -- is reported separately and never as a regression: it means the signal became unreadable, not that a control changed.',
+      'Two new checks read the Entra audit logs rather than the configuration -- the first in Checkpoint to report what a tenant actually did rather than how it is set up. "No legacy authentication observed in sign-in logs" sits alongside the existing legacy-authentication check and answers the question that one cannot: whether any legacy sign-in actually succeeded despite the policy. A Conditional Access policy scoped past one service account still using IMAP leaves the configuration check passing while those sign-ins keep bypassing MFA entirely. Attempts that were blocked show as Review rather than Fail -- a blocked attempt is the control working.',
+      '"Privileged role changes reviewed" lists every privileged role change in your review window, with who made it, who received it and when -- the answer to an auditor asking for exactly that, without anyone exporting a spreadsheet the week before. It never fails: somebody being granted a role is not a defect, and what the standards actually require is that the change was authorised, which no API can decide. Self-service PIM activations are excluded, since a user elevating into a role they are already eligible for is the control working as intended. Both checks need the AuditLog.Read.All permission and appear as Manual until it is consented; sign-in logs additionally need Entra ID P1. The review window is configurable in Settings and defaults to 30 days, matching Entra\'s own log retention.'
+    ]
+  },
+  {
     version: '1.68.0',
     date: '2026-09-13',
     entries: [
