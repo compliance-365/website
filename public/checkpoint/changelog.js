@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.65.0',
+    date: '2026-09-13',
+    entries: [
+      'Column headers now stay put while you scroll a register, and so do the Statement of Applicability\'s family headings -- so you can still tell which column you are reading, and which control family you are in, sixty rows down. Both were written to behave this way and neither ever did: the card wrapping each table was silently acting as a scroll container, which pins a sticky header to something that never moves. Applies on screens 1400px and wider, where no register needs to scroll sideways; narrower screens keep the horizontal scroll they have today.',
+      'The Posture scan\'s check list can now be filtered by status -- All, Need attention, To review, Clear -- with a count on each. Triaging 40+ checks across eight categories previously meant opening each category and reading past its passing checks to find the failures. Filtering opens whatever matches, and categories with nothing in them drop out rather than leaving empty sections to click through.',
+      'Every summary tile whose figure is a share of something -- framework readiness, implemented-of-applicable, and the register filters on the Statement of Applicability, Vendor risk and AI systems -- now carries a small bar showing that share, so a strip of tiles can be compared at a glance instead of by reading each number. Tiles that are a plain count, with no total to measure against, deliberately do not get one.',
+      'The Dashboard\'s posture score now shows the same ring the Posture scan draws, so the headline number reads as a position on a scale rather than a bare figure, and the Dashboard\'s tile strip is split into "Audit readiness" and "Risk & obligations" with the label carried once above each rather than repeated on every tile.'
+    ]
+  },
+  {
     version: '1.64.0',
     date: '2026-09-09',
     entries: [
