@@ -125,6 +125,19 @@
      sm = controls (buttons, inputs, chips), md = cards and tiles,
      lg = panels that float above the page. */
   --r-sm:8px; --r-md:14px; --r-lg:20px;
+  /* Height of the sticky topbar, as a token because two other sticky
+     things now have to sit below it and a hard-coded 71px in three
+     places is three chances to drift. It is 16px padding top and
+     bottom + a 1px bottom border + the 38px tall control row inside —
+     measured, and asserted in test/styles-tokens.test.mjs so a change
+     to .top's padding that silently slides every sticky header under it
+     fails a test rather than shipping. */
+  --topbar-h:71px;
+  /* A sticky <thead> sits directly under the topbar; the Statement of
+     Applicability's family headers then sit under BOTH. Kept as a
+     derived token so the family offset can never disagree with the
+     header height it is supposed to clear. */
+  --thead-h:38px;
 
   /* Strict type scale — six steps, everything in the stylesheet below
      now resolves to one of these (nearest-neighbour, consolidating what
@@ -1140,7 +1153,41 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
    point is knowing which family you are in 60 rows down; the offset
    clears the table's own sticky <thead>. Sits ON the table surface
    rather than in a card of its own so it reads as part of the list. */
-.soa-family th{position:sticky;top:38px;z-index:2;background:var(--surface-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 14px;text-transform:none;letter-spacing:0}
+/* ===== Sticky column headers — why this is behind a media query =====
+   These offsets are relative to the WINDOW, which is what scrolls: the
+   sidebar is sticky/100vh and .main does not scroll on its own.
+
+   .card carries overflow-x:auto so a wide register scrolls inside its
+   own card on a narrow viewport. CSS resolves an overflow of `visible`
+   on one axis to `auto` when the other axis is not visible, so that one
+   declaration silently made every .card a scroll container on BOTH
+   axes — and position:sticky resolves against the nearest scrollport,
+   not the window. Those cards are as tall as their content and
+   therefore never scroll vertically, so a sticky header inside one was
+   pinned to a scrollport that cannot move: inert, in every register, at
+   every width. The family headers below have been sticky (and have
+   never once stuck) since they were written; the 38px offset in that
+   rule was reserving room for a sticky <thead> that was never declared
+   at all.
+
+   Restoring the window as the sticky container means the card must stop
+   being a scroll container, which it can only afford where the table
+   already fits: measured across every register, nothing overflows at
+   1400px and up, the Actions register (11 columns) overflows by ~134px
+   at 1280 and ~390px at 1024. So the trade is made on width — above
+   1400px the headers stick and no table needs to scroll sideways; below
+   it the card keeps its horizontal scroll and the headers behave as
+   they always have. Scoped with :has(table) so only the cards this is
+   about lose their overflow, never the ones wrapping a chart.
+
+   z-index: the topbar is 20 and must stay above both; the <thead> sits
+   above the family rows, which sit above ordinary cells. */
+@media (min-width:1400px){
+  .card:has(table){overflow:visible}
+  .card:has(table) thead th{position:sticky;top:var(--topbar-h);z-index:3;background:var(--surface)}
+  .card:has(table) .soa-family th{top:calc(var(--topbar-h) + var(--thead-h))}
+}
+.soa-family th{position:sticky;top:var(--thead-h);z-index:2;background:var(--surface-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 14px;text-transform:none;letter-spacing:0}
 .soa-family span{color:var(--gold);font-size:var(--fs-2);font-weight:700;letter-spacing:.02em}
 .soa-family b{float:right;color:var(--paper-faint);font-size:var(--fs-1);font-weight:600}
 .cx-rest{margin-top:16px}

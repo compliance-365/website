@@ -4408,7 +4408,7 @@ function showModal(opts) {
   }
 
   function constellationTableHtml(rows, showFw) {
-    return '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr>' +
+    return '<div class="card" style="padding:0 10px"><table><thead><tr>' +
       '<th scope="col">Control</th><th scope="col">Title</th>' +
       (showFw ? '<th scope="col">Framework</th>' : '') +
       '<th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Evidence</th>' +
@@ -8694,7 +8694,7 @@ function showModal(opts) {
     if (!el) return;
     if (!_questionnaireResult || !_questionnaireResult.length) { el.innerHTML = ''; return; }
     var confChip = function (c) { return c === 'High' ? 'st-Implemented' : c === 'Medium' ? 'st-Intreatment' : 'st-Notstarted'; };
-    el.innerHTML = '<div class="card" style="padding:0 10px;overflow-x:auto;margin-bottom:16px"><table><thead><tr><th scope="col">Question</th><th scope="col">Answer</th><th scope="col">Confidence</th><th scope="col">What to verify</th></tr></thead><tbody>' +
+    el.innerHTML = '<div class="card" style="padding:0 10px;margin-bottom:16px"><table><thead><tr><th scope="col">Question</th><th scope="col">Answer</th><th scope="col">Confidence</th><th scope="col">What to verify</th></tr></thead><tbody>' +
       _questionnaireResult.map(function (qa) {
         return '<tr><td>' + esc(qa.question) + '</td><td>' + escAiText(qa.answer) + '</td><td><span class="chip ' + confChip(qa.confidence) + '">' + esc(qa.confidence) + '</span></td><td class="src">' + esc(qa.verify) + '</td></tr>';
       }).join('') + '</tbody></table></div>' +
@@ -8789,7 +8789,7 @@ function showModal(opts) {
     var readyCount = rows.filter(function (r) { return r.status === 'ready'; }).length;
     el.innerHTML = '<div class="chip st-Intreatment" style="margin-bottom:12px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
       '<p style="font-size:13px;color:var(--paper-dim);margin-bottom:12px">' + readyCount + ' of ' + rows.length + ' item(s) have evidence on hand right now.</p>' +
-      '<div class="card" style="padding:0 10px;overflow-x:auto;margin-bottom:16px"><table><thead><tr><th scope="col">Evidence requested</th><th scope="col">Related control</th><th scope="col">Status</th></tr></thead><tbody>' +
+      '<div class="card" style="padding:0 10px;margin-bottom:16px"><table><thead><tr><th scope="col">Evidence requested</th><th scope="col">Related control</th><th scope="col">Status</th></tr></thead><tbody>' +
       rows.map(function (r) {
         var statusChip = r.status === 'ready' ? '<span class="chip st-Implemented">Ready</span>' : '<span class="chip st-Open">Missing</span>';
         var ctrlCell = (r.controlCode && r.controlCode !== 'General')

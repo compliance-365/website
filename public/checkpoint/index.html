@@ -682,7 +682,7 @@
       </div>
       <div class="filters" id="actFilters" role="group" aria-label="Filter by status"></div>
       <div class="filters" id="actTypeFilters" style="margin-top:-8px" role="group" aria-label="Filter by type"></div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Action</th><th scope="col">Type</th><th scope="col">Risk</th><th scope="col">Control</th><th scope="col">Priority</th><th scope="col">Owner</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Evidence</th><th scope="col"></th></tr></thead><tbody id="actRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Action</th><th scope="col">Type</th><th scope="col">Risk</th><th scope="col">Control</th><th scope="col">Priority</th><th scope="col">Owner</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Evidence</th><th scope="col"></th></tr></thead><tbody id="actRows"></tbody></table></div>
     </section>
 
     <!-- VENDORS -->
@@ -725,7 +725,7 @@
       </div>
       <div class="filters" id="vendorCritFilters" role="group" aria-label="Filter by criticality"></div>
       <div class="filters" id="vendorStatusFilters" style="margin-top:-8px" role="group" aria-label="Filter by review status"></div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Vendor</th><th scope="col">Criticality</th><th scope="col">Review status</th><th scope="col">Next review</th><th scope="col">Certifications</th><th scope="col">Owner</th><th scope="col">Questionnaire</th></tr></thead><tbody id="vendorRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Vendor</th><th scope="col">Criticality</th><th scope="col">Review status</th><th scope="col">Next review</th><th scope="col">Certifications</th><th scope="col">Owner</th><th scope="col">Questionnaire</th></tr></thead><tbody id="vendorRows"></tbody></table></div>
     </section>
 
     <!-- AI SYSTEMS (ISO 42001) -->
@@ -765,7 +765,7 @@
       </div>
       <div class="filters" id="aiTierFilters" role="group" aria-label="Filter by risk tier"></div>
       <div class="filters" id="aiStatusFilters" style="margin-top:-8px" role="group" aria-label="Filter by impact assessment status"></div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">System</th><th scope="col">Risk tier</th><th scope="col">Impact assessment</th><th scope="col">Vendor</th><th scope="col">Owner</th><th scope="col">Last reviewed</th></tr></thead><tbody id="aiRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">System</th><th scope="col">Risk tier</th><th scope="col">Impact assessment</th><th scope="col">Vendor</th><th scope="col">Owner</th><th scope="col">Last reviewed</th></tr></thead><tbody id="aiRows"></tbody></table></div>
     </section>
 
     <!-- THREAT INTEL -->
@@ -874,7 +874,7 @@
            table below; aria-live so a screen reader hears the table narrow,
            since the tile that did it is well above this point on the page. -->
       <div class="focus-bar" id="soaFocusBar" role="status" aria-live="polite" hidden></div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Applicable</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Applicable</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
     </section>
 
     <!-- SHARED EVIDENCE -->
@@ -1088,7 +1088,7 @@
           <button class="btn ghost sm" data-action="App.toggleAddAudit">Cancel</button>
         </div>
       </div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Framework</th><th scope="col">Scope</th><th scope="col">Auditor</th><th scope="col">Planned</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="auditRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Framework</th><th scope="col">Scope</th><th scope="col">Auditor</th><th scope="col">Planned</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="auditRows"></tbody></table></div>
     </section>
 
     <!-- INCIDENTS -->
@@ -1122,7 +1122,7 @@
           <button class="btn ghost sm" data-action="App.toggleAddIncident">Cancel</button>
         </div>
       </div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Detected</th><th scope="col">Status</th><th scope="col">Privacy assessment</th><th scope="col"></th></tr></thead><tbody id="incidentRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Detected</th><th scope="col">Status</th><th scope="col">Privacy assessment</th><th scope="col"></th></tr></thead><tbody id="incidentRows"></tbody></table></div>
     </section>
 
     <!-- MANAGEMENT REVIEW -->
@@ -1144,7 +1144,7 @@
           <button class="btn ghost sm" data-action="App.toggleAddReview">Cancel</button>
         </div>
       </div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Date</th><th scope="col">Attendees</th><th scope="col">Next due</th><th scope="col"></th></tr></thead><tbody id="reviewRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Date</th><th scope="col">Attendees</th><th scope="col">Next due</th><th scope="col"></th></tr></thead><tbody id="reviewRows"></tbody></table></div>
     </section>
 
     <!-- COMPLIANCE CALENDAR -->
@@ -1165,7 +1165,7 @@
           <button class="btn ghost sm" data-action="App.toggleAddCalItem">Cancel</button>
         </div>
       </div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Activity</th><th scope="col">Category</th><th scope="col">Frequency</th><th scope="col">Owner</th><th scope="col">Next due</th><th scope="col">Last completed</th><th scope="col"></th></tr></thead><tbody id="calRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Activity</th><th scope="col">Category</th><th scope="col">Frequency</th><th scope="col">Owner</th><th scope="col">Next due</th><th scope="col">Last completed</th><th scope="col"></th></tr></thead><tbody id="calRows"></tbody></table></div>
     </section>
 
     <!-- AUDIT LOG -->
@@ -1176,7 +1176,7 @@
         <button class="btn ghost sm" data-action="App.verifyAuditChain">Verify integrity</button>
       </div>
       <div class="card" id="auditChainCard" style="margin-bottom:16px;display:none"></div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">When</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Before</th><th scope="col">After</th></tr></thead><tbody id="auditLogRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">When</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Before</th><th scope="col">After</th></tr></thead><tbody id="auditLogRows"></tbody></table></div>
     </section>
 
     <!-- REPORTS -->
@@ -1199,7 +1199,7 @@
         <button class="btn sm" data-action="App.runSelfTest">Run again</button>
         <span id="selftestSummary" style="font-size:12.5px;color:var(--paper-dim)"></span>
       </div>
-      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Result</th><th scope="col">Group</th><th scope="col">Check</th><th scope="col">Detail</th></tr></thead><tbody id="selftestRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Result</th><th scope="col">Group</th><th scope="col">Check</th><th scope="col">Detail</th></tr></thead><tbody id="selftestRows"></tbody></table></div>
     </section>
 
     <!-- TRUST CENTER -->
