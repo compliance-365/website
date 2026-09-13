@@ -3172,7 +3172,27 @@ function showModal(opts) {
       (opts.tone && value ? ' style="color:var(--' + opts.tone + ')"' : '') + '>' + value + '</b></div>' +
       '<span>' + opts.label + '</span>' +
       (opts.sub ? '<div class="sub">' + opts.sub + '</div>' : '') +
+      kpiMeter(opts.meter, opts.tone && value ? opts.tone : null) +
       '</' + tag + '>';
+  }
+  /* The bar at the foot of a summary tile. Returns '' unless the caller
+     passed a genuine part-of-whole — see .kpi-meter's own note in
+     styles.css for why a meter is never attached to a bare count.
+
+     opts.meter is {value, max}; a max of 0 (no applicable controls, no
+     assigned courses) yields nothing rather than a full or empty bar,
+     because both of those are assertions this app has no basis to make.
+     The percentage is clamped, so a value that exceeds its own
+     denominator — which has happened whenever a register's counts and
+     its scope query drifted apart — renders as a full bar instead of
+     overflowing the card. */
+  function kpiMeter(meter, tone) {
+    if (!meter) return '';
+    var max = Number(meter.max) || 0;
+    if (max <= 0) return '';
+    var pct = Math.max(0, Math.min(100, (Number(meter.value) || 0) / max * 100));
+    return '<span class="kpi-meter"' + (tone ? ' style="color:var(--' + tone + ')"' : '') +
+      ' aria-hidden="true"><i style="--kpi-meter-pct:' + pct.toFixed(1) + '%"></i></span>';
   }
   /* Rows behind one Statement of Applicability summary tile. Same wrapper
      reasoning as controlReviewStatus() above — lib.js's soaFocusRows()
@@ -3701,7 +3721,14 @@ function showModal(opts) {
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = window.CheckpointLib.readinessPct(applicable);
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
-      return '<div class="card kpi" data-action="App.goSoaFw" data-id="' + fw + '"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
+      /* Caption is the framework's own name, NOT "Audit readiness — X".
+         Ten tiles in one strip each repeating the same three words put
+         the only word that differs between them — the framework — last,
+         after the eye has already read the same prefix nine times. The
+         strip now says what it is once, in its section heading, and each
+         tile says only which framework it is; the readiness reading is
+         carried by the figure, the % sign and the meter beneath it. */
+      return '<div class="card kpi" data-action="App.goSoaFw" data-id="' + fw + '"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div>' + kpiMeter({ value: impl, max: applicable.length }) + '</div>';
     }).join('');
     /* The posture score leads the view on its own, at hero size — it is
        the number the gauge, the trend chart and the favicon are all
@@ -3709,11 +3736,41 @@ function showModal(opts) {
        "exclusions missing justification" three tiles to its right. */
     var heroEl = document.getElementById('heroScore');
     if (heroEl) {
-      heroEl.innerHTML = '<div class="card kpi kpi-hero" data-action="App.go" data-id="scan"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>';
+      /* The hero carries the same ring the Posture scan view draws for
+         this identical number. It was the emptiest card on the page —
+         a two-digit figure and a caption floating in a tile sized for a
+         hero — while the one view that renders this score properly was
+         a click away. The ring is not decoration here: it is the only
+         thing on the Dashboard that shows 45/100 as a POSITION on a
+         scale rather than as a bare number, which is the difference
+         between "45" and "less than half way".
+         Drawn inline rather than shared with the scan view's markup
+         because that one is a static element in index.html the scan
+         animates by id (gArc/gNum/gCap); duplicating two circles is
+         cheaper and safer than making that element render in two
+         places under two different id regimes.
+         r=52 c=2*pi*52=326.7 — the same geometry as #gArc, so the two
+         rings are visibly the same component across the two views. */
+      var heroPct = last ? Math.max(0, Math.min(100, last.score)) : 0;
+      var heroRing = '<svg class="hero-ring" viewBox="0 0 120 120" aria-hidden="true">' +
+        '<circle cx="60" cy="60" r="52" fill="none" stroke="rgba(var(--paper-rgb),.12)" stroke-width="9"/>' +
+        (last ? '<circle cx="60" cy="60" r="52" fill="none" stroke="var(--gold)" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)" stroke-dasharray="326.7" stroke-dashoffset="' + (326.7 - 326.7 * heroPct / 100).toFixed(1) + '"/>' : '') +
+        '</svg>';
+      heroEl.innerHTML = '<div class="card kpi kpi-hero" data-action="App.go" data-id="scan">' + heroRing +
+        '<div class="hero-body"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div></div>';
       runCountUps(heroEl);
     }
 
-    document.getElementById('kpiRow').innerHTML = fwTiles +
+    /* Readiness strip and operational strip are filled separately — see
+       index.html's note on why they are two grids. A tenant entitled to
+       no frameworks at all gets no readiness tiles, so the label above
+       that strip would otherwise head an empty row; both are hidden
+       together in that case. */
+    document.getElementById('kpiRow').innerHTML = fwTiles;
+    var kpiRowLabel = document.getElementById('kpiRowLabel');
+    if (kpiRowLabel) kpiRowLabel.style.display = fwTiles ? '' : 'none';
+    document.getElementById('kpiRow').style.display = fwTiles ? '' : 'none';
+    document.getElementById('kpiRowOps').innerHTML =
       /* Same fail colour the three tiles below already use for a non-zero
          count of something bad. This tile alone used to stay gold however
          many high/critical risks were open, so the worst number on the
@@ -3723,6 +3780,7 @@ function showModal(opts) {
       '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>' +
       '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + unjustifiedExclusions + '" style="color:' + (unjustifiedExclusions ? 'var(--fail)' : 'var(--gold-light)') + '">' + unjustifiedExclusions + '</b></div><span>Exclusions missing justification</span><div class="sub">Auditors check this first — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
     runCountUps(document.getElementById('kpiRow'));
+    runCountUps(document.getElementById('kpiRowOps'));
     updateFavicon();
 
     var covNoteEl = document.getElementById('coverageNote');
@@ -4496,6 +4554,26 @@ function showModal(opts) {
      every single visit to find the two that matter. */
   var _scanCatOpen = {};
 
+  /* Status triage filter for the checks list — 'all' | 'red' | 'amber' |
+     'green', matching the same coarse rag bucket checkDisplay() already
+     computes and the category roll-up already counts, so the pill
+     labelled "6 need attention" and the category summary reading "6
+     need attention" can never disagree.
+
+     This view is where a practitioner triages, and it listed every
+     relevant check in the tenant — 40+ rows across 8 categories — with
+     no way to ask the only question the view is opened for: what is
+     failing. Collapsing the clean categories (which the default open
+     state already does) narrows it, but a category is red if ANY check
+     in it is red, so opening the two red ones still means reading past
+     their passing rows to find the failures.
+
+     In-memory only, same convention as _scanCatOpen above and every
+     other view filter in this app (_riskF, _soaFw) — a filter that
+     survived a reload would mean opening the view to a subset without
+     having asked for one, which is how a check goes unnoticed. */
+  var _scanStatusF = 'all';
+
   function renderScanChecks(instant) {
     var el = document.getElementById('checkList');
     var areas = [], byArea = {};
@@ -4512,15 +4590,53 @@ function showModal(opts) {
       byArea[c.area].push(c);
     });
     var aiOn = !!(S.entitlements && S.entitlements.ai);
-    var toolbar = areas.length > 1
-      ? '<div class="scan-cat-toolbar"><button class="btn ghost sm" data-action="App.setAllScanCategories" data-id="1">Expand all</button><button class="btn ghost sm" data-action="App.setAllScanCategories" data-id="0">Collapse all</button></div>'
-      : '';
-    el.innerHTML = toolbar + areas.map(function (area) {
+
+    /* Totals for the filter pills, counted over exactly the same set the
+       rows below are drawn from (relevantCheckDefs()), so a pill never
+       promises a count the list cannot show. A bucket with nothing in it
+       renders as a disabled pill rather than being dropped: "0 failing"
+       is the single most reassuring thing this view can say, and hiding
+       it would make a clean tenant look like a tenant whose filter is
+       missing. */
+    var ragTotals = { red: 0, amber: 0, green: 0 };
+    relevantCheckDefs().forEach(function (c) { ragTotals[checkDisplay(c).rag]++; });
+    var totalChecks = ragTotals.red + ragTotals.amber + ragTotals.green;
+    var statusPills = [
+      { k: 'all', label: 'All', n: totalChecks },
+      { k: 'red', label: 'Need attention', n: ragTotals.red },
+      { k: 'amber', label: 'To review', n: ragTotals.amber },
+      { k: 'green', label: 'Clear', n: ragTotals.green }
+    ].map(function (f) {
+      var on = _scanStatusF === f.k;
+      return '<button class="f-pill' + (on ? ' on' : '') + '" type="button" aria-pressed="' + (on ? 'true' : 'false') + '"' +
+        (f.n ? '' : ' disabled') +
+        ' data-action="App.setScanStatusFilter" data-id="' + f.k + '">' + f.label + ' <b>' + f.n + '</b></button>';
+    }).join('');
+    var toolbar = '<div class="scan-cat-toolbar">' +
+      '<div class="filters scan-status-filters" role="group" aria-label="Filter checks by status">' + statusPills + '</div>' +
+      (areas.length > 1
+        ? '<div class="scan-cat-expand"><button class="btn ghost sm" data-action="App.setAllScanCategories" data-id="1">Expand all</button><button class="btn ghost sm" data-action="App.setAllScanCategories" data-id="0">Collapse all</button></div>'
+        : '') +
+      '</div>';
+    var areaHtml = areas.map(function (area) {
       var checks = byArea[area];
       var counts = { red: 0, amber: 0, green: 0 };
-      var rows = checks.map(function (c) {
+      /* Counted over the category's FULL check list, before the status
+         filter is applied — the summary line on a category header
+         describes the category, not the current filter. Under
+         "Need attention" a header still reads "6 need attention · 7 to
+         review" while showing only the 6, which is what tells a reader
+         the list is filtered rather than that the other 7 vanished. */
+      checks.forEach(function (c) { counts[checkDisplay(c).rag]++; });
+      var visible = _scanStatusF === 'all'
+        ? checks
+        : checks.filter(function (c) { return checkDisplay(c).rag === _scanStatusF; });
+      /* A category with nothing matching the filter is dropped whole —
+         leaving an empty accordion behind would make the reader open it
+         to discover it is empty, once per category, every time. */
+      if (!visible.length) return '';
+      var rows = visible.map(function (c) {
         var d = checkDisplay(c);
-        counts[d.rag]++;
         var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
         if (d.disp) {
           var dueSoon = d.disp.reviewDue && d.disp.reviewDue < new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
@@ -4543,6 +4659,13 @@ function showModal(opts) {
       var catRag = counts.red ? 'red' : counts.amber ? 'amber' : 'green';
       var open = _scanCatOpen[area];
       if (open === undefined) open = catRag !== 'green';
+      /* An active filter force-opens whatever survived it. Asking for
+         "Need attention" and being shown a row of collapsed headers is
+         the filter refusing to answer the question it was given — and
+         the default collapse rule would do exactly that for any clean
+         category under the "Clear" filter. The practitioner's own
+         expand/collapse still applies as soon as the filter is off. */
+      if (_scanStatusF !== 'all') open = true;
       var summaryParts = [];
       if (counts.red) summaryParts.push(counts.red + ' need attention');
       if (counts.amber) summaryParts.push(counts.amber + ' to review');
@@ -4557,6 +4680,13 @@ function showModal(opts) {
         '<div class="check-area-body"' + (open ? '' : ' hidden') + '>' + rows + '</div>' +
         '</div>';
     }).join('');
+    /* Every category filtered away. Only reachable with a filter on (an
+       unfiltered list always has rows), so the way out is offered
+       rather than described. */
+    el.innerHTML = toolbar + (areaHtml ||
+      '<p class="scan-empty">No checks in this tenant are ' +
+      (_scanStatusF === 'red' ? 'failing' : _scanStatusF === 'amber' ? 'awaiting review' : 'clear') +
+      ' right now. <button class="btn quiet sm" data-action="App.setScanStatusFilter" data-id="all">Show all checks</button></p>');
   }
 
   /* In-memory only, keyed by check id — never persisted, never sent
@@ -5218,11 +5348,16 @@ function showModal(opts) {
          deliberately static and, since 1.62.0, visibly so. The other
          three all narrow the table below. */
       kpiEl.innerHTML =
+        /* The Total tile is the denominator every meter beside it is
+           drawn against, so it gets none of its own — a bar that is
+           always full says nothing. */
         kpiTile({ value: vendors.length, label: 'Total vendors' }) +
         kpiTile({ key: 'Overdue', value: od.length, label: 'Overdue reviews', tone: 'fail',
+          meter: { value: od.length, max: vendors.length },
           action: 'App.filterVendorStatus', focus: window._vendorStatusF,
           title: 'Show only these vendors in the table below' }) +
         kpiTile({ key: 'Critical', value: critHigh, label: 'Critical / High criticality',
+          meter: { value: critHigh, max: vendors.length },
           action: 'App.filterVendorCrit', focus: window._vendorCritF,
           title: 'Show only these vendors in the table below' }) +
         /* Was inert while looking exactly like the two filters beside it,
@@ -5230,6 +5365,7 @@ function showModal(opts) {
            now filters, via a new Unclassified status pill. */
         kpiTile({ key: 'Unclassified', value: unclassified, label: 'Data access not classified',
           tone: 'warn', sub: unclassified ? 'an auditor checks this first' : 'every vendor classified',
+          meter: { value: unclassified, max: vendors.length },
           action: 'App.filterVendorStatus', focus: window._vendorStatusF,
           title: 'Show only these vendors in the table below' });
       runCountUps(kpiEl);
@@ -5308,12 +5444,15 @@ function showModal(opts) {
       kpiEl.innerHTML =
         kpiTile({ value: systems.length, label: 'Total AI systems' }) +
         kpiTile({ key: 'High', value: highRisk, label: 'Prohibited / High risk tier', tone: 'fail',
+          meter: { value: highRisk, max: systems.length },
           action: 'App.filterAiTier', focus: window._aiTierF,
           title: 'Show only these systems in the table below' }) +
         kpiTile({ key: 'Not started', value: notStarted, label: 'Impact assessment not started', tone: 'warn',
+          meter: { value: notStarted, max: systems.length },
           action: 'App.filterAiStatus', focus: window._aiStatusF,
           title: 'Show only these systems in the table below' }) +
         kpiTile({ key: 'Completed', value: completed, label: 'Impact assessment completed',
+          meter: { value: completed, max: systems.length },
           action: 'App.filterAiStatus', focus: window._aiStatusF,
           title: 'Show only these systems in the table below' });
       runCountUps(kpiEl);
@@ -6013,8 +6152,16 @@ function showModal(opts) {
       var overdue = soaFocusRows('overdue', visRows).length;
       var unjustified = soaFocusRows('unjustified', visRows).length;
       var focus = window._soaFocus || '';
+      /* Every one of these counts is a slice of the SAME denominator —
+         the applicable rows currently in scope (visRows) — so each tile
+         can carry a meter showing what share of the framework it is.
+         That is the reading the bare figure does not give: "7 overdue
+         for review" is a different fact in a 92-control ISO SoA than in
+         a 6-control Essential Eight one, and the strip is the place a
+         practitioner compares exactly that. */
       function tile(key, value, caption, sub, alert) {
         return kpiTile({ key: key, value: value, label: caption, sub: sub, focus: focus,
+          meter: { value: value, max: visRows.length },
           action: 'App.focusSoa', tone: alert ? 'fail' : '',
           title: 'Show only these controls in the table below' });
       }
@@ -10188,6 +10335,14 @@ function showModal(opts) {
     setAllScanCategories: function (val) {
       var open = val === '1';
       relevantCheckDefs().forEach(function (c) { _scanCatOpen[c.area] = open; });
+      renderScanChecks(true);
+    },
+    setScanStatusFilter: function (k) {
+      /* Clicking the active pill clears the filter, same toggle-off
+         behaviour the summary tiles that filter a table already have —
+         one control, two directions, rather than making "All" the only
+         way back. */
+      _scanStatusF = (_scanStatusF === k && k !== 'all') ? 'all' : k;
       renderScanChecks(true);
     },
 

@@ -436,7 +436,20 @@
           <div id="nextActionsList"></div>
         </div>
       </div>
+      <!-- Two strips, not one. This was a single flat grid mixing one
+           readiness tile per purchased framework with four unrelated
+           operational counts (high/critical risks, overdue actions,
+           controls overdue for review, unjustified exclusions), so a
+           "0%" readiness tile and a "0 overdue actions" tile sat side by
+           side reading as the same kind of fact when one is a
+           part-of-whole and the other is a count — and the readiness
+           tiles each had to carry the words "Audit readiness —" to say
+           so, which is the same three words repeated up to ten times
+           across one row. The label now sits once, on the strip. -->
+      <div class="strip-label" id="kpiRowLabel">Audit readiness</div>
       <div class="grid kpis kpis-compact" id="kpiRow"></div>
+      <div class="strip-label">Risk &amp; obligations</div>
+      <div class="grid kpis kpis-compact" id="kpiRowOps"></div>
       <p class="grid-note" id="coverageNote"></p>
 
       <div class="section-head"><h2>Position</h2><p>Where this tenant stands against its frameworks, and which way it is moving.</p></div>
