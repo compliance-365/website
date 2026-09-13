@@ -172,6 +172,115 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     assert.deepEqual(errors, [], 'no console errors rendering the Dashboard\'s extra panels');
     await context.close();
   });
+
+  /* ===== Interaction paths, not just render paths =====
+     Everything above navigates and asserts nothing threw while
+     RENDERING. That leaves a whole class of bug untouched: a handler
+     only reached by clicking something can be missing entirely and
+     every test here still passes.
+
+     That is not hypothetical. applyBulkActionEdit() shipped in a state
+     where it was called three times and defined zero times — the bulk
+     status, priority and owner actions would all have thrown
+     ReferenceError the moment a practitioner used them — and the full
+     suite, this file included, was green. Nothing walked a selection.
+
+     So these two tests exercise the paths a render never reaches: a
+     bulk edit end to end on each register that has one, and a scan of
+     every wired-up handler in the rendered DOM. Still a smoke test —
+     "does using this throw", not "is the business rule right". */
+
+  /* Every data-action / data-change-action in the DOM has to resolve to
+     a real function. Catches a renamed or deleted handler that a render
+     test cannot see because the markup renders fine either way — the
+     button just does nothing, or throws, when someone presses it. */
+  test('every wired-up action resolves to a function', async () => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
+
+    const navIds = await page.$$eval('.nav-item[data-v]', (els) => els
+      .filter((el) => el.offsetParent !== null && el.closest('.nav-group,.side'))
+      .map((el) => el.dataset.v));
+
+    const dead = new Set();
+    for (const id of navIds) {
+      await page.evaluate((v) => window.App.go(v), id);
+      await page.waitForTimeout(120);
+      const missing = await page.evaluate(() => {
+        const out = [];
+        document.querySelectorAll('[data-action],[data-change-action]').forEach((el) => {
+          ['action', 'changeAction'].forEach((key) => {
+            const path = el.dataset[key];
+            if (!path) return;
+            let ctx = window;
+            for (const seg of path.split('.')) { if (ctx == null) break; ctx = ctx[seg]; }
+            if (typeof ctx !== 'function') out.push(path);
+          });
+        });
+        return out;
+      });
+      missing.forEach((m) => dead.add(m + '  (on view "' + id + '")'));
+    }
+    assert.deepEqual([...dead], [], 'every data-action must resolve to a function');
+    assert.deepEqual(errors, [], 'no console errors while scanning actions');
+    await context.close();
+  });
+
+  /* One bulk edit per register that has one, driven the way a
+     practitioner drives it: tick rows, choose a value, let the write
+     run. Asserts the rows actually changed, because a handler that
+     silently no-ops would otherwise pass a "nothing threw" check. */
+  test('bulk editing works on every register that offers it', async () => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+
+    const registers = [
+      { view: 'soa', rows: '#soaRows', box: '.soa-sel', bar: '#soaBulkBar', value: 'In progress' },
+      { view: 'actions', rows: '#actRows', box: '.act-sel', bar: '#actBulkBar', value: 'In progress' },
+      { view: 'vendors', rows: '#vendorRows', box: '.vendor-sel', bar: '#vendorBulkBar', value: 'Low' }
+    ];
+
+    for (const r of registers) {
+      await page.evaluate((v) => window.App.go(v), r.view);
+      await page.waitForSelector(r.rows + ' ' + r.box, { timeout: 10000 });
+
+      const picked = await page.evaluate((cfg) => {
+        const keys = [];
+        [...document.querySelectorAll(cfg.rows + ' ' + cfg.box)].slice(0, 3).forEach((cb) => {
+          cb.checked = true;
+          cb.dispatchEvent(new Event('change', { bubbles: true }));
+          keys.push(cb.dataset.id);
+        });
+        return keys;
+      }, r);
+      assert.ok(picked.length > 0, r.view + ': expected selectable rows to tick');
+
+      const barShown = await page.$eval(r.bar, (el) => !el.hidden);
+      assert.ok(barShown, r.view + ': the bulk bar should appear once rows are selected');
+
+      /* The first <select> in the bar is the primary field on all three
+         (status, status, criticality). Dispatching change is what the
+         app's own global change dispatcher listens for. */
+      await page.evaluate((cfg) => {
+        const sel = document.querySelector(cfg.bar + ' select');
+        sel.value = cfg.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }, r);
+      await page.waitForTimeout(2500);
+
+      const cleared = await page.$eval(r.bar, (el) => el.hidden);
+      assert.ok(cleared, r.view + ': the selection should clear once a bulk edit completes');
+      assert.deepEqual(errors, [], r.view + ': no console errors running a bulk edit');
+    }
+    await context.close();
+  });
 });
 
 /* A failed chromium.launch() (the skip path above) can leave Playwright's

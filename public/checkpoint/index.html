@@ -304,6 +304,15 @@
 
 <!-- APP -->
 <div class="app" id="appShell">
+  <!-- Skip link. The sidebar carries 30 nav destinations, so without
+       this a keyboard or screen-reader user tabs through all 30 before
+       reaching the content of whichever view they are already on —
+       once per view, every time. First focusable thing in the shell,
+       visible only while focused (see .skip-link). Targets .main
+       rather than a view section because App.go() swaps which section
+       is current; .main is the one landmark that is always the
+       content. -->
+  <a class="skip-link" href="#mainContent">Skip to content</a>
   <button class="nav-toggle" id="navToggleBtn" data-action="App.toggleNav" aria-expanded="false" aria-controls="appSide" aria-label="Menu">☰</button>
   <div class="nav-overlay" id="navOverlay" data-action="App.closeNav"></div>
   <aside class="side" id="appSide">
@@ -392,7 +401,7 @@
     <button class="version-tag" id="versionTag" data-action="App.openChangelog">Checkpoint</button>
   </aside>
 
-  <main class="main">
+  <main class="main" id="mainContent" tabindex="-1">
     <div class="top">
       <div class="client">
         <span class="chip" id="modeChip">—</span>
