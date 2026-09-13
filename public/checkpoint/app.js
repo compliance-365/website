@@ -699,6 +699,8 @@ function showModal(opts) {
        absent: they write nothing, and a Viewer gets no checkboxes
        rendered anyway. */
     'bulkSoaStatus', 'bulkSoaApplicable',
+    'bulkActStatus', 'bulkActPriority', 'bulkActOwner',
+    'bulkVendorCriticality', 'bulkVendorOwner', 'bulkVendorReviewed',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
@@ -5156,7 +5158,9 @@ function showModal(opts) {
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
       var updCount = updateCounts[a.id] || 0;
-      return '<tr data-id="' + a.id + '" data-action="App.openAction"><td class="id-t"><button class="lnk" data-action="App.openAction" data-id="' + a.id + '">' + a.id + '</button>' +
+      return '<tr data-id="' + a.id + '"' + (_actSel.has(a.id) ? ' class="row-sel"' : '') + ' data-action="App.openAction"><td class="id-t">' +
+        bulkCheckbox('act-sel', 'App.toggleActSel', a.id, a.id, _actSel.has(a.id)) +
+        '<button class="lnk" data-action="App.openAction" data-id="' + a.id + '">' + a.id + '</button>' +
         (updCount ? '<div class="src">' + updCount + ' update' + (updCount > 1 ? 's' : '') + '</div>' : '') +
         '</td><td class="act-title" style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
@@ -5178,7 +5182,10 @@ function showModal(opts) {
         '</td></tr>';
     }).join('');
     var actRowsEl = document.getElementById('actRows');
+    /* Runs after the rows exist, because it reads them to know what is
+       currently selectable. */
     actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
+    renderActBulkBar();
     revealRows(actRowsEl);
   }
 
@@ -5473,13 +5480,16 @@ function showModal(opts) {
       var catLine = (v.dataCategories && v.dataCategories.length)
         ? '<div class="src" style="color:var(--gold-light)">' + esc(v.dataCategories.join(' · ')) + '</div>'
         : '<div class="src" style="color:var(--warn)">Data access not classified</div>';
-      return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t"><button class="lnk" data-action="App.openVendor" data-id="' + v.id + '">' + esc(v.id) + '</button></td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
+      return '<tr data-id="' + v.id + '"' + (_vendorSel.has(v.id) ? ' class="row-sel"' : '') + ' data-action="App.openVendor"><td class="id-t">' +
+        bulkCheckbox('vendor-sel', 'App.toggleVendorSel', v.id, v.id, _vendorSel.has(v.id)) +
+        '<button class="lnk" data-action="App.openVendor" data-id="' + v.id + '">' + esc(v.id) + '</button></td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
         '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ' + icon('flag') : '') + '</td>' +
         '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
         '<td><span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span></td></tr>';
     }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No vendors match this filter. Add one above.', cta: { label: '+ Add vendor', action: 'App.toggleAddVendor' } });
+    renderVendorBulkBar();
     revealRows(wrap);
   }
 
@@ -5753,9 +5763,7 @@ function showModal(opts) {
     /* Checkbox first inside the Control cell — see the _soaSel note. A
        read-only session gets no checkbox at all rather than a disabled
        one: there is no bulk action behind it to explain. */
-    var selCell = READONLY ? '' :
-      '<input type="checkbox" class="soa-sel" data-change-action="App.toggleSoaSel" data-id="' + key + '"' +
-      (_soaSel.has(key) ? ' checked' : '') + ' aria-label="Select ' + esc(c.id) + '">';
+    var selCell = bulkCheckbox('soa-sel', 'App.toggleSoaSel', key, c.id, _soaSel.has(key));
     return '<tr data-id="' + key + '"' + (_soaSel.has(key) ? ' class="soa-row-sel"' : '') + '><td class="id-t">' + selCell + '<button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + esc(c.t) + '</button>' + ismLine + justificationLine + '</td>' +
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       /* Same "st-" + status-with-spaces-stripped class already used for
@@ -6350,41 +6358,181 @@ function showModal(opts) {
     return Array.from(document.querySelectorAll('#soaRows tr[data-id] .soa-sel'))
       .map(function (cb) { return cb.getAttribute('data-id'); });
   }
-  function renderSoaBulkBar() {
-    var bar = document.getElementById('soaBulkBar');
+  /* ===== One bulk bar, every register that has one =====
+     The Statement of Applicability grew this first; Actions and Vendor
+     risk now use the same shell. What differs between them is only the
+     middle — which fields act on the selection — so that is all a
+     caller supplies. Everything else is identical and was going to be
+     copied three times otherwise: pruning the selection to what is
+     still on screen, the count, select-all/clear, hiding for a
+     read-only session, and publishing the bar's height for the sticky
+     headers below it.
+
+     cfg.shownKeys() reads the rendered rows rather than re-deriving
+     them, because which rows are on screen is the product of every
+     filter that register has, and a second derivation here would be
+     free to disagree with the table. */
+  function renderBulkBar(cfg) {
+    var bar = document.getElementById(cfg.barId);
     if (!bar) return;
-    var shown = soaShownKeys();
-    /* Drop anything the current filter/framework no longer shows, so a
-       bulk action can never touch a control the practitioner cannot
-       see. */
+    var sel = cfg.sel;
+    var shown = cfg.shownKeys();
+    /* Drop anything the current filter no longer shows, so a bulk
+       action can never touch a row the practitioner cannot see. */
     var shownSet = new Set(shown);
-    soaSelKeys().forEach(function (k) { if (!shownSet.has(k)) _soaSel.delete(k); });
-    var n = _soaSel.size;
-    var view = document.getElementById('v-soa');
+    Array.from(sel).forEach(function (k) { if (!shownSet.has(k)) sel.delete(k); });
+    var n = sel.size;
+    var view = document.getElementById(cfg.viewId);
     if (!n || READONLY) {
       bar.innerHTML = ''; bar.hidden = true;
       if (view) view.style.removeProperty('--bulk-h');
       return;
     }
     bar.hidden = false;
-    var allShown = shown.length && shown.every(function (k) { return _soaSel.has(k); });
+    var allShown = shown.length && shown.every(function (k) { return sel.has(k); });
     bar.innerHTML = '<span class="bulk-count"><b>' + n + '</b> selected</span>' +
       '<span class="bulk-sep" aria-hidden="true"></span>' +
-      '<label class="bulk-field"><span>Set status</span>' +
-      '<select class="mini" data-change-action="App.bulkSoaStatus" aria-label="Set status on selected controls">' +
-      ['', 'Not started', 'In progress', 'Implemented'].map(function (v) {
-        return '<option value="' + esc(v) + '"' + (v ? '' : ' selected') + '>' + (v || 'Choose…') + '</option>';
-      }).join('') + '</select></label>' +
-      '<button class="btn ghost sm" data-action="App.bulkSoaApplicable" data-id="yes">Mark applicable</button>' +
-      '<button class="btn ghost sm" data-action="App.bulkSoaApplicable" data-id="no">Mark not applicable</button>' +
+      cfg.fields(n) +
       '<span class="bulk-spacer"></span>' +
-      (allShown ? '' : '<button class="lnk" data-action="App.soaSelectAllShown">Select all ' + shown.length + ' shown</button>') +
-      '<button class="lnk" data-action="App.clearSoaSel">Clear selection</button>';
+      (allShown ? '' : '<button class="lnk" data-action="' + esc(cfg.selectAllAction) + '">Select all ' + shown.length + ' shown</button>') +
+      '<button class="lnk" data-action="' + esc(cfg.clearAction) + '">Clear selection</button>';
     /* Publish the bar's real height so the sticky <thead> and family
        headers below it can offset by it — see the --bulk-h note in
        styles.css. Read after innerHTML so the measurement is of the bar
        as it will actually render, wrapped lines included. */
     if (view) view.style.setProperty('--bulk-h', bar.offsetHeight + 'px');
+  }
+
+  /* A <select> that acts on the whole selection. Deliberately has no
+     data-id: the global change dispatcher passes el.value as the FIRST
+     argument when there is none, which is what every bulk handler
+     below expects. */
+  function bulkSelect(action, label, values) {
+    return '<label class="bulk-field"><span>' + esc(label) + '</span>' +
+      '<select class="mini" data-change-action="' + esc(action) + '" aria-label="' + esc(label) + ' on selected rows">' +
+      [''].concat(values).map(function (v) {
+        return '<option value="' + esc(v) + '"' + (v ? '' : ' selected') + '>' + (v ? esc(v) : 'Choose…') + '</option>';
+      }).join('') + '</select></label>';
+  }
+
+  /* The checkbox a selectable row carries. Read-only sessions get none
+     at all rather than a disabled one — there is no bulk action behind
+     it to explain. */
+  function bulkCheckbox(cls, action, key, label, checked) {
+    if (READONLY) return '';
+    return '<input type="checkbox" class="' + esc(cls) + '" data-change-action="' + esc(action) + '" data-id="' + esc(key) + '"' +
+      (checked ? ' checked' : '') + ' aria-label="Select ' + esc(label) + '">';
+  }
+
+  /* Selections for the other two registers with bulk actions. Keyed by
+     the register's own id (ACT-001, V-003) rather than a composite,
+     since neither is framework-scoped the way a control is. In-memory
+     only, same as _soaSel and every other view filter here. */
+  var _actSel = new Set();
+  var _vendorSel = new Set();
+  function actShownKeys() {
+    return Array.from(document.querySelectorAll('#actRows tr[data-id] .act-sel'))
+      .map(function (cb) { return cb.getAttribute('data-id'); });
+  }
+  function vendorShownKeys() {
+    return Array.from(document.querySelectorAll('#vendorRows tr[data-id] .vendor-sel'))
+      .map(function (cb) { return cb.getAttribute('data-id'); });
+  }
+  function selectedActions() {
+    return Array.from(_actSel).map(function (id) {
+      return (S.actions || []).find(function (a) { return a.id === id; });
+    }).filter(Boolean);
+  }
+  function selectedVendors() {
+    return Array.from(_vendorSel).map(function (id) {
+      return (S.vendors || []).find(function (v) { return v.id === id; });
+    }).filter(Boolean);
+  }
+  /* The write half of a bulk edit, shared by both registers. mutate()
+     changes one row in place and returns what to audit; everything
+     around it — sequencing, the busy overlay, one audit entry per row,
+     the toast, clearing the selection and re-rendering — is identical
+     and belongs in one place.
+
+     Sequential, not Promise.all: each write PATCHes a SharePoint list
+     item, and the same concurrency that made two overlapping scans
+     collide with 412s applies to a batch of twenty. One audit entry per
+     row is deliberate — the audit log is evidence, and "20 rows
+     changed" is not something an auditor can sample.
+
+     A row whose value already matches is filtered out by the caller, so
+     an empty batch is a no-op that still clears the selection rather
+     than leaving it armed over rows nothing happened to. */
+  async function applyBulkEdit(rows, mutate, write, message, after) {
+    if (!rows.length) { after(); return; }
+    busy(true);
+    try {
+      for (var i = 0; i < rows.length; i++) {
+        var entry = mutate(rows[i]);
+        try { await write(rows[i]); } catch (e) { warn(e); }
+        audit(entry.field, entry.kind, rows[i].id, entry.from, entry.to);
+      }
+    } finally { busy(false); }
+    log('<b>' + rows.length + '</b> row' + (rows.length === 1 ? '' : 's') + ' updated — ' + esc(message) + '.');
+    toast(message);
+    after();
+  }
+  async function applyBulkActionEdit(rows, mutate, message) {
+    await applyBulkEdit(rows, function (a) {
+      var e = mutate(a); e.kind = 'Action'; return e;
+    }, function (a) { return Store.updateAction(a); }, message, function () {
+      _actSel.clear();
+      renderActions(); renderNavCounts(); renderDash();
+    });
+  }
+  async function applyBulkVendorEdit(rows, mutate, message, syncCalendar) {
+    await applyBulkEdit(rows, function (v) {
+      var e = mutate(v); e.kind = 'Vendor'; return e;
+    }, async function (v) {
+      await Store.updateVendor(v);
+      /* Only the reviewed batch moves review dates, and only that one
+         needs the compliance calendar re-synced for each vendor. */
+      if (syncCalendar) await syncVendorCalendar(v);
+    }, message, function () {
+      _vendorSel.clear();
+      renderVendors(); renderNavCounts(); renderDash();
+      if (syncCalendar) renderCalendar();
+    });
+  }
+
+  function renderActBulkBar() {
+    renderBulkBar({
+      barId: 'actBulkBar', viewId: 'v-actions', sel: _actSel, shownKeys: actShownKeys,
+      selectAllAction: 'App.actSelectAllShown', clearAction: 'App.clearActSel',
+      fields: function () {
+        return bulkSelect('App.bulkActStatus', 'Set status', ACTION_STATUS_OPTS) +
+          bulkSelect('App.bulkActPriority', 'Set priority', ['Critical', 'High', 'Medium', 'Low']) +
+          '<button class="btn ghost sm" data-action="App.bulkActOwner">Set owner…</button>';
+      }
+    });
+  }
+  function renderVendorBulkBar() {
+    renderBulkBar({
+      barId: 'vendorBulkBar', viewId: 'v-vendors', sel: _vendorSel, shownKeys: vendorShownKeys,
+      selectAllAction: 'App.vendorSelectAllShown', clearAction: 'App.clearVendorSel',
+      fields: function () {
+        return bulkSelect('App.bulkVendorCriticality', 'Set criticality', ['Critical', 'High', 'Medium', 'Low']) +
+          '<button class="btn ghost sm" data-action="App.bulkVendorReviewed">Mark reviewed today</button>' +
+          '<button class="btn ghost sm" data-action="App.bulkVendorOwner">Set owner…</button>';
+      }
+    });
+  }
+
+  function renderSoaBulkBar() {
+    renderBulkBar({
+      barId: 'soaBulkBar', viewId: 'v-soa', sel: _soaSel, shownKeys: soaShownKeys,
+      selectAllAction: 'App.soaSelectAllShown', clearAction: 'App.clearSoaSel',
+      fields: function () {
+        return bulkSelect('App.bulkSoaStatus', 'Set status', ['Not started', 'In progress', 'Implemented']) +
+          '<button class="btn ghost sm" data-action="App.bulkSoaApplicable" data-id="yes">Mark applicable</button>' +
+          '<button class="btn ghost sm" data-action="App.bulkSoaApplicable" data-id="no">Mark not applicable</button>';
+      }
+    });
   }
 
   function renderSoa() {
@@ -11509,6 +11657,116 @@ function showModal(opts) {
       audit('Control status changed', 'Control', key, prevSt, v);
       renderSoa(); renderDash();
       await offerCrossFrameworkPropagation(c);
+    },
+
+    /* ===== Actions register bulk edits =====
+       Same shape as the SoA's: selection lives in a Set so it survives
+       the re-render each write triggers, writes are sequential because
+       every one PATCHes a SharePoint list item, and each row keeps its
+       own audit entry because the audit log is evidence. */
+    toggleActSel: function (id) {
+      var cb = document.querySelector('.act-sel[data-id="' + CSS.escape(id) + '"]');
+      if (cb && cb.checked) _actSel.add(id); else _actSel.delete(id);
+      var row = document.querySelector('#actRows tr[data-id="' + CSS.escape(id) + '"]');
+      if (row) row.classList.toggle('row-sel', _actSel.has(id));
+      renderActBulkBar();
+    },
+    actSelectAllShown: function () { actShownKeys().forEach(function (k) { _actSel.add(k); }); renderActions(); },
+    clearActSel: function () { _actSel.clear(); renderActions(); },
+
+    bulkActStatus: async function (value) {
+      var v = value || '';
+      if (!v) return;
+      var rows = selectedActions().filter(function (a) { return a.status !== v; });
+      await applyBulkActionEdit(rows, function (a) {
+        var prev = a.status; a.status = v;
+        return { field: 'Action status changed', from: prev, to: v };
+      }, rows.length + ' action' + (rows.length === 1 ? '' : 's') + ' set to ' + v);
+    },
+    bulkActPriority: async function (value) {
+      var v = value || '';
+      if (!v) return;
+      var rows = selectedActions().filter(function (a) { return a.pr !== v; });
+      await applyBulkActionEdit(rows, function (a) {
+        var prev = a.pr; a.pr = v;
+        return { field: 'Action priority changed', from: prev, to: v };
+      }, rows.length + ' action' + (rows.length === 1 ? '' : 's') + ' set to ' + v + ' priority');
+    },
+    bulkActOwner: async function () {
+      var sel = selectedActions();
+      if (!sel.length) return;
+      var vals = await showModal({
+        title: 'Set owner on ' + sel.length + ' action' + (sel.length === 1 ? '' : 's'),
+        fields: [{ id: 'owner', label: 'Owner', value: '' }],
+        confirmText: 'Set owner'
+      });
+      if (!vals) return;
+      var owner = String(vals.owner || '').trim();
+      if (!owner) { toastError('Owner cannot be empty.'); return; }
+      var rows = sel.filter(function (a) { return a.owner !== owner; });
+      await applyBulkActionEdit(rows, function (a) {
+        var prev = a.owner; a.owner = owner;
+        return { field: 'Action owner changed', from: prev || 'unassigned', to: owner };
+      }, rows.length + ' action' + (rows.length === 1 ? '' : 's') + ' assigned to ' + owner);
+    },
+
+    /* ===== Vendor risk bulk edits ===== */
+    toggleVendorSel: function (id) {
+      var cb = document.querySelector('.vendor-sel[data-id="' + CSS.escape(id) + '"]');
+      if (cb && cb.checked) _vendorSel.add(id); else _vendorSel.delete(id);
+      var row = document.querySelector('#vendorRows tr[data-id="' + CSS.escape(id) + '"]');
+      if (row) row.classList.toggle('row-sel', _vendorSel.has(id));
+      renderVendorBulkBar();
+    },
+    vendorSelectAllShown: function () { vendorShownKeys().forEach(function (k) { _vendorSel.add(k); }); renderVendors(); },
+    clearVendorSel: function () { _vendorSel.clear(); renderVendors(); },
+
+    bulkVendorCriticality: async function (value) {
+      var v = value || '';
+      if (!v) return;
+      var rows = selectedVendors().filter(function (x) { return x.criticality !== v; });
+      await applyBulkVendorEdit(rows, function (x) {
+        var prev = x.criticality; x.criticality = v;
+        return { field: 'Vendor criticality changed', from: prev, to: v };
+      }, rows.length + ' vendor' + (rows.length === 1 ? '' : 's') + ' set to ' + v);
+    },
+    bulkVendorOwner: async function () {
+      var sel = selectedVendors();
+      if (!sel.length) return;
+      var vals = await showModal({
+        title: 'Set owner on ' + sel.length + ' vendor' + (sel.length === 1 ? '' : 's'),
+        fields: [{ id: 'owner', label: 'Owner', value: '' }],
+        confirmText: 'Set owner'
+      });
+      if (!vals) return;
+      var owner = String(vals.owner || '').trim();
+      if (!owner) { toastError('Owner cannot be empty.'); return; }
+      var rows = sel.filter(function (x) { return x.owner !== owner; });
+      await applyBulkVendorEdit(rows, function (x) {
+        var prev = x.owner; x.owner = owner;
+        return { field: 'Vendor owner changed', from: prev || 'unassigned', to: owner };
+      }, rows.length + ' vendor' + (rows.length === 1 ? '' : 's') + ' assigned to ' + owner);
+    },
+    /* One review date for the batch, asked once — the single-row
+       markVendorReviewed() asks for the next due date per vendor, which
+       across a selection would be the same date typed N times. */
+    bulkVendorReviewed: async function () {
+      var sel = selectedVendors();
+      if (!sel.length) return;
+      var vals = await showModal({
+        title: 'Mark ' + sel.length + ' vendor' + (sel.length === 1 ? '' : 's') + ' reviewed',
+        message: 'Records today as the review date for every selected vendor, and sets the same next-review date on each.',
+        fields: [{ id: 'nextDue', label: 'Next review due', type: 'date', value: daysFrom(365) }],
+        confirmText: 'Mark reviewed'
+      });
+      if (!vals) return;
+      var due = vals.nextDue || daysFrom(365);
+      var today = new Date().toISOString().slice(0, 10);
+      await applyBulkVendorEdit(sel, function (x) {
+        var prev = x.reviewStatus + ' / due ' + (x.nextReviewDue || 'unset');
+        x.lastReviewed = today; x.nextReviewDue = due; x.reviewStatus = 'Reviewed';
+        return { field: 'Vendor reviewed', from: prev, to: 'Reviewed / due ' + due };
+      }, sel.length + ' vendor' + (sel.length === 1 ? '' : 's') + ' marked reviewed', true);
     },
 
     toggleSoaSel: function (key) {
@@ -17076,6 +17334,16 @@ function showModal(opts) {
   }
 
   document.addEventListener('click', function (e) {
+    /* A control that dispatches through the CHANGE listener below must
+       never also fire an ancestor's click action. The Actions register's
+       rows are themselves clickable (<tr data-action="App.openAction">),
+       so without this a tick on that row's bulk checkbox would both
+       select the row and open its drawer over the top of the table the
+       practitioner is selecting in. Scoped to elements that carry their
+       own data-change-action rather than to inputs generally, so it can
+       only ever suppress a click that has a change-handler waiting for
+       it. */
+    if (e.target.closest('[data-change-action]')) return;
     var el = e.target.closest('[data-action]');
     if (!el) return;
     var fn = resolvePath(el.dataset.action);

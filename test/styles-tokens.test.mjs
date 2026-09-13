@@ -117,6 +117,24 @@ describe('styles.css — sticky header offsets', () => {
       'the bulk bar is the first sticky thing under the topbar');
   });
 
+  /* Below 1400px the mechanism changes: the card becomes a bounded pane
+     and the header sticks to the pane's top instead of to the topbar.
+     That only holds while the card actually clips — position:sticky
+     resolves against the nearest scrollport, so if the overflow or the
+     max-height is dropped, the header silently stops sticking at every
+     width under 1400 while still looking fine above it. Both halves are
+     asserted. */
+  test('below 1400 the table card is a bounded scroll pane', () => {
+    const block = /@media \(max-width:1399px\)\{([\s\S]*?)\n\}/.exec(code);
+    assert.ok(block, 'the max-width:1399px sticky block is missing');
+    assert.match(block[1], /\.card:has\(table\)\{overflow:auto;max-height:/,
+      'the card must clip AND be bounded, or there is no scrollport for the header to stick to');
+    assert.match(block[1], /thead th\{position:sticky;top:0/,
+      'below 1400 the header sticks to the top of the pane, not to the topbar');
+    assert.match(block[1], /\.bulk-bar\{position:static\}/,
+      'a window-sticky bulk bar would cover the pane\'s own column names');
+  });
+
   test('no table card re-declares overflow inline, which would defeat sticky', () => {
     for (const f of ['../public/checkpoint/index.html', '../public/checkpoint/app.js']) {
       const src = readFileSync(new URL(f, import.meta.url), 'utf8');
