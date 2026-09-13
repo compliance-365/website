@@ -4580,6 +4580,80 @@ function showModal(opts) {
      having asked for one, which is how a check goes unnoticed. */
   var _scanStatusF = 'all';
 
+  /* ===== What moved between the two most recent scans =====
+     Deliberately NOT the same thing as the Dashboard's "Continuous
+     monitoring" card. That one lists the scheduled monitor's Alert
+     rows: written server-side by the Azure Function, emailed, and
+     persisting until a practitioner acknowledges each one. It also
+     only ever fires on pass -> fail.
+
+     This is the complement, and it exists because of a gap that had
+     nothing covering it: a practitioner who runs a scan by hand gets
+     no drift information at all. runScan() computes whether results
+     moved (scanResultsChanged, used to decide whether to snapshot) and
+     then throws the direction away. Every scan has recorded its full
+     per-check result map in its Detail JSON since the feature existed,
+     so the comparison needs no new Graph call, no new scope and no
+     schema change — the evidence was already there with nothing
+     reading it back.
+
+     It is also broader than pass -> fail:
+       regressed   any downgrade, so pass -> review and review -> fail
+                   are visible too. A control degrading short of
+                   outright failure is exactly what a quarterly review
+                   is supposed to catch, and it was invisible.
+       improved    shown because a practitioner needs to see that the
+                   remediation they did last week actually landed.
+       wentManual  a check that stopped answering — a licence lapsed,
+                   the scan account lost a role. Reported separately
+                   and never as a regression, because filing a
+                   licensing change next to "MFA was switched off"
+                   teaches people to skim the list. */
+  function renderScanDrift() {
+    var card = document.getElementById('scanDriftCard');
+    var body = document.getElementById('scanDriftBody');
+    if (!card || !body) return;
+    var history = scanResultHistory();
+    /* Needs two scans to compare. A first-ever scan has nothing to
+       drift from, and saying so is better than an empty card. */
+    if (history.length < 2) { card.style.display = 'none'; return; }
+    var prev = history[history.length - 2];
+    var curr = history[history.length - 1];
+    var drift = window.CheckpointLib.scanDrift(prev.results, curr.results);
+    card.style.display = '';
+    var labels = allCheckLabelsById();
+    function rows(list, cls, arrowColor) {
+      return list.map(function (d) {
+        return '<div class="drift-row ' + cls + '">' +
+          '<span class="drift-label">' + esc(labels[d.id] || d.id) + '</span>' +
+          '<span class="drift-move"><i>' + esc(d.from) + '</i> → <b style="color:' + arrowColor + '">' + esc(d.to) + '</b></span>' +
+          '</div>';
+      }).join('');
+    }
+    var parts = '';
+    if (drift.regressed.length) {
+      parts += '<div class="drift-group"><div class="drift-head drift-head-bad">' + drift.regressed.length +
+        ' went backwards</div>' + rows(drift.regressed, 'is-bad', 'var(--fail)') + '</div>';
+    }
+    if (drift.wentManual.length) {
+      parts += '<div class="drift-group"><div class="drift-head">' + drift.wentManual.length +
+        ' stopped answering</div><p class="drift-note">No longer readable in this tenant — usually a licence or a role the scan account lost, not a control that changed.</p>' +
+        rows(drift.wentManual, 'is-quiet', 'var(--paper-dim)') + '</div>';
+    }
+    if (drift.improved.length) {
+      parts += '<div class="drift-group"><div class="drift-head drift-head-good">' + drift.improved.length +
+        ' improved</div>' + rows(drift.improved, 'is-good', 'var(--pass)') + '</div>';
+    }
+    if (drift.cameBack.length) {
+      parts += '<div class="drift-group"><div class="drift-head">' + drift.cameBack.length +
+        ' started answering again</div>' + rows(drift.cameBack, 'is-quiet', 'var(--paper-dim)') + '</div>';
+    }
+    var caption = '<p class="drift-caption">' + esc(fmtDate(prev.date)) + ' → ' + esc(fmtDate(curr.date)) +
+      ' · ' + drift.compared + ' check' + (drift.compared === 1 ? '' : 's') + ' compared</p>';
+    body.innerHTML = caption + (parts ||
+      '<p class="drift-none">Nothing moved. Every check answered the same way as it did on ' + esc(fmtDate(prev.date)) + '.</p>');
+  }
+
   function renderScanChecks(instant) {
     var el = document.getElementById('checkList');
     var areas = [], byArea = {};
@@ -9587,7 +9661,7 @@ function showModal(opts) {
     dash: renderDash,
     board: renderBoard,
     constellation: renderConstellation,
-    scan: function () { renderCoverage(); renderScanChecks(true); },
+    scan: function () { renderCoverage(); renderScanChecks(true); renderScanDrift(); },
     risks: renderRisks,
     quantrisk: renderQuantRisk,
     actions: renderActions,
@@ -9626,7 +9700,7 @@ function showModal(opts) {
     if (!STATIC_VIEWS[v]) warn('renderView: no renderer registered for view "' + v + '"');
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -10347,6 +10421,7 @@ function showModal(opts) {
       Store.saveScanState().catch(warn);
       setTimeout(function () {
         renderProposed(); renderResolvable(); renderNavCounts(); renderDash(); renderSoa();
+        renderScanDrift();
         /* ONE summary, not nine toasts.
            This used to fire a separate toast per framework plus one for
            the proposed risks — all in this same tick, all into the same

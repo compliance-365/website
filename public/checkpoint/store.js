@@ -1163,12 +1163,62 @@ window.VENDOR_DATA_CATEGORIES = [
 
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
-  var KEY = 'checkpoint-demo-v6'; /* bumped: v5 had every premium framework switched off, so a returning visitor would keep an ISO 27001-only demo tenant and never see the rest */
+  var KEY = 'checkpoint-demo-v7'; /* bumped: v6's seeded scans carried no `detail`, so a returning visitor would keep a demo tenant with no per-check scan history — no drift card and no Type II evidence. (v5 had every premium framework switched off.) */
   var S = null;
 
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
 
+  /* Every seeded scan carries the same `detail` JSON a real scan
+     records, because two features read per-check results back out of
+     it rather than out of lastResults: the drift card ("Changed since
+     the previous scan", renderScanDrift) and the Type II operating-
+     effectiveness evidence (scanResultHistory -> operatingEffectiveness).
+     Seeded scans used to carry a score and nothing else, so in demo
+     mode both of those read an empty history and rendered nothing —
+     the demo silently had no drift and no assurance evidence at all.
+
+     The three sets are graded so the demo tells a coherent story
+     rather than showing random churn:
+       -42 -> -21  broad improvement, matching 41 -> 48
+       -21 -> -1   a net slip to 45, and specifically wdac pass -> fail,
+                   which is the exact regression the seeded ALT-001
+                   alert claims was detected on that date. The two
+                   were describing the same event already; now they
+                   agree.
+     The -1 set also seeds one check going to 'manual' (encryption),
+     so the demo exercises the "stopped answering" case — a licence or
+     role the scan account lost — and shows it reported apart from the
+     real regressions rather than mixed in with them. */
+  function demoResults() {
+    var now = {
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
+        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
+        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
+        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
+        'privacy-srr': 'fail', 'retention': 'review'
+      };
+    /* Each older set is expressed as a DIFF from the one after it.
+       Spelling out three near-identical 33-key literals would make a
+       later check addition silently inconsistent across them; this way
+       a new check lands in all three and only its movement is stated. */
+    var at21 = Object.assign({}, now, {
+      wdac: 'pass',                    /* the ALT-001 regression */
+      'lifecycle-workflows': 'pass',
+      encryption: 'review',            /* still readable back then */
+      'ca-tou': 'fail',
+      retention: 'fail'
+    });
+    var at42 = Object.assign({}, at21, {
+      'mfa-all': 'review', 'guests': 'review', 'device': 'review',
+      'compliance-policy': 'fail', 'device-config': 'review',
+      'macro': 'review', 'logging': 'review', 'labels': 'fail'
+    });
+    return { now: now, at21: at21, at42: at42 };
+  }
+
   function seed() {
+    var demoRes = demoResults();
+    var resultsNow = demoRes.now, resultsAt21 = demoRes.at21, resultsAt42 = demoRes.at42;
     return {
       mode: 'demo',
       client: 'Meridian Health SaaS — demo tenant',
@@ -1177,19 +1227,13 @@ window.DemoStore = (function () {
          the Risk Landscape's movement trails and the Risk Register
          Snapshot report's "movement since" section — the same shape
          runScan() records on every real scan. */
-      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual', riskSnapshot: [
+      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual', detail: JSON.stringify({ results: resultsAt42, readiness: 12, source: 'manual' }), riskSnapshot: [
         { id: 'R-001', L: 5, I: 4 }, { id: 'R-002', L: 4, I: 5 }, { id: 'R-003', L: 4, I: 3 }, { id: 'R-004', L: 3, I: 4 }, { id: 'R-005', L: 3, I: 4 }
-      ] }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual' }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated' }],
+      ] }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual', detail: JSON.stringify({ results: resultsAt21, readiness: 15, source: 'manual' }) }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated', detail: JSON.stringify({ results: resultsNow, readiness: 15, source: 'automated' }) }],
       alerts: [
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
-      lastResults: {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
-        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
-        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
-        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
-        'privacy-srr': 'fail', 'retention': 'review'
-      },
+      lastResults: resultsNow,
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
         'ca-device': 'Device compliance is required by at least one Conditional Access policy, but not for all cloud apps',

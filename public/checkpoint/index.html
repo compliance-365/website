@@ -573,6 +573,15 @@
         </div>
         </div>
         </div>
+        <!-- What moved between the two most recent scans. Distinct from
+             the Dashboard's "Continuous monitoring" card, which is the
+             scheduled monitor's persistent, acknowledgeable ALERT queue
+             (written server-side, emailed, survives until someone acts
+             on it). This one is immediate and informational: it needs
+             no deployed monitor, appears for a manual scan too, and
+             reports improvements and lost signal as well as
+             regressions. See renderScanDrift(). -->
+        <div class="card" id="scanDriftCard" style="display:none"><h3>Changed since the previous scan</h3><div id="scanDriftBody"></div></div>
         <div class="card"><h3>Checks</h3><div id="checkList"></div></div>
       </div>
       <div id="proposedWrap" style="margin-top:22px"></div>

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, residualAcceptanceStale, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged,
+const { band, residual, residualAcceptanceStale, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged, scanDrift,
   sharedEvidenceClosure, crossFrameworkStatusSuggestions, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
@@ -480,6 +480,71 @@ describe('scanResultsChanged() — did any individual check move since the last 
 
   test('two empty maps -> no movement', () => {
     assert.equal(scanResultsChanged({}, {}), false);
+  });
+});
+
+describe('scanDrift() — which checks moved, and in which direction', () => {
+  test('grades a genuine regression and a genuine improvement', () => {
+    const d = scanDrift({ mfa: 'pass', legacy: 'fail' }, { mfa: 'fail', legacy: 'pass' });
+    assert.deepEqual(d.regressed, [{ id: 'mfa', from: 'pass', to: 'fail' }]);
+    assert.deepEqual(d.improved, [{ id: 'legacy', from: 'fail', to: 'pass' }]);
+    assert.equal(d.changed, 2);
+  });
+
+  test('review sits between fail and pass in both directions', () => {
+    assert.equal(scanDrift({ a: 'fail' }, { a: 'review' }).improved.length, 1);
+    assert.equal(scanDrift({ a: 'review' }, { a: 'fail' }).regressed.length, 1);
+    assert.equal(scanDrift({ a: 'pass' }, { a: 'review' }).regressed.length, 1);
+    assert.equal(scanDrift({ a: 'review' }, { a: 'pass' }).improved.length, 1);
+  });
+
+  /* The distinction this function exists to draw. A check going manual
+     means the signal stopped being readable — a licence lapsed, the
+     scan account lost a role — not that the tenant got worse. Grading
+     it as a regression would file a licensing change next to MFA being
+     switched off, and the list stops being worth reading. */
+  test('a check going manual is neither an improvement nor a regression', () => {
+    const d = scanDrift({ pim: 'pass' }, { pim: 'manual' });
+    assert.deepEqual(d.regressed, []);
+    assert.deepEqual(d.improved, []);
+    assert.deepEqual(d.wentManual, [{ id: 'pim', from: 'pass', to: 'manual' }]);
+    assert.equal(d.changed, 1);
+  });
+
+  test('a check that starts answering again is reported separately, not as an improvement', () => {
+    const d = scanDrift({ pim: 'manual' }, { pim: 'fail' });
+    assert.deepEqual(d.improved, []);
+    assert.deepEqual(d.regressed, []);
+    assert.deepEqual(d.cameBack, [{ id: 'pim', from: 'manual', to: 'fail' }]);
+  });
+
+  /* A new check shipping in a release is not tenant drift. */
+  test('checks entering or leaving the definition set are not drift', () => {
+    const d = scanDrift({ old: 'pass' }, { fresh: 'fail' });
+    assert.deepEqual(d.appeared, [{ id: 'fresh', to: 'fail' }]);
+    assert.deepEqual(d.vanished, [{ id: 'old', from: 'pass' }]);
+    assert.deepEqual(d.regressed, []);
+    assert.equal(d.changed, 0, 'neither side was present in both scans, so nothing moved');
+  });
+
+  test('an unrecognised result string is reported as moved but never graded', () => {
+    const d = scanDrift({ a: 'pass' }, { a: 'wat' });
+    assert.deepEqual(d.improved, []);
+    assert.deepEqual(d.regressed, []);
+    assert.equal(d.changed, 1);
+  });
+
+  test('identical scans report no drift', () => {
+    const prev = { a: 'pass', b: 'review', c: 'manual' };
+    const d = scanDrift(prev, { ...prev });
+    assert.equal(d.changed, 0);
+    assert.equal(d.compared, 3);
+  });
+
+  test('a missing side yields an empty result rather than throwing', () => {
+    assert.equal(scanDrift(null, { a: 'pass' }).changed, 0);
+    assert.equal(scanDrift({ a: 'pass' }, null).changed, 0);
+    assert.equal(scanDrift(null, null).compared, 0);
   });
 });
 

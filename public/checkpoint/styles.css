@@ -1558,3 +1558,29 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
      side by side. */
   [style="grid-template-columns:1fr 1fr;gap:12px"]{grid-template-columns:1fr!important}
 }
+
+/* ===== Scan drift ("Changed since the previous scan") =====
+   Grouped by direction rather than interleaved, because the question
+   a practitioner opens this card with is "did anything get worse",
+   and an improvement sitting between two regressions makes that
+   harder to answer, not easier. Groups render in the order
+   regressed → stopped answering → improved → started answering
+   again; see renderScanDrift(). */
+.drift-caption{color:var(--paper-dim);font-size:var(--fs-1);letter-spacing:.04em;margin-bottom:14px}
+.drift-group + .drift-group{margin-top:18px}
+.drift-head{font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim);margin-bottom:8px}
+.drift-head-bad{color:var(--fail)}
+.drift-head-good{color:var(--pass)}
+.drift-note{color:var(--paper-dim);font-size:var(--fs-1);line-height:1.55;margin:-4px 0 8px;max-width:64ch}
+.drift-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)}
+.drift-row .drift-label{font-size:var(--fs-2);line-height:1.5}
+.drift-row .drift-move{font-size:var(--fs-1);white-space:nowrap;color:var(--paper-dim);letter-spacing:.04em}
+.drift-row .drift-move i{font-style:normal}
+.drift-row .drift-move b{font-weight:600}
+.drift-none{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;max-width:64ch}
+@media (max-width:560px){
+  /* the label wraps at this width, and a right-aligned status pair
+     on its own baseline reads as belonging to the wrong row. */
+  .drift-row{flex-direction:column;gap:2px}
+  .drift-row .drift-move{white-space:normal}
+}

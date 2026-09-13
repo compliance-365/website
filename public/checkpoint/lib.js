@@ -1718,6 +1718,61 @@
     return Object.keys(seen).some(function (k) { return prevResults[k] !== nextResults[k]; });
   }
 
+  /* ===== Configuration drift between two scans =====
+     scanResultsChanged() above answers "did anything move" for the
+     snapshot decision. This answers WHICH checks moved and in which
+     direction, which is a different question with a different reader:
+     a practitioner asking "what changed in the tenant since I last
+     looked".
+
+     Every scan already records its full per-check result map in the
+     scan row's Detail JSON, so this needs no new Graph call, no new
+     scope and no schema change — the evidence has been accumulating
+     all along with nothing reading it back.
+
+     Direction is judged on a deliberate ordering rather than
+     alphabetically or by a raw !==: pass is better than review, review
+     than fail. 'manual' sits OUTSIDE that order entirely and is
+     reported as neither an improvement nor a regression, because it
+     does not mean "worse" — it means the signal stopped being readable
+     (a licence lapsed, a scan account lost a role, a service was
+     turned off). Scoring that as a regression would put a licensing
+     change in the same list as MFA being switched off, and the
+     practitioner would learn to skim the list. It gets its own bucket
+     so it can be said plainly: this check stopped answering.
+
+     'appeared' and 'vanished' cover a check entering or leaving the
+     definition set between releases — a new check shipping is not
+     tenant drift and must not read as one. */
+  var DRIFT_RANK = { fail: 0, review: 1, pass: 2 };
+  function scanDrift(prevResults, nextResults) {
+    var out = { improved: [], regressed: [], wentManual: [], cameBack: [], appeared: [], vanished: [], changed: 0, compared: 0 };
+    if (!prevResults || !nextResults) return out;
+    var seen = {};
+    Object.keys(prevResults).forEach(function (k) { seen[k] = true; });
+    Object.keys(nextResults).forEach(function (k) { seen[k] = true; });
+    Object.keys(seen).sort().forEach(function (id) {
+      var before = prevResults[id];
+      var after = nextResults[id];
+      if (before === undefined) { out.appeared.push({ id: id, to: after }); return; }
+      if (after === undefined) { out.vanished.push({ id: id, from: before }); return; }
+      out.compared++;
+      if (before === after) return;
+      out.changed++;
+      var entry = { id: id, from: before, to: after };
+      if (after === 'manual') { out.wentManual.push(entry); return; }
+      if (before === 'manual') { out.cameBack.push(entry); return; }
+      var b = DRIFT_RANK[before], a = DRIFT_RANK[after];
+      /* An unranked value on either side (a result string this version
+         does not know) is reported as changed but not graded — same
+         reasoning as 'manual': inventing a direction from a value we
+         cannot order is worse than saying only that it moved. */
+      if (b === undefined || a === undefined) { out.cameBack.push(entry); return; }
+      if (a > b) out.improved.push(entry); else out.regressed.push(entry);
+    });
+    return out;
+  }
+
   /* Deterministic per-control "theme" key for the Control Constellation
      view — grouping is derived purely from the control code's own
      string shape, never from a `cat`/`domain` field, because live
@@ -3726,7 +3781,7 @@
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
-    scanResultsChanged: scanResultsChanged,
+    scanResultsChanged: scanResultsChanged, scanDrift: scanDrift,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationTableRows: constellationTableRows,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
