@@ -175,3 +175,50 @@ describe('every inline copy of the mark uses the same dot colour', () => {
       `favicon.svg paints the dot ${want}; these copies disagree:\n  ` + wrong.join('\n  '));
   });
 });
+
+/* ===== The mark's dot stays gold =====
+   #A9812E is the one place the pre-1.65 gold survives, and it survives
+   on purpose: the identity is a gold mark beside an orange interface,
+   not one colour that half-migrated. That is invisible in the source —
+   a reader who knows the accent is #BE4A1E sees #A9812E and reasonably
+   concludes someone missed it. "Replace the gold accent with orange
+   #BE4A1E" in fact rewrote these very lines and left the dot alone.
+
+   Asserted rather than only commented, because the failure mode is
+   someone tidying it in good faith across 23 files at once. If the
+   brand mark is ever genuinely re-coloured, this test is the place
+   that says so out loud — update it deliberately, in the same change.
+
+   The red Critical state (#c97a7a) is the documented exception: the
+   canvas favicon turns the dot red when the tenant has an open
+   Critical residual risk, which is a status signal, not the brand. */
+describe('brand mark — the dot is deliberately still gold', () => {
+  const GOLD = '#A9812E';
+  const files = [
+    'public/assets/favicon.svg',
+    'public/assets/logo.svg',
+    'public/checkpoint/index.html',
+    'public/checkpoint/onboarding.html',
+    'public/checkpoint/report.js',
+    'src/components/Header.astro',
+    'src/components/Footer.astro'
+  ];
+
+  test('every lockup still draws the gold dot', () => {
+    for (const f of files) {
+      const src = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+      assert.ok(/#A9812E/i.test(src) || /%23A9812E/i.test(src),
+        f + ' no longer contains ' + GOLD + ' — if the brand mark was re-coloured on ' +
+        'purpose, change this test in the same commit; if not, this is the accidental ' +
+        '"finish the orange migration" that the comment in styles.css warns about');
+    }
+  });
+
+  test('the canvas favicon draws the same gold, not the UI accent', () => {
+    assert.match(fn, /#A9812E/i,
+      'updateFavicon() must draw the brand gold; #BE4A1E here would make the tab icon ' +
+      'disagree with every other lockup');
+    assert.doesNotMatch(fn, /#BE4A1E/i,
+      'the UI accent has no business in the brand mark');
+  });
+});

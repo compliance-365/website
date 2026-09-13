@@ -24,31 +24,38 @@
      (#BE4A1E) is the darkest token the app ever uses AS TEXT (card
      titles, the CHECKPOINT rail label, the brand mark's "365").
 
-     CORRECTION, measured with lib.js's own contrastRatio() against
-     these exact token values: --gold as text is 3.41:1 on the card
-     (--ink-2), 3.28:1 on the raised surface (--charcoal) and 4.03:1 on
-     the page ground (--ink). --ink on a --gold FILL (every primary
-     button and active filter pill) is likewise 4.03:1.
+     STALE NUMBERS, now corrected — and the earlier correction here was
+     itself unfair. This paragraph asserted 4.77:1 on the card and
+     4.60:1 on the raised surface and built "a measured ceiling, not a
+     guess" on them; a previous pass said those numbers "do not
+     reproduce", which reads as an accusation that they were never
+     measured. They reproduce exactly — for the colour this token USED
+     to hold. #A9812E, the gold this app shipped until 1.64.0, measures
+     4.77:1 on the card and 4.60:1 on the raised surface to the
+     hundredth, verified with lib.js's own contrastRatio(). "Replace
+     the gold accent with orange #BE4A1E" then moved the token, and the
+     measurements written around it were never re-derived.
 
-     This paragraph previously asserted 4.77:1 on the card and 4.60:1
-     on the raised surface, and concluded that one more step of
-     lightness would take gold under 4.5:1 — "a measured ceiling, not a
-     guess". Those two numbers do not reproduce; the real values are
-     roughly a full point lower and are ALREADY under the 4.5:1 AA
-     minimum for normal-size text. So the surface tiers below are NOT
-     in fact pinned by a gold-on-card contrast ceiling: that constraint
-     was never real, and anything reasoning from it (how light the card
-     may go, why the raised tier sits only 1.6 L* above it) should be
-     re-derived rather than inherited.
+     Against the value --gold actually holds now the same function
+     gives 3.41:1 on the card, 3.28:1 on raised and 4.03:1 on the page
+     ground — about a point lower, and under the 4.5:1 AA minimum for
+     normal-size text. So the ceiling those numbers described was real
+     when it was written and is not real now: nothing pins the surface
+     tiers to a gold-on-card contrast limit today, and anything
+     reasoning from it (how light the card may go, why the raised tier
+     sits only 1.6 L* above it) should be re-derived rather than
+     inherited.
 
-     Nothing here changes a colour. Gold-as-text failing AA is a real,
-     open defect affecting every card heading, section eyebrow,
-     .check-area-name, .tagline and .settings-subhead, and gold-fill
-     buttons at 4.03:1 alongside it — but the fix is a brand decision
-     (most likely promoting --gold-light, 8.69:1 on the card, to the
-     text role and leaving --gold to fills), not a tidy-up to make
-     silently while correcting a comment. Left for that decision, with
-     the true numbers recorded so it is made on real ones.
+     The lesson is the one this file keeps paying for: a measured
+     number is only true of the value it was measured against, and a
+     token swap silently invalidates every figure written near it.
+     Re-measure when a colour moves — and before calling a predecessor's
+     number wrong, check what it was measured against.
+
+     --gold as TEXT is no longer used anywhere: the accent ramp below
+     resolves that role to --accent-ink (#F0A97F on dark, 8.69:1;
+     #A63A12 on light, 6.07:1) and leaves --gold to fills, where white
+     measures 5.01:1 on it.
 
      The card tier is still the lightest of the three deliberately,
      because the card is what a practitioner looks at all day. The
@@ -110,6 +117,25 @@
   --accent-fill:var(--gold);
   --accent-fill-hover:#A63A12;
   --on-accent:#FFFFFF;
+  /* ===== The brand mark's dot is NOT this accent, on purpose =====
+     The gold circle closing the "C" in the Compliance 365 mark
+     (index.html's three lockups, onboarding.html, report.js's report
+     masthead, and the canvas favicon app.js draws) is #A9812E and
+     stays that way. It is the one place the old gold survives, and it
+     survives deliberately: the identity is two colours — a gold mark
+     beside an orange interface — not one colour that half-migrated.
+
+     Written down because it looks exactly like an oversight and is
+     not. "Replace the gold accent with orange #BE4A1E" rewrote those
+     very SVG lines — it changed their stroke and left the dot alone —
+     so keeping it was a decision then, and has been re-confirmed
+     since. Do not "finish the migration": the dot appears 23 times
+     across this app, the owner console, the marketing page and the
+     public website (its header, footer, homepage, the homepage's 3D
+     scene, favicon.svg and logo.svg). They move together or not at
+     all, and the answer is not at all.
+
+     No contrast floor applies to it: a dot is a fill, never text. */
   --line:rgba(255,255,255,.12);
   /* Status/severity hues — pass/warn/fail plus a fourth, --critical,
      distinct from --fail (High vs. Critical residual risk read as two
