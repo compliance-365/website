@@ -21,20 +21,40 @@
      lib.js's own contrastRatio() whenever they move.
 
      The card tier is now as light as this palette can make it. --gold
-     (#BE4A1E) is the binding constraint: it is the darkest token the
-     app ever uses AS TEXT (card titles, the CHECKPOINT rail label, the
-     brand mark's "365"), and it measures 4.77:1 on the card and 4.60:1
-     on the raised surface. One more step of lightness on either takes
-     it under 4.5:1, so this is a measured ceiling, not a guess — the
-     only way past it is to change the brand gold, which is a different
-     decision than "more depth".
+     (#BE4A1E) is the darkest token the app ever uses AS TEXT (card
+     titles, the CHECKPOINT rail label, the brand mark's "365").
 
-     That ceiling is spent on the card tier deliberately, because the
-     card is what a practitioner looks at all day. It leaves the raised
-     tier only 1.6 L* above the card, so raised surfaces (toast,
-     tooltip, popover) no longer separate by lightness — they separate
-     by --elev-3, which is what actually reads as "floating free of the
-     page" for something that overlaps other content anyway. */
+     CORRECTION, measured with lib.js's own contrastRatio() against
+     these exact token values: --gold as text is 3.41:1 on the card
+     (--ink-2), 3.28:1 on the raised surface (--charcoal) and 4.03:1 on
+     the page ground (--ink). --ink on a --gold FILL (every primary
+     button and active filter pill) is likewise 4.03:1.
+
+     This paragraph previously asserted 4.77:1 on the card and 4.60:1
+     on the raised surface, and concluded that one more step of
+     lightness would take gold under 4.5:1 — "a measured ceiling, not a
+     guess". Those two numbers do not reproduce; the real values are
+     roughly a full point lower and are ALREADY under the 4.5:1 AA
+     minimum for normal-size text. So the surface tiers below are NOT
+     in fact pinned by a gold-on-card contrast ceiling: that constraint
+     was never real, and anything reasoning from it (how light the card
+     may go, why the raised tier sits only 1.6 L* above it) should be
+     re-derived rather than inherited.
+
+     Nothing here changes a colour. Gold-as-text failing AA is a real,
+     open defect affecting every card heading, section eyebrow,
+     .check-area-name, .tagline and .settings-subhead, and gold-fill
+     buttons at 4.03:1 alongside it — but the fix is a brand decision
+     (most likely promoting --gold-light, 8.69:1 on the card, to the
+     text role and leaving --gold to fills), not a tidy-up to make
+     silently while correcting a comment. Left for that decision, with
+     the true numbers recorded so it is made on real ones.
+
+     The card tier is still the lightest of the three deliberately,
+     because the card is what a practitioner looks at all day. The
+     raised tier sits close to it and separates by --elev-3 rather than
+     by lightness, which is what actually reads as "floating free of
+     the page" for something that overlaps other content anyway. */
   --ink:#06060A; --ink-2:#1C1B22; --charcoal:#201E26;
   /* Bare "R,G,B" triplets alongside the solid hex above — lets any
      rule that needs a translucent wash of paper/ink write
@@ -1021,7 +1041,24 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .fw-chips span{font-size:var(--fs-eyebrow);letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
 select.mini,input.mini,textarea.mini{background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
 select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(190, 74, 30,.6)}
-select.mini:focus,input.mini:focus,textarea.mini:focus{outline:none;border-color:var(--gold)}
+/* :focus-visible, and the ring is NOT suppressed. This was
+   `select.mini:focus{outline:none;border-color:var(--gold)}`, which is
+   more specific than the global a/button/input/select:focus-visible
+   ring above and therefore removed it from every .mini control in the
+   app — the SoA's 92 status dropdowns, the framework target-level
+   selects, the Settings inputs. That left a gold BORDER as the only
+   keyboard-focus cue on controls that already carry a status-coloured
+   border (st-Open is red-bordered, st-Implemented green), so on those
+   the focused state was very nearly the unfocused one. The global rule
+   documents itself as "a fallback for everything else, not a
+   replacement for a better component-specific treatment" — a border
+   tint that collides with the control's own status colour is not a
+   better treatment. Keeping the border tint AND the ring: the ring
+   does the accessibility work, the border keeps the original intent. */
+select.mini:focus-visible,input.mini:focus-visible,textarea.mini:focus-visible{border-color:var(--gold)}
+/* A mouse click still gets the quiet border tint on its own, which is
+   what the old :focus rule was really for. */
+select.mini:focus,input.mini:focus,textarea.mini:focus{border-color:var(--gold)}
 select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;cursor:not-allowed}
 /* SoA Status dropdown colour-coding — reuses the same .st-* status
    tokens the chips elsewhere already use, so red/amber/green reads at
@@ -1032,6 +1069,20 @@ select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-co
 select.mini.st-Implemented{color:var(--pass);border-color:rgba(143,191,154,.5);background:rgba(143,191,154,.1)}
 select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);background:var(--surface-raised)}
 .toggle{width:34px;height:19px;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
+/* The switch is 34x19 — under the 24px minimum WCAG 2.2 AA asks of a
+   pointer target (2.5.8), and there are 93 of them in the ISO SoA
+   alone, one per control row, plus the framework, Settings and Trust
+   Center switches.
+   The hit area is expanded rather than the switch: growing the visual
+   control to 24px tall would add 5px to all 93 SoA rows and change the
+   density of the table a practitioner reads all day, to fix something
+   that is about where a finger or cursor lands, not about how big the
+   control looks. An invisible ::before centred on the switch takes the
+   target to 34x24 while the painted pill stays exactly as it was.
+   ::before, because ::after is already the moving knob.
+   The parent must not clip it — the switch sits in table cells with no
+   overflow of their own, so nothing here needs a change beyond this. */
+.toggle::before{content:"";position:absolute;left:0;right:0;top:50%;height:24px;transform:translateY(-50%)}
 .toggle::after{content:"";position:absolute;top:2.5px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--paper);transition:left .2s var(--ease),width .1s var(--ease)}
 .toggle:hover{background:rgba(var(--paper-rgb),.24)}
 .toggle.on{background:var(--gold)}
