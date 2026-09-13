@@ -109,7 +109,8 @@ const SCORED_CHECK_IDS = [
   'ca-device', 'ca-risk', 'ca-sif', 'ca-tou', 'ca-cas', 'oauth-consent', 'leaver', 'sod',
   'device-checkin', 'device-config',
   'backup', 'bcp', 'supplier', 'policy', 'audit-review', 'incident-lessons',
-  'xdr-incidents', 'privacy-srr', 'lifecycle-workflows'
+  'xdr-incidents', 'privacy-srr', 'lifecycle-workflows',
+  'legacy-auth-observed', 'priv-role-changes'
 ];
 const CHECK_LABELS = {
   'mfa-all': 'MFA enforced — all users',
@@ -149,7 +150,9 @@ const CHECK_LABELS = {
   'incident-lessons': 'Closed incidents have a recorded root cause and lessons learned',
   'xdr-incidents': 'Security incidents triaged within cadence',
   'privacy-srr': 'Subject rights requests answered within statutory deadline',
-  'lifecycle-workflows': 'Joiner/leaver processing technically automated'
+  'lifecycle-workflows': 'Joiner/leaver processing technically automated',
+  'legacy-auth-observed': 'No legacy authentication observed in sign-in logs',
+  'priv-role-changes': 'Privileged role changes reviewed'
 };
 
 async function resolveLists(g, siteId) {
@@ -452,6 +455,39 @@ async function readSettings(g, siteId, settingsListId) {
   const settings = {};
   (items.value || []).forEach(i => { if (i.fields && i.fields.SettingKey) settings[i.fields.SettingKey] = i.fields.SettingValue; });
   return settings;
+}
+
+/* Mirrors lib.js's PRIV_ROLE_ACTIVITY_EXCLUDE exactly. Self-service PIM
+   activations are excluded from the privileged-role-change list: a user
+   elevating into a role they are already eligible for is the control
+   working as designed — the very thing the 'pim' check rewards a tenant
+   for having — and folding routine activations in would bury the
+   assignment changes that actually alter who holds what. */
+const PRIV_ROLE_ACTIVITY_EXCLUDE = /^add member to role completed \(pim activation\)$|^add member to role requested \(pim activation\)$|^remove member from role \(pim activation\)$|pim activation/i;
+
+/* gAll with a hard row cap. The shared client's gAll() follows every
+   nextLink, which is correct for every configuration collection this
+   Function reads — their size is bounded by how the tenant is set up.
+   The Entra sign-in log is the exception: it is bounded by how much
+   TRAFFIC the tenant receives, and a tenant under a credential-stuffing
+   run against IMAP can have hundreds of thousands of rows in a 30-day
+   window. Unbounded paging there would hang the nightly run on exactly
+   the tenant that most needs the answer.
+
+   Mirrors graph.js's gCapped(), including returning { rows, truncated }
+   rather than a bare array — a caller that cannot tell a complete
+   result from a capped one will eventually report a capped one as
+   complete. */
+async function gCapped(g, path, maxRows) {
+  let out = [], url = path, truncated = false;
+  for (;;) {
+    const page = await g(url);
+    out = out.concat((page && page.value) || []);
+    if (out.length >= maxRows) { truncated = !!(page && page['@odata.nextLink']); out = out.slice(0, maxRows); break; }
+    url = (page && page['@odata.nextLink']) || null;
+    if (!url) break;
+  }
+  return { rows: out, truncated };
 }
 
 function numSetting(settings, key, def) {
@@ -829,6 +865,131 @@ async function runPostureChecks(g, gAll, settings) {
           (overdue.length ? '; ' + overdue.length + ' open beyond the ' + incidentTriageDays + '-day triage window' : '') +
           (unassigned.length ? '; ' + unassigned.length + ' high-severity unassigned' : ''));
   } catch (e) { set('xdr-incidents', 'review', 'Defender XDR incidents not readable: ' + e.message); }
+
+  /* --- Entra audit logs: legacy-auth-observed + priv-role-changes ----
+     Both need the AuditLog.Read.All application permission, added
+     specifically for these two; see README.md. Mirrors graph.js's two
+     checks and lib.js's legacyAuthObservedResult() /
+     privRoleChangeResult() exactly — test/posture-monitor-parity.test.mjs
+     feeds both sides identical fixtures and asserts they agree.
+
+     These are the first checks in this Function that read what the
+     tenant DID rather than how it is CONFIGURED, and that is worth the
+     new permission precisely here: a legacy sign-in succeeding
+     overnight is exactly the kind of thing the unattended monitor
+     should email about, and it is invisible to every configuration
+     check in this file.
+
+     Unlike every other check here, a 401/403 sets 'manual' rather than
+     'review'. The rest of this file has no capability probing and
+     degrades a permission error to 'review' (see xdr-incidents'
+     comment). That is tolerable for a check whose licence most tenants
+     hold; it is not for sign-in logs, which need Entra ID P1 AND a
+     reports-reading role, so a free-tier tenant would otherwise carry a
+     permanent nightly 'review' — half a point off its score every run
+     for a question it was never able to answer. 'manual' is the honest
+     answer and score() excludes it from the denominator. */
+  const auditWindowDays = numSetting(settings, 'auditLogWindowDays', 30);
+  const auditSince = new Date(Date.now() - auditWindowDays * 86400000).toISOString();
+  const legacyApps = ['Exchange ActiveSync', 'IMAP4', 'POP3', 'Authenticated SMTP', 'MAPI Over HTTP', 'Offline Address Book', 'Exchange Web Services', 'Other clients'];
+
+  try {
+    const legacyFilter = 'createdDateTime ge ' + auditSince + ' and (' +
+      legacyApps.map(a => "clientAppUsed eq '" + a + "'").join(' or ') + ')';
+    const sel = '&$select=id,createdDateTime,userPrincipalName,clientAppUsed,status,appDisplayName&$top=200';
+    /* Two queries for the same reason graph.js uses two: a capped scan
+       of all attempts could cut off before reaching the one success
+       buried among 50,000 blocked attempts, and would then grade
+       'review' on a tenant whose legacy auth demonstrably works. Asking
+       Entra for the successes directly means the fail decision never
+       depends on where the cap fell. */
+    const successes = await gCapped(g, '/auditLogs/signIns?$filter=' + encodeURIComponent(legacyFilter + ' and status/errorCode eq 0') + sel, 200);
+    const attempts = await gCapped(g, '/auditLogs/signIns?$filter=' + encodeURIComponent(legacyFilter) + sel, 1000);
+
+    const succeeded = successes.rows;
+    const users = [...new Set(succeeded.map(r => r.userPrincipalName).filter(Boolean))].sort();
+    const byApp = {};
+    attempts.rows.forEach(r => {
+      const app = r.clientAppUsed || 'Unknown client';
+      if (!byApp[app]) byApp[app] = { attempts: 0, succeeded: 0 };
+      byApp[app].attempts++;
+      if (r.status && r.status.errorCode === 0) byApp[app].succeeded++;
+    });
+    succeeded.forEach(r => {
+      const app = r.clientAppUsed || 'Unknown client';
+      if (!byApp[app]) byApp[app] = { attempts: 0, succeeded: 0 };
+      if (!byApp[app].succeeded) byApp[app].succeeded = 1;
+    });
+    const apps = Object.keys(byApp).sort();
+
+    let note;
+    if (succeeded.length) {
+      note = succeeded.length + ' legacy sign-in(s) SUCCEEDED in the last ' + auditWindowDays + ' days via ' +
+        apps.filter(a => byApp[a].succeeded).join(', ') + ' — ' + users.length + ' account(s) affected' +
+        (users.length <= 5 ? ': ' + users.join(', ') : '') +
+        '. These sign-ins bypassed MFA regardless of what policy says.';
+    } else if (attempts.rows.length) {
+      note = attempts.rows.length + ' legacy sign-in attempt(s) in the last ' + auditWindowDays + ' days via ' +
+        apps.join(', ') + ' — all blocked or failed. The control is holding; confirm no real client or service account is still configured this way.';
+    } else {
+      note = 'No legacy-authentication sign-ins of any kind in the last ' + auditWindowDays + ' days';
+    }
+    if (attempts.truncated || successes.truncated) note += ' (counts are a lower bound — more rows than this run reads in one pass)';
+    /* Attempts alone are review, never fail: a blocked attempt is the
+       control working, and grading it as a failure would mean the only
+       route to 'pass' is for the internet to stop scanning you. */
+    set('legacy-auth-observed', succeeded.length ? 'fail' : (attempts.rows.length ? 'review' : 'pass'), note);
+  } catch (e) {
+    if (e && (e.status === 401 || e.status === 403)) {
+      set('legacy-auth-observed', 'manual', 'Sign-in logs are not readable by this identity — reading them needs Entra ID P1 and the AuditLog.Read.All application permission. The configuration-only legacy-authentication check is the only answer available.');
+    } else {
+      set('legacy-auth-observed', 'review', 'Sign-in logs not readable: ' + e.message);
+    }
+  }
+
+  /* Never fails, by design — see lib.js's privRoleChangeResult(). A role
+     being granted is not a defect; what the standards require is that
+     the change was authorised and reviewed, which no API can decide. The
+     compliance value here is the evidence, not the grade. */
+  try {
+    const roleFilter = 'activityDateTime ge ' + auditSince + " and category eq 'RoleManagement'";
+    const rolePage = await gCapped(g, '/auditLogs/directoryAudits?$filter=' + encodeURIComponent(roleFilter) + '&$top=200', 1000);
+    const changes = rolePage.rows.filter(r => r && !PRIV_ROLE_ACTIVITY_EXCLUDE.test(r.activityDisplayName || '')).map(r => {
+      let actor = '';
+      if (r.initiatedBy) {
+        if (r.initiatedBy.user) actor = r.initiatedBy.user.userPrincipalName || r.initiatedBy.user.displayName || '';
+        else if (r.initiatedBy.app) actor = r.initiatedBy.app.displayName || '';
+      }
+      const targets = r.targetResources || [];
+      /* Picked by type, not position — Entra orders targetResources
+         inconsistently across activity types. */
+      const roleT = targets.find(t => t && t.type === 'Role');
+      const subjectT = targets.find(t => t && (t.type === 'User' || t.type === 'ServicePrincipal'));
+      return {
+        date: r.activityDateTime || '',
+        actor,
+        role: (roleT && (roleT.displayName || roleT.id)) || '',
+        subject: (subjectT && (subjectT.userPrincipalName || subjectT.displayName || subjectT.id)) || ''
+      };
+    });
+    changes.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    const actors = [...new Set(changes.map(c => c.actor).filter(Boolean))].sort();
+    let prcNote = changes.length
+      ? changes.length + ' privileged role change(s) in the last ' + auditWindowDays + ' days, by ' +
+        (actors.length <= 3 ? actors.join(', ') : actors.length + ' different principals') +
+        ' — confirm each was authorised. Most recent: ' +
+        changes.slice(0, 3).map(c => (c.role || 'a role') + ' → ' + (c.subject || 'unknown') + ' (' + (c.date || '').slice(0, 10) + ')').join('; ') +
+        '. Self-service PIM activations are excluded.'
+      : 'No privileged role changes in the last ' + auditWindowDays + ' days (self-service PIM activations excluded)';
+    if (rolePage.truncated) prcNote += ' (more changes than this run reads in one pass — the count is a lower bound)';
+    set('priv-role-changes', changes.length ? 'review' : 'pass', prcNote);
+  } catch (e) {
+    if (e && (e.status === 401 || e.status === 403)) {
+      set('priv-role-changes', 'manual', 'Directory audit logs are not readable by this identity — needs the AuditLog.Read.All application permission. Available on every Entra tier, so this is a permission gap rather than a licence gap.');
+    } else {
+      set('priv-role-changes', 'review', 'Directory audit logs not readable: ' + e.message);
+    }
+  }
 
   /* --- privacy-srr (Microsoft Priva subject rights requests) — needs
      the SubjectRightsRequest.Read.All application permission. Mirrors
@@ -1703,5 +1864,5 @@ module.exports.__test = {
   runPostureChecks, runRegisterChecks, readDocumentRegister,
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,
-  SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL, isDowngrade
+  SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL, isDowngrade, gCapped, PRIV_ROLE_ACTIVITY_EXCLUDE
 };

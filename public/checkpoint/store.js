@@ -467,6 +467,17 @@ window.CHECK_DEFS = [
   { id: 'mfa-all',    area: 'Identity', label: 'MFA enforced — all users',                    tpl: null,        scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'mfa-priv',   area: 'Identity', label: 'Phishing-resistant MFA — privileged roles',    tpl: 'mfa-priv',  scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'legacy',     area: 'Identity', label: 'Legacy authentication blocked',                tpl: 'legacy',    scored: true, requiresCapability: 'conditionalAccess' },
+  /* The two log-derived Identity checks. Every other check in this
+     registry reads CONFIGURATION — what the tenant is set up to do.
+     These read the Entra audit logs — what it actually did, which is
+     the thing an auditor asks for and the thing configuration alone
+     cannot prove. 'legacy-auth-observed' is deliberately the pair of
+     'legacy' directly above it: that one says legacy authentication is
+     blocked by policy, this one says whether any legacy sign-in got
+     through anyway, and the two disagreeing is the most useful output
+     either can produce. */
+  { id: 'legacy-auth-observed', area: 'Identity', label: 'No legacy authentication observed in sign-in logs', tpl: 'legacy-auth-observed', scored: true, requiresCapability: 'signInLogs' },
+  { id: 'priv-role-changes',    area: 'Identity', label: 'Privileged role changes reviewed',                  tpl: null,                    scored: true, requiresCapability: 'directoryAudits' },
   /* ca-device / ca-risk read fields of the SAME Conditional Access
      policy response mfa-all/legacy/mfa-priv already fetch — no new
      Graph call, no new scope. Mined, not added. */
@@ -598,6 +609,7 @@ window.THRESHOLD_DEFS = [
   { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' },
   { key: 'deviceStaleDays', label: 'Device check-in staleness (days)', desc: 'A managed device that has not contacted Intune within this many days is treated as unmanaged — it is not receiving policy or updates, and its last reported compliance state is stale evidence.', def: '30' },
   { key: 'incidentTriageDays', label: 'Incident triage window (days)', desc: 'A high-severity Defender XDR incident still active beyond this many days fails the incident-triage check. Set this to whatever your own incident response plan commits to — the default of 5 days is a starting point, not a standard.', def: '5' },
+  { key: 'auditLogWindowDays', label: 'Audit log review window (days)', desc: 'How far back the two Entra audit-log checks look — observed legacy authentication, and privileged role changes. Set this to match the review cadence your own ISMS commits to rather than leaving the 30-day default; a quarterly access review wants 90. Entra itself retains sign-in and directory audit logs for 30 days on P1/P2 (7 days on the free tier), so a longer window here silently returns only what Entra still holds.', def: '30' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
 ];
 window.DEFAULT_SETTINGS = {
@@ -677,6 +689,7 @@ window.DEFAULT_SETTINGS = {
   riskyUsersReviewMax: '3',
   incidentTriageDays: '5',
   deviceStaleDays: '30',
+  auditLogWindowDays: '30',
   controlReviewCadenceDays: '90',
   /* Trust Center — what a generated public page is allowed to show.
      Off by default wherever disclosure is the more sensitive choice
@@ -883,6 +896,8 @@ window.CHECK_CONTROLS = {
   'mfa-all': ['A.5.15', 'A.8.5'],
   'mfa-priv': ['A.8.2', 'A.8.5'],
   'legacy': ['A.8.5', 'A.5.15'],
+  'legacy-auth-observed': ['A.8.5', 'A.8.15'],
+  'priv-role-changes': ['A.5.15', 'A.5.18', 'A.8.15'],
   'ca-device': ['A.8.1', 'A.5.15'],
   'ca-risk': ['A.8.5', 'A.5.15'],
   'ca-sif': ['A.8.2', 'A.8.5'],
@@ -1191,7 +1206,7 @@ window.DemoStore = (function () {
      real regressions rather than mixed in with them. */
   function demoResults() {
     var now = {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'legacy-auth-observed': 'fail', 'priv-role-changes': 'review', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
         'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
@@ -1203,6 +1218,7 @@ window.DemoStore = (function () {
        a new check lands in all three and only its movement is stated. */
     var at21 = Object.assign({}, now, {
       wdac: 'pass',                    /* the ALT-001 regression */
+      'legacy-auth-observed': 'review', /* attempts, all blocked — then one got through */
       'lifecycle-workflows': 'pass',
       encryption: 'review',            /* still readable back then */
       'ca-tou': 'fail',
@@ -1236,6 +1252,8 @@ window.DemoStore = (function () {
       lastResults: resultsNow,
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
+        'legacy-auth-observed': '2 legacy sign-in(s) SUCCEEDED in the last 30 days via IMAP4, Authenticated SMTP — 2 account(s) affected: svc-scanner@meridianhealth.example, j.reyes@meridianhealth.example. These sign-ins bypassed MFA regardless of what policy says.',
+        'priv-role-changes': '3 privileged role change(s) in the last 30 days, by k.patel@meridianhealth.example, s.okafor@meridianhealth.example — confirm each was authorised. Most recent: Security Administrator → m.chen@meridianhealth.example (2026-09-04); Global Administrator → k.patel@meridianhealth.example (2026-08-28); Privileged Role Administrator → s.okafor@meridianhealth.example (2026-08-22). Self-service PIM activations are excluded.',
         'ca-device': 'Device compliance is required by at least one Conditional Access policy, but not for all cloud apps',
         'ca-risk': 'No Conditional Access policy enforces sign-in-risk or user-risk based access controls',
         'ca-sif': 'No Conditional Access policy enforces sign-in frequency for privileged directory roles — a stolen or persisted admin session can remain valid indefinitely',

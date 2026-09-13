@@ -79,7 +79,7 @@ const MERGED_NIST_SUBCATEGORIES = CONTENT_AVAILABLE ? PACKS.nistcsf.extra.subcat
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
 // Capabilities probed against Microsoft Graph (graph.js CAPABILITY_PROBES).
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement', 'lifecycleWorkflows'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement', 'lifecycleWorkflows', 'signInLogs', 'directoryAudits'];
 // Capabilities that are DERIVED rather than probed, because nothing in
 // Microsoft 365 knows the answer. 'aws' is set by app.js from whether the
 // optional AWS collector has ever written an aws-* result for this tenant.
@@ -510,10 +510,17 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // call and no new scope. An unlicensed tenant is unaffected either
     // way: the relevant capability probe fails, the check degrades to
     // 'manual', and score() excludes 'manual' from its denominator
-    // entirely.
-    assert.equal(CHECK_DEFS.length, 51);
+    // entirely. 51 -> 53 when 'legacy-auth-observed' and
+    // 'priv-role-changes' were added — the first checks in this registry
+    // to read the Entra AUDIT LOGS rather than configuration, so unlike
+    // every addition since 'lifecycle-workflows' these did cost a new
+    // scope (AuditLog.Read.All) and two new capability probes
+    // ('signInLogs', 'directoryAudits'). That is the point of them:
+    // configuration says what the tenant is set up to do, and only the
+    // log says what it did.
+    assert.equal(CHECK_DEFS.length, 53);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 41);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 43);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

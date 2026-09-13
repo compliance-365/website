@@ -8,6 +8,7 @@ import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
 const { band, residual, residualAcceptanceStale, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged, scanDrift,
+  legacyAuthObservedResult, privRoleChangeResult,
   sharedEvidenceClosure, crossFrameworkStatusSuggestions, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
@@ -2235,5 +2236,159 @@ describe('crossFrameworkStatusSuggestions() — propagating a practitioner\'s ow
     const got = crossFrameworkStatusSuggestions(controls[0], { controls, entitlements: { iso27001: true, soc2: true } });
     assert.deepEqual(got.map((p) => p.fw + '|' + p.code), ['soc2|CC6.1']);
     assert.ok(!got.some((p) => p.code === 'A.5.15'));
+  });
+});
+
+/* The two Entra audit-log checks. Both read logs rather than
+   configuration, which makes them the only checks in the suite that can
+   contradict a passing config check — 'legacy' can say legacy auth is
+   blocked while the sign-in log shows IMAP4 succeeding. That is the
+   whole point of them, so the grading boundaries are worth pinning
+   precisely. */
+describe('legacyAuthObservedResult() — was legacy auth actually used', () => {
+  const ok = (app, upn) => ({ clientAppUsed: app, status: { errorCode: 0 }, userPrincipalName: upn });
+  const blocked = (app) => ({ clientAppUsed: app, status: { errorCode: 53003 } });
+
+  test('no legacy sign-ins at all passes', () => {
+    assert.equal(legacyAuthObservedResult([]).result, 'pass');
+    assert.equal(legacyAuthObservedResult(null).result, 'pass');
+  });
+
+  test('a successful legacy sign-in fails — the protocol is in live use', () => {
+    const r = legacyAuthObservedResult([ok('IMAP4', 'svc@x.test')]);
+    assert.equal(r.result, 'fail');
+    assert.equal(r.succeeded, 1);
+    assert.deepEqual(r.users, ['svc@x.test']);
+  });
+
+  test('blocked attempts alone are review, never fail', () => {
+    // A blocked attempt is the control WORKING. Grading it as a failure
+    // would mean the only route to 'pass' is for the internet to stop
+    // scanning you — and would make the check useless within a week.
+    const r = legacyAuthObservedResult([blocked('Other clients'), blocked('POP3'), blocked('POP3')]);
+    assert.equal(r.result, 'review');
+    assert.equal(r.attempts, 3);
+    assert.equal(r.succeeded, 0);
+  });
+
+  test('one success among many blocked attempts still fails', () => {
+    const r = legacyAuthObservedResult([blocked('POP3'), ok('Authenticated SMTP', 'a@x.test'), blocked('POP3')]);
+    assert.equal(r.result, 'fail');
+    assert.equal(r.succeeded, 1);
+  });
+
+  test('a row with no readable status is not counted as a success', () => {
+    // Same rule as incidentTriageResult's unparseable dates: a field we
+    // could not read must never manufacture a finding.
+    const r = legacyAuthObservedResult([{ clientAppUsed: 'IMAP4' }, { clientAppUsed: 'POP3', status: {} }]);
+    assert.equal(r.result, 'review');
+    assert.equal(r.succeeded, 0);
+    assert.equal(r.attempts, 2);
+  });
+
+  test('attempts and successes are broken down per client protocol', () => {
+    const r = legacyAuthObservedResult([ok('IMAP4', 'a@x.test'), blocked('IMAP4'), blocked('POP3')]);
+    assert.deepEqual(r.byApp, {
+      IMAP4: { attempts: 2, succeeded: 1 },
+      POP3: { attempts: 1, succeeded: 0 }
+    });
+  });
+
+  test('distinct users are deduplicated and sorted', () => {
+    const r = legacyAuthObservedResult([ok('IMAP4', 'b@x.test'), ok('POP3', 'a@x.test'), ok('IMAP4', 'b@x.test')]);
+    assert.deepEqual(r.users, ['a@x.test', 'b@x.test']);
+  });
+
+  test('a row with no clientAppUsed is still counted, under a named bucket', () => {
+    const r = legacyAuthObservedResult([{ status: { errorCode: 0 }, userPrincipalName: 'a@x.test' }]);
+    assert.equal(r.result, 'fail');
+    assert.deepEqual(Object.keys(r.byApp), ['Unknown client']);
+  });
+});
+
+describe('privRoleChangeResult() — privileged role changes in the window', () => {
+  const change = (activity, role, subject, actor, date) => ({
+    activityDisplayName: activity,
+    activityDateTime: date,
+    initiatedBy: { user: { userPrincipalName: actor } },
+    targetResources: [{ type: 'User', userPrincipalName: subject }, { type: 'Role', displayName: role }]
+  });
+
+  test('no changes in the window passes', () => {
+    assert.equal(privRoleChangeResult([]).result, 'pass');
+    assert.equal(privRoleChangeResult(null).result, 'pass');
+  });
+
+  test('any change is review and never fail', () => {
+    // Somebody being granted a role is not a defect — it is how an
+    // organisation staffs itself. What the standards require is that the
+    // change was authorised and reviewed, which no API can decide.
+    const many = Array.from({ length: 50 }, (_, i) =>
+      change('Add member to role', 'Global Administrator', `u${i}@x.test`, 'admin@x.test', '2026-01-0' + (i % 9 + 1)));
+    assert.equal(privRoleChangeResult(many).result, 'review');
+    assert.equal(privRoleChangeResult(many).count, 50);
+  });
+
+  test('self-service PIM activations are excluded', () => {
+    // A user elevating into a role they are already eligible for is the
+    // control working as designed — the very thing the 'pim' check
+    // rewards. Folding routine activations in would bury the assignment
+    // changes that actually alter who holds what.
+    const rows = [
+      change('Add member to role completed (PIM activation)', 'Global Administrator', 'a@x.test', 'a@x.test', '2026-01-02'),
+      change('Remove member from role (PIM activation)', 'Global Administrator', 'a@x.test', 'a@x.test', '2026-01-02')
+    ];
+    assert.equal(privRoleChangeResult(rows).result, 'pass');
+    assert.equal(privRoleChangeResult(rows).count, 0);
+  });
+
+  test('a permanent assignment alongside activations is still reported', () => {
+    const rows = [
+      change('Add member to role completed (PIM activation)', 'Global Administrator', 'a@x.test', 'a@x.test', '2026-01-02'),
+      change('Add member to role', 'Security Administrator', 'b@x.test', 'admin@x.test', '2026-01-03')
+    ];
+    const r = privRoleChangeResult(rows);
+    assert.equal(r.count, 1);
+    assert.equal(r.changes[0].role, 'Security Administrator');
+    assert.equal(r.changes[0].subject, 'b@x.test');
+  });
+
+  test('role and subject are picked by targetResource type, not position', () => {
+    // Entra orders targetResources inconsistently across activity types,
+    // so reading [0] and [1] positionally would mislabel half the rows.
+    const r = privRoleChangeResult([{
+      activityDisplayName: 'Add eligible member to role',
+      activityDateTime: '2026-02-01',
+      initiatedBy: { user: { userPrincipalName: 'admin@x.test' } },
+      targetResources: [{ type: 'Role', displayName: 'Privileged Role Administrator' }, { type: 'User', userPrincipalName: 'c@x.test' }]
+    }]);
+    assert.equal(r.changes[0].role, 'Privileged Role Administrator');
+    assert.equal(r.changes[0].subject, 'c@x.test');
+  });
+
+  test('an app-initiated change reports the app as the actor', () => {
+    const r = privRoleChangeResult([{
+      activityDisplayName: 'Add member to role',
+      activityDateTime: '2026-02-01',
+      initiatedBy: { app: { displayName: 'Provisioning Service' } },
+      targetResources: [{ type: 'ServicePrincipal', displayName: 'Backup Connector' }, { type: 'Role', displayName: 'Directory Readers' }]
+    }]);
+    assert.deepEqual(r.actors, ['Provisioning Service']);
+    assert.equal(r.changes[0].subject, 'Backup Connector');
+  });
+
+  test('changes are listed newest first', () => {
+    const r = privRoleChangeResult([
+      change('Add member to role', 'A', 'a@x.test', 'admin@x.test', '2026-01-01'),
+      change('Add member to role', 'C', 'c@x.test', 'admin@x.test', '2026-03-01'),
+      change('Add member to role', 'B', 'b@x.test', 'admin@x.test', '2026-02-01')
+    ]);
+    assert.deepEqual(r.changes.map((c) => c.role), ['C', 'B', 'A']);
+  });
+
+  test('missing fields degrade to empty strings rather than throwing', () => {
+    const r = privRoleChangeResult([{ activityDisplayName: 'Add member to role' }, {}, null, 'nonsense']);
+    assert.equal(r.count, 2);
+    assert.deepEqual(r.actors, []);
   });
 });

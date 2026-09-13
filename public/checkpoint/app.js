@@ -341,6 +341,25 @@ function showModal(opts) {
       risk: { title: 'Legacy authentication protocols allow credential-stuffing & MFA bypass', cat: 'Access', L: 5, I: 4, controls: ['A.8.5', 'A.5.15'] },
       actions: [{ t: 'Block legacy authentication via Conditional Access policy', pr: 'Critical', days: 14, control: 'A.8.5' }]
     },
+    /* Only 'legacy-auth-observed' gets a template, and only it should.
+       A successful legacy sign-in is a concrete, remediable finding
+       with a named account behind it. 'priv-role-changes' has no
+       template on purpose: it reports that role changes happened, which
+       is not a defect and has no remediation — proposing a risk every
+       time somebody is promoted would fill the register with noise and
+       train people to reject proposals without reading them.
+
+       A.8.15 rides alongside A.8.5 here because the finding is only
+       visible at all thanks to logging: if the sign-in log were not
+       being kept and read, this check could not exist. */
+    'legacy-auth-observed': {
+      risk: { title: 'Legacy authentication is in live use, bypassing MFA regardless of policy', cat: 'Access', L: 5, I: 5, controls: ['A.8.5', 'A.8.15'] },
+      actions: [
+        { t: 'Identify the accounts and clients still signing in over legacy protocols, and migrate or decommission each', pr: 'Critical', days: 14, control: 'A.8.5' },
+        { t: 'Close the gap that let these sign-ins through — confirm the Conditional Access policy scope covers them, and disable the legacy protocols at the Exchange mailbox level as well', pr: 'Critical', days: 21, control: 'A.8.5' },
+        { t: 'Reset credentials for any account that completed a legacy sign-in — it authenticated without MFA', pr: 'High', days: 7, control: 'A.5.17' }
+      ]
+    },
     'wdac': {
       risk: { title: 'Unhardened endpoints permit untrusted code execution across the fleet', cat: 'Ops', L: 4, I: 4, controls: ['A.8.7', 'A.8.19'] },
       actions: [{ t: 'Deploy WDAC application control baseline via Intune', pr: 'High', days: 30, control: 'A.8.7' }, { t: 'Stand up pilot ring & exception process for app control', pr: 'Medium', days: 45, control: 'A.8.19' }]

@@ -171,6 +171,129 @@
     return Math.max(5, Math.round(pts / measured.length * 100));
   }
 
+  /* ── Entra sign-in logs: was legacy authentication actually USED? ──
+     graph.js's 'legacy-auth-observed' check.
+
+     The existing 'legacy' check reads Conditional Access policy and
+     answers "is legacy authentication blocked by configuration". That
+     is the control, and it is the right thing to check — but it is a
+     statement of intent, and an auditor's next question is always
+     whether the intent held. A CA policy scoped to a group somebody has
+     since been excluded from, a policy in report-only state, an
+     Exchange-level override: each of those leaves the config check
+     passing while IMAP4 and Authenticated SMTP keep working.
+
+     This is the evidence half, and only the sign-in log can give it.
+     Scored on OUTCOME, not attempts:
+
+       fail    at least one legacy sign-in SUCCEEDED in the window. The
+               protocol is not merely permitted, it is in live use, and
+               the account using it has no MFA in front of it.
+       review  legacy attempts occurred but every one was blocked or
+               failed. The control is holding; somebody should still
+               know, because it usually means a real mail client or
+               service account is still configured for it and will
+               break — or be re-enabled by a helpdesk exception — the
+               moment a user complains.
+       pass    no legacy sign-ins at all in the window.
+
+     Attempts alone are deliberately NOT a fail. A blocked attempt is
+     the control working, and grading it the same as a successful one
+     would mean the only way to score 'pass' is for the internet to
+     stop scanning you. */
+  function legacyAuthObservedResult(signIns) {
+    var rows = (signIns || []).filter(function (r) { return r && typeof r === 'object'; });
+    var succeeded = rows.filter(function (r) {
+      /* Entra reports success as status.errorCode === 0. Anything else
+         — including an absent status, which we cannot interpret — is
+         NOT counted as a successful sign-in: inventing a fail out of a
+         field we could not read is how a posture score loses its
+         credibility (same rule as incidentTriageResult's unparseable
+         dates). */
+      return r.status && r.status.errorCode === 0;
+    });
+    var byApp = {};
+    rows.forEach(function (r) {
+      var app = r.clientAppUsed || 'Unknown client';
+      if (!byApp[app]) byApp[app] = { attempts: 0, succeeded: 0 };
+      byApp[app].attempts++;
+      if (r.status && r.status.errorCode === 0) byApp[app].succeeded++;
+    });
+    var users = {};
+    succeeded.forEach(function (r) { if (r.userPrincipalName) users[r.userPrincipalName] = true; });
+    return {
+      result: succeeded.length ? 'fail' : (rows.length ? 'review' : 'pass'),
+      attempts: rows.length,
+      succeeded: succeeded.length,
+      byApp: byApp,
+      users: Object.keys(users).sort()
+    };
+  }
+
+  /* ── Entra directory audit log: privileged role changes in a window ──
+     graph.js's 'priv-role-changes' check.
+
+     Deliberately never returns 'fail'. A directory role being granted
+     is not a defect — it is how an organisation staffs itself, and a
+     check that fails every time somebody is promoted would be switched
+     off within a month. What ISO 27001 A.5.15/A.5.18 and Essential
+     Eight's restrict-admin-privileges actually require is that
+     privileged access changes are AUTHORISED and REVIEWED, which no API
+     can decide. So:
+
+       review  one or more privileged role changes in the window — here
+               is the list, confirm each was authorised.
+       pass    none in the window.
+
+     The value is not the grade, it is the note: an auditor asking
+     "show me every privileged role change last quarter, and who made
+     it" gets that answer from this check's evidence rather than from
+     somebody exporting a CSV by hand the week before the audit.
+
+     Self-service PIM ACTIVATIONS are excluded. A user elevating into a
+     role they are already eligible for is the control working as
+     designed — the very thing the 'pim' check scores a tenant for
+     having — and folding routine activations in would bury the
+     assignments that actually change who holds what. Permanent
+     assignment changes, eligibility grants and role deletions all
+     count. */
+  var PRIV_ROLE_ACTIVITY_EXCLUDE = /^add member to role completed \(pim activation\)$|^add member to role requested \(pim activation\)$|^remove member from role \(pim activation\)$|pim activation/i;
+  function privRoleChangeResult(auditRecords) {
+    var changes = (auditRecords || []).filter(function (r) {
+      if (!r || typeof r !== 'object') return false;
+      return !PRIV_ROLE_ACTIVITY_EXCLUDE.test(r.activityDisplayName || '');
+    }).map(function (r) {
+      var actor = '';
+      if (r.initiatedBy) {
+        if (r.initiatedBy.user) actor = r.initiatedBy.user.userPrincipalName || r.initiatedBy.user.displayName || '';
+        else if (r.initiatedBy.app) actor = r.initiatedBy.app.displayName || '';
+      }
+      /* The role is the targetResource whose type is 'Role'; the person
+         it was granted to is the 'User' one. Entra orders these
+         inconsistently across activity types, so pick by type rather
+         than by position. */
+      var targets = r.targetResources || [];
+      var roleT = targets.find(function (t) { return t && t.type === 'Role'; });
+      var subjectT = targets.find(function (t) { return t && (t.type === 'User' || t.type === 'ServicePrincipal'); });
+      return {
+        activity: r.activityDisplayName || 'Role change',
+        date: r.activityDateTime || '',
+        actor: actor,
+        role: (roleT && (roleT.displayName || roleT.id)) || '',
+        subject: (subjectT && (subjectT.userPrincipalName || subjectT.displayName || subjectT.id)) || ''
+      };
+    });
+    changes.sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+    var actors = {};
+    changes.forEach(function (c) { if (c.actor) actors[c.actor] = true; });
+    return {
+      result: changes.length ? 'review' : 'pass',
+      count: changes.length,
+      changes: changes,
+      actors: Object.keys(actors).sort()
+    };
+  }
+
   /* Scores the Defender XDR incident queue (graph.js's 'xdr-incidents'
      check). Pure so the compliance-meaningful part is testable without
      a Graph call — the query that feeds it lives in graph.js.
@@ -3782,6 +3905,8 @@
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     scanResultsChanged: scanResultsChanged, scanDrift: scanDrift,
+    legacyAuthObservedResult: legacyAuthObservedResult, privRoleChangeResult: privRoleChangeResult,
+    PRIV_ROLE_ACTIVITY_EXCLUDE: PRIV_ROLE_ACTIVITY_EXCLUDE,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationTableRows: constellationTableRows,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,

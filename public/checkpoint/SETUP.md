@@ -79,6 +79,7 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `SecurityAlert.Read.All` | Read the Defender XDR alert queue (replaces the Secure Score proxy behind the alerts check where Defender XDR is present) | Yes |
 | `SubjectRightsRequest.Read.All` | Read Priva subject rights requests (privacy-request check; requires Microsoft Priva) | Yes |
 | `RecordsManagement.Read.All` | Read Purview retention labels (retention/disposal check; requires Purview records management). Delegated-only — no application-permission equivalent exists | Yes |
+| `AuditLog.Read.All` | Read the Entra sign-in log and directory audit log. Backs the only two checks that read what the tenant **did** rather than how it is **configured**: `legacy-auth-observed` (did any legacy sign-in actually succeed, whatever the Conditional Access policy claims) and `priv-role-changes` (every privileged role change in the review window, with who made it). Read-only, and Checkpoint never writes to or purges an audit log — the logs are the evidence. Graph gates both logs behind this one scope, so consenting enables both checks or neither. Sign-in logs additionally need Entra ID P1 and a reports-reading role (Reports Reader, Security Reader, Security Administrator or Global Reader); directory audit logs are available on every tier but still need one of those roles. Without them, both checks degrade to Manual rather than failing | Yes |
 
 **Stage 2 — requested the first time registers are loaded/created**
 (`Store.load()`, i.e. the first time anyone opens Checkpoint in this
@@ -2694,6 +2695,33 @@ table:
 `LifecycleWorkflows.Read.All`) and a fresh admin-consent decision, which
 is why they were added as a deliberate, separate change from the
 no-new-permission batch above them.
+
+`legacy-auth-observed` and `priv-role-changes` run here too, on one more
+new application permission (`AuditLog.Read.All`). These two are worth
+calling out separately: every other check the monitor runs reads
+*configuration*, and these read the *logs*. That is exactly what makes
+them valuable unattended — a legacy sign-in that succeeds overnight
+bypasses MFA no matter what the Conditional Access policy says, and
+nothing else in the monitor can see it. Both raise a drift alert and an
+email the same way any other check does.
+
+Two behaviours differ from the rest of the monitor, deliberately:
+
+- A permission or licence error on either log reports **Manual**, not
+  Review. Every other check here degrades a 403 to Review, which is
+  tolerable for a licence most tenants hold — but sign-in logs need
+  Entra ID P1 *and* a reports-reading role, so a free-tier tenant would
+  otherwise carry a permanent nightly Review and lose half a point on
+  every run for a question it was never able to answer.
+- Sign-in log reads are **capped** rather than following every page. A
+  sign-in log is the one Graph resource Checkpoint reads whose size is
+  bounded by traffic rather than by configuration; a tenant under a
+  credential-stuffing run against IMAP can have hundreds of thousands of
+  rows in the window. Where a count is capped, the check's note says so
+  and reports the number as a lower bound. The pass/review/fail grade
+  never depends on where the cap fell — successful legacy sign-ins are
+  queried separately, server-side, so the fail decision is exact even
+  when the attempt count is not.
 
 Full deploy steps (app registration, the exact application permissions
 and why each is the least-privilege choice for its check, the
