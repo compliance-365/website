@@ -412,9 +412,16 @@ describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consiste
    it ships again. */
 describe('scan-suggest tables never disagree with their guidance.checks panel, across every framework', { skip: SKIP }, () => {
   const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
+  /* cps234 was missing from this list, and that omission had a cost:
+     its map carried "vendor-review", a check id that has never
+     existed (the supplier check is `supplier`), so CPS234.16 and
+     CPS234.22 sat behind a mapping that could never fire — invisible
+     precisely because this guard did not look at cps234. Every pack
+     that has a scan-suggest map belongs here. */
   const SCAN_SUGGEST_KEY = {
     essential8: 'checkE8', is18: 'checkIs18', rffr: 'checkRffr',
-    iso42001: 'checkIso42001', iso27701: 'checkIso27701', soc2: 'checkSoc2', nistcsf: 'checkNistCsf'
+    iso42001: 'checkIso42001', iso27701: 'checkIso27701', soc2: 'checkSoc2',
+    nistcsf: 'checkNistCsf', cps234: 'checkCps234'
   };
 
   Object.keys(SCAN_SUGGEST_KEY).forEach((fw) => {
@@ -477,6 +484,48 @@ describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', {
       if (c.domain === 'ICT') assert.ok(c.ismChapter && String(c.ismChapter).trim(), `ICT control ${c.code} is missing ismChapter`);
       else assert.ok(!c.ismChapter, `non-ICT control ${c.code} (domain: ${c.domain}) unexpectedly has ismChapter set`);
     });
+  });
+});
+
+/* How many checks no pack maps at all.
+
+   Each premium pack's check -> control map (extra.checkSoc2,
+   extra.checkE8, …) is read DIRECTLY — unlike CHECK_CONTROLS, which
+   resolves through ISO 27001 and then follows each control's own
+   cross-map tokens. These maps are what drive the post-scan "these
+   checks passed, so set these controls" proposals for that framework,
+   so a check missing from every pack still scores but proposes
+   nothing anywhere: the practitioner sets those controls by hand.
+
+   The describe above already guards that each mapping points at a
+   real check and a real control, and that it is cross-referenced from
+   guidance. This guards the opposite direction, which nothing did:
+   the size of the unmapped population. */
+describe('content packs — checks no pack maps', { skip: SKIP }, () => {
+  test('the count is pinned, so it can only grow deliberately', () => {
+    // Not zero, and not a bug in itself: mapping a check into a
+    // framework is an editorial judgement about whether that check
+    // really evidences that control, and a wrong mapping (which
+    // auto-proposes a control status) is worse than an absent one.
+    //
+    // 24 when this guard was added; 18 once the six checks from
+    // 1.69.0-1.70.0 were mapped. Every one of the remaining 18
+    // predates that work, and the assertion message prints them —
+    // that list is a backlog, not a passing grade.
+    //
+    // Counted against the MAP only, not guidance prose: a control's
+    // guidance can name a check in passing without the pack mapping
+    // it, and only the map drives the proposals this measures.
+    const mapped = new Set();
+    PREMIUM_FRAMEWORKS.forEach((fw) => {
+      const extra = (PACKS[fw] && PACKS[fw].extra) || {};
+      const key = Object.keys(extra).find((k) => k.startsWith('check') && extra[k] && typeof extra[k] === 'object' && !Array.isArray(extra[k]));
+      if (key) Object.keys(extra[key]).forEach((id) => mapped.add(id));
+    });
+    const unmapped = CHECK_DEFS
+      .filter((c) => c.requiresCapability !== 'aws' && !mapped.has(c.id))
+      .map((c) => c.id).sort();
+    assert.equal(unmapped.length, 18, 'unmapped checks:\n  ' + unmapped.join('\n  '));
   });
 });
 
