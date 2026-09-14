@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.72.0',
+    date: '2026-09-14',
+    entries: [
+      'The Financial risk analysis view no longer freezes on a large risk register. The simulation and its summaries ran synchronously, so opening the view, generating a board report or running a scan stalled the page for as long as they took -- around 400ms on a 40-risk register and over a second on a large one, with no spinner because nothing else could run. Most of that turned out to be not the simulation but the sorting done to summarise it, once per risk. That work is now roughly three times faster and the view is about twice as fast overall; the figures it produces are byte-for-byte identical to before.',
+      'The Statement of Applicability now shows what is actually behind the implemented count: how many of those controls are demonstrated by passing scan observations, how many rest on linked evidence, how many on a person\'s verification alone, and how many on nothing at all. "68% implemented" says nothing about how much of it an assessor can inspect, and that breakdown is the first thing they ask for. Each count filters the table like every other number in the view, and the unsupported figure is shown even when it is zero -- a clean result is worth seeing, and hiding it would make it look like the feature was missing.'
+    ]
+  },
+  {
     version: '1.71.0',
     date: '2026-09-14',
     entries: [

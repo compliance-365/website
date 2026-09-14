@@ -3262,11 +3262,34 @@ function showModal(opts) {
      every caller therefore slices identically. renderSoaDashboard() uses
      it for the number ON a tile and renderSoa() for the rows that tile
      opens, so the two cannot disagree. */
+  /* The assurance roll-up's own filter keys. Handled HERE rather than
+     in lib.js's soaFocusRows() because an assurance level is derived
+     from this tenant's scan history, its evidence links and its review
+     cadence — assuranceForControl() needs S, and pushing scan history
+     into a pure filter keyed on a single control row would drag half
+     the app's state across a boundary the rest of this file keeps
+     carefully. Everything else still delegates, so there is exactly
+     one implementation of the status filters. */
+  var ASSURANCE_FOCUS_LEVELS = {
+    'assur-demonstrated': 'demonstrated', 'assur-evidenced': 'evidenced',
+    'assur-asserted': 'asserted', 'assur-unsupported': 'unsupported'
+  };
+  var ASSURANCE_FOCUS_LABELS = {
+    'assur-demonstrated': 'Demonstrated — backed by passing scan observations',
+    'assur-evidenced': 'Evidenced — evidence linked, no automated signal',
+    'assur-asserted': 'Asserted — verified by a person, no evidence linked',
+    'assur-unsupported': 'Unsupported — implemented with nothing behind it'
+  };
   function soaFocusRows(key, visRows) {
+    var level = ASSURANCE_FOCUS_LEVELS[key];
+    if (level) return visRows.filter(function (c) { return assuranceForControl(c).level === level; });
     return window.CheckpointLib.soaFocusRows(key, visRows, {
       today: new Date().toISOString().slice(0, 10),
       cadenceDays: S.settings && S.settings.controlReviewCadenceDays
     });
+  }
+  function soaFocusLabel(key) {
+    return ASSURANCE_FOCUS_LABELS[key] || window.CheckpointLib.soaFocusLabel(key);
   }
   /* generic trend badge vs a previous snapshot. higherIsBetter flips which
      direction counts as "good" (green) — a rising posture score is good, a
@@ -6430,6 +6453,52 @@ function showModal(opts) {
         mixEl.innerHTML = mix ? 'Also: ' + mix : '';
         mixEl.hidden = !mix;
       }
+
+      /* What is actually BEHIND the implemented count. The strip above
+         says how many controls are implemented; this says how many of
+         those are demonstrated by passing scan observations, how many
+         rest on linked evidence, how many on somebody's word, and how
+         many on nothing at all.
+
+         That last number is the one an assessor reaches for first, and
+         until now the app computed it (assuranceSummary() in lib.js has
+         been correct and tested since the assurance feature shipped)
+         and rendered it nowhere — the per-control level was on each
+         row, but never totalled. A practitioner could read "68%
+         implemented" off this view with no way to know that a third of
+         it was unsupported.
+
+         Same slice treatment as the status mix rather than more tiles,
+         for the reason recorded above: this view already carries three
+         tiles and two distributions, and a fourth strip would wrap.
+         Each count filters the table, so the promise every other number
+         here makes — the figure is the length of the list it opens —
+         holds for these too. */
+      var assurEl = document.getElementById('soaAssuranceLine');
+      if (assurEl) {
+        var rollup = window.CheckpointLib.assuranceSummary(visRows.map(assuranceForControl));
+        /* Every other slice in this view hides at zero, because "0 in
+           progress" is noise. Unsupported is the deliberate exception:
+           it is the first number an assessor asks for, and hiding it
+           makes "none of your implemented controls are unsupported" —
+           a genuinely good result worth seeing — indistinguishable
+           from the feature not being there at all. It renders at zero,
+           in the reassuring colour, whenever there is an implemented
+           count for it to qualify. */
+        var implementedTotal = rollup.demonstrated + rollup.evidenced + rollup.asserted + rollup.unsupported;
+        var parts = [
+          slice('assur-demonstrated', rollup.demonstrated, 'demonstrated'),
+          slice('assur-evidenced', rollup.evidenced, 'evidenced'),
+          slice('assur-asserted', rollup.asserted, 'asserted'),
+          rollup.unsupported
+            ? slice('assur-unsupported', rollup.unsupported, 'unsupported')
+            : (implementedTotal ? '<span class="soa-slice-ok">0 unsupported</span>' : '')
+        ].filter(Boolean).join('<span aria-hidden="true"> · </span>');
+        assurEl.innerHTML = parts
+          ? '<span title="How much of the implemented count is actually backed by something an assessor can inspect">Assurance behind it:</span> ' + parts
+          : '';
+        assurEl.hidden = !parts;
+      }
     }
 
     var themeEl = document.getElementById('soaThemeChart');
@@ -6835,7 +6904,7 @@ function showModal(opts) {
     var focusRows = focusKey ? soaFocusRows(focusKey, visRows) : null;
     renderFocusBar('soaFocusBar', focusKey ? {
       key: focusKey, shown: focusRows.length, total: visRows.length,
-      label: window.CheckpointLib.soaFocusLabel(focusKey),
+      label: soaFocusLabel(focusKey),
       action: 'App.focusSoa', clearLabel: 'Show all controls'
     } : null);
     if (focusRows) {

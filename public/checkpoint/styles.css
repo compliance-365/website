@@ -940,6 +940,11 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .soa-mix{margin:0 0 16px;font-size:var(--fs-1);color:var(--paper-faint);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
 .soa-slice{font:inherit;color:inherit;padding:0;border:none;background:none;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
 .soa-slice:hover,.soa-slice:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
+/* "0 unsupported" — the one slice that renders at zero (see renderSoa).
+   Not a button, because there is nothing to filter to; coloured as the
+   good result it is, rather than sitting in the same grey as counts
+   that are merely absent. */
+.soa-slice-ok{color:var(--pass)}
 .soa-slice.on{color:var(--gold-light);font-weight:700;text-decoration-color:currentColor}
 /* Sits directly above the table it describes, so "showing 2 of 93" is
    read at the moment the short table would otherwise look like missing
