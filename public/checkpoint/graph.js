@@ -308,7 +308,22 @@ window.Graph = (function () {
        almost always a missing role or an unconsented AuditLog.Read.All
        scope rather than a licensing gap. */
     { key: 'directoryAudits', label: 'Entra ID directory audit logs', licence: 'Any Entra ID tier, with a role that can read reports (Reports Reader, Security Reader, Security Administrator or Global Reader)', path: '/auditLogs/directoryAudits?$top=1',
-      note: 'Directory audit logs are not readable — the privileged-role-change check will show as Manual. These are available on every Entra tier, so this is usually a missing reports-reading role rather than a licence gap.' }
+      note: 'Directory audit logs are not readable — the privileged-role-change check will show as Manual. These are available on every Entra tier, so this is usually a missing reports-reading role rather than a licence gap.' },
+    /* signInActivity on /users. Deliberately its OWN probe rather than
+       being folded into the existing /users read the leaver and
+       segregation-of-duties checks share: Graph rejects the WHOLE
+       request when signInActivity is selected without Entra ID P1, so
+       adding the field to that shared $select would take two working
+       checks down on every free-tier tenant to add a third. A separate
+       call costs one round trip and cannot regress anything. */
+    { key: 'signInActivity', label: 'Entra ID sign-in activity on user accounts', licence: 'Entra ID P1 or P2, and a role that can read reports', path: '/users?$select=id,signInActivity&$top=1',
+      note: 'Per-account sign-in activity is not readable — the dormant-account check will show as Manual. It needs Entra ID P1 and a reports-reading role; without it, the leaver check above still covers accounts that were actually disabled.' },
+    /* The authentication methods registration report. Needs no premium
+       licence — only the AuditLog.Read.All scope and a reports-reading
+       role — so unlike the probe above, a Manual here is almost always
+       consent or roles rather than tier. */
+    { key: 'mfaRegistrationReport', label: 'Entra ID authentication methods registration report', licence: 'Any Entra ID tier, with a role that can read reports', path: '/reports/authenticationMethods/userRegistrationDetails?$top=1',
+      note: 'The authentication methods registration report is not readable — the MFA-registration-coverage check will show as Manual. The Conditional Access MFA check above still reports what policy REQUIRES; only what users can actually do is unavailable.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -441,6 +456,11 @@ window.Graph = (function () {
     var incidentTriageDays = num('incidentTriageDays', 5);
     var deviceStaleDays = num('deviceStaleDays', 30);
     var auditLogWindowDays = num('auditLogWindowDays', 30);
+    var deviceEncryptionPassPct = num('deviceEncryptionPassPct', 100);
+    var deviceEncryptionReviewPct = num('deviceEncryptionReviewPct', 95);
+    var dormantAccountDays = num('dormantAccountDays', 90);
+    var dormantAccountReviewMax = num('dormantAccountReviewMax', 5);
+    var mfaCoverageReviewPct = num('mfaCoverageReviewPct', 95);
 
     /* Consulted below so a licence/permission gap this tenant genuinely
        has (no Entra ID P2, no Intune, etc.) shows up as a clean,
@@ -707,16 +727,23 @@ window.Graph = (function () {
       set('compliance-policy', 'manual', capabilities.intune.note);
       set('device-config', 'manual', capabilities.intune.note);
       set('device-checkin', 'manual', capabilities.intune.note);
+      set('device-encryption', 'manual', capabilities.intune.note);
+      set('device-jailbroken', 'manual', capabilities.intune.note);
     } else {
       try {
-        /* lastSyncDateTime is added to the existing $select rather than
-           fetched separately — same call, same permission, one more
-           field, and it powers the device-checkin check below. */
-        var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState,lastSyncDateTime&$top=999');
+        /* lastSyncDateTime, isEncrypted and jailBroken are added to the
+           existing $select rather than fetched separately — same call,
+           same permission, three more fields, and they power the
+           device-checkin, device-encryption and device-jailbroken
+           checks below. All three are GA on Graph v1.0's managedDevice
+           resource. */
+        var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState,lastSyncDateTime,isEncrypted,jailBroken&$top=999');
         raw['device'] = { managedDevices: devs };
         if (!devs.length) {
           set('device', 'review', 'No Intune-managed devices found');
           set('device-checkin', 'review', 'No Intune-managed devices found');
+          set('device-encryption', 'manual', 'No Intune-managed devices found');
+          set('device-jailbroken', 'manual', 'No Intune-managed devices found');
         } else {
           var ok = devs.filter(function (d) { return d.complianceState === 'compliant'; }).length;
           var pct = Math.round(ok / devs.length * 100);
@@ -738,10 +765,46 @@ window.Graph = (function () {
               ? dc.stale + ' of ' + dc.total + ' device(s) have not checked in for over ' + deviceStaleDays + ' days' +
                 (dc.never ? ' (' + dc.never + ' never have)' : '') + ' — their compliance state is stale evidence'
               : 'All ' + dc.total + ' managed device(s) checked in within ' + deviceStaleDays + ' days');
+
+          /* Disk encryption. Intune's own compliance state does NOT
+             answer this — a tenant whose compliance policy never
+             required encryption reports 100% compliant with an
+             unencrypted fleet, which is exactly the gap worth closing
+             and exactly why this is a separate check rather than a
+             detail of 'device'. */
+          var enc = window.CheckpointLib.deviceEncryptionResult(devs, deviceEncryptionPassPct, deviceEncryptionReviewPct);
+          raw['device-encryption'] = { total: enc.total, known: enc.known, encrypted: enc.encrypted, unencrypted: enc.unencrypted, unknown: enc.unknown, pct: enc.pct, unencryptedNames: enc.unencryptedNames };
+          set('device-encryption', enc.result,
+            enc.result === 'manual'
+              ? 'No managed device reports an encryption state — this is "not visible" rather than "not encrypted". Record how disk encryption is verified if it is managed outside Intune.'
+              : enc.pct + '% of ' + enc.known + ' device(s) reporting encryption state are encrypted (target ≥' + deviceEncryptionPassPct + '%, review ≥' + deviceEncryptionReviewPct + '%)' +
+                (enc.unencrypted
+                  ? ' — ' + enc.unencrypted + ' UNENCRYPTED' + (enc.unencryptedNames.length <= 5 ? ': ' + enc.unencryptedNames.join(', ') : '')
+                  : '') +
+                (enc.unknown ? '. ' + enc.unknown + ' further device(s) do not report the field and are excluded rather than counted against you.' : ''));
+
+          /* Jailbroken/rooted mobile devices. Scoped to iOS/Android in
+             lib.js, and 'manual' for a fleet with none — see
+             jailbrokenDeviceResult()'s comment. */
+          var jb = window.CheckpointLib.jailbrokenDeviceResult(devs);
+          raw['device-jailbroken'] = { mobile: jb.mobile, known: jb.known, jailbroken: jb.jailbroken, unknown: jb.unknown, names: jb.names };
+          set('device-jailbroken', jb.result,
+            jb.result === 'manual'
+              ? (jb.mobile
+                  ? jb.mobile + ' mobile device(s) enrolled but none report a jailbreak/root state — not visible rather than clean.'
+                  : 'No iOS or Android devices are enrolled, so there is no jailbreak/root exposure to measure here.')
+              : (jb.jailbroken
+                  ? jb.jailbroken + ' of ' + jb.mobile + ' mobile device(s) report as JAILBROKEN/ROOTED' +
+                    (jb.names.length <= 5 ? ': ' + jb.names.join(', ') : '') +
+                    ' — the compliance state these devices report cannot be trusted, because the controls asserting it can be defeated locally.'
+                  : 'None of ' + jb.known + ' mobile device(s) reporting a jailbreak/root state are compromised' +
+                    (jb.unknown ? ' (' + jb.unknown + ' further device(s) do not report it)' : ''))); 
         }
       } catch (e) {
         set('device', 'review', 'Could not read Intune devices: ' + e.message);
         set('device-checkin', 'review', 'Could not read Intune devices: ' + e.message);
+        set('device-encryption', 'review', 'Could not read Intune devices: ' + e.message);
+        set('device-jailbroken', 'review', 'Could not read Intune devices: ' + e.message);
       }
 
       /* --- Device configuration profiles (A.8.9 configuration management)
@@ -1198,6 +1261,72 @@ window.Graph = (function () {
         set('priv-role-changes', prc.result, prcNote);
       } catch (e) {
         set('priv-role-changes', 'review', 'Directory audit logs not readable: ' + e.message);
+      }
+    }
+
+    /* dormant-accounts — the other half of the leaver check.
+       'leaver' looks at accounts somebody already DISABLED and asks
+       whether the rest of the offboarding finished. This finds the
+       accounts nobody disabled at all: an enabled credential that has
+       not been used in a quarter is an unfinished offboarding, an
+       unowned service account, or a contractor whose engagement ended.
+
+       A separate /users read rather than a field on the one the leaver
+       check already makes — see the 'signInActivity' probe's comment
+       for why folding it in would be a regression on free-tier
+       tenants. */
+    if (!capabilities.signInActivity.available) {
+      set('dormant-accounts', 'manual', capabilities.signInActivity.note);
+    } else {
+      try {
+        var activityUsers = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,signInActivity&$top=999');
+        var dorm = window.CheckpointLib.dormantAccountResult(activityUsers, dormantAccountDays, dormantAccountReviewMax, Date.now());
+        raw['dormant-accounts'] = { enabled: dorm.enabled, dormant: dorm.dormant, never: dorm.never, guests: dorm.guests, accounts: dorm.accounts, dormantDays: dormantAccountDays };
+        set('dormant-accounts', dorm.result,
+          dorm.dormant === 0
+            ? 'All ' + dorm.enabled + ' enabled account(s) have signed in within ' + dormantAccountDays + ' days'
+            : dorm.dormant + ' of ' + dorm.enabled + ' enabled account(s) have not signed in for over ' + dormantAccountDays + ' days' +
+              (dorm.never ? ' (' + dorm.never + ' never have — break-glass accounts legitimately sit here, so check yours before acting)' : '') +
+              (dorm.guests ? '; ' + dorm.guests + ' of them are guests' : '') +
+              '. Oldest: ' + dorm.accounts.slice(0, 5).map(function (a) {
+                return (a.upn || a.name) + ' (' + (a.lastSignIn ? a.lastSignIn.slice(0, 10) : 'never') + ')';
+              }).join(', ') + '. Confirm each is deliberate rather than an unfinished offboarding.');
+      } catch (e) {
+        set('dormant-accounts', 'review', 'Could not read per-account sign-in activity: ' + e.message);
+      }
+    }
+
+    /* mfa-registration — the evidence half of 'mfa-all', in the same
+       way legacy-auth-observed is the evidence half of 'legacy'.
+       'mfa-all' says what Conditional Access REQUIRES; this says
+       whether the people it applies to could actually complete it. A
+       tenant with a flawless policy and forty unregistered users has
+       not protected those accounts, it has arranged for them to be
+       locked out — and what follows in practice is an exclusion group
+       that quietly undoes the policy. */
+    if (!capabilities.mfaRegistrationReport.available) {
+      set('mfa-registration', 'manual', capabilities.mfaRegistrationReport.note);
+    } else {
+      try {
+        var regRows = await gAll('/reports/authenticationMethods/userRegistrationDetails?$top=999');
+        var mfar = window.CheckpointLib.mfaRegistrationResult(regRows, mfaCoverageReviewPct);
+        raw['mfa-registration'] = { total: mfar.total, capable: mfar.capable, notCapable: mfar.notCapable, pct: mfar.pct, admins: mfar.admins, adminsNotCapable: mfar.adminsNotCapable, gaps: mfar.gaps };
+        set('mfa-registration', mfar.result,
+          mfar.result === 'manual'
+            ? 'The authentication methods registration report returned no users.'
+            : mfar.pct + '% of ' + mfar.total + ' user(s) are MFA-capable (review floor ' + mfaCoverageReviewPct + '%)' +
+              (mfar.adminsNotCapable
+                ? '. ' + mfar.adminsNotCapable + ' ADMINISTRATOR(S) cannot complete MFA: ' +
+                  (mfar.adminGaps.length <= 5 ? mfar.adminGaps.join(', ') : mfar.adminGaps.length + ' accounts') +
+                  ' — fixed before anything else here, whatever the overall percentage says.'
+                : '') +
+              (mfar.notCapable && !mfar.adminsNotCapable
+                ? '. ' + mfar.notCapable + ' user(s) have no usable method registered' +
+                  (mfar.gaps.length <= 5 ? ': ' + mfar.gaps.join(', ') : '') +
+                  ' — they are covered by policy but cannot satisfy it.'
+                : ''));
+      } catch (e) {
+        set('mfa-registration', 'review', 'Could not read the authentication methods registration report: ' + e.message);
       }
     }
 

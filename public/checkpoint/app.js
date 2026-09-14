@@ -360,6 +360,40 @@ function showModal(opts) {
         { t: 'Reset credentials for any account that completed a legacy sign-in — it authenticated without MFA', pr: 'High', days: 7, control: 'A.5.17' }
       ]
     },
+    /* All four of these propose a risk because all four name a
+       concrete, remediable thing with an owner behind it — an
+       unencrypted laptop, a rooted phone, a live credential nobody
+       uses, an admin who cannot complete MFA. Contrast
+       'priv-role-changes' above, which deliberately has no template:
+       it reports that role changes happened, which is not a defect. */
+    'device-encryption': {
+      risk: { title: 'Fleet data is readable on loss or theft — disk encryption is not enforced everywhere', cat: 'Data', L: 3, I: 5, controls: ['A.8.24', 'A.8.1'] },
+      actions: [
+        { t: 'Encrypt the devices reporting as unencrypted, and confirm recovery keys escrow to Intune/Entra before enforcing', pr: 'High', days: 21, control: 'A.8.24' },
+        { t: 'Add disk encryption as a requirement to the Intune compliance policy, so an unencrypted device is reported non-compliant rather than compliant', pr: 'High', days: 30, control: 'A.8.1' }
+      ]
+    },
+    'device-jailbroken': {
+      risk: { title: 'Jailbroken/rooted mobile devices hold corporate access, and report themselves as compliant', cat: 'Ops', L: 3, I: 5, controls: ['A.8.1', 'A.8.19'] },
+      actions: [
+        { t: 'Retire or wipe the jailbroken/rooted devices — the compliance state they report cannot be trusted while the controls asserting it can be defeated locally', pr: 'Critical', days: 7, control: 'A.8.1' },
+        { t: 'Add a jailbreak/root detection rule to the Intune compliance policy so these devices are blocked by Conditional Access rather than merely visible', pr: 'High', days: 21, control: 'A.8.19' }
+      ]
+    },
+    'dormant-accounts': {
+      risk: { title: 'Dormant enabled accounts remain live credentials with no one watching them', cat: 'Access', L: 4, I: 4, controls: ['A.5.16', 'A.5.18'] },
+      actions: [
+        { t: 'Review each dormant account and disable the ones that are unfinished offboardings — recording which are deliberate (break-glass, seasonal) so the next review does not re-litigate them', pr: 'High', days: 21, control: 'A.5.18' },
+        { t: 'Give every retained service account a named owner and a review date, so "nobody knows what this is for" stops being the reason it survives', pr: 'Medium', days: 45, control: 'A.5.16' }
+      ]
+    },
+    'mfa-registration': {
+      risk: { title: 'Users are covered by an MFA policy they cannot satisfy, inviting exclusions that undo it', cat: 'Access', L: 4, I: 5, controls: ['A.5.17', 'A.8.5'] },
+      actions: [
+        { t: 'Register a phishing-resistant method for every administrator who cannot currently complete MFA — before any other item here', pr: 'Critical', days: 7, control: 'A.8.5' },
+        { t: 'Run a registration campaign for the remaining users, rather than excluding them from the Conditional Access policy to stop the lockouts', pr: 'High', days: 30, control: 'A.5.17' }
+      ]
+    },
     'wdac': {
       risk: { title: 'Unhardened endpoints permit untrusted code execution across the fleet', cat: 'Ops', L: 4, I: 4, controls: ['A.8.7', 'A.8.19'] },
       actions: [{ t: 'Deploy WDAC application control baseline via Intune', pr: 'High', days: 30, control: 'A.8.7' }, { t: 'Stand up pilot ring & exception process for app control', pr: 'Medium', days: 45, control: 'A.8.19' }]

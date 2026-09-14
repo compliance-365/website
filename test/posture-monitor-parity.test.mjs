@@ -583,7 +583,13 @@ describe('SCORED_CHECK_IDS / CHECK_LABELS', () => {
     // overnight is exactly what an unattended monitor should email
     // about, and it is invisible to every configuration check in the
     // file.
-    assert.equal(monitor.SCORED_CHECK_IDS.length, 40);
+    // 40 -> 44 with the endpoint-state and account-hygiene batch:
+    // device-encryption and device-jailbroken are mined from the same
+    // managedDevices response the device check already fetches, and
+    // dormant-accounts/mfa-registration spend the AuditLog.Read.All
+    // permission the audit-log pair already added — four more scored
+    // checks for no new consent decision at all.
+    assert.equal(monitor.SCORED_CHECK_IDS.length, 44);
     assert.ok(monitor.SCORED_CHECK_IDS.indexOf('retention') === -1, 'retention can never be scored unattended');
   });
 
@@ -806,5 +812,158 @@ describe('gCapped() — the sign-in log is the one unbounded Graph resource here
     const r = await monitor.gCapped(pager(250, 250), '/p?skip=0', 250);
     assert.equal(r.rows.length, 250);
     assert.equal(r.truncated, false);
+  });
+});
+
+/* The endpoint-state and account-hygiene batch, end to end through the
+   monitor's own runPostureChecks() and asserted against lib.js on the
+   identical fixture. index.js's copies are hand-ported by the
+   codebase's stated convention ("if you change one, change the
+   other"), and each of these four has a boundary that is easy to port
+   wrongly: a field that must not be read as a boolean, a denominator
+   that must exclude silent devices, a timestamp that must count as
+   never, and an admin who must override a percentage. */
+describe('runPostureChecks() — device-encryption, device-jailbroken, dormant-accounts, mfa-registration', () => {
+  const NOW_ISO = (days) => new Date(Date.now() - days * 86400000).toISOString();
+
+  function graphWith({ devices = [], users = [], regRows = [], usersError = null, regError = null } = {}) {
+    return fakeGraph([
+      [/^\/identity\/conditionalAccess\/policies$/, () => ({ value: [] })],
+      // The leaver check's /users read and the dormant check's are
+      // separate calls on purpose; the dormant one is the only one
+      // selecting signInActivity, so route on that.
+      [/^\/users\?\$select=id,displayName,userPrincipalName,accountEnabled,userType,signInActivity/, () => {
+        if (usersError) throw usersError;
+        return { value: users };
+      }],
+      [/^\/users\?\$select=id,displayName,userPrincipalName,accountEnabled/, () => ({ value: [] })],
+      [/^\/directoryRoles\?\$select/, () => ({ value: [] })],
+      [/^\/directoryRoles\(roleTemplateId=/, () => ({ value: [] })],
+      [/^\/roleManagement\/directory\/roleAssignmentScheduleInstances/, () => ({ value: [] })],
+      [/^\/roleManagement\/directory\/roleEligibilityScheduleInstances/, () => ({ value: [] })],
+      [/^\/users\?\$filter=userType/, () => ({ value: [] })],
+      [/^\/identityProtection\/riskyUsers/, () => ({ value: [] })],
+      [/^\/deviceManagement\/managedDevices/, () => ({ value: devices })],
+      [/^\/deviceManagement\/deviceCompliancePolicies/, () => ({ value: [] })],
+      [/^\/deviceManagement\/deviceConfigurations/, () => ({ value: [] })],
+      [/^\/oauth2PermissionGrants/, () => ({ value: [] })],
+      [/^\/identityGovernance\/accessReviews\/definitions/, () => ({ value: [] })],
+      [/^\/security\/secureScores/, () => ({ value: [] })],
+      [/^\/security\/incidents/, () => ({ value: [] })],
+      [/^\/security\/subjectRightsRequests/, () => ({ value: [] })],
+      [/^\/identityGovernance\/lifecycleWorkflows\/workflows/, () => ({ value: [] })],
+      [/^\/auditLogs\/signIns/, () => ({ value: [] })],
+      [/^\/auditLogs\/directoryAudits/, () => ({ value: [] })],
+      [/^\/reports\/authenticationMethods\/userRegistrationDetails/, () => {
+        if (regError) throw regError;
+        return { value: regRows };
+      }]
+    ]);
+  }
+
+  const run = async (opts) => {
+    const { g, gAll } = graphWith(opts);
+    return (await monitor.runPostureChecks(g, gAll, NO_OP_SETTINGS)).results;
+  };
+
+  const dev = (name, props) => ({ deviceName: name, operatingSystem: 'Windows', complianceState: 'compliant', lastSyncDateTime: NOW_ISO(1), ...props });
+
+  test('a fully encrypted fleet passes on both sides', async () => {
+    const devices = [dev('a', { isEncrypted: true }), dev('b', { isEncrypted: true })];
+    assert.equal((await run({ devices }))['device-encryption'], 'pass');
+    assert.equal(CheckpointLib.deviceEncryptionResult(devices, 100, 95).result, 'pass');
+  });
+
+  test('an unencrypted device fails on both sides', async () => {
+    const devices = [dev('a', { isEncrypted: true }), dev('b', { isEncrypted: false })];
+    assert.equal((await run({ devices }))['device-encryption'], 'fail');
+    assert.equal(CheckpointLib.deviceEncryptionResult(devices, 100, 95).result, 'fail');
+  });
+
+  test('devices silent on isEncrypted leave the denominator, not the numerator', async () => {
+    // The port that counts a silent device as unencrypted turns this
+    // into a fail. Both sides must read it as pass.
+    const devices = [dev('a', { isEncrypted: true }), dev('b', {}), dev('c', {})];
+    assert.equal((await run({ devices }))['device-encryption'], 'pass');
+    assert.equal(CheckpointLib.deviceEncryptionResult(devices, 100, 95).result, 'pass');
+  });
+
+  test('a fleet reporting no encryption state at all is manual on both sides', async () => {
+    const devices = [dev('a', {}), dev('b', {})];
+    assert.equal((await run({ devices }))['device-encryption'], 'manual');
+    assert.equal(CheckpointLib.deviceEncryptionResult(devices, 100, 95).result, 'manual');
+  });
+
+  test('jailBroken is parsed as a string, not a truthy value', async () => {
+    // "False" is a truthy JavaScript string. A port using `if
+    // (d.jailBroken)` scores an entirely clean fleet as compromised.
+    const clean = [dev('p1', { operatingSystem: 'iOS', jailBroken: 'False' })];
+    assert.equal((await run({ devices: clean }))['device-jailbroken'], 'pass');
+    assert.equal(CheckpointLib.jailbrokenDeviceResult(clean).result, 'pass');
+    const rooted = [dev('p2', { operatingSystem: 'Android', jailBroken: 'True' })];
+    assert.equal((await run({ devices: rooted }))['device-jailbroken'], 'fail');
+    assert.equal(CheckpointLib.jailbrokenDeviceResult(rooted).result, 'fail');
+  });
+
+  test('a Windows-only fleet is manual for jailbreak on both sides', async () => {
+    const devices = [dev('w1', { isEncrypted: true })];
+    assert.equal((await run({ devices }))['device-jailbroken'], 'manual');
+    assert.equal(CheckpointLib.jailbrokenDeviceResult(devices).result, 'manual');
+  });
+
+  test('an active directory passes dormant-accounts on both sides', async () => {
+    const users = [{ accountEnabled: true, userPrincipalName: 'a@x.test', signInActivity: { lastSignInDateTime: NOW_ISO(3) } }];
+    assert.equal((await run({ users }))['dormant-accounts'], 'pass');
+    assert.equal(CheckpointLib.dormantAccountResult(users, 90, 5, Date.now()).result, 'pass');
+  });
+
+  test('dormant accounts grade review then fail as the count crosses the threshold', async () => {
+    const few = Array.from({ length: 3 }, (_, i) => ({ accountEnabled: true, userPrincipalName: 'u' + i + '@x.test', signInActivity: { lastSignInDateTime: NOW_ISO(400) } }));
+    assert.equal((await run({ users: few }))['dormant-accounts'], 'review');
+    assert.equal(CheckpointLib.dormantAccountResult(few, 90, 5, Date.now()).result, 'review');
+    const many = Array.from({ length: 12 }, (_, i) => ({ accountEnabled: true, userPrincipalName: 'u' + i + '@x.test', signInActivity: { lastSignInDateTime: NOW_ISO(400) } }));
+    assert.equal((await run({ users: many }))['dormant-accounts'], 'fail');
+    assert.equal(CheckpointLib.dormantAccountResult(many, 90, 5, Date.now()).result, 'fail');
+  });
+
+  test('non-interactive sign-in counts as activity on both sides', async () => {
+    // A service account signing in non-interactively is in use;
+    // grading it dormant would bury the real findings.
+    const users = [{ accountEnabled: true, userPrincipalName: 'svc@x.test', signInActivity: { lastNonInteractiveSignInDateTime: NOW_ISO(2) } }];
+    assert.equal((await run({ users }))['dormant-accounts'], 'pass');
+    assert.equal(CheckpointLib.dormantAccountResult(users, 90, 5, Date.now()).result, 'pass');
+  });
+
+  test('a 403 on sign-in activity is manual, not review', async () => {
+    // Sign-in activity needs Entra ID P1. A free-tier tenant must not
+    // lose half a point nightly for a question it could never answer.
+    const err = new Error('Graph 403'); err.status = 403;
+    assert.equal((await run({ usersError: err }))['dormant-accounts'], 'manual');
+  });
+
+  test('an admin without MFA fails outright on both sides, whatever the percentage', async () => {
+    const regRows = Array.from({ length: 99 }, (_, i) => ({ userPrincipalName: 'u' + i + '@x.test', isMfaCapable: true }));
+    regRows.push({ userPrincipalName: 'ga@x.test', isMfaCapable: false, isAdmin: true });
+    assert.equal((await run({ regRows }))['mfa-registration'], 'fail');
+    assert.equal(CheckpointLib.mfaRegistrationResult(regRows, 95).result, 'fail');
+  });
+
+  test('full MFA capability passes, a small gap reviews, on both sides', async () => {
+    const full = [{ userPrincipalName: 'a@x.test', isMfaCapable: true }];
+    assert.equal((await run({ regRows: full }))['mfa-registration'], 'pass');
+    assert.equal(CheckpointLib.mfaRegistrationResult(full, 95).result, 'pass');
+    const near = Array.from({ length: 100 }, (_, i) => ({ userPrincipalName: 'u' + i + '@x.test', isMfaCapable: i >= 3 }));
+    assert.equal((await run({ regRows: near }))['mfa-registration'], 'review');
+    assert.equal(CheckpointLib.mfaRegistrationResult(near, 95).result, 'review');
+  });
+
+  test('an empty registration report is manual on both sides', async () => {
+    assert.equal((await run({ regRows: [] }))['mfa-registration'], 'manual');
+    assert.equal(CheckpointLib.mfaRegistrationResult([], 95).result, 'manual');
+  });
+
+  test('a 403 on the registration report is manual, not review', async () => {
+    const err = new Error('Graph 403'); err.status = 403;
+    assert.equal((await run({ regError: err }))['mfa-registration'], 'manual');
   });
 });

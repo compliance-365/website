@@ -1087,6 +1087,179 @@
     };
   }
 
+  /* ── Endpoint security state, mined from the device list ──────────
+     The three checks above (device / device-checkin / device-config)
+     between them ask whether a policy EXISTS, whether devices are
+     still talking to Intune, and whether Intune's own compliance
+     engine is happy. None of them read the security state of the
+     endpoint itself. These two do, from exactly the same
+     /deviceManagement/managedDevices response the compliance check
+     already fetches — two more fields on the $select, no new call and
+     no new permission.
+
+     Disk encryption. Essential Eight and ISO 27001 A.8.24 both land
+     here, and it is the first question asked after a laptop goes
+     missing: was the data on it readable. Intune's own compliance
+     state does NOT answer it — a tenant whose compliance policy never
+     required encryption reports 100% compliant with an unencrypted
+     fleet, which is precisely the gap worth closing.
+
+     Devices that do not report the field at all are excluded from the
+     denominator and counted separately, never scored as unencrypted.
+     isEncrypted is not populated for every platform and management
+     mode, and manufacturing a failure out of a field we could not read
+     is how a posture score loses its credibility (same rule as
+     incidentTriageResult's unparseable dates). If NOTHING reports it,
+     the answer is 'manual' — we did not check, rather than we checked
+     and found nothing wrong. */
+  function deviceEncryptionResult(devices, passPct, reviewPct) {
+    var list = (devices || []).filter(function (d) { return d; });
+    var known = list.filter(function (d) { return typeof d.isEncrypted === 'boolean'; });
+    var unknown = list.length - known.length;
+    if (!known.length) {
+      return { result: 'manual', total: list.length, known: 0, encrypted: 0, unencrypted: 0, unknown: unknown, pct: null, unencryptedNames: [] };
+    }
+    var encrypted = known.filter(function (d) { return d.isEncrypted === true; });
+    var bare = known.filter(function (d) { return d.isEncrypted === false; });
+    var pct = Math.round(encrypted.length / known.length * 100);
+    var pass = typeof passPct === 'number' ? passPct : 100;
+    var review = typeof reviewPct === 'number' ? reviewPct : 95;
+    return {
+      result: pct >= pass ? 'pass' : (pct >= review ? 'review' : 'fail'),
+      total: list.length, known: known.length, encrypted: encrypted.length,
+      unencrypted: bare.length, unknown: unknown, pct: pct,
+      unencryptedNames: bare.map(function (d) { return d.deviceName || d.id; }).filter(Boolean).sort()
+    };
+  }
+
+  /* Jailbroken / rooted mobile devices. A rooted phone that Intune
+     reports as compliant is worse than an unmanaged one: the controls
+     the compliance state is asserting can all be defeated locally, so
+     the tenant is being told a device is safe precisely when it is not.
+
+     Scoped to iOS and Android only, and 'manual' when the fleet has no
+     mobile devices — a Windows-only tenant has no jailbreak exposure,
+     and a permanently green check for a question that does not apply is
+     as misleading as a permanently red one. Graph reports jailBroken as
+     a STRING ("True"/"False"/"Unknown"), not a boolean, so the parse is
+     deliberately explicit; a fleet where every mobile device answers
+     "Unknown" is also 'manual', for the same reason as above. */
+  function jailbrokenDeviceResult(devices) {
+    var mobile = (devices || []).filter(function (d) {
+      return d && /^(ios|ipados|android)$/i.test(String(d.operatingSystem || '').trim());
+    });
+    if (!mobile.length) {
+      return { result: 'manual', mobile: 0, known: 0, jailbroken: 0, unknown: 0, names: [] };
+    }
+    var yes = mobile.filter(function (d) { return /^true$/i.test(String(d.jailBroken || '').trim()); });
+    var no = mobile.filter(function (d) { return /^false$/i.test(String(d.jailBroken || '').trim()); });
+    var known = yes.length + no.length;
+    if (!known) {
+      return { result: 'manual', mobile: mobile.length, known: 0, jailbroken: 0, unknown: mobile.length, names: [] };
+    }
+    return {
+      result: yes.length ? 'fail' : 'pass',
+      mobile: mobile.length, known: known, jailbroken: yes.length, unknown: mobile.length - known,
+      names: yes.map(function (d) { return d.deviceName || d.id; }).filter(Boolean).sort()
+    };
+  }
+
+  /* ── Dormant accounts ─────────────────────────────────────────────
+     graph.js's 'dormant-accounts' check.
+
+     The existing 'leaver' check looks at accounts somebody already
+     DISABLED and asks whether the rest of the offboarding finished.
+     This is the other half, and the more common failure: the account
+     nobody disabled at all. An enabled account that has not signed in
+     for a quarter is either an offboarding that was never done, a
+     service account nobody owns, or a contractor whose engagement
+     ended — every one of them a live credential with no one watching
+     it.
+
+     Never-signed-in accounts are counted alongside dormant ones rather
+     than separately graded, because they are the same finding seen
+     earlier. They are reported as their own number in the note, though,
+     because break-glass accounts legitimately live in exactly that
+     bucket and a practitioner needs to recognise theirs.
+
+     Graded by COUNT against a threshold, not proportionally, and
+     deliberately allowed to fail: a handful is housekeeping and
+     genuinely may be deliberate, but a directory with dozens of
+     untouched enabled accounts is not a tenant with many break-glass
+     accounts, it is an unmanaged directory. */
+  function dormantAccountResult(users, dormantDays, reviewMax, nowMs) {
+    var enabled = (users || []).filter(function (u) { return u && u.accountEnabled === true; });
+    var limit = (typeof dormantDays === 'number' && dormantDays > 0 ? dormantDays : 90) * 86400000;
+    var max = typeof reviewMax === 'number' && reviewMax >= 0 ? reviewMax : 5;
+    var dormant = [], never = 0, guests = 0;
+    enabled.forEach(function (u) {
+      var act = u.signInActivity || {};
+      var last = act.lastSignInDateTime || act.lastNonInteractiveSignInDateTime || null;
+      var t = last ? Date.parse(last) : NaN;
+      /* An unparseable timestamp is treated as "no data", i.e. the same
+         as never — not as a recent sign-in. Reading it as recent would
+         hide exactly the accounts this check exists to surface. */
+      var isNever = !last || isNaN(t);
+      if (!isNever && (nowMs - t) <= limit) return;
+      if (isNever) never++;
+      if (String(u.userType || '').toLowerCase() === 'guest') guests++;
+      dormant.push({
+        name: u.displayName || u.userPrincipalName || u.id,
+        upn: u.userPrincipalName || '',
+        lastSignIn: isNever ? null : last,
+        guest: String(u.userType || '').toLowerCase() === 'guest'
+      });
+    });
+    dormant.sort(function (a, b) { return (a.lastSignIn || '').localeCompare(b.lastSignIn || ''); });
+    return {
+      result: dormant.length === 0 ? 'pass' : (dormant.length <= max ? 'review' : 'fail'),
+      enabled: enabled.length, dormant: dormant.length, never: never, guests: guests, accounts: dormant
+    };
+  }
+
+  /* ── MFA registration coverage ────────────────────────────────────
+     graph.js's 'mfa-registration' check, and the evidence half of
+     'mfa-all' in the same way legacy-auth-observed is the evidence half
+     of 'legacy'.
+
+     'mfa-all' reads Conditional Access and answers "is MFA required".
+     This reads the registration report and answers "could these people
+     actually complete it". The two come apart constantly: a tenant with
+     a flawless tenant-wide MFA policy and forty users who have never
+     registered a method has not protected those accounts, it has
+     arranged for them to be locked out — and in practice what follows
+     is a CA exclusion group that quietly undoes the policy.
+
+     Scored on isMfaCapable rather than isMfaRegistered: registered says
+     a method exists on the account, capable says the method is one the
+     tenant's policy will actually accept. Capable is the one that
+     predicts whether the sign-in succeeds.
+
+     An ADMIN who is not MFA-capable fails the check outright, whatever
+     the overall percentage. Averaging a Global Administrator into a
+     fleet-wide coverage figure is how the single most valuable account
+     in the tenant gets rounded away. */
+  function mfaRegistrationResult(rows, reviewPct) {
+    var list = (rows || []).filter(function (r) { return r && typeof r === 'object'; });
+    if (!list.length) return { result: 'manual', total: 0, capable: 0, notCapable: 0, pct: null, admins: 0, adminsNotCapable: 0, gaps: [], adminGaps: [] };
+    var notCapable = list.filter(function (r) { return r.isMfaCapable !== true; });
+    var admins = list.filter(function (r) { return r.isAdmin === true; });
+    var adminGaps = notCapable.filter(function (r) { return r.isAdmin === true; });
+    var pct = Math.round((list.length - notCapable.length) / list.length * 100);
+    var review = typeof reviewPct === 'number' ? reviewPct : 95;
+    var result;
+    if (adminGaps.length) result = 'fail';
+    else if (!notCapable.length) result = 'pass';
+    else result = pct >= review ? 'review' : 'fail';
+    function names(rs) { return rs.map(function (r) { return r.userPrincipalName || r.id; }).filter(Boolean).sort(); }
+    return {
+      result: result, total: list.length, capable: list.length - notCapable.length,
+      notCapable: notCapable.length, pct: pct, admins: admins.length, adminsNotCapable: adminGaps.length,
+      gaps: names(notCapable), adminGaps: names(adminGaps)
+    };
+  }
+
+
   /* Subject rights requests (Microsoft Priva) — the privacy equivalent
      of incident triage, and the one privacy obligation that comes with
      a statutory clock rather than a policy one.
@@ -3906,6 +4079,8 @@
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     scanResultsChanged: scanResultsChanged, scanDrift: scanDrift,
     legacyAuthObservedResult: legacyAuthObservedResult, privRoleChangeResult: privRoleChangeResult,
+    deviceEncryptionResult: deviceEncryptionResult, jailbrokenDeviceResult: jailbrokenDeviceResult,
+    dormantAccountResult: dormantAccountResult, mfaRegistrationResult: mfaRegistrationResult,
     PRIV_ROLE_ACTIVITY_EXCLUDE: PRIV_ROLE_ACTIVITY_EXCLUDE,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationTableRows: constellationTableRows,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
