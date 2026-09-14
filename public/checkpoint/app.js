@@ -742,7 +742,7 @@ function showModal(opts) {
   var MUTATING_ACTIONS = new Set([
     'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
-    'closeRisk', 'reopenRisk', 'deleteRisk',
+    'closeRisk', 'reopenRisk', 'deleteRisk', 'editRiskFinancials',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
@@ -2284,7 +2284,7 @@ function showModal(opts) {
       var financialHtml = '<p class="rpt-plain">No open risks to simulate.</p>';
       var lecChart = null;
       if (qrRisks.length) {
-        var qrPortfolio = window.CheckpointLib.simulatePortfolioLosses(qrRisks, QUANT_RISK_TRIALS, Math.floor(Date.now() % 4294967296));
+        var qrPortfolio = simulateQuantRisk(qrRisks);
         var qrSummary = window.CheckpointLib.summarizeLossDistribution(qrPortfolio.portfolioTotals);
         var qrCurve = window.CheckpointLib.lossExceedanceCurve(qrPortfolio.portfolioTotals, 40);
         lecChart = RC.lossExceedance(qrCurve, {});
@@ -8626,8 +8626,97 @@ function showModal(opts) {
   function quantRiskOpenRisks() {
     return S.risks.filter(function (r) { return r.status !== 'Closed'; }).map(function (r) {
       var q = residual(r);
-      return { id: r.id, title: r.title, L: q.L, I: q.I, band: band(q.L * q.I) };
+      /* `overrides` is the shape riskFinancialInputs() takes, passed
+         straight through. It was supported by the engine from the
+         start and never populated by anything — so the documented
+         promise that "a tenant with real loss history can override
+         specific risks" was unreachable, and every figure in this view
+         traced back to one generic five-band table. */
+      return { id: r.id, title: r.title, L: q.L, I: q.I, band: band(q.L * q.I), overrides: r.finOverride || undefined };
     });
+  }
+
+  /* Every simulation in the app runs through here, so the Financial
+     risk view and the board report can never disagree.
+
+     They used to. Both seeded from Date.now() independently, which
+     meant generating the report straight after reading the screen
+     produced different figures for a register that had not changed —
+     measured at ~3% on the mean, 6.5% on P99 and 33% on the worst
+     trial. A board number that moves when you press refresh cannot be
+     defended, and "it is a simulation" is not the answer: it should
+     move when the RISKS move. portfolioSeed() hashes the register's
+     own content, so it does exactly that. */
+  function simulateQuantRisk(risks) {
+    var seed = window.CheckpointLib.portfolioSeed(risks);
+    return window.CheckpointLib.simulatePortfolioLosses(risks, QUANT_RISK_TRIALS, seed);
+  }
+
+  /* Every scan's recorded ALE snapshot, oldest first — the same
+     "decode it back out of the scan's Detail JSON" shape
+     scanResultHistory() uses. Scans taken before this feature existed
+     carry no `ale` key and are skipped rather than plotted as zero:
+     a tenant's exposure did not start at nothing, we just were not
+     recording it yet, and a line rising from zero would read as
+     exposure getting worse. */
+  function aleHistory() {
+    return (S.scans || []).map(function (sc) {
+      if (!sc.detail) return null;
+      try {
+        var d = JSON.parse(sc.detail);
+        return (d && d.ale && typeof d.ale.mean === 'number') ? { date: sc.date, ale: d.ale } : null;
+      } catch (e) { return null; }
+    }).filter(Boolean);
+  }
+
+  function renderAleTrend() {
+    var card = document.getElementById('qrTrendCard');
+    var body = document.getElementById('qrTrendBody');
+    if (!card || !body) return;
+    var hist = aleHistory();
+    /* One point is not a trend. */
+    if (hist.length < 2) { card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    var first = hist[0], last = hist[hist.length - 1];
+    var W = 620, H = 150, padL = 8, padR = 8, padT = 12, padB = 22;
+    var peak = hist.reduce(function (m, h) { return Math.max(m, h.ale.p90 || 0, h.ale.mean || 0); }, 0) || 1;
+    function xAt(i) { return padL + (hist.length === 1 ? (W - padL - padR) / 2 : (i / (hist.length - 1)) * (W - padL - padR)); }
+    function yAt(v) { return padT + (1 - (Number(v) || 0) / peak) * (H - padT - padB); }
+    function line(key, color, width) {
+      return '<polyline fill="none" stroke="' + color + '" stroke-width="' + width + '" stroke-linejoin="round" points="' +
+        hist.map(function (h, i) { return xAt(i).toFixed(1) + ',' + yAt(h.ale[key]).toFixed(1); }).join(' ') + '"/>';
+    }
+    var dots = hist.map(function (h, i) {
+      return '<circle cx="' + xAt(i).toFixed(1) + '" cy="' + yAt(h.ale.mean).toFixed(1) + '" r="2.5" fill="var(--accent-fill)"><title>' +
+        esc(fmtDate(h.date)) + ' — mean ' + esc(fmtUsdCompact(h.ale.mean)) + ', P90 ' + esc(fmtUsdCompact(h.ale.p90)) + '</title></circle>';
+    }).join('');
+
+    var delta = last.ale.mean - first.ale.mean;
+    var pct = first.ale.mean ? Math.abs(delta / first.ale.mean) * 100 : 0;
+    /* Down is good here — the opposite of the posture score — so the
+       colours are deliberately inverted relative to every other trend
+       in the app, and the wording says which way is which rather than
+       leaving a coloured number to be read either way. */
+    var dir = delta === 0
+      ? '<b>unchanged</b>'
+      : '<b style="color:' + (delta < 0 ? 'var(--pass)' : 'var(--fail)') + '">' +
+        (delta < 0 ? 'down ' : 'up ') + esc(fmtUsdCompact(Math.abs(delta))) + ' (' + pct.toFixed(0) + '%)</b>';
+
+    body.innerHTML =
+      '<p style="font-size:13px;margin:0 0 10px">Mean simulated annual loss is ' + dir +
+        ' since ' + esc(fmtDate(first.date)) + ' — ' + esc(fmtUsdCompact(first.ale.mean)) + ' → ' + esc(fmtUsdCompact(last.ale.mean)) +
+        '. P90 is now ' + esc(fmtUsdCompact(last.ale.p90)) + ', expected shortfall ' + esc(fmtUsdCompact(last.ale.es99)) + '.</p>' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" role="img" aria-label="Simulated annual loss at each scan, from ' +
+        esc(fmtDate(first.date)) + ' to ' + esc(fmtDate(last.date)) + '">' +
+        line('p90', 'var(--warn)', 1.5) + line('mean', 'var(--accent-fill)', 2) + dots +
+        '<text x="' + padL + '" y="' + (H - 6) + '" fill="var(--paper-faint)" font-size="10.5">' + esc(fmtDate(first.date)) + '</text>' +
+        '<text x="' + (W - padR) + '" y="' + (H - 6) + '" text-anchor="end" fill="var(--paper-faint)" font-size="10.5">' + esc(fmtDate(last.date)) + '</text>' +
+      '</svg>' +
+      '<p style="font-size:11.5px;color:var(--paper-faint);margin:6px 0 0">' +
+        '<span style="color:var(--accent-fill)">—</span> mean annual loss &nbsp; ' +
+        '<span style="color:var(--warn)">—</span> P90 &nbsp;·&nbsp; ' + hist.length + ' scans with a recorded figure' +
+      '</p>';
   }
 
   function renderQuantRisk() {
@@ -8641,18 +8730,12 @@ function showModal(opts) {
     if (!openRisks.length) {
       kpiEl.innerHTML = '';
       if (lecEl) lecEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">No open risks to simulate.</p>';
-      if (rowsEl) rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No open risks.</td></tr>';
+      if (rowsEl) rowsEl.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No open risks.</td></tr>';
       if (assumptionsEl) assumptionsEl.innerHTML = '';
       return;
     }
 
-    /* Seeded fresh each render from the wall clock — real use never
-       needs bit-for-bit reproducibility across renders (a new trial
-       set every time is exactly what "automatic" means here); the
-       ENGINE itself (lib.js) stays a pure, seed-in function so tests
-       can pin a seed and get an exact, hand-verifiable result. */
-    var seed = Math.floor(Date.now() % 4294967296);
-    var portfolio = window.CheckpointLib.simulatePortfolioLosses(openRisks, QUANT_RISK_TRIALS, seed);
+    var portfolio = simulateQuantRisk(openRisks);
     var portfolioSummary = window.CheckpointLib.summarizeLossDistribution(portfolio.portfolioTotals);
     var curve = window.CheckpointLib.lossExceedanceCurve(portfolio.portfolioTotals, 40);
 
@@ -8660,7 +8743,15 @@ function showModal(opts) {
       '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.mean)) + '</b></div><span>Mean annual loss (simulated ALE)</span><div class="sub">' + openRisks.length + ' open risk' + (openRisks.length === 1 ? '' : 's') + ' · ' + QUANT_RISK_TRIALS.toLocaleString() + ' trials</div></div>' +
       '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.p90)) + '</b></div><span>P90 annual loss</span><div class="sub">1-in-10 years this bad or worse</div></div>' +
       '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.p99)) + '</b></div><span>P99 annual loss</span><div class="sub">1-in-100 years this bad or worse</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.max)) + '</b></div><span>Worst simulated year</span><div class="sub">across all ' + QUANT_RISK_TRIALS.toLocaleString() + ' trials</div></div>';
+      /* Expected shortfall, NOT the single worst trial. `max` is a
+         statistic about how many times the dice were rolled rather
+         than about the risk: it grows without bound with trial count
+         and swung by a third between page loads, so a board could
+         watch its "worst case" move by millions with nothing about the
+         register having changed. Expected shortfall answers the
+         question max was standing in for — how bad is a genuinely bad
+         year — and converges. See summarizeLossDistribution(). */
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.es99)) + '</b></div><span>Expected shortfall (worst 1%)</span><div class="sub">average of the worst 1-in-100 years</div></div>';
 
     if (lecEl) {
       lecEl.innerHTML = window.ReportEngine.charts.lossExceedance(curve, { interactive: true, palette: 'app' });
@@ -8685,11 +8776,22 @@ function showModal(opts) {
         return { id: pr.id, risk: openRisks[i], summary: summary };
       }).sort(function (a, b) { return b.summary.p90 - a.summary.p90; });
       rowsEl.innerHTML = ranked.map(function (r) {
+        /* Says, per row, whether these figures came from the generic
+           band table or from numbers this tenant actually supplied —
+           the single most useful thing to know when someone asks how
+           much to trust the column beside it. */
+        var custom = !!(r.risk.overrides && Object.keys(r.risk.overrides).length);
         return '<tr><td class="id-t">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td>' +
           '<td><span class="chip sev-' + r.risk.band + '">' + esc(r.risk.band) + '</span></td>' +
           '<td>' + esc(fmtUsdCompact(r.summary.mean)) + '</td>' +
           '<td><b>' + esc(fmtUsdCompact(r.summary.p90)) + '</b></td>' +
-          '<td>' + esc(fmtUsdCompact(r.summary.p99)) + '</td></tr>';
+          '<td>' + esc(fmtUsdCompact(r.summary.p99)) + '</td>' +
+          '<td style="white-space:nowrap">' +
+            (custom
+              ? '<span class="chip" title="This risk uses assumptions entered for this tenant, not the default band">Tenant figures</span> '
+              : '<span style="color:var(--paper-faint);font-size:11.5px">Band default</span> ') +
+            '<button class="btn ghost sm" data-action="App.editRiskFinancials" data-id="' + esc(r.id) + '">Edit</button>' +
+          '</td></tr>';
       }).join('');
     }
   }
@@ -9724,7 +9826,7 @@ function showModal(opts) {
     constellation: renderConstellation,
     scan: function () { renderCoverage(); renderScanChecks(true); renderScanDrift(); },
     risks: renderRisks,
-    quantrisk: renderQuantRisk,
+    quantrisk: function () { renderQuantRisk(); renderAleTrend(); },
     actions: renderActions,
     vendors: renderVendors,
     aisystems: renderAiSystems,
@@ -10475,8 +10577,38 @@ function showModal(opts) {
           var q = residual(r);
           return { id: r.id, L: q.L, I: q.I };
         });
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot });
-        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot }).catch(warn);
+        /* The simulated exposure AT THIS SCAN, in money — the same
+           "extra field lives in Detail's JSON" pattern again, and the
+           one number a board actually tracks between meetings. Without
+           it the Financial risk view could say what exposure is today
+           but never that remediation had moved it, which is the whole
+           commercial argument for quantifying at all.
+
+           Only the summary is stored, never the 10,000 trials: the
+           figures are what gets trended, and a scan row carrying a
+           quarter of a megabyte of raw draws would be a schema all of
+           its own for no added answer.
+
+           Deterministic by construction now — simulateQuantRisk()
+           seeds from the register's content — so two scans taken with
+           an unchanged register record identical numbers and the trend
+           shows a flat line rather than simulation noise pretending to
+           be progress. Before portfolioSeed() this snapshot would have
+           been actively misleading. */
+        var aleSnapshot = null;
+        try {
+          var aleRisks = quantRiskOpenRisks();
+          if (aleRisks.length) {
+            var aleSummary = window.CheckpointLib.summarizeLossDistribution(simulateQuantRisk(aleRisks).portfolioTotals);
+            aleSnapshot = {
+              mean: Math.round(aleSummary.mean), p90: Math.round(aleSummary.p90),
+              p99: Math.round(aleSummary.p99), es99: Math.round(aleSummary.es99),
+              risks: aleRisks.length, trials: QUANT_RISK_TRIALS
+            };
+          }
+        } catch (e) { warn(e); /* a scan must never fail over its own trend snapshot */ }
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot, ale: aleSnapshot });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot, ale: aleSnapshot }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
@@ -11145,6 +11277,87 @@ function showModal(opts) {
        The scan→approve path already creates fully-linked, auto-scoring
        risks; these let a practitioner create, change and close a risk by
        hand with the same rigour an auditor expects of a live register. */
+    /* Per-risk financial assumptions. The engine has taken these since
+       the feature shipped; nothing ever set them, so every figure in
+       the Financial risk view traced back to one generic five-band
+       table and a practitioner with real loss history had no way in.
+
+       Blank means "use the band", per field, not "zero" — so a tenant
+       can override just the loss magnitude on the one risk it has a
+       real number for and leave frequency on the default. Validation
+       rejects min>max and negatives rather than silently producing a
+       degenerate distribution: sampleTriangular() collapses to a point
+       mass when max<=min, which would quietly turn a range into a
+       constant with nothing on screen to say so. */
+    editRiskFinancials: async function (id) {
+      var r = S.risks.find(function (x) { return x.id === id; });
+      if (!r) return;
+      var q = residual(r);
+      var dflt = window.CheckpointLib.riskFinancialInputs(q.L, q.I);
+      var cur = r.finOverride || {};
+      function fld(key, label, ph) {
+        return { id: key, label: label, value: cur[key] != null ? String(cur[key]) : '', placeholder: 'band default: ' + ph };
+      }
+      var v = await showModal({
+        title: 'Financial assumptions — ' + r.id,
+        message: 'Leave a field blank to use the default band for this risk\'s residual score (L' + q.L + ' / I' + q.I + '). Loss is per event, in USD; frequency is events per year.',
+        fields: [
+          fld('lossMin', 'Loss per event — minimum', String(dflt.lossMin)),
+          fld('lossLikely', 'Loss per event — most likely', String(dflt.lossLikely)),
+          fld('lossMax', 'Loss per event — maximum', String(dflt.lossMax)),
+          fld('freqMin', 'Events per year — minimum', String(dflt.freqMin)),
+          fld('freqLikely', 'Events per year — most likely', String(dflt.freqLikely)),
+          fld('freqMax', 'Events per year — maximum', String(dflt.freqMax))
+        ],
+        confirmText: 'Save assumptions',
+        cancelText: 'Cancel',
+        validate: function (vals) {
+          var bad = null;
+          ['lossMin', 'lossLikely', 'lossMax', 'freqMin', 'freqLikely', 'freqMax'].forEach(function (k) {
+            if (bad) return;
+            var raw = String(vals[k] || '').trim();
+            if (!raw) return;
+            var n = Number(raw);
+            if (!isFinite(n) || n < 0) bad = 'Enter a non-negative number, or leave the field blank to use the band default.';
+          });
+          if (bad) return bad;
+          function span(minK, likelyK, maxK, what) {
+            var mn = vals[minK] !== '' ? Number(vals[minK]) : dflt[minK];
+            var mx = vals[maxK] !== '' ? Number(vals[maxK]) : dflt[maxK];
+            var lk = vals[likelyK] !== '' ? Number(vals[likelyK]) : dflt[likelyK];
+            if (mx < mn) return what + ': maximum cannot be below minimum.';
+            if (lk < mn || lk > mx) return what + ': the most likely value has to sit between the minimum and the maximum.';
+            return null;
+          }
+          return span('lossMin', 'lossLikely', 'lossMax', 'Loss per event') ||
+            span('freqMin', 'freqLikely', 'freqMax', 'Events per year') || null;
+        }
+      });
+      if (!v) return;
+      var next = {};
+      ['lossMin', 'lossLikely', 'lossMax', 'freqMin', 'freqLikely', 'freqMax'].forEach(function (k) {
+        var raw = String(v[k] || '').trim();
+        if (raw !== '') next[k] = Number(raw);
+      });
+      /* A frequency this high cannot be simulated honestly — see
+         POISSON_LAMBDA_CAP in lib.js. Said at the point of entry
+         rather than silently modelling something else. */
+      if (next.freqMax != null && next.freqMax > window.CheckpointLib.POISSON_LAMBDA_CAP) {
+        toast('<b>Frequency capped:</b> the simulation models at most ' + window.CheckpointLib.POISSON_LAMBDA_CAP + ' events/year. Anything above that is far outside what an order-of-magnitude model can say anything useful about.');
+      }
+      var beforeTxt = Object.keys(r.finOverride || {}).length ? JSON.stringify(r.finOverride) : 'band defaults';
+      busy(true);
+      try {
+        r.finOverride = Object.keys(next).length ? next : null;
+        await Store.updateRisk(r);
+        audit('Risk financial assumptions updated', 'Risk', r.id, beforeTxt, Object.keys(next).length ? JSON.stringify(next) : 'band defaults');
+        toast(Object.keys(next).length ? '<b>' + r.id + '</b> assumptions saved' : '<b>' + r.id + '</b> reset to band defaults');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderQuantRisk();
+      renderRisks();
+    },
+
     editRisk: async function (id) {
       var r = risk(id);
       if (!r) return;

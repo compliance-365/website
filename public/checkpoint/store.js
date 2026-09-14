@@ -1276,9 +1276,9 @@ window.DemoStore = (function () {
          the Risk Landscape's movement trails and the Risk Register
          Snapshot report's "movement since" section — the same shape
          runScan() records on every real scan. */
-      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual', detail: JSON.stringify({ results: resultsAt42, readiness: 12, source: 'manual' }), riskSnapshot: [
+      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual', detail: JSON.stringify({ results: resultsAt42, readiness: 12, source: 'manual', ale: { mean: 6180000, p90: 11400000, p99: 17900000, es99: 20100000, risks: 5, trials: 10000 } }), riskSnapshot: [
         { id: 'R-001', L: 5, I: 4 }, { id: 'R-002', L: 4, I: 5 }, { id: 'R-003', L: 4, I: 3 }, { id: 'R-004', L: 3, I: 4 }, { id: 'R-005', L: 3, I: 4 }
-      ] }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual', detail: JSON.stringify({ results: resultsAt21, readiness: 15, source: 'manual' }) }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated', detail: JSON.stringify({ results: resultsNow, readiness: 15, source: 'automated' }) }],
+      ] }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual', detail: JSON.stringify({ results: resultsAt21, readiness: 15, source: 'manual', ale: { mean: 5470000, p90: 10100000, p99: 15800000, es99: 17600000, risks: 5, trials: 10000 } }) }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated', detail: JSON.stringify({ results: resultsNow, readiness: 15, source: 'automated', ale: { mean: 4820000, p90: 8900000, p99: 13900000, es99: 15500000, risks: 5, trials: 10000 } }) }],
       alerts: [
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
@@ -1310,7 +1310,13 @@ window.DemoStore = (function () {
       },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Treat', actions: ['ACT-001', 'ACT-002'] },
-        { id: 'R-002', title: 'No tested restore path for SharePoint business-critical libraries', cat: 'Data', src: 'Workshop', L: 3, I: 5, controls: ['A.8.13'], owner: 'S. Okafor', status: 'In treatment', treat: 'Treat', actions: ['ACT-003'] },
+        { id: 'R-002', title: 'No tested restore path for SharePoint business-critical libraries', cat: 'Data', src: 'Workshop', L: 3, I: 5, controls: ['A.8.13'], owner: 'S. Okafor', status: 'In treatment', treat: 'Treat', actions: ['ACT-003'],
+          /* One risk on real tenant figures rather than the generic
+             band, so the demo shows both states of the Assumptions
+             column and the editor has something to open. Shaped like a
+             genuine estimate: a restore failure on clinical records is
+             costlier and rarer than the band for L3/I5 assumes. */
+          finOverride: { lossMin: 250000, lossLikely: 900000, lossMax: 3500000, freqMin: 0.05, freqLikely: 0.15, freqMax: 0.5 } },
         { id: 'R-003', title: 'Staff unable to recognise credential-phishing attempts', cat: 'People', src: 'Gap analysis', L: 4, I: 3, controls: ['A.6.3'], owner: 'M. Chen', status: 'Monitored', treat: 'Treat', actions: ['ACT-004'] },
         { id: 'R-004', title: 'Shadow cloud services holding client data outside the tenant', cat: 'Data', src: 'Workshop', L: 3, I: 4, controls: ['A.5.23', 'A.5.9'], owner: 'K. Patel', status: 'Open', treat: 'Treat', actions: ['ACT-005'] },
         { id: 'R-005', title: 'Cryptographic key handling undocumented for client-facing APIs', cat: 'Ops', src: 'Gap analysis', L: 2, I: 4, controls: ['A.8.24'], owner: 'S. Okafor', status: 'Open', treat: 'Treat', actions: ['ACT-006'] }
@@ -1705,6 +1711,27 @@ window.DemoStore = (function () {
   };
 })();
 
+/* A risk's financial-simulation overrides, decoded from the single
+   JSON column that carries them. Only the six keys the simulation
+   actually reads are kept, and only when they parse as finite numbers
+   — a malformed or hand-edited cell degrades to "no overrides" (the
+   documented default bands) rather than feeding NaN into the Monte
+   Carlo, where it would silently poison every percentile with no
+   visible error. */
+var FIN_OVERRIDE_KEYS = ['freqMin', 'freqLikely', 'freqMax', 'lossMin', 'lossLikely', 'lossMax'];
+function parseFinOverride(raw) {
+  if (!raw) return null;
+  var obj;
+  try { obj = JSON.parse(raw); } catch (e) { return null; }
+  if (!obj || typeof obj !== 'object') return null;
+  var out = {};
+  FIN_OVERRIDE_KEYS.forEach(function (k) {
+    var n = Number(obj[k]);
+    if (obj[k] != null && obj[k] !== '' && isFinite(n) && n >= 0) out[k] = n;
+  });
+  return Object.keys(out).length ? out : null;
+}
+
 /* ================= SharePoint store ================= */
 window.SpStore = (function () {
   var CONFIG = window.CHECKPOINT_CONFIG;
@@ -1750,7 +1777,22 @@ window.SpStore = (function () {
          a regressed check simply stops matching — the flag itself is
          left alone rather than reset, since nothing reads it once the
          check no longer passes). */
-      { name: 'ResolutionDismissed', boolean: {} }
+      { name: 'ResolutionDismissed', boolean: {} },
+      /* Per-risk financial-simulation overrides, as a JSON object:
+         any subset of {freqMin,freqLikely,freqMax,lossMin,lossLikely,
+         lossMax}. Blank on every risk until somebody sets one, and the
+         simulation falls back to RISK_FINANCIAL_BANDS for whatever is
+         absent — so this is purely additive and a tenant that never
+         touches it behaves exactly as before.
+
+         ONE JSON column rather than six nullable number columns
+         deliberately: it is an optional, sparse bag whose shape belongs
+         to lib.js's riskFinancialInputs(), and six more columns would
+         have to be threaded through DEFS, the reconcile list, the row
+         parser and the row writer for a field most rows never set.
+         Same "extra fields live in a JSON column" pattern the scan
+         Detail already uses. */
+      { name: 'FinancialOverride', text: { allowMultipleLines: true } }
     ],
     Actions: [
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
@@ -2288,7 +2330,7 @@ window.SpStore = (function () {
        every column costs nothing for an up-to-date tenant and closes
        this bug class completely for whichever tenant is still missing
        one from years of incremental additions. */
-    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed'],
+    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride'],
     Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
     /* Same incomplete-subset mistake as Risks/Actions above, caught the
        same way: this used to list only LastVerified/EvidenceUrl/
@@ -2570,7 +2612,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride) };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -2775,6 +2817,7 @@ window.SpStore = (function () {
         Controls: csv(r.controls), ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat,
         AcceptedBy: r.acceptedBy || '', AcceptedDate: r.acceptedDate || '', AcceptanceNote: r.acceptanceNote || '',
         AcceptedScore: (typeof r.acceptedScore === 'number' ? r.acceptedScore : null),
+        FinancialOverride: (r.finOverride && Object.keys(r.finOverride).length) ? JSON.stringify(r.finOverride) : '',
         AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '',
         ResolutionDismissed: !!r.resolutionDismissed
       });

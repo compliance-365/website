@@ -657,10 +657,19 @@
           <div id="qrAssumptionsWrap"></div>
         </div>
       </div>
+      <!-- Exposure over time. Hidden until two scans have recorded an
+           ALE snapshot — one point is not a trend, and an empty axis
+           reads as "the number never moved" rather than "we have not
+           measured it twice yet". See renderAleTrend(). -->
+      <div class="card" id="qrTrendCard" style="margin-top:16px;display:none">
+        <h3>Exposure over time</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Simulated annual loss recorded at each posture scan. Because the simulation is seeded from the register's own contents, this line moves only when the risks do — not with the run-to-run noise of re-running a Monte Carlo.</p>
+        <div id="qrTrendBody"></div>
+      </div>
       <div class="card" style="margin-top:16px">
         <h3>Risk ranking by simulated exposure</h3>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">The same open risks as the Risk register, re-ordered by simulated financial exposure (P90 annual loss) rather than ordinal L×I — the two rankings don't always agree.</p>
-        <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Residual band</th><th scope="col">Mean annual loss</th><th scope="col">P90 annual loss</th><th scope="col">P99 annual loss</th></tr></thead><tbody id="qrRiskRows"></tbody></table></div>
+        <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Residual band</th><th scope="col">Mean annual loss</th><th scope="col">P90 annual loss</th><th scope="col">P99 annual loss</th><th scope="col">Assumptions</th></tr></thead><tbody id="qrRiskRows"></tbody></table></div>
       </div>
     </section>
 

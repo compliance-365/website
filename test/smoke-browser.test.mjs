@@ -285,6 +285,68 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     }
     await context.close();
   });
+
+  /* The Financial risk view, end to end. Two of the things this guards
+     are invisible to a unit test: that re-rendering the view produces
+     the SAME figures (the whole point of seeding from the register's
+     content rather than the clock), and that the assumptions editor
+     actually reaches the simulation. The engine-level behaviour is
+     covered in lib.test.mjs; this covers the wiring between them, which
+     is exactly where the per-risk override support sat unreachable for
+     as long as it did. */
+  test('the Financial risk view is deterministic and its assumptions editor reaches the simulation', async () => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+
+    await page.evaluate(() => window.App.go('quantrisk'));
+    await page.waitForSelector('#qrRiskRows tr', { timeout: 10000 });
+
+    // Same register, rendered twice -> byte-identical figures. Before
+    // portfolioSeed() this differed on every render, and the board
+    // report disagreed with the screen for an unchanged register.
+    const first = await page.$eval('#qrKpiRow', (el) => el.innerText);
+    await page.evaluate(() => { window.App.go('risks'); window.App.go('quantrisk'); });
+    await page.waitForSelector('#qrRiskRows tr', { timeout: 10000 });
+    const second = await page.$eval('#qrKpiRow', (el) => el.innerText);
+    assert.equal(second, first, 'the same register must simulate to the same figures on every render');
+
+    // The expected-shortfall KPI replaced "worst simulated year", which
+    // was the sample maximum and grew without bound with trial count.
+    assert.ok(/Expected shortfall/i.test(first), 'the tail KPI should be expected shortfall');
+    assert.ok(!/Worst simulated year/i.test(first), 'the non-convergent max KPI should be gone');
+
+    const meanBefore = first.split('\n')[0];
+    await page.click('#qrRiskRows tr:first-child button[data-action="App.editRiskFinancials"]');
+    await page.waitForSelector('#modalBox .m-field input', { timeout: 10000 });
+    const fields = await page.$$('#modalBox .m-field input');
+    assert.equal(fields.length, 6, 'six assumption fields: loss min/likely/max and frequency min/likely/max');
+
+    // A max below the min must be refused rather than silently
+    // collapsing the triangular distribution to a point mass.
+    await fields[0].fill('900000');
+    await fields[2].fill('1000');
+    await page.click('#modalBox .m-btns button:last-child');
+    await page.waitForTimeout(300);
+    const err = await page.$eval('#modalBox .m-error', (el) => el.textContent);
+    assert.match(err, /maximum cannot be below minimum/i);
+
+    // A valid, much larger loss range must move the portfolio figure.
+    await fields[0].fill('500000');
+    await fields[1].fill('2000000');
+    await fields[2].fill('9000000');
+    await page.click('#modalBox .m-btns button:last-child');
+    await page.waitForTimeout(1500);
+    const meanAfter = await page.$eval('#qrKpiRow', (el) => el.innerText.split('\n')[0]);
+    assert.notEqual(meanAfter, meanBefore, 'saving larger loss assumptions must change the simulated ALE');
+    const rowText = await page.$eval('#qrRiskRows tr:first-child', (el) => el.innerText);
+    assert.match(rowText, /Tenant figures/i, 'the edited risk should be marked as using tenant figures');
+
+    assert.deepEqual(errors, [], 'no console errors driving the Financial risk view');
+    await context.close();
+  });
 });
 
 /* A failed chromium.launch() (the skip path above) can leave Playwright's
