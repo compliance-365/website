@@ -1877,14 +1877,147 @@ function showModal(opts) {
      partnerFetchClientSummary(). Its own throwaway MSAL instance
      (sessionStorage cache) never touches this console's own signed-in
      session. */
-  async function partnerFetchClientSummary(tenantId, sitePath) {
+  /* One client's sync, shared by the single-row button and the
+     roster-wide run so the two can never drift on WHICH fields a sync
+     writes — the bug that shape invites is a bulk run quietly leaving
+     nextBestModule or scoreHistory stale on every client it touched.
+
+     Never throws: a roster walk must not stop because one client's
+     tenant is unreachable, and the failure is recorded on the row
+     itself (syncError, shown in the roster's health dot) exactly as it
+     always was. */
+  async function syncOneClient(c, opts) {
+    try {
+      var summary = await partnerFetchClientSummary(c.tenantId, c.sitePath, opts || {});
+      c.name = summary.name || c.name;
+      c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
+      c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
+      c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
+      c.syncError = '';
+      /* Next-best-module and readiness trend are both computed HERE,
+         from this same sync's own fetched data, then persisted as
+         plain summary fields — never recomputed from stale data
+         later, and never touching the full framework/control
+         registry this bundle deliberately doesn't carry (see
+         computeNextBestModule()'s own comment in lib.js). */
+      var nextBest = window.CheckpointLib.computeNextBestModule(summary.controlRows, summary.modules);
+      c.nextBestModule = nextBest ? nextBest.moduleId : '';
+      c.nextBestModulePct = nextBest ? nextBest.pct : null;
+      var history = (c.scoreHistory || []).slice();
+      history.push({ date: new Date().toISOString().slice(0, 10), score: summary.score });
+      c.scoreHistory = history.slice(-3);
+      await updatePartnerClient(c);
+      audit('Partner client synced', 'PartnerClient', c._sp, '', (summary.name || c.name) + ' — score ' + summary.score + ', synced by ' + summary.signedInAs);
+      return { ok: true, id: c._sp, name: c.name };
+    } catch (e) {
+      /* MSAL reports a browser-suppressed popup with its own error
+         codes rather than a thrown DOM error; the roster runner needs
+         to tell that apart from a real failure. */
+      var code = (e && e.errorCode) || '';
+      var blocked = code === 'popup_window_error' || code === 'empty_window_error';
+      /* A blocked popup never reached the client's tenant, so nothing
+         about the CLIENT has been learned and nothing should be
+         written to their row. Stamping lastSynced here (as every other
+         failure does, so the health dot shows a recent attempt) would
+         be worse than useless: it marks the one client we most want to
+         retry as freshly synced, which sends it to the back of the
+         stalest-first queue on resume. */
+      if (blocked) return { ok: false, id: c._sp, name: c.name, error: 'Browser blocked the sign-in window', popupBlocked: true };
+      c.syncError = code === 'user_cancelled' ? 'Sign-in cancelled'
+        : ('Sync failed: ' + (e && e.message ? e.message : e));
+      c.lastSynced = new Date().toISOString();
+      try { await updatePartnerClient(c); } catch (e2) { warn(e2); }
+      audit('Partner client sync failed', 'PartnerClient', c._sp, '', c.syncError);
+      return { ok: false, id: c._sp, name: c.name, error: c.syncError, popupBlocked: blocked };
+    }
+  }
+
+  /* Progress for a roster-wide run. Its own state rather than a
+     re-render of the roster, because the roster rows are rewritten
+     after every client and a progress line living inside them would
+     be destroyed mid-run. */
+  var SYNC_ALL = { running: false, cancelled: false, done: 0, total: 0, skipped: 0, results: [], blockedOn: null, current: '', summary: null };
+
+  function renderSyncAllBar() {
+    var el = document.getElementById('partnerSyncAllBar');
+    var btn = document.getElementById('partnerSyncAllBtn');
+    if (btn) btn.textContent = SYNC_ALL.running ? 'Stop syncing' : 'Sync all';
+    if (!el) return;
+    if (SYNC_ALL.running) {
+      el.hidden = false;
+      el.innerHTML = '<b>Syncing ' + (SYNC_ALL.done + 1) + ' of ' + SYNC_ALL.total + '</b>' +
+        (SYNC_ALL.current ? ' — ' + esc(SYNC_ALL.current) : '') +
+        '<div class="src">Each client that needs a fresh sign-in opens its own window. Stop at any time — everything synced so far is saved.</div>';
+      return;
+    }
+    if (SYNC_ALL.blockedOn) {
+      /* The browser refused a popup outside a user gesture. One more
+         click is a gesture, so the run can pick up exactly where it
+         stopped — and because the clients already done are recorded,
+         resuming re-queues only what is left (stalest first, as
+         before). */
+      el.hidden = false;
+      el.innerHTML = '<b>Your browser blocked the sign-in window for ' + esc(SYNC_ALL.blockedOn) + '.</b>' +
+        '<div class="src">Browsers only allow a sign-in window to open from a click. ' +
+        SYNC_ALL.done + ' of ' + SYNC_ALL.total + ' synced so far — continue to carry on from here, or allow pop-ups for this site to run the rest in one go.</div>' +
+        '<button class="btn sm" data-action="OwnerApp.partnerSyncAll" style="margin-top:8px">Continue</button>';
+      return;
+    }
+    if (SYNC_ALL.summary) {
+      el.hidden = false;
+      el.innerHTML = '<b>' + esc(SYNC_ALL.summary.message) + '</b>' +
+        (SYNC_ALL.summary.failed ? '<div class="src">Failed clients keep their reason in the Last sync / health column.</div>' : '');
+      return;
+    }
+    el.hidden = true;
+    el.innerHTML = '';
+  }
+
+  async function partnerFetchClientSummary(tenantId, sitePath, opts) {
+    opts = opts || {};
     if (!CONFIG.clientId) throw new Error('No app registration configured');
     var msalApp = new msal.PublicClientApplication({
       auth: { clientId: CONFIG.clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri: location.origin + location.pathname },
       cache: { cacheLocation: 'sessionStorage' }
     });
     await msalApp.initialize();
-    var res = await msalApp.loginPopup({ scopes: ['User.Read', 'Sites.Read.All'], prompt: 'select_account' });
+    var SYNC_SCOPES = ['User.Read', 'Sites.Read.All'];
+    var res = null;
+
+    /* Try a cached token before opening a popup. This is what makes
+       "Sync all" viable rather than just automated: a browser only
+       reliably allows a popup inside the user gesture that triggered
+       it, so the SECOND popup in a loop is routinely blocked. Every
+       client we can satisfy silently is one that never needs a gesture
+       at all, and re-running a roster sync in the same browser session
+       becomes largely silent.
+
+       Deliberately not attempted for a single-row Sync (silentFirst is
+       only passed by the bulk runner): clicking Sync on one client is
+       often exactly how a partner switches which account they are
+       using for that tenant, and silently reusing yesterday's token
+       would quietly ignore them. The bulk run has no such intent
+       behind it — it just wants the roster current. */
+    if (opts.silentFirst) {
+      var cached = [];
+      try { cached = msalApp.getAllAccounts() || []; } catch (e) { cached = []; }
+      for (var ai = 0; ai < cached.length && !res; ai++) {
+        try {
+          res = await msalApp.acquireTokenSilent({ scopes: SYNC_SCOPES, account: cached[ai] });
+        } catch (e) {
+          /* Wrong tenant for this authority, expired refresh token,
+             consent revoked — all mean "this account can't answer for
+             this client", never a reason to abandon the sync. Fall
+             through to the next cached account, then to the popup. */
+          res = null;
+        }
+      }
+    }
+
+    /* prompt:'select_account' only on the interactive path, and kept
+       there: a tenant we have no usable token for is one where the
+       partner genuinely has to say which account to use. */
+    if (!res) res = await msalApp.loginPopup({ scopes: SYNC_SCOPES, prompt: 'select_account' });
     var token = res.accessToken;
     var signedInAs = (res.account && (res.account.username || res.account.name)) || 'Unknown';
 
@@ -2301,35 +2434,77 @@ function showModal(opts) {
       if (!c) return;
       var btn = document.getElementById('partnerSync-' + id);
       if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
-      try {
-        var summary = await partnerFetchClientSummary(c.tenantId, c.sitePath);
-        c.name = summary.name || c.name;
-        c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
-        c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
-        c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
-        c.syncError = '';
-        /* Next-best-module and readiness trend are both computed HERE,
-           from this same sync's own fetched data, then persisted as
-           plain summary fields — never recomputed from stale data
-           later, and never touching the full framework/control
-           registry this bundle deliberately doesn't carry (see
-           computeNextBestModule()'s own comment in lib.js). */
-        var nextBest = window.CheckpointLib.computeNextBestModule(summary.controlRows, summary.modules);
-        c.nextBestModule = nextBest ? nextBest.moduleId : '';
-        c.nextBestModulePct = nextBest ? nextBest.pct : null;
-        var history = (c.scoreHistory || []).slice();
-        history.push({ date: new Date().toISOString().slice(0, 10), score: summary.score });
-        c.scoreHistory = history.slice(-3);
-        await updatePartnerClient(c);
-        audit('Partner client synced', 'PartnerClient', id, '', (summary.name || c.name) + ' — score ' + summary.score + ', synced by ' + summary.signedInAs);
-        toast('Synced <b>' + esc(c.name) + '</b>');
-      } catch (e) {
-        c.syncError = e.errorCode === 'user_cancelled' ? 'Sign-in cancelled' : ('Sync failed: ' + (e.message || e));
-        c.lastSynced = new Date().toISOString();
-        try { await updatePartnerClient(c); } catch (e2) { warn(e2); }
-        audit('Partner client sync failed', 'PartnerClient', id, '', c.syncError);
-        toast('<b>Sync failed:</b> ' + esc(c.syncError));
+      var r = await syncOneClient(c, {});
+      toast(r.ok ? 'Synced <b>' + esc(c.name) + '</b>' : '<b>Sync failed:</b> ' + esc(r.error));
+      refreshInsightViews();
+    },
+
+    /* Walk the whole roster. See syncAllQueue() in lib.js for why the
+       order is stalest-first, and partnerFetchClientSummary()'s
+       silentFirst branch for why this is not simply fourteen popups in
+       a row. */
+    partnerSyncAll: async function () {
+      if (SYNC_ALL.running) { SYNC_ALL.cancelled = true; renderSyncAllBar(); return; }
+      /* PARTNER_DATA is null until the console finishes loading. Every
+         other client action lives on a roster ROW, which cannot exist
+         before the data does; this one sits in the toolbar and is
+         reachable the moment the view is shown, so it is the only one
+         that has to say so rather than throwing on a null. */
+      if (!PARTNER_DATA) { toast('Still loading the roster — try again in a moment.'); return; }
+      /* Resuming after a blocked popup continues the SAME run rather
+         than starting a new one: the clients already done this run are
+         held aside so they are not signed into twice. Any other entry
+         to this action is a fresh run and clears that. */
+      var resuming = !!SYNC_ALL.blockedOn;
+      var carried = resuming ? (SYNC_ALL.results || []) : [];
+      var alreadyDone = {};
+      carried.forEach(function (r) { if (r && r.id) alreadyDone[r.id] = true; });
+      var roster = (PARTNER_DATA.clients || []).filter(function (c) { return c && !alreadyDone[c._sp]; });
+      var plan = window.CheckpointLib.syncAllQueue(roster);
+      if (!plan.queue.length) {
+        toast(plan.skipped.length
+          ? 'Nothing to sync — every roster row is missing a tenant ID.'
+          : 'No clients on the roster yet.');
+        return;
       }
+      SYNC_ALL = {
+        running: true, cancelled: false,
+        done: carried.length, total: plan.queue.length + carried.length,
+        skipped: plan.skipped.length, results: carried.slice(),
+        blockedOn: null, current: '', summary: null
+      };
+      renderSyncAllBar();
+      for (var i = 0; i < plan.queue.length; i++) {
+        if (SYNC_ALL.cancelled) break;
+        var client = plan.queue[i];
+        SYNC_ALL.current = client.name || client.tenantId;
+        renderSyncAllBar();
+        var res = await syncOneClient(client, { silentFirst: true });
+        SYNC_ALL.results.push(res);
+        SYNC_ALL.done++;
+        /* A blocked popup is not a failed client — it is the browser
+           refusing to open a window outside a user gesture, which is
+           exactly what happens from the second iteration onward when
+           no cached token was available. Stopping here and asking for
+           one more click is honest; carrying on would produce a row of
+           identical failures against clients that are perfectly fine.
+           The already-synced ones keep their results. */
+        if (res.popupBlocked) {
+          SYNC_ALL.blockedOn = client.name || client.tenantId;
+          SYNC_ALL.results.pop();
+          SYNC_ALL.done--;
+          break;
+        }
+        renderSyncAllBar();
+        refreshInsightViews();
+      }
+      SYNC_ALL.running = false;
+      SYNC_ALL.current = '';
+      var sum = window.CheckpointLib.syncAllSummary(SYNC_ALL.results, SYNC_ALL.total, SYNC_ALL.skipped);
+      SYNC_ALL.summary = sum;
+      audit('Partner roster sync', 'PartnerClient', 'all', '', sum.message);
+      toast((sum.complete ? 'Roster synced — ' : 'Roster sync finished — ') + esc(sum.message));
+      renderSyncAllBar();
       refreshInsightViews();
     },
 

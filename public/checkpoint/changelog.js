@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.73.0',
+    date: '2026-09-14',
+    entries: [
+      'The Owner Console can sync the whole client roster from one button. Syncing was one client at a time, each through its own sign-in, so a partner with a dozen clients had to click Sync a dozen times -- which in practice meant the roster was only ever as current as the last time someone sat and did that. "Sync all" now walks it, reusing a cached sign-in wherever one exists so most clients need no window at all, and taking the least recently synced first so stopping part-way still leaves the roster better off than it was. If the browser blocks a sign-in window -- which it does for any window not opened by a click -- the run pauses and offers to continue rather than stamping the same failure against clients that are perfectly fine. A partial run always says how many were not attempted.',
+      'Every link the app renders is now protocol-checked, including advisory links in Threat intel. That was the only one of thirty-three that was not, and while it could not actually carry a dangerous link (the feed builds it from a fixed prefix), a rule like "every rendered link is checked" is only worth having if it holds everywhere without someone having to trace each link back to find the exception.'
+    ]
+  },
+  {
     version: '1.72.0',
     date: '2026-09-14',
     entries: [

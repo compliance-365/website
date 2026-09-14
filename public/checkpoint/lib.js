@@ -3400,6 +3400,71 @@
     return { color: 'green', reason: 'Healthy' };
   }
 
+  /* ── Roster-wide sync: what to sync, in what order ────────────────
+     The owner console syncs a client by signing in to that client's
+     tenant and reading their Checkpoint lists, one interactive
+     sign-in at a time. A partner with fourteen clients therefore had
+     to click Sync fourteen times, which in practice means the roster
+     is only ever as current as the last time somebody sat and did
+     that. "Sync all" walks the roster instead; this decides what it
+     walks.
+
+     Ordered STALEST FIRST — never-synced clients, then oldest
+     lastSynced. A bulk run over client tenants is interruptible by
+     things outside our control (a browser blocking the second popup,
+     an expired session, somebody closing the sign-in window), so the
+     order has to be one where stopping early still leaves the roster
+     better than it was. Alphabetical or roster order would spend the
+     run on the clients that least needed it.
+
+     Clients with no tenant identifier are skipped rather than
+     attempted: there is nothing to sign in to, and a failure row
+     against them would read as a problem with the client rather than
+     as a roster row nobody finished filling in. */
+  function syncAllQueue(clients) {
+    var list = (Array.isArray(clients) ? clients : []).filter(function (c) { return c && typeof c === 'object'; });
+    var queue = [], skipped = [];
+    list.forEach(function (c) {
+      if (!String(c.tenantId || '').trim()) skipped.push({ id: c._sp, name: c.name || '(unnamed client)', reason: 'No tenant ID on the roster row' });
+      else queue.push(c);
+    });
+    queue.sort(function (a, b) {
+      var as = String(a.lastSynced || ''), bs = String(b.lastSynced || '');
+      /* Never-synced sorts ahead of everything, then oldest first.
+         Ties broken by name so the order is stable between runs
+         rather than depending on however the list arrived. */
+      if (!as && bs) return -1;
+      if (as && !bs) return 1;
+      if (as !== bs) return as < bs ? -1 : 1;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+    return { queue: queue, skipped: skipped };
+  }
+
+  /* Turns a finished (or abandoned) run into the one line a partner
+     reads afterwards. Kept separate from the runner so the wording is
+     testable without a browser, and so "stopped early" is always
+     stated rather than a partial run quietly looking complete. */
+  function syncAllSummary(results, queued, skipped) {
+    var r = Array.isArray(results) ? results : [];
+    var ok = r.filter(function (x) { return x && x.ok; }).length;
+    var failed = r.filter(function (x) { return x && !x.ok; }).length;
+    var total = typeof queued === 'number' ? queued : r.length;
+    var skip = typeof skipped === 'number' ? skipped : 0;
+    var attempted = ok + failed;
+    var stoppedEarly = attempted < total;
+    var parts = [ok + ' synced'];
+    if (failed) parts.push(failed + ' failed');
+    if (skip) parts.push(skip + ' skipped (no tenant ID)');
+    if (stoppedEarly) parts.push((total - attempted) + ' not attempted');
+    return {
+      ok: ok, failed: failed, skipped: skip, total: total,
+      attempted: attempted, stoppedEarly: stoppedEarly,
+      complete: !stoppedEarly && !failed,
+      message: parts.join(' · ')
+    };
+  }
+
   /* Ranks upsell candidates across a partner's whole client roster —
      each client's own nextBestModule/nextBestModulePct (computeNextBestModule's
      result from their last sync, denormalised onto the roster row) against
@@ -4232,6 +4297,7 @@
     entitlementAnnualValue: entitlementAnnualValue, computePaymentStatus: computePaymentStatus,
     computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     rankUpsellOpportunities: rankUpsellOpportunities,
+    syncAllQueue: syncAllQueue, syncAllSummary: syncAllSummary,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,

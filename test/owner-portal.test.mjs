@@ -12,7 +12,7 @@ const {
   latestEntitlementsByTenant, computePartnerRevenue, computeNextBestModule, computeClientHealth,
   buildClientIssuancePlan, findDuplicateTenantClient, isValidTenantIdentifier, addMonthsToDateStr,
   computeClientChecklist, entitlementAnnualValue, computePaymentStatus, rankUpsellOpportunities,
-  buildAdminConsentUrl
+  buildAdminConsentUrl, syncAllQueue, syncAllSummary
 } = CheckpointLib;
 
 describe('entitlementAnnualValue() — per-client cost view', () => {
@@ -534,5 +534,81 @@ describe('buildAdminConsentUrl() — the link a client\'s Global Admin approves'
   test('the client id is carried through unmodified', () => {
     var url = buildAdminConsentUrl(clientId, 'contoso.com', redirect);
     assert.ok(url.includes('client_id=' + clientId));
+  });
+});
+
+describe('syncAllQueue() — the order a roster-wide sync walks in', () => {
+  const c = (name, tenantId, lastSynced) => ({ _sp: name, name, tenantId, lastSynced });
+
+  test('stalest first: never-synced, then oldest', () => {
+    // A bulk run over client tenants is interruptible by things we do
+    // not control — a blocked popup, an expired session, someone
+    // closing the sign-in window. The order has to be one where
+    // stopping early still leaves the roster better off, which
+    // alphabetical or roster order would not.
+    const { queue } = syncAllQueue([
+      c('Zeta', 'z.com', '2026-09-01'),
+      c('Alpha', 'a.com', ''),
+      c('Gamma', 'g.com', '2026-06-01')
+    ]);
+    assert.deepEqual(queue.map((x) => x.name), ['Alpha', 'Gamma', 'Zeta']);
+  });
+
+  test('clients with no tenant ID are skipped, with a reason, not failed', () => {
+    // Nothing to sign in to. A failure row would read as a problem
+    // with the client rather than an unfinished roster row.
+    const { queue, skipped } = syncAllQueue([c('Ok', 'a.com', ''), c('Blank', '', ''), c('Spaces', '   ', '')]);
+    assert.deepEqual(queue.map((x) => x.name), ['Ok']);
+    assert.deepEqual(skipped.map((x) => x.name), ['Blank', 'Spaces']);
+    assert.match(skipped[0].reason, /tenant ID/i);
+  });
+
+  test('ties break by name, so the order is stable between runs', () => {
+    const { queue } = syncAllQueue([c('Delta', 'd.com', '2026-01-01'), c('Bravo', 'b.com', '2026-01-01')]);
+    assert.deepEqual(queue.map((x) => x.name), ['Bravo', 'Delta']);
+  });
+
+  test('an empty or junk roster produces an empty queue rather than throwing', () => {
+    assert.deepEqual(syncAllQueue([]).queue, []);
+    assert.deepEqual(syncAllQueue(null).queue, []);
+    assert.deepEqual(syncAllQueue([null, undefined, 'nonsense']).queue, []);
+  });
+});
+
+describe('syncAllSummary() — what the partner reads afterwards', () => {
+  test('a clean full run reads as complete', () => {
+    const s = syncAllSummary([{ ok: true }, { ok: true }], 2, 0);
+    assert.equal(s.message, '2 synced');
+    assert.equal(s.complete, true);
+    assert.equal(s.stoppedEarly, false);
+  });
+
+  test('a run that stopped early always says so', () => {
+    // A partial run must never look finished — that is how a roster
+    // gets trusted as current when half of it is weeks old.
+    const s = syncAllSummary([{ ok: true }], 5, 0);
+    assert.equal(s.stoppedEarly, true);
+    assert.equal(s.complete, false);
+    assert.match(s.message, /4 not attempted/);
+  });
+
+  test('failures are counted separately from skips', () => {
+    const s = syncAllSummary([{ ok: true }, { ok: false }, { ok: false }], 3, 2);
+    assert.equal(s.ok, 1);
+    assert.equal(s.failed, 2);
+    assert.equal(s.skipped, 2);
+    assert.match(s.message, /1 synced · 2 failed · 2 skipped/);
+  });
+
+  test('failures alone mean not complete, even with nothing left unattempted', () => {
+    const s = syncAllSummary([{ ok: true }, { ok: false }], 2, 0);
+    assert.equal(s.stoppedEarly, false);
+    assert.equal(s.complete, false);
+  });
+
+  test('no results at all is an honest zero, not a crash', () => {
+    const s = syncAllSummary([], 0, 0);
+    assert.equal(s.ok, 0);
+    assert.equal(s.message, '0 synced');
   });
 });
