@@ -8896,7 +8896,17 @@ function showModal(opts) {
         '<span style="font-size:11.5px;color:var(--paper-faint)">Added ' + esc(fmtDate(item.dateAdded)) + '</span></div>' +
         '<div style="margin:6px 0">' + badges + '</div>' +
         '<p style="font-size:12.5px;margin:4px 0;color:var(--paper-dim)">' + esc(item.name) + (item.description ? ' — ' + esc(item.description) : '') + '</p>' +
-        (item.url ? '<a href="' + esc(item.url) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--gold-light)">' + esc(item.cveId) + ' →</a>' : '<span style="font-size:12px;color:var(--paper-faint)">' + esc(item.cveId) + '</span>') +
+        /* isSafeUrl, like every other rendered link in this file. Not
+           because this one is known to be hostile — the feed Lambda
+           builds it from a hardcoded https://nvd.nist.gov/ prefix, so
+           it cannot carry a javascript: scheme today — but because
+           this is the only <a href> in the app the guard did not cover,
+           and the whole value of a rule like "every link we render is
+           protocol-checked" is that it holds without the reader having
+           to trace each link back to its source to find out whether it
+           is the exception. The feed endpoint is configurable
+           (CONFIG.threatIntelUrl) and its contents are not ours. */
+        (item.url && isSafeUrl(item.url) ? '<a href="' + esc(item.url) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--gold-light)">' + esc(item.cveId) + ' →</a>' : '<span style="font-size:12px;color:var(--paper-faint)">' + esc(item.cveId) + '</span>') +
         '</div>';
     }).join('');
   }
