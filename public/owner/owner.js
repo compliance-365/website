@@ -1622,7 +1622,7 @@ function showModal(opts) {
       '<div class="card" style="padding:20px">' +
       '<h3 style="margin-bottom:10px">Run this locally to issue the signed file</h3>' +
       '<p style="font-size:12.5px;color:var(--paper-dim);margin-bottom:10px">This console never holds the Ed25519 private key (see tools/ISSUANCE.md) — copy this command, run it wherever the key lives, then confirm below. <code>--record</code> already registers the entitlement automatically if that succeeds; use "Record entitlement" here if you\'d rather confirm it from this console instead (or <code>--record</code> failed).</p>' +
-      '<textarea class="mini" id="ncCommand" readonly style="width:100%;min-height:70px;font-family:monospace;font-size:12px">' + esc(plan.command) + '</textarea>' +
+      '<textarea class="mini" id="ncCommand" readonly aria-label="Issuance command to run locally" style="width:100%;min-height:70px;font-family:monospace;font-size:12px">' + esc(plan.command) + '</textarea>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">' +
       '<button class="btn ghost sm" data-action="OwnerApp.partnerCopyIssuanceCommand">Copy command</button>' +
       '<button class="btn sm" data-action="OwnerApp.partnerRecordIssuance">Record entitlement' + (NEW_CLIENT_PREFILL ? ' (renewal)' : '') + '</button>' +

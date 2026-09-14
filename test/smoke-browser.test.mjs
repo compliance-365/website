@@ -396,6 +396,69 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     assert.deepEqual(errors, [], 'no console errors driving the Financial risk view');
     await context.close();
   });
+
+  /* Every form control a practitioner can reach must announce something
+     a person could act on. This is the one class of defect the "every
+     wired-up action resolves to a function" test above cannot see: those
+     controls all resolved, rendered and worked — they were simply
+     nameless to anyone not looking at the screen.
+
+     Measured against Chromium's computed accessibility tree rather than
+     the markup, because the markup reads as if it were fine: an input
+     with a placeholder and a visible <b> beside it LOOKS labelled, and
+     a reviewer skimming the source would say so. The accessibility tree
+     is where the truth is — the browser falls back to the placeholder
+     for the accessible name, so `placeholder="4"` on a threshold input
+     produced a control announced as "4".
+
+     That was the real state of the Settings view: all fourteen
+     threshold spinbuttons announced as their own default value — three
+     separate controls called "95", two called "5", two called "30" —
+     leaving no way to tell mfaCoverageReviewPct from
+     deviceEncryptionPassPct without sight of the screen.
+
+     The rule is "the name must contain a letter", not merely "a name
+     exists", precisely because the broken state HAD names. A bare
+     number, "https://…" or "e.g. …" is an example value that has
+     drifted into the name slot, and only the letter test catches it. */
+  test('every form control has an accessible name a person could act on', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
+
+    const navIds = await page.$$eval('.nav-item[data-v]', (els) => els
+      .filter((el) => el.offsetParent !== null && el.closest('.nav-group,.side'))
+      .map((el) => el.dataset.v));
+    assert.ok(navIds.length > 5, 'expected the nav to yield views to walk');
+
+    /* ariaSnapshot() renders one line per node as `- role "name": value`,
+       so the quoted segment is the computed name and anything after the
+       colon is the value — which is why a control whose name is really
+       its value is visible here and nowhere else. */
+    const CONTROL = /^\s*-\s+(textbox|spinbutton|combobox|searchbox|slider|checkbox|radio)\b/;
+    const nameless = [];
+    for (const v of navIds) {
+      await page.evaluate((id) => window.App.go(id), v);
+      await page.waitForTimeout(150);
+      const snap = await page.locator('body').ariaSnapshot();
+      for (const line of snap.split('\n')) {
+        if (!CONTROL.test(line)) continue;
+        const m = line.match(/^\s*-\s+(\w+)\s+"([^"]*)"/);
+        const role = m ? m[1] : (line.match(/-\s+(\w+)/) || [])[1];
+        const name = m ? m[2] : '';
+        if (!/[A-Za-z]/.test(name)) nameless.push(`${v} :: ${role} "${name}"`);
+      }
+    }
+
+    assert.deepEqual(nameless, [],
+      'every form control must have an accessible name containing a word, not an example value:\n  ' +
+      nameless.join('\n  '));
+    assert.deepEqual(errors, [], 'no console errors while walking views for accessible names');
+    await context.close();
+  });
 });
 
 /* A failed chromium.launch() (the skip path above) can leave Playwright's
