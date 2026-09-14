@@ -147,8 +147,12 @@
     <div style="margin-bottom:18px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn" data-action="OwnerApp.partnerPromptAddClient">+ Add client</button>
       <button class="btn ghost" data-action="OwnerApp.partnerPromptAddEntitlement">+ Record entitlement</button>
+      <!-- Walks the whole roster, stalest client first, reusing a
+           cached sign-in wherever one exists. See partnerSyncAll(). -->
+      <button class="btn ghost" data-action="OwnerApp.partnerSyncAll" id="partnerSyncAllBtn">Sync all</button>
       <button class="btn ghost" data-action="OwnerApp.partnerRefresh">Refresh</button>
     </div>
+    <div class="card" id="partnerSyncAllBar" hidden style="margin-bottom:18px;font-size:12.5px"></div>
     <div class="card" style="padding:0 10px;overflow-x:auto">
       <table>
         <thead><tr><th scope="col">Client</th><th scope="col">Readiness</th><th scope="col">Status</th><th scope="col">Modules</th><th scope="col">Renewal</th><th scope="col">Last sync / health</th><th scope="col">Actions</th></tr></thead>
