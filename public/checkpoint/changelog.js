@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.70.0',
+    date: '2026-09-14',
+    entries: [
+      'Two new device checks read the security state of the endpoint itself, rather than whether a policy about it exists. "Disk encryption enforced across the fleet" reports the proportion of managed devices actually reporting an encrypted disk -- which Intune\'s own compliance figure does not tell you, because a tenant whose compliance policy never required encryption reports 100% compliant with an unencrypted fleet. Devices that do not report an encryption state at all are excluded and counted separately rather than held against you, and the note says how many, so the percentage is never mistaken for whole-fleet coverage. The target and review floor are both configurable in Settings and default to 100% and 95%.',
+      '"No jailbroken or rooted mobile devices enrolled" flags enrolled iOS and Android devices reporting as compromised. A rooted phone that Intune reports as compliant is worse than an unmanaged one, because every control the compliance state is asserting can be defeated locally -- the tenant is being told the device is safe precisely when it is not. A fleet with no mobile devices shows as Manual rather than a permanent green tick for a question that does not apply. Neither check needs a new permission: both read fields on the device list the compliance check already fetches.',
+      '"No dormant enabled accounts" is the other half of the existing leaver check. That one looks at accounts somebody already disabled and asks whether the rest of the offboarding finished; this finds the accounts nobody disabled at all -- an enabled credential unused for a quarter is an unfinished offboarding, an unowned service account, or a contractor whose engagement ended. Accounts that have never signed in are reported as their own number, because break-glass accounts legitimately sit there. A handful is a Review; dozens is a Fail, because that is not a tenant with many break-glass accounts. The window and threshold are configurable and default to 90 days and 5 accounts.',
+      '"MFA registration coverage" reads who can actually complete MFA, as against what Conditional Access requires -- the same configuration-versus-reality pairing as the legacy authentication checks added last release. The two come apart constantly: a tenant with a flawless tenant-wide MFA policy and forty users who have never registered a method has not protected those accounts, it has arranged for them to be locked out, and what usually follows is an exclusion group that quietly undoes the policy. An administrator who cannot complete MFA fails the check outright whatever the overall percentage, because averaging a Global Administrator into a fleet-wide figure is how the most valuable account in the tenant gets rounded away.',
+      'All four checks also run in the scheduled monitor, so a laptop enrolling unencrypted or a phone that gets rooted overnight raises a drift alert and an email. None of the four needs a new permission: the two device checks read fields already being fetched, and the two account checks spend the audit-log permission added in 1.69.0. Where a licence or role is genuinely missing they report Manual rather than dragging the score down for a question the tenant was never able to answer.'
+    ]
+  },
+  {
     version: '1.69.0',
     date: '2026-09-13',
     entries: [

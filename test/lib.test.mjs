@@ -9,6 +9,7 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 
 const { band, residual, residualAcceptanceStale, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged, scanDrift,
   legacyAuthObservedResult, privRoleChangeResult,
+  deviceEncryptionResult, jailbrokenDeviceResult, dormantAccountResult, mfaRegistrationResult,
   sharedEvidenceClosure, crossFrameworkStatusSuggestions, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
@@ -2390,5 +2391,217 @@ describe('privRoleChangeResult() — privileged role changes in the window', () 
     const r = privRoleChangeResult([{ activityDisplayName: 'Add member to role' }, {}, null, 'nonsense']);
     assert.equal(r.count, 2);
     assert.deepEqual(r.actors, []);
+  });
+});
+
+describe('deviceEncryptionResult() — is the data on the fleet readable', () => {
+  const dev = (name, enc) => (enc === undefined ? { deviceName: name } : { deviceName: name, isEncrypted: enc });
+
+  test('a fully encrypted fleet passes', () => {
+    const r = deviceEncryptionResult([dev('a', true), dev('b', true)], 100, 95);
+    assert.equal(r.result, 'pass');
+    assert.equal(r.pct, 100);
+  });
+
+  test('one unencrypted device in a small fleet fails against a 100% target', () => {
+    const r = deviceEncryptionResult([dev('a', true), dev('b', false)], 100, 95);
+    assert.equal(r.result, 'fail');
+    assert.deepEqual(r.unencryptedNames, ['b']);
+  });
+
+  test('the review band sits between the two thresholds', () => {
+    // 96 of 100 encrypted: short of the 100% target, above the 95% review floor.
+    const fleet = Array.from({ length: 100 }, (_, i) => dev('d' + i, i >= 4));
+    assert.equal(deviceEncryptionResult(fleet, 100, 95).result, 'review');
+    // 94 of 100 drops below the review floor.
+    const worse = Array.from({ length: 100 }, (_, i) => dev('d' + i, i >= 6));
+    assert.equal(deviceEncryptionResult(worse, 100, 95).result, 'fail');
+  });
+
+  test('devices that do not report the field are excluded from the denominator, never scored as unencrypted', () => {
+    // isEncrypted is not populated for every platform and management
+    // mode. Counting a silent device as unencrypted would invent a
+    // failure out of a field we could not read.
+    const r = deviceEncryptionResult([dev('a', true), dev('b'), dev('c')], 100, 95);
+    assert.equal(r.result, 'pass');
+    assert.equal(r.known, 1);
+    assert.equal(r.unknown, 2);
+    assert.equal(r.total, 3);
+  });
+
+  test('a fleet where nothing reports encryption state is manual, not pass', () => {
+    // "We did not check" must never read as "we checked and it was fine".
+    const r = deviceEncryptionResult([dev('a'), dev('b')], 100, 95);
+    assert.equal(r.result, 'manual');
+    assert.equal(r.pct, null);
+  });
+
+  test('no devices at all is manual', () => {
+    assert.equal(deviceEncryptionResult([], 100, 95).result, 'manual');
+    assert.equal(deviceEncryptionResult(null, 100, 95).result, 'manual');
+  });
+
+  test('thresholds are configurable and default sensibly when absent', () => {
+    const fleet = [dev('a', true), dev('b', false)];
+    assert.equal(deviceEncryptionResult(fleet, 50, 25).result, 'pass');
+    assert.equal(deviceEncryptionResult(fleet).result, 'fail');
+  });
+});
+
+describe('jailbrokenDeviceResult() — a rooted phone reporting compliant', () => {
+  const mob = (os, jb, name) => ({ operatingSystem: os, jailBroken: jb, deviceName: name });
+
+  test('a clean mobile fleet passes', () => {
+    const r = jailbrokenDeviceResult([mob('iOS', 'False', 'p1'), mob('Android', 'False', 'p2')]);
+    assert.equal(r.result, 'pass');
+    assert.equal(r.mobile, 2);
+  });
+
+  test('any jailbroken device fails, and is named', () => {
+    const r = jailbrokenDeviceResult([mob('iOS', 'False', 'p1'), mob('Android', 'True', 'p2')]);
+    assert.equal(r.result, 'fail');
+    assert.deepEqual(r.names, ['p2']);
+  });
+
+  test('jailBroken is matched as a string, case-insensitively', () => {
+    // Graph returns "True"/"False"/"Unknown" as a STRING, not a boolean;
+    // a truthiness test would score every device as jailbroken.
+    assert.equal(jailbrokenDeviceResult([mob('iOS', 'true', 'p1')]).result, 'fail');
+    assert.equal(jailbrokenDeviceResult([mob('iOS', 'FALSE', 'p1')]).result, 'pass');
+  });
+
+  test('a Windows-only fleet is manual, not pass', () => {
+    // No mobile devices means no jailbreak exposure. A permanently green
+    // check for a question that does not apply misleads as much as a red one.
+    const r = jailbrokenDeviceResult([{ operatingSystem: 'Windows', deviceName: 'w1' }, { operatingSystem: 'macOS' }]);
+    assert.equal(r.result, 'manual');
+    assert.equal(r.mobile, 0);
+  });
+
+  test('mobile devices that all report Unknown are manual', () => {
+    const r = jailbrokenDeviceResult([mob('iOS', 'Unknown', 'p1'), mob('Android', '', 'p2')]);
+    assert.equal(r.result, 'manual');
+    assert.equal(r.unknown, 2);
+  });
+
+  test('one known device among Unknowns still decides the grade', () => {
+    const r = jailbrokenDeviceResult([mob('iOS', 'Unknown', 'p1'), mob('Android', 'True', 'p2')]);
+    assert.equal(r.result, 'fail');
+    assert.equal(r.unknown, 1);
+  });
+});
+
+describe('dormantAccountResult() — the account nobody disabled', () => {
+  const NOW = Date.parse('2026-09-14T00:00:00Z');
+  const ago = (days) => new Date(NOW - days * 86400000).toISOString();
+  const user = (name, days, extra = {}) => ({
+    accountEnabled: true, displayName: name, userPrincipalName: name + '@x.test',
+    signInActivity: days === null ? undefined : { lastSignInDateTime: ago(days) }, ...extra
+  });
+
+  test('an active directory passes', () => {
+    assert.equal(dormantAccountResult([user('a', 1), user('b', 30)], 90, 5, NOW).result, 'pass');
+  });
+
+  test('a few dormant accounts are review — some are legitimately break-glass', () => {
+    const r = dormantAccountResult([user('a', 1), user('b', 200), user('c', 400)], 90, 5, NOW);
+    assert.equal(r.result, 'review');
+    assert.equal(r.dormant, 2);
+  });
+
+  test('more than the threshold fails — that is an unmanaged directory, not break-glass', () => {
+    const many = Array.from({ length: 12 }, (_, i) => user('u' + i, 300));
+    assert.equal(dormantAccountResult(many, 90, 5, NOW).result, 'fail');
+  });
+
+  test('disabled accounts are out of scope — that is the leaver check', () => {
+    const r = dormantAccountResult([{ accountEnabled: false, displayName: 'gone', signInActivity: { lastSignInDateTime: ago(900) } }], 90, 5, NOW);
+    assert.equal(r.result, 'pass');
+    assert.equal(r.enabled, 0);
+  });
+
+  test('an account that never signed in counts as dormant and is reported separately', () => {
+    // Break-glass accounts live in exactly this bucket, which is why the
+    // number is surfaced rather than folded into the total.
+    const r = dormantAccountResult([user('never', null)], 90, 5, NOW);
+    assert.equal(r.dormant, 1);
+    assert.equal(r.never, 1);
+  });
+
+  test('an unparseable timestamp is treated as never, not as a recent sign-in', () => {
+    // Reading it as recent would hide the account this check exists to find.
+    const r = dormantAccountResult([{ accountEnabled: true, displayName: 'x', signInActivity: { lastSignInDateTime: 'not-a-date' } }], 90, 5, NOW);
+    assert.equal(r.dormant, 1);
+    assert.equal(r.never, 1);
+  });
+
+  test('non-interactive sign-in counts as activity when no interactive one exists', () => {
+    // A service account signing in non-interactively every hour is in
+    // use; grading it dormant would bury the real findings.
+    const r = dormantAccountResult([{
+      accountEnabled: true, displayName: 'svc',
+      signInActivity: { lastNonInteractiveSignInDateTime: ago(2) }
+    }], 90, 5, NOW);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('dormant guests are counted and flagged as guests', () => {
+    const r = dormantAccountResult([user('g', 300, { userType: 'Guest' }), user('m', 300)], 90, 5, NOW);
+    assert.equal(r.dormant, 2);
+    assert.equal(r.guests, 1);
+    assert.equal(r.accounts.find((a) => a.name === 'g').guest, true);
+  });
+
+  test('accounts are listed oldest sign-in first, with never-signed-in ahead of them', () => {
+    const r = dormantAccountResult([user('recent', 100), user('never', null), user('ancient', 900)], 90, 5, NOW);
+    assert.deepEqual(r.accounts.map((a) => a.name), ['never', 'ancient', 'recent']);
+  });
+});
+
+describe('mfaRegistrationResult() — could these people actually complete MFA', () => {
+  const u = (upn, capable, isAdmin) => ({ userPrincipalName: upn, isMfaCapable: capable, isAdmin: !!isAdmin });
+
+  test('full coverage passes', () => {
+    assert.equal(mfaRegistrationResult([u('a@x', true), u('b@x', true)], 95).result, 'pass');
+  });
+
+  test('an admin without MFA fails outright, whatever the overall percentage', () => {
+    // Averaging a Global Administrator into a fleet-wide figure is how
+    // the most valuable account in the tenant gets rounded away.
+    const fleet = Array.from({ length: 99 }, (_, i) => u('u' + i + '@x', true));
+    fleet.push(u('ga@x', false, true));
+    const r = mfaRegistrationResult(fleet, 95);
+    assert.equal(r.result, 'fail');
+    assert.equal(r.pct, 99);
+    assert.deepEqual(r.adminGaps, ['ga@x']);
+  });
+
+  test('a small non-admin gap is review, a large one fails', () => {
+    const near = Array.from({ length: 100 }, (_, i) => u('u' + i + '@x', i >= 3));
+    assert.equal(mfaRegistrationResult(near, 95).result, 'review');
+    const wide = Array.from({ length: 100 }, (_, i) => u('u' + i + '@x', i >= 20));
+    assert.equal(mfaRegistrationResult(wide, 95).result, 'fail');
+  });
+
+  test('capability is scored, not registration', () => {
+    // isMfaRegistered says a method exists; isMfaCapable says the method
+    // is one the tenant's policy will accept. Only the latter predicts
+    // whether the sign-in actually succeeds.
+    const r = mfaRegistrationResult([{ userPrincipalName: 'a@x', isMfaRegistered: true, isMfaCapable: false }], 95);
+    assert.equal(r.result, 'fail');
+    assert.equal(r.capable, 0);
+  });
+
+  test('an empty or unreadable report is manual, not pass', () => {
+    assert.equal(mfaRegistrationResult([], 95).result, 'manual');
+    assert.equal(mfaRegistrationResult(null, 95).result, 'manual');
+  });
+
+  test('a missing isMfaCapable is treated as not capable, not as capable', () => {
+    // The safe direction: an absent field must not quietly certify an
+    // account as protected.
+    const r = mfaRegistrationResult([{ userPrincipalName: 'a@x' }], 95);
+    assert.equal(r.result, 'fail');
+    assert.deepEqual(r.gaps, ['a@x']);
   });
 });

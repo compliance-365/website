@@ -79,7 +79,7 @@ const MERGED_NIST_SUBCATEGORIES = CONTENT_AVAILABLE ? PACKS.nistcsf.extra.subcat
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
 // Capabilities probed against Microsoft Graph (graph.js CAPABILITY_PROBES).
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement', 'lifecycleWorkflows', 'signInLogs', 'directoryAudits'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement', 'lifecycleWorkflows', 'signInLogs', 'directoryAudits', 'signInActivity', 'mfaRegistrationReport'];
 // Capabilities that are DERIVED rather than probed, because nothing in
 // Microsoft 365 knows the answer. 'aws' is set by app.js from whether the
 // optional AWS collector has ever written an aws-* result for this tenant.
@@ -518,9 +518,16 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // ('signInLogs', 'directoryAudits'). That is the point of them:
     // configuration says what the tenant is set up to do, and only the
     // log says what it did.
-    assert.equal(CHECK_DEFS.length, 53);
+    // 53 -> 57 with the endpoint-state and account-hygiene batch.
+    // 'device-encryption' and 'device-jailbroken' are mined from the
+    // SAME managedDevices response the 'device' check already fetches
+    // (two more fields on its $select) — no new call, no new scope.
+    // 'dormant-accounts' and 'mfa-registration' spend the
+    // AuditLog.Read.All scope added for the audit-log pair, so they
+    // cost two new capability probes but no new consent.
+    assert.equal(CHECK_DEFS.length, 57);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 43);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 47);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

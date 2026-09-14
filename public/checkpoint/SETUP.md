@@ -79,7 +79,7 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `SecurityAlert.Read.All` | Read the Defender XDR alert queue (replaces the Secure Score proxy behind the alerts check where Defender XDR is present) | Yes |
 | `SubjectRightsRequest.Read.All` | Read Priva subject rights requests (privacy-request check; requires Microsoft Priva) | Yes |
 | `RecordsManagement.Read.All` | Read Purview retention labels (retention/disposal check; requires Purview records management). Delegated-only — no application-permission equivalent exists | Yes |
-| `AuditLog.Read.All` | Read the Entra sign-in log and directory audit log. Backs the only two checks that read what the tenant **did** rather than how it is **configured**: `legacy-auth-observed` (did any legacy sign-in actually succeed, whatever the Conditional Access policy claims) and `priv-role-changes` (every privileged role change in the review window, with who made it). Read-only, and Checkpoint never writes to or purges an audit log — the logs are the evidence. Graph gates both logs behind this one scope, so consenting enables both checks or neither. Sign-in logs additionally need Entra ID P1 and a reports-reading role (Reports Reader, Security Reader, Security Administrator or Global Reader); directory audit logs are available on every tier but still need one of those roles. Without them, both checks degrade to Manual rather than failing | Yes |
+| `AuditLog.Read.All` | Read the Entra sign-in log, directory audit log, per-account sign-in activity and the authentication methods registration report. Backs the checks that read what the tenant **did** rather than how it is **configured**: `legacy-auth-observed` (did any legacy sign-in actually succeed, whatever the Conditional Access policy claims) and `priv-role-changes` (every privileged role change in the review window, with who made it). Read-only, and Checkpoint never writes to or purges an audit log — the logs are the evidence. Graph gates both logs behind this one scope, so consenting enables both checks or neither. Sign-in logs additionally need Entra ID P1 and a reports-reading role (Reports Reader, Security Reader, Security Administrator or Global Reader); directory audit logs are available on every tier but still need one of those roles. Without them, these checks degrade to Manual rather than failing. The same scope also backs `dormant-accounts` (enabled accounts with no recent sign-in — the offboarding that was never *started*, where the `leaver` check covers the one left half-finished; needs Entra ID P1 for `signInActivity`) and `mfa-registration` (who is actually MFA-**capable**, as against what Conditional Access *requires*; no premium tier needed). Neither adds a consent decision — both spend a permission already granted | Yes |
 
 **Stage 2 — requested the first time registers are loaded/created**
 (`Store.load()`, i.e. the first time anyone opens Checkpoint in this
@@ -2722,6 +2722,24 @@ Two behaviours differ from the rest of the monitor, deliberately:
   never depends on where the cap fell — successful legacy sign-ins are
   queried separately, server-side, so the fail decision is exact even
   when the attempt count is not.
+
+`device-encryption`, `device-jailbroken`, `dormant-accounts` and
+`mfa-registration` run here too, and none of them cost a new
+permission. The two device checks are mined from extra fields on the
+`/deviceManagement/managedDevices` response the compliance check
+already fetches; the two identity checks spend the
+`AuditLog.Read.All` grant above. They follow the same **Manual, not
+Review** rule on a 401/403 for the same reason — `signInActivity`
+needs Entra ID P1, and the registration report needs a
+reports-reading role, so a tenant without either would otherwise
+carry a permanent nightly Review.
+
+One thing to know about `device-encryption` before reading its
+result: devices that do not report an encryption state at all are
+excluded from the denominator, never scored as unencrypted. Intune
+does not populate `isEncrypted` for every platform and management
+mode, and the note says how many were excluded so the percentage is
+never mistaken for whole-fleet coverage.
 
 Full deploy steps (app registration, the exact application permissions
 and why each is the least-privilege choice for its check, the

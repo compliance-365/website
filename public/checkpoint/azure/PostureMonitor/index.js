@@ -110,7 +110,8 @@ const SCORED_CHECK_IDS = [
   'device-checkin', 'device-config',
   'backup', 'bcp', 'supplier', 'policy', 'audit-review', 'incident-lessons',
   'xdr-incidents', 'privacy-srr', 'lifecycle-workflows',
-  'legacy-auth-observed', 'priv-role-changes'
+  'legacy-auth-observed', 'priv-role-changes',
+  'device-encryption', 'device-jailbroken', 'dormant-accounts', 'mfa-registration'
 ];
 const CHECK_LABELS = {
   'mfa-all': 'MFA enforced — all users',
@@ -152,7 +153,11 @@ const CHECK_LABELS = {
   'privacy-srr': 'Subject rights requests answered within statutory deadline',
   'lifecycle-workflows': 'Joiner/leaver processing technically automated',
   'legacy-auth-observed': 'No legacy authentication observed in sign-in logs',
-  'priv-role-changes': 'Privileged role changes reviewed'
+  'priv-role-changes': 'Privileged role changes reviewed',
+  'device-encryption': 'Disk encryption enforced across the fleet',
+  'device-jailbroken': 'No jailbroken or rooted mobile devices enrolled',
+  'dormant-accounts': 'No dormant enabled accounts',
+  'mfa-registration': 'MFA registration coverage'
 };
 
 async function resolveLists(g, siteId) {
@@ -714,13 +719,19 @@ async function runPostureChecks(g, gAll, settings) {
   } catch (e) { set('riskyusers', 'review', 'Identity Protection not licensed or not readable: ' + e.message); }
 
   try {
-    /* lastSyncDateTime added to the existing $select rather than fetched
-       separately — same call, same permission, one more field, powering
-       device-checkin below. Mirrors graph.js exactly. */
-    const devs = await gAll('/deviceManagement/managedDevices?$select=complianceState,lastSyncDateTime&$top=999');
+    /* lastSyncDateTime, isEncrypted and jailBroken are added to the
+       existing $select rather than fetched separately — same call, same
+       permission, three more fields, powering device-checkin,
+       device-encryption and device-jailbroken below. deviceName and
+       operatingSystem come along because the latter two need to name
+       the offending devices and to tell a phone from a laptop. Mirrors
+       graph.js exactly. */
+    const devs = await gAll('/deviceManagement/managedDevices?$select=deviceName,operatingSystem,complianceState,lastSyncDateTime,isEncrypted,jailBroken&$top=999');
     if (!devs.length) {
       set('device', 'review', 'No Intune-managed devices found');
       set('device-checkin', 'review', 'No Intune-managed devices found');
+      set('device-encryption', 'manual', 'No Intune-managed devices found');
+      set('device-jailbroken', 'manual', 'No Intune-managed devices found');
     } else {
       const ok = devs.filter(d => d.complianceState === 'compliant').length;
       const pct = Math.round(ok / devs.length * 100);
@@ -744,10 +755,59 @@ async function runPostureChecks(g, gAll, settings) {
           ? stale + ' of ' + devs.length + ' device(s) have not checked in for over ' + staleDays + ' days' +
             (neverCheckedIn ? ' (' + neverCheckedIn + ' never have)' : '') + ' — their compliance state is stale evidence'
           : 'All ' + devs.length + ' managed device(s) checked in within ' + staleDays + ' days');
+
+      /* device-encryption — mirrors lib.js's deviceEncryptionResult().
+         Devices that do not report isEncrypted are excluded from the
+         denominator rather than scored as unencrypted: the field is not
+         populated for every platform and management mode, and inventing
+         a failure from a field we could not read is how a posture score
+         loses its credibility. Nothing reporting it at all is 'manual'. */
+      const encPass = numSetting(settings, 'deviceEncryptionPassPct', 100);
+      const encReview = numSetting(settings, 'deviceEncryptionReviewPct', 95);
+      const encKnown = devs.filter(d => typeof d.isEncrypted === 'boolean');
+      const encUnknown = devs.length - encKnown.length;
+      if (!encKnown.length) {
+        set('device-encryption', 'manual', 'No managed device reports an encryption state — "not visible" rather than "not encrypted".');
+      } else {
+        const bare = encKnown.filter(d => d.isEncrypted === false);
+        const encPct = Math.round((encKnown.length - bare.length) / encKnown.length * 100);
+        const bareNames = bare.map(d => d.deviceName).filter(Boolean).sort();
+        set('device-encryption', encPct >= encPass ? 'pass' : (encPct >= encReview ? 'review' : 'fail'),
+          encPct + '% of ' + encKnown.length + ' device(s) reporting encryption state are encrypted (target ≥' + encPass + '%, review ≥' + encReview + '%)' +
+          (bare.length ? ' — ' + bare.length + ' UNENCRYPTED' + (bareNames.length <= 5 ? ': ' + bareNames.join(', ') : '') : '') +
+          (encUnknown ? '. ' + encUnknown + ' further device(s) do not report the field and are excluded rather than counted against you.' : ''));
+      }
+
+      /* device-jailbroken — mirrors lib.js's jailbrokenDeviceResult().
+         iOS/Android only, and 'manual' for a fleet with no mobile
+         devices: a permanently green check for a question that does not
+         apply misleads as much as a red one. Graph reports jailBroken as
+         a STRING ("True"/"False"/"Unknown"), so the parse is explicit —
+         a truthiness test would score every device as jailbroken. */
+      const mobile = devs.filter(d => /^(ios|ipados|android)$/i.test(String(d.operatingSystem || '').trim()));
+      const jbYes = mobile.filter(d => /^true$/i.test(String(d.jailBroken || '').trim()));
+      const jbNo = mobile.filter(d => /^false$/i.test(String(d.jailBroken || '').trim()));
+      const jbKnown = jbYes.length + jbNo.length;
+      if (!mobile.length) {
+        set('device-jailbroken', 'manual', 'No iOS or Android devices are enrolled, so there is no jailbreak/root exposure to measure here.');
+      } else if (!jbKnown) {
+        set('device-jailbroken', 'manual', mobile.length + ' mobile device(s) enrolled but none report a jailbreak/root state — not visible rather than clean.');
+      } else {
+        const jbNames = jbYes.map(d => d.deviceName).filter(Boolean).sort();
+        set('device-jailbroken', jbYes.length ? 'fail' : 'pass',
+          jbYes.length
+            ? jbYes.length + ' of ' + mobile.length + ' mobile device(s) report as JAILBROKEN/ROOTED' +
+              (jbNames.length <= 5 ? ': ' + jbNames.join(', ') : '') +
+              ' — the compliance state these devices report cannot be trusted, because the controls asserting it can be defeated locally.'
+            : 'None of ' + jbKnown + ' mobile device(s) reporting a jailbreak/root state are compromised' +
+              (mobile.length - jbKnown ? ' (' + (mobile.length - jbKnown) + ' further device(s) do not report it)' : ''));
+      }
     }
   } catch (e) {
     set('device', 'review', 'Could not read Intune devices: ' + e.message);
     set('device-checkin', 'review', 'Could not read Intune devices: ' + e.message);
+    set('device-encryption', 'review', 'Could not read Intune devices: ' + e.message);
+    set('device-jailbroken', 'review', 'Could not read Intune devices: ' + e.message);
   }
 
   try {
@@ -988,6 +1048,101 @@ async function runPostureChecks(g, gAll, settings) {
       set('priv-role-changes', 'manual', 'Directory audit logs are not readable by this identity — needs the AuditLog.Read.All application permission. Available on every Entra tier, so this is a permission gap rather than a licence gap.');
     } else {
       set('priv-role-changes', 'review', 'Directory audit logs not readable: ' + e.message);
+    }
+  }
+
+  /* --- dormant-accounts + mfa-registration -------------------------
+     Both spend the AuditLog.Read.All application permission added for
+     the two audit-log checks above — no new consent decision, and the
+     same 401/403-is-'manual' handling for the same reason: sign-in
+     activity needs Entra ID P1, and a free-tier tenant should not lose
+     half a point every night for a question it could never answer.
+
+     dormant-accounts uses its OWN /users read rather than adding
+     signInActivity to the one the leaver check makes just above.
+     Graph rejects the WHOLE request when signInActivity is selected
+     without P1, so folding it in would take two working checks down on
+     every free-tier tenant in order to add a third. Mirrors graph.js,
+     which splits it for the same reason. */
+  try {
+    const dormantDays = numSetting(settings, 'dormantAccountDays', 90);
+    const dormantMax = numSetting(settings, 'dormantAccountReviewMax', 5);
+    const activityUsers = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,signInActivity&$top=999');
+    const enabledUsers = activityUsers.filter(u => u && u.accountEnabled === true);
+    const dormantLimit = dormantDays * 86400000;
+    const nowD = Date.now();
+    const dormant = [];
+    let neverSignedIn = 0, dormantGuests = 0;
+    enabledUsers.forEach(u => {
+      const act = u.signInActivity || {};
+      const last = act.lastSignInDateTime || act.lastNonInteractiveSignInDateTime || null;
+      const t = last ? Date.parse(last) : NaN;
+      /* An unparseable timestamp counts as never, not as recent —
+         reading it as recent would hide the very accounts this finds. */
+      const isNever = !last || isNaN(t);
+      if (!isNever && (nowD - t) <= dormantLimit) return;
+      if (isNever) neverSignedIn++;
+      if (String(u.userType || '').toLowerCase() === 'guest') dormantGuests++;
+      dormant.push({ upn: u.userPrincipalName || u.displayName || u.id, last: isNever ? null : last });
+    });
+    dormant.sort((a, b) => (a.last || '').localeCompare(b.last || ''));
+    set('dormant-accounts', dormant.length === 0 ? 'pass' : (dormant.length <= dormantMax ? 'review' : 'fail'),
+      dormant.length === 0
+        ? 'All ' + enabledUsers.length + ' enabled account(s) have signed in within ' + dormantDays + ' days'
+        : dormant.length + ' of ' + enabledUsers.length + ' enabled account(s) have not signed in for over ' + dormantDays + ' days' +
+          (neverSignedIn ? ' (' + neverSignedIn + ' never have — break-glass accounts legitimately sit here, so check yours before acting)' : '') +
+          (dormantGuests ? '; ' + dormantGuests + ' of them are guests' : '') +
+          '. Oldest: ' + dormant.slice(0, 5).map(a => a.upn + ' (' + (a.last ? a.last.slice(0, 10) : 'never') + ')').join(', ') +
+          '. Confirm each is deliberate rather than an unfinished offboarding.');
+  } catch (e) {
+    if (e && (e.status === 401 || e.status === 403)) {
+      set('dormant-accounts', 'manual', 'Per-account sign-in activity is not readable by this identity — it needs Entra ID P1 and the AuditLog.Read.All application permission. The leaver check above still covers accounts that were actually disabled.');
+    } else {
+      set('dormant-accounts', 'review', 'Could not read per-account sign-in activity: ' + e.message);
+    }
+  }
+
+  /* mfa-registration scores isMfaCapable, not isMfaRegistered:
+     registered says a method exists on the account, capable says it is
+     one the tenant's policy will actually accept, and capable is what
+     predicts whether the sign-in succeeds. An ADMIN who is not capable
+     fails the check outright whatever the overall percentage —
+     averaging a Global Administrator into a fleet-wide figure is how
+     the most valuable account in the tenant gets rounded away.
+     Mirrors lib.js's mfaRegistrationResult(). */
+  try {
+    const mfaReviewPct = numSetting(settings, 'mfaCoverageReviewPct', 95);
+    const regRows = (await gAll('/reports/authenticationMethods/userRegistrationDetails?$top=999')).filter(r => r && typeof r === 'object');
+    if (!regRows.length) {
+      set('mfa-registration', 'manual', 'The authentication methods registration report returned no users.');
+    } else {
+      const notCapable = regRows.filter(r => r.isMfaCapable !== true);
+      const adminGaps = notCapable.filter(r => r.isAdmin === true);
+      const mfaPct = Math.round((regRows.length - notCapable.length) / regRows.length * 100);
+      const adminNames = adminGaps.map(r => r.userPrincipalName).filter(Boolean).sort();
+      const gapNames = notCapable.map(r => r.userPrincipalName).filter(Boolean).sort();
+      let mfaResult;
+      if (adminGaps.length) mfaResult = 'fail';
+      else if (!notCapable.length) mfaResult = 'pass';
+      else mfaResult = mfaPct >= mfaReviewPct ? 'review' : 'fail';
+      set('mfa-registration', mfaResult,
+        mfaPct + '% of ' + regRows.length + ' user(s) are MFA-capable (review floor ' + mfaReviewPct + '%)' +
+        (adminGaps.length
+          ? '. ' + adminGaps.length + ' ADMINISTRATOR(S) cannot complete MFA: ' +
+            (adminNames.length <= 5 ? adminNames.join(', ') : adminGaps.length + ' accounts') +
+            ' — fixed before anything else here, whatever the overall percentage says.'
+          : '') +
+        (notCapable.length && !adminGaps.length
+          ? '. ' + notCapable.length + ' user(s) have no usable method registered' +
+            (gapNames.length <= 5 ? ': ' + gapNames.join(', ') : '') +
+            ' — they are covered by policy but cannot satisfy it.'
+          : ''));
+    }
+  } catch (e) {
+    if (e && (e.status === 401 || e.status === 403)) {
+      set('mfa-registration', 'manual', 'The authentication methods registration report is not readable by this identity — it needs the AuditLog.Read.All application permission. The Conditional Access MFA check still reports what policy REQUIRES.');
+    } else {
+      set('mfa-registration', 'review', 'Could not read the authentication methods registration report: ' + e.message);
     }
   }
 

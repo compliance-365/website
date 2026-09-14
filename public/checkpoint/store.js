@@ -478,6 +478,14 @@ window.CHECK_DEFS = [
      either can produce. */
   { id: 'legacy-auth-observed', area: 'Identity', label: 'No legacy authentication observed in sign-in logs', tpl: 'legacy-auth-observed', scored: true, requiresCapability: 'signInLogs' },
   { id: 'priv-role-changes',    area: 'Identity', label: 'Privileged role changes reviewed',                  tpl: null,                    scored: true, requiresCapability: 'directoryAudits' },
+  /* dormant-accounts is the other half of 'leaver' below: that one
+     looks at accounts somebody already disabled and asks whether the
+     rest of the offboarding finished, this one finds the accounts
+     nobody disabled at all. mfa-registration is to 'mfa-all' what
+     legacy-auth-observed is to 'legacy' — policy says what is
+     REQUIRED, the registration report says who could actually do it. */
+  { id: 'dormant-accounts',     area: 'Identity', label: 'No dormant enabled accounts',                       tpl: 'dormant-accounts',      scored: true, requiresCapability: 'signInActivity' },
+  { id: 'mfa-registration',     area: 'Identity', label: 'MFA registration coverage',                         tpl: 'mfa-registration',      scored: true, requiresCapability: 'mfaRegistrationReport' },
   /* ca-device / ca-risk read fields of the SAME Conditional Access
      policy response mfa-all/legacy/mfa-priv already fetch — no new
      Graph call, no new scope. Mined, not added. */
@@ -512,6 +520,15 @@ window.CHECK_DEFS = [
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'device-checkin', area: 'Devices', label: 'Managed devices checking in with Intune', tpl: 'device-checkin', scored: true, requiresCapability: 'intune' },
+  /* The two checks that read the SECURITY STATE of the endpoint rather
+     than the existence of a policy about it. Both are mined from the
+     same /deviceManagement/managedDevices response the 'device' check
+     above already fetches — two more fields on its $select, no new call
+     and no new permission. Intune's own compliance state cannot stand
+     in for either: a tenant whose compliance policy never required
+     encryption reports 100% compliant with an unencrypted fleet. */
+  { id: 'device-encryption', area: 'Devices', label: 'Disk encryption enforced across the fleet', tpl: 'device-encryption', scored: true, requiresCapability: 'intune' },
+  { id: 'device-jailbroken', area: 'Devices', label: 'No jailbroken or rooted mobile devices enrolled', tpl: 'device-jailbroken', scored: true, requiresCapability: 'intune' },
   { id: 'device-config', area: 'Devices', label: 'Device configuration profiles deployed', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
   /* Apps & Data (8) */
@@ -609,6 +626,11 @@ window.THRESHOLD_DEFS = [
   { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' },
   { key: 'deviceStaleDays', label: 'Device check-in staleness (days)', desc: 'A managed device that has not contacted Intune within this many days is treated as unmanaged — it is not receiving policy or updates, and its last reported compliance state is stale evidence.', def: '30' },
   { key: 'incidentTriageDays', label: 'Incident triage window (days)', desc: 'A high-severity Defender XDR incident still active beyond this many days fails the incident-triage check. Set this to whatever your own incident response plan commits to — the default of 5 days is a starting point, not a standard.', def: '5' },
+  { key: 'deviceEncryptionPassPct', label: 'Disk encryption target (%)', desc: 'The proportion of devices REPORTING an encryption state that must be encrypted for the encryption check to pass. Defaults to 100 — there is rarely a good reason for a corporate device to be unencrypted, so anything less is a deliberate decision you should be able to justify. Devices that do not report the field at all are excluded from the denominator, never counted against you.', def: '100' },
+  { key: 'deviceEncryptionReviewPct', label: 'Disk encryption review floor (%)', desc: 'At or above this, a fleet short of the target above shows as Review rather than Fail — a couple of stragglers mid-rollout, not a systemic gap.', def: '95' },
+  { key: 'dormantAccountDays', label: 'Dormant account threshold (days)', desc: 'An ENABLED account with no sign-in in this many days is reported as dormant. Accounts that have never signed in are included, which is where break-glass accounts legitimately sit — check yours before acting on the list.', def: '90' },
+  { key: 'dormantAccountReviewMax', label: 'Max dormant accounts (review)', desc: 'At or under this many dormant accounts is a Review — a handful is housekeeping and some are deliberate. More than this is a Fail: a directory with dozens of untouched enabled accounts is not one with dozens of break-glass accounts.', def: '5' },
+  { key: 'mfaCoverageReviewPct', label: 'MFA registration review floor (%)', desc: 'Full coverage passes; at or above this floor shows as Review; below it fails. An administrator who cannot complete MFA fails the check outright regardless of this number — averaging a Global Administrator into a fleet-wide percentage is how the most valuable account in the tenant gets rounded away.', def: '95' },
   { key: 'auditLogWindowDays', label: 'Audit log review window (days)', desc: 'How far back the two Entra audit-log checks look — observed legacy authentication, and privileged role changes. Set this to match the review cadence your own ISMS commits to rather than leaving the 30-day default; a quarterly access review wants 90. Entra itself retains sign-in and directory audit logs for 30 days on P1/P2 (7 days on the free tier), so a longer window here silently returns only what Entra still holds.', def: '30' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
 ];
@@ -689,6 +711,11 @@ window.DEFAULT_SETTINGS = {
   riskyUsersReviewMax: '3',
   incidentTriageDays: '5',
   deviceStaleDays: '30',
+  deviceEncryptionPassPct: '100',
+  deviceEncryptionReviewPct: '95',
+  dormantAccountDays: '90',
+  dormantAccountReviewMax: '5',
+  mfaCoverageReviewPct: '95',
   auditLogWindowDays: '30',
   controlReviewCadenceDays: '90',
   /* Trust Center — what a generated public page is allowed to show.
@@ -898,6 +925,10 @@ window.CHECK_CONTROLS = {
   'legacy': ['A.8.5', 'A.5.15'],
   'legacy-auth-observed': ['A.8.5', 'A.8.15'],
   'priv-role-changes': ['A.5.15', 'A.5.18', 'A.8.15'],
+  'dormant-accounts': ['A.5.16', 'A.5.18'],
+  'mfa-registration': ['A.5.17', 'A.8.5'],
+  'device-encryption': ['A.8.24', 'A.8.1'],
+  'device-jailbroken': ['A.8.1', 'A.8.19'],
   'ca-device': ['A.8.1', 'A.5.15'],
   'ca-risk': ['A.8.5', 'A.5.15'],
   'ca-sif': ['A.8.2', 'A.8.5'],
@@ -1206,8 +1237,8 @@ window.DemoStore = (function () {
      real regressions rather than mixed in with them. */
   function demoResults() {
     var now = {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'legacy-auth-observed': 'fail', 'priv-role-changes': 'review', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
-        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review',
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'legacy-auth-observed': 'fail', 'priv-role-changes': 'review', 'dormant-accounts': 'fail', 'mfa-registration': 'review', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
+        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review', 'device-encryption': 'review', 'device-jailbroken': 'fail',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
         'privacy-srr': 'fail', 'retention': 'review'
@@ -1219,6 +1250,8 @@ window.DemoStore = (function () {
     var at21 = Object.assign({}, now, {
       wdac: 'pass',                    /* the ALT-001 regression */
       'legacy-auth-observed': 'review', /* attempts, all blocked — then one got through */
+      'device-encryption': 'pass',      /* encryption slipped as new devices enrolled */
+      'device-jailbroken': 'pass',      /* the rooted handset enrolled since */
       'lifecycle-workflows': 'pass',
       encryption: 'review',            /* still readable back then */
       'ca-tou': 'fail',
@@ -1252,6 +1285,10 @@ window.DemoStore = (function () {
       lastResults: resultsNow,
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
+        'device-encryption': '97% of 203 device(s) reporting encryption state are encrypted (target ≥100%, review ≥95%) — 6 UNENCRYPTED. 11 further device(s) do not report the field and are excluded rather than counted against you.',
+        'device-jailbroken': '1 of 38 mobile device(s) report as JAILBROKEN/ROOTED: MERIDIAN-IPHONE-114 — the compliance state these devices report cannot be trusted, because the controls asserting it can be defeated locally.',
+        'dormant-accounts': '17 of 186 enabled account(s) have not signed in for over 90 days (2 never have — break-glass accounts legitimately sit here, so check yours before acting); 4 of them are guests. Oldest: contractor.dpatel@meridianhealth.example (never), breakglass01@meridianhealth.example (never), r.whitfield@meridianhealth.example (2025-11-02), locum.temp3@meridianhealth.example (2025-12-18), audit.guest@partner.example (2026-01-09). Confirm each is deliberate rather than an unfinished offboarding.',
+        'mfa-registration': '96% of 186 user(s) are MFA-capable (review floor 95%). 7 user(s) have no usable method registered — they are covered by policy but cannot satisfy it.',
         'legacy-auth-observed': '2 legacy sign-in(s) SUCCEEDED in the last 30 days via IMAP4, Authenticated SMTP — 2 account(s) affected: svc-scanner@meridianhealth.example, j.reyes@meridianhealth.example. These sign-ins bypassed MFA regardless of what policy says.',
         'priv-role-changes': '3 privileged role change(s) in the last 30 days, by k.patel@meridianhealth.example, s.okafor@meridianhealth.example — confirm each was authorised. Most recent: Security Administrator → m.chen@meridianhealth.example (2026-09-04); Global Administrator → k.patel@meridianhealth.example (2026-08-28); Privileged Role Administrator → s.okafor@meridianhealth.example (2026-08-22). Self-service PIM activations are excluded.',
         'ca-device': 'Device compliance is required by at least one Conditional Access policy, but not for all cloud apps',
