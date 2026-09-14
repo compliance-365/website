@@ -3711,7 +3711,7 @@ function showModal(opts) {
     var grantSnippet = window.CheckpointLib.monitorGrantSnippet(siteId, clientId, 'Checkpoint Posture Monitor');
     var grantHtml =
       '<div class="d-kv" style="padding:0 0 6px"><span>App registration Client ID (from step 1, once created)</span></div>' +
-      '<input type="text" value="' + esc(clientId) + '" placeholder="paste the Application (client) ID here" data-change-action="App.setMonitorClientId" style="width:100%;margin-bottom:6px">' +
+      '<input type="text" value="' + esc(clientId) + '" placeholder="paste the Application (client) ID here" aria-label="App registration Client ID" data-change-action="App.setMonitorClientId" style="width:100%;margin-bottom:6px">' +
       '<pre id="msGrant" style="white-space:pre-wrap;font-size:11px;background:var(--surface-2);border-radius:6px;padding:8px;margin:6px 0">' + esc(grantSnippet) + '</pre>' +
       '<button class="btn ghost sm" data-action="App.copyEl" data-id="msGrant">Copy request</button>';
 
@@ -7013,7 +7013,7 @@ function showModal(opts) {
       '</div>' +
       '<div class="card" style="max-width:720px;margin-bottom:16px">' +
       '<div class="d-kv" style="padding:0 0 10px"><span>Evidence URL (SharePoint/OneDrive link)</span></div>' +
-      '<input class="mini" id="sharedEvidenceUrlInput" style="width:100%;margin-bottom:12px" value="' + esc(currentUrl) + '" placeholder="https://…">' +
+      '<input class="mini" id="sharedEvidenceUrlInput" style="width:100%;margin-bottom:12px" value="' + esc(currentUrl) + '" placeholder="https://…" aria-label="Evidence URL (SharePoint/OneDrive link)">' +
       '<button class="btn sm" data-action="App.applySharedEvidence">Apply to all ' + closure.length + ' control' + (closure.length === 1 ? '' : 's') + '</button>' +
       '</div>' +
       byFw.map(function (g) {
@@ -9442,7 +9442,7 @@ function showModal(opts) {
       '<div id="copilotStarters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
       COPILOT_STARTERS.map(function (q) { return '<button class="btn ghost sm" data-action="App.copilotAskStarter" data-id="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') +
       '</div>' +
-      '<textarea id="copilotInput" class="mini" style="width:100%;min-height:60px;font-family:Manrope" placeholder="Ask about your compliance state…"></textarea>' +
+      '<textarea id="copilotInput" class="mini" style="width:100%;min-height:60px;font-family:Manrope" placeholder="Ask about your compliance state…" aria-label="Ask about your compliance state"></textarea>' +
       '<button class="btn sm" id="copilotSendBtn" data-action="App.copilotSend" style="margin-top:10px">Send</button>';
     renderCopilotMessages();
   }
@@ -9644,7 +9644,7 @@ function showModal(opts) {
 
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Client display name</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        '<input class="mini" id="clientDisplayNameInput" placeholder="' + esc(tenantRaw || 'e.g. Acme Group Pty Ltd') + '" value="' + esc(displayNameCurrent) + '" style="flex:1;min-width:220px">' +
+        '<input class="mini" id="clientDisplayNameInput" aria-label="Client display name" placeholder="' + esc(tenantRaw || 'e.g. Acme Group Pty Ltd') + '" value="' + esc(displayNameCurrent) + '" style="flex:1;min-width:220px">' +
         '<button class="btn ghost sm" data-action="App.setClientDisplayName">Save</button>' +
         '</div>' +
         '<p class="src" style="margin-top:6px">Shown in the top bar, Boardroom Mode and on reports in place of the raw tenant name' + (tenantRaw ? ' (currently “' + esc(tenantRaw) + '”)' : '') + '. Leave blank to use the tenant name.</p></div>' +
@@ -9669,14 +9669,14 @@ function showModal(opts) {
 
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Classification marking</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
+        '<input class="mini" id="reportClassificationInput" aria-label="Classification marking" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
         '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
         '</div>' +
         '<p class="src" style="margin-top:6px">Carried on the cover and every printed page header. Set to “OFFICIAL: Sensitive” or another marking for a defence/government client.</p></div>' +
 
         '<div><span style="' + lbl + '">Report footer text</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        '<input class="mini" id="reportFooterTextInput" placeholder="Prepared by Compliance365 for ' + esc(displayNameCurrent || tenantRaw || 'the client') + '" value="' + esc(footerTextCurrent) + '" style="flex:1;min-width:220px">' +
+        '<input class="mini" id="reportFooterTextInput" aria-label="Report footer text" placeholder="Prepared by Compliance365 for ' + esc(displayNameCurrent || tenantRaw || 'the client') + '" value="' + esc(footerTextCurrent) + '" style="flex:1;min-width:220px">' +
         '<button class="btn ghost sm" data-action="App.setReportFooterText">Save</button>' +
         '</div>' +
         '<p class="src" style="margin-top:6px">Optional line printed in the footer of every report page. Leave blank to repeat the classification marking there.</p></div>';
@@ -9723,7 +9723,7 @@ function showModal(opts) {
       digestEl.innerHTML =
         '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. There\'s no backend here to send this unattended: it\'s a nudge on load like the scan reminder above, until the scheduled monitor (SETUP.md § Continuous monitoring) is deployed to send it too.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" role="switch" aria-checked="' + (digestOnCurrent ? 'true' : 'false') + '" aria-label="Email digest enabled" data-action="App.toggleDigestEnabled"></button></div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
-        '<input class="mini" id="digestRecipientsInput" placeholder="Recipients — comma-separated" value="' + esc(digestRecipCurrent) + '" style="flex:1;min-width:220px">' +
+        '<input class="mini" id="digestRecipientsInput" aria-label="Email digest recipients" placeholder="Recipients — comma-separated" value="' + esc(digestRecipCurrent) + '" style="flex:1;min-width:220px">' +
         '<select class="mini" data-change-action="App.setDigestFrequency" aria-label="Email digest frequency">' + ['Weekly', 'Monthly'].map(function (f) { return '<option' + (digestFreqCurrent === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select>' +
         '<button class="btn ghost sm" data-action="App.saveDigestRecipients">Save recipients</button>' +
         '<button class="btn sm" data-action="App.sendDigestNow">Send digest now</button>' +
@@ -9781,7 +9781,7 @@ function showModal(opts) {
         ['Type I', 'Type II'].map(function (s) { return '<option value="' + s + '"' + (soc2TypeCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select></div>' +
         (soc2TypeCurrent === 'Type II' ? '<div class="fw-admin-row" style="margin-top:10px"><div><b>Observation period start</b><p>Posture scans before this date aren\'t counted as Type II observations. Left blank, the operating-effectiveness view falls back to the tenant\'s entire scan history, which almost always overstates the real window — set this to when observation actually began.</p></div>' +
-          '<input class="mini" type="date" value="' + esc(soc2StartCurrent) + '" data-change-action="App.setSoc2ObservationStart"></div>' : '');
+          '<input class="mini" type="date" value="' + esc(soc2StartCurrent) + '" aria-label="Observation period start" data-change-action="App.setSoc2ObservationStart"></div>' : '');
     }
 
     var threshWrap = document.getElementById('thresholdRows');
@@ -9789,7 +9789,7 @@ function showModal(opts) {
       threshWrap.innerHTML = window.THRESHOLD_DEFS.map(function (t) {
         var current = (S.settings && S.settings[t.key] !== undefined && S.settings[t.key] !== '') ? S.settings[t.key] : t.def;
         return '<div class="card fw-admin-row"><div><b>' + esc(t.label) + '</b><p>' + esc(t.desc) + '</p></div>' +
-          '<input class="mini" type="number" min="0" style="width:70px" value="' + esc(current) + '" placeholder="' + esc(t.def) + '" data-change-action="App.setThreshold" data-id="' + t.key + '"></div>';
+          '<input class="mini" type="number" min="0" style="width:70px" value="' + esc(current) + '" placeholder="' + esc(t.def) + '" aria-label="' + esc(t.label) + '" data-change-action="App.setThreshold" data-id="' + t.key + '"></div>';
       }).join('');
     }
 

@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.73.1',
+    date: '2026-09-14',
+    entries: [
+      'Every field in Settings now announces its own name to a screen reader. The threshold fields each carried a visible label beside them but were not associated with it, so the browser fell back to the example value shown in the empty field -- which for these is a number. All fifteen announced as their own default: three separate fields called "95", two called "5", two called "30". Anyone working without sight of the screen had no way to tell the MFA coverage threshold from the device encryption one. The same fault, for the same reason, affected the client display name, classification marking, report footer, digest recipients, SOC 2 observation date, evidence URL, monitor Client ID and the copilot box, each of which announced an example rather than a name.'
+    ]
+  },
+  {
     version: '1.73.0',
     date: '2026-09-14',
     entries: [
