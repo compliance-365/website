@@ -286,6 +286,55 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* The SoA's assurance roll-up. Two properties worth pinning: it must
+     RECONCILE with the Implemented tile (demonstrated + evidenced +
+     asserted + unsupported is exactly the implemented count — a
+     roll-up that disagrees with the tile above it is the "2 overdue
+     tile that opens three rows" failure this view's own comments warn
+     about), and each count must filter the table to exactly that many
+     rows, since that is the promise every other number here makes. */
+  test('the SoA assurance roll-up reconciles with the Implemented tile and filters the table', async () => {
+    /* reducedMotion, because the KPI tiles count UP to their value over
+       1200ms (countUp() in app.js) and reading one mid-animation gets a
+       number that is real but not final — the first cut of this test
+       compared a settled roll-up of 19 against a tile still passing
+       through 6. countUp() short-circuits to the exact value under
+       prefers-reduced-motion, which makes this deterministic instead of
+       racing a sleep against an easing curve. */
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.evaluate(() => window.App.go('soa'));
+    await page.waitForSelector('#soaRows tr', { timeout: 10000 });
+
+    const line = await page.$eval('#soaAssuranceLine', (el) => el.innerText);
+    const rollup = [...line.matchAll(/(\d+)\s+(demonstrated|evidenced|asserted|unsupported)/g)]
+      .reduce((a, m) => a + Number(m[1]), 0);
+    const implemented = Number((await page.$eval('#soaKpiRow', (el) => el.innerText)).split('\n')[0]);
+    assert.equal(rollup, implemented,
+      `assurance roll-up (${rollup}) must equal the Implemented tile (${implemented})`);
+
+    // "0 unsupported" renders rather than hiding: silence must not mean
+    // both "none" and "not measured" for the number an assessor asks
+    // for first.
+    assert.match(line, /unsupported/, 'the unsupported count is always shown, including at zero');
+
+    const buttons = await page.$$('#soaAssuranceLine button');
+    assert.ok(buttons.length > 0, 'expected at least one filterable assurance count in demo mode');
+    const label = await buttons[buttons.length - 1].innerText();
+    const expected = parseInt(label, 10);
+    await buttons[buttons.length - 1].click();
+    await page.waitForTimeout(700);
+    const rows = await page.$$eval('#soaRows tr', (els) =>
+      els.filter((r) => r.querySelector('td') && !r.querySelector('td[colspan]')).length);
+    assert.equal(rows, expected, `clicking "${label}" should open exactly ${expected} rows, got ${rows}`);
+
+    assert.deepEqual(errors, [], 'no console errors driving the assurance roll-up');
+    await context.close();
+  });
+
   /* The Financial risk view, end to end. Two of the things this guards
      are invisible to a unit test: that re-rendering the view produces
      the SAME figures (the whole point of seeding from the register's

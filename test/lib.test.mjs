@@ -2755,3 +2755,59 @@ describe('samplePoisson() — the frequency a practitioner can now type in', () 
     assert.ok(Math.abs(sum / 200000 - 12) < 0.1, 'mean must still equal lambda at the top of the band');
   });
 });
+
+describe('loss summaries accept typed arrays — the simulator now returns them', () => {
+  // simulateRiskLosses/simulatePortfolioLosses return Float64Array,
+  // because a typed-array sort needs no (a,b)=>a-b comparator and the
+  // per-risk table sorts once PER RISK (195ms -> 63ms at 80 risks).
+  //
+  // Array.isArray() is FALSE for a Float64Array. The guards in these
+  // two functions used it, so the first cut of that change discarded
+  // every typed array and returned the all-zero summary — every
+  // financial figure in the app silently reading $0, with nothing
+  // thrown. These pin the array-likeness that prevents it.
+  test('the simulator returns typed arrays', () => {
+    const r = simulatePortfolioLosses([{ id: 'R1', L: 3, I: 3 }], 200, 7);
+    assert.ok(r.portfolioTotals instanceof Float64Array);
+    assert.ok(r.perRisk[0].losses instanceof Float64Array);
+    assert.ok(simulateRiskLosses(riskFinancialInputs(3, 3), 100, 1) instanceof Float64Array);
+  });
+
+  test('summarizeLossDistribution reads a Float64Array, not an all-zero summary', () => {
+    const s = summarizeLossDistribution(Float64Array.from([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]));
+    assert.equal(s.count, 10);
+    assert.equal(s.mean, 55);
+    assert.equal(s.max, 100);
+  });
+
+  test('a typed array and the equivalent plain array summarise identically', () => {
+    const plain = [7, 3, 91, 44, 12, 88, 5, 63, 21, 30];
+    assert.deepEqual(summarizeLossDistribution(Float64Array.from(plain)), summarizeLossDistribution(plain));
+  });
+
+  test('lossExceedanceCurve reads a Float64Array too', () => {
+    const plain = [10, 20, 30, 40, 50];
+    const curve = lossExceedanceCurve(Float64Array.from(plain), 6);
+    assert.equal(curve.length, 6);
+    assert.deepEqual(curve, lossExceedanceCurve(plain, 6));
+  });
+
+  test('empty and non-array inputs still return the honest zero/empty answer', () => {
+    assert.equal(summarizeLossDistribution(new Float64Array(0)).count, 0);
+    assert.equal(summarizeLossDistribution([]).count, 0);
+    assert.equal(summarizeLossDistribution(null).count, 0);
+    assert.equal(summarizeLossDistribution(undefined).count, 0);
+    assert.deepEqual(lossExceedanceCurve(new Float64Array(0), 10), []);
+    assert.deepEqual(lossExceedanceCurve(null, 10), []);
+  });
+
+  test('summarising does not reorder the caller\'s array', () => {
+    // Both functions sort a COPY. Reordering a result the caller still
+    // holds a reference to would be a nasty surprise, and the per-risk
+    // loop summarises arrays the portfolio result still owns.
+    const arr = Float64Array.from([50, 10, 30]);
+    summarizeLossDistribution(arr);
+    lossExceedanceCurve(arr, 5);
+    assert.deepEqual(Array.from(arr), [50, 10, 30]);
+  });
+});
