@@ -18,7 +18,7 @@ const { band, residual, residualAcceptanceStale, checkResult, score, readinessPc
   fingerprintFromRows, remediationVelocityProjection,
   weeklyActivityGrid, riskBubblePoint, riskBubbleLayout,
   relLuminance, contrastRatio, compositeOverBg, pickReadableRgb,
-  mulberry32, sampleTriangular, samplePoisson, riskFinancialInputs,
+  mulberry32, portfolioSeed, POISSON_LAMBDA_CAP, sampleTriangular, samplePoisson, riskFinancialInputs,
   simulateRiskLosses, simulatePortfolioLosses, summarizeLossDistribution,
   lossExceedanceCurve, RISK_FINANCIAL_BANDS,
   classifyAiActRisk, AI_ACT_QUESTIONS } = CheckpointLib;
@@ -1597,7 +1597,7 @@ describe('summarizeLossDistribution()', () => {
   });
   test('an empty array returns an honest all-zero summary, not NaN', () => {
     var s = summarizeLossDistribution([]);
-    assert.deepEqual(s, { mean: 0, median: 0, p10: 0, p90: 0, p95: 0, p99: 0, min: 0, max: 0, count: 0 });
+    assert.deepEqual(s, { mean: 0, median: 0, p10: 0, p90: 0, p95: 0, p99: 0, es95: 0, es99: 0, min: 0, max: 0, count: 0 });
   });
   test('a fixed, hand-computed fixture matches exactly (nearest-rank percentiles)', () => {
     var s = summarizeLossDistribution([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
@@ -2603,5 +2603,155 @@ describe('mfaRegistrationResult() — could these people actually complete MFA',
     const r = mfaRegistrationResult([{ userPrincipalName: 'a@x' }], 95);
     assert.equal(r.result, 'fail');
     assert.deepEqual(r.gaps, ['a@x']);
+  });
+});
+
+describe('expected shortfall — a tail number that converges', () => {
+  const PORTFOLIO = [
+    { id: 'R1', L: 4, I: 4 }, { id: 'R2', L: 3, I: 5 }, { id: 'R3', L: 4, I: 3 },
+    { id: 'R4', L: 3, I: 4 }, { id: 'R5', L: 3, I: 4 }, { id: 'R6', L: 2, I: 3 }, { id: 'R7', L: 4, I: 2 }
+  ];
+  const at = (trials) => summarizeLossDistribution(simulatePortfolioLosses(PORTFOLIO, trials, 4242).portfolioTotals);
+
+  test('es99 is the mean of the worst 1% of years, not the value at that percentile', () => {
+    // Hand-checkable: 100 trials of 1..100. The worst 1% is the single
+    // largest (100); es95 averages the worst 5 (96..100 -> 98).
+    const losses = Array.from({ length: 100 }, (_, i) => i + 1);
+    const s = summarizeLossDistribution(losses);
+    assert.equal(s.es99, 100);
+    assert.equal(s.es95, 98);
+  });
+
+  test('expected shortfall is at least the percentile it sits beyond', () => {
+    const s = at(20000);
+    assert.ok(s.es99 >= s.p99, 'es99 must be >= p99 — it averages the tail past it');
+    assert.ok(s.es95 >= s.p95, 'es95 must be >= p95');
+    assert.ok(s.es99 >= s.es95, 'a deeper tail cannot average lower');
+  });
+
+  test('es99 is stable run to run, where max is not', () => {
+    // This is the whole reason the KPI changed, stated as the problem
+    // a user actually saw: reopening the view produced a different
+    // "worst simulated year" for an unchanged register.
+    //
+    // Measured across INDEPENDENT seeds, not nested trial counts —
+    // a 100,000-trial run with the same seed shares its first 10,000
+    // trials with a 10,000-trial one, so comparing the two measures
+    // almost nothing (the max is usually in the shared prefix, and the
+    // drift reads as a flat 0%). Independent runs are also what the UI
+    // actually does.
+    // 16 seeds rather than a handful: the spread of a MAXIMUM is itself
+    // noisy, so too few runs understates exactly the instability being
+    // demonstrated and leaves the assertion sitting near its threshold.
+    // Measured across twelve different seed-sets, the ratio below never
+    // fell under 3.1x, so the 2x bar has real headroom rather than
+    // passing by luck.
+    const seeds = [11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121, 132, 143, 154, 165, 176];
+    const runs = seeds.map((sd) => summarizeLossDistribution(simulatePortfolioLosses(PORTFOLIO, 10000, sd).portfolioTotals));
+    const spread = (k) => {
+      const v = runs.map((r) => r[k]).sort((a, b) => a - b);
+      return (v[v.length - 1] - v[0]) / v[Math.floor(v.length / 2)];
+    };
+    const esSpread = spread('es99'), maxSpread = spread('max');
+    assert.ok(esSpread < 0.12, `es99 should barely move between runs, spread ${(esSpread * 100).toFixed(1)}%`);
+    assert.ok(maxSpread > esSpread * 2,
+      `max should be far less stable than es99 (max ${(maxSpread * 100).toFixed(1)}%, es99 ${(esSpread * 100).toFixed(1)}%)`);
+  });
+
+  test('es99 settles as trials grow, on independent trial sets', () => {
+    // The convergence claim itself, with the nesting removed by giving
+    // each trial count its own seed.
+    const a = summarizeLossDistribution(simulatePortfolioLosses(PORTFOLIO, 20000, 101).portfolioTotals);
+    const b = summarizeLossDistribution(simulatePortfolioLosses(PORTFOLIO, 200000, 202).portfolioTotals);
+    const drift = Math.abs(b.es99 - a.es99) / a.es99;
+    assert.ok(drift < 0.1, `es99 should settle across a 10x trial increase, drifted ${(drift * 100).toFixed(1)}%`);
+  });
+
+  test('an all-zero trial set reports zero rather than dividing by an empty tail', () => {
+    const s = summarizeLossDistribution([0, 0, 0, 0]);
+    assert.equal(s.es99, 0);
+    assert.equal(s.es95, 0);
+  });
+
+  test('a single trial is its own tail', () => {
+    const s = summarizeLossDistribution([500]);
+    assert.equal(s.es99, 500);
+    assert.equal(s.es95, 500);
+  });
+
+  test('an empty trial set returns zeroes, not NaN', () => {
+    const s = summarizeLossDistribution([]);
+    assert.equal(s.es99, 0);
+    assert.equal(s.es95, 0);
+    assert.equal(s.count, 0);
+  });
+});
+
+describe('portfolioSeed() — the same register simulates to the same figures', () => {
+  const risks = [{ id: 'R1', L: 4, I: 4 }, { id: 'R2', L: 3, I: 5 }];
+
+  test('identical registers produce an identical seed', () => {
+    assert.equal(portfolioSeed(risks), portfolioSeed([{ id: 'R1', L: 4, I: 4 }, { id: 'R2', L: 3, I: 5 }]));
+  });
+
+  test('register ORDER does not change the seed', () => {
+    // Sorting the register in the UI must not move the board's numbers.
+    assert.equal(portfolioSeed(risks), portfolioSeed(risks.slice().reverse()));
+  });
+
+  test('re-scoring a risk moves the seed', () => {
+    assert.notEqual(portfolioSeed(risks), portfolioSeed([{ id: 'R1', L: 5, I: 4 }, { id: 'R2', L: 3, I: 5 }]));
+  });
+
+  test('adding or removing a risk moves the seed', () => {
+    assert.notEqual(portfolioSeed(risks), portfolioSeed(risks.concat([{ id: 'R3', L: 1, I: 1 }])));
+    assert.notEqual(portfolioSeed(risks), portfolioSeed([risks[0]]));
+  });
+
+  test('changing an override moves the seed', () => {
+    const a = [{ id: 'R1', L: 4, I: 4, overrides: { lossLikely: 50000 } }];
+    const b = [{ id: 'R1', L: 4, I: 4, overrides: { lossLikely: 60000 } }];
+    assert.notEqual(portfolioSeed(a), portfolioSeed(b));
+  });
+
+  test('an override set to the same value as no override still differs from none', () => {
+    // The seed only has to be STABLE and to move on change; it does not
+    // have to model equivalence. Pinning it so the intent is explicit.
+    assert.notEqual(portfolioSeed([{ id: 'R1', L: 4, I: 4 }]), portfolioSeed([{ id: 'R1', L: 4, I: 4, overrides: { lossMin: 1000 } }]));
+  });
+
+  test('the same register simulates to identical figures twice running', () => {
+    const seed = portfolioSeed(risks);
+    const a = summarizeLossDistribution(simulatePortfolioLosses(risks, 2000, seed).portfolioTotals);
+    const b = summarizeLossDistribution(simulatePortfolioLosses(risks, 2000, seed).portfolioTotals);
+    assert.deepEqual(a, b);
+  });
+
+  test('an empty register returns a usable non-zero seed', () => {
+    assert.ok(portfolioSeed([]) > 0);
+    assert.ok(portfolioSeed(null) > 0);
+  });
+});
+
+describe('samplePoisson() — the frequency a practitioner can now type in', () => {
+  test('a lambda past the cap terminates instead of hanging', () => {
+    // Knuth's method multiplies uniforms until the product drops below
+    // exp(-lambda). Past ~745 that threshold underflows to exactly 0
+    // and no product of positive uniforms ever reaches it — an
+    // infinite loop, not a slow one. Unreachable while the bands
+    // capped at 12; reachable the moment overrides became settable.
+    const rand = mulberry32(1);
+    const k = samplePoisson(5000, rand);
+    assert.ok(Number.isFinite(k) && k > 0, 'must return a finite draw');
+    assert.ok(k < 5000, 'capped, so the draw reflects the cap not the input');
+  });
+
+  test('the cap leaves the whole default band range untouched', () => {
+    // The highest default frequency band is 12 events/year.
+    assert.ok(POISSON_LAMBDA_CAP > 12 * 50);
+    const rand = mulberry32(9);
+    let sum = 0;
+    for (let i = 0; i < 200000; i++) sum += samplePoisson(12, rand);
+    assert.ok(Math.abs(sum / 200000 - 12) < 0.1, 'mean must still equal lambda at the top of the band');
   });
 });

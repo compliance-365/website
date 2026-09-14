@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.71.0',
+    date: '2026-09-14',
+    entries: [
+      'The Financial risk analysis view now gives the same answer twice. It used to re-seed its simulation from the clock on every render, so the figures moved a little each time you opened it -- and the board report, which seeded separately, disagreed with the screen for a register that had not changed at all. The simulation is now seeded from the risk register\'s own contents, so the numbers move when the risks move and not otherwise. The same register always produces the same board pack.',
+      'Replaced the "Worst simulated year" tile with expected shortfall -- the average of the worst 1-in-100 years. The old tile showed the single worst trial, which is a fact about how many times the simulation rolled the dice rather than anything about your risk: it grew every time the trial count did, and moved by roughly a third between two page loads. Expected shortfall answers the same question, settles on a stable figure, and is the measure financial regulators moved to for the same reason.',
+      'Each risk\'s loss and frequency assumptions can now be edited. Until now every figure in the view came from one generic table mapping likelihood and impact scores to illustrative dollar ranges -- fine as a starting point, but there was no way to enter a real number where you had one. Any of the six inputs can be set per risk, blank fields keep the default band, and the ranking table marks which risks are running on your own figures rather than the defaults.',
+      'Exposure is now tracked over time. Every posture scan records the simulated annual loss alongside the score, and the view charts it -- so you can show a board that remediation moved the number, in money, rather than only that a control went green. This was only worth doing once the simulation stopped drifting between runs: trending a figure that wobbled on every render would have shown noise as progress. Scans from before this release are left out of the line rather than drawn as zero.',
+      'Fixed a latent hang: a frequency above roughly 745 events per year would have locked the browser tab in the simulation loop. It was unreachable while the ranges were fixed, and reachable the moment you could type one in, so it is now capped -- with a note if you enter something above it.'
+    ]
+  },
+  {
     version: '1.70.0',
     date: '2026-09-14',
     entries: [
