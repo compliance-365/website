@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.75.0',
+    date: '2026-09-15',
+    entries: [
+      'A new Control Testing & Independent Assurance Policy. ISO 27001\'s A.5.35 -- independent review of information security -- had no template behind it, which is a gap in its own right for anyone heading into certification, and it also left six CPS 234 paragraphs with nothing to evidence them. The policy sets out how control effectiveness is tested, that testers must be functionally independent of the function owning the control (a separate reporting line, not a separate employer), how a supplier\'s own test report is assessed before it is relied on, and that a deficiency which cannot be fixed in time is escalated to the Board whatever its severity. Five of the six paragraphs are now covered.',
+      'The Incident Response Plan now treats external notification as something you work out before an incident, not during one. It asks for every notification obligation to be listed in the plan in advance with its recipient, its trigger and its deadline, and states that a fixed deadline runs from the point of becoming aware -- not from confirmation or the end of an investigation. A second statement covers the obligation, separate from any incident, to report a material control weakness the organisation does not expect to fix in time; that one is triggered by the weakness rather than by an event, so a plan built entirely around incidents never fires it. The obligations render from your own declared regulatory context, so an APRA-regulated client sees APRA named while an ISO-only client is not made to commit to a prudential deadline that does not apply to it.'
+    ]
+  },
+  {
     version: '1.74.0',
     date: '2026-09-15',
     entries: [

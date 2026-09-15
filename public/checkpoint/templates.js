@@ -306,7 +306,8 @@ window.POLICY_TEMPLATES = [
       'You clicked a link and entered your password, and realised twenty minutes later. Report it now. That is usually well inside the window where resetting the password and revoking sessions ends the whole thing.',
       'You sent a file to the wrong external recipient. Report it and preserve the evidence — do not delete the sent message, because it is what the assessment is based on.',
       'Something feels off but you cannot say why, and you do not want to waste anyone\'s time. Report it anyway. Pattern-spotting across several vague reports is how real intrusions get found.',
-      'It is Friday evening. Report it anyway rather than letting a weekend pass on a suspected compromise.'
+      'It is Friday evening. Report it anyway rather than letting a weekend pass on a suspected compromise.',
+      'You are asked whether something is "material" before anyone notifies a regulator. Flag it up rather than settling it alone — several regimes start their clock at the point someone became aware, and some are triggered by an incident being reported to any other regulator anywhere, which is not a judgement any one person makes off the cuff.'
     ],
     policyStatements: [
       {
@@ -330,6 +331,14 @@ window.POLICY_TEMPLATES = [
         because: 'Notification clocks start at suspicion rather than confirmation, so time spent deciding whether to start the assessment is time already on the clock.'
       },
       {
+        rule: 'Every external notification obligation the organisation is subject to is identified in this plan before an incident occurs, recording for each one its recipient, its trigger and its deadline. The obligations that apply here arise under: {{regulatory}}. Where an obligation sets a fixed deadline, that deadline runs from the point of becoming aware, not from confirmation, classification or the completion of any investigation.',
+        because: 'The shortest of these deadlines is routinely measured in hours, and an organisation discovering mid-incident which regulator it owes what has already spent the part of the window that mattered. Recording them in advance turns a research task into a lookup.'
+      },
+      {
+        rule: 'A material information security control weakness the organisation expects it will not be able to remediate in a timely manner is notified to the relevant regulator on its own deadline, independently of whether any incident has occurred.',
+        because: 'This obligation is triggered by an unfixable weakness rather than by an event, so a plan organised entirely around incidents will never fire it — which is precisely why it is the one most often missed.'
+      },
+      {
         rule: 'Every incident is reviewed after closure, with lessons recorded and corrective actions raised where a control failed.',
         because: 'An incident that produces no change is one the organisation has paid for and learned nothing from.'
       }
@@ -345,11 +354,11 @@ window.POLICY_TEMPLATES = [
       },
       {
         role: 'ISMS manager',
-        responsibility: 'Maintains this plan, triages incoming reports, assesses breach-notification obligations, and tracks corrective actions to closure.'
+        responsibility: 'Maintains this plan and the list of external notification obligations within it, triages incoming reports, assesses breach-notification obligations, and tracks corrective actions to closure.'
       },
       {
         role: 'Executive sponsor',
-        responsibility: 'Decides on external communication, regulatory notification and any material business decision arising from an incident.'
+        responsibility: 'Decides on external communication and any material business decision arising from an incident, and is accountable for each regulatory notification being made within its own deadline.'
       }
     ],
     exceptions: 'There are no exceptions to the reporting requirement. Where containment would cause greater harm than the incident itself — for example taking a safety-critical system offline — the incident owner may defer containment with the executive sponsor\'s agreement, recording the decision and its reasoning at the time.',
@@ -369,7 +378,17 @@ window.POLICY_TEMPLATES = [
        evidence), and "Every incident is reviewed after closure, with
        lessons recorded and corrective actions raised" is A.5.27
        (learning from incidents). */
-    controls: ['A.5.24', 'A.5.25', 'A.5.26', 'A.5.27', 'A.5.28', 'A.6.8', 'CPS234.23', 'CPS234.24', 'CPS234.25', 'CPS234.26'],
+    /* A.5.5 (contact with authorities) and CPS234.35/.36 added with the
+       two notification statements above. The deadlines themselves are
+       deliberately NOT written into the statements: this template is
+       shared by every framework, and hard-coding "72 hours" would have
+       an ISO-only client committing to a prudential deadline that does
+       not apply to them. {{regulatory}} renders the tenant's own
+       declared obligations instead, so an APRA-regulated client sees
+       APRA named and everyone else sees their own regime. The specific
+       clocks live in the CPS 234 pack's guidance, which is where
+       framework-specific numbers belong. */
+    controls: ['A.5.5', 'A.5.24', 'A.5.25', 'A.5.26', 'A.5.27', 'A.5.28', 'A.6.8', 'CPS234.23', 'CPS234.24', 'CPS234.25', 'CPS234.26', 'CPS234.35', 'CPS234.36'],
     frameworks: ['iso27001', 'iso27701', 'nistcsf', 'dispirap', 'cps234']
   },
   {
@@ -1287,6 +1306,82 @@ window.POLICY_TEMPLATES = [
        environmental threats), not just a paraphrase of A.7.1/A.7.2/A.7.7. */
     controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.5', 'A.7.7'],
     frameworks: ['iso27001', 'iso27701', 'dispirap']
+  },
+  {
+    id: 'control-testing-policy',
+    title: 'Control Testing & Independent Assurance Policy',
+    purpose: 'This policy establishes how the effectiveness of information security controls is tested, who may perform that testing, and how deficiencies are escalated — so that the organisation\u2019s view of its own control environment rests on evidence rather than on the assumption that a control still works because it once did.',
+    scope: 'Applies to every information security control the organisation relies on, whether operated internally or by a related or third party, and to every person or firm engaged to test or provide assurance over those controls.',
+    whyItMatters: 'A control nobody tests is a control nobody can vouch for. This policy exists because the gap between "we implemented that" and "that still works" is where most audit findings live, and it is rarely closed by the team that owns the control noticing the problem themselves.\n\nThe part that affects you directly is independence. If you own a control, you are not the right person to sign off that it is effective — not because your judgement is doubted, but because nobody is well placed to find the gaps in something they built. Expect to be asked for evidence by someone outside your reporting line, and expect that to be routine rather than an accusation.',
+    inPractice: [
+      'A test finds a deficiency in a control you own. The finding is the policy working, not a failure on your part. What matters next is whether it can be remediated in time — and if it cannot, it gets escalated rather than quietly carried.',
+      'You are asked to test a control your own team operates. Say so. The testing needs someone whose reporting line is separate, and a test run by the control owner does not satisfy this policy even when it is done well.',
+      'A supplier offers their own test report as evidence. It can be used, but it is assessed for whether its scope and frequency are adequate before it is relied on — accepting the report as-is is the gap this policy is written to prevent.',
+      'The testing program has not changed in two years while the business has. That is itself a finding: the program\u2019s sufficiency is reviewed on its own cycle, separately from running the tests in it.'
+    ],
+    policyStatements: [
+      {
+        rule: 'Control effectiveness is tested through a documented, systematic program rather than ad hoc exercises, with the nature and frequency of testing set against the rate of change in threats, the criticality and sensitivity of the assets protected, the consequences of an incident, the risk arising from environments where the organisation cannot enforce its own policies, and the materiality and frequency of change to the assets themselves.',
+        because: 'A schedule assembled from whatever was tested last year describes the organisation\u2019s habits rather than its risk, and an annual penetration test on its own leaves everything it did not cover untested indefinitely.'
+      },
+      {
+        rule: 'Testing is performed by personnel who are appropriately skilled and functionally independent of the function that owns the control under test; an internal team qualifies where its reporting line is genuinely separate from that function.',
+        because: 'Independence is about the reporting line, not the employment contract — a tester who ultimately answers to the control owner is being asked to report on their own manager.'
+      },
+      {
+        rule: 'Where the organisation relies on a related or third party\u2019s own control testing, the adequacy of that testing is assessed against the same factors before it is relied upon, and the assessment is recorded.',
+        because: 'A supplier\u2019s report describes what the supplier chose to test; relying on it without checking that scope against the organisation\u2019s own risk transfers the judgement without transferring the accountability.'
+      },
+      {
+        rule: 'Any testing result identifying a control deficiency that cannot be remediated in a timely manner is escalated and reported to the Board or senior management, whatever the assessed severity of the deficiency.',
+        because: 'The trigger is that the deficiency will persist, not that it is severe — a minor weakness nobody can close is a standing exposure, and severity-based escalation is exactly how those stay invisible.'
+      },
+      {
+        rule: 'The sufficiency of the testing program itself is reviewed at least annually, and on material change to the organisation\u2019s information assets or business environment.',
+        because: 'Reviewing the programme is a different exercise from running the tests in it; a programme that is executed faithfully can still be aimed at last year\u2019s environment.'
+      },
+      {
+        rule: 'Assurance over information security controls is provided by personnel with demonstrable skill in the area being assured, and specialist capability is co-sourced where it is not available internally.',
+        because: 'An assurance opinion is only worth the expertise behind it, and a generalist review of a specialist control produces a clean report that means very little.'
+      }
+    ],
+    roles: [
+      {
+        role: 'Control owner',
+        responsibility: 'Maintains the control, supplies evidence to testers on request, and remediates deficiencies raised against it — but does not test or sign off the effectiveness of a control they own.'
+      },
+      {
+        role: 'ISMS manager',
+        responsibility: 'Maintains the testing program and its schedule, assesses the adequacy of third-party test reports before they are relied on, and tracks deficiencies through to closure.'
+      },
+      {
+        role: 'Independent tester or assurance provider',
+        responsibility: 'Performs testing to the agreed scope, reports findings without filtering by expected reception, and states plainly where scope or access prevented a conclusion.'
+      },
+      {
+        role: 'Executive sponsor',
+        responsibility: 'Receives escalated deficiencies that cannot be remediated in time, approves the annual review of the testing program, and authorises co-sourcing where internal capability is insufficient.'
+      }
+    ],
+    exceptions: 'A control may be excluded from a testing cycle where testing would itself create unacceptable risk — for example a destructive test against a safety-critical system — provided the exclusion, its reasoning and the compensating assurance relied on instead are recorded at the time and reviewed at the next program review. Lack of time or resource is not an exception; it is a deficiency, and is escalated as one.',
+    nonCompliance: 'Signing off the effectiveness of a control one owns, or reporting a test as passed without performing it, undermines every downstream statement the organisation makes about its control environment and is treated as a serious matter. Reporting that a test could not be completed, or that its result was inconclusive, is not: an honest gap is usable and a false pass is not.',
+    relatedDocuments: [
+      'Information Security Policy',
+      'Risk Management Framework',
+      'Supplier Security Policy',
+      'Information Security Objectives & Metrics'
+    ],
+    reviewCadence: 'Annually, and on material change to the organisation\u2019s information assets or business environment.',
+    /* A.5.35 (independent review of information security) had no
+       template at all before this one, which also left six CPS 234
+       paragraphs with no documented home. Five are claimed here.
+       CPS234.32 is not: it obliges INTERNAL AUDIT\u2019s own activities to
+       cover control design and operating effectiveness, which is a
+       statement about audit coverage rather than a rule this policy
+       can carry \u2014 see CPS234_NOT_A_DOCUMENT_CLAIM in
+       test/content-library.test.mjs. */
+    controls: ['A.5.35', 'CPS234.27', 'CPS234.29', 'CPS234.30', 'CPS234.31', 'CPS234.33'],
+    frameworks: ['iso27001', 'soc2', 'nistcsf', 'cps234']
   },
   {
     id: 'isms-scope',

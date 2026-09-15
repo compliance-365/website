@@ -160,11 +160,24 @@ describe('policy template library — the reader-facing rewrite', () => {
    produced the mapping (template documents A.5.22 + CPS234.34 rests on
    A.5.22, therefore template evidences CPS234.34) reaches every one of
    these and is wrong every time. Whoever re-runs that join later needs
-   to fail this test rather than rediscover the argument. */
+   to fail this test rather than rediscover the argument.
+
+   CPS234.30 was on this list and should not have been. It requires
+   testing to be performed by skilled, functionally independent
+   specialists — and the standard's own guidance settles it: "an
+   internal team can qualify if the reporting line is genuinely
+   separate". That is a rule about who may perform testing, which is
+   exactly what a policy states. The original entry confused a property
+   of the activity with something unstateable as a rule. It is now
+   claimed by the Control Testing & Independent Assurance Policy.
+
+   The reasons below are not all the same shape, and that is deliberate:
+   .34 and .32 name a party whose ACTIVITY the paragraph obliges, while
+   .17 is one Checkpoint evidences better by observation than by prose.
+   Either way no template may claim them. */
 const CPS234_NOT_A_DOCUMENT_CLAIM = {
-  'CPS234.34': 'obliges INTERNAL AUDIT to assess a third party\'s assurance, under two conditions that must both hold — a supplier policy is not that assessment',
+  'CPS234.34': 'obliges INTERNAL AUDIT to assess a third party\'s assurance, under two conditions that must both hold — no policy document is that assessment',
   'CPS234.32': 'internal audit reviews control design and operating effectiveness — an audit activity, not a documented rule',
-  'CPS234.30': 'testing performed by skilled, functionally INDEPENDENT specialists — a property of who runs the test',
   'CPS234.17': 'capability ACTIVELY maintained as threats change — evidenced by scan drift and the threat intel view, not by prose'
 };
 
