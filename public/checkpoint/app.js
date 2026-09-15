@@ -8953,10 +8953,20 @@ function showModal(opts) {
       el.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">No current advisories in the tracked vendor list.</div>';
       return;
     }
+    /* Says in words what the re-sort actually did — without this, a
+       tick that matches nothing renders an identical list and reads as
+       a broken checkbox. See threatIntelMatchSummary()'s comment. */
+    var summary = window.CheckpointLib.threatIntelMatchSummary(ranked, {
+      hasStack: !!(stackTags && stackTags.length),
+      hasIndustry: !!industryId
+    });
+    var summaryHtml = (summary && summary.message)
+      ? '<div class="card" style="margin-bottom:10px;font-size:12.5px;color:var(--paper-dim)">' + esc(summary.message) + '</div>'
+      : '';
     var noteHtml = isSample
       ? '<div class="chip st-Intreatment" style="margin-bottom:10px">Sample data — demo mode. A live tenant shows the actual current feed.</div>'
       : '<p style="font-size:11.5px;color:var(--paper-faint);margin:0 0 10px">' + (updatedAt ? 'Feed updated ' + esc(String(updatedAt).slice(0, 10)) + ' · ' : '') + 'Source: CISA Known Exploited Vulnerabilities catalog</p>';
-    el.innerHTML = noteHtml + ranked.map(function (item) {
+    el.innerHTML = noteHtml + summaryHtml + ranked.map(function (item) {
       var badges = (item.matchedStack || item.matchedIndustry ? '<span class="chip st-Implemented" style="margin-right:6px">Relevant to you</span>' : '') +
         (item.knownRansomwareUse ? '<span class="chip sev-Critical" style="margin-right:6px">Known ransomware use</span>' : '');
       return '<div class="card" style="margin-bottom:10px">' +
