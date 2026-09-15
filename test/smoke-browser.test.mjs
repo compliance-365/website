@@ -514,6 +514,78 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     assert.deepEqual(errors, [], 'no console errors while walking views for accessible names');
     await context.close();
   });
+
+  /* The threat-intel stack picker shipped for months unable to select
+     'microsoft' or 'browser' at all — no checkbox named either tag,
+     though the feed Lambda emits both (11 and 2 of 40 items in a live
+     feed measured 2026-09-15). Ticking one of the options that DID
+     exist usually matched nothing, so the list re-rendered identically
+     and the whole panel read as broken.
+
+     test/threat-intel-vocabulary.test.mjs holds the three files to one
+     shared vocabulary, which is the durable guard. This one is the far
+     end of the same wire: that a real click in a real browser visibly
+     reorders the list, and that when it cannot, the panel says so
+     instead of going quiet. Demo mode's four fixed items make both
+     outcomes exact rather than dependent on what CISA published today. */
+  test('ticking a tech-stack option visibly re-sorts the threat intel list', async () => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
+    await page.click('.nav-item[data-v="threatintel"]');
+    await page.waitForSelector('#tiListWrap .card b', { timeout: 10000 });
+
+    const firstVendor = () => page.$eval('#tiListWrap .card b', (el) => el.textContent.trim());
+
+    // The regression itself: 'microsoft' is emitted by the feed and is
+    // the one thing every Checkpoint tenant runs, yet had no checkbox.
+    const msBox = '[data-change-action="App.toggleThreatIntelStack"][data-id="microsoft-estate"]';
+    assert.ok(await page.$(msBox), 'expected a tech-stack option selecting the "microsoft" tag');
+    assert.ok(await page.$('[data-change-action="App.toggleThreatIntelStack"][data-id="browser"]'),
+      'expected a tech-stack option selecting the "browser" tag');
+
+    // Demo mode's only Microsoft item is also its OLDEST, so date order
+    // alone can never put it first — if it moves up, the stack sort did it.
+    const before = await firstVendor();
+    assert.ok(!/Microsoft/i.test(before), 'expected the Microsoft item not to lead before any stack is declared, got: ' + before);
+
+    await page.check(msBox);
+    await page.waitForFunction((prev) => {
+      const el = document.querySelector('#tiListWrap .card b');
+      return el && el.textContent.trim() !== prev;
+    }, before, { timeout: 5000 });
+    const after = await firstVendor();
+    assert.match(after, /Microsoft/i, 'ticking the Microsoft option should sort its advisory to the top, got: ' + after);
+
+    assert.deepEqual(errors, [], 'no console errors re-sorting the threat intel list');
+    await context.close();
+  });
+
+  test('a tech-stack option that matches nothing says so rather than looking inert', async () => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
+    await page.click('.nav-item[data-v="threatintel"]');
+    await page.waitForSelector('#tiListWrap .card', { timeout: 10000 });
+
+    /* Nothing in demo mode is tagged 'ics-ot', so the list cannot
+       change — exactly the case that was reported as broken. The panel
+       must account for it in words. */
+    await page.check('[data-change-action="App.toggleThreatIntelStack"][data-id="ics-ot"]');
+    await page.waitForFunction(
+      () => /technology you have ticked/.test(document.getElementById('tiListWrap').textContent),
+      null, { timeout: 5000 });
+    const text = await page.$eval('#tiListWrap', (el) => el.textContent);
+    assert.match(text, /technology you have ticked/,
+      'a zero-match selection should be stated, not rendered as an unchanged list');
+
+    assert.deepEqual(errors, [], 'no console errors on a zero-match selection');
+    await context.close();
+  });
 });
 
 /* A failed chromium.launch() (the skip path above) can leave Playwright's
