@@ -72,14 +72,29 @@ const VENDOR_ALLOWLIST = [
    than one tag, since lib.js's rankThreatIntelItems() (browser side)
    only cares whether ANY tag matches a tenant's declared stack or
    industry, not which. */
-const TAG_RULES = [
+/* Exported so test/threat-intel-lambda.test.mjs can enumerate the tags
+   and assert each one is actually reachable from a vendor/product
+   string as CISA really writes it. A rule whose match terms never fire
+   is invisible otherwise: it costs nothing, throws nothing, and simply
+   stops a whole category of advisory from ever being marked relevant. */
+export const TAG_RULES = [
   { tag: 'microsoft', match: ['microsoft'] },
-  { tag: 'identity', match: ['active directory', 'ad fs', 'adfs', 'identity', 'okta', 'duo ', 'ping identity'] },
+  /* 'entra' and 'azure ad' are both here because Microsoft renamed
+     Azure AD to Entra ID in 2023 and CISA writes whichever name the
+     advisory used — an entry for Entra ID matched none of the original
+     terms, so cloud identity tagged as 'microsoft' alone while the
+     on-premises equivalent tagged 'identity' too. */
+  { tag: 'identity', match: ['active directory', 'ad fs', 'adfs', 'identity', 'entra', 'azure ad', 'okta', 'duo ', 'ping identity'] },
   { tag: 'network-edge', match: ['cisco', 'fortinet', 'ivanti', 'citrix', 'palo alto', 'sonicwall', 'f5', 'juniper', 'check point', 'barracuda', 'watchguard', 'sophos', 'pulse secure', 'zyxel', 'draytek', 'd-link'] },
   { tag: 'virtualization', match: ['vmware', 'hyper-v', 'hypervisor', 'esxi', 'nutanix'] },
   { tag: 'ics-ot', match: ['schneider electric', 'siemens', 'rockwell automation', 'honeywell', 'mitsubishi electric', 'delta electronics', 'moxa'] },
   { tag: 'storage-nas', match: ['qnap', 'synology', 'netgear'] },
-  { tag: 'browser', match: ['chrome', 'firefox', 'safari', 'edge browser'] },
+  /* 'chromium' as well as 'chrome': CISA files these as "Google /
+     Chromium V8", and "chromium" does not contain the substring
+     "chrome". Every Chromium entry in the catalogue therefore fell
+     through to 'general' and this rule matched nothing at all, which
+     cost the three industry profiles that list 'browser'. */
+  { tag: 'browser', match: ['chrome', 'chromium', 'firefox', 'safari', 'edge browser'] },
   { tag: 'collaboration', match: ['atlassian', 'confluence', 'jira', 'zimbra'] },
   { tag: 'file-transfer', match: ['progress software', 'moveit', 'fortra', 'goanywhere', 'accellion'] }
 ];
