@@ -6,7 +6,7 @@
 // input can all be asserted against directly.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { tagEntry, shapeKevResponse } from '../lambda/threat-intel.js';
+import { tagEntry, shapeKevResponse, TAG_RULES } from '../lambda/threat-intel.js';
 
 function kevEntry(over) {
   return Object.assign({
@@ -20,6 +20,60 @@ function kevEntry(over) {
     knownRansomwareCampaignUse: 'Unknown'
   }, over || {});
 }
+
+/* One REAL vendor/product pair per tag, spelled the way CISA spells it
+   in the published catalog — not derived from the rule's own match
+   terms, which is the whole point. The browser rule used to match
+   'chrome' and CISA files these as "Google / Chromium V8"; "chromium"
+   does not contain "chrome", so the rule matched nothing in a
+   40-item live feed while looking perfectly correct in review.
+   Deriving fixtures from the rules would have reproduced that blind
+   spot exactly. */
+const REAL_CISA_ENTRIES = {
+  microsoft:      ['Microsoft', 'SharePoint Server'],
+  identity:       ['Microsoft', 'Entra ID'],
+  'network-edge': ['Citrix', 'NetScaler ADC and NetScaler Gateway'],
+  virtualization: ['VMware', 'ESXi'],
+  'ics-ot':       ['Schneider Electric', 'Modicon'],
+  'storage-nas':  ['QNAP', 'QTS'],
+  browser:        ['Google', 'Chromium V8'],
+  collaboration:  ['Atlassian', 'Confluence Data Center and Server'],
+  'file-transfer':['Progress Software', 'MOVEit Transfer']
+};
+
+describe('TAG_RULES — every rule is reachable from a real advisory', () => {
+  test('each tag fires for a vendor/product string as CISA actually writes it', () => {
+    const unreachable = [];
+    TAG_RULES.forEach((rule) => {
+      const fixture = REAL_CISA_ENTRIES[rule.tag];
+      if (!fixture) {
+        unreachable.push(`${rule.tag} has no REAL_CISA_ENTRIES fixture — add one spelled as CISA spells it`);
+        return;
+      }
+      const tags = tagEntry(fixture[0], fixture[1]);
+      if (!tags.includes(rule.tag)) {
+        unreachable.push(`${rule.tag} does not fire for "${fixture[0]} / ${fixture[1]}" — got ${JSON.stringify(tags)}`);
+      }
+    });
+    assert.deepEqual(unreachable, [],
+      'a tag rule that never fires silently drops a whole category of advisory:\n  ' + unreachable.join('\n  '));
+  });
+
+  test('the fixture list has no entry for a tag no rule defines', () => {
+    const ruleTags = new Set(TAG_RULES.map((r) => r.tag));
+    const orphans = Object.keys(REAL_CISA_ENTRIES).filter((t) => !ruleTags.has(t));
+    assert.deepEqual(orphans, [], `REAL_CISA_ENTRIES names tags no rule produces: ${orphans.join(', ')}`);
+  });
+
+  test('Entra ID and Azure AD both tag as identity, not just microsoft', () => {
+    // Microsoft renamed Azure AD to Entra ID in 2023 and CISA uses
+    // whichever name the advisory carried, so both have to resolve.
+    ['Entra ID', 'Azure AD Connect', 'Active Directory Federation Services'].forEach((product) => {
+      assert.ok(tagEntry('Microsoft', product).includes('identity'),
+        `"Microsoft / ${product}" should carry the identity tag`);
+    });
+  });
+});
 
 describe('tagEntry()', () => {
   test('tags a Microsoft entry as microsoft', () => {
