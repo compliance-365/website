@@ -8,7 +8,8 @@
     "dev": "astro dev",
     "test": "node --test 'test/**/*.test.mjs'",
     "issue-entitlement": "node tools/issue-entitlement.mjs",
-    "onboarding-shots": "node scripts/capture-onboarding-shots.mjs && node scripts/inline-onboarding-shots.mjs"
+    "onboarding-shots": "node scripts/capture-onboarding-shots.mjs && node scripts/inline-onboarding-shots.mjs",
+    "check:cors": "node scripts/check-endpoint-cors.mjs"
   },
   "devDependencies": {
     "@astrojs/sitemap": "3.6.0",

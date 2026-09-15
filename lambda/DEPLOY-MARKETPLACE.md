@@ -75,6 +75,9 @@ do **not** need to provision a service principal for this to work.
    Authorization`. The `Authorization` header matters — the landing
    page sends the caller's Graph token, and without it every real
    request fails the browser's preflight before reaching the Lambda.
+   See [CORS.md](CORS.md): the Lambda's own CORS headers stop applying the
+   moment the gateway handles CORS, and `Allow-Headers` is the field most
+   often left empty. Verify with `npm run check:cors`.
 6. **Configuration → General configuration → Edit → Timeout: 15 sec.**
    Do not skip this. AWS defaults every new function to **3 seconds**,
    and this one makes up to seven sequential outbound calls on a single
@@ -85,6 +88,7 @@ do **not** need to provision a service principal for this to work.
    `Task timed out after 3.00 seconds` and no application error at all,
    so the logs point at nothing. This cost a debugging session on the
    first deploy.
+
 
 ## 4. Partner Center — Technical configuration
 

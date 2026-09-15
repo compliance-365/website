@@ -34,6 +34,9 @@
  *   6. Enable CORS on the route:
  *        Allow-Origin: https://www.compliance365.com.au
  *        Allow-Methods: GET, OPTIONS
+ *      The CORS headers this file returns do NOT apply once the gateway
+ *      handles CORS — it strips them. See lambda/CORS.md; verify with
+ *      `npm run check:cors` rather than assuming.
  *   6b. Configuration -> General configuration -> Edit -> Timeout: 10
  *       sec. AWS's 3-second default is not enough to fetch and parse
  *       CISA's KEV catalog from ap-southeast-2 on a cold start; left at

@@ -44,6 +44,8 @@ here.
 5. API Gateway HTTP API trigger, `POST /report-error`.
 6. CORS on the route: Allow-Origin `https://www.compliance365.com.au`,
    Allow-Methods `POST, OPTIONS`, Allow-Headers `Content-Type`.
+   See [CORS.md](CORS.md): the Lambda's own CORS headers stop applying the
+   moment the gateway handles CORS. Verify with `npm run check:cors`.
 7. **Configuration → General configuration → Edit → Timeout: 10 sec.**
    Do not leave this at AWS's 3-second default: this makes four
    sequential round trips (token, site, list-resolve, item POST)
@@ -54,6 +56,7 @@ here.
    SharePoint just after the Lambda is killed, so the caller gets a
    raw `500` for a report that actually saved — the opposite of the
    graceful-drop behaviour this file is built around (see §6 below).
+
 
 ## 4. Provision the SharePoint list
 
