@@ -61,6 +61,7 @@ const NOBODY_TENANT = '00000000-0000-4000-8000-000000000000';
 
 const CHECKS = [
   {
+    id: 'provision-auth-gate',
     key: 'selfServeActivateUrl',
     label: 'Self-serve provisioning — caller-tenant auth gate',
     commit: '84431721 "Verify caller controls tenantId before signing a self-serve activation"',
@@ -82,6 +83,7 @@ const CHECKS = [
     }
   },
   {
+    id: 'provision-revocation-reason',
     key: 'selfServeActivateUrl',
     label: 'Self-serve provisioning — revocation reason is not disclosed',
     commit: 'd9398195 "Harden the self-serve provisioning Lambda"',
@@ -139,9 +141,33 @@ function readConfiguredUrls() {
   return out;
 }
 
+/* Which release the running provision function matches, read off the
+   combination of signatures above. "Stale" alone is not actionable —
+   the first thing you need after a redeploy that changed nothing is
+   whether the running code moved AT ALL, because "still exactly the
+   old version" and "moved, but not far enough" point at completely
+   different mistakes. The first means the paste never reached this
+   function; the second means it did and you are missing a later
+   commit. */
+const PROVISION_ERAS = [
+  { authGate: false, leaksReason: true, era: '2026-08-12 (24af8a7c…9d4349fb)' },
+  { authGate: false, leaksReason: false, era: '2026-08-16 (d9398195)' },
+  { authGate: true, leaksReason: true, era: 'inconsistent — an auth gate but the old revocation response; check you pasted a whole file' }
+];
+
+function describeProvisionEra(results) {
+  const gate = results.get('provision-auth-gate');
+  const reason = results.get('provision-revocation-reason');
+  if (!gate || !reason) return null;
+  if (gate.ok && reason.ok) return null; // current; nothing to date
+  const match = PROVISION_ERAS.find((e) => e.authGate === gate.ok && e.leaksReason === !reason.ok);
+  return match ? match.era : 'unrecognised — the running code matches no release this script knows about';
+}
+
 async function main() {
   const urls = readConfiguredUrls();
   const stale = [];
+  const results = new Map();
 
   console.log('Checking whether each deployed Lambda is running current code\n');
 
@@ -155,6 +181,8 @@ async function main() {
     } catch (e) {
       result = { ok: false, detail: `request failed: ${e.message}` };
     }
+
+    if (check.id) results.set(check.id, result);
 
     if (result.ok) {
       console.log(`  CURRENT  ${check.label}\n           ${result.detail}`);
@@ -170,8 +198,26 @@ async function main() {
 
   if (stale.length) {
     console.log(`${stale.length} deployed Lambda behaviour(s) predate this repository.`);
+    const era = describeProvisionEra(results);
+    if (era) console.log(`The running provision function matches lambda/provision.js as of ${era}.`);
+    console.log('');
     console.log('Redeploy by pasting the file from lambda/ into the AWS console');
     console.log('(Lambda -> the function -> Code -> index.mjs -> Deploy), then re-run this.');
+    console.log('');
+    console.log('IF YOU BELIEVE YOU ALREADY REDEPLOYED and the era above has not moved,');
+    console.log('the paste did not reach the function this URL invokes. In order of how');
+    console.log('often each one is the answer:');
+    console.log('  1. The console editor keeps unsaved edits indefinitely and still shows');
+    console.log('     your new code. Changes go live only on **Deploy** (Ctrl+Shift+U), not');
+    console.log('     Save. A greyed-out Deploy button means it already went live.');
+    console.log('  2. The API Gateway route points at a different function, or at a');
+    console.log('     published VERSION or ALIAS rather than $LATEST — editing $LATEST then');
+    console.log('     changes nothing for callers. Check: API Gateway -> the API -> Routes');
+    console.log('     -> the POST route -> Integration, and see exactly which function ARN');
+    console.log('     (and whether it ends in a :version or :alias) it names.');
+    console.log('  3. Two similarly-named functions exist and the edit went to the other.');
+    console.log('     The URL being probed is the only authority on which one matters:');
+    console.log(`       ${urls.selfServeActivateUrl || '(none configured)'}`);
     process.exit(1);
   }
   console.log('Every probed endpoint is running current code.');
