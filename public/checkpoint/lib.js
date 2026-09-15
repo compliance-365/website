@@ -4271,6 +4271,49 @@
     });
   }
 
+  /* The sort above reorders but never filters, so when a tenant ticks a
+     stack option that nothing in the current feed matches, the list is
+     byte-identical to what it showed before. There is no error state to
+     render, nothing failed, and the control is working exactly as
+     designed — but from the user's chair it is indistinguishable from a
+     dead checkbox, which is precisely how it was reported ("whenever I
+     select an option it returns the same results"). Five of the seven
+     options shipped at the time matched zero items in a live 40-item
+     feed, so that was the common case rather than the edge one.
+
+     This states the outcome in words instead: how many advisories the
+     declared stack and industry actually account for, and — the part
+     that matters — an explicit sentence when the answer is none.
+     Returns null when the tenant has declared neither, since "0 of 40
+     match" is noise for someone who has not told us anything yet. */
+  function threatIntelMatchSummary(ranked, opts) {
+    opts = opts || {};
+    var list = Array.isArray(ranked) ? ranked : [];
+    var hasStack = !!opts.hasStack;
+    var hasIndustry = !!opts.hasIndustry;
+    if (!hasStack && !hasIndustry) return null;
+
+    var stackCount = list.filter(function (i) { return i.matchedStack; }).length;
+    var industryCount = list.filter(function (i) { return i.matchedIndustry && !i.matchedStack; }).length;
+    var total = list.length;
+    var relevant = stackCount + industryCount;
+
+    var message;
+    if (!total) {
+      message = '';
+    } else if (hasStack && stackCount === 0 && industryCount === 0) {
+      message = 'Nothing in the current ' + total + '-advisory feed affects the technology you have ticked, so the list stays in date order. That is a good result, not a missing one.';
+    } else if (hasStack && stackCount === 0) {
+      message = 'No advisory matches the technology you have ticked. ' + industryCount + ' of ' + total + ' are sorted to the top as typical for your industry instead.';
+    } else if (!hasStack) {
+      message = relevant + ' of ' + total + ' advisories are typical for your industry and are sorted to the top. Tick your technology above to sharpen this.';
+    } else {
+      message = stackCount + ' of ' + total + ' advisories affect technology you have ticked and are sorted to the top' +
+        (industryCount ? ', followed by ' + industryCount + ' more typical for your industry' : '') + '.';
+    }
+    return { stackCount: stackCount, industryCount: industryCount, total: total, relevant: relevant, message: message };
+  }
+
   return {
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
@@ -4326,6 +4369,7 @@
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
     threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
+    threatIntelMatchSummary: threatIntelMatchSummary,
     soaFocusRows: soaFocusRows, soaFocusLabel: soaFocusLabel,
     trainingFocusRows: trainingFocusRows, trainingSummary: trainingSummary,
     documentFocusRows: documentFocusRows, documentFocusLabel: documentFocusLabel,

@@ -8,7 +8,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { threatIntelRelevance, rankThreatIntelItems, THREAT_INTEL_INDUSTRY_TAGS } = CheckpointLib;
+const { threatIntelRelevance, rankThreatIntelItems, threatIntelMatchSummary, THREAT_INTEL_INDUSTRY_TAGS } = CheckpointLib;
 
 function item(over) {
   return Object.assign({ cveId: 'CVE-0000-0000', vendor: 'X', product: 'Y', dateAdded: '2024-01-01', tags: ['general'] }, over || {});
@@ -82,5 +82,60 @@ describe('rankThreatIntelItems()', () => {
   test('tolerates no options and a non-array input', () => {
     assert.deepEqual(rankThreatIntelItems(null), []);
     assert.doesNotThrow(() => rankThreatIntelItems([item()]));
+  });
+});
+
+/* The sort reorders and never filters, so "I ticked a box and got the
+   same results" is the EXPECTED rendering whenever nothing matches —
+   and was indistinguishable from a dead control. These cover the
+   sentence that now says so out loud. */
+describe('threatIntelMatchSummary()', () => {
+  const feed = (flags) => flags.map(([s, i]) => ({ matchedStack: s, matchedIndustry: i }));
+
+  test('is null when the tenant has declared neither stack nor industry', () => {
+    assert.equal(threatIntelMatchSummary(feed([[false, false]]), {}), null);
+  });
+
+  test('says so explicitly when a declared stack matches nothing at all', () => {
+    const r = threatIntelMatchSummary(feed([[false, false], [false, false]]), { hasStack: true });
+    assert.equal(r.stackCount, 0);
+    assert.match(r.message, /Nothing in the current 2-advisory feed/);
+    // The reassurance matters: zero matches is good news, not a fault.
+    assert.match(r.message, /good result/);
+  });
+
+  test('counts stack matches and reports industry matches separately', () => {
+    const r = threatIntelMatchSummary(feed([[true, true], [true, false], [false, true], [false, false]]), { hasStack: true, hasIndustry: true });
+    // An item matching BOTH counts once, under stack — it is sorted there.
+    assert.equal(r.stackCount, 2);
+    assert.equal(r.industryCount, 1);
+    assert.equal(r.relevant, 3);
+    assert.match(r.message, /2 of 4/);
+    assert.match(r.message, /1 more typical for your industry/);
+  });
+
+  test('omits the industry clause when there are no industry-only matches', () => {
+    const r = threatIntelMatchSummary(feed([[true, false], [false, false]]), { hasStack: true, hasIndustry: true });
+    assert.equal(r.industryCount, 0);
+    assert.doesNotMatch(r.message, /typical for your industry/);
+  });
+
+  test('falls back to the industry count, and invites a stack, when no stack is declared', () => {
+    const r = threatIntelMatchSummary(feed([[false, true], [false, false]]), { hasIndustry: true });
+    assert.match(r.message, /1 of 2/);
+    assert.match(r.message, /Tick your technology/);
+  });
+
+  test('a declared stack that misses while the industry still hits does not claim a stack match', () => {
+    const r = threatIntelMatchSummary(feed([[false, true], [false, false]]), { hasStack: true, hasIndustry: true });
+    assert.equal(r.stackCount, 0);
+    assert.match(r.message, /No advisory matches the technology you have ticked/);
+    assert.match(r.message, /1 of 2/);
+  });
+
+  test('tolerates a non-array, as every other pure helper here does', () => {
+    const r = threatIntelMatchSummary(null, { hasStack: true });
+    assert.equal(r.total, 0);
+    assert.equal(r.message, '');
   });
 });

@@ -100,6 +100,13 @@ Run it after touching a gateway, and before any release that depends on
 one. It is deliberately not part of `npm test`, which must stay offline
 and deterministic.
 
+`npm run check:deploy` is its companion and answers the question
+underneath: CORS proves the browser can *reach* the function, not that
+the function is running the code in this repository. These Lambdas are
+deployed by hand, so those are genuinely separate questions — and one
+of them has already been answered wrong in production for two weeks.
+See [DEPLOY-PROVISION.md](DEPLOY-PROVISION.md).
+
 To check a single endpoint by hand:
 
 ```

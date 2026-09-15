@@ -2605,11 +2605,18 @@ window.INDUSTRY_PROFILES = [
    — lib.js's rankThreatIntelItems() surfaces an entry first when its
    tags overlap with whatever's ticked here. */
 window.TECH_STACK_OPTIONS = [
+  /* Every tag here must be one lambda/threat-intel.js's TAG_RULES can
+     actually emit, and every tag TAG_RULES emits (bar its 'general'
+     fallback) must appear here — otherwise the checkbox is inert or the
+     advisory is unreachable. test/threat-intel-vocabulary.test.mjs
+     holds both directions; see its header for how that drifted. */
+  { id: 'microsoft-estate', label: 'Microsoft Windows, Office, Exchange or SharePoint', tags: ['microsoft'] },
   { id: 'network-edge', label: 'Firewall / VPN / network edge appliance', tags: ['network-edge'] },
   { id: 'virtualization', label: 'On-premises virtualization (VMware, Hyper-V)', tags: ['virtualization'] },
   { id: 'onprem-identity', label: 'On-premises Active Directory / ADFS', tags: ['identity'] },
   { id: 'storage-nas', label: 'Network storage appliances (NAS/SAN)', tags: ['storage-nas'] },
   { id: 'ics-ot', label: 'Industrial control / operational technology systems', tags: ['ics-ot'] },
   { id: 'file-transfer', label: 'Managed file transfer software', tags: ['file-transfer'] },
-  { id: 'collaboration', label: 'Atlassian (Jira/Confluence) or similar collaboration tools', tags: ['collaboration'] }
+  { id: 'collaboration', label: 'Atlassian (Jira/Confluence) or similar collaboration tools', tags: ['collaboration'] },
+  { id: 'browser', label: 'Chrome, Edge, Firefox or Safari as a managed browser', tags: ['browser'] }
 ];
