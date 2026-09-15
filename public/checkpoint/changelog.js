@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.76.0',
+    date: '2026-09-15',
+    entries: [
+      'The policy library now groups by CPS 234 as well as by ISO 27001. A document appears under its usual framework group and again under any framework whose own controls it cites, so the six policies that evidence CPS 234 paragraphs are findable under CPS 234 without disappearing from ISO 27001 -- which matters because a CPS 234 client is nearly always an ISO 27001 client too, and moving them would have emptied that list of its core policies. The same rule fixes two documents that were already in the wrong place: the AI Acceptable Use Policy cites AI controls but never appeared under ISO 42001, and the Privacy Policy cites PIMS controls but never appeared under ISO 27701.'
+    ]
+  },
+  {
     version: '1.75.0',
     date: '2026-09-15',
     entries: [

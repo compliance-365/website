@@ -397,6 +397,61 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* The policy picker lists a template under its primary framework group
+     AND under any entitled framework whose own control codes it cites.
+     The second half is what this guards: it replaced a flat "listed
+     once, never duplicated across groups", and the tempting way to add
+     a CPS 234 group is to move those documents into it instead — which
+     would empty an ISO 27001 client's list of its core policies, since
+     a CPS 234 client is nearly always an ISO 27001 client too.
+
+     So the assertion is deliberately that the SAME template appears in
+     both groups, not merely that a CPS 234 group exists. A revert to
+     "list once", or a switch from duplicating to relocating, both leave
+     a CPS 234 group standing and both fail here.
+
+     Counts are not asserted. Demo mode carries only a sample of each
+     framework's control list (its cps234 set omits the codes the
+     Supplier Security Policy cites), so the group is smaller here than
+     in a licensed tenant — real behaviour, thin demo data, and pinning
+     a number would encode the sample rather than the rule. */
+  test('a policy serving two frameworks is listed under both, not moved between them', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.evaluate(() => window.App.go('documents'));
+    // optgroup is never 'visible' to Playwright — wait for it in the DOM.
+    await page.waitForSelector('#tplSelect optgroup', { state: 'attached', timeout: 10000 });
+
+    const groups = await page.$$eval('#tplSelect optgroup', (els) => {
+      const out = {};
+      els.forEach((g) => { out[g.label] = [...g.querySelectorAll('option')].map((o) => o.value); });
+      return out;
+    });
+
+    const cps = Object.keys(groups).find((k) => /CPS\s*234/i.test(k));
+    assert.ok(cps, `expected a CPS 234 group in the picker, got: ${Object.keys(groups).join(', ')}`);
+
+    const iso = Object.keys(groups).find((k) => /ISO\s*27001/i.test(k));
+    assert.ok(iso, 'expected an ISO 27001 group in the picker');
+
+    assert.ok(groups[cps].includes('infosec-policy'),
+      'the Information Security Policy cites CPS 234 paragraphs, so it belongs in the CPS 234 group');
+    assert.ok(groups[iso].includes('infosec-policy'),
+      'the Information Security Policy must STAY in ISO 27001 — appearing in CPS 234 adds a listing, it does not move one');
+
+    // Selecting the duplicated entry still resolves to one template.
+    await page.selectOption('#tplSelect', 'infosec-policy');
+    await page.waitForTimeout(200);
+    const preview = await page.$eval('#tplPreview', (el) => el.innerText);
+    assert.match(preview, /Purpose:/, 'selecting a duplicated option should still render its preview');
+
+    assert.deepEqual(errors, [], 'no console errors rendering the template picker');
+    await context.close();
+  });
+
   /* Every form control a practitioner can reach must announce something
      a person could act on. This is the one class of defect the "every
      wired-up action resolves to a function" test above cannot see: those
