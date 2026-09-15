@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.74.0',
+    date: '2026-09-15',
+    entries: [
+      'CPS 234 clients now get policy templates. Five of the ISO 27001 policies -- Information Security, Incident Response, Supplier Security, Data Classification and Asset Management -- are now offered under a CPS 234 group in the policy picker, and a document generated from one records the specific CPS 234 paragraphs it evidences rather than only the ISO controls. Fourteen of the standard\'s twenty-four paragraphs are covered this way. The rest are left deliberately unmapped: several ask for an activity performed by a named party -- internal audit forming a view, an independent specialist running a test -- and a policy document cannot evidence those. Claiming them would tell an APRA reviewer a paragraph was covered when nothing had been done.',
+      'The "link as evidence" prompt no longer counts controls your tenant does not have. A policy template can name controls from several frameworks at once -- the Privacy Policy documents both ISO 27001 and ISO 27701 controls -- and it is offered to anyone holding any one of them. The linking itself was always correct and skipped the rest, but the numbers around it were not: the prompt offered to link six controls and the confirmation said six were linked when only three existed for that tenant. Both now count what will actually be linked.'
+    ]
+  },
+  {
     version: '1.73.1',
     date: '2026-09-14',
     entries: [
