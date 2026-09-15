@@ -7134,10 +7134,29 @@ function showModal(opts) {
      first since almost every document belongs to it, ISO 27701 and
      42001 next as the other two ISO management systems, then the
      non-ISO frameworks. Anything not in this list falls back to being
-     grouped by its own id, which never happens today (every current
-     framework id is listed) but keeps a future addition from silently
-     vanishing instead of just appearing ungrouped. */
-  var TEMPLATE_GROUP_ORDER = ['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential8', 'nistcsf', 'dispirap', 'is18'];
+     grouped by its own id, which keeps a future addition from silently
+     vanishing instead of just appearing ungrouped. cps234 and rffr were
+     missing here while templates were already tagged cps234 — harmless,
+     since the fallback still produced a correctly labelled group, but it
+     left the order of that group arbitrary. */
+  var TEMPLATE_GROUP_ORDER = ['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential8', 'nistcsf', 'dispirap', 'is18', 'cps234', 'rffr'];
+
+  /* The frameworks a template cites controls for, limited to the ones
+     this client holds. Resolved against each framework's own control
+     list rather than by reading the code's prefix, so a framework whose
+     codes do not look like "A.5.1" still resolves. */
+  function templateCitedFrameworks(t, entitled) {
+    var out = [];
+    entitled.forEach(function (fw) {
+      var defined = ((window.FRAMEWORKS[fw] || {}).controls || []);
+      if (!defined.length) return;
+      var has = (t.controls || []).some(function (code) {
+        return defined.some(function (c) { return c.code === code; });
+      });
+      if (has) out.push(fw);
+    });
+    return out;
+  }
 
   function renderTemplatesPicker() {
     var sel = document.getElementById('tplSelect');
@@ -7146,17 +7165,41 @@ function showModal(opts) {
       /* Group by framework, filtered to what THIS client is actually
          entitled to — a client licensed only for SOC 2 shouldn't scroll
          past 20 ISO 27001 policies to find the ones that apply to them.
-         A document tagged with several frameworks (most infosec
-         policies also serve ISO 27701, which extends ISO 27001) is
-         listed once, under the first of its tags in TEMPLATE_GROUP_ORDER
-         that the client holds — never duplicated across groups. */
+
+         A document is listed under its PRIMARY group — the first of its
+         tags in TEMPLATE_GROUP_ORDER that the client holds — and then
+         again under any entitled framework whose own control codes it
+         actually cites.
+
+         That second rule replaces a flat "never duplicated across
+         groups". The old rule was written for ISO 27701, which extends
+         ISO 27001: listing the same policy under both says nothing a
+         27701 client did not already know, so suppressing it was right.
+         CPS 234 is a different case. Its clients are almost always ISO
+         27001 clients too, so grouping those documents by CPS 234
+         INSTEAD would empty their ISO 27001 list of its core policies —
+         but a practitioner asking "what do I need for APRA" cannot
+         answer it from a list grouped by ISO 27001 either. Appearing in
+         both is what that question needs.
+
+         Citing the framework's controls is the test, rather than merely
+         carrying its tag, because the tag is a broad statement of which
+         frameworks a document serves while a cited code is a specific
+         claim about a specific control — and a specific claim is what
+         earns a place in that framework's own list. It also self-limits:
+         eight extra listings across the whole library today. */
       var entitled = entitledFrameworks();
       var groups = {};
+      function place(fw, t) {
+        var list = (groups[fw] = groups[fw] || []);
+        if (list.indexOf(t) === -1) list.push(t);
+      }
       window.POLICY_TEMPLATES.forEach(function (t) {
         var applicable = (t.frameworks || []).filter(function (fw) { return entitled.indexOf(fw) !== -1; });
         if (!applicable.length) return;
         var primary = TEMPLATE_GROUP_ORDER.filter(function (fw) { return applicable.indexOf(fw) !== -1; })[0] || applicable[0];
-        (groups[primary] = groups[primary] || []).push(t);
+        place(primary, t);
+        templateCitedFrameworks(t, applicable).forEach(function (fw) { place(fw, t); });
       });
       var groupIds = TEMPLATE_GROUP_ORDER.filter(function (fw) { return groups[fw]; })
         .concat(Object.keys(groups).filter(function (fw) { return TEMPLATE_GROUP_ORDER.indexOf(fw) === -1; }));
