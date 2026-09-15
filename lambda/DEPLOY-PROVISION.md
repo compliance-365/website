@@ -84,7 +84,9 @@ not as a signed-in user, because the Lambda runs unattended.
 
 ## 5. Add an API Gateway trigger
 1. Lambda → Add trigger → API Gateway → **HTTP API**
-2. Security: Open (CORS handled in code)
+2. Security: Open — but "CORS handled in code" only holds until CORS is
+   enabled on the gateway, which then overrides the Lambda's headers
+   entirely. See [CORS.md](CORS.md) and step 6 below.
 3. Route: `POST /provision`
 4. **Configuration → General configuration → Edit → Timeout: 15 sec.**
 
@@ -107,10 +109,22 @@ not as a signed-in user, because the Lambda runs unattended.
 > customer, check this setting before anything else.
 
 ## 6. Enable CORS on the route
+
+> **Before this step, read [CORS.md](CORS.md).** These Lambdas set their own
+> CORS headers, but the gateway strips them once CORS is enabled there — a
+> misconfigured gateway returns 200 with real data and the browser silently
+> discards it. `npm run check:cors` verifies it.
+
 1. API Gateway → your API → Routes → the POST route → CORS
 2. Allow origin: `https://www.compliance365.com.au`
-3. Allow headers: `content-type`
+3. Allow headers: `content-type`, `authorization` — **both**. app.js sends the
+   caller's bearer token on this endpoint, so a preflight asking for
+   `authorization` is rejected if only `content-type` is listed, and the POST
+   never happens. This exact omission left self-serve activation broken in
+   production while the Lambda itself was working perfectly.
 4. Allow methods: `POST, OPTIONS`
+5. Max age: `300` — the console defaults to 0, which re-preflights every call.
+6. Verify with `npm run check:cors` before calling this done.
 
 ## 7. Wire the front end
 Copy the invoke URL (looks like

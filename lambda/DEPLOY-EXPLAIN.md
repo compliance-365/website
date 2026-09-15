@@ -30,7 +30,9 @@ throttled separately.
 ### 4. Add an API Gateway trigger
 1. Lambda → Add trigger → API Gateway
 2. Choose **HTTP API** (not REST API)
-3. Security: **Open** (CORS is handled in the code)
+3. Security: **Open** — but note that "CORS is handled in the code" is only
+   true until CORS is enabled on the gateway, which then overrides it
+   entirely. See [CORS.md](CORS.md) and step 5 below.
 4. Click Add
 
 ### 5. Raise the timeout — this one is not optional
@@ -50,6 +52,12 @@ being well under API Gateway's own 29–30s ceiling, so the caller sees a
 clean error rather than a hung request.
 
 ### 5. Enable CORS on the route
+
+> **Before this step, read [CORS.md](CORS.md).** These Lambdas set their own
+> CORS headers, but the gateway strips them once CORS is enabled there — a
+> misconfigured gateway returns 200 with real data and the browser silently
+> discards it. `npm run check:cors` verifies it.
+
 1. Go to API Gateway → your new API → Routes
 2. Click the POST route → CORS
 3. Allow origin: `https://www.compliance365.com.au`

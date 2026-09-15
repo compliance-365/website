@@ -17,6 +17,8 @@ Checkpoint client.
 5. API Gateway HTTP API trigger, `GET /threat-intel`.
 6. CORS on the route: Allow-Origin `https://www.compliance365.com.au`,
    Allow-Methods `GET, OPTIONS`.
+   See [CORS.md](CORS.md): the Lambda's own CORS headers stop applying the
+   moment the gateway handles CORS. Verify with `npm run check:cors`.
 7. Deploy it in `ap-southeast-2` (Sydney) like every other Lambda in
    this directory — `public/checkpoint/index.html`'s CSP `connect-src`
    already allowlists `https://*.execute-api.ap-southeast-2.amazonaws.com`
@@ -34,6 +36,7 @@ Checkpoint client.
    handler's own try/catch never even gets a chance to run). Once a
    warm container has the feed cached (`CACHE_TTL_MS`, 6 hours), the
    response is effectively instant regardless of the timeout ceiling.
+
 
 ## 2. Point the app at it
 
