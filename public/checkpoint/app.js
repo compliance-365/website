@@ -3202,6 +3202,31 @@ function showModal(opts) {
     return window.CheckpointLib.controlReviewStatus(c, new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
   }
 
+  /* The controls a policy template documents that actually EXIST in
+     this tenant's register, resolved once so the counts, the list and
+     the loop can never disagree.
+
+     A template names controls from more than one framework — the
+     Privacy Policy documents A.8.11 and P.7.x, the AI Acceptable Use
+     Policy documents AI.x — and the picker offers a template to any
+     tenant holding ANY ONE of its frameworks. So an ISO-27001-only
+     tenant generating the Privacy Policy has no P.x rows to link to,
+     and a tenant without CPS 234 has no CPS234.x rows.
+
+     The link loop always skipped those correctly. The numbers around
+     it did not: both the "link as evidence for N controls" prompt and
+     the "Linked as evidence to N controls" toast counted every code
+     the template names, so a tenant could be told six controls were
+     linked when three of the six do not exist for them — a count
+     reported for work that did not happen. iso27001 wins a tie because
+     the same Annex A id can appear in more than one framework's set. */
+  function templateControlsPresent(codes) {
+    return (codes || []).map(function (code) {
+      return S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) ||
+        S.controls.find(function (x) { return x.id === code; });
+    }).filter(function (c) { return !!c; });
+  }
+
   /* ===== One builder for every register's summary tile =====
      The Statement of Applicability and Training each grew their own
      copy of this markup, and the Documents register grew a third that
@@ -13752,18 +13777,17 @@ function showModal(opts) {
       renderDocuments();
       toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved' + (tailored ? ' (AI-assisted)' : '') + '.');
 
-      if (t.controls.length) {
+      var linkable = templateControlsPresent(t.controls);
+      if (linkable.length) {
         var link = await showModal({
           title: 'Link as evidence?',
-          message: 'Link this document as evidence for ' + t.controls.length + ' control' + (t.controls.length > 1 ? 's' : '') + ' it helps satisfy: ' + t.controls.join(', ') + '?',
+          message: 'Link this document as evidence for ' + linkable.length + ' control' + (linkable.length > 1 ? 's' : '') + ' it helps satisfy: ' + linkable.map(function (c) { return c.id; }).join(', ') + '?',
           confirmText: 'Link evidence',
           cancelText: 'Not now'
         });
         if (link) {
           var bumped = 0;
-          t.controls.forEach(function (code) {
-            var c = S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) || S.controls.find(function (x) { return x.id === code; });
-            if (!c) return;
+          linkable.forEach(function (c) {
             var prevUrl = c.evidenceUrl;
             c.evidenceUrl = doc.url;
             var key = c.fw + '|' + c.id;
@@ -13786,7 +13810,7 @@ function showModal(opts) {
             audit('Evidence link changed', 'Control', key, prevUrl || '(none)', doc.url);
           });
           renderSoa(); renderDash();
-          toast('Linked as evidence to ' + t.controls.length + ' control' + (t.controls.length > 1 ? 's' : '') + (bumped ? ', ' + bumped + ' moved to In progress' : '') + '.');
+          toast('Linked as evidence to ' + linkable.length + ' control' + (linkable.length > 1 ? 's' : '') + (bumped ? ', ' + bumped + ' moved to In progress' : '') + '.');
         }
       }
     },
@@ -13889,9 +13913,8 @@ function showModal(opts) {
          at all, which would be a worse claim than the "In progress"
          it starts at. */
       if (t.controls.length && approvedDoc && approvedDoc.url) {
-        var eligible = t.controls.map(function (code) {
-          return S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) || S.controls.find(function (x) { return x.id === code; });
-        }).filter(function (c) { return c && c.app && c.st !== 'Implemented' && c.evidenceUrl === approvedDoc.url; });
+        var eligible = templateControlsPresent(t.controls)
+          .filter(function (c) { return c.app && c.st !== 'Implemented' && c.evidenceUrl === approvedDoc.url; });
         if (eligible.length) {
           var markImpl = await showModal({
             title: 'Mark as Implemented?',

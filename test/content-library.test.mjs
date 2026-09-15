@@ -148,6 +148,51 @@ describe('policy template library — the reader-facing rewrite', () => {
   });
 });
 
+/* CPS 234 paragraphs are claimed by a policy template only where the
+   paragraph asks for a documented rule. Several ask instead for an
+   ACTIVITY performed by a named party — internal audit forming a view,
+   independent specialists running a test — and a policy cannot evidence
+   those. Claiming one would tell an APRA reviewer the paragraph is
+   covered when nothing has been done, which is worse than leaving it
+   visibly unmapped.
+
+   Listed here rather than inferred, because the mechanical join that
+   produced the mapping (template documents A.5.22 + CPS234.34 rests on
+   A.5.22, therefore template evidences CPS234.34) reaches every one of
+   these and is wrong every time. Whoever re-runs that join later needs
+   to fail this test rather than rediscover the argument. */
+const CPS234_NOT_A_DOCUMENT_CLAIM = {
+  'CPS234.34': 'obliges INTERNAL AUDIT to assess a third party\'s assurance, under two conditions that must both hold — a supplier policy is not that assessment',
+  'CPS234.32': 'internal audit reviews control design and operating effectiveness — an audit activity, not a documented rule',
+  'CPS234.30': 'testing performed by skilled, functionally INDEPENDENT specialists — a property of who runs the test',
+  'CPS234.17': 'capability ACTIVELY maintained as threats change — evidenced by scan drift and the threat intel view, not by prose'
+};
+
+describe('policy template library — CPS 234 claims stay honest', { skip: SKIP }, () => {
+  test('no template claims a CPS 234 paragraph that asks for an activity, not a document', () => {
+    const claimed = [];
+    POLICY_TEMPLATES.forEach((t) => {
+      (t.controls || []).forEach((code) => {
+        if (CPS234_NOT_A_DOCUMENT_CLAIM[code]) {
+          claimed.push(`${t.id} claims ${code} — ${CPS234_NOT_A_DOCUMENT_CLAIM[code]}`);
+        }
+      });
+    });
+    assert.deepEqual(claimed, [], `a policy template cannot evidence these:\n  ${claimed.join('\n  ')}`);
+  });
+
+  test('a template tagged cps234 cites at least one CPS 234 paragraph, and vice versa', () => {
+    const mismatched = [];
+    POLICY_TEMPLATES.forEach((t) => {
+      const tagged = (t.frameworks || []).indexOf('cps234') !== -1;
+      const cites = (t.controls || []).some((c) => /^CPS234\./.test(c));
+      if (tagged && !cites) mismatched.push(`${t.id} is tagged cps234 but cites no CPS234 paragraph — it would group under CPS 234 in the picker and evidence nothing`);
+      if (cites && !tagged) mismatched.push(`${t.id} cites a CPS234 paragraph but is not tagged cps234 — a CPS 234 client would never be offered it`);
+    });
+    assert.deepEqual(mismatched, [], mismatched.join('\n  '));
+  });
+});
+
 describe('policy template library — mappings resolve to real controls', { skip: SKIP }, () => {
   test('every cited control code exists in a real framework registry', () => {
     const bad = [];

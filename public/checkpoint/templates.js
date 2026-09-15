@@ -162,8 +162,8 @@ window.POLICY_TEMPLATES = [
        responsibilities section (see the `roles` array above), so
        linking it as A.5.2's evidence too is earned, not claimed: any
        OTHER policy template with no roles section stays unmapped. */
-    controls: ['A.5.1', 'A.5.2', 'A.5.4'],
-    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
+    controls: ['A.5.1', 'A.5.2', 'A.5.4', 'CPS234.13', 'CPS234.14', 'CPS234.15', 'CPS234.18', 'CPS234.19'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf', 'cps234']
   },
   {
     id: 'acceptable-use-policy',
@@ -369,8 +369,8 @@ window.POLICY_TEMPLATES = [
        evidence), and "Every incident is reviewed after closure, with
        lessons recorded and corrective actions raised" is A.5.27
        (learning from incidents). */
-    controls: ['A.5.24', 'A.5.25', 'A.5.26', 'A.5.27', 'A.5.28', 'A.6.8'],
-    frameworks: ['iso27001', 'iso27701', 'nistcsf', 'dispirap']
+    controls: ['A.5.24', 'A.5.25', 'A.5.26', 'A.5.27', 'A.5.28', 'A.6.8', 'CPS234.23', 'CPS234.24', 'CPS234.25', 'CPS234.26'],
+    frameworks: ['iso27001', 'iso27701', 'nistcsf', 'dispirap', 'cps234']
   },
   {
     id: 'bcp-dr-plan',
@@ -499,8 +499,8 @@ window.POLICY_TEMPLATES = [
       'Business Continuity & Disaster Recovery Plan'
     ],
     reviewCadence: 'Annually for standard suppliers; more frequently for any supplier assessed as Critical or High risk.',
-    controls: ['A.5.19', 'A.5.20', 'A.5.22'],
-    frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap']
+    controls: ['A.5.19', 'A.5.20', 'A.5.22', 'CPS234.16', 'CPS234.22', 'CPS234.28'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap', 'cps234']
   },
   {
     id: 'data-classification-policy',
@@ -562,8 +562,8 @@ window.POLICY_TEMPLATES = [
       'Record of Processing Activities & Data Handling Procedure'
     ],
     reviewCadence: 'Annually, or when a new category of sensitive information is introduced into the business.',
-    controls: ['A.5.12', 'A.5.13', 'A.5.14'],
-    frameworks: ['iso27001', 'iso27701', 'soc2']
+    controls: ['A.5.12', 'A.5.13', 'A.5.14', 'CPS234.20'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'cps234']
   },
   {
     id: 'secure-development-policy',
@@ -1155,8 +1155,8 @@ window.POLICY_TEMPLATES = [
       'Cryptography Policy'
     ],
     reviewCadence: 'Annually, or when the organisation’s device management or asset tracking approach changes materially.',
-    controls: ['A.5.9', 'A.5.11'],
-    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
+    controls: ['A.5.9', 'A.5.11', 'CPS234.21'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf', 'cps234']
   },
   {
     id: 'change-management-policy',
