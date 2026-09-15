@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.76.1',
+    date: '2026-09-15',
+    entries: [
+      'The CPS 234 demo now covers third parties. Its illustrative control slice took one control from each of the standard\'s nine categories, which left out the related-party and third-party obligations entirely -- a sixth of CPS 234, and one of the things that most distinguishes it. That also had a visible effect: the Supplier Security Policy was the one CPS 234 policy missing from the picker\'s CPS 234 group, because the group lists a document under a framework whose controls it cites and none of the three the policy cites were in the slice. Adding the foundational third-party control fixes both, and the demo register now carries it so the policy can link evidence to it rather than pointing at a row that does not exist.'
+    ]
+  },
+  {
     version: '1.76.0',
     date: '2026-09-15',
     entries: [

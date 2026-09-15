@@ -339,10 +339,23 @@ window.DEMO_FRAMEWORK_SEEDS = {
      slice, so enabling it would have shown a prospect an empty
      register. One control from each of its nine categories — the
      smallest slice that still lets the grouped Statement of
-     Applicability draw the shape APRA actually organises it by. */
+     Applicability draw the shape APRA actually organises it by.
+
+     Ten controls, not nine: CPS234.16 is a second entry in
+     cpsCapability, and the exception is deliberate. Third parties run
+     through CPS 234 as one of its defining concerns — six of its
+     twenty-four paragraphs are about assessing a related or third
+     party — and picking the first control of each category left that
+     theme unrepresented in the demo entirely. It also has a visible
+     consequence: the Supplier Security Policy cites only CPS234.16,
+     .22 and .28, so with none of them in the slice it was the one
+     CPS 234 policy missing from the picker's CPS 234 group, which
+     lists a template under a framework whose controls it cites.
+     Adding the foundational third-party obligation fixes both. */
   cps234: [
     { fw: "cps234", code: "CPS234.13", t: "Board ultimately responsible for information security", app: true, map: "ISO27001 A.5.4 · NIST GV.RR", cat: "cpsRoles" },
     { fw: "cps234", code: "CPS234.15", t: "Maintain an information security capability", app: true, map: "ISO27001 A.5.1 · NIST GV.OC", cat: "cpsCapability" },
+    { fw: "cps234", code: "CPS234.16", t: "Assess related-party and third-party information security capability", app: true, map: "ISO27001 A.5.19 · NIST GV.SC", cat: "cpsCapability" },
     { fw: "cps234", code: "CPS234.18", t: "Maintain an information security policy framework", app: true, map: "ISO27001 A.5.1 · NIST GV.PO", cat: "cpsPolicy" },
     { fw: "cps234", code: "CPS234.20", t: "Classify information assets by criticality and sensitivity", app: true, map: "ISO27001 A.5.12 · NIST ID.AM", cat: "cpsAssets" },
     { fw: "cps234", code: "CPS234.21", t: "Controls commensurate with threat, sensitivity, life-cycle and consequence", app: true, map: "ISO27001 A.5.9 · NIST PR.DS", cat: "cpsControls" },
@@ -1209,7 +1222,7 @@ window.VENDOR_DATA_CATEGORIES = [
 
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
-  var KEY = 'checkpoint-demo-v7'; /* bumped: v6's seeded scans carried no `detail`, so a returning visitor would keep a demo tenant with no per-check scan history — no drift card and no Type II evidence. (v5 had every premium framework switched off.) */
+  var KEY = 'checkpoint-demo-v8'; /* bumped: v7's CPS 234 slice had no third-party control, so a returning visitor would keep a register the Supplier Security Policy cannot link evidence to — the picker lists it under CPS 234, but CPS234.16 would not exist to link. (v7 fixed seeded scans carrying no `detail`; v5 had every premium framework switched off.) */
   var S = null;
 
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
