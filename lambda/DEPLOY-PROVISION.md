@@ -180,23 +180,40 @@ That's the only front-end change needed — `app.js`'s
    Only if no such row exists has the path genuinely never run. Log the
    raw `sub` object temporarily if anything doesn't line up.
 
-> **⚠️ A sandbox run is not a switch-flip — it needs THREE coordinated
-> changes, and breaks real activations while it is in place.**
+### Running a sandbox checkout
+
+Both Lambdas now carry the sandbox AND production price catalogues
+permanently (see PRICE_TO_MODULE's own comment), so a sandbox run no
+longer needs a code edit. Two things move, and both revert in seconds:
+
+| # | change | where | revert |
+|---|---|---|---|
+| 1 | sandbox token + sandbox price ids | `src/data/pricing.js`, **locally only — never commit** | `git checkout src/data/pricing.js` |
+| 2 | `PADDLE_ENV` → `sandbox` | Lambda console env vars | set it back to `production` |
+
+Restore the sandbox block from git history — `git show d8ca0058^:src/data/pricing.js`
+has the exact token and ids — then:
+
+```
+npm run dev          # serves on http://localhost:4321
+```
+
+`http://localhost:4321` is already in this Lambda's allowed CORS
+origins, so the local site talks to the real (sandbox-mode) Lambda with
+nothing else to configure. Walk /pricing → /start → checkout with a
+Paddle test card, and confirm a PartnerEntitlements row appears with a
+`sub_...` SubscriptionId.
+
+> **⚠️ While `PADDLE_ENV` is `sandbox`, real customers' activation and
+> refresh fail.** They call `api.paddle.com`-issued subscription ids
+> against the sandbox host, which 404s. Revocation checks are
+> unaffected — they never call Paddle. Keep the window short, and check
+> the roster afterwards for any real signup that landed during it.
 >
-> | # | change | why |
-> |---|---|---|
-> | 1 | `src/data/pricing.js` → sandbox token **and sandbox price ids** | the two Paddle catalogues are entirely separate |
-> | 2 | Lambda `PADDLE_ENV` → `sandbox` | otherwise it calls `api.paddle.com` and a sandbox transaction 404s |
-> | 3 | Lambda `PRICE_TO_MODULE` → **add the sandbox price ids** | it holds only production ids, so a sandbox subscription dies at the mapping step with *"None of this subscription's prices are in PRICE_TO_MODULE"* |
->
-> Miss #3 and the checkout completes, the customer is charged in
-> sandbox, and activation fails on a message that points at pricing.js
-> drift rather than at the environment you switched.
->
-> While `PADDLE_ENV` is `sandbox`, real customers' activation and
-> refresh fail (revocation checks are unaffected — they never call
-> Paddle). Run it against `http://localhost:4321`, already in this
-> Lambda's allowed CORS origins, and revert all three afterwards.
+> The blast radius depends entirely on whether self-serve has live
+> customers. **Check PartnerEntitlements for any row with a `sub_...`
+> SubscriptionId before you start** — if there are none, nobody has ever
+> completed a self-serve checkout and this window costs nothing.
 4. Check the owner console's roster/Dashboard — the new client should
    have appeared automatically.
 5. **Confirm the caller-tenant check actually gates the request.** The

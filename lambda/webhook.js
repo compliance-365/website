@@ -50,7 +50,34 @@ const PRICE_TO_MODULE = {
   'pri_01kyvvafz0rjmx93fknmh5shqe': 'soc2', 'pri_01kyvvbwjk49d86sv92paytdrk': 'soc2',
   'pri_01kyvvedm0at83vabz57dax7q4': 'essential8', 'pri_01kyvvjpbzmm31ypek8gxgcw0s': 'essential8',
   'pri_01kyvvxxq9bxpacjnav5d3j7ec': 'nistcsf', 'pri_01kyvvzxfr78bx69grc818jt99': 'nistcsf',
-  'pri_01kyvw1edqna8qn220c4rpkafg': 'ai'
+  'pri_01kyvw1edqna8qn220c4rpkafg': 'ai',
+  /* SANDBOX catalogue. Kept here PERMANENTLY, alongside production,
+     rather than swapped in when testing — the two catalogues share no
+     ids (verified by test/paddle-price-map.test.mjs), and a production
+     Paddle response can never contain a sandbox id or vice versa, so
+     carrying both is inert in production and removes an entire class of
+     mistake.
+
+     The mistake it removes: a sandbox run needs pricing.js AND
+     PADDLE_ENV switched, and previously this map too. Miss this one and
+     the checkout completes, the test card is charged, and activation
+     fails with "None of this subscription's prices are in
+     PRICE_TO_MODULE" — a message that points at pricing.js drift rather
+     than at the environment you just switched. That is a bad half hour.
+     Now only two things move, and neither is a code edit to this file. */
+  'pri_01ky2560831rv9zzdmcxjgv82f': 'iso27001',
+  'pri_01ky254skh5vtwkj34b9eczb1a': 'iso27001',
+  'pri_01ky24ktbrq0gy7bm2mk72k8sa': 'iso27701',
+  'pri_01ky24f8vydtar052488baj4rh': 'iso27701',
+  'pri_01ky24a5ey37g7sty7b99ehp5x': 'iso42001',
+  'pri_01ky244htj7qexa370250f3hfp': 'iso42001',
+  'pri_01ky253bfd3xtnd81y4sv7vw4x': 'soc2',
+  'pri_01ky251skf7qxjdtbnqxgw8thd': 'soc2',
+  'pri_01ky250323b6yve29w3fpm6eby': 'essential8',
+  'pri_01ky24yrnfzjqtzfc8zhdwv1vk': 'essential8',
+  'pri_01ky24x1mc2tgaf5dp9e6qv74b': 'nistcsf',
+  'pri_01ky24vq2nyh4y9hd2kth79fdf': 'nistcsf',
+  'pri_01ky25w0y4m7zeas4p5ksvwex3': 'ai'
 };
 
 /* ============== Paddle signature verification ==============
