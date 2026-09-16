@@ -4314,7 +4314,36 @@
     return { stackCount: stackCount, industryCount: industryCount, total: total, relevant: relevant, message: message };
   }
 
+  /* Normalises anything a date field might hold into a bare YYYY-MM-DD,
+     or '' when there is no usable date in it.
+
+     Exists because both app.js's and owner.js's fmtDate() render a date
+     by appending 'T00:00' to force local-midnight rather than UTC. That
+     is correct for a date-only string and silently catastrophic for a
+     full ISO timestamp: '2026-09-16T05:12:33.123Z' + 'T00:00' parses to
+     Invalid Date, and "Invalid Date" is what the owner console printed
+     in its Last sync column for EVERY synced client, because lastSynced
+     is always stored as new Date().toISOString(). Not an edge case —
+     the primary path, in four places.
+
+     app.js had been living with the same trap by remembering to
+     .slice(0, 10) at its one timestamp call site. Putting the rule here
+     means neither file has to remember. */
+  function normaliseDateInput(value) {
+    if (!value) return '';
+    var s = String(value);
+    // Already a date-only string, or an ISO timestamp whose first ten
+    // characters are exactly that date — take them verbatim rather than
+    // round-tripping through Date(), which would shift the day for any
+    // timestamp whose UTC and local dates differ.
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    var d = new Date(s);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
+  }
+
   return {
+    normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
