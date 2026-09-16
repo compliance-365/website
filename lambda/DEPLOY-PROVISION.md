@@ -5,6 +5,17 @@ This is the one-time setup that makes trial/subscription signups on
 Checkpoint activates itself, no CLI, no emailed file, no manual owner
 console entry.
 
+> **⚠️ Deploying is manual, so git and production drift silently.**
+> Nothing connects a merged commit to a running function. On
+> 2026-09-15 a sandbox smoke test found this Lambda still running
+> pre-`84431721` code — no caller-tenant auth gate, and still
+> disclosing the revocation reason — two weeks after both fixes
+> merged. Every test passed and `npm run check:cors` passed the whole
+> time; neither asks what code is actually running.
+>
+> **`npm run check:deploy`** does ask. Run it after every paste-and-save
+> here, and before trusting any release that depends on this function.
+
 ## What you need
 - Paddle account with the framework prices already created (done)
 - Your existing `entitlement-private.json` and `tools/module-keys.json`
@@ -174,6 +185,14 @@ That's the only front-end change needed — `app.js`'s
      signs successfully, the fix isn't wired up correctly and this must
      not go to production. (A request with the header stripped
      entirely should 401, not fall through to the old behaviour.)
+
+6. **Confirm the running function is this file.** Steps 5's two checks
+   prove the gate by hand; `npm run check:deploy` probes the same
+   behaviour automatically and names the missing commit if the console
+   still holds an older paste. It sends only requests the current code
+   refuses — nothing is signed, charged or written — and exits 1 on
+   drift, so it works as a release gate. This is the check that would
+   have caught the two-week gap described at the top of this file.
 
 ## 9. Go live
 Once sandbox testing looks right: switch `PADDLE_ENV` to `production`,
