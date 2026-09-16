@@ -1601,7 +1601,14 @@ function showModal(opts) {
   /* evidence links render as real <a href> — reject javascript: and other
      non-http(s) schemes so a pasted link can never become an XSS vector */
   function isSafeUrl(u) { return /^https?:\/\//i.test(u); }
-  function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
+  /* 'T00:00' forces local midnight instead of UTC, but only parses when
+     `d` is already date-only — see normaliseDateInput()'s comment for
+     the Invalid Date this used to print for every synced client. */
+  function fmtDate(d) {
+    var s = window.CheckpointLib.normaliseDateInput(d);
+    if (!s) return '—';
+    return new Date(s + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
 
   /* ================= Design system: motion, icons, empty states =================

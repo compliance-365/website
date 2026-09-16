@@ -159,13 +159,44 @@ That's the only front-end change needed — `app.js`'s
    sign in with Microsoft, and see "Confirming your purchase…" — then
    either move straight past the activation step, or show a clear error
    if something's misconfigured.
-3. **Before trusting this in anger**, confirm the exact Paddle
-   subscription/transaction response shape matches what `provision.js`'s
-   `resolvePurchase()` expects (`current_billing_period`, `next_billed_at`,
-   `items[].price.id`, `status` values) against a real Paddle sandbox
-   call — this was written from Paddle's documented API shape but hasn't
-   been exercised against a live response. Log the raw `sub` object
-   temporarily if anything doesn't line up.
+3. **Confirm the Paddle response shape parses.** The fields that matter
+   are `current_billing_period`, `next_billed_at`, `items[].price.id` and
+   the `status` values, read by `resolveSubscription()` (NOT
+   `resolvePurchase()`, which this step named for a long time and which
+   has never existed).
+
+   > **The owner console answers this without a sandbox run at all, and
+   > with better evidence.** `SubscriptionId` and `PaddleStatus` on a
+   > PartnerEntitlements row are written *only* by this Lambda —
+   > `tools/issue-entitlement.mjs` never sets them, so a manually-issued
+   > client cannot produce them. Any row with a `sub_…` SubscriptionId is
+   > therefore proof the full chain ran, and each column verifies one of
+   > the fields above: `Modules` proves `items[].price.id` resolved
+   > through PRICE_TO_MODULE, `Expiry` proves the billing-period parsing,
+   > and `PaddleStatus`/`Type` prove the `status` handling. Against
+   > PRODUCTION Paddle, which a sandbox call cannot match for
+   > authority. **Check the roster before setting any of this up.**
+
+   Only if no such row exists has the path genuinely never run. Log the
+   raw `sub` object temporarily if anything doesn't line up.
+
+> **⚠️ A sandbox run is not a switch-flip — it needs THREE coordinated
+> changes, and breaks real activations while it is in place.**
+>
+> | # | change | why |
+> |---|---|---|
+> | 1 | `src/data/pricing.js` → sandbox token **and sandbox price ids** | the two Paddle catalogues are entirely separate |
+> | 2 | Lambda `PADDLE_ENV` → `sandbox` | otherwise it calls `api.paddle.com` and a sandbox transaction 404s |
+> | 3 | Lambda `PRICE_TO_MODULE` → **add the sandbox price ids** | it holds only production ids, so a sandbox subscription dies at the mapping step with *"None of this subscription's prices are in PRICE_TO_MODULE"* |
+>
+> Miss #3 and the checkout completes, the customer is charged in
+> sandbox, and activation fails on a message that points at pricing.js
+> drift rather than at the environment you switched.
+>
+> While `PADDLE_ENV` is `sandbox`, real customers' activation and
+> refresh fail (revocation checks are unaffected — they never call
+> Paddle). Run it against `http://localhost:4321`, already in this
+> Lambda's allowed CORS origins, and revert all three afterwards.
 4. Check the owner console's roster/Dashboard — the new client should
    have appeared automatically.
 5. **Confirm the caller-tenant check actually gates the request.** The

@@ -171,7 +171,14 @@ function showModal(opts) {
 
   /* ================= small DOM helpers (same shapes as app.js's) ================= */
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-  function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
+  /* 'T00:00' forces local midnight instead of UTC, but only parses when
+     `d` is already date-only — see normaliseDateInput()'s comment for
+     the Invalid Date this used to print for every synced client. */
+  function fmtDate(d) {
+    var s = window.CheckpointLib.normaliseDateInput(d);
+    if (!s) return '—';
+    return new Date(s + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  }
   function toast(msg) {
     var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
