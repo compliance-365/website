@@ -204,28 +204,39 @@ nothing else to configure. Walk /pricing → /start → checkout with a
 Paddle test card, and confirm a PartnerEntitlements row appears with a
 `sub_...` SubscriptionId.
 
-> **⛔ Do NOT sign in with the Compliance365 partner tenant during any
-> end-to-end checkout — sandbox or production.**
+> **⚠️ Signing in with the partner tenant was a permanent lockout until
+> the precedence fix shipped. Confirm the fix is LIVE before you do it.**
 >
-> It overwrites the partner licence that unlocks the owner console, and
-> it does so in both stores at once:
+> It used to overwrite the partner licence that unlocks the owner
+> console, in both stores at once:
 >
 > - `/checkpoint/` and `/owner/` compute the SAME localStorage key
->   (`'cpActivation:v1:' + tenantStorageKey()`, identical in
->   `app.js` and `owner.js`), and localStorage is per-ORIGIN, not
->   per-path. The self-serve activation lands directly on top of the
->   partner file.
-> - `reconcileActivationSources()` then picks the winner by latest
->   `issuedAt` and does not consider `type` at all, so even where the
->   partner file survives, a `demo` activation issued today outranks a
->   partner licence issued earlier.
-> - `owner.js` only unlocks when the winner's `type === 'partner'`
->   (see its `afterSignIn()`), so the console stops opening.
+>   (`'cpActivation:v1:' + tenantStorageKey()`, identical in `app.js`
+>   and `owner.js`), and localStorage is per-ORIGIN, not per-path.
+> - `mirrorActivationStores()` does not merely read the winning
+>   activation, it WRITES it into both localStorage and the tenant
+>   Settings list, over whatever each held.
+> - `reconcileActivationSources()` used to rank on `issuedAt` alone, so
+>   a `demo` activation issued today beat a partner licence issued
+>   earlier — and `owner.js` only unlocks when the winner's type is
+>   `partner`.
 >
-> This is about WHICH TENANT SIGNS IN, not which Paddle environment, so
-> switching to sandbox does not avoid it. Use a separate tenant (a free
-> Microsoft 365 developer tenant is enough), or have the partner
-> activation file to hand to re-import afterwards.
+> A $0 trial signup therefore cost the partner their console, with no
+> way back but re-importing the partner activation file.
+>
+> **Now fixed**: that ranking prefers a live partner licence over any
+> client/demo grant (and still prefers a live grant over a lapsed one,
+> so a lapsed partner licence cannot outrank a paid subscription). The
+> partner's self-serve activation is simply discarded on the next load
+> — they already hold every framework — while the Paddle subscription
+> and its roster row are untouched.
+>
+> **The fix is client-side, so it only protects you once deployed.**
+> Before any checkout on the partner tenant, confirm the live site has
+> it: the GitHub Pages deploy for the commit carrying it must have run.
+> Until then the old behaviour still applies in the browser, whatever
+> the repository says. Keeping the partner activation file to hand
+> remains cheap insurance.
 
 > **⚠️ While `PADDLE_ENV` is `sandbox`, real customers' activation and
 > refresh fail.** They call `api.paddle.com`-issued subscription ids
