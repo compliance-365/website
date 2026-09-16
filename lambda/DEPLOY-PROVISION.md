@@ -204,6 +204,29 @@ nothing else to configure. Walk /pricing → /start → checkout with a
 Paddle test card, and confirm a PartnerEntitlements row appears with a
 `sub_...` SubscriptionId.
 
+> **⛔ Do NOT sign in with the Compliance365 partner tenant during any
+> end-to-end checkout — sandbox or production.**
+>
+> It overwrites the partner licence that unlocks the owner console, and
+> it does so in both stores at once:
+>
+> - `/checkpoint/` and `/owner/` compute the SAME localStorage key
+>   (`'cpActivation:v1:' + tenantStorageKey()`, identical in
+>   `app.js` and `owner.js`), and localStorage is per-ORIGIN, not
+>   per-path. The self-serve activation lands directly on top of the
+>   partner file.
+> - `reconcileActivationSources()` then picks the winner by latest
+>   `issuedAt` and does not consider `type` at all, so even where the
+>   partner file survives, a `demo` activation issued today outranks a
+>   partner licence issued earlier.
+> - `owner.js` only unlocks when the winner's `type === 'partner'`
+>   (see its `afterSignIn()`), so the console stops opening.
+>
+> This is about WHICH TENANT SIGNS IN, not which Paddle environment, so
+> switching to sandbox does not avoid it. Use a separate tenant (a free
+> Microsoft 365 developer tenant is enough), or have the partner
+> activation file to hand to re-import afterwards.
+
 > **⚠️ While `PADDLE_ENV` is `sandbox`, real customers' activation and
 > refresh fail.** They call `api.paddle.com`-issued subscription ids
 > against the sandbox host, which 404s. Revocation checks are
