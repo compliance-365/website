@@ -3182,10 +3182,55 @@
   function reconcileActivationSources(candidates) {
     var verified = (candidates || []).filter(function (c) { return c && c.ok; });
     if (!verified.length) return { winner: null, staleSources: [] };
+
+    /* Ranked on three keys, in this order. Latest-issuedAt alone was
+       the original rule and is still the last word, but on its own it
+       silently destroyed partner licences.
+
+       Why that mattered: the caller does not merely READ the winner,
+       it MIRRORS it — app.js's mirrorActivationStores() writes
+       winner.raw into BOTH localStorage and the tenant Settings list,
+       overwriting whatever each held. And /checkpoint/ and /owner/
+       compute the same localStorage key on the same origin. So a
+       partner who completed a self-serve checkout in their own tenant
+       got a 'demo' activation issued today, which outranked their
+       partner licence on issuedAt, and was then written over it in
+       both stores — permanently locking them out of the owner console,
+       which only opens when the winner's type is 'partner'.
+
+       1. usable — 'valid' or 'grace' beats 'expired'. A live grant
+          should govern over a dead one whatever its issue date, and
+          this is also what stops key 2 from letting a LAPSED partner
+          licence outrank a paid-up subscription. (Expired candidates
+          reach here: verifyActivationRaw() returns ok:true for them,
+          reserving ok:false for a bad signature or the wrong tenant.)
+       2. partner — a partner licence and a client/demo entitlement are
+          different KINDS of grant, not two versions of one thing, so
+          the newer must not displace the other. A partner licence
+          already grants every framework, so preferring it costs the
+          holder nothing; the self-serve activation is simply discarded
+          on the next load, while the Paddle subscription and its
+          roster row are untouched.
+       3. issuedAt — the original rule, and still correct for what it
+          was written for: two stores holding the same lineage, where
+          the later issuance is the renewal.
+
+       Candidates with no evalResult.status/type (every pre-existing
+       caller and test) tie on keys 1 and 2 and fall through to 3, so
+       this is a no-op for everything except the cross-type case. */
+    function rankOf(c) {
+      var e = c.evalResult || {};
+      return {
+        usable: (e.status === 'valid' || e.status === 'grace') ? 1 : 0,
+        partner: e.type === 'partner' ? 1 : 0,
+        issuedAt: String(e.issuedAt || '')
+      };
+    }
     var winner = verified.slice().sort(function (a, b) {
-      var ai = String((a.evalResult && a.evalResult.issuedAt) || '');
-      var bi = String((b.evalResult && b.evalResult.issuedAt) || '');
-      return bi.localeCompare(ai);
+      var ra = rankOf(a), rb = rankOf(b);
+      if (ra.usable !== rb.usable) return rb.usable - ra.usable;
+      if (ra.partner !== rb.partner) return rb.partner - ra.partner;
+      return rb.issuedAt.localeCompare(ra.issuedAt);
     })[0];
     var staleSources = verified
       .filter(function (c) { return c.raw !== winner.raw; })

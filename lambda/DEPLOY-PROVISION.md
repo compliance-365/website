@@ -180,23 +180,74 @@ That's the only front-end change needed — `app.js`'s
    Only if no such row exists has the path genuinely never run. Log the
    raw `sub` object temporarily if anything doesn't line up.
 
-> **⚠️ A sandbox run is not a switch-flip — it needs THREE coordinated
-> changes, and breaks real activations while it is in place.**
+### Running a sandbox checkout
+
+Both Lambdas now carry the sandbox AND production price catalogues
+permanently (see PRICE_TO_MODULE's own comment), so a sandbox run no
+longer needs a code edit. Two things move, and both revert in seconds:
+
+| # | change | where | revert |
+|---|---|---|---|
+| 1 | sandbox token + sandbox price ids | `src/data/pricing.js`, **locally only — never commit** | `git checkout src/data/pricing.js` |
+| 2 | `PADDLE_ENV` → `sandbox` | Lambda console env vars | set it back to `production` |
+
+Restore the sandbox block from git history — `git show d8ca0058^:src/data/pricing.js`
+has the exact token and ids — then:
+
+```
+npm run dev          # serves on http://localhost:4321
+```
+
+`http://localhost:4321` is already in this Lambda's allowed CORS
+origins, so the local site talks to the real (sandbox-mode) Lambda with
+nothing else to configure. Walk /pricing → /start → checkout with a
+Paddle test card, and confirm a PartnerEntitlements row appears with a
+`sub_...` SubscriptionId.
+
+> **⚠️ Signing in with the partner tenant was a permanent lockout until
+> the precedence fix shipped. Confirm the fix is LIVE before you do it.**
 >
-> | # | change | why |
-> |---|---|---|
-> | 1 | `src/data/pricing.js` → sandbox token **and sandbox price ids** | the two Paddle catalogues are entirely separate |
-> | 2 | Lambda `PADDLE_ENV` → `sandbox` | otherwise it calls `api.paddle.com` and a sandbox transaction 404s |
-> | 3 | Lambda `PRICE_TO_MODULE` → **add the sandbox price ids** | it holds only production ids, so a sandbox subscription dies at the mapping step with *"None of this subscription's prices are in PRICE_TO_MODULE"* |
+> It used to overwrite the partner licence that unlocks the owner
+> console, in both stores at once:
 >
-> Miss #3 and the checkout completes, the customer is charged in
-> sandbox, and activation fails on a message that points at pricing.js
-> drift rather than at the environment you switched.
+> - `/checkpoint/` and `/owner/` compute the SAME localStorage key
+>   (`'cpActivation:v1:' + tenantStorageKey()`, identical in `app.js`
+>   and `owner.js`), and localStorage is per-ORIGIN, not per-path.
+> - `mirrorActivationStores()` does not merely read the winning
+>   activation, it WRITES it into both localStorage and the tenant
+>   Settings list, over whatever each held.
+> - `reconcileActivationSources()` used to rank on `issuedAt` alone, so
+>   a `demo` activation issued today beat a partner licence issued
+>   earlier — and `owner.js` only unlocks when the winner's type is
+>   `partner`.
 >
-> While `PADDLE_ENV` is `sandbox`, real customers' activation and
-> refresh fail (revocation checks are unaffected — they never call
-> Paddle). Run it against `http://localhost:4321`, already in this
-> Lambda's allowed CORS origins, and revert all three afterwards.
+> A $0 trial signup therefore cost the partner their console, with no
+> way back but re-importing the partner activation file.
+>
+> **Now fixed**: that ranking prefers a live partner licence over any
+> client/demo grant (and still prefers a live grant over a lapsed one,
+> so a lapsed partner licence cannot outrank a paid subscription). The
+> partner's self-serve activation is simply discarded on the next load
+> — they already hold every framework — while the Paddle subscription
+> and its roster row are untouched.
+>
+> **The fix is client-side, so it only protects you once deployed.**
+> Before any checkout on the partner tenant, confirm the live site has
+> it: the GitHub Pages deploy for the commit carrying it must have run.
+> Until then the old behaviour still applies in the browser, whatever
+> the repository says. Keeping the partner activation file to hand
+> remains cheap insurance.
+
+> **⚠️ While `PADDLE_ENV` is `sandbox`, real customers' activation and
+> refresh fail.** They call `api.paddle.com`-issued subscription ids
+> against the sandbox host, which 404s. Revocation checks are
+> unaffected — they never call Paddle. Keep the window short, and check
+> the roster afterwards for any real signup that landed during it.
+>
+> The blast radius depends entirely on whether self-serve has live
+> customers. **Check PartnerEntitlements for any row with a `sub_...`
+> SubscriptionId before you start** — if there are none, nobody has ever
+> completed a self-serve checkout and this window costs nothing.
 4. Check the owner console's roster/Dashboard — the new client should
    have appeared automatically.
 5. **Confirm the caller-tenant check actually gates the request.** The

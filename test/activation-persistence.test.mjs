@@ -48,6 +48,69 @@ async function verifyRaw(rawText, acceptTenantIds, pub, today) {
 }
 
 describe('reconcileActivationSources() — picking a winner among verified candidates', () => {
+  /* The partner-lockout case. A partner who completes a self-serve
+     checkout in their own tenant gets a 'demo' activation issued
+     today. Under the original latest-issuedAt-only rule it outranked
+     their partner licence — and because the caller MIRRORS the winner
+     into both stores (app.js's mirrorActivationStores), and
+     /checkpoint/ and /owner/ share one localStorage key on one origin,
+     the partner file was then overwritten in both places. The owner
+     console only opens when the winner's type is 'partner', so that
+     was a permanent lockout from a $0 trial signup. */
+  const cand = (source, type, status, issuedAt) =>
+    ({ source, raw: source, ok: true, evalResult: { type, status, issuedAt } });
+
+  test('a partner licence is not displaced by a newer demo activation', () => {
+    const partner = cand('partner', 'partner', 'valid', '2026-07-10');
+    const demo = cand('demo', 'demo', 'valid', '2026-09-16');
+    assert.equal(reconcileActivationSources([partner, demo]).winner.source, 'partner');
+    // Order of the candidate array must not decide it.
+    assert.equal(reconcileActivationSources([demo, partner]).winner.source, 'partner');
+  });
+
+  test('nor by a newer paid client activation', () => {
+    const partner = cand('partner', 'partner', 'valid', '2026-07-10');
+    const client = cand('client', 'client', 'valid', '2026-09-16');
+    assert.equal(reconcileActivationSources([partner, client]).winner.source, 'partner');
+  });
+
+  /* The guard on the guard: preferring partner must not resurrect a
+     LAPSED one over a grant that is actually live. Expired candidates
+     do reach here — verifyActivationRaw() returns ok:true for them and
+     reserves ok:false for a bad signature or the wrong tenant. */
+  test('an EXPIRED partner licence loses to a valid client entitlement', () => {
+    const lapsed = cand('lapsed-partner', 'partner', 'expired', '2025-01-01');
+    const client = cand('client', 'client', 'valid', '2026-01-01');
+    assert.equal(reconcileActivationSources([lapsed, client]).winner.source, 'client');
+  });
+
+  test('a partner licence in its grace period still counts as live', () => {
+    const grace = cand('grace-partner', 'partner', 'grace', '2025-01-01');
+    const client = cand('client', 'client', 'valid', '2026-01-01');
+    assert.equal(reconcileActivationSources([grace, client]).winner.source, 'grace-partner');
+  });
+
+  test('within one type, the later issuance still wins — the original rule', () => {
+    const older = cand('older', 'client', 'valid', '2025-01-01');
+    const newer = cand('newer', 'client', 'valid', '2026-01-01');
+    assert.equal(reconcileActivationSources([older, newer]).winner.source, 'newer');
+    assert.equal(reconcileActivationSources([newer, older]).winner.source, 'newer');
+  });
+
+  test('a valid activation beats an expired one issued later', () => {
+    const validOld = cand('valid-old', 'client', 'valid', '2025-01-01');
+    const expiredNew = cand('expired-new', 'client', 'expired', '2026-01-01');
+    assert.equal(reconcileActivationSources([validOld, expiredNew]).winner.source, 'valid-old');
+  });
+
+  test('the loser is reported stale, so the caller overwrites it', () => {
+    const partner = cand('partner', 'partner', 'valid', '2026-07-10');
+    const demo = cand('demo', 'demo', 'valid', '2026-09-16');
+    const r = reconcileActivationSources([partner, demo]);
+    assert.deepEqual(r.staleSources, ['demo'],
+      'the demo store must be listed stale so mirrorActivationStores() writes the partner file back over it');
+  });
+
   test('no candidates at all -> no winner, nothing stale', () => {
     var r = reconcileActivationSources([]);
     assert.equal(r.winner, null);

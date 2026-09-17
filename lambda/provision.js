@@ -105,7 +105,34 @@ const PRICE_TO_MODULE = {
   'pri_01kyvvjpbzmm31ypek8gxgcw0s': { moduleId: 'essential8', tier: 'growth' },
   'pri_01kyvvxxq9bxpacjnav5d3j7ec': { moduleId: 'nistcsf', tier: 'micro' },
   'pri_01kyvvzxfr78bx69grc818jt99': { moduleId: 'nistcsf', tier: 'growth' },
-  'pri_01kyvw1edqna8qn220c4rpkafg': { moduleId: 'ai', tier: null }
+  'pri_01kyvw1edqna8qn220c4rpkafg': { moduleId: 'ai', tier: null },
+  /* SANDBOX catalogue. Kept here PERMANENTLY, alongside production,
+     rather than swapped in when testing — the two catalogues share no
+     ids (verified by test/paddle-price-map.test.mjs), and a production
+     Paddle response can never contain a sandbox id or vice versa, so
+     carrying both is inert in production and removes an entire class of
+     mistake.
+
+     The mistake it removes: a sandbox run needs pricing.js AND
+     PADDLE_ENV switched, and previously this map too. Miss this one and
+     the checkout completes, the test card is charged, and activation
+     fails with "None of this subscription's prices are in
+     PRICE_TO_MODULE" — a message that points at pricing.js drift rather
+     than at the environment you just switched. That is a bad half hour.
+     Now only two things move, and neither is a code edit to this file. */
+  'pri_01ky2560831rv9zzdmcxjgv82f': { moduleId: 'iso27001', tier: 'micro' },
+  'pri_01ky254skh5vtwkj34b9eczb1a': { moduleId: 'iso27001', tier: 'growth' },
+  'pri_01ky24ktbrq0gy7bm2mk72k8sa': { moduleId: 'iso27701', tier: 'micro' },
+  'pri_01ky24f8vydtar052488baj4rh': { moduleId: 'iso27701', tier: 'growth' },
+  'pri_01ky24a5ey37g7sty7b99ehp5x': { moduleId: 'iso42001', tier: 'micro' },
+  'pri_01ky244htj7qexa370250f3hfp': { moduleId: 'iso42001', tier: 'growth' },
+  'pri_01ky253bfd3xtnd81y4sv7vw4x': { moduleId: 'soc2', tier: 'micro' },
+  'pri_01ky251skf7qxjdtbnqxgw8thd': { moduleId: 'soc2', tier: 'growth' },
+  'pri_01ky250323b6yve29w3fpm6eby': { moduleId: 'essential8', tier: 'micro' },
+  'pri_01ky24yrnfzjqtzfc8zhdwv1vk': { moduleId: 'essential8', tier: 'growth' },
+  'pri_01ky24x1mc2tgaf5dp9e6qv74b': { moduleId: 'nistcsf', tier: 'micro' },
+  'pri_01ky24vq2nyh4y9hd2kth79fdf': { moduleId: 'nistcsf', tier: 'growth' },
+  'pri_01ky25w0y4m7zeas4p5ksvwex3': { moduleId: 'ai', tier: null }
 };
 
 const GRACE_DAYS = 14; // same standard as tools/issue-entitlement.mjs
