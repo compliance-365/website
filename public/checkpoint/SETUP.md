@@ -605,9 +605,20 @@ every campaign permanently short of 100%.
   build pipeline content-hashes them and regenerates their SRI hashes
   automatically (`RELEASE.md` §1).
 - A `Content-Security-Policy` meta tag restricts script/connect/style/font
-  origins to exactly what the app calls (self, Google Fonts, Graph,
-  Entra sign-in) — a compromised/injected script can't phone home
-  anywhere else, and no script can load from any origin but this one.
+  origins to exactly what the app calls — a compromised/injected script
+  can't phone home anywhere else, and no script can load from any origin
+  but this one. Scripts, styles and fonts are `'self'` only (both fonts
+  are vendored into `fonts/`, not fetched from Google Fonts); the only
+  external origins are on `connect-src`: Graph, Entra sign-in, the
+  client's own Azure OpenAI resource, and the self-serve activation
+  Lambda. `index.html`'s own comments explain each one.
+- Those are the only security headers in force. GitHub Pages serves this
+  app (see `RELEASE.md` §4) and does not support custom response headers,
+  so anything that can only be sent as a header — `X-Frame-Options` and
+  CSP `frame-ancestors` (both ignored in a `<meta>` tag), HSTS,
+  `Referrer-Policy` — is **not** applied today. The practical gap is
+  clickjacking protection; closing it needs a proxy/CDN in front that can
+  add the header.
 - Evidence links (control/action evidence URLs) are restricted to
   `http://`/`https://` at both save-time and render-time — a
   `javascript:` URI or similar can never be persisted or rendered as a
