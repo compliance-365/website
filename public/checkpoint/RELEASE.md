@@ -189,3 +189,106 @@ DNS, or the deployed content itself) is ever suspected:
    and consider whether the compromise vector (leaked credential,
    dependency, social engineering) needs a structural fix beyond this
    one incident.
+
+---
+
+## 5. Response security headers (Cloudflare in front of Pages)
+
+GitHub Pages cannot send custom response headers. `index.html`'s CSP
+`<meta>` tag covers everything a page can enforce about itself, but four
+controls can only travel as real headers, and a `<meta>` tag carrying
+any of them is silently ignored by every browser:
+
+| Header | Why a meta tag can't do it |
+|---|---|
+| `X-Frame-Options` | never honoured in `<meta>` |
+| CSP `frame-ancestors` | explicitly ignored when delivered by `<meta>` |
+| `Strict-Transport-Security` | header-only by spec |
+| `Referrer-Policy` | `<meta name="referrer">` exists but doesn't cover subresources |
+
+The practical gap is clickjacking: without one of the first two, any site
+can frame Checkpoint and overlay bait on a signed-in user's session.
+
+The fix is a proxy in front of the origin. These are the steps for
+Cloudflare, which is free at the tier needed and needs no change to this
+repo or to the Pages deployment.
+
+### 5a. The two values that must NOT be the strict ones
+
+**Set `SAMEORIGIN` and `frame-ancestors 'self'` — not `DENY`, not
+`'none'`.**
+
+`graph.js` sets `redirectUri: location.origin + location.pathname` — the
+app's own page. MSAL's silent token renewal (`acquireTokenSilent`, behind
+every Graph call) can run its authorize request in a hidden iframe that
+Entra redirects back to that redirect URI. Checkpoint therefore frames
+*itself*, same-origin, as a normal part of signing in.
+
+`DENY` / `'none'` block that frame. The symptom is not an obvious
+breakage: users get apparently-random sign-outs whenever a cached token
+expires and renewal silently fails. (The deleted
+`staticwebapp.config.json` specified exactly those two stricter values —
+one more reason it was the wrong starting point.)
+
+### 5b. Setup
+
+1. **Add the zone.** Add `compliance365.com.au` to Cloudflare and move the
+   registrar's nameservers to the pair Cloudflare issues. DNS is
+   authoritative there from then on — copy every existing record across
+   first (MX especially; losing mail is the usual way this goes wrong).
+2. **Keep the Pages records, proxied.** `www` stays pointed at GitHub
+   Pages exactly as it is now, with the orange cloud ON — an unproxied
+   ("grey cloud") record is pure DNS and Cloudflare never sees the
+   response, so no header can be added.
+3. **SSL/TLS mode: Full (strict).** GitHub Pages serves a valid
+   certificate for the custom domain, so strict works and should be used.
+   Do **not** use Flexible: Pages redirects HTTP→HTTPS itself and
+   Flexible turns that into a redirect loop.
+4. **Leave "Enforce HTTPS" enabled** on the GitHub Pages settings page.
+5. **Add a Response Header Transform Rule** (Rules → Transform Rules →
+   Modify Response Header → Create). Available on the free plan. Match
+   all requests for the hostname, then *set* these:
+
+   ```
+   X-Frame-Options              SAMEORIGIN
+   Content-Security-Policy      frame-ancestors 'self'
+   Referrer-Policy              strict-origin-when-cross-origin
+   Strict-Transport-Security    max-age=86400
+   ```
+
+   The CSP line carries **only** `frame-ancestors`. Do not restate the
+   whole policy here: a header CSP and the `<meta>` CSP both apply and
+   are intersected, so a second full policy is a standing invitation for
+   the two to drift and start blocking things that work today. One
+   directive, in the one place that can deliver it.
+
+6. **Verify from outside:**
+
+   ```
+   npm run check:headers
+   ```
+
+   It fails on a missing header, and also on `DENY` / `'none'` per §5a.
+
+### 5c. HSTS: ramp it, don't preload on day one
+
+Start at `max-age=86400` (one day) as above. Once that has been live and
+the site is confirmed healthy on HTTPS, raise it — a year
+(`max-age=31536000`) is the usual destination.
+
+Add `includeSubDomains` only after confirming **every** subdomain is
+HTTPS-capable; it applies to all of them, including any internal or
+legacy host that may not have a certificate.
+
+Do not add `preload` casually. Submitting to the browser preload list is
+effectively irreversible on any useful timescale — removal requires a
+separate request and then waits for browser releases to ship it, months
+out. A mistake there takes the domain and every subdomain offline for
+anyone whose browser has the entry, with no way to serve them over HTTP
+in the meantime.
+
+### 5d. After it's live
+
+Update SETUP.md's security section — it currently states plainly that
+these headers are **not** in force, which is true today and must stop
+being true at the same moment the rule goes live, not later.
