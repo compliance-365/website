@@ -590,7 +590,7 @@
 
     <!-- RISKS -->
     <section class="view" id="v-risks">
-      <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual scores recalculate automatically as linked actions complete.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual is estimated from completed treatment actions until someone records an assessed one, which then takes precedence. Open risks not reviewed within the cadence are flagged.</p></div>
       <!-- Heatmap and summary strip share one row. The heatmap is
            deliberately ~560px (its cells have to stay square, so
            stretching it to the full 1208px content column would be
@@ -618,6 +618,7 @@
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="nrTitle" placeholder="Risk statement" style="grid-column:1/-1">
           <input class="mini" id="nrCategory" placeholder="Category (e.g. Access control)">
+          <input class="mini" id="nrCia" placeholder="Threatens (C, I, A)" aria-label="Threatens confidentiality, integrity or availability">
           <input class="mini" id="nrOwner" placeholder="Owner">
           <select class="mini" id="nrLikelihood" aria-label="Likelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
           <select class="mini" id="nrImpact" aria-label="Impact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
@@ -638,7 +639,7 @@
       </div>
       <div class="filters" id="riskFilters" role="group" aria-label="Filter by severity"></div>
       <div id="riskCellFilterChip" style="margin-bottom:10px"></div>
-      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Category</th><th scope="col">Source</th><th scope="col">Inherent</th><th scope="col">Residual</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Category</th><th scope="col">CIA</th><th scope="col">Source</th><th scope="col">Inherent</th><th scope="col">Residual</th><th scope="col">Reviewed</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
     </section>
 
     <!-- FINANCIAL RISK ANALYSIS (Monte Carlo) -->

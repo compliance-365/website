@@ -47,10 +47,14 @@ describe('band()', () => {
 });
 
 describe('residual()', () => {
+  // `derived: true` on each of these says the number came from the
+  // arithmetic estimate rather than from a practitioner's assessment —
+  // see the assessed-residual block below. The estimate's own behaviour
+  // is unchanged from before that flag existed.
   test('no actions done -> inherent L/I unchanged', () => {
     const r = { L: 4, I: 4, actions: ['ACT-001', 'ACT-002'] };
     const actions = [{ id: 'ACT-001', status: 'Open' }, { id: 'ACT-002', status: 'In progress' }];
-    assert.deepEqual(residual(r, actions), { L: 4, I: 4 });
+    assert.deepEqual(residual(r, actions), { L: 4, I: 4, derived: true });
   });
   test('each completed action reduces L by 1, floor 1', () => {
     const r = { L: 3, I: 5, actions: ['ACT-001', 'ACT-002', 'ACT-003'] };
@@ -58,23 +62,51 @@ describe('residual()', () => {
       { id: 'ACT-001', status: 'Done' }, { id: 'ACT-002', status: 'Done' }, { id: 'ACT-003', status: 'Open' }
     ];
     // 2 of 3 done -> L drops by 2 (floor 1), I unchanged since not ALL are done
-    assert.deepEqual(residual(r, actions), { L: 1, I: 5 });
+    assert.deepEqual(residual(r, actions), { L: 1, I: 5, derived: true });
   });
   test('L never drops below 1 even with many completed actions', () => {
     const r = { L: 2, I: 3, actions: ['ACT-001', 'ACT-002', 'ACT-003', 'ACT-004'] };
     const actions = ['ACT-001', 'ACT-002', 'ACT-003', 'ACT-004'].map(id => ({ id, status: 'Done' }));
     // all 4 done -> L would be 2-4=-2, floored to 1; I drops by 1 since ALL actions done
-    assert.deepEqual(residual(r, actions), { L: 1, I: 2 });
+    assert.deepEqual(residual(r, actions), { L: 1, I: 2, derived: true });
   });
   test('I only drops once every linked action is Done, floor 1', () => {
     const r = { L: 5, I: 1, actions: ['ACT-001'] };
     const actions = [{ id: 'ACT-001', status: 'Done' }];
     // I=1-1=0 floored to 1
-    assert.deepEqual(residual(r, actions), { L: 4, I: 1 });
+    assert.deepEqual(residual(r, actions), { L: 4, I: 1, derived: true });
   });
   test('a risk with no linked actions never gets the all-done impact reduction', () => {
     const r = { L: 3, I: 4, actions: [] };
-    assert.deepEqual(residual(r, []), { L: 3, I: 4 });
+    assert.deepEqual(residual(r, []), { L: 3, I: 4, derived: true });
+  });
+
+  // An assessed residual is a practitioner's re-evaluation of the risk
+  // with treatment in place (ISO/IEC 27005), and it wins over anything
+  // the arithmetic would have produced — including in the direction the
+  // formula cannot go, which is UP. Treatment that turned out not to
+  // work can leave residual worse than the estimate claims.
+  test('an assessed residual overrides the derived estimate', () => {
+    const r = { L: 5, I: 5, actions: ['ACT-001'], resL: 2, resI: 3 };
+    const actions = [{ id: 'ACT-001', status: 'Done' }];
+    assert.deepEqual(residual(r, actions), { L: 2, I: 3, derived: false });
+  });
+  test('an assessed residual can be higher than the derived estimate', () => {
+    const r = { L: 2, I: 2, actions: ['ACT-001'], resL: 4, resI: 5 };
+    const actions = [{ id: 'ACT-001', status: 'Done' }];
+    assert.deepEqual(residual(r, actions), { L: 4, I: 5, derived: false });
+  });
+  test('a half-recorded assessment is ignored rather than half-applied', () => {
+    // Only one of the two numbers present means nobody completed the
+    // assessment; falling back to the estimate beats inventing the
+    // missing half or crashing on it.
+    const actions = [{ id: 'ACT-001', status: 'Done' }];
+    assert.deepEqual(residual({ L: 4, I: 4, actions: ['ACT-001'], resL: 2 }, actions), { L: 3, I: 3, derived: true });
+    assert.deepEqual(residual({ L: 4, I: 4, actions: ['ACT-001'], resI: 2 }, actions), { L: 3, I: 3, derived: true });
+  });
+  test('an assessed residual is still floored at 1', () => {
+    const r = { L: 3, I: 3, actions: [], resL: 0, resI: -2 };
+    assert.deepEqual(residual(r, []), { L: 1, I: 1, derived: false });
   });
 });
 

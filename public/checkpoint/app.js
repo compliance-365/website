@@ -742,7 +742,7 @@ function showModal(opts) {
   var MUTATING_ACTIONS = new Set([
     'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
-    'closeRisk', 'reopenRisk', 'deleteRisk', 'editRiskFinancials',
+    'closeRisk', 'reopenRisk', 'deleteRisk', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
@@ -943,11 +943,11 @@ function showModal(opts) {
   var EXPORT_REGISTERS = [
     {
       key: 'risks', label: 'Risks', filename: 'risks.csv',
-      header: ['ID', 'Risk', 'Category', 'Source', 'Inherent score', 'Inherent band', 'Residual score', 'Residual band', 'Owner', 'Status'],
+      header: ['ID', 'Risk', 'Category', 'CIA', 'Source', 'Inherent score', 'Inherent band', 'Residual score', 'Residual band', 'Residual basis', 'Last reviewed', 'Reviewed by', 'Owner', 'Status'],
       rows: function () {
         return S.risks.map(function (r) {
           var q = residual(r);
-          return [r.id, r.title, r.cat, r.src, r.L * r.I, band(r.L * r.I), q.L * q.I, band(q.L * q.I), r.owner, r.status];
+          return [r.id, r.title, r.cat, (r.cia || []).join('/'), r.src, r.L * r.I, band(r.L * r.I), q.L * q.I, band(q.L * q.I), q.derived ? 'Estimated' : 'Assessed', r.lastReviewed || '', r.lastReviewedBy || '', r.owner, r.status];
         });
       }
     },
@@ -5234,6 +5234,8 @@ function showModal(opts) {
     var highCrit = open.filter(function (r) { var q = residual(r); var b = band(q.L * q.I); return b === 'Critical' || b === 'High'; });
     var overAppetite = risksAboveAppetite();
     var unowned = open.filter(function (r) { return !String(r.owner || '').trim(); });
+    var staleReview = risksOverdueForReview();
+    var reviewCadence = (S.settings && S.settings.riskReviewCadenceDays) || 90;
     var focus = window._riskF || 'All';
     el.innerHTML =
       /* The denominator the three meters beside it are drawn against,
@@ -5254,8 +5256,68 @@ function showModal(opts) {
         sub: unowned.length ? 'an auditor samples ownership' : 'every open risk is owned',
         meter: { value: unowned.length, max: open.length },
         action: 'App.filterRisk', focus: focus,
+        title: 'Show only these risks in the table below' }) +
+      /* Clause 8.2 wants assessments at planned intervals, and the Risk
+         Management Framework template commits to quarterly — so a count
+         of what has slipped past the tenant's own cadence belongs next
+         to the other things an auditor samples. */
+      kpiTile({ key: 'ReviewOverdue', value: staleReview.length, label: 'Overdue for review', tone: 'warn',
+        sub: staleReview.length ? 'cadence is ' + reviewCadence + ' days' : 'every open risk reviewed within ' + reviewCadence + ' days',
+        meter: { value: staleReview.length, max: open.length },
+        action: 'App.filterRisk', focus: focus,
         title: 'Show only these risks in the table below' });
     runCountUps(el);
+  }
+
+  /* Accepts whatever a practitioner types — "c,i", "C / I / A",
+     "confidentiality, availability" — and returns the canonical
+     ['C','I','A'] subset, in that fixed order so two risks classified
+     the same way never render differently. Anything unrecognised is
+     dropped rather than stored: a register with a stray "X" in the CIA
+     column is worse than one with a blank. */
+  function normaliseCia(v) {
+    var seen = {};
+    String(v || '').split(/[\s,/;|]+/).forEach(function (tok) {
+      var t = tok.trim().toUpperCase();
+      if (!t) return;
+      if (t === 'C' || t.indexOf('CONF') === 0) seen.C = true;
+      else if (t === 'I' || t.indexOf('INTEG') === 0) seen.I = true;
+      else if (t === 'A' || t.indexOf('AVAIL') === 0) seen.A = true;
+    });
+    return ['C', 'I', 'A'].filter(function (k) { return seen[k]; });
+  }
+
+  /* The C/I/A a risk threatens, as chips. Blank is shown as an explicit
+     dash rather than an empty cell: "not classified yet" is a real state
+     an auditor asks about, and an empty cell reads as a rendering bug. */
+  function ciaChips(r) {
+    var v = (r.cia || []).filter(Boolean);
+    if (!v.length) return '<span class="src" title="Not yet classified against confidentiality / integrity / availability">—</span>';
+    return '<span style="display:inline-flex;gap:4px">' + v.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</span>';
+  }
+
+  /* Review state for one risk, against the tenant's own cadence. Closed
+     risks render blank rather than "current": they are not being chased,
+     and a green chip on a closed risk implies an assurance nobody gave. */
+  function riskReviewChip(r) {
+    var st = riskReviewStatus(r);
+    if (r.status === 'Closed') return '<span class="src">—</span>';
+    if (st.neverReviewed) return '<span class="chip st-Notstarted" title="Never reviewed since it was raised">Never</span>';
+    if (st.due) return '<span class="chip sev-High" title="Last reviewed ' + esc(r.lastReviewed) + '">' + st.daysOverdue + 'd over</span>';
+    return '<span class="chip st-Implemented" title="Last reviewed ' + esc(r.lastReviewed) + (r.lastReviewedBy ? ' by ' + esc(r.lastReviewedBy) : '') + '">' + esc(r.lastReviewed) + '</span>';
+  }
+
+  /* Thin wrapper over lib.js's pure riskReviewStatus() — supplies
+     today's date and this tenant's own riskReviewCadenceDays setting,
+     exactly as controlReviewStatus() above does for controls. */
+  function riskReviewStatus(r) {
+    return window.CheckpointLib.riskReviewStatus(r, new Date().toISOString().slice(0, 10), S.settings && S.settings.riskReviewCadenceDays);
+  }
+
+  /* Open risks past the tenant's review cadence, or never reviewed —
+     the register's own overdue set, and what the summary tile counts. */
+  function risksOverdueForReview() {
+    return (S.risks || []).filter(function (r) { return riskReviewStatus(r).due; });
   }
 
   function renderRisks() {
@@ -5269,7 +5331,7 @@ function showModal(opts) {
        the Critical and High pills show as active for it, and clicking
        either one afterwards narrows to that single band as normal. */
     document.getElementById('riskFilters').innerHTML = ['All', 'Critical', 'High', 'Medium', 'Low'].map(function (x) {
-      /* 'AboveAppetite'/'NoOwner' are tile-only filters that cut across
+      /* 'AboveAppetite'/'NoOwner'/'ReviewOverdue' are tile-only filters that cut across
          severity, so no severity pill is their equivalent — including
          'All', which would otherwise read as "nothing is filtered"
          while the table shows a subset. The focus bar below says what
@@ -5288,7 +5350,7 @@ function showModal(opts) {
       var q = residual(r);
       if (cellFilter) return q.L === cellFilter.L && q.I === cellFilter.I;
       if (f === 'All') return true;
-      /* Two more synthetic filter values alongside 'HighCritical' — set
+      /* Three more synthetic filter values alongside 'HighCritical' — set
          only by the summary tiles, never by a severity pill, and each
          resolved through the SAME function its tile counted with so the
          number on the tile and the rows it opens cannot disagree. Both
@@ -5299,18 +5361,30 @@ function showModal(opts) {
         return risksAboveAppetite().some(function (x) { return x.id === r.id; });
       }
       if (f === 'NoOwner') return r.status !== 'Closed' && !String(r.owner || '').trim();
+      /* Resolved through the SAME function the tile counted with, so
+         the number and the rows it opens cannot disagree. */
+      if (f === 'ReviewOverdue') return riskReviewStatus(r).due;
       var rb = band(q.L * q.I);
       if (f === 'HighCritical') return rb === 'Critical' || rb === 'High';
       return rb === f;
     }).map(function (r) {
       var q = residual(r), ib = band(r.L * r.I), rb = band(q.L * q.I);
-      return '<tr data-id="' + r.id + '" data-action="App.openRisk"><td class="id-t"><button class="lnk" data-action="App.openRisk" data-id="' + r.id + '">' + r.id + '</button></td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td class="src">' + esc(r.src) + '</td>' +
-        '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
+      /* An assessed residual and a derived one look identical as a
+         number, so the chip says which it is — an auditor reading
+         "12 High" is entitled to know whether a person concluded that
+         or the arithmetic did. */
+      var resTitle = q.derived
+        ? 'Estimated from completed treatment actions — no assessed residual recorded'
+        : 'Assessed by ' + (r.resBy || 'unknown') + (r.resDate ? ' on ' + r.resDate : '');
+      return '<tr data-id="' + r.id + '" data-action="App.openRisk"><td class="id-t"><button class="lnk" data-action="App.openRisk" data-id="' + r.id + '">' + r.id + '</button></td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + ciaChips(r) + '</td><td class="src">' + esc(r.src) + '</td>' +
+        '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td>' +
+        '<td><span class="chip sev-' + rb + '" title="' + esc(resTitle) + '">' + (q.L * q.I) + ' ' + rb + (q.derived ? '' : ' \u2713') + '</span></td>' +
+        '<td>' + riskReviewChip(r) + '</td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
     var riskRowsEl = document.getElementById('riskRows');
     var emptyText = cellFilter ? 'No open risks scored exactly this way. Try a nearby cell, or clear the filter above.' : 'No risks in this band. The register builds as scans are approved and workshops are captured.';
-    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 8, text: emptyText, cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
+    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 10, text: emptyText, cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
     revealRows(riskRowsEl);
   }
 
@@ -11135,6 +11209,8 @@ function showModal(opts) {
           '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">' +
           '<button class="btn sm" data-action="App.editRisk" data-id="' + r.id + '">Edit risk</button>' +
           '<button class="btn ghost sm" data-action="App.addTreatmentAction" data-id="' + r.id + '">Add treatment action</button>' +
+          '<button class="btn ghost sm" data-action="App.markRiskReviewed" data-id="' + r.id + '">Record review</button>' +
+          '<button class="btn ghost sm" data-action="App.recordAssessedResidual" data-id="' + r.id + '">Assess residual</button>' +
           '<button class="btn ghost sm" data-action="App.acceptRisk" data-id="' + r.id + '">Accept residual</button>' +
           (r.status === 'Closed'
             ? '<button class="btn ghost sm" data-action="App.reopenRisk" data-id="' + r.id + '">Reopen</button>'
@@ -11420,7 +11496,7 @@ function showModal(opts) {
       var showing = panel.style.display !== 'none';
       panel.style.display = showing ? 'none' : 'block';
       if (!showing) {
-        ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
+        ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrCia', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('nrLikelihood').value = '3';
         document.getElementById('nrImpact').value = '3';
         document.getElementById('nrTreatment').value = 'Treat';
@@ -11482,7 +11558,7 @@ function showModal(opts) {
         var newRisk = {
           id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
           L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
-          controls: [], owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Treat', actions: actIds,
+          controls: [], cia: normaliseCia(document.getElementById('nrCia').value), owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Treat', actions: actIds,
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
@@ -11599,6 +11675,11 @@ function showModal(opts) {
         fields: [
           { id: 'title', label: 'Risk statement', type: 'textarea', value: r.title },
           { id: 'cat', label: 'Category', value: r.cat, placeholder: 'e.g. Access control' },
+          /* ISO 27001 6.1.2 c)1) — which of confidentiality, integrity
+             and availability this risk threatens. Free text in the same
+             comma-separated shape as Linked controls below, rather than
+             a control this modal does not have; normalised on save. */
+          { id: 'cia', label: 'Threatens (C, I, A)', value: (r.cia || []).join(', '), placeholder: 'e.g. C, I' },
           { id: 'owner', label: 'Risk owner', value: r.owner },
           { id: 'L', label: 'Likelihood', type: 'select', value: r.L, options: LIKELIHOOD_OPTS },
           { id: 'I', label: 'Impact', type: 'select', value: r.I, options: IMPACT_OPTS },
@@ -11616,9 +11697,97 @@ function showModal(opts) {
         r.title = v.title; r.cat = v.cat || 'Uncategorised'; r.owner = v.owner || 'Unassigned';
         r.L = parseInt(v.L, 10) || r.L; r.I = parseInt(v.I, 10) || r.I; r.treat = v.treat; r.status = v.status;
         r.controls = v.controls.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        r.cia = normaliseCia(v.cia);
         await Store.updateRisk(r);
         audit('Risk updated', 'Risk', r.id, before, r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat);
         toast('<b>' + r.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Records that this risk was reviewed today, and by whom (ISO 27001
+       clause 8.2 — assessments at planned intervals). Deliberately its
+       own small action rather than a side effect of editRisk(): a review
+       that changed nothing is still a review, and is the one an auditor
+       is most likely to ask about. */
+    markRiskReviewed: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var prev = r.lastReviewed || 'never';
+      var v = await showModal({
+        title: 'Record review — ' + r.id,
+        message: 'Confirms this risk has been reviewed as at today, against the current treatment and score. Last reviewed: ' + prev + '.',
+        fields: [
+          { id: 'by', label: 'Reviewed by', value: who },
+          { id: 'date', label: 'Review date', type: 'date', value: new Date().toISOString().slice(0, 10) },
+          { id: 'note', label: 'Note (optional)', type: 'textarea', placeholder: 'What changed, or that nothing did.' }
+        ],
+        confirmText: 'Record review',
+        validate: function (v) { return v.by ? null : 'Name who carried out the review.'; }
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        r.lastReviewed = v.date || new Date().toISOString().slice(0, 10);
+        r.lastReviewedBy = v.by;
+        await Store.updateRisk(r);
+        log('<b>' + r.id + '</b> reviewed by ' + esc(v.by) + ' on ' + esc(r.lastReviewed) + (v.note ? ': ' + esc(v.note) : ''));
+        audit('Risk reviewed', 'Risk', r.id, prev, r.lastReviewed + ' by ' + v.by + (v.note ? ' — ' + v.note : ''));
+        toast('<b>' + r.id + '</b> review recorded');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Records an ASSESSED residual (ISO/IEC 27005) — the practitioner's
+       re-evaluation of likelihood and impact with treatment in place,
+       which lib.js's residual() then returns in preference to its own
+       arithmetic estimate. Clearing both fields drops back to the
+       estimate, so this is reversible rather than a one-way door. */
+    recordAssessedResidual: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var q = residual(r);
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Assessed residual — ' + r.id,
+        message: 'Your judgement of the risk with its treatment in place. Currently showing ' + (q.L * q.I) + ' (' + band(q.L * q.I) + ')' +
+          (q.derived ? ', estimated from completed actions.' : ', assessed by ' + (r.resBy || 'unknown') + (r.resDate ? ' on ' + r.resDate : '') + '.') +
+          ' Set both to "— none —" to go back to the estimate.',
+        fields: [
+          { id: 'L', label: 'Residual likelihood', type: 'select', value: (typeof r.resL === 'number' ? r.resL : ''), options: [{ value: '', label: '— none —' }].concat(LIKELIHOOD_OPTS) },
+          { id: 'I', label: 'Residual impact', type: 'select', value: (typeof r.resI === 'number' ? r.resI : ''), options: [{ value: '', label: '— none —' }].concat(IMPACT_OPTS) },
+          { id: 'by', label: 'Assessed by', value: r.resBy || who },
+          { id: 'date', label: 'Assessment date', type: 'date', value: new Date().toISOString().slice(0, 10) }
+        ],
+        confirmText: 'Record assessment',
+        validate: function (v) {
+          var hasL = v.L !== '' && v.L != null, hasI = v.I !== '' && v.I != null;
+          if (hasL !== hasI) return 'Set both likelihood and impact, or neither — half an assessment is not one.';
+          if (hasL && !v.by) return 'Name who made the assessment.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var hasBoth = v.L !== '' && v.L != null && v.I !== '' && v.I != null;
+      var before = (q.L * q.I) + (q.derived ? ' (estimated)' : ' (assessed)');
+      busy(true);
+      try {
+        if (hasBoth) {
+          r.resL = parseInt(v.L, 10); r.resI = parseInt(v.I, 10);
+          r.resBy = v.by; r.resDate = v.date || new Date().toISOString().slice(0, 10);
+        } else {
+          r.resL = null; r.resI = null; r.resBy = ''; r.resDate = '';
+        }
+        await Store.updateRisk(r);
+        var after = residual(r);
+        log('<b>' + r.id + '</b> residual ' + (hasBoth ? 'assessed at ' + after.L + '×' + after.I + ' by ' + esc(v.by) : 'assessment cleared — back to the estimate'));
+        audit('Residual risk assessed', 'Risk', r.id, before, (after.L * after.I) + (after.derived ? ' (estimated)' : ' (assessed by ' + v.by + ')'));
+        toast('<b>' + r.id + '</b> residual updated');
       } catch (e) { warn(e); }
       busy(false);
       closeDrawerUi();

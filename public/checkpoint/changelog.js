@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.78.0',
+    date: '2026-09-19',
+    entries: [
+      'The risk register now does three things its own Risk Management Framework policy template already said it did. Each risk records which of confidentiality, integrity and availability it threatens (ISO 27001 6.1.2 c)1) asks for risks in those terms; Category was a different axis). Each risk records when it was last reviewed and by whom, with open risks past the tenant\'s cadence -- new setting, default 90 days to match the template\'s quarterly commitment -- flagged on the register and its summary tiles, and never-reviewed risks called out as such; clause 8.2 wants assessments at planned intervals and nothing evidenced that before. And residual risk can now be ASSESSED rather than only estimated: the arithmetic estimate (one point off likelihood per completed action) stays the default and is labelled as an estimate, but "Assess residual" records a practitioner\'s own re-evaluation with treatment in place, which is how ISO/IEC 27005 expects residual to be determined, and that takes precedence everywhere the residual is shown. An assessment can be worse than the estimate, which is the case the formula cannot produce. The seven new SharePoint columns self-heal onto already-provisioned tenants on next load -- no re-provisioning, and existing risks read as unclassified/never-reviewed/estimated rather than being back-filled with invented values.'
+    ]
+  },
+  {
     version: '1.77.0',
     date: '2026-09-19',
     entries: [
