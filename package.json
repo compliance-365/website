@@ -10,7 +10,8 @@
     "issue-entitlement": "node tools/issue-entitlement.mjs",
     "onboarding-shots": "node scripts/capture-onboarding-shots.mjs && node scripts/inline-onboarding-shots.mjs",
     "check:cors": "node scripts/check-endpoint-cors.mjs",
-    "check:deploy": "node scripts/check-lambda-deployed.mjs"
+    "check:deploy": "node scripts/check-lambda-deployed.mjs",
+    "check:headers": "node scripts/check-security-headers.mjs"
   },
   "devDependencies": {
     "@astrojs/sitemap": "3.6.0",
