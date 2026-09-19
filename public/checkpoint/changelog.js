@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.77.0',
+    date: '2026-09-19',
+    entries: [
+      'Action due dates now follow the priority instead of a flat default. Every path that raises an action -- the manual add form, treatment actions created with a risk or added to one later, findings raised from an internal audit, and CSV rows imported without a date -- reads one table: Critical 7 days, High 14, Medium 30, Low 60. Changing the priority on the add form moves the date with it. Treatment actions also inherit the priority of the risk they treat, from that risk\'s own L x I band, so a 5 x 5 risk opens a Critical action due in a week rather than the Medium/30 everything used to get regardless of severity. Dates stay editable; posture-scan findings keep the specific timeframe their template carries. These windows are a documented default, not an ISO requirement -- ISO 27001 and 42001 prescribe no remediation timeframes at all, they require that you set your own proportionate to risk and can show you met them -- so override them where your ISMS says otherwise. SETUP.md covers the reasoning.'
+    ]
+  },
+  {
     version: '1.76.1',
     date: '2026-09-15',
     entries: [

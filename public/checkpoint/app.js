@@ -1157,6 +1157,62 @@ function showModal(opts) {
   var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
   var ACTION_PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
+  /* Default remediation window per priority, in days — the due date any
+     newly-raised action gets before anyone edits it.
+
+     ON WHAT THESE NUMBERS ARE, AND ARE NOT
+     --------------------------------------
+     They are NOT an ISO requirement, and nothing in the app should ever
+     claim they are. ISO/IEC 27001 does not prescribe remediation
+     timeframes anywhere: clause 6.1.3 requires a risk treatment plan,
+     clause 10.2 requires that a nonconformity be reacted to, corrected
+     and its cause evaluated, and clause 9.3 requires management review
+     of the results — none of them name a number of days. ISO/IEC 42001
+     follows the same Annex SL shape and is equally silent. Certification
+     bodies do impose deadlines on their own audit findings (typically a
+     corrective action plan for a major nonconformity, minors by the next
+     surveillance visit), but those are the CB's terms, not the standard's.
+
+     What the standards DO require is that the organisation decides its
+     own timeframes proportionate to risk, records them, and can show it
+     met them. The auditable failure is not "you used 30 days instead of
+     14" — it is having no stated basis at all, or a register full of
+     dates that plainly ignore severity. So the value of this table is
+     that it exists, is applied consistently by every path that raises an
+     action, and is written down; the specific numbers are a defensible
+     default, not a compliance fact.
+
+     WHERE THE DEFAULTS COME FROM
+     ----------------------------
+     High = 14 days is anchored to the one hard number this app already
+     tracks: ASD Essential Eight's two-week patching window (see
+     store.js's E8.2/E8.6 control text). Critical = 7 tightens that for
+     things actively being exploited without adopting E8's 48-hour
+     extreme-risk figure, which is a patching SLA rather than a general
+     remediation one. Medium and Low step out from there.
+
+     These also preserve what the app did before this table existed: the
+     add-action form defaulted to 14 days with its priority dropdown
+     defaulting to High, and manually-added risk treatment actions
+     defaulted to Medium/30. Both still land on the same date.
+
+     A client whose own documented SLA differs should be able to say so
+     in Settings rather than inherit ours — that is a follow-up, and the
+     reason every caller goes through dueForPriority() instead of
+     hard-coding its own daysFrom(). Posture-scan findings deliberately
+     keep the per-finding `days` in their own templates: a finding that
+     names a specific remediation carries a considered timeframe with it,
+     which is more precise than a band default. */
+  var REMEDIATION_DAYS = { Critical: 7, High: 14, Medium: 30, Low: 60 };
+
+  /* The due date for a newly-raised action of this priority. Unknown or
+     missing priority falls back to the Medium window rather than the
+     shortest one — an action nobody classified should not silently
+     become the most urgent thing in the register. */
+  function dueForPriority(pr) {
+    return daysFrom(REMEDIATION_DAYS[pr] || REMEDIATION_DAYS.Medium);
+  }
+
   /* A file picker with no markup of its own, so adding an import button
      to another register never means adding a hidden <input> to
      index.html as well. Resolves null when the practitioner cancels --
@@ -1256,7 +1312,12 @@ function showModal(opts) {
           pr: pick(rec.Priority, ACTION_PRIORITIES, 'Medium'),
           owner: rec.Owner || 'Unassigned',
           ownerEmail: rec['Owner email'] || '',
-          due: normaliseDate(rec.Due || '') || daysFrom(30),
+          /* An imported row that carries its own Due date keeps it — the
+             source register's dates are the point of importing. Only a
+             row with no date at all falls back, and then to the band
+             window for whatever priority it does carry, so an imported
+             Critical does not quietly sit on the same date as a Low. */
+          due: normaliseDate(rec.Due || '') || dueForPriority(pick(rec.Priority, ACTION_PRIORITIES, 'Medium')),
           status: 'Open', evidenceUrl: '', src: 'CSV import'
         };
         await Store.addAction(a);
@@ -11425,8 +11486,16 @@ function showModal(opts) {
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
+        /* Treatment actions inherit the severity of the risk they treat,
+           rather than everything landing on Medium/30 whatever the
+           register says. The risk's own inherent band (L x I, the same
+           band() the register and reports display) is the priority, and
+           REMEDIATION_DAYS turns that into the date — so a 5x5 risk
+           opens Critical and due in a week, not Medium and due next
+           month. */
+        var sev = band(newRisk.L * newRisk.I);
         for (var i = 0; i < actionLines.length; i++) {
-          await Store.addAction({ id: actIds[i], title: actionLines[i], risk: rid, control: '', pr: 'Medium', owner: owner, due: daysFrom(30), status: 'Open', src: 'Manual entry', aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : '' });
+          await Store.addAction({ id: actIds[i], title: actionLines[i], risk: rid, control: '', pr: sev, owner: owner, due: dueForPriority(sev), status: 'Open', src: 'Manual entry', aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : '' });
         }
         log('<b>' + rid + '</b> added to risk register manually' + (aiAssisted ? ' (AI-drafted, reviewed by ' + esc(reviewer) + ')' : '') + ': ' + esc(title));
         toast('<b>' + rid + '</b> added');
@@ -11606,20 +11675,29 @@ function showModal(opts) {
     addTreatmentAction: async function (id) {
       var r = risk(id);
       if (!r) return;
+      /* Defaults follow the risk being treated, not a fixed High/30 —
+         same rule addManualRisk() applies to the actions it creates with
+         a risk. Both fields stay editable: showModal's values are a
+         starting point, and a risk's treatment plan can legitimately
+         hold one urgent action and one that waits on a vendor. The two
+         move together here because the modal's fields are built once on
+         open, so the date cannot follow the dropdown live the way the
+         add-action panel's can. */
+      var sev = band(r.L * r.I);
       var v = await showModal({
         title: 'Add treatment action — ' + r.id,
         fields: [
           { id: 'title', label: 'Action', type: 'textarea', placeholder: 'e.g. Enforce phishing-resistant MFA on privileged roles' },
           { id: 'owner', label: 'Owner', value: r.owner },
-          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
-          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+          { id: 'pr', label: 'Priority', type: 'select', value: sev, options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'due', label: 'Due date', type: 'date', value: dueForPriority(sev) }
         ],
         confirmText: 'Add action',
         validate: function (v) { return v.title ? null : 'Describe the action.'; }
       });
       if (!v) return;
       var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var a = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: 'Action', risk: r.id, control: '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Risk treatment' };
+      var a = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: 'Action', risk: r.id, control: '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || dueForPriority(v.pr), status: 'Open', evidenceUrl: '', src: 'Risk treatment' };
       busy(true);
       try {
         await Store.addAction(a);
@@ -11699,9 +11777,21 @@ function showModal(opts) {
       panel.style.display = showing ? 'none' : 'block';
       if (!showing) {
         ['naTitle', 'naControl', 'naOwner', 'naOwnerEmail'].forEach(function (id) { document.getElementById(id).value = ''; });
-        document.getElementById('naDue').value = daysFrom(14);
+        document.getElementById('naDue').value = dueForPriority(document.getElementById('naPriority').value);
         fillSelect(document.getElementById('naRisk'), riskLinkOptions(''), '');
       }
+    },
+
+    /* Moves the due date to match the priority the practitioner just
+       picked. Deliberately overwrites whatever was in the field: it is
+       the direct, visible answer to changing the priority, and the date
+       input is right there to adjust afterwards if this action is an
+       exception to the band. Writes nothing to the store, so it stays
+       out of MUTATING_ACTIONS — and a Viewer never sees this panel
+       anyway (toggleAddAction is in HIDE_ACTIONS). */
+    syncActionDueToPriority: function (pr) {
+      var due = document.getElementById('naDue');
+      if (due) due.value = dueForPriority(pr);
     },
 
     addManualAction: async function () {
@@ -11709,16 +11799,17 @@ function showModal(opts) {
       if (!title) { toast('Enter a title or finding description first'); return; }
       var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
       var linkedRisk = document.getElementById('naRisk').value;
+      var priority = document.getElementById('naPriority').value;
       var a = {
         id: 'ACT-' + String(maxA + 1).padStart(3, '0'),
         title: title,
         type: document.getElementById('naType').value,
         risk: '',
         control: document.getElementById('naControl').value.trim(),
-        pr: document.getElementById('naPriority').value,
+        pr: priority,
         owner: document.getElementById('naOwner').value.trim() || 'Unassigned',
         ownerEmail: document.getElementById('naOwnerEmail').value.trim(),
-        due: document.getElementById('naDue').value || daysFrom(14),
+        due: document.getElementById('naDue').value || dueForPriority(priority),
         status: 'Open',
         evidenceUrl: '',
         src: document.getElementById('naSource').value
@@ -14155,14 +14246,20 @@ function showModal(opts) {
           { id: 'risk', label: 'Linked risk (optional)', type: 'select', value: '', options: riskLinkOptions('') },
           { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
           { id: 'owner', label: 'Owner', value: a.auditor || '' },
-          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+          /* Same band table as every other path, so an audit finding and
+             a risk treatment action of equal priority carry the same
+             deadline — a register where the two disagree is the thing an
+             auditor actually queries. A certification body's own window
+             for closing a nonconformity it raised is a separate clock
+             and belongs on the date field, which stays editable. */
+          { id: 'due', label: 'Due date', type: 'date', value: dueForPriority('High') }
         ],
         confirmText: 'Raise finding',
         validate: function (v) { return v.title ? null : 'Describe the finding.'; }
       });
       if (!v) return;
       var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || dueForPriority(v.pr), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
       busy(true);
       try {
         await Store.addAction(act);

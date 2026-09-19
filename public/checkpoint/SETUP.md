@@ -1703,6 +1703,37 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   findings that didn't originate from a scan or risk. The Audit
   Readiness report calls out any open non-conformities as a standing
   recommendation.
+- **Remediation windows by priority**: every path that raises an action
+  — the manual "+ Add action / finding" form, treatment actions created
+  with a risk or added to one later, findings raised from an internal
+  audit, and CSV rows imported without a due date — takes its default
+  due date from one table: **Critical 7 days, High 14, Medium 30, Low
+  60**. Changing the priority dropdown on the add form moves the date
+  with it. Treatment actions inherit the priority of the risk they
+  treat, from that risk's own inherent L × I band, so a 5 × 5 risk opens
+  a Critical action due in a week rather than everything landing on the
+  same date regardless of severity. Every date stays editable — the
+  table is a starting point, not a lock.
+
+  **These numbers are not an ISO requirement, and Checkpoint does not
+  present them as one.** ISO/IEC 27001 prescribes no remediation
+  timeframes anywhere: clause 6.1.3 requires a risk treatment plan,
+  clause 10.2 requires that a nonconformity be reacted to, corrected and
+  its cause evaluated, clause 9.3 requires management review of the
+  results — none names a number of days, and ISO/IEC 42001 is equally
+  silent. What an auditor tests is whether *your* stated windows are
+  applied consistently and met; the failure mode is a register whose
+  dates plainly ignore severity, or a timeframe you cannot account for.
+  High = 14 days is anchored to the one hard number Checkpoint already
+  tracks, ASD Essential Eight's two-week patching window; the rest step
+  out from there. If your ISMS documents different windows, treat these
+  as defaults to override on the way in — and say so in your risk
+  treatment procedure, which is the document the auditor will ask for.
+
+  Posture-scan findings are the deliberate exception: each carries its
+  own timeframe in its finding template, because a finding that names a
+  specific remediation comes with a considered deadline that is more
+  precise than a band default.
 - **Action progress log**: a new "Checkpoint ActionUpdates" register —
   every dated, attributed progress note against an action, with its own
   optional evidence link and the action's status as of that entry.
