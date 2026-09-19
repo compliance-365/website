@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.79.0',
+    date: '2026-09-19',
+    entries: [
+      'Remediation windows are now yours to set. Critical/High/Medium/Low each have a setting (Settings -> thresholds), so an ISMS that commits to different figures says so once instead of overriding every action by hand; the shipped 7/14/30/60 are just the fallback, and a blank, non-numeric, zero or negative value falls back rather than producing an action due before it was raised. ISO prescribes no remediation timeframes at all -- what it asks is that the windows YOU documented are applied and met, which is exactly why these belong in Settings rather than in our source.',
+      'Audited the 53 posture-scan finding templates against those bands. Each template carries its own timeframe on purpose -- publishing retention labels across an estate takes longer than switching on a Conditional Access policy -- but six had drifted far enough to invert the bands: two Critical findings given 21 days, and four High findings given 45, while Medium findings elsewhere got 21. A register that hands the more serious finding the later deadline argues against its own prioritisation. Each band now has a ceiling of the next milder band\'s window (Critical 14, High 30, Medium 60, Low 90); a finding may still be faster than its band, never slower than the ceiling, and a test enforces it so the same drift cannot return.'
+    ]
+  },
+  {
     version: '1.78.0',
     date: '2026-09-19',
     entries: [

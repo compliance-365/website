@@ -1754,6 +1754,14 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   same date regardless of severity. Every date stays editable — the
   table is a starting point, not a lock.
 
+  **All four windows are settings** (Settings → thresholds:
+  `remediationDaysCritical` / `High` / `Medium` / `Low`). A client whose
+  ISMS commits to different figures sets them once there rather than
+  overriding every action by hand, and the shipped 7/14/30/60 are only
+  the fallback for a tenant that has saved none. A blank, non-numeric,
+  zero or negative value falls back to the default rather than producing
+  an action due before it was raised.
+
   **These numbers are not an ISO requirement, and Checkpoint does not
   present them as one.** ISO/IEC 27001 prescribes no remediation
   timeframes anywhere: clause 6.1.3 requires a risk treatment plan,
@@ -1772,7 +1780,20 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   Posture-scan findings are the deliberate exception: each carries its
   own timeframe in its finding template, because a finding that names a
   specific remediation comes with a considered deadline that is more
-  precise than a band default.
+  precise than a band default. Publishing retention labels across an
+  estate genuinely takes longer than switching on a Conditional Access
+  policy, and the templates are right to say so.
+
+  What those per-finding figures may **not** do is invert the bands. A
+  template's `days` encodes effort and its priority encodes severity, and
+  a High finding given 45 days while a Medium one gets 21 makes the
+  register argue against its own prioritisation — which is what an
+  auditor queries. So each band has a ceiling equal to the next milder
+  band's window (Critical ≤ 14, High ≤ 30, Medium ≤ 60, Low ≤ 90), a
+  finding may be faster than its band but never slower than that, and
+  `scan-template-timeframes.test.mjs` enforces it. An audit of the 53
+  templates against this rule found six breaches — two Criticals at 21
+  days and four Highs at 45 — now corrected.
 - **Action progress log**: a new "Checkpoint ActionUpdates" register —
   every dated, attributed progress note against an action, with its own
   optional evidence link and the action's status as of that entry.

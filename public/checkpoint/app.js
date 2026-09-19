@@ -356,7 +356,7 @@ function showModal(opts) {
       risk: { title: 'Legacy authentication is in live use, bypassing MFA regardless of policy', cat: 'Access', L: 5, I: 5, controls: ['A.8.5', 'A.8.15'] },
       actions: [
         { t: 'Identify the accounts and clients still signing in over legacy protocols, and migrate or decommission each', pr: 'Critical', days: 14, control: 'A.8.5' },
-        { t: 'Close the gap that let these sign-ins through — confirm the Conditional Access policy scope covers them, and disable the legacy protocols at the Exchange mailbox level as well', pr: 'Critical', days: 21, control: 'A.8.5' },
+        { t: 'Close the gap that let these sign-ins through — confirm the Conditional Access policy scope covers them, and disable the legacy protocols at the Exchange mailbox level as well', pr: 'Critical', days: 14, control: 'A.8.5' },
         { t: 'Reset credentials for any account that completed a legacy sign-in — it authenticated without MFA', pr: 'High', days: 7, control: 'A.5.17' }
       ]
     },
@@ -400,7 +400,7 @@ function showModal(opts) {
     },
     'mfa-priv': {
       risk: { title: 'Privileged accounts protected by phishable MFA methods', cat: 'Access', L: 4, I: 5, controls: ['A.8.2', 'A.8.5'] },
-      actions: [{ t: 'Enforce FIDO2/passkey sign-in for all privileged roles', pr: 'Critical', days: 21, control: 'A.8.2' }]
+      actions: [{ t: 'Enforce FIDO2/passkey sign-in for all privileged roles', pr: 'Critical', days: 14, control: 'A.8.2' }]
     },
     'ca-device': {
       risk: { title: 'Cloud apps are reachable from unmanaged, non-compliant devices', cat: 'Access', L: 4, I: 4, controls: ['A.8.1', 'A.5.15'] },
@@ -481,8 +481,8 @@ function showModal(opts) {
     'retention': {
       risk: { title: 'No published retention or disposal rules, so data is kept indefinitely by default', cat: 'Data', L: 3, I: 4, controls: ['A.5.33', 'A.8.10'] },
       actions: [
-        { t: 'Publish retention labels covering each category of personal and business-critical information', pr: 'High', days: 45, control: 'A.5.33' },
-        { t: 'Set an end-of-retention action on every label so retained content is actually disposed of', pr: 'High', days: 45, control: 'A.8.10' }
+        { t: 'Publish retention labels covering each category of personal and business-critical information', pr: 'High', days: 30, control: 'A.5.33' },
+        { t: 'Set an end-of-retention action on every label so retained content is actually disposed of', pr: 'High', days: 30, control: 'A.8.10' }
       ]
     },
     /* The three templates below pair with the register-derived checks
@@ -492,7 +492,7 @@ function showModal(opts) {
     'bcp': {
       risk: { title: 'Continuity plan untested, so recovery capability is assumed rather than known', cat: 'Ops', L: 3, I: 5, controls: ['A.5.29', 'A.5.30'] },
       actions: [
-        { t: 'Run a BCP/DR failover test and record the outcome against the calendar entry', pr: 'High', days: 45, control: 'A.5.30' },
+        { t: 'Run a BCP/DR failover test and record the outcome against the calendar entry', pr: 'High', days: 30, control: 'A.5.30' },
         { t: 'Approve the BCP/DR plan document and set its next review date', pr: 'Medium', days: 21, control: 'A.5.29' }
       ]
     },
@@ -512,7 +512,7 @@ function showModal(opts) {
     },
     'audit-review': {
       risk: { title: 'No current independent review of the ISMS, so effectiveness is assumed rather than tested', cat: 'Governance', L: 3, I: 4, controls: ['A.5.35'] },
-      actions: [{ t: 'Complete a scheduled internal audit, or schedule one if none is planned, and record its findings', pr: 'High', days: 45, control: 'A.5.35' }]
+      actions: [{ t: 'Complete a scheduled internal audit, or schedule one if none is planned, and record its findings', pr: 'High', days: 30, control: 'A.5.35' }]
     },
     'incident-lessons': {
       risk: { title: 'Incidents closed without a recorded root cause or lessons learned', cat: 'Ops', L: 3, I: 3, controls: ['A.5.27', 'A.5.28'] },
@@ -1196,21 +1196,62 @@ function showModal(opts) {
      defaulting to High, and manually-added risk treatment actions
      defaulted to Medium/30. Both still land on the same date.
 
-     A client whose own documented SLA differs should be able to say so
-     in Settings rather than inherit ours — that is a follow-up, and the
-     reason every caller goes through dueForPriority() instead of
-     hard-coding its own daysFrom(). Posture-scan findings deliberately
-     keep the per-finding `days` in their own templates: a finding that
-     names a specific remediation carries a considered timeframe with it,
-     which is more precise than a band default. */
+     These are only the DEFAULTS. Each one is a tenant setting
+     (remediationDaysCritical/High/Medium/Low in store.js's
+     THRESHOLD_DEFS), so a client whose ISMS commits to different figures
+     says so once in Settings instead of overriding every action by hand
+     — which is the whole point, given the standards care that your own
+     stated windows are met rather than that they match ours. This object
+     is what a tenant with no setting saved falls back to.
+
+     Posture-scan findings deliberately keep the per-finding `days` in
+     their own templates: a finding that names a specific remediation
+     carries a considered timeframe with it, which is more precise than a
+     band default. What those per-finding figures may NOT do is invert
+     the bands — see REMEDIATION_CEILING below. */
   var REMEDIATION_DAYS = { Critical: 7, High: 14, Medium: 30, Low: 60 };
+
+  /* The longest a scan-template finding of each priority may be given:
+     the next milder band's default window.
+
+     The templates' own `days` encode EFFORT (publishing retention labels
+     across an estate genuinely takes longer than switching on a
+     Conditional Access policy) while `pr` encodes SEVERITY. Those are
+     different axes and the app is right to carry both — but they must
+     not cross. A High finding given 45 days while a Medium one gets 21
+     is the inversion an auditor actually queries, because the register
+     then argues against its own prioritisation.
+
+     A finding may still be FASTER than its band: beating the window is
+     never a finding. Only the ceiling is enforced (by
+     scan-template-timeframes.test.mjs), and it is deliberately loose
+     enough to keep the effort signal rather than flattening every
+     template onto the band default. Low's ceiling has no band below it,
+     so it takes 90 — a quarter, the same horizon the risk review cadence
+     uses. */
+  var REMEDIATION_CEILING = { Critical: REMEDIATION_DAYS.High, High: REMEDIATION_DAYS.Medium, Medium: REMEDIATION_DAYS.Low, Low: 90 };
+
+  /* This tenant's window for a given priority, in days: its own setting
+     when one is saved and usable, otherwise the shipped default. A blank
+     or non-numeric setting falls back rather than propagating NaN into a
+     date — a tenant that typed "two weeks" into the box should get the
+     default, not an Invalid Date on every action it raises. Zero and
+     negatives are rejected for the same reason: an action due before it
+     was raised is not a tighter SLA, it is a broken one. */
+  function remediationDays(pr) {
+    var key = 'remediationDays' + pr;
+    var raw = S.settings && S.settings[key];
+    var n = (raw === '' || raw == null) ? NaN : Number(raw);
+    if (!isNaN(n) && n > 0) return n;
+    return REMEDIATION_DAYS[pr] || REMEDIATION_DAYS.Medium;
+  }
 
   /* The due date for a newly-raised action of this priority. Unknown or
      missing priority falls back to the Medium window rather than the
      shortest one — an action nobody classified should not silently
      become the most urgent thing in the register. */
   function dueForPriority(pr) {
-    return daysFrom(REMEDIATION_DAYS[pr] || REMEDIATION_DAYS.Medium);
+    return daysFrom(REMEDIATION_DAYS[pr] ? remediationDays(pr) : remediationDays('Medium'));
   }
 
   /* A file picker with no markup of its own, so adding an import button
