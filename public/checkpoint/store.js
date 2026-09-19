@@ -661,7 +661,19 @@ window.THRESHOLD_DEFS = [
   { key: 'remediationDaysCritical', label: 'Remediation window — Critical (days)', desc: 'Default due date for a newly-raised Critical action, counted from the day it is raised. Every date stays editable; this is the starting point, and the figure your risk treatment procedure should agree with.', def: '7' },
   { key: 'remediationDaysHigh', label: 'Remediation window — High (days)', desc: 'Default due date for a newly-raised High action. The 14-day default matches ASD Essential Eight\'s two-week patching window.', def: '14' },
   { key: 'remediationDaysMedium', label: 'Remediation window — Medium (days)', desc: 'Default due date for a newly-raised Medium action. Also the fallback for an action whose priority is missing or unrecognised — an unclassified action should not silently become the most urgent thing in the register.', def: '30' },
-  { key: 'remediationDaysLow', label: 'Remediation window — Low (days)', desc: 'Default due date for a newly-raised Low action.', def: '60' }
+  { key: 'remediationDaysLow', label: 'Remediation window — Low (days)', desc: 'Default due date for a newly-raised Low action.', def: '60' },
+  /* Audit findings run on a DIFFERENT clock from the severity bands
+     above, which is why this is its own key rather than another band.
+     The windows above answer "how urgent is this, given the risk"; a
+     nonconformity raised in an audit answers to whoever raised it —
+     typically a certification body expecting a corrective action plan
+     within 30 days for a major, and closure by the next surveillance
+     visit for a minor. Those are the CB's terms, not the standard's
+     (ISO names no deadline), and not a function of the finding's
+     priority, so a High audit finding and a High posture-scan action
+     legitimately carry different dates. Set this to whatever your own
+     certification body's terms actually say. */
+  { key: 'auditFindingDueDays', label: 'Audit finding window (days)', desc: 'Default due date for a finding raised from an internal audit, counted from the day it is raised. Separate from the remediation windows above because an audit finding answers to the body that raised it — commonly a 30-day corrective action plan — rather than to the finding\'s own severity. Editable per finding either way.', def: '30' }
 ];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',

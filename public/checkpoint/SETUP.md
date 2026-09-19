@@ -1777,8 +1777,18 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   as defaults to override on the way in — and say so in your risk
   treatment procedure, which is the document the auditor will ask for.
 
-  Posture-scan findings are the deliberate exception: each carries its
-  own timeframe in its finding template, because a finding that names a
+  **Audit findings run on a separate clock.** A finding raised from an
+  internal audit takes `auditFindingDueDays` (default **30**), not one of
+  the bands above. A nonconformity answers to the body that raised it —
+  a certification body commonly wants a corrective action plan within 30
+  days for a major and closure by the next surveillance visit for a
+  minor — and that is not a function of the finding's own severity. So a
+  High audit finding and a High posture-scan action legitimately carry
+  different dates. Set it to whatever your certification body's terms
+  actually say; the date stays editable per finding either way.
+
+  Posture-scan findings are the other deliberate exception: each carries
+  its own timeframe in its finding template, because a finding that names a
   specific remediation comes with a considered deadline that is more
   precise than a band default. Publishing retention labels across an
   estate genuinely takes longer than switching on a Conditional Access

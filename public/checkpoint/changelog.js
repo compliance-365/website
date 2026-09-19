@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.80.0',
+    date: '2026-09-19',
+    entries: [
+      'Audit findings are back on a 30-day default, and now have their own setting (auditFindingDueDays) rather than borrowing a severity band. 1.77.0 routed them through the remediation windows for consistency, which moved the default from 30 days to 14 -- tidier, but wrong: a nonconformity answers to the body that raised it, and a certification body typically wants a corrective action plan within 30 days for a major and closure by the next surveillance visit for a minor. Those terms are the CB\'s, not the standard\'s, and not a function of the finding\'s own priority, so a High audit finding and a High posture-scan action can legitimately carry different dates. Same validation as the other windows: a blank, non-numeric, zero or negative value falls back to 30.'
+    ]
+  },
+  {
     version: '1.79.0',
     date: '2026-09-19',
     entries: [
