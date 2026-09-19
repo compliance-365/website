@@ -1703,6 +1703,45 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   findings that didn't originate from a scan or risk. The Audit
   Readiness report calls out any open non-conformities as a standing
   recommendation.
+- **Risk register: CIA, review cadence and assessed residual**: three
+  fields that bring the register in line with what the Risk Management
+  Framework policy template (generated from Documents) already says it
+  does.
+
+  **CIA.** Each risk records which of confidentiality, integrity and
+  availability it threatens — ISO 27001 clause 6.1.2 c)1) asks for risks
+  to be identified in those terms, and `Category` (Access/Data/Supplier)
+  is a different axis. Shown as a column in the register and included in
+  the CSV export. Blank reads as "not yet classified", never as a value.
+
+  **Review cadence.** A risk records when it was last reviewed and by
+  whom. An open risk not reviewed within `riskReviewCadenceDays`
+  (Settings → thresholds, default 90 to match the template's quarterly
+  commitment) shows as overdue on the register and in its summary tiles;
+  one never reviewed shows as "Never". Clause 8.2 requires assessments at
+  planned intervals, and this is what evidences it. Closed risks are
+  never chased. "Record review" in the risk drawer logs a review that
+  changed nothing, which is still a review and still the one an auditor
+  samples.
+
+  **Assessed residual.** Residual risk is still *estimated* by default —
+  each completed treatment action drops likelihood by one, impact by one
+  once all are done — and the register labels it as an estimate. "Assess
+  residual" in the risk drawer records a practitioner's actual
+  re-evaluation of likelihood and impact with treatment in place, which
+  is how ISO/IEC 27005 expects residual to be determined, and that
+  assessment then takes precedence everywhere the residual is shown
+  (register, heatmap, appetite comparison, reports). A tick beside the
+  residual chip marks an assessed one. The assessment can go *up* as well
+  as down — treatment that did not work leaves residual worse than the
+  arithmetic assumes, which is the case the formula structurally cannot
+  produce. Clearing both fields returns to the estimate.
+
+  On an existing tenant the seven new SharePoint columns are added
+  automatically on next load by `reconcileColumns()` — no
+  re-provisioning, and risks created before they existed simply read as
+  unclassified/never-reviewed/estimated rather than being back-filled
+  with invented values.
 - **Remediation windows by priority**: every path that raises an action
   — the manual "+ Add action / finding" form, treatment actions created
   with a risk or added to one later, findings raised from an internal

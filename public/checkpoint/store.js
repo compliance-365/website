@@ -645,7 +645,8 @@ window.THRESHOLD_DEFS = [
   { key: 'dormantAccountReviewMax', label: 'Max dormant accounts (review)', desc: 'At or under this many dormant accounts is a Review — a handful is housekeeping and some are deliberate. More than this is a Fail: a directory with dozens of untouched enabled accounts is not one with dozens of break-glass accounts.', def: '5' },
   { key: 'mfaCoverageReviewPct', label: 'MFA registration review floor (%)', desc: 'Full coverage passes; at or above this floor shows as Review; below it fails. An administrator who cannot complete MFA fails the check outright regardless of this number — averaging a Global Administrator into a fleet-wide percentage is how the most valuable account in the tenant gets rounded away.', def: '95' },
   { key: 'auditLogWindowDays', label: 'Audit log review window (days)', desc: 'How far back the two Entra audit-log checks look — observed legacy authentication, and privileged role changes. Set this to match the review cadence your own ISMS commits to rather than leaving the 30-day default; a quarterly access review wants 90. Entra itself retains sign-in and directory audit logs for 30 days on P1/P2 (7 days on the free tier), so a longer window here silently returns only what Entra still holds.', def: '30' },
-  { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
+  { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' },
+  { key: 'riskReviewCadenceDays', label: 'Risk review cadence (days)', desc: 'An open risk not reviewed within this many days shows as overdue for review on the Risk register, the Dashboard and the Audit Readiness Report. ISO 27001 clause 8.2 requires risk assessments at planned intervals or on significant change, and the Risk Management Framework policy template commits to reviewing residual risk at least quarterly — which is where the 90-day default comes from. Set it to whatever your own framework actually says.', def: '90' }
 ];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
@@ -1322,17 +1323,33 @@ window.DemoStore = (function () {
         'retention': '4 of 4 retention label(s) published, none with an end-of-retention action — retained content is never disposed of'
       },
       risks: [
-        { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Treat', actions: ['ACT-001', 'ACT-002'] },
+        { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Treat', actions: ['ACT-001', 'ACT-002'],
+          /* The one demo risk carrying an ASSESSED residual rather than
+             the derived estimate: both treatment actions are done, so
+             the arithmetic would say L2/I3, but the contractual clauses
+             only cover new suppliers — the practitioner's re-assessment
+             is deliberately WORSE than the formula, which is the case
+             the formula structurally cannot produce. */
+          cia: ['C'], lastReviewed: daysFrom(-20), lastReviewedBy: 'K. Patel',
+          resL: 3, resI: 4, resBy: 'K. Patel', resDate: daysFrom(-20) },
         { id: 'R-002', title: 'No tested restore path for SharePoint business-critical libraries', cat: 'Data', src: 'Workshop', L: 3, I: 5, controls: ['A.8.13'], owner: 'S. Okafor', status: 'In treatment', treat: 'Treat', actions: ['ACT-003'],
+          cia: ['I', 'A'], lastReviewed: daysFrom(-60), lastReviewedBy: 'S. Okafor',
           /* One risk on real tenant figures rather than the generic
              band, so the demo shows both states of the Assumptions
              column and the editor has something to open. Shaped like a
              genuine estimate: a restore failure on clinical records is
              costlier and rarer than the band for L3/I5 assumes. */
           finOverride: { lossMin: 250000, lossLikely: 900000, lossMax: 3500000, freqMin: 0.05, freqLikely: 0.15, freqMax: 0.5 } },
-        { id: 'R-003', title: 'Staff unable to recognise credential-phishing attempts', cat: 'People', src: 'Gap analysis', L: 4, I: 3, controls: ['A.6.3'], owner: 'M. Chen', status: 'Monitored', treat: 'Treat', actions: ['ACT-004'] },
-        { id: 'R-004', title: 'Shadow cloud services holding client data outside the tenant', cat: 'Data', src: 'Workshop', L: 3, I: 4, controls: ['A.5.23', 'A.5.9'], owner: 'K. Patel', status: 'Open', treat: 'Treat', actions: ['ACT-005'] },
-        { id: 'R-005', title: 'Cryptographic key handling undocumented for client-facing APIs', cat: 'Ops', src: 'Gap analysis', L: 2, I: 4, controls: ['A.8.24'], owner: 'S. Okafor', status: 'Open', treat: 'Treat', actions: ['ACT-006'] }
+        { id: 'R-003', title: 'Staff unable to recognise credential-phishing attempts', cat: 'People', src: 'Gap analysis', L: 4, I: 3, controls: ['A.6.3'], owner: 'M. Chen', status: 'Monitored', treat: 'Treat', actions: ['ACT-004'],
+          /* Past the 90-day default cadence, so the register and
+             dashboard have a genuine overdue-for-review row to show. */
+          cia: ['C'], lastReviewed: daysFrom(-140), lastReviewedBy: 'M. Chen' },
+        { id: 'R-004', title: 'Shadow cloud services holding client data outside the tenant', cat: 'Data', src: 'Workshop', L: 3, I: 4, controls: ['A.5.23', 'A.5.9'], owner: 'K. Patel', status: 'Open', treat: 'Treat', actions: ['ACT-005'],
+          /* Deliberately no lastReviewed — the "never reviewed" state
+             an auditor asks about first. */
+          cia: ['C', 'I'] },
+        { id: 'R-005', title: 'Cryptographic key handling undocumented for client-facing APIs', cat: 'Ops', src: 'Gap analysis', L: 2, I: 4, controls: ['A.8.24'], owner: 'S. Okafor', status: 'Open', treat: 'Treat', actions: ['ACT-006'],
+          cia: ['C', 'I'], lastReviewed: daysFrom(-5), lastReviewedBy: 'S. Okafor' }
       ],
       actions: [
         { id: 'ACT-001', title: 'Issue updated security schedule to top-10 suppliers', risk: 'R-001', control: 'A.5.19', pr: 'High', owner: 'K. Patel', due: daysFrom(-6), status: 'In progress', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
@@ -1781,6 +1798,34 @@ window.SpStore = (function () {
          it (same "who" the audit log already records for the add/
          approve action itself). */
       { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} },
+      /* Which of confidentiality, integrity and availability this risk
+         threatens, as a CSV of C/I/A. ISO 27001 6.1.2 c)1) asks for
+         risks to be identified in terms of the loss of CIA, and the Risk
+         Management Framework policy template's opening statement says
+         the register records exactly that — it had nowhere to put it,
+         Category (Access/Data/Supplier) being a different axis. Blank on
+         risks created before this existed and on anything imported
+         without it; the register reads that as "not classified" rather
+         than inventing a value. */
+      { name: 'Cia', text: {} },
+      /* When this risk was last reviewed, and by whom. Clause 8.2 wants
+         assessments at planned intervals; the framework template commits
+         to quarterly. Compared against the tenant's
+         riskReviewCadenceDays by CheckpointLib.riskReviewStatus(). Blank
+         means never reviewed, which reads as due rather than as current
+         — a risk nobody has looked at is the one to chase, not the one
+         to leave alone. */
+      { name: 'LastReviewed', text: {} }, { name: 'LastReviewedBy', text: {} },
+      /* An ASSESSED residual — the practitioner's re-evaluation of
+         likelihood and impact with treatment in place (ISO/IEC 27005),
+         which CheckpointLib.residual() returns in preference to its own
+         arithmetic estimate. Both numbers must be present to count;
+         either alone is an incomplete assessment and is ignored.
+         ResidualBy/ResidualDate record who made the call and when, the
+         same way the acceptance fields do — a residual rating is only
+         true on the day it was set, so the date is part of the claim. */
+      { name: 'ResidualL', number: {} }, { name: 'ResidualI', number: {} },
+      { name: 'ResidualBy', text: {} }, { name: 'ResidualDate', text: {} },
       /* Set when a practitioner dismisses a "ready to close" resolution
          proposal (its underlying check now passes) rather than approving
          it — a one-way "not yet" so the same risk isn't re-proposed for
@@ -2343,7 +2388,7 @@ window.SpStore = (function () {
        every column costs nothing for an up-to-date tenant and closes
        this bug class completely for whichever tenant is still missing
        one from years of incremental additions. */
-    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride'],
+    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride', 'Cia', 'LastReviewed', 'LastReviewedBy', 'ResidualL', 'ResidualI', 'ResidualBy', 'ResidualDate'],
     Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
     /* Same incomplete-subset mistake as Risks/Actions above, caught the
        same way: this used to list only LastVerified/EvidenceUrl/
@@ -2625,7 +2670,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride) };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride), cia: uncsv(f.Cia), lastReviewed: f.LastReviewed || '', lastReviewedBy: f.LastReviewedBy || '', resL: (typeof f.ResidualL === 'number' ? f.ResidualL : null), resI: (typeof f.ResidualI === 'number' ? f.ResidualI : null), resBy: f.ResidualBy || '', resDate: f.ResidualDate || '' };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -2816,7 +2861,8 @@ window.SpStore = (function () {
       r._sp = await addItem('Risks', {
         Title: r.title, RefId: r.id, Category: r.cat, Source: r.src, Likelihood: r.L, Impact: r.I,
         Controls: csv(r.controls), Owner: r.owner, Status: r.status, Treatment: r.treat,
-        ActionRefs: csv(r.actions), TplId: r.tpl || '', AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || ''
+        ActionRefs: csv(r.actions), TplId: r.tpl || '', AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '',
+        Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || ''
       });
       S.risks.push(r);
     },
@@ -2832,7 +2878,10 @@ window.SpStore = (function () {
         AcceptedScore: (typeof r.acceptedScore === 'number' ? r.acceptedScore : null),
         FinancialOverride: (r.finOverride && Object.keys(r.finOverride).length) ? JSON.stringify(r.finOverride) : '',
         AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '',
-        ResolutionDismissed: !!r.resolutionDismissed
+        ResolutionDismissed: !!r.resolutionDismissed,
+        Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || '',
+        ResidualL: (typeof r.resL === 'number' ? r.resL : null), ResidualI: (typeof r.resI === 'number' ? r.resI : null),
+        ResidualBy: r.resBy || '', ResidualDate: r.resDate || ''
       });
     },
     deleteRisk: async function (r) {

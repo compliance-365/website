@@ -16,18 +16,78 @@
     return sc >= 15 ? 'Critical' : sc >= 10 ? 'High' : sc >= 5 ? 'Medium' : 'Low';
   }
 
-  /* Residual likelihood/impact for a risk: each completed treatment
-     action shaves a point off likelihood (floor 1); impact drops by one
-     (floor 1) only once every linked action is done. `actions` is the
-     full actions register (or any array of {id, status} objects) — the
-     risk itself only stores action id references. */
+  /* Residual likelihood/impact for a risk.
+
+     Two sources, in priority order.
+
+     1. AN ASSESSED RESIDUAL, when the risk carries one. ISO/IEC 27005
+        determines residual risk by RE-ASSESSING likelihood and impact
+        with the treatment in place — a judgement a practitioner makes,
+        not a number a formula derives. resL/resI hold that judgement,
+        alongside who recorded it and when (resBy/resDate), and this
+        function returns it unchanged. Set through the risk drawer's
+        "Record assessed residual"; absent until someone does.
+
+     2. OTHERWISE THE DERIVED ESTIMATE, unchanged from what this function
+        always did: each completed treatment action shaves a point off
+        likelihood (floor 1), and impact drops by one (floor 1) only once
+        every linked action is done.
+
+     The estimate stays the default deliberately. A register where every
+     untouched risk shows a blank residual is worse than one showing a
+     rough one, and the derived number is a reasonable proxy for "some
+     treatment has landed". But it assumes every action reduces
+     likelihood by exactly one, which is a property of the arithmetic
+     rather than of the controls — three weak actions move a risk further
+     than one strong one. So it is a starting point that a practitioner
+     can overrule with an actual assessment, and `derived` on the result
+     says which of the two the caller is looking at, so the UI can label
+     an estimate as an estimate.
+
+     `actions` is the full actions register (or any array of
+     {id, status} objects) — the risk itself only stores action id
+     references. */
   function residual(r, actions) {
+    if (typeof r.resL === 'number' && typeof r.resI === 'number') {
+      return { L: Math.max(1, r.resL), I: Math.max(1, r.resI), derived: false };
+    }
     var done = r.actions.filter(function (id) {
       var a = actions.find(function (x) { return x.id === id; });
       return a && a.status === 'Done';
     }).length;
     var all = r.actions.length > 0 && done === r.actions.length;
-    return { L: Math.max(1, r.L - done), I: all ? Math.max(1, r.I - 1) : r.I };
+    return { L: Math.max(1, r.L - done), I: all ? Math.max(1, r.I - 1) : r.I, derived: true };
+  }
+
+  /* Whether a risk is overdue for review.
+
+     ISO/IEC 27001 clause 8.2 requires risk assessments at planned
+     intervals or on significant change, and Checkpoint's own Risk
+     Management Framework template commits to reviewing residual risk
+     "at least quarterly and after any material change" — which the app
+     had no way to evidence, having never recorded when a risk was last
+     looked at.
+
+     Deliberately mirrors controlReviewStatus() rather than
+     documentReviewState(): a risk has no natural per-item next-review
+     date the way a controlled document does, so this is "last reviewed
+     plus the tenant's cadence", one setting for the whole register.
+
+     A risk that has NEVER been reviewed reads as due with
+     neverReviewed: true, so the UI can say that instead of a day count
+     computed from nothing — same convention controlReviewStatus() uses
+     for a control that was never verified. Closed risks are never
+     chased. `today` is a YYYY-MM-DD string parameter, never the ambient
+     clock, so tests pin it. */
+  function riskReviewStatus(risk, today, cadenceDays) {
+    var r = risk || {};
+    var cadence = (cadenceDays == null || cadenceDays === '') ? 90 : Number(cadenceDays);
+    if (isNaN(cadence)) cadence = 90;
+    if (r.status === 'Closed') return { due: false, neverReviewed: false, daysOverdue: 0 };
+    if (!r.lastReviewed) return { due: true, neverReviewed: true, daysOverdue: null };
+    var days = daysBetweenDateStr(r.lastReviewed, today);
+    var over = days - cadence;
+    return { due: over > 0, neverReviewed: false, daysOverdue: over > 0 ? over : 0 };
   }
 
   /* Whether a recorded residual-risk acceptance (App.acceptRisk() —
@@ -4419,6 +4479,7 @@
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
+    riskReviewStatus: riskReviewStatus,
     buildAdminConsentUrl: buildAdminConsentUrl,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
