@@ -646,7 +646,22 @@ window.THRESHOLD_DEFS = [
   { key: 'mfaCoverageReviewPct', label: 'MFA registration review floor (%)', desc: 'Full coverage passes; at or above this floor shows as Review; below it fails. An administrator who cannot complete MFA fails the check outright regardless of this number — averaging a Global Administrator into a fleet-wide percentage is how the most valuable account in the tenant gets rounded away.', def: '95' },
   { key: 'auditLogWindowDays', label: 'Audit log review window (days)', desc: 'How far back the two Entra audit-log checks look — observed legacy authentication, and privileged role changes. Set this to match the review cadence your own ISMS commits to rather than leaving the 30-day default; a quarterly access review wants 90. Entra itself retains sign-in and directory audit logs for 30 days on P1/P2 (7 days on the free tier), so a longer window here silently returns only what Entra still holds.', def: '30' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' },
-  { key: 'riskReviewCadenceDays', label: 'Risk review cadence (days)', desc: 'An open risk not reviewed within this many days shows as overdue for review on the Risk register, the Dashboard and the Audit Readiness Report. ISO 27001 clause 8.2 requires risk assessments at planned intervals or on significant change, and the Risk Management Framework policy template commits to reviewing residual risk at least quarterly — which is where the 90-day default comes from. Set it to whatever your own framework actually says.', def: '90' }
+  { key: 'riskReviewCadenceDays', label: 'Risk review cadence (days)', desc: 'An open risk not reviewed within this many days shows as overdue for review on the Risk register, the Dashboard and the Audit Readiness Report. ISO 27001 clause 8.2 requires risk assessments at planned intervals or on significant change, and the Risk Management Framework policy template commits to reviewing residual risk at least quarterly — which is where the 90-day default comes from. Set it to whatever your own framework actually says.', def: '90' },
+  /* Remediation windows, one per action priority. ISO prescribes no
+     numbers here — 27001 clause 6.1.3 wants a risk treatment plan, 10.2
+     wants a nonconformity reacted to and its cause evaluated, neither
+     names a deadline, and 42001 is the same. What an auditor tests is
+     whether the windows YOU documented are applied and met, which is
+     exactly why these are settings rather than constants: a client whose
+     ISMS commits to different figures should be able to say so once,
+     here, instead of overriding every action by hand. The defaults are
+     Checkpoint's, not a standard's — High = 14 days is anchored to ASD
+     Essential Eight's two-week patching window (see E8.2/E8.6 below),
+     and the rest step out from there. */
+  { key: 'remediationDaysCritical', label: 'Remediation window — Critical (days)', desc: 'Default due date for a newly-raised Critical action, counted from the day it is raised. Every date stays editable; this is the starting point, and the figure your risk treatment procedure should agree with.', def: '7' },
+  { key: 'remediationDaysHigh', label: 'Remediation window — High (days)', desc: 'Default due date for a newly-raised High action. The 14-day default matches ASD Essential Eight\'s two-week patching window.', def: '14' },
+  { key: 'remediationDaysMedium', label: 'Remediation window — Medium (days)', desc: 'Default due date for a newly-raised Medium action. Also the fallback for an action whose priority is missing or unrecognised — an unclassified action should not silently become the most urgent thing in the register.', def: '30' },
+  { key: 'remediationDaysLow', label: 'Remediation window — Low (days)', desc: 'Default due date for a newly-raised Low action.', def: '60' }
 ];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',

@@ -25,6 +25,7 @@ import { readFileSync } from 'node:fs';
 
 const app = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../public/checkpoint/index.html', import.meta.url), 'utf8');
+const store = readFileSync(new URL('../public/checkpoint/store.js', import.meta.url), 'utf8');
 
 /* The table as app.js actually declares it, parsed rather than restated,
    so this file cannot drift from the source it is guarding. */
@@ -64,10 +65,63 @@ describe('the remediation window table', () => {
 
   test('an unrecognised priority falls back to the Medium window, not the shortest', () => {
     // An action nobody classified must not silently become the most
-    // urgent thing in the register.
+    // urgent thing in the register. Asserted on both halves of the
+    // lookup, since the window each band resolves to became a tenant
+    // setting: dueForPriority() decides WHICH band applies, and
+    // remediationDays() decides what that band is worth.
     const fn = /function dueForPriority\(pr\) \{([\s\S]*?)\n  \}/.exec(app);
     assert.ok(fn, 'dueForPriority() has been renamed or removed');
-    assert.match(fn[1], /REMEDIATION_DAYS\[pr\] \|\| REMEDIATION_DAYS\.Medium/);
+    assert.match(fn[1], /Medium/, 'an unknown priority no longer routes to the Medium window');
+    assert.doesNotMatch(fn[1], /Critical/, 'an unknown priority must not fall back to the shortest window');
+
+    const resolver = app.slice(app.indexOf('function remediationDays(pr)'), app.indexOf('\n  }', app.indexOf('function remediationDays(pr)')));
+    assert.match(resolver, /REMEDIATION_DAYS\[pr\] \|\| REMEDIATION_DAYS\.Medium/,
+      'the band lookup itself no longer falls back to Medium');
+  });
+});
+
+describe('the windows are the tenant\'s own, not hard-coded', () => {
+  /* The numbers shipped here are Checkpoint's, not a standard's — ISO
+     prescribes none — so a client whose ISMS commits to different
+     figures has to be able to say so once rather than override every
+     action by hand. Each band is a setting; this table is the fallback
+     for a tenant that has saved none. */
+  const resolver = (() => {
+    const start = app.indexOf('function remediationDays(pr)');
+    assert.ok(start > -1, 'remediationDays() has been renamed or removed');
+    return app.slice(start, app.indexOf('\n  }', start));
+  })();
+
+  for (const band of PRIORITIES) {
+    test(`${band} has a tenant setting backing it`, () => {
+      assert.match(store, new RegExp("key: 'remediationDays" + band + "'"),
+        `remediationDays${band} is not declared in THRESHOLD_DEFS, so the window cannot be configured`);
+    });
+
+    test(`the ${band} setting's default matches the shipped table`, () => {
+      const m = new RegExp("key: 'remediationDays" + band + "'[^}]*def: '(\\d+)'").exec(store);
+      assert.ok(m, `no default found for remediationDays${band}`);
+      assert.equal(Number(m[1]), TABLE[band],
+        `the setting default and REMEDIATION_DAYS disagree for ${band} — a tenant that never touches Settings would get a different window from one that saves the defaults`);
+    });
+  }
+
+  test('the setting is read before the fallback', () => {
+    assert.match(resolver, /S\.settings && S\.settings\[key\]/, 'the tenant setting is never consulted');
+    assert.match(resolver, /REMEDIATION_DAYS\[pr\]/, 'there is no fallback when no setting is saved');
+  });
+
+  test('a blank or non-numeric setting falls back instead of producing an Invalid Date', () => {
+    // A tenant that typed "two weeks" into the box should get the
+    // default, not NaN propagated into daysFrom() and an Invalid Date on
+    // every action it raises.
+    assert.match(resolver, /isNaN\(n\)/, 'a non-numeric setting is never rejected');
+  });
+
+  test('zero and negative windows are rejected', () => {
+    // An action due before the day it was raised is not a tighter SLA,
+    // it is a broken one — and it would read as instantly overdue.
+    assert.match(resolver, /n > 0/, 'a zero or negative setting is never rejected');
   });
 });
 
