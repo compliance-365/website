@@ -130,8 +130,7 @@ describe('every path that raises an action uses the table', () => {
      unique to it, plus what its due date must be derived from. */
   const SITES = [
     ["src: 'Manual entry'", 'a manually-added risk\'s treatment actions'],
-    ["src: 'Risk treatment'", 'an action added to an existing risk'],
-    ["src: 'Internal audit'", 'a finding raised from an internal audit']
+    ["src: 'Risk treatment'", 'an action added to an existing risk']
   ];
 
   for (const [marker, label] of SITES) {
@@ -168,5 +167,63 @@ describe('every path that raises an action uses the table', () => {
     const line = app.split('\n').find(l => l.includes("src: 'Posture scan'") && l.includes('due:'));
     assert.ok(line, 'the posture-scan action-creating line has moved');
     assert.match(line, /due: daysFrom\(a\.days\)/);
+  });
+});
+
+describe('audit findings run on their own clock, not the severity bands', () => {
+  /* A nonconformity answers to whoever raised it. A certification body
+     typically wants a corrective action plan within 30 days for a major
+     and closure by the next surveillance visit for a minor — terms that
+     are the CB's, not the standard's (ISO names no deadline), and not a
+     function of the finding's own priority. So a High audit finding and
+     a High posture-scan action legitimately carry different dates, and
+     tying the two together would be wrong rather than tidy.
+
+     This deliberately reverses part of an earlier change that routed
+     audit findings through dueForPriority() for consistency. Consistency
+     was the wrong goal: it moved the default from 30 days to 14 and
+     quietly put audit findings on a clock their certification body never
+     agreed to. */
+  const line = app.split('\n').find(l => l.includes("src: 'Internal audit'") && l.includes('due:'));
+  const resolver = (() => {
+    const start = app.indexOf('function auditFindingDays()');
+    assert.ok(start > -1, 'auditFindingDays() has been renamed or removed');
+    return app.slice(start, app.indexOf('\n  }', start));
+  })();
+
+  test('the setting exists and defaults to 30 days', () => {
+    const m = /\{ key: 'auditFindingDueDays'[^}]*def: '(\d+)'/.exec(store);
+    assert.ok(m, 'auditFindingDueDays is not declared in THRESHOLD_DEFS');
+    assert.equal(m[1], '30',
+      'the default should match the corrective-action window a certification body commonly gives');
+  });
+
+  test('the shipped fallback agrees with the setting default', () => {
+    const m = /var AUDIT_FINDING_DAYS = (\d+);/.exec(app);
+    assert.ok(m, 'AUDIT_FINDING_DAYS has been renamed or removed');
+    const setting = /\{ key: 'auditFindingDueDays'[^}]*def: '(\d+)'/.exec(store);
+    assert.equal(Number(m[1]), Number(setting[1]),
+      'a tenant that never touches Settings would get a different window from one that saves the default');
+  });
+
+  test('the finding takes that clock, not a severity band', () => {
+    assert.ok(line, "no action-creating line found for src: 'Internal audit'");
+    assert.match(line, /due: [^,]*auditFindingDays\(\)/,
+      'an audit finding no longer uses its own window');
+    assert.doesNotMatch(line, /dueForPriority\(/,
+      'an audit finding is back on the severity bands, which moves its default off the CB clock');
+  });
+
+  test('it still does not hard-code a number of days', () => {
+    // The point of the original single-sourcing change stands: the value
+    // belongs in one named place, it is just a different place from the
+    // severity bands.
+    assert.doesNotMatch(line, /due: [^,]*daysFrom\(\d/,
+      'the audit window is hard-coded at the call site instead of read from the setting');
+  });
+
+  test('a blank, non-numeric, zero or negative setting falls back', () => {
+    assert.match(resolver, /isNaN\(n\)/, 'a non-numeric setting is never rejected');
+    assert.match(resolver, /n > 0/, 'a zero or negative setting is never rejected');
   });
 });

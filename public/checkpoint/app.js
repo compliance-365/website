@@ -1246,6 +1246,20 @@ function showModal(opts) {
     return REMEDIATION_DAYS[pr] || REMEDIATION_DAYS.Medium;
   }
 
+  /* The window for a finding raised from an internal audit — its own
+     clock, not one of the severity bands. See store.js's
+     auditFindingDueDays for why: a nonconformity answers to the body
+     that raised it (commonly a 30-day corrective action plan), which is
+     not a function of the finding's own priority. Same validation as
+     remediationDays(): a blank, non-numeric, zero or negative setting
+     falls back rather than reaching daysFrom(). */
+  var AUDIT_FINDING_DAYS = 30;
+  function auditFindingDays() {
+    var raw = S.settings && S.settings.auditFindingDueDays;
+    var n = (raw === '' || raw == null) ? NaN : Number(raw);
+    return (!isNaN(n) && n > 0) ? n : AUDIT_FINDING_DAYS;
+  }
+
   /* The due date for a newly-raised action of this priority. Unknown or
      missing priority falls back to the Medium window rather than the
      shortest one — an action nobody classified should not silently
@@ -14456,20 +14470,24 @@ function showModal(opts) {
           { id: 'risk', label: 'Linked risk (optional)', type: 'select', value: '', options: riskLinkOptions('') },
           { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
           { id: 'owner', label: 'Owner', value: a.auditor || '' },
-          /* Same band table as every other path, so an audit finding and
-             a risk treatment action of equal priority carry the same
-             deadline — a register where the two disagree is the thing an
-             auditor actually queries. A certification body's own window
-             for closing a nonconformity it raised is a separate clock
-             and belongs on the date field, which stays editable. */
-          { id: 'due', label: 'Due date', type: 'date', value: dueForPriority('High') }
+          /* The audit-finding clock, NOT the severity bands the rest of
+             the app uses. A nonconformity answers to the body that
+             raised it — a certification body typically wants a
+             corrective action plan within 30 days for a major, and
+             closure by the next surveillance visit for a minor — and
+             that is not a function of the finding's own priority. So a
+             High audit finding and a High posture-scan action
+             legitimately carry different dates, and this one is
+             tenant-configurable separately (auditFindingDueDays).
+             Editable per finding either way. */
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(auditFindingDays()) }
         ],
         confirmText: 'Raise finding',
         validate: function (v) { return v.title ? null : 'Describe the finding.'; }
       });
       if (!v) return;
       var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || dueForPriority(v.pr), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(auditFindingDays()), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
       busy(true);
       try {
         await Store.addAction(act);
