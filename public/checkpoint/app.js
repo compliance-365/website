@@ -10349,6 +10349,16 @@ function showModal(opts) {
        nothing new was invented for. See openPalette/closePalette for
        the focus-trap/Escape pattern, shared with the drawer. */
     openPalette: function () {
+      /* A restricted session has no real use for a command palette onto
+         a two-view app, and Ctrl/Cmd-K is a global keydown listener that
+         fires regardless of whether the topbar trigger is even visible
+         — see the RESTRICTED_HIDE_IDS comment near applyRestrictedUi()
+         for the full reasoning (this is the one place that reasoning
+         actually bites: everything a filtered palette would still leak
+         — Run posture scan, every Add-X command, the real record search
+         index — closes in one line here instead of being filtered
+         piecemeal). */
+      if (RESTRICTED_ACCESS) return;
       var overlay = document.getElementById('cmdkOverlay');
       var box = document.getElementById('cmdk');
       var input = document.getElementById('cmdkInput');
@@ -16601,8 +16611,26 @@ function showModal(opts) {
      this reuses them rather than restructuring either view's markup.
      trainingActionsRow is the one id added purely for this — the
      "+ Assign training / Catch up new starters / Export CSV" row had
-     none before. A no-op for every other session. */
-  var RESTRICTED_HIDE_IDS = ['attestKpiRow', 'attestAdminWrap', 'trainingActionsRow', 'trainingKpiRow', 'trainingAdminWrap'];
+     none before.
+
+     btnSettingsTop/btnScanTop/gsearchWrap close a gap found testing this
+     at phone width: applyRestrictedNav() only ever touched .nav-item
+     elements, but the topbar's Settings gear and "Run posture scan"
+     button are separate always-on controls that reach the same
+     destinations a different way — data-action="App.go" data-id=
+     "settings" opens the full admin console directly, nav hidden or
+     not. The command palette (Ctrl/Cmd-K) is the same shape of gap one
+     level deeper: its "Go to X" entries already self-filter through
+     isNavVisible() (buildCommands() in this file), since that reads the
+     exact inline style this function sets — but "Run posture scan",
+     every "Add X" command and, more to the point, the record search
+     index behind a query (real risk/action/vendor/etc rows) do not. A
+     restricted session has no real use for a command palette onto a
+     two-view app, so openPalette() itself refuses to open one rather
+     than trying to individually filter every command and the search
+     index — see the RESTRICTED_ACCESS check at the top of openPalette.
+     A no-op for every other session. */
+  var RESTRICTED_HIDE_IDS = ['attestKpiRow', 'attestAdminWrap', 'trainingActionsRow', 'trainingKpiRow', 'trainingAdminWrap', 'btnSettingsTop', 'btnScanTop', 'gsearchWrap'];
   function applyRestrictedUi() {
     if (!RESTRICTED_ACCESS) return;
     RESTRICTED_HIDE_IDS.forEach(function (id) {
