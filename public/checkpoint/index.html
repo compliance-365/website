@@ -386,11 +386,8 @@
       </details>
       <details class="nav-group" data-group="aitools">
         <summary class="nav-label">AI tools</summary>
-        <button class="nav-item" data-v="aiassistant">AI assistant</button>
+        <button class="nav-item" data-v="aitools">AI assistant</button>
         <button class="nav-item" id="navCopilot" data-action="App.openCopilot" style="display:none">Compliance Copilot</button>
-        <button class="nav-item" data-v="questionnaire">Questionnaire assistant</button>
-        <button class="nav-item" data-v="mockauditor">Mock auditor</button>
-        <button class="nav-item" data-v="evidencesim">Evidence request simulator</button>
       </details>
       <details class="nav-group" data-group="admin">
         <summary class="nav-label">Administration</summary>
@@ -1296,17 +1293,21 @@
       <div id="apResult"></div>
     </section>
 
-    <!-- AI ASSISTANT (purchasable add-on — the 'ai' entitlement module) -->
-    <section class="view" id="v-aiassistant">
-      <div class="vhead"><div class="rule"></div><h1>AI assistant</h1><p>A drafting aid grounded in your own compliance registers — policy language, evidence descriptions, risk treatment notes, report commentary. Runs against <b>your own</b> Azure OpenAI resource in your own tenant (see AI-SETUP.md) — nothing is sent to Compliance365 or any third party, and the assistant can only read what you choose to include below and only ever returns text for you to review. It never writes to any register, and every response carries a visible "AI-assisted draft — review before use" label.</p></div>
+    <!-- AI TOOLS (purchasable add-on — the 'ai' entitlement module).
+         One config card, four tools sharing it — see renderAiTools()/
+         AI_TOOLS in app.js. Each tool's own not-configured/configured
+         pair below is untouched from when it was its own view; only the
+         active tab's wrapper is visible at a time (App.setAiTool). -->
+    <section class="view" id="v-aitools">
+      <div class="vhead"><div class="rule"></div><h1>AI tools</h1><p>Drafting help and audit rehearsal, all grounded in your own compliance registers. Runs against <b>your own</b> Azure OpenAI resource in your own tenant (see AI-SETUP.md) — nothing is sent to Compliance365 or any third party, and every tool only reads what you choose to include and only ever returns text for you to review. Nothing here writes to any register, and every response carries a visible "AI-assisted draft — review before use" label.</p></div>
       <div class="card" style="max-width:820px;margin-bottom:16px">
         <div class="d-kv" style="padding:0 0 6px"><span>Azure OpenAI endpoint (your own resource — e.g. https://your-resource.openai.azure.com)</span></div>
         <input class="mini" id="aiEndpointInput" placeholder="https://your-resource.openai.azure.com" style="width:100%;margin-bottom:12px">
         <div class="d-kv" style="padding:0 0 6px"><span>Deployment name</span></div>
         <input class="mini" id="aiDeploymentInput" placeholder="e.g. gpt-4o" style="width:100%;margin-bottom:12px">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
-          <button class="toggle" id="aiEnabledToggle" role="switch" aria-label="Enable the AI assistant" data-action="App.aiToggleEnabled"></button>
-          <span>Enable the AI assistant</span>
+          <button class="toggle" id="aiEnabledToggle" role="switch" aria-label="Enable the AI tools" data-action="App.aiToggleEnabled"></button>
+          <span>Enable the AI tools</span>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <button class="btn" data-action="App.aiSaveConfig">Save</button>
@@ -1314,59 +1315,61 @@
         </div>
         <div id="aiConfigStatus" style="font-size:12.5px;margin-top:10px"></div>
       </div>
-      <div id="aiNotConfigured"></div>
-      <div id="aiConfigured" style="display:none">
-        <div class="card" style="max-width:820px;margin-bottom:16px">
-          <div class="d-kv" style="padding:0 0 6px"><span>What do you need help with?</span></div>
-          <select class="mini" id="aiFeature" aria-label="What do you need help with?" data-change-action="App.aiSetFeature" style="width:100%;margin-bottom:14px">
-            <option value="chat">General question</option>
-            <option value="policy">Draft policy language</option>
-            <option value="evidence">Draft an evidence description</option>
-            <option value="risk">Draft risk treatment notes</option>
-            <option value="report">Draft report commentary</option>
-          </select>
-          <div class="d-kv" style="padding:0 0 6px"><span>Include from your registers (only what's ticked is sent)</span></div>
-          <div id="aiContextChoices" style="margin-bottom:14px"></div>
-          <div class="d-kv" style="padding:0 0 6px"><span>Your question or request</span></div>
-          <textarea class="mini" id="aiPrompt" placeholder="e.g. Draft an access-control policy paragraph covering our MFA requirement" style="width:100%;min-height:80px;font-family:Manrope;margin-bottom:14px"></textarea>
-          <button class="btn" id="aiAskBtn" data-action="App.aiAsk">Ask</button>
+
+      <div class="filters" id="aiToolPicker" role="group" aria-label="AI tool" style="margin-bottom:16px"></div>
+
+      <div id="aiToolBody-draft">
+        <div id="aiNotConfigured"></div>
+        <div id="aiConfigured" style="display:none">
+          <div class="card" style="max-width:820px;margin-bottom:16px">
+            <div class="d-kv" style="padding:0 0 6px"><span>What do you need help with?</span></div>
+            <select class="mini" id="aiFeature" aria-label="What do you need help with?" data-change-action="App.aiSetFeature" style="width:100%;margin-bottom:14px">
+              <option value="chat">General question</option>
+              <option value="policy">Draft policy language</option>
+              <option value="evidence">Draft an evidence description</option>
+              <option value="risk">Draft risk treatment notes</option>
+              <option value="report">Draft report commentary</option>
+            </select>
+            <div class="d-kv" style="padding:0 0 6px"><span>Include from your registers (only what's ticked is sent)</span></div>
+            <div id="aiContextChoices" style="margin-bottom:14px"></div>
+            <div class="d-kv" style="padding:0 0 6px"><span>Your question or request</span></div>
+            <textarea class="mini" id="aiPrompt" placeholder="e.g. Draft an access-control policy paragraph covering our MFA requirement" style="width:100%;min-height:80px;font-family:Manrope;margin-bottom:14px"></textarea>
+            <button class="btn" id="aiAskBtn" data-action="App.aiAsk">Ask</button>
+          </div>
+          <div id="aiResult"></div>
         </div>
-        <div id="aiResult"></div>
       </div>
-    </section>
 
-    <!-- QUESTIONNAIRE ASSISTANT (AI add-on) -->
-    <section class="view" id="v-questionnaire">
-      <div class="vhead"><div class="rule"></div><h1>Questionnaire assistant</h1><p>Paste a security/compliance questionnaire (one question per line) and get a draft answer for each, grounded in your Statement of Applicability and latest scan — with a confidence level and what to verify before sending. Every answer is a draft; review each one before it leaves this app.</p></div>
-      <div id="questionnaireNotConfigured"></div>
-      <div id="questionnaireConfigured" style="display:none">
-        <div class="card" style="max-width:820px;margin-bottom:16px">
-          <div class="d-kv" style="padding:0 0 6px"><span>Questions (one per line)</span></div>
-          <textarea class="mini" id="questionnaireInput" style="width:100%;min-height:140px;font-family:Manrope;margin-bottom:14px" placeholder="Do you enforce MFA for all users?&#10;Do you encrypt data at rest?&#10;How do you manage third-party risk?"></textarea>
-          <button class="btn" id="questionnaireAskBtn" data-action="App.questionnaireAsk">Get answers</button>
+      <div id="aiToolBody-questionnaire" style="display:none">
+        <p style="color:var(--paper-dim);font-size:13px;max-width:70ch;margin:0 0 16px">Paste a security/compliance questionnaire (one question per line) and get a draft answer for each, grounded in your Statement of Applicability and latest scan — with a confidence level and what to verify before sending.</p>
+        <div id="questionnaireNotConfigured"></div>
+        <div id="questionnaireConfigured" style="display:none">
+          <div class="card" style="max-width:820px;margin-bottom:16px">
+            <div class="d-kv" style="padding:0 0 6px"><span>Questions (one per line)</span></div>
+            <textarea class="mini" id="questionnaireInput" style="width:100%;min-height:140px;font-family:Manrope;margin-bottom:14px" placeholder="Do you enforce MFA for all users?&#10;Do you encrypt data at rest?&#10;How do you manage third-party risk?"></textarea>
+            <button class="btn" id="questionnaireAskBtn" data-action="App.questionnaireAsk">Get answers</button>
+          </div>
+          <div id="questionnaireResult"></div>
         </div>
-        <div id="questionnaireResult"></div>
       </div>
-    </section>
 
-    <!-- MOCK AUDITOR (AI add-on) -->
-    <section class="view" id="v-mockauditor">
-      <div class="vhead"><div class="rule"></div><h1>Mock auditor</h1><p>Generates 10 interview questions an external auditor might ask, targeting your CURRENT gaps — unevidenced implemented controls, failing posture checks, overdue actions — with an honest model answer for each, including where the honest answer is "we have a gap". A rehearsal tool, not a substitute for the real audit.</p></div>
-      <div id="mockAuditorNotConfigured"></div>
-      <div id="mockAuditorConfigured" style="display:none">
-        <div style="margin-bottom:16px"><button class="btn" id="mockAuditorRunBtn" data-action="App.mockAuditorRun">Generate mock interview</button></div>
-        <div id="mockAuditorResult"></div>
+      <div id="aiToolBody-mockauditor" style="display:none">
+        <p style="color:var(--paper-dim);font-size:13px;max-width:70ch;margin:0 0 16px">Generates 10 interview questions an external auditor might ask, targeting your CURRENT gaps — unevidenced implemented controls, failing posture checks, overdue actions — with an honest model answer for each, including where the honest answer is "we have a gap". A rehearsal tool, not a substitute for the real audit.</p>
+        <div id="mockAuditorNotConfigured"></div>
+        <div id="mockAuditorConfigured" style="display:none">
+          <div style="margin-bottom:16px"><button class="btn" id="mockAuditorRunBtn" data-action="App.mockAuditorRun">Generate mock interview</button></div>
+          <div id="mockAuditorResult"></div>
+        </div>
       </div>
-    </section>
 
-    <!-- EVIDENCE REQUEST SIMULATOR (AI add-on) -->
-    <section class="view" id="v-evidencesim">
-      <div class="vhead"><div class="rule"></div><h1>Evidence request simulator</h1><p>Generates a realistic evidence request list — the artefacts an external auditor would ask to see for your Implemented controls — and flags which ones you already have evidence for versus which are missing. Ready/Missing is read directly from your own register, never guessed by the model. A rehearsal tool, not a substitute for the real audit.</p></div>
-      <div id="evidenceSimNotConfigured"></div>
-      <div id="evidenceSimConfigured" style="display:none">
-        <div class="filters" id="evidenceSimFwTabs" role="group" aria-label="Framework" style="margin-bottom:16px"></div>
-        <div style="margin-bottom:16px"><button class="btn" id="evidenceSimRunBtn" data-action="App.evidenceRequestSimRun">Generate evidence request list</button></div>
-        <div id="evidenceSimResult"></div>
+      <div id="aiToolBody-evidencesim" style="display:none">
+        <p style="color:var(--paper-dim);font-size:13px;max-width:70ch;margin:0 0 16px">Generates a realistic evidence request list — the artefacts an external auditor would ask to see for your Implemented controls — and flags which ones you already have evidence for versus which are missing. Ready/Missing is read directly from your own register, never guessed by the model. A rehearsal tool, not a substitute for the real audit.</p>
+        <div id="evidenceSimNotConfigured"></div>
+        <div id="evidenceSimConfigured" style="display:none">
+          <div class="filters" id="evidenceSimFwTabs" role="group" aria-label="Framework" style="margin-bottom:16px"></div>
+          <div style="margin-bottom:16px"><button class="btn" id="evidenceSimRunBtn" data-action="App.evidenceRequestSimRun">Generate evidence request list</button></div>
+          <div id="evidenceSimResult"></div>
+        </div>
       </div>
     </section>
 
