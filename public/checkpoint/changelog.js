@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.80.1',
+    date: '2026-09-20',
+    entries: [
+      'Closed a gap in the restricted Staff view (1.64.0): the Settings gear icon and "Run posture scan" button in the topbar reached the full admin console directly, bypassing the trimmed nav entirely, and Ctrl/Cmd-K opened the full command palette -- including "Run posture scan", every "Add X" command, and a live search index over real risk/action/vendor records -- regardless of whether its topbar trigger was even visible, since the keyboard shortcut is a global listener. Found testing the restricted view at phone width, where the crowded topbar made the leak obvious. All three are now hidden/disabled for a restricted session, same "UX only, not enforcement" posture as everything else that view already trims.'
+    ]
+  },
+  {
     version: '1.80.0',
     date: '2026-09-19',
     entries: [
