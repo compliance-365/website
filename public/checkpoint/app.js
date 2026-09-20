@@ -3720,7 +3720,7 @@ function showModal(opts) {
       { label: 'Approve your first policy document', why: 'A controlled document needs an owner and an approval before it counts as evidence.', done: anyDocApproved, view: 'documents', cta: 'Open Documents' }
     ];
     if (S.entitlements && S.entitlements.ai) {
-      steps.push({ label: 'Configure the AI assistant', why: 'Point Checkpoint at your own Azure OpenAI resource to unlock drafting help across the app.', done: !!(S.settings && S.settings.aiEnabled === 'true'), view: 'aiassistant', cta: 'Open AI assistant' });
+      steps.push({ label: 'Configure the AI assistant', why: 'Point Checkpoint at your own Azure OpenAI resource to unlock drafting help across the app.', done: !!(S.settings && S.settings.aiEnabled === 'true'), view: 'aitools', cta: 'Open AI tools' });
     }
     return steps;
   }
@@ -9374,8 +9374,7 @@ function showModal(opts) {
     frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
     documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', incidents: 'Incidents', auditlog: 'Audit log', reports: 'Audit reports',
-    trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
-    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', evidencesim: 'Evidence request simulator',
+    trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aitools: 'AI tools',
     settings: 'Settings'
   };
   var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list' };
@@ -9650,6 +9649,35 @@ function showModal(opts) {
         '<button class="toggle' + (checked ? ' on' : '') + '" role="switch" aria-checked="' + (checked ? 'true' : 'false') + '" aria-label="' + esc(AI_CONTEXT_SECTION_LABELS[key] || key) + '" data-action="App.aiToggleContext" data-id="' + key + '"></button>' +
         '<span>' + esc(AI_CONTEXT_SECTION_LABELS[key] || key) + '</span></div>';
     }).join('') || '<span style="font-size:12.5px;color:var(--paper-faint)">No register context is available to this option.</span>';
+  }
+
+  /* AI tools hub (v1.81.0) — one config card, four tools sharing it
+     (see index.html's #v-aitools). Each tool keeps its own render
+     function and its own not-configured/configured pair exactly as
+     when it was its own view; this only decides which one is visible
+     and calls that one, same "orchestrator + existing per-thing
+     renderers" shape as renderAttestations()/renderMyAttestations() and
+     every other view with more than one moving part in this file.
+     'draft' is the default tab, matching the original AI assistant nav
+     item this hub replaces — the onboarding checklist and the search
+     palette both still point at view:'aitools', which lands here. */
+  var AI_TOOLS = [
+    { key: 'draft', label: 'Draft assistant', render: function () { renderAiAssistant(); } },
+    { key: 'questionnaire', label: 'Questionnaire assistant', render: function () { renderQuestionnaireAssistant(); } },
+    { key: 'mockauditor', label: 'Mock auditor', render: function () { renderMockAuditor(); } },
+    { key: 'evidencesim', label: 'Evidence request simulator', render: function () { renderEvidenceRequestSim(); } }
+  ];
+  function renderAiTools() {
+    var active = AI_TOOLS.some(function (t) { return t.key === window._aiTool; }) ? window._aiTool : 'draft';
+    window._aiTool = active;
+    document.getElementById('aiToolPicker').innerHTML = AI_TOOLS.map(function (t) {
+      return '<button class="f-pill' + (t.key === active ? ' on' : '') + '" aria-pressed="' + (t.key === active ? 'true' : 'false') + '" data-action="App.setAiTool" data-id="' + t.key + '">' + esc(t.label) + '</button>';
+    }).join('');
+    AI_TOOLS.forEach(function (t) {
+      var body = document.getElementById('aiToolBody-' + t.key);
+      if (body) body.style.display = t.key === active ? '' : 'none';
+    });
+    AI_TOOLS.find(function (t) { return t.key === active; }).render();
   }
 
   /* Friendly "AI not configured" card — never a broken/dead button. Shown
@@ -10081,7 +10109,7 @@ function showModal(opts) {
     /* the whole AI Governance module — nav item, register, scan-time
        discovery (see runScan()) — is gated on the iso42001 entitlement,
        not a feature toggle: it's meaningless without that framework.
-       Not to be confused with the AI ASSISTANT nav below — that one is
+       Not to be confused with the AI TOOLS nav below — that one is
        ai.js's drafting assistant, an unrelated purchasable add-on. */
     var aiGovNav = document.querySelector('.nav-item[data-v="aisystems"]');
     if (aiGovNav) {
@@ -10089,13 +10117,16 @@ function showModal(opts) {
       aiGovNav.style.display = aiGovOn ? '' : 'none';
       if (!aiGovOn && aiGovNav.classList.contains('on')) App.go('dash');
     }
-    /* AI assistant (ai.js) — gated on the 'ai' add-on entitlement (see
+    /* AI tools (ai.js) — gated on the 'ai' add-on entitlement (see
        window.ADDON_MODULES in store.js), same nav-hide-and-bounce
-       pattern as every other licence-gated nav item on this page. The
-       view itself ALSO renders an "AI not configured" card when the
-       entitlement is on but Settings' aiEndpoint/aiDeployment/aiEnabled
-       aren't set up yet — see renderAiAssistant(). */
-    var aiAssistantNav = document.querySelector('.nav-item[data-v="aiassistant"]');
+       pattern as every other licence-gated nav item on this page. One
+       nav item now covers all four tools (see #v-aitools/AI_TOOLS) — a
+       practitioner who loses the entitlement mid-session is bounced
+       off whichever tool they were on, same as before this collapsed
+       to one item. The hub itself ALSO renders an "AI not configured"
+       card when the entitlement is on but Settings' aiEndpoint/
+       aiDeployment/aiEnabled aren't set up yet — see renderAiTools(). */
+    var aiAssistantNav = document.querySelector('.nav-item[data-v="aitools"]');
     var aiAssistantOn = !!(S.entitlements && S.entitlements.ai);
     if (aiAssistantNav) {
       aiAssistantNav.style.display = aiAssistantOn ? '' : 'none';
@@ -10113,12 +10144,6 @@ function showModal(opts) {
        surfaces above are. */
     var evidenceInterpretCard = document.getElementById('evidenceInterpretCard');
     if (evidenceInterpretCard) evidenceInterpretCard.style.display = aiAssistantOn ? '' : 'none';
-    ['questionnaire', 'mockauditor', 'evidencesim'].forEach(function (v) {
-      var nav = document.querySelector('.nav-item[data-v="' + v + '"]');
-      if (!nav) return;
-      nav.style.display = aiAssistantOn ? '' : 'none';
-      if (!aiAssistantOn && nav.classList.contains('on')) App.go('dash');
-    });
   }
 
   /* Persistent, unobtrusive banner for a 'demo' (sales trial) licence
@@ -10202,10 +10227,7 @@ function showModal(opts) {
        alongside the Frameworks view's — one function, two destinations. */
     settings: renderFrameworksAdmin,
     selftest: renderSelfTest,
-    aiassistant: renderAiAssistant,
-    questionnaire: renderQuestionnaireAssistant,
-    mockauditor: renderMockAuditor,
-    evidencesim: renderEvidenceRequestSim
+    aitools: renderAiTools,
   };
   /* Views whose markup is static in index.html and derives nothing —
      listed so "absent from VIEW_RENDERERS" always means "static on
@@ -15540,7 +15562,12 @@ function showModal(opts) {
         audit('AI configuration saved', 'AiConfig', '', '', 'endpoint set: ' + (!!endpoint) + ', deployment set: ' + (!!deployment));
         toast('AI configuration saved');
       } catch (e) { warn(e); toastError('Could not save AI configuration'); }
-      renderAiAssistant();
+      /* Whichever tool is on-screen, not always renderAiAssistant() —
+         the config card is shared across all four now (see AI_TOOLS),
+         so saving it while on, say, the Questionnaire tab has to
+         refresh THAT tab's not-configured/configured gate, not the
+         Draft assistant tab underneath it. */
+      renderAiTools();
     },
 
     aiTestConnection: async function () {
@@ -15555,6 +15582,10 @@ function showModal(opts) {
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(e.message || e) + '</span>';
       }
     },
+
+    /* Switches the active tab in the AI tools hub — see AI_TOOLS/
+       renderAiTools() in the render section. */
+    setAiTool: function (key) { window._aiTool = key; renderAiTools(); },
 
     aiSetFeature: function (val) {
       window._aiFeature = val;

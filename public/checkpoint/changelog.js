@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.81.0',
+    date: '2026-09-20',
+    entries: [
+      'The AI tools group collapses from four nav items to one. AI assistant, Questionnaire assistant, Mock auditor and Evidence request simulator now share a single "AI tools" hub with one Azure OpenAI config card at the top and a tab picker beneath it, instead of four separate views each with their own not-configured message and no path back to the config form they all depended on. Configuring the connection once now unlocks all four immediately, wherever you are in the hub -- previously, landing on Questionnaire/Mock auditor/Evidence request simulator before configuring showed a dead-end "configure the AI assistant first" message with only a docs link, not the form itself. Nav item count drops from 29 to 26.'
+    ]
+  },
+  {
     version: '1.80.1',
     date: '2026-09-20',
     entries: [
