@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.81.1',
+    date: '2026-09-20',
+    entries: [
+      'Clarified the Email digest copy (Settings, and the Dashboard\'s due banner): the scheduled PostureMonitor Azure Function can already send this digest unattended once deployed with NOTIFY_FROM/NOTIFY_TO configured -- both spots now point at azure/README.md\'s "The periodic digest" section directly, instead of vaguely gesturing at "the scheduled monitor". No behaviour change; the due-date arithmetic is now one digestIsDue() function instead of duplicated inline.'
+    ]
+  },
+  {
     version: '1.81.0',
     date: '2026-09-20',
     entries: [

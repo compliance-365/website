@@ -3891,6 +3891,17 @@ function showModal(opts) {
       '<div style="margin-top:10px"><a class="btn sm" href="' + deployUrl + '" target="_blank" rel="noopener">Deploy to Azure →</a></div>';
   }
 
+  /* Pure — no DOM, just S.settings — so the Dashboard banner below can
+     call it without duplicating the digestEnabled/digestFrequency/
+     digestLastSent arithmetic inline. Same logic as PostureMonitor's
+     own digestDue() (azure/PostureMonitor/index.js) — kept in sync by
+     hand since they run in different runtimes, not by sharing code. */
+  function digestIsDue() {
+    if (!(S.settings && S.settings.digestEnabled === 'true')) return false;
+    var freqDays = { Weekly: 7, Monthly: 30 }[(S.settings && S.settings.digestFrequency) || 'Weekly'] || 7;
+    return daysSince(S.settings && S.settings.digestLastSent) >= freqDays;
+  }
+
   function renderDash() {
     renderGettingStarted();
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
@@ -4134,18 +4145,21 @@ function showModal(opts) {
       scanDueEl.style.display = due ? 'block' : 'none';
     }
 
-    /* email digest due — same on-load nudge as the scan-due banner
+    /* Email digest due — same on-load nudge as the scan-due banner
        above, not a real schedule: a browser tab can't send mail while
-       nobody has it open. The scheduled Function/Logic App (SETUP.md
-       § Continuous monitoring) can send this digest unattended once
-       deployed; until then, a practitioner has to be looking at the
-       Dashboard to be reminded to click "Send now". */
+       nobody has it open. This IS solvable unattended, and already is
+       on any tenant with the PostureMonitor Azure Function deployed and
+       NOTIFY_FROM/NOTIFY_TO configured — see azure/README.md § The
+       periodic digest and SETUP.md § Continuous monitoring; that
+       Function's sendDigest()/digestDue() read these exact same four
+       Settings keys. This banner is what a tenant sees before that's
+       configured (or when using the app without the scheduled monitor
+       at all) — a practitioner has to be looking at the Dashboard to be
+       reminded to click "Send now". */
     var digestDueEl = document.getElementById('digestDueBanner');
     if (digestDueEl) {
-      var digestOn = S.settings && S.settings.digestEnabled === 'true';
-      var digestFreqDays = { Weekly: 7, Monthly: 30 }[(S.settings && S.settings.digestFrequency) || 'Weekly'] || 7;
       var sinceDigest = daysSince(S.settings && S.settings.digestLastSent);
-      var digestDue = digestOn && sinceDigest >= digestFreqDays;
+      var digestDue = digestIsDue();
       digestDueEl.innerHTML = digestDue
         ? '<b>Compliance digest is due</b> — ' + (S.settings.digestLastSent ? 'last sent ' + sinceDigest + ' days ago' : 'never sent') + ' (frequency: ' + esc(S.settings.digestFrequency || 'Weekly') + '). Browser tabs can\'t send this unattended — <a href="#" data-action="App.sendDigestNow" style="color:inherit;text-decoration:underline">send it now</a>.'
         : '';
@@ -10024,7 +10038,7 @@ function showModal(opts) {
       var digestRecipCurrent = (S.settings && S.settings.digestRecipients) || '';
       var digestLastSentCurrent = S.settings && S.settings.digestLastSent;
       digestEl.innerHTML =
-        '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. There\'s no backend here to send this unattended: it\'s a nudge on load like the scan reminder above, until the scheduled monitor (SETUP.md § Continuous monitoring) is deployed to send it too.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" role="switch" aria-checked="' + (digestOnCurrent ? 'true' : 'false') + '" aria-label="Email digest enabled" data-action="App.toggleDigestEnabled"></button></div>' +
+        '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. This browser can only send it while you have Checkpoint open — it\'s a nudge on load, like the scan reminder above, not a schedule. If the scheduled monitor (SETUP.md § Continuous monitoring) is deployed for this tenant, it can send this digest unattended too — see azure/README.md § The periodic digest for the two app settings that turn it on.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" role="switch" aria-checked="' + (digestOnCurrent ? 'true' : 'false') + '" aria-label="Email digest enabled" data-action="App.toggleDigestEnabled"></button></div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
         '<input class="mini" id="digestRecipientsInput" aria-label="Email digest recipients" placeholder="Recipients — comma-separated" value="' + esc(digestRecipCurrent) + '" style="flex:1;min-width:220px">' +
         '<select class="mini" data-change-action="App.setDigestFrequency" aria-label="Email digest frequency">' + ['Weekly', 'Monthly'].map(function (f) { return '<option' + (digestFreqCurrent === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select>' +
