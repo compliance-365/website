@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.83.0',
+    date: '2026-09-21',
+    entries: [
+      'Word export is now a real .docx (OOXML), not an HTML document wearing a .doc extension -- opens natively in Word with real styles, not through its compatibility importer. Both the single-document "Word" action and the bulk "Export all policies (ZIP)" produce .docx now; the bulk HTML option is unchanged. Same uncontrolled-copy banner, same content, same audit trail -- just a genuine Word document underneath.'
+    ]
+  },
+  {
     version: '1.82.0',
     date: '2026-09-21',
     entries: [
