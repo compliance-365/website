@@ -7758,6 +7758,7 @@ function showModal(opts) {
              keeps a draft row's actions to one line. */
           if (status === 'Approved') {
             actions.push('<button class="btn ghost sm" data-action="App.exportPolicyWord" data-id="' + esc(d.name) + '">Word</button>');
+            actions.push('<button class="btn ghost sm" data-action="App.exportPolicyPdf" data-id="' + esc(d.name) + '">PDF</button>');
           }
         }
         return '<tr data-id="' + esc(d.id) + '"' + (_docSel.has(d.id) ? ' class="row-sel"' : '') + '>' +
@@ -13501,6 +13502,41 @@ function showModal(opts) {
       downloadBlob(docName.replace(/\.html?$/i, '') + '.doc', new Blob([html], { type: 'application/msword' }));
       audit('Policy exported to Word', 'Document', docName, '(none)', 'Uncontrolled copy');
       toast('Exported as an uncontrolled Word copy.');
+    },
+    /* Sibling of exportPolicyWord() above — same content lookup and same
+       "uncontrolled copy" doctrine, but there is no PDF file to build:
+       printPreview() (~line 2003) already opens a popup with a
+       PRINT / SAVE AS PDF button, used today only at generation time
+       (line ~14158). This wires the same popup onto an already-generated,
+       approved document from the register, so getting a PDF of the
+       current version doesn't require regenerating it. */
+    exportPolicyPdf: async function (docName) {
+      var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      var tplId = doc && doc.tplId;
+      if (!tplId) {
+        var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
+        try { tplId = genEntry && JSON.parse(genEntry.after).tplId; } catch (e) { tplId = null; }
+      }
+      var t = tplId && window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+      if (!t) { toastError('Could not recover this document\'s content.'); return; }
+      var ok = await showModal({
+        title: 'Print / save as PDF',
+        message: 'Opens a print-ready view of the current approved version. A PDF saved from it is a snapshot — its version and approval stop being tracked, and it will not reflect the policy if it is later revised. To always point at the current version, share the SharePoint link instead of distributing a PDF copy.',
+        confirmText: 'Continue', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var c = effectivePolicyContent(t, docName);
+      var html = buildTemplateHtml(c, {
+        clientLabel: clientDisplayLabel('This organisation'), owner: (doc && doc.owner) || '',
+        reviewDate: (doc && doc.nextReview) || '', approved: docStatusOf(doc || {}) === 'Approved',
+        generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
+        logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+        version: (doc && doc.version) || '', approvedBy: (doc && doc.approvedBy) || '',
+        classification: (doc && doc.classification) || 'Internal'
+      }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — printed ' + esc(new Date().toLocaleDateString('en-AU')) + '. This snapshot is not tracked and will not reflect later revisions.</div>');
+      if (!printPreview(t.title, html)) return;
+      audit('Policy printed / exported to PDF', 'Document', docName, '(none)', 'Uncontrolled copy');
+      toast('Opened print preview — use Print / Save as PDF in the new tab.');
     },
     filterAttest: function (f) { window._attestF = f; renderAttestationSummary(); renderAttestationRecords(); },
     /* Clicking the active tile clears back to All, same toggle the
