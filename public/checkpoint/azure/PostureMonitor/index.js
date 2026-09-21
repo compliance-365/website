@@ -21,6 +21,7 @@
 
 const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = require('../lib/graph');
 const { mintEvidenceToken } = require('../lib/evidenceToken');
+const { mintVendorToken } = require('../lib/vendorToken');
 
 /* Where the owner-driven evidence page lives — Compliance365's own
    public site (GitHub Pages, per RELEASE.md), the same domain the
@@ -46,6 +47,22 @@ function buildEvidenceLink(itemId) {
   if (!secret || !apiHost || !itemId) return null;
   const token = mintEvidenceToken(itemId, secret, 30);
   return EVIDENCE_PAGE_URL + '?token=' + encodeURIComponent(token) + '&api=' + encodeURIComponent(apiHost);
+}
+
+/* Same pattern as EVIDENCE_PAGE_URL/buildEvidenceLink() above, for the
+   vendor self-service questionnaire form — Compliance365's own public
+   site, not this Function App; the page is static and holds no
+   secrets, the per-vendor token in its own URL is the real boundary
+   (see lib/vendorToken.js). Returns null (never a broken link) if
+   VENDOR_LINK_SECRET or WEBSITE_HOSTNAME aren't set — an older
+   deployment not yet redeployed with this app setting. */
+const VENDOR_QUESTIONNAIRE_PAGE_URL = 'https://www.compliance365.com.au/checkpoint/vendor-questionnaire.html';
+function buildVendorLink(vendorItemId) {
+  const secret = process.env.VENDOR_LINK_SECRET;
+  const apiHost = process.env.WEBSITE_HOSTNAME;
+  if (!secret || !apiHost || !vendorItemId) return null;
+  const token = mintVendorToken(vendorItemId, secret, 14);
+  return VENDOR_QUESTIONNAIRE_PAGE_URL + '?token=' + encodeURIComponent(token) + '&api=' + encodeURIComponent(apiHost);
 }
 
 /* Most of CHECK_DEFS's scored:true entries in store.js.
@@ -1645,12 +1662,18 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
      One alert per vendor per check, not rolled up: unlike stale
      controls, a mature tenant only has a handful of vendors, and WHICH
      vendor needs following up is the entire point of the alert. */
+  let vendorRows = [];
   if (optional.Vendors) {
     let rows = [];
     try {
       const items = await g(`/sites/${siteId}/lists/${optional.Vendors}/items?$expand=fields&$top=999`);
-      rows = (items.value || []).map(i => i.fields || {});
+      /* _itemId (not just .fields) kept on the row itself now — the
+         questionnaire-link step below needs it for the Graph PATCH/the
+         token, same as the review/expiry alerts below only ever needed
+         the field values. */
+      rows = (items.value || []).map(i => Object.assign({ _itemId: i.id }, i.fields));
     } catch (e) { context.log.error('Checkpoint governance sweep: could not read the vendor register: ' + e.message); }
+    vendorRows = rows;
 
     rows.forEach(v => {
       const name = v.Service || v.RefId || '(unnamed vendor)';
@@ -1703,10 +1726,44 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
     });
   }
 
+  /* ---- Vendor questionnaire self-service links ----
+     Independent of the findings/alerts above — sending a requested
+     questionnaire link isn't a governance finding, it's fulfilling
+     something a practitioner already asked for by clicking "Request
+     self-service link" in the browser app (which only ever sets
+     QuestionnaireStatus to 'Link requested', a plain field write; it
+     cannot mint a token itself, since that would mean shipping
+     VENDOR_LINK_SECRET to the browser). Runs every sweep regardless of
+     whether any governance finding fired, and regardless of
+     NOTIFY_FROM/VENDOR_LINK_SECRET being configured — buildVendorLink()
+     returning null and notifyOwner() returning false both fail closed,
+     so a tenant without either configured just never sends, no error,
+     the vendor stays at 'Link requested' until it is. */
+  let questionnaireLinksSent = 0;
+  const linkRequested = vendorRows.filter(v => v.QuestionnaireStatus === 'Link requested' && v.ContactEmail);
+  for (const v of linkRequested) {
+    const link = buildVendorLink(v._itemId);
+    if (!link) continue;
+    const name = v.Title || v.RefId || '(unnamed vendor)';
+    const body = '<p>Hello,</p>' +
+      '<p>As part of our ongoing supplier security review programme, please answer a short set of security, privacy and AI questions for <b>' + esc(name) + '</b>' + (v.Service ? ' (' + esc(v.Service) + ')' : '') + '.</p>' +
+      '<p><a href="' + esc(link) + '">Answer the questionnaire →</a></p>' +
+      '<p style="color:#666;font-size:12px">This link is personal to this one questionnaire and doesn’t require creating an account. It expires after a while — reply to this email if it stops working and a fresh one can be sent.</p>';
+    if (await notifyOwner(g, context, v.ContactEmail, 'Security questionnaire — ' + name, body)) {
+      try {
+        await g(`/sites/${siteId}/lists/${optional.Vendors}/items/${encodeURIComponent(v._itemId)}/fields`, {
+          method: 'PATCH', body: { QuestionnaireStatus: 'Sent', QuestionnaireSentDate: today }
+        });
+        questionnaireLinksSent++;
+      } catch (e) { context.log.error('Checkpoint governance sweep: sent a questionnaire link to ' + v.ContactEmail + ' but could not update the vendor record: ' + (e && e.message ? e.message : e)); }
+    }
+  }
+  if (questionnaireLinksSent) context.log('Checkpoint governance sweep: sent ' + questionnaireLinksSent + ' vendor questionnaire link(s).');
+
   /* Same shape as the full return below — a caller reading
      ownersChased must not get undefined just because a quiet night
      took the early exit. */
-  if (!findings.length) return { written: 0, digest: digestData, ownersChased: 0 };
+  if (!findings.length) return { written: 0, digest: digestData, ownersChased: 0, questionnaireLinksSent };
 
   const alreadyOpen = await openAlertKeys(g, siteId, lists.Alerts);
   const fresh = findings.filter(f => !alreadyOpen.has(f.checkId));
@@ -1743,7 +1800,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   }
   if (chased) context.log('Checkpoint governance sweep: chased ' + chased + ' action owner(s) directly.');
 
-  return { written: fresh.length, digest: digestData, ownersChased: chased };
+  return { written: fresh.length, digest: digestData, ownersChased: chased, questionnaireLinksSent };
 }
 
 /* Emails one named action owner. Separate from notify() because that
@@ -2019,5 +2076,6 @@ module.exports.__test = {
   runPostureChecks, runRegisterChecks, readDocumentRegister,
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,
-  SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL, isDowngrade, gCapped, PRIV_ROLE_ACTIVITY_EXCLUDE
+  SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL, isDowngrade, gCapped, PRIV_ROLE_ACTIVITY_EXCLUDE,
+  buildVendorLink, VENDOR_QUESTIONNAIRE_PAGE_URL
 };

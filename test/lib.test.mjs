@@ -21,7 +21,7 @@ const { band, residual, residualAcceptanceStale, checkResult, score, readinessPc
   mulberry32, portfolioSeed, POISSON_LAMBDA_CAP, sampleTriangular, samplePoisson, riskFinancialInputs,
   simulateRiskLosses, simulatePortfolioLosses, summarizeLossDistribution,
   lossExceedanceCurve, RISK_FINANCIAL_BANDS,
-  classifyAiActRisk, AI_ACT_QUESTIONS } = CheckpointLib;
+  classifyAiActRisk, AI_ACT_QUESTIONS, VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -2328,6 +2328,61 @@ describe('classifyAiActRisk()', () => {
     AI_ACT_QUESTIONS.forEach((q) => {
       assert.ok(['Prohibited', 'High', 'Limited'].includes(q.tier), `${q.id} has an unexpected tier: ${q.tier}`);
     });
+  });
+});
+
+describe('VENDOR_QUESTIONNAIRE', () => {
+  test('every question id across all three sections is unique', () => {
+    const ids = VENDOR_QUESTIONNAIRE_SECTIONS.flatMap((key) => VENDOR_QUESTIONNAIRE[key].questions.map((q) => q.id));
+    assert.equal(new Set(ids).size, ids.length);
+  });
+
+  test('every question is type yesno or text, and every dependsOn names a real question id in the same section', () => {
+    VENDOR_QUESTIONNAIRE_SECTIONS.forEach((key) => {
+      const sec = VENDOR_QUESTIONNAIRE[key];
+      const ids = new Set(sec.questions.map((q) => q.id));
+      sec.questions.forEach((q) => {
+        assert.ok(['yesno', 'text'].includes(q.type), `${key}.${q.id} has an unexpected type: ${q.type}`);
+        if (q.dependsOn) assert.ok(ids.has(q.dependsOn), `${key}.${q.id}'s dependsOn '${q.dependsOn}' is not a question in the same section`);
+      });
+    });
+  });
+
+  test('the three AI follow-up ids reuse AI_ACT_QUESTIONS ids exactly, so a vendor answer needs no translation to feed classifyAiActRisk()', () => {
+    const aiActIds = new Set(AI_ACT_QUESTIONS.map((q) => q.id));
+    const followUps = VENDOR_QUESTIONNAIRE.ai.questions.filter((q) => q.dependsOn === 'usesAi');
+    assert.equal(followUps.length, 3);
+    followUps.forEach((q) => assert.ok(aiActIds.has(q.id), `${q.id} is not an AI_ACT_QUESTIONS id`));
+  });
+
+  test('total question count stays small — the whole point is not overloading a vendor', () => {
+    const total = VENDOR_QUESTIONNAIRE_SECTIONS.reduce((n, key) => n + VENDOR_QUESTIONNAIRE[key].questions.length, 0);
+    assert.ok(total <= 15, `expected a short questionnaire, found ${total} questions across all sections`);
+  });
+});
+
+describe('vendorAiActAnswers()', () => {
+  test('a vendor that has not said usesAi=Yes contributes nothing, regardless of what else is set', () => {
+    assert.deepEqual(vendorAiActAnswers({ directInteraction: 'Yes', usesAi: 'No' }), {});
+    assert.deepEqual(vendorAiActAnswers({ directInteraction: 'Yes' }), {});
+    assert.deepEqual(vendorAiActAnswers(undefined), {});
+  });
+
+  test('Yes answers become true booleans for classifyAiActRisk(); No/Unknown/missing are left out entirely', () => {
+    const answers = vendorAiActAnswers({ usesAi: 'Yes', directInteraction: 'Yes', essentialServicesAccess: 'No', syntheticContent: 'Unknown' });
+    assert.deepEqual(answers, { directInteraction: true });
+  });
+
+  test('feeds classifyAiActRisk() directly and produces a sensible tier', () => {
+    const answers = vendorAiActAnswers({ usesAi: 'Yes', essentialServicesAccess: 'Yes' });
+    const result = classifyAiActRisk(answers);
+    assert.equal(result.tier, 'High');
+  });
+
+  test('"Unknown" never reads as a triggered obligation — an unanswered question is a gap to chase, not license to assume the worse case', () => {
+    const answers = vendorAiActAnswers({ usesAi: 'Yes', directInteraction: 'Unknown', essentialServicesAccess: 'Unknown', syntheticContent: 'Unknown' });
+    const result = classifyAiActRisk(answers);
+    assert.equal(result.tier, 'Minimal');
   });
 });
 

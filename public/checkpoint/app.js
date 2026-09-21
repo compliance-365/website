@@ -743,7 +743,7 @@ function showModal(opts) {
     'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
-    'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
+    'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'requestVendorQuestionnaireLink', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
     /* Bulk equivalents of setSt/toggleApp — gated for the same reason
@@ -5773,6 +5773,68 @@ function showModal(opts) {
         lastCompleted: '', owner: owner || '', notes: 'Auto-linked to the document control register', status: 'Active'
       });
     } catch (e) { warn(e); }
+  }
+
+  /* Builds the "Send questionnaire" email body from
+     CheckpointLib.VENDOR_QUESTIONNAIRE — itemised questions, not the
+     free prose paragraph this used to be. Security and Privacy fold
+     each dependent follow-up into its parent's own line (e.g. "...which
+     one, and when does it expire?") since it reads as one natural
+     question in an email; AI is framed explicitly as conditional
+     ("only relevant if...") since most vendors aren't an AI vendor and
+     the whole point of asking is not to make the other 90% wade through
+     AI Act questions that don't apply to them. */
+  function vendorQuestionnaireEmailBody(v, clientLabel) {
+    var Q = window.CheckpointLib.VENDOR_QUESTIONNAIRE;
+    var secHtml = ['security', 'privacy'].map(function (key) {
+      var sec = Q[key];
+      var items = sec.questions.filter(function (q) { return !q.dependsOn; }).map(function (q) {
+        var follow = sec.questions.filter(function (d) { return d.dependsOn === q.id; })[0];
+        return '<li style="margin-bottom:7px">' + esc(q.label) + (follow ? ' <i>' + esc(follow.label) + '</i>' : '') + '</li>';
+      }).join('');
+      return '<p style="margin:18px 0 4px"><b>' + esc(sec.label) + '</b></p><ol style="margin:0;padding-left:20px">' + items + '</ol>';
+    }).join('');
+    var aiFollowUps = Q.ai.questions.slice(1).map(function (q) { return '<li style="margin-bottom:4px">' + esc(q.label) + '</li>'; }).join('');
+    var aiHtml = '<p style="margin:18px 0 4px"><b>AI</b></p>' +
+      '<ol style="margin:0;padding-left:20px"><li style="margin-bottom:6px">' + esc(Q.ai.questions[0].label) + '</li></ol>' +
+      '<p style="margin:6px 0 4px;color:#555;font-size:13px">Only relevant if you answered yes above — otherwise please skip:</p>' +
+      '<ul style="margin:0;padding-left:20px;color:#555;font-size:13px">' + aiFollowUps + '</ul>';
+    var dataCatHtml = (v.dataCategories && v.dataCategories.length)
+      ? '<p style="margin-top:16px">Our records indicate your systems access the following categories of our data — please confirm or correct this in your reply:</p><ul>' + v.dataCategories.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>'
+      : '';
+    return '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
+      '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
+      '<p>Hello,</p>' +
+      '<p>As part of our ongoing supplier security review programme, please answer the following short set of questions for <b>' + esc(v.name) + '</b> (' + esc(v.service) + '). A plain-text reply covering each point is all we need — no form to fill in.</p>' +
+      secHtml + aiHtml + dataCatHtml +
+      '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365 on behalf of ' + esc(clientLabel) + '.</p>' +
+      '</div>';
+  }
+
+  /* Read-only summary of a vendor's recorded questionnaire answers for
+     the drawer — empty string if nothing has been recorded yet, so
+     callers can splice this straight into the questionnaire section
+     without an extra conditional. The AI tier badge only appears once
+     usesAi is Yes; a vendor that isn't an AI vendor has nothing to
+     classify and showing "Minimal" for every non-AI vendor would be
+     noise, not information. */
+  function vendorAnswersHtml(v) {
+    var a = v.questionnaireAnswers;
+    if (!a || !Object.keys(a).length) return '';
+    var Q = window.CheckpointLib.VENDOR_QUESTIONNAIRE;
+    var rows = window.CheckpointLib.VENDOR_QUESTIONNAIRE_SECTIONS.map(function (secKey) {
+      var sec = Q[secKey];
+      var qRows = sec.questions.filter(function (q) { return a[q.id]; }).map(function (q) {
+        return '<div class="d-kv"><span>' + esc(q.label) + '</span><b>' + esc(a[q.id]) + '</b></div>';
+      }).join('');
+      return qRows ? '<div style="margin-top:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint)">' + esc(sec.label) + '</div>' + qRows : '';
+    }).join('');
+    var aiTierHtml = '';
+    if (a.usesAi === 'Yes') {
+      var tier = window.CheckpointLib.classifyAiActRisk(window.CheckpointLib.vendorAiActAnswers(a));
+      aiTierHtml = '<div class="d-kv"><span>Suggested EU AI Act tier</span><b><span class="chip sev-' + tier.tier + '">' + esc(tier.tier) + '</span></b></div>';
+    }
+    return rows + aiTierHtml;
   }
 
   var VENDOR_CRITICALITIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -12368,11 +12430,20 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Security questionnaire</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(v.questionnaireStatus || 'Not sent') + '</b></div>' +
         (v.questionnaireSentDate ? '<div class="d-kv"><span>Sent</span><b>' + fmtDate(v.questionnaireSentDate) + '</b></div>' : '') +
-        '<div class="d-kv"><span>Contact</span><b>' + esc(v.contactEmail || 'Not set') + '</b></div></div>' +
+        (v.questionnaireReceivedDate ? '<div class="d-kv"><span>Received</span><b>' + fmtDate(v.questionnaireReceivedDate) + '</b></div>' : '') +
+        '<div class="d-kv"><span>Contact</span><b>' + esc(v.contactEmail || 'Not set') + '</b></div>' +
+        vendorAnswersHtml(v) +
+        (v.questionnaireStatus === 'Link requested'
+          ? '<div class="d-kv"><span>Self-service link</span><b style="color:var(--gold-light)">Requested — goes out on the next scheduled run</b></div>'
+          : '') +
+        '</div>' +
         '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + linkedControls + '</div>' +
         '<div class="d-sec"><h4>Linked risks</h4>' + linkedRisks + '</div>' +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
         '<button class="btn sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>' +
+        (v.questionnaireStatus === 'Link requested' ? '' :
+          '<button class="btn ghost sm" data-action="App.requestVendorQuestionnaireLink" data-id="' + v.id + '">Request self-service link</button>') +
+        '<button class="btn ghost sm" data-action="App.recordVendorQuestionnaire" data-id="' + v.id + '">Record answers</button>' +
         '<button class="btn sm" data-action="App.markVendorReviewed" data-id="' + v.id + '">Mark reviewed</button>' +
         '<button class="btn ghost sm" data-action="App.editVendor" data-id="' + v.id + '">Edit</button>' +
         '</div>';
@@ -12394,17 +12465,7 @@ function showModal(opts) {
       busy(true);
       try {
         var clientLabel = clientDisplayLabel();
-        var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
-          '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
-          '<p>Hello,</p>' +
-          '<p>As part of our ongoing supplier security review programme, please complete our vendor security questionnaire for <b>' + esc(v.name) + '</b> (' + esc(v.service) + ').</p>' +
-          ((v.dataCategories && v.dataCategories.length)
-            ? '<p>Our records indicate your systems access the following categories of our data — please confirm or correct this list in your reply:</p><ul>' + v.dataCategories.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>'
-            : '<p>Please describe the categories of our data your systems access (e.g. customer PII, financial data, credentials, production system access).</p>') +
-          '<p>Please also reply with your current SOC 2 / ISO 27001 (or equivalent) certification status, where our data is stored and processed (regions/sub-processors), and how it is encrypted at rest and in transit.</p>' +
-          '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365 on behalf of ' + esc(clientLabel) + '.</p>' +
-          '</div>';
-        await Graph.sendMail(to, 'Security questionnaire — ' + v.name + ' / ' + clientLabel, body);
+        await Graph.sendMail(to, 'Security questionnaire — ' + v.name + ' / ' + clientLabel, vendorQuestionnaireEmailBody(v, clientLabel));
         var prevStatus = v.questionnaireStatus;
         v.questionnaireStatus = 'Sent';
         v.questionnaireSentDate = new Date().toISOString().slice(0, 10);
@@ -12413,6 +12474,91 @@ function showModal(opts) {
         audit('Vendor questionnaire sent', 'Vendor', v.id, prevStatus || 'Not sent', 'Sent to ' + to);
         log('Security questionnaire sent to <b>' + esc(to) + '</b> for vendor <b>' + esc(v.name) + '</b>.');
         toast('Questionnaire sent to <b>' + esc(to) + '</b>');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderVendors();
+      if (document.getElementById('drawer').classList.contains('open')) App.openVendor(id);
+    },
+
+    /* Transcribes a vendor's reply (however it arrived — email, a call,
+       a portal export) into the structured Security/Privacy/AI answers
+       CheckpointLib.VENDOR_QUESTIONNAIRE defines, so "we asked" and "here
+       is what they said" both live on the vendor record instead of only
+       in an inbox. Every field is offered flat, dependents included —
+       unlike the outbound email's progressive framing, a practitioner
+       transcribing an existing reply benefits from seeing every question
+       at once, not from having questions hidden until answered. */
+    recordVendorQuestionnaire: async function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      var Q = window.CheckpointLib.VENDOR_QUESTIONNAIRE;
+      var existing = v.questionnaireAnswers || {};
+      var fields = [];
+      window.CheckpointLib.VENDOR_QUESTIONNAIRE_SECTIONS.forEach(function (secKey) {
+        Q[secKey].questions.forEach(function (q) {
+          fields.push(q.type === 'yesno'
+            ? { id: q.id, label: q.label, type: 'select', value: existing[q.id] || '', options: [{ value: '', label: '—' }, { value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }, { value: 'Unknown', label: 'Unknown / not answered' }] }
+            : { id: q.id, label: q.label, type: 'text', value: existing[q.id] || '' });
+        });
+      });
+      var vals = await showModal({
+        title: 'Record questionnaire answers — ' + v.name,
+        message: 'Transcribe the vendor’s reply. Leave anything unanswered as —.',
+        fields: fields,
+        confirmText: 'Save', cancelText: 'Cancel'
+      });
+      if (!vals) return;
+      var prevStatus = v.questionnaireStatus;
+      v.questionnaireAnswers = vals;
+      v.questionnaireStatus = 'Received';
+      v.questionnaireReceivedDate = new Date().toISOString().slice(0, 10);
+      busy(true);
+      try {
+        await Store.updateVendor(v);
+        audit('Vendor questionnaire answers recorded', 'Vendor', v.id, prevStatus || 'Not sent', 'Received');
+        log('Questionnaire answers recorded for <b>' + esc(v.name) + '</b>.');
+        toast('Answers saved');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderVendors();
+      if (document.getElementById('drawer').classList.contains('open')) App.openVendor(id);
+    },
+
+    /* Flags a vendor for the OPT-IN automated path instead of sending
+       anything itself — this is a plain SharePoint field write, nothing
+       more. It cannot mint or send a link on its own: doing that would
+       mean shipping VENDOR_LINK_SECRET to every browser running
+       Checkpoint, which defeats the entire point of a server-held
+       secret being the token's authorisation boundary (see
+       azure/lib/vendorToken.js). The scheduled monitor, if deployed
+       with NOTIFY_FROM/VENDOR_LINK_SECRET configured, picks up any
+       vendor sitting at 'Link requested' on its next run, mints the
+       token there (the one place that secret ever exists), and sends
+       it — see PostureMonitor's sendVendorQuestionnaireLinks() (in its
+       runGovernanceSweep()). A tenant without the monitor deployed just
+       never sees this vendor move past 'Link requested' — no error, no
+       broken feature, same "manual is never a failure" doctrine as
+       everywhere else the monitor is optional. */
+    requestVendorQuestionnaireLink: async function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      var toVals = await showModal({
+        title: 'Request self-service link',
+        message: 'Only takes effect if the scheduled monitor (SETUP.md § Continuous monitoring) is deployed for this tenant with email configured — see azure/README.md. If it is, the vendor gets an emailed link to answer the same questions themselves, no sign-in needed, and the answers land here automatically.',
+        fields: [{ id: 'to', label: 'Send to (email address)', type: 'email', value: v.contactEmail || '', placeholder: 'security@vendor.example' }],
+        confirmText: 'Request', cancelText: 'Cancel',
+        validate: function (vv) { return isValidEmail(vv.to) ? null : 'Enter a valid email address.'; }
+      });
+      if (!toVals) return;
+      var prevStatus = v.questionnaireStatus;
+      v.questionnaireStatus = 'Link requested';
+      v.contactEmail = toVals.to;
+      busy(true);
+      try {
+        await Store.updateVendor(v);
+        audit('Vendor questionnaire link requested', 'Vendor', v.id, prevStatus || 'Not sent', 'Link requested');
+        log('Self-service questionnaire link requested for <b>' + esc(v.name) + '</b> — sends on the scheduled monitor\'s next run, if deployed.');
+        toast('Link requested');
       } catch (e) { warn(e); }
       busy(false);
       renderVendors();

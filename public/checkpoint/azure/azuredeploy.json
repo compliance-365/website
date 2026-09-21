@@ -53,7 +53,8 @@
     "storageAccountName": "[substring(concat('cpmon', uniqueString(resourceGroup().id)), 0, 20)]",
     "hostingPlanName": "[concat(parameters('functionAppName'), '-plan')]",
     "appInsightsName": "[concat(parameters('functionAppName'), '-ai')]",
-    "evidenceLinkSecret": "[guid(resourceGroup().id, parameters('functionAppName'), 'evidenceLinkSecret')]"
+    "evidenceLinkSecret": "[guid(resourceGroup().id, parameters('functionAppName'), 'evidenceLinkSecret')]",
+    "vendorLinkSecret": "[guid(resourceGroup().id, parameters('functionAppName'), 'vendorLinkSecret')]"
   },
   "resources": [
     {
@@ -116,7 +117,8 @@
             { "name": "SP_SITE_PATH", "value": "[parameters('spSitePath')]" },
             { "name": "LIST_PREFIX", "value": "[parameters('listPrefix')]" },
             { "name": "SCAN_CRON", "value": "[parameters('scanCron')]" },
-            { "name": "EVIDENCE_LINK_SECRET", "value": "[variables('evidenceLinkSecret')]" }
+            { "name": "EVIDENCE_LINK_SECRET", "value": "[variables('evidenceLinkSecret')]" },
+            { "name": "VENDOR_LINK_SECRET", "value": "[variables('vendorLinkSecret')]" }
           ],
           "cors": {
             "allowedOrigins": [ "https://www.compliance365.com.au" ]

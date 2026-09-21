@@ -53,6 +53,12 @@ var appInsightsName = '${functionAppName}-ai'
 // unpredictable enough for an HMAC key nobody outside this deployment
 // ever needs to see or type.
 var evidenceLinkSecret = guid(resourceGroup().id, functionAppName, 'evidenceLinkSecret')
+// Same idea, for the vendor self-service questionnaire link
+// (VendorQuestionnaireSubmit/index.js and lib/vendorToken.js) — its own
+// secret, not a reuse of evidenceLinkSecret above: a fresh key per new
+// trust boundary is the convention vendorToken.js's own header comment
+// documents.
+var vendorLinkSecret = guid(resourceGroup().id, functionAppName, 'vendorLinkSecret')
 
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageAccountName
@@ -111,14 +117,18 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         { name: 'LIST_PREFIX', value: listPrefix }
         { name: 'SCAN_CRON', value: scanCron }
         { name: 'EVIDENCE_LINK_SECRET', value: evidenceLinkSecret }
+        { name: 'VENDOR_LINK_SECRET', value: vendorLinkSecret }
       ]
-      // Lets the browser page at https://www.compliance365.com.au/checkpoint/evidence.html
-      // (Compliance365's own public site — NOT this Function App) call
-      // EvidenceSubmit's HTTP endpoint from a different origin. The page
-      // is static and holds no secrets; the per-action token in its own
-      // URL is the real authorisation boundary (see
-      // lib/evidenceToken.js), so this only needs to allow the ONE
-      // origin the page is actually served from — never '*'.
+      // Lets the browser pages at
+      // https://www.compliance365.com.au/checkpoint/evidence.html and
+      // .../vendor-questionnaire.html (Compliance365's own public site —
+      // NOT this Function App) call EvidenceSubmit's/
+      // VendorQuestionnaireSubmit's HTTP endpoints from a different
+      // origin. Both pages are static and hold no secrets; the
+      // per-record token in each one's own URL is the real
+      // authorisation boundary (see lib/evidenceToken.js,
+      // lib/vendorToken.js), so this only needs to allow the ONE origin
+      // both pages are actually served from — never '*'.
       cors: {
         allowedOrigins: [
           'https://www.compliance365.com.au'
