@@ -13468,13 +13468,12 @@ function showModal(opts) {
       toast('Reverted to the shipped template wording.');
     },
 
-    /* One-way export. Word opens an HTML document with a Word MIME
-       type and a .doc extension perfectly well, which avoids shipping a
-       document-generation library for a feature that is deliberately a
-       dead end — anything edited in Word stops being a managed document
-       and will not survive the next regeneration. The banner in the
-       exported file says so, so a copy that escapes into a shared drive
-       still explains itself. */
+    /* One-way export — a real .docx (OOXML), built by
+       CheckpointLib.buildPolicyDocx() (lib.js), not an HTML document
+       wearing a .doc extension the way this used to work. Still a dead
+       end by design: anything edited in Word stops being a managed
+       document and will not survive the next regeneration, which is
+       what the confirmation modal and the in-document banner both say. */
     exportPolicyWord: async function (docName) {
       var doc = (window._docs || []).find(function (d) { return d.name === docName; });
       var tplId = doc && doc.tplId;
@@ -13491,15 +13490,17 @@ function showModal(opts) {
       });
       if (!ok) return;
       var c = effectivePolicyContent(t, docName);
-      var html = buildTemplateHtml(c, {
+      var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      var bytes = window.CheckpointLib.buildPolicyDocx(c, {
         clientLabel: clientDisplayLabel('This organisation'), owner: (doc && doc.owner) || '',
-        reviewDate: (doc && doc.nextReview) || '', approved: docStatusOf(doc || {}) === 'Approved',
-        generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
-        logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+        reviewDate: (doc && doc.nextReview) ? fmtDocDate(doc.nextReview) : '', approved: docStatusOf(doc || {}) === 'Approved',
+        generatedDate: generatedDate,
+        brandColor: clientBrandColor() || '',
         version: (doc && doc.version) || '', approvedBy: (doc && doc.approvedBy) || '',
-        classification: (doc && doc.classification) || 'Internal'
-      }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — exported for offline editing. Changes made here are not tracked and will not survive regeneration.</div>');
-      downloadBlob(docName.replace(/\.html?$/i, '') + '.doc', new Blob([html], { type: 'application/msword' }));
+        classification: (doc && doc.classification) || 'Internal',
+        banner: 'Uncontrolled copy — exported for offline editing. Changes made here are not tracked and will not survive regeneration.'
+      });
+      downloadBlob(docName.replace(/\.html?$/i, '') + '.docx', new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
       audit('Policy exported to Word', 'Document', docName, '(none)', 'Uncontrolled copy');
       toast('Exported as an uncontrolled Word copy.');
     },
@@ -16338,7 +16339,7 @@ function showModal(opts) {
        them in one action.
 
        Two format options, because the two reasons to do this want
-       different things: Word (.doc) for a records system or anywhere a
+       different things: Word (.docx) for a records system or anywhere a
        human will open and read them, HTML for a wiki/intranet or
        anything that will re-render them itself. Both carry the same
        uncontrolled-copy banner exportPolicyWord() applies — a copy
@@ -16375,8 +16376,8 @@ function showModal(opts) {
         title: 'Export ' + candidates.length + ' polic' + (candidates.length === 1 ? 'y' : 'ies'),
         message: 'Bundles every generated policy into one ZIP, with a manifest carrying the version, owner, approval and review date for each.\n\nThese are uncontrolled copies: once a policy leaves Checkpoint its version and approval stop being tracked here, and edits made to the copy will not survive the next regeneration. Every file is watermarked to say so.',
         fields: [
-          { id: 'format', label: 'Format', type: 'select', value: 'doc', options: [
-            { value: 'doc', label: 'Word (.doc) — for a records system or reading' },
+          { id: 'format', label: 'Format', type: 'select', value: 'docx', options: [
+            { value: 'docx', label: 'Word (.docx) — for a records system or reading' },
             { value: 'html', label: 'HTML — for a wiki, intranet or re-rendering' }
           ] }
         ],
@@ -16384,23 +16385,40 @@ function showModal(opts) {
         cancelText: 'Cancel'
       });
       if (!vals) return;
-      var ext = vals.format === 'html' ? '.html' : '.doc';
+      var ext = vals.format === 'html' ? '.html' : '.docx';
 
       busy(true);
       var files = [], failed = [];
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      var banner = 'Uncontrolled copy — exported ' + generatedDate + '. Version and approval are tracked in Checkpoint, not in this file.';
       for (var i = 0; i < candidates.length; i++) {
         var d = candidates[i].doc, t = candidates[i].tpl;
+        var baseName = d.name.replace(/\.html?$/i, '').replace(/[\/\\:*?"<>|]/g, '-');
         try {
-          var html = buildTemplateHtml(effectivePolicyContent(t, d.name), {
-            clientLabel: clientDisplayLabel('This organisation'), owner: d.owner || '',
-            reviewDate: d.nextReview || '', approved: docStatusOf(d) === 'Approved',
-            generatedDate: generatedDate,
-            logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
-            version: d.version || '', approvedBy: d.approvedBy || '',
-            classification: d.classification || 'Internal'
-          }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — exported ' + esc(generatedDate) + '. Version and approval are tracked in Checkpoint, not in this file.</div>');
-          files.push({ name: d.name.replace(/\.html?$/i, '').replace(/[\/\\:*?"<>|]/g, '-') + ext, content: html });
+          var c = effectivePolicyContent(t, d.name);
+          if (vals.format === 'html') {
+            var html = buildTemplateHtml(c, {
+              clientLabel: clientDisplayLabel('This organisation'), owner: d.owner || '',
+              reviewDate: d.nextReview || '', approved: docStatusOf(d) === 'Approved',
+              generatedDate: generatedDate,
+              logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+              version: d.version || '', approvedBy: d.approvedBy || '',
+              classification: d.classification || 'Internal'
+            }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">' + esc(banner) + '</div>');
+            files.push({ name: baseName + ext, content: html });
+          } else {
+            var bytes = window.CheckpointLib.buildPolicyDocx(c, {
+              clientLabel: clientDisplayLabel('This organisation'), owner: d.owner || '',
+              reviewDate: d.nextReview ? fmtDocDate(d.nextReview) : '', approved: docStatusOf(d) === 'Approved',
+              generatedDate: generatedDate, brandColor: clientBrandColor() || '',
+              version: d.version || '', approvedBy: d.approvedBy || '',
+              classification: d.classification || 'Internal', banner: banner
+            });
+            /* bytes, not content — a .docx is itself binary zip data;
+               buildZip() below would corrupt it if run through the
+               string/TextEncoder path meant for the HTML branch. */
+            files.push({ name: baseName + ext, bytes: bytes });
+          }
         } catch (e) { failed.push(d.name + ' — ' + (e && e.message ? e.message : 'could not render')); }
       }
 

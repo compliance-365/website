@@ -10,7 +10,7 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 const { band, residual, residualAcceptanceStale, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, scanResultsChanged, scanDrift,
   legacyAuthObservedResult, privRoleChangeResult,
   deviceEncryptionResult, jailbrokenDeviceResult, dormantAccountResult, mfaRegistrationResult,
-  sharedEvidenceClosure, crossFrameworkStatusSuggestions, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
+  sharedEvidenceClosure, crossFrameworkStatusSuggestions, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip, buildPolicyDocx,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
@@ -25,6 +25,26 @@ const { band, residual, residualAcceptanceStale, checkResult, score, readinessPc
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
+}
+
+// Module-level (not buildZip()-describe-scoped) STORE-zip reader, kept
+// byte-preserving rather than decoding straight to text — needed to
+// check a binary entry (buildZip()'s bytes: path) round-trips exactly,
+// and reused by buildPolicyDocx()'s tests to pull out its XML parts.
+function parseStoreZipBytes(bytes) {
+  function u16(o) { return bytes[o] | (bytes[o + 1] << 8); }
+  function u32(o) { return (bytes[o] | (bytes[o + 1] << 8) | (bytes[o + 2] << 16) | (bytes[o + 3] << 24)) >>> 0; }
+  var out = [], o = 0;
+  while (o < bytes.length && u32(o) === 0x04034b50) {
+    var compSize = u32(o + 18);
+    var nameLen = u16(o + 26);
+    var extraLen = u16(o + 28);
+    var nameStart = o + 30;
+    var dataStart = nameStart + nameLen + extraLen;
+    out.push({ name: new TextDecoder().decode(bytes.slice(nameStart, nameStart + nameLen)), bytes: bytes.slice(dataStart, dataStart + compSize) });
+    o = dataStart + compSize;
+  }
+  return out;
 }
 
 describe('band()', () => {
@@ -703,6 +723,140 @@ describe('buildZip()', () => {
     var zip = buildZip([]);
     assert.deepEqual(parseStoreZip(zip), []);
     assert.equal(readU32(zip, zip.length - 22), 0x06054b50);
+  });
+  test('an entry with bytes is stored as-is, not re-encoded through TextEncoder', () => {
+    // The exact case buildPolicyDocx() needs: a nested .docx (itself
+    // binary zip data) has to survive byte-for-byte, which a "binary
+    // string" through TextEncoder would corrupt for bytes >= 0x80.
+    var raw = Uint8Array.from([0x50, 0x4B, 0x03, 0x04, 0x00, 0x80, 0xFF, 0x7E]);
+    var zip = buildZip([{ name: 'nested.docx', bytes: raw }]);
+    var entries = parseStoreZipBytes(zip);
+    assert.equal(entries.length, 1);
+    assert.deepEqual(Array.from(entries[0].bytes), Array.from(raw));
+  });
+});
+
+describe('buildPolicyDocx()', () => {
+  var t = {
+    title: 'Information Security Policy',
+    purpose: 'Purpose text.',
+    scope: 'Scope text.',
+    whyItMatters: 'Para one.\n\nPara two.',
+    inPractice: ['Practice A', 'Practice B'],
+    policyStatements: [
+      { rule: 'Rule one.', because: 'Because one.' },
+      'Rule two as a plain string.'
+    ],
+    roles: [{ role: 'Owner', responsibility: 'Owns it.' }],
+    exceptions: 'Exceptions text.',
+    nonCompliance: 'Non-compliance text.',
+    relatedDocuments: ['Doc A', 'Doc B'],
+    reviewCadence: 'Annually.',
+    controls: ['A.5.1', 'A.5.2']
+  };
+  var opts = {
+    clientLabel: 'Acme & Co', owner: 'Jane Smith', reviewDate: '1 Jan 2027',
+    approved: true, generatedDate: '21 September 2026', brandColor: '#2E7D32',
+    version: '1.0', approvedBy: 'Jane Smith', classification: 'Internal',
+    banner: 'Uncontrolled copy — exported 21 September 2026.'
+  };
+
+  function docxParts(bytes) {
+    var out = {};
+    parseStoreZipBytes(bytes).forEach(function (e) { out[e.name] = new TextDecoder().decode(e.bytes); });
+    return out;
+  }
+  // Every open tag closed by the matching close tag, none left dangling
+  // — a cheap but real well-formedness check with no XML-parser
+  // dependency, same "zero-dependency" spirit as the rest of this file.
+  function assertWellFormedXml(xml, label) {
+    var stack = [];
+    var tagRe = /<\/?([a-zA-Z0-9:._-]+)(?:\s[^>]*?)?(\/?)>/g;
+    var m;
+    while ((m = tagRe.exec(xml))) {
+      var isClose = xml[m.index + 1] === '/';
+      var selfClose = m[2] === '/';
+      if (m[0].indexOf('<?') === 0) continue;
+      if (selfClose) continue;
+      if (isClose) {
+        var top = stack.pop();
+        assert.equal(top, m[1], label + ': mismatched close tag ' + m[0] + ' (expected ' + top + ')');
+      } else {
+        stack.push(m[1]);
+      }
+    }
+    assert.equal(stack.length, 0, label + ': unclosed tag(s) ' + stack.join(', '));
+  }
+
+  test('produces a valid zip with the expected OOXML parts', () => {
+    var bytes = buildPolicyDocx(t, opts);
+    var parts = docxParts(bytes);
+    assert.deepEqual(Object.keys(parts).sort(), [
+      '[Content_Types].xml', '_rels/.rels', 'docProps/app.xml', 'docProps/core.xml',
+      'word/_rels/document.xml.rels', 'word/document.xml', 'word/styles.xml'
+    ]);
+    Object.keys(parts).forEach(function (name) { assertWellFormedXml(parts[name], name); });
+  });
+
+  test('every <w:pPr> orders pBdr/shd before spacing/ind/jc (OOXML schema order — Word/LibreOffice reject the file otherwise, even though it is well-formed XML)', () => {
+    var doc = docxParts(buildPolicyDocx(t, opts))['word/document.xml'];
+    var pPrBlocks = doc.match(/<w:pPr>[\s\S]*?<\/w:pPr>/g) || [];
+    assert.ok(pPrBlocks.length > 0);
+    pPrBlocks.forEach(function (block) {
+      var order = [];
+      ['w:pStyle', 'w:pBdr', 'w:shd', 'w:spacing', 'w:ind', 'w:jc'].forEach(function (tag) {
+        var i = block.indexOf('<' + tag);
+        if (i !== -1) order.push([i, tag]);
+      });
+      var sorted = order.slice().sort(function (a, b) { return a[0] - b[0]; });
+      assert.deepEqual(order, sorted, 'out-of-order pPr children in: ' + block);
+    });
+  });
+
+  test('every <w:rPr> orders color before sz (OOXML schema order)', () => {
+    var parts = docxParts(buildPolicyDocx(t, opts));
+    [parts['word/document.xml'], parts['word/styles.xml']].forEach(function (xml) {
+      var rPrBlocks = xml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/g) || [];
+      rPrBlocks.forEach(function (block) {
+        var colorI = block.indexOf('<w:color');
+        var szI = block.indexOf('<w:sz');
+        if (colorI !== -1 && szI !== -1) assert.ok(colorI < szI, 'w:sz before w:color in: ' + block);
+      });
+    });
+  });
+
+  test('a paragraph never carries more than one <w:pBdr> (top+bottom must merge into one)', () => {
+    var doc = docxParts(buildPolicyDocx(t, opts))['word/document.xml'];
+    var pPrBlocks = doc.match(/<w:pPr>[\s\S]*?<\/w:pPr>/g) || [];
+    pPrBlocks.forEach(function (block) {
+      var count = (block.match(/<w:pBdr>/g) || []).length;
+      assert.ok(count <= 1, 'more than one w:pBdr in: ' + block);
+    });
+  });
+
+  test('content round-trips into word/document.xml, correctly XML-escaped', () => {
+    var doc = docxParts(buildPolicyDocx(t, opts))['word/document.xml'];
+    assert.match(doc, /Information Security Policy/);
+    assert.match(doc, /Acme &amp; Co/); // '&' escaped, not raw
+    assert.match(doc, /1\.\s*Rule one\./);
+    assert.match(doc, /Because one\./);
+    assert.match(doc, /Owner/);
+    assert.match(doc, /Owns it\./);
+    assert.match(doc, /A\.5\.1; A\.5\.2/);
+  });
+
+  test('draft (unapproved) documents show the DRAFT banner and no approver', () => {
+    var draftOpts = Object.assign({}, opts, { approved: false, approvedBy: '', banner: undefined });
+    var doc = docxParts(buildPolicyDocx(t, draftOpts))['word/document.xml'];
+    assert.match(doc, /DRAFT.*NOT YET CONFIRMED/);
+    assert.match(doc, /Not yet approved/);
+  });
+
+  test('an invalid brand colour falls back to the Checkpoint accent, never raw user input in a colour attribute', () => {
+    var badOpts = Object.assign({}, opts, { brandColor: 'javascript:alert(1)' });
+    var styles = docxParts(buildPolicyDocx(t, badOpts))['word/styles.xml'];
+    assert.doesNotMatch(styles, /alert/);
+    assert.match(styles, /BE4A1E/);
   });
 });
 

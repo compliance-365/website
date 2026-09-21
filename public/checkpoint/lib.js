@@ -2988,13 +2988,18 @@
      major unzip tool (Windows Explorer, macOS Archive Utility, 7-Zip,
      Python's zipfile) opens correctly: a local file header + raw bytes
      per entry, a central directory, and the end-of-central-directory
-     record. `files` is an array of {name, content} (content: a string,
-     UTF-8 encoded here); returns a Uint8Array, not a Blob — wrapping it
-     in one is a DOM/window concern for whatever downloads it, kept out
-     of this dependency-free module same as everywhere else in this
-     file. `date` (optional, defaults to now) sets every entry's
-     modified-time field — exposed as a parameter purely so tests can
-     pass a fixed date instead of asserting against the clock. */
+     record. `files` is an array of {name, content} or {name, bytes} —
+     `content` is a string, UTF-8 encoded here; `bytes` is a
+     Uint8Array/byte array stored as-is, for an entry that is already
+     binary (e.g. a .docx being nested inside this zip — running it
+     through TextEncoder as if it were a "binary string" would corrupt
+     any byte outside the ASCII range). Returns a Uint8Array, not a
+     Blob — wrapping it in one is a DOM/window concern for whatever
+     downloads it, kept out of this dependency-free module same as
+     everywhere else in this file. `date` (optional, defaults to now)
+     sets every entry's modified-time field — exposed as a parameter
+     purely so tests can pass a fixed date instead of asserting against
+     the clock. */
   var CRC_TABLE = (function () {
     var t = [];
     for (var n = 0; n < 256; n++) {
@@ -3023,7 +3028,7 @@
     var localEntries = [], centralEntries = [], offset = 0;
     files.forEach(function (f) {
       var nameBytes = Array.from(enc.encode(f.name));
-      var dataBytes = Array.from(enc.encode(f.content));
+      var dataBytes = f.bytes ? Array.from(f.bytes) : Array.from(enc.encode(f.content));
       var crc = crc32(dataBytes);
       var local = [].concat(
         u32(0x04034b50), u16(20), u16(0), u16(0), u16(dt.time), u16(dt.date),
@@ -3044,6 +3049,253 @@
       u32(centralBytes.length), u32(offset), u16(0)
     );
     return Uint8Array.from([].concat.apply([], localEntries).concat(centralBytes, eocd));
+  }
+
+  /* ==========================================================
+     Real .docx (OOXML) export for a generated policy document.
+
+     Word export used to be an HTML document saved with a .doc
+     extension — Word's compatibility importer opens it, but it isn't a
+     real Word document (no native styles, no paragraph/table model
+     Word's own editor understands). This builds an actual OOXML
+     package: a handful of plain-text XML parts zipped together with
+     buildZip() above, same dependency-free approach as everywhere else
+     in this file rather than pulling in a docx-generation library for
+     it.
+
+     Deliberately not a byte-for-byte port of buildTemplateHtml()'s
+     output in app.js — some of what that HTML template does has no
+     sane OOXML equivalent (the hand-drawn SVG section icons; the
+     rotated ghost "DRAFT" watermark) or would cost a whole extra XML
+     part for comparatively little (true numbered/bulleted lists need
+     word/numbering.xml; this uses a plain "•  "/"N.  " text prefix
+     instead, which reads identically in Word). The content itself —
+     every section, every field of the document-control block, the
+     brand accent colour — carries over in full; only the decoration
+     is thinner. The client logo also isn't embedded (v1: client name
+     as text, same fallback the HTML template uses when no logo is
+     set) — that's an image part + relationship this can grow into
+     later without changing the shape of what's here. */
+
+  function docxEsc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  }
+  var DOCX_ACCENT_FALLBACK = 'BE4A1E';
+  function docxAccentHex(c) {
+    return /^#[0-9a-fA-F]{6}$/.test(c || '') ? c.slice(1).toUpperCase() : DOCX_ACCENT_FALLBACK;
+  }
+  /* A light wash of the accent over the warm-paper background, for the
+     "what this means for you" callout shading — mirrors the HTML
+     template's rgba(accent,.07) over #FAF7F1, computed here since
+     OOXML shading is an opaque fill, not a translucent overlay. */
+  function docxTint(hex, weight) {
+    var bg = { r: 0xFA, g: 0xF7, b: 0xF1 };
+    var r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+    function mix(a, c) { return Math.round(a * (1 - weight) + c * weight); }
+    function h2(n) { return ('0' + n.toString(16)).slice(-2).toUpperCase(); }
+    return h2(mix(bg.r, r)) + h2(mix(bg.g, g)) + h2(mix(bg.b, b));
+  }
+  function docxRun(text, r) {
+    r = r || {};
+    var rPr = [];
+    if (r.bold) rPr.push('<w:b/>');
+    if (r.italic) rPr.push('<w:i/>');
+    if (r.color) rPr.push('<w:color w:val="' + r.color + '"/>');
+    if (r.sz) rPr.push('<w:sz w:val="' + r.sz + '"/>');
+    var rPrXml = rPr.length ? '<w:rPr>' + rPr.join('') + '</w:rPr>' : '';
+    return '<w:r>' + rPrXml + '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r>';
+  }
+  function docxP(text, p, r) {
+    p = p || {};
+    /* CT_PPr is schema-ordered — Word/LibreOffice reject an otherwise
+       well-formed document.xml if these appear out of sequence:
+       pStyle, then pBdr/shd, then spacing/ind/jc. A single <w:pBdr>
+       holds every edge it uses (top and bottom both, if both are set)
+       — a paragraph can have only one. */
+    var pPr = [];
+    if (p.style) pPr.push('<w:pStyle w:val="' + p.style + '"/>');
+    if (p.borderTop || p.borderBottom) {
+      var edges = '';
+      if (p.borderTop) edges += '<w:top w:val="single" w:sz="' + p.borderTop.sz + '" w:space="4" w:color="' + p.borderTop.color + '"/>';
+      if (p.borderBottom) edges += '<w:bottom w:val="single" w:sz="' + p.borderBottom.sz + '" w:space="4" w:color="' + p.borderBottom.color + '"/>';
+      pPr.push('<w:pBdr>' + edges + '</w:pBdr>');
+    }
+    if (p.shade) pPr.push('<w:shd w:val="clear" w:color="auto" w:fill="' + p.shade + '"/>');
+    if (p.before != null || p.after != null) pPr.push('<w:spacing w:before="' + (p.before || 0) + '" w:after="' + (p.after || 0) + '"/>');
+    if (p.indent) pPr.push('<w:ind w:left="' + p.indent + '"/>');
+    if (p.jc) pPr.push('<w:jc w:val="' + p.jc + '"/>');
+    var pPrXml = pPr.length ? '<w:pPr>' + pPr.join('') + '</w:pPr>' : '';
+    return '<w:p>' + pPrXml + docxRun(text, r) + '</w:p>';
+  }
+  function docxHeading(text) { return docxP(text, { style: 'Heading2', before: 280, after: 100 }); }
+  function docxBullet(text) { return docxP('•  ' + text, { indent: 360, before: 40, after: 40 }); }
+  function docxStatement(n, rule, because, accent) {
+    var xml = docxP(n + '.  ' + rule, { before: 160, after: because ? 20 : 120 }, { bold: true, color: accent });
+    if (because) xml += docxP(because, { after: 120, indent: 240 }, { italic: true, color: '6B675E' });
+    return xml;
+  }
+  /* Plain bordered table, direct per-cell formatting rather than a
+     named table style — one fewer XML concept for the same visual
+     result, since nothing here needs a table style reused elsewhere. */
+  function docxTable(rows, colWidths) {
+    var borders = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (edge) {
+      return '<w:' + edge + ' w:val="single" w:sz="4" w:space="0" w:color="D9D5CB"/>';
+    }).join('') + '</w:tblBorders>';
+    var grid = colWidths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('');
+    var body = rows.map(function (cells) {
+      return '<w:tr>' + cells.map(function (c, i) {
+        return '<w:tc><w:tcPr><w:tcW w:w="' + colWidths[i] + '" w:type="dxa"/></w:tcPr><w:p>' + docxRun(c, i === 0 ? { bold: true } : {}) + '</w:p></w:tc>';
+      }).join('') + '</w:tr>';
+    }).join('');
+    return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>' + borders + '</w:tblPr><w:tblGrid>' + grid + '</w:tblGrid>' + body + '</w:tbl>';
+  }
+
+  /* `t` is an effective policy template's content (title, purpose,
+     scope, policyStatements, roles, exceptions, nonCompliance,
+     relatedDocuments, reviewCadence, controls, whyItMatters,
+     inPractice — the same shape app.js's buildTemplateHtml() takes).
+     `opts.generatedDate`/`opts.reviewDate` are expected already
+     formatted for display (same convention buildTemplateHtml() uses
+     for generatedDate) — this function does no date parsing, so it has
+     no locale/timezone opinion of its own. `opts.banner`, if set, is
+     rendered as a bold red strip at the very top (the "uncontrolled
+     copy" warning callers already attach to every export). */
+  function buildPolicyDocxBody(t, opts) {
+    var accent = docxAccentHex(opts.brandColor);
+    var parts = [];
+    if (opts.banner) {
+      parts.push(docxP(opts.banner, { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
+    }
+    if (!opts.approved) {
+      parts.push(docxP('DRAFT — REVIEW AND APPROVE. NOT YET CONFIRMED BY A PRACTITIONER AS READY FOR USE.',
+        { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
+    }
+    parts.push(docxP(opts.clientLabel || 'This organisation', { style: 'ClientName', after: 20 }));
+    parts.push(docxP(('Policy document · Generated ' + (opts.generatedDate || '')).toUpperCase(),
+      { style: 'Meta', after: 160, borderBottom: { sz: 16, color: '0B0B0C' } }));
+    parts.push(docxP(t.title, { style: 'Title', before: 200 }));
+    parts.push(docxP('', { borderBottom: { sz: 8, color: accent }, after: 200 }));
+
+    var dctlRows = [
+      ['Organisation', opts.clientLabel || ''],
+      ['Document owner', opts.owner || ''],
+      ['Version', opts.version || (opts.approved ? '1.0' : '0.1')],
+      ['Status', opts.approved ? 'Approved' : 'Draft'],
+      ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Not yet approved'],
+      [opts.approved ? 'Approval date' : 'Generated', opts.generatedDate || ''],
+      ['Next review due', opts.reviewDate || '—'],
+      ['Classification', opts.classification || 'Internal']
+    ];
+    parts.push(docxTable(dctlRows, [2600, 6800]));
+    parts.push(docxP('', { after: 160 }));
+
+    if (opts.aiAssisted) {
+      parts.push(docxP('AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + (opts.aiReviewer || 'a practitioner') + ' before generation.', { after: 160 }, { italic: true }));
+    }
+
+    if (t.whyItMatters) {
+      parts.push(docxHeading('What this means for you'));
+      var tint = docxTint(accent, 0.08);
+      t.whyItMatters.split('\n\n').forEach(function (p) { parts.push(docxP(p, { shade: tint, before: 40, after: 40 })); });
+    }
+    if (t.inPractice && t.inPractice.length) {
+      parts.push(docxHeading('In practice'));
+      t.inPractice.forEach(function (p) { parts.push(docxBullet(p)); });
+    }
+
+    parts.push(docxHeading('Purpose'));
+    parts.push(docxP(t.purpose || '', { after: 120 }));
+    parts.push(docxHeading('Scope'));
+    parts.push(docxP(t.scope || '', { after: 120 }));
+
+    parts.push(docxHeading('Policy'));
+    (t.policyStatements || []).forEach(function (s, i) {
+      var rule = typeof s === 'string' ? s : s.rule;
+      var because = typeof s === 'string' ? '' : (s.because || '');
+      parts.push(docxStatement(i + 1, rule, because, accent));
+    });
+
+    if (t.roles && t.roles.length) {
+      parts.push(docxHeading('Who is responsible'));
+      parts.push(docxTable(t.roles.map(function (r) { return [r.role, r.responsibility]; }), [2600, 6800]));
+      parts.push(docxP('', { after: 160 }));
+    }
+    if (t.exceptions) { parts.push(docxHeading('Exceptions')); parts.push(docxP(t.exceptions, { after: 120 })); }
+    if (t.nonCompliance) { parts.push(docxHeading('If this policy is not followed')); parts.push(docxP(t.nonCompliance, { after: 120 })); }
+    if (t.relatedDocuments && t.relatedDocuments.length) {
+      parts.push(docxHeading('Related documents'));
+      t.relatedDocuments.forEach(function (d) { parts.push(docxBullet(d)); });
+    }
+
+    parts.push(docxHeading('Review'));
+    parts.push(docxP(t.reviewCadence || '', { after: 120 }));
+    if (t.controls && t.controls.length) {
+      parts.push(docxHeading('Helps satisfy'));
+      parts.push(docxP(t.controls.join('; '), { after: 120 }));
+    }
+
+    parts.push(docxP('Compliance365 — Checkpoint · ' + (opts.approved ? 'Approved' : 'Draft') + ' · ' + (opts.generatedDate || ''),
+      { style: 'Meta', before: 320, borderTop: { sz: 6, color: '999489' } }));
+    return parts.join('');
+  }
+
+  function buildDocxStylesXml(accent) {
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Manrope" w:hAnsi="Manrope"/><w:color w:val="0B0B0C"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>' +
+      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:rPr><w:rFonts w:ascii="Bricolage Grotesque" w:hAnsi="Bricolage Grotesque"/><w:sz w:val="48"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="ClientName"><w:name w:val="Client Name"/><w:basedOn w:val="Normal"/><w:rPr><w:rFonts w:ascii="Bricolage Grotesque" w:hAnsi="Bricolage Grotesque"/><w:sz w:val="32"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Meta"><w:name w:val="Meta"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="6B675E"/><w:sz w:val="16"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:pPr><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:rFonts w:ascii="Bricolage Grotesque" w:hAnsi="Bricolage Grotesque"/><w:color w:val="' + accent + '"/><w:sz w:val="27"/></w:rPr></w:style>' +
+      '</w:styles>';
+  }
+  function buildDocxCoreXml(t, opts) {
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">' +
+      '<dc:title>' + docxEsc(t.title) + '</dc:title>' +
+      '<dc:creator>Compliance365 — Checkpoint</dc:creator>' +
+      '<cp:lastModifiedBy>' + docxEsc(opts.owner || '') + '</cp:lastModifiedBy>' +
+      '<cp:version>' + docxEsc(opts.version || '') + '</cp:version>' +
+      '</cp:coreProperties>';
+  }
+  var DOCX_CONTENT_TYPES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
+    '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
+    '</Types>';
+  var DOCX_RELS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>' +
+    '</Relationships>';
+  var DOCX_DOCUMENT_RELS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '</Relationships>';
+  var DOCX_APP_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Checkpoint</Application></Properties>';
+
+  function buildPolicyDocx(t, opts) {
+    opts = opts || {};
+    var bodyXml = buildPolicyDocxBody(t, opts) +
+      '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
+    var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + bodyXml + '</w:body></w:document>';
+    return buildZip([
+      { name: '[Content_Types].xml', content: DOCX_CONTENT_TYPES_XML },
+      { name: '_rels/.rels', content: DOCX_RELS_XML },
+      { name: 'word/document.xml', content: documentXml },
+      { name: 'word/_rels/document.xml.rels', content: DOCX_DOCUMENT_RELS_XML },
+      { name: 'word/styles.xml', content: buildDocxStylesXml(docxAccentHex(opts.brandColor)) },
+      { name: 'docProps/core.xml', content: buildDocxCoreXml(t, opts) },
+      { name: 'docProps/app.xml', content: DOCX_APP_XML }
+    ]);
   }
 
   /* ==========================================================
@@ -4466,7 +4718,7 @@
     riskFinancialInputs: riskFinancialInputs, simulateRiskLosses: simulateRiskLosses,
     simulatePortfolioLosses: simulatePortfolioLosses, summarizeLossDistribution: summarizeLossDistribution,
     lossExceedanceCurve: lossExceedanceCurve, RISK_FINANCIAL_BANDS: RISK_FINANCIAL_BANDS,
-    toCsv: toCsv, buildZip: buildZip,
+    toCsv: toCsv, buildZip: buildZip, buildPolicyDocx: buildPolicyDocx,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
     evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
