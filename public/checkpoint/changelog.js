@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.82.0',
+    date: '2026-09-21',
+    entries: [
+      'Documents: approved policies now have a "PDF" action alongside "Word" -- opens the same print-ready preview already used when a policy is first generated, so getting a current PDF no longer means regenerating the document. Same uncontrolled-copy banner and audit trail as the Word export.'
+    ]
+  },
+  {
     version: '1.81.1',
     date: '2026-09-20',
     entries: [
