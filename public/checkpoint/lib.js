@@ -4483,6 +4483,73 @@
     return { tier: tier, reasons: reasons, obligations: obligations };
   }
 
+  /* ================= Vendor security/privacy/AI questionnaire =================
+     Deliberately short — a handful of questions a vendor can answer in a
+     few minutes, not a full SIG/CAIQ-length assessment. Security and
+     Privacy are new question sets; the three AI questions deliberately
+     reuse AI_ACT_QUESTIONS' own ids (directInteraction,
+     essentialServicesAccess, syntheticContent) where the question means
+     the same thing, so a vendor's AI answers can feed classifyAiActRisk()
+     directly — see vendorAiActAnswers() below — instead of this being a
+     second, unrelated AI-risk model to maintain.
+
+     `dependsOn`, where set, is a UI hint only (skip/grey out until the
+     named question is answered Yes) — nothing here enforces it, so a
+     transcribed answer for a "conditional" question when the gate
+     question is No is tolerated, not rejected: a practitioner
+     transcribing a vendor's free-text reply shouldn't be blocked by a
+     structural rule the vendor's own reply didn't respect either. */
+  var VENDOR_QUESTIONNAIRE = {
+    security: {
+      label: 'Security',
+      questions: [
+        { id: 'certification', label: 'Current independent security certification (SOC 2, ISO 27001, or equivalent)?', type: 'yesno' },
+        { id: 'certificationDetail', label: 'Which certification, and when does it expire?', type: 'text', dependsOn: 'certification' },
+        { id: 'encryption', label: 'Is our data encrypted at rest and in transit?', type: 'yesno' },
+        { id: 'mfa', label: 'Is MFA enforced for staff who can access our data?', type: 'yesno' },
+        { id: 'incidentResponse', label: 'Documented incident response process, and will you notify us of an incident affecting our data?', type: 'yesno' }
+      ]
+    },
+    privacy: {
+      label: 'Privacy',
+      questions: [
+        { id: 'dataLocation', label: 'Where is our data stored and processed (country/region)?', type: 'text' },
+        { id: 'subProcessors', label: 'Do you use third-party sub-processors to handle our data?', type: 'yesno' },
+        { id: 'subProcessorsDetail', label: 'If yes, who — can you list them?', type: 'text', dependsOn: 'subProcessors' },
+        { id: 'dataAtContractEnd', label: 'What happens to our data when the contract ends (deletion/return)?', type: 'text' }
+      ]
+    },
+    ai: {
+      label: 'AI',
+      questions: [
+        { id: 'usesAi', label: 'Does your product/service use AI or machine learning to process our data, or to make decisions that affect us or our customers?', type: 'yesno' },
+        { id: 'directInteraction', label: 'Does it interact directly with people (e.g. a chatbot) who might not realise it’s AI?', type: 'yesno', dependsOn: 'usesAi' },
+        { id: 'essentialServicesAccess', label: 'Does it help decide access to things like credit, employment, insurance or other essential services?', type: 'yesno', dependsOn: 'usesAi' },
+        { id: 'syntheticContent', label: 'Does it generate synthetic content (text, image, audio, video) that could be mistaken for human-made?', type: 'yesno', dependsOn: 'usesAi' }
+      ]
+    }
+  };
+  var VENDOR_QUESTIONNAIRE_SECTIONS = ['security', 'privacy', 'ai'];
+
+  /* Pulls the subset of a vendor's questionnaire answers that map onto
+     AI_ACT_QUESTIONS ids, converting this questionnaire's 'Yes'/'No'/
+     'Unknown' strings to the booleans classifyAiActRisk() expects.
+     'Unknown' reads as false (not triggering an obligation) rather than
+     true (over-claiming one) — an unanswered question is a gap to chase
+     with the vendor, not a licence to assume the worse-and-safer
+     interpretation on their behalf. Returns {} (Minimal tier) if the
+     vendor hasn't answered usesAi as Yes at all, same as any AI system
+     with no boxes ticked. */
+  function vendorAiActAnswers(answers) {
+    answers = answers || {};
+    if (answers.usesAi !== 'Yes') return {};
+    var out = {};
+    ['directInteraction', 'essentialServicesAccess', 'syntheticContent'].forEach(function (id) {
+      if (answers[id] === 'Yes') out[id] = true;
+    });
+    return out;
+  }
+
   /* ================= Audit-log integrity chain =================
      Each audit entry carries the hash of the entry before it, so the
      log is a chain rather than a bag of independent rows. Altering or
@@ -4755,6 +4822,7 @@
     encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
+    VENDOR_QUESTIONNAIRE: VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS: VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers: vendorAiActAnswers,
     threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
     threatIntelMatchSummary: threatIntelMatchSummary,
     soaFocusRows: soaFocusRows, soaFocusLabel: soaFocusLabel,

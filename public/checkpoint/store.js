@@ -1496,7 +1496,7 @@ window.DemoStore = (function () {
       ],
       vendors: [
         { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', certExpiryDate: daysFrom(-12), owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008', publicListed: true, dataCategories: ['Health information', 'Customer PII', 'Production system access'] },
-        { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', certExpiryDate: daysFrom(200), owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), calRef: 'CAL-009', publicListed: true, dataCategories: ['Financial / payment data'] },
+        { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', certExpiryDate: daysFrom(200), owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), questionnaireReceivedDate: daysFrom(-312), questionnaireAnswers: { certification: 'Yes', certificationDetail: 'SOC 2 Type II, renews annually; PCI DSS Level 1', encryption: 'Yes', mfa: 'Yes', incidentResponse: 'Yes', dataLocation: 'US (AWS us-east-1), with encrypted backups in us-west-2', subProcessors: 'Yes', subProcessorsDetail: 'AWS (hosting), Twilio (SMS verification)', dataAtContractEnd: 'Deleted within 30 days of contract termination, confirmed in writing', usesAi: 'No' }, calRef: 'CAL-009', publicListed: true, dataCategories: ['Financial / payment data'] },
         { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '', publicListed: false, dataCategories: ['Company confidential'] }
       ],
       aiSystems: [
@@ -2064,6 +2064,7 @@ window.SpStore = (function () {
       { name: 'Notes', text: { allowMultipleLines: true } }, { name: 'ContactEmail', text: {} },
       { name: 'Controls', text: {} }, { name: 'RiskRefs', text: {} },
       { name: 'QuestionnaireStatus', text: {} }, { name: 'QuestionnaireSentDate', text: {} },
+      { name: 'QuestionnaireAnswers', text: { allowMultipleLines: true } }, { name: 'QuestionnaireReceivedDate', text: {} },
       { name: 'CalRef', text: {} }, { name: 'PublicListed', boolean: {} },
       { name: 'DataCategories', text: {} }, { name: 'CertExpiryDate', text: {} }
     ],
@@ -2437,10 +2438,12 @@ window.SpStore = (function () {
     AISystems: ['AiActAnswers'],
     AuditLog: ['EntryHash', 'PrevHash'],
     /* CertExpiryDate added for the Azure Function's vendor cert/report
-       expiry sweep — a tenant provisioned before it existed has a
-       Vendors list missing it, same "Field not recognized" failure
-       class as the others in this map. */
-    Vendors: ['CertExpiryDate']
+       expiry sweep; QuestionnaireAnswers/QuestionnaireReceivedDate for
+       the structured Security/Privacy/AI questionnaire — a tenant
+       provisioned before either existed has a Vendors list missing
+       them, same "Field not recognized" failure class as the others in
+       this map. */
+    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
@@ -2783,6 +2786,8 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); }),
         vendors: vendorItems.map(function (i) {
           var f = i.fields;
+          var questionnaireAnswers;
+          try { questionnaireAnswers = JSON.parse(f.QuestionnaireAnswers || '{}'); } catch (e) { questionnaireAnswers = {}; }
           return {
             _sp: i.id, id: f.RefId, name: f.Title, service: f.Service || '', dataAccessed: f.DataAccessed || '',
             criticality: f.Criticality || 'Medium', reviewStatus: f.ReviewStatus || 'Not started',
@@ -2790,6 +2795,7 @@ window.SpStore = (function () {
             certifications: f.Certifications || '', owner: f.Owner || '', notes: f.Notes || '',
             contactEmail: f.ContactEmail || '', controls: uncsv(f.Controls), riskRefs: uncsv(f.RiskRefs),
             questionnaireStatus: f.QuestionnaireStatus || 'Not sent', questionnaireSentDate: f.QuestionnaireSentDate || '',
+            questionnaireAnswers: questionnaireAnswers, questionnaireReceivedDate: f.QuestionnaireReceivedDate || '',
             calRef: f.CalRef || '', publicListed: !!f.PublicListed, dataCategories: uncsv(f.DataCategories),
             certExpiryDate: f.CertExpiryDate || ''
           };
@@ -2972,6 +2978,7 @@ window.SpStore = (function () {
         NextReviewDue: v.nextReviewDue || '', Certifications: v.certifications || '', Owner: v.owner,
         Notes: v.notes || '', ContactEmail: v.contactEmail || '', Controls: csv(v.controls), RiskRefs: csv(v.riskRefs),
         QuestionnaireStatus: v.questionnaireStatus || 'Not sent', QuestionnaireSentDate: v.questionnaireSentDate || '',
+        QuestionnaireAnswers: JSON.stringify(v.questionnaireAnswers || {}), QuestionnaireReceivedDate: v.questionnaireReceivedDate || '',
         CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories),
         CertExpiryDate: v.certExpiryDate || ''
       });
@@ -2983,7 +2990,9 @@ window.SpStore = (function () {
         ReviewStatus: v.reviewStatus, LastReviewed: v.lastReviewed || '', NextReviewDue: v.nextReviewDue || '',
         Certifications: v.certifications || '', Owner: v.owner, Notes: v.notes || '', ContactEmail: v.contactEmail || '',
         Controls: csv(v.controls), RiskRefs: csv(v.riskRefs), QuestionnaireStatus: v.questionnaireStatus || 'Not sent',
-        QuestionnaireSentDate: v.questionnaireSentDate || '', CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories),
+        QuestionnaireSentDate: v.questionnaireSentDate || '',
+        QuestionnaireAnswers: JSON.stringify(v.questionnaireAnswers || {}), QuestionnaireReceivedDate: v.questionnaireReceivedDate || '',
+        CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories),
         CertExpiryDate: v.certExpiryDate || ''
       });
     },

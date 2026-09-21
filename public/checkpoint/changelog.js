@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.84.0',
+    date: '2026-09-21',
+    entries: [
+      'Vendor risk: "Send questionnaire" now asks a short, structured set of Security/Privacy/AI questions instead of a free-text paragraph -- and a new "Record answers" action lets you transcribe a vendor\'s reply into the register, so the answers live on the vendor record instead of only in an inbox. The AI section suggests an EU AI Act risk tier once a vendor confirms they use AI, reusing the same classifier the AI systems register already has. Questionnaire status now genuinely reaches "Received", not just "Sent".'
+    ]
+  },
+  {
     version: '1.83.0',
     date: '2026-09-21',
     entries: [
