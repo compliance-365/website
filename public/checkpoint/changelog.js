@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.85.0',
+    date: '2026-09-21',
+    entries: [
+      'Vendor risk: "Request self-service link" queues a vendor for the opt-in automated questionnaire path -- if the scheduled monitor (SETUP.md § Continuous monitoring) is deployed with email configured, it emails the vendor contact a no-sign-in link to a short self-service form and their answers land in the register automatically, no transcription needed. Without the monitor deployed, nothing breaks -- the existing manual send/record pair keeps working exactly as before.'
+    ]
+  },
+  {
     version: '1.84.0',
     date: '2026-09-21',
     entries: [

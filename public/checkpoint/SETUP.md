@@ -1515,14 +1515,31 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   the criticality actually set — a suggestion the practitioner can
   always override, never an automatic change. Unclassified vendors are
   visibly flagged in the register so "we never asked what data they
-  hold" can't hide. "Send questionnaire" reuses `Graph.sendMail` (the
-  same delegated `Mail.Send` scope, requested incrementally on first
-  use, as the Board view's "Email status update") to email a vendor
-  contact — the email lists the recorded data categories and asks the
-  vendor to confirm or correct them — and records
-  Sent/Received status and date on the vendor record — Checkpoint tracks
-  the questionnaire's status, not its content; there's no inbox to read
-  a reply from. Each vendor's next-review date drives one real
+  hold" can't hide. **Questionnaire**: a short, structured
+  Security/Privacy/AI question set (`VENDOR_QUESTIONNAIRE` in lib.js —
+  8 questions for a non-AI vendor, up to 11 for one that uses AI; the
+  AI section is gated behind a single "does this use AI?" question so
+  most vendors never see it). "Send questionnaire" reuses
+  `Graph.sendMail` (the same delegated `Mail.Send` scope, requested
+  incrementally on first use, as the Board view's "Email status
+  update") to email these questions itemised, plus the recorded data
+  categories for the vendor to confirm or correct. "Record answers"
+  lets a practitioner transcribe a vendor's reply (however it arrived)
+  into structured fields — `QuestionnaireStatus` now genuinely reaches
+  **Received**, not just Sent, and the AI section's answers feed the
+  same `classifyAiActRisk()` the AI systems register uses, shown as a
+  suggested EU AI Act tier once a vendor confirms AI use. "Request
+  self-service link" is the opt-in automated path: it only flags the
+  vendor (`QuestionnaireStatus: 'Link requested'`, a plain field
+  write) — if the scheduled monitor (§9) is deployed with
+  `VENDOR_LINK_SECRET`/`NOTIFY_FROM` configured, its next run emails
+  the vendor a no-sign-in link (`vendor-questionnaire.html`,
+  token-scoped to that one vendor, same pattern as the owner-driven
+  evidence link in azure/README.md) and their answers land in the
+  register automatically; without the monitor deployed, the vendor
+  simply never moves past "Link requested" — no error, and the manual
+  send/record pair above works regardless. Each vendor's next-review
+  date drives one real
   Compliance Calendar entry (category "Supplier security review") kept
   in sync automatically as the vendor's dates change — the vendor
   register is the source of truth for that sync, so record a completed

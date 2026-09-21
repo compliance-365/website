@@ -367,6 +367,43 @@ from — never `*`. A tenant that deployed this Function before
 Checkpoint" chase text until redeployed; nothing breaks, and no link is
 ever emitted broken.
 
+### Vendor questionnaire self-service links — no sign-in required
+
+Same shape as owner-driven evidence above, for a different audience: a
+third-party vendor contact, not an employee, so there is no Entra
+account to sign into even in principle. When a practitioner clicks
+"Request self-service link" on a vendor in Checkpoint's Vendor risk
+register, that's a plain SharePoint field write (`QuestionnaireStatus`
+→ `Link requested`) — the browser never mints a token itself, since
+that would mean shipping the signing secret to every browser running
+Checkpoint. This Function's governance sweep picks up any vendor sitting
+at `Link requested` on its next run, mints a short-lived, HMAC-signed
+token (`VENDOR_LINK_SECRET`, auto-generated at deploy time, same as
+`EVIDENCE_LINK_SECRET` — a fresh secret per trust boundary, never
+reused across the two) naming that one vendor's item id, and emails a
+link to a second static page — `vendor-questionnaire.html`, also on
+Compliance365's public site. `VendorQuestionnaireSubmit`, a third
+HTTP-triggered function in this Function App, verifies the token,
+returns the vendor's name/service and the same short Security/Privacy/AI
+question set the browser app's own "Send questionnaire"/"Record
+answers" actions use, and on submission patches the vendor's
+`QuestionnaireAnswers` (JSON), flips `QuestionnaireStatus` to
+`Received`, and stamps `QuestionnaireReceivedDate` — exactly what a
+practitioner transcribing the same reply by hand would write.
+
+Deliberately narrow, same reasoning as the evidence link: a vendor's
+submission can only ever touch that vendor's own three fields, never
+criticality, ownership, linked controls/risks, or any other row. Needs
+no new Graph permission — same `Sites.Selected` write access on
+Checkpoint's own site. Requires `NOTIFY_FROM` (below) as well as
+`VENDOR_LINK_SECRET`: a vendor is chased by email, which only an
+app-only identity with a configured mailbox can send. Without either
+configured, a vendor simply never moves past `Link requested` — no
+error, nothing breaks, the practitioner can still email the itemised
+questions and transcribe the reply by hand (the browser app's own
+"Send questionnaire" / "Record answers" pair) regardless of whether
+this Function is deployed at all.
+
 ### The periodic digest
 
 If the tenant has turned the digest on in Checkpoint (Frameworks &
@@ -432,10 +469,11 @@ func azure functionapp publish <functionAppName>
 ```
 
 (The VS Code Azure Functions extension's "Deploy to Function App" works
-identically if you'd rather not use the CLI.) This deploys **both**
+identically if you'd rather not use the CLI.) This deploys **all three**
 functions in this folder — the timer-triggered `PostureMonitor` and the
-HTTP-triggered `EvidenceSubmit` (see "Owner-driven evidence" above) —
-in one push; there's nothing to deploy separately.
+HTTP-triggered `EvidenceSubmit`/`VendorQuestionnaireSubmit` (see
+"Owner-driven evidence" and "Vendor questionnaire self-service links"
+above) — in one push; there's nothing to deploy separately.
 
 ## 6. Verify
 
@@ -457,6 +495,12 @@ in one push; there's nothing to deploy separately.
   evidence" link rather than plain "Open Checkpoint" text — the
   difference between `EVIDENCE_LINK_SECRET` being set (it is,
   automatically, from the deploy above) and not.
+- To check the vendor questionnaire link: in the browser app, click
+  "Request self-service link" on a vendor, wait for (or trigger) a run,
+  and confirm the vendor's contact receives an email with an "Answer
+  the questionnaire" link, and that `QuestionnaireStatus` moves to
+  `Sent` — needs `NOTIFY_FROM` set as well as `VENDOR_LINK_SECRET`
+  (which, like `EVIDENCE_LINK_SECRET`, is already set automatically).
 
 ## Changing or disabling it
 
@@ -486,3 +530,6 @@ in one push; there's nothing to deploy separately.
   links emailed after the change use the new one. There's normally no
   need to do this — links expire on their own after 30 days — but it's
   there for the rare "an email account was compromised" case.
+  `VENDOR_LINK_SECRET` works identically for outstanding vendor
+  questionnaire links (which expire on their own after 14 days) — the
+  two are separate settings, so rotating one never affects the other.

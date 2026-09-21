@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep, buildEvidenceLink, EVIDENCE_PAGE_URL } =
+const { digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep, buildEvidenceLink, EVIDENCE_PAGE_URL, buildVendorLink } =
   require('../public/checkpoint/azure/PostureMonitor/index.js').__test;
 
 const TODAY = '2026-08-15';
@@ -297,6 +297,114 @@ describe('runGovernanceSweep() — vendor review & certification expiry chasing'
     assert.equal(result.written, 0, 'already-open alert is not re-raised');
     assert.equal(writes.length, 0);
   });
+});
+
+describe('runGovernanceSweep() — vendor questionnaire self-service links', () => {
+  const today = '2026-06-15';
+  const lists = { Alerts: 'alerts-list' };
+  const optional = { Vendors: 'vendors-list' };
+  const ctx = () => ({ log: Object.assign(() => {}, { error: () => {} }) });
+
+  function withVendorLinkEnv(fn) {
+    process.env.NOTIFY_FROM = 'compliance@example.com';
+    process.env.VENDOR_LINK_SECRET = 'test-vendor-secret';
+    process.env.WEBSITE_HOSTNAME = 'contoso-checkpoint-monitor.azurewebsites.net';
+    return fn().finally(() => {
+      delete process.env.NOTIFY_FROM;
+      delete process.env.VENDOR_LINK_SECRET;
+      delete process.env.WEBSITE_HOSTNAME;
+    });
+  }
+
+  function graph(vendors) {
+    const sent = [], patches = [];
+    async function g(path, opts) {
+      const patchMatch = path.match(/\/lists\/vendors-list\/items\/(\d+)\/fields$/);
+      if (patchMatch && opts && opts.method === 'PATCH') { patches.push({ id: patchMatch[1], fields: opts.body }); return null; }
+      if (/\/lists\/vendors-list\/items/.test(path)) return { value: vendors.map((f, i) => ({ id: String(i + 1), fields: f })) };
+      if (/\/lists\/alerts-list\/items/.test(path)) {
+        if (opts && opts.method === 'POST') return { id: 'a' };
+        return { value: [] };
+      }
+      if (/sendMail/.test(path)) { sent.push({ path, body: opts.body }); return null; }
+      throw new Error('unexpected path: ' + path);
+    }
+    return { g, sent, patches };
+  }
+
+  const requested = { RefId: 'VEN-002', Title: 'Aria Payments Gateway', Service: 'Card payments', QuestionnaireStatus: 'Link requested', ContactEmail: 'security@aria.example' };
+
+  test('emails a vendor contact a self-service link and flips status to Sent', async () => {
+    const { g, sent, patches } = graph([requested]);
+    const res = await withVendorLinkEnv(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.questionnaireLinksSent, 1);
+    const to = sent.flatMap(s => s.body.message.toRecipients.map(r => r.emailAddress.address));
+    assert.ok(to.includes('security@aria.example'));
+    assert.equal(patches.length, 1);
+    assert.equal(patches[0].id, '1');
+    assert.equal(patches[0].fields.QuestionnaireStatus, 'Sent');
+    assert.equal(patches[0].fields.QuestionnaireSentDate, today);
+  });
+
+  test('a vendor not in "Link requested" status is left alone', async () => {
+    const vendors = [
+      Object.assign({}, requested, { QuestionnaireStatus: 'Not sent' }),
+      Object.assign({}, requested, { QuestionnaireStatus: 'Sent' }),
+      Object.assign({}, requested, { QuestionnaireStatus: 'Received' })
+    ];
+    const { g, sent, patches } = graph(vendors);
+    const res = await withVendorLinkEnv(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.questionnaireLinksSent, 0);
+    assert.equal(sent.length, 0);
+    assert.equal(patches.length, 0);
+  });
+
+  test('a vendor with no ContactEmail is never chased — nowhere to send it', async () => {
+    const noEmail = Object.assign({}, requested, { ContactEmail: '' });
+    const { g, sent } = graph([noEmail]);
+    const res = await withVendorLinkEnv(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.questionnaireLinksSent, 0);
+    assert.equal(sent.length, 0);
+  });
+
+  test('without NOTIFY_FROM or VENDOR_LINK_SECRET, nothing sends and the vendor stays at "Link requested" — fails closed, never errors', async () => {
+    const { g, sent, patches } = graph([requested]);
+    const res = await runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today);
+    assert.equal(res.questionnaireLinksSent, 0);
+    assert.equal(sent.length, 0);
+    assert.equal(patches.length, 0);
+  });
+
+  test('runs even when no other governance finding fired on this sweep', async () => {
+    const { g } = graph([requested]);
+    const res = await withVendorLinkEnv(() => runGovernanceSweep(g, null, ctx(), 'site', lists, optional, {}, today));
+    assert.equal(res.written, 0, 'no NextReviewDue/CertExpiryDate on this vendor means no findings');
+    assert.equal(res.questionnaireLinksSent, 1, 'the link still goes out on the same, otherwise-quiet, sweep');
+  });
+});
+
+describe('buildVendorLink()', () => {
+  function withEnv(fn) {
+    process.env.VENDOR_LINK_SECRET = 'test-vendor-secret';
+    process.env.WEBSITE_HOSTNAME = 'contoso-checkpoint-monitor.azurewebsites.net';
+    return Promise.resolve().then(fn).finally(() => { delete process.env.VENDOR_LINK_SECRET; delete process.env.WEBSITE_HOSTNAME; });
+  }
+
+  test('builds a link carrying a token and the api host', () => withEnv(() => {
+    const link = buildVendorLink('7');
+    assert.match(link, /^https:\/\/www\.compliance365\.com\.au\/checkpoint\/vendor-questionnaire\.html\?token=/);
+    assert.match(link, /api=contoso-checkpoint-monitor\.azurewebsites\.net/);
+  }));
+
+  test('returns null (never a broken link) without VENDOR_LINK_SECRET or WEBSITE_HOSTNAME', () => {
+    delete process.env.VENDOR_LINK_SECRET; delete process.env.WEBSITE_HOSTNAME;
+    assert.equal(buildVendorLink('7'), null);
+  });
+
+  test('returns null without a vendor item id', () => withEnv(() => {
+    assert.equal(buildVendorLink(''), null);
+    assert.equal(buildVendorLink(null), null);
+  }));
 });
 
 describe('buildDigestHtml() — what the recipient actually reads', () => {

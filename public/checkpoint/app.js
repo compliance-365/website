@@ -743,7 +743,7 @@ function showModal(opts) {
     'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
-    'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
+    'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'requestVendorQuestionnaireLink', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
     /* Bulk equivalents of setSt/toggleApp — gated for the same reason
@@ -12432,11 +12432,17 @@ function showModal(opts) {
         (v.questionnaireSentDate ? '<div class="d-kv"><span>Sent</span><b>' + fmtDate(v.questionnaireSentDate) + '</b></div>' : '') +
         (v.questionnaireReceivedDate ? '<div class="d-kv"><span>Received</span><b>' + fmtDate(v.questionnaireReceivedDate) + '</b></div>' : '') +
         '<div class="d-kv"><span>Contact</span><b>' + esc(v.contactEmail || 'Not set') + '</b></div>' +
-        vendorAnswersHtml(v) + '</div>' +
+        vendorAnswersHtml(v) +
+        (v.questionnaireStatus === 'Link requested'
+          ? '<div class="d-kv"><span>Self-service link</span><b style="color:var(--gold-light)">Requested — goes out on the next scheduled run</b></div>'
+          : '') +
+        '</div>' +
         '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + linkedControls + '</div>' +
         '<div class="d-sec"><h4>Linked risks</h4>' + linkedRisks + '</div>' +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
         '<button class="btn sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>' +
+        (v.questionnaireStatus === 'Link requested' ? '' :
+          '<button class="btn ghost sm" data-action="App.requestVendorQuestionnaireLink" data-id="' + v.id + '">Request self-service link</button>') +
         '<button class="btn ghost sm" data-action="App.recordVendorQuestionnaire" data-id="' + v.id + '">Record answers</button>' +
         '<button class="btn sm" data-action="App.markVendorReviewed" data-id="' + v.id + '">Mark reviewed</button>' +
         '<button class="btn ghost sm" data-action="App.editVendor" data-id="' + v.id + '">Edit</button>' +
@@ -12512,6 +12518,47 @@ function showModal(opts) {
         audit('Vendor questionnaire answers recorded', 'Vendor', v.id, prevStatus || 'Not sent', 'Received');
         log('Questionnaire answers recorded for <b>' + esc(v.name) + '</b>.');
         toast('Answers saved');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderVendors();
+      if (document.getElementById('drawer').classList.contains('open')) App.openVendor(id);
+    },
+
+    /* Flags a vendor for the OPT-IN automated path instead of sending
+       anything itself — this is a plain SharePoint field write, nothing
+       more. It cannot mint or send a link on its own: doing that would
+       mean shipping VENDOR_LINK_SECRET to every browser running
+       Checkpoint, which defeats the entire point of a server-held
+       secret being the token's authorisation boundary (see
+       azure/lib/vendorToken.js). The scheduled monitor, if deployed
+       with NOTIFY_FROM/VENDOR_LINK_SECRET configured, picks up any
+       vendor sitting at 'Link requested' on its next run, mints the
+       token there (the one place that secret ever exists), and sends
+       it — see PostureMonitor's sendVendorQuestionnaireLinks() (in its
+       runGovernanceSweep()). A tenant without the monitor deployed just
+       never sees this vendor move past 'Link requested' — no error, no
+       broken feature, same "manual is never a failure" doctrine as
+       everywhere else the monitor is optional. */
+    requestVendorQuestionnaireLink: async function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      var toVals = await showModal({
+        title: 'Request self-service link',
+        message: 'Only takes effect if the scheduled monitor (SETUP.md § Continuous monitoring) is deployed for this tenant with email configured — see azure/README.md. If it is, the vendor gets an emailed link to answer the same questions themselves, no sign-in needed, and the answers land here automatically.',
+        fields: [{ id: 'to', label: 'Send to (email address)', type: 'email', value: v.contactEmail || '', placeholder: 'security@vendor.example' }],
+        confirmText: 'Request', cancelText: 'Cancel',
+        validate: function (vv) { return isValidEmail(vv.to) ? null : 'Enter a valid email address.'; }
+      });
+      if (!toVals) return;
+      var prevStatus = v.questionnaireStatus;
+      v.questionnaireStatus = 'Link requested';
+      v.contactEmail = toVals.to;
+      busy(true);
+      try {
+        await Store.updateVendor(v);
+        audit('Vendor questionnaire link requested', 'Vendor', v.id, prevStatus || 'Not sent', 'Link requested');
+        log('Self-service questionnaire link requested for <b>' + esc(v.name) + '</b> — sends on the scheduled monitor\'s next run, if deployed.');
+        toast('Link requested');
       } catch (e) { warn(e); }
       busy(false);
       renderVendors();
