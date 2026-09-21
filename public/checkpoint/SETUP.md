@@ -1999,9 +1999,19 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   controls the template declares, reusing the exact same
   `Store.updateControl()` + `audit()` calls as `App.setControlEvidence()`.
   Generated documents carry a visible "DRAFT — review and approve"
-  watermark and a red banner baked into the document itself. There's no
-  separate SharePoint column tracking draft/approved state — a
-  document's status is derived from the audit log (already a durable,
+  watermark and a red banner baked into the document itself.
+  **Layout**: three visual styles — Standard (this app's own brand),
+  Formal (white, serif, no icons, for regulated/traditional
+  industries), Minimal (white, restrained, accent used once) — chosen
+  in Settings → Client branding → "Policy document layout"
+  (`policyTemplateLayout()`, `layoutCss()` in app.js). All three style
+  the same content markup, so choosing a layout never changes what a
+  document says, only how it looks; already-generated documents keep
+  the look they were generated with. Word export (`buildPolicyDocx()`
+  in lib.js) honours the same choice, adapted to what OOXML direct
+  formatting can express — see that function's own header comment.
+  There's no separate SharePoint column tracking draft/approved state
+  — a document's status is derived from the audit log (already a durable,
   versioned SharePoint list): the most recent `'Policy template
   generated'` or `'Policy document approved'` entry for that exact
   filename. The Documents table shows a DRAFT chip and a "Mark

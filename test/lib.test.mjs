@@ -788,49 +788,74 @@ describe('buildPolicyDocx()', () => {
     assert.equal(stack.length, 0, label + ': unclosed tag(s) ' + stack.join(', '));
   }
 
-  test('produces a valid zip with the expected OOXML parts', () => {
-    var bytes = buildPolicyDocx(t, opts);
-    var parts = docxParts(bytes);
-    assert.deepEqual(Object.keys(parts).sort(), [
-      '[Content_Types].xml', '_rels/.rels', 'docProps/app.xml', 'docProps/core.xml',
-      'word/_rels/document.xml.rels', 'word/document.xml', 'word/styles.xml'
-    ]);
-    Object.keys(parts).forEach(function (name) { assertWellFormedXml(parts[name], name); });
-  });
+  ['standard', 'formal', 'minimal'].forEach(function (layout) {
+    var layoutOpts = Object.assign({}, opts, { layout: layout });
 
-  test('every <w:pPr> orders pBdr/shd before spacing/ind/jc (OOXML schema order — Word/LibreOffice reject the file otherwise, even though it is well-formed XML)', () => {
-    var doc = docxParts(buildPolicyDocx(t, opts))['word/document.xml'];
-    var pPrBlocks = doc.match(/<w:pPr>[\s\S]*?<\/w:pPr>/g) || [];
-    assert.ok(pPrBlocks.length > 0);
-    pPrBlocks.forEach(function (block) {
-      var order = [];
-      ['w:pStyle', 'w:pBdr', 'w:shd', 'w:spacing', 'w:ind', 'w:jc'].forEach(function (tag) {
-        var i = block.indexOf('<' + tag);
-        if (i !== -1) order.push([i, tag]);
-      });
-      var sorted = order.slice().sort(function (a, b) { return a[0] - b[0]; });
-      assert.deepEqual(order, sorted, 'out-of-order pPr children in: ' + block);
+    test('[' + layout + '] produces a valid zip with the expected OOXML parts', () => {
+      var bytes = buildPolicyDocx(t, layoutOpts);
+      var parts = docxParts(bytes);
+      assert.deepEqual(Object.keys(parts).sort(), [
+        '[Content_Types].xml', '_rels/.rels', 'docProps/app.xml', 'docProps/core.xml',
+        'word/_rels/document.xml.rels', 'word/document.xml', 'word/styles.xml'
+      ]);
+      Object.keys(parts).forEach(function (name) { assertWellFormedXml(parts[name], name); });
     });
-  });
 
-  test('every <w:rPr> orders color before sz (OOXML schema order)', () => {
-    var parts = docxParts(buildPolicyDocx(t, opts));
-    [parts['word/document.xml'], parts['word/styles.xml']].forEach(function (xml) {
-      var rPrBlocks = xml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/g) || [];
-      rPrBlocks.forEach(function (block) {
-        var colorI = block.indexOf('<w:color');
-        var szI = block.indexOf('<w:sz');
-        if (colorI !== -1 && szI !== -1) assert.ok(colorI < szI, 'w:sz before w:color in: ' + block);
+    test('[' + layout + '] every <w:pPr> orders pBdr/shd before spacing/ind/jc (OOXML schema order — Word/LibreOffice reject the file otherwise, even though it is well-formed XML)', () => {
+      var doc = docxParts(buildPolicyDocx(t, layoutOpts))['word/document.xml'];
+      var pPrBlocks = doc.match(/<w:pPr>[\s\S]*?<\/w:pPr>/g) || [];
+      assert.ok(pPrBlocks.length > 0);
+      pPrBlocks.forEach(function (block) {
+        var order = [];
+        ['w:pStyle', 'w:pBdr', 'w:shd', 'w:spacing', 'w:ind', 'w:jc'].forEach(function (tag) {
+          var i = block.indexOf('<' + tag);
+          if (i !== -1) order.push([i, tag]);
+        });
+        var sorted = order.slice().sort(function (a, b) { return a[0] - b[0]; });
+        assert.deepEqual(order, sorted, 'out-of-order pPr children in: ' + block);
       });
     });
-  });
 
-  test('a paragraph never carries more than one <w:pBdr> (top+bottom must merge into one)', () => {
-    var doc = docxParts(buildPolicyDocx(t, opts))['word/document.xml'];
-    var pPrBlocks = doc.match(/<w:pPr>[\s\S]*?<\/w:pPr>/g) || [];
-    pPrBlocks.forEach(function (block) {
-      var count = (block.match(/<w:pBdr>/g) || []).length;
-      assert.ok(count <= 1, 'more than one w:pBdr in: ' + block);
+    test('[' + layout + '] every <w:rPr> orders rFonts, then b/caps, then color, then sz (OOXML schema order)', () => {
+      var parts = docxParts(buildPolicyDocx(t, layoutOpts));
+      [parts['word/document.xml'], parts['word/styles.xml']].forEach(function (xml) {
+        var rPrBlocks = xml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/g) || [];
+        rPrBlocks.forEach(function (block) {
+          var order = [];
+          ['w:rFonts', 'w:b\\b', 'w:caps', 'w:color', 'w:sz'].forEach(function (tag) {
+            var m = block.match(new RegExp('<' + tag));
+            if (m) order.push([m.index, tag]);
+          });
+          var sorted = order.slice().sort(function (a, b) { return a[0] - b[0]; });
+          assert.deepEqual(order, sorted, 'out-of-order rPr children in: ' + block);
+        });
+      });
+    });
+
+    test('[' + layout + '] a paragraph never carries more than one <w:pBdr> (top/left/bottom must merge into one)', () => {
+      var doc = docxParts(buildPolicyDocx(t, layoutOpts))['word/document.xml'];
+      var pPrBlocks = doc.match(/<w:pPr>[\s\S]*?<\/w:pPr>/g) || [];
+      pPrBlocks.forEach(function (block) {
+        var count = (block.match(/<w:pBdr>/g) || []).length;
+        assert.ok(count <= 1, 'more than one w:pBdr in: ' + block);
+      });
+    });
+
+    test('[' + layout + '] a table cell never orders <w:shd> before <w:tcW> (CT_TcPr schema order)', () => {
+      var doc = docxParts(buildPolicyDocx(t, layoutOpts))['word/document.xml'];
+      var tcPrBlocks = doc.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/g) || [];
+      tcPrBlocks.forEach(function (block) {
+        var wI = block.indexOf('<w:tcW');
+        var shdI = block.indexOf('<w:shd');
+        if (wI !== -1 && shdI !== -1) assert.ok(wI < shdI, 'w:shd before w:tcW in: ' + block);
+      });
+    });
+
+    test('[' + layout + '] every statement number and rule text still round-trips, whichever run structure the layout uses', () => {
+      var doc = docxParts(buildPolicyDocx(t, layoutOpts))['word/document.xml'];
+      assert.match(doc, /Rule one\./);
+      assert.match(doc, /Rule two as a plain string\./);
+      assert.match(doc, /Because one\./);
     });
   });
 
@@ -857,6 +882,44 @@ describe('buildPolicyDocx()', () => {
     var styles = docxParts(buildPolicyDocx(t, badOpts))['word/styles.xml'];
     assert.doesNotMatch(styles, /alert/);
     assert.match(styles, /BE4A1E/);
+  });
+
+  test('an unrecognised layout value falls back to standard rather than producing unstyled output', () => {
+    var bogusOpts = Object.assign({}, opts, { layout: 'nonexistent' });
+    var styles = docxParts(buildPolicyDocx(t, bogusOpts))['word/styles.xml'];
+    assert.match(styles, /Bricolage Grotesque/, 'falls back to standard’s heading font');
+  });
+
+  test('layout: standard keeps the exact original single-run, accent-coloured statement line (no regression from adding the multi-run form)', () => {
+    var doc = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: 'standard' })))['word/document.xml'];
+    assert.match(doc, /<w:r><w:rPr><w:b\/><w:color w:val="2E7D32"\/><\/w:rPr><w:t xml:space="preserve">1\.  Rule one\.<\/w:t><\/w:r>/);
+  });
+
+  test('layout: formal uses Times New Roman for headings and body, and the document-control table’s header column is shaded', () => {
+    var styles = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: 'formal' })))['word/styles.xml'];
+    assert.match(styles, /Times New Roman/);
+    assert.doesNotMatch(styles, /Bricolage Grotesque|Manrope|Calibri/);
+    var doc = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: 'formal' })))['word/document.xml'];
+    assert.match(doc, /<w:shd w:val="clear" w:color="auto" w:fill="F7F5F2"\/>/);
+  });
+
+  test('layout: minimal uses Calibri and small-caps headings, and skips the masthead’s bottom rule', () => {
+    var styles = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: 'minimal' })))['word/styles.xml'];
+    assert.match(styles, /Calibri/);
+    assert.match(styles, /<w:style w:type="paragraph" w:styleId="Heading2">[\s\S]*?<w:caps\/>/);
+    var doc = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: 'minimal' })))['word/document.xml'];
+    var mastMeta = doc.match(/<w:pStyle w:val="Meta"\/>[\s\S]*?<\/w:p>/)[0];
+    assert.doesNotMatch(mastMeta, /w:pBdr/, 'no masthead border in minimal, matching layoutCss()’s .mast{border-bottom:none}');
+  });
+
+  test('every layout’s table border colour differs, and each stays internally consistent between the document-control and roles tables', () => {
+    ['standard', 'formal', 'minimal'].forEach(function (layout) {
+      var doc = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: layout })))['word/document.xml'];
+      var borderColors = (doc.match(/<w:tblBorders>[\s\S]*?<\/w:tblBorders>/g) || []).map(function (b) {
+        return b.match(/w:color="([0-9A-F]+)"/)[1];
+      });
+      assert.equal(new Set(borderColors).size, 1, layout + ': document-control and roles tables should share one border colour');
+    });
   });
 });
 

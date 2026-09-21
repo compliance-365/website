@@ -3042,6 +3042,127 @@ function showModal(opts) {
     return (S.policyDrafts || []).find(function (d) { return d.docName === docName; }) || null;
   }
 
+  /* The three visual identities a generated policy document can use —
+     'standard' (default, matches the live app's own brand), 'formal'
+     (white/serif/no-icon, for regulated or traditional industries where
+     'standard' can read as too casual), 'minimal' (white/light-weight/
+     restrained, for a client whose own brand shouldn't compete with
+     Checkpoint's). All three style EXACTLY the same markup
+     buildTemplateHtml() below produces — the content-building code
+     never varies by layout, only this stylesheet does, so a layout
+     switch can never silently drop or reorder content. 'formal' and
+     'minimal' deliberately use system font stacks rather than shipping
+     another @font-face — Georgia/Times New Roman and Calibri/Segoe UI
+     are both what those two looks are actually supposed to be, not a
+     substitute for a missing custom font. */
+  function layoutCss(layout, accent, accentRgb) {
+    if (layout === 'formal') {
+      return 'body{font-family:Georgia,\'Times New Roman\',Times,serif;background:#FFFFFF;color:#1A1A1A;padding:56px 64px;max-width:880px;margin:0 auto;font-size:13.5px;line-height:1.7}' +
+        '.mast{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #1A1A1A;padding-bottom:14px;margin-bottom:4px}' +
+        '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Georgia,serif;font-weight:400;font-size:19px;letter-spacing:.02em}' +
+        '.mr{text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#5a5650;font-style:italic}' +
+        'h1{font-family:Georgia,serif;font-weight:400;font-size:28px;margin:22px 0 6px;letter-spacing:.005em}' +
+        'h2{font-family:Georgia,serif;font-weight:700;font-size:16px;margin:32px 0 10px;display:flex;align-items:center;gap:9px;letter-spacing:.01em;border-bottom:1px solid #ddd;padding-bottom:6px}' +
+        '.sec-ico{display:none}' +
+        '.gr{width:100%;height:1px;background:#1A1A1A;margin:10px 0 4px}' +
+        '.intro{color:#333;max-width:74ch}' +
+        '.callout{background:none;border-left:2px solid #1A1A1A;border-radius:0;padding:6px 0 6px 18px;margin-top:10px}' +
+        '.callout .intro{margin:0 0 8px;font-style:italic}.callout .intro:last-child{margin-bottom:0}' +
+        '.stmt-list{margin-top:14px}' +
+        '.stmt{display:flex;gap:12px;padding:0;margin-bottom:14px;background:none;border:none;border-radius:0}' +
+        '.stmt-n{flex:none;width:20px;font-family:Georgia,serif;font-weight:700;font-size:13.5px;color:' + accent + ';text-align:right;border-radius:0;background:none;line-height:inherit}' +
+        '.stmt-body{flex:1;min-width:0}.stmt-rule{margin:0;font-weight:700}' +
+        '.because{color:#5a5650;font-style:italic;margin-top:4px;max-width:74ch}' +
+        'ul.prac{list-style:none;margin:10px 0 0;padding:0}' +
+        'ul.prac li{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px;max-width:78ch}' +
+        '.prac-ck,.prac-dot{display:none}' +
+        'ul.prac li::before{content:"\\2014";flex:none;color:#5a5650}' +
+        '.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}' +
+        '.chip-ctrl{display:inline-block;padding:3px 10px;border-radius:0;background:none;border:1px solid #1A1A1A;font-size:11px;font-weight:400;color:#1A1A1A;letter-spacing:.02em;font-family:Georgia,serif}' +
+        '.roles{width:100%;border-collapse:collapse;margin:12px 0 0}' +
+        '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:13px;font-weight:700;color:#1A1A1A;vertical-align:top;font-family:Georgia,serif}' +
+        '.roles td{padding:8px 0;font-size:13px;color:#333}' +
+        '.roles tr+tr th,.roles tr+tr td{border-top:1px solid #ddd}' +
+        '.dctl{width:100%;border-collapse:collapse;margin:22px 0;border:1px solid #1A1A1A}' +
+        '.dctl th{text-align:left;width:170px;padding:8px 14px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5a5650;font-weight:700;vertical-align:top;background:#F7F5F2;font-family:Georgia,serif}' +
+        '.dctl td{padding:8px 14px;font-size:13px;color:#1A1A1A}' +
+        '.dctl tr+tr th,.dctl tr+tr td{border-top:1px solid #ddd}' +
+        '.pf{margin-top:44px;padding-top:14px;border-top:1px solid #1A1A1A;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#5a5650;display:flex;justify-content:space-between;font-family:Georgia,serif}' +
+        '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Georgia,serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
+        '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-56px -64px 24px}';
+    }
+    if (layout === 'minimal') {
+      return 'body{font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif;background:#FFFFFF;color:#111;padding:64px 72px;max-width:820px;margin:0 auto;font-size:13px;line-height:1.75;font-weight:400}' +
+        '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:none;padding-bottom:0;margin-bottom:0}' +
+        '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:inherit;font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase}' +
+        '.mr{text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#999}' +
+        'h1{font-family:inherit;font-weight:300;font-size:34px;margin:34px 0 2px;letter-spacing:-.01em}' +
+        'h2{font-family:inherit;font-weight:600;font-size:11px;margin:40px 0 14px;display:flex;align-items:center;gap:9px;letter-spacing:.14em;text-transform:uppercase;color:#111}' +
+        '.sec-ico{display:none}' +
+        '.gr{width:32px;height:2px;background:' + accent + ';margin:16px 0 30px}' +
+        '.intro{color:#444;max-width:68ch;font-weight:300}' +
+        '.callout{background:none;border-left:none;border-radius:0;padding:0;margin-top:8px}' +
+        '.callout .intro{margin:0 0 10px;font-weight:300}.callout .intro:last-child{margin-bottom:0}' +
+        '.stmt-list{margin-top:18px}' +
+        '.stmt{display:flex;gap:18px;padding:18px 0;margin-bottom:0;background:none;border:none;border-top:1px solid #eee;border-radius:0}' +
+        '.stmt:first-child{border-top:none;padding-top:0}' +
+        '.stmt-n{flex:none;width:26px;height:auto;border-radius:0;background:none;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:400;font-size:11px;color:#999;padding-top:2px;line-height:inherit;text-align:left}' +
+        '.stmt-body{flex:1;min-width:0}.stmt-rule{margin:0;font-weight:500}' +
+        '.because{color:#999;font-style:normal;margin-top:6px;max-width:68ch;font-size:12px}' +
+        'ul.prac{list-style:none;margin:14px 0 0;padding:0}' +
+        'ul.prac li{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;max-width:78ch;font-weight:300}' +
+        '.prac-ck,.prac-dot{flex:none;width:4px;height:4px;border-radius:50%;background:#ccc;margin:8px 1px 0;overflow:hidden}' +
+        '.prac-ck svg{display:none}' +
+        '.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}' +
+        '.chip-ctrl{display:inline-block;padding:0;background:none;border:none;border-bottom:1px solid #ddd;border-radius:0;font-size:11px;font-weight:400;color:#666;letter-spacing:.02em}' +
+        '.roles{width:100%;border-collapse:collapse;margin:14px 0 0}' +
+        '.roles th{text-align:left;width:200px;padding:10px 14px 10px 0;font-size:12px;font-weight:500;color:#111;vertical-align:top}' +
+        '.roles td{padding:10px 0;font-size:13px;color:#444;font-weight:300}' +
+        '.roles tr+tr th,.roles tr+tr td{border-top:1px solid #eee}' +
+        '.dctl{width:100%;border-collapse:collapse;margin:26px 0;border-top:none;border-bottom:none}' +
+        '.dctl th{text-align:left;width:160px;padding:6px 12px 6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#999;font-weight:500;vertical-align:top}' +
+        '.dctl td{padding:6px 0;font-size:12.5px;color:#111}' +
+        '.dctl tr+tr th,.dctl tr+tr td{border-top:none}' +
+        '.pf{margin-top:50px;padding-top:16px;border-top:none;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#ccc;display:flex;justify-content:space-between}' +
+        '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:inherit;font-size:140px;font-weight:300;color:rgba(185,28,28,.12);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
+        '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-64px -72px 24px}';
+    }
+    // 'standard' — the original, unchanged.
+    return 'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
+      '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
+      '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
+      '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
+      'h1{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:30px;margin:26px 0 4px}' +
+      'h2{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:19px;margin:30px 0 12px;display:flex;align-items:center;gap:9px}' +
+      '.sec-ico{display:inline-flex;flex:none;color:' + accent + '}.sec-ico svg{display:block}' +
+      '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
+      '.intro{color:#4b473e;max-width:70ch}' +
+      '.callout{background:rgba(' + accentRgb + ',.07);border-left:3px solid ' + accent + ';border-radius:0 6px 6px 0;padding:14px 18px;margin-top:10px}' +
+      '.callout .intro{margin:0 0 8px}.callout .intro:last-child{margin-bottom:0}' +
+      '.stmt-list{margin-top:14px}' +
+      '.stmt{display:flex;gap:14px;padding:14px 16px;margin-bottom:10px;background:rgba(11,11,12,.02);border:1px solid rgba(11,11,12,.08);border-radius:6px}' +
+      '.stmt-n{flex:none;width:22px;height:22px;border-radius:50%;background:' + accent + ';color:#fff;font-size:11px;font-weight:700;line-height:22px;text-align:center}' +
+      '.stmt-body{flex:1;min-width:0}.stmt-rule{margin:0;font-weight:600}' +
+      '.because{color:#6b675e;font-style:italic;margin-top:5px;max-width:70ch}' +
+      'ul.prac{list-style:none;margin:10px 0 0;padding:0}' +
+      'ul.prac li{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px;max-width:78ch}' +
+      '.prac-ck{flex:none;width:18px;height:18px;color:#3A7A3A;margin-top:1px}' +
+      '.prac-dot{flex:none;width:6px;height:6px;border-radius:50%;background:' + accent + ';margin:6px 1px 0}' +
+      '.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}' +
+      '.chip-ctrl{display:inline-block;padding:4px 11px;border-radius:20px;background:rgba(11,11,12,.05);border:1px solid rgba(11,11,12,.14);font-size:11px;font-weight:600;color:#4b473e;letter-spacing:.02em}' +
+      '.roles{width:100%;border-collapse:collapse;margin:12px 0 0}' +
+      '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
+      '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
+      '.roles tr+tr th,.roles tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
+      '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
+      '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
+      '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
+      '.dctl tr+tr th,.dctl tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
+      '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
+      '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Bricolage Grotesque,sans-serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
+      '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}';
+  }
+
   function buildTemplateHtml(t, opts) {
     var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
     /* The document leads with the CLIENT's own branding — it's their
@@ -3170,55 +3291,17 @@ function showModal(opts) {
       govHtml +
       sectionHeading('review', 'Review') + '<p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? sectionHeading('satisfies', 'Helps satisfy') + '<div class="chips">' + t.controls.map(function (c) { return '<span class="chip-ctrl">' + esc(c) + '</span>'; }).join('') + '</div>' : '');
+    var layout = opts.layout || 'standard';
     return '<!DOCTYPE html><html><head><style>' +
-      "@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;src:url('" + fontBase + "fonts/bricolage.woff2') format('woff2-variations')}" +
-      "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
-      'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
-      '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
-      '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
-      '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
-      'h1{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:30px;margin:26px 0 4px}' +
-      'h2{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:19px;margin:30px 0 12px;display:flex;align-items:center;gap:9px}' +
-      '.sec-ico{display:inline-flex;flex:none;color:' + accent + '}.sec-ico svg{display:block}' +
-      '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
-      '.intro{color:#4b473e;max-width:70ch}' +
-      /* The reader-facing "what this means for you" section gets its own
-         tinted, left-bordered box — visually distinct from the
-         declarative sections around it, the "two registers... kept
-         visibly apart" the surrounding comment already describes, now
-         carried through in the layout, not just the prose voice. */
-      '.callout{background:rgba(' + accentRgb + ',.07);border-left:3px solid ' + accent + ';border-radius:0 6px 6px 0;padding:14px 18px;margin-top:10px}' +
-      '.callout .intro{margin:0 0 8px}.callout .intro:last-child{margin-bottom:0}' +
-      /* Each policy statement as its own card with a numbered badge,
-         rather than a plain <ol> — the thing a reader actually scans
-         for ("how many rules, which one applies to me") is easier to
-         find as distinct blocks than as a wall of numbered sentences. */
-      '.stmt-list{margin-top:14px}' +
-      '.stmt{display:flex;gap:14px;padding:14px 16px;margin-bottom:10px;background:rgba(11,11,12,.02);border:1px solid rgba(11,11,12,.08);border-radius:6px}' +
-      '.stmt-n{flex:none;width:22px;height:22px;border-radius:50%;background:' + accent + ';color:#fff;font-size:11px;font-weight:700;line-height:22px;text-align:center}' +
-      '.stmt-body{flex:1;min-width:0}.stmt-rule{margin:0;font-weight:600}' +
-      /* The reason attached to a rule is set apart rather than run into
-         it, so the normative sentence still reads as the rule and the
-         rationale reads as support for it — not as a qualification
-         weakening it. */
-      '.because{color:#6b675e;font-style:italic;margin-top:5px;max-width:70ch}' +
-      'ul.prac{list-style:none;margin:10px 0 0;padding:0}' +
-      'ul.prac li{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px;max-width:78ch}' +
-      '.prac-ck{flex:none;width:18px;height:18px;color:#3A7A3A;margin-top:1px}' +
-      '.prac-dot{flex:none;width:6px;height:6px;border-radius:50%;background:' + accent + ';margin:6px 1px 0}' +
-      '.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}' +
-      '.chip-ctrl{display:inline-block;padding:4px 11px;border-radius:20px;background:rgba(11,11,12,.05);border:1px solid rgba(11,11,12,.14);font-size:11px;font-weight:600;color:#4b473e;letter-spacing:.02em}' +
-      '.roles{width:100%;border-collapse:collapse;margin:12px 0 0}' +
-      '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
-      '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
-      '.roles tr+tr th,.roles tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
-      '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
-      '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
-      '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
-      '.dctl tr+tr th,.dctl tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
-      '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
-      '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Bricolage Grotesque,sans-serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
-      '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}' +
+      /* Only 'standard' needs the custom webfonts — 'formal'/'minimal'
+         are deliberately built on system font stacks (see layoutCss()'s
+         own header comment), so loading these for them would be a
+         wasted network request for a font nothing on the page uses. */
+      (layout === 'standard'
+        ? "@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;src:url('" + fontBase + "fonts/bricolage.woff2') format('woff2-variations')}" +
+          "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}"
+        : '') +
+      layoutCss(layout, accent, accentRgb) +
       standalonePrintCss({ classification: opts.classification, draft: !opts.approved }) +
       '</style></head><body>' +
       standaloneRunningMarks({
@@ -3254,6 +3337,17 @@ function showModal(opts) {
   function clientBrandColor() {
     var c = (S.settings && S.settings.clientBrandColor) || '';
     return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
+  }
+  var POLICY_TEMPLATE_LAYOUTS = ['standard', 'formal', 'minimal'];
+  /* The validated document layout choice — same guard shape as
+     clientBrandColor() above, since a hand-edited Settings row is just
+     as untrusted here: an unrecognised value falls back to 'standard'
+     rather than passing through to buildTemplateHtml()/buildPolicyDocx()
+     as an unknown layout key, which would otherwise render with no
+     styles at all. */
+  function policyTemplateLayout() {
+    var v = (S.settings && S.settings.policyTemplateLayout) || '';
+    return POLICY_TEMPLATE_LAYOUTS.indexOf(v) !== -1 ? v : 'standard';
   }
   /* Paints the top bar's client identity: display-name override (raw
      tenant label preserved in data-tenant/title so it's never lost),
@@ -7725,7 +7819,8 @@ function showModal(opts) {
       reviewDate: doc.nextReview || '', approved: status === 'Approved',
       generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
       logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
-      version: doc.version || '', approvedBy: doc.approvedBy || '', classification: doc.classification || 'Internal'
+      version: doc.version || '', approvedBy: doc.approvedBy || '', classification: doc.classification || 'Internal',
+      layout: policyTemplateLayout()
     });
     try {
       var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], docName, { type: 'text/html;charset=utf-8' });
@@ -10046,6 +10141,18 @@ function showModal(opts) {
         (brandColorCurrent ? '<button class="btn ghost sm" data-action="App.clearClientBrandColor">Reset to gold</button>' : '') +
         '</div>' +
         '<p class="src" style="margin-top:6px">Recolours report furniture — section rules, KPI figures, the cover framework tag. Charts keep their print-validated palette so a light brand colour can never make one unreadable.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Policy document layout</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<select id="policyTemplateLayoutInput" class="mini" aria-label="Policy document layout" style="min-width:160px">' +
+        POLICY_TEMPLATE_LAYOUTS.map(function (v) {
+          var label = v === 'standard' ? 'Standard' : v === 'formal' ? 'Formal' : 'Minimal';
+          return '<option value="' + v + '"' + (policyTemplateLayout() === v ? ' selected' : '') + '>' + label + '</option>';
+        }).join('') +
+        '</select>' +
+        '<button class="btn ghost sm" data-action="App.setPolicyTemplateLayout">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">The visual style every newly generated policy document, PDF and Word export uses — Standard (this app’s own brand), Formal (white, serif, no icons — for regulated or traditional industries), or Minimal (white, restrained, no colour fills beyond the accent rule). Already-generated documents keep the look they were generated with; changing this only affects what’s generated from here on, until re-generated.</p></div>' +
 
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Classification marking</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
@@ -13644,7 +13751,8 @@ function showModal(opts) {
         brandColor: clientBrandColor() || '',
         version: (doc && doc.version) || '', approvedBy: (doc && doc.approvedBy) || '',
         classification: (doc && doc.classification) || 'Internal',
-        banner: 'Uncontrolled copy — exported for offline editing. Changes made here are not tracked and will not survive regeneration.'
+        banner: 'Uncontrolled copy — exported for offline editing. Changes made here are not tracked and will not survive regeneration.',
+        layout: policyTemplateLayout()
       });
       downloadBlob(docName.replace(/\.html?$/i, '') + '.docx', new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
       audit('Policy exported to Word', 'Document', docName, '(none)', 'Uncontrolled copy');
@@ -13679,7 +13787,7 @@ function showModal(opts) {
         generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
         logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
         version: (doc && doc.version) || '', approvedBy: (doc && doc.approvedBy) || '',
-        classification: (doc && doc.classification) || 'Internal'
+        classification: (doc && doc.classification) || 'Internal', layout: policyTemplateLayout()
       }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — printed ' + esc(new Date().toLocaleDateString('en-AU')) + '. This snapshot is not tracked and will not reflect later revisions.</div>');
       if (!printPreview(t.title, html)) return;
       audit('Policy printed / exported to PDF', 'Document', docName, '(none)', 'Uncontrolled copy');
@@ -14335,7 +14443,7 @@ function showModal(opts) {
          edits — otherwise "Generate" would quietly reset a policy
          somebody had spent an afternoon on. */
       var effective = effectivePolicyContent(base, t.title + '.html');
-      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: '0.1', classification: 'Internal' });
+      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: '0.1', classification: 'Internal', layout: policyTemplateLayout() });
       var filename = t.title + '.html';
 
       if (!printPreview(t.title, html)) return;
@@ -14478,7 +14586,7 @@ function showModal(opts) {
          and the register would disagree the moment anyone shifted the
          cadence, which is exactly the kind of mismatch an auditor
          pulls on. */
-      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal' });
+      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal', layout: policyTemplateLayout() });
       var approvedDoc;
       try {
         var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], name, { type: 'text/html;charset=utf-8' });
@@ -16399,6 +16507,18 @@ function showModal(opts) {
       renderFrameworksAdmin();
     },
 
+    setPolicyTemplateLayout: async function () {
+      var input = document.getElementById('policyTemplateLayoutInput');
+      var value = (input && input.value) || 'standard';
+      if (POLICY_TEMPLATE_LAYOUTS.indexOf(value) === -1) { toast('Pick a layout first'); return; }
+      var prev = policyTemplateLayout();
+      S.settings.policyTemplateLayout = value;
+      try { await Store.setSetting('policyTemplateLayout', value); } catch (e) { warn(e); }
+      audit('Policy document layout changed', 'Setting', 'policyTemplateLayout', prev, value);
+      toast('Policy document layout set to <b>' + esc(value) + '</b> — applies to documents generated from now on');
+      renderFrameworksAdmin();
+    },
+
     setReportFooterText: async function () {
       var input = document.getElementById('reportFooterTextInput');
       var value = ((input && input.value) || '').trim();
@@ -16549,7 +16669,7 @@ function showModal(opts) {
               generatedDate: generatedDate,
               logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
               version: d.version || '', approvedBy: d.approvedBy || '',
-              classification: d.classification || 'Internal'
+              classification: d.classification || 'Internal', layout: policyTemplateLayout()
             }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">' + esc(banner) + '</div>');
             files.push({ name: baseName + ext, content: html });
           } else {
@@ -16558,7 +16678,7 @@ function showModal(opts) {
               reviewDate: d.nextReview ? fmtDocDate(d.nextReview) : '', approved: docStatusOf(d) === 'Approved',
               generatedDate: generatedDate, brandColor: clientBrandColor() || '',
               version: d.version || '', approvedBy: d.approvedBy || '',
-              classification: d.classification || 'Internal', banner: banner
+              classification: d.classification || 'Internal', banner: banner, layout: policyTemplateLayout()
             });
             /* bytes, not content — a .docx is itself binary zip data;
                buildZip() below would corrupt it if run through the
