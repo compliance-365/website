@@ -3075,7 +3075,17 @@
      is thinner. The client logo also isn't embedded (v1: client name
      as text, same fallback the HTML template uses when no logo is
      set) — that's an image part + relationship this can grow into
-     later without changing the shape of what's here. */
+     later without changing the shape of what's here.
+
+     opts.layout ('standard'/'formal'/'minimal', default 'standard')
+     selects one of three fonts/colours/border treatments — the same
+     three layoutCss() gives buildTemplateHtml()'s HTML output, adapted
+     to what OOXML direct formatting can actually express (no per-
+     character colour within a run the way CSS could style a nested
+     span, hence docxStatement()'s two-run split for 'formal'/'minimal'
+     rather than a literal port of the HTML's separate badge element).
+     See DOCX_LAYOUT_STYLES and each of docxBullet()/docxStatement()/
+     docxTable()'s layout branches below. */
 
   function docxEsc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
@@ -3105,18 +3115,27 @@
     var rPrXml = rPr.length ? '<w:rPr>' + rPr.join('') + '</w:rPr>' : '';
     return '<w:r>' + rPrXml + '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r>';
   }
-  function docxP(text, p, r) {
+  /* `textOrRuns` is either a plain string (rendered as one run, `r` its
+     rProps — the original shape, still how most callers work) or an
+     array of {text, ...rProps} for a paragraph that needs more than one
+     run — e.g. a statement number in the accent colour followed by the
+     rule text in ink, which a single-colour run can't express. Layouts
+     that need only one colour per line keep using the string form;
+     nothing about it changed. */
+  function docxP(textOrRuns, p, r) {
     p = p || {};
     /* CT_PPr is schema-ordered — Word/LibreOffice reject an otherwise
        well-formed document.xml if these appear out of sequence:
        pStyle, then pBdr/shd, then spacing/ind/jc. A single <w:pBdr>
-       holds every edge it uses (top and bottom both, if both are set)
-       — a paragraph can have only one. */
+       holds every edge it uses (top/left/bottom, whichever are set) —
+       a paragraph can have only one, and CT_PBdr's own child order is
+       top, left, bottom, right. */
     var pPr = [];
     if (p.style) pPr.push('<w:pStyle w:val="' + p.style + '"/>');
-    if (p.borderTop || p.borderBottom) {
+    if (p.borderTop || p.borderLeft || p.borderBottom) {
       var edges = '';
       if (p.borderTop) edges += '<w:top w:val="single" w:sz="' + p.borderTop.sz + '" w:space="4" w:color="' + p.borderTop.color + '"/>';
+      if (p.borderLeft) edges += '<w:left w:val="single" w:sz="' + p.borderLeft.sz + '" w:space="4" w:color="' + p.borderLeft.color + '"/>';
       if (p.borderBottom) edges += '<w:bottom w:val="single" w:sz="' + p.borderBottom.sz + '" w:space="4" w:color="' + p.borderBottom.color + '"/>';
       pPr.push('<w:pBdr>' + edges + '</w:pBdr>');
     }
@@ -3125,29 +3144,73 @@
     if (p.indent) pPr.push('<w:ind w:left="' + p.indent + '"/>');
     if (p.jc) pPr.push('<w:jc w:val="' + p.jc + '"/>');
     var pPrXml = pPr.length ? '<w:pPr>' + pPr.join('') + '</w:pPr>' : '';
-    return '<w:p>' + pPrXml + docxRun(text, r) + '</w:p>';
+    var runsXml = Array.isArray(textOrRuns)
+      ? textOrRuns.map(function (run) { return docxRun(run.text, run); }).join('')
+      : docxRun(textOrRuns, r);
+    return '<w:p>' + pPrXml + runsXml + '</w:p>';
   }
   function docxHeading(text) { return docxP(text, { style: 'Heading2', before: 280, after: 100 }); }
-  function docxBullet(text) { return docxP('•  ' + text, { indent: 360, before: 40, after: 40 }); }
-  function docxStatement(n, rule, because, accent) {
-    var xml = docxP(n + '.  ' + rule, { before: 160, after: because ? 20 : 120 }, { bold: true, color: accent });
+  /* Bullet character varies by layout the same way the HTML template's
+     three stylesheets do — a plain dash reads as "restrained", the
+     round bullet as the app's own default look. Purely a glyph choice;
+     the list still has no real OOXML numbering definition (see this
+     file's header comment on buildPolicyDocx for why), in any layout. */
+  function docxBullet(text, layout) {
+    var prefix = layout === 'formal' ? '—  ' : layout === 'minimal' ? '–  ' : '•  ';
+    var rProps = layout === 'minimal' ? { color: '666666' } : {};
+    return docxP(prefix + text, { indent: 360, before: 40, after: 40 }, rProps);
+  }
+  /* Three distinct treatments, matching layoutCss()'s HTML statement
+     styles as closely as OOXML's per-run (not per-character) styling
+     allows: 'standard' keeps the original single-run, whole-line
+     accent+bold (unchanged, so nothing already shipped regresses);
+     'formal'/'minimal' split the number and the rule into two runs
+     (docxP's array form) so the number alone carries colour/weight and
+     the rule reads as plain body text — closer to a "badge" than
+     "the whole sentence is coloured". */
+  function docxStatement(n, rule, because, accent, layout) {
+    var xml;
+    if (layout === 'formal') {
+      xml = docxP([{ text: n + '.  ', bold: true, color: accent }, { text: rule, bold: true, color: '1A1A1A' }],
+        { before: 160, after: because ? 20 : 120 });
+    } else if (layout === 'minimal') {
+      xml = docxP([{ text: n + '   ', color: '999999' }, { text: rule, color: '111111' }],
+        { before: 200, after: because ? 20 : 160 });
+    } else {
+      xml = docxP(n + '.  ' + rule, { before: 160, after: because ? 20 : 120 }, { bold: true, color: accent });
+    }
     if (because) xml += docxP(because, { after: 120, indent: 240 }, { italic: true, color: '6B675E' });
     return xml;
   }
   /* Plain bordered table, direct per-cell formatting rather than a
      named table style — one fewer XML concept for the same visual
-     result, since nothing here needs a table style reused elsewhere. */
-  function docxTable(rows, colWidths) {
+     result, since nothing here needs a table style reused elsewhere.
+     `opts.borderColor` and `opts.headerShade` (shades only the first
+     column, matching the document-control table's label column) are
+     both layout-driven; a caller that wants no header shading (the
+     roles table, in every layout) simply omits headerShade. */
+  function docxTable(rows, colWidths, opts) {
+    opts = opts || {};
+    var borderColor = opts.borderColor || 'D9D5CB';
     var borders = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (edge) {
-      return '<w:' + edge + ' w:val="single" w:sz="4" w:space="0" w:color="D9D5CB"/>';
+      return '<w:' + edge + ' w:val="single" w:sz="4" w:space="0" w:color="' + borderColor + '"/>';
     }).join('') + '</w:tblBorders>';
     var grid = colWidths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('');
     var body = rows.map(function (cells) {
       return '<w:tr>' + cells.map(function (c, i) {
-        return '<w:tc><w:tcPr><w:tcW w:w="' + colWidths[i] + '" w:type="dxa"/></w:tcPr><w:p>' + docxRun(c, i === 0 ? { bold: true } : {}) + '</w:p></w:tc>';
+        var shd = (opts.headerShade && i === 0) ? '<w:shd w:val="clear" w:color="auto" w:fill="' + opts.headerShade + '"/>' : '';
+        return '<w:tc><w:tcPr><w:tcW w:w="' + colWidths[i] + '" w:type="dxa"/>' + shd + '</w:tcPr><w:p>' + docxRun(c, i === 0 ? { bold: true } : {}) + '</w:p></w:tc>';
       }).join('') + '</w:tr>';
     }).join('');
     return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>' + borders + '</w:tblPr><w:tblGrid>' + grid + '</w:tblGrid>' + body + '</w:tbl>';
+  }
+  /* Per-layout table border colour, shared by both the document-control
+     and roles tables — kept as one lookup rather than repeating the
+     three-way branch at every call site. */
+  function docxTableBorderColor(layout) {
+    if (layout === 'formal') return '1A1A1A';
+    if (layout === 'minimal') return 'EEEEEE';
+    return 'D9D5CB';
   }
 
   /* `t` is an effective policy template's content (title, purpose,
@@ -3162,6 +3225,8 @@
      copy" warning callers already attach to every export). */
   function buildPolicyDocxBody(t, opts) {
     var accent = docxAccentHex(opts.brandColor);
+    var layout = opts.layout || 'standard';
+    var tableBorder = docxTableBorderColor(layout);
     var parts = [];
     if (opts.banner) {
       parts.push(docxP(opts.banner, { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
@@ -3171,10 +3236,12 @@
         { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
     }
     parts.push(docxP(opts.clientLabel || 'This organisation', { style: 'ClientName', after: 20 }));
+    /* The masthead's own bottom rule — dropped for 'minimal', same as
+       layoutCss()'s .mast{border-bottom:none} for that layout. */
     parts.push(docxP(('Policy document · Generated ' + (opts.generatedDate || '')).toUpperCase(),
-      { style: 'Meta', after: 160, borderBottom: { sz: 16, color: '0B0B0C' } }));
+      { style: 'Meta', after: 160, borderBottom: layout === 'minimal' ? null : { sz: 16, color: '0B0B0C' } }));
     parts.push(docxP(t.title, { style: 'Title', before: 200 }));
-    parts.push(docxP('', { borderBottom: { sz: 8, color: accent }, after: 200 }));
+    parts.push(docxP('', { borderBottom: { sz: layout === 'formal' ? 12 : 8, color: layout === 'formal' ? '1A1A1A' : accent }, after: 200 }));
 
     var dctlRows = [
       ['Organisation', opts.clientLabel || ''],
@@ -3186,21 +3253,33 @@
       ['Next review due', opts.reviewDate || '—'],
       ['Classification', opts.classification || 'Internal']
     ];
-    parts.push(docxTable(dctlRows, [2600, 6800]));
+    parts.push(docxTable(dctlRows, [2600, 6800], { borderColor: tableBorder, headerShade: layout === 'formal' ? 'F7F5F2' : null }));
     parts.push(docxP('', { after: 160 }));
 
     if (opts.aiAssisted) {
       parts.push(docxP('AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + (opts.aiReviewer || 'a practitioner') + ' before generation.', { after: 160 }, { italic: true }));
     }
 
+    /* The reader-facing callout: a tinted box for 'standard' (matching
+       the HTML template's rgba(accent,.07) treatment), a left rule only
+       for 'formal' (a shaded box reads as web UI, not a printed report,
+       for that layout), and plain text for 'minimal' — same three
+       treatments layoutCss() gives the HTML .callout class. */
     if (t.whyItMatters) {
       parts.push(docxHeading('What this means for you'));
-      var tint = docxTint(accent, 0.08);
-      t.whyItMatters.split('\n\n').forEach(function (p) { parts.push(docxP(p, { shade: tint, before: 40, after: 40 })); });
+      t.whyItMatters.split('\n\n').forEach(function (p) {
+        if (layout === 'formal') {
+          parts.push(docxP(p, { borderLeft: { sz: 12, color: '1A1A1A' }, indent: 200, before: 40, after: 40 }, { italic: true }));
+        } else if (layout === 'minimal') {
+          parts.push(docxP(p, { before: 40, after: 40 }));
+        } else {
+          parts.push(docxP(p, { shade: docxTint(accent, 0.08), before: 40, after: 40 }));
+        }
+      });
     }
     if (t.inPractice && t.inPractice.length) {
       parts.push(docxHeading('In practice'));
-      t.inPractice.forEach(function (p) { parts.push(docxBullet(p)); });
+      t.inPractice.forEach(function (p) { parts.push(docxBullet(p, layout)); });
     }
 
     parts.push(docxHeading('Purpose'));
@@ -3212,19 +3291,19 @@
     (t.policyStatements || []).forEach(function (s, i) {
       var rule = typeof s === 'string' ? s : s.rule;
       var because = typeof s === 'string' ? '' : (s.because || '');
-      parts.push(docxStatement(i + 1, rule, because, accent));
+      parts.push(docxStatement(i + 1, rule, because, accent, layout));
     });
 
     if (t.roles && t.roles.length) {
       parts.push(docxHeading('Who is responsible'));
-      parts.push(docxTable(t.roles.map(function (r) { return [r.role, r.responsibility]; }), [2600, 6800]));
+      parts.push(docxTable(t.roles.map(function (r) { return [r.role, r.responsibility]; }), [2600, 6800], { borderColor: tableBorder }));
       parts.push(docxP('', { after: 160 }));
     }
     if (t.exceptions) { parts.push(docxHeading('Exceptions')); parts.push(docxP(t.exceptions, { after: 120 })); }
     if (t.nonCompliance) { parts.push(docxHeading('If this policy is not followed')); parts.push(docxP(t.nonCompliance, { after: 120 })); }
     if (t.relatedDocuments && t.relatedDocuments.length) {
       parts.push(docxHeading('Related documents'));
-      t.relatedDocuments.forEach(function (d) { parts.push(docxBullet(d)); });
+      t.relatedDocuments.forEach(function (d) { parts.push(docxBullet(d, layout)); });
     }
 
     parts.push(docxHeading('Review'));
@@ -3235,19 +3314,38 @@
     }
 
     parts.push(docxP('Compliance365 — Checkpoint · ' + (opts.approved ? 'Approved' : 'Draft') + ' · ' + (opts.generatedDate || ''),
-      { style: 'Meta', before: 320, borderTop: { sz: 6, color: '999489' } }));
+      { style: 'Meta', before: 320, borderTop: layout === 'minimal' ? null : { sz: 6, color: '999489' } }));
     return parts.join('');
   }
 
-  function buildDocxStylesXml(accent) {
+  /* Font/size/weight per layout, for the four named styles below —
+     'formal'/'minimal' deliberately reference system fonts Word already
+     ships (Times New Roman, Calibri) rather than a custom font, same
+     reasoning layoutCss() gives for its own system font stacks: those
+     looks are supposed to be built on what's already there, not a
+     substitute for a missing brand font. */
+  var DOCX_LAYOUT_STYLES = {
+    standard: { bodyFont: 'Manrope', headingFont: 'Bricolage Grotesque', titleSz: '48', clientSz: '32', metaSz: '16', headingSz: '27', headingColorMode: 'accent', headingCaps: false, headingBold: false },
+    formal: { bodyFont: 'Times New Roman', headingFont: 'Times New Roman', titleSz: '44', clientSz: '30', metaSz: '17', headingSz: '24', headingColorMode: 'ink', headingCaps: false, headingBold: true },
+    minimal: { bodyFont: 'Calibri', headingFont: 'Calibri', titleSz: '52', clientSz: '20', metaSz: '15', headingSz: '18', headingColorMode: 'ink', headingCaps: true, headingBold: true }
+  };
+  function buildDocxStylesXml(accent, layout) {
+    var cfg = DOCX_LAYOUT_STYLES[layout] || DOCX_LAYOUT_STYLES.standard;
+    var headingColor = cfg.headingColorMode === 'accent' ? accent : '0B0B0C';
+    /* rPr child order again — rFonts, b, caps, color, sz, same sequence
+       docxRun()/docxP() already follow, just built by hand here since
+       these are named styles, not per-run formatting. */
+    var headingRpr = '<w:rFonts w:ascii="' + cfg.headingFont + '" w:hAnsi="' + cfg.headingFont + '"/>' +
+      (cfg.headingBold ? '<w:b/>' : '') + (cfg.headingCaps ? '<w:caps/>' : '') +
+      '<w:color w:val="' + headingColor + '"/><w:sz w:val="' + cfg.headingSz + '"/>';
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-      '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Manrope" w:hAnsi="Manrope"/><w:color w:val="0B0B0C"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>' +
+      '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="' + cfg.bodyFont + '" w:hAnsi="' + cfg.bodyFont + '"/><w:color w:val="0B0B0C"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>' +
       '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
-      '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:rPr><w:rFonts w:ascii="Bricolage Grotesque" w:hAnsi="Bricolage Grotesque"/><w:sz w:val="48"/></w:rPr></w:style>' +
-      '<w:style w:type="paragraph" w:styleId="ClientName"><w:name w:val="Client Name"/><w:basedOn w:val="Normal"/><w:rPr><w:rFonts w:ascii="Bricolage Grotesque" w:hAnsi="Bricolage Grotesque"/><w:sz w:val="32"/></w:rPr></w:style>' +
-      '<w:style w:type="paragraph" w:styleId="Meta"><w:name w:val="Meta"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="6B675E"/><w:sz w:val="16"/></w:rPr></w:style>' +
-      '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:pPr><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:rFonts w:ascii="Bricolage Grotesque" w:hAnsi="Bricolage Grotesque"/><w:color w:val="' + accent + '"/><w:sz w:val="27"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:rPr><w:rFonts w:ascii="' + cfg.headingFont + '" w:hAnsi="' + cfg.headingFont + '"/><w:sz w:val="' + cfg.titleSz + '"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="ClientName"><w:name w:val="Client Name"/><w:basedOn w:val="Normal"/><w:rPr><w:rFonts w:ascii="' + cfg.headingFont + '" w:hAnsi="' + cfg.headingFont + '"/><w:sz w:val="' + cfg.clientSz + '"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Meta"><w:name w:val="Meta"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="6B675E"/><w:sz w:val="' + cfg.metaSz + '"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:pPr><w:outlineLvl w:val="1"/></w:pPr><w:rPr>' + headingRpr + '</w:rPr></w:style>' +
       '</w:styles>';
   }
   function buildDocxCoreXml(t, opts) {
@@ -3292,7 +3390,7 @@
       { name: '_rels/.rels', content: DOCX_RELS_XML },
       { name: 'word/document.xml', content: documentXml },
       { name: 'word/_rels/document.xml.rels', content: DOCX_DOCUMENT_RELS_XML },
-      { name: 'word/styles.xml', content: buildDocxStylesXml(docxAccentHex(opts.brandColor)) },
+      { name: 'word/styles.xml', content: buildDocxStylesXml(docxAccentHex(opts.brandColor), opts.layout || 'standard') },
       { name: 'docProps/core.xml', content: buildDocxCoreXml(t, opts) },
       { name: 'docProps/app.xml', content: DOCX_APP_XML }
     ]);

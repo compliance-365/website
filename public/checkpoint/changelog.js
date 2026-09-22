@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.86.0',
+    date: '2026-09-21',
+    entries: [
+      'Policy documents now come in three visual layouts -- Standard (this app\'s own brand), Formal (white, serif, no icons -- for regulated or traditional industries), and Minimal (white, restrained, accent used once) -- chosen in Settings → Client branding → "Policy document layout". Applies consistently across the generated HTML view, PDF export, Word export and bulk export (HTML and Word both); already-generated documents keep the look they were generated with.'
+    ]
+  },
+  {
     version: '1.85.0',
     date: '2026-09-21',
     entries: [
