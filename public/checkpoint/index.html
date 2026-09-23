@@ -374,6 +374,7 @@
         <summary class="nav-label">Assurance</summary>
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
+        <button class="nav-item" data-v="objectives">Objectives register <span class="n" id="nObjectives"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
         <button class="nav-item" data-v="incidents">Incidents <span class="n" id="nIncidents"></span></button>
         <button class="nav-item" data-v="auditlog">Audit log</button>
@@ -1194,6 +1195,28 @@
       </div>
       <div class="grid kpis" id="reviewKpiRow" style="margin:0 0 16px"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Date</th><th scope="col">Attendees</th><th scope="col">Next due</th><th scope="col"></th></tr></thead><tbody id="reviewRows"></tbody></table></div>
+    </section>
+
+    <!-- OBJECTIVES -->
+    <section class="view" id="v-objectives">
+      <div class="vhead"><div class="rule"></div><h1>Objectives register</h1><p>ISO 27001 clause 6.2 requires information security objectives that are measurable, communicated and monitored — not just restated policy intent. Set a metric and a target for each one, and clause 9.1's requirement to track progress against them is what the status and progress notes below are for.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddObjective">+ Add objective</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="objectives">Export CSV</button></div>
+      <div class="card" id="addObjectivePanel" style="margin-bottom:16px;display:none">
+        <h3>New objective</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naObjTitle" placeholder="Objective (e.g. Reduce phishing simulation click rate)" style="grid-column:1/-1">
+          <input class="mini" id="naObjMetric" placeholder="Metric — what is tracked">
+          <input class="mini" id="naObjTarget" placeholder="Target — what counts as met">
+          <input class="mini" id="naObjOwner" placeholder="Owner">
+          <input class="mini" id="naObjDue" aria-label="Due date" type="date">
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" data-action="App.addManualObjective">Add</button>
+          <button class="btn ghost sm" data-action="App.toggleAddObjective">Cancel</button>
+        </div>
+      </div>
+      <div class="grid kpis" id="objKpiRow" style="margin:0 0 16px"></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Objective</th><th scope="col">Owner</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Progress notes</th><th scope="col"></th></tr></thead><tbody id="objRows"></tbody></table></div>
     </section>
 
     <!-- COMPLIANCE CALENDAR -->

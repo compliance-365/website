@@ -921,6 +921,51 @@ describe('buildPolicyDocx()', () => {
       assert.equal(new Set(borderColors).size, 1, layout + ': document-control and roles tables should share one border colour');
     });
   });
+
+  describe('leadershipCommitment (the CEO foreword)', () => {
+    var tWithLeadership = Object.assign({}, t, { leadershipCommitment: 'We commit the resources this needs.\n\nWe expect to be told when something is wrong.' });
+
+    test('renders a heading and both paragraphs, ahead of "What this means for you"', () => {
+      var doc = docxParts(buildPolicyDocx(tWithLeadership, opts))['word/document.xml'];
+      assert.match(doc, /A message from leadership/);
+      assert.match(doc, /We commit the resources this needs\./);
+      assert.match(doc, /We expect to be told when something is wrong\./);
+      var leadershipAt = doc.indexOf('A message from leadership');
+      var whyItMattersAt = doc.indexOf('What this means for you');
+      assert.ok(leadershipAt < whyItMattersAt, 'leadership foreword renders before the staff-facing section');
+    });
+
+    test('a document with no leadershipCommitment renders no such section, on any template', () => {
+      var doc = docxParts(buildPolicyDocx(t, opts))['word/document.xml'];
+      assert.doesNotMatch(doc, /A message from leadership/);
+    });
+
+    test('an approved document signs the foreword with the SAME approvedBy/date the document-control table shows — no second field to keep in sync', () => {
+      var doc = docxParts(buildPolicyDocx(tWithLeadership, opts))['word/document.xml'];
+      var afterLeadership = doc.slice(doc.indexOf('A message from leadership'), doc.indexOf('A message from leadership') + 900);
+      assert.match(afterLeadership, new RegExp(opts.approvedBy));
+      assert.match(afterLeadership, new RegExp(opts.generatedDate));
+    });
+
+    test('an unapproved draft shows the foreword text but signs nothing — there is nothing true to sign yet', () => {
+      var draftOpts = Object.assign({}, opts, { approved: false, approvedBy: '', banner: undefined });
+      var doc = docxParts(buildPolicyDocx(tWithLeadership, draftOpts))['word/document.xml'];
+      assert.match(doc, /We commit the resources this needs\./);
+      // The document-control table still names the owner elsewhere in the
+      // doc — only the foreword's OWN signature block must stay empty.
+      var leadershipAt = doc.indexOf('A message from leadership');
+      var afterLeadership = doc.slice(leadershipAt, leadershipAt + 900);
+      assert.doesNotMatch(afterLeadership, /Jane Smith/);
+    });
+
+    test('all three layouts render the foreword using the same three-way treatment whyItMatters already uses', () => {
+      ['standard', 'formal', 'minimal'].forEach(function (layout) {
+        var doc = docxParts(buildPolicyDocx(tWithLeadership, Object.assign({}, opts, { layout: layout })))['word/document.xml'];
+        assert.match(doc, /A message from leadership/, layout);
+        assert.match(doc, /We commit the resources this needs\./, layout);
+      });
+    });
+  });
 });
 
 describe('canonicalJson()', () => {
@@ -2207,6 +2252,48 @@ describe('trainingCheckResult()', () => {
     const mk = (n, total) => Array.from({ length: total }, (_, i) => (i < n ? done() : open()));
     assert.equal(trainingCheckResult(mk(8, 10), today, { passPct: 80 }).result, 'pass');
     assert.equal(trainingCheckResult(mk(8, 10), today, { passPct: 95, reviewPct: 85 }).result, 'fail');
+  });
+});
+
+describe('objectivesCheckResult()', () => {
+  const { objectivesCheckResult } = CheckpointLib;
+  const today = '2026-07-25';
+  const ok = (over) => Object.assign({ metric: 'Click rate', target: 'Under 5%', status: 'On track', due: '2026-12-01' }, over);
+
+  test('an empty register is "manual", never a fail — nobody has set an objective yet', () => {
+    const r = objectivesCheckResult([], today);
+    assert.equal(r.result, 'manual');
+    assert.match(r.note, /No information security objectives/);
+    assert.equal(objectivesCheckResult(null, today).result, 'manual');
+  });
+
+  test('any Missed objective fails, regardless of how many others are on track', () => {
+    const r = objectivesCheckResult([ok(), ok({ status: 'Missed' })], today);
+    assert.equal(r.result, 'fail');
+    assert.match(r.note, /1 of 2 objective\(s\) missed/);
+  });
+
+  test('an objective past its due date with no outcome recorded is a review, not a pass', () => {
+    const r = objectivesCheckResult([ok({ due: '2026-01-01', status: 'On track' })], today);
+    assert.equal(r.result, 'review');
+    assert.match(r.note, /past due with no outcome recorded/);
+  });
+
+  test('an Achieved objective past its own due date is not counted as overdue-unresolved', () => {
+    const r = objectivesCheckResult([ok({ due: '2026-01-01', status: 'Achieved' })], today);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('an objective with no metric or target is a review — not yet measurable, Clause 6.2\'s whole point', () => {
+    const r = objectivesCheckResult([ok({ metric: '', target: '' })], today);
+    assert.equal(r.result, 'review');
+    assert.match(r.note, /not yet measurable/);
+  });
+
+  test('every objective measurable, owned and on track or achieved passes', () => {
+    const r = objectivesCheckResult([ok(), ok({ status: 'Achieved', due: '2026-01-01' }), ok({ status: 'Not started', due: '2027-01-01' })], today);
+    assert.equal(r.result, 'pass');
+    assert.match(r.note, /All 3 objective/);
   });
 });
 

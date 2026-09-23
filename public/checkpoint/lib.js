@@ -1603,6 +1603,35 @@
     return { result: 'pass', note: 'All ' + closed.length + ' closed incident(s) have a recorded root cause and lessons learned.' };
   }
 
+  /* Clause 6.2 — information security objectives, and Clause 9.1's
+     requirement to monitor progress against them. Scored from
+     Checkpoint's own Objectives register: a Missed objective past its
+     due date with nothing decided about it is the clause failing in
+     practice, not just an unmet target — 9.1 expects the organisation
+     to have SEEN it and decided what happens next, not just missed
+     quietly. Same fail/review/pass shape as policyCheckResult(). */
+  function objectivesCheckResult(objectives, today) {
+    var list = (objectives || []).filter(function (o) { return o; });
+    if (!list.length) {
+      return { result: 'manual', note: 'No information security objectives recorded in Checkpoint\'s register — set at least one measurable objective, or keep them in whatever system you use.' };
+    }
+    var missed = list.filter(function (o) { return o.status === 'Missed'; });
+    if (missed.length) {
+      return { result: 'fail', note: missed.length + ' of ' + list.length + ' objective(s) missed their target.' };
+    }
+    var overdueUnresolved = list.filter(function (o) {
+      return o.status !== 'Achieved' && o.due && o.due < today;
+    });
+    var noMetric = list.filter(function (o) { return !o.metric || !o.target; });
+    if (overdueUnresolved.length || noMetric.length) {
+      var gaps = [];
+      if (overdueUnresolved.length) gaps.push(overdueUnresolved.length + ' past due with no outcome recorded');
+      if (noMetric.length) gaps.push(noMetric.length + ' with no metric or target set — not yet measurable');
+      return { result: 'review', note: list.length + ' objective(s) recorded, but ' + gaps.join(', ') + '.' };
+    }
+    return { result: 'pass', note: 'All ' + list.length + ' objective(s) measurable, owned and on track or achieved.' };
+  }
+
   /* Who is missing induction training entirely. Distinct from the
      re-assignment rule a recurring campaign uses: a campaign skips
      anyone with an OPEN record (so an annual refresh reaches people who
@@ -3212,6 +3241,19 @@
     if (layout === 'minimal') return 'EEEEEE';
     return 'D9D5CB';
   }
+  /* Shared by "What this means for you" and the leadership-commitment
+     section below — both are a block of \n\n-separated paragraphs that
+     want the same three-way tinted-box/left-rule/plain treatment
+     layoutCss() gives the HTML .callout class. Pulled out once both
+     needed it rather than copied twice. */
+  function docxCalloutParagraphs(paragraphs, accent, layout) {
+    var tint = layout === 'standard' ? docxTint(accent, 0.08) : null;
+    return paragraphs.map(function (p) {
+      if (layout === 'formal') return docxP(p, { borderLeft: { sz: 12, color: '1A1A1A' }, indent: 200, before: 40, after: 40 }, { italic: true });
+      if (layout === 'minimal') return docxP(p, { before: 40, after: 40 });
+      return docxP(p, { shade: tint, before: 40, after: 40 });
+    }).join('');
+  }
 
   /* `t` is an effective policy template's content (title, purpose,
      scope, policyStatements, roles, exceptions, nonCompliance,
@@ -3256,6 +3298,26 @@
     parts.push(docxTable(dctlRows, [2600, 6800], { borderColor: tableBorder, headerShade: layout === 'formal' ? 'F7F5F2' : null }));
     parts.push(docxP('', { after: 160 }));
 
+    /* A leadership-authored foreword, distinct from the staff-facing
+       "What this means for you" below it — placed right after the
+       document-control table so it reads before anything else, the way
+       a foreword does. Deliberately reuses opts.approvedBy/generatedDate
+       as the signature line rather than adding a second name/date field
+       to the document register: when the person who approves THIS
+       document is the person the commitment is written for (a CEO), the
+       existing approval already IS the signature — see app.js's
+       leadershipHtml for the identical reasoning on the HTML side. No
+       signature line renders on an unapproved draft; there is nothing
+       true to sign yet. */
+    if (t.leadershipCommitment) {
+      parts.push(docxHeading('A message from leadership'));
+      parts.push(docxCalloutParagraphs(t.leadershipCommitment.split('\n\n'), accent, layout));
+      if (opts.approved && opts.approvedBy) {
+        parts.push(docxP(opts.approvedBy, { before: 80 }, { bold: true }));
+        parts.push(docxP(opts.generatedDate || '', { after: 160 }, { color: '6B675E', sz: 16 }));
+      }
+    }
+
     if (opts.aiAssisted) {
       parts.push(docxP('AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + (opts.aiReviewer || 'a practitioner') + ' before generation.', { after: 160 }, { italic: true }));
     }
@@ -3267,15 +3329,7 @@
        treatments layoutCss() gives the HTML .callout class. */
     if (t.whyItMatters) {
       parts.push(docxHeading('What this means for you'));
-      t.whyItMatters.split('\n\n').forEach(function (p) {
-        if (layout === 'formal') {
-          parts.push(docxP(p, { borderLeft: { sz: 12, color: '1A1A1A' }, indent: 200, before: 40, after: 40 }, { italic: true }));
-        } else if (layout === 'minimal') {
-          parts.push(docxP(p, { before: 40, after: 40 }));
-        } else {
-          parts.push(docxP(p, { shade: docxTint(accent, 0.08), before: 40, after: 40 }));
-        }
-      });
+      parts.push(docxCalloutParagraphs(t.whyItMatters.split('\n\n'), accent, layout));
     }
     if (t.inPractice && t.inPractice.length) {
       parts.push(docxHeading('In practice'));
@@ -4906,6 +4960,7 @@
     recurringActivityState: recurringActivityState, backupCheckResult: backupCheckResult,
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
+    objectivesCheckResult: objectivesCheckResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,

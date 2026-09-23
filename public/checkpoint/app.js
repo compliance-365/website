@@ -768,6 +768,7 @@ function showModal(opts) {
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
+    'addManualObjective', 'editObjective',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -815,7 +816,8 @@ function showModal(opts) {
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
-    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining'
+    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining',
+    'toggleAddObjective'
   ]);
 
   function isMutatingAction(path) {
@@ -1014,6 +1016,13 @@ function showModal(opts) {
       header: ['ID', 'Date', 'Attendees', 'Next due', 'Inputs', 'Decisions'],
       rows: function () {
         return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, reviewInputsToText(r.inputs), r.decisions]; });
+      }
+    },
+    {
+      key: 'objectives', label: 'Objectives', filename: 'objectives.csv',
+      header: ['ID', 'Objective', 'Metric', 'Target', 'Owner', 'Due', 'Status', 'Progress notes'],
+      rows: function () {
+        return (S.objectives || []).map(function (o) { return [o.id, o.title, o.metric, o.target, o.owner, o.due, o.status, o.notes]; });
       }
     },
     {
@@ -2936,7 +2945,7 @@ function showModal(opts) {
      frameworks it serves — stays owned by the shipped template, because
      those are what the SoA and the register key off and a hand-edited
      control code would silently break the mapping. */
-  var EDITABLE_POLICY_FIELDS = ['purpose', 'scope', 'whyItMatters', 'inPractice',
+  var EDITABLE_POLICY_FIELDS = ['purpose', 'scope', 'leadershipCommitment', 'whyItMatters', 'inPractice',
     'policyStatements', 'roles', 'exceptions', 'nonCompliance', 'relatedDocuments', 'reviewCadence'];
 
   /* ================= Organisation profile tokens =================
@@ -2984,7 +2993,7 @@ function showModal(opts) {
   function applyOrgTokens(t) {
     if (!t) return t;
     var out = Object.assign({}, t);
-    ['purpose', 'scope', 'whyItMatters', 'exceptions', 'nonCompliance', 'reviewCadence'].forEach(function (k) {
+    ['purpose', 'scope', 'leadershipCommitment', 'whyItMatters', 'exceptions', 'nonCompliance', 'reviewCadence'].forEach(function (k) {
       if (typeof out[k] === 'string') out[k] = resolveOrgTokens(out[k]);
     });
     ['inPractice', 'relatedDocuments'].forEach(function (k) {
@@ -3255,6 +3264,26 @@ function showModal(opts) {
         t.relatedDocuments.map(function (d) { return '<li><span class="prac-dot"></span>' + esc(d) + '</li>'; }).join('') + '</ul>';
     }
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
+    /* A leadership-authored foreword, distinct from the staff-facing
+       "What this means for you" below it — rendered right after the
+       document-control table so it's the first thing read, the way a
+       foreword is. Deliberately has no signature field of its own:
+       when the person this is written for (a CEO) is also the person
+       who approves the document, "Approved by"/the approval date
+       already ARE their signature — re-showing those two fields here,
+       under a paragraph addressed to the reader in the first person,
+       is what turns a document-control row into something that reads
+       as personally signed, with no second name/date field to keep in
+       sync. No signature line on an unapproved draft — there's nothing
+       true to sign yet. */
+    var leadershipHtml = t.leadershipCommitment
+      ? sectionHeading('policy', 'A message from leadership') +
+        '<div class="callout">' + t.leadershipCommitment.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('') +
+        (opts.approved && opts.approvedBy
+          ? '<p class="intro" style="margin:10px 0 0;font-weight:600">' + esc(opts.approvedBy) + '<br><span style="font-weight:400;color:#6b675e;font-size:11px">' + esc(opts.generatedDate) + '</span></p>'
+          : '') +
+        '</div>'
+      : '';
     /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
        controlled document has to identify itself (title, date,
        version, author) on its own face, not just in a register
@@ -3278,6 +3307,7 @@ function showModal(opts) {
     var body = '<table class="dctl"><tbody>' + dctlRows.map(function (r) {
       return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
     }).join('') + '</tbody></table>' +
+      leadershipHtml +
       aiNoteHtml +
       /* Order is the whole design: the reader-facing sections come
          first so someone who stops a third of the way down has still
@@ -3679,6 +3709,10 @@ function showModal(opts) {
     var reviewOverdue = lastReview && lastReview.nextDue && lastReview.nextDue < today;
     var rEl = document.getElementById('nReviews');
     rEl.textContent = reviewOverdue ? '!' : ''; rEl.style.display = reviewOverdue ? 'inline-block' : 'none';
+
+    var atRiskObjectives = (S.objectives || []).filter(function (o) { return o.status === 'At risk' || o.status === 'Missed'; }).length;
+    var oEl = document.getElementById('nObjectives');
+    if (oEl) { oEl.textContent = atRiskObjectives || ''; oEl.style.display = atRiskObjectives ? 'inline-block' : 'none'; }
 
     var overdueCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && c.nextDue && c.nextDue < today; }).length;
     var cEl = document.getElementById('nCalendar');
@@ -5690,6 +5724,7 @@ function showModal(opts) {
   var TREATMENT_OPTS = RISK_TREATMENTS.map(function (t) { return { value: t, label: t + ' — ' + TREATMENT_DESCRIPTIONS[t] }; });
   var RISK_STATUS_OPTS = ['Open', 'In treatment', 'Monitored', 'Closed'];
   var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
+  var OBJECTIVE_STATUS_OPTS = ['Not started', 'On track', 'At risk', 'Achieved', 'Missed'];
 
   /* Options for a "link to risk" <select> — open risks first, plus the
      currently-linked one even if it's since been closed (so editing an
@@ -7746,6 +7781,7 @@ function showModal(opts) {
         '<p>Editing the document\'s content, not its HTML. The file is re-rendered from what you save here, so your changes survive approval, a version bump, a branding change and any future improvement to the underlying template. Title, mapped controls and frameworks stay owned by the template, because the register and the Statement of Applicability key off them.</p></div>' +
       (draft ? '<div class="card" style="margin-bottom:18px;border-left:3px solid var(--gold-light)"><div class="d-kv"><span>Last edited</span><b>' + esc(draft.updatedBy || 'unknown') + ' · ' + fmtDocDate(draft.updatedDate) + '</b></div></div>' : '') +
       '<div class="card">' +
+        editorField('peLeadership', 'A message from leadership', 'A first-person foreword from whoever leads the organisation — ISO 27001 Clause 5.1 asks leadership to demonstrate commitment, and this is what a CEO\'s own words look like on the page. Rendered right after the document-control block, signed with the document\'s own Approved by/approval date once approved. Separate paragraphs with a blank line. Leave empty to omit the section.', c.leadershipCommitment, 5) +
         editorField('peWhy', 'What this means for you', 'The staff-facing opener. Second person. Separate paragraphs with a blank line. Leave empty to omit the section.', c.whyItMatters, 7) +
         editorField('pePractice', 'In practice', 'One concrete situation per line. These are the part people actually remember.', linesToList(c.inPractice).join('\n'), 5) +
         editorField('pePurpose', 'Purpose', 'Why this document exists. Declarative, not second person.', c.purpose, 3) +
@@ -7772,6 +7808,7 @@ function showModal(opts) {
   function readPolicyEditor() {
     function v(id) { return (document.getElementById(id).value || '').trim(); }
     return {
+      leadershipCommitment: v('peLeadership'),
       whyItMatters: v('peWhy'),
       inPractice: linesToList(v('pePractice')),
       purpose: v('pePurpose'),
@@ -8717,6 +8754,54 @@ function showModal(opts) {
       kpiTile({ value: overdue, label: 'Next review overdue', tone: 'fail',
         sub: nextDue ? 'next due ' + fmtDate(nextDue) : 'no next review scheduled' });
     runCountUps(el);
+  }
+  function objectiveStatusCls(status) {
+    if (status === 'Achieved' || status === 'On track') return 'st-Implemented';
+    if (status === 'At risk') return 'st-Inprogress';
+    if (status === 'Missed') return 'st-Open';
+    return 'st-Notstarted';
+  }
+  function renderObjectivesDashboard() {
+    var el = document.getElementById('objKpiRow');
+    if (!el) return;
+    var objectives = S.objectives || [];
+    var today = new Date().toISOString().slice(0, 10);
+    var live = objectives.filter(function (o) { return o.status !== 'Achieved'; });
+    var atRisk = live.filter(function (o) { return o.status === 'At risk' || o.status === 'Missed'; });
+    var overdue = live.filter(function (o) { return o.due && o.due < today; });
+    var achieved = objectives.filter(function (o) { return o.status === 'Achieved'; });
+    el.innerHTML =
+      kpiTile({ value: objectives.length, label: 'Objectives set',
+        sub: objectives.length ? 'ISO 27001 clause 6.2' : 'clause 6.2 expects measurable objectives' }) +
+      kpiTile({ value: atRisk.length, label: 'At risk or missed', tone: 'fail',
+        meter: { value: atRisk.length, max: objectives.length },
+        sub: atRisk.length ? 'not on track to be met' : 'nothing at risk' }) +
+      kpiTile({ value: overdue.length, label: 'Past due date', tone: 'warn',
+        meter: { value: overdue.length, max: objectives.length },
+        sub: overdue.length ? 'due date has passed' : 'nothing overdue' }) +
+      kpiTile({ value: achieved.length, label: 'Achieved', meter: { value: achieved.length, max: objectives.length } });
+    runCountUps(el);
+  }
+  function renderObjectives() {
+    var wrap = document.getElementById('objRows');
+    if (!wrap) return;
+    renderObjectivesDashboard();
+    var objectives = S.objectives || [];
+    if (!objectives.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 6, text: 'No information security objectives set yet. ISO 27001 clause 6.2 expects measurable, owned objectives — not just restated policy intent.', cta: { label: '+ Add objective', action: 'App.toggleAddObjective' } });
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    wrap.innerHTML = objectives.map(function (o) {
+      var overdue = o.status !== 'Achieved' && o.due && o.due < today;
+      return '<tr><td style="color:var(--paper)">' + esc(o.title) + (o.metric ? '<div class="src">' + esc(o.metric) + (o.target ? ' — ' + esc(o.target) : '') + '</div>' : '') + '</td>' +
+        '<td>' + esc(o.owner || '—') + '</td>' +
+        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(o.due) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
+        '<td><span class="chip ' + objectiveStatusCls(o.status) + '">' + esc(o.status) + '</span></td>' +
+        '<td style="color:var(--paper-dim);font-size:12px">' + esc(o.notes || '—') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editObjective" data-id="' + esc(o.id) + '">Edit</button></td></tr>';
+    }).join('');
+    revealRows(wrap);
   }
   function renderCalendarDashboard() {
     var el = document.getElementById('calKpiRow');
@@ -10402,6 +10487,7 @@ function showModal(opts) {
     training: renderTraining,
     audits: renderAudits,
     reviews: renderReviews,
+    objectives: renderObjectives,
     calendar: renderCalendar,
     incidents: renderIncidents,
     auditlog: renderAuditLog,
@@ -14763,6 +14849,75 @@ function showModal(opts) {
       toast('<b>' + a.id + '</b> marked complete');
       audit('Internal audit completed', 'Audit', a.id, prevStatus, 'Completed: ' + a.summary);
       renderAudits(); renderNavCounts(); renderDash();
+    },
+
+    toggleAddObjective: function () {
+      var panel = document.getElementById('addObjectivePanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naObjTitle').value = '';
+        document.getElementById('naObjMetric').value = '';
+        document.getElementById('naObjTarget').value = '';
+        document.getElementById('naObjOwner').value = '';
+        document.getElementById('naObjDue').value = daysFrom(365);
+      }
+    },
+
+    addManualObjective: async function () {
+      var title = document.getElementById('naObjTitle').value.trim();
+      if (!title) { toast('Enter an objective first'); return; }
+      var maxO = (S.objectives || []).reduce(function (m, o) { var n = parseInt(String(o.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var o = {
+        id: 'OBJ-' + String(maxO + 1).padStart(3, '0'),
+        title: title,
+        metric: document.getElementById('naObjMetric').value.trim(),
+        target: document.getElementById('naObjTarget').value.trim(),
+        owner: document.getElementById('naObjOwner').value.trim() || 'Unassigned',
+        due: document.getElementById('naObjDue').value || daysFrom(365),
+        status: 'Not started', notes: ''
+      };
+      busy(true);
+      try {
+        await Store.addObjective(o);
+        log('<b>' + o.id + '</b> objective added: ' + esc(o.title));
+        toast('<b>' + o.id + '</b> added');
+        audit('Objective added', 'Objective', o.id, '', o.title + (o.metric ? ' — ' + o.metric : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddObjective();
+      renderObjectives(); renderNavCounts();
+    },
+
+    editObjective: async function (id) {
+      var o = (S.objectives || []).find(function (x) { return x.id === id; });
+      if (!o) return;
+      var v = await showModal({
+        title: 'Edit ' + o.id,
+        fields: [
+          { id: 'title', label: 'Objective', type: 'textarea', value: o.title },
+          { id: 'metric', label: 'Metric — what is tracked', value: o.metric || '' },
+          { id: 'target', label: 'Target — what counts as met', value: o.target || '' },
+          { id: 'owner', label: 'Owner', value: o.owner },
+          { id: 'due', label: 'Due date', type: 'date', value: o.due },
+          { id: 'status', label: 'Status', type: 'select', value: o.status, options: OBJECTIVE_STATUS_OPTS },
+          { id: 'notes', label: 'Progress notes', type: 'textarea', value: o.notes || '' }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter an objective.'; }
+      });
+      if (!v) return;
+      var prevStatus = o.status;
+      busy(true);
+      try {
+        o.title = v.title; o.metric = v.metric; o.target = v.target;
+        o.owner = v.owner || 'Unassigned'; o.due = v.due || o.due; o.status = v.status; o.notes = v.notes;
+        await Store.updateObjective(o);
+        audit('Objective updated', 'Objective', o.id, prevStatus, o.status + (o.notes ? ' — ' + o.notes : ''));
+        toast('<b>' + o.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderObjectives(); renderNavCounts();
     },
 
     openAudit: function (id) {

@@ -53,6 +53,19 @@
        title,            // document title
        purpose,          // 2-4 sentence "why this document exists"
        scope,            // 2-4 sentence "who/what this applies to"
+       leadershipCommitment, // optional; only the Information Security
+                          // Policy carries one today. A first-person,
+                          // leadership-authored foreword — ISO 27001
+                          // Clause 5.1 asks for top management to
+                          // demonstrate commitment, and a document a
+                          // CEO has visibly signed is stronger evidence
+                          // of that than a policy they merely approved
+                          // in a workflow. Rendered right after the
+                          // document-control block, signed with the
+                          // SAME approvedBy/approval-date the document
+                          // register already captures — no separate
+                          // signature field to keep in sync (see
+                          // buildTemplateHtml()'s leadershipHtml).
        policyStatements, // the actual policy — an array of individual
                           // statements, rendered as a numbered list
        reviewCadence,    // when the document itself must be revisited
@@ -97,6 +110,7 @@ window.POLICY_TEMPLATES = [
     title: 'Information Security Policy',
     purpose: 'This policy sets out the organisation’s commitment to protecting the confidentiality, integrity and availability of the information it holds, and establishes the framework of subordinate policies, roles and controls used to manage information security risk.',
     scope: 'Applies to every employee, contractor and third party who accesses the organisation’s systems, data or Microsoft 365 tenant, and to every information asset the organisation owns, processes or is otherwise responsible for.',
+    leadershipCommitment: 'Information security is a leadership responsibility, not a delegated one. We commit the resources this programme needs, hold the people who run it accountable, and expect information security to be a normal part of how we decide things as leaders — a new product, a new supplier, a new market — not a review raised after the decision is already made.\n\nWe expect to be told when something is wrong. A risk or a near-miss reported early is this programme working as intended; one hidden to avoid an awkward conversation is a failure of it, whoever caused it.',
     whyItMatters: 'This is the policy the others hang off, so most of what it asks of you is indirect. The part that is not: the organisation has decided to treat security as something managed deliberately rather than left to individual judgement, which means when you are unsure, there is a documented answer and a named person to ask rather than a guess you have to defend later.\n\nIt also commits the organisation in the other direction. Security measures have to be proportionate to real risk, and you are entitled to ask why a control exists and to have that answered. A control nobody can explain is a control worth challenging.',
     inPractice: [
       'You are asked to do something that seems to conflict with a security requirement. Raise it rather than quietly working around it — the exception route below exists precisely for this, and a documented exception is safer for everyone than an undocumented workaround.',
