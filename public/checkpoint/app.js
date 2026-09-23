@@ -768,6 +768,7 @@ function showModal(opts) {
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
+    'addManualObjective', 'editObjective',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -815,7 +816,8 @@ function showModal(opts) {
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
-    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining'
+    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining',
+    'toggleAddObjective'
   ]);
 
   function isMutatingAction(path) {
@@ -1014,6 +1016,13 @@ function showModal(opts) {
       header: ['ID', 'Date', 'Attendees', 'Next due', 'Inputs', 'Decisions'],
       rows: function () {
         return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, reviewInputsToText(r.inputs), r.decisions]; });
+      }
+    },
+    {
+      key: 'objectives', label: 'Objectives', filename: 'objectives.csv',
+      header: ['ID', 'Objective', 'Metric', 'Target', 'Owner', 'Due', 'Status', 'Progress notes'],
+      rows: function () {
+        return (S.objectives || []).map(function (o) { return [o.id, o.title, o.metric, o.target, o.owner, o.due, o.status, o.notes]; });
       }
     },
     {
@@ -3701,6 +3710,10 @@ function showModal(opts) {
     var rEl = document.getElementById('nReviews');
     rEl.textContent = reviewOverdue ? '!' : ''; rEl.style.display = reviewOverdue ? 'inline-block' : 'none';
 
+    var atRiskObjectives = (S.objectives || []).filter(function (o) { return o.status === 'At risk' || o.status === 'Missed'; }).length;
+    var oEl = document.getElementById('nObjectives');
+    if (oEl) { oEl.textContent = atRiskObjectives || ''; oEl.style.display = atRiskObjectives ? 'inline-block' : 'none'; }
+
     var overdueCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && c.nextDue && c.nextDue < today; }).length;
     var cEl = document.getElementById('nCalendar');
     cEl.textContent = overdueCal || ''; cEl.style.display = overdueCal ? 'inline-block' : 'none';
@@ -5711,6 +5724,7 @@ function showModal(opts) {
   var TREATMENT_OPTS = RISK_TREATMENTS.map(function (t) { return { value: t, label: t + ' — ' + TREATMENT_DESCRIPTIONS[t] }; });
   var RISK_STATUS_OPTS = ['Open', 'In treatment', 'Monitored', 'Closed'];
   var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
+  var OBJECTIVE_STATUS_OPTS = ['Not started', 'On track', 'At risk', 'Achieved', 'Missed'];
 
   /* Options for a "link to risk" <select> — open risks first, plus the
      currently-linked one even if it's since been closed (so editing an
@@ -8741,6 +8755,54 @@ function showModal(opts) {
         sub: nextDue ? 'next due ' + fmtDate(nextDue) : 'no next review scheduled' });
     runCountUps(el);
   }
+  function objectiveStatusCls(status) {
+    if (status === 'Achieved' || status === 'On track') return 'st-Implemented';
+    if (status === 'At risk') return 'st-Inprogress';
+    if (status === 'Missed') return 'st-Open';
+    return 'st-Notstarted';
+  }
+  function renderObjectivesDashboard() {
+    var el = document.getElementById('objKpiRow');
+    if (!el) return;
+    var objectives = S.objectives || [];
+    var today = new Date().toISOString().slice(0, 10);
+    var live = objectives.filter(function (o) { return o.status !== 'Achieved'; });
+    var atRisk = live.filter(function (o) { return o.status === 'At risk' || o.status === 'Missed'; });
+    var overdue = live.filter(function (o) { return o.due && o.due < today; });
+    var achieved = objectives.filter(function (o) { return o.status === 'Achieved'; });
+    el.innerHTML =
+      kpiTile({ value: objectives.length, label: 'Objectives set',
+        sub: objectives.length ? 'ISO 27001 clause 6.2' : 'clause 6.2 expects measurable objectives' }) +
+      kpiTile({ value: atRisk.length, label: 'At risk or missed', tone: 'fail',
+        meter: { value: atRisk.length, max: objectives.length },
+        sub: atRisk.length ? 'not on track to be met' : 'nothing at risk' }) +
+      kpiTile({ value: overdue.length, label: 'Past due date', tone: 'warn',
+        meter: { value: overdue.length, max: objectives.length },
+        sub: overdue.length ? 'due date has passed' : 'nothing overdue' }) +
+      kpiTile({ value: achieved.length, label: 'Achieved', meter: { value: achieved.length, max: objectives.length } });
+    runCountUps(el);
+  }
+  function renderObjectives() {
+    var wrap = document.getElementById('objRows');
+    if (!wrap) return;
+    renderObjectivesDashboard();
+    var objectives = S.objectives || [];
+    if (!objectives.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 6, text: 'No information security objectives set yet. ISO 27001 clause 6.2 expects measurable, owned objectives — not just restated policy intent.', cta: { label: '+ Add objective', action: 'App.toggleAddObjective' } });
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    wrap.innerHTML = objectives.map(function (o) {
+      var overdue = o.status !== 'Achieved' && o.due && o.due < today;
+      return '<tr><td style="color:var(--paper)">' + esc(o.title) + (o.metric ? '<div class="src">' + esc(o.metric) + (o.target ? ' — ' + esc(o.target) : '') + '</div>' : '') + '</td>' +
+        '<td>' + esc(o.owner || '—') + '</td>' +
+        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(o.due) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
+        '<td><span class="chip ' + objectiveStatusCls(o.status) + '">' + esc(o.status) + '</span></td>' +
+        '<td style="color:var(--paper-dim);font-size:12px">' + esc(o.notes || '—') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editObjective" data-id="' + esc(o.id) + '">Edit</button></td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
   function renderCalendarDashboard() {
     var el = document.getElementById('calKpiRow');
     if (!el) return;
@@ -10425,6 +10487,7 @@ function showModal(opts) {
     training: renderTraining,
     audits: renderAudits,
     reviews: renderReviews,
+    objectives: renderObjectives,
     calendar: renderCalendar,
     incidents: renderIncidents,
     auditlog: renderAuditLog,
@@ -14786,6 +14849,75 @@ function showModal(opts) {
       toast('<b>' + a.id + '</b> marked complete');
       audit('Internal audit completed', 'Audit', a.id, prevStatus, 'Completed: ' + a.summary);
       renderAudits(); renderNavCounts(); renderDash();
+    },
+
+    toggleAddObjective: function () {
+      var panel = document.getElementById('addObjectivePanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naObjTitle').value = '';
+        document.getElementById('naObjMetric').value = '';
+        document.getElementById('naObjTarget').value = '';
+        document.getElementById('naObjOwner').value = '';
+        document.getElementById('naObjDue').value = daysFrom(365);
+      }
+    },
+
+    addManualObjective: async function () {
+      var title = document.getElementById('naObjTitle').value.trim();
+      if (!title) { toast('Enter an objective first'); return; }
+      var maxO = (S.objectives || []).reduce(function (m, o) { var n = parseInt(String(o.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var o = {
+        id: 'OBJ-' + String(maxO + 1).padStart(3, '0'),
+        title: title,
+        metric: document.getElementById('naObjMetric').value.trim(),
+        target: document.getElementById('naObjTarget').value.trim(),
+        owner: document.getElementById('naObjOwner').value.trim() || 'Unassigned',
+        due: document.getElementById('naObjDue').value || daysFrom(365),
+        status: 'Not started', notes: ''
+      };
+      busy(true);
+      try {
+        await Store.addObjective(o);
+        log('<b>' + o.id + '</b> objective added: ' + esc(o.title));
+        toast('<b>' + o.id + '</b> added');
+        audit('Objective added', 'Objective', o.id, '', o.title + (o.metric ? ' — ' + o.metric : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddObjective();
+      renderObjectives(); renderNavCounts();
+    },
+
+    editObjective: async function (id) {
+      var o = (S.objectives || []).find(function (x) { return x.id === id; });
+      if (!o) return;
+      var v = await showModal({
+        title: 'Edit ' + o.id,
+        fields: [
+          { id: 'title', label: 'Objective', type: 'textarea', value: o.title },
+          { id: 'metric', label: 'Metric — what is tracked', value: o.metric || '' },
+          { id: 'target', label: 'Target — what counts as met', value: o.target || '' },
+          { id: 'owner', label: 'Owner', value: o.owner },
+          { id: 'due', label: 'Due date', type: 'date', value: o.due },
+          { id: 'status', label: 'Status', type: 'select', value: o.status, options: OBJECTIVE_STATUS_OPTS },
+          { id: 'notes', label: 'Progress notes', type: 'textarea', value: o.notes || '' }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter an objective.'; }
+      });
+      if (!v) return;
+      var prevStatus = o.status;
+      busy(true);
+      try {
+        o.title = v.title; o.metric = v.metric; o.target = v.target;
+        o.owner = v.owner || 'Unassigned'; o.due = v.due || o.due; o.status = v.status; o.notes = v.notes;
+        await Store.updateObjective(o);
+        audit('Objective updated', 'Objective', o.id, prevStatus, o.status + (o.notes ? ' — ' + o.notes : ''));
+        toast('<b>' + o.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderObjectives(); renderNavCounts();
     },
 
     openAudit: function (id) {

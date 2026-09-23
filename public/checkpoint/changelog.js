@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.88.0',
+    date: '2026-09-23',
+    entries: [
+      'New Objectives register (Assurance → Objectives register) for ISO 27001 Clause 6.2 — set measurable information security objectives with a metric, a target, an owner and a due date, and track progress against them (Not started / On track / At risk / Achieved / Missed) with dated progress notes, closing the gap between restating policy intent and actually evidencing Clause 6.2/9.1. Summary tiles show what\'s at risk, overdue or achieved; exports to CSV alongside every other register.'
+    ]
+  },
+  {
     version: '1.87.0',
     date: '2026-09-23',
     entries: [

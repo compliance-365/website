@@ -2255,6 +2255,48 @@ describe('trainingCheckResult()', () => {
   });
 });
 
+describe('objectivesCheckResult()', () => {
+  const { objectivesCheckResult } = CheckpointLib;
+  const today = '2026-07-25';
+  const ok = (over) => Object.assign({ metric: 'Click rate', target: 'Under 5%', status: 'On track', due: '2026-12-01' }, over);
+
+  test('an empty register is "manual", never a fail — nobody has set an objective yet', () => {
+    const r = objectivesCheckResult([], today);
+    assert.equal(r.result, 'manual');
+    assert.match(r.note, /No information security objectives/);
+    assert.equal(objectivesCheckResult(null, today).result, 'manual');
+  });
+
+  test('any Missed objective fails, regardless of how many others are on track', () => {
+    const r = objectivesCheckResult([ok(), ok({ status: 'Missed' })], today);
+    assert.equal(r.result, 'fail');
+    assert.match(r.note, /1 of 2 objective\(s\) missed/);
+  });
+
+  test('an objective past its due date with no outcome recorded is a review, not a pass', () => {
+    const r = objectivesCheckResult([ok({ due: '2026-01-01', status: 'On track' })], today);
+    assert.equal(r.result, 'review');
+    assert.match(r.note, /past due with no outcome recorded/);
+  });
+
+  test('an Achieved objective past its own due date is not counted as overdue-unresolved', () => {
+    const r = objectivesCheckResult([ok({ due: '2026-01-01', status: 'Achieved' })], today);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('an objective with no metric or target is a review — not yet measurable, Clause 6.2\'s whole point', () => {
+    const r = objectivesCheckResult([ok({ metric: '', target: '' })], today);
+    assert.equal(r.result, 'review');
+    assert.match(r.note, /not yet measurable/);
+  });
+
+  test('every objective measurable, owned and on track or achieved passes', () => {
+    const r = objectivesCheckResult([ok(), ok({ status: 'Achieved', due: '2026-01-01' }), ok({ status: 'Not started', due: '2027-01-01' })], today);
+    assert.equal(r.result, 'pass');
+    assert.match(r.note, /All 3 objective/);
+  });
+});
+
 describe('usersMissingInduction()', () => {
   const users = [
     { upn: 'A@x.example', name: 'A' },

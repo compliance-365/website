@@ -1483,6 +1483,18 @@ window.DemoStore = (function () {
       reviews: [
         { id: 'MR-001', date: daysFrom(-30), attendees: 'M. Chen (CEO), K. Patel (Head of Eng), S. Okafor (ISMS Manager)', inputs: 'Posture score 48/100 (up from 41). 5 open risks, 2 High/Critical residual. 7 open actions, some overdue. 1 open non-conformity from AUD-001. ISO 27001 readiness 34%.', decisions: 'Approved additional contractor time for supplier security remediation (R-001). Agreed to bring forward the ISO 42001 internal audit to Q3. No change to risk appetite.', nextDue: daysFrom(60) }
       ],
+      /* ISO 27001 Clause 6.2 — measurable, owned, dated targets, not just
+         restated policy intent. A spread of statuses so the register's
+         KPI tiles show something real in the demo, not all-green or
+         all-empty. */
+      objectives: [
+        { id: 'OBJ-001', title: 'Reduce phishing simulation click-through rate', metric: 'Click rate on quarterly phishing simulations', target: 'Under 5% by Q4', owner: 'M. Chen', due: daysFrom(70), status: 'On track', notes: 'Last simulation: 7.2%, down from 14% two quarters ago.' },
+        { id: 'OBJ-002', title: 'Achieve ISO 27001 certification', metric: 'Certification audit outcome', target: 'Stage 2 audit passed with no major non-conformities', owner: 'S. Okafor', due: daysFrom(150), status: 'At risk', notes: 'Readiness at 34% per last management review — behind the pace needed for the planned audit date.' },
+        { id: 'OBJ-003', title: 'Close all Critical and High residual risks', metric: 'Count of open Critical/High residual risks', target: 'Zero by year end', owner: 'K. Patel', due: daysFrom(120), status: 'On track', notes: '' },
+        { id: 'OBJ-004', title: 'Complete security awareness training for all staff', metric: '% of staff with current Security Awareness completion', target: '100% by Q2', owner: 'M. Chen', due: daysFrom(-15), status: 'Missed', notes: 'Landed at 91% — five staff never completed the refresh. Rolled into OBJ-001\'s owner for chasing.' },
+        { id: 'OBJ-005', title: 'Stand up a documented internal audit programme', metric: 'Internal audits completed against the annual plan', target: '2 of 2 planned audits completed', owner: 'S. Okafor', due: daysFrom(-33), status: 'Achieved', notes: 'AUD-001 completed; AUD-002 (ISO 42001) scheduled and on track.' },
+        { id: 'OBJ-006', title: 'Roll out vendor security questionnaires to top-10 suppliers', metric: 'Suppliers with a received, current questionnaire response', target: '10 of 10 by Q3', owner: 'K. Patel', due: daysFrom(45), status: 'Not started', notes: '' }
+      ],
       calendar: [
         { id: 'CAL-001', title: 'Access control review — all systems', category: 'Access control review', freq: 'Annual', nextDue: daysFrom(45), lastCompleted: daysFrom(-320), owner: 'K. Patel', notes: '', status: 'Active' },
         { id: 'CAL-002', title: 'BCP/DR failover test', category: 'BCP/DR test', freq: 'Annual', nextDue: daysFrom(-5), lastCompleted: daysFrom(-370), owner: 'S. Okafor', notes: '', status: 'Active' },
@@ -1739,6 +1751,8 @@ window.DemoStore = (function () {
     updateIncident: async function () { persist(); },
     updateAudit: async function () { persist(); },
     addReview: async function (r) { S.reviews.push(r); persist(); },
+    addObjective: async function (o) { S.objectives.push(o); persist(); },
+    updateObjective: async function () { persist(); },
     addCalendarItem: async function (c) { S.calendar.push(c); persist(); },
     updateCalendarItem: async function () { persist(); },
     appendAudit: async function (entry) {
@@ -2025,6 +2039,16 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'ReviewDate', text: {} }, { name: 'Attendees', text: {} },
       { name: 'Inputs', text: { allowMultipleLines: true } }, { name: 'Decisions', text: { allowMultipleLines: true } },
       { name: 'NextDue', text: {} }
+    ],
+    /* Information security objectives, ISO 27001 Clause 6.2 — measurable,
+       owned, dated targets ("reduce phishing click rate to under 3% by
+       Q4", not just "improve security awareness"). Title carries the
+       objective itself; Metric/Target are what "measurable" means in
+       practice — what's tracked and what counts as met. */
+    Objectives: [
+      { name: 'RefId', text: {} }, { name: 'Metric', text: {} }, { name: 'Target', text: {} },
+      { name: 'Owner', text: {} }, { name: 'DueDate', text: {} }, { name: 'Status', text: {} },
+      { name: 'ProgressNotes', text: { allowMultipleLines: true } }
     ],
     Calendar: [
       { name: 'RefId', text: {} }, { name: 'Category', text: {} }, { name: 'Frequency', text: {} },
@@ -2684,6 +2708,7 @@ window.SpStore = (function () {
       var setItems = await items('Settings');
       var audItems = await items('Audits');
       var revItems = await items('Reviews');
+      var objItems = await items('Objectives');
       var calItems = await items('Calendar');
       var logItems = await items('AuditLog');
       var alertItems = await items('Alerts');
@@ -2772,6 +2797,10 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '' };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
+        objectives: objItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, title: f.Title, metric: f.Metric || '', target: f.Target || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Not started', notes: f.ProgressNotes || '' };
+        }).sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); }),
         calendar: calItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, title: f.Title, category: f.Category || 'Other', freq: f.Frequency || 'Annual', nextDue: f.NextDue || '', lastCompleted: f.LastCompleted || '', owner: f.Owner || '', notes: f.Notes || '', status: f.Status || 'Active' };
@@ -3181,6 +3210,19 @@ window.SpStore = (function () {
         Inputs: r.inputs, Decisions: r.decisions, NextDue: r.nextDue || ''
       });
       S.reviews.push(r);
+    },
+    addObjective: async function (o) {
+      o._sp = await addItem('Objectives', {
+        Title: o.title, RefId: o.id, Metric: o.metric || '', Target: o.target || '',
+        Owner: o.owner, DueDate: o.due || '', Status: o.status || 'Not started', ProgressNotes: o.notes || ''
+      });
+      S.objectives.push(o);
+    },
+    updateObjective: async function (o) {
+      await patchItem('Objectives', o._sp, {
+        Title: o.title, Metric: o.metric || '', Target: o.target || '',
+        Owner: o.owner, DueDate: o.due || '', Status: o.status, ProgressNotes: o.notes || ''
+      });
     },
     addCalendarItem: async function (c) {
       c._sp = await addItem('Calendar', {

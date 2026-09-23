@@ -1603,6 +1603,35 @@
     return { result: 'pass', note: 'All ' + closed.length + ' closed incident(s) have a recorded root cause and lessons learned.' };
   }
 
+  /* Clause 6.2 — information security objectives, and Clause 9.1's
+     requirement to monitor progress against them. Scored from
+     Checkpoint's own Objectives register: a Missed objective past its
+     due date with nothing decided about it is the clause failing in
+     practice, not just an unmet target — 9.1 expects the organisation
+     to have SEEN it and decided what happens next, not just missed
+     quietly. Same fail/review/pass shape as policyCheckResult(). */
+  function objectivesCheckResult(objectives, today) {
+    var list = (objectives || []).filter(function (o) { return o; });
+    if (!list.length) {
+      return { result: 'manual', note: 'No information security objectives recorded in Checkpoint\'s register — set at least one measurable objective, or keep them in whatever system you use.' };
+    }
+    var missed = list.filter(function (o) { return o.status === 'Missed'; });
+    if (missed.length) {
+      return { result: 'fail', note: missed.length + ' of ' + list.length + ' objective(s) missed their target.' };
+    }
+    var overdueUnresolved = list.filter(function (o) {
+      return o.status !== 'Achieved' && o.due && o.due < today;
+    });
+    var noMetric = list.filter(function (o) { return !o.metric || !o.target; });
+    if (overdueUnresolved.length || noMetric.length) {
+      var gaps = [];
+      if (overdueUnresolved.length) gaps.push(overdueUnresolved.length + ' past due with no outcome recorded');
+      if (noMetric.length) gaps.push(noMetric.length + ' with no metric or target set — not yet measurable');
+      return { result: 'review', note: list.length + ' objective(s) recorded, but ' + gaps.join(', ') + '.' };
+    }
+    return { result: 'pass', note: 'All ' + list.length + ' objective(s) measurable, owned and on track or achieved.' };
+  }
+
   /* Who is missing induction training entirely. Distinct from the
      re-assignment rule a recurring campaign uses: a campaign skips
      anyone with an OPEN record (so an annual refresh reaches people who
@@ -4931,6 +4960,7 @@
     recurringActivityState: recurringActivityState, backupCheckResult: backupCheckResult,
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
+    objectivesCheckResult: objectivesCheckResult,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
