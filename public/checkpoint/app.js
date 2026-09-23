@@ -3023,6 +3023,46 @@ function showModal(opts) {
     catch (e) { return false; }
   }
 
+  /* Every OTHER template's own "Who is responsible" table, merged into
+     one register — the entire content of the 'roles-responsibilities'
+     document (see its comment in templates.js). Reads each source
+     template's EFFECTIVE roles (via effectivePolicyContent(), so a
+     practitioner's own edit to some other policy's roles table is
+     reflected here too, not just the shipped default), deduplicates by
+     role name, and folds distinct responsibility text together with the
+     documents it came from — an auditor asking "where does that come
+     from" gets an answer without leaving this document.
+
+     Limited to entitled frameworks, the same filter renderTemplatesPicker()
+     already applies to the generator's own dropdown — otherwise a client
+     licensed only for ISO 27001 would see this register padded with
+     roles from AI and privacy documents they were never entitled to
+     generate in the first place. */
+  function aggregateRolesAndResponsibilities() {
+    var entitled = entitledFrameworks();
+    var byRole = {};
+    var order = [];
+    (window.POLICY_TEMPLATES || []).forEach(function (t) {
+      if (t.id === 'roles-responsibilities') return;
+      if (!(t.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; })) return;
+      var content = effectivePolicyContent(t, t.title + '.html');
+      (content.roles || []).forEach(function (r) {
+        var name = r && r.role && String(r.role).trim();
+        if (!name) return;
+        var key = name.toLowerCase();
+        if (!byRole[key]) { byRole[key] = { role: name, texts: [], docs: [] }; order.push(key); }
+        var entry = byRole[key];
+        entry.docs.push(t.title);
+        var text = (r.responsibility || '').trim();
+        if (text && entry.texts.indexOf(text) === -1) entry.texts.push(text);
+      });
+    });
+    return order.map(function (key) {
+      var entry = byRole[key];
+      return { role: entry.role, responsibility: entry.texts.join(' • ') + ' (' + entry.docs.join(', ') + ')' };
+    });
+  }
+
   /* The content a document should actually be rendered from: the
      shipped template, with any saved edits for THIS document layered
      over it, and organisation-profile tokens resolved last. Every
@@ -3036,11 +3076,20 @@ function showModal(opts) {
      Engineering, Support") rather than raw {{businessUnits}} markup.
      Once they save that edit it is literal text and stops tracking
      the profile — which is the right default, because at that point
-     it is their wording, not the template's. */
+     it is their wording, not the template's.
+
+     'roles-responsibilities' is the one template whose own `roles`
+     field (templates.js: always []) is never what gets rendered —
+     aggregateRolesAndResponsibilities() replaces it here, before the
+     draft merge below, so a practitioner's own edit to THIS document
+     (if they've added or annotated a row by hand) still wins over the
+     freshly-computed aggregate, same precedence every other field
+     already has. */
   function effectivePolicyContent(t, docName) {
+    var base = t.id === 'roles-responsibilities' ? Object.assign({}, t, { roles: aggregateRolesAndResponsibilities() }) : t;
     var draft = docName && (S.policyDrafts || []).find(function (d) { return d.docName === docName; });
-    if (!draft || !draft.content) return applyOrgTokens(t);
-    var merged = Object.assign({}, t);
+    if (!draft || !draft.content) return applyOrgTokens(base);
+    var merged = Object.assign({}, base);
     EDITABLE_POLICY_FIELDS.forEach(function (k) {
       if (draft.content[k] !== undefined) merged[k] = draft.content[k];
     });

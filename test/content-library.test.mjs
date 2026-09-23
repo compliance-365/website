@@ -67,7 +67,7 @@ if (CONTENT_AVAILABLE) {
    fails this suite rather than silently joining the exemption. */
 const CLAUSE_DOCUMENTS = new Set([
   'isms-scope', 'risk-management-framework', 'infosec-objectives-metrics',
-  'aims-scope', 'ai-risk-framework', 'ai-objectives-metrics'
+  'aims-scope', 'ai-risk-framework', 'ai-objectives-metrics', 'roles-responsibilities'
 ]);
 
 describe('policy template library — shape', () => {

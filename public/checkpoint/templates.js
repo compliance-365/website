@@ -1584,6 +1584,53 @@ window.POLICY_TEMPLATES = [
     frameworks: ['iso27001', 'iso27701']
   },
   {
+    /* Unlike every other template here, this one's `roles` field below
+       is never actually rendered as-is — effectivePolicyContent() in
+       app.js special-cases this id and replaces it with a table
+       freshly assembled from every OTHER template's own "Who is
+       responsible" roles, deduplicated by role name. That is the
+       entire point of the document: Clause 5.3 asks who holds
+       authority across the whole ISMS, and every policy already
+       answers that for its own slice — nobody had put the answers in
+       one place. See aggregateRolesAndResponsibilities() in app.js.
+       The roles array below is real content in its own right (who is
+       accountable for THIS register, not for the ISMS at large) — it
+       is just never what actually renders. */
+    id: 'roles-responsibilities',
+    title: 'Roles & Responsibilities',
+    purpose: 'This document consolidates who is accountable for what across the information security management system into a single register. It is assembled automatically from the "Who is responsible" table of every generated policy, procedure and plan, so it reflects the current state of the policy set rather than a point-in-time write-up done once and left to go stale. It satisfies the ISO/IEC 27001 Clause 5.3 requirement that roles relevant to information security are assigned and communicated.',
+    scope: 'Every role named as responsible for something in any of this organisation’s generated policies, procedures and plans. A role appearing in more than one document is listed once here, with its responsibilities from each source combined.',
+    policyStatements: [
+      {
+        rule: 'This register is regenerated from the current roles table of every other policy, procedure and plan, rather than authored and maintained as its own separate document.',
+        because: 'A hand-maintained copy of information every other document already states drifts from those documents the first time one of them changes and this one does not.'
+      },
+      {
+        rule: 'A role named as responsible for something in more than one source document appears here once, with its responsibilities from each source combined and each source named.',
+        because: 'The same title doing different things in different documents is exactly what Clause 5.3 asks an organisation to be able to show, not hide behind one line per document.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Regenerates this register whenever a source policy\'s roles table changes, so it stays current, and raises it at management review if a role or responsibility looks wrong or missing.'
+      },
+      {
+        role: 'Document owners',
+        responsibility: 'Keep their own policy\'s "Who is responsible" table accurate — the source this register is built from, not something they maintain here directly.'
+      }
+    ],
+    exceptions: 'None — this register has no content of its own to except from; any exception belongs to the source policy the responsibility is drawn from.',
+    nonCompliance: 'A source policy\'s roles table left inaccurate after a role changes is a Clause 5.3 gap in that policy, surfaced here as soon as this register is next regenerated.',
+    relatedDocuments: [
+      'Information Security Policy',
+      'ISMS Scope Document'
+    ],
+    reviewCadence: 'Regenerate whenever a policy\'s roles table changes, so this register never drifts from the documents it is drawn from — at minimum, alongside the annual management review.',
+    controls: ['A.5.2'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'iso42001']
+  },
+  {
     id: 'ai-policy',
     title: 'AI Policy',
     purpose: 'This policy sets out the organisation’s commitment to developing, procuring and using artificial intelligence responsibly, and establishes the objectives, roles and controls used to govern AI across its life cycle. It is the top-level policy of the organisation’s AI management system (AIMS), consistent with ISO/IEC 42001. It is distinct from the AI Acceptable Use Policy, which governs how employees use AI tools day to day.',

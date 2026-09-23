@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.89.0',
+    date: '2026-09-23',
+    entries: [
+      'New "Roles & Responsibilities" document in the policy generator (ISO 27001 Clause 5.3) — assembled automatically from the "Who is responsible" table of every other generated policy, procedure and plan, deduplicated by role name with each responsibility traced back to its source document. Regenerating it always reflects the current state of the policy set, so it never drifts the way a hand-maintained copy would. Limited to the frameworks the tenant is actually entitled to, the same as the generator\'s own template picker.'
+    ]
+  },
+  {
     version: '1.88.0',
     date: '2026-09-23',
     entries: [
