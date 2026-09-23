@@ -12,6 +12,20 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.90.0',
+    date: '2026-09-23',
+    entries: [
+      'New "Management system clauses" register (Frameworks → Management system clauses) tracking ISO 27001 Clauses 4-9 — the management-system requirements themselves, as distinct from the Annex A controls in the Statement of Applicability. Status, owner, verification and linked evidence per clause, the same actions the SoA offers per control, deliberately without an Applicable toggle: unlike a control, a clause can never be excluded, which is why this is its own register rather than more rows in the SoA.'
+    ]
+  },
+  {
+    version: '1.89.0',
+    date: '2026-09-23',
+    entries: [
+      'New "Roles & Responsibilities" document in the policy generator (ISO 27001 Clause 5.3) — assembled automatically from the "Who is responsible" table of every other generated policy, procedure and plan, deduplicated by role name with each responsibility traced back to its source document. Regenerating it always reflects the current state of the policy set, so it never drifts the way a hand-maintained copy would. Limited to the frameworks the tenant is actually entitled to, the same as the generator\'s own template picker.'
+    ]
+  },
+  {
     version: '1.88.0',
     date: '2026-09-23',
     entries: [

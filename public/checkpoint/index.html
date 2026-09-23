@@ -354,6 +354,7 @@
         <summary class="nav-label">Frameworks</summary>
         <button class="nav-item" data-v="frameworks">Frameworks</button>
         <button class="nav-item" data-v="soa">Statement of Applicability <span class="n" id="nSoa"></span></button>
+        <button class="nav-item" data-v="clauses">Management system clauses <span class="n" id="nClauses"></span></button>
         <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
       </details>
       <!-- "Records" grew to seven items as document control, attestation
@@ -921,6 +922,14 @@
            renderSoaBulkBar(); hidden whenever nothing is selected. -->
       <div class="bulk-bar" id="soaBulkBar" role="region" aria-label="Bulk actions" hidden></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Applicable</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
+    </section>
+
+    <!-- MANAGEMENT SYSTEM CLAUSES -->
+    <section class="view" id="v-clauses">
+      <div class="vhead"><div class="rule"></div><h1>Management system clauses</h1><p>ISO 27001 Clauses 4-9 — the management-system requirements themselves, as distinct from the Annex A controls in the Statement of Applicability. Every clause here is mandatory: unlike a control, a clause can never be marked Not Applicable, which is why this is its own register rather than more rows in the SoA. Clause 10 (Improvement) is tracked through the Actions register's corrective-action fields instead.</p></div>
+      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="clauses">Export CSV</button></div>
+      <div class="grid kpis" id="clauseKpiRow" style="margin:0 0 16px"></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Clause</th><th scope="col">Title</th><th scope="col">Status</th><th scope="col">Owner</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="clauseRows"></tbody></table></div>
     </section>
 
     <!-- SHARED EVIDENCE -->
