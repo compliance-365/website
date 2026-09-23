@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.90.0',
+    date: '2026-09-23',
+    entries: [
+      'New "Management system clauses" register (Frameworks → Management system clauses) tracking ISO 27001 Clauses 4-9 — the management-system requirements themselves, as distinct from the Annex A controls in the Statement of Applicability. Status, owner, verification and linked evidence per clause, the same actions the SoA offers per control, deliberately without an Applicable toggle: unlike a control, a clause can never be excluded, which is why this is its own register rather than more rows in the SoA.'
+    ]
+  },
+  {
     version: '1.89.0',
     date: '2026-09-23',
     entries: [

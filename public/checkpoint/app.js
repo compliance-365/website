@@ -746,6 +746,7 @@ function showModal(opts) {
     'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'requestVendorQuestionnaireLink', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
+    'setClauseStatus', 'verifyClause', 'setClauseEvidence', 'setClauseOwner',
     /* Bulk equivalents of setSt/toggleApp — gated for the same reason
        the single-row versions are. The selection actions themselves
        (toggleSoaSel/soaSelectAllShown/clearSoaSel) are deliberately
@@ -993,6 +994,13 @@ function showModal(opts) {
         return S.controls.filter(function (c) { return S.entitlements && S.entitlements[c.fw]; }).map(function (c) {
           return [fwName(c.fw), c.id, c.t, c.app ? 'Yes' : 'No', c.app ? c.st : 'N/A', c.map, c.own, c.verified, c.verifiedBy, c.evidenceUrl, c.just];
         });
+      }
+    },
+    {
+      key: 'clauses', label: 'Management system clauses', filename: 'clauses.csv',
+      header: ['Clause', 'Title', 'Status', 'Owner', 'Verified date', 'Verified by', 'Evidence URL'],
+      rows: function () {
+        return (S.clauses || []).map(function (c) { return [c.id, c.t, c.st, c.own, c.verified, c.verifiedBy, c.evidenceUrl]; });
       }
     },
     {
@@ -3748,6 +3756,10 @@ function showModal(opts) {
     var sugg = totalPendingSuggestions();
     var sEl = document.getElementById('nSoa');
     if (sEl) { sEl.textContent = sugg || ''; sEl.style.display = sugg ? 'inline-block' : 'none'; }
+
+    var notStartedClauses = (S.clauses || []).filter(function (c) { return c.st === 'Not started'; }).length;
+    var clEl = document.getElementById('nClauses');
+    if (clEl) { clEl.textContent = notStartedClauses || ''; clEl.style.display = notStartedClauses ? 'inline-block' : 'none'; }
 
     var today = new Date().toISOString().slice(0, 10);
     var overdueAudits = (S.audits || []).filter(function (a) { return a.status === 'Planned' && a.planned && a.planned < today; }).length;
@@ -8852,6 +8864,60 @@ function showModal(opts) {
     }).join('');
     revealRows(wrap);
   }
+
+  /* controlReviewStatus() requires c.app (a control can be excluded, so
+     "due for review" only means anything once it's actually applicable)
+     — a clause never has that field because it can never be excluded,
+     so this supplies app:true just to satisfy the pure function's
+     contract without adding a meaningless Applicable field to the
+     clause's own persisted shape. */
+  function clauseReviewStatus(c) {
+    return window.CheckpointLib.controlReviewStatus(Object.assign({}, c, { app: true }), new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
+  }
+  function renderClausesDashboard() {
+    var el = document.getElementById('clauseKpiRow');
+    if (!el) return;
+    var clauses = S.clauses || [];
+    var implemented = clauses.filter(function (c) { return c.st === 'Implemented'; });
+    var notStarted = clauses.filter(function (c) { return c.st === 'Not started'; });
+    var overdue = implemented.filter(function (c) { return clauseReviewStatus(c).due; });
+    el.innerHTML =
+      kpiTile({ value: clauses.length, label: 'Clauses tracked',
+        sub: clauses.length ? 'ISO 27001 Clauses 4-9' : 'management-system requirements, not yet loaded' }) +
+      kpiTile({ value: implemented.length, label: 'Implemented', meter: { value: implemented.length, max: clauses.length } }) +
+      kpiTile({ value: notStarted.length, label: 'Not started', tone: 'fail',
+        meter: { value: notStarted.length, max: clauses.length },
+        sub: notStarted.length ? 'no evidence recorded yet' : 'every clause at least in progress' }) +
+      kpiTile({ value: overdue.length, label: 'Verification overdue', tone: 'warn',
+        meter: { value: overdue.length, max: clauses.length },
+        sub: overdue.length ? 'past the review cadence' : 'nothing overdue' });
+    runCountUps(el);
+  }
+  function renderClauses() {
+    var wrap = document.getElementById('clauseRows');
+    if (!wrap) return;
+    renderClausesDashboard();
+    var clauses = S.clauses || [];
+    if (!clauses.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 5, text: 'No management system clauses loaded yet.' });
+      return;
+    }
+    wrap.innerHTML = clauses.map(function (c) {
+      var rv = clauseReviewStatus(c);
+      var verifiedCell = c.st !== 'Implemented' ? '<span class="src">—</span>'
+        : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Re-verify</button>'
+        : '<button class="btn sm" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Verify now</button>';
+      var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
+        ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + esc(c.id) + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Edit</button>'
+        : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Link evidence</button>';
+      return '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + '</td>' +
+        '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + esc(c.id) + '" aria-label="Clause ' + esc(c.id) + ' status">' +
+        ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
+        '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + esc(c.id) + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
+        '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
   function renderCalendarDashboard() {
     var el = document.getElementById('calKpiRow');
     if (!el) return;
@@ -10530,6 +10596,7 @@ function showModal(opts) {
     threatintel: renderThreatIntel,
     frameworks: renderFrameworksAdmin,
     soa: renderSoa,
+    clauses: renderClauses,
     sharedevidence: renderSharedEvidence,
     documents: renderDocuments,
     attestations: renderAttestations,
@@ -13441,6 +13508,113 @@ function showModal(opts) {
       audit('Control owner changed', 'Control', key, prevOwn || '(none)', c.own || '(none)');
       renderSoa(); renderDash();
       refreshControlDrawer(key);
+    },
+
+    /* ===== Management system clauses (ISO 27001 Clauses 4-9) =====
+       Same four actions the Statement of Applicability offers per
+       control (status, owner, evidence, verify), deliberately without
+       an Applicable toggle or a justification field — see
+       window.CLAUSE_DEFS's comment for why neither has meaning for a
+       clause. Keyed on c.id alone (Code), not fw|id like Controls —
+       codes are unique across this single-framework list today, and if
+       a second framework's clauses are ever added, Code stays unique
+       within THIS list because Clause numbering itself doesn't repeat
+       the way a bare Annex A code could collide across frameworks. */
+    setClauseStatus: async function (key, v) {
+      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      if (!c) return;
+      if (v === 'Implemented' && !c.evidenceUrl) {
+        var proceed = await showModal({
+          title: 'No evidence linked',
+          message: 'Marking this Implemented with no linked evidence. Auditors typically require evidence for every implemented clause — continue anyway?',
+          confirmText: 'Mark Implemented'
+        });
+        if (!proceed) { renderClauses(); return; }
+      }
+      var prevSt = c.st;
+      c.st = v;
+      try { await Store.updateClause(c); } catch (e) { warn(e); }
+      audit('Clause status changed', 'Clause', key, prevSt, v);
+      renderClauses(); renderDash();
+    },
+
+    verifyClause: async function (key) {
+      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      if (!c) return;
+      if (!c.evidenceUrl) {
+        var proceed = await showModal({
+          title: 'No evidence linked',
+          message: 'This clause has no linked evidence. Auditors typically require evidence for every implemented requirement — verify anyway?',
+          confirmText: 'Verify anyway'
+        });
+        if (!proceed) return;
+      }
+      var attester = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+      var prevVerified = c.verified;
+      c.verified = new Date().toISOString().slice(0, 10);
+      c.verifiedBy = attester;
+      try { await Store.updateClause(c); } catch (e) { warn(e); }
+      toast('<b>Clause ' + esc(c.id) + '</b> verified by ' + esc(attester));
+      audit('Clause verified', 'Clause', key, prevVerified || 'never verified', c.verified + ' by ' + attester);
+      renderClauses();
+    },
+
+    setClauseEvidence: async function (key) {
+      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      if (!c) return;
+      var urlVals = await showModal({
+        title: 'Link evidence — Clause ' + c.id,
+        fields: [{ id: 'url', label: 'Evidence URL (SharePoint/OneDrive) — leave blank to clear', value: c.evidenceUrl || '', placeholder: 'https://…' }],
+        confirmText: 'Save',
+        validate: function (v) { return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://'; }
+      });
+      if (!urlVals) return;
+      var url = urlVals.url;
+      var prevUrl = c.evidenceUrl;
+      c.evidenceUrl = url;
+      var bumped = false;
+      if (url && c.st === 'Not started') {
+        var prevSt = c.st;
+        c.st = 'In progress';
+        audit('Clause status changed', 'Clause', key, prevSt, 'In progress (evidence linked)');
+        bumped = true;
+      }
+      try { await Store.updateClause(c); } catch (e) { warn(e); }
+      audit('Evidence link changed', 'Clause', key, prevUrl || '(none)', url || '(none)');
+      renderClauses();
+      if (bumped) { renderDash(); toast('<b>Clause ' + esc(c.id) + '</b> moved to In progress.'); }
+    },
+
+    setClauseOwner: async function (key) {
+      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      if (!c) return;
+      var vals = await showModal({
+        title: 'Clause owner — ' + c.id,
+        message: 'Who is accountable for this requirement being met and kept evidenced. Leave blank to clear.',
+        fields: [{ id: 'own', label: 'Owner', value: c.own || '', placeholder: 'e.g. S. Okafor' }],
+        confirmText: 'Save'
+      });
+      if (!vals) return;
+      var prevOwn = c.own;
+      c.own = vals.own.trim();
+      try { await Store.updateClause(c); } catch (e) { warn(e); }
+      audit('Clause owner changed', 'Clause', key, prevOwn || '(none)', c.own || '(none)');
+      renderClauses();
+    },
+
+    openClauseEvidenceDoc: async function (key) {
+      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;
+      if (Store.kind === 'demo') { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
+      var win = window.open('', '_blank');
+      if (win) win.opener = null;
+      try {
+        var downloadUrl = await Graph.fetchDownloadUrl(c.evidenceUrl);
+        if (win) win.location.href = downloadUrl; else window.open(downloadUrl, '_blank', 'noopener');
+      } catch (e) {
+        console.error(e);
+        if (win) win.location.href = c.evidenceUrl; else window.open(c.evidenceUrl, '_blank', 'noopener');
+      }
     },
 
     setSharedEvidenceControl: function (key) {

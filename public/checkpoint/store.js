@@ -211,6 +211,60 @@ function allControlSeeds() {
 }
 window.allControlSeeds = allControlSeeds;
 
+/* ISO/IEC 27001:2022 Clauses 4-9 — the management-system requirements
+   themselves, as distinct from the Annex A controls above. Every one
+   of these is mandatory: there is no "Not Applicable" for a clause the
+   way there is for a control (ISO 27001 Clause 6.1.3(d) only permits
+   excluding an ANNEX A control, never a clause), which is exactly why
+   these live in their own list rather than as extra rows in Controls —
+   mixing them into the Statement of Applicability would give every one
+   of them a meaningless Applicable toggle and break the toggle's own
+   meaning for the controls around it. Clause 10 (Improvement) is
+   deliberately not included: nonconformities and corrective action are
+   already evidenced end-to-end by the Actions register's CAPA fields
+   (see capaStatus() in lib.js), so a Clause 10 row here would just
+   duplicate that, not close a gap.
+
+   Sub-clause granularity throughout (6.1.1/6.1.2/6.1.3, 7.5.1/7.5.2/
+   7.5.3) rather than one row per top-level clause — an auditor tests
+   against the sub-clause, and a single "Clause 6" row could show
+   Implemented on the strength of risk assessment alone while risk
+   TREATMENT (6.1.3) had nothing behind it.
+
+   Framework is included (rather than assumed) even though only
+   'iso27001' seeds today: ISO 27701 extends 27001's own clauses rather
+   than defining new ones (so one list already serves both), but ISO
+   42001 is a separate management system with its own parallel clause
+   structure — this column is what lets that be added later as more
+   rows, not a rewrite. */
+window.CLAUSE_DEFS = [
+  { code: '4.1', t: 'Understanding the organization and its context', fw: 'iso27001' },
+  { code: '4.2', t: 'Understanding the needs and expectations of interested parties', fw: 'iso27001' },
+  { code: '4.3', t: 'Determining the scope of the information security management system', fw: 'iso27001' },
+  { code: '4.4', t: 'Information security management system', fw: 'iso27001' },
+  { code: '5.1', t: 'Leadership and commitment', fw: 'iso27001' },
+  { code: '5.2', t: 'Policy', fw: 'iso27001' },
+  { code: '5.3', t: 'Organizational roles, responsibilities and authorities', fw: 'iso27001' },
+  { code: '6.1.1', t: 'Actions to address risks and opportunities — general', fw: 'iso27001' },
+  { code: '6.1.2', t: 'Information security risk assessment', fw: 'iso27001' },
+  { code: '6.1.3', t: 'Information security risk treatment', fw: 'iso27001' },
+  { code: '6.2', t: 'Information security objectives and planning to achieve them', fw: 'iso27001' },
+  { code: '6.3', t: 'Planning of changes', fw: 'iso27001' },
+  { code: '7.1', t: 'Resources', fw: 'iso27001' },
+  { code: '7.2', t: 'Competence', fw: 'iso27001' },
+  { code: '7.3', t: 'Awareness', fw: 'iso27001' },
+  { code: '7.4', t: 'Communication', fw: 'iso27001' },
+  { code: '7.5.1', t: 'Documented information — general', fw: 'iso27001' },
+  { code: '7.5.2', t: 'Creating and updating documented information', fw: 'iso27001' },
+  { code: '7.5.3', t: 'Control of documented information', fw: 'iso27001' },
+  { code: '8.1', t: 'Operational planning and control', fw: 'iso27001' },
+  { code: '8.2', t: 'Information security risk assessment', fw: 'iso27001' },
+  { code: '8.3', t: 'Information security risk treatment', fw: 'iso27001' },
+  { code: '9.1', t: 'Monitoring, measurement, analysis and evaluation', fw: 'iso27001' },
+  { code: '9.2', t: 'Internal audit', fw: 'iso27001' },
+  { code: '9.3', t: 'Management review', fw: 'iso27001' }
+];
+
 /* A small, deliberately-partial illustrative slice (~10 real controls
    each, out of each framework's full 22-51) for the 6 premium
    frameworks, used ONLY to seed demo mode's example tenant — never the
@@ -1432,6 +1486,19 @@ window.DemoStore = (function () {
           return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
         });
       })(),
+      /* Same demo-status pattern as controls above — a mix so the
+         summary tiles show something real rather than all-green or
+         all-empty — but its own index, not shared with i27001 above:
+         Clause 5.1 landing on the same modulus phase as an unrelated
+         Annex A control is a coincidence worth not depending on. */
+      clauses: (window.CLAUSE_DEFS || []).map(function (c, i) {
+        var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
+        var st = i % 5 === 0 ? 'Not started' : i % 4 === 0 ? 'In progress' : 'Implemented';
+        var verified = st === 'Implemented' ? daysFrom(i % 3 === 0 ? -100 : -20) : '';
+        var evidenceUrl = st === 'Implemented' && i % 3 === 0 ? 'https://meridianhealthsaas.sharepoint.com/sites/compliance/Evidence/Clause-' + c.code + '.pdf' : '';
+        var verifiedBy = st === 'Implemented' ? owners[i % owners.length] : '';
+        return { id: c.code, fw: c.fw, t: c.t, st: st, own: st === 'Not started' ? '' : owners[i % owners.length], verified: verified, evidenceUrl: evidenceUrl, verifiedBy: verifiedBy };
+      }),
       /* Every framework is switched ON in demo mode. The demo exists to
          show how each module works, and the control sets behind them are
          already the deliberately-partial DEMO_FRAMEWORK_SEEDS slices
@@ -1674,6 +1741,7 @@ window.DemoStore = (function () {
        audit log already relies on. */
     addActionUpdate: async function (u) { S.actionUpdates.push(u); persist(); },
     updateControl: async function () { persist(); },
+    updateClause: async function () { persist(); },
     addScan: async function (sc) { S.scans.push(sc); persist(); },
     saveScanState: async function () { persist(); },
     acknowledgeAlert: async function (a) { a.ack = true; persist(); },
@@ -1941,6 +2009,16 @@ window.SpStore = (function () {
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
       { name: 'Owner', text: {} }, { name: 'MapsTo', text: {} }, { name: 'Justification', text: { allowMultipleLines: true } },
       { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} }, { name: 'VerifiedBy', text: {} }
+    ],
+    /* Deliberately its own list, not more rows in Controls — see
+       window.CLAUSE_DEFS's comment for why a clause and an Annex A
+       control cannot share a schema: no Applicable, no MapsTo,
+       no Justification, because none of those have meaning for a
+       requirement that can never be excluded. */
+    Clauses: [
+      { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Status', text: {} },
+      { name: 'Owner', text: {} }, { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} },
+      { name: 'VerifiedBy', text: {} }
     ],
     Scans: [
       { name: 'ScanDate', text: {} }, { name: 'Score', number: {} }, { name: 'Detail', text: { allowMultipleLines: true } }
@@ -2322,6 +2400,7 @@ window.SpStore = (function () {
       });
       lists[k] = created.id;
       if (k === 'Controls') await seedControls(onStatus);
+      if (k === 'Clauses') await seedClauses(onStatus);
       if (k === 'Entitlements') await seedEntitlements(onStatus);
       if (k === 'Settings') await seedSettings(onStatus);
     }
@@ -2329,6 +2408,9 @@ window.SpStore = (function () {
        the registry has a Controls list missing that framework's rows —
        add whatever's missing rather than requiring re-provisioning. */
     await reconcileControls(onStatus);
+    /* Same self-heal, for a tenant provisioned before window.CLAUSE_DEFS
+       gained a clause (or before the Clauses list existed at all). */
+    await reconcileClauses(onStatus);
 
     /* self-heal: a tenant provisioned before a COLUMN was added to a
        list's schema (e.g. the Risks acceptance sign-off fields) has that
@@ -2565,6 +2647,38 @@ window.SpStore = (function () {
     }
   }
 
+  async function seedClauses(onStatus) {
+    if (onStatus) onStatus('Seeding management system clauses…');
+    var defs = window.CLAUSE_DEFS || [];
+    for (var i = 0; i < defs.length; i++) {
+      var c = defs[i];
+      await addItem('Clauses', { Title: c.t, Code: c.code, Framework: c.fw, Status: 'Not started', Owner: '', LastVerified: '', EvidenceUrl: '', VerifiedBy: '' });
+    }
+  }
+
+  /* Same self-heal shape as reconcileControls() above, for a tenant
+     provisioned before window.CLAUSE_DEFS existed or before it gained a
+     clause. Diffs against Code+Framework, same key shape Controls
+     already uses, even though Framework is 'iso27001' for every row
+     today — the day a second framework's clauses are added, this
+     already disambiguates correctly rather than needing a second pass. */
+  async function reconcileClauses(onStatus) {
+    var have = {};
+    (await items('Clauses')).forEach(function (i) {
+      var f = i.fields;
+      have[(f.Framework || 'iso27001') + '|' + f.Code] = true;
+    });
+    var missing = (window.CLAUSE_DEFS || []).filter(function (c) { return !have[c.fw + '|' + c.code]; });
+    if (!missing.length) return 0;
+    if (onStatus) onStatus('Adding ' + missing.length + ' new management system clause(s)…');
+    for (var i = 0; i < missing.length; i++) {
+      var c = missing[i];
+      var id = await addItem('Clauses', { Title: c.t, Code: c.code, Framework: c.fw, Status: 'Not started', Owner: '', LastVerified: '', EvidenceUrl: '', VerifiedBy: '' });
+      if (S && S.clauses) S.clauses.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, st: 'Not started', own: '', verified: '', evidenceUrl: '', verifiedBy: '' });
+    }
+    return missing.length;
+  }
+
   var entRowId = {}; /* fw -> SharePoint item id, for setEntitlement patches */
   async function seedEntitlements(onStatus) {
     if (onStatus) onStatus('Setting up framework entitlements…');
@@ -2702,6 +2816,7 @@ window.SpStore = (function () {
       var actItems = await items('Actions');
       var actUpdItems = await items('ActionUpdates');
       var ctlItems = await items('Controls');
+      var clauseItems = await items('Clauses');
       var scanItems = await items('Scans');
       var actvItems = await items('Activity');
       var entItems = await items('Entitlements');
@@ -2743,6 +2858,10 @@ window.SpStore = (function () {
         controls: ctlItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
+        }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
+        clauses: clauseItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, st: f.Status || 'Not started', own: f.Owner || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
@@ -2987,6 +3106,9 @@ window.SpStore = (function () {
     },
     updateControl: async function (c) {
       await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
+    },
+    updateClause: async function (c) {
+      await patchItem('Clauses', c._sp, { Status: c.st, Owner: c.own, LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
     },
     addScan: async function (sc) {
       sc._sp = await addItem('Scans', { Title: 'Scan ' + sc.date, ScanDate: sc.date, Score: sc.score, Detail: sc.detail || '' });
