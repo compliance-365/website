@@ -921,6 +921,51 @@ describe('buildPolicyDocx()', () => {
       assert.equal(new Set(borderColors).size, 1, layout + ': document-control and roles tables should share one border colour');
     });
   });
+
+  describe('leadershipCommitment (the CEO foreword)', () => {
+    var tWithLeadership = Object.assign({}, t, { leadershipCommitment: 'We commit the resources this needs.\n\nWe expect to be told when something is wrong.' });
+
+    test('renders a heading and both paragraphs, ahead of "What this means for you"', () => {
+      var doc = docxParts(buildPolicyDocx(tWithLeadership, opts))['word/document.xml'];
+      assert.match(doc, /A message from leadership/);
+      assert.match(doc, /We commit the resources this needs\./);
+      assert.match(doc, /We expect to be told when something is wrong\./);
+      var leadershipAt = doc.indexOf('A message from leadership');
+      var whyItMattersAt = doc.indexOf('What this means for you');
+      assert.ok(leadershipAt < whyItMattersAt, 'leadership foreword renders before the staff-facing section');
+    });
+
+    test('a document with no leadershipCommitment renders no such section, on any template', () => {
+      var doc = docxParts(buildPolicyDocx(t, opts))['word/document.xml'];
+      assert.doesNotMatch(doc, /A message from leadership/);
+    });
+
+    test('an approved document signs the foreword with the SAME approvedBy/date the document-control table shows — no second field to keep in sync', () => {
+      var doc = docxParts(buildPolicyDocx(tWithLeadership, opts))['word/document.xml'];
+      var afterLeadership = doc.slice(doc.indexOf('A message from leadership'), doc.indexOf('A message from leadership') + 900);
+      assert.match(afterLeadership, new RegExp(opts.approvedBy));
+      assert.match(afterLeadership, new RegExp(opts.generatedDate));
+    });
+
+    test('an unapproved draft shows the foreword text but signs nothing — there is nothing true to sign yet', () => {
+      var draftOpts = Object.assign({}, opts, { approved: false, approvedBy: '', banner: undefined });
+      var doc = docxParts(buildPolicyDocx(tWithLeadership, draftOpts))['word/document.xml'];
+      assert.match(doc, /We commit the resources this needs\./);
+      // The document-control table still names the owner elsewhere in the
+      // doc — only the foreword's OWN signature block must stay empty.
+      var leadershipAt = doc.indexOf('A message from leadership');
+      var afterLeadership = doc.slice(leadershipAt, leadershipAt + 900);
+      assert.doesNotMatch(afterLeadership, /Jane Smith/);
+    });
+
+    test('all three layouts render the foreword using the same three-way treatment whyItMatters already uses', () => {
+      ['standard', 'formal', 'minimal'].forEach(function (layout) {
+        var doc = docxParts(buildPolicyDocx(tWithLeadership, Object.assign({}, opts, { layout: layout })))['word/document.xml'];
+        assert.match(doc, /A message from leadership/, layout);
+        assert.match(doc, /We commit the resources this needs\./, layout);
+      });
+    });
+  });
 });
 
 describe('canonicalJson()', () => {

@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.87.0',
+    date: '2026-09-23',
+    entries: [
+      'Policy documents can now carry a leadership-commitment foreword -- a first-person statement from whoever leads the organisation, rendered as its own "A message from leadership" section right after the document-control block, signed with the SAME Approved by / approval date the document already captures once it\'s approved (no separate signature field to keep in sync). Directly addresses ISO 27001 Clause 5.1\'s expectation that top management demonstrate commitment. Off by default and editable per document -- the Information Security Policy ships with one, and any policy can add its own via the document editor\'s new "A message from leadership" field.'
+    ]
+  },
+  {
     version: '1.86.0',
     date: '2026-09-21',
     entries: [

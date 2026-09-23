@@ -2936,7 +2936,7 @@ function showModal(opts) {
      frameworks it serves — stays owned by the shipped template, because
      those are what the SoA and the register key off and a hand-edited
      control code would silently break the mapping. */
-  var EDITABLE_POLICY_FIELDS = ['purpose', 'scope', 'whyItMatters', 'inPractice',
+  var EDITABLE_POLICY_FIELDS = ['purpose', 'scope', 'leadershipCommitment', 'whyItMatters', 'inPractice',
     'policyStatements', 'roles', 'exceptions', 'nonCompliance', 'relatedDocuments', 'reviewCadence'];
 
   /* ================= Organisation profile tokens =================
@@ -2984,7 +2984,7 @@ function showModal(opts) {
   function applyOrgTokens(t) {
     if (!t) return t;
     var out = Object.assign({}, t);
-    ['purpose', 'scope', 'whyItMatters', 'exceptions', 'nonCompliance', 'reviewCadence'].forEach(function (k) {
+    ['purpose', 'scope', 'leadershipCommitment', 'whyItMatters', 'exceptions', 'nonCompliance', 'reviewCadence'].forEach(function (k) {
       if (typeof out[k] === 'string') out[k] = resolveOrgTokens(out[k]);
     });
     ['inPractice', 'relatedDocuments'].forEach(function (k) {
@@ -3255,6 +3255,26 @@ function showModal(opts) {
         t.relatedDocuments.map(function (d) { return '<li><span class="prac-dot"></span>' + esc(d) + '</li>'; }).join('') + '</ul>';
     }
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
+    /* A leadership-authored foreword, distinct from the staff-facing
+       "What this means for you" below it — rendered right after the
+       document-control table so it's the first thing read, the way a
+       foreword is. Deliberately has no signature field of its own:
+       when the person this is written for (a CEO) is also the person
+       who approves the document, "Approved by"/the approval date
+       already ARE their signature — re-showing those two fields here,
+       under a paragraph addressed to the reader in the first person,
+       is what turns a document-control row into something that reads
+       as personally signed, with no second name/date field to keep in
+       sync. No signature line on an unapproved draft — there's nothing
+       true to sign yet. */
+    var leadershipHtml = t.leadershipCommitment
+      ? sectionHeading('policy', 'A message from leadership') +
+        '<div class="callout">' + t.leadershipCommitment.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('') +
+        (opts.approved && opts.approvedBy
+          ? '<p class="intro" style="margin:10px 0 0;font-weight:600">' + esc(opts.approvedBy) + '<br><span style="font-weight:400;color:#6b675e;font-size:11px">' + esc(opts.generatedDate) + '</span></p>'
+          : '') +
+        '</div>'
+      : '';
     /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
        controlled document has to identify itself (title, date,
        version, author) on its own face, not just in a register
@@ -3278,6 +3298,7 @@ function showModal(opts) {
     var body = '<table class="dctl"><tbody>' + dctlRows.map(function (r) {
       return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
     }).join('') + '</tbody></table>' +
+      leadershipHtml +
       aiNoteHtml +
       /* Order is the whole design: the reader-facing sections come
          first so someone who stops a third of the way down has still
@@ -7746,6 +7767,7 @@ function showModal(opts) {
         '<p>Editing the document\'s content, not its HTML. The file is re-rendered from what you save here, so your changes survive approval, a version bump, a branding change and any future improvement to the underlying template. Title, mapped controls and frameworks stay owned by the template, because the register and the Statement of Applicability key off them.</p></div>' +
       (draft ? '<div class="card" style="margin-bottom:18px;border-left:3px solid var(--gold-light)"><div class="d-kv"><span>Last edited</span><b>' + esc(draft.updatedBy || 'unknown') + ' · ' + fmtDocDate(draft.updatedDate) + '</b></div></div>' : '') +
       '<div class="card">' +
+        editorField('peLeadership', 'A message from leadership', 'A first-person foreword from whoever leads the organisation — ISO 27001 Clause 5.1 asks leadership to demonstrate commitment, and this is what a CEO\'s own words look like on the page. Rendered right after the document-control block, signed with the document\'s own Approved by/approval date once approved. Separate paragraphs with a blank line. Leave empty to omit the section.', c.leadershipCommitment, 5) +
         editorField('peWhy', 'What this means for you', 'The staff-facing opener. Second person. Separate paragraphs with a blank line. Leave empty to omit the section.', c.whyItMatters, 7) +
         editorField('pePractice', 'In practice', 'One concrete situation per line. These are the part people actually remember.', linesToList(c.inPractice).join('\n'), 5) +
         editorField('pePurpose', 'Purpose', 'Why this document exists. Declarative, not second person.', c.purpose, 3) +
@@ -7772,6 +7794,7 @@ function showModal(opts) {
   function readPolicyEditor() {
     function v(id) { return (document.getElementById(id).value || '').trim(); }
     return {
+      leadershipCommitment: v('peLeadership'),
       whyItMatters: v('peWhy'),
       inPractice: linesToList(v('pePractice')),
       purpose: v('pePurpose'),
