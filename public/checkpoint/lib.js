@@ -6314,6 +6314,66 @@
     };
   }
 
+  /* What Checkpoint has done for a client over a period, from the audit
+     log and the registers, with a conservative estimate of the hours it
+     replaced. Every assumption is listed next to its line, so the
+     estimate can be checked and argued with rather than taken on trust.
+     Posture scans count once per week at most: a tenant scanned daily
+     has not had seven manual reviews' worth of work done. */
+  var VALUE_HOURS = {
+    scanWeek: 2, document: 3, statusUpdate: 0.25, finding: 0.5, questionnaireAnswer: 0.1,
+    vendorQuestionnaire: 1, report: 2, workpack: 4, surveillance: 3
+  };
+  function isoWeekKey(iso) {
+    var d = new Date(String(iso).slice(0, 10) + 'T00:00:00Z');
+    if (isNaN(d)) return '';
+    var day = (d.getUTCDay() + 6) % 7;
+    d.setUTCDate(d.getUTCDate() - day + 3);
+    var firstThu = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    return d.getUTCFullYear() + '-W' + (1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7));
+  }
+  function valueDelivered(data, since) {
+    var d = data || {}, from = String(since || '');
+    var inPeriod = function (date) { return !from || String(date || '').slice(0, 10) >= from; };
+    var log = (d.auditLog || []).filter(function (e) { return e && inPeriod(e.entryDateTime); });
+    var count = function (action) { return log.filter(function (e) { return e.action === action; }).length; };
+    var leadingNumber = function (e) { var m = /^(\d+)/.exec(String(e.after || '')); return m ? parseInt(m[1], 10) : 0; };
+
+    var scans = (d.scans || []).filter(function (x) { return x && inPeriod(x.date); });
+    var weeks = {};
+    scans.forEach(function (x) { var k = isoWeekKey(x.date); if (k) weeks[k] = true; });
+    var checks = 0;
+    scans.forEach(function (x) {
+      try { var r = JSON.parse(x.detail || '{}').results; checks += Array.isArray(r) ? r.length : (r ? Object.keys(r).length : 0); } catch (e) { /* unparseable detail counts no checks */ }
+    });
+    var scanWeeks = Object.keys(weeks).length;
+
+    var automatedStatus = log.filter(function (e) {
+      return (e.action === 'Control status changed' || e.action === 'Clause status changed') &&
+        /\((automated|scan-suggested|policy approved|policy generated|evidence linked|cross-framework)/.test(String(e.after || ''));
+    }).length;
+    /* "Open — 3 action(s) created": the risk and actions one approval
+       of a scan finding writes. */
+    var findings = count('Risk approved from scan finding');
+    var qAnswers = log.filter(function (e) { return e.action === 'Questionnaire assistant run' || e.action === 'Questionnaire answers drafted with AI'; })
+      .reduce(function (n, e) { return n + leadingNumber(e); }, 0);
+    var reports = log.filter(function (e) { return e.action === 'Report generated'; });
+    var reportHours = reports.reduce(function (h, e) { return h + (VALUE_HOURS[e.targetId] || VALUE_HOURS.report); }, 0);
+
+    var items = [
+      { key: 'scans', label: 'Microsoft 365 posture scans', count: scans.length, detail: checks + ' checks run, in ' + scanWeeks + ' week' + (scanWeeks === 1 ? '' : 's'), hours: scanWeeks * VALUE_HOURS.scanWeek, basis: VALUE_HOURS.scanWeek + ' hours per week scanned, for a manual configuration review' },
+      { key: 'documents', label: 'Policies and procedures drafted', count: count('Policy template generated'), hours: count('Policy template generated') * VALUE_HOURS.document, basis: VALUE_HOURS.document + ' hours each to draft from scratch' },
+      { key: 'status', label: 'Control and clause updates made automatically', count: automatedStatus, hours: automatedStatus * VALUE_HOURS.statusUpdate, basis: '15 minutes each to find the evidence and update the register' },
+      { key: 'findings', label: 'Scan findings turned into risks and actions', count: findings, hours: findings * VALUE_HOURS.finding, basis: '30 minutes each to investigate and write up' },
+      { key: 'questionnaires', label: 'Security questionnaire answers drafted', count: qAnswers, hours: qAnswers * VALUE_HOURS.questionnaireAnswer, basis: '6 minutes per answer' },
+      { key: 'vendors', label: 'Supplier questionnaires sent and recorded', count: count('Vendor questionnaire sent') + count('Vendor questionnaire answers recorded'), hours: (count('Vendor questionnaire sent') + count('Vendor questionnaire answers recorded')) * VALUE_HOURS.vendorQuestionnaire, basis: '1 hour each' },
+      { key: 'reports', label: 'Reports and audit packs generated', count: reports.length, hours: reportHours, basis: '2 hours per report; 3 for a pre-audit pack, 4 for an internal audit workpack' }
+    ].filter(function (i) { return i.count > 0; });
+    items.forEach(function (i) { i.hours = Math.round(i.hours * 10) / 10; });
+    var hours = Math.round(items.reduce(function (h, i) { return h + i.hours; }, 0));
+    return { items: items, hours: hours, since: from };
+  }
+
   /* A three-year internal audit programme that covers everything before
      recertification: the management-system clauses every year (the
      Internal Audit Procedure template commits to that), and one or two
@@ -6405,6 +6465,7 @@
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS,
     buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft,
     clauseUpdatesForDocument: clauseUpdatesForDocument,
+    valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,

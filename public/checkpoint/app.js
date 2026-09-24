@@ -4541,6 +4541,31 @@ function showModal(opts) {
 
   /* Dashboard: once a management system is certified, what matters is
      the next certification body audit — shown above everything else. */
+  /* What Checkpoint did for this client in the last 12 months, with the
+     hours it replaced (CheckpointLib.valueDelivered). The assumptions
+     sit under the total so the number can be checked. */
+  function valueSummary() {
+    return window.CheckpointLib.valueDelivered({ scans: S.scans || [], auditLog: S.auditLog || [] }, daysFrom(-365));
+  }
+  function renderValueCard() {
+    var el = document.getElementById('valueCard');
+    if (!el) return;
+    var v = valueSummary();
+    if (!v.items.length) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">' +
+        '<div><h3 style="margin-bottom:4px">What Checkpoint did in the last 12 months</h3>' +
+        '<p style="margin:0;color:var(--paper-dim);font-size:13px">About <b style="color:var(--paper)">' + v.hours + ' hour' + (v.hours === 1 ? '' : 's') + '</b> of compliance work, estimated conservatively.</p></div>' +
+        '<button class="btn ghost sm" data-action="App.copyValueSummary">Copy summary</button>' +
+      '</div>' +
+      '<table class="tbl" style="margin-top:10px"><thead><tr><th>Work</th><th>Count</th><th>Hours</th></tr></thead><tbody>' +
+      v.items.map(function (i) { return '<tr><td>' + esc(i.label) + (i.detail ? '<div class="src">' + esc(i.detail) + '</div>' : '') + '</td><td>' + i.count + '</td><td>' + i.hours + '</td></tr>'; }).join('') +
+      '</tbody></table>' +
+      '<details style="margin-top:8px"><summary class="src" style="cursor:pointer">How this is estimated</summary><ul class="src" style="margin:6px 0 0 18px;line-height:1.7">' +
+      v.items.map(function (i) { return '<li>' + esc(i.label) + ': ' + esc(i.basis) + '.</li>'; }).join('') +
+      '<li>Counted from this tenant\'s audit log and scan history. Scans count at most once a week, and only automated register updates count, not manual edits.</li></ul></details>';
+  }
+
   function renderCertDashCard() {
     var el = document.getElementById('certDashCard');
     if (!el) return;
@@ -4822,6 +4847,7 @@ function showModal(opts) {
 
   function renderDash() {
     renderCertDashCard();
+    renderValueCard();
     renderGettingStarted();
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
     var odActs = S.actions.filter(function (a) { return overdueDays(a) > 0; });
@@ -16483,6 +16509,15 @@ function showModal(opts) {
       window._workpackAudit = id;
       window._soaFw = a.fw;
       App.report('workpack');
+    },
+
+    copyValueSummary: async function () {
+      var v = valueSummary();
+      var text = 'Checkpoint in the last 12 months (' + clientDisplayLabel() + '): about ' + v.hours + ' hours of compliance work.\n' +
+        v.items.map(function (i) { return '- ' + i.label + ': ' + i.count + (i.detail ? ' (' + i.detail + ')' : '') + ', about ' + i.hours + ' hours'; }).join('\n') +
+        '\nEstimated from the audit log and scan history: ' + v.items.map(function (i) { return i.basis; }).join('; ') + '.';
+      try { await navigator.clipboard.writeText(text); toast('Summary copied'); }
+      catch (e) { await showModal({ title: 'Value summary', message: 'Copy this text:', fields: [{ id: 't', label: 'Summary', type: 'textarea', value: text }], confirmText: 'Done' }); }
     },
 
     certPack: function (fw) {
