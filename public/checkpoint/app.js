@@ -3838,6 +3838,71 @@ function showModal(opts) {
   }
   function warn(e) { console.error(e); toastError('<b>Sync issue:</b> ' + esc(e.message || e)); reportError(e, 'warn'); }
 
+  /* ── Unsaved changes: no write fails silently ─────────────────────
+     Most register writes in this file follow `try { await
+     Store.updateX(...) } catch (e) { warn(e); }` (116 of them), or fire
+     and forget with `.catch(warn)`. warn() alone shows a 3.4-second
+     toast, after which the screen keeps showing the edit as saved while
+     SharePoint never got it — the edit silently vanishes on the next
+     reload. For a tool whose records are audit evidence, that is a
+     credibility defect, not a cosmetic one.
+
+     Rather than rewrite every call site, every WRITE method on the
+     store is wrapped once, here (CheckpointLib.createWriteGuard() in lib.js):
+     1. A transient failure (network, throttling, 5xx) is retried once
+        after a short pause — on top of graph.js's own 429/503/504
+        backoff, which covers only the Graph response itself.
+     2. A write that still fails is queued as an unsaved change, keyed by
+        method and record, so a second failed edit to the same record
+        replaces the first rather than stacking. The error is re-thrown,
+        so every existing catch still runs exactly as before.
+     3. While anything is queued, a standing banner says so, with Retry
+        — never a toast that vanishes. Retry re-sends each record's
+        CURRENT in-memory state, which is what the screen shows, so a
+        successful retry makes SharePoint match what the user saw.
+     4. The queue retries itself when the browser comes back online and
+        once a minute, and leaving the page while it is non-empty asks
+        for confirmation.
+     A write that later succeeds (by retry, or because the same record
+     was saved again) clears its queue entry. */
+  var STORE_WRITE_METHODS = [
+    'addRisk', 'updateRisk', 'deleteRisk', 'addAction', 'updateAction', 'deleteAction', 'addActionUpdate',
+    'updateControl', 'updateClause', 'addScan', 'saveScanState', 'acknowledgeAlert', 'addVendor', 'updateVendor',
+    'addAiSystem', 'updateAiSystem', 'setCheckDisposition', 'clearCheckDisposition', 'setEntitlement', 'setSetting',
+    'updateDocumentMeta', 'addAttestations', 'updateAttestation', 'addTrainingAssignments', 'updateTrainingRecord',
+    'addAudit', 'updateAudit', 'addIncident', 'updateIncident', 'addReview', 'addObjective', 'updateObjective',
+    'addCalendarItem', 'updateCalendarItem'
+  ];
+  var WRITE_GUARD = window.CheckpointLib.createWriteGuard({
+    methods: STORE_WRITE_METHODS,
+    onChange: function () { renderUnsavedBanner(); }
+  });
+  WRITE_GUARD.wrap(window.SpStore);
+  WRITE_GUARD.wrap(window.DemoStore);
+
+  function unsavedCount() { return WRITE_GUARD.count(); }
+  function renderUnsavedBanner() {
+    var el = document.getElementById('saveFailBanner');
+    if (!el) return;
+    var items = WRITE_GUARD.pending();
+    if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    var latest = items[items.length - 1];
+    el.style.display = 'block';
+    el.innerHTML = '<b>' + items.length + ' change' + (items.length > 1 ? 's have' : ' has') + ' not saved to SharePoint.</b> ' +
+      'What you see on screen is not yet stored in the tenant, and would be lost on reload. ' +
+      'Latest: ' + esc(latest.label) + ' — ' + esc(latest.error) + '. Checkpoint retries automatically every minute and when the connection returns. ' +
+      '<button class="btn ghost sm" data-action="App.retryUnsaved" style="margin-left:6px">Retry now</button>' +
+      '<button class="lnk src" data-action="App.showUnsaved" style="margin-left:8px">Details</button>';
+  }
+  function retryUnsaved() { return WRITE_GUARD.retryAll(); }
+  window.addEventListener('online', function () { if (unsavedCount()) retryUnsaved(); });
+  setInterval(function () { if (unsavedCount()) retryUnsaved(); }, 60000);
+  window.addEventListener('beforeunload', function (ev) {
+    if (!unsavedCount()) return;
+    ev.preventDefault();
+    ev.returnValue = '';
+  });
+
   /* ── Segregation of duties (ISO 27001 A.5.3) ──────────────────────
      Who originated a record is not stored on the record itself; it is
      in the audit log, which is exactly what makes it trustworthy —
@@ -4078,24 +4143,60 @@ function showModal(opts) {
      window._docs may not be loaded yet on a cold Dashboard render
      (loadDocumentRegisterInBackground() is async) — the document step
      just reads as not-done until it arrives, then this re-renders. */
-  function gettingStartedSteps() {
-    var entitled = entitledFrameworks();
-    var anyControlImplemented = entitled.some(function (fw) {
-      return frameworkAppRows(fw).some(function (c) { return c.st === 'Implemented'; });
-    });
-    var anyDocApproved = (window._docs || []).some(function (d) { return docStatusOf(d) === 'Approved'; });
-    var steps = [
-      { label: 'Run your first posture scan', why: 'Everything else in Checkpoint is measured against this — controls, risks and readiness all start from a scan.', done: (S.scans || []).length > 0, view: 'scan', cta: 'Run a scan' },
-      { label: 'Add or approve your first risk', why: 'Scan findings propose risks for review — approve one, or add your own, to start the register.', done: (S.risks || []).length > 0, view: 'risks', cta: 'Open Risk register' },
-      { label: 'Mark your first control Implemented', why: 'The Statement of Applicability is what a certification audit is actually assessed against.', done: anyControlImplemented, view: 'soa', cta: 'Open Statement of Applicability' },
-      { label: 'Approve your first policy document', why: 'A controlled document needs an owner and an approval before it counts as evidence.', done: anyDocApproved, view: 'documents', cta: 'Open Documents' }
-    ];
-    if (S.entitlements && S.entitlements.ai) {
-      steps.push({ label: 'Configure the AI assistant', why: 'Point Checkpoint at your own Azure OpenAI resource to unlock drafting help across the app.', done: !!(S.settings && S.settings.aiEnabled === 'true'), view: 'aitools', cta: 'Open AI tools' });
-    }
-    return steps;
+  /* Each path step's action: the thing that DOES the step where the app
+     can (open the questionnaire, run the scan, generate or approve the
+     document set), otherwise the view where it is done. */
+  var PATH_STEP_ACTIONS = {
+    scope: { action: 'App.orgProfileWizard', cta: 'Start the questionnaire' },
+    scan: { action: 'App.runScanFromDash', cta: 'Run the scan' },
+    docs: { action: 'App.generateDocumentSet', cta: 'Generate the documents' },
+    approve: { action: 'App.approveDraftSet', cta: 'Approve drafts' },
+    risks: { view: 'risks', cta: 'Open the risk register' },
+    soa: { view: 'soa', cta: 'Open the Statement of Applicability' },
+    objectives: { view: 'objectives', cta: 'Open objectives' },
+    training: { view: 'training', cta: 'Open training' },
+    suppliers: { view: 'vendors', cta: 'Open suppliers' },
+    ai: { view: 'aisystems', cta: 'Open AI systems' },
+    audit: { view: 'audits', cta: 'Open internal audits' },
+    review: { view: 'reviews', cta: 'Open management reviews' },
+    clauses: { view: 'clauses', cta: 'Open the clause register' },
+    book: { view: 'calendar', cta: 'Open the calendar' }
+  };
+  function pathStepButton(step, primary) {
+    var a = PATH_STEP_ACTIONS[step.id] || {};
+    var cls = 'btn ' + (primary ? '' : 'ghost ') + 'sm';
+    return a.action
+      ? '<button class="' + cls + '" data-action="' + a.action + '">' + esc(a.cta) + '</button>'
+      : '<button class="' + cls + '" data-action="App.go" data-id="' + a.view + '">' + esc(a.cta) + '</button>';
   }
 
+  function gettingStartedSteps() {
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var pathTemplates = Object.keys(window.CLAUSE_DOCUMENT_MAP || {}).filter(function (id) {
+      var t = window.POLICY_TEMPLATES.find(function (x) { return x.id === id; });
+      return t && (t.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; });
+    });
+    return window.CheckpointLib.certificationPathSteps({
+      entitled: entitled,
+      scopeStatement: orgProfileValue('orgScopeStatement'),
+      scans: (S.scans || []).length,
+      docs: (window._docs || S.documents || []).map(function (d) { return { tplId: d.tplId, status: docStatusOf(d) }; }),
+      pathTemplates: pathTemplates,
+      risks: S.risks, appControls: primaryFw ? frameworkAppRows(primaryFw) : [],
+      objectives: S.objectives, training: S.training, vendors: S.vendors, aiSystems: S.aiSystems,
+      audits: S.audits, reviews: S.reviews, clauses: visibleClauses(), calendar: S.calendar,
+      today: new Date().toISOString().slice(0, 10)
+    });
+  }
+
+  /* "Your path to certification" — the Dashboard's guided path. Same
+     principle as the checklist it replaced: every step's done-state is
+     derived from real register data (certificationPathSteps() in
+     lib.js), nothing to tick or dismiss, so it is consistent for every
+     practitioner and the client alike. The next step is always shown
+     with a button that does it; the full list sits underneath. The card
+     disappears once every step is genuinely complete. */
   function renderGettingStarted() {
     var el = document.getElementById('gettingStartedCard');
     if (!el) return;
@@ -4103,26 +4204,31 @@ function showModal(opts) {
     var doneCount = steps.filter(function (s) { return s.done; }).length;
     if (doneCount === steps.length) { el.style.display = 'none'; return; }
     el.style.display = '';
-    var firstPending = steps.findIndex(function (s) { return !s.done; });
+    var next = steps.find(function (s) { return !s.done; });
+    var phases = steps.reduce(function (acc, s) { if (acc.indexOf(s.phase) === -1) acc.push(s.phase); return acc; }, []);
+    var phaseDone = function (ph) { return steps.filter(function (s) { return s.phase === ph; }).every(function (s) { return s.done; }); };
     var stepperHtml = '<div class="gs-stepper">' +
-      steps.map(function (s, i) {
-        var state = s.done ? 'done' : (i === firstPending ? 'current' : 'pending');
-        var node = '<div class="gs-node ' + state + '"><span class="gs-node-ic">' + (s.done ? icon('check') : (i + 1)) + '</span><span class="gs-node-label">' + esc(s.label) + '</span></div>';
-        if (i === steps.length - 1) return node;
-        var connCls = (s.done ? 'done' : '') + (i === firstPending - 1 ? ' active' : '');
-        return node + '<span class="gs-conn ' + connCls + '"><i></i></span>';
-      }).join('') +
-      '</div>';
-    el.innerHTML = '<h3>Getting started</h3>' +
-      '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 14px">' + doneCount + ' of ' + steps.length + ' steps done — this disappears once every step below is complete.</p>' +
-      stepperHtml +
+      phases.map(function (ph, i) {
+        var state = phaseDone(ph) ? 'done' : (ph === next.phase ? 'current' : 'pending');
+        var node = '<div class="gs-node ' + state + '"><span class="gs-node-ic">' + (state === 'done' ? icon('check') : (i + 1)) + '</span><span class="gs-node-label">' + esc(ph) + '</span></div>';
+        if (i === phases.length - 1) return node;
+        return node + '<span class="gs-conn ' + (state === 'done' ? 'done' : '') + '"><i></i></span>';
+      }).join('') + '</div>';
+    var nextHtml = '<div class="gs-row" style="border:1px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:12px">' +
+      '<span class="gs-check"></span>' +
+      '<div class="gs-text"><b>Next: ' + esc(next.label) + '</b><span>' + esc(next.why) + (next.detail ? ' — ' + esc(next.detail) + '.' : '') + '</span></div>' +
+      pathStepButton(next, true) + '</div>';
+    var listHtml = '<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--paper-dim);font-size:12.5px">All ' + steps.length + ' steps</summary>' +
       steps.map(function (s) {
         return '<div class="gs-row' + (s.done ? ' done' : '') + '">' +
           '<span class="gs-check">' + (s.done ? icon('check') : '') + '</span>' +
-          '<div class="gs-text"><b>' + esc(s.label) + '</b><span>' + esc(s.why) + '</span></div>' +
-          (s.done ? '' : '<button class="btn ghost sm" data-action="App.go" data-id="' + s.view + '">' + esc(s.cta) + '</button>') +
+          '<div class="gs-text"><b>' + esc(s.label) + '</b><span>' + esc(s.phase) + ' · ' + esc(s.why) + (s.detail && !s.done ? ' — ' + esc(s.detail) + '.' : '') + '</span></div>' +
+          (s.done ? '' : pathStepButton(s, false)) +
           '</div>';
-      }).join('');
+      }).join('') + '</details>';
+    el.innerHTML = '<h3>Your path to certification</h3>' +
+      '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 14px">' + doneCount + ' of ' + steps.length + ' steps done. Each step ticks itself off as the work is recorded in Checkpoint.</p>' +
+      stepperHtml + nextHtml + listHtml;
   }
 
   /* Residual-risk 5×5 heat-map — extracted from renderDash() so the same
@@ -15063,7 +15169,7 @@ function showModal(opts) {
       audit('Organisation profile updated', 'Settings', 'orgProfile', '', industryLabel);
       log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document' + (withAims ? ', AI Management System Scope' : '') + ' and Organisational Context & Interested Parties to use it.');
       toast('Scope & context saved');
-      renderFrameworksAdmin();
+      renderFrameworksAdmin(); renderGettingStarted();
       return true;
     },
 
@@ -15082,6 +15188,27 @@ function showModal(opts) {
        never regenerated or overwritten (edit or regenerate those one at
        a time). No preview per document: the set is reviewed where it
        lands, in the register, before approval. */
+    retryUnsaved: async function () {
+      busy(true);
+      var left = await retryUnsaved();
+      busy(false);
+      if (left) toastError(left + ' change' + (left > 1 ? 's' : '') + ' still not saved — see the banner for the latest error.');
+      else toast('All changes saved to SharePoint.');
+    },
+
+    showUnsaved: async function () {
+      var items = WRITE_GUARD.pending();
+      if (!items.length) return;
+      await showModal({
+        title: 'Changes not yet saved',
+        message: items.slice(0, 12).map(function (u) {
+          return '• ' + u.label + ' — ' + u.error + ' (' + u.at.toLocaleTimeString() + ')';
+        }).join('\n') + (items.length > 12 ? '\n…and ' + (items.length - 12) + ' more' : '') +
+          '\n\nRetry re-sends each record as it is shown on screen. If a change keeps failing with a permissions or validation error, reloading will discard it and show what SharePoint actually holds.',
+        confirmText: 'Close', cancelText: 'Close'
+      });
+    },
+
     generateDocumentSet: async function () {
       if (Store.kind === 'demo') { toast('Generating the document set saves into a real tenant\'s Documents — sign in to a real tenant to use it.'); return; }
       var entitled = entitledFrameworks();
