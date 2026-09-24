@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.98.0',
+    date: '2026-09-24',
+    entries: [
+      'A change that fails to save to SharePoint is no longer silent. Every save is retried once if the failure looks temporary; one that still fails puts a standing banner at the top of the app — "N changes have not saved to SharePoint" — with Retry and Details, instead of a toast that disappears while the screen goes on showing the edit as saved. Checkpoint retries automatically every minute and when the connection returns, and warns before the page is closed with unsaved changes.',
+      'The Dashboard\'s Getting started card is now "Your path to certification": every step from the scope & context questionnaire to booking the certification audit, in six phases — Set up, Document, Assess, Operate, Check, Certify. The next step is always shown with a button that does it (start the questionnaire, run the scan, generate or approve the document set) or opens where it is done, and each step ticks itself off as the work is recorded.'
+    ]
+  },
+  {
     version: '1.97.0',
     date: '2026-09-24',
     entries: [
