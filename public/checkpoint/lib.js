@@ -2179,6 +2179,9 @@
       /* CPS234 — same self-prefixed treatment, and for the same reason
          as IS18 above: "CPS234.13" matches the bare-code shape too. */
       if (/^CPS234\.\d+/.test(tok)) { lastFw = 'cps234'; return { fw: 'cps234', code: tok }; }
+      /* Privacy Act — APP and NDB codes are self-prefixed too, and
+         "APP11.1" matches the bare-code shape just like CPS234 does. */
+      if (/^APP\d+\.\w+/.test(tok) || /^NDB\.\d+/.test(tok)) { lastFw = 'privacyact'; return { fw: 'privacyact', code: tok }; }
       if (lastFw && /^[A-Za-z]{1,4}\.?\d/.test(tok)) return { fw: lastFw, code: tok };
       lastFw = null; /* prose like "EU AI Act Art.9" resets the chain */
       return null;
@@ -5726,6 +5729,289 @@
     return { wrap: wrap, pending: pending, count: function () { return Object.keys(queue).length; }, retryAll: retryAll };
   }
 
+  /* ============================================================
+     Information asset register (ISO 27001 A.5.9)
+     ------------------------------------------------------------
+     A.5.9 asks for an inventory of information AND other associated
+     assets, with owners. Microsoft 365 can discover the "associated"
+     half — Intune devices, Entra enterprise applications, SharePoint
+     sites — and the Vendor register already lists the external
+     services. What no system can discover is the information itself
+     (the customer database, HR records, source code), which is why the
+     register takes manual entries alongside synced ones and why an
+     Intune-only list would not satisfy an auditor.
+
+     mergeDiscoveredAssets() is the re-sync rule, and the part worth
+     testing: discovered rows are keyed by source + sourceId so a second
+     sync updates rather than duplicates; only the fields the SOURCE owns
+     (name, location, the device's primary user as owner) are refreshed;
+     everything a person set — classification, criticality, notes, an
+     owner typed over a blank — is left alone; and a synced asset that
+     has disappeared from its source is flagged, never deleted, because
+     a device missing from Intune is itself something to look into. */
+  var ASSET_TYPES = ['Information', 'Application', 'Cloud service', 'Device', 'Information location', 'Other'];
+  var ASSET_CLASSIFICATIONS = ['Public', 'Internal', 'Confidential', 'Restricted'];
+
+  function mergeDiscoveredAssets(existing, discovered, today) {
+    var list = existing || [];
+    var byKey = {};
+    list.forEach(function (a) { if (a && a.source && a.source !== 'Manual' && a.sourceId) byKey[a.source + '|' + a.sourceId] = a; });
+    var seen = {}, toAdd = [], toUpdate = [];
+    (discovered || []).forEach(function (d) {
+      if (!d || !d.source || !d.sourceId) return;
+      var key = d.source + '|' + d.sourceId;
+      if (seen[key]) return;
+      seen[key] = 1;
+      var cur = byKey[key];
+      if (!cur) {
+        toAdd.push({ name: d.name, type: d.type, owner: d.owner || '', classification: d.classification || '', criticality: d.criticality || '',
+          location: d.location || '', source: d.source, sourceId: d.sourceId, status: 'Active', lastSynced: today, lastReviewed: '', notes: d.notes || '' });
+        return;
+      }
+      var changed = false;
+      function set(field, v) { if (v !== undefined && v !== null && v !== '' && cur[field] !== v) { cur[field] = v; changed = true; } }
+      set('name', d.name);
+      set('location', d.location);
+      /* A device's owner is its Intune primary user — the source owns it.
+         For every other source a synced owner only fills a blank. */
+      if (d.source === 'Intune') set('owner', d.owner);
+      else if (!cur.owner) set('owner', d.owner);
+      if (cur.status !== 'Active') { cur.status = 'Active'; changed = true; }
+      if (cur.lastSynced !== today) { cur.lastSynced = today; changed = true; }
+      if (changed) toUpdate.push(cur);
+    });
+    /* Only sources that were actually read this time can mark an asset
+       missing — a failed SharePoint read must not flag every site. */
+    var readSources = {};
+    (discovered || []).forEach(function (d) { if (d && d.source) readSources[d.source] = 1; });
+    var missing = list.filter(function (a) {
+      return a && a.source && a.source !== 'Manual' && readSources[a.source] && a.status === 'Active' && !seen[a.source + '|' + a.sourceId];
+    });
+    missing.forEach(function (a) { a.status = 'Not found in last sync'; toUpdate.push(a); });
+    return { toAdd: toAdd, toUpdate: toUpdate, missing: missing.length };
+  }
+
+  /* What the register can honestly claim for A.5.9, and what is still
+     missing. Retired assets are history, not inventory. */
+  function assetRegisterSummary(assets, today, reviewDays) {
+    var live = (assets || []).filter(function (a) { return a && a.status !== 'Retired'; });
+    var noOwner = live.filter(function (a) { return !String(a.owner || '').trim(); });
+    var unclassified = live.filter(function (a) { return (a.type === 'Information' || a.type === 'Information location') && !a.classification; });
+    var info = live.filter(function (a) { return a.type === 'Information'; });
+    var missing = live.filter(function (a) { return a.status === 'Not found in last sync'; });
+    var days = typeof reviewDays === 'number' ? reviewDays : 365;
+    var stale = live.filter(function (a) {
+      if (!a.lastReviewed) return true;
+      return today && daysBetweenDateStr(String(a.lastReviewed).slice(0, 10), today) > days;
+    });
+    var byType = {};
+    live.forEach(function (a) { byType[a.type || 'Other'] = (byType[a.type || 'Other'] || 0) + 1; });
+    return {
+      total: live.length, information: info.length, noOwner: noOwner.length, unclassified: unclassified.length,
+      missing: missing.length, unreviewed: stale.length, byType: byType,
+      /* Ready for an auditor: at least one INFORMATION asset (a device
+         list alone is not an A.5.9 inventory), and every live asset owned. */
+      ready: info.length > 0 && noOwner.length === 0
+    };
+  }
+
+  /* ============================================================
+     Legal, statutory, regulatory and contractual requirements
+     (ISO 27001 A.5.31, and Clause 4.2's "requirements of interested
+     parties")
+     ------------------------------------------------------------
+     A starting set for an Australian organisation. Each row is a
+     PROMPT for the practitioner, not a legal conclusion: the ones whose
+     applicability depends on the organisation (turnover, sector, state)
+     start as "To confirm", never "Yes", because Checkpoint cannot know
+     whether the small-business exemption applies or which state's
+     health records law is in play. Nothing here is legal advice, and
+     the view says so. */
+  var LEGAL_BASELINE_AU = [
+    { title: 'Privacy Act 1988 (Cth) — Australian Privacy Principles', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Handle personal information in line with the 13 APPs. Applies to organisations with annual turnover over $3 million, and to health service providers and certain other entities regardless of turnover.',
+      controls: ['A.5.34', 'A.5.31'] },
+    { title: 'Notifiable Data Breaches scheme (Privacy Act Part IIIC)', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Assess a suspected eligible data breach within 30 days, and notify affected individuals and the OAIC as soon as practicable once one is confirmed.',
+      controls: ['A.5.24', 'A.5.26', 'A.5.34'] },
+    { title: 'Cyber Security Act 2024 (Cth) — ransomware payment reporting', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Report a ransomware or cyber extortion payment to the Australian Signals Directorate within 72 hours of making it (businesses above the turnover threshold, and critical infrastructure entities).',
+      controls: ['A.5.24', 'A.5.26'] },
+    { title: 'Spam Act 2003 (Cth)', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Commercial electronic messages need consent, must identify the sender and must include a working unsubscribe facility.',
+      controls: ['A.5.31'] },
+    { title: 'Corporations Act 2001 (Cth) s 286 — financial records', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Keep written financial records that explain transactions and financial position, and retain them for 7 years.',
+      controls: ['A.5.33'] },
+    { title: 'Fair Work Act 2009 (Cth) — employee records', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Keep prescribed employee records (pay, hours, leave) for 7 years, and protect them.',
+      controls: ['A.5.33', 'A.6.1'] },
+    { title: 'Copyright Act 1968 (Cth) and software licence terms', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Use software and third-party content only as licensed.',
+      controls: ['A.5.32'] },
+    { title: 'Security of Critical Infrastructure Act 2018 (Cth)', type: 'Legislation', jurisdiction: 'Australia (Cth)', applies: 'To confirm',
+      requirement: 'Only if the organisation owns or operates a critical infrastructure asset: register the asset, report cyber incidents, and maintain a critical infrastructure risk management program.',
+      controls: ['A.5.31', 'A.5.24'] },
+    { title: 'State or territory health records and privacy law', type: 'Legislation', jurisdiction: 'State / territory', applies: 'To confirm',
+      requirement: 'For example the Health Records Act 2001 (Vic) or the Health Records and Information Privacy Act 2002 (NSW), if health information is handled in that jurisdiction.',
+      controls: ['A.5.34'] },
+    { title: 'Customer contracts — security, confidentiality and breach notification clauses', type: 'Contract', jurisdiction: 'Contractual', applies: 'Yes',
+      requirement: 'List the security obligations your customer agreements impose (for example certification, notification windows, data location, right to audit).',
+      controls: ['A.5.20', 'A.5.31'] }
+  ];
+  var LEGAL_TYPES = ['Legislation', 'Regulation', 'Contract', 'Standard', 'Other'];
+  var LEGAL_APPLIES = ['Yes', 'No', 'To confirm'];
+
+  function legalRegisterSummary(reqs, today, reviewDays) {
+    var list = reqs || [];
+    var applying = list.filter(function (r) { return r.applies === 'Yes'; });
+    var toConfirm = list.filter(function (r) { return r.applies === 'To confirm'; });
+    var days = typeof reviewDays === 'number' ? reviewDays : 365;
+    var stale = list.filter(function (r) {
+      if (r.applies === 'No') return false;
+      return !r.lastReviewed || (today && daysBetweenDateStr(String(r.lastReviewed).slice(0, 10), today) > days);
+    });
+    var noOwner = applying.filter(function (r) { return !String(r.owner || '').trim(); });
+    return { total: list.length, applying: applying.length, toConfirm: toConfirm.length, stale: stale.length, noOwner: noOwner.length,
+      ready: applying.length > 0 && toConfirm.length === 0 && noOwner.length === 0 };
+  }
+
+  /* ============================================================
+     Statement of Applicability — justification for INCLUSION
+     ------------------------------------------------------------
+     ISO 27001 6.1.3 d) requires the SoA to state, for every control,
+     the justification for including it as well as for excluding it.
+     A SoA that only justifies exclusions is a common Stage 1 finding.
+     The honest justification for an included control is traceable in
+     Checkpoint already — the risks it treats, the legal or contractual
+     requirements it meets, the posture checks that monitor it — so it
+     is derived rather than typed. The Justification field is NOT used
+     here: it holds the EXCLUSION reason and survives a control being
+     toggled back to applicable, so reading it would cite a reason for
+     leaving a control out as the reason for putting it in. To cite a
+     specific reason, link the control to a risk or a requirement.
+     ctx = { risks:[{id,title,controls,status}], obligations:[{id,title,controls,applies}],
+             checkLabelsByControl: { code: [label] } } */
+  function soaInclusionReasons(control, ctx) {
+    ctx = ctx || {};
+    if (!control || !control.app) return [];
+    var code = control.id || control.code;
+    var out = [];
+    var risks = (ctx.risks || []).filter(function (r) { return r.status !== 'Closed' && (r.controls || []).indexOf(code) !== -1; });
+    if (risks.length) out.push('Risk treatment: ' + risks.slice(0, 4).map(function (r) { return r.id; }).join(', ') + (risks.length > 4 ? ' +' + (risks.length - 4) : ''));
+    var obs = (ctx.obligations || []).filter(function (o) { return o.applies === 'Yes' && (o.controls || []).indexOf(code) !== -1; });
+    if (obs.length) out.push('Legal / contractual: ' + obs.slice(0, 3).map(function (o) { return o.id + ' ' + o.title.split(' — ')[0]; }).join('; '));
+    var checks = (ctx.checkLabelsByControl || {})[code] || [];
+    if (checks.length) out.push('Monitored by posture check: ' + checks.slice(0, 2).join('; ') + (checks.length > 2 ? ' +' + (checks.length - 2) : ''));
+    if (!out.length) out.push('Baseline: adopted as good practice (ISO/IEC 27002) — no specific risk or requirement recorded yet');
+    return out;
+  }
+
+  /* ============================================================
+     Mandatory documented information — the Stage 1 checklist
+     ------------------------------------------------------------
+     What ISO/IEC 27001:2022 explicitly requires to exist as documented
+     information (Clauses 4-10), plus the Annex A records an auditor
+     samples first. Each item resolves from real data: an approved
+     template, or the register that IS the record. Status 'done' means
+     the evidence exists; 'partial' means it exists but is not yet in a
+     state an auditor accepts (a draft, an unowned asset, a stale
+     review); 'missing' means there is nothing to show.
+     s = { docs:[{tplId,status}], soa:{applicable,notStarted,unjustified}, risks, objectives,
+           training, audits, reviews, lastScanDate, actions, assets:{summary}, legal:{summary}, today } */
+  var MANDATORY_DOCS = [
+    { ref: '4.3', item: 'ISMS scope', tpl: 'isms-scope' },
+    { ref: '4.2', item: 'Interested parties and their requirements', tpl: 'context-interested-parties' },
+    { ref: '5.2', item: 'Information security policy', tpl: 'infosec-policy' },
+    { ref: '5.3', item: 'Roles, responsibilities and authorities', tpl: 'roles-responsibilities' },
+    { ref: '6.1.2', item: 'Risk assessment process', tpl: 'risk-management-framework' },
+    { ref: '6.1.3', item: 'Risk treatment process', tpl: 'risk-management-framework' },
+    { ref: '6.1.3 d)', item: 'Statement of Applicability', record: 'soa' },
+    { ref: '6.1.3 e)', item: 'Risk treatment plan', record: 'rtp' },
+    { ref: '6.2', item: 'Information security objectives', tpl: 'infosec-objectives-metrics', record: 'objectives' },
+    { ref: '7.2', item: 'Evidence of competence', record: 'training' },
+    { ref: '7.5', item: 'Control of documented information', tpl: 'document-control-procedure' },
+    { ref: '8.2', item: 'Results of information security risk assessments', record: 'riskAssessment' },
+    { ref: '8.3', item: 'Results of information security risk treatment', record: 'riskTreatment' },
+    { ref: '9.1', item: 'Monitoring and measurement results', record: 'monitoring' },
+    { ref: '9.2', item: 'Internal audit programme and results', tpl: 'internal-audit-procedure', record: 'audit' },
+    { ref: '9.3', item: 'Management review results', tpl: 'management-review-procedure', record: 'review' },
+    { ref: '10.2', item: 'Nonconformities and corrective actions', tpl: 'nonconformity-corrective-action' },
+    { ref: 'A.5.9', item: 'Inventory of information and other associated assets', record: 'assets' },
+    { ref: 'A.5.10', item: 'Acceptable use of information and assets', tpl: 'acceptable-use-policy' },
+    { ref: 'A.5.15', item: 'Access control policy', tpl: 'access-control-policy' },
+    { ref: 'A.5.19', item: 'Supplier security policy', tpl: 'supplier-security-policy' },
+    { ref: 'A.5.24', item: 'Incident management plan', tpl: 'incident-response-plan' },
+    { ref: 'A.5.29', item: 'Business continuity and ICT readiness plan', tpl: 'bcp-dr-plan' },
+    { ref: 'A.5.31', item: 'Legal, statutory, regulatory and contractual requirements', tpl: 'legal-regulatory-policy', record: 'legal' }
+  ];
+
+  function mandatoryDocumentation(s) {
+    s = s || {};
+    var today = s.today;
+    var byTpl = {};
+    (s.docs || []).forEach(function (d) { if (d && d.tplId) byTpl[d.tplId] = d; });
+    var within = function (d, days) { return d && today && daysBetweenDateStr(String(d).slice(0, 10), today) <= days; };
+    var openRisks = (s.risks || []).filter(function (r) { return r.status !== 'Closed'; });
+    function record(kind) {
+      switch (kind) {
+        case 'soa':
+          if (!s.soa || !s.soa.applicable) return { st: 'missing', note: 'No applicable controls recorded' };
+          if (s.soa.notStarted || s.soa.unjustified) return { st: 'partial', note: (s.soa.notStarted ? s.soa.notStarted + ' control(s) not started' : '') + (s.soa.notStarted && s.soa.unjustified ? '; ' : '') + (s.soa.unjustified ? s.soa.unjustified + ' exclusion(s) without a justification' : '') };
+          return { st: 'done', note: s.soa.applicable + ' applicable controls, inclusions and exclusions justified' };
+        case 'rtp':
+          if (!openRisks.length) return { st: 'missing', note: 'No risks in the register' };
+          var untreated = openRisks.filter(function (r) { return !(r.treat && r.owner); }).length;
+          return untreated ? { st: 'partial', note: untreated + ' risk(s) without a treatment or owner' } : { st: 'done', note: 'Every open risk has a treatment and an owner (Risk treatment plan report)' };
+        case 'objectives':
+          return (s.objectives || []).some(function (o) { return o.metric && o.target; }) ? { st: 'done', note: 'Measurable objectives in the Objectives register' } : { st: 'missing', note: 'No measurable objective recorded' };
+        case 'training':
+          var done = (s.training || []).filter(function (t) { return t.status === 'Completed' || t.completedDate || t.completed; }).length;
+          if (!(s.training || []).length) return { st: 'missing', note: 'No training assigned' };
+          return done ? { st: 'done', note: done + ' completion record(s)' } : { st: 'partial', note: 'Training assigned, none completed yet' };
+        case 'riskAssessment':
+          if (!openRisks.length) return { st: 'missing', note: 'No risk assessment results' };
+          var reviewed = openRisks.filter(function (r) { return within(r.lastReviewed, 365); }).length;
+          return reviewed === openRisks.length ? { st: 'done', note: openRisks.length + ' risk(s), all reviewed in the last 12 months' } : { st: 'partial', note: (openRisks.length - reviewed) + ' of ' + openRisks.length + ' risk(s) not reviewed in the last 12 months' };
+        case 'riskTreatment':
+          var withActions = openRisks.filter(function (r) { return (r.actions || []).length || r.treat === 'Tolerate' || r.acceptedBy; }).length;
+          if (!openRisks.length) return { st: 'missing', note: 'No risk treatment results' };
+          return withActions === openRisks.length ? { st: 'done', note: 'Every open risk has actions or a recorded acceptance' } : { st: 'partial', note: (openRisks.length - withActions) + ' risk(s) with no action and no acceptance' };
+        case 'monitoring':
+          return within(s.lastScanDate, 90) ? { st: 'done', note: 'Posture scan within 90 days, plus objective progress' } : (s.lastScanDate ? { st: 'partial', note: 'Last posture scan more than 90 days ago' } : { st: 'missing', note: 'No monitoring results yet' });
+        case 'audit':
+          return (s.audits || []).some(function (a) { return a.status === 'Completed' && within(a.completed, 365); }) ? { st: 'done', note: 'Internal audit completed in the last 12 months' } : ((s.audits || []).length ? { st: 'partial', note: 'Audit planned, none completed in the last 12 months' } : { st: 'missing', note: 'No internal audit recorded' });
+        case 'review':
+          return (s.reviews || []).some(function (r) { return r.decisions && within(r.date, 365); }) ? { st: 'done', note: 'Management review with decisions in the last 12 months' } : { st: 'missing', note: 'No management review in the last 12 months' };
+        case 'assets':
+          var a = s.assets || {};
+          if (!a.total) return { st: 'missing', note: 'Asset register is empty' };
+          if (!a.information) return { st: 'partial', note: a.total + ' asset(s), but no information assets — a device list alone is not an A.5.9 inventory' };
+          return a.noOwner ? { st: 'partial', note: a.noOwner + ' asset(s) without an owner' } : { st: 'done', note: a.total + ' asset(s), all owned' };
+        case 'legal':
+          var l = s.legal || {};
+          if (!l.total) return { st: 'missing', note: 'Legal and regulatory register is empty' };
+          if (l.toConfirm || l.noOwner) return { st: 'partial', note: (l.toConfirm ? l.toConfirm + ' requirement(s) still to confirm' : '') + (l.toConfirm && l.noOwner ? '; ' : '') + (l.noOwner ? l.noOwner + ' without an owner' : '') };
+          return { st: 'done', note: l.applying + ' applicable requirement(s), all owned' };
+      }
+      return { st: 'missing', note: '' };
+    }
+    var rank = { missing: 0, partial: 1, done: 2 };
+    return MANDATORY_DOCS.map(function (m) {
+      var parts = [];
+      if (m.tpl) {
+        var d = byTpl[m.tpl];
+        parts.push(!d ? { st: 'missing', note: 'Document not generated' } : d.status === 'Approved' ? { st: 'done', note: 'Approved document' } : { st: 'partial', note: 'Document in ' + (d.status || 'Draft') });
+      }
+      if (m.record) parts.push(record(m.record));
+      /* An item is only as good as its weakest part: an approved audit
+         procedure with no audit ever run is not done. */
+      var worst = parts.reduce(function (w, p) { return rank[p.st] < rank[w.st] ? p : w; }, parts[0]);
+      return { ref: m.ref, item: m.item, tpl: m.tpl || null, record: m.record || null, status: worst.st,
+        note: parts.map(function (p) { return p.note; }).filter(Boolean).join('; ') };
+    });
+  }
+
   /* The guided path to certification — the ordered things a client has
      to do, from answering the scope questionnaire to booking the
      certification audit, each with its done-state derived from real
@@ -5788,6 +6074,22 @@
         why: 'The suppliers that hold or can reach the organisation’s information, so their security can be reviewed.',
         done: (s.vendors || []).length > 0 }
     ];
+    /* ISO 27001 only: the two registers an auditor samples first
+       (A.5.9, A.5.31) and the Stage 1 documented-information checklist. */
+    var iso = (s.entitled || []).indexOf('iso27001') !== -1;
+    if (iso) {
+      var as = s.assets || {}, lg = s.legal || {};
+      /* Before risk treatment: the risk assessment draws on both. */
+      steps.splice(steps.findIndex(function (x) { return x.id === 'risks'; }), 0,
+        { id: 'assets', phase: 'Assess', label: 'Build the asset register',
+          why: 'Sync devices, applications and sites from Microsoft 365, then add the information assets themselves, each with an owner (A.5.9).',
+          done: !!as.ready,
+          detail: as.total ? (!as.information ? 'no information assets yet' : as.noOwner ? as.noOwner + ' without an owner' : '') : '' },
+        { id: 'legal', phase: 'Assess', label: 'Record legal and contractual requirements',
+          why: 'Which laws, regulations and customer contracts apply, who owns each, and the controls they drive (A.5.31, Clause 4.2).',
+          done: !!lg.ready,
+          detail: lg.total ? (lg.toConfirm ? lg.toConfirm + ' still to confirm' : lg.noOwner ? lg.noOwner + ' without an owner' : '') : '' });
+    }
     if ((s.entitled || []).indexOf('iso42001') !== -1) {
       steps.push({ id: 'ai', phase: 'Operate', label: 'Register AI systems and assess their impact',
         why: 'Each AI system in use, with a completed impact assessment (ISO 42001 6.1.4).',
@@ -5805,16 +6107,20 @@
         why: 'Most clauses complete themselves as the steps above are done — this shows what is left.',
         done: (s.clauses || []).length > 0 && openClauses === 0,
         detail: openClauses ? openClauses + ' clause' + (openClauses === 1 ? '' : 's') + ' still open' : '' },
+      { id: 'mandatory', phase: 'Certify', label: 'Complete the mandatory documented information',
+        why: 'Every document and record ISO 27001 itself requires, checked against your registers — the first thing a Stage 1 auditor asks for.',
+        done: !!(s.mandatory && s.mandatory.length && s.mandatory.every(function (m) { return m.status === 'done'; })),
+        detail: s.mandatory ? s.mandatory.filter(function (m) { return m.status !== 'done'; }).length + ' of ' + s.mandatory.length + ' not yet in place' : '' },
       { id: 'book', phase: 'Certify', label: 'Book the certification audit',
         why: 'Add the certification body’s Stage 1 and Stage 2 dates to the compliance calendar.',
         done: booked }
     );
-    return steps;
+    return iso ? steps : steps.filter(function (x) { return x.id !== 'mandatory'; });
   }
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

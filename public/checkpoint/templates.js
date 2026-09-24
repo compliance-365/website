@@ -1725,6 +1725,86 @@ window.POLICY_TEMPLATES = [
     frameworks: ['iso27001', 'iso27701']
   },
   {
+    id: 'privacy-management-plan',
+    title: 'Privacy Management Plan',
+    purpose: 'This plan sets out how the organisation meets its obligations under the Privacy Act 1988 (Cth) — the 13 Australian Privacy Principles (APPs) and the Notifiable Data Breaches (NDB) scheme — including who is accountable, how requests from individuals are answered, and what happens when personal information may have been compromised.',
+    scope: 'Applies to all personal information the organisation collects, holds, uses or discloses, in every system and by every employee, contractor and supplier acting for it, including information held overseas by service providers.',
+    whyItMatters: 'Australians have a legal right to know how their personal information is handled, to see it and to have it corrected. When personal information is compromised in a way likely to cause serious harm, the law requires the organisation to tell them and the Office of the Australian Information Commissioner (OAIC), and to assess suspected breaches within 30 days.\n\nFor most people this plan matters in two moments: when someone asks what information the organisation holds about them, and when something goes wrong. In both cases the first step is the same — tell the privacy officer straight away.',
+    inPractice: [
+      'A customer emails asking for a copy of everything the organisation holds about them. Forward it to the privacy officer the same day; the 30-day clock the OAIC measures against has already started.',
+      'A spreadsheet of customer details is emailed to the wrong recipient. Report it as a security incident immediately — the privacy officer decides whether it is an eligible data breach, and that assessment must be finished within 30 days.',
+      'A team wants to start using a new cloud service that will hold customer information overseas. Before any data is loaded, the privacy officer confirms the contract binds the provider to handle it consistently with the APPs.'
+    ],
+    policyStatements: [
+      {
+        rule: 'A privacy officer is appointed, with authority to handle privacy enquiries and complaints and to lead the response to suspected data breaches.',
+        because: 'APP 1.2 requires practices, procedures and systems for complying with the APPs and handling complaints, and that needs a named owner.'
+      },
+      {
+        rule: 'A privacy impact assessment is completed before any new project, system or supplier that changes how personal information is collected, used or disclosed.',
+        because: 'Privacy problems are cheapest to fix before the system is built, and the assessment is the evidence that reasonable steps were taken.'
+      },
+      {
+        rule: 'The organisation collects only the personal information it reasonably needs, tells individuals about the collection, and uses or discloses it only for the purpose it was collected for or a purpose the APPs permit.',
+        because: 'APPs 3, 5 and 6 limit collection and use, and information that is never collected cannot be misused or breached.'
+      },
+      {
+        rule: 'Requests from individuals to access or correct their personal information are logged, answered within 30 days, and refused only for a reason the APPs permit, with written reasons and information about how to complain.',
+        because: 'APPs 12 and 13 give individuals these rights; the OAIC treats 30 days as the benchmark for a reasonable period.'
+      },
+      {
+        rule: 'Personal information is disclosed to an overseas recipient only after reasonable steps — usually contract terms — ensure it will be handled consistently with the APPs.',
+        because: 'Under APP 8 and section 16C the organisation remains accountable for how an overseas recipient handles the information.'
+      },
+      {
+        rule: 'Personal information is protected by the organisation’s information security management system, and destroyed or de-identified when it is no longer needed and no law requires it to be kept.',
+        because: 'APP 11 requires reasonable technical and organisational measures to protect personal information, and its secure disposal.'
+      },
+      {
+        rule: 'A suspected data breach involving personal information is reported to the privacy officer immediately, contained, and assessed within 30 days to decide whether it is an eligible data breach.',
+        because: 'Section 26WH of the Privacy Act requires a reasonable and expeditious assessment completed within 30 days.'
+      },
+      {
+        rule: 'Where an eligible data breach has occurred, the OAIC and the individuals at risk of serious harm are notified as soon as practicable, with the information the Act requires and the steps individuals should take.',
+        because: 'Sections 26WK and 26WL make notification mandatory, and prompt notice lets people protect themselves.'
+      },
+      {
+        rule: 'This plan, the privacy policy and the data breach response process are reviewed at least annually and after any eligible data breach or change to privacy law.',
+        because: 'The Privacy Act changed materially in 2024 and further reforms are expected; an out-of-date plan is a compliance gap.'
+      }
+    ],
+    roles: [
+      {
+        role: 'Privacy officer',
+        responsibility: 'Owns this plan; handles privacy enquiries, complaints and requests from individuals; leads data breach assessments and notifications.'
+      },
+      {
+        role: 'ISMS manager',
+        responsibility: 'Ensures the information security controls protecting personal information are in place, and treats suspected breaches as security incidents.'
+      },
+      {
+        role: 'Executive management',
+        responsibility: 'Approves this plan, receives reports of eligible data breaches, and ensures the privacy officer has the resources to act.'
+      },
+      {
+        role: 'All personnel',
+        responsibility: 'Handle personal information only as their role requires, and report requests from individuals and suspected breaches to the privacy officer immediately.'
+      }
+    ],
+    exceptions: 'Any exception to this plan must be approved in writing by the privacy officer, recorded with its reason and review date, and must not breach the Privacy Act.',
+    nonCompliance: 'Mishandling personal information, or failing to report a suspected breach, may lead to disciplinary action, and is recorded as an information security incident.',
+    relatedDocuments: [
+      'Privacy Policy',
+      'Incident Response Plan',
+      'International PII Transfer Policy',
+      'Information Security Policy',
+      'Legal, Regulatory & Contractual Requirements Policy'
+    ],
+    reviewCadence: 'Annually, after any eligible data breach, and when privacy law changes.',
+    controls: ['A.5.34', 'APP1.2', 'APP3.2', 'APP5.1', 'APP6.1', 'APP8.1', 'APP11.1', 'APP11.2', 'APP12.1', 'APP12.4', 'APP12.9', 'APP13.1', 'APP13.3', 'APP13.5', 'NDB.26WH', 'NDB.26WK', 'NDB.26WL'],
+    frameworks: ['iso27001', 'privacyact']
+  },
+  {
     id: 'isms-scope',
     title: 'ISMS Scope Document',
     purpose: 'This document defines the scope and boundaries of the organisation’s information security management system (ISMS) — the parts of the business, the locations, the information and the technology it covers, and anything deliberately excluded. It satisfies the ISO/IEC 27001 Clause 4.3 requirement to determine and document the scope of the ISMS.',
@@ -3261,8 +3341,8 @@ window.POLICY_TEMPLATES = [
       'PII Processor Obligations Policy'
     ],
     reviewCadence: 'Annually, or whenever a new cross-border processing arrangement, supplier or hosting location is introduced.',
-    controls: ['P.7.5.1', 'P.7.5.2', 'P.7.5.3', 'P.7.5.4'],
-    frameworks: ['iso27701']
+    controls: ['P.7.5.1', 'P.7.5.2', 'P.7.5.3', 'P.7.5.4', 'APP8.1'],
+    frameworks: ['iso27701', 'privacyact']
   },
   {
     id: 'pii-processor-obligations-policy',

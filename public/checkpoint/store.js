@@ -166,6 +166,12 @@ window.FRAMEWORKS = {
     /* Full control set ships as an encrypted content pack (checkpoint-content/cps234.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
+  privacyact: {
+    id: "privacyact", name: "Privacy Act (APPs)", tag: "AU Privacy",
+    blurb: "Privacy Act 1988 (Cth) — the 13 Australian Privacy Principles broken into their operative requirements, plus the Notifiable Data Breaches duties, as amended in 2024. Mapped to ISO 27001 so the ISMS evidences APP 11, and scored live where Microsoft 365 can show it.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/privacyact.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js once a verified activation licenses this module. Empty here for the same reason as every other premium framework. */
+    controls: []
+  },
   rffr: {
     id: "rffr", name: "RFFR (ISM SoA)", tag: "Cth Employment",
     blurb: "Right Fit For Risk — the DEWR cyber-security accreditation for Employment Services providers, delivered as one Statement of Applicability: the 7 program-deed obligations plus all 989 Australian Government ISM (June 2026) controls applicable to Non-Classified and OFFICIAL: Sensitive information, cross-mapped to the ISO 27001 ISMS backbone and Essential Eight so the certification, the E8 uplift and the RFFR SoA are prepared once, not three times. RFFR Core Expectations are flagged for milestone prioritisation.",
@@ -174,7 +180,7 @@ window.FRAMEWORKS = {
   }
 };
 /* Sidebar / tab display order. Add new framework ids here. */
-window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr', 'cps234'];
+window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr', 'cps234', 'privacyact'];
 
 /* Purchasable add-on capabilities that are NOT compliance frameworks —
    they never appear in the sidebar's framework list, the Statement of
@@ -465,6 +471,19 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "cps234", code: "CPS234.27", t: "Systematic control testing program", app: true, map: "ISO27001 A.5.35 · NIST ID.IM", cat: "cpsTesting" },
     { fw: "cps234", code: "CPS234.32", t: "Internal audit reviews control design and operating effectiveness", app: true, map: "ISO27001 A.5.35 · NIST GV.OV", cat: "cpsAudit" },
     { fw: "cps234", code: "CPS234.35", t: "Notify APRA within 72 hours of a material incident", app: true, map: "ISO27001 A.5.5 · NIST RS.CO", cat: "cpsNotify" }
+  ],
+  /* Privacy Act — one requirement per APP grouping, plus APP 11.1 and
+     the 30-day NDB assessment, the two an Australian client is asked
+     about first. Codes and titles match checkpoint-content/privacyact.json. */
+  privacyact: [
+    { fw: "privacyact", code: "APP1.2", t: "Practices, procedures and systems to comply with the APPs and handle privacy complaints", app: true, map: "ISO27001 A.5.34 · A.5.1", cat: "appGovernance" },
+    { fw: "privacyact", code: "APP1.3", t: "Clearly expressed, up-to-date APP privacy policy", app: true, map: "ISO27001 A.5.34", cat: "appGovernance" },
+    { fw: "privacyact", code: "APP5.1", t: "Individuals notified of collection matters", app: true, map: "ISO27001 A.5.34", cat: "appCollection" },
+    { fw: "privacyact", code: "APP8.1", t: "Reasonable steps before disclosing personal information overseas", app: true, map: "ISO27001 A.5.34 · A.5.19 · A.5.14", cat: "appUse" },
+    { fw: "privacyact", code: "APP11.1", t: "Personal information protected from misuse, interference, loss and unauthorised access, modification or disclosure", app: true, map: "ISO27001 A.5.34 · A.5.15 · A.8.5 · A.8.24 · A.8.12", cat: "appSecurity" },
+    { fw: "privacyact", code: "APP11.2", t: "Personal information destroyed or de-identified when no longer needed", app: true, map: "ISO27001 A.8.10 · A.5.33", cat: "appSecurity" },
+    { fw: "privacyact", code: "APP12.1", t: "Individuals given access to their personal information on request", app: true, map: "ISO27001 A.5.34", cat: "appRights" },
+    { fw: "privacyact", code: "NDB.26WH", t: "Suspected eligible data breaches assessed within 30 days", app: true, map: "ISO27001 A.5.25 · A.5.26", cat: "appNdb" }
   ]
 };
 
@@ -1397,6 +1416,9 @@ window.CHECK_NISTCSF = {};
    cps234 content pack and is merged in by mergeLicensedPacks() once a
    verified activation licenses the module. */
 window.CHECK_CPS234 = {};
+/* Posture check id -> Privacy Act (APP / NDB) code(s). Ships in the
+   privacyact content pack (extra.checkPrivacyAct); empty until licensed. */
+window.CHECK_PRIVACYACT = {};
 
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
@@ -1631,7 +1653,7 @@ window.DemoStore = (function () {
          'ai' stays off — it is a purchasable assistant add-on rather
          than a framework, so switching it on would light up assistant
          features instead of demonstrating a control register. */
-      entitlements: { iso27001: true, soc2: true, essential8: true, is18: true, iso42001: true, iso27701: true, dispirap: true, nistcsf: true, rffr: true, cps234: true, ai: false },
+      entitlements: { iso27001: true, soc2: true, essential8: true, is18: true, iso42001: true, iso27701: true, dispirap: true, nistcsf: true, rffr: true, cps234: true, privacyact: true, ai: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       /* One list per framework whose SoA statuses runScan() can suggest.
@@ -1670,6 +1692,26 @@ window.DemoStore = (function () {
       ],
       reviews: [
         { id: 'MR-001', date: daysFrom(-30), attendees: 'M. Chen (CEO), K. Patel (Head of Eng), S. Okafor (ISMS Manager)', inputs: 'Posture score 48/100 (up from 41). 5 open risks, 2 High/Critical residual. 7 open actions, some overdue. 1 open non-conformity from AUD-001. ISO 27001 readiness 34%.', decisions: 'Approved additional contractor time for supplier security remediation (R-001). Agreed to bring forward the ISO 42001 internal audit to Q3. No change to risk appetite.', nextDue: daysFrom(60) }
+      ],
+      /* Asset register: a mix of synced and manual rows, including the
+         information assets no system can discover, one unowned asset and
+         one device that has dropped out of Intune — so the demo shows
+         every state the register can be in. */
+      assets: [
+        { id: 'AST-001', name: 'Customer health records (production database)', type: 'Information', owner: 'K. Patel', classification: 'Restricted', criticality: 'High', location: 'Northwind Cloud Hosting (VEN-001)', source: 'Manual', sourceId: '', status: 'Active', lastSynced: '', lastReviewed: daysFrom(-60), notes: 'Contains health information — APP 11 and state health records law apply.' },
+        { id: 'AST-002', name: 'Product source code', type: 'Information', owner: 'K. Patel', classification: 'Confidential', criticality: 'High', location: 'GitHub organisation', source: 'Manual', sourceId: '', status: 'Active', lastSynced: '', lastReviewed: daysFrom(-60), notes: '' },
+        { id: 'AST-003', name: 'Employee and payroll records', type: 'Information', owner: '', classification: 'Confidential', criticality: 'Medium', location: 'HR system', source: 'Manual', sourceId: '', status: 'Active', lastSynced: '', lastReviewed: '', notes: '' },
+        { id: 'AST-004', name: 'Finance', type: 'Information location', owner: 'M. Chen', classification: 'Confidential', criticality: 'Medium', location: 'SharePoint site', source: 'SharePoint', sourceId: 'site-finance', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: daysFrom(-100), notes: '' },
+        { id: 'AST-005', name: 'Salesforce', type: 'Application', owner: 'M. Chen', classification: '', criticality: 'High', location: 'Entra enterprise application', source: 'Entra', sourceId: 'sp-salesforce', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: '', notes: '' },
+        { id: 'AST-006', name: 'MER-LT-0142', type: 'Device', owner: 'k.patel@meridianhealth.example', classification: '', criticality: '', location: 'Windows 11 · compliant', source: 'Intune', sourceId: 'dev-0142', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: '', notes: '' },
+        { id: 'AST-007', name: 'MER-LT-0098', type: 'Device', owner: 's.okafor@meridianhealth.example', classification: '', criticality: '', location: 'macOS 14 · compliant', source: 'Intune', sourceId: 'dev-0098', status: 'Not found in last sync', lastSynced: daysFrom(-30), lastReviewed: '', notes: '' },
+        { id: 'AST-008', name: 'Northwind Cloud Hosting', type: 'Cloud service', owner: 'K. Patel', classification: '', criticality: 'Critical', location: 'Vendor register (VEN-001)', source: 'Vendor', sourceId: 'VEN-001', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: '', notes: '' }
+      ],
+      legal: [
+        { id: 'LEG-001', title: 'Privacy Act 1988 (Cth) — Australian Privacy Principles', type: 'Legislation', jurisdiction: 'Australia (Cth)', requirement: 'Handle personal information in line with the 13 APPs. Health service provider, so the small-business exemption does not apply.', applies: 'Yes', owner: 'S. Okafor', controls: ['A.5.34', 'A.5.31'], lastReviewed: daysFrom(-90), notes: '' },
+        { id: 'LEG-002', title: 'Notifiable Data Breaches scheme (Privacy Act Part IIIC)', type: 'Legislation', jurisdiction: 'Australia (Cth)', requirement: 'Assess a suspected eligible data breach within 30 days; notify individuals and the OAIC.', applies: 'Yes', owner: 'S. Okafor', controls: ['A.5.24', 'A.5.26', 'A.5.34'], lastReviewed: daysFrom(-90), notes: '' },
+        { id: 'LEG-003', title: 'Health Records Act 2001 (Vic)', type: 'Legislation', jurisdiction: 'Victoria', requirement: 'Health Privacy Principles for health information held in Victoria.', applies: 'To confirm', owner: '', controls: ['A.5.34'], lastReviewed: '', notes: 'Confirm whether any Victorian patients are served.' },
+        { id: 'LEG-004', title: 'Customer contracts — security, confidentiality and breach notification clauses', type: 'Contract', jurisdiction: 'Contractual', requirement: 'Hospital customers require ISO 27001 certification within 12 months and breach notification within 24 hours.', applies: 'Yes', owner: 'M. Chen', controls: ['A.5.20', 'A.5.24', 'A.5.31'], lastReviewed: daysFrom(-30), notes: '' }
       ],
       /* Approved questionnaire answers — one of them (ANS-002) was
          approved while backups were passing, so the demo shows the
@@ -1950,6 +1992,12 @@ window.DemoStore = (function () {
     addReview: async function (r) { S.reviews.push(r); persist(); },
     addObjective: async function (o) { S.objectives.push(o); persist(); },
     addAnswer: async function (a) { S.answers = S.answers || []; S.answers.push(a); persist(); },
+    addAsset: async function (a) { S.assets = S.assets || []; S.assets.push(a); persist(); },
+    updateAsset: async function () { persist(); },
+    deleteAsset: async function (a) { S.assets = (S.assets || []).filter(function (x) { return x !== a; }); persist(); },
+    addLegal: async function (r) { S.legal = S.legal || []; S.legal.push(r); persist(); },
+    updateLegal: async function () { persist(); },
+    deleteLegal: async function (r) { S.legal = (S.legal || []).filter(function (x) { return x !== r; }); persist(); },
     updateAnswer: async function () { persist(); },
     deleteAnswer: async function (a) { S.answers = (S.answers || []).filter(function (x) { return x !== a; }); persist(); },
     updateObjective: async function () { persist(); },
@@ -2259,6 +2307,27 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'Metric', text: {} }, { name: 'Target', text: {} },
       { name: 'Owner', text: {} }, { name: 'DueDate', text: {} }, { name: 'Status', text: {} },
       { name: 'ProgressNotes', text: { allowMultipleLines: true } }
+    ],
+    /* Information asset register, ISO 27001 A.5.9. Title carries the
+       asset name. Source/SourceId key rows synced from Microsoft 365
+       (Intune, Entra, SharePoint) or the Vendor register so a re-sync
+       updates them in place; manual rows have Source 'Manual'. See
+       lib.js's mergeDiscoveredAssets() for what a sync may overwrite. */
+    Assets: [
+      { name: 'RefId', text: {} }, { name: 'AssetType', text: {} }, { name: 'Owner', text: {} },
+      { name: 'Classification', text: {} }, { name: 'Criticality', text: {} }, { name: 'Location', text: {} },
+      { name: 'Source', text: {} }, { name: 'SourceId', text: {} }, { name: 'Status', text: {} },
+      { name: 'LastSynced', text: {} }, { name: 'LastReviewed', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } }
+    ],
+    /* Legal, statutory, regulatory and contractual requirements, ISO
+       27001 A.5.31 / Clause 4.2. Title carries the requirement's name;
+       Controls lists the control codes it drives, which is what lets the
+       SoA cite it as a justification for including those controls. */
+    LegalRegister: [
+      { name: 'RefId', text: {} }, { name: 'ReqType', text: {} }, { name: 'Jurisdiction', text: {} },
+      { name: 'Requirement', text: { allowMultipleLines: true } }, { name: 'Applies', text: {} },
+      { name: 'Owner', text: {} }, { name: 'Controls', text: {} }, { name: 'LastReviewed', text: {} },
+      { name: 'Notes', text: { allowMultipleLines: true } }
     ],
     /* Security questionnaire answer library — answers a practitioner has
        reviewed and approved, reused the next time a customer asks the
@@ -2878,6 +2947,19 @@ window.SpStore = (function () {
      an add and an update function (the pattern every other list in
      this file uses) is exactly where the two would eventually drift.
      One function, both callers. */
+  function assetFields(a, withRef) {
+    var f = { Title: String(a.name || '').slice(0, 255), AssetType: a.type || 'Other', Owner: a.owner || '', Classification: a.classification || '',
+      Criticality: a.criticality || '', Location: a.location || '', Source: a.source || 'Manual', SourceId: a.sourceId || '',
+      Status: a.status || 'Active', LastSynced: a.lastSynced || '', LastReviewed: a.lastReviewed || '', Notes: a.notes || '' };
+    if (withRef) f.RefId = a.id;
+    return f;
+  }
+  function legalFields(r, withRef) {
+    var f = { Title: String(r.title || '').slice(0, 255), ReqType: r.type || 'Legislation', Jurisdiction: r.jurisdiction || '', Requirement: r.requirement || '',
+      Applies: r.applies || 'To confirm', Owner: r.owner || '', Controls: csv(r.controls), LastReviewed: r.lastReviewed || '', Notes: r.notes || '' };
+    if (withRef) f.RefId = r.id;
+    return f;
+  }
   function answerFields(a, withRef) {
     var f = { Title: String(a.question || '').slice(0, 255), Answer: a.answer || '', Verdict: a.verdict || '', Topics: a.topics || '',
       ApprovedBy: a.approvedBy || '', ApprovedDate: a.approvedDate || '', TimesUsed: String(a.timesUsed || 0) };
@@ -2972,6 +3054,8 @@ window.SpStore = (function () {
       var revItems = await items('Reviews');
       var objItems = await items('Objectives');
       var ansItems = await items('Answers');
+      var assetItems = await items('Assets');
+      var legalItems = await items('LegalRegister');
       var calItems = await items('Calendar');
       var logItems = await items('AuditLog');
       var alertItems = await items('Alerts');
@@ -3069,6 +3153,14 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '' };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
+        assets: assetItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, name: f.Title || '', type: f.AssetType || 'Other', owner: f.Owner || '', classification: f.Classification || '', criticality: f.Criticality || '', location: f.Location || '', source: f.Source || 'Manual', sourceId: f.SourceId || '', status: f.Status || 'Active', lastSynced: f.LastSynced || '', lastReviewed: f.LastReviewed || '', notes: f.Notes || '' };
+        }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
+        legal: legalItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, title: f.Title || '', type: f.ReqType || 'Legislation', jurisdiction: f.Jurisdiction || '', requirement: f.Requirement || '', applies: f.Applies || 'To confirm', owner: f.Owner || '', controls: uncsv(f.Controls), lastReviewed: f.LastReviewed || '', notes: f.Notes || '' };
+        }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
         answers: ansItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, question: f.Title || '', answer: f.Answer || '', verdict: f.Verdict || '', topics: f.Topics || '', approvedBy: f.ApprovedBy || '', approvedDate: f.ApprovedDate || '', timesUsed: Number(f.TimesUsed) || 0 };
@@ -3489,6 +3581,26 @@ window.SpStore = (function () {
         Inputs: r.inputs, Decisions: r.decisions, NextDue: r.nextDue || ''
       });
       S.reviews.push(r);
+    },
+    addAsset: async function (a) {
+      a._sp = await addItem('Assets', assetFields(a, true));
+      S.assets = S.assets || [];
+      S.assets.push(a);
+    },
+    updateAsset: async function (a) { await patchItem('Assets', a._sp, assetFields(a, false)); },
+    deleteAsset: async function (a) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.Assets + '/items/' + a._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+      S.assets = (S.assets || []).filter(function (x) { return x !== a; });
+    },
+    addLegal: async function (r) {
+      r._sp = await addItem('LegalRegister', legalFields(r, true));
+      S.legal = S.legal || [];
+      S.legal.push(r);
+    },
+    updateLegal: async function (r) { await patchItem('LegalRegister', r._sp, legalFields(r, false)); },
+    deleteLegal: async function (r) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.LegalRegister + '/items/' + r._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+      S.legal = (S.legal || []).filter(function (x) { return x !== r; });
     },
     addAnswer: async function (a) {
       a._sp = await addItem('Answers', answerFields(a, true));

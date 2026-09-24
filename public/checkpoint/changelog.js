@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.100.0',
+    date: '2026-09-24',
+    entries: [
+      'New Asset register (Risk & posture → Asset register) for ISO 27001 A.5.9. Sync from Microsoft 365 brings in Intune devices with their primary user as owner, your Entra enterprise applications, SharePoint sites and the services in your vendor register, and keeps them current on every sync without overwriting the classification, criticality or notes you set. A device that disappears from Intune is flagged, never deleted. Add the information assets themselves — customer data, HR records, source code — by hand, because a device list alone is not an A.5.9 inventory.',
+      'New Legal & regulatory register (Assurance) for ISO 27001 A.5.31 and Clause 4.2, with an Australian starting set — the Privacy Act and NDB scheme, ransomware payment reporting under the Cyber Security Act 2024, the Spam Act, record-keeping duties, SOCI and customer contracts — to confirm and assign owners. It is a prompt, not legal advice.',
+      'The Statement of Applicability now gives every included control its justification for inclusion, as ISO 27001 6.1.3 d) requires: the risks it treats, the legal and contractual requirements it meets and the posture checks that monitor it. It appears in the SoA view, the SoA report and the CSV export.',
+      'The Audit Readiness Report opens with a Stage 1 checklist of the mandatory documented information ISO 27001 requires — scope, policy, risk processes, SoA, risk treatment plan, objectives, competence, monitoring results, internal audit, management review, corrective action — plus the Annex A records an auditor samples first, each marked in place, incomplete or missing from your real data.',
+      'Your path to certification gains three steps for ISO 27001 tenants: build the asset register, record legal and contractual requirements, and complete the mandatory documented information.',
+      'New framework: Privacy Act (APPs). All 13 Australian Privacy Principles broken into their operative requirements, plus the Notifiable Data Breaches duties, as amended in 2024 — including the automated-decision transparency obligations that apply from 10 December 2026. Cross-mapped to ISO 27001, with scan suggestions from the subject rights, retention, MFA, encryption, DLP and incident checks. Comes with a new Privacy Management Plan template covering APP governance, access and correction timeframes and the 30-day breach assessment.'
+    ]
+  },
+  {
     version: '1.99.0',
     date: '2026-09-24',
     entries: [

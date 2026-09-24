@@ -87,7 +87,7 @@ import { webcrypto } from 'node:crypto';
 const PLAN_TO_FRAMEWORK = {
   iso27001: 'iso27001', soc2: 'soc2', essential8: 'essential8',
   is18: 'is18', iso42001: 'iso42001', iso27701: 'iso27701',
-  dispirap: 'dispirap', nistcsf: 'nistcsf', rffr: 'rffr', cps234: 'cps234',
+  dispirap: 'dispirap', nistcsf: 'nistcsf', rffr: 'rffr', cps234: 'cps234', privacyact: 'privacyact',
   ai: 'ai'
 };
 

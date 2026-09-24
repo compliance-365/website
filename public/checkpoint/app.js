@@ -741,6 +741,11 @@ function showModal(opts) {
     cpsControls: 'Implementation of controls', cpsIncident: 'Incident management',
     cpsTesting: 'Testing control effectiveness', cpsAudit: 'Internal audit',
     cpsNotify: 'APRA notification',
+    /* Privacy Act — APP groupings, prefixed for the same collision reason. */
+    appGovernance: 'APP 1 — Open and transparent management', appCollection: 'APP 2–5 — Collection and notice',
+    appUse: 'APP 6–9 — Use, disclosure, overseas and identifiers', appQuality: 'APP 10 — Quality',
+    appSecurity: 'APP 11 — Security and destruction', appRights: 'APP 12–13 — Access and correction',
+    appNdb: 'Notifiable Data Breaches',
     deeds: 'RFFR Obligations', roles: 'Cyber security roles', incidents: 'Cyber security incidents',
     procurement: 'Procurement & outsourcing', documentation: 'Documentation', physical: 'Physical security',
     personnel: 'Personnel security', 'comms-infra': 'Communications infrastructure', 'comms-systems': 'Communications systems',
@@ -809,6 +814,7 @@ function showModal(opts) {
        the same reason aiInterpretEvidence is. Matching evidence and
        exporting are read-only and open to a Viewer. */
     'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
+    'addManualAsset', 'syncAssets', 'editAsset', 'seedLegalBaseline', 'addLegalReq', 'editLegalReq',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -857,7 +863,7 @@ function showModal(opts) {
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
     'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining',
-    'toggleAddObjective'
+    'toggleAddObjective', 'toggleAddAsset'
   ]);
 
   function isMutatingAction(path) {
@@ -1018,7 +1024,7 @@ function showModal(opts) {
     },
     {
       key: 'controls', label: 'Controls (SoA)', filename: 'controls.csv',
-      header: ['Framework', 'Control ID', 'Title', 'Applicable', 'Status', 'Also satisfies', 'Owner', 'Verified date', 'Verified by', 'Evidence URL', 'Justification'],
+      header: ['Framework', 'Control ID', 'Title', 'Applicable', 'Status', 'Also satisfies', 'Owner', 'Verified date', 'Verified by', 'Evidence URL', 'Justification', 'Justification for inclusion'],
       /* Unlike every other register above, this one is framework-scoped
          premium content (control titles, not just a client's own risk/
          action text), so it gets the one exception to "always reads
@@ -1031,7 +1037,7 @@ function showModal(opts) {
          another module's full control set in one click. */
       rows: function () {
         return S.controls.filter(function (c) { return S.entitlements && S.entitlements[c.fw]; }).map(function (c) {
-          return [fwName(c.fw), c.id, c.t, c.app ? 'Yes' : 'No', c.app ? c.st : 'N/A', c.map, c.own, c.verified, c.verifiedBy, c.evidenceUrl, c.just];
+          return [fwName(c.fw), c.id, c.t, c.app ? 'Yes' : 'No', c.app ? c.st : 'N/A', c.map, c.own, c.verified, c.verifiedBy, c.evidenceUrl, c.app ? '' : c.just, c.app ? soaInclusionReasons(c).join('; ') : ''];
         });
       }
     },
@@ -1070,6 +1076,20 @@ function showModal(opts) {
       header: ['ID', 'Objective', 'Metric', 'Target', 'Owner', 'Due', 'Status', 'Progress notes'],
       rows: function () {
         return (S.objectives || []).map(function (o) { return [o.id, o.title, o.metric, o.target, o.owner, o.due, o.status, o.notes]; });
+      }
+    },
+    {
+      key: 'assets', label: 'Asset register', filename: 'asset-register.csv',
+      header: ['ID', 'Asset', 'Type', 'Owner', 'Classification', 'Criticality', 'Where held', 'Source', 'Status', 'Last synced', 'Last reviewed', 'Notes'],
+      rows: function () {
+        return (S.assets || []).map(function (a) { return [a.id, a.name, a.type, a.owner, a.classification, a.criticality, a.location, a.source, a.status, a.lastSynced, a.lastReviewed, a.notes]; });
+      }
+    },
+    {
+      key: 'legal', label: 'Legal & regulatory register', filename: 'legal-register.csv',
+      header: ['ID', 'Requirement', 'Type', 'Jurisdiction', 'What it requires', 'Applies', 'Owner', 'Controls', 'Last reviewed', 'Notes'],
+      rows: function () {
+        return (S.legal || []).map(function (r) { return [r.id, r.title, r.type, r.jurisdiction, r.requirement, r.applies, r.owner, (r.controls || []).join(' '), r.lastReviewed, r.notes]; });
       }
     },
     {
@@ -2439,12 +2459,12 @@ function showModal(opts) {
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var pct = window.CheckpointLib.readinessPct(app);
       var tableHtml = '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr></thead><tbody>' +
-        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</tbody></table>';
+        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + (!c.app && c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + (c.app ? '<div class="rpt-just">Justification for inclusion: ' + esc(soaInclusionReasons(c).join('; ')) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</tbody></table>';
       var statusCounts = controlStatusCounts(fwControls);
       return {
         title: 'Statement of Applicability — ' + fwLabel,
         dashboard: {
-          intro: 'Controls assessed for applicability with implementation status and cross-framework mapping. Justifications recorded for all exclusions. Evidence references resolve to the tenant Evidence library.',
+          intro: 'Controls assessed for applicability with implementation status and cross-framework mapping. Every included control carries its justification for inclusion (the risks it treats, the legal and contractual requirements it meets, the checks that monitor it), and every exclusion its recorded justification, as ISO 27001 6.1.3 d) requires. Evidence references resolve to the tenant Evidence library.',
           charts: [
             { figure: 1, title: 'Readiness — ' + fwLabel, caption: pct + '% of applicable controls implemented (' + impl + '/' + app.length + ').', svg: RC.donut(statusCounts) },
             { figure: 2, title: 'Control status by theme', caption: 'Implementation mix across ' + fwLabel + '’s own theme/category grouping.', svg: RC.stackedBars(themeGroupsFor(activeFw, fwControls), CONTROL_STATUS_LEGEND) }
@@ -2623,6 +2643,22 @@ function showModal(opts) {
       var readinessBand = pct >= 90 ? 'Certification-ready' : pct >= 70 ? 'On track — minor gaps remain' : pct >= 50 ? 'Material gaps — a remediation plan is required before audit' : 'Significant uplift required before audit can be scheduled';
 
       var sections = [];
+
+      /* Stage 1 checklist — the documented information ISO 27001:2022
+         itself requires, and the Annex A records an auditor samples
+         first, each resolved from real register data. First, because a
+         missing mandatory document is the one gap that stops a Stage 1
+         audit outright, whatever the control percentages say. */
+      if (activeFw === 'iso27001') {
+        var mand = mandatoryDocsStatus();
+        var mandMissing = mand.filter(function (m) { return m.status !== 'done'; }).length;
+        var mandLabel = { done: 'In place', partial: 'Incomplete', missing: 'Missing' };
+        var mandHtml = '<p class="rpt-plain">' + (mandMissing ? mandMissing + ' of ' + mand.length + ' items are not yet in a state a certification auditor will accept.' : 'Every mandatory document and record is in place.') + '</p>' +
+          '<table class="rpt-table"><thead><tr><th>Ref</th><th>Documented information</th><th>Status</th><th>Detail</th></tr></thead><tbody>' +
+          mand.map(function (m) { return '<tr><td class="rpt-idc">' + esc(m.ref) + '</td><td>' + esc(m.item) + '</td><td><b>' + mandLabel[m.status] + '</b></td><td>' + esc(m.note) + '</td></tr>'; }).join('') +
+          '</tbody></table>';
+        sections.push({ heading: 'Mandatory documented information (' + (mand.length - mandMissing) + '/' + mand.length + ' in place)', html: mandHtml, pageBreak: true });
+      }
 
       /* per-theme breakdown — only ISO 27001's control codes carry a
          natural theme prefix (A.5 Organizational / A.6 People /
@@ -4062,6 +4098,13 @@ function showModal(opts) {
     var rEl = document.getElementById('nReviews');
     rEl.textContent = reviewOverdue ? '!' : ''; rEl.style.display = reviewOverdue ? 'inline-block' : 'none';
 
+    var aSum = window.CheckpointLib.assetRegisterSummary(S.assets || [], today, 365);
+    var aEl = document.getElementById('nAssets');
+    if (aEl) { var aN = aSum.noOwner + aSum.missing; aEl.textContent = aN || ''; aEl.style.display = aN ? 'inline-block' : 'none'; }
+    var lSum = window.CheckpointLib.legalRegisterSummary(S.legal || [], today, 365);
+    var lEl = document.getElementById('nLegal');
+    if (lEl) { var lN = lSum.toConfirm + lSum.noOwner; lEl.textContent = lN || ''; lEl.style.display = lN ? 'inline-block' : 'none'; }
+
     var atRiskObjectives = (S.objectives || []).filter(function (o) { return o.status === 'At risk' || o.status === 'Missed'; }).length;
     var oEl = document.getElementById('nObjectives');
     if (oEl) { oEl.textContent = atRiskObjectives || ''; oEl.style.display = atRiskObjectives ? 'inline-block' : 'none'; }
@@ -4205,14 +4248,35 @@ function showModal(opts) {
     audit: { view: 'audits', cta: 'Open internal audits' },
     review: { view: 'reviews', cta: 'Open management reviews' },
     clauses: { view: 'clauses', cta: 'Open the clause register' },
+    assets: { view: 'assets', cta: 'Open the asset register' },
+    legal: { view: 'legal', cta: 'Open the legal register' },
+    mandatory: { action: 'App.report', id: 'ready', cta: 'Open the readiness report' },
     book: { view: 'calendar', cta: 'Open the calendar' }
   };
   function pathStepButton(step, primary) {
     var a = PATH_STEP_ACTIONS[step.id] || {};
     var cls = 'btn ' + (primary ? '' : 'ghost ') + 'sm';
     return a.action
-      ? '<button class="' + cls + '" data-action="' + a.action + '">' + esc(a.cta) + '</button>'
+      ? '<button class="' + cls + '" data-action="' + a.action + '"' + (a.id ? ' data-id="' + esc(a.id) + '"' : '') + '>' + esc(a.cta) + '</button>'
       : '<button class="' + cls + '" data-action="App.go" data-id="' + a.view + '">' + esc(a.cta) + '</button>';
+  }
+
+  /* ISO 27001 Stage 1 checklist — lib.js's mandatoryDocumentation()
+     over the tenant's documents and registers. */
+  function mandatoryDocsStatus() {
+    var app = frameworkAppRows('iso27001');
+    var all = frameworkVisibleRows('iso27001');
+    var last = S.scans && S.scans[S.scans.length - 1];
+    var today = new Date().toISOString().slice(0, 10);
+    return window.CheckpointLib.mandatoryDocumentation({
+      docs: (window._docs || S.documents || []).map(function (d) { return { tplId: d.tplId, status: docStatusOf(d) }; }),
+      soa: { applicable: app.length, notStarted: app.filter(function (c) { return c.st === 'Not started'; }).length, unjustified: all.filter(function (c) { return !c.app && !c.just; }).length },
+      risks: S.risks, objectives: S.objectives, training: S.training, audits: S.audits, reviews: S.reviews,
+      lastScanDate: last ? last.date : '',
+      assets: window.CheckpointLib.assetRegisterSummary(S.assets || [], today, 365),
+      legal: window.CheckpointLib.legalRegisterSummary(S.legal || [], today, 365),
+      today: today
+    });
   }
 
   function gettingStartedSteps() {
@@ -4231,6 +4295,9 @@ function showModal(opts) {
       risks: S.risks, appControls: primaryFw ? frameworkAppRows(primaryFw) : [],
       objectives: S.objectives, training: S.training, vendors: S.vendors, aiSystems: S.aiSystems,
       audits: S.audits, reviews: S.reviews, clauses: visibleClauses(), calendar: S.calendar,
+      assets: window.CheckpointLib.assetRegisterSummary(S.assets || [], new Date().toISOString().slice(0, 10), 365),
+      legal: window.CheckpointLib.legalRegisterSummary(S.legal || [], new Date().toISOString().slice(0, 10), 365),
+      mandatory: primaryFw === 'iso27001' ? mandatoryDocsStatus() : null,
       today: new Date().toISOString().slice(0, 10)
     });
   }
@@ -6732,7 +6799,9 @@ function showModal(opts) {
       ? (c.just
           ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlJustification" data-id="' + key + '">Edit</button></div>'
           : '<div style="margin-top:4px"><span class="verify-stale">' + icon('flag') + ' No justification recorded</span> <button class="btn sm" data-action="App.setControlJustification" data-id="' + key + '">Add justification</button></div>')
-      : '';
+      /* 6.1.3 d) wants the reason for INCLUDING a control too — derived
+         from the risks, requirements and checks already linked to it. */
+      : '<div class="src" style="margin-top:4px">Included: ' + esc(soaInclusionReasons(c).join(' · ')) + '</div>';
     /* The control code alone used to be the only way into the guidance
        drawer, and with no visible affordance at rest (the .lnk
        underline only appears on hover) — a practitioner scanning
@@ -6942,6 +7011,18 @@ function showModal(opts) {
      inverting the map costs a controlsForCheck() call per check and
      the SoA renders every row through it. */
   var _assuranceIndex = null;
+  /* Why an applicable control is in the SoA — lib.js's
+     soaInclusionReasons() over this tenant's risks, legal register and
+     the posture checks mapped to the control. */
+  function soaInclusionReasons(c) {
+    var idx = checkIdsByControl();
+    var labels = {};
+    (idx[(c.fw || 'iso27001') + '|' + c.id] || []).forEach(function (id) {
+      var d = (window.CHECK_DEFS || []).find(function (x) { return x.id === id; });
+      if (d) (labels[c.id] = labels[c.id] || []).push(d.label);
+    });
+    return window.CheckpointLib.soaInclusionReasons(c, { risks: S.risks || [], obligations: S.legal || [], checkLabelsByControl: labels });
+  }
   function checkIdsByControl() {
     if (_assuranceIndex) return _assuranceIndex;
     var idx = {};
@@ -7935,7 +8016,7 @@ function showModal(opts) {
      missing here while templates were already tagged cps234 — harmless,
      since the fallback still produced a correctly labelled group, but it
      left the order of that group arbitrary. */
-  var TEMPLATE_GROUP_ORDER = ['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential8', 'nistcsf', 'dispirap', 'is18', 'cps234', 'rffr'];
+  var TEMPLATE_GROUP_ORDER = ['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential8', 'nistcsf', 'dispirap', 'is18', 'cps234', 'privacyact', 'rffr'];
 
   /* The frameworks a template cites controls for, limited to the ones
      this client holds. Resolved against each framework's own control
@@ -9336,6 +9417,124 @@ function showModal(opts) {
     }).join('');
     revealRows(wrap);
   }
+  /* ================= Asset register (A.5.9) ================= */
+  var _assetFilter = 'all';
+  function assetSummary() {
+    return window.CheckpointLib.assetRegisterSummary(S.assets || [], new Date().toISOString().slice(0, 10), 365);
+  }
+  function renderAssets() {
+    var wrap = document.getElementById('assetRows');
+    if (!wrap) return;
+    var sum = assetSummary();
+    var kpi = document.getElementById('assetKpiRow');
+    kpi.innerHTML =
+      kpiTile({ value: sum.total, label: 'Assets', sub: sum.information + ' information asset' + (sum.information === 1 ? '' : 's') }) +
+      kpiTile({ value: sum.noOwner, label: 'Without an owner', tone: 'fail', meter: { value: sum.noOwner, max: sum.total }, sub: sum.noOwner ? 'A.5.9 requires an owner' : 'every asset owned' }) +
+      kpiTile({ value: sum.unclassified, label: 'Information unclassified', tone: 'warn', sub: 'A.5.12 classification' }) +
+      kpiTile({ value: sum.missing, label: 'Not found in last sync', tone: 'warn', sub: sum.missing ? 'disposed, or no longer managed?' : 'register matches Microsoft 365' });
+    runCountUps(kpi);
+    var types = ['all'].concat(window.CheckpointLib.ASSET_TYPES);
+    document.getElementById('assetFilter').innerHTML = types.map(function (t) {
+      var n = t === 'all' ? sum.total : (sum.byType[t] || 0);
+      return '<button class="f-pill' + (_assetFilter === t ? ' on' : '') + '" aria-pressed="' + (_assetFilter === t) + '" data-action="App.setAssetFilter" data-id="' + esc(t) + '">' + esc(t === 'all' ? 'All' : t) + ' ' + n + '</button>';
+    }).join('');
+    var list = (S.assets || []).filter(function (a) { return a.status !== 'Retired' && (_assetFilter === 'all' || a.type === _assetFilter); });
+    if (!list.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No assets yet. Sync from Microsoft 365 for devices, applications and sites, then add the information assets no system can see.', cta: { label: 'Sync from Microsoft 365', action: 'App.syncAssets' } });
+      return;
+    }
+    wrap.innerHTML = list.map(function (a) {
+      var flag = a.status === 'Not found in last sync';
+      return '<tr><td class="src">' + esc(a.id) + '</td>' +
+        '<td style="color:var(--paper);max-width:300px">' + esc(a.name) + (a.location ? '<div class="src">' + esc(a.location) + '</div>' : '') + (flag ? '<div class="src" style="color:var(--fail)">' + icon('flag') + ' Not found in the last sync — disposed of, or no longer managed?</div>' : '') + '</td>' +
+        '<td>' + esc(a.type) + '</td>' +
+        '<td>' + (a.owner ? esc(a.owner) : '<span class="verify-stale">' + icon('flag') + ' None</span>') + '</td>' +
+        '<td>' + (a.classification ? '<span class="chip st-Notstarted">' + esc(a.classification) + '</span>' : '—') + (a.criticality ? '<div class="src">' + esc(a.criticality) + ' criticality</div>' : '') + '</td>' +
+        '<td class="src">' + esc(a.source) + (a.lastSynced ? '<br>synced ' + fmtDate(a.lastSynced) : '') + '</td>' +
+        '<td class="src">' + (a.lastReviewed ? fmtDate(a.lastReviewed) : '—') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editAsset" data-id="' + esc(a.id) + '">Edit</button></td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
+  function nextRegId(list, prefix) {
+    var max = (list || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    return prefix + String(max + 1).padStart(3, '0');
+  }
+
+  /* ================= Legal & regulatory register (A.5.31) ================= */
+  function legalSummary() {
+    return window.CheckpointLib.legalRegisterSummary(S.legal || [], new Date().toISOString().slice(0, 10), 365);
+  }
+  function renderLegal() {
+    var wrap = document.getElementById('legalRows');
+    if (!wrap) return;
+    var sum = legalSummary();
+    var kpi = document.getElementById('legalKpiRow');
+    kpi.innerHTML =
+      kpiTile({ value: sum.applying, label: 'Requirements that apply', sub: sum.total + ' recorded' }) +
+      kpiTile({ value: sum.toConfirm, label: 'Still to confirm', tone: 'warn', sub: sum.toConfirm ? 'decide whether each applies' : 'all decided' }) +
+      kpiTile({ value: sum.noOwner, label: 'Applying, no owner', tone: 'fail', sub: 'every requirement needs an owner' }) +
+      kpiTile({ value: sum.stale, label: 'Not reviewed in 12 months', tone: 'warn', sub: 'review when the law or business changes' });
+    runCountUps(kpi);
+    var list = S.legal || [];
+    if (!list.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 7, text: 'No requirements recorded. Start from the Australian set and confirm which apply, then add your customer contract obligations.', cta: { label: 'Add Australian starting set', action: 'App.seedLegalBaseline' } });
+      return;
+    }
+    var cls = function (v) { return v === 'Yes' ? 'st-Implemented' : v === 'No' ? 'st-Notstarted' : 'st-Intreatment'; };
+    wrap.innerHTML = list.map(function (r) {
+      return '<tr><td class="src">' + esc(r.id) + '</td>' +
+        '<td style="color:var(--paper);max-width:380px">' + esc(r.title) + '<div class="src">' + esc(r.type) + (r.jurisdiction ? ' · ' + esc(r.jurisdiction) : '') + '</div>' + (r.requirement ? '<div style="font-size:12px;color:var(--paper-dim);margin-top:3px">' + esc(r.requirement) + '</div>' : '') + '</td>' +
+        '<td><span class="chip ' + cls(r.applies) + '">' + esc(r.applies) + '</span></td>' +
+        '<td>' + (r.owner ? esc(r.owner) : (r.applies === 'No' ? '—' : '<span class="verify-stale">' + icon('flag') + ' None</span>')) + '</td>' +
+        '<td class="src">' + esc((r.controls || []).join(', ') || '—') + '</td>' +
+        '<td class="src">' + (r.lastReviewed ? fmtDate(r.lastReviewed) : '—') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editLegalReq" data-id="' + esc(r.id) + '">Edit</button></td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
+  /* ================= /registers ================= */
+
+  async function legalEditModal(r) {
+    var isNew = !r;
+    var v = await showModal({
+      title: isNew ? 'New requirement' : 'Edit ' + r.id,
+      fields: [
+        { id: 'title', label: 'Requirement (e.g. the Act, regulation or contract)', value: r ? r.title : '' },
+        { id: 'type', label: 'Type', type: 'select', value: r ? r.type : 'Legislation', options: window.CheckpointLib.LEGAL_TYPES },
+        { id: 'jurisdiction', label: 'Jurisdiction', value: r ? r.jurisdiction : '' },
+        { id: 'requirement', label: 'What it requires of you', type: 'textarea', value: r ? r.requirement : '' },
+        { id: 'applies', label: 'Applies to us', type: 'select', value: r ? r.applies : 'To confirm', options: window.CheckpointLib.LEGAL_APPLIES },
+        { id: 'owner', label: 'Owner', value: r ? r.owner : '' },
+        { id: 'controls', label: 'Controls it drives (comma-separated codes, e.g. A.5.34, A.5.24)', value: r ? (r.controls || []).join(', ') : '' },
+        { id: 'reviewed', label: 'Mark as reviewed today', type: 'select', value: 'Yes', options: ['Yes', 'No'] },
+        { id: 'notes', label: 'Notes', type: 'textarea', value: r ? r.notes : '' }
+      ],
+      confirmText: isNew ? 'Add' : 'Save changes',
+      validate: function (v) { return v.title ? null : 'Name the requirement.'; }
+    });
+    if (!v) return;
+    var controls = String(v.controls || '').split(/[,;\s]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+    busy(true);
+    try {
+      if (isNew) {
+        r = { id: nextRegId(S.legal, 'LEG-'), title: v.title, type: v.type, jurisdiction: v.jurisdiction, requirement: v.requirement, applies: v.applies, owner: v.owner, controls: controls, lastReviewed: v.reviewed === 'Yes' ? new Date().toISOString().slice(0, 10) : '', notes: v.notes };
+        await Store.addLegal(r);
+        audit('Legal requirement added', 'Legal', r.id, '', r.applies + ' — ' + r.title);
+      } else {
+        var before = r.applies + ' / ' + r.owner;
+        r.title = v.title; r.type = v.type; r.jurisdiction = v.jurisdiction; r.requirement = v.requirement; r.applies = v.applies;
+        r.owner = v.owner; r.controls = controls; r.notes = v.notes;
+        if (v.reviewed === 'Yes') r.lastReviewed = new Date().toISOString().slice(0, 10);
+        await Store.updateLegal(r);
+        audit('Legal requirement updated', 'Legal', r.id, before, r.applies + ' / ' + r.owner);
+      }
+      toast('<b>' + r.id + '</b> saved');
+    } catch (e) { warn(e); }
+    busy(false);
+    renderLegal(); renderNavCounts();
+  }
+
   /* ================= Security questionnaires ================= */
   /* The questionnaire being worked on lives in memory only: it is a
      customer's document, and what is worth keeping from it (approved
@@ -11164,6 +11363,8 @@ function showModal(opts) {
     reviews: renderReviews,
     objectives: renderObjectives,
     questionnaires: renderQuestionnaires,
+    assets: renderAssets,
+    legal: renderLegal,
     calendar: renderCalendar,
     incidents: renderIncidents,
     auditlog: renderAuditLog,
@@ -15868,6 +16069,136 @@ function showModal(opts) {
       renderObjectives(); renderNavCounts();
     },
 
+    /* ---------- Asset register ---------- */
+    setAssetFilter: function (t) { _assetFilter = t || 'all'; renderAssets(); },
+
+    toggleAddAsset: function () {
+      var panel = document.getElementById('addAssetPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naAssetType').innerHTML = window.CheckpointLib.ASSET_TYPES.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
+        document.getElementById('naAssetClass').innerHTML = '<option value="">Classification…</option>' + window.CheckpointLib.ASSET_CLASSIFICATIONS.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
+        ['naAssetName', 'naAssetOwner', 'naAssetLoc'].forEach(function (id) { document.getElementById(id).value = ''; });
+        document.getElementById('naAssetCrit').value = '';
+      }
+    },
+
+    addManualAsset: async function () {
+      var name = document.getElementById('naAssetName').value.trim();
+      if (!name) { toast('Enter the asset first'); return; }
+      var a = {
+        id: nextRegId(S.assets, 'AST-'), name: name,
+        type: document.getElementById('naAssetType').value || 'Information',
+        owner: document.getElementById('naAssetOwner').value.trim(),
+        classification: document.getElementById('naAssetClass').value,
+        criticality: document.getElementById('naAssetCrit').value,
+        location: document.getElementById('naAssetLoc').value.trim(),
+        source: 'Manual', sourceId: '', status: 'Active', lastSynced: '', lastReviewed: new Date().toISOString().slice(0, 10), notes: ''
+      };
+      busy(true);
+      try { await Store.addAsset(a); audit('Asset added', 'Asset', a.id, '', a.type + ' — ' + a.name); toast('<b>' + a.id + '</b> added'); } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddAsset();
+      renderAssets(); renderNavCounts();
+    },
+
+    /* Pulls devices (Intune), applications (Entra) and sites (SharePoint)
+       from Microsoft 365, plus the vendor register's services, and merges
+       them with lib.js's mergeDiscoveredAssets() — which decides what a
+       sync may overwrite. Demo mode syncs the vendor register only. */
+    syncAssets: async function () {
+      var btn = document.getElementById('assetSyncBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+      var discovered = [], errors = {};
+      if (Store.kind === 'sharepoint') {
+        try { var r = await Graph.discoverAssets(); discovered = r.items; errors = r.errors; } catch (e) { warn(e); }
+      }
+      (S.vendors || []).forEach(function (v) {
+        discovered.push({ source: 'Vendor', sourceId: v.id, name: v.name, type: 'Cloud service', owner: v.owner || '', location: 'Vendor register (' + v.id + ')', criticality: v.criticality || '' });
+      });
+      var today = new Date().toISOString().slice(0, 10);
+      var plan = window.CheckpointLib.mergeDiscoveredAssets(S.assets || [], discovered, today);
+      busy(true);
+      var added = 0, updated = 0;
+      for (var i = 0; i < plan.toAdd.length; i++) {
+        var a = plan.toAdd[i];
+        a.id = nextRegId(S.assets, 'AST-');
+        try { await Store.addAsset(a); added++; } catch (e) { warn(e); break; }
+      }
+      for (var j = 0; j < plan.toUpdate.length; j++) {
+        try { await Store.updateAsset(plan.toUpdate[j]); updated++; } catch (e) { warn(e); }
+      }
+      busy(false);
+      var failed = Object.keys(errors);
+      audit('Asset register synced', 'Asset', '', '', added + ' added, ' + updated + ' updated, ' + plan.missing + ' not found' + (failed.length ? '; not readable: ' + failed.join(', ') : ''));
+      toast('<b>' + added + '</b> added · ' + updated + ' updated' + (plan.missing ? ' · ' + plan.missing + ' not found' : '') + (failed.length ? ' · could not read ' + esc(failed.join(', ')) : '') + (Store.kind === 'demo' ? ' (demo: vendor register only)' : ''));
+      if (btn) { btn.disabled = false; btn.textContent = 'Sync from Microsoft 365'; }
+      renderAssets(); renderNavCounts();
+    },
+
+    editAsset: async function (id) {
+      var a = (S.assets || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var synced = a.source !== 'Manual';
+      var v = await showModal({
+        title: 'Edit ' + a.id + (synced ? ' (synced from ' + a.source + ')' : ''),
+        fields: [
+          { id: 'name', label: 'Asset' + (synced ? ' — refreshed on each sync' : ''), value: a.name },
+          { id: 'type', label: 'Type', type: 'select', value: a.type, options: window.CheckpointLib.ASSET_TYPES },
+          { id: 'owner', label: 'Owner' + (a.source === 'Intune' ? ' — the Intune primary user, refreshed on each sync' : ''), value: a.owner },
+          { id: 'classification', label: 'Classification', type: 'select', value: a.classification, options: [''].concat(window.CheckpointLib.ASSET_CLASSIFICATIONS) },
+          { id: 'criticality', label: 'Criticality', type: 'select', value: a.criticality, options: ['', 'Low', 'Medium', 'High', 'Critical'] },
+          { id: 'location', label: 'Where it is held', value: a.location },
+          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ['Active', 'Not found in last sync', 'Retired'] },
+          { id: 'reviewed', label: 'Mark as reviewed today', type: 'select', value: 'Yes', options: ['Yes', 'No'] },
+          { id: 'notes', label: 'Notes', type: 'textarea', value: a.notes }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.name ? null : 'Enter the asset.'; }
+      });
+      if (!v) return;
+      var before = a.owner + ' / ' + a.classification + ' / ' + a.status;
+      busy(true);
+      try {
+        a.name = v.name; a.type = v.type; a.owner = v.owner; a.classification = v.classification; a.criticality = v.criticality;
+        a.location = v.location; a.status = v.status; a.notes = v.notes;
+        if (v.reviewed === 'Yes') a.lastReviewed = new Date().toISOString().slice(0, 10);
+        await Store.updateAsset(a);
+        audit('Asset updated', 'Asset', a.id, before, a.owner + ' / ' + a.classification + ' / ' + a.status);
+        toast('<b>' + a.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAssets(); renderNavCounts();
+    },
+
+    /* ---------- Legal & regulatory register ---------- */
+    seedLegalBaseline: async function () {
+      var have = {};
+      (S.legal || []).forEach(function (r) { have[String(r.title).toLowerCase()] = 1; });
+      var todo = window.CheckpointLib.LEGAL_BASELINE_AU.filter(function (b) { return !have[b.title.toLowerCase()]; });
+      if (!todo.length) { toast('The Australian starting set is already in the register'); return; }
+      var ok = await showModal({ title: 'Add ' + todo.length + ' Australian requirement(s)?', message: 'Each is added as a prompt for you to confirm, not a legal conclusion. Most start as "To confirm" because whether they apply depends on your turnover, sector and state.', confirmText: 'Add', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < todo.length; i++) {
+        var b = todo[i];
+        var r = { id: nextRegId(S.legal, 'LEG-'), title: b.title, type: b.type, jurisdiction: b.jurisdiction, requirement: b.requirement, applies: b.applies, owner: '', controls: b.controls.slice(), lastReviewed: '', notes: '' };
+        try { await Store.addLegal(r); n++; } catch (e) { warn(e); break; }
+      }
+      busy(false);
+      audit('Legal register starting set added', 'Legal', '', '', n + ' requirement(s)');
+      toast('<b>' + n + '</b> requirement(s) added — confirm which apply');
+      renderLegal(); renderNavCounts();
+    },
+
+    addLegalReq: async function () { await legalEditModal(null); },
+    editLegalReq: async function (id) {
+      var r = (S.legal || []).find(function (x) { return x.id === id; });
+      if (r) await legalEditModal(r);
+    },
+
     /* ---------- Security questionnaires ---------- */
     qrLoadFile: function () {
       var input = document.getElementById('qrFile');
@@ -18742,6 +19073,9 @@ function showModal(opts) {
         }
         if (moduleId === 'cps234' && content.extra && content.extra.checkCps234) {
           Object.assign(window.CHECK_CPS234, content.extra.checkCps234);
+        }
+        if (moduleId === 'privacyact' && content.extra && content.extra.checkPrivacyAct) {
+          Object.assign(window.CHECK_PRIVACYACT, content.extra.checkPrivacyAct);
         }
         PACKS_MERGED[moduleId] = true;
       } catch (e) {

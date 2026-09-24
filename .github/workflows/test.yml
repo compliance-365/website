@@ -82,7 +82,7 @@ jobs:
         run: |
           set -e
           missing=""
-          for f in ai.json cps234.json dispirap.json essential8.json is18.json iso27701.json iso42001.json nistcsf.json rffr.json soc2.json; do
+          for f in ai.json cps234.json dispirap.json essential8.json is18.json iso27701.json iso42001.json nistcsf.json privacyact.json rffr.json soc2.json; do
             if [ ! -s "checkpoint-content/$f" ]; then
               missing="$missing $f"
             fi
@@ -92,7 +92,7 @@ jobs:
             echo "Check the CHECKPOINT_CONTENT_PAT secret and the checkout step above."
             exit 1
           fi
-          echo "Premium content checkout verified — all 10 framework files present ✅"
+          echo "Premium content checkout verified — all 11 framework files present ✅"
 
       - name: Setup Node
         uses: actions/setup-node@v4

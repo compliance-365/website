@@ -13,8 +13,31 @@ const byId = (s) => Object.fromEntries(certificationPathSteps(Object.assign({ to
 describe('certificationPathSteps()', () => {
   test('a brand-new tenant has every step outstanding, in the intended order', () => {
     const steps = certificationPathSteps({ today: TODAY, entitled: ['iso27001'] });
-    assert.deepEqual(steps.map((s) => s.id), ['scope', 'scan', 'docs', 'approve', 'risks', 'soa', 'objectives', 'training', 'suppliers', 'audit', 'review', 'clauses', 'book']);
+    assert.deepEqual(steps.map((s) => s.id), ['scope', 'scan', 'docs', 'approve', 'assets', 'legal', 'risks', 'soa', 'objectives', 'training', 'suppliers', 'audit', 'review', 'clauses', 'mandatory', 'book']);
     assert.ok(steps.every((s) => !s.done));
+  });
+
+  test('the asset, legal and mandatory-documents steps are ISO 27001 only', () => {
+    const other = byId({ entitled: ['soc2'] });
+    assert.ok(!other.assets && !other.legal && !other.mandatory);
+    const iso = byId({ entitled: ['iso27001'] });
+    assert.ok(iso.assets && iso.legal && iso.mandatory);
+  });
+
+  test('asset register: a device list alone is not done; owned information assets are', () => {
+    assert.equal(byId({ entitled: ['iso27001'], assets: { total: 40, information: 0, noOwner: 0, ready: false } }).assets.detail, 'no information assets yet');
+    assert.equal(byId({ entitled: ['iso27001'], assets: { total: 40, information: 3, noOwner: 0, ready: true } }).assets.done, true);
+  });
+
+  test('legal register: requirements still to confirm keep the step open', () => {
+    const s = byId({ entitled: ['iso27001'], legal: { total: 10, toConfirm: 4, noOwner: 0, ready: false } });
+    assert.equal(s.legal.done, false);
+    assert.equal(s.legal.detail, '4 still to confirm');
+  });
+
+  test('mandatory documents: done only when every item is in place', () => {
+    assert.equal(byId({ entitled: ['iso27001'], mandatory: [{ status: 'done' }, { status: 'partial' }] }).mandatory.done, false);
+    assert.equal(byId({ entitled: ['iso27001'], mandatory: [{ status: 'done' }, { status: 'done' }] }).mandatory.done, true);
   });
 
   test('the AI step appears only for tenants entitled to ISO 42001', () => {

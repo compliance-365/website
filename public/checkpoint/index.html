@@ -347,6 +347,7 @@
         <button class="nav-item" data-v="quantrisk">Financial risk analysis</button>
         <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
         <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
+        <button class="nav-item" data-v="assets">Asset register <span class="n" id="nAssets"></span></button>
         <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
         <button class="nav-item" data-v="threatintel">Threat intel</button>
       </details>
@@ -376,6 +377,7 @@
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="objectives">Objectives register <span class="n" id="nObjectives"></span></button>
+        <button class="nav-item" data-v="legal">Legal &amp; regulatory register <span class="n" id="nLegal"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
         <button class="nav-item" data-v="incidents">Incidents <span class="n" id="nIncidents"></span></button>
         <button class="nav-item" data-v="auditlog">Audit log</button>
@@ -1233,6 +1235,43 @@
       </div>
       <div class="grid kpis" id="objKpiRow" style="margin:0 0 16px"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Objective</th><th scope="col">Owner</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Progress notes</th><th scope="col"></th></tr></thead><tbody id="objRows"></tbody></table></div>
+    </section>
+
+    <!-- ASSET REGISTER -->
+    <section class="view" id="v-assets">
+      <div class="vhead"><div class="rule"></div><h1>Asset register</h1><p>ISO 27001 A.5.9 asks for an inventory of information and other associated assets, each with an owner. <b>Sync from Microsoft 365</b> brings in Intune devices (with their primary user as owner), your Entra enterprise applications, SharePoint sites and the services in your vendor register, and keeps them current. Add the information itself by hand — the customer database, HR records, source code — because no system can discover what your information is, and a device list alone will not satisfy an auditor.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn sm" data-action="App.syncAssets" id="assetSyncBtn">Sync from Microsoft 365</button>
+        <button class="btn ghost sm" data-action="App.toggleAddAsset">+ Add asset</button>
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="assets">Export CSV</button>
+      </div>
+      <div class="card" id="addAssetPanel" style="margin-bottom:16px;display:none">
+        <h3>New asset</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naAssetName" placeholder="Asset (e.g. Customer database, Payroll records)" style="grid-column:1/-1" aria-label="Asset name">
+          <select class="mini" id="naAssetType" aria-label="Asset type"></select>
+          <input class="mini" id="naAssetOwner" placeholder="Owner" aria-label="Owner">
+          <select class="mini" id="naAssetClass" aria-label="Classification"></select>
+          <select class="mini" id="naAssetCrit" aria-label="Criticality"><option value="">Criticality…</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+          <input class="mini" id="naAssetLoc" placeholder="Where it is held (system, site, supplier)" style="grid-column:1/-1" aria-label="Location">
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.addManualAsset">Add</button><button class="btn ghost sm" data-action="App.toggleAddAsset">Cancel</button></div>
+      </div>
+      <div class="grid kpis" id="assetKpiRow" style="margin:0 0 16px"></div>
+      <div id="assetFilter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Asset</th><th scope="col">Type</th><th scope="col">Owner</th><th scope="col">Classification</th><th scope="col">Source</th><th scope="col">Reviewed</th><th scope="col"></th></tr></thead><tbody id="assetRows"></tbody></table></div>
+    </section>
+
+    <!-- LEGAL & REGULATORY REGISTER -->
+    <section class="view" id="v-legal">
+      <div class="vhead"><div class="rule"></div><h1>Legal &amp; regulatory register</h1><p>The legal, statutory, regulatory and contractual requirements that apply to you (ISO 27001 A.5.31 and Clause 4.2), who owns each one, and the controls it drives. Controls linked here are cited in the Statement of Applicability as a reason for including them. The Australian starting set is a prompt, not legal advice: confirm what applies with your own advisers.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn sm" data-action="App.seedLegalBaseline">Add Australian starting set</button>
+        <button class="btn ghost sm" data-action="App.addLegalReq">+ Add requirement</button>
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="legal">Export CSV</button>
+      </div>
+      <div class="grid kpis" id="legalKpiRow" style="margin:0 0 16px"></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Requirement</th><th scope="col">Applies</th><th scope="col">Owner</th><th scope="col">Controls</th><th scope="col">Reviewed</th><th scope="col"></th></tr></thead><tbody id="legalRows"></tbody></table></div>
     </section>
 
     <!-- SECURITY QUESTIONNAIRES -->
