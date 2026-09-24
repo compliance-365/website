@@ -33,6 +33,30 @@ jobs:
         env:
           HAS_PAT: ${{ secrets.CHECKPOINT_CONTENT_PAT }}
 
+      - name: Pick the premium content ref
+        # A change that adds a posture check usually also maps it in the
+        # content packs, and the two repos' tests check each other (every
+        # pack key must be a real check id; the unmapped-check count is
+        # pinned). Testing a website PR against content's default branch
+        # would make that pair untestable before merge. So a PR tests
+        # against a Checkpoint-Content branch of the SAME NAME when one
+        # exists, and the default branch otherwise — which is every push
+        # to main and every PR that does not touch content.
+        id: content-ref
+        if: steps.content-pat.outputs.available == 'true'
+        run: |
+          ref=""
+          if [ -n "$HEAD_REF" ] && git ls-remote --exit-code --heads "https://x-access-token:${PAT}@github.com/compliance-365/Checkpoint-Content.git" "$HEAD_REF" >/dev/null 2>&1; then
+            ref="$HEAD_REF"
+            echo "Testing against Checkpoint-Content branch '$HEAD_REF' (same name as this PR's branch)."
+          else
+            echo "Testing against Checkpoint-Content's default branch."
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          PAT: ${{ secrets.CHECKPOINT_CONTENT_PAT }}
+
       - name: Checkout premium content (compliance-365/Checkpoint-Content)
         # Three test files (cps234, framework-registry, content-library)
         # read this private repo's content directly to validate it for
@@ -51,6 +75,7 @@ jobs:
           repository: compliance-365/Checkpoint-Content
           token: ${{ secrets.CHECKPOINT_CONTENT_PAT }}
           path: checkpoint-content
+          ref: ${{ steps.content-ref.outputs.ref }}
 
       - name: Assert premium content checkout is complete
         if: steps.content-pat.outputs.available == 'true'
