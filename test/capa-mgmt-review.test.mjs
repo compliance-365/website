@@ -1,4 +1,4 @@
-// Fixture-based tests for the corrective-action (ISO 27001 Clause 10.1)
+// Fixture-based tests for the corrective-action (ISO 27001 Clause 10.2)
 // and management-review-input (Clause 9.3.2) pure logic in lib.js.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +6,7 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 
 const { capaStatus, MR_INPUT_SECTIONS, parseReviewInputs, serializeReviewInputs } = CheckpointLib;
 
-describe('capaStatus() — corrective-action rigour (Clause 10.1)', () => {
+describe('capaStatus() — corrective-action rigour (Clause 10.2)', () => {
   test('a plain Action is never subject to CAPA and is trivially complete', () => {
     const r = capaStatus({ type: 'Action', status: 'Open' });
     assert.equal(r.isNc, false);

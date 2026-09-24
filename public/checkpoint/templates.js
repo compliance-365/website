@@ -38,15 +38,23 @@
         development, continuity, incident response) plus AI use and
         privacy; and
      2. The management-system clause documents ISO 27001 requires as
-        documented information but that aren't Annex A controls — the
-        ISMS Scope (clause 4.3), the Risk Management Framework (clauses
-        6.1.2/6.1.3) and the Information Security Objectives & Metrics
-        (clauses 6.2/9.1). These carry an empty `controls` array because
+        documented information, or that an auditor expects to see as a
+        written procedure, but that aren't Annex A controls — the
+        Organisational Context & Interested Parties (4.1/4.2), the ISMS
+        Scope (4.3), the Risk Management Framework (6.1.2/6.1.3), the
+        Information Security Objectives & Metrics (6.2/9.1), the ISMS
+        Change Planning Procedure (6.3), the Competence, Training &
+        Awareness Plan (7.2/7.3), the Communication Plan (7.4), the
+        Document & Records Control Procedure (7.5), the Internal Audit
+        Procedure & Programme (9.2), the Management Review Procedure
+        (9.3) and the Nonconformity & Corrective Action Procedure
+        (10.1/10.2). These mostly carry an empty `controls` array because
         the frameworks model Annex A controls, not clauses — the clause
-        each satisfies is named in its own purpose instead. (The other
-        clause artefacts — Statement of Applicability, Risk Treatment
-        Plan, Management Review, Internal Audit — are generated as
-        reports/features elsewhere in Checkpoint, not as templates here.)
+        each satisfies is named in its own purpose instead. The records
+        these procedures produce — the Statement of Applicability, Risk
+        Treatment Plan, audit and review results, corrective actions —
+        live in Checkpoint's own registers, not as templates here; the
+        procedures say how those registers are used.
    Each entry:
      {
        id,               // stable key, used as the SharePoint filename stem
@@ -1398,11 +1406,271 @@ window.POLICY_TEMPLATES = [
     frameworks: ['iso27001', 'soc2', 'nistcsf', 'cps234']
   },
   {
+    id: 'legal-regulatory-policy',
+    title: 'Legal, Regulatory & Contractual Requirements Policy',
+    purpose: 'This policy sets out how the organisation identifies, records and keeps current the legal, statutory, regulatory and contractual requirements relevant to information security, and how it protects the records those requirements oblige it to keep.',
+    scope: 'Applies to every obligation relevant to information security and privacy that the organisation is subject to, including legislation, regulator requirements, industry codes, and security and privacy terms in customer and supplier contracts. The obligations currently identified include: {{regulatory}}.',
+    whyItMatters: 'Much of what the security programme does exists because a law, regulator or customer contract requires it. If nobody knows which obligations apply, the organisation can be fully compliant with its own policies and still in breach of a contract it signed last month.\n\nMost people never need to read legislation. What matters is recognising when something you are doing creates or changes an obligation — signing a contract with security terms, collecting a new kind of personal information, or entering a new market — and telling the person who keeps the register.',
+    inPractice: [
+      'A customer contract you are negotiating includes security requirements, audit rights or breach-notification timeframes. Send it to the legal / compliance lead before signing so the obligation is recorded and someone owns meeting it.',
+      'A regulator publishes new guidance, or the organisation starts operating in a new jurisdiction. Flag it so the register and affected policies are updated rather than discovered at audit.',
+      'You are asked to delete records to free up space. Check the retention requirement first; some records must be kept for a legally set period.'
+    ],
+    policyStatements: [
+      {
+        rule: 'A register of legal, statutory, regulatory and contractual requirements relevant to information security and privacy is maintained, recording each requirement, its source, the policies or controls that meet it, and its owner.',
+        because: 'An obligation not written down is one nobody can show they are meeting.'
+      },
+      {
+        rule: 'The register is reviewed at least annually and whenever the organisation enters a new market, begins a new type of processing, signs a contract with material security terms, or learns of a change in law or regulation.',
+        because: 'Obligations change on outside timetables, and a register reviewed only on schedule misses the change that matters.'
+      },
+      {
+        rule: 'Security and privacy terms in contracts are reviewed before signature, and any commitment beyond existing controls is recorded in the register and assigned an owner.',
+        because: 'A contract can quietly commit the organisation to controls it does not have, with the gap found only when the customer audits.'
+      },
+      {
+        rule: 'Records required by law, regulation or contract are identified, retained for the required period, and protected from loss, destruction, falsification and unauthorised access or release.',
+        because: 'Records that must be kept are evidence, and evidence altered or lost when needed is worse than none.'
+      },
+      {
+        rule: 'Intellectual property rights are respected, including software licensing terms, and only legitimately licensed software and content are used.',
+        because: 'Licence breaches are a legal exposure, and unlicensed software is a common way malware enters an organisation.'
+      },
+      {
+        rule: 'Compliance with the requirements in the register is checked through internal audit and reported to management review.',
+        because: 'Identifying an obligation is only half the requirement; the other half is being able to show it is met.'
+      }
+    ],
+    roles: [
+      {
+        role: 'Legal / compliance lead',
+        responsibility: 'Maintains the requirements register, reviews contracts for security and privacy terms, and tracks changes in law and regulation.'
+      },
+      {
+        role: 'ISMS manager',
+        responsibility: 'Maps each requirement to the policies and controls that meet it, and includes compliance in internal audit and management review.'
+      },
+      {
+        role: 'Contract owners',
+        responsibility: 'Route contracts with security or privacy terms for review before signature, and notify the legal / compliance lead of changes.'
+      }
+    ],
+    exceptions: 'Where the organisation cannot immediately meet a newly identified obligation, the gap is recorded on the risk register with a treatment plan and a date, and escalated to the executive sponsor. An obligation is never treated as optional.',
+    nonCompliance: 'Signing a contract with security commitments without review, or destroying records that must be retained, is addressed through the disciplinary process where deliberate and raised as a corrective action in every case.',
+    relatedDocuments: [
+      'Organisational Context & Interested Parties',
+      'Document & Records Control Procedure',
+      'Privacy Policy',
+      'Supplier Security Policy'
+    ],
+    reviewCadence: 'Annually, and on any material change in law, regulation, jurisdiction or contractual commitment.',
+    controls: ['A.5.31', 'A.5.32', 'A.5.33'],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'remote-working-policy',
+    title: 'Remote Working & Mobile Device Policy',
+    purpose: 'This policy sets out the security requirements for working away from the organisation’s premises and for the laptops, phones and tablets used to access organisation information, whether issued by the organisation or personally owned.',
+    scope: 'Applies to all personnel working remotely, whether at home, while travelling or at another organisation’s premises, and to every endpoint device used to access organisation information, including personal devices enrolled for work use.',
+    whyItMatters: 'Working away from the office means leaving behind most of the protections the office provides without anyone noticing: controlled entry, a managed network, a locked cabinet. The device and the way it is used become the whole of the security.\n\nThe requirements here are mostly about keeping the device managed and the screen private. A managed device can be located, wiped and kept patched; an unmanaged one cannot. A conversation or screen in a public place is disclosed to whoever is nearby.',
+    inPractice: [
+      'You want to check work email on a personal phone. Enrol it through the approved method first — that allows work data to be removed from the phone if it is lost, without touching your personal data.',
+      'You are working on a train or in a café. Position your screen so it cannot be read by others, lock it whenever you step away, and avoid discussing sensitive matters where you can be overheard.',
+      'Your laptop or phone is lost or stolen. Report it immediately, even if you think it will turn up; the sooner it is reported, the sooner it can be locked or wiped.'
+    ],
+    policyStatements: [
+      {
+        rule: 'Organisation information is accessed only from devices that are managed by the organisation or enrolled in its device management, meet its compliance policy, and are encrypted, patched and protected against malware.',
+        because: 'A device that is not managed cannot be checked, patched or wiped, so any data on it is out of the organisation’s control.'
+      },
+      {
+        rule: 'Personally owned devices used for work are enrolled under the organisation’s app or device protection policy, so work data stays separate from personal data and can be removed selectively.',
+        because: 'Separating work data from personal data allows it to be protected and removed without intruding on the owner’s personal data.'
+      },
+      {
+        rule: 'Devices lock automatically after a short period of inactivity and require authentication to unlock; screens are locked whenever left unattended.',
+        because: 'An unlocked device left alone for a minute gives anyone nearby the user’s access.'
+      },
+      {
+        rule: 'Remote access to organisation systems uses multi-factor authentication and approved, encrypted connections.',
+        because: 'Remote access is the most attacked entry point, and a password alone is not enough to protect it.'
+      },
+      {
+        rule: 'Remote workers take reasonable care over their surroundings: preventing screens and conversations being overlooked or overheard, and not leaving devices unattended in public places or vehicles.',
+        because: 'Physical exposure outside the office is as real as network exposure, and harder to detect afterwards.'
+      },
+      {
+        rule: 'Lost or stolen devices are reported immediately so they can be locked or wiped remotely.',
+        because: 'The window between loss and remote wipe is when the data is most exposed.'
+      },
+      {
+        rule: 'Working from outside the country for extended periods requires prior approval.',
+        because: 'Access from another jurisdiction can conflict with data-residency, export or privacy obligations and can trigger security alerts.'
+      }
+    ],
+    roles: [
+      {
+        role: 'IT / platform owner',
+        responsibility: 'Maintains device management, compliance and app protection policies, and performs remote lock and wipe when a device is reported lost.'
+      },
+      {
+        role: 'Line managers',
+        responsibility: 'Approve remote working arrangements and extended overseas work for their team.'
+      },
+      {
+        role: 'All personnel',
+        responsibility: 'Keep devices enrolled, updated and locked, work in a way that keeps information private, and report lost devices immediately.'
+      }
+    ],
+    exceptions: 'A device that cannot meet the compliance policy (for example specialised equipment) requires a documented exception with compensating controls, approved by the ISMS manager and reviewed annually.',
+    nonCompliance: 'Accessing organisation information from an unmanaged device, or failing to report a lost device, is addressed through the disciplinary process where deliberate.',
+    relatedDocuments: [
+      'Acceptable Use Policy',
+      'Access Control Policy',
+      'Malware & Endpoint Protection Policy',
+      'Asset Management Policy'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s device platform or working arrangements change materially.',
+    controls: ['A.6.7', 'A.8.1', 'A.7.9'],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'information-transfer-policy',
+    title: 'Information Transfer Policy',
+    purpose: 'This policy sets out how organisation information is transferred securely — within the organisation and to or from external parties — by email, file sharing, messaging, removable media or physical means.',
+    scope: 'Applies to all transfers of organisation information by any means, and to everyone who sends or receives it, including through Microsoft 365 email, Teams, SharePoint and OneDrive sharing.',
+    whyItMatters: 'Most data leaks are not break-ins; they are information sent to the wrong person, shared with a link that works for anyone, or copied somewhere it should not be. Every one of those happens during a transfer.\n\nThe rules here make the safe route the normal route: share through the organisation’s platforms with named people rather than sending copies, and check who you are sending to before you send. Sensitive information needs a little more care, as its classification label says.',
+    inPractice: [
+      'You need to send a large or sensitive file to a client. Share it from SharePoint or OneDrive with the named recipient rather than attaching a copy; access can be removed later, whereas an attachment cannot be taken back.',
+      'Email autocomplete suggests a recipient. Check the full address before sending anything sensitive; autocomplete is one of the most common causes of misdirected email.',
+      'A partner asks you to upload files to their portal or a personal file-sharing service. Check it is approved before using it.'
+    ],
+    policyStatements: [
+      {
+        rule: 'Information is transferred using approved channels only: the organisation’s email, Microsoft 365 sharing, and other services approved under the Cloud Services Security Policy.',
+        because: 'An unapproved channel is one the organisation cannot monitor, secure or recover information from.'
+      },
+      {
+        rule: 'Transfer requirements follow the information’s classification: information above the lowest classification is shared with named recipients only, encrypted in transit, and not sent through anonymous or organisation-wide links.',
+        because: 'A link anyone can use is a disclosure to whoever it gets forwarded to.'
+      },
+      {
+        rule: 'Regular or bulk transfers of information to external parties are covered by an agreement setting out the security responsibilities of each party.',
+        because: 'The organisation stays accountable for information after it is sent, and an agreement is how that accountability continues.'
+      },
+      {
+        rule: 'External sharing settings, data loss prevention and sensitivity labels are configured to enforce these rules where the platform allows, and exceptions are monitored.',
+        because: 'Technical enforcement catches the mistakes that policy alone does not.'
+      },
+      {
+        rule: 'Removable media and physical transfer of information are used only where no approved electronic route exists, with encryption and tracked delivery for anything classified above the lowest level.',
+        because: 'Physical media is easily lost and rarely logged, which makes it the hardest channel to account for.'
+      },
+      {
+        rule: 'Information sent to the wrong recipient, or shared more widely than intended, is reported as an information security incident.',
+        because: 'Many misdirected transfers can be contained if reported quickly, and some are notifiable breaches.'
+      }
+    ],
+    roles: [
+      {
+        role: 'IT / platform owner',
+        responsibility: 'Configures sharing, data loss prevention and labelling controls to enforce this policy, and monitors external sharing.'
+      },
+      {
+        role: 'Information owners',
+        responsibility: 'Decide who may receive their information and ensure transfer agreements are in place for regular external transfers.'
+      },
+      {
+        role: 'All personnel',
+        responsibility: 'Use approved channels, check recipients, and report misdirected information immediately.'
+      }
+    ],
+    exceptions: 'A business need to use a non-approved channel is raised with the ISMS manager, and approved only with compensating controls and a review date.',
+    nonCompliance: 'Deliberately transferring information through unapproved channels, or failing to report a known misdirected transfer, is addressed through the disciplinary process.',
+    relatedDocuments: [
+      'Data Classification & Handling Policy',
+      'Cryptography Policy',
+      'Cloud Services Security Policy',
+      'Incident Response Plan'
+    ],
+    reviewCadence: 'Annually, or when sharing platforms or data loss prevention controls change materially.',
+    controls: ['A.5.14'],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'cloud-services-policy',
+    title: 'Cloud Services Security Policy',
+    purpose: 'This policy sets out how the organisation selects, approves, uses, manages and exits cloud services, so that information held in them is protected to the same standard as information held anywhere else.',
+    scope: 'Applies to every cloud service used to process organisation information, including Microsoft 365 and Azure, software-as-a-service applications, and free or trial services adopted by individual teams.',
+    whyItMatters: 'Signing up for a cloud service takes a minute and a credit card, and that is exactly the risk: organisation data can end up in a service nobody has assessed, with nobody able to get it back when the person who signed up leaves.\n\nThis policy does not stop teams using good tools. It asks that a new service is checked and approved before organisation data goes into it, so security, privacy and exit are considered while there is still a choice.',
+    inPractice: [
+      'Your team finds a useful online tool and wants to upload client data to it. Request approval first; the check covers where the data is stored, who can access it and how to get it back.',
+      'A free trial asks you to sign in with your work account. Starting a trial is fine, but it still counts as a new service once organisation data goes in, so request approval before uploading any.',
+      'A service you use is being replaced or cancelled. Make sure the data is exported and deleted from the old service under the exit plan, not simply abandoned.'
+    ],
+    policyStatements: [
+      {
+        rule: 'A cloud service is approved before organisation information is placed in it, based on an assessment of its security, data location, certifications, access controls and exit arrangements.',
+        because: 'The assessment is the only point at which the organisation can still decline a service that does not meet its requirements.'
+      },
+      {
+        rule: 'Approved cloud services are recorded in the supplier register with an owner, the classification of the information they hold, and their review date.',
+        because: 'A service nobody knows the organisation uses is one nobody is reviewing, and its data is left behind when staff leave.'
+      },
+      {
+        rule: 'The division of security responsibilities between the organisation and the provider is understood and recorded, and the organisation’s share is configured and maintained — including identity, access, logging and data protection settings.',
+        because: 'Most cloud breaches are caused by the customer’s own configuration, not the provider’s infrastructure.'
+      },
+      {
+        rule: 'Access to cloud services uses the organisation’s single sign-on and multi-factor authentication wherever the service supports it.',
+        because: 'Separate accounts with separate passwords are not removed when someone leaves.'
+      },
+      {
+        rule: 'Use of unapproved cloud services is monitored through the tools available, and discovered services are either approved or retired.',
+        because: 'Discovery is the only reliable way to find the services adopted without approval.'
+      },
+      {
+        rule: 'Each approved service holding significant organisation information has an exit plan covering data return in a usable format and confirmed deletion.',
+        because: 'The time to negotiate getting data back is before signing, not when the relationship ends.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Owns the cloud service approval process and reviews the register of approved services.'
+      },
+      {
+        role: 'IT / platform owner',
+        responsibility: 'Assesses services technically, integrates them with single sign-on, configures the organisation’s side of the shared responsibility, and runs discovery.'
+      },
+      {
+        role: 'Service owners',
+        responsibility: 'Request approval before adoption, keep the service’s configuration and users current, and carry out the exit plan when it is retired.'
+      }
+    ],
+    exceptions: 'A service that cannot support single sign-on or meet another requirement may be approved with compensating controls recorded on the risk register and reviewed annually.',
+    nonCompliance: 'Placing organisation information in an unapproved cloud service is treated as an information security incident, and addressed through the disciplinary process where deliberate.',
+    relatedDocuments: [
+      'Supplier Security Policy',
+      'Information Transfer Policy',
+      'Access Control Policy',
+      'Data Classification & Handling Policy'
+    ],
+    reviewCadence: 'Annually, and whenever a significant new cloud platform is adopted.',
+    controls: ['A.5.23'],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
     id: 'isms-scope',
     title: 'ISMS Scope Document',
     purpose: 'This document defines the scope and boundaries of the organisation’s information security management system (ISMS) — the parts of the business, the locations, the information and the technology it covers, and anything deliberately excluded. It satisfies the ISO/IEC 27001 Clause 4.3 requirement to determine and document the scope of the ISMS.',
     scope: 'This document describes the ISMS itself: what it does and does not cover — the business units, locations and services in scope, and anything deliberately excluded.',
     policyStatements: [
+      {
+        rule: 'Scope statement: {{scopeStatement}}',
+        because: 'A one-sentence statement is what appears on a certificate and in customer assurance, so it must agree with the detailed scope below.'
+      },
       {
         rule: 'The ISMS covers the organisation’s information and the systems that process it, centred on its Microsoft 365 tenant. In scope are the following business units and teams: {{businessUnits}}.',
         because: 'A scope stated only in general terms cannot be audited, and cannot tell anyone whether a given system is inside it.'
@@ -1418,6 +1686,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'The obligations the organisation must satisfy within this scope include: {{regulatory}}.',
         because: 'Clause 4.2 asks not just who the interested parties are but what they require — an obligation nobody has written down is one nobody is demonstrably meeting.'
+      },
+      {
+        rule: 'The interfaces and dependencies between activities performed by the organisation and those performed by other organisations are: {{interfaces}}',
+        because: 'Clause 4.3 requires these to be considered, because the boundary of the ISMS is usually drawn at exactly these points.'
       },
       {
         rule: 'The scope includes the organisation’s people, its processes, and the technology it controls; reliance on Microsoft 365 and other third-party services is in scope for oversight and managed through the Supplier Security Policy, even though those providers’ internal operations are not the organisation’s to run.',
@@ -1451,7 +1723,7 @@ window.POLICY_TEMPLATES = [
       }
     ],
     exceptions: 'Exclusions from scope are stated explicitly in this document with their justification, rather than left implicit. An exclusion that cannot be justified on a defensible basis is not an exclusion; it is a gap, and it belongs on the risk register instead.',
-    nonCompliance: 'Operating a system or process that should be within scope outside the management system is a management-system nonconformity, raised as a corrective action under Clause 10.1.',
+    nonCompliance: 'Operating a system or process that should be within scope outside the management system is a management-system nonconformity, raised as a corrective action under Clause 10.2.',
     relatedDocuments: [
       'Information Security Policy',
       'Risk Management Framework',
@@ -1629,6 +1901,477 @@ window.POLICY_TEMPLATES = [
     reviewCadence: 'Regenerate whenever a policy\'s roles table changes, so this register never drifts from the documents it is drawn from — at minimum, alongside the annual management review.',
     controls: ['A.5.2'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'iso42001']
+  },
+  {
+    id: 'context-interested-parties',
+    title: 'Organisational Context & Interested Parties',
+    purpose: 'This document records the internal and external issues that affect the organisation’s ability to achieve the intended outcomes of its information security management system, the interested parties relevant to it, and what those parties require. It satisfies the ISO/IEC 27001 Clause 4.1 (context) and Clause 4.2 (interested parties) requirements, and is the input the ISMS Scope Document draws its boundaries from.',
+    scope: 'Applies to the information security management system as a whole. It describes the situation of the organisation as it delivers {{services}}, and is revisited whenever that situation changes.',
+    policyStatements: [
+      {
+        rule: 'External issues relevant to information security are identified and recorded. Those currently identified are: {{externalIssues}}',
+        because: 'Clause 4.1 asks what outside the organisation shapes its security outcomes; an ISMS designed without that view protects against the wrong things.'
+      },
+      {
+        rule: 'Internal issues relevant to information security are identified and recorded. Those currently identified are: {{internalIssues}}',
+        because: 'An organisation’s own constraints decide what controls it can realistically operate, which is as important to the design as the threats it faces.'
+      },
+      {
+        rule: 'The interested parties relevant to the ISMS are identified. They include: {{interestedParties}}.',
+        because: 'Security obligations come from people and bodies outside the security function, and a party nobody has named is a requirement nobody is tracking.'
+      },
+      {
+        rule: 'The relevant requirements of each interested party are recorded. {{partyRequirements}}',
+        because: 'Clause 4.2 asks not just who the interested parties are but what they require of the organisation.'
+      },
+      {
+        rule: 'Legal, regulatory and contractual obligations are recorded among those requirements. These include: {{regulatory}}. The Legal, Regulatory & Contractual Requirements Policy governs how these obligations are kept current.',
+        because: 'Clause 4.2 asks not just who the interested parties are but which of their requirements the ISMS will address — the list of obligations is what the controls are ultimately accountable to.'
+      },
+      {
+        rule: 'For each requirement, the organisation records which of them will be addressed through the ISMS, and where (a policy, a control, a contract clause or an objective).',
+        because: 'The 2022 edition added this explicitly: a requirement identified but not traced to anything that meets it is a known gap.'
+      },
+      {
+        rule: '{{climate}}',
+        because: 'Since ISO/IEC 27001:2022 Amendment 1 (2024), the organisation must determine whether climate change is a relevant issue, and auditors now ask to see the determination.'
+      },
+      {
+        rule: 'Context and interested parties are a standing input to management review, and this document is updated whenever a material change in either is identified.',
+        because: 'Context changes — a new regulator, a major customer, an acquisition — are exactly the changes that make last year’s scope and risk assessment wrong.'
+      }
+    ],
+    roles: [
+      {
+        role: 'Executive sponsor',
+        responsibility: 'Confirms the strategic context and the interested parties the ISMS must serve, and approves this document.'
+      },
+      {
+        role: 'ISMS manager',
+        responsibility: 'Maintains this document, brings changes in context to management review, and ensures the scope and risk assessment reflect them.'
+      },
+      {
+        role: 'Legal / compliance lead',
+        responsibility: 'Identifies new or changed legal, regulatory and contractual obligations and notifies the ISMS manager.'
+      }
+    ],
+    exceptions: 'None — this document records facts about the organisation rather than rules to be excepted from. A requirement the organisation has decided not to address is recorded here with the reason, not omitted.',
+    nonCompliance: 'Failing to reflect a known material change in context or in an interested party’s requirements is a management-system nonconformity, raised as a corrective action under Clause 10.2.',
+    relatedDocuments: [
+      'ISMS Scope Document',
+      'Legal, Regulatory & Contractual Requirements Policy',
+      'Risk Management Framework',
+      'Management Review Procedure'
+    ],
+    reviewCadence: 'At least annually as a management review input, and whenever the organisation’s structure, market, regulatory environment or key relationships change materially.',
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'isms-change-planning',
+    title: 'ISMS Change Planning Procedure',
+    purpose: 'This procedure defines how changes to the information security management system itself — its scope, structure, policies, processes, roles or resources — are planned and carried out in a controlled way. It satisfies the ISO/IEC 27001 Clause 6.3 (planning of changes) requirement. Changes to IT systems are governed separately by the Change Management Policy.',
+    scope: 'Applies to any change to the ISMS: a scope change, a reorganisation affecting security roles, a new or retired policy or process, a change of key supplier or platform that the ISMS depends on, or a change of certification framework.',
+    policyStatements: [
+      {
+        rule: 'A change to the ISMS is identified as such before it is made, and recorded with its purpose and its potential consequences for information security.',
+        because: 'Clause 6.3 requires changes to be carried out in a planned manner; a reorganisation that quietly removes a control owner is still a change to the ISMS, whoever made it.'
+      },
+      {
+        rule: 'Each planned change records what will change, why, who is responsible, the resources needed, when it will take effect, and how the ISMS will continue to function during the transition.',
+        because: 'Most management-system failures happen in the gap between the old arrangement ending and the new one starting.'
+      },
+      {
+        rule: 'The effect of the change on the scope, the risk assessment, the Statement of Applicability and existing objectives is assessed, and each is updated where affected.',
+        because: 'The core ISMS documents reference one another; changing one without the others leaves them contradicting each other in front of an auditor.'
+      },
+      {
+        rule: 'Significant ISMS changes are approved by the executive sponsor before implementation and reported to the next management review.',
+        because: 'Top management owns the ISMS under Clause 5.1, so a significant change to it is their decision, not an operational one.'
+      },
+      {
+        rule: 'Once implemented, the change is reviewed to confirm it achieved its purpose without weakening information security.',
+        because: 'A change is not complete when it is made; it is complete when it is known to have worked.'
+      }
+    ],
+    roles: [
+      {
+        role: 'Executive sponsor',
+        responsibility: 'Approves significant changes to the ISMS and the resources they need.'
+      },
+      {
+        role: 'ISMS manager',
+        responsibility: 'Identifies ISMS changes, plans them under this procedure, updates the affected documents and reports outcomes to management review.'
+      },
+      {
+        role: 'Department and process owners',
+        responsibility: 'Notify the ISMS manager before making organisational or process changes that affect security roles, controls or scope.'
+      }
+    ],
+    exceptions: 'An urgent change needed to contain an incident may be made first and planned retrospectively, provided it is recorded under this procedure within five working days and reviewed at the next management review.',
+    nonCompliance: 'Making a significant change to the ISMS without planning or recording it is a management-system nonconformity, raised as a corrective action under Clause 10.2.',
+    relatedDocuments: [
+      'Change Management Policy',
+      'ISMS Scope Document',
+      'Risk Management Framework',
+      'Management Review Procedure'
+    ],
+    reviewCadence: 'Annually, alongside the management review.',
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'competence-awareness-plan',
+    title: 'Competence, Training & Awareness Plan',
+    purpose: 'This plan defines how the organisation determines the competence needed by people whose work affects information security, ensures they have it, and makes everyone working under its control aware of the information security policy and their part in it. It satisfies the ISO/IEC 27001 Clause 7.2 (competence) and Clause 7.3 (awareness) requirements and supports Annex A control A.6.3.',
+    scope: 'Applies to all employees and contractors working under the organisation’s control, with additional competence requirements for roles named in the Roles & Responsibilities register.',
+    policyStatements: [
+      {
+        rule: 'The competence required for each role with information security responsibilities is determined and recorded — in terms of education, training, experience or certification — starting from the roles named in the Roles & Responsibilities register.',
+        because: 'Clause 7.2 starts with determining what competence is necessary; without that, there is nothing to measure people against.'
+      },
+      {
+        rule: 'Where a gap exists between required and current competence, action is taken — training, mentoring, reassignment or recruitment — and its effectiveness is evaluated.',
+        because: 'Attendance is not competence; the standard asks whether the action worked, not whether it happened.'
+      },
+      {
+        rule: 'Evidence of competence (training completion, qualifications, certifications and relevant experience) is retained as documented information.',
+        because: 'Competence that cannot be evidenced cannot be audited, and Clause 7.2 explicitly requires it to be retained.'
+      },
+      {
+        rule: 'All personnel complete information security awareness training on joining and at least annually, tracked in this console’s training register, covering the information security policy, their contribution to the ISMS, and the consequences of not conforming.',
+        because: 'These three topics are exactly what Clause 7.3 requires people to be aware of; an awareness programme that omits one leaves a finding.'
+      },
+      {
+        rule: 'Awareness is reinforced between formal training through targeted communications and exercises — for example phishing simulations — with results reported as a metric in the Information Security Objectives & Metrics.',
+        because: 'Annual training alone decays quickly; measuring behaviour shows whether awareness is actually changing anything.'
+      },
+      {
+        rule: 'The training and awareness programme is reviewed at least annually and after significant incidents, and updated to reflect new threats and changes in policy.',
+        because: 'Incidents caused by human error are the clearest signal of where the programme is not working.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Owns this plan, determines role competence requirements with managers, and reports training completion and effectiveness to management review.'
+      },
+      {
+        role: 'People / HR lead',
+        responsibility: 'Ensures awareness training is part of onboarding, retains competence records, and supports recruitment or development where gaps are found.'
+      },
+      {
+        role: 'Line managers',
+        responsibility: 'Ensure their people complete required training on time and raise competence gaps in their teams.'
+      },
+      {
+        role: 'All personnel',
+        responsibility: 'Complete assigned training and apply it in their work.'
+      }
+    ],
+    exceptions: 'Training deadlines may be extended for personnel on extended leave, with completion required within two weeks of return. Competence requirements for a role are not waived; a gap is recorded with a plan to close it.',
+    nonCompliance: 'Persistent failure to complete mandatory training is escalated to the line manager and addressed under the Human Resources Security Policy. A role operated without its required competence is raised as a corrective action.',
+    relatedDocuments: [
+      'Roles & Responsibilities',
+      'Human Resources Security Policy',
+      'Information Security Objectives & Metrics',
+      'Communication Plan'
+    ],
+    reviewCadence: 'Annually, and after any significant incident attributed to human error.',
+    controls: ['A.6.3'],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'communication-plan',
+    title: 'Communication Plan',
+    purpose: 'This plan defines what the organisation communicates about information security, when, to whom, how, and who is responsible — internally and externally. It satisfies the ISO/IEC 27001 Clause 7.4 (communication) requirement.',
+    scope: 'Applies to planned internal and external communication relevant to the information security management system. Communication during an incident is governed by the Incident Response Plan, and notification of personal-information breaches by the Privacy Policy.',
+    policyStatements: [
+      {
+        rule: 'Planned ISMS communications are recorded in a communication schedule stating, for each one, what is communicated, when, to whom, how, and who communicates it.',
+        because: 'These five questions are exactly what Clause 7.4 asks the organisation to determine.'
+      },
+      {
+        rule: 'Internal communications include at minimum: the information security policy and material changes to it; new or changed policies relevant to each audience; security objectives and performance; lessons learned from incidents; and reminders ahead of recurring obligations such as training and access reviews.',
+        because: 'People cannot follow a policy they have not been told about, and changes are the communications most often missed.'
+      },
+      {
+        rule: 'External communications include, where relevant: security commitments to customers and in contracts; responses to customer security questionnaires; notifications to regulators and affected parties; and security requirements communicated to suppliers.',
+        because: 'External parties make decisions based on what the organisation tells them, so those statements must be accurate and authorised.'
+      },
+      {
+        rule: 'Only authorised people make external statements about the organisation’s information security posture, certifications or incidents.',
+        because: 'An inaccurate claim about security made by the wrong person can become a contractual or misleading-conduct problem.'
+      },
+      {
+        rule: 'Communication records are retained for significant communications, such as policy publication and regulator or customer notifications.',
+        because: 'When asked whether staff were told about a policy, or when a regulator was notified, a record is the only answer that holds up.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Owns this plan and the communication schedule, and ensures planned communications happen.'
+      },
+      {
+        role: 'Executive sponsor',
+        responsibility: 'Communicates the importance of information security and the policy to the organisation, and authorises significant external statements.'
+      },
+      {
+        role: 'Communications / marketing lead',
+        responsibility: 'Ensures public statements about security and certifications are accurate and approved before release.'
+      }
+    ],
+    exceptions: 'Urgent communications during an incident follow the Incident Response Plan rather than this schedule.',
+    nonCompliance: 'An unauthorised or inaccurate external statement about information security is treated as an incident and reviewed; planned communications repeatedly missed are raised as a corrective action.',
+    relatedDocuments: [
+      'Information Security Policy',
+      'Incident Response Plan',
+      'Competence, Training & Awareness Plan',
+      'Supplier Security Policy'
+    ],
+    reviewCadence: 'Annually, alongside the management review.',
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'document-control-procedure',
+    title: 'Document & Records Control Procedure',
+    purpose: 'This procedure defines how the organisation creates, approves, publishes, changes, protects, retains and disposes of the documented information its information security management system needs. It satisfies the ISO/IEC 27001 Clause 7.5 (documented information) requirements.',
+    scope: 'Applies to all ISMS documents (policies, procedures, plans, registers) and records (evidence that an activity happened, such as audit reports, review minutes, training records and scan results), whether held in this console, in SharePoint or elsewhere.',
+    policyStatements: [
+      {
+        rule: 'Documents and records required by the ISMS are identified, and the list of controlled documents is kept current in this console’s document register.',
+        because: 'Clause 7.5.1 requires the documented information the standard and the organisation need; a list is the only way to know whether it all exists.'
+      },
+      {
+        rule: 'Each controlled document carries a title, owner, version, status, classification, approval date and next review date.',
+        because: 'Clause 7.5.2 requires appropriate identification; an undated, unowned document cannot be shown to be current.'
+      },
+      {
+        rule: 'Documents are reviewed and approved for suitability and adequacy by an authorised approver before publication, and after every material change.',
+        because: 'Approval is the evidence that management accepted a document as the rule, rather than a draft someone wrote.'
+      },
+      {
+        rule: 'Only the current approved version is published to its audience; previous versions are retained but clearly marked superseded, and drafts are marked as drafts.',
+        because: 'Clause 7.5.3 requires the relevant version to be available where needed, and an out-of-date copy being followed is a common audit finding.'
+      },
+      {
+        rule: 'Documented information is protected against loss of confidentiality, improper use and loss of integrity, with access set according to its classification and changes tracked through version history.',
+        because: 'The ISMS’s own records are evidence; if they can be altered without trace, they stop being evidence.'
+      },
+      {
+        rule: 'Records are retained for defined periods — at minimum the current certification cycle plus one year, or longer where law or contract requires — and then disposed of securely.',
+        because: 'Auditors sample records across the certification cycle, and keeping records indefinitely creates its own privacy and discovery risk.'
+      },
+      {
+        rule: 'Documents of external origin needed by the ISMS (for example standards, regulatory guidance and supplier assurance reports) are identified and controlled.',
+        because: 'Clause 7.5.3 applies to external documents too; a policy that cites an outdated standard leaves the organisation meeting the wrong requirement.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Maintains the document register and this procedure, and monitors review dates.'
+      },
+      {
+        role: 'Document owners',
+        responsibility: 'Keep their documents accurate, submit changes for approval, and review them by their due date.'
+      },
+      {
+        role: 'Approvers',
+        responsibility: 'Review documents for suitability and adequacy before approving them.'
+      }
+    ],
+    exceptions: 'Working notes and drafts not yet relied on as ISMS rules or evidence are outside this procedure until published or used as a record.',
+    nonCompliance: 'Publishing an unapproved document as policy, or altering a record after the fact, is a management-system nonconformity raised as a corrective action; deliberate alteration of records is also addressed through the disciplinary process.',
+    relatedDocuments: [
+      'Information Security Policy',
+      'Data Classification & Handling Policy',
+      'Legal, Regulatory & Contractual Requirements Policy'
+    ],
+    reviewCadence: 'Annually.',
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'internal-audit-procedure',
+    title: 'Internal Audit Procedure & Programme',
+    purpose: 'This procedure defines how the organisation plans and carries out internal audits of its information security management system, so that it knows — independently of any certification body — whether the ISMS conforms to its own requirements and to ISO/IEC 27001, and whether it is effectively implemented and maintained. It satisfies the ISO/IEC 27001 Clause 9.2 requirements.',
+    scope: 'Applies to the whole ISMS within the scope defined in the ISMS Scope Document: Clauses 4 to 10 and every applicable Annex A control in the Statement of Applicability. Audits are scheduled and recorded in this console’s internal audit register.',
+    policyStatements: [
+      {
+        rule: 'An audit programme is maintained covering the full ISMS scope at least once in each three-year certification cycle, with all management-system clauses audited at least annually.',
+        because: 'Clause 9.2.2 requires a programme, not an event, and a certification body will expect to see all of it covered before recertification.'
+      },
+      {
+        rule: 'The frequency and depth of audit for each area reflect its importance and risk, the results of previous audits, and recent changes and incidents.',
+        because: 'The standard asks the programme to consider importance and previous results, so high-risk and previously nonconforming areas are audited more often.'
+      },
+      {
+        rule: 'Each audit has defined criteria and scope, recorded before it starts.',
+        because: 'An audit without stated criteria cannot produce a finding anyone can check.'
+      },
+      {
+        rule: 'Auditors are competent in auditing and in ISO/IEC 27001, and are objective and impartial: no one audits their own work. Where the organisation is too small to achieve this internally, an external auditor is engaged.',
+        because: 'Clause 9.2.2 requires objectivity and impartiality; self-audit is one of the most common reasons an internal audit programme is rejected.'
+      },
+      {
+        rule: 'Audit results are reported to relevant management, and each nonconformity is raised in the Actions register and handled under the Nonconformity & Corrective Action Procedure.',
+        because: 'Findings that go no further than the audit report do not change anything.'
+      },
+      {
+        rule: 'The audit programme, audit plans and audit reports are retained as documented information, and the programme’s results are an input to management review.',
+        because: 'Clause 9.2.2 requires evidence of both the programme and its results, and Clause 9.3 requires audit results to reach top management.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Maintains the audit programme and schedule, arranges competent and impartial auditors, and reports results to management review.'
+      },
+      {
+        role: 'Internal auditors',
+        responsibility: 'Plan and conduct audits against defined criteria, record objective evidence, and report findings impartially.'
+      },
+      {
+        role: 'Auditees and process owners',
+        responsibility: 'Provide access and evidence, and own the corrective action for findings in their area.'
+      },
+      {
+        role: 'Executive sponsor',
+        responsibility: 'Provides the resources for the audit programme and reviews its results.'
+      }
+    ],
+    exceptions: 'A scheduled audit may be deferred once, with the reason recorded and a new date set within the same audit cycle. An area may not go unaudited for a full cycle.',
+    nonCompliance: 'Missing the annual coverage of management-system clauses, or using an auditor who audits their own work, is a management-system nonconformity raised as a corrective action.',
+    relatedDocuments: [
+      'ISMS Scope Document',
+      'Nonconformity & Corrective Action Procedure',
+      'Management Review Procedure',
+      'Control Testing & Independent Assurance Policy'
+    ],
+    reviewCadence: 'The programme is reviewed annually and after each certification or surveillance audit; this procedure annually.',
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'management-review-procedure',
+    title: 'Management Review Procedure',
+    purpose: 'This procedure defines how top management reviews the information security management system at planned intervals to confirm it remains suitable, adequate and effective, and what that review must consider and decide. It satisfies the ISO/IEC 27001 Clause 9.3 requirements and is the main mechanism for continual improvement under Clause 10.1.',
+    scope: 'Applies to the executive team and the ISMS manager. Reviews are recorded in this console’s management review register, which pre-populates many of the required inputs.',
+    policyStatements: [
+      {
+        rule: 'Management review is held at least annually, and more often during the first year of certification or after significant change.',
+        because: 'Clause 9.3.1 requires planned intervals, and one review a year is the minimum a certification body will accept.'
+      },
+      {
+        rule: 'The review is attended by top management with authority over the ISMS, not delegated entirely to the security function.',
+        because: 'The purpose is for top management to review the ISMS; a review attended only by the people who run it is a self-assessment.'
+      },
+      {
+        rule: 'The review considers, at minimum: the status of actions from previous reviews; changes in external and internal issues; changes in interested parties’ needs; nonconformities and corrective actions; monitoring and measurement results; audit results; fulfilment of objectives; feedback from interested parties; the results of risk assessment and the status of risk treatment; and opportunities for continual improvement.',
+        because: 'These are the inputs Clause 9.3.2 lists; a review that skips one leaves that part of the ISMS unexamined by the people accountable for it.'
+      },
+      {
+        rule: 'The review records decisions on continual improvement opportunities and on any needed changes to the ISMS, including resources.',
+        because: 'Clause 9.3.3 requires outputs, not just discussion; a review that decides nothing produces no evidence of management direction.'
+      },
+      {
+        rule: 'Every decision requiring action is raised in the Actions register with an owner and due date, and its status is reported to the next review.',
+        because: 'Tracking previous decisions is the first input to the next review, which is only possible if they were recorded as actions.'
+      },
+      {
+        rule: 'Minutes recording attendees, inputs considered, decisions and actions are retained as documented information.',
+        because: 'Clause 9.3.3 requires evidence of the results, and minutes are what an auditor asks for first.'
+      }
+    ],
+    roles: [
+      {
+        role: 'Executive sponsor',
+        responsibility: 'Chairs the review, ensures top management attends, and owns its decisions.'
+      },
+      {
+        role: 'ISMS manager',
+        responsibility: 'Prepares the inputs, records the minutes and actions, and follows actions through to the next review.'
+      },
+      {
+        role: 'Action owners',
+        responsibility: 'Deliver actions assigned at the review by their due date.'
+      }
+    ],
+    exceptions: 'A review may be rescheduled once within the same quarter with the executive sponsor’s agreement. The annual minimum is not waived.',
+    nonCompliance: 'Missing the annual review, or holding one that does not consider the required inputs, is a management-system nonconformity raised as a corrective action.',
+    relatedDocuments: [
+      'Information Security Objectives & Metrics',
+      'Internal Audit Procedure & Programme',
+      'Nonconformity & Corrective Action Procedure',
+      'Organisational Context & Interested Parties'
+    ],
+    reviewCadence: 'Annually.',
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
+    id: 'nonconformity-corrective-action',
+    title: 'Nonconformity & Corrective Action Procedure',
+    purpose: 'This procedure defines how the organisation responds when it finds that something does not conform to its own requirements, to ISO/IEC 27001 or to its obligations, and how it improves the ISMS continually. It satisfies the ISO/IEC 27001 Clause 10.2 (nonconformity and corrective action) and Clause 10.1 (continual improvement) requirements.',
+    scope: 'Applies to nonconformities from any source — internal and external audits, incidents, monitoring, management review, complaints and self-identified gaps. Nonconformities are recorded in this console’s Actions register, where each one carries its corrective-action record.',
+    policyStatements: [
+      {
+        rule: 'Every nonconformity is recorded in the Actions register with its source, description, owner and due date, and categorised as major or minor.',
+        because: 'A nonconformity that is not recorded cannot be tracked, trended or shown to an auditor as handled.'
+      },
+      {
+        rule: 'The organisation reacts to each nonconformity by taking action to control and correct it, and deals with its consequences.',
+        because: 'Clause 10.2(a) requires the immediate fix first, before the investigation.'
+      },
+      {
+        rule: 'The cause of each nonconformity is determined, and the organisation checks whether similar nonconformities exist or could occur elsewhere.',
+        because: 'Correcting a symptom without its root cause means the same nonconformity returns, which auditors treat as more serious the second time.'
+      },
+      {
+        rule: 'Corrective action proportionate to the effects of the nonconformity is taken to eliminate its cause, and the ISMS is changed where necessary.',
+        because: 'Clause 10.2 requires the action to be appropriate to the effect: a minor slip does not need a new process, and a systemic failure is not fixed by a reminder email.'
+      },
+      {
+        rule: 'Once the corrective action is complete, its effectiveness is reviewed and recorded; a nonconformity is closed only after that review confirms the cause has been removed.',
+        because: 'Closing on completion rather than on effectiveness is the most common corrective-action finding.'
+      },
+      {
+        rule: 'The nature of each nonconformity, the actions taken and the results are retained as documented information.',
+        because: 'Clause 10.2 explicitly requires this evidence.'
+      },
+      {
+        rule: 'Trends in nonconformities, incidents, audit results and metrics are reviewed at management review to identify opportunities for continual improvement, and improvement actions are recorded in the Actions register.',
+        because: 'Clause 10.1 asks for the suitability, adequacy and effectiveness of the ISMS to be improved continually, not only when something breaks.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Maintains this procedure, ensures every nonconformity is recorded and progressed, and reports trends to management review.'
+      },
+      {
+        role: 'Nonconformity owners',
+        responsibility: 'Correct the nonconformity, determine its root cause, deliver the corrective action and support the effectiveness review.'
+      },
+      {
+        role: 'Executive sponsor',
+        responsibility: 'Ensures resources for corrective action and decides on improvement opportunities at management review.'
+      }
+    ],
+    exceptions: 'A due date may be extended once with the ISMS manager’s approval and a recorded reason. A major nonconformity raised by a certification body follows that body’s required timescales.',
+    nonCompliance: 'Closing a nonconformity without root-cause analysis or an effectiveness review, or leaving it without an owner, is itself a nonconformity.',
+    relatedDocuments: [
+      'Internal Audit Procedure & Programme',
+      'Management Review Procedure',
+      'Incident Response Plan',
+      'Information Security Objectives & Metrics'
+    ],
+    reviewCadence: 'Annually.',
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
   },
   {
     id: 'ai-policy',
@@ -2588,7 +3331,86 @@ window.ORG_PROFILE_FIELDS = [
     type: 'textarea',
     hint: 'Anything explicitly outside the ISMS, and why. Leave blank if nothing is excluded — that is a valid and common answer.',
     fallback: 'nothing — the ISMS covers the whole of the organisation described above'
+  },
+  /* The Clause 4 context facts below are drafted by the scope & context
+     questionnaire (App.orgProfileWizard → CheckpointLib.
+     buildOrgContextDraft()) from plain-English answers, then edited
+     before saving. Each value is one or more complete sentences, so
+     every token sits at the end of a statement and its fallback is a
+     complete sentence too. */
+  {
+    key: 'orgExternalIssues', token: 'externalIssues', label: 'External issues (Clause 4.1)',
+    type: 'textarea',
+    hint: 'What outside the organisation affects its information security: sector, regulation, threats, customers, suppliers.',
+    fallback: 'The regulatory environment, the threat landscape facing the sector, customer and market expectations, and dependence on cloud and other third-party providers.'
+  },
+  {
+    key: 'orgInternalIssues', token: 'internalIssues', label: 'Internal issues (Clause 4.1)',
+    type: 'textarea',
+    hint: 'What inside the organisation affects it: size, structure, ways of working, capability, change.',
+    fallback: 'The organisation’s structure, culture, capability and capacity, its technology estate, and the maturity of its existing controls.'
+  },
+  {
+    key: 'orgPartyRequirements', token: 'partyRequirements', label: 'What interested parties require (Clause 4.2)',
+    type: 'textarea',
+    hint: 'What each interested party needs or expects of the organisation’s information security.',
+    fallback: 'Customers expect confidentiality and availability of their information and services; regulators expect compliance with applicable law; employees expect their personal information to be protected; and owners expect information risk to be managed within appetite.'
+  },
+  {
+    key: 'orgClimate', token: 'climate', label: 'Climate change determination (Clause 4.1/4.2)',
+    type: 'textarea',
+    hint: 'ISO/IEC 27001:2022 Amendment 1 (2024) requires the organisation to determine whether climate change is a relevant issue.',
+    fallback: 'Whether climate change is a relevant issue has been considered, as ISO/IEC 27001:2022 Amendment 1 requires, and the determination is revisited at each management review.'
+  },
+  {
+    key: 'orgInterfaces', token: 'interfaces', label: 'Interfaces and dependencies (Clause 4.3 c)',
+    type: 'textarea',
+    hint: 'Where the organisation’s activities meet those performed by others: cloud platforms, IT providers, remote working, customers.',
+    fallback: 'Microsoft 365 and other cloud services, the organisation’s IT and other suppliers, and the customers and partners with whom information is exchanged.'
+  },
+  {
+    key: 'orgScopeStatement', token: 'scopeStatement', label: 'Scope statement',
+    type: 'textarea',
+    hint: 'One sentence summarising the scope — the form a certification body prints on the certificate.',
+    fallback: 'The information security management system of the organisation, covering the services it delivers, in accordance with the current Statement of Applicability.'
   }
+];
+
+/* The scope & context questionnaire — plain-English questions a client
+   can answer without knowing ISO 27001, each one feeding
+   CheckpointLib.buildOrgContextDraft() (lib.js), which drafts the
+   Clause 4 fields above from them. Stored as ordinary Settings rows
+   under `key` so the questionnaire re-opens with its previous answers.
+   An empty answer ('') contributes nothing to the draft. */
+window.ORG_CONTEXT_QUESTIONS = [
+  { id: 'size', key: 'orgSize', label: 'How many people work for the organisation?', options: [
+    { value: 'micro', label: 'Fewer than 20' }, { value: 'small', label: '20 to 99' },
+    { value: 'medium', label: '100 to 499' }, { value: 'large', label: '500 or more' }] },
+  { id: 'workModel', key: 'orgWorkModel', label: 'Where do people work?', options: [
+    { value: 'office', label: 'Mainly in our own offices' }, { value: 'hybrid', label: 'A mix of office and home or remote' },
+    { value: 'remote', label: 'Fully remote' }] },
+  { id: 'itModel', key: 'orgItModel', label: 'Who runs the organisation’s IT?', options: [
+    { value: 'inhouse', label: 'Our own IT staff' }, { value: 'msp', label: 'A managed service provider (MSP)' },
+    { value: 'mixed', label: 'A mix of our own staff and an MSP' }] },
+  { id: 'cloud', key: 'orgCloud', label: 'Which cloud services hold the organisation’s information?', options: [
+    { value: 'm365', label: 'Microsoft 365 only' }, { value: 'saas', label: 'Microsoft 365 plus other online (SaaS) applications' },
+    { value: 'iaas', label: 'All of those, plus our own servers in Azure, AWS or similar' }] },
+  { id: 'develops', key: 'orgDevelops', label: 'Does the organisation develop its own software?', options: [
+    { value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] },
+  { id: 'personalData', key: 'orgPersonalData', label: 'What personal information does it hold?', options: [
+    { value: 'staff', label: 'Only about our own staff' }, { value: 'customers', label: 'About customers or members of the public' },
+    { value: 'sensitive', label: 'Sensitive information, such as health or financial records' }] },
+  { id: 'customerDemand', key: 'orgCustomerDemand', label: 'Do customers ask for evidence of your security?', options: [
+    { value: 'rarely', label: 'Rarely' }, { value: 'often', label: 'Often — security questionnaires, due diligence' },
+    { value: 'contract', label: 'It is written into our contracts, or certification is required' }] },
+  { id: 'ai', key: 'orgAiUse', label: 'How does the organisation use AI?', options: [
+    { value: 'none', label: 'It does not' }, { value: 'tools', label: 'Staff use AI tools such as Copilot or ChatGPT' },
+    { value: 'builds', label: 'We build AI into our own products or services' }] },
+  { id: 'change', key: 'orgChange', label: 'Is the organisation going through change?', options: [
+    { value: 'stable', label: 'No — broadly stable' }, { value: 'growing', label: 'Growing quickly' },
+    { value: 'major', label: 'Major change, such as a restructure, merger or system migration' }] },
+  { id: 'climate', key: 'orgClimateRelevant', label: 'Could climate change (for example extreme weather) disrupt the organisation, its sites or its key suppliers?', options: [
+    { value: 'relevant', label: 'Yes, it could' }, { value: 'not-relevant', label: 'No — not materially' }] }
 ];
 
 /* Australian-market industry presets. These pre-fill the two fields
@@ -2606,52 +3428,62 @@ window.INDUSTRY_PROFILES = [
   {
     id: 'saas', label: 'Technology / SaaS',
     interestedParties: 'Enterprise and SMB customers, prospective customers’ procurement and security teams, investors, employees, cloud and sub-processor suppliers, and the regulators of the markets the product is sold into.',
-    regulatory: 'Privacy Act 1988 (Cth) and the Australian Privacy Principles; the Notifiable Data Breaches scheme; customer contractual security schedules and DPAs; where customers are overseas, GDPR or equivalent obligations flowed down by contract.'
+    regulatory: 'Privacy Act 1988 (Cth) and the Australian Privacy Principles; the Notifiable Data Breaches scheme; customer contractual security schedules and DPAs; where customers are overseas, GDPR or equivalent obligations flowed down by contract.',
+    externalIssues: 'a competitive SaaS market in which buyers expect independent security assurance, and customers in several jurisdictions each bringing their own privacy obligations'
   },
   {
     id: 'healthcare', label: 'Healthcare / Medical',
     interestedParties: 'Patients and their families, treating clinicians and referrers, Medicare and private health insurers, the Australian Digital Health Agency, state health departments, employees, and clinical-system and pathology suppliers.',
-    regulatory: 'Privacy Act 1988 (Cth) — noting health information is sensitive information and the small-business exemption does not apply to health service providers; My Health Records Act 2012; state health records legislation; the Notifiable Data Breaches scheme.'
+    regulatory: 'Privacy Act 1988 (Cth) — noting health information is sensitive information and the small-business exemption does not apply to health service providers; My Health Records Act 2012; state health records legislation; the Notifiable Data Breaches scheme.',
+    externalIssues: 'a sector heavily targeted by ransomware because clinical services cannot tolerate downtime, with strict expectations for health information privacy'
   },
   {
     id: 'finserv', label: 'Financial services',
     interestedParties: 'Retail and wholesale customers, APRA and ASIC, AUSTRAC, the board and risk committee, employees, outsourced service providers and material service providers, and scheme or clearing counterparties.',
-    regulatory: 'APRA CPS 234 (Information Security) and CPS 230 (Operational Risk Management) where APRA-regulated; AFSL obligations; AML/CTF Act 2006 and AUSTRAC reporting; Privacy Act 1988 (Cth); the Notifiable Data Breaches scheme.'
+    regulatory: 'APRA CPS 234 (Information Security) and CPS 230 (Operational Risk Management) where APRA-regulated; AFSL obligations; AML/CTF Act 2006 and AUSTRAC reporting; Privacy Act 1988 (Cth); the Notifiable Data Breaches scheme.',
+    externalIssues: 'prudential and conduct regulation (APRA and ASIC) with explicit information security and operational resilience expectations, and persistent fraud and account-takeover attempts'
   },
   {
     id: 'government', label: 'Government / public sector',
     interestedParties: 'Citizens and service recipients, the responsible minister and department, the relevant Auditor-General, other agencies sharing data, employees, and contracted service providers.',
-    regulatory: 'The Protective Security Policy Framework (PSPF) and the ISM where applicable; state equivalents such as Queensland’s IS18 or the NSW Cyber Security Policy; Privacy Act 1988 (Cth) or the state privacy act that applies; public-records and archives legislation.'
+    regulatory: 'The Protective Security Policy Framework (PSPF) and the ISM where applicable; state equivalents such as Queensland’s IS18 or the NSW Cyber Security Policy; Privacy Act 1988 (Cth) or the state privacy act that applies; public-records and archives legislation.',
+    externalIssues: 'government security policy (the PSPF and the ISM, or the state equivalent) with annual reporting obligations, and high public and ministerial scrutiny of any data breach'
   },
   {
     id: 'defence', label: 'Defence industry',
     interestedParties: 'The Department of Defence and its Defence Industry Security Office, prime contractors and their supply chains, security-cleared personnel, the Australian Signals Directorate, and subcontractors handling controlled information.',
-    regulatory: 'Defence Industry Security Program (DISP) membership conditions; the Information Security Manual (ISM); the Defence Security Principles Framework; export-control obligations under the Defence Trade Controls Act 2012; Privacy Act 1988 (Cth).'
+    regulatory: 'Defence Industry Security Program (DISP) membership conditions; the Information Security Manual (ISM); the Defence Security Principles Framework; export-control obligations under the Defence Trade Controls Act 2012; Privacy Act 1988 (Cth).',
+    externalIssues: 'security requirements set by Defence (DISP and the ISM) as a condition of contracts, targeting by state-sponsored actors, and export-control obligations on technical data'
   },
   {
     id: 'education', label: 'Education / training',
     interestedParties: 'Students and, where students are minors, their parents or guardians; academic and professional staff; accrediting and regulatory bodies such as TEQSA or ASQA; funding departments; alumni; and learning-platform suppliers.',
-    regulatory: 'Privacy Act 1988 (Cth) or the applicable state privacy act; the ESOS Act and National Code where international students are enrolled; state child-safety and working-with-children obligations; the Notifiable Data Breaches scheme.'
+    regulatory: 'Privacy Act 1988 (Cth) or the applicable state privacy act; the ESOS Act and National Code where international students are enrolled; state child-safety and working-with-children obligations; the Notifiable Data Breaches scheme.',
+    externalIssues: 'large and changing user populations of students and staff, duty-of-care expectations where students are minors, and a sector frequently targeted by credential theft'
   },
   {
     id: 'critical-infra', label: 'Critical infrastructure / utilities',
     interestedParties: 'End consumers and connected communities, the Cyber and Infrastructure Security Centre, sector regulators, state emergency and essential-services bodies, employees, and operational-technology and maintenance suppliers.',
-    regulatory: 'Security of Critical Infrastructure Act 2018 (SOCI) — including the critical infrastructure risk management program and mandatory cyber incident reporting obligations where the entity is a responsible entity; sector-specific licence conditions; Privacy Act 1988 (Cth).'
+    regulatory: 'Security of Critical Infrastructure Act 2018 (SOCI) — including the critical infrastructure risk management program and mandatory cyber incident reporting obligations where the entity is a responsible entity; sector-specific licence conditions; Privacy Act 1988 (Cth).',
+    externalIssues: 'obligations under the Security of Critical Infrastructure Act, targeting by state-sponsored and criminal actors, and the safety consequences of disruption to operational technology'
   },
   {
     id: 'proserv', label: 'Professional services',
     interestedParties: 'Clients and their own regulators, professional and registration bodies, insurers, employees and contractors, and the platform and hosting suppliers that hold client material.',
-    regulatory: 'Privacy Act 1988 (Cth); professional confidentiality and, where legal services are provided, legal professional privilege obligations; client contractual security and confidentiality terms; the Notifiable Data Breaches scheme.'
+    regulatory: 'Privacy Act 1988 (Cth); professional confidentiality and, where legal services are provided, legal professional privilege obligations; client contractual security and confidentiality terms; the Notifiable Data Breaches scheme.',
+    externalIssues: 'clients entrusting confidential material and increasingly assessing their advisers’ security, and business email compromise targeting payments and trust accounts'
   },
   {
     id: 'notforprofit', label: 'Not-for-profit / community',
     interestedParties: 'Service recipients and their families, donors and members, the ACNC, grant-funding bodies and government departments, volunteers and employees, and service-delivery partners.',
-    regulatory: 'Privacy Act 1988 (Cth) where it applies; ACNC governance standards; grant and funding-agreement security conditions; state child-safety obligations where services are delivered to minors.'
+    regulatory: 'Privacy Act 1988 (Cth) where it applies; ACNC governance standards; grant and funding-agreement security conditions; state child-safety obligations where services are delivered to minors.',
+    externalIssues: 'limited funding for security, funders and grant bodies attaching security conditions, and the trust of donors and vulnerable service recipients'
   },
   {
     id: 'other', label: 'Other / general',
     interestedParties: 'Customers, regulators, employees, shareholders or owners, and key suppliers.',
-    regulatory: 'Privacy Act 1988 (Cth) and the Notifiable Data Breaches scheme where applicable, and the organisation’s customer contractual obligations.'
+    regulatory: 'Privacy Act 1988 (Cth) and the Notifiable Data Breaches scheme where applicable, and the organisation’s customer contractual obligations.',
+    externalIssues: 'the regulatory environment and customer expectations of the markets the organisation operates in'
   }
 ];
 

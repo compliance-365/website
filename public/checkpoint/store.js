@@ -211,7 +211,7 @@ function allControlSeeds() {
 }
 window.allControlSeeds = allControlSeeds;
 
-/* ISO/IEC 27001:2022 Clauses 4-9 — the management-system requirements
+/* ISO/IEC 27001:2022 Clauses 4-10 — the management-system requirements
    themselves, as distinct from the Annex A controls above. Every one
    of these is mandatory: there is no "Not Applicable" for a clause the
    way there is for a control (ISO 27001 Clause 6.1.3(d) only permits
@@ -219,11 +219,20 @@ window.allControlSeeds = allControlSeeds;
    these live in their own list rather than as extra rows in Controls —
    mixing them into the Statement of Applicability would give every one
    of them a meaningless Applicable toggle and break the toggle's own
-   meaning for the controls around it. Clause 10 (Improvement) is
-   deliberately not included: nonconformities and corrective action are
-   already evidenced end-to-end by the Actions register's CAPA fields
-   (see capaStatus() in lib.js), so a Clause 10 row here would just
-   duplicate that, not close a gap.
+   meaning for the controls around it.
+
+   Clause 10 (Improvement) was originally left out on the reasoning that
+   the Actions register's CAPA fields (capaStatus() in lib.js) already
+   evidence it. They evidence 10.2 — but an auditor still tests 10.1 and
+   10.2 as clauses in their own right, and a register that stops at 9.3
+   reads as a management system with no improvement clause at all. So
+   both are rows here like any other, with a `hint` saying where the
+   evidence actually lives rather than duplicating it: the 10.2 row
+   points at the Actions register's corrective-action loop (and
+   renderClauses() shows its live open count), and 10.1 at the
+   management review outputs that drive continual improvement. Note the
+   2022 numbering: 10.1 is Continual improvement and 10.2 is
+   Nonconformity and corrective action — the reverse of the 2013 edition.
 
    Sub-clause granularity throughout (6.1.1/6.1.2/6.1.3, 7.5.1/7.5.2/
    7.5.3) rather than one row per top-level clause — an auditor tests
@@ -231,12 +240,16 @@ window.allControlSeeds = allControlSeeds;
    Implemented on the strength of risk assessment alone while risk
    TREATMENT (6.1.3) had nothing behind it.
 
-   Framework is included (rather than assumed) even though only
-   'iso27001' seeds today: ISO 27701 extends 27001's own clauses rather
-   than defining new ones (so one list already serves both), but ISO
-   42001 is a separate management system with its own parallel clause
-   structure — this column is what lets that be added later as more
-   rows, not a rewrite. */
+   Framework is part of every row's identity, not decoration. ISO 42001
+   is a separate management system (the AIMS) with its own Clauses
+   4-10 in the same Harmonized Structure as 27001 — so its codes
+   collide with 27001's ("4.1" exists in both), and every lookup is by
+   fw|code, never code alone (see clauseKey() in app.js). 42001 adds
+   two requirements 27001 has no equivalent of: 6.1.4 and 8.4, the AI
+   system impact assessment. Its rows are seeded for every tenant like
+   27001's, and shown only when the tenant is entitled to ISO 42001.
+   ISO 27701 is not separately listed: the rows here serve a privacy
+   extension to the ISMS, which is how Checkpoint models 27701. */
 window.CLAUSE_DEFS = [
   { code: '4.1', t: 'Understanding the organization and its context', fw: 'iso27001' },
   { code: '4.2', t: 'Understanding the needs and expectations of interested parties', fw: 'iso27001' },
@@ -262,7 +275,42 @@ window.CLAUSE_DEFS = [
   { code: '8.3', t: 'Information security risk treatment', fw: 'iso27001' },
   { code: '9.1', t: 'Monitoring, measurement, analysis and evaluation', fw: 'iso27001' },
   { code: '9.2', t: 'Internal audit', fw: 'iso27001' },
-  { code: '9.3', t: 'Management review', fw: 'iso27001' }
+  { code: '9.3', t: 'Management review', fw: 'iso27001' },
+  { code: '10.1', t: 'Continual improvement', fw: 'iso27001',
+    hint: 'Evidenced by management review outputs and the improvement actions they raise — see the Management Review Procedure and the Actions register.' },
+  { code: '10.2', t: 'Nonconformity and corrective action', fw: 'iso27001',
+    hint: 'Evidenced by the corrective-action loop on each nonconformity in the Actions register — see the Nonconformity & Corrective Action Procedure.' },
+  { code: '4.1', t: 'Understanding the organization and its context', fw: 'iso42001' },
+  { code: '4.2', t: 'Understanding the needs and expectations of interested parties', fw: 'iso42001' },
+  { code: '4.3', t: 'Determining the scope of the AI management system', fw: 'iso42001' },
+  { code: '4.4', t: 'AI management system', fw: 'iso42001' },
+  { code: '5.1', t: 'Leadership and commitment', fw: 'iso42001' },
+  { code: '5.2', t: 'AI policy', fw: 'iso42001' },
+  { code: '5.3', t: 'Roles, responsibilities and authorities', fw: 'iso42001' },
+  { code: '6.1.1', t: 'Actions to address risks and opportunities — general', fw: 'iso42001' },
+  { code: '6.1.2', t: 'AI risk assessment', fw: 'iso42001' },
+  { code: '6.1.3', t: 'AI risk treatment', fw: 'iso42001' },
+  { code: '6.1.4', t: 'AI system impact assessment', fw: 'iso42001' },
+  { code: '6.2', t: 'AI objectives and planning to achieve them', fw: 'iso42001' },
+  { code: '6.3', t: 'Planning of changes', fw: 'iso42001' },
+  { code: '7.1', t: 'Resources', fw: 'iso42001' },
+  { code: '7.2', t: 'Competence', fw: 'iso42001' },
+  { code: '7.3', t: 'Awareness', fw: 'iso42001' },
+  { code: '7.4', t: 'Communication', fw: 'iso42001' },
+  { code: '7.5.1', t: 'Documented information — general', fw: 'iso42001' },
+  { code: '7.5.2', t: 'Creating and updating documented information', fw: 'iso42001' },
+  { code: '7.5.3', t: 'Control of documented information', fw: 'iso42001' },
+  { code: '8.1', t: 'Operational planning and control', fw: 'iso42001' },
+  { code: '8.2', t: 'AI risk assessment', fw: 'iso42001' },
+  { code: '8.3', t: 'AI risk treatment', fw: 'iso42001' },
+  { code: '8.4', t: 'AI system impact assessment', fw: 'iso42001' },
+  { code: '9.1', t: 'Monitoring, measurement, analysis and evaluation', fw: 'iso42001' },
+  { code: '9.2', t: 'Internal audit', fw: 'iso42001' },
+  { code: '9.3', t: 'Management review', fw: 'iso42001' },
+  { code: '10.1', t: 'Continual improvement', fw: 'iso42001',
+    hint: 'Evidenced by management review outputs and the improvement actions they raise — see the Management Review Procedure and the Actions register.' },
+  { code: '10.2', t: 'Nonconformity and corrective action', fw: 'iso42001',
+    hint: 'Evidenced by the corrective-action loop on each nonconformity in the Actions register — see the Nonconformity & Corrective Action Procedure.' }
 ];
 
 /* A small, deliberately-partial illustrative slice (~10 real controls
@@ -852,6 +900,25 @@ window.DEFAULT_SETTINGS = {
   orgInterestedParties: '',
   orgRegulatory: '',
   orgExclusions: '',
+  /* Clause 4 context drafted by the scope & context questionnaire, and
+     the questionnaire's own answers (ORG_CONTEXT_QUESTIONS) so it
+     re-opens where it was left. Same '' = unanswered convention. */
+  orgExternalIssues: '',
+  orgInternalIssues: '',
+  orgPartyRequirements: '',
+  orgClimate: '',
+  orgInterfaces: '',
+  orgScopeStatement: '',
+  orgSize: '',
+  orgWorkModel: '',
+  orgItModel: '',
+  orgCloud: '',
+  orgDevelops: '',
+  orgPersonalData: '',
+  orgCustomerDemand: '',
+  orgAiUse: '',
+  orgChange: '',
+  orgClimateRelevant: '',
   /* Comma-separated ids into window.TECH_STACK_OPTIONS (templates.js) —
      which of a short, self-declared list of technology categories this
      tenant actually runs. Drives the "relevant to you" sort in the
@@ -1966,7 +2033,7 @@ window.SpStore = (function () {
       { name: 'Priority', text: {} }, { name: 'Owner', text: {} }, { name: 'DueDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} },
       { name: 'EvidenceUrl', text: {} }, { name: 'FindingType', text: {} },
-      /* Corrective-action (CAPA) fields, ISO 27001 Clause 10.1 — only
+      /* Corrective-action (CAPA) fields, ISO 27001 Clause 10.2 — only
          populated for Non-conformity finding types (see capaStatus() in
          lib.js). Added to existing tenants' Actions list by
          reconcileColumns() below, so no re-provisioning is needed. */
@@ -2659,9 +2726,8 @@ window.SpStore = (function () {
   /* Same self-heal shape as reconcileControls() above, for a tenant
      provisioned before window.CLAUSE_DEFS existed or before it gained a
      clause. Diffs against Code+Framework, same key shape Controls
-     already uses, even though Framework is 'iso27001' for every row
-     today — the day a second framework's clauses are added, this
-     already disambiguates correctly rather than needing a second pass. */
+     already uses — required, since ISO 27001 and ISO 42001 share
+     clause numbers. */
   async function reconcileClauses(onStatus) {
     var have = {};
     (await items('Clauses')).forEach(function (i) {
@@ -2862,7 +2928,12 @@ window.SpStore = (function () {
         clauses: clauseItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, st: f.Status || 'Not started', own: f.Owner || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
-        }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
+        }).sort(function (a, b) {
+          /* Grouped by framework (FRAMEWORK_ORDER), then numerically by
+             code — two frameworks' "4.1" must not interleave. */
+          var fa = window.FRAMEWORK_ORDER.indexOf(a.fw), fb = window.FRAMEWORK_ORDER.indexOf(b.fw);
+          return fa !== fb ? fa - fb : a.id.localeCompare(b.id, undefined, { numeric: true });
+        }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
           var readiness, readinessByFw, critRisks, overdueActions, source, projection, riskSnapshot;

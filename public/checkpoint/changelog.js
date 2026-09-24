@@ -12,6 +12,38 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.94.0',
+    date: '2026-09-24',
+    entries: [
+      'The organisation profile is now a scope & context questionnaire (Settings → Scope & context). The client answers ten plain-English questions — size, ways of working, who runs their IT, which cloud services they use, what personal information they hold, what customers ask for, how they use AI, organisational change and climate exposure — then confirms what is in scope. Checkpoint drafts the ISO 27001 Clause 4 content from those answers for review: external and internal issues (4.1), what interested parties require (4.2), the climate change determination added by Amendment 1 (2024), interfaces and dependencies (4.3), and a one-sentence scope statement. The ISMS Scope Document and Organisational Context & Interested Parties generate from them.',
+      'Re-running the questionnaire updates the drafted text only where nobody has edited it — a practitioner\'s own wording is never overwritten.',
+      'Generated documents no longer show a doubled full stop where an answer ends with one and the template adds its own.'
+    ]
+  },
+  {
+    version: '1.93.0',
+    date: '2026-09-24',
+    entries: [
+      'The Management system clauses register now covers ISO 42001 as well as ISO 27001. A tenant entitled to ISO 42001 sees its AI management system Clauses 4-10 as a second group, including 6.1.4 and 8.4 (AI system impact assessment), which have no ISO 27001 equivalent. Rows are added to existing tenants automatically and appear as soon as the entitlement is active. The CSV export gains a Framework column.'
+    ]
+  },
+  {
+    version: '1.92.0',
+    date: '2026-09-24',
+    entries: [
+      'Eight new management-system procedures in the policy generator, covering the ISO 27001 clauses that an auditor expects to see as a written procedure: Organisational Context & Interested Parties (4.1/4.2), ISMS Change Planning Procedure (6.3), Competence, Training & Awareness Plan (7.2/7.3), Communication Plan (7.4), Document & Records Control Procedure (7.5), Internal Audit Procedure & Programme (9.2), Management Review Procedure (9.3), and Nonconformity & Corrective Action Procedure (10.1/10.2). Each one says how the matching register in Checkpoint is used, so the procedure and its evidence stay consistent.',
+      'Four new Annex A policies: Legal, Regulatory & Contractual Requirements (A.5.31-A.5.33), Remote Working & Mobile Device (A.6.7, A.8.1, A.7.9), Information Transfer (A.5.14) and Cloud Services Security (A.5.23). Each can be linked as evidence to those controls once saved.'
+    ]
+  },
+  {
+    version: '1.91.0',
+    date: '2026-09-24',
+    entries: [
+      'The Management system clauses register now covers Clause 10 as well: 10.1 Continual improvement and 10.2 Nonconformity and corrective action are rows like any other, added automatically to existing tenants. The 10.2 row shows how many nonconformities in the Actions register still have an open corrective-action loop, so the evidence an auditor asks for is one click away.',
+      'Corrective-action references throughout the app now cite ISO 27001:2022 Clause 10.2, not 10.1. The 2022 edition swapped the two: 10.1 is Continual improvement, and 10.2 is Nonconformity and corrective action.'
+    ]
+  },
+  {
     version: '1.90.1',
     date: '2026-09-24',
     entries: [
@@ -650,7 +682,7 @@ window.CHECKPOINT_CHANGELOG = [
     version: '1.27.0',
     date: '2026-07-14',
     entries: [
-      'Corrective actions for nonconformities now follow the full ISO 27001 Clause 10.1 loop, not just a due date. A nonconformity in the Actions register carries a "Corrective action" record — the immediate correction, the root cause, and (once the corrective action is completed) a verified effectiveness review. Each nonconformity row shows the single next step it owes ("record the correction", "determine the root cause", "review effectiveness"…) until the loop is closed out.',
+      'Corrective actions for nonconformities now follow the full ISO 27001 Clause 10.2 loop, not just a due date. A nonconformity in the Actions register carries a "Corrective action" record — the immediate correction, the root cause, and (once the corrective action is completed) a verified effectiveness review. Each nonconformity row shows the single next step it owes ("record the correction", "determine the root cause", "review effectiveness"…) until the loop is closed out.',
       'The Audit Readiness Report and Management Review Pack now include a nonconformities & corrective-actions section — each one with its root cause and where its CAPA stands — so an auditor sees the corrective-action loop, not just that a nonconformity was logged.',
       'The management review now captures its inputs structured against the seven Clause 9.3.2 sub-clauses (a–g) — prior-review actions, changes in issues, interested-party changes and feedback, security performance, risk-treatment status, and improvement opportunities — instead of one free-text box. The measurable ones (performance, risk status, prior actions) are pre-filled from live data; the qualitative ones are prompted for rather than invented. The Management Review Pack renders each input against its clause, and reviews recorded before this change still display correctly.'
     ]

@@ -998,9 +998,9 @@ function showModal(opts) {
     },
     {
       key: 'clauses', label: 'Management system clauses', filename: 'clauses.csv',
-      header: ['Clause', 'Title', 'Status', 'Owner', 'Verified date', 'Verified by', 'Evidence URL'],
+      header: ['Framework', 'Clause', 'Title', 'Status', 'Owner', 'Verified date', 'Verified by', 'Evidence URL'],
       rows: function () {
-        return (S.clauses || []).map(function (c) { return [c.id, c.t, c.st, c.own, c.verified, c.verifiedBy, c.evidenceUrl]; });
+        return visibleClauses().map(function (c) { return [fwName(c.fw), c.id, c.t, c.st, c.own, c.verified, c.verifiedBy, c.evidenceUrl]; });
       }
     },
     {
@@ -2654,7 +2654,7 @@ function showModal(opts) {
         '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
       sections.push({ heading: 'What the auditor will ask', html: auditorAskHtml, pageBreak: false });
 
-      /* Nonconformities & corrective actions (Clause 10.1) — every NC
+      /* Nonconformities & corrective actions (Clause 10.2) — every NC
          with where its CAPA stands, so an auditor sees the corrective-
          action loop, not just that an NC was logged. */
       /* Actions carry a free-text `control` field (e.g. "A.8.5"), never
@@ -2680,7 +2680,7 @@ function showModal(opts) {
       if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
       if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
       if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
-      if (capaOutstanding) recs.push('Complete the corrective-action loop on ' + capaOutstanding + ' nonconformit' + (capaOutstanding > 1 ? 'ies' : 'y') + ' — root cause and verified effectiveness, not just a fix (Clause 10.1).');
+      if (capaOutstanding) recs.push('Complete the corrective-action loop on ' + capaOutstanding + ' nonconformit' + (capaOutstanding > 1 ? 'ies' : 'y') + ' — root cause and verified effectiveness, not just a fix (Clause 10.2).');
       if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
       if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
       recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
@@ -2840,7 +2840,7 @@ function showModal(opts) {
             : '<p class="rpt-plain" style="margin-top:6px">No management review recorded yet — the measurable inputs above are computed live; record a review to capture the full Clause 9.3.2 set.</p>');
       }
 
-      /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.1) —
+      /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.2) —
          every NC with its root cause and where its CAPA stands. Same
          "cannot safely filter free-text control codes by framework"
          reasoning as the ready builder above — the heading states the
@@ -2986,10 +2986,15 @@ function showModal(opts) {
 
   function resolveOrgTokens(str) {
     if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
-    return str.replace(/\{\{(\w+)\}\}/g, function (whole, token) {
+    /* Answers are free text and often end in a full stop; the template
+       text around a token often supplies its own punctuation. Where
+       both do, keep the template's — "contract.." and "sold into. —"
+       read as typos in an approved policy. */
+    return str.replace(/\{\{(\w+)\}\}(?=(\.|,|;| —)?)/g, function (whole, token, next) {
       var f = orgProfileFieldByToken(token);
       if (!f) return '';
-      return orgProfileValue(f.key) || f.fallback || '';
+      var v = orgProfileValue(f.key) || f.fallback || '';
+      return next ? v.replace(/\.\s*$/, '') : v;
     });
   }
 
@@ -3757,7 +3762,7 @@ function showModal(opts) {
     var sEl = document.getElementById('nSoa');
     if (sEl) { sEl.textContent = sugg || ''; sEl.style.display = sugg ? 'inline-block' : 'none'; }
 
-    var notStartedClauses = (S.clauses || []).filter(function (c) { return c.st === 'Not started'; }).length;
+    var notStartedClauses = visibleClauses().filter(function (c) { return c.st === 'Not started'; }).length;
     var clEl = document.getElementById('nClauses');
     if (clEl) { clEl.textContent = notStartedClauses || ''; clEl.style.display = notStartedClauses ? 'inline-block' : 'none'; }
 
@@ -8871,19 +8876,41 @@ function showModal(opts) {
      so this supplies app:true just to satisfy the pure function's
      contract without adding a meaningless Applicable field to the
      clause's own persisted shape. */
+  /* Clauses are identified by fw|code, never code alone — ISO 27001
+     and ISO 42001 share the same Harmonized Structure numbering, so
+     "4.1" is two different rows. A bare code (anything saved or
+     linked before 42001 rows existed) resolves to ISO 27001, the only
+     framework whose clauses existed then. */
+  function clauseKey(c) { return c.fw + '|' + c.id; }
+  function findClause(key) {
+    var parts = String(key).split('|');
+    var fw = parts.length > 1 ? parts[0] : 'iso27001', code = parts.length > 1 ? parts[1] : parts[0];
+    return (S.clauses || []).find(function (x) { return (x.fw || 'iso27001') === fw && x.id === code; });
+  }
+  function clauseLabel(c) { return (c.fw && c.fw !== 'iso27001' ? fwName(c.fw) + ' ' : '') + 'Clause ' + c.id; }
+  /* Only the management systems this tenant is entitled to. Every
+     framework's clause rows are seeded regardless (same as Controls),
+     so turning an entitlement on later shows them without a
+     reprovision. ISO 27001 is always shown: it is the base ISMS every
+     other framework in Checkpoint builds on. */
+  function visibleClauses() {
+    var ent = entitledFrameworks();
+    return (S.clauses || []).filter(function (c) { return c.fw === 'iso27001' || ent.indexOf(c.fw) !== -1; });
+  }
   function clauseReviewStatus(c) {
     return window.CheckpointLib.controlReviewStatus(Object.assign({}, c, { app: true }), new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
   }
   function renderClausesDashboard() {
     var el = document.getElementById('clauseKpiRow');
     if (!el) return;
-    var clauses = S.clauses || [];
+    var clauses = visibleClauses();
+    var fws = clauses.reduce(function (acc, c) { if (acc.indexOf(c.fw) === -1) acc.push(c.fw); return acc; }, []);
     var implemented = clauses.filter(function (c) { return c.st === 'Implemented'; });
     var notStarted = clauses.filter(function (c) { return c.st === 'Not started'; });
     var overdue = implemented.filter(function (c) { return clauseReviewStatus(c).due; });
     el.innerHTML =
       kpiTile({ value: clauses.length, label: 'Clauses tracked',
-        sub: clauses.length ? 'ISO 27001 Clauses 4-9' : 'management-system requirements, not yet loaded' }) +
+        sub: clauses.length ? fws.map(fwName).join(' + ') + ' Clauses 4-10' : 'management-system requirements, not yet loaded' }) +
       kpiTile({ value: implemented.length, label: 'Implemented', meter: { value: implemented.length, max: clauses.length } }) +
       kpiTile({ value: notStarted.length, label: 'Not started', tone: 'fail',
         meter: { value: notStarted.length, max: clauses.length },
@@ -8897,23 +8924,43 @@ function showModal(opts) {
     var wrap = document.getElementById('clauseRows');
     if (!wrap) return;
     renderClausesDashboard();
-    var clauses = S.clauses || [];
+    var clauses = visibleClauses();
+    var multiFw = clauses.some(function (c) { return c.fw !== clauses[0].fw; });
     if (!clauses.length) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 5, text: 'No management system clauses loaded yet.' });
       return;
     }
+    /* Where a clause's evidence lives elsewhere in the console (Clause
+       10 — see window.CLAUSE_DEFS), say so under its title, and for
+       10.2 give the live count the auditor will ask about rather than
+       a static pointer. */
+    var hints = {};
+    (window.CLAUSE_DEFS || []).forEach(function (d) { if (d.hint) hints[d.fw + '|' + d.code] = d.hint; });
+    var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
+    var lastFw = null;
     wrap.innerHTML = clauses.map(function (c) {
       var rv = clauseReviewStatus(c);
+      var key = esc(clauseKey(c));
+      /* A heading row per management system once there is more than
+         one — otherwise 27001's and 42001's identical numbering reads
+         as the same list twice. */
+      var groupRow = '';
+      if (multiFw && c.fw !== lastFw) {
+        groupRow = '<tr class="soa-group-row"><td colspan="6"><b>' + esc(fwName(c.fw)) + '</b> <span class="src">' + (c.fw === 'iso42001' ? 'AI management system' : 'Information security management system') + '</span></td></tr>';
+        lastFw = c.fw;
+      }
+      var hint = hints[(c.fw || 'iso27001') + '|' + c.id] || '';
+      if (c.id === '10.2' && hint) hint += ' ' + (capaOpen ? capaOpen + ' nonconformit' + (capaOpen > 1 ? 'ies' : 'y') + ' with the corrective-action loop still open.' : 'No nonconformity has an open corrective-action loop.');
       var verifiedCell = c.st !== 'Implemented' ? '<span class="src">—</span>'
-        : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Re-verify</button>'
-        : '<button class="btn sm" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Verify now</button>';
+        : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyClause" data-id="' + key + '">Re-verify</button>'
+        : '<button class="btn sm" data-action="App.verifyClause" data-id="' + key + '">Verify now</button>';
       var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-        ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + esc(c.id) + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Edit</button>'
-        : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Link evidence</button>';
-      return '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + '</td>' +
-        '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + esc(c.id) + '" aria-label="Clause ' + esc(c.id) + ' status">' +
+        ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + key + '">Edit</button>'
+        : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + key + '">Link evidence</button>';
+      return groupRow + '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + '</td>' +
+        '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + key + '" aria-label="' + esc(clauseLabel(c)) + ' status">' +
         ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
-        '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + esc(c.id) + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
+        '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
         '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
     }).join('');
     revealRows(wrap);
@@ -10424,12 +10471,12 @@ function showModal(opts) {
       var orgTotal = (window.ORG_PROFILE_FIELDS || []).length;
       var orgIndLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === orgProfileValue('orgIndustry'); }) || {}).label;
       orgProfEl.innerHTML =
-        '<div><b>Organisation profile</b><p>' +
+        '<div><b>Scope &amp; context (ISO 27001 Clause 4)</b><p>' +
         (orgFilled
           ? esc(orgIndLabel || 'Profile set') + ' · ' + orgFilled + ' of ' + orgTotal + ' answered. Generated documents fill themselves in from these.'
-          : 'Not set yet. Documents generate with generic wording until it is — which is valid, just less specific than an auditor expects for Clause 4.3.') +
+          : 'Not set yet. A short questionnaire drafts the scope statement, internal and external issues, interested parties and their requirements, and interfaces. Until then, documents generate with generic wording — valid, but less specific than an auditor expects for Clause 4.') +
         '</p></div>' +
-        '<button class="btn ' + (orgFilled ? 'ghost ' : '') + 'sm" data-action="App.orgProfileWizard">' + (orgFilled ? 'Review profile' : 'Set up profile') + '</button>';
+        '<button class="btn ' + (orgFilled ? 'ghost ' : '') + 'sm" data-action="App.orgProfileWizard">' + (orgFilled ? 'Review answers' : 'Start questionnaire') + '</button>';
     }
 
     var e8El = document.getElementById('e8TargetLevelRow');
@@ -12541,7 +12588,7 @@ function showModal(opts) {
     },
 
     /* Corrective-action record for a nonconformity (ISO 27001 Clause
-       10.1): the immediate correction, the root cause, and — after the
+       10.2): the immediate correction, the root cause, and — after the
        corrective action is completed — verification that it worked.
        capaStatus() (lib.js) tracks which step is owed next; the register
        row shows it. Only meaningful for a Non-conformity finding type. */
@@ -12552,7 +12599,7 @@ function showModal(opts) {
       var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var v = await showModal({
         title: 'Corrective action — ' + a.id,
-        message: 'ISO 27001 Clause 10.1: contain it, find the root cause, act, then verify the fix held. Effectiveness is reviewed after the corrective action itself is completed.',
+        message: 'ISO 27001 Clause 10.2: contain it, find the root cause, act, then verify the fix held. Effectiveness is reviewed after the corrective action itself is completed.',
         fields: [
           { id: 'correction', label: 'Immediate correction / containment', type: 'textarea', value: a.correction, placeholder: 'What was done straight away to control the nonconformity and its consequences.' },
           { id: 'rootCause', label: 'Root cause', type: 'textarea', value: a.rootCause, placeholder: 'Why it happened — the underlying cause, not just the symptom.' },
@@ -13510,18 +13557,16 @@ function showModal(opts) {
       refreshControlDrawer(key);
     },
 
-    /* ===== Management system clauses (ISO 27001 Clauses 4-9) =====
+    /* ===== Management system clauses (ISO 27001 Clauses 4-10) =====
        Same four actions the Statement of Applicability offers per
        control (status, owner, evidence, verify), deliberately without
        an Applicable toggle or a justification field — see
        window.CLAUSE_DEFS's comment for why neither has meaning for a
-       clause. Keyed on c.id alone (Code), not fw|id like Controls —
-       codes are unique across this single-framework list today, and if
-       a second framework's clauses are ever added, Code stays unique
-       within THIS list because Clause numbering itself doesn't repeat
-       the way a bare Annex A code could collide across frameworks. */
+       clause. Keyed on fw|code (clauseKey()), like Controls: ISO 27001
+       and ISO 42001 share clause numbering, so the code alone is
+       ambiguous. */
     setClauseStatus: async function (key, v) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       if (v === 'Implemented' && !c.evidenceUrl) {
         var proceed = await showModal({
@@ -13534,12 +13579,12 @@ function showModal(opts) {
       var prevSt = c.st;
       c.st = v;
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      audit('Clause status changed', 'Clause', key, prevSt, v);
+      audit('Clause status changed', 'Clause', clauseLabel(c), prevSt, v);
       renderClauses(); renderDash(); renderNavCounts();
     },
 
     verifyClause: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       if (!c.evidenceUrl) {
         var proceed = await showModal({
@@ -13554,16 +13599,16 @@ function showModal(opts) {
       c.verified = new Date().toISOString().slice(0, 10);
       c.verifiedBy = attester;
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      toast('<b>Clause ' + esc(c.id) + '</b> verified by ' + esc(attester));
-      audit('Clause verified', 'Clause', key, prevVerified || 'never verified', c.verified + ' by ' + attester);
+      toast('<b>' + esc(clauseLabel(c)) + '</b> verified by ' + esc(attester));
+      audit('Clause verified', 'Clause', clauseLabel(c), prevVerified || 'never verified', c.verified + ' by ' + attester);
       renderClauses(); renderNavCounts();
     },
 
     setClauseEvidence: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       var urlVals = await showModal({
-        title: 'Link evidence — Clause ' + c.id,
+        title: 'Link evidence — ' + clauseLabel(c),
         fields: [{ id: 'url', label: 'Evidence URL (SharePoint/OneDrive) — leave blank to clear', value: c.evidenceUrl || '', placeholder: 'https://…' }],
         confirmText: 'Save',
         validate: function (v) { return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://'; }
@@ -13576,20 +13621,20 @@ function showModal(opts) {
       if (url && c.st === 'Not started') {
         var prevSt = c.st;
         c.st = 'In progress';
-        audit('Clause status changed', 'Clause', key, prevSt, 'In progress (evidence linked)');
+        audit('Clause status changed', 'Clause', clauseLabel(c), prevSt, 'In progress (evidence linked)');
         bumped = true;
       }
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      audit('Evidence link changed', 'Clause', key, prevUrl || '(none)', url || '(none)');
+      audit('Evidence link changed', 'Clause', clauseLabel(c), prevUrl || '(none)', url || '(none)');
       renderClauses(); renderNavCounts();
-      if (bumped) { renderDash(); toast('<b>Clause ' + esc(c.id) + '</b> moved to In progress.'); }
+      if (bumped) { renderDash(); toast('<b>' + esc(clauseLabel(c)) + '</b> moved to In progress.'); }
     },
 
     setClauseOwner: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       var vals = await showModal({
-        title: 'Clause owner — ' + c.id,
+        title: 'Owner — ' + clauseLabel(c),
         message: 'Who is accountable for this requirement being met and kept evidenced. Leave blank to clear.',
         fields: [{ id: 'own', label: 'Owner', value: c.own || '', placeholder: 'e.g. S. Okafor' }],
         confirmText: 'Save'
@@ -13598,12 +13643,12 @@ function showModal(opts) {
       var prevOwn = c.own;
       c.own = vals.own.trim();
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      audit('Clause owner changed', 'Clause', key, prevOwn || '(none)', c.own || '(none)');
+      audit('Clause owner changed', 'Clause', clauseLabel(c), prevOwn || '(none)', c.own || '(none)');
       renderClauses();
     },
 
     openClauseEvidenceDoc: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;
       if (Store.kind === 'demo') { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
       var win = window.open('', '_blank');
@@ -14636,27 +14681,32 @@ function showModal(opts) {
     orgProfileWizard: async function (opts) {
       opts = opts || {};
       var fields = window.ORG_PROFILE_FIELDS || [];
+      var questions = window.ORG_CONTEXT_QUESTIONS || [];
       function fld(key) { return fields.find(function (f) { return f.key === key; }); }
+      var TOTAL = 5;
+      function stepTitle(n, t) { return (n === 1 && opts.title ? opts.title : t) + ' (' + n + ' of ' + TOTAL + ')'; }
 
+      /* Step 1 — industry, plus the plain-English questions. A client
+         can answer every one of these without knowing ISO 27001; the
+         Clause 4 text is drafted from them in steps 3-5. */
       var currentIndustry = orgProfileValue('orgIndustry');
       var step1 = await showModal({
-        title: opts.title || 'Set up your organisation profile',
-        message: 'Answered once, then reused by every document Checkpoint generates. ISO 27001 expects an organisation to be specific about its scope (Clause 4.3) and who depends on it (Clause 4.2) — these are those answers.\n\nStart with the industry: it pre-fills the two fields practitioners most often stall on.',
+        title: stepTitle(1, 'Scope & context questionnaire'),
+        message: 'A few questions about the organisation. The answers draft the ISMS scope and the ISO 27001 Clause 4 context — internal and external issues, interested parties and what they require, interfaces and dependencies, and a scope statement — for you to review before anything is saved. Every document Checkpoint generates then uses them.',
         fields: [{
-          id: 'industry', label: fld('orgIndustry').label, type: 'select',
+          id: 'industry', label: 'Industry', type: 'select',
           value: currentIndustry || 'other',
           options: (window.INDUSTRY_PROFILES || []).map(function (p) { return { value: p.id, label: p.label }; })
-        }],
+        }].concat(questions.map(function (q) {
+          return { id: q.id, label: q.label, type: 'select', value: orgProfileValue(q.key),
+            options: [{ value: '', label: '— Not answered —' }].concat(q.options) };
+        })),
         confirmText: 'Next'
       });
       if (!step1) return false;
 
       var preset = (window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; })
-        || { interestedParties: '', regulatory: '' };
-      /* An industry change re-seeds the two derived fields; anything
-         the practitioner already wrote for the SAME industry is kept.
-         Re-running the wizard to fix a typo in "locations" must not
-         silently discard a carefully edited interested-parties list. */
+        || { interestedParties: '', regulatory: '', externalIssues: '' };
       var industryChanged = currentIndustry && currentIndustry !== step1.industry;
       function seeded(key, presetText) {
         var existing = orgProfileValue(key);
@@ -14665,30 +14715,87 @@ function showModal(opts) {
       }
 
       var step2 = await showModal({
-        title: 'Organisation profile — the specifics',
-        message: 'These fill in the generated ISMS Scope, and any other document that needs them. Anything left blank falls back to the generic wording, so a partial answer is fine.\n\nThe pre-filled obligations are a starting point drawn from your industry, not legal advice — whether a given law binds this organisation is a determination only you can make.',
+        title: stepTitle(2, 'What is in scope'),
+        message: 'Where the ISMS boundary sits (Clause 4.3). Anything left blank falls back to the generic wording — "all business units", "all locations" — so a partial answer is fine.',
         fields: [
           { id: 'businessUnits', label: fld('orgBusinessUnits').label, type: 'textarea', value: orgProfileValue('orgBusinessUnits'), placeholder: 'e.g. Engineering, Customer Support, Finance' },
           { id: 'locations', label: fld('orgLocations').label, type: 'textarea', value: orgProfileValue('orgLocations'), placeholder: 'e.g. the Brisbane office, and staff working remotely within Australia' },
           { id: 'services', label: fld('orgServices').label, type: 'textarea', value: orgProfileValue('orgServices'), placeholder: 'e.g. the hosted claims-processing platform and its support services' },
-          { id: 'interestedParties', label: fld('orgInterestedParties').label, type: 'textarea', value: seeded('orgInterestedParties', preset.interestedParties) },
-          { id: 'regulatory', label: fld('orgRegulatory').label, type: 'textarea', value: seeded('orgRegulatory', preset.regulatory) },
           { id: 'exclusions', label: fld('orgExclusions').label, type: 'textarea', value: orgProfileValue('orgExclusions'), placeholder: 'Leave blank if nothing is excluded' }
         ],
-        confirmText: 'Save profile'
+        confirmText: 'Next'
       });
       if (!step2) return false;
 
+      /* Draft from the new answers. A saved field is only replaced when
+         it is empty or still exactly what the PREVIOUS answers would
+         have drafted — i.e. nobody has edited it. A practitioner's own
+         wording is never overwritten by re-running the questionnaire. */
+      var orgName = clientDisplayLabel('the organisation');
+      var answersNow = Object.assign({}, step1, step2);
+      var answersPrev = { businessUnits: orgProfileValue('orgBusinessUnits'), locations: orgProfileValue('orgLocations'), services: orgProfileValue('orgServices') };
+      questions.forEach(function (q) { answersPrev[q.id] = orgProfileValue(q.key); });
+      var presetPrev = (window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === currentIndustry; }) || {};
+      var draftNow = window.CheckpointLib.buildOrgContextDraft(answersNow, preset, orgName);
+      var draftPrev = window.CheckpointLib.buildOrgContextDraft(answersPrev, presetPrev, orgName);
+      function drafted(key, prop) {
+        var existing = orgProfileValue(key);
+        if (!existing || existing === draftPrev[prop]) return draftNow[prop];
+        return existing;
+      }
+
+      var draftNote = 'Drafted from your answers — edit freely. Anything left blank falls back to generic wording.';
+      var step3 = await showModal({
+        title: stepTitle(3, 'Context of the organisation (Clause 4.1)'),
+        message: 'The issues inside and outside the organisation that affect what its information security needs to achieve. ' + draftNote,
+        fields: [
+          { id: 'externalIssues', label: fld('orgExternalIssues').label, type: 'textarea', value: drafted('orgExternalIssues', 'externalIssues') },
+          { id: 'internalIssues', label: fld('orgInternalIssues').label, type: 'textarea', value: drafted('orgInternalIssues', 'internalIssues') },
+          { id: 'climate', label: fld('orgClimate').label, type: 'textarea', value: drafted('orgClimate', 'climate') }
+        ],
+        confirmText: 'Next'
+      });
+      if (!step3) return false;
+
+      var step4 = await showModal({
+        title: stepTitle(4, 'Interested parties (Clause 4.2)'),
+        message: 'Who depends on the organisation, and what they require of it. The parties and obligations are pre-filled from your industry; they are a starting point, not legal advice — whether a given law binds this organisation is a determination only you can make.',
+        fields: [
+          { id: 'interestedParties', label: fld('orgInterestedParties').label, type: 'textarea', value: seeded('orgInterestedParties', preset.interestedParties) },
+          { id: 'partyRequirements', label: fld('orgPartyRequirements').label, type: 'textarea', value: drafted('orgPartyRequirements', 'partyRequirements') },
+          { id: 'regulatory', label: fld('orgRegulatory').label, type: 'textarea', value: seeded('orgRegulatory', preset.regulatory) }
+        ],
+        confirmText: 'Next'
+      });
+      if (!step4) return false;
+
+      var step5 = await showModal({
+        title: stepTitle(5, 'Scope statement (Clause 4.3)'),
+        message: 'Where the organisation depends on others, and the one-sentence scope statement. ' + draftNote,
+        fields: [
+          { id: 'interfaces', label: fld('orgInterfaces').label, type: 'textarea', value: drafted('orgInterfaces', 'interfaces') },
+          { id: 'scopeStatement', label: fld('orgScopeStatement').label, type: 'textarea', value: drafted('orgScopeStatement', 'scopeStatement') }
+        ],
+        confirmText: 'Save'
+      });
+      if (!step5) return false;
+
       busy(true);
       try {
-        await Store.setSetting('orgIndustry', step1.industry);
-        S.settings.orgIndustry = step1.industry;
         var map = {
+          orgIndustry: step1.industry,
           orgBusinessUnits: step2.businessUnits, orgLocations: step2.locations,
-          orgServices: step2.services, orgInterestedParties: step2.interestedParties,
-          orgRegulatory: step2.regulatory, orgExclusions: step2.exclusions
+          orgServices: step2.services, orgExclusions: step2.exclusions,
+          orgExternalIssues: step3.externalIssues, orgInternalIssues: step3.internalIssues, orgClimate: step3.climate,
+          orgInterestedParties: step4.interestedParties, orgPartyRequirements: step4.partyRequirements, orgRegulatory: step4.regulatory,
+          orgInterfaces: step5.interfaces, orgScopeStatement: step5.scopeStatement
         };
+        questions.forEach(function (q) { map[q.key] = step1[q.id] || ''; });
         for (var k in map) {
+          /* Unchanged values are skipped — each is its own SharePoint
+             write, and a re-run that changes one answer shouldn't cost
+             twenty-odd requests. */
+          if ((S.settings[k] || '') === (map[k] || '')) continue;
           await Store.setSetting(k, map[k]);
           S.settings[k] = map[k];
         }
@@ -14697,8 +14804,8 @@ function showModal(opts) {
 
       var industryLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; }) || {}).label || step1.industry;
       audit('Organisation profile updated', 'Settings', 'orgProfile', '', industryLabel);
-      log('Organisation profile saved — <b>' + esc(industryLabel) + '</b>. Generated documents now use it.');
-      toast('Organisation profile saved');
+      log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document and Organisational Context & Interested Parties to use it.');
+      toast('Scope & context saved');
       renderFrameworksAdmin();
       return true;
     },
@@ -14728,11 +14835,11 @@ function showModal(opts) {
         var wants = await showModal({
           title: 'Fill this document in automatically?',
           message: '“' + t.title + '” asks the organisation to be specific about things no template can know — its business units, locations, interested parties and regulatory obligations.\n\nAnswer them once and every document that needs them is filled in from now on. Skip, and the document generates with generic wording you can edit later.',
-          confirmText: 'Set up the profile',
+          confirmText: 'Answer the questionnaire',
           cancelText: 'Skip for now'
         });
         if (wants) {
-          var saved = await App.orgProfileWizard({ title: 'Set up your organisation profile' });
+          var saved = await App.orgProfileWizard();
           if (!saved) return; /* cancelled mid-wizard — don't generate behind their back */
         }
       }
@@ -15171,7 +15278,7 @@ function showModal(opts) {
        action/nonconformity in the Actions register, sourced "Internal
        audit" and linked back to this audit's findingRefs, rather than
        the old two-step of creating it separately then typing its ID in.
-       Nonconformity types then flow into the CAPA loop (Clause 10.1). */
+       Nonconformity types then flow into the CAPA loop (Clause 10.2). */
     raiseAuditFinding: async function (id) {
       var a = (S.audits || []).find(function (x) { return x.id === id; });
       if (!a) return;
