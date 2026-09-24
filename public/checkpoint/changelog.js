@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.91.0',
+    date: '2026-09-24',
+    entries: [
+      'The Management system clauses register now covers Clause 10 as well: 10.1 Continual improvement and 10.2 Nonconformity and corrective action are rows like any other, added automatically to existing tenants. The 10.2 row shows how many nonconformities in the Actions register still have an open corrective-action loop, so the evidence an auditor asks for is one click away.',
+      'Corrective-action references throughout the app now cite ISO 27001:2022 Clause 10.2, not 10.1. The 2022 edition swapped the two: 10.1 is Continual improvement, and 10.2 is Nonconformity and corrective action.'
+    ]
+  },
+  {
     version: '1.90.0',
     date: '2026-09-23',
     entries: [
@@ -643,7 +651,7 @@ window.CHECKPOINT_CHANGELOG = [
     version: '1.27.0',
     date: '2026-07-14',
     entries: [
-      'Corrective actions for nonconformities now follow the full ISO 27001 Clause 10.1 loop, not just a due date. A nonconformity in the Actions register carries a "Corrective action" record — the immediate correction, the root cause, and (once the corrective action is completed) a verified effectiveness review. Each nonconformity row shows the single next step it owes ("record the correction", "determine the root cause", "review effectiveness"…) until the loop is closed out.',
+      'Corrective actions for nonconformities now follow the full ISO 27001 Clause 10.2 loop, not just a due date. A nonconformity in the Actions register carries a "Corrective action" record — the immediate correction, the root cause, and (once the corrective action is completed) a verified effectiveness review. Each nonconformity row shows the single next step it owes ("record the correction", "determine the root cause", "review effectiveness"…) until the loop is closed out.',
       'The Audit Readiness Report and Management Review Pack now include a nonconformities & corrective-actions section — each one with its root cause and where its CAPA stands — so an auditor sees the corrective-action loop, not just that a nonconformity was logged.',
       'The management review now captures its inputs structured against the seven Clause 9.3.2 sub-clauses (a–g) — prior-review actions, changes in issues, interested-party changes and feedback, security performance, risk-treatment status, and improvement opportunities — instead of one free-text box. The measurable ones (performance, risk status, prior actions) are pre-filled from live data; the qualitative ones are prompted for rather than invented. The Management Review Pack renders each input against its clause, and reviews recorded before this change still display correctly.'
     ]

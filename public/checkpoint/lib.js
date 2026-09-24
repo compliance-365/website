@@ -4175,7 +4175,7 @@
   }
 
   /* Corrective-action (CAPA) state for a nonconformity, per ISO 27001
-     Clause 10.1 — react/correct, find the root cause, act, then verify
+     Clause 10.2 — react/correct, find the root cause, act, then verify
      effectiveness. A plain Action (not a nonconformity) is trivially
      "complete" here — CAPA rigour only applies to Major/Minor NCs. Pure
      so the register indicators, the report, and the tests all read the

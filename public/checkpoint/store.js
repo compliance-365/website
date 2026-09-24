@@ -211,7 +211,7 @@ function allControlSeeds() {
 }
 window.allControlSeeds = allControlSeeds;
 
-/* ISO/IEC 27001:2022 Clauses 4-9 — the management-system requirements
+/* ISO/IEC 27001:2022 Clauses 4-10 — the management-system requirements
    themselves, as distinct from the Annex A controls above. Every one
    of these is mandatory: there is no "Not Applicable" for a clause the
    way there is for a control (ISO 27001 Clause 6.1.3(d) only permits
@@ -219,11 +219,20 @@ window.allControlSeeds = allControlSeeds;
    these live in their own list rather than as extra rows in Controls —
    mixing them into the Statement of Applicability would give every one
    of them a meaningless Applicable toggle and break the toggle's own
-   meaning for the controls around it. Clause 10 (Improvement) is
-   deliberately not included: nonconformities and corrective action are
-   already evidenced end-to-end by the Actions register's CAPA fields
-   (see capaStatus() in lib.js), so a Clause 10 row here would just
-   duplicate that, not close a gap.
+   meaning for the controls around it.
+
+   Clause 10 (Improvement) was originally left out on the reasoning that
+   the Actions register's CAPA fields (capaStatus() in lib.js) already
+   evidence it. They evidence 10.2 — but an auditor still tests 10.1 and
+   10.2 as clauses in their own right, and a register that stops at 9.3
+   reads as a management system with no improvement clause at all. So
+   both are rows here like any other, with a `hint` saying where the
+   evidence actually lives rather than duplicating it: the 10.2 row
+   points at the Actions register's corrective-action loop (and
+   renderClauses() shows its live open count), and 10.1 at the
+   management review outputs that drive continual improvement. Note the
+   2022 numbering: 10.1 is Continual improvement and 10.2 is
+   Nonconformity and corrective action — the reverse of the 2013 edition.
 
    Sub-clause granularity throughout (6.1.1/6.1.2/6.1.3, 7.5.1/7.5.2/
    7.5.3) rather than one row per top-level clause — an auditor tests
@@ -262,7 +271,11 @@ window.CLAUSE_DEFS = [
   { code: '8.3', t: 'Information security risk treatment', fw: 'iso27001' },
   { code: '9.1', t: 'Monitoring, measurement, analysis and evaluation', fw: 'iso27001' },
   { code: '9.2', t: 'Internal audit', fw: 'iso27001' },
-  { code: '9.3', t: 'Management review', fw: 'iso27001' }
+  { code: '9.3', t: 'Management review', fw: 'iso27001' },
+  { code: '10.1', t: 'Continual improvement', fw: 'iso27001',
+    hint: 'Evidenced by management review outputs and the improvement actions they raise — see the Management Review Procedure and the Actions register.' },
+  { code: '10.2', t: 'Nonconformity and corrective action', fw: 'iso27001',
+    hint: 'Evidenced by the corrective-action loop on each nonconformity in the Actions register — see the Nonconformity & Corrective Action Procedure.' }
 ];
 
 /* A small, deliberately-partial illustrative slice (~10 real controls
@@ -1966,7 +1979,7 @@ window.SpStore = (function () {
       { name: 'Priority', text: {} }, { name: 'Owner', text: {} }, { name: 'DueDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} },
       { name: 'EvidenceUrl', text: {} }, { name: 'FindingType', text: {} },
-      /* Corrective-action (CAPA) fields, ISO 27001 Clause 10.1 — only
+      /* Corrective-action (CAPA) fields, ISO 27001 Clause 10.2 — only
          populated for Non-conformity finding types (see capaStatus() in
          lib.js). Added to existing tenants' Actions list by
          reconcileColumns() below, so no re-provisioning is needed. */

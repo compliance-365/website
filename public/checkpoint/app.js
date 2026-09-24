@@ -2654,7 +2654,7 @@ function showModal(opts) {
         '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
       sections.push({ heading: 'What the auditor will ask', html: auditorAskHtml, pageBreak: false });
 
-      /* Nonconformities & corrective actions (Clause 10.1) — every NC
+      /* Nonconformities & corrective actions (Clause 10.2) — every NC
          with where its CAPA stands, so an auditor sees the corrective-
          action loop, not just that an NC was logged. */
       /* Actions carry a free-text `control` field (e.g. "A.8.5"), never
@@ -2680,7 +2680,7 @@ function showModal(opts) {
       if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
       if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
       if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
-      if (capaOutstanding) recs.push('Complete the corrective-action loop on ' + capaOutstanding + ' nonconformit' + (capaOutstanding > 1 ? 'ies' : 'y') + ' — root cause and verified effectiveness, not just a fix (Clause 10.1).');
+      if (capaOutstanding) recs.push('Complete the corrective-action loop on ' + capaOutstanding + ' nonconformit' + (capaOutstanding > 1 ? 'ies' : 'y') + ' — root cause and verified effectiveness, not just a fix (Clause 10.2).');
       if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
       if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
       recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
@@ -2840,7 +2840,7 @@ function showModal(opts) {
             : '<p class="rpt-plain" style="margin-top:6px">No management review recorded yet — the measurable inputs above are computed live; record a review to capture the full Clause 9.3.2 set.</p>');
       }
 
-      /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.1) —
+      /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.2) —
          every NC with its root cause and where its CAPA stands. Same
          "cannot safely filter free-text control codes by framework"
          reasoning as the ready builder above — the heading states the
@@ -8883,7 +8883,7 @@ function showModal(opts) {
     var overdue = implemented.filter(function (c) { return clauseReviewStatus(c).due; });
     el.innerHTML =
       kpiTile({ value: clauses.length, label: 'Clauses tracked',
-        sub: clauses.length ? 'ISO 27001 Clauses 4-9' : 'management-system requirements, not yet loaded' }) +
+        sub: clauses.length ? 'ISO 27001 Clauses 4-10' : 'management-system requirements, not yet loaded' }) +
       kpiTile({ value: implemented.length, label: 'Implemented', meter: { value: implemented.length, max: clauses.length } }) +
       kpiTile({ value: notStarted.length, label: 'Not started', tone: 'fail',
         meter: { value: notStarted.length, max: clauses.length },
@@ -8902,15 +8902,24 @@ function showModal(opts) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 5, text: 'No management system clauses loaded yet.' });
       return;
     }
+    /* Where a clause's evidence lives elsewhere in the console (Clause
+       10 — see window.CLAUSE_DEFS), say so under its title, and for
+       10.2 give the live count the auditor will ask about rather than
+       a static pointer. */
+    var hints = {};
+    (window.CLAUSE_DEFS || []).forEach(function (d) { if (d.hint) hints[d.fw + '|' + d.code] = d.hint; });
+    var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
     wrap.innerHTML = clauses.map(function (c) {
       var rv = clauseReviewStatus(c);
+      var hint = hints[(c.fw || 'iso27001') + '|' + c.id] || '';
+      if (c.id === '10.2' && hint) hint += ' ' + (capaOpen ? capaOpen + ' nonconformit' + (capaOpen > 1 ? 'ies' : 'y') + ' with the corrective-action loop still open.' : 'No nonconformity has an open corrective-action loop.');
       var verifiedCell = c.st !== 'Implemented' ? '<span class="src">—</span>'
         : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Re-verify</button>'
         : '<button class="btn sm" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Verify now</button>';
       var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
         ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + esc(c.id) + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Edit</button>'
         : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Link evidence</button>';
-      return '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + '</td>' +
+      return '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + '</td>' +
         '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + esc(c.id) + '" aria-label="Clause ' + esc(c.id) + ' status">' +
         ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
         '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + esc(c.id) + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
@@ -12541,7 +12550,7 @@ function showModal(opts) {
     },
 
     /* Corrective-action record for a nonconformity (ISO 27001 Clause
-       10.1): the immediate correction, the root cause, and — after the
+       10.2): the immediate correction, the root cause, and — after the
        corrective action is completed — verification that it worked.
        capaStatus() (lib.js) tracks which step is owed next; the register
        row shows it. Only meaningful for a Non-conformity finding type. */
@@ -12552,7 +12561,7 @@ function showModal(opts) {
       var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var v = await showModal({
         title: 'Corrective action — ' + a.id,
-        message: 'ISO 27001 Clause 10.1: contain it, find the root cause, act, then verify the fix held. Effectiveness is reviewed after the corrective action itself is completed.',
+        message: 'ISO 27001 Clause 10.2: contain it, find the root cause, act, then verify the fix held. Effectiveness is reviewed after the corrective action itself is completed.',
         fields: [
           { id: 'correction', label: 'Immediate correction / containment', type: 'textarea', value: a.correction, placeholder: 'What was done straight away to control the nonconformity and its consequences.' },
           { id: 'rootCause', label: 'Root cause', type: 'textarea', value: a.rootCause, placeholder: 'Why it happened — the underlying cause, not just the symptom.' },
@@ -13510,7 +13519,7 @@ function showModal(opts) {
       refreshControlDrawer(key);
     },
 
-    /* ===== Management system clauses (ISO 27001 Clauses 4-9) =====
+    /* ===== Management system clauses (ISO 27001 Clauses 4-10) =====
        Same four actions the Statement of Applicability offers per
        control (status, owner, evidence, verify), deliberately without
        an Applicable toggle or a justification field — see
@@ -15171,7 +15180,7 @@ function showModal(opts) {
        action/nonconformity in the Actions register, sourced "Internal
        audit" and linked back to this audit's findingRefs, rather than
        the old two-step of creating it separately then typing its ID in.
-       Nonconformity types then flow into the CAPA loop (Clause 10.1). */
+       Nonconformity types then flow into the CAPA loop (Clause 10.2). */
     raiseAuditFinding: async function (id) {
       var a = (S.audits || []).find(function (x) { return x.id === id; });
       if (!a) return;
