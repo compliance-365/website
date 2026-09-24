@@ -79,13 +79,13 @@ const MERGED_NIST_SUBCATEGORIES = CONTENT_AVAILABLE ? PACKS.nistcsf.extra.subcat
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
 // Capabilities probed against Microsoft Graph (graph.js CAPABILITY_PROBES).
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement', 'lifecycleWorkflows', 'signInLogs', 'directoryAudits', 'signInActivity', 'mfaRegistrationReport'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings', 'defenderXdr', 'priva', 'recordsManagement', 'lifecycleWorkflows', 'signInLogs', 'directoryAudits', 'signInActivity', 'mfaRegistrationReport', 'threatHunting', 'attackSimulation'];
 // Capabilities that are DERIVED rather than probed, because nothing in
 // Microsoft 365 knows the answer. 'aws' is set by app.js from whether the
 // optional AWS collector has ever written an aws-* result for this tenant.
 // Listed separately so the guard below still catches a genuine typo in a
 // requiresCapability value, rather than being loosened to accept anything.
-const DERIVED_CAPABILITY_KEYS = ['aws'];
+const DERIVED_CAPABILITY_KEYS = ['aws', 'github'];
 const ALL_CAPABILITY_KEYS = [...KNOWN_CAPABILITY_KEYS, ...DERIVED_CAPABILITY_KEYS];
 
 describe('premium content is not shipped in the bundle', { skip: SKIP }, () => {
@@ -574,14 +574,27 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // 'dormant-accounts' and 'mfa-registration' spend the
     // AuditLog.Read.All scope added for the audit-log pair, so they
     // cost two new capability probes but no new consent.
-    assert.equal(CHECK_DEFS.length, 57);
+    // 57 -> 66 with the Defender depth and secure development batch.
+    // 'edr-coverage' and 'phish-sim' cost two new scopes
+    // (ThreatHunting.Read.All, AttackSimulation.Read.All) and two new
+    // capability probes ('threatHunting', 'attackSimulation'); 'patch'
+    // and 'encryption' gained direct reads without changing their ids.
+    // The seven gh-* checks are populated only by the optional GitHub
+    // collector and gated on the derived 'github' capability, exactly
+    // like the aws-* pack.
+    assert.equal(CHECK_DEFS.length, 66);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws').length, 47);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'github').length, 7);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws' && c.requiresCapability !== 'github').length, 49);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {
     CHECK_DEFS.filter((c) => c.requiresCapability === 'aws')
       .forEach((c) => assert.ok(c.id.startsWith('aws-'), `${c.id} must start with aws-`));
+  });
+  test('every GitHub check id is namespaced, so it can never collide with another check', () => {
+    CHECK_DEFS.filter((c) => c.requiresCapability === 'github')
+      .forEach((c) => assert.ok(c.id.startsWith('gh-'), `${c.id} must start with gh-`));
   });
   test('every check id is unique', () => {
     const seen = new Set();

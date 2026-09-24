@@ -1,0 +1,8 @@
+{
+  "name": "checkpoint-github-collector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scheduled GitHub Actions job that collects Checkpoint's secure development checks (ISO 27001 A.8.25/A.8.28/A.8.29/A.8.32) entirely inside the client's own GitHub organisation, and writes the results into the client's own SharePoint. No dependencies: Node 20's built-in fetch only.",
+  "engines": { "node": ">=20" },
+  "type": "module"
+}

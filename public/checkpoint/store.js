@@ -646,6 +646,11 @@ window.CHECK_DEFS = [
   { id: 'device-jailbroken', area: 'Devices', label: 'No jailbroken or rooted mobile devices enrolled', tpl: 'device-jailbroken', scored: true, requiresCapability: 'intune' },
   { id: 'device-config', area: 'Devices', label: 'Device configuration profiles deployed', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
+  /* Read from Defender advanced hunting (graph.js's 'threatHunting'
+     probe) — whether every device Defender knows about runs a healthy
+     endpoint sensor, including machines its device discovery found
+     that Intune never enrolled. */
+  { id: 'edr-coverage', area: 'Devices', label: 'Endpoint detection & response sensor on every device', tpl: 'edr-coverage', scored: true, requiresCapability: 'threatHunting' },
   /* Apps & Data (8) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
   { id: 'macro',      area: 'Apps & Data', label: 'Office macro settings hardened',            tpl: null,        scored: true, requiresCapability: 'secureScore' },
@@ -687,6 +692,10 @@ window.CHECK_DEFS = [
      a client tracking awareness training in a separate LMS is never
      scored down for leaving no trace here. */
   { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: true },
+  /* Defender for Office 365 P2 attack simulation — evidence that
+     awareness is tested, not only delivered. Never scores 'fail' (see
+     lib.js's attackSimulationResult for why). */
+  { id: 'phish-sim',  area: 'Governance', label: 'Phishing simulation run within cadence',      tpl: 'phish-sim', scored: true, requiresCapability: 'attackSimulation' },
   /* Two more register-derived checks, same reasoning and same safety
      property as backup/bcp/supplier/policy above: computed client-side
      from a Checkpoint register (Audits, Incidents) rather than Graph,
@@ -716,7 +725,22 @@ window.CHECK_DEFS = [
   { id: 'aws-s3-public',      area: 'Cloud (AWS)', label: 'S3 public access blocked account-wide',             tpl: null, scored: true, requiresCapability: 'aws' },
   { id: 'aws-ebs-encryption', area: 'Cloud (AWS)', label: 'EBS volumes encrypted by default',                  tpl: null, scored: true, requiresCapability: 'aws' },
   { id: 'aws-rds-encryption', area: 'Cloud (AWS)', label: 'RDS instances encrypted at rest',                   tpl: null, scored: true, requiresCapability: 'aws' },
-  { id: 'aws-sg-open',        area: 'Cloud (AWS)', label: 'No security group exposes admin ports to the internet', tpl: null, scored: true, requiresCapability: 'aws' }
+  { id: 'aws-sg-open',        area: 'Cloud (AWS)', label: 'No security group exposes admin ports to the internet', tpl: null, scored: true, requiresCapability: 'aws' },
+  /* Secure development (GitHub) (7) — populated only by the optional
+     GitHub collector (public/checkpoint/github/), a scheduled Actions
+     workflow a client runs in their OWN GitHub organisation. Same
+     derived-capability contract as the AWS pack above: no gh-* result
+     ever seen means the rows stay hidden and out of the score, so a
+     tenant that builds no software is not seven checks short of
+     anything. Labels must match GITHUB_CHECK_LABELS in
+     github/collector/checks.mjs (test/github-collector.test.mjs). */
+  { id: 'gh-branch-review',   area: 'Secure development (GitHub)', label: 'Default branches require a reviewed pull request',       tpl: 'gh-branch-review', scored: true, requiresCapability: 'github' },
+  { id: 'gh-status-checks',   area: 'Secure development (GitHub)', label: 'Default branches require passing status checks',          tpl: null, scored: true, requiresCapability: 'github' },
+  { id: 'gh-secret-scanning', area: 'Secure development (GitHub)', label: 'Secret scanning and push protection enabled',             tpl: null, scored: true, requiresCapability: 'github' },
+  { id: 'gh-secret-alerts',   area: 'Secure development (GitHub)', label: 'No unresolved leaked-secret alerts',                       tpl: 'gh-secret-alerts', scored: true, requiresCapability: 'github' },
+  { id: 'gh-dependabot',      area: 'Secure development (GitHub)', label: 'Vulnerable dependencies fixed within the window',          tpl: 'gh-dependabot', scored: true, requiresCapability: 'github' },
+  { id: 'gh-code-scanning',   area: 'Secure development (GitHub)', label: 'Code scanning (SAST) runs on every repository',            tpl: null, scored: true, requiresCapability: 'github' },
+  { id: 'gh-org-2fa',         area: 'Secure development (GitHub)', label: 'Two-factor authentication required for the organisation', tpl: null, scored: true, requiresCapability: 'github' }
 ];
 
 /* Optional dashboard/workflow features — practitioners can switch these
@@ -746,6 +770,10 @@ window.THRESHOLD_DEFS = [
   { key: 'dormantAccountDays', label: 'Dormant account threshold (days)', desc: 'An ENABLED account with no sign-in in this many days is reported as dormant. Accounts that have never signed in are included, which is where break-glass accounts legitimately sit — check yours before acting on the list.', def: '90' },
   { key: 'dormantAccountReviewMax', label: 'Max dormant accounts (review)', desc: 'At or under this many dormant accounts is a Review — a handful is housekeeping and some are deliberate. More than this is a Fail: a directory with dozens of untouched enabled accounts is not one with dozens of break-glass accounts.', def: '5' },
   { key: 'mfaCoverageReviewPct', label: 'MFA registration review floor (%)', desc: 'Full coverage passes; at or above this floor shows as Review; below it fails. An administrator who cannot complete MFA fails the check outright regardless of this number — averaging a Global Administrator into a fleet-wide percentage is how the most valuable account in the tenant gets rounded away.', def: '95' },
+  { key: 'patchExploitWindowDays', label: 'Exploitable vulnerability patch window (days)', desc: 'With Defender advanced hunting available, the patch check reads Defender Vulnerability Management directly: a critical CVE with a known public exploit, published longer ago than this and still present on any device, fails; a high one is a Review. Essential Eight asks for two weeks (48 hours where an exploit exists, at Maturity Level 3) — set this to what your own patch policy commits to.', def: '14' },
+  { key: 'edrCoverageReviewPct', label: 'EDR sensor coverage review floor (%)', desc: 'Every known device running a healthy Defender for Endpoint sensor is a pass. Below that but at or above this floor is a Review; below it is a Fail. Devices discovered on the network without a sensor count against coverage, as do onboarded sensors that have stopped reporting.', def: '90' },
+  { key: 'phishSimCadenceDays', label: 'Phishing simulation cadence (days)', desc: 'A completed Defender attack simulation within this many days, with a compromise rate at or under the threshold below, passes the phishing-simulation check. Older than this is a Review — never a Fail, since no standard mandates simulation specifically.', def: '180' },
+  { key: 'phishSimMaxCompromisePct', label: 'Phishing simulation compromise threshold (%)', desc: 'The share of targeted users compromised in the latest simulation above which the check shows Review — a signal to follow up with targeted training, not a failed control.', def: '20' },
   { key: 'auditLogWindowDays', label: 'Audit log review window (days)', desc: 'How far back the two Entra audit-log checks look — observed legacy authentication, and privileged role changes. Set this to match the review cadence your own ISMS commits to rather than leaving the 30-day default; a quarterly access review wants 90. Entra itself retains sign-in and directory audit logs for 30 days on P1/P2 (7 days on the free tier), so a longer window here silently returns only what Entra still holds.', def: '30' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' },
   { key: 'riskReviewCadenceDays', label: 'Risk review cadence (days)', desc: 'An open risk not reviewed within this many days shows as overdue for review on the Risk register, the Dashboard and the Audit Readiness Report. ISO 27001 clause 8.2 requires risk assessments at planned intervals or on significant change, and the Risk Management Framework policy template commits to reviewing residual risk at least quarterly — which is where the 90-day default comes from. Set it to whatever your own framework actually says.', def: '90' },
@@ -1157,6 +1185,12 @@ window.CHECK_CONTROLS = {
      every scan that no ISO 27001 control ever saw. A.6.3 (security
      awareness training) is exactly what it measures. */
   'training': ['A.6.3'],
+  /* Defender depth. EDR sensor coverage is the direct evidence for
+     malware protection (A.8.7) and monitoring (A.8.16) that a device
+     compliance percentage cannot give; a completed phishing simulation
+     is A.6.3 evidence that awareness is tested. */
+  'edr-coverage': ['A.8.7', 'A.8.16'],
+  'phish-sim': ['A.6.3'],
   /* The AWS check pack (aws/collector/checks.mjs) — ten scored:true
      checks with zero framework mapping until now, each earning its
      control the same way as every check above, mirroring whichever
@@ -1181,6 +1215,20 @@ window.CHECK_CONTROLS = {
   'aws-ebs-encryption': ['A.8.24'],
   'aws-rds-encryption': ['A.8.24'],
   'aws-sg-open': ['A.8.20', 'A.8.21'],
+  /* The GitHub pack (github/collector/checks.mjs). The first automated
+     evidence for the secure-development block of Annex A. Review-before-
+     merge is both an SDLC control (A.8.25) and the change-management
+     approval step A.8.32 tests for; required status checks are where
+     security testing (A.8.29) becomes a gate rather than a report.
+     A.8.26/A.8.27 are deliberately absent — they are about decisions a
+     repository setting cannot show (see the collector's header). */
+  'gh-branch-review': ['A.8.25', 'A.8.32'],
+  'gh-status-checks': ['A.8.25', 'A.8.29'],
+  'gh-secret-scanning': ['A.8.28', 'A.5.17'],
+  'gh-secret-alerts': ['A.5.17', 'A.8.28'],
+  'gh-dependabot': ['A.8.8', 'A.8.28'],
+  'gh-code-scanning': ['A.8.28', 'A.8.29'],
+  'gh-org-2fa': ['A.8.4', 'A.8.5'],
   'sod': ['A.5.3']
 };
 
@@ -1402,7 +1450,7 @@ window.DemoStore = (function () {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'legacy-auth-observed': 'fail', 'priv-role-changes': 'review', 'dormant-accounts': 'fail', 'mfa-registration': 'review', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
         'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review', 'device-encryption': 'review', 'device-jailbroken': 'fail',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
-        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail',
+        'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail', 'edr-coverage': 'review', 'phish-sim': 'pass',
         'privacy-srr': 'fail', 'retention': 'review'
       };
     /* Each older set is expressed as a DIFF from the one after it.
@@ -1467,6 +1515,8 @@ window.DemoStore = (function () {
         'lifecycle-workflows': '1 of 2 workflow(s) enabled — joiner not automated, leaver automated, mover not automated',
         'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in',
         'xdr-incidents': '7 active incident(s), 3 high severity; 2 open beyond the 5-day triage window; 1 high-severity unassigned',
+        'edr-coverage': '94.2% of known devices have a healthy Defender sensor (81 onboarded, 2 inactive, 3 discovered without a sensor). Unprotected devices only appear when Defender device discovery is enabled.',
+        'phish-sim': 'Last completed simulation "Q3 credential harvest" 41 day(s) ago; 6.5% of targeted users compromised',
         'privacy-srr': '3 open request(s); 1 PAST their statutory due date; 1 due within 7 days',
         'retention': '4 of 4 retention label(s) published, none with an end-of-retention action — retained content is never disposed of'
       },
@@ -1616,6 +1666,14 @@ window.DemoStore = (function () {
       ],
       reviews: [
         { id: 'MR-001', date: daysFrom(-30), attendees: 'M. Chen (CEO), K. Patel (Head of Eng), S. Okafor (ISMS Manager)', inputs: 'Posture score 48/100 (up from 41). 5 open risks, 2 High/Critical residual. 7 open actions, some overdue. 1 open non-conformity from AUD-001. ISO 27001 readiness 34%.', decisions: 'Approved additional contractor time for supplier security remediation (R-001). Agreed to bring forward the ISO 42001 internal audit to Q3. No change to risk appetite.', nextDue: daysFrom(60) }
+      ],
+      /* Approved questionnaire answers — one of them (ANS-002) was
+         approved while backups were passing, so the demo shows the
+         "evidence has changed since approval" flag doing its job. */
+      answers: [
+        { id: 'ANS-001', question: 'Do you enforce multi-factor authentication for all user accounts?', answer: 'Yes. Multi-factor authentication is required for every user through Conditional Access, and administrators must use phishing-resistant methods. Legacy authentication is blocked.', verdict: 'Yes', topics: 'Multi-factor authentication', approvedBy: 'S. Okafor', approvedDate: daysFrom(-40), timesUsed: 3 },
+        { id: 'ANS-002', question: 'Are backups performed regularly and are restores tested?', answer: 'Yes. Microsoft 365 data is backed up daily to an independent service, and restores are tested quarterly.', verdict: 'Yes', topics: 'Backup & restore', approvedBy: 'S. Okafor', approvedDate: daysFrom(-200), timesUsed: 5 },
+        { id: 'ANS-003', question: 'Do you have a documented incident response plan?', answer: 'Yes. Our incident response plan defines roles, severity levels and notification timeframes, and is tested annually.', verdict: 'Partial', topics: 'Incident response', approvedBy: 'K. Patel', approvedDate: daysFrom(-12), timesUsed: 1 }
       ],
       /* ISO 27001 Clause 6.2 — measurable, owned, dated targets, not just
          restated policy intent. A spread of statuses so the register's
@@ -1887,6 +1945,9 @@ window.DemoStore = (function () {
     updateAudit: async function () { persist(); },
     addReview: async function (r) { S.reviews.push(r); persist(); },
     addObjective: async function (o) { S.objectives.push(o); persist(); },
+    addAnswer: async function (a) { S.answers = S.answers || []; S.answers.push(a); persist(); },
+    updateAnswer: async function () { persist(); },
+    deleteAnswer: async function (a) { S.answers = (S.answers || []).filter(function (x) { return x !== a; }); persist(); },
     updateObjective: async function () { persist(); },
     addCalendarItem: async function (c) { S.calendar.push(c); persist(); },
     updateCalendarItem: async function () { persist(); },
@@ -2194,6 +2255,16 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'Metric', text: {} }, { name: 'Target', text: {} },
       { name: 'Owner', text: {} }, { name: 'DueDate', text: {} }, { name: 'Status', text: {} },
       { name: 'ProgressNotes', text: { allowMultipleLines: true } }
+    ],
+    /* Security questionnaire answer library — answers a practitioner has
+       reviewed and approved, reused the next time a customer asks the
+       same thing (see lib.js's assessQuestion()). Title carries the
+       question. Verdict records what the EVIDENCE said at approval, so a
+       later reuse can flag that the evidence has since changed. */
+    Answers: [
+      { name: 'RefId', text: {} }, { name: 'Answer', text: { allowMultipleLines: true } },
+      { name: 'Verdict', text: {} }, { name: 'Topics', text: {} },
+      { name: 'ApprovedBy', text: {} }, { name: 'ApprovedDate', text: {} }, { name: 'TimesUsed', text: {} }
     ],
     Calendar: [
       { name: 'RefId', text: {} }, { name: 'Category', text: {} }, { name: 'Frequency', text: {} },
@@ -2803,6 +2874,12 @@ window.SpStore = (function () {
      an add and an update function (the pattern every other list in
      this file uses) is exactly where the two would eventually drift.
      One function, both callers. */
+  function answerFields(a, withRef) {
+    var f = { Title: String(a.question || '').slice(0, 255), Answer: a.answer || '', Verdict: a.verdict || '', Topics: a.topics || '',
+      ApprovedBy: a.approvedBy || '', ApprovedDate: a.approvedDate || '', TimesUsed: String(a.timesUsed || 0) };
+    if (withRef) f.RefId = a.id;
+    return f;
+  }
   function incidentFields(n) {
     return {
       Title: n.id, RefId: n.id, Category: n.category || 'Other', Severity: n.severity || 'Medium',
@@ -2890,6 +2967,7 @@ window.SpStore = (function () {
       var audItems = await items('Audits');
       var revItems = await items('Reviews');
       var objItems = await items('Objectives');
+      var ansItems = await items('Answers');
       var calItems = await items('Calendar');
       var logItems = await items('AuditLog');
       var alertItems = await items('Alerts');
@@ -2987,6 +3065,10 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '' };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
+        answers: ansItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, question: f.Title || '', answer: f.Answer || '', verdict: f.Verdict || '', topics: f.Topics || '', approvedBy: f.ApprovedBy || '', approvedDate: f.ApprovedDate || '', timesUsed: Number(f.TimesUsed) || 0 };
+        }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
         objectives: objItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, title: f.Title, metric: f.Metric || '', target: f.Target || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Not started', notes: f.ProgressNotes || '' };
@@ -3403,6 +3485,18 @@ window.SpStore = (function () {
         Inputs: r.inputs, Decisions: r.decisions, NextDue: r.nextDue || ''
       });
       S.reviews.push(r);
+    },
+    addAnswer: async function (a) {
+      a._sp = await addItem('Answers', answerFields(a, true));
+      S.answers = S.answers || [];
+      S.answers.push(a);
+    },
+    updateAnswer: async function (a) {
+      await patchItem('Answers', a._sp, answerFields(a, false));
+    },
+    deleteAnswer: async function (a) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.Answers + '/items/' + a._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+      S.answers = (S.answers || []).filter(function (x) { return x !== a; });
     },
     addObjective: async function (o) {
       o._sp = await addItem('Objectives', {

@@ -445,6 +445,40 @@ function showModal(opts) {
         { t: 'Confirm the incident response plan states the triage window this check measures against', pr: 'Medium', days: 30, control: 'A.5.24' }
       ]
     },
+    'edr-coverage': {
+      risk: { title: 'Devices on the network run without an endpoint detection & response sensor', cat: 'Ops', L: 4, I: 4, controls: ['A.8.7', 'A.8.16'] },
+      actions: [
+        { t: 'Onboard every device Defender discovered without a sensor, or record why each one is out of scope', pr: 'High', days: 21, control: 'A.8.7' },
+        { t: 'Investigate onboarded sensors that have stopped reporting and restore or retire them', pr: 'High', days: 14, control: 'A.8.16' }
+      ]
+    },
+    'gh-branch-review': {
+      risk: { title: 'Code reaches production branches without independent review', cat: 'Ops', L: 3, I: 4, controls: ['A.8.25', 'A.8.32'] },
+      actions: [
+        { t: 'Add an organisation ruleset requiring a pull request with at least one approving review on every default branch', pr: 'High', days: 21, control: 'A.8.32' },
+        { t: 'Archive or exclude repositories that are not in ISMS scope so the rule applies where it matters', pr: 'Low', days: 45, control: 'A.8.25' }
+      ]
+    },
+    'gh-secret-alerts': {
+      risk: { title: 'Leaked credentials in source control remain valid', cat: 'Access', L: 4, I: 5, controls: ['A.5.17', 'A.8.28'] },
+      actions: [
+        { t: 'Revoke and rotate every credential behind an open secret scanning alert, then close the alert', pr: 'Critical', days: 3, control: 'A.5.17' },
+        { t: 'Turn on push protection so the next secret is blocked before it lands in history', pr: 'High', days: 14, control: 'A.8.28' }
+      ]
+    },
+    'gh-dependabot': {
+      risk: { title: 'Known-vulnerable dependencies ship in production code', cat: 'Ops', L: 4, I: 4, controls: ['A.8.8', 'A.8.28'] },
+      actions: [
+        { t: 'Upgrade or patch every critical dependency vulnerability open beyond the window', pr: 'High', days: 14, control: 'A.8.8' },
+        { t: 'Enable Dependabot security updates so fixes arrive as pull requests rather than alerts', pr: 'Medium', days: 30, control: 'A.8.28' }
+      ]
+    },
+    'phish-sim': {
+      risk: { title: 'Security awareness is delivered but never tested', cat: 'People', L: 3, I: 3, controls: ['A.6.3'] },
+      actions: [
+        { t: 'Run a Defender attack simulation campaign and assign follow-up training to users who were compromised', pr: 'Medium', days: 45, control: 'A.6.3' }
+      ]
+    },
     'backup': {
       risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
@@ -770,6 +804,10 @@ function showModal(opts) {
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
     'addManualObjective', 'editObjective',
+    /* Approving writes to the Answer library; AI drafting is gated for
+       the same reason aiInterpretEvidence is. Matching evidence and
+       exporting are read-only and open to a Viewer. */
+    'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -1031,6 +1069,13 @@ function showModal(opts) {
       header: ['ID', 'Objective', 'Metric', 'Target', 'Owner', 'Due', 'Status', 'Progress notes'],
       rows: function () {
         return (S.objectives || []).map(function (o) { return [o.id, o.title, o.metric, o.target, o.owner, o.due, o.status, o.notes]; });
+      }
+    },
+    {
+      key: 'answers', label: 'Questionnaire answer library', filename: 'answer-library.csv',
+      header: ['ID', 'Question', 'Approved answer', 'Evidence at approval', 'Topics', 'Approved by', 'Approved', 'Times used'],
+      rows: function () {
+        return (S.answers || []).map(function (a) { return [a.id, a.question, a.answer, a.verdict, a.topics, a.approvedBy, a.approvedDate, a.timesUsed || 0]; });
       }
     },
     {
@@ -8965,6 +9010,145 @@ function showModal(opts) {
     }).join('');
     revealRows(wrap);
   }
+  /* ================= Security questionnaires ================= */
+  /* The questionnaire being worked on lives in memory only: it is a
+     customer's document, and what is worth keeping from it (approved
+     answers) is saved to the Answer library as each one is approved.
+     Export before leaving the page if the whole set is needed. */
+  var _qr = null; /* { customer, items: [assessQuestion() result + { answer, source, aiDraft, approvedId }] } */
+
+  /* Everything assessQuestion() needs, read from S only — lib.js never
+     reaches into app state itself. Scoped to ISO 27001 SoA rows because
+     the topic taxonomy is written against Annex A; the other frameworks
+     cross-map to those rows. */
+  function qrContext() {
+    var results = {}, labels = {};
+    (window.CHECK_DEFS || []).forEach(function (c) {
+      labels[c.id] = c.label;
+      var r = checkResult(c);
+      if (r) results[c.id] = r;
+    });
+    var last = S.scans && S.scans[S.scans.length - 1];
+    return {
+      controls: (S.controls || []).filter(function (c) { return (c.fw || 'iso27001') === 'iso27001'; }),
+      results: results, notes: S.lastNotes || {}, checkLabels: labels, scanDate: last ? last.date : '',
+      registers: { risks: (S.risks || []).length, aiSystems: (S.aiSystems || []).length },
+      library: S.answers || []
+    };
+  }
+
+  function qrVerdictCls(v) {
+    return v === 'Yes' ? 'st-Implemented' : v === 'Partial' ? 'st-Intreatment' : v === 'No' ? 'st-Open' : 'st-Notstarted';
+  }
+  function qrSourceLabel(it) {
+    if (it.approvedId) return 'Approved to library as ' + it.approvedId;
+    if (it.source === 'ai') return 'AI-assisted draft — review before use';
+    if (it.source === 'library') return 'Reused from library ' + it.libraryId + (it.evidenceChanged ? '. The evidence has changed since it was approved.' : '');
+    if (it.source === 'evidence') return 'Drafted from evidence';
+    return 'Needs your answer';
+  }
+
+  function renderQuestionnaires() {
+    renderQrWorkspace();
+    renderAnswerLibrary();
+  }
+
+  function renderQrWorkspace() {
+    var el = document.getElementById('qrWorkspace');
+    if (!el) return;
+    if (!_qr || !_qr.items.length) { el.innerHTML = ''; return; }
+    var items = _qr.items;
+    var count = function (fn) { return items.filter(fn).length; };
+    var aiReady = !!(S.entitlements && S.entitlements.ai) && (function () { var c = aiGetConfig(); return c.enabled && c.endpoint && c.deployment; })();
+    var aiNote = (S.entitlements && S.entitlements.ai)
+      ? (aiReady ? '<button class="btn ghost sm" id="qrAiBtn" data-action="App.qrDraftWithAi">Draft with AI</button>' : '<span style="font-size:12px;color:var(--paper-faint)">AI drafting is available once the AI assistant is configured (AI tools).</span>')
+      : '<span style="font-size:12px;color:var(--paper-faint)">The AI add-on can draft prose for the remaining answers from this same evidence.</span>';
+    el.innerHTML =
+      '<div class="grid kpis" style="margin:0 0 16px">' +
+        kpiTile({ value: items.length, label: 'Questions', sub: _qr.customer ? _qr.customer : 'this questionnaire' }) +
+        kpiTile({ value: count(function (i) { return i.verdict === 'Yes'; }), label: 'Evidenced', meter: { value: count(function (i) { return i.verdict === 'Yes'; }), max: items.length }, sub: 'evidence says yes' }) +
+        kpiTile({ value: count(function (i) { return i.verdict === 'Partial' || i.verdict === 'No'; }), label: 'Gaps to answer carefully', tone: 'warn', sub: 'partial or not in place' }) +
+        kpiTile({ value: count(function (i) { return i.source === 'library'; }), label: 'Reused answers', sub: count(function (i) { return i.evidenceChanged; }) ? count(function (i) { return i.evidenceChanged; }) + ' with changed evidence' : 'from the answer library' }) +
+      '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
+        '<button class="btn sm" data-action="App.qrApproveAll">Approve all answered</button>' +
+        '<button class="btn ghost sm" data-action="App.qrExport">Export answers (CSV)</button>' + aiNote +
+      '</div>' +
+      '<div class="card" style="padding:0 10px;margin-bottom:8px"><table><thead><tr><th scope="col">#</th><th scope="col">Question</th><th scope="col">Evidence</th><th scope="col" style="min-width:320px">Answer</th><th scope="col"></th></tr></thead><tbody>' +
+      items.map(function (it, i) {
+        var detail = (it.evidence.length ? '<ul style="margin:6px 0 0 16px;padding:0">' + it.evidence.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>' : '<div style="margin-top:6px">No matching control, check or register record.</div>');
+        return '<tr>' +
+          '<td class="src">' + (i + 1) + '</td>' +
+          '<td style="color:var(--paper);max-width:320px">' + esc(it.question) +
+            (it.topics.length ? '<div class="src" style="margin-top:4px">' + esc(it.topics.join(' · ')) + '</div>' : '') + '</td>' +
+          '<td><span class="chip ' + qrVerdictCls(it.verdict) + '">' + esc(it.verdict) + '</span>' +
+            '<details style="margin-top:6px;font-size:12px;color:var(--paper-dim)"><summary>Why</summary>' + detail + '</details></td>' +
+          '<td><textarea class="mini" id="qrAns-' + i + '" aria-label="Answer to question ' + (i + 1) + '" style="width:100%;min-height:74px;font-family:Manrope" placeholder="' + (it.verdict === 'Yes' ? '' : 'The evidence does not support a yes on its own. Write what is true.') + '">' + esc(it.answer || '') + '</textarea>' +
+            '<div class="src" style="margin-top:4px' + (it.evidenceChanged && !it.approvedId ? ';color:var(--fail)' : '') + '">' + esc(qrSourceLabel(it)) + '</div>' +
+            it.cautions.map(function (c) { return '<div class="src" style="margin-top:2px;color:var(--warn)">' + esc(c) + '</div>'; }).join('') + '</td>' +
+          '<td style="white-space:nowrap">' + (it.approvedId ? '' : '<button class="btn ghost sm" data-action="App.qrApprove" data-id="' + i + '">Approve</button>') + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function renderAnswerLibrary() {
+    var wrap = document.getElementById('ansRows');
+    if (!wrap) return;
+    var list = S.answers || [];
+    if (!list.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 6, text: 'No approved answers yet. Approve answers from a questionnaire above and they will be reused next time.' });
+      return;
+    }
+    wrap.innerHTML = list.map(function (a) {
+      return '<tr><td class="src">' + esc(a.id) + '</td>' +
+        '<td style="color:var(--paper);max-width:280px">' + esc(a.question) + (a.topics ? '<div class="src">' + esc(a.topics) + '</div>' : '') + '</td>' +
+        '<td style="font-size:12.5px;color:var(--paper-dim);max-width:380px">' + esc(a.answer) + '</td>' +
+        '<td>' + (a.verdict ? '<span class="chip ' + qrVerdictCls(a.verdict) + '">' + esc(a.verdict) + '</span>' : '—') + '</td>' +
+        '<td class="src">' + esc(a.approvedBy || '—') + '<br>' + fmtDate(a.approvedDate) + (a.timesUsed ? '<br>used ' + a.timesUsed + '×' : '') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editAnswer" data-id="' + esc(a.id) + '">Edit</button> <button class="btn ghost sm" data-action="App.deleteAnswer" data-id="' + esc(a.id) + '">Delete</button></td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
+
+  /* Pulls the practitioner's edits out of the textareas before anything
+     reads _qr — the table is re-rendered from _qr, so an unsynced edit
+     would be lost on the next render. */
+  function qrSyncEdits() {
+    if (!_qr) return;
+    _qr.items.forEach(function (it, i) {
+      var t = document.getElementById('qrAns-' + i);
+      if (t && t.value !== (it.answer || '')) { it.answer = t.value; if (it.source !== 'ai') it.source = it.answer ? 'edited' : 'none'; }
+    });
+  }
+
+  function nextAnswerId() {
+    var max = (S.answers || []).reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    return 'ANS-' + String(max + 1).padStart(3, '0');
+  }
+
+  /* Approving an answer that came FROM the library updates that entry
+     (new wording, today's evidence verdict, one more use) rather than
+     adding a near-duplicate beside it. */
+  async function qrApproveItem(it) {
+    var who = (function () { var acc = (typeof Graph !== 'undefined' && Graph.getAccount()) || null; return (acc && (acc.name || acc.username)) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner'); })();
+    var today = new Date().toISOString().slice(0, 10);
+    var existing = it.libraryId && (S.answers || []).find(function (a) { return a.id === it.libraryId; });
+    if (existing) {
+      var before = existing.verdict;
+      existing.answer = it.answer; existing.verdict = it.verdict; existing.approvedBy = who; existing.approvedDate = today;
+      existing.timesUsed = (existing.timesUsed || 0) + 1;
+      await Store.updateAnswer(existing);
+      audit('Questionnaire answer re-approved', 'Answer', existing.id, before, it.verdict + ' — ' + it.question);
+      it.approvedId = existing.id;
+      return;
+    }
+    var a = { id: nextAnswerId(), question: it.question, answer: it.answer, verdict: it.verdict, topics: it.topics.join(', '), approvedBy: who, approvedDate: today, timesUsed: 1 };
+    await Store.addAnswer(a);
+    audit('Questionnaire answer approved', 'Answer', a.id, '', it.verdict + ' — ' + it.question);
+    it.approvedId = a.id;
+  }
+  /* ================= /Security questionnaires ================= */
+
   function renderCalendarDashboard() {
     var el = document.getElementById('calKpiRow');
     if (!el) return;
@@ -10651,6 +10835,7 @@ function showModal(opts) {
     audits: renderAudits,
     reviews: renderReviews,
     objectives: renderObjectives,
+    questionnaires: renderQuestionnaires,
     calendar: renderCalendar,
     incidents: renderIncidents,
     auditlog: renderAuditLog,
@@ -15250,6 +15435,177 @@ function showModal(opts) {
       renderObjectives(); renderNavCounts();
     },
 
+    /* ---------- Security questionnaires ---------- */
+    qrLoadFile: function () {
+      var input = document.getElementById('qrFile');
+      var file = input && input.files && input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { toast('That file is over 2 MB — save just the questions column as CSV'); input.value = ''; return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        document.getElementById('qrInput').value = String(reader.result || '');
+        var name = document.getElementById('qrCustomer');
+        if (name && !name.value) name.value = file.name.replace(/\.(csv|txt)$/i, '');
+        toast('<b>' + esc(file.name) + '</b> loaded — press Match evidence');
+      };
+      reader.readAsText(file);
+    },
+
+    qrAnalyse: function () {
+      var questions = window.CheckpointLib.parseQuestionnaireInput(document.getElementById('qrInput').value);
+      if (!questions.length) { toast('Paste at least one question first'); return; }
+      if (questions.length > 500) { toast('Only the first 500 questions were loaded'); questions = questions.slice(0, 500); }
+      var ctx = qrContext();
+      _qr = {
+        customer: (document.getElementById('qrCustomer').value || '').trim(),
+        items: questions.map(function (q) {
+          var r = window.CheckpointLib.assessQuestion(q, ctx);
+          r.answer = r.draft;
+          return r;
+        })
+      };
+      var yes = _qr.items.filter(function (i) { return i.verdict === 'Yes'; }).length;
+      audit('Questionnaire matched to evidence', 'Questionnaire', _qr.customer || '', '', questions.length + ' question(s), ' + yes + ' evidenced');
+      renderQrWorkspace();
+      document.getElementById('qrWorkspace').scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    },
+
+    qrClear: function () {
+      _qr = null;
+      document.getElementById('qrInput').value = '';
+      document.getElementById('qrCustomer').value = '';
+      var f = document.getElementById('qrFile'); if (f) f.value = '';
+      renderQrWorkspace();
+    },
+
+    qrApprove: async function (idx) {
+      qrSyncEdits();
+      var it = _qr && _qr.items[Number(idx)];
+      if (!it) return;
+      if (!String(it.answer || '').trim()) { toast('Write an answer before approving it'); return; }
+      busy(true);
+      try { await qrApproveItem(it); toast('Approved to the answer library as <b>' + esc(it.approvedId) + '</b>'); } catch (e) { warn(e); }
+      busy(false);
+      renderQuestionnaires();
+    },
+
+    qrApproveAll: async function () {
+      qrSyncEdits();
+      if (!_qr) return;
+      var todo = _qr.items.filter(function (it) { return !it.approvedId && String(it.answer || '').trim(); });
+      if (!todo.length) { toast('Nothing to approve — every answered question is already in the library'); return; }
+      var changed = todo.filter(function (it) { return it.evidenceChanged; }).length;
+      var ok = await showModal({ title: 'Approve ' + todo.length + ' answer(s)?', message: 'Each answer is saved to the answer library with today\'s evidence verdict, for reuse on future questionnaires.' + (changed ? ' ' + changed + ' of them reuse an answer whose evidence has changed since it was approved. Check those first.' : ''), confirmText: 'Approve', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < todo.length; i++) {
+        try { await qrApproveItem(todo[i]); n++; } catch (e) { warn(e); }
+      }
+      busy(false);
+      toast('<b>' + n + '</b> answer(s) approved to the library');
+      renderQuestionnaires();
+    },
+
+    qrExport: function () {
+      qrSyncEdits();
+      if (!_qr) return;
+      var rows = [['#', 'Question', 'Answer', 'Evidence verdict', 'Evidence', 'Source', 'Needs confirming']].concat(_qr.items.map(function (it, i) {
+        return [i + 1, it.question, it.answer || '', it.verdict, it.evidence.join(' | '), qrSourceLabel(it), it.cautions.join(' ')];
+      }));
+      var name = (_qr.customer || 'questionnaire').replace(/[^\w.-]+/g, '-').slice(0, 60) + '-answers.csv';
+      downloadTextFile(name, 'text/csv;charset=utf-8', window.CheckpointLib.toCsv(rows));
+      audit('Questionnaire answers exported (CSV)', 'Questionnaire', _qr.customer || '', '', _qr.items.length + ' question(s)');
+      toast('<b>' + esc(name) + '</b> downloaded');
+    },
+
+    /* AI add-on only. Drafts prose for every question that is not
+       already an approved library answer, in batches of eight so each
+       question's evidence fits the context budget. Each question is
+       sent with ITS OWN evidence pack and verdict — the model writes
+       words, the evidence decides what they may claim. A batch that
+       fails leaves those answers as they were. */
+    qrDraftWithAi: async function () {
+      qrSyncEdits();
+      if (!_qr) return;
+      if (!(S.entitlements && S.entitlements.ai)) { toast('AI drafting is part of the AI add-on'); return; }
+      if (Store.kind === 'demo') { toast('AI drafting isn\'t available in demo mode'); return; }
+      var todo = _qr.items.filter(function (it) { return !it.approvedId && it.source !== 'library'; });
+      if (!todo.length) { toast('Every question already has an approved or reused answer'); return; }
+      /* AI-SETUP.md's data-flow promise: nothing reaches the model that
+         the practitioner has not seen. Say exactly what goes. */
+      var go = await showModal({ title: 'Draft ' + todo.length + ' answer(s) with AI?',
+        message: 'Sent to your own Azure OpenAI resource, in batches of eight: each question\'s text, its evidence verdict and the facts listed under its "Why", plus your Statement of Applicability and scan summaries. Nothing else from your registers is sent, and nothing is saved until you approve an answer.',
+        confirmText: 'Draft answers', cancelText: 'Cancel' });
+      if (!go) return;
+      var btn = document.getElementById('qrAiBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Drafting…'; }
+      var bag = aiBuildDataBag(), done = 0, failed = 0;
+      for (var start = 0; start < todo.length; start += 8) {
+        var batch = todo.slice(start, start + 8);
+        try {
+          var evidence = batch.map(function (it, i) {
+            return { n: i + 1, verdict: it.verdict, evidence: it.evidence, approved: '', caution: it.cautions.join(' ') };
+          });
+          var res = await window.CheckpointAI.chat('questionnaire',
+            window.CheckpointAI.buildGroundedQuestionnairePrompt(batch.map(function (it) { return it.question; })),
+            { questionEvidence: evidence, soaSummary: bag.soaSummary, scanSummary: bag.scanSummary });
+          var parsed = window.CheckpointAI.parseQuestionnaireAnswers(res.text, batch.map(function (it) { return it.question; }));
+          parsed.forEach(function (p, i) {
+            if (!p.answer || /^\(no answer parsed/.test(p.answer)) return;
+            batch[i].answer = p.answer; batch[i].source = 'ai'; batch[i].aiVerify = p.verify;
+            done++;
+          });
+        } catch (e) {
+          failed += batch.length;
+          if (e.code === 'auth_error' || e.code === 'not_configured') { toast(e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.' : 'AI is not configured.'); break; }
+        }
+      }
+      audit('Questionnaire answers drafted with AI', 'Questionnaire', _qr.customer || '', '', done + ' drafted' + (failed ? ', ' + failed + ' failed' : ''));
+      toast('<b>' + done + '</b> answer(s) drafted' + (failed ? ' · ' + failed + ' could not be drafted' : '') + ' — review before approving');
+      renderQrWorkspace();
+    },
+
+    editAnswer: async function (id) {
+      var a = (S.answers || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var v = await showModal({
+        title: 'Edit ' + a.id,
+        fields: [
+          { id: 'question', label: 'Question', type: 'textarea', value: a.question },
+          { id: 'answer', label: 'Approved answer', type: 'textarea', value: a.answer }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.question && v.answer ? null : 'Both the question and the answer are needed.'; }
+      });
+      if (!v) return;
+      var before = a.answer;
+      busy(true);
+      try {
+        a.question = v.question; a.answer = v.answer;
+        await Store.updateAnswer(a);
+        audit('Library answer edited', 'Answer', a.id, before, a.answer);
+        toast('<b>' + a.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAnswerLibrary();
+    },
+
+    deleteAnswer: async function (id) {
+      var a = (S.answers || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var ok = await showModal({ title: 'Delete ' + a.id + '?', message: 'Remove this answer from the library? Questionnaires you have already sent are unaffected. This can\'t be undone; history remains in the audit log.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      busy(true);
+      try {
+        await Store.deleteAnswer(a);
+        audit('Library answer deleted', 'Answer', a.id, a.question, '');
+        toast('<b>' + a.id + '</b> deleted');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAnswerLibrary();
+    },
+
     openAudit: function (id) {
       var a = (S.audits || []).find(function (x) { return x.id === id; });
       if (!a) return;
@@ -17319,7 +17675,9 @@ function showModal(opts) {
         defenderXdr: { key: 'defenderXdr', label: 'Microsoft Defender XDR incidents', licence: 'A Microsoft Defender XDR plan (Defender for Office/Endpoint/Identity, or Microsoft 365 E5)', available: true, status: 'available', note: '' },
         priva: { key: 'priva', label: 'Microsoft Priva subject rights requests', licence: 'Microsoft Priva (Subject Rights Requests)', available: true, status: 'available', note: '' },
         recordsManagement: { key: 'recordsManagement', label: 'Microsoft Purview retention labels', licence: 'Microsoft Purview records management (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
-        lifecycleWorkflows: { key: 'lifecycleWorkflows', label: 'Entra ID Governance Lifecycle Workflows', licence: 'Microsoft Entra ID Governance (Entra ID P2 + the Governance add-on, or Microsoft Entra Suite)', available: true, status: 'available', note: '' }
+        lifecycleWorkflows: { key: 'lifecycleWorkflows', label: 'Entra ID Governance Lifecycle Workflows', licence: 'Microsoft Entra ID Governance (Entra ID P2 + the Governance add-on, or Microsoft Entra Suite)', available: true, status: 'available', note: '' },
+        threatHunting: { key: 'threatHunting', label: 'Microsoft Defender advanced hunting', licence: 'Microsoft Defender for Endpoint P2 or Defender Vulnerability Management (Microsoft 365 E5 includes both)', available: true, status: 'available', note: '' },
+        attackSimulation: { key: 'attackSimulation', label: 'Defender for Office 365 attack simulation training', licence: 'Microsoft Defender for Office 365 Plan 2 (Microsoft 365 E5 includes it)', available: true, status: 'available', note: '' }
       };
       applyAwsCapability();
       return;
@@ -17339,13 +17697,19 @@ function showModal(opts) {
      hidden rather than appearing permanently greyed out -- and a
      tenant that deploys the collector gets them the moment its first
      run lands, with no setting to remember to switch on. */
-  function awsResultsPresent() {
-    if (S.lastResults && Object.keys(S.lastResults).some(function (k) { return k.indexOf('aws-') === 0; })) return true;
+  function collectorResultsPresent(prefix) {
+    if (S.lastResults && Object.keys(S.lastResults).some(function (k) { return k.indexOf(prefix) === 0; })) return true;
     return (S.scans || []).some(function (sc) {
-      try { return Object.keys((JSON.parse(sc.detail || '{}').results) || {}).some(function (k) { return k.indexOf('aws-') === 0; }); }
+      try { return Object.keys((JSON.parse(sc.detail || '{}').results) || {}).some(function (k) { return k.indexOf(prefix) === 0; }); }
       catch (e) { return false; }
     });
   }
+  function awsResultsPresent() { return collectorResultsPresent('aws-'); }
+  /* Same derivation for the optional GitHub collector
+     (public/checkpoint/github/) — the Secure development (GitHub) rows
+     appear the moment its first run lands, and a tenant that builds no
+     software never sees them. */
+  function githubResultsPresent() { return collectorResultsPresent('gh-'); }
 
   function applyAwsCapability() {
     var present = awsResultsPresent();
@@ -17355,6 +17719,13 @@ function showModal(opts) {
       licence: 'Optional — deploy the collector Lambda into the client\'s own AWS account (public/checkpoint/aws/)',
       available: present, status: present ? 'available' : 'not-deployed',
       note: present ? '' : 'No AWS collector has reported for this tenant, so the Cloud (AWS) checks are not measured.'
+    };
+    var gh = githubResultsPresent();
+    CAP.github = {
+      key: 'github', label: 'GitHub secure development collector',
+      licence: 'Optional — run the collector as a scheduled GitHub Actions workflow in the client\'s own GitHub organisation (public/checkpoint/github/)',
+      available: gh, status: gh ? 'available' : 'not-deployed',
+      note: gh ? '' : 'No GitHub collector has reported for this tenant, so the Secure development (GitHub) checks are not measured.'
     };
   }
 
@@ -18153,8 +18524,10 @@ function showModal(opts) {
        first would briefly show ten AWS rows and then remove them --
        and the answer is already knowable without any probe at all. */
     var awsOn = awsResultsPresent();
+    var ghOn = githubResultsPresent();
     return window.CHECK_DEFS.filter(function (c) {
       if (c.requiresCapability === 'aws') return awsOn;
+      if (c.requiresCapability === 'github') return ghOn;
       if (!c.requiresCapability) return true;
       var cap = CAP && CAP[c.requiresCapability];
       return !(cap && cap.status === 'not-deployed');

@@ -118,7 +118,18 @@ window.CHECKPOINT_CONFIG = {
        Security Reader, Security Administrator or Global Reader, and
        sign-in logs additionally need Entra ID P1 — which is why both
        checks are capability-probed rather than assumed. */
-    'AuditLog.Read.All'
+    'AuditLog.Read.All',
+    /* Defender depth. ThreatHunting.Read.All runs read-only KQL against
+       Defender advanced hunting (graph.js's 'threatHunting' probe) —
+       the only GA v1.0 route to Defender Vulnerability Management and
+       endpoint sensor state. AttackSimulation.Read.All reads phishing
+       simulation campaigns and their reports ('attackSimulation').
+       Both read-only: Checkpoint never launches a simulation or runs
+       anything but the fixed queries in graph.js. Same one-time
+       incremental-consent prompt on next sign-in as every scope above;
+       an unlicensed tenant sees Manual, never a failure. */
+    'ThreatHunting.Read.All',
+    'AttackSimulation.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

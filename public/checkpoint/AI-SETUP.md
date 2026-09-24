@@ -189,6 +189,13 @@ assistant view shows a plain "AI assistant not configured yet" card
 linking back to this document — never a broken or silently-disabled
 button.
 
+**Security questionnaires** (Reporting → Security questionnaires) works
+without the AI add-on. With it, **Draft with AI** sends each question
+with its own evidence verdict and facts, the ones listed under the
+question's "Why" in the UI. A confirmation first says exactly what is
+sent. The prompt requires the answer to agree with the evidence verdict.
+Answers reused from the answer library are never sent for re-drafting.
+
 ---
 
 ## 7. Governance rails (what the assistant will and won't do)
