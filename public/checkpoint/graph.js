@@ -1793,6 +1793,46 @@ window.Graph = (function () {
     'elevenlabs', 'character.ai', 'you.com', 'poe', 'azure openai'
   ];
   var HIGH_PRIV_SCOPES = ['Directory.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All', 'Sites.FullControl.All', 'User.ReadWrite.All'];
+  /* Asset discovery for the information asset register (A.5.9). Reads
+     what Microsoft 365 can see — Intune-managed devices (with their
+     primary user as owner), the tenant's own Entra enterprise
+     applications, and SharePoint sites — and returns rows in the shape
+     lib.js's mergeDiscoveredAssets() takes. Every source is read
+     independently and a failure is reported, not thrown: sources that
+     failed return no rows, and mergeDiscoveredAssets() only marks an
+     asset missing when its OWN source was read successfully.
+     All reads, no writes; nothing here needs a new permission. */
+  var MICROSOFT_TENANT_IDS = ['f8cdef31-a31e-4b4a-93e4-5f571e91255a', '72f988bf-86f1-41af-91ab-2d7cd011db47'];
+  async function discoverAssets() {
+    var items = [], errors = {};
+    try {
+      var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,osVersion,userPrincipalName,complianceState&$top=999');
+      devs.forEach(function (d) {
+        items.push({ source: 'Intune', sourceId: d.id, name: d.deviceName || d.id, type: 'Device', owner: d.userPrincipalName || '',
+          location: [d.operatingSystem, d.osVersion].filter(Boolean).join(' ') + (d.complianceState ? ' · ' + d.complianceState : '') });
+      });
+    } catch (e) { errors.Intune = e.message; }
+    try {
+      var sps;
+      try {
+        sps = await gAll("/servicePrincipals?$filter=tags/any(t:t eq 'WindowsAzureActiveDirectoryIntegratedApp')&$select=id,displayName,appOwnerOrganizationId,servicePrincipalType&$top=999");
+      } catch (e) {
+        /* Some tenants reject the tags filter; read a capped page set
+           instead and filter here. */
+        sps = (await gCapped('/servicePrincipals?$select=id,displayName,appOwnerOrganizationId,servicePrincipalType,tags&$top=999', 5000)).rows
+          .filter(function (x) { return (x.tags || []).indexOf('WindowsAzureActiveDirectoryIntegratedApp') !== -1; });
+      }
+      sps.filter(function (x) { return x.servicePrincipalType === 'Application' && MICROSOFT_TENANT_IDS.indexOf(x.appOwnerOrganizationId) === -1; })
+        .forEach(function (x) { items.push({ source: 'Entra', sourceId: x.id, name: x.displayName || x.id, type: 'Application', location: 'Entra enterprise application' }); });
+    } catch (e) { errors.Entra = e.message; }
+    try {
+      var sites = await gAll('/sites?search=*&$select=id,displayName,name,webUrl&$top=999', { scopes: CONFIG.scopesProvision });
+      sites.filter(function (x) { return x.webUrl && x.webUrl.indexOf('-my.sharepoint.com') === -1; })
+        .forEach(function (x) { items.push({ source: 'SharePoint', sourceId: x.id, name: x.displayName || x.name || x.webUrl, type: 'Information location', location: x.webUrl }); });
+    } catch (e) { errors.SharePoint = e.message; }
+    return { items: items, errors: errors };
+  }
+
   async function discoverAiSystems(oauthGrants) {
     var sps = await gAll('/servicePrincipals?$select=id,appId,displayName&$top=999');
     var byId = {};
@@ -1823,7 +1863,7 @@ window.Graph = (function () {
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
-    discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
+    discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop
        mechanics that don't depend on a signed-in MSAL session be

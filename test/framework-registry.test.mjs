@@ -421,7 +421,7 @@ describe('scan-suggest tables never disagree with their guidance.checks panel, a
   const SCAN_SUGGEST_KEY = {
     essential8: 'checkE8', is18: 'checkIs18', rffr: 'checkRffr',
     iso42001: 'checkIso42001', iso27701: 'checkIso27701', soc2: 'checkSoc2',
-    nistcsf: 'checkNistCsf', cps234: 'checkCps234'
+    nistcsf: 'checkNistCsf', cps234: 'checkCps234', privacyact: 'checkPrivacyAct'
   };
 
   Object.keys(SCAN_SUGGEST_KEY).forEach((fw) => {
@@ -525,7 +525,11 @@ describe('content packs — checks no pack maps', { skip: SKIP }, () => {
     const unmapped = CHECK_DEFS
       .filter((c) => c.requiresCapability !== 'aws' && !mapped.has(c.id))
       .map((c) => c.id).sort();
-    assert.equal(unmapped.length, 18, 'unmapped checks:\n  ' + unmapped.join('\n  '));
+    // 18 -> 14 when the Privacy Act (APP) pack mapped retention (APP
+    // 11.2), privacy-srr (APP 12.1/13.1), xdr-incidents and
+    // incident-lessons (NDB 30-day assessment) — the first pack to map
+    // any of the four.
+    assert.equal(unmapped.length, 14, 'unmapped checks:\n  ' + unmapped.join('\n  '));
   });
 });
 

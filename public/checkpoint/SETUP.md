@@ -2843,6 +2843,58 @@ being worked on lives in the browser session only.
 
 **Tests**: `test/questionnaire-responder.test.mjs`.
 
+### ISO 27001 certification readiness
+
+Four things a certification auditor asks for by name, each built from
+the tenant's own data:
+
+- **Asset register** (Risk & posture, A.5.9). *Sync from Microsoft 365*
+  reads Intune devices (with their primary user as owner), Entra
+  enterprise applications (third-party only, not Microsoft's own) and
+  SharePoint sites, plus the vendor register's services. It needs no new
+  permission. A re-sync updates only what the source owns
+  (`mergeDiscoveredAssets()` in `lib.js`), and an asset gone from its
+  source is flagged, not deleted. Information assets are added by hand.
+  An Intune device list alone does not count as an A.5.9 inventory, and
+  the register marks itself not ready until it has at least one owned
+  information asset.
+- **Legal & regulatory register** (Assurance, A.5.31 / 4.2), with an
+  Australian starting set. Its rows are prompts, not legal conclusions.
+  Anything whose applicability depends on the organisation starts as
+  *To confirm*.
+- **SoA justification for inclusion** (6.1.3 d)). This is derived from
+  linked risks, applicable legal requirements and mapped posture checks,
+  falling back to a stated baseline reason. The Justification field is
+  never used for it, because that field holds the exclusion reason and
+  survives a control being toggled back to applicable.
+- **Stage 1 checklist.** The Audit Readiness Report now opens with the
+  mandatory documented information (`mandatoryDocumentation()` in
+  `lib.js`). An item backed by both a procedure and a record is only as
+  complete as the weaker of the two.
+
+Both registers are new SharePoint lists (`Checkpoint Assets`,
+`Checkpoint LegalRegister`), provisioned automatically on next load.
+
+**Tests**: `test/iso27001-readiness.test.mjs`, `test/certification-path.test.mjs`.
+
+### Privacy Act (APPs) pack
+
+`checkpoint-content/privacyact.json` has 33 requirements across the 13
+APPs and the three NDB duties (ss 26WH, 26WK, 26WL), cross-mapped to
+ISO 27001. It works like every other premium pack, so it needs a
+module key before the build will encrypt it:
+
+```
+node tools/issue-entitlement.mjs keygen-modules --modules privacyact
+```
+
+Then add the new key to the `MODULE_KEYS_JSON` secret used by
+`deploy.yml`. Until you do, the build skips the pack and the framework
+shows as unavailable. After that, issue activations with `privacyact`
+in the framework list as usual.
+
+**Tests**: `test/privacyact.test.mjs`.
+
 ## 9. Continuous monitoring (optional)
 
 By default Checkpoint is an interactive tool — a practitioner runs a
