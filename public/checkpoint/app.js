@@ -809,6 +809,7 @@ function showModal(opts) {
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
+    'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
     'addManualObjective', 'editObjective',
     /* Approving writes to the Answer library; AI drafting is gated for
        the same reason aiInterpretEvidence is. Matching evidence and
@@ -1808,6 +1809,13 @@ function showModal(opts) {
     if (!s) return '—';
     return new Date(s + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
   }
+  /* With the year — for anything that spans years, like a three-year
+     certification cycle, where "8 Nov" three times says nothing. */
+  function fmtDateY(d) {
+    var s = window.CheckpointLib.normaliseDateInput(d);
+    if (!s) return '—';
+    return new Date(s + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
 
   /* ================= Design system: motion, icons, empty states =================
@@ -2626,6 +2634,101 @@ function showModal(opts) {
             }).join('') + '</ul>',
           pageBreak: false
         }] : [])
+      };
+    },
+
+    /* Pre-audit pack — for a certified management system, before a
+       surveillance or recertification visit. Everything since the last
+       certification body audit (or the certificate's issue), and
+       everything overdue the auditor will pick up. */
+    surveillance: function (activeFw, fwLabel) {
+      var cert = certRecords()[activeFw];
+      if (!cert || !cert.issued) {
+        toast('Record the ' + esc(fwLabel) + ' certificate first (Assurance → Certification) — the pre-audit pack is built around its cycle.');
+        return null;
+      }
+      var todayIso = new Date().toISOString().slice(0, 10);
+      var cyc = window.CheckpointLib.certificationCycle(cert, todayIso);
+      var lastVisit = cyc.milestones.filter(function (m) { return m.done; }).map(function (m) { return m.doneDate; }).sort().pop() || cert.issued;
+      var nextAudit = cyc.next;
+      var clauseFw = activeFw === 'iso27701' ? 'iso27001' : activeFw;
+
+      /* 1. The certificate and the cycle. */
+      var cycleHtml = '<p class="rpt-intro">' + esc(cert.body || 'Certification body not recorded') + (cert.number ? ', certificate ' + esc(cert.number) : '') +
+        '. Issued ' + fmtDateY(cert.issued) + ', expires ' + fmtDateY(cyc.expires) + '.' + (cert.scope ? ' Scope: ' + esc(cert.scope) : '') + '</p>' +
+        '<table class="rpt-table"><thead><tr><th>Audit</th><th>Due by</th><th>Status</th></tr></thead><tbody>' +
+        cyc.milestones.map(function (m) { return '<tr><td>' + esc(m.label) + '</td><td>' + fmtDateY(m.dueBy) + '</td><td>' + (m.done ? 'Done ' + fmtDateY(m.doneDate) + (m.result ? ' — ' + esc(m.result) : '') : CERT_STATE_LABEL[m.state]) + '</td></tr>'; }).join('') +
+        '</tbody></table>';
+
+      /* 2. What changed since the last visit — from the audit log. */
+      var since = (S.auditLog || []).filter(function (e) { return String(e.entryDateTime || '').slice(0, 10) >= lastVisit; });
+      var byType = {};
+      since.forEach(function (e) { var k = e.targetType || 'Other'; byType[k] = (byType[k] || 0) + 1; });
+      var changeKeys = Object.keys(byType).sort(function (a, b) { return byType[b] - byType[a]; });
+      var changesHtml = '<p class="rpt-intro">' + since.length + ' recorded change' + (since.length === 1 ? '' : 's') + ' since ' + fmtDateY(lastVisit) + '. An auditor samples from what changed, so these are the areas to have evidence ready for.</p>' +
+        (changeKeys.length ? '<table class="rpt-table"><thead><tr><th>Area</th><th>Changes</th></tr></thead><tbody>' + changeKeys.map(function (k) { return '<tr><td>' + esc(k) + '</td><td>' + byType[k] + '</td></tr>'; }).join('') + '</tbody></table>' : '');
+
+      /* 3. Certification body findings and where they stand. */
+      var cbFindings = certFindings(activeFw);
+      var findingsHtml = cbFindings.length
+        ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Finding</th><th>Grade</th><th>Due</th><th>Corrective action</th></tr></thead><tbody>' +
+          cbFindings.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type) + '</td><td>' + fmtDateY(a.due) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</tbody></table>'
+        : '<p class="rpt-intro">No findings from the certification body are recorded.</p>';
+      var openCb = cbFindings.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; });
+
+      /* 4. Internal audit coverage this cycle. */
+      var cov = window.CheckpointLib.internalAuditCoverage(S.audits || [], clauseFw, cyc.cycleStart);
+      var coverageHtml = '<p class="rpt-intro">' + cov.pct + '% of the management-system clauses and Annex A themes have been covered by a completed internal audit since ' + fmtDateY(cyc.cycleStart) + '.' +
+        (cov.missing.length ? ' Not yet covered: ' + esc(cov.missing.join(', ')) + '.' : '') + '</p>';
+
+      /* 5. What is overdue. */
+      var clauses = (S.clauses || []).filter(function (c) { return c.fw === clauseFw; });
+      var openClauses = clauses.filter(function (c) { return c.st !== 'Implemented'; });
+      var app = frameworkAppRows(activeFw);
+      var staleControls = app.filter(function (c) { return c.st === 'Implemented' && controlReviewStatus(c).due; });
+      var docs = (window._docs || S.documents || []).filter(function (d) { return docStatusOf(d) === 'Approved' && d.nextReview && d.nextReview < todayIso; });
+      var overdueActions = S.actions.filter(overdue);
+      var highRisks = S.risks.filter(function (r) { var q = residual(r); return r.status !== 'Closed' && q.L * q.I >= 10; });
+      var overdueHtml = '<table class="rpt-table"><thead><tr><th>Item</th><th>Count</th></tr></thead><tbody>' +
+        [['Management-system clauses not Implemented', openClauses.length + (openClauses.length ? ' (' + esc(openClauses.map(function (c) { return c.id; }).join(', ')) + ')' : '')],
+         ['Implemented controls overdue for re-verification', staleControls.length],
+         ['Approved documents past their review date', docs.length + (docs.length ? ' (' + esc(docs.slice(0, 6).map(function (d) { return d.name.replace(/\.html$/, ''); }).join(', ')) + (docs.length > 6 ? '…' : '') + ')' : '')],
+         ['Overdue actions', overdueActions.length],
+         ['Open High/Critical residual risks', highRisks.length]
+        ].map(function (r) { return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>'; }).join('') + '</tbody></table>';
+
+      var recs = [];
+      if (openCb.length) recs.push('Close out the ' + openCb.length + ' open certification body finding' + (openCb.length > 1 ? 's' : '') + ' — the auditor verifies these first, and an unclosed minor from the last visit can be raised as a major.');
+      if (cov.missing.length) recs.push('Schedule internal audits of ' + cov.missing.join(', ') + ' before ' + (nextAudit && nextAudit.key === 'recert' ? 'recertification' : 'the end of the cycle') + '.');
+      if (openClauses.length) recs.push('Implement and evidence clause' + (openClauses.length > 1 ? 's ' : ' ') + openClauses.map(function (c) { return c.id; }).join(', ') + '.');
+      if (staleControls.length) recs.push('Re-verify the ' + staleControls.length + ' control' + (staleControls.length > 1 ? 's' : '') + ' whose evidence has gone stale.');
+      if (docs.length) recs.push('Review and re-approve the ' + docs.length + ' document' + (docs.length > 1 ? 's' : '') + ' past their review date.');
+      if (!(S.reviews || []).some(function (r) { return r.date && r.date >= lastVisit; })) recs.push('Hold a management review before the visit — none is recorded since the last certification body audit.');
+      if (!recs.length) recs.push('Nothing outstanding — send the auditor this pack with the Statement of Applicability and the latest management review minutes.');
+
+      return {
+        title: 'Pre-audit pack — ' + fwLabel,
+        dashboard: {
+          intro: nextAudit
+            ? '<b>' + esc(nextAudit.label) + '</b> due by ' + fmtDateY(nextAudit.dueBy) + (nextAudit.days !== null ? (nextAudit.days >= 0 ? ' (' + nextAudit.days + ' days)' : ' (overdue)') : '') + '. ' + since.length + ' changes since the last visit, ' + openCb.length + ' open certification body finding' + (openCb.length === 1 ? '' : 's') + ', internal audit coverage ' + cov.pct + '%.'
+            : 'Every audit in this certification cycle is recorded.',
+          charts: [
+            { figure: 1, title: 'Key metrics', caption: 'As at this pack’s date.', svg: RC.kpiStrip([
+              { value: nextAudit && nextAudit.days !== null ? String(Math.max(nextAudit.days, 0)) : '—', label: 'Days to next audit' },
+              { value: String(openCb.length), label: 'Open CB findings' },
+              { value: cov.pct + '%', label: 'Internal audit coverage' },
+              { value: String(openClauses.length), label: 'Clauses not implemented' }
+            ]) }
+          ]
+        },
+        sections: [
+          { heading: 'Certificate and cycle', html: cycleHtml, pageBreak: true },
+          { heading: 'Findings from the certification body (' + cbFindings.length + ')', html: findingsHtml, pageBreak: false },
+          { heading: 'Changes since ' + fmtDateY(lastVisit), html: changesHtml, pageBreak: false },
+          { heading: 'Internal audit coverage this cycle', html: coverageHtml, pageBreak: false },
+          { heading: 'Outstanding before the visit', html: overdueHtml, pageBreak: false },
+          { heading: 'Recommendations', html: '<ul class="rpt-plain">' + recs.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>', pageBreak: false }
+        ]
       };
     },
 
@@ -4084,6 +4187,14 @@ function showModal(opts) {
     var sEl = document.getElementById('nSoa');
     if (sEl) { sEl.textContent = sugg || ''; sEl.style.display = sugg ? 'inline-block' : 'none'; }
 
+    /* Certification: a certification body audit due within 90 days, or overdue. */
+    var certDueN = certifiedFrameworks().filter(function (fw) {
+      var n = window.CheckpointLib.certificationCycle(certRecords()[fw], new Date().toISOString().slice(0, 10)).next;
+      return n && (n.state === 'due-soon' || n.state === 'overdue');
+    }).length;
+    var certEl = document.getElementById('nCert');
+    if (certEl) { certEl.textContent = certDueN || ''; certEl.style.display = certDueN ? 'inline-block' : 'none'; }
+
     var notStartedClauses = visibleClauses().filter(function (c) { return c.st === 'Not started'; }).length;
     var clEl = document.getElementById('nClauses');
     if (clEl) { clEl.textContent = notStartedClauses || ''; clEl.style.display = notStartedClauses ? 'inline-block' : 'none'; }
@@ -4231,6 +4342,142 @@ function showModal(opts) {
      window._docs may not be loaded yet on a cold Dashboard render
      (loadDocumentRegisterInBackground() is async) — the document step
      just reads as not-done until it arrives, then this re-renders. */
+  /* ================= Certification lifecycle =================
+     One record per certified ISO management system, kept as a JSON
+     Settings value (no new SharePoint list to provision): certification
+     body, certificate number, scope, issue and expiry dates, and the
+     outcome of each certification body audit in the cycle. The cycle
+     itself — which audit is next and by when — is derived by
+     CheckpointLib.certificationCycle(); nothing about it is stored. */
+  var CERT_FRAMEWORKS = ['iso27001', 'iso27701', 'iso42001'];
+  var CERT_AUDIT_KEYS = { s1: 'Surveillance audit 1', s2: 'Surveillance audit 2', recert: 'Recertification audit' };
+  function certRecords() {
+    try { var o = JSON.parse((S.settings && S.settings.certRecords) || '{}'); return o && typeof o === 'object' ? o : {}; }
+    catch (e) { return {}; }
+  }
+  async function saveCertRecords(all) {
+    var v = JSON.stringify(all);
+    S.settings.certRecords = v;
+    await Store.setSetting('certRecords', v);
+  }
+  function certFrameworksHere() {
+    var ent = entitledFrameworks();
+    return CERT_FRAMEWORKS.filter(function (fw) { return fw === 'iso27001' || ent.indexOf(fw) !== -1; });
+  }
+  function certifiedFrameworks() {
+    var all = certRecords();
+    return certFrameworksHere().filter(function (fw) { return all[fw] && all[fw].issued; });
+  }
+
+  /* Keeps the compliance calendar in step with the certificate: the next
+     certification body audit (category "External surveillance audit")
+     and the certificate's expiry ("Certificate expiry"). Items are
+     matched by a marker in their notes, so renaming one by hand does not
+     make a duplicate. */
+  async function syncCertCalendar(fw) {
+    var cert = certRecords()[fw];
+    if (!cert || !cert.issued) return;
+    var cyc = window.CheckpointLib.certificationCycle(cert, new Date().toISOString().slice(0, 10));
+    var body = cert.body ? ' — ' + cert.body : '';
+    var wanted = [];
+    if (cyc.next) wanted.push({ marker: 'cert:' + fw + ':audit', title: fwName(fw) + ' ' + cyc.next.label + body, category: 'External surveillance audit', nextDue: cyc.next.dueBy });
+    if (cyc.expires) wanted.push({ marker: 'cert:' + fw + ':expiry', title: fwName(fw) + ' certificate expiry' + body, category: 'Certificate expiry', nextDue: cyc.expires });
+    for (var i = 0; i < wanted.length; i++) {
+      var w = wanted[i];
+      var cal = (S.calendar || []).find(function (c) { return (c.notes || '').indexOf(w.marker) !== -1; });
+      if (cal) {
+        if (cal.title === w.title && cal.nextDue === w.nextDue && cal.status === 'Active') continue;
+        cal.title = w.title; cal.nextDue = w.nextDue; cal.status = 'Active';
+        try { await Store.updateCalendarItem(cal); } catch (e) { warn(e); }
+        continue;
+      }
+      var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      try {
+        await Store.addCalendarItem({
+          id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: w.title, category: w.category, freq: 'Once',
+          nextDue: w.nextDue, lastCompleted: '', owner: cert.owner || '', notes: 'Kept in step with the certificate (' + w.marker + ')', status: 'Active'
+        });
+      } catch (e) { warn(e); }
+    }
+  }
+
+  /* Findings the certification body raised against this certificate —
+     ordinary Actions, sourced "Certification audit (ISO 27001)" so the
+     source says whose finding it is wherever the action is shown. */
+  function certFindingSource(fw) { return 'Certification audit (' + fwName(fw) + ')'; }
+  function certFindings(fw) {
+    var src = certFindingSource(fw);
+    return (S.actions || []).filter(function (a) { return a.src === src; });
+  }
+
+  var CERT_STATE_LABEL = { done: 'Done', overdue: 'Overdue', 'due-soon': 'Due soon', upcoming: 'Upcoming' };
+  function certStateChip(m) {
+    var cls = m.state === 'done' ? 'st-Implemented' : m.state === 'overdue' ? 'st-Open' : m.state === 'due-soon' ? 'st-Inprogress' : 'st-Notstarted';
+    return '<span class="chip ' + cls + '">' + CERT_STATE_LABEL[m.state] + '</span>';
+  }
+
+  function renderCertification() {
+    var wrap = document.getElementById('certCards');
+    if (!wrap) return;
+    var all = certRecords();
+    var today = new Date().toISOString().slice(0, 10);
+    wrap.innerHTML = certFrameworksHere().map(function (fw) {
+      var cert = all[fw];
+      if (!cert || !cert.issued) {
+        return '<div class="card" style="margin-bottom:16px"><h3>' + esc(fwName(fw)) + '</h3>' +
+          '<p style="color:var(--paper-dim);font-size:12.5px">Not certified yet. Once the certification body issues the certificate, record it here and Checkpoint schedules the rest of the three-year cycle.</p>' +
+          '<button class="btn sm" data-action="App.recordCertificate" data-id="' + fw + '">Record certificate</button></div>';
+      }
+      var cyc = window.CheckpointLib.certificationCycle(cert, today);
+      var cov = window.CheckpointLib.internalAuditCoverage(S.audits || [], fw === 'iso27701' ? '' : fw, cyc.cycleStart);
+      var openCb = certFindings(fw).filter(function (a) { return a.status !== 'Done'; });
+      var rows = cyc.milestones.map(function (m) {
+        return '<tr><td>' + esc(m.label) + '</td><td>' + (m.dueBy ? fmtDateY(m.dueBy) : '—') + '</td><td>' + certStateChip(m) +
+          (m.done ? ' <span class="src">' + fmtDateY(m.doneDate) + (m.result ? ' · ' + esc(m.result) : '') + '</span>' : (m.days !== null && m.days >= 0 ? ' <span class="src">in ' + m.days + ' days</span>' : '')) + '</td></tr>';
+      }).join('');
+      return '<div class="card" style="margin-bottom:16px">' +
+        '<div class="fw-admin-row"><div><h3 style="margin:0">' + esc(fwName(fw)) + ' — certified</h3>' +
+        '<p style="color:var(--paper-dim);font-size:12.5px;margin:4px 0 0">' + esc(cert.body || 'Certification body not recorded') + (cert.number ? ' · certificate ' + esc(cert.number) : '') +
+        ' · issued ' + fmtDateY(cert.issued) + ' · expires ' + fmtDateY(cyc.expires) + (cyc.expiresDays !== null ? ' (' + (cyc.expiresDays >= 0 ? cyc.expiresDays + ' days' : 'expired') + ')' : '') + '</p>' +
+        (cert.scope ? '<p class="src" style="margin:4px 0 0">Scope: ' + esc(cert.scope) + '</p>' : '') +
+        '</div><button class="btn ghost sm" data-action="App.recordCertificate" data-id="' + fw + '">Edit</button></div>' +
+        '<table style="margin-top:12px"><thead><tr><th>Certification body audit</th><th>Due by</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">' +
+        (cyc.next ? '<button class="btn sm" data-action="App.recordCertAudit" data-id="' + fw + '">Record ' + esc(cyc.next.label.toLowerCase()) + ' outcome</button>' : '') +
+        '<button class="btn ghost sm" data-action="App.raiseCertFinding" data-id="' + fw + '">Raise certification body finding</button>' +
+        '<button class="btn ghost sm" data-action="App.certPack" data-id="' + fw + '">Pre-audit pack</button>' +
+        '</div>' +
+        (openCb.length ? '<p style="margin-top:10px;font-size:12.5px"><b>' + openCb.length + ' open finding' + (openCb.length > 1 ? 's' : '') + '</b> from the certification body: ' + openCb.map(function (a) { return esc(a.id) + ' (' + esc(a.type.replace('Non-conformity ', 'NC ')) + ', due ' + fmtDateY(a.due) + ')'; }).join(', ') + '</p>' : '') +
+        '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">' +
+        '<b>Internal audit coverage this cycle — ' + cov.pct + '%</b>' +
+        '<p class="src" style="margin:4px 0 8px">' + (cov.missing.length
+          ? 'Not yet covered by a completed internal audit since ' + fmtDateY(cyc.cycleStart) + ': ' + esc(cov.missing.join(', ')) + '. The recertification auditor expects the whole ISMS to have been audited within the cycle.'
+          : 'Every management-system clause and Annex A theme has been covered by a completed internal audit this cycle.') + '</p>' +
+        '<button class="btn ghost sm" data-action="App.planInternalAudits" data-id="' + fw + '">Plan the internal audit programme</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  /* Dashboard: once a management system is certified, what matters is
+     the next certification body audit — shown above everything else. */
+  function renderCertDashCard() {
+    var el = document.getElementById('certDashCard');
+    if (!el) return;
+    var fws = certifiedFrameworks();
+    if (!fws.length) { el.style.display = 'none'; return; }
+    var all = certRecords(), today = new Date().toISOString().slice(0, 10);
+    el.style.display = '';
+    el.innerHTML = '<h3>Certification</h3>' + fws.map(function (fw) {
+      var cyc = window.CheckpointLib.certificationCycle(all[fw], today);
+      var n = cyc.next;
+      var line = n
+        ? n.label + ' due by <b>' + fmtDateY(n.dueBy) + '</b>' + (n.days !== null ? (n.days >= 0 ? ' — ' + n.days + ' days' : ' — <b style="color:var(--fail)">overdue</b>') : '')
+        : 'Cycle complete — record the new certificate';
+      return '<div class="gs-row"><span class="gs-check">' + icon('check') + '</span><div class="gs-text"><b>' + esc(fwName(fw)) + ' certified</b><span>' + line + '</span></div>' +
+        '<button class="btn ghost sm" data-action="App.go" data-id="certification">Open</button></div>';
+    }).join('');
+  }
+
   /* Each path step's action: the thing that DOES the step where the app
      can (open the questionnaire, run the scan, generate or approve the
      document set), otherwise the view where it is done. */
@@ -4295,6 +4542,7 @@ function showModal(opts) {
       risks: S.risks, appControls: primaryFw ? frameworkAppRows(primaryFw) : [],
       objectives: S.objectives, training: S.training, vendors: S.vendors, aiSystems: S.aiSystems,
       audits: S.audits, reviews: S.reviews, clauses: visibleClauses(), calendar: S.calendar,
+      certified: certifiedFrameworks().length > 0,
       assets: window.CheckpointLib.assetRegisterSummary(S.assets || [], new Date().toISOString().slice(0, 10), 365),
       legal: window.CheckpointLib.legalRegisterSummary(S.legal || [], new Date().toISOString().slice(0, 10), 365),
       mandatory: primaryFw === 'iso27001' ? mandatoryDocsStatus() : null,
@@ -4492,6 +4740,7 @@ function showModal(opts) {
   }
 
   function renderDash() {
+    renderCertDashCard();
     renderGettingStarted();
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
     var odActs = S.actions.filter(function (a) { return overdueDays(a) > 0; });
@@ -11393,6 +11642,7 @@ function showModal(opts) {
     documents: renderDocuments,
     attestations: renderAttestations,
     training: renderTraining,
+    certification: renderCertification,
     audits: renderAudits,
     reviews: renderReviews,
     objectives: renderObjectives,
@@ -15984,6 +16234,145 @@ function showModal(opts) {
         document.getElementById('naAuditAuditor').value = '';
         document.getElementById('naAuditDate').value = daysFrom(30);
       }
+    },
+
+    /* ===== Certification lifecycle actions (see renderCertification) ===== */
+    recordCertificate: async function (fw) {
+      if (CERT_FRAMEWORKS.indexOf(fw) === -1) return;
+      var all = certRecords();
+      var cur = all[fw] || {};
+      var v = await showModal({
+        title: (cur.issued ? 'Edit ' : 'Record ') + fwName(fw) + ' certificate',
+        message: 'From the certificate the certification body issued. The three-year cycle — two surveillance audits, then recertification before expiry — is scheduled from the issue date and added to the compliance calendar.',
+        fields: [
+          { id: 'body', label: 'Certification body', value: cur.body || '', placeholder: 'e.g. BSI, SAI Global, DNV' },
+          { id: 'number', label: 'Certificate number', value: cur.number || '' },
+          { id: 'issued', label: 'Issue date (certification decision)', type: 'date', value: cur.issued || '' },
+          { id: 'expires', label: 'Expiry date — leave blank for three years from issue', type: 'date', value: cur.expires || '' },
+          { id: 'scope', label: 'Scope as printed on the certificate', type: 'textarea', value: cur.scope || (fw === 'iso42001' ? orgProfileValue('orgAimsScopeStatement') : orgProfileValue('orgScopeStatement')) },
+          { id: 'owner', label: 'Owner of the certification cycle', value: cur.owner || 'ISMS manager' }
+        ],
+        confirmText: 'Save certificate',
+        validate: function (x) {
+          if (!x.issued) return 'Enter the issue date — the whole cycle is scheduled from it.';
+          if (x.expires && x.expires <= x.issued) return 'The expiry date must be after the issue date.';
+          return null;
+        }
+      });
+      if (!v) return;
+      all[fw] = Object.assign({}, cur, { fw: fw, body: v.body, number: v.number, issued: v.issued, expires: v.expires, scope: v.scope, owner: v.owner, audits: cur.audits || {} });
+      busy(true);
+      try {
+        await saveCertRecords(all);
+        await syncCertCalendar(fw);
+        audit('Certificate recorded', 'Certification', fwName(fw), cur.issued ? 'issued ' + cur.issued : '(none)', (v.body || 'CB') + ' ' + (v.number || '') + ', issued ' + v.issued);
+        toast(fwName(fw) + ' certificate saved — the next audit is on the compliance calendar.');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderCertification(); renderCertDashCard(); renderGettingStarted(); renderNavCounts();
+    },
+
+    recordCertAudit: async function (fw) {
+      var all = certRecords();
+      var cert = all[fw];
+      if (!cert || !cert.issued) return;
+      var cyc = window.CheckpointLib.certificationCycle(cert, new Date().toISOString().slice(0, 10));
+      if (!cyc.next) { toast('Every audit in this cycle is recorded — record the renewed certificate to start the next cycle.'); return; }
+      var v = await showModal({
+        title: cyc.next.label + ' — ' + fwName(fw),
+        message: 'Record the certification body\'s visit. Raise each nonconformity it found as a certification body finding afterwards, so it is tracked to closure in the Actions register.',
+        fields: [
+          { id: 'date', label: 'Audit date', type: 'date', value: new Date().toISOString().slice(0, 10) },
+          { id: 'result', label: 'Outcome', type: 'select', value: 'Certification maintained', options: cyc.next.key === 'recert'
+            ? ['Recertification recommended', 'Recommended subject to closing nonconformities', 'Not recommended']
+            : ['Certification maintained', 'Maintained subject to closing nonconformities', 'Suspension recommended'] }
+        ],
+        confirmText: 'Record outcome'
+      });
+      if (!v) return;
+      cert.audits = cert.audits || {};
+      cert.audits[cyc.next.key] = { date: v.date, result: v.result };
+      busy(true);
+      try {
+        await saveCertRecords(all);
+        await syncCertCalendar(fw);
+        audit('Certification audit recorded', 'Certification', fwName(fw), '', cyc.next.label + ' on ' + v.date + ': ' + v.result);
+        toast(cyc.next.label + ' recorded.' + (/nonconform|subject|Not recommended|Suspension/i.test(v.result) ? ' Raise each finding with "Raise certification body finding".' : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      renderCertification(); renderCertDashCard(); renderDash();
+    },
+
+    raiseCertFinding: async function (fw) {
+      var cert = certRecords()[fw];
+      if (!cert) return;
+      var cyc = window.CheckpointLib.certificationCycle(cert, new Date().toISOString().slice(0, 10));
+      /* The certification body's clock, not Checkpoint's severity bands: a
+         major usually needs a corrective action plan within about 30 days
+         (and verified closure within 90); a minor must be closed by the
+         next visit. Defaults only — the body's report states the real
+         dates, and they are editable. */
+      var nextVisit = cyc.next && cyc.next.dueBy ? cyc.next.dueBy : daysFrom(90);
+      var v = await showModal({
+        title: 'Certification body finding — ' + fwName(fw),
+        message: 'Creates a finding in the Actions register sourced "' + certFindingSource(fw) + '". It runs through the same corrective-action loop as an internal finding: correction, root cause, then a verified effectiveness review.',
+        fields: [
+          { id: 'title', label: 'Finding, as worded in the audit report', type: 'textarea' },
+          { id: 'type', label: 'Grade', type: 'select', value: 'Non-conformity (Minor)', options: ['Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'] },
+          { id: 'control', label: 'Clause or control (optional)', placeholder: 'e.g. 9.2 or A.5.15' },
+          { id: 'owner', label: 'Owner', value: cert.owner || '' },
+          { id: 'due', label: 'Due date — minor: by the next visit; major: per the body\'s deadline', type: 'date', value: nextVisit }
+        ],
+        confirmText: 'Raise finding',
+        validate: function (x) { return x.title ? null : 'Enter the finding.'; }
+      });
+      if (!v) return;
+      var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '',
+        pr: v.type.indexOf('Major') !== -1 ? 'Critical' : 'High', owner: v.owner || 'Unassigned', due: v.due, status: 'Open', evidenceUrl: '', src: certFindingSource(fw) };
+      busy(true);
+      try {
+        await Store.addAction(act);
+        audit('Certification body finding raised', 'Action', act.id, '', v.type + ': ' + v.title);
+        toast('<b>' + act.id + '</b> raised from the certification body audit.');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderCertification(); renderActions(); renderNavCounts(); renderDash();
+    },
+
+    planInternalAudits: async function (fw) {
+      var cert = certRecords()[fw];
+      if (!cert || !cert.issued) return;
+      var auditFw = fw === 'iso27701' ? 'iso27001' : fw;
+      var existing = (S.audits || []).map(function (a) { return a.scope; });
+      var plan = window.CheckpointLib.internalAuditProgramme(cert).filter(function (p) { return existing.indexOf(p.scope) === -1; });
+      if (!plan.length) { toast('The internal audit programme for this cycle is already scheduled.'); return; }
+      var ok = await showModal({
+        title: 'Plan the internal audit programme',
+        message: plan.length + ' internal audits across the three-year cycle, each two months before a certification body visit so its findings can be closed first:\n\n' +
+          plan.map(function (p) { return '• ' + fmtDateY(p.planned) + ' — ' + p.scope; }).join('\n') +
+          '\n\nThe management-system clauses are audited every year, and each Annex A theme once, so the whole ISMS is covered before recertification. Change dates or auditors afterwards in Internal audits.',
+        fields: [{ id: 'auditor', label: 'Internal auditor (must not audit their own work)', value: '' }],
+        confirmText: 'Schedule ' + plan.length + ' audits'
+      });
+      if (!ok) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < plan.length; i++) {
+        var maxA = (S.audits || []).reduce(function (m, a) { var k = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+        var a = { id: 'AUD-' + String(maxA + 1).padStart(3, '0'), fw: auditFw, scope: plan[i].scope, auditor: ok.auditor || 'Unassigned',
+          planned: plan[i].planned, completed: '', status: 'Planned', summary: '', findingRefs: [] };
+        try { await Store.addAudit(a); n++; audit('Internal audit scheduled', 'Audit', a.id, '', a.scope + ' — planned ' + a.planned); }
+        catch (e) { warn(e); }
+      }
+      busy(false);
+      toast(n + ' internal audits scheduled across the certification cycle.');
+      renderCertification(); renderAudits(); renderNavCounts();
+    },
+
+    certPack: function (fw) {
+      window._soaFw = fw;
+      App.report('surveillance');
     },
 
     addAudit: async function () {

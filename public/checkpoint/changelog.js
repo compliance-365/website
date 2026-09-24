@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.102.0',
+    date: '2026-09-24',
+    entries: [
+      'New Certification view (Assurance → Certification) for staying certified. Record the certificate — certification body, number, scope, issue and expiry dates — and Checkpoint lays out the three-year cycle: surveillance audits within 12 and 24 months, then recertification before expiry. The next audit and the expiry go on the compliance calendar automatically, and the Dashboard shows the next audit once you are certified.',
+      'Record each certification body audit\'s outcome, and raise its findings straight into the Actions register, sourced to that certificate and run through the same corrective-action loop as internal findings.',
+      'Internal audit coverage for the cycle: which management-system clauses and Annex A themes this cycle\'s completed internal audits have covered, and one click to schedule a three-year internal audit programme that covers them all before recertification.',
+      'New Pre-audit pack report: the certificate and cycle, the certification body\'s findings and where they stand, what changed since the last visit, internal audit coverage, and everything overdue that the auditor will pick up — with recommendations.'
+    ]
+  },
+  {
     version: '1.101.0',
     date: '2026-09-24',
     entries: [

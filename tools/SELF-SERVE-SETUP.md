@@ -7,16 +7,21 @@ starts a 7-day free trial, and Checkpoint provisions inside their own
 Microsoft 365 tenant — with **zero manual work from you**, and their
 client record appearing on the owner console roster automatically.
 
-**Current status:** Paddle sandbox account created, all 6 self-serve
-framework products/prices created (ISO 27001, ISO 27701, ISO 42001,
-SOC 2, Essential Eight, NIST CSF × Micro/Growth), sandbox token wired into
-`src/data/pricing.js`, checkout verified end-to-end against a stubbed
-Paddle.js. The provisioning Lambda (`lambda/provision.js`) is written and
-its signing logic verified to produce byte-identical signatures to
-`app.js`'s own verifier — but it hasn't been deployed or exercised against
-a real Paddle sandbox call yet (see `lambda/DEPLOY-PROVISION.md` step 8).
-Still to do: the AI assistant add-on price, deploying the Lambda, and the
-Azure app registration it needs.
+**Current status (September 2026): live.** Paddle runs in production
+(`src/data/pricing.js`: live client token, `paddleEnv: 'production'`, the
+production catalogue's price ids for the six self-serve frameworks and the
+AI add-on), the provisioning Lambda is deployed and set as
+`selfServeActivateUrl` in `public/checkpoint/config.js`, and
+`npm run check:deploy` confirms it is running current code. The Microsoft
+Marketplace fulfillment endpoint is also configured
+(`marketplaceFulfillmentUrl`). The sections below are kept as the record of
+how it was set up, and for rebuilding it.
+
+Frameworks sold only by quote (no Paddle price): IS18, DISP/IRAP, CPS 234,
+RFFR and the Privacy Act (APPs). Adding one to self-serve means creating its
+products and prices in Paddle, then updating `pricing.js`, `lambda/provision.js`
+and `lambda/webhook.js` together (`test/paddle-price-map.test.mjs` checks
+they agree).
 
 Until the Lambda is deployed and `config.js`'s `selfServeActivateUrl` is
 set, the pages degrade gracefully: `/pricing` and `/start` work fully

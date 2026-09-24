@@ -6039,7 +6039,7 @@
     var reviewDone = (s.reviews || []).some(function (r) { return r.decisions && within(r.date); });
     var openClauses = (s.clauses || []).filter(function (c) { return c.st !== 'Implemented'; }).length;
     var ai = s.aiSystems || [];
-    var booked = (s.calendar || []).some(function (c) { return /certif|external audit|stage 1|stage 2/i.test((c.title || '') + ' ' + (c.category || '')); });
+    var booked = !!s.certified || (s.calendar || []).some(function (c) { return /certif|external audit|stage 1|stage 2/i.test((c.title || '') + ' ' + (c.category || '')); });
 
     var steps = [
       { id: 'scope', phase: 'Set up', label: 'Answer the scope & context questionnaire',
@@ -6118,6 +6118,121 @@
     return iso ? steps : steps.filter(function (x) { return x.id !== 'mandatory'; });
   }
 
+  /* ── Certification lifecycle ─────────────────────────────────────
+     An ISO certificate runs a three-year cycle: surveillance audits in
+     years one and two, then a recertification audit that must be
+     completed before the certificate expires. ISO/IEC 17021-1 requires
+     the first surveillance audit within 12 months of the certification
+     decision and at least one surveillance audit in each calendar year;
+     "within 12 / 24 months of issue" and "before expiry" are the dates
+     a certification body works to in practice, so they are what is
+     shown. The body's own dates always win: a recorded audit date
+     replaces the computed one. */
+  function addMonthsIso(iso, months) {
+    var d = new Date(String(iso).slice(0, 10) + 'T00:00:00Z');
+    if (isNaN(d)) return '';
+    var day = d.getUTCDate();
+    d.setUTCDate(1);
+    d.setUTCMonth(d.getUTCMonth() + months);
+    var last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    d.setUTCDate(Math.min(day, last));
+    return d.toISOString().slice(0, 10);
+  }
+
+  /* cert = { fw, body, number, scope, issued, expires,
+              audits: { s1: { date, result }, s2: {...}, recert: {...} } }
+     Returns { milestones: [{ key, label, dueBy, done, doneDate, result,
+     state, days }], next, expiresDays, cycleStart }. state is 'done',
+     'overdue', 'due-soon' (within 90 days) or 'upcoming'. */
+  function certificationCycle(cert, today) {
+    var c = cert || {};
+    var issued = c.issued || '';
+    var expires = c.expires || (issued ? addMonthsIso(issued, 36) : '');
+    var audits = c.audits || {};
+    var defs = [
+      { key: 's1', label: 'Surveillance audit 1', dueBy: issued ? addMonthsIso(issued, 12) : '' },
+      { key: 's2', label: 'Surveillance audit 2', dueBy: issued ? addMonthsIso(issued, 24) : '' },
+      { key: 'recert', label: 'Recertification audit', dueBy: expires }
+    ];
+    var milestones = defs.map(function (m) {
+      var rec = audits[m.key] || {};
+      var done = !!rec.date;
+      var days = m.dueBy && today ? daysBetweenDateStr(today, m.dueBy) : null;
+      var state = done ? 'done' : (days === null ? 'upcoming' : days < 0 ? 'overdue' : days <= 90 ? 'due-soon' : 'upcoming');
+      return { key: m.key, label: m.label, dueBy: m.dueBy, done: done, doneDate: rec.date || '', result: rec.result || '', state: state, days: days };
+    });
+    return {
+      milestones: milestones,
+      next: milestones.filter(function (m) { return !m.done; })[0] || null,
+      expires: expires,
+      expiresDays: expires && today ? daysBetweenDateStr(today, expires) : null,
+      cycleStart: issued
+    };
+  }
+
+  /* Which management-system clauses (4-10) and Annex A themes (A.5-A.8)
+     the COMPLETED internal audits since `since` covered, read from each
+     audit's own scope text — the Audits register has no structured
+     coverage field, and scopes are written like "Clauses 4-10" or
+     "Access control (Annex A.5, A.8)". Recognised: "Clause 9",
+     "Clauses 4-6" / "4 to 6", "A.5" / "A.5.15" (its theme), "Annex A"
+     with no theme (all four), and "full ISMS" / "all clauses" (all
+     clauses). Anything else is ignored rather than guessed at, so
+     coverage is never overstated. Returns { clauses:{n:bool},
+     themes:{t:bool}, missing:[labels], pct }. */
+  var COVERAGE_CLAUSES = ['4', '5', '6', '7', '8', '9', '10'];
+  var COVERAGE_THEMES = ['A.5', 'A.6', 'A.7', 'A.8'];
+  function internalAuditCoverage(audits, fw, since) {
+    var clauses = {}, themes = {};
+    COVERAGE_CLAUSES.forEach(function (n) { clauses[n] = false; });
+    COVERAGE_THEMES.forEach(function (t) { themes[t] = false; });
+    (audits || []).forEach(function (a) {
+      if (!a || a.status !== 'Completed' || !a.completed) return;
+      if (since && a.completed < since) return;
+      if (fw && a.fw && a.fw !== fw) return;
+      var text = String(a.scope || '');
+      if (/\b(full|entire|whole)\s+(isms|management system)\b|\ball clauses\b/i.test(text)) {
+        COVERAGE_CLAUSES.forEach(function (n) { clauses[n] = true; });
+      }
+      var re = /\bclauses?\s+(\d{1,2})(?:\s*(?:-|–|to)\s*(\d{1,2}))?/gi, m;
+      while ((m = re.exec(text))) {
+        var from = parseInt(m[1], 10), to = m[2] ? parseInt(m[2], 10) : from;
+        for (var n = from; n <= to; n++) if (clauses[String(n)] !== undefined) clauses[String(n)] = true;
+      }
+      var themeRe = /\bA\.(5|6|7|8)\b/g, t, anyTheme = false;
+      while ((t = themeRe.exec(text))) { themes['A.' + t[1]] = true; anyTheme = true; }
+      if (!anyTheme && /\bannex a\b/i.test(text)) COVERAGE_THEMES.forEach(function (x) { themes[x] = true; });
+    });
+    var missing = COVERAGE_CLAUSES.filter(function (n) { return !clauses[n]; }).map(function (n) { return 'Clause ' + n; })
+      .concat(COVERAGE_THEMES.filter(function (x) { return !themes[x]; }).map(function (x) { return 'Annex ' + x; }));
+    var total = COVERAGE_CLAUSES.length + COVERAGE_THEMES.length;
+    return { clauses: clauses, themes: themes, missing: missing, pct: Math.round((total - missing.length) / total * 100) };
+  }
+
+  /* A three-year internal audit programme that covers everything before
+     recertification: the management-system clauses every year (the
+     Internal Audit Procedure template commits to that), and one or two
+     Annex A themes each year so all four are covered once per cycle.
+     Scopes are written in the exact form internalAuditCoverage() reads.
+     Dates sit two months before each certification body audit, so
+     findings can be closed first. */
+  function internalAuditProgramme(cert) {
+    var issued = (cert && cert.issued) || '';
+    if (!issued) return [];
+    var plan = [
+      { year: 1, theme: 'Annex A.5 (organisational controls)', before: 12 },
+      { year: 2, theme: 'Annex A.6 and A.7 (people and physical controls)', before: 24 },
+      { year: 3, theme: 'Annex A.8 (technological controls)', before: 33 }
+    ];
+    var out = [];
+    plan.forEach(function (p) {
+      var planned = addMonthsIso(issued, p.before - 2);
+      out.push({ year: p.year, planned: planned, scope: 'Clauses 4-10 (management system), year ' + p.year + ' of the certification cycle' });
+      out.push({ year: p.year, planned: planned, scope: p.theme + ', year ' + p.year + ' of the certification cycle' });
+    });
+    return out;
+  }
+
   return {
     normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, readinessPct: readinessPct,
@@ -6186,6 +6301,7 @@
     buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft,
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
-    createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps
+    createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
+    addMonthsIso: addMonthsIso, certificationCycle: certificationCycle, internalAuditCoverage: internalAuditCoverage, internalAuditProgramme: internalAuditProgramme
   };
 });

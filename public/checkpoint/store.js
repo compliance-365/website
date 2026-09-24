@@ -938,6 +938,9 @@ window.DEFAULT_SETTINGS = {
      the webhook itself; teamsAlerts/teamsDigest choose what is posted.
      teamsConnectedAt / teamsConnectedUrl / teamsLastError are written BY
      the monitor, so Settings can show whether delivery is working. */
+  /* Certification records, JSON keyed by framework id — see
+     certRecords() in app.js and certificationCycle() in lib.js. */
+  certRecords: '',
   teamsWebhookUrl: '',
   teamsAlerts: 'true',
   teamsDigest: 'true',
