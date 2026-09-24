@@ -2732,6 +2732,87 @@ function showModal(opts) {
       };
     },
 
+    /* Internal audit workpack — the checklist for one audit
+       (window._workpackAudit), pre-filled from the registers by
+       CheckpointLib.auditWorkpack(). The Result and Notes columns are
+       left blank for the auditor. */
+    workpack: function (activeFw, fwLabel) {
+      var a = (S.audits || []).find(function (x) { return x.id === window._workpackAudit; });
+      if (!a) { toast('Open an internal audit first — the workpack is built from its scope.'); return null; }
+      var today = new Date().toISOString().slice(0, 10);
+      if (window._workpackScope) { a = Object.assign({}, a, { scope: window._workpackScope }); window._workpackScope = null; }
+      var wp = window.CheckpointLib.auditWorkpack(a, {
+        clauses: S.clauses || [], controls: S.controls || [], actions: S.actions || [], risks: S.risks || [], audits: S.audits || [],
+        cadenceDays: S.settings && S.settings.controlReviewCadenceDays
+      }, today);
+      if (!wp.readable) {
+        toast('Checkpoint can\'t read this audit\'s scope. Write it as, for example, "Clauses 4-10" or "Annex A.5 and A.8", then try again.');
+        return null;
+      }
+      var link = function (u) { return u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener">Evidence</a>' : '—'; };
+      var flagCell = function (f) { return f.length ? esc(f.join('; ')) : '—'; };
+      var blank = '<td style="min-width:70px"></td><td style="min-width:120px"></td>';
+      var flaggedClauses = wp.clauses.filter(function (c) { return c.flags.length; }).length;
+      var flaggedControls = wp.controls.filter(function (c) { return c.priority; }).length;
+      var ownWork = wp.clauses.concat(wp.controls).filter(function (r) { return r.flags.some(function (f) { return /^Auditor owns/.test(f); }); }).length;
+
+      var sections = [];
+      sections.push({ heading: 'How to use this workpack', pageBreak: true, html:
+        '<p class="rpt-intro">Audit ' + esc(a.id) + ': ' + esc(a.scope) + '. Auditor: ' + esc(a.auditor || 'Unassigned') + '. Planned ' + fmtDateY(a.planned) + '.</p>' +
+        '<ul class="rpt-plain">' +
+        '<li>Each row lists what Checkpoint already holds: status, owner and the linked evidence. Examine the evidence, then record a result: C (conforms), NC (nonconformity) or OFI (opportunity for improvement).</li>' +
+        '<li>Start with flagged rows. They are where findings are most likely.</li>' +
+        '<li>Raise each NC or OFI with "Raise finding" on the audit in Checkpoint. It goes into the corrective action loop and is linked to this audit.</li>' +
+        (ownWork ? '<li><b>' + ownWork + ' item' + (ownWork > 1 ? 's are' : ' is') + ' owned by the auditor.</b> Clause 9.2.2 requires auditors not to audit their own work, so assign another auditor for ' + (ownWork > 1 ? 'those' : 'that item') + '.</li>' : '') +
+        '</ul>' +
+        (wp.previous ? '<p class="rpt-intro">Previous audit: ' + esc(wp.previous.id) + ' (' + esc(wp.previous.scope) + '), completed ' + fmtDateY(wp.previous.completed) + (wp.previous.summary ? '. Outcome: ' + esc(wp.previous.summary) : '') + '</p>' : '') });
+
+      if (wp.followUps.length) {
+        sections.push({ heading: 'Open findings to follow up (' + wp.followUps.length + ')', pageBreak: false, html:
+          '<p class="rpt-intro">Check whether each has been corrected and the correction was effective.</p>' +
+          '<table class="rpt-table"><thead><tr><th>ID</th><th>Finding</th><th>Type</th><th>Source</th><th>Due</th><th>Result</th><th>Notes</th></tr></thead><tbody>' +
+          wp.followUps.map(function (f) { return '<tr><td class="rpt-idc">' + esc(f.id) + '</td><td>' + esc(f.title) + '</td><td>' + esc(f.type) + '</td><td>' + esc(f.src) + '</td><td>' + (f.due ? fmtDateY(f.due) : '—') + '</td>' + blank + '</tr>'; }).join('') +
+          '</tbody></table>' });
+      }
+
+      if (wp.clauses.length) {
+        sections.push({ heading: 'Management-system clauses (' + wp.clauses.length + ')', pageBreak: true, html:
+          wp.prompts.map(function (p) { return '<p class="rpt-intro"><b>Clause ' + esc(p.clause) + '.</b> ' + esc(p.prompt) + '</p>'; }).join('') +
+          '<table class="rpt-table"><thead><tr><th>Clause</th><th>Requirement</th><th>Status</th><th>Owner</th><th>Evidence</th><th>Look at first</th><th>Result</th><th>Notes</th></tr></thead><tbody>' +
+          wp.clauses.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.title) + '</td><td>' + esc(c.status) + '</td><td>' + esc(c.owner || '—') + '</td><td>' + link(c.evidenceUrl) + '</td><td>' + flagCell(c.flags) + '</td>' + blank + '</tr>'; }).join('') +
+          '</tbody></table>' });
+      }
+
+      if (wp.controls.length) {
+        sections.push({ heading: 'Controls (' + wp.controls.length + ')', pageBreak: true, html:
+          '<p class="rpt-intro">Applicable controls in scope, flagged ones first. For each, check the evidence shows the control operating, not just documented.</p>' +
+          '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Status</th><th>Owner</th><th>Evidence</th><th>Look at first</th><th>Result</th><th>Notes</th></tr></thead><tbody>' +
+          wp.controls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.title) + '</td><td>' + esc(c.status) + '</td><td>' + esc(c.owner || '—') + '</td><td>' + link(c.evidenceUrl) + '</td><td>' + flagCell(c.flags) + '</td>' + blank + '</tr>'; }).join('') +
+          '</tbody></table>' });
+      }
+
+      sections.push({ heading: 'Audit conclusion', pageBreak: false, html:
+        '<table class="rpt-table"><tbody>' +
+        ['Overall conclusion', 'Nonconformities raised', 'Opportunities for improvement', 'Auditor signature and date'].map(function (k) { return '<tr><td style="width:35%"><b>' + k + '</b></td><td style="height:48px"></td></tr>'; }).join('') +
+        '</tbody></table>' });
+
+      return {
+        title: 'Internal audit workpack — ' + a.id,
+        dashboard: {
+          intro: wp.clauses.length + ' clause' + (wp.clauses.length === 1 ? '' : 's') + ' and ' + wp.controls.length + ' control' + (wp.controls.length === 1 ? '' : 's') + ' in scope. ' + (flaggedClauses + flaggedControls) + ' flagged to look at first, ' + wp.followUps.length + ' open finding' + (wp.followUps.length === 1 ? '' : 's') + ' to follow up.',
+          charts: [
+            { figure: 1, title: 'Scope at a glance', caption: 'From the registers on the date this workpack was generated.', svg: RC.kpiStrip([
+              { value: String(wp.clauses.length), label: 'Clauses' },
+              { value: String(wp.controls.length), label: 'Controls' },
+              { value: String(flaggedClauses + flaggedControls), label: 'Flagged' },
+              { value: String(wp.followUps.length), label: 'Findings to follow up' }
+            ]) }
+          ]
+        },
+        sections: sections
+      };
+    },
+
     ready: function (activeFw, fwLabel) {
       var fwControls = frameworkVisibleRows(activeFw);
       var app = fwControls.filter(function (c) { return c.app; });
@@ -9964,7 +10045,7 @@ function showModal(opts) {
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
-        '<td style="white-space:nowrap">' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button></td></tr>';
+        '<td style="white-space:nowrap">' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + a.id + '">Workpack</button> <button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button></td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -16370,6 +16451,40 @@ function showModal(opts) {
       renderCertification(); renderAudits(); renderNavCounts();
     },
 
+    /* A scope written as free text ("AI system risk management
+       process") says nothing Checkpoint can map to clauses or controls,
+       so ask once and append the coverage to the scope. The certification
+       view's coverage count reads the same text, so this fixes both. */
+    auditWorkpack: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      if (!window.CheckpointLib.parseAuditScope(a.scope).clauses.length && !window.CheckpointLib.parseAuditScope(a.scope).themes.length && !window.CheckpointLib.parseAuditScope(a.scope).allControls) {
+        var v = await showModal({
+          title: 'What does ' + a.id + ' cover?',
+          message: 'Checkpoint can\'t tell which clauses or controls "' + a.scope + '" covers. Write it as, for example, "Clauses 4-10", "Clauses 6 and 8", "Annex A.5 and A.8" or "Annex A". ' + (READONLY ? 'This is used for this workpack only.' : 'It is added to the audit\'s scope, so internal audit coverage counts it too.'),
+          fields: [{ id: 'cover', label: 'Covers', value: a.fw === 'iso27001' ? 'Clauses 4-10' : 'Clauses 4-10 and Annex A' }],
+          confirmText: 'Build workpack',
+          validate: function (x) {
+            var sc = window.CheckpointLib.parseAuditScope(x.cover);
+            return (sc.clauses.length || sc.themes.length || sc.allControls) ? null : 'Checkpoint still can\'t read that. Try "Clauses 4-10" or "Annex A.5".';
+          }
+        });
+        if (!v) return;
+        var prevScope = a.scope;
+        var newScope = a.scope + ' (covers ' + v.cover.trim() + ')';
+        if (READONLY) {
+          window._workpackScope = newScope;
+        } else {
+          a.scope = newScope;
+          try { await Store.updateAudit(a); audit('Internal audit scope clarified', 'Audit', a.id, prevScope, a.scope); } catch (e) { warn(e); }
+          renderAudits();
+        }
+      }
+      window._workpackAudit = id;
+      window._soaFw = a.fw;
+      App.report('workpack');
+    },
+
     certPack: function (fw) {
       window._soaFw = fw;
       App.report('surveillance');
@@ -16812,6 +16927,7 @@ function showModal(opts) {
         (READONLY ? '' :
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
           '<button class="btn sm" data-action="App.raiseAuditFinding" data-id="' + a.id + '">Raise finding</button>' +
+          '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + a.id + '">Workpack</button>' +
           (a.status === 'Planned' ? '<button class="btn ghost sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '') +
           '</div>');
       openDrawerUi('Audit ' + a.id);

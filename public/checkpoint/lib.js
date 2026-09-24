@@ -6182,6 +6182,32 @@
      themes:{t:bool}, missing:[labels], pct }. */
   var COVERAGE_CLAUSES = ['4', '5', '6', '7', '8', '9', '10'];
   var COVERAGE_THEMES = ['A.5', 'A.6', 'A.7', 'A.8'];
+  /* What an internal audit's free-text scope covers, in the forms the
+     programme writes and people naturally type: "Clauses 4-10",
+     "clause 9", "Annex A.5 and A.8", "full ISMS", or a bare "Annex A"
+     meaning every theme. Wording it can't read covers nothing, so
+     coverage is never overstated. */
+  function parseAuditScope(scope) {
+    var text = String(scope || ''), clauses = {}, themes = {};
+    if (/\b(full|entire|whole)\s+(isms|aims|management system)\b|\ball clauses\b/i.test(text)) {
+      COVERAGE_CLAUSES.forEach(function (n) { clauses[n] = true; });
+    }
+    var re = /\bclauses?\s+(\d{1,2})(?:\s*(?:-|–|to)\s*(\d{1,2}))?/gi, m;
+    while ((m = re.exec(text))) {
+      var from = parseInt(m[1], 10), to = m[2] ? parseInt(m[2], 10) : from;
+      for (var n = from; n <= to; n++) if (COVERAGE_CLAUSES.indexOf(String(n)) !== -1) clauses[String(n)] = true;
+    }
+    var themeRe = /\bA\.(5|6|7|8)\b/g, t, anyTheme = false;
+    while ((t = themeRe.exec(text))) { themes['A.' + t[1]] = true; anyTheme = true; }
+    var allControls = /\bannex a\b|\ball controls\b/i.test(text);
+    if (!anyTheme && allControls) COVERAGE_THEMES.forEach(function (x) { themes[x] = true; });
+    return {
+      clauses: COVERAGE_CLAUSES.filter(function (n) { return clauses[n]; }),
+      themes: COVERAGE_THEMES.filter(function (x) { return themes[x]; }),
+      allControls: allControls && !anyTheme
+    };
+  }
+
   function internalAuditCoverage(audits, fw, since) {
     var clauses = {}, themes = {};
     COVERAGE_CLAUSES.forEach(function (n) { clauses[n] = false; });
@@ -6190,23 +6216,102 @@
       if (!a || a.status !== 'Completed' || !a.completed) return;
       if (since && a.completed < since) return;
       if (fw && a.fw && a.fw !== fw) return;
-      var text = String(a.scope || '');
-      if (/\b(full|entire|whole)\s+(isms|management system)\b|\ball clauses\b/i.test(text)) {
-        COVERAGE_CLAUSES.forEach(function (n) { clauses[n] = true; });
-      }
-      var re = /\bclauses?\s+(\d{1,2})(?:\s*(?:-|–|to)\s*(\d{1,2}))?/gi, m;
-      while ((m = re.exec(text))) {
-        var from = parseInt(m[1], 10), to = m[2] ? parseInt(m[2], 10) : from;
-        for (var n = from; n <= to; n++) if (clauses[String(n)] !== undefined) clauses[String(n)] = true;
-      }
-      var themeRe = /\bA\.(5|6|7|8)\b/g, t, anyTheme = false;
-      while ((t = themeRe.exec(text))) { themes['A.' + t[1]] = true; anyTheme = true; }
-      if (!anyTheme && /\bannex a\b/i.test(text)) COVERAGE_THEMES.forEach(function (x) { themes[x] = true; });
+      var sc = parseAuditScope(a.scope);
+      sc.clauses.forEach(function (n) { clauses[n] = true; });
+      sc.themes.forEach(function (x) { themes[x] = true; });
     });
     var missing = COVERAGE_CLAUSES.filter(function (n) { return !clauses[n]; }).map(function (n) { return 'Clause ' + n; })
       .concat(COVERAGE_THEMES.filter(function (x) { return !themes[x]; }).map(function (x) { return 'Annex ' + x; }));
     var total = COVERAGE_CLAUSES.length + COVERAGE_THEMES.length;
     return { clauses: clauses, themes: themes, missing: missing, pct: Math.round((total - missing.length) / total * 100) };
+  }
+
+  /* What an internal auditor examines under each management-system
+     clause. ISO 27001 and ISO 42001 share the Harmonized Structure, so
+     one set of prompts serves both; "the management system" covers the
+     ISMS and the AIMS alike. */
+  var CLAUSE_AUDIT_PROMPTS = {
+    '4': 'Is the scope documented with its boundaries and interfaces? Are internal and external issues and interested parties\u2019 requirements recorded, and reviewed since the last audit?',
+    '5': 'Is top management visibly directing the management system (management review minutes, resourcing decisions)? Is the policy approved, current and communicated? Are roles assigned and understood?',
+    '6': 'Does the risk assessment follow the documented method and reflect current risks? Do risk owners approve treatment plans and residual risk? Is the Statement of Applicability consistent with the treatment plan? Are objectives measurable and tracked?',
+    '7': 'Are competence records held for people in key roles? Are staff aware of the policy and their responsibilities? Is documented information approved, versioned and reviewed on schedule?',
+    '8': 'Are risk assessments repeated at planned intervals and on significant change? Is the treatment plan being delivered on time? Are outsourced processes controlled?',
+    '9': 'Are monitoring and measurement results recorded and analysed? Is the internal audit programme running as planned? Does the latest management review cover every required input and record decisions?',
+    '10': 'Do nonconformities have a recorded root cause, a corrective action and an effectiveness check? Is there evidence of continual improvement since the last audit?'
+  };
+
+  /* A pre-filled internal audit checklist for one audit: every clause
+     and control its scope covers, the evidence already linked in
+     Checkpoint, and what an auditor should look at first. The auditor
+     still does the audit; this removes the preparation. */
+  function auditWorkpack(audit, data, today) {
+    var a = audit || {}, d = data || {};
+    var fw = a.fw || 'iso27001';
+    var clauseFw = fw === 'iso27701' ? 'iso27001' : fw;
+    var scope = parseAuditScope(a.scope);
+    var yearAgo = addMonthsIso(today, -12);
+    var cadence = d.cadenceDays;
+    /* Clause 9.2.2: auditors must not audit their own work. */
+    var auditor = String(a.auditor || '').trim().toLowerCase();
+    var ownsIt = function (row) { return !!auditor && auditor !== 'unassigned' && String(row.own || '').trim().toLowerCase() === auditor; };
+    var OWN_WORK = 'Auditor owns this \u2014 needs another auditor';
+    var openActions = (d.actions || []).filter(function (x) { return x && x.status !== 'Done' && x.status !== 'Closed' && x.status !== 'Cancelled'; });
+
+    var clauses = (d.clauses || []).filter(function (c) {
+      return c.fw === clauseFw && scope.clauses.indexOf(String(c.id).split('.')[0]) !== -1;
+    }).map(function (c) {
+      var flags = [];
+      if (c.st !== 'Implemented') flags.push('Not implemented');
+      if (!c.evidenceUrl) flags.push('No evidence linked');
+      else if (c.verified && c.verified < yearAgo) flags.push('Evidence not re-verified in 12 months');
+      if (ownsIt(c)) flags.push(OWN_WORK);
+      return { id: c.id, title: c.t, status: c.st, owner: c.own || '', evidenceUrl: c.evidenceUrl || '', verified: c.verified || '', flags: flags };
+    });
+
+    var inScope = function (c) {
+      if (!c.app) return false;
+      if (scope.allControls) return true;
+      if (fw !== 'iso27001' && fw !== 'iso27701') return false;
+      return scope.themes.some(function (t) { return String(c.id).indexOf(t + '.') === 0; });
+    };
+    var highRiskControls = {};
+    (d.risks || []).forEach(function (r) {
+      if (!r || r.status === 'Closed') return;
+      var q = residual({ L: r.L, I: r.I, resL: r.resL, resI: r.resI, actions: r.actions || [] }, d.actions || []);
+      if (q.L * q.I < 10) return;
+      (r.controls || []).forEach(function (id) { highRiskControls[id] = true; });
+    });
+    var controls = (d.controls || []).filter(function (c) { return c.fw === fw && inScope(c); }).map(function (c) {
+      var flags = [];
+      if (c.st !== 'Implemented') flags.push('Not implemented');
+      if (!c.evidenceUrl) flags.push('No evidence linked');
+      var rv = controlReviewStatus(c, today, cadence);
+      if (c.st === 'Implemented' && rv.due) flags.push(rv.neverVerified ? 'Never verified' : 'Verification overdue');
+      if (highRiskControls[c.id]) flags.push('Treats a high risk');
+      var acts = openActions.filter(function (x) { return x.control === c.id; }).map(function (x) { return x.id; });
+      if (acts.length) flags.push('Open action ' + acts.join(', '));
+      if (ownsIt(c)) flags.push(OWN_WORK);
+      return { id: c.id, title: c.t, status: c.st, owner: c.own || '', evidenceUrl: c.evidenceUrl || '', verified: c.verified || '', flags: flags, priority: flags.length > 0 };
+    });
+    controls.sort(function (x, y) { return (y.priority ? 1 : 0) - (x.priority ? 1 : 0); });
+
+    var followUps = (d.actions || []).filter(function (x) {
+      return x && (x.src === 'Internal audit' || /^Certification audit/.test(x.src || '')) && x.status !== 'Done' && x.status !== 'Closed' && x.status !== 'Cancelled';
+    }).map(function (x) { return { id: x.id, title: x.title, type: x.type || 'Action', due: x.due || '', src: x.src }; });
+
+    var previous = (d.audits || []).filter(function (x) {
+      return x && x.id !== a.id && x.status === 'Completed' && (x.fw === fw || (clauseFw === 'iso27001' && x.fw === 'iso27001'));
+    }).sort(function (x, y) { return String(y.completed || '').localeCompare(String(x.completed || '')); })[0] || null;
+
+    return {
+      scope: scope,
+      prompts: scope.clauses.map(function (n) { return { clause: n, prompt: CLAUSE_AUDIT_PROMPTS[n] }; }),
+      clauses: clauses,
+      controls: controls,
+      followUps: followUps,
+      previous: previous ? { id: previous.id, completed: previous.completed, summary: previous.summary || '', scope: previous.scope } : null,
+      readable: scope.clauses.length > 0 || scope.themes.length > 0 || scope.allControls
+    };
   }
 
   /* A three-year internal audit programme that covers everything before
@@ -6300,6 +6405,7 @@
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS,
     buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft,
     clauseUpdatesForDocument: clauseUpdatesForDocument,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
     addMonthsIso: addMonthsIso, certificationCycle: certificationCycle, internalAuditCoverage: internalAuditCoverage, internalAuditProgramme: internalAuditProgramme
