@@ -758,6 +758,7 @@ function showModal(opts) {
     'bulkDocStatus', 'bulkDocOwner',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
+    'generateDocumentSet', 'approveDraftSet',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
     /* importCsv IS gated (unlike exportCsv, which is read-only): it is
        the largest single bulk write in the app. */
@@ -2600,6 +2601,27 @@ function showModal(opts) {
         : '<p class="rpt-intro">None — every applicable control is marked Implemented.</p>';
       sections.push({ heading: 'Open control gaps (' + notImpl.length + ')', html: gapsHtml, pageBreak: sections.length === 0 });
 
+      /* Management-system clauses (Clauses 4-10) — mandatory, never
+         excludable, and the first thing a Stage 1 audit examines, so a
+         readiness report that covered only Annex A would overstate
+         readiness. ISO 27701 extends the ISO 27001 ISMS, so it reports
+         27001's clauses; ISO 42001 reports its own. Other frameworks
+         have no clause register. */
+      var clauseFw = activeFw === 'iso42001' ? 'iso42001' : (activeFw === 'iso27001' || activeFw === 'iso27701') ? 'iso27001' : null;
+      var fwClauses = clauseFw ? (S.clauses || []).filter(function (c) { return c.fw === clauseFw; }) : [];
+      var clausesImpl = fwClauses.filter(function (c) { return c.st === 'Implemented'; });
+      var clausesOpen = fwClauses.filter(function (c) { return c.st !== 'Implemented'; });
+      var clausesUnevidenced = clausesImpl.filter(function (c) { return !c.evidenceUrl; });
+      if (fwClauses.length) {
+        var clauseHtml = '<p class="rpt-intro">' + clausesImpl.length + ' of ' + fwClauses.length + ' ' + fwName(clauseFw) + ' management-system requirements are implemented. Unlike Annex A controls, none of these can be excluded — every one must be met and evidenced for certification.</p>' +
+          '<table class="rpt-table"><thead><tr><th>Clause</th><th>Requirement</th><th>Status</th><th>Owner</th><th>Evidence</th><th>Last verified</th></tr></thead><tbody>' +
+          fwClauses.map(function (c) {
+            var ev = c.evidenceUrl ? 'Linked' : (c.st === 'Implemented' ? '<b style="color:#b91c1c">None</b>' : '—');
+            return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + esc(c.st) + '</td><td>' + esc(c.own || '—') + '</td><td>' + ev + '</td><td>' + (c.verified ? fmtDate(c.verified) : '—') + '</td></tr>';
+          }).join('') + '</tbody></table>';
+        sections.push({ heading: 'Management system clauses (' + clausesImpl.length + '/' + fwClauses.length + ' implemented)', html: clauseHtml, pageBreak: true });
+      }
+
       /* the honesty gap: self-reported "Implemented" with no evidence
          on file is exactly what an auditor will challenge first */
       var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
@@ -2677,6 +2699,8 @@ function showModal(opts) {
       var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
       var capaOutstanding = allNcs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var recs = [];
+      if (clausesOpen.length) recs.push('Implement and evidence the ' + clausesOpen.length + ' management-system clause' + (clausesOpen.length > 1 ? 's' : '') + ' not yet Implemented (' + clausesOpen.map(function (c) { return c.id; }).join(', ') + ') — a Stage 1 audit examines these before any Annex A control.');
+      if (clausesUnevidenced.length) recs.push('Link evidence to the ' + clausesUnevidenced.length + ' clause' + (clausesUnevidenced.length > 1 ? 's' : '') + ' marked Implemented without it (' + clausesUnevidenced.map(function (c) { return c.id; }).join(', ') + ').');
       if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
       if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
       if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
@@ -2700,6 +2724,7 @@ function showModal(opts) {
         title: 'Audit Readiness Report — ' + fwLabel,
         dashboard: {
           intro: '<b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
+            (fwClauses.length ? clausesImpl.length + ' of ' + fwClauses.length + ' management-system clauses are implemented. ' : '') +
             crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.',
           /* 'ready' gets every chart function — the most detailed report
              type, matching its role as the pre-audit deep dive. */
@@ -3529,6 +3554,157 @@ function showModal(opts) {
      linked when three of the six do not exist for them — a count
      reported for work that did not happen. iso27001 wins a tie because
      the same Annex A id can appear in more than one framework's set. */
+  /* Applies CheckpointLib.clauseUpdatesForDocument() to the clause
+     register for a document just generated or approved: persists each
+     changed clause, audits it, and returns a one-line summary for the
+     caller's toast ('' when nothing changed). Automatic rather than
+     prompted, unlike the Annex A "Link as evidence?" offer — a clause
+     document is written FOR its clause, so the link is never a
+     judgement call, and the rules never claim more than the document
+     supports (see the function's comment in lib.js). */
+  function applyClauseDocumentUpdates(tplId, docUrl, stage) {
+    var mapping = (window.CLAUSE_DOCUMENT_MAP || {})[tplId];
+    if (!mapping || !docUrl) return '';
+    var updates = window.CheckpointLib.clauseUpdatesForDocument(mapping, S.clauses, docUrl, stage);
+    if (!updates.length) return '';
+    var implemented = [], progressed = [], linked = 0;
+    updates.forEach(function (u) {
+      var c = u.clause;
+      if (u.set.evidenceUrl) {
+        audit('Evidence link changed', 'Clause', clauseLabel(c), '(none)', u.set.evidenceUrl);
+        c.evidenceUrl = u.set.evidenceUrl;
+        linked++;
+      }
+      if (u.set.st) {
+        audit('Clause status changed', 'Clause', clauseLabel(c), c.st, u.set.st + (stage === 'approved' ? ' (document approved)' : ' (document generated)'));
+        c.st = u.set.st;
+        (u.set.st === 'Implemented' ? implemented : progressed).push(c.id);
+      }
+      Store.updateClause(c).catch(function (e) { warn(e); });
+    });
+    renderClauses(); renderNavCounts(); renderDash();
+    var parts = [];
+    if (linked) parts.push('linked as evidence to ' + linked + ' clause' + (linked > 1 ? 's' : ''));
+    if (implemented.length) parts.push('Clause ' + implemented.join(', ') + ' marked Implemented');
+    if (progressed.length) parts.push('Clause ' + progressed.join(', ') + ' moved to In progress');
+    return parts.join('; ');
+  }
+
+  /* A bulleted list for a modal message, capped so a long document set
+     cannot push the dialog's buttons off-screen (the modal does not
+     scroll). The full list is in the Documents register. */
+  function shortList(names, max) {
+    max = max || 8;
+    var shown = names.slice(0, max).map(function (n) { return '• ' + n; });
+    if (names.length > max) shown.push('…and ' + (names.length - max) + ' more');
+    return shown.join('\n');
+  }
+
+  /* Saves a generated document as a DRAFT in Policies & Procedures and
+     writes the 'Policy template generated' audit entry — the durable
+     record approveTemplate() recovers owner/review date/tailoring from.
+     Shared by the single generator and generateDocumentSet(). Registers
+     the document as it's saved (Clause 7.5.2): owner and next review
+     from the generator, frameworks from the template's own tagging, and
+     version 0.1/Draft as the honest starting point. Throws on upload
+     failure; a register-metadata failure comes back as doc.metaError. */
+  async function saveTemplateDraft(t, html, filename, params) {
+    var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], filename, { type: 'text/html;charset=utf-8' });
+    var doc = await Store.uploadDocument(file, 'Policies & Procedures', {
+      owner: params.owner, version: '0.1', status: 'Draft',
+      approvedBy: '', approvalDate: '', nextReview: params.reviewDate,
+      /* Internal, not the tenant's report classification: a policy is
+         meant to be readable by every employee who has to follow it.
+         Overridable per document via Details. */
+      classification: 'Internal', frameworks: (t.frameworks || []).join(','), tplId: t.id
+    });
+    audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify(Object.assign({ tplId: t.id }, params)));
+    return doc;
+  }
+
+  /* Links a just-generated document as evidence to the controls it was
+     written for — automatically, where it used to ask. Only a control
+     with NO evidence yet is linked (a control someone already linked to
+     other evidence keeps it), and only one still at the untouched
+     "Not started" default moves to "In progress". Never "Implemented":
+     for a control, a written policy is usually necessary but not
+     sufficient, so that stays the practitioner's call at approval. */
+  function linkTemplateControls(t, docUrl) {
+    if (!docUrl) return '';
+    var linked = 0, bumped = 0;
+    templateControlsPresent(t.controls).forEach(function (c) {
+      if (c.evidenceUrl && c.evidenceUrl !== docUrl) return;
+      var key = c.fw + '|' + c.id;
+      var changed = false;
+      if (!c.evidenceUrl) {
+        c.evidenceUrl = docUrl;
+        audit('Evidence link changed', 'Control', key, '(none)', docUrl);
+        linked++; changed = true;
+      }
+      if (c.st === 'Not started') {
+        c.st = 'In progress';
+        audit('Control status changed', 'Control', key, 'Not started', 'In progress (policy generated)');
+        bumped++; changed = true;
+      }
+      if (changed) Store.updateControl(c).catch(function (e) { warn(e); });
+    });
+    if (!linked && !bumped) return '';
+    renderSoa(); renderDash();
+    return 'linked as evidence to ' + linked + ' control' + (linked === 1 ? '' : 's') + (bumped ? ', ' + bumped + ' moved to In progress' : '');
+  }
+
+  /* Saves the approved (un-watermarked) copy of a generated document,
+     records the approval, schedules its review and updates the clause
+     register. Shared by approveTemplate() and approveDraftSet(); the
+     caller has already collected `vals` ({ approvedBy, version,
+     nextReview }) and passed the segregation-of-duties gate. Throws if
+     the approved copy cannot be saved. Returns { approvedDoc,
+     clauseNote }. */
+  async function saveApprovedTemplate(name, category, t, params, existing, vals, sodFinding, quiet) {
+    var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+    /* Recovers the SAME AI-tailored purpose/scope/statements this
+       draft was generated with (not the original template's), if
+       any — otherwise the approved copy would silently revert to
+       the untailored text. */
+    /* Precedence: shipped template, then the AI-tailored draft this
+       document was generated from, then whatever a practitioner has
+       since edited. The last of those used NOT to be applied here at
+       all — approval re-rendered from the pristine template and
+       silently destroyed any edit made since generation. That was a
+       defect, not a limitation; effectivePolicyContent() closes it. */
+    var tailored = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
+    var effective = effectivePolicyContent(tailored, name);
+    /* The approved copy carries the review date just confirmed, not
+       the one baked in at generation — otherwise the printed document
+       and the register would disagree the moment anyone shifted the
+       cadence, which is exactly the kind of mismatch an auditor
+       pulls on. */
+    var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal', layout: policyTemplateLayout() });
+    var approvedDoc;
+    try {
+      var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], name, { type: 'text/html;charset=utf-8' });
+      approvedDoc = await Store.uploadDocument(file, category, {
+        owner: params.owner, version: vals.version, status: 'Approved',
+        approvedBy: vals.approvedBy, approvalDate: new Date().toISOString().slice(0, 10),
+        nextReview: vals.nextReview, classification: existing.classification || 'Internal',
+        frameworks: (t.frameworks || []).join(','), tplId: t.id
+      });
+    } catch (e) { warn(e); throw e; }
+    audit('Policy document approved', 'Document', name, 'Draft',
+      'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview + segregationNote(sodFinding));
+    /* An approved policy's review date becomes a real, dated ISMS
+       activity — Clause 7.5.2 c) is a commitment to re-review, and a
+       date sitting only on a document is a date nobody is reminded
+       about. */
+    await syncPolicyReviewCalendar(name, vals.nextReview, params.owner);
+    /* A batch (approveDraftSet) refreshes once at the end instead of
+       re-listing the document library after every document. */
+    if (!quiet) { renderDocuments(); renderDash(); }
+
+    var clauseNote = approvedDoc && approvedDoc.url ? applyClauseDocumentUpdates(t.id, approvedDoc.url, 'approved') : '';
+    return { approvedDoc: approvedDoc, clauseNote: clauseNote };
+  }
+
   function templateControlsPresent(codes) {
     return (codes || []).map(function (code) {
       return S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) ||
@@ -3883,6 +4059,7 @@ function showModal(opts) {
          'manual' for the rest of the session. renderScanChecks too, so
          the Posture scan view reflects it without needing a re-scan. */
       applyRegisterCheckResults();
+      runClauseAutomation();
       renderDash();
       renderScanChecks(true);
     }).catch(function (e) { console.error(e); });
@@ -7945,6 +8122,10 @@ function showModal(opts) {
     rows.innerHTML = skeletonRows(4, 6);
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      /* A freshly approved document can complete a clause whose records
+         already exist (e.g. an audit procedure approved after the audit
+         was run) — re-evaluate now rather than on the next reload. */
+      runClauseAutomation();
       renderDocRegisterSummary(docs);
       var cf = window._docCatF || 'All';
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
@@ -8445,6 +8626,45 @@ function showModal(opts) {
      the whole reason this is safe to turn on for existing tenants: a
      client who has never touched the vendor register sees exactly what
      they saw before, and only a populated register can move the score. */
+  /* Runs CheckpointLib.clauseAutomationUpdates() against the live
+     registers and persists what it decides: a clause whose approved
+     generated document and operating records are both in place is
+     marked Implemented and re-verified today, with no one having to
+     open the clause register. Called wherever the registers it reads
+     can have changed — renderAll(), the document register's background
+     load, and after a scan. Idempotent (a clause already Implemented
+     and verified today produces no update), never downgrades, and
+     never runs on a read-only session. Status changes are audited;
+     the daily re-verification is not (it would bury the audit log),
+     but it is attributed on the clause itself as
+     "Checkpoint (automated)". */
+  var _clauseAutomationBusy = false;
+  function runClauseAutomation() {
+    if (READONLY || _clauseAutomationBusy || !S.clauses || !S.clauses.length) return;
+    var docs = window._docs || S.documents || [];
+    if (!docs.length) return;
+    var today = new Date().toISOString().slice(0, 10);
+    var updates = window.CheckpointLib.clauseAutomationUpdates(window.CLAUSE_DOCUMENT_MAP || {}, S.clauses, docs, {
+      risks: S.risks, training: S.training, audits: S.audits, reviews: S.reviews, objectives: S.objectives,
+      actions: S.actions, aiSystems: S.aiSystems, docs: docs, scans: S.scans
+    }, today);
+    if (!updates.length) return;
+    _clauseAutomationBusy = true;
+    var promoted = [];
+    updates.forEach(function (u) {
+      var c = u.clause;
+      if (u.set.st) {
+        audit('Clause status changed', 'Clause', clauseLabel(c), c.st, 'Implemented (automated: ' + u.note + ')');
+        promoted.push(clauseLabel(c));
+      }
+      Object.keys(u.set).forEach(function (k) { c[k] = u.set[k]; });
+      Store.updateClause(c).catch(function (e) { warn(e); });
+    });
+    _clauseAutomationBusy = false;
+    renderClauses(); renderNavCounts();
+    if (promoted.length) log('Management system clauses marked Implemented automatically — approved document and records in place: <b>' + esc(promoted.join(', ')) + '</b>.');
+  }
+
   function applyRegisterCheckResults() {
     if (!S.lastResults) return;
     var today = new Date().toISOString().slice(0, 10);
@@ -10467,8 +10687,10 @@ function showModal(opts) {
 
     var orgProfEl = document.getElementById('orgProfileRow');
     if (orgProfEl) {
-      var orgFilled = (window.ORG_PROFILE_FIELDS || []).filter(function (f) { return !!orgProfileValue(f.key); }).length;
-      var orgTotal = (window.ORG_PROFILE_FIELDS || []).length;
+      /* The ISO 42001 fields only count for a tenant that can answer them. */
+      var orgFields = (window.ORG_PROFILE_FIELDS || []).filter(function (f) { return !f.aims || entitledFrameworks().indexOf('iso42001') !== -1; });
+      var orgFilled = orgFields.filter(function (f) { return !!orgProfileValue(f.key); }).length;
+      var orgTotal = orgFields.length;
       var orgIndLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === orgProfileValue('orgIndustry'); }) || {}).label;
       orgProfEl.innerHTML =
         '<div><b>Scope &amp; context (ISO 27001 Clause 4)</b><p>' +
@@ -10672,7 +10894,7 @@ function showModal(opts) {
     if (!STATIC_VIEWS[v]) warn('renderView: no renderer registered for view "' + v + '"');
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); runClauseAutomation(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -10995,6 +11217,7 @@ function showModal(opts) {
          'manual' placeholders and the assurance history would never see
          these checks pass. */
       applyRegisterCheckResults();
+      runClauseAutomation();
 
       renderScanChecks(false);
       var rows2 = document.querySelectorAll('#checkList .check-row');
@@ -14683,7 +14906,10 @@ function showModal(opts) {
       var fields = window.ORG_PROFILE_FIELDS || [];
       var questions = window.ORG_CONTEXT_QUESTIONS || [];
       function fld(key) { return fields.find(function (f) { return f.key === key; }); }
-      var TOTAL = 5;
+      /* The AI step only for tenants entitled to ISO 42001 — the one
+         framework whose scope document uses it. */
+      var withAims = entitledFrameworks().indexOf('iso42001') !== -1;
+      var TOTAL = withAims ? 6 : 5;
       function stepTitle(n, t) { return (n === 1 && opts.title ? opts.title : t) + ' (' + n + ' of ' + TOTAL + ')'; }
 
       /* Step 1 — industry, plus the plain-English questions. A client
@@ -14776,9 +15002,36 @@ function showModal(opts) {
           { id: 'interfaces', label: fld('orgInterfaces').label, type: 'textarea', value: drafted('orgInterfaces', 'interfaces') },
           { id: 'scopeStatement', label: fld('orgScopeStatement').label, type: 'textarea', value: drafted('orgScopeStatement', 'scopeStatement') }
         ],
-        confirmText: 'Save'
+        confirmText: withAims ? 'Next' : 'Save'
       });
       if (!step5) return false;
+
+      /* Step 6 — the ISO 42001 counterpart, drafted from the same
+         answers plus the AI system register. Same never-overwrite-an-
+         edit rule as above. */
+      var step6 = {};
+      if (withAims) {
+        var register = (S.aiSystems || []).map(function (x) { return { name: x.name, purpose: x.purpose }; });
+        var aimsNow = window.CheckpointLib.buildAimsContextDraft(answersNow, register, orgName);
+        var aimsPrev = window.CheckpointLib.buildAimsContextDraft(answersPrev, register, orgName);
+        var aimsDrafted = function (key, prop) {
+          var existing = orgProfileValue(key);
+          if (!existing || existing === aimsPrev[prop]) return aimsNow[prop];
+          return existing;
+        };
+        step6 = await showModal({
+          title: stepTitle(6, 'AI management system (ISO 42001 Clause 4)'),
+          message: 'The same context for the AI management system. The systems are pre-filled from the AI system register' + (register.length ? '' : ', which is empty — add systems there and re-run this, or describe them here') + '. ' + draftNote,
+          fields: [
+            { id: 'aiSystems', label: fld('orgAiSystems').label, type: 'textarea', value: aimsDrafted('orgAiSystems', 'aiSystems') },
+            { id: 'aiRole', label: fld('orgAiRole').label, type: 'textarea', value: aimsDrafted('orgAiRole', 'aiRole') },
+            { id: 'aiIssues', label: fld('orgAiIssues').label, type: 'textarea', value: aimsDrafted('orgAiIssues', 'aiIssues') },
+            { id: 'aimsScopeStatement', label: fld('orgAimsScopeStatement').label, type: 'textarea', value: aimsDrafted('orgAimsScopeStatement', 'aimsScopeStatement') }
+          ],
+          confirmText: 'Save'
+        });
+        if (!step6) return false;
+      }
 
       busy(true);
       try {
@@ -14790,6 +15043,10 @@ function showModal(opts) {
           orgInterestedParties: step4.interestedParties, orgPartyRequirements: step4.partyRequirements, orgRegulatory: step4.regulatory,
           orgInterfaces: step5.interfaces, orgScopeStatement: step5.scopeStatement
         };
+        if (withAims) {
+          map.orgAiSystems = step6.aiSystems; map.orgAiRole = step6.aiRole;
+          map.orgAiIssues = step6.aiIssues; map.orgAimsScopeStatement = step6.aimsScopeStatement;
+        }
         questions.forEach(function (q) { map[q.key] = step1[q.id] || ''; });
         for (var k in map) {
           /* Unchanged values are skipped — each is its own SharePoint
@@ -14804,7 +15061,7 @@ function showModal(opts) {
 
       var industryLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; }) || {}).label || step1.industry;
       audit('Organisation profile updated', 'Settings', 'orgProfile', '', industryLabel);
-      log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document and Organisational Context & Interested Parties to use it.');
+      log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document' + (withAims ? ', AI Management System Scope' : '') + ' and Organisational Context & Interested Parties to use it.');
       toast('Scope & context saved');
       renderFrameworksAdmin();
       return true;
@@ -14817,6 +15074,141 @@ function showModal(opts) {
        DRAFT-watermarked; the generation parameters are recorded in the
        audit log so App.approveTemplate() can regenerate a clean copy
        later without needing a second store for draft/approved state. */
+    /* One click for the whole document set: every template tagged to a
+       framework this tenant is entitled to, that is not already in
+       Documents, generated as a DRAFT with the same content, register
+       metadata and audit record the single generator writes — and linked
+       to its clauses and controls automatically. Existing documents are
+       never regenerated or overwritten (edit or regenerate those one at
+       a time). No preview per document: the set is reviewed where it
+       lands, in the register, before approval. */
+    generateDocumentSet: async function () {
+      if (Store.kind === 'demo') { toast('Generating the document set saves into a real tenant\'s Documents — sign in to a real tenant to use it.'); return; }
+      var entitled = entitledFrameworks();
+      try { window._docs = await Store.listDocuments(); } catch (e) { warn(e); }
+      var have = {};
+      (window._docs || []).forEach(function (d) { have[d.name] = true; });
+      var todo = window.POLICY_TEMPLATES.filter(function (t) {
+        return (t.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; }) && !have[t.title + '.html'];
+      });
+      /* Roles & Responsibilities is assembled from every other document's
+         roles table, so it goes last. */
+      todo.sort(function (a, b) { return (a.id === 'roles-responsibilities') - (b.id === 'roles-responsibilities'); });
+      if (!todo.length) { toast('Every document this tenant\'s frameworks need is already in Documents.'); return; }
+
+      if (todo.some(templateUsesOrgTokens) && !orgProfileStarted()) {
+        var wants = await showModal({
+          title: 'Answer the scope & context questionnaire first?',
+          message: 'Several of these documents — the ISMS Scope, the Context & Interested Parties, and others — fill themselves in from the client\'s answers. Answer it now and the whole set is specific to this organisation; skip, and they generate with generic wording.',
+          confirmText: 'Answer the questionnaire',
+          cancelText: 'Skip for now'
+        });
+        if (wants && !(await App.orgProfileWizard())) return;
+      }
+
+      var nextYear = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+      var vals = await showModal({
+        title: 'Generate the document set',
+        message: todo.length + ' document' + (todo.length > 1 ? 's' : '') + ' for ' + entitled.map(fwName).join(', ') + ' are not in Documents yet:\n\n' +
+          shortList(todo.map(function (t) { return t.title; })) +
+          '\n\nEach is saved as a DRAFT in Policies & Procedures, linked as evidence to the clauses and controls it was written for, and waits for approval. Documents already in the register are left untouched.',
+        fields: [
+          { id: 'owner', label: 'Document owner', value: 'ISMS manager', placeholder: 'Name or role' },
+          { id: 'reviewDate', label: 'Next review due', type: 'date', value: nextYear }
+        ],
+        confirmText: 'Generate ' + todo.length,
+        validate: function (v) { return v.owner ? null : 'Enter a document owner.'; }
+      });
+      if (!vals) return;
+
+      var clientLabel = clientDisplayLabel('This organisation');
+      var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      var saved = [], failed = [];
+      busy(true);
+      for (var i = 0; i < todo.length; i++) {
+        var t = todo[i], filename = t.title + '.html';
+        try {
+          var effective = effectivePolicyContent(t, filename);
+          var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: vals.owner, reviewDate: vals.reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: false, aiReviewer: '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: '0.1', classification: 'Internal', layout: policyTemplateLayout() });
+          var doc = await saveTemplateDraft(t, html, filename, { owner: vals.owner, reviewDate: vals.reviewDate, clientLabel: clientLabel, aiAssisted: false, aiReviewer: '' });
+          applyClauseDocumentUpdates(t.id, doc.url, 'generated');
+          linkTemplateControls(t, doc.url);
+          saved.push(t.title);
+        } catch (e) { warn(e); failed.push(t.title); }
+      }
+      busy(false);
+      renderDocuments(); renderClauses(); renderSoa(); renderDash(); renderNavCounts();
+      log('Document set generated — <b>' + saved.length + '</b> draft(s) saved and linked to their clauses and controls' + (failed.length ? '; failed: ' + esc(failed.join(', ')) : '') + '.');
+      if (failed.length) toastError(saved.length + ' of ' + todo.length + ' documents generated. Could not save: ' + esc(failed.join(', ')) + ' — try those individually.');
+      else toast(saved.length + ' draft documents generated and linked to their clauses and controls. Review them in Documents, then use Approve drafts.');
+    },
+
+    /* Approves every draft generated from a template in one sitting —
+       the meeting where management signs off the policy suite. The same
+       approval, per document, that approveTemplate() records (named
+       approver, version, next review, un-watermarked copy, review date
+       on the calendar, clause register updated); only the dialog is
+       shared. Segregation of duties is applied per document: with it
+       enforced, a document raised by the signed-in account is skipped
+       and listed to be approved by someone else; without it, it is
+       approved and recorded on the audit log as a self-approval — and
+       the dialog says so before anything happens. */
+    approveDraftSet: async function () {
+      if (Store.kind === 'demo') { toast('Approving drafts saves into a real tenant\'s Documents — sign in to a real tenant to use it.'); return; }
+      try { window._docs = await Store.listDocuments(); } catch (e) { warn(e); }
+      var drafts = (window._docs || []).map(function (d) {
+        var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === d.name && e.action === 'Policy template generated'; });
+        var params = null;
+        try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
+        var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
+        return (d.status === 'Draft' && t) ? { doc: d, params: params, t: t, sod: segregationFinding('Document', d.name) } : null;
+      }).filter(Boolean);
+      if (!drafts.length) { toast('No generated drafts are waiting for approval.'); return; }
+      var selfRaised = drafts.filter(function (x) { return x.sod; });
+      var sodNote = !selfRaised.length ? '' : sodEnforced()
+        ? '\n\n' + selfRaised.length + ' of these were generated by the account you are signed in as. Segregation of duties is on, so they will be skipped — someone else must approve them.'
+        : '\n\n' + selfRaised.length + ' of these were generated by the account you are signed in as; approving them will be recorded on the audit log as self-approval (ISO 27001 A.5.3).';
+      var nextYear = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+      var vals = await showModal({
+        title: 'Approve ' + drafts.length + ' draft' + (drafts.length > 1 ? 's' : ''),
+        message: 'Each document is re-saved without the draft watermark, with the approval recorded on the register and its review date added to the calendar:\n\n' +
+          shortList(drafts.map(function (x) { return x.doc.name.replace(/\.html$/, ''); })) + sodNote,
+        fields: [
+          { id: 'approvedBy', label: 'Approved by', value: (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'version', label: 'Version being approved', value: '1.0' },
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: nextYear }
+        ],
+        confirmText: 'Approve all',
+        validate: function (v) {
+          if (!v.approvedBy) return 'Record who approved these documents.';
+          if (!v.version) return 'Record the version being approved.';
+          if (!v.nextReview) return 'Set the next review date.';
+          return null;
+        }
+      });
+      if (!vals) return;
+      var approved = [], skipped = [], failed = [], clauseNotes = [];
+      busy(true);
+      for (var i = 0; i < drafts.length; i++) {
+        var x = drafts[i];
+        if (x.sod && sodEnforced()) { skipped.push(x.t.title); continue; }
+        try {
+          var res = await saveApprovedTemplate(x.doc.name, x.doc.category || 'Policies & Procedures', x.t, x.params, x.doc, vals, x.sod, true);
+          approved.push(x.t.title);
+          if (res.clauseNote) clauseNotes.push(res.clauseNote);
+        } catch (e) { warn(e); failed.push(x.t.title); }
+      }
+      busy(false);
+      renderDocuments(); renderClauses(); renderDash(); renderNavCounts();
+      log('Draft set approved by <b>' + esc(vals.approvedBy) + '</b> as v' + esc(vals.version) + ' — ' + approved.length + ' approved' +
+        (skipped.length ? ', ' + skipped.length + ' skipped for segregation of duties (' + esc(skipped.join(', ')) + ')' : '') +
+        (failed.length ? ', ' + failed.length + ' failed (' + esc(failed.join(', ')) + ')' : '') + '.');
+      var msg = approved.length + ' document' + (approved.length === 1 ? '' : 's') + ' approved' +
+        (skipped.length ? '; ' + skipped.length + ' need another approver' : '') +
+        (failed.length ? '; ' + failed.length + ' could not be saved — approve those individually' : '') + '.';
+      (failed.length ? toastError : toast)(msg);
+    },
+
     generateTemplate: async function () {
       var sel = document.getElementById('tplSelect');
       var t = sel && window.POLICY_TEMPLATES.find(function (x) { return x.id === sel.value; });
@@ -14870,23 +15262,10 @@ function showModal(opts) {
       }
       var doc;
       try {
-        var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], filename, { type: 'text/html;charset=utf-8' });
-        /* Registers the document as it's saved (Clause 7.5.2) rather
-           than leaving it for someone to fill in later: owner and next
-           review are the two fields the practitioner has just typed
-           into the generator, the frameworks come from the template's
-           own tagging, and version 0.1/Draft is the honest starting
-           point — approveTemplate() below promotes it to 1.0/Approved
-           with a real approver against their name. */
-        doc = await Store.uploadDocument(file, 'Policies & Procedures', {
-          owner: owner, version: '0.1', status: 'Draft',
-          approvedBy: '', approvalDate: '', nextReview: reviewDate,
-          /* Internal, not the tenant's report classification: a policy
-             is meant to be readable by every employee who has to follow
-             it (and, shortly, to be attested by them), which is a
-             different audience from a board report. Overridable per
-             document via Details. */
-          classification: 'Internal', frameworks: (t.frameworks || []).join(','), tplId: t.id
+        doc = await saveTemplateDraft(t, html, filename, {
+          owner: owner, reviewDate: reviewDate, clientLabel: clientLabel,
+          aiAssisted: !!tailored, aiReviewer: tailored ? reviewer : '',
+          tailoredPurpose: tailored ? tailored.purpose : undefined, tailoredScope: tailored ? tailored.scope : undefined, tailoredStatements: tailored ? tailored.statements : undefined
         });
       } catch (e) {
         warn(e);
@@ -14897,50 +15276,11 @@ function showModal(opts) {
         warn(doc.metaError);
         toastError('Saved <b>' + esc(filename) + '</b>, but its register details could not be written — set them via <b>Details</b> in the register below.');
       }
-      audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({
-        tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel,
-        aiAssisted: !!tailored, aiReviewer: tailored ? reviewer : '',
-        tailoredPurpose: tailored ? tailored.purpose : undefined, tailoredScope: tailored ? tailored.scope : undefined, tailoredStatements: tailored ? tailored.statements : undefined
-      }));
       renderDocuments();
-      toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved' + (tailored ? ' (AI-assisted)' : '') + '.');
-
-      var linkable = templateControlsPresent(t.controls);
-      if (linkable.length) {
-        var link = await showModal({
-          title: 'Link as evidence?',
-          message: 'Link this document as evidence for ' + linkable.length + ' control' + (linkable.length > 1 ? 's' : '') + ' it helps satisfy: ' + linkable.map(function (c) { return c.id; }).join(', ') + '?',
-          confirmText: 'Link evidence',
-          cancelText: 'Not now'
-        });
-        if (link) {
-          var bumped = 0;
-          linkable.forEach(function (c) {
-            var prevUrl = c.evidenceUrl;
-            c.evidenceUrl = doc.url;
-            var key = c.fw + '|' + c.id;
-            /* A policy just written FOR this control is real, visible
-               progress — leaving the control sitting at "Not started"
-               while it now has linked evidence reads as stale/wrong on
-               every chart and KPI that reads status (see the live
-               "why does this look uncoloured" reports this session).
-               Only bumps a control that's still at the untouched
-               default — never overwrites "In progress"/"Implemented"
-               someone already set by hand, and never claims
-               "Implemented" on the strength of a draft policy alone. */
-            if (c.st === 'Not started') {
-              var prevSt = c.st;
-              c.st = 'In progress';
-              audit('Control status changed', 'Control', key, prevSt, 'In progress (policy generated)');
-              bumped++;
-            }
-            Store.updateControl(c).catch(function (e) { warn(e); });
-            audit('Evidence link changed', 'Control', key, prevUrl || '(none)', doc.url);
-          });
-          renderSoa(); renderDash();
-          toast('Linked as evidence to ' + linkable.length + ' control' + (linkable.length > 1 ? 's' : '') + (bumped ? ', ' + bumped + ' moved to In progress' : '') + '.');
-        }
-      }
+      var clauseNote = applyClauseDocumentUpdates(t.id, doc.url, 'generated');
+      var controlNote = linkTemplateControls(t, doc.url);
+      var notes = [clauseNote && 'management system clauses: ' + clauseNote, controlNote].filter(Boolean);
+      toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved' + (tailored ? ' (AI-assisted)' : '') + '.' + (notes.length ? ' ' + esc(notes.join('; ')) + '.' : ''));
     },
 
     /* Regenerates the same document without the DRAFT watermark and
@@ -14984,46 +15324,12 @@ function showModal(opts) {
         }
       });
       if (!vals) return;
-      var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      /* Recovers the SAME AI-tailored purpose/scope/statements this
-         draft was generated with (not the original template's), if
-         any — otherwise the approved copy would silently revert to
-         the untailored text. */
-      /* Precedence: shipped template, then the AI-tailored draft this
-         document was generated from, then whatever a practitioner has
-         since edited. The last of those used NOT to be applied here at
-         all — approval re-rendered from the pristine template and
-         silently destroyed any edit made since generation. That was a
-         defect, not a limitation; effectivePolicyContent() closes it. */
-      var tailored = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
-      var effective = effectivePolicyContent(tailored, name);
-      /* The approved copy carries the review date just confirmed, not
-         the one baked in at generation — otherwise the printed document
-         and the register would disagree the moment anyone shifted the
-         cadence, which is exactly the kind of mismatch an auditor
-         pulls on. */
-      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal', layout: policyTemplateLayout() });
-      var approvedDoc;
-      try {
-        var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], name, { type: 'text/html;charset=utf-8' });
-        approvedDoc = await Store.uploadDocument(file, category, {
-          owner: params.owner, version: vals.version, status: 'Approved',
-          approvedBy: vals.approvedBy, approvalDate: new Date().toISOString().slice(0, 10),
-          nextReview: vals.nextReview, classification: existing.classification || 'Internal',
-          frameworks: (t.frameworks || []).join(','), tplId: t.id
-        });
-      } catch (e) { warn(e); toastError('Could not save the approved copy: ' + esc(e.message || e)); return; }
-      audit('Policy document approved', 'Document', name, 'Draft',
-        'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview + segregationNote(sodFinding));
-      /* An approved policy's review date becomes a real, dated ISMS
-         activity — Clause 7.5.2 c) is a commitment to re-review, and a
-         date sitting only on a document is a date nobody is reminded
-         about. */
-      await syncPolicyReviewCalendar(name, vals.nextReview, params.owner);
-      renderDocuments();
-      renderDash();
+      var saved;
+      try { saved = await saveApprovedTemplate(name, category, t, params, existing, vals, sodFinding); }
+      catch (e) { toastError('Could not save the approved copy: ' + esc(e.message || e)); return; }
+      var approvedDoc = saved.approvedDoc;
       if (approvedDoc && approvedDoc.metaError) toastError('<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.');
-      else toast('<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
+      else toast('<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.' + (saved.clauseNote ? ' Management system clauses: ' + esc(saved.clauseNote) + '.' : ''));
 
       /* Offers to close the loop the "Link as evidence?" prompt in
          generateTemplate() opened: a control whose CURRENT evidence is

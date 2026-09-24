@@ -12,6 +12,32 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.97.0',
+    date: '2026-09-24',
+    entries: [
+      'New Threat Intelligence Procedure in the policy generator (ISO 27001 A.5.7), built around Checkpoint\'s own Threat intel view: defined sources, weekly review, exposure assessment, and every relevant item turned into an action or a risk update.',
+      '"Generate full document set" (Settings → Policy template library) generates every document the tenant\'s frameworks need that is not already in Documents, in one go — each saved as a draft and linked to its clauses and controls automatically. Existing documents are never regenerated.',
+      '"Approve drafts" approves every generated draft in one sitting, for the meeting where management signs off the policy set: one approver, version and review date, the same per-document approval record as approving one at a time, and segregation of duties applied to each document.',
+      'Management system clauses now complete themselves. When a clause\'s approved procedure is linked and its records exist — a completed internal audit in the last year (9.2), a management review with recorded decisions (9.3, 10.1), assessed and treated risks (6.1.2, 6.1.3), objectives on track (6.2), training complete (7.2, 7.3), a current document register (7.5), completed AI impact assessments (ISO 42001 6.1.4) — the clause is marked Implemented and re-verified automatically, and stays verified while those records stay current. When records lapse the clause is never downgraded; its verification simply turns overdue for a person to review.',
+      'Generating a document now links it as evidence to the controls it was written for automatically, instead of asking. A control that already has other evidence keeps it.'
+    ]
+  },
+  {
+    version: '1.96.0',
+    date: '2026-09-24',
+    entries: [
+      'The Audit Readiness Report now includes the management system clauses: every ISO 27001 clause for ISO 27001 and ISO 27701 reports, and every ISO 42001 clause for the ISO 42001 report, with status, owner, evidence and last verification. It flags clauses marked Implemented with no evidence, and the recommendations name each clause still to implement.',
+      'Generating a management-system document now updates the clauses it is written for automatically. Saving the draft links it as evidence and moves the clause to In progress. Approving it marks the clause Implemented where the document itself is what the clause requires — context (4.1/4.2), scope (4.3), policy (5.2), roles (5.3) and communication (7.4). Procedures for processes that must also be carried out, such as internal audit, management review or risk assessment, stay In progress until their records exist. A clause already linked to different evidence, or already Implemented, is never changed.'
+    ]
+  },
+  {
+    version: '1.95.0',
+    date: '2026-09-24',
+    entries: [
+      'The scope & context questionnaire now covers ISO 42001 too. For a tenant entitled to ISO 42001 it adds a sixth step that drafts the AI management system\'s Clause 4 content: the AI systems in scope (pre-filled from the AI system register), the organisation\'s role for AI (provider, user or both, from the AI-use answer), the AI-specific issues it faces, and an AIMS scope statement. The AI Management System Scope generates from them instead of asking for bracketed specifics to be filled in by hand.'
+    ]
+  },
+  {
     version: '1.94.0',
     date: '2026-09-24',
     entries: [
