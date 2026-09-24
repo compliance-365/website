@@ -13535,7 +13535,7 @@ function showModal(opts) {
       c.st = v;
       try { await Store.updateClause(c); } catch (e) { warn(e); }
       audit('Clause status changed', 'Clause', key, prevSt, v);
-      renderClauses(); renderDash();
+      renderClauses(); renderDash(); renderNavCounts();
     },
 
     verifyClause: async function (key) {
@@ -13556,7 +13556,7 @@ function showModal(opts) {
       try { await Store.updateClause(c); } catch (e) { warn(e); }
       toast('<b>Clause ' + esc(c.id) + '</b> verified by ' + esc(attester));
       audit('Clause verified', 'Clause', key, prevVerified || 'never verified', c.verified + ' by ' + attester);
-      renderClauses();
+      renderClauses(); renderNavCounts();
     },
 
     setClauseEvidence: async function (key) {
@@ -13581,7 +13581,7 @@ function showModal(opts) {
       }
       try { await Store.updateClause(c); } catch (e) { warn(e); }
       audit('Evidence link changed', 'Clause', key, prevUrl || '(none)', url || '(none)');
-      renderClauses();
+      renderClauses(); renderNavCounts();
       if (bumped) { renderDash(); toast('<b>Clause ' + esc(c.id) + '</b> moved to In progress.'); }
     },
 
