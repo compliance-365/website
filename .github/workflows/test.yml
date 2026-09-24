@@ -46,7 +46,13 @@ jobs:
         if: steps.content-pat.outputs.available == 'true'
         run: |
           ref=""
-          if [ -n "$HEAD_REF" ] && git ls-remote --exit-code --heads "https://x-access-token:${PAT}@github.com/compliance-365/Checkpoint-Content.git" "$HEAD_REF" >/dev/null 2>&1; then
+          # The REST API rather than `git ls-remote`: the website checkout
+          # above leaves an Authorization extraheader for github.com in the
+          # local git config, carrying the workflow's own token (which
+          # cannot see Checkpoint-Content). git sends that header in
+          # preference to credentials in the URL, so ls-remote always
+          # failed and every PR silently fell back to the default branch.
+          if [ -n "$HEAD_REF" ] && curl -fsS -o /dev/null -H "Authorization: Bearer ${PAT}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/compliance-365/Checkpoint-Content/git/ref/heads/${HEAD_REF}"; then
             ref="$HEAD_REF"
             echo "Testing against Checkpoint-Content branch '$HEAD_REF' (same name as this PR's branch)."
           else
