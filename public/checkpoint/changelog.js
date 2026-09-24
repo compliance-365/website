@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.92.0',
+    date: '2026-09-24',
+    entries: [
+      'Eight new management-system procedures in the policy generator, covering the ISO 27001 clauses that an auditor expects to see as a written procedure: Organisational Context & Interested Parties (4.1/4.2), ISMS Change Planning Procedure (6.3), Competence, Training & Awareness Plan (7.2/7.3), Communication Plan (7.4), Document & Records Control Procedure (7.5), Internal Audit Procedure & Programme (9.2), Management Review Procedure (9.3), and Nonconformity & Corrective Action Procedure (10.1/10.2). Each one says how the matching register in Checkpoint is used, so the procedure and its evidence stay consistent.',
+      'Four new Annex A policies: Legal, Regulatory & Contractual Requirements (A.5.31-A.5.33), Remote Working & Mobile Device (A.6.7, A.8.1, A.7.9), Information Transfer (A.5.14) and Cloud Services Security (A.5.23). Each can be linked as evidence to those controls once saved.'
+    ]
+  },
+  {
     version: '1.91.0',
     date: '2026-09-24',
     entries: [
