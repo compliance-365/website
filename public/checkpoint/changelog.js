@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.93.0',
+    date: '2026-09-24',
+    entries: [
+      'The Management system clauses register now covers ISO 42001 as well as ISO 27001. A tenant entitled to ISO 42001 sees its AI management system Clauses 4-10 as a second group, including 6.1.4 and 8.4 (AI system impact assessment), which have no ISO 27001 equivalent. Rows are added to existing tenants automatically and appear as soon as the entitlement is active. The CSV export gains a Framework column.'
+    ]
+  },
+  {
     version: '1.92.0',
     date: '2026-09-24',
     entries: [

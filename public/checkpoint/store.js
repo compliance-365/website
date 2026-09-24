@@ -240,12 +240,16 @@ window.allControlSeeds = allControlSeeds;
    Implemented on the strength of risk assessment alone while risk
    TREATMENT (6.1.3) had nothing behind it.
 
-   Framework is included (rather than assumed) even though only
-   'iso27001' seeds today: ISO 27701 extends 27001's own clauses rather
-   than defining new ones (so one list already serves both), but ISO
-   42001 is a separate management system with its own parallel clause
-   structure — this column is what lets that be added later as more
-   rows, not a rewrite. */
+   Framework is part of every row's identity, not decoration. ISO 42001
+   is a separate management system (the AIMS) with its own Clauses
+   4-10 in the same Harmonized Structure as 27001 — so its codes
+   collide with 27001's ("4.1" exists in both), and every lookup is by
+   fw|code, never code alone (see clauseKey() in app.js). 42001 adds
+   two requirements 27001 has no equivalent of: 6.1.4 and 8.4, the AI
+   system impact assessment. Its rows are seeded for every tenant like
+   27001's, and shown only when the tenant is entitled to ISO 42001.
+   ISO 27701 is not separately listed: the rows here serve a privacy
+   extension to the ISMS, which is how Checkpoint models 27701. */
 window.CLAUSE_DEFS = [
   { code: '4.1', t: 'Understanding the organization and its context', fw: 'iso27001' },
   { code: '4.2', t: 'Understanding the needs and expectations of interested parties', fw: 'iso27001' },
@@ -275,6 +279,37 @@ window.CLAUSE_DEFS = [
   { code: '10.1', t: 'Continual improvement', fw: 'iso27001',
     hint: 'Evidenced by management review outputs and the improvement actions they raise — see the Management Review Procedure and the Actions register.' },
   { code: '10.2', t: 'Nonconformity and corrective action', fw: 'iso27001',
+    hint: 'Evidenced by the corrective-action loop on each nonconformity in the Actions register — see the Nonconformity & Corrective Action Procedure.' },
+  { code: '4.1', t: 'Understanding the organization and its context', fw: 'iso42001' },
+  { code: '4.2', t: 'Understanding the needs and expectations of interested parties', fw: 'iso42001' },
+  { code: '4.3', t: 'Determining the scope of the AI management system', fw: 'iso42001' },
+  { code: '4.4', t: 'AI management system', fw: 'iso42001' },
+  { code: '5.1', t: 'Leadership and commitment', fw: 'iso42001' },
+  { code: '5.2', t: 'AI policy', fw: 'iso42001' },
+  { code: '5.3', t: 'Roles, responsibilities and authorities', fw: 'iso42001' },
+  { code: '6.1.1', t: 'Actions to address risks and opportunities — general', fw: 'iso42001' },
+  { code: '6.1.2', t: 'AI risk assessment', fw: 'iso42001' },
+  { code: '6.1.3', t: 'AI risk treatment', fw: 'iso42001' },
+  { code: '6.1.4', t: 'AI system impact assessment', fw: 'iso42001' },
+  { code: '6.2', t: 'AI objectives and planning to achieve them', fw: 'iso42001' },
+  { code: '6.3', t: 'Planning of changes', fw: 'iso42001' },
+  { code: '7.1', t: 'Resources', fw: 'iso42001' },
+  { code: '7.2', t: 'Competence', fw: 'iso42001' },
+  { code: '7.3', t: 'Awareness', fw: 'iso42001' },
+  { code: '7.4', t: 'Communication', fw: 'iso42001' },
+  { code: '7.5.1', t: 'Documented information — general', fw: 'iso42001' },
+  { code: '7.5.2', t: 'Creating and updating documented information', fw: 'iso42001' },
+  { code: '7.5.3', t: 'Control of documented information', fw: 'iso42001' },
+  { code: '8.1', t: 'Operational planning and control', fw: 'iso42001' },
+  { code: '8.2', t: 'AI risk assessment', fw: 'iso42001' },
+  { code: '8.3', t: 'AI risk treatment', fw: 'iso42001' },
+  { code: '8.4', t: 'AI system impact assessment', fw: 'iso42001' },
+  { code: '9.1', t: 'Monitoring, measurement, analysis and evaluation', fw: 'iso42001' },
+  { code: '9.2', t: 'Internal audit', fw: 'iso42001' },
+  { code: '9.3', t: 'Management review', fw: 'iso42001' },
+  { code: '10.1', t: 'Continual improvement', fw: 'iso42001',
+    hint: 'Evidenced by management review outputs and the improvement actions they raise — see the Management Review Procedure and the Actions register.' },
+  { code: '10.2', t: 'Nonconformity and corrective action', fw: 'iso42001',
     hint: 'Evidenced by the corrective-action loop on each nonconformity in the Actions register — see the Nonconformity & Corrective Action Procedure.' }
 ];
 
@@ -2672,9 +2707,8 @@ window.SpStore = (function () {
   /* Same self-heal shape as reconcileControls() above, for a tenant
      provisioned before window.CLAUSE_DEFS existed or before it gained a
      clause. Diffs against Code+Framework, same key shape Controls
-     already uses, even though Framework is 'iso27001' for every row
-     today — the day a second framework's clauses are added, this
-     already disambiguates correctly rather than needing a second pass. */
+     already uses — required, since ISO 27001 and ISO 42001 share
+     clause numbers. */
   async function reconcileClauses(onStatus) {
     var have = {};
     (await items('Clauses')).forEach(function (i) {
@@ -2875,7 +2909,12 @@ window.SpStore = (function () {
         clauses: clauseItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, st: f.Status || 'Not started', own: f.Owner || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
-        }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
+        }).sort(function (a, b) {
+          /* Grouped by framework (FRAMEWORK_ORDER), then numerically by
+             code — two frameworks' "4.1" must not interleave. */
+          var fa = window.FRAMEWORK_ORDER.indexOf(a.fw), fb = window.FRAMEWORK_ORDER.indexOf(b.fw);
+          return fa !== fb ? fa - fb : a.id.localeCompare(b.id, undefined, { numeric: true });
+        }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
           var readiness, readinessByFw, critRisks, overdueActions, source, projection, riskSnapshot;

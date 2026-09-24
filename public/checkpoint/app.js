@@ -998,9 +998,9 @@ function showModal(opts) {
     },
     {
       key: 'clauses', label: 'Management system clauses', filename: 'clauses.csv',
-      header: ['Clause', 'Title', 'Status', 'Owner', 'Verified date', 'Verified by', 'Evidence URL'],
+      header: ['Framework', 'Clause', 'Title', 'Status', 'Owner', 'Verified date', 'Verified by', 'Evidence URL'],
       rows: function () {
-        return (S.clauses || []).map(function (c) { return [c.id, c.t, c.st, c.own, c.verified, c.verifiedBy, c.evidenceUrl]; });
+        return visibleClauses().map(function (c) { return [fwName(c.fw), c.id, c.t, c.st, c.own, c.verified, c.verifiedBy, c.evidenceUrl]; });
       }
     },
     {
@@ -3757,7 +3757,7 @@ function showModal(opts) {
     var sEl = document.getElementById('nSoa');
     if (sEl) { sEl.textContent = sugg || ''; sEl.style.display = sugg ? 'inline-block' : 'none'; }
 
-    var notStartedClauses = (S.clauses || []).filter(function (c) { return c.st === 'Not started'; }).length;
+    var notStartedClauses = visibleClauses().filter(function (c) { return c.st === 'Not started'; }).length;
     var clEl = document.getElementById('nClauses');
     if (clEl) { clEl.textContent = notStartedClauses || ''; clEl.style.display = notStartedClauses ? 'inline-block' : 'none'; }
 
@@ -8871,19 +8871,41 @@ function showModal(opts) {
      so this supplies app:true just to satisfy the pure function's
      contract without adding a meaningless Applicable field to the
      clause's own persisted shape. */
+  /* Clauses are identified by fw|code, never code alone — ISO 27001
+     and ISO 42001 share the same Harmonized Structure numbering, so
+     "4.1" is two different rows. A bare code (anything saved or
+     linked before 42001 rows existed) resolves to ISO 27001, the only
+     framework whose clauses existed then. */
+  function clauseKey(c) { return c.fw + '|' + c.id; }
+  function findClause(key) {
+    var parts = String(key).split('|');
+    var fw = parts.length > 1 ? parts[0] : 'iso27001', code = parts.length > 1 ? parts[1] : parts[0];
+    return (S.clauses || []).find(function (x) { return (x.fw || 'iso27001') === fw && x.id === code; });
+  }
+  function clauseLabel(c) { return (c.fw && c.fw !== 'iso27001' ? fwName(c.fw) + ' ' : '') + 'Clause ' + c.id; }
+  /* Only the management systems this tenant is entitled to. Every
+     framework's clause rows are seeded regardless (same as Controls),
+     so turning an entitlement on later shows them without a
+     reprovision. ISO 27001 is always shown: it is the base ISMS every
+     other framework in Checkpoint builds on. */
+  function visibleClauses() {
+    var ent = entitledFrameworks();
+    return (S.clauses || []).filter(function (c) { return c.fw === 'iso27001' || ent.indexOf(c.fw) !== -1; });
+  }
   function clauseReviewStatus(c) {
     return window.CheckpointLib.controlReviewStatus(Object.assign({}, c, { app: true }), new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
   }
   function renderClausesDashboard() {
     var el = document.getElementById('clauseKpiRow');
     if (!el) return;
-    var clauses = S.clauses || [];
+    var clauses = visibleClauses();
+    var fws = clauses.reduce(function (acc, c) { if (acc.indexOf(c.fw) === -1) acc.push(c.fw); return acc; }, []);
     var implemented = clauses.filter(function (c) { return c.st === 'Implemented'; });
     var notStarted = clauses.filter(function (c) { return c.st === 'Not started'; });
     var overdue = implemented.filter(function (c) { return clauseReviewStatus(c).due; });
     el.innerHTML =
       kpiTile({ value: clauses.length, label: 'Clauses tracked',
-        sub: clauses.length ? 'ISO 27001 Clauses 4-10' : 'management-system requirements, not yet loaded' }) +
+        sub: clauses.length ? fws.map(fwName).join(' + ') + ' Clauses 4-10' : 'management-system requirements, not yet loaded' }) +
       kpiTile({ value: implemented.length, label: 'Implemented', meter: { value: implemented.length, max: clauses.length } }) +
       kpiTile({ value: notStarted.length, label: 'Not started', tone: 'fail',
         meter: { value: notStarted.length, max: clauses.length },
@@ -8897,7 +8919,8 @@ function showModal(opts) {
     var wrap = document.getElementById('clauseRows');
     if (!wrap) return;
     renderClausesDashboard();
-    var clauses = S.clauses || [];
+    var clauses = visibleClauses();
+    var multiFw = clauses.some(function (c) { return c.fw !== clauses[0].fw; });
     if (!clauses.length) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 5, text: 'No management system clauses loaded yet.' });
       return;
@@ -8909,20 +8932,30 @@ function showModal(opts) {
     var hints = {};
     (window.CLAUSE_DEFS || []).forEach(function (d) { if (d.hint) hints[d.fw + '|' + d.code] = d.hint; });
     var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
+    var lastFw = null;
     wrap.innerHTML = clauses.map(function (c) {
       var rv = clauseReviewStatus(c);
+      var key = esc(clauseKey(c));
+      /* A heading row per management system once there is more than
+         one — otherwise 27001's and 42001's identical numbering reads
+         as the same list twice. */
+      var groupRow = '';
+      if (multiFw && c.fw !== lastFw) {
+        groupRow = '<tr class="soa-group-row"><td colspan="6"><b>' + esc(fwName(c.fw)) + '</b> <span class="src">' + (c.fw === 'iso42001' ? 'AI management system' : 'Information security management system') + '</span></td></tr>';
+        lastFw = c.fw;
+      }
       var hint = hints[(c.fw || 'iso27001') + '|' + c.id] || '';
       if (c.id === '10.2' && hint) hint += ' ' + (capaOpen ? capaOpen + ' nonconformit' + (capaOpen > 1 ? 'ies' : 'y') + ' with the corrective-action loop still open.' : 'No nonconformity has an open corrective-action loop.');
       var verifiedCell = c.st !== 'Implemented' ? '<span class="src">—</span>'
-        : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Re-verify</button>'
-        : '<button class="btn sm" data-action="App.verifyClause" data-id="' + esc(c.id) + '">Verify now</button>';
+        : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyClause" data-id="' + key + '">Re-verify</button>'
+        : '<button class="btn sm" data-action="App.verifyClause" data-id="' + key + '">Verify now</button>';
       var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-        ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + esc(c.id) + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Edit</button>'
-        : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + esc(c.id) + '">Link evidence</button>';
-      return '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + '</td>' +
-        '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + esc(c.id) + '" aria-label="Clause ' + esc(c.id) + ' status">' +
+        ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + key + '">Edit</button>'
+        : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + key + '">Link evidence</button>';
+      return groupRow + '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + '</td>' +
+        '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + key + '" aria-label="' + esc(clauseLabel(c)) + ' status">' +
         ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
-        '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + esc(c.id) + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
+        '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
         '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
     }).join('');
     revealRows(wrap);
@@ -13524,13 +13557,11 @@ function showModal(opts) {
        control (status, owner, evidence, verify), deliberately without
        an Applicable toggle or a justification field — see
        window.CLAUSE_DEFS's comment for why neither has meaning for a
-       clause. Keyed on c.id alone (Code), not fw|id like Controls —
-       codes are unique across this single-framework list today, and if
-       a second framework's clauses are ever added, Code stays unique
-       within THIS list because Clause numbering itself doesn't repeat
-       the way a bare Annex A code could collide across frameworks. */
+       clause. Keyed on fw|code (clauseKey()), like Controls: ISO 27001
+       and ISO 42001 share clause numbering, so the code alone is
+       ambiguous. */
     setClauseStatus: async function (key, v) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       if (v === 'Implemented' && !c.evidenceUrl) {
         var proceed = await showModal({
@@ -13543,12 +13574,12 @@ function showModal(opts) {
       var prevSt = c.st;
       c.st = v;
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      audit('Clause status changed', 'Clause', key, prevSt, v);
+      audit('Clause status changed', 'Clause', clauseLabel(c), prevSt, v);
       renderClauses(); renderDash(); renderNavCounts();
     },
 
     verifyClause: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       if (!c.evidenceUrl) {
         var proceed = await showModal({
@@ -13563,16 +13594,16 @@ function showModal(opts) {
       c.verified = new Date().toISOString().slice(0, 10);
       c.verifiedBy = attester;
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      toast('<b>Clause ' + esc(c.id) + '</b> verified by ' + esc(attester));
-      audit('Clause verified', 'Clause', key, prevVerified || 'never verified', c.verified + ' by ' + attester);
+      toast('<b>' + esc(clauseLabel(c)) + '</b> verified by ' + esc(attester));
+      audit('Clause verified', 'Clause', clauseLabel(c), prevVerified || 'never verified', c.verified + ' by ' + attester);
       renderClauses(); renderNavCounts();
     },
 
     setClauseEvidence: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       var urlVals = await showModal({
-        title: 'Link evidence — Clause ' + c.id,
+        title: 'Link evidence — ' + clauseLabel(c),
         fields: [{ id: 'url', label: 'Evidence URL (SharePoint/OneDrive) — leave blank to clear', value: c.evidenceUrl || '', placeholder: 'https://…' }],
         confirmText: 'Save',
         validate: function (v) { return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://'; }
@@ -13585,20 +13616,20 @@ function showModal(opts) {
       if (url && c.st === 'Not started') {
         var prevSt = c.st;
         c.st = 'In progress';
-        audit('Clause status changed', 'Clause', key, prevSt, 'In progress (evidence linked)');
+        audit('Clause status changed', 'Clause', clauseLabel(c), prevSt, 'In progress (evidence linked)');
         bumped = true;
       }
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      audit('Evidence link changed', 'Clause', key, prevUrl || '(none)', url || '(none)');
+      audit('Evidence link changed', 'Clause', clauseLabel(c), prevUrl || '(none)', url || '(none)');
       renderClauses(); renderNavCounts();
-      if (bumped) { renderDash(); toast('<b>Clause ' + esc(c.id) + '</b> moved to In progress.'); }
+      if (bumped) { renderDash(); toast('<b>' + esc(clauseLabel(c)) + '</b> moved to In progress.'); }
     },
 
     setClauseOwner: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c) return;
       var vals = await showModal({
-        title: 'Clause owner — ' + c.id,
+        title: 'Owner — ' + clauseLabel(c),
         message: 'Who is accountable for this requirement being met and kept evidenced. Leave blank to clear.',
         fields: [{ id: 'own', label: 'Owner', value: c.own || '', placeholder: 'e.g. S. Okafor' }],
         confirmText: 'Save'
@@ -13607,12 +13638,12 @@ function showModal(opts) {
       var prevOwn = c.own;
       c.own = vals.own.trim();
       try { await Store.updateClause(c); } catch (e) { warn(e); }
-      audit('Clause owner changed', 'Clause', key, prevOwn || '(none)', c.own || '(none)');
+      audit('Clause owner changed', 'Clause', clauseLabel(c), prevOwn || '(none)', c.own || '(none)');
       renderClauses();
     },
 
     openClauseEvidenceDoc: async function (key) {
-      var c = (S.clauses || []).find(function (x) { return x.id === key; });
+      var c = findClause(key);
       if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;
       if (Store.kind === 'demo') { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
       var win = window.open('', '_blank');
