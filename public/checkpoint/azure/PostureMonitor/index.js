@@ -57,6 +57,8 @@ function buildEvidenceLink(itemId) {
    VENDOR_LINK_SECRET or WEBSITE_HOSTNAME aren't set — an older
    deployment not yet redeployed with this app setting. */
 const VENDOR_QUESTIONNAIRE_PAGE_URL = 'https://www.compliance365.com.au/checkpoint/vendor-questionnaire.html';
+/* Where a Teams card's "Open Checkpoint" button goes. */
+const CHECKPOINT_APP_URL = process.env.CHECKPOINT_URL || 'https://www.compliance365.com.au/checkpoint/';
 function buildVendorLink(vendorItemId) {
   const secret = process.env.VENDOR_LINK_SECRET;
   const apiHost = process.env.WEBSITE_HOSTNAME;
@@ -1390,30 +1392,99 @@ async function notify(g, context, subject, htmlBody) {
   return sent;
 }
 
-/* Posts a plain-text summary to a Microsoft Teams Incoming Webhook, if
-   TEAMS_WEBHOOK_URL is set. Webhooks accept a simple markdown "text"
-   payload, not the HTML built for email, so tags are stripped rather
-   than rendered — see htmlToTeamsText() below. No Graph call and no
-   Graph permission at all, so this works even on a tenant that never
-   grants Mail.Send. */
-async function notifyTeams(context, subject, htmlBody) {
-  const url = process.env.TEAMS_WEBHOOK_URL;
-  if (!url) return false;
+/* Microsoft Teams notifications.
+
+   Office 365 Connectors — the classic "Incoming Webhook" — were retired
+   from Teams in May 2026; those URLs no longer deliver. Their
+   replacement is a webhook created by the Teams Workflows app ("Post to
+   a channel when a webhook request is received"), which takes an
+   Adaptive Card wrapped in a message envelope. Every Teams post below
+   is built by buildTeamsCard() in that shape.
+
+   The webhook URL comes from, in order: the TEAMS_WEBHOOK_URL app
+   setting (set by whoever deployed this Function), then the
+   teamsWebhookUrl Checkpoint setting (set by the practitioner in
+   Settings → Microsoft Teams, so no Azure portal visit is needed).
+   Resolved once per run by configureTeams(). Either way it is a plain
+   HTTPS POST whose URL is the only credential — no Graph permission.
+
+   What is sent is governed by two Checkpoint settings, both on unless
+   set to 'false': teamsAlerts (drift and governance alerts, as they
+   are raised) and teamsDigest (the periodic digest). */
+let TEAMS = { url: '', alerts: true, digest: true };
+
+function configureTeams(settings) {
+  const s = settings || {};
+  const url = (process.env.TEAMS_WEBHOOK_URL || s.teamsWebhookUrl || '').trim();
+  TEAMS = {
+    url: /^https:\/\//i.test(url) ? url : '',
+    alerts: s.teamsAlerts !== 'false',
+    digest: s.teamsDigest !== 'false'
+  };
+  return TEAMS;
+}
+
+/* An Adaptive Card in the envelope Teams Workflows webhooks accept.
+   `sections` is [{ heading, lines: [string] }] or a plain text string;
+   `facts` is [[label, value]]. Text is plain — Adaptive Card TextBlocks
+   render a small markdown subset, so ** is used for emphasis. */
+function buildTeamsCard(title, opts) {
+  const o = opts || {};
+  const body = [{ type: 'TextBlock', text: title, weight: 'Bolder', size: 'Medium', wrap: true }];
+  if (o.subtitle) body.push({ type: 'TextBlock', text: o.subtitle, isSubtle: true, spacing: 'None', wrap: true });
+  if (o.facts && o.facts.length) {
+    body.push({ type: 'FactSet', facts: o.facts.map(f => ({ title: String(f[0]), value: String(f[1]) })) });
+  }
+  if (typeof o.text === 'string' && o.text) body.push({ type: 'TextBlock', text: o.text, wrap: true });
+  (o.sections || []).forEach(sec => {
+    body.push({ type: 'TextBlock', text: sec.heading, weight: 'Bolder', spacing: 'Medium', wrap: true });
+    const lines = sec.lines && sec.lines.length ? sec.lines : ['None.'];
+    body.push({ type: 'TextBlock', text: lines.map(l => '- ' + l).join('\n'), wrap: true, spacing: 'Small' });
+  });
+  return {
+    type: 'message',
+    attachments: [{
+      contentType: 'application/vnd.microsoft.card.adaptive',
+      contentUrl: null,
+      content: {
+        $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+        type: 'AdaptiveCard',
+        version: '1.4',
+        body: body,
+        actions: [{ type: 'Action.OpenUrl', title: 'Open Checkpoint', url: o.url || CHECKPOINT_APP_URL }]
+      }
+    }]
+  };
+}
+
+/* POSTs one card. Never throws — a Teams failure must never roll back an
+   alert already written to SharePoint. Returns '' on success or the
+   error message, which the run records as teamsLastError so the
+   practitioner sees a broken webhook in Checkpoint rather than never
+   hearing about it. */
+async function postTeams(context, card) {
+  if (!TEAMS.url) return 'no webhook configured';
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '**' + subject + '**\n\n' + htmlToTeamsText(htmlBody) })
-    });
+    const res = await fetch(TEAMS.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(card) });
     if (!res.ok) throw new Error('Teams webhook returned ' + res.status);
-    return true;
+    TEAMS.lastError = '';
+    return '';
   } catch (e) {
-    context.log.error('Checkpoint governance sweep: Teams notification failed: ' + (e && e.message ? e.message : e));
-    return false;
+    const msg = (e && e.message) ? e.message : String(e);
+    context.log.error('Checkpoint: Teams notification failed: ' + msg);
+    TEAMS.lastError = msg;
+    return msg;
   }
 }
 
-/* Crude HTML->text for the Teams payload above. Every htmlBody this file
+/* An alert notification (drift or governance) as a Teams card. The
+   email HTML is flattened to text, same content, one channel post. */
+async function notifyTeams(context, subject, htmlBody) {
+  if (!TEAMS.url || !TEAMS.alerts) return false;
+  return (await postTeams(context, buildTeamsCard(subject, { text: htmlToTeamsText(htmlBody) }))) === '';
+}
+
+/* Crude HTML->text for the Teams cards above. Every htmlBody this file
    builds is always simple <p>/<ul>/<li>/<b> markup, never arbitrary
    content, so a full parser would be solving a problem that doesn't
    exist here — same reasoning as esc() being a plain replace chain
@@ -1434,7 +1505,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   const cadenceDays = numSetting(settings, 'controlReviewCadenceDays', DEFAULT_CONTROL_REVIEW_CADENCE_DAYS);
   /* Raw material for the periodic digest, filled in as each register is
      read below — so the digest costs no extra Graph calls. */
-  const digestData = { overdueActions: [], dueSoonActions: [], staleControls: 0 };
+  const digestData = { overdueActions: [], dueSoonActions: [], staleControls: 0, awaitingApproval: [] };
   /* Per-owner overdue chases, filled by the actions sweep below and
      sent only for findings that survive alert dedup. */
   const ownerChases = [];
@@ -1447,6 +1518,12 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
     for (const d of docs) {
       const controlled = !!d.status || CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
       if (!controlled || d.status === 'Superseded') continue;
+      /* Digest only: a controlled document still in Draft or In review
+         has not been issued, and approval is usually the one step
+         waiting on someone specific. */
+      if (d.status === 'Draft' || d.status === 'In review') {
+        digestData.awaitingApproval.push(String(d.name || '').replace(/\.html$/i, '') + (d.owner ? ' (owner ' + d.owner + ')' : ''));
+      }
 
       /* A controlled policy with no review date at all is its own
          finding — Clause 7.5.2 c) is not satisfied by a document
@@ -1850,10 +1927,11 @@ async function notifyOwner(g, context, to, subject, htmlBody) {
    ============================================================ */
 const DIGEST_FREQ_DAYS = { Weekly: 7, Monthly: 30 };
 
-function digestDue(settings, today) {
+function digestDue(settings, today, teamsAvailable) {
   if ((settings.digestEnabled || '') !== 'true') return false;
   const to = (settings.digestRecipients || '').trim();
-  if (!to) return false;
+  /* Needs somewhere to go: email recipients, or a Teams channel. */
+  if (!to && !teamsAvailable) return false;
   const every = DIGEST_FREQ_DAYS[settings.digestFrequency] || DIGEST_FREQ_DAYS.Weekly;
   const last = settings.digestLastSent;
   if (!last) return true;
@@ -1878,6 +1956,7 @@ function buildDigestHtml(d, today) {
     section('Overdue remediation actions (' + (d.overdueActions || []).length + ')', list(overdue)) +
     section('Due in the next 14 days (' + (d.dueSoonActions || []).length + ')', list(dueSoon)) +
     section('Open drift alerts (' + (d.openAlerts || []).length + ')', list(alerts)) +
+    section('Documents waiting for approval (' + (d.awaitingApproval || []).length + ')', list((d.awaitingApproval || []).slice(0, 10).map(n => esc(n)))) +
     section('Controls overdue for re-verification', '<p>' + (d.staleControls || 0) + '</p>') +
     '<p style="color:#666;margin-top:22px">Every figure above is computed from this tenant\'s own Checkpoint registers. ' +
     'Turn this digest off, or change who receives it, from the Settings view in Checkpoint.</p></div>';
@@ -1893,36 +1972,100 @@ async function setSetting(g, siteId, settingsListId, key, value) {
   }
 }
 
+/* The digest as a Teams card — the same figures as the email, laid out
+   for a channel: headline facts, then the lists people act on. */
+function buildDigestTeamsCard(d, today) {
+  const scoreFact = d.score + '/100' +
+    (typeof d.prevScore === 'number' ? ' (' + (d.score >= d.prevScore ? '+' : '') + (d.score - d.prevScore) + ')' : '');
+  const top = (arr, fmt) => (arr || []).slice(0, 8).map(fmt);
+  return buildTeamsCard('Checkpoint compliance digest — ' + today, {
+    subtitle: 'Generated by the scheduled monitor running in your own tenant.',
+    facts: [
+      ['Posture score', scoreFact],
+      ['Overdue actions', (d.overdueActions || []).length],
+      ['Due in 14 days', (d.dueSoonActions || []).length],
+      ['Open drift alerts', (d.openAlerts || []).length],
+      ['Awaiting approval', (d.awaitingApproval || []).length],
+      ['Controls overdue for re-verification', d.staleControls || 0]
+    ],
+    sections: [
+      { heading: 'Overdue', lines: top(d.overdueActions, a => '**' + a.ref + '** ' + a.title + ' — ' + a.days + ' days overdue' + (a.owner ? ', ' + a.owner : '')) },
+      { heading: 'Due soon', lines: top(d.dueSoonActions, a => '**' + a.ref + '** ' + a.title + ' — due ' + a.due + (a.owner ? ', ' + a.owner : '')) },
+      { heading: 'Waiting for approval', lines: top(d.awaitingApproval, n => n) }
+    ]
+  });
+}
+
+/* Sends the digest by email (NOTIFY_FROM + digestRecipients) and/or to
+   Teams (webhook + teamsDigest), whichever are configured. Either
+   succeeding counts as sent; digestLastSent is stamped only then, so a
+   digest that reached nobody is retried next run rather than silently
+   skipped. */
 async function sendDigest(g, context, siteId, lists, settings, digestData, today) {
   const to = (settings.digestRecipients || '').trim();
   const from = process.env.NOTIFY_FROM;
-  if (!from) {
-    context.log('Checkpoint digest is due but NOTIFY_FROM is not set — an app-only identity has no mailbox of its own, so it cannot send. See azure/README.md.');
-    return false;
-  }
   let ok = false;
-  try {
-    await g(`/users/${encodeURIComponent(from)}/sendMail`, {
-      method: 'POST',
-      body: {
-        message: {
-          subject: 'Checkpoint compliance digest — ' + today,
-          body: { contentType: 'HTML', content: buildDigestHtml(digestData, today) },
-          toRecipients: to.split(',').map(a => ({ emailAddress: { address: a.trim() } })).filter(r => r.emailAddress.address)
-        },
-        saveToSentItems: false
-      }
-    });
-    ok = true;
-  } catch (e) {
-    context.log.error('Checkpoint digest send failed (will retry next run): ' + (e && e.message ? e.message : e));
-    return false;
+  if (to && !from) {
+    context.log('Checkpoint digest has email recipients but NOTIFY_FROM is not set — an app-only identity has no mailbox of its own, so it cannot email. See azure/README.md.');
   }
+  if (to && from) {
+    try {
+      await g(`/users/${encodeURIComponent(from)}/sendMail`, {
+        method: 'POST',
+        body: {
+          message: {
+            subject: 'Checkpoint compliance digest — ' + today,
+            body: { contentType: 'HTML', content: buildDigestHtml(digestData, today) },
+            toRecipients: to.split(',').map(a => ({ emailAddress: { address: a.trim() } })).filter(r => r.emailAddress.address)
+          },
+          saveToSentItems: false
+        }
+      });
+      ok = true;
+    } catch (e) {
+      context.log.error('Checkpoint digest email failed (will retry next run): ' + (e && e.message ? e.message : e));
+    }
+  }
+  if (TEAMS.url && TEAMS.digest) {
+    if ((await postTeams(context, buildDigestTeamsCard(digestData, today))) === '') ok = true;
+  }
+  if (!ok) return false;
   /* Only stamped after a successful send — a failed send must be
      retried next run, not silently counted as done. */
   try { await setSetting(g, siteId, lists.Settings, 'digestLastSent', today); }
   catch (e) { context.log.error('Checkpoint digest sent but digestLastSent could not be recorded (it may send again next run): ' + (e && e.message ? e.message : e)); }
-  return ok;
+  return true;
+}
+
+/* Called once per run, after settings are read. The first time a given
+   webhook URL is seen, posts a short "connected" card, so whoever set it
+   up sees it working without waiting for an alert, and records
+   teamsConnectedAt / teamsConnectedUrl (a hash, never the URL itself).
+   At the end of the run, recordTeamsStatus() writes teamsLastError when
+   it changed, so Checkpoint's Settings can show a failing webhook. */
+function teamsUrlFingerprint(url) {
+  return require('crypto').createHash('sha256').update(String(url)).digest('hex').slice(0, 16);
+}
+async function announceTeamsConnection(g, context, siteId, lists, settings, today) {
+  if (!TEAMS.url) return;
+  const fp = teamsUrlFingerprint(TEAMS.url);
+  if (settings.teamsConnectedUrl === fp) return;
+  const err = await postTeams(context, buildTeamsCard('Checkpoint is connected to this channel', {
+    text: 'This channel will receive ' + [TEAMS.alerts ? 'compliance alerts as they are raised' : '', TEAMS.digest ? 'the periodic compliance digest' : ''].filter(Boolean).join(' and ') +
+      ' from the Checkpoint monitor running in your Microsoft 365 tenant. Change this in Checkpoint → Settings → Microsoft Teams.'
+  }));
+  if (err) return;
+  try {
+    await setSetting(g, siteId, lists.Settings, 'teamsConnectedUrl', fp);
+    await setSetting(g, siteId, lists.Settings, 'teamsConnectedAt', today);
+  } catch (e) { context.log.error('Checkpoint: Teams connected but the confirmation could not be recorded: ' + (e && e.message ? e.message : e)); }
+}
+async function recordTeamsStatus(g, context, siteId, lists, settings) {
+  if (!TEAMS.url || TEAMS.lastError === undefined) return;
+  const value = TEAMS.lastError ? new Date().toISOString().slice(0, 10) + ': ' + TEAMS.lastError : '';
+  if ((settings.teamsLastError || '') === value) return;
+  try { await setSetting(g, siteId, lists.Settings, 'teamsLastError', value); }
+  catch (e) { context.log.error('Checkpoint: could not record the Teams delivery status: ' + (e && e.message ? e.message : e)); }
 }
 
 module.exports = async function (context, myTimer) {
@@ -1934,6 +2077,8 @@ module.exports = async function (context, myTimer) {
     const lists = await resolveLists(g, siteId);
 
     const settings = await readSettings(g, siteId, lists.Settings);
+    configureTeams(settings);
+    await announceTeamsConnection(g, context, siteId, lists, settings, today);
     /* Resolved once, up front, and shared by the training check and the
        governance sweep below — both need the same lenient lookup, and
        resolving it here means the training result lands in `results`
@@ -2040,7 +2185,7 @@ module.exports = async function (context, myTimer) {
        failed execution because a mailbox was briefly unavailable. */
     let digestSent = false;
     try {
-      if (digestData && digestDue(settings, today)) {
+      if (digestData && digestDue(settings, today, !!(TEAMS.url && TEAMS.digest))) {
         const openAlertLabels = [];
         try {
           const alertItems = await g(`/sites/${siteId}/lists/${lists.Alerts}/items?$expand=fields&$top=999`);
@@ -2058,6 +2203,7 @@ module.exports = async function (context, myTimer) {
       context.log.error('Checkpoint digest step failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));
     }
 
+    await recordTeamsStatus(g, context, siteId, lists, settings);
     context.log(`Checkpoint posture monitor: scored ${score}, ${alertsWritten} drift alert(s) and ${governanceAlerts} governance alert(s) written${digestSent ? ', digest sent' : ''}.`);
   } catch (e) {
     context.log.error('Checkpoint posture monitor failed: ' + (e && e.message ? e.message : e));
@@ -2073,6 +2219,7 @@ module.exports = async function (context, myTimer) {
    Function host or a tenant. */
 module.exports.__test = {
   digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep,
+  configureTeams, buildTeamsCard, buildDigestTeamsCard, notifyTeams, sendDigest, announceTeamsConnection, recordTeamsStatus, teamsUrlFingerprint,
   runPostureChecks, runRegisterChecks, readDocumentRegister,
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,

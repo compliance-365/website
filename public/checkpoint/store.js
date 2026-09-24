@@ -933,6 +933,17 @@ window.DEFAULT_SETTINGS = {
   digestRecipients: '',
   digestFrequency: 'Weekly',
   digestLastSent: '',
+  /* Microsoft Teams notifications, sent by the scheduled monitor (azure/
+     PostureMonitor) through a Teams Workflows webhook. teamsWebhookUrl is
+     the webhook itself; teamsAlerts/teamsDigest choose what is posted.
+     teamsConnectedAt / teamsConnectedUrl / teamsLastError are written BY
+     the monitor, so Settings can show whether delivery is working. */
+  teamsWebhookUrl: '',
+  teamsAlerts: 'true',
+  teamsDigest: 'true',
+  teamsConnectedAt: '',
+  teamsConnectedUrl: '',
+  teamsLastError: '',
   /* Organisation profile — the Clause 4.2/4.3 facts generated policy
      documents fill themselves in from (see ORG_PROFILE_FIELDS in
      templates.js and resolveOrgTokens() in app.js). Empty by default:

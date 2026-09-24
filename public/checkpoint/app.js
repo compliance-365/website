@@ -797,7 +797,7 @@ function showModal(opts) {
     'bulkDocStatus', 'bulkDocOwner',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
-    'generateDocumentSet', 'approveDraftSet',
+    'generateDocumentSet', 'approveDraftSet', 'saveTeamsWebhook', 'clearTeamsWebhook', 'toggleTeamsSetting',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
     /* importCsv IS gated (unlike exportCsv, which is read-only): it is
        the largest single bulk write in the app. */
@@ -11164,7 +11164,7 @@ function showModal(opts) {
       var digestRecipCurrent = (S.settings && S.settings.digestRecipients) || '';
       var digestLastSentCurrent = S.settings && S.settings.digestLastSent;
       digestEl.innerHTML =
-        '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. This browser can only send it while you have Checkpoint open — it\'s a nudge on load, like the scan reminder above, not a schedule. If the scheduled monitor (SETUP.md § Continuous monitoring) is deployed for this tenant, it can send this digest unattended too — see azure/README.md § The periodic digest for the two app settings that turn it on.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" role="switch" aria-checked="' + (digestOnCurrent ? 'true' : 'false') + '" aria-label="Email digest enabled" data-action="App.toggleDigestEnabled"></button></div>' +
+        '<div class="fw-admin-row"><div><b>Compliance digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts, documents waiting for approval and readiness — emailed to whoever you list below, and posted to Microsoft Teams if connected (next card). This browser can only send it while you have Checkpoint open — it\'s a nudge on load, like the scan reminder above, not a schedule. If the scheduled monitor (SETUP.md § Continuous monitoring) is deployed for this tenant, it can send this digest unattended too — see azure/README.md § The periodic digest for the two app settings that turn it on.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" role="switch" aria-checked="' + (digestOnCurrent ? 'true' : 'false') + '" aria-label="Email digest enabled" data-action="App.toggleDigestEnabled"></button></div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
         '<input class="mini" id="digestRecipientsInput" aria-label="Email digest recipients" placeholder="Recipients — comma-separated" value="' + esc(digestRecipCurrent) + '" style="flex:1;min-width:220px">' +
         '<select class="mini" data-change-action="App.setDigestFrequency" aria-label="Email digest frequency">' + ['Weekly', 'Monthly'].map(function (f) { return '<option' + (digestFreqCurrent === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select>' +
@@ -11172,6 +11172,40 @@ function showModal(opts) {
         '<button class="btn sm" data-action="App.sendDigestNow">Send digest now</button>' +
         '</div>' +
         '<p class="src" style="margin-top:8px">Last sent: ' + (digestLastSentCurrent ? fmtDate(digestLastSentCurrent) : 'Never') + '</p>';
+    }
+
+    /* Microsoft Teams — the scheduled monitor posts to a channel through
+       a Teams Workflows webhook (azure/README.md § Microsoft Teams). The
+       browser never posts itself: a closed tab sends nothing, and the
+       page's CSP deliberately allows no third-party endpoints. So this
+       card configures, and reports back what the monitor last recorded. */
+    var teamsEl = document.getElementById('teamsRow');
+    if (teamsEl) {
+      var st = S.settings || {};
+      var tUrl = st.teamsWebhookUrl || '';
+      var tHost = '';
+      try { tHost = tUrl ? new URL(tUrl).host : ''; } catch (e) { tHost = ''; }
+      var tStatus = !tUrl
+        ? 'Not connected.'
+        : st.teamsLastError
+          ? '<b style="color:var(--fail)">Last post failed</b> — ' + esc(st.teamsLastError) + '. Check the webhook still exists in the channel\'s Workflows, then save it again.'
+          : st.teamsConnectedAt
+            ? 'Connected — confirmation posted ' + fmtDate(st.teamsConnectedAt) + ' (webhook on ' + esc(tHost) + ').'
+            : 'Saved (' + esc(tHost) + '). The scheduled monitor posts a confirmation to the channel on its next run.';
+      var tOn = function (k) { return st[k] !== 'false'; };
+      teamsEl.innerHTML =
+        '<div class="fw-admin-row"><div><b>Microsoft Teams</b><p>Post compliance alerts — posture drift, overdue actions, policies past review, and the other governance findings — to a Teams channel as they are raised, and the compliance digest above on its schedule. ' +
+        'In the channel, open <b>Workflows</b> → <i>Post to a channel when a webhook request is received</i>, copy the URL it gives you and paste it here. Sent by the scheduled monitor (SETUP.md § Continuous monitoring), so it works with Checkpoint closed.</p></div></div>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
+        '<input class="mini" id="teamsWebhookInput" type="url" aria-label="Teams Workflows webhook URL" placeholder="' + (tUrl ? 'Webhook saved — paste a new URL to replace it' : 'Paste the Workflows webhook URL') + '" style="flex:1;min-width:260px">' +
+        '<button class="btn ghost sm" data-action="App.saveTeamsWebhook">Save webhook</button>' +
+        (tUrl ? '<button class="btn ghost sm" data-action="App.clearTeamsWebhook">Disconnect</button>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:12px">' +
+        '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (tOn('teamsAlerts') ? ' on' : '') + '" role="switch" aria-checked="' + tOn('teamsAlerts') + '" aria-label="Post alerts to Teams" data-action="App.toggleTeamsSetting" data-id="teamsAlerts"></button> Alerts as they are raised</label>' +
+        '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (tOn('teamsDigest') ? ' on' : '') + '" role="switch" aria-checked="' + tOn('teamsDigest') + '" aria-label="Post the digest to Teams" data-action="App.toggleTeamsSetting" data-id="teamsDigest"></button> The compliance digest (needs the digest switched on above)</label>' +
+        '</div>' +
+        '<p class="src" style="margin-top:8px">' + tStatus + ' The webhook URL is the only credential for the channel — anyone who can read this tenant\'s Checkpoint Settings list can see it, so remove it here (and in Workflows) if it is ever exposed.</p>';
     }
 
     var orgProfEl = document.getElementById('orgProfileRow');
@@ -16797,6 +16831,59 @@ function showModal(opts) {
       try { await Store.setSetting('sodEnforced', next); } catch (e) { warn(e); }
       audit('Setting changed', 'Setting', 'sodEnforced', next === 'true' ? 'false' : 'true', next);
       toast('Segregation of duties ' + (next === 'true' ? 'enforced' : 'switched off'));
+      renderFrameworksAdmin();
+    },
+
+    /* Teams webhook — validated as an https URL only. Workflows webhook
+       hosts vary by tenant and region (environment.api.powerplatform.com,
+       *.logic.azure.com), so pinning a host list would break real ones. */
+    saveTeamsWebhook: async function () {
+      var input = document.getElementById('teamsWebhookInput');
+      var url = ((input && input.value) || '').trim();
+      if (!url) { toast('Paste the webhook URL from the channel\'s Workflows first.'); return; }
+      var parsed = null;
+      try { parsed = new URL(url); } catch (e) { parsed = null; }
+      if (!parsed || parsed.protocol !== 'https:') { toast('That doesn\'t look like a webhook URL — it should start with https://'); return; }
+      if (/webhook\.office\.com$/i.test(parsed.host) || /outlook\.office\.com$/i.test(parsed.host)) {
+        var go = await showModal({
+          title: 'This looks like a retired Incoming Webhook',
+          message: 'Microsoft retired Office 365 Connectors — including classic Incoming Webhooks on webhook.office.com — in May 2026, so this URL will not deliver. Create a new one in the channel with Workflows → "Post to a channel when a webhook request is received".\n\nSave it anyway?',
+          confirmText: 'Save anyway', cancelText: 'Cancel'
+        });
+        if (!go) return;
+      }
+      S.settings.teamsWebhookUrl = url;
+      S.settings.teamsLastError = '';
+      try {
+        await Store.setSetting('teamsWebhookUrl', url);
+        await Store.setSetting('teamsLastError', '');
+      } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'teamsWebhookUrl', '(hidden)', 'Teams webhook saved (' + parsed.host + ')');
+      toast('Teams webhook saved — the scheduled monitor posts a confirmation to the channel on its next run.');
+      renderFrameworksAdmin();
+    },
+
+    clearTeamsWebhook: async function () {
+      var ok = await showModal({ title: 'Disconnect Microsoft Teams?', message: 'Checkpoint stops posting to the channel. Delete the workflow in Teams too if this webhook should never be used again.', confirmText: 'Disconnect', cancelText: 'Cancel' });
+      if (!ok) return;
+      ['teamsWebhookUrl', 'teamsConnectedAt', 'teamsConnectedUrl', 'teamsLastError'].forEach(function (k) { S.settings[k] = ''; });
+      try {
+        await Store.setSetting('teamsWebhookUrl', '');
+        await Store.setSetting('teamsConnectedAt', '');
+        await Store.setSetting('teamsConnectedUrl', '');
+        await Store.setSetting('teamsLastError', '');
+      } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'teamsWebhookUrl', '(hidden)', 'Teams disconnected');
+      toast('Microsoft Teams disconnected.');
+      renderFrameworksAdmin();
+    },
+
+    toggleTeamsSetting: async function (key) {
+      if (key !== 'teamsAlerts' && key !== 'teamsDigest') return;
+      var next = S.settings[key] === 'false' ? 'true' : 'false';
+      S.settings[key] = next;
+      try { await Store.setSetting(key, next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', key, next === 'true' ? 'false' : 'true', next);
       renderFrameworksAdmin();
     },
 
