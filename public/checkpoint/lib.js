@@ -4918,6 +4918,104 @@
     return d.toISOString().slice(0, 10);
   }
 
+  /* Clause 4 drafting — turns the scope & context questionnaire's
+     plain-English answers (ORG_CONTEXT_QUESTIONS in templates.js) into
+     first-draft text for the ISO 27001 Clause 4 facts: external and
+     internal issues (4.1), interested parties' requirements (4.2), the
+     climate change determination (4.1/4.2 as amended in 2024),
+     interfaces and dependencies (4.3 c) and a one-sentence scope
+     statement of the kind a certification body prints on the
+     certificate.
+
+     Deliberately a draft, never a finished answer: the wizard shows
+     every string for editing before anything is saved, and the output
+     only ever contains what the answers support — an unanswered
+     question contributes nothing rather than a guess. `answers` holds
+     the question ids below plus the free-text scope fields; `preset`
+     is the matching INDUSTRY_PROFILES entry (its externalIssues line
+     is the sector-specific part no generic rule can supply). */
+  function buildOrgContextDraft(answers, preset, orgName) {
+    var a = answers || {};
+    var p = preset || {};
+    function sentenceList(items) {
+      items = items.filter(Boolean);
+      if (!items.length) return '';
+      var s = items.length === 1 ? items[0] : items.slice(0, -1).join('; ') + '; and ' + items[items.length - 1];
+      return s.charAt(0).toUpperCase() + s.slice(1) + '.';
+    }
+    var sensitive = a.personalData === 'sensitive';
+    var customerPii = a.personalData === 'customers' || sensitive;
+    var msp = a.itModel === 'msp' || a.itModel === 'mixed';
+
+    var external = [
+      p.externalIssues || '',
+      'a persistent threat landscape — ransomware, business email compromise and credential phishing aimed at Microsoft 365 accounts'
+    ];
+    if (a.cloud === 'm365') external.push('reliance on Microsoft 365 for email, collaboration and file storage, which makes the security of that tenant central to the ISMS');
+    if (a.cloud === 'saas' || a.cloud === 'iaas') external.push('dependence on third-party SaaS applications that hold organisation data outside the Microsoft 365 tenant');
+    if (a.cloud === 'iaas') external.push('hosted infrastructure in public cloud (such as Azure or AWS) under the provider’s shared-responsibility model');
+    if (msp) external.push('dependence on a managed service provider for IT operations, which makes that provider’s own security part of the organisation’s');
+    if (a.customerDemand === 'often') external.push('customers increasingly asking for evidence of security, such as completed security questionnaires, before they buy');
+    if (a.customerDemand === 'contract') external.push('customers requiring specific security controls, breach notification or independent certification as a condition of contract');
+    if (customerPii) external.push('regulatory and public expectations for protecting personal information, including mandatory notification of eligible data breaches');
+    if (a.ai === 'tools' || a.ai === 'builds') external.push('rapid adoption of generative AI, and emerging regulation and customer expectations about how it is used');
+
+    var internal = [];
+    if (a.size === 'micro') internal.push('a small team in which security responsibilities are held alongside other roles, which limits dedicated security capacity and segregation of duties');
+    if (a.size === 'small') internal.push('a growing organisation formalising processes that previously relied on the knowledge of a few individuals');
+    if (a.size === 'medium' || a.size === 'large') internal.push('several teams and management layers, which calls for consistent application of policy across the organisation');
+    if (a.workModel === 'hybrid') internal.push('a hybrid workforce that accesses information both from the office and from homes and other locations outside the organisation’s physical control');
+    if (a.workModel === 'remote') internal.push('a fully remote workforce, so every working location is outside the organisation’s physical control');
+    if (a.itModel === 'inhouse') internal.push('an in-house IT capability whose time is shared between day-to-day operations and security improvement');
+    if (msp) internal.push('reliance on external IT expertise, which requires a clear division of security responsibilities with the provider');
+    if (a.develops === 'yes') internal.push('in-house software development, which brings secure development, change control and protection of source code into scope');
+    if (sensitive) internal.push('processing of sensitive personal information (such as health or financial information), which raises the impact of any breach');
+    if (a.ai === 'builds') internal.push('development of AI capabilities within the organisation’s own products or services');
+    if (a.change === 'growing') internal.push('rapid growth, with people, systems and suppliers being added faster than controls are usually updated');
+    if (a.change === 'major') internal.push('significant organisational change underway, such as a restructure, merger or major system migration');
+    if (internal.length) internal.push('a security programme being formalised against ISO/IEC 27001, with existing controls at varying levels of maturity');
+
+    var reqs = [];
+    var custReq = 'customers expect their information to be kept confidential and services to be available';
+    if (a.customerDemand === 'often') custReq += ', and increasingly ask for evidence of this through security questionnaires';
+    if (a.customerDemand === 'contract') custReq += ', and contractually require specific security controls, prompt breach notification and in some cases independent certification';
+    reqs.push(custReq);
+    reqs.push('regulators require compliance with the legal and regulatory obligations recorded in this profile' + (customerPii ? ', including notification of eligible data breaches' : ''));
+    reqs.push('employees expect their own personal information to be protected and clear guidance on their security responsibilities');
+    reqs.push('owners and the board expect information risk to be managed within appetite and reported to them');
+    if (msp || a.cloud) reqs.push('suppliers and service providers require clearly defined, contractually agreed access and security responsibilities');
+    if (a.ai === 'builds') reqs.push('users of AI-enabled products and services expect transparency about AI use and fair, reliable outcomes');
+
+    var climate = '';
+    if (a.climate === 'relevant') climate = 'Climate change has been considered and determined to be a relevant issue: the effect of extreme weather on facilities, power, connectivity and key suppliers is addressed through business continuity and supplier planning, and is revisited at each management review.';
+    if (a.climate === 'not-relevant') climate = 'Climate change has been considered and determined not to be a material issue for the information security management system at present. The determination is revisited at each management review.';
+
+    var interfaces = [];
+    if (a.cloud) interfaces.push('Microsoft 365, where Microsoft operates the underlying platform and the organisation is responsible for its tenant configuration, identities and data');
+    if (a.cloud === 'saas' || a.cloud === 'iaas') interfaces.push('third-party SaaS applications, each governed through the Supplier Security Policy');
+    if (a.cloud === 'iaas') interfaces.push('public cloud infrastructure, where the provider secures the physical and virtualisation layers and the organisation secures its workloads, identities and configuration');
+    if (a.itModel === 'msp') interfaces.push('the managed service provider, which administers the organisation’s IT under contract with defined security responsibilities');
+    if (a.itModel === 'mixed') interfaces.push('the managed service provider, which administers part of the organisation’s IT under contract with defined security responsibilities');
+    if (a.workModel === 'hybrid' || a.workModel === 'remote') interfaces.push('home and other remote working environments, which are not under the organisation’s physical control');
+    if (interfaces.length) interfaces.push('customers and partners with whom information is exchanged');
+
+    function or(v, d) { return (v && String(v).trim()) || d; }
+    var scopeStatement = 'The information security management system of ' + or(orgName, 'the organisation') +
+      ' covering ' + or(a.services, 'the services it delivers') +
+      ', provided by ' + or(a.businessUnits, 'all of its business units and teams') +
+      ' from ' + or(a.locations, 'all of its locations') +
+      ', in accordance with the current Statement of Applicability.';
+
+    return {
+      externalIssues: sentenceList(external),
+      internalIssues: sentenceList(internal),
+      partyRequirements: sentenceList(reqs),
+      climate: climate,
+      interfaces: sentenceList(interfaces),
+      scopeStatement: scopeStatement
+    };
+  }
+
   return {
     normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
@@ -4982,6 +5080,7 @@
     trainingFocusRows: trainingFocusRows, trainingSummary: trainingSummary,
     documentFocusRows: documentFocusRows, documentFocusLabel: documentFocusLabel,
     dedupeAudience: dedupeAudience,
-    THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS
+    THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS,
+    buildOrgContextDraft: buildOrgContextDraft
   };
 });

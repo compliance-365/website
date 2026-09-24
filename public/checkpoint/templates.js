@@ -1668,6 +1668,10 @@ window.POLICY_TEMPLATES = [
     scope: 'This document describes the ISMS itself: what it does and does not cover — the business units, locations and services in scope, and anything deliberately excluded.',
     policyStatements: [
       {
+        rule: 'Scope statement: {{scopeStatement}}',
+        because: 'A one-sentence statement is what appears on a certificate and in customer assurance, so it must agree with the detailed scope below.'
+      },
+      {
         rule: 'The ISMS covers the organisation’s information and the systems that process it, centred on its Microsoft 365 tenant. In scope are the following business units and teams: {{businessUnits}}.',
         because: 'A scope stated only in general terms cannot be audited, and cannot tell anyone whether a given system is inside it.'
       },
@@ -1682,6 +1686,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'The obligations the organisation must satisfy within this scope include: {{regulatory}}.',
         because: 'Clause 4.2 asks not just who the interested parties are but what they require — an obligation nobody has written down is one nobody is demonstrably meeting.'
+      },
+      {
+        rule: 'The interfaces and dependencies between activities performed by the organisation and those performed by other organisations are: {{interfaces}}',
+        because: 'Clause 4.3 requires these to be considered, because the boundary of the ISMS is usually drawn at exactly these points.'
       },
       {
         rule: 'The scope includes the organisation’s people, its processes, and the technology it controls; reliance on Microsoft 365 and other third-party services is in scope for oversight and managed through the Supplier Security Policy, even though those providers’ internal operations are not the organisation’s to run.',
@@ -1898,14 +1906,14 @@ window.POLICY_TEMPLATES = [
     id: 'context-interested-parties',
     title: 'Organisational Context & Interested Parties',
     purpose: 'This document records the internal and external issues that affect the organisation’s ability to achieve the intended outcomes of its information security management system, the interested parties relevant to it, and what those parties require. It satisfies the ISO/IEC 27001 Clause 4.1 (context) and Clause 4.2 (interested parties) requirements, and is the input the ISMS Scope Document draws its boundaries from.',
-    scope: 'Applies to the information security management system as a whole. It describes the organisation’s situation as a {{industry}} organisation delivering {{services}}, and is revisited whenever that situation changes.',
+    scope: 'Applies to the information security management system as a whole. It describes the situation of the organisation as it delivers {{services}}, and is revisited whenever that situation changes.',
     policyStatements: [
       {
-        rule: 'External issues relevant to information security are identified and recorded — including the regulatory environment, the threat landscape facing the sector, customer and market expectations, and dependence on cloud and other third-party providers.',
+        rule: 'External issues relevant to information security are identified and recorded. Those currently identified are: {{externalIssues}}',
         because: 'Clause 4.1 asks what outside the organisation shapes its security outcomes; an ISMS designed without that view protects against the wrong things.'
       },
       {
-        rule: 'Internal issues relevant to information security are identified and recorded — including the organisation’s structure, culture, capability and capacity, technology estate, and the maturity of its existing controls.',
+        rule: 'Internal issues relevant to information security are identified and recorded. Those currently identified are: {{internalIssues}}',
         because: 'An organisation’s own constraints decide what controls it can realistically operate, which is as important to the design as the threats it faces.'
       },
       {
@@ -1913,12 +1921,20 @@ window.POLICY_TEMPLATES = [
         because: 'Security obligations come from people and bodies outside the security function, and a party nobody has named is a requirement nobody is tracking.'
       },
       {
-        rule: 'The relevant requirements of each interested party are recorded, including legal, regulatory and contractual obligations. These include: {{regulatory}}. The Legal, Regulatory & Contractual Requirements Policy governs how these obligations are kept current.',
+        rule: 'The relevant requirements of each interested party are recorded. {{partyRequirements}}',
+        because: 'Clause 4.2 asks not just who the interested parties are but what they require of the organisation.'
+      },
+      {
+        rule: 'Legal, regulatory and contractual obligations are recorded among those requirements. These include: {{regulatory}}. The Legal, Regulatory & Contractual Requirements Policy governs how these obligations are kept current.',
         because: 'Clause 4.2 asks not just who the interested parties are but which of their requirements the ISMS will address — the list of obligations is what the controls are ultimately accountable to.'
       },
       {
         rule: 'For each requirement, the organisation records which of them will be addressed through the ISMS, and where (a policy, a control, a contract clause or an objective).',
         because: 'The 2022 edition added this explicitly: a requirement identified but not traced to anything that meets it is a known gap.'
+      },
+      {
+        rule: '{{climate}}',
+        because: 'Since ISO/IEC 27001:2022 Amendment 1 (2024), the organisation must determine whether climate change is a relevant issue, and auditors now ask to see the determination.'
       },
       {
         rule: 'Context and interested parties are a standing input to management review, and this document is updated whenever a material change in either is identified.',
@@ -3315,7 +3331,86 @@ window.ORG_PROFILE_FIELDS = [
     type: 'textarea',
     hint: 'Anything explicitly outside the ISMS, and why. Leave blank if nothing is excluded — that is a valid and common answer.',
     fallback: 'nothing — the ISMS covers the whole of the organisation described above'
+  },
+  /* The Clause 4 context facts below are drafted by the scope & context
+     questionnaire (App.orgProfileWizard → CheckpointLib.
+     buildOrgContextDraft()) from plain-English answers, then edited
+     before saving. Each value is one or more complete sentences, so
+     every token sits at the end of a statement and its fallback is a
+     complete sentence too. */
+  {
+    key: 'orgExternalIssues', token: 'externalIssues', label: 'External issues (Clause 4.1)',
+    type: 'textarea',
+    hint: 'What outside the organisation affects its information security: sector, regulation, threats, customers, suppliers.',
+    fallback: 'The regulatory environment, the threat landscape facing the sector, customer and market expectations, and dependence on cloud and other third-party providers.'
+  },
+  {
+    key: 'orgInternalIssues', token: 'internalIssues', label: 'Internal issues (Clause 4.1)',
+    type: 'textarea',
+    hint: 'What inside the organisation affects it: size, structure, ways of working, capability, change.',
+    fallback: 'The organisation’s structure, culture, capability and capacity, its technology estate, and the maturity of its existing controls.'
+  },
+  {
+    key: 'orgPartyRequirements', token: 'partyRequirements', label: 'What interested parties require (Clause 4.2)',
+    type: 'textarea',
+    hint: 'What each interested party needs or expects of the organisation’s information security.',
+    fallback: 'Customers expect confidentiality and availability of their information and services; regulators expect compliance with applicable law; employees expect their personal information to be protected; and owners expect information risk to be managed within appetite.'
+  },
+  {
+    key: 'orgClimate', token: 'climate', label: 'Climate change determination (Clause 4.1/4.2)',
+    type: 'textarea',
+    hint: 'ISO/IEC 27001:2022 Amendment 1 (2024) requires the organisation to determine whether climate change is a relevant issue.',
+    fallback: 'Whether climate change is a relevant issue has been considered, as ISO/IEC 27001:2022 Amendment 1 requires, and the determination is revisited at each management review.'
+  },
+  {
+    key: 'orgInterfaces', token: 'interfaces', label: 'Interfaces and dependencies (Clause 4.3 c)',
+    type: 'textarea',
+    hint: 'Where the organisation’s activities meet those performed by others: cloud platforms, IT providers, remote working, customers.',
+    fallback: 'Microsoft 365 and other cloud services, the organisation’s IT and other suppliers, and the customers and partners with whom information is exchanged.'
+  },
+  {
+    key: 'orgScopeStatement', token: 'scopeStatement', label: 'Scope statement',
+    type: 'textarea',
+    hint: 'One sentence summarising the scope — the form a certification body prints on the certificate.',
+    fallback: 'The information security management system of the organisation, covering the services it delivers, in accordance with the current Statement of Applicability.'
   }
+];
+
+/* The scope & context questionnaire — plain-English questions a client
+   can answer without knowing ISO 27001, each one feeding
+   CheckpointLib.buildOrgContextDraft() (lib.js), which drafts the
+   Clause 4 fields above from them. Stored as ordinary Settings rows
+   under `key` so the questionnaire re-opens with its previous answers.
+   An empty answer ('') contributes nothing to the draft. */
+window.ORG_CONTEXT_QUESTIONS = [
+  { id: 'size', key: 'orgSize', label: 'How many people work for the organisation?', options: [
+    { value: 'micro', label: 'Fewer than 20' }, { value: 'small', label: '20 to 99' },
+    { value: 'medium', label: '100 to 499' }, { value: 'large', label: '500 or more' }] },
+  { id: 'workModel', key: 'orgWorkModel', label: 'Where do people work?', options: [
+    { value: 'office', label: 'Mainly in our own offices' }, { value: 'hybrid', label: 'A mix of office and home or remote' },
+    { value: 'remote', label: 'Fully remote' }] },
+  { id: 'itModel', key: 'orgItModel', label: 'Who runs the organisation’s IT?', options: [
+    { value: 'inhouse', label: 'Our own IT staff' }, { value: 'msp', label: 'A managed service provider (MSP)' },
+    { value: 'mixed', label: 'A mix of our own staff and an MSP' }] },
+  { id: 'cloud', key: 'orgCloud', label: 'Which cloud services hold the organisation’s information?', options: [
+    { value: 'm365', label: 'Microsoft 365 only' }, { value: 'saas', label: 'Microsoft 365 plus other online (SaaS) applications' },
+    { value: 'iaas', label: 'All of those, plus our own servers in Azure, AWS or similar' }] },
+  { id: 'develops', key: 'orgDevelops', label: 'Does the organisation develop its own software?', options: [
+    { value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] },
+  { id: 'personalData', key: 'orgPersonalData', label: 'What personal information does it hold?', options: [
+    { value: 'staff', label: 'Only about our own staff' }, { value: 'customers', label: 'About customers or members of the public' },
+    { value: 'sensitive', label: 'Sensitive information, such as health or financial records' }] },
+  { id: 'customerDemand', key: 'orgCustomerDemand', label: 'Do customers ask for evidence of your security?', options: [
+    { value: 'rarely', label: 'Rarely' }, { value: 'often', label: 'Often — security questionnaires, due diligence' },
+    { value: 'contract', label: 'It is written into our contracts, or certification is required' }] },
+  { id: 'ai', key: 'orgAiUse', label: 'How does the organisation use AI?', options: [
+    { value: 'none', label: 'It does not' }, { value: 'tools', label: 'Staff use AI tools such as Copilot or ChatGPT' },
+    { value: 'builds', label: 'We build AI into our own products or services' }] },
+  { id: 'change', key: 'orgChange', label: 'Is the organisation going through change?', options: [
+    { value: 'stable', label: 'No — broadly stable' }, { value: 'growing', label: 'Growing quickly' },
+    { value: 'major', label: 'Major change, such as a restructure, merger or system migration' }] },
+  { id: 'climate', key: 'orgClimateRelevant', label: 'Could climate change (for example extreme weather) disrupt the organisation, its sites or its key suppliers?', options: [
+    { value: 'relevant', label: 'Yes, it could' }, { value: 'not-relevant', label: 'No — not materially' }] }
 ];
 
 /* Australian-market industry presets. These pre-fill the two fields
@@ -3333,52 +3428,62 @@ window.INDUSTRY_PROFILES = [
   {
     id: 'saas', label: 'Technology / SaaS',
     interestedParties: 'Enterprise and SMB customers, prospective customers’ procurement and security teams, investors, employees, cloud and sub-processor suppliers, and the regulators of the markets the product is sold into.',
-    regulatory: 'Privacy Act 1988 (Cth) and the Australian Privacy Principles; the Notifiable Data Breaches scheme; customer contractual security schedules and DPAs; where customers are overseas, GDPR or equivalent obligations flowed down by contract.'
+    regulatory: 'Privacy Act 1988 (Cth) and the Australian Privacy Principles; the Notifiable Data Breaches scheme; customer contractual security schedules and DPAs; where customers are overseas, GDPR or equivalent obligations flowed down by contract.',
+    externalIssues: 'a competitive SaaS market in which buyers expect independent security assurance, and customers in several jurisdictions each bringing their own privacy obligations'
   },
   {
     id: 'healthcare', label: 'Healthcare / Medical',
     interestedParties: 'Patients and their families, treating clinicians and referrers, Medicare and private health insurers, the Australian Digital Health Agency, state health departments, employees, and clinical-system and pathology suppliers.',
-    regulatory: 'Privacy Act 1988 (Cth) — noting health information is sensitive information and the small-business exemption does not apply to health service providers; My Health Records Act 2012; state health records legislation; the Notifiable Data Breaches scheme.'
+    regulatory: 'Privacy Act 1988 (Cth) — noting health information is sensitive information and the small-business exemption does not apply to health service providers; My Health Records Act 2012; state health records legislation; the Notifiable Data Breaches scheme.',
+    externalIssues: 'a sector heavily targeted by ransomware because clinical services cannot tolerate downtime, with strict expectations for health information privacy'
   },
   {
     id: 'finserv', label: 'Financial services',
     interestedParties: 'Retail and wholesale customers, APRA and ASIC, AUSTRAC, the board and risk committee, employees, outsourced service providers and material service providers, and scheme or clearing counterparties.',
-    regulatory: 'APRA CPS 234 (Information Security) and CPS 230 (Operational Risk Management) where APRA-regulated; AFSL obligations; AML/CTF Act 2006 and AUSTRAC reporting; Privacy Act 1988 (Cth); the Notifiable Data Breaches scheme.'
+    regulatory: 'APRA CPS 234 (Information Security) and CPS 230 (Operational Risk Management) where APRA-regulated; AFSL obligations; AML/CTF Act 2006 and AUSTRAC reporting; Privacy Act 1988 (Cth); the Notifiable Data Breaches scheme.',
+    externalIssues: 'prudential and conduct regulation (APRA and ASIC) with explicit information security and operational resilience expectations, and persistent fraud and account-takeover attempts'
   },
   {
     id: 'government', label: 'Government / public sector',
     interestedParties: 'Citizens and service recipients, the responsible minister and department, the relevant Auditor-General, other agencies sharing data, employees, and contracted service providers.',
-    regulatory: 'The Protective Security Policy Framework (PSPF) and the ISM where applicable; state equivalents such as Queensland’s IS18 or the NSW Cyber Security Policy; Privacy Act 1988 (Cth) or the state privacy act that applies; public-records and archives legislation.'
+    regulatory: 'The Protective Security Policy Framework (PSPF) and the ISM where applicable; state equivalents such as Queensland’s IS18 or the NSW Cyber Security Policy; Privacy Act 1988 (Cth) or the state privacy act that applies; public-records and archives legislation.',
+    externalIssues: 'government security policy (the PSPF and the ISM, or the state equivalent) with annual reporting obligations, and high public and ministerial scrutiny of any data breach'
   },
   {
     id: 'defence', label: 'Defence industry',
     interestedParties: 'The Department of Defence and its Defence Industry Security Office, prime contractors and their supply chains, security-cleared personnel, the Australian Signals Directorate, and subcontractors handling controlled information.',
-    regulatory: 'Defence Industry Security Program (DISP) membership conditions; the Information Security Manual (ISM); the Defence Security Principles Framework; export-control obligations under the Defence Trade Controls Act 2012; Privacy Act 1988 (Cth).'
+    regulatory: 'Defence Industry Security Program (DISP) membership conditions; the Information Security Manual (ISM); the Defence Security Principles Framework; export-control obligations under the Defence Trade Controls Act 2012; Privacy Act 1988 (Cth).',
+    externalIssues: 'security requirements set by Defence (DISP and the ISM) as a condition of contracts, targeting by state-sponsored actors, and export-control obligations on technical data'
   },
   {
     id: 'education', label: 'Education / training',
     interestedParties: 'Students and, where students are minors, their parents or guardians; academic and professional staff; accrediting and regulatory bodies such as TEQSA or ASQA; funding departments; alumni; and learning-platform suppliers.',
-    regulatory: 'Privacy Act 1988 (Cth) or the applicable state privacy act; the ESOS Act and National Code where international students are enrolled; state child-safety and working-with-children obligations; the Notifiable Data Breaches scheme.'
+    regulatory: 'Privacy Act 1988 (Cth) or the applicable state privacy act; the ESOS Act and National Code where international students are enrolled; state child-safety and working-with-children obligations; the Notifiable Data Breaches scheme.',
+    externalIssues: 'large and changing user populations of students and staff, duty-of-care expectations where students are minors, and a sector frequently targeted by credential theft'
   },
   {
     id: 'critical-infra', label: 'Critical infrastructure / utilities',
     interestedParties: 'End consumers and connected communities, the Cyber and Infrastructure Security Centre, sector regulators, state emergency and essential-services bodies, employees, and operational-technology and maintenance suppliers.',
-    regulatory: 'Security of Critical Infrastructure Act 2018 (SOCI) — including the critical infrastructure risk management program and mandatory cyber incident reporting obligations where the entity is a responsible entity; sector-specific licence conditions; Privacy Act 1988 (Cth).'
+    regulatory: 'Security of Critical Infrastructure Act 2018 (SOCI) — including the critical infrastructure risk management program and mandatory cyber incident reporting obligations where the entity is a responsible entity; sector-specific licence conditions; Privacy Act 1988 (Cth).',
+    externalIssues: 'obligations under the Security of Critical Infrastructure Act, targeting by state-sponsored and criminal actors, and the safety consequences of disruption to operational technology'
   },
   {
     id: 'proserv', label: 'Professional services',
     interestedParties: 'Clients and their own regulators, professional and registration bodies, insurers, employees and contractors, and the platform and hosting suppliers that hold client material.',
-    regulatory: 'Privacy Act 1988 (Cth); professional confidentiality and, where legal services are provided, legal professional privilege obligations; client contractual security and confidentiality terms; the Notifiable Data Breaches scheme.'
+    regulatory: 'Privacy Act 1988 (Cth); professional confidentiality and, where legal services are provided, legal professional privilege obligations; client contractual security and confidentiality terms; the Notifiable Data Breaches scheme.',
+    externalIssues: 'clients entrusting confidential material and increasingly assessing their advisers’ security, and business email compromise targeting payments and trust accounts'
   },
   {
     id: 'notforprofit', label: 'Not-for-profit / community',
     interestedParties: 'Service recipients and their families, donors and members, the ACNC, grant-funding bodies and government departments, volunteers and employees, and service-delivery partners.',
-    regulatory: 'Privacy Act 1988 (Cth) where it applies; ACNC governance standards; grant and funding-agreement security conditions; state child-safety obligations where services are delivered to minors.'
+    regulatory: 'Privacy Act 1988 (Cth) where it applies; ACNC governance standards; grant and funding-agreement security conditions; state child-safety obligations where services are delivered to minors.',
+    externalIssues: 'limited funding for security, funders and grant bodies attaching security conditions, and the trust of donors and vulnerable service recipients'
   },
   {
     id: 'other', label: 'Other / general',
     interestedParties: 'Customers, regulators, employees, shareholders or owners, and key suppliers.',
-    regulatory: 'Privacy Act 1988 (Cth) and the Notifiable Data Breaches scheme where applicable, and the organisation’s customer contractual obligations.'
+    regulatory: 'Privacy Act 1988 (Cth) and the Notifiable Data Breaches scheme where applicable, and the organisation’s customer contractual obligations.',
+    externalIssues: 'the regulatory environment and customer expectations of the markets the organisation operates in'
   }
 ];
 

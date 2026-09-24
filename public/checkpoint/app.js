@@ -2986,10 +2986,15 @@ function showModal(opts) {
 
   function resolveOrgTokens(str) {
     if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
-    return str.replace(/\{\{(\w+)\}\}/g, function (whole, token) {
+    /* Answers are free text and often end in a full stop; the template
+       text around a token often supplies its own punctuation. Where
+       both do, keep the template's — "contract.." and "sold into. —"
+       read as typos in an approved policy. */
+    return str.replace(/\{\{(\w+)\}\}(?=(\.|,|;| —)?)/g, function (whole, token, next) {
       var f = orgProfileFieldByToken(token);
       if (!f) return '';
-      return orgProfileValue(f.key) || f.fallback || '';
+      var v = orgProfileValue(f.key) || f.fallback || '';
+      return next ? v.replace(/\.\s*$/, '') : v;
     });
   }
 
@@ -10466,12 +10471,12 @@ function showModal(opts) {
       var orgTotal = (window.ORG_PROFILE_FIELDS || []).length;
       var orgIndLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === orgProfileValue('orgIndustry'); }) || {}).label;
       orgProfEl.innerHTML =
-        '<div><b>Organisation profile</b><p>' +
+        '<div><b>Scope &amp; context (ISO 27001 Clause 4)</b><p>' +
         (orgFilled
           ? esc(orgIndLabel || 'Profile set') + ' · ' + orgFilled + ' of ' + orgTotal + ' answered. Generated documents fill themselves in from these.'
-          : 'Not set yet. Documents generate with generic wording until it is — which is valid, just less specific than an auditor expects for Clause 4.3.') +
+          : 'Not set yet. A short questionnaire drafts the scope statement, internal and external issues, interested parties and their requirements, and interfaces. Until then, documents generate with generic wording — valid, but less specific than an auditor expects for Clause 4.') +
         '</p></div>' +
-        '<button class="btn ' + (orgFilled ? 'ghost ' : '') + 'sm" data-action="App.orgProfileWizard">' + (orgFilled ? 'Review profile' : 'Set up profile') + '</button>';
+        '<button class="btn ' + (orgFilled ? 'ghost ' : '') + 'sm" data-action="App.orgProfileWizard">' + (orgFilled ? 'Review answers' : 'Start questionnaire') + '</button>';
     }
 
     var e8El = document.getElementById('e8TargetLevelRow');
@@ -14676,27 +14681,32 @@ function showModal(opts) {
     orgProfileWizard: async function (opts) {
       opts = opts || {};
       var fields = window.ORG_PROFILE_FIELDS || [];
+      var questions = window.ORG_CONTEXT_QUESTIONS || [];
       function fld(key) { return fields.find(function (f) { return f.key === key; }); }
+      var TOTAL = 5;
+      function stepTitle(n, t) { return (n === 1 && opts.title ? opts.title : t) + ' (' + n + ' of ' + TOTAL + ')'; }
 
+      /* Step 1 — industry, plus the plain-English questions. A client
+         can answer every one of these without knowing ISO 27001; the
+         Clause 4 text is drafted from them in steps 3-5. */
       var currentIndustry = orgProfileValue('orgIndustry');
       var step1 = await showModal({
-        title: opts.title || 'Set up your organisation profile',
-        message: 'Answered once, then reused by every document Checkpoint generates. ISO 27001 expects an organisation to be specific about its scope (Clause 4.3) and who depends on it (Clause 4.2) — these are those answers.\n\nStart with the industry: it pre-fills the two fields practitioners most often stall on.',
+        title: stepTitle(1, 'Scope & context questionnaire'),
+        message: 'A few questions about the organisation. The answers draft the ISMS scope and the ISO 27001 Clause 4 context — internal and external issues, interested parties and what they require, interfaces and dependencies, and a scope statement — for you to review before anything is saved. Every document Checkpoint generates then uses them.',
         fields: [{
-          id: 'industry', label: fld('orgIndustry').label, type: 'select',
+          id: 'industry', label: 'Industry', type: 'select',
           value: currentIndustry || 'other',
           options: (window.INDUSTRY_PROFILES || []).map(function (p) { return { value: p.id, label: p.label }; })
-        }],
+        }].concat(questions.map(function (q) {
+          return { id: q.id, label: q.label, type: 'select', value: orgProfileValue(q.key),
+            options: [{ value: '', label: '— Not answered —' }].concat(q.options) };
+        })),
         confirmText: 'Next'
       });
       if (!step1) return false;
 
       var preset = (window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; })
-        || { interestedParties: '', regulatory: '' };
-      /* An industry change re-seeds the two derived fields; anything
-         the practitioner already wrote for the SAME industry is kept.
-         Re-running the wizard to fix a typo in "locations" must not
-         silently discard a carefully edited interested-parties list. */
+        || { interestedParties: '', regulatory: '', externalIssues: '' };
       var industryChanged = currentIndustry && currentIndustry !== step1.industry;
       function seeded(key, presetText) {
         var existing = orgProfileValue(key);
@@ -14705,30 +14715,87 @@ function showModal(opts) {
       }
 
       var step2 = await showModal({
-        title: 'Organisation profile — the specifics',
-        message: 'These fill in the generated ISMS Scope, and any other document that needs them. Anything left blank falls back to the generic wording, so a partial answer is fine.\n\nThe pre-filled obligations are a starting point drawn from your industry, not legal advice — whether a given law binds this organisation is a determination only you can make.',
+        title: stepTitle(2, 'What is in scope'),
+        message: 'Where the ISMS boundary sits (Clause 4.3). Anything left blank falls back to the generic wording — "all business units", "all locations" — so a partial answer is fine.',
         fields: [
           { id: 'businessUnits', label: fld('orgBusinessUnits').label, type: 'textarea', value: orgProfileValue('orgBusinessUnits'), placeholder: 'e.g. Engineering, Customer Support, Finance' },
           { id: 'locations', label: fld('orgLocations').label, type: 'textarea', value: orgProfileValue('orgLocations'), placeholder: 'e.g. the Brisbane office, and staff working remotely within Australia' },
           { id: 'services', label: fld('orgServices').label, type: 'textarea', value: orgProfileValue('orgServices'), placeholder: 'e.g. the hosted claims-processing platform and its support services' },
-          { id: 'interestedParties', label: fld('orgInterestedParties').label, type: 'textarea', value: seeded('orgInterestedParties', preset.interestedParties) },
-          { id: 'regulatory', label: fld('orgRegulatory').label, type: 'textarea', value: seeded('orgRegulatory', preset.regulatory) },
           { id: 'exclusions', label: fld('orgExclusions').label, type: 'textarea', value: orgProfileValue('orgExclusions'), placeholder: 'Leave blank if nothing is excluded' }
         ],
-        confirmText: 'Save profile'
+        confirmText: 'Next'
       });
       if (!step2) return false;
 
+      /* Draft from the new answers. A saved field is only replaced when
+         it is empty or still exactly what the PREVIOUS answers would
+         have drafted — i.e. nobody has edited it. A practitioner's own
+         wording is never overwritten by re-running the questionnaire. */
+      var orgName = clientDisplayLabel('the organisation');
+      var answersNow = Object.assign({}, step1, step2);
+      var answersPrev = { businessUnits: orgProfileValue('orgBusinessUnits'), locations: orgProfileValue('orgLocations'), services: orgProfileValue('orgServices') };
+      questions.forEach(function (q) { answersPrev[q.id] = orgProfileValue(q.key); });
+      var presetPrev = (window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === currentIndustry; }) || {};
+      var draftNow = window.CheckpointLib.buildOrgContextDraft(answersNow, preset, orgName);
+      var draftPrev = window.CheckpointLib.buildOrgContextDraft(answersPrev, presetPrev, orgName);
+      function drafted(key, prop) {
+        var existing = orgProfileValue(key);
+        if (!existing || existing === draftPrev[prop]) return draftNow[prop];
+        return existing;
+      }
+
+      var draftNote = 'Drafted from your answers — edit freely. Anything left blank falls back to generic wording.';
+      var step3 = await showModal({
+        title: stepTitle(3, 'Context of the organisation (Clause 4.1)'),
+        message: 'The issues inside and outside the organisation that affect what its information security needs to achieve. ' + draftNote,
+        fields: [
+          { id: 'externalIssues', label: fld('orgExternalIssues').label, type: 'textarea', value: drafted('orgExternalIssues', 'externalIssues') },
+          { id: 'internalIssues', label: fld('orgInternalIssues').label, type: 'textarea', value: drafted('orgInternalIssues', 'internalIssues') },
+          { id: 'climate', label: fld('orgClimate').label, type: 'textarea', value: drafted('orgClimate', 'climate') }
+        ],
+        confirmText: 'Next'
+      });
+      if (!step3) return false;
+
+      var step4 = await showModal({
+        title: stepTitle(4, 'Interested parties (Clause 4.2)'),
+        message: 'Who depends on the organisation, and what they require of it. The parties and obligations are pre-filled from your industry; they are a starting point, not legal advice — whether a given law binds this organisation is a determination only you can make.',
+        fields: [
+          { id: 'interestedParties', label: fld('orgInterestedParties').label, type: 'textarea', value: seeded('orgInterestedParties', preset.interestedParties) },
+          { id: 'partyRequirements', label: fld('orgPartyRequirements').label, type: 'textarea', value: drafted('orgPartyRequirements', 'partyRequirements') },
+          { id: 'regulatory', label: fld('orgRegulatory').label, type: 'textarea', value: seeded('orgRegulatory', preset.regulatory) }
+        ],
+        confirmText: 'Next'
+      });
+      if (!step4) return false;
+
+      var step5 = await showModal({
+        title: stepTitle(5, 'Scope statement (Clause 4.3)'),
+        message: 'Where the organisation depends on others, and the one-sentence scope statement. ' + draftNote,
+        fields: [
+          { id: 'interfaces', label: fld('orgInterfaces').label, type: 'textarea', value: drafted('orgInterfaces', 'interfaces') },
+          { id: 'scopeStatement', label: fld('orgScopeStatement').label, type: 'textarea', value: drafted('orgScopeStatement', 'scopeStatement') }
+        ],
+        confirmText: 'Save'
+      });
+      if (!step5) return false;
+
       busy(true);
       try {
-        await Store.setSetting('orgIndustry', step1.industry);
-        S.settings.orgIndustry = step1.industry;
         var map = {
+          orgIndustry: step1.industry,
           orgBusinessUnits: step2.businessUnits, orgLocations: step2.locations,
-          orgServices: step2.services, orgInterestedParties: step2.interestedParties,
-          orgRegulatory: step2.regulatory, orgExclusions: step2.exclusions
+          orgServices: step2.services, orgExclusions: step2.exclusions,
+          orgExternalIssues: step3.externalIssues, orgInternalIssues: step3.internalIssues, orgClimate: step3.climate,
+          orgInterestedParties: step4.interestedParties, orgPartyRequirements: step4.partyRequirements, orgRegulatory: step4.regulatory,
+          orgInterfaces: step5.interfaces, orgScopeStatement: step5.scopeStatement
         };
+        questions.forEach(function (q) { map[q.key] = step1[q.id] || ''; });
         for (var k in map) {
+          /* Unchanged values are skipped — each is its own SharePoint
+             write, and a re-run that changes one answer shouldn't cost
+             twenty-odd requests. */
+          if ((S.settings[k] || '') === (map[k] || '')) continue;
           await Store.setSetting(k, map[k]);
           S.settings[k] = map[k];
         }
@@ -14737,8 +14804,8 @@ function showModal(opts) {
 
       var industryLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; }) || {}).label || step1.industry;
       audit('Organisation profile updated', 'Settings', 'orgProfile', '', industryLabel);
-      log('Organisation profile saved — <b>' + esc(industryLabel) + '</b>. Generated documents now use it.');
-      toast('Organisation profile saved');
+      log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document and Organisational Context & Interested Parties to use it.');
+      toast('Scope & context saved');
       renderFrameworksAdmin();
       return true;
     },
@@ -14768,11 +14835,11 @@ function showModal(opts) {
         var wants = await showModal({
           title: 'Fill this document in automatically?',
           message: '“' + t.title + '” asks the organisation to be specific about things no template can know — its business units, locations, interested parties and regulatory obligations.\n\nAnswer them once and every document that needs them is filled in from now on. Skip, and the document generates with generic wording you can edit later.',
-          confirmText: 'Set up the profile',
+          confirmText: 'Answer the questionnaire',
           cancelText: 'Skip for now'
         });
         if (wants) {
-          var saved = await App.orgProfileWizard({ title: 'Set up your organisation profile' });
+          var saved = await App.orgProfileWizard();
           if (!saved) return; /* cancelled mid-wizard — don't generate behind their back */
         }
       }

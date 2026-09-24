@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.94.0',
+    date: '2026-09-24',
+    entries: [
+      'The organisation profile is now a scope & context questionnaire (Settings → Scope & context). The client answers ten plain-English questions — size, ways of working, who runs their IT, which cloud services they use, what personal information they hold, what customers ask for, how they use AI, organisational change and climate exposure — then confirms what is in scope. Checkpoint drafts the ISO 27001 Clause 4 content from those answers for review: external and internal issues (4.1), what interested parties require (4.2), the climate change determination added by Amendment 1 (2024), interfaces and dependencies (4.3), and a one-sentence scope statement. The ISMS Scope Document and Organisational Context & Interested Parties generate from them.',
+      'Re-running the questionnaire updates the drafted text only where nobody has edited it — a practitioner\'s own wording is never overwritten.',
+      'Generated documents no longer show a doubled full stop where an answer ends with one and the template adds its own.'
+    ]
+  },
+  {
     version: '1.93.0',
     date: '2026-09-24',
     entries: [

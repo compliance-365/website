@@ -900,6 +900,25 @@ window.DEFAULT_SETTINGS = {
   orgInterestedParties: '',
   orgRegulatory: '',
   orgExclusions: '',
+  /* Clause 4 context drafted by the scope & context questionnaire, and
+     the questionnaire's own answers (ORG_CONTEXT_QUESTIONS) so it
+     re-opens where it was left. Same '' = unanswered convention. */
+  orgExternalIssues: '',
+  orgInternalIssues: '',
+  orgPartyRequirements: '',
+  orgClimate: '',
+  orgInterfaces: '',
+  orgScopeStatement: '',
+  orgSize: '',
+  orgWorkModel: '',
+  orgItModel: '',
+  orgCloud: '',
+  orgDevelops: '',
+  orgPersonalData: '',
+  orgCustomerDemand: '',
+  orgAiUse: '',
+  orgChange: '',
+  orgClimateRelevant: '',
   /* Comma-separated ids into window.TECH_STACK_OPTIONS (templates.js) —
      which of a short, self-declared list of technology categories this
      tenant actually runs. Drives the "relevant to you" sort in the
