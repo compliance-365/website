@@ -11507,7 +11507,7 @@ function showModal(opts) {
     var cadenceEl = document.getElementById('scanCadenceRow');
     if (cadenceEl) {
       var cadenceCurrent = (S.settings && S.settings.scanCadenceDays) || '30';
-      cadenceEl.innerHTML = '<div><b>Posture scan reminder</b><p>The Dashboard flags a scan as overdue after this many days. There\'s no backend to run scans unattended — this is a nudge on load, not a schedule. See SETUP.md for wiring real automation via Power Automate.</p></div>' +
+      cadenceEl.innerHTML = '<div><b>Posture scan reminder</b><p>The Dashboard flags a scan as overdue after this many days. There\'s no backend to run scans unattended — this is a nudge on load, not a schedule. See POWER-AUTOMATE.md for flows that act on Checkpoint\'s lists.</p></div>' +
         '<select class="mini" data-change-action="App.setScanCadence" aria-label="Posture scan cadence">' +
         ['7', '14', '30', '60', '90'].map(function (s) { return '<option' + (cadenceCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
@@ -11561,7 +11561,8 @@ function showModal(opts) {
         '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (tOn('teamsAlerts') ? ' on' : '') + '" role="switch" aria-checked="' + tOn('teamsAlerts') + '" aria-label="Post alerts to Teams" data-action="App.toggleTeamsSetting" data-id="teamsAlerts"></button> Alerts as they are raised</label>' +
         '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (tOn('teamsDigest') ? ' on' : '') + '" role="switch" aria-checked="' + tOn('teamsDigest') + '" aria-label="Post the digest to Teams" data-action="App.toggleTeamsSetting" data-id="teamsDigest"></button> The compliance digest (needs the digest switched on above)</label>' +
         '</div>' +
-        '<p class="src" style="margin-top:8px">' + tStatus + ' The webhook URL is the only credential for the channel — anyone who can read this tenant\'s Checkpoint Settings list can see it, so remove it here (and in Workflows) if it is ever exposed.</p>';
+        '<p class="src" style="margin-top:8px">' + tStatus + ' The webhook URL is the only credential for the channel — anyone who can read this tenant\'s Checkpoint Settings list can see it, so remove it here (and in Workflows) if it is ever exposed.</p>' +
+        '<p class="src" style="margin-top:8px">Want Checkpoint in Outlook or Planner too? <a href="POWER-AUTOMATE.md" target="_blank" rel="noopener">POWER-AUTOMATE.md</a> has four ready-to-build flows that read Checkpoint\'s lists: owner alerts, privacy breach escalation, a weekly due list and Planner tasks.</p>';
     }
 
     var orgProfEl = document.getElementById('orgProfileRow');

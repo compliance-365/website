@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.103.0',
+    date: '2026-09-25',
+    entries: [
+      'Internal audit workpack: Workpack on any internal audit builds its checklist for you — every clause and control the audit\'s scope covers, with its status, owner and the evidence already linked, audit prompts for each clause, and blank Result and Notes columns for the auditor. It flags what to look at first: anything not implemented, missing evidence, evidence not re-verified in 12 months, controls treating a high risk or with an open action, and items the auditor owns (clause 9.2.2 — auditors must not audit their own work). Open internal and certification body findings are listed for follow-up.',
+      'If an audit\'s scope is free text Checkpoint can\'t map to clauses or controls, it asks once what the audit covers and adds that to the scope, so the Certification view\'s internal audit coverage counts it too.',
+      'New Dashboard panel, What Checkpoint did in the last 12 months: posture scans and checks run, policies drafted, automated register updates, scan findings turned into risks and actions, questionnaire answers drafted, supplier questionnaires and reports generated, with a conservative estimate of the hours it replaced. Every assumption is shown, and Copy summary puts it on the clipboard for a renewal or quarterly review.',
+      'New guide, POWER-AUTOMATE.md (linked from Settings → Microsoft Teams): four ready-to-build Power Automate flows that read Checkpoint\'s SharePoint lists — owner alerts for high-priority actions, same-day escalation of a suspected privacy breach, a weekly list of what\'s due, and new actions into Planner. No premium licence needed.'
+    ]
+  },
+  {
     version: '1.102.0',
     date: '2026-09-24',
     entries: [
