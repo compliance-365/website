@@ -2443,19 +2443,27 @@ window.POLICY_TEMPLATES = [
   {
     id: 'aims-scope',
     title: 'AI Management System Scope',
-    purpose: 'This document defines the scope and boundaries of the organisation’s AI management system (AIMS) — which AI systems, activities, functions and locations it covers, and anything excluded. It satisfies the ISO/IEC 42001 Clause 4.3 requirement to determine and document the scope of the AIMS.',
-    scope: 'This document describes the AIMS itself. It is a starting draft — the bracketed specifics must be completed with the organisation’s actual AI systems and activities before approval.',
+    purpose: 'This document defines the scope and boundaries of the organisation’s AI management system (AIMS) — which AI systems, activities, functions and locations it covers, and anything excluded. It satisfies the ISO/IEC 42001 Clause 4.3 requirement to determine and document the scope of the AIMS, drawing on the context determined under Clauses 4.1 and 4.2.',
+    scope: 'This document describes the AIMS itself: the AI systems and activities it covers, the organisation’s role for them, and anything deliberately excluded.',
     policyStatements: [
       {
-        rule: 'The AIMS covers the AI systems the organisation develops, deploys, procures or operates — to be completed with the specific systems, use cases, teams and locations in scope.',
+        rule: 'Scope statement: {{aimsScopeStatement}}',
+        because: 'A one-sentence statement is what customers and certification bodies read first, so it must agree with the detail below.'
+      },
+      {
+        rule: 'The AI systems in scope are: {{aiSystems}} Each is recorded in the AI system register with its purpose, owner, data sources and risk tier.',
         because: 'A scope that does not name systems cannot answer whether a given tool is governed, which is the only question anyone asks of it.'
       },
       {
-        rule: 'The organisation’s role for each AI system in scope — as a provider, a deployer/user, or both — is identified, because different obligations follow from each role.',
+        rule: 'The organisation’s role for AI is identified, because different obligations follow from each role. {{aiRole}}',
         because: 'Provider and deployer obligations differ substantially under both ISO 42001 and emerging AI regulation, and the wrong assumption misses whole duties.'
       },
       {
-        rule: 'The needs and expectations of interested parties affected by the organisation’s AI — customers, individuals subject to AI-driven decisions, regulators and employees — have been considered in setting this scope.',
+        rule: 'The issues that affect how the organisation governs AI have been determined. They include: {{aiIssues}}',
+        because: 'ISO 42001 Clause 4.1 asks what shapes the intended outcomes of the AIMS, and those issues are what its risk assessment must answer to.'
+      },
+      {
+        rule: 'The needs and expectations of interested parties affected by the organisation’s AI — {{interestedParties}} — have been considered in setting this scope, including individuals subject to AI-driven outputs and decisions.',
         because: 'The people most affected by an AI system are rarely the people who chose it, so their interests only enter the scope deliberately.'
       },
       {
@@ -3373,6 +3381,37 @@ window.ORG_PROFILE_FIELDS = [
     type: 'textarea',
     hint: 'One sentence summarising the scope — the form a certification body prints on the certificate.',
     fallback: 'The information security management system of the organisation, covering the services it delivers, in accordance with the current Statement of Applicability.'
+  },
+  /* ISO 42001 counterparts, drafted by the questionnaire's AI step
+     (CheckpointLib.buildAimsContextDraft()) for tenants entitled to
+     ISO 42001, and used by the AI Management System Scope. */
+  {
+    aims: true,
+    key: 'orgAiSystems', token: 'aiSystems', label: 'AI systems in scope',
+    type: 'textarea',
+    hint: 'Pre-filled from the AI system register. Name each system and what it is used for.',
+    fallback: 'The AI systems recorded in the organisation’s AI system register, whether developed, procured or used by staff.'
+  },
+  {
+    aims: true,
+    key: 'orgAiRole', token: 'aiRole', label: 'The organisation’s role for AI',
+    type: 'textarea',
+    hint: 'Provider (it supplies AI systems to others), user/deployer (it uses AI systems provided by others), or both. ISO 42001 Clause 4.1.',
+    fallback: 'The organisation’s role for each AI system in scope — as a provider, a user (deployer), or both — is recorded in the AI system register.'
+  },
+  {
+    aims: true,
+    key: 'orgAiIssues', token: 'aiIssues', label: 'AI-specific issues (ISO 42001 Clause 4.1)',
+    type: 'textarea',
+    hint: 'What inside and outside the organisation affects how it governs AI: regulation, providers, adoption, data.',
+    fallback: 'Emerging AI regulation and customer expectations, dependence on third-party AI providers, and the pace at which AI tools are being adopted.'
+  },
+  {
+    aims: true,
+    key: 'orgAimsScopeStatement', token: 'aimsScopeStatement', label: 'AI management system scope statement',
+    type: 'textarea',
+    hint: 'One sentence summarising the scope of the AI management system.',
+    fallback: 'The AI management system of the organisation, covering the AI systems it develops, provides or uses in support of the services it delivers.'
   }
 ];
 

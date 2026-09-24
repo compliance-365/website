@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.95.0',
+    date: '2026-09-24',
+    entries: [
+      'The scope & context questionnaire now covers ISO 42001 too. For a tenant entitled to ISO 42001 it adds a sixth step that drafts the AI management system\'s Clause 4 content: the AI systems in scope (pre-filled from the AI system register), the organisation\'s role for AI (provider, user or both, from the AI-use answer), the AI-specific issues it faces, and an AIMS scope statement. The AI Management System Scope generates from them instead of asking for bracketed specifics to be filled in by hand.'
+    ]
+  },
+  {
     version: '1.94.0',
     date: '2026-09-24',
     entries: [

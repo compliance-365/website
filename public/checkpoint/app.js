@@ -10467,8 +10467,10 @@ function showModal(opts) {
 
     var orgProfEl = document.getElementById('orgProfileRow');
     if (orgProfEl) {
-      var orgFilled = (window.ORG_PROFILE_FIELDS || []).filter(function (f) { return !!orgProfileValue(f.key); }).length;
-      var orgTotal = (window.ORG_PROFILE_FIELDS || []).length;
+      /* The ISO 42001 fields only count for a tenant that can answer them. */
+      var orgFields = (window.ORG_PROFILE_FIELDS || []).filter(function (f) { return !f.aims || entitledFrameworks().indexOf('iso42001') !== -1; });
+      var orgFilled = orgFields.filter(function (f) { return !!orgProfileValue(f.key); }).length;
+      var orgTotal = orgFields.length;
       var orgIndLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === orgProfileValue('orgIndustry'); }) || {}).label;
       orgProfEl.innerHTML =
         '<div><b>Scope &amp; context (ISO 27001 Clause 4)</b><p>' +
@@ -14683,7 +14685,10 @@ function showModal(opts) {
       var fields = window.ORG_PROFILE_FIELDS || [];
       var questions = window.ORG_CONTEXT_QUESTIONS || [];
       function fld(key) { return fields.find(function (f) { return f.key === key; }); }
-      var TOTAL = 5;
+      /* The AI step only for tenants entitled to ISO 42001 — the one
+         framework whose scope document uses it. */
+      var withAims = entitledFrameworks().indexOf('iso42001') !== -1;
+      var TOTAL = withAims ? 6 : 5;
       function stepTitle(n, t) { return (n === 1 && opts.title ? opts.title : t) + ' (' + n + ' of ' + TOTAL + ')'; }
 
       /* Step 1 — industry, plus the plain-English questions. A client
@@ -14776,9 +14781,36 @@ function showModal(opts) {
           { id: 'interfaces', label: fld('orgInterfaces').label, type: 'textarea', value: drafted('orgInterfaces', 'interfaces') },
           { id: 'scopeStatement', label: fld('orgScopeStatement').label, type: 'textarea', value: drafted('orgScopeStatement', 'scopeStatement') }
         ],
-        confirmText: 'Save'
+        confirmText: withAims ? 'Next' : 'Save'
       });
       if (!step5) return false;
+
+      /* Step 6 — the ISO 42001 counterpart, drafted from the same
+         answers plus the AI system register. Same never-overwrite-an-
+         edit rule as above. */
+      var step6 = {};
+      if (withAims) {
+        var register = (S.aiSystems || []).map(function (x) { return { name: x.name, purpose: x.purpose }; });
+        var aimsNow = window.CheckpointLib.buildAimsContextDraft(answersNow, register, orgName);
+        var aimsPrev = window.CheckpointLib.buildAimsContextDraft(answersPrev, register, orgName);
+        var aimsDrafted = function (key, prop) {
+          var existing = orgProfileValue(key);
+          if (!existing || existing === aimsPrev[prop]) return aimsNow[prop];
+          return existing;
+        };
+        step6 = await showModal({
+          title: stepTitle(6, 'AI management system (ISO 42001 Clause 4)'),
+          message: 'The same context for the AI management system. The systems are pre-filled from the AI system register' + (register.length ? '' : ', which is empty — add systems there and re-run this, or describe them here') + '. ' + draftNote,
+          fields: [
+            { id: 'aiSystems', label: fld('orgAiSystems').label, type: 'textarea', value: aimsDrafted('orgAiSystems', 'aiSystems') },
+            { id: 'aiRole', label: fld('orgAiRole').label, type: 'textarea', value: aimsDrafted('orgAiRole', 'aiRole') },
+            { id: 'aiIssues', label: fld('orgAiIssues').label, type: 'textarea', value: aimsDrafted('orgAiIssues', 'aiIssues') },
+            { id: 'aimsScopeStatement', label: fld('orgAimsScopeStatement').label, type: 'textarea', value: aimsDrafted('orgAimsScopeStatement', 'aimsScopeStatement') }
+          ],
+          confirmText: 'Save'
+        });
+        if (!step6) return false;
+      }
 
       busy(true);
       try {
@@ -14790,6 +14822,10 @@ function showModal(opts) {
           orgInterestedParties: step4.interestedParties, orgPartyRequirements: step4.partyRequirements, orgRegulatory: step4.regulatory,
           orgInterfaces: step5.interfaces, orgScopeStatement: step5.scopeStatement
         };
+        if (withAims) {
+          map.orgAiSystems = step6.aiSystems; map.orgAiRole = step6.aiRole;
+          map.orgAiIssues = step6.aiIssues; map.orgAimsScopeStatement = step6.aimsScopeStatement;
+        }
         questions.forEach(function (q) { map[q.key] = step1[q.id] || ''; });
         for (var k in map) {
           /* Unchanged values are skipped — each is its own SharePoint
@@ -14804,7 +14840,7 @@ function showModal(opts) {
 
       var industryLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; }) || {}).label || step1.industry;
       audit('Organisation profile updated', 'Settings', 'orgProfile', '', industryLabel);
-      log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document and Organisational Context & Interested Parties to use it.');
+      log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document' + (withAims ? ', AI Management System Scope' : '') + ' and Organisational Context & Interested Parties to use it.');
       toast('Scope & context saved');
       renderFrameworksAdmin();
       return true;

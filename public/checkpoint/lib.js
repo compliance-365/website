@@ -5016,6 +5016,56 @@
     };
   }
 
+  /* ISO 42001 Clause 4 drafting — the AI management system counterpart
+     of buildOrgContextDraft(), from the same questionnaire answers plus
+     the tenant's AI system register. Same rules: a draft for review,
+     never more than the inputs support. `aiSystems` is the register
+     ([{ name, purpose }]); when it is empty the systems line falls back
+     to what the AI-use answer says, and to nothing at all if that was
+     not answered either. */
+  function buildAimsContextDraft(answers, aiSystems, orgName) {
+    var a = answers || {};
+    var systems = (aiSystems || []).filter(function (x) { return x && x.name; });
+    function sentenceList(items) {
+      items = items.filter(Boolean);
+      if (!items.length) return '';
+      var s = items.length === 1 ? items[0] : items.slice(0, -1).join('; ') + '; and ' + items[items.length - 1];
+      return s.charAt(0).toUpperCase() + s.slice(1) + '.';
+    }
+    function lowerFirst(t) { t = String(t || '').trim().replace(/\.\s*$/, ''); return t.charAt(0).toLowerCase() + t.slice(1); }
+
+    var systemsText = '';
+    if (systems.length) {
+      systemsText = sentenceList(systems.map(function (x) { return x.name + (x.purpose ? ' (' + lowerFirst(x.purpose) + ')' : ''); }));
+    } else if (a.ai === 'tools') {
+      systemsText = 'Generative AI tools used by staff in their work, such as Microsoft 365 Copilot and approved AI assistants.';
+    } else if (a.ai === 'builds') {
+      systemsText = 'AI capabilities built into the organisation’s own products and services; and generative AI tools used by staff in their work.';
+    }
+
+    var role = '';
+    if (a.ai === 'tools') role = 'The organisation is a user (deployer) of AI systems provided by others; it does not develop or supply AI systems to third parties.';
+    if (a.ai === 'builds') role = 'The organisation is both a provider of AI systems, through the AI capabilities in its own products and services, and a user (deployer) of AI systems provided by others.';
+
+    var issues = [];
+    if (a.ai === 'tools' || a.ai === 'builds') {
+      issues.push('emerging AI regulation and guidance, including the EU AI Act where the organisation’s AI reaches EU markets, and customer expectations about responsible AI use');
+      issues.push('dependence on third-party model and platform providers whose models, terms and data handling can change without notice');
+    }
+    if (a.ai === 'tools') issues.push('staff adopting AI tools faster than they can be assessed, including tools that have not been approved');
+    if (a.ai === 'builds') issues.push('the organisation’s obligations as a provider — transparency to users, testing for accuracy and bias, and monitoring AI systems after release');
+    if ((a.ai === 'tools' || a.ai === 'builds') && (a.personalData === 'customers' || a.personalData === 'sensitive')) issues.push('personal information' + (a.personalData === 'sensitive' ? ', including sensitive information,' : '') + ' that may be entered into or processed by AI systems');
+    if (a.ai === 'builds' && a.develops === 'yes') issues.push('in-house development and change of AI capabilities, which brings data quality, model evaluation and life-cycle controls into scope');
+
+    function or(v, d) { return (v && String(v).trim()) || d; }
+    var scopeStatement = 'The AI management system of ' + or(orgName, 'the organisation') +
+      ' covering ' + (a.ai === 'builds' ? 'the development, provision and use of AI systems' : 'the use of AI systems') +
+      ' in support of ' + or(a.services, 'the services it delivers') +
+      ', across ' + or(a.businessUnits, 'all of its business units and teams') + '.';
+
+    return { aiSystems: systemsText, aiRole: role, aiIssues: sentenceList(issues), aimsScopeStatement: scopeStatement };
+  }
+
   return {
     normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
@@ -5081,6 +5131,6 @@
     documentFocusRows: documentFocusRows, documentFocusLabel: documentFocusLabel,
     dedupeAudience: dedupeAudience,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS,
-    buildOrgContextDraft: buildOrgContextDraft
+    buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft
   };
 });
