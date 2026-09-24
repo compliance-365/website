@@ -5072,8 +5072,9 @@
      the rows that actually change — `set` holds only changed fields.
 
      Rules, in order of what they protect:
-     - Never downgrade: an Implemented clause is left alone, and nothing
-       ever moves backwards.
+     - Never downgrade: an Implemented clause keeps its status (it only
+       gains this document as evidence if it had none), and nothing ever
+       moves backwards.
      - Never overwrite someone else's evidence: a clause already linked
        to a DIFFERENT document keeps that link and its status — the
        practitioner chose that evidence deliberately.
@@ -5086,13 +5087,133 @@
     var out = [];
     (mapping || []).forEach(function (m) {
       var c = (clauses || []).find(function (x) { return (x.fw || 'iso27001') === m.fw && x.id === m.code; });
-      if (!c || !docUrl || c.st === 'Implemented') return;
+      if (!c || !docUrl) return;
       if (c.evidenceUrl && c.evidenceUrl !== docUrl) return;
+      /* Already Implemented: never changed — except that one with NO
+         evidence gets this document linked, closing exactly the
+         "Implemented without linked evidence" gap the readiness report
+         flags. */
+      if (c.st === 'Implemented') {
+        if (!c.evidenceUrl) out.push({ clause: c, set: { evidenceUrl: docUrl } });
+        return;
+      }
       var set = {};
       if (!c.evidenceUrl) set.evidenceUrl = docUrl;
       if (stage === 'approved' && m.implements) set.st = 'Implemented';
       else if (c.st === 'Not started') set.st = 'In progress';
       if (Object.keys(set).length) out.push({ clause: c, set: set });
+    });
+    return out;
+  }
+
+  /* Whether the RECORDS a process clause needs exist — the half of a
+     clause an approved procedure cannot supply on its own (see
+     CLAUSE_DOCUMENT_MAP's `implements: false` entries). Reads the
+     registers Checkpoint already keeps, reusing the same check
+     functions the posture scan scores them with, so a clause and its
+     related check can never disagree. Returns { met, note }; a clause
+     with no rule here returns { met: false, note: '' } and is left for
+     the practitioner to judge. `d` = { risks, training, audits, reviews,
+     objectives, actions, aiSystems, docs, scans, reviewCadenceDays }. */
+  function clauseOperatingEvidence(fw, code, d, today) {
+    d = d || {};
+    function ok(note) { return { met: true, note: note }; }
+    function no(note) { return { met: false, note: note || '' }; }
+    var openRisks = (d.risks || []).filter(function (r) { return r.status !== 'Closed'; });
+    var fwAudits = (d.audits || []).filter(function (a) {
+      return fw === 'iso42001' ? a.fw === 'iso42001' : a.fw !== 'iso42001';
+    });
+    var lastReview = (d.reviews || []).filter(function (r) { return r.date && r.decisions; })
+      .reduce(function (m, r) { return !m || r.date > m.date ? r : m; }, null);
+    var reviewCurrent = lastReview && daysBetweenDateStr(lastReview.date, today) <= 365;
+    switch (code) {
+      case '6.1.2':
+        if (fw === 'iso42001') return no();
+        if (!openRisks.length) return no('No open risks recorded.');
+        return openRisks.every(function (r) { return r.L && r.I && r.owner; })
+          ? ok(openRisks.length + ' open risk(s) assessed for likelihood and impact, each with an owner.')
+          : no('Some open risks have no likelihood, impact or owner.');
+      case '6.1.3':
+        if (fw === 'iso42001') return no();
+        if (!openRisks.length) return no('No open risks recorded.');
+        return openRisks.every(function (r) { return r.treat; })
+          ? ok('Every open risk has a recorded treatment decision.')
+          : no('Some open risks have no treatment decision.');
+      case '6.1.4':
+        if (fw !== 'iso42001') return no();
+        var ai = d.aiSystems || [];
+        if (!ai.length) return no('No AI systems registered.');
+        return ai.every(function (a) { return a.impactAssessmentStatus === 'Completed'; })
+          ? ok('Impact assessments completed for all ' + ai.length + ' registered AI system(s).')
+          : no('Some registered AI systems have no completed impact assessment.');
+      case '6.2':
+        var obj = objectivesCheckResult(d.objectives || [], today);
+        return obj.result === 'pass' ? ok(obj.note) : no(obj.note);
+      case '9.1':
+        var obj91 = objectivesCheckResult(d.objectives || [], today);
+        var recentScan = (d.scans || []).some(function (x) { return x.date && daysBetweenDateStr(String(x.date).slice(0, 10), today) <= 90; });
+        return obj91.result === 'pass' && recentScan
+          ? ok('Objectives measured and on track, and a posture scan has run within 90 days.')
+          : no('Needs objectives on track and a posture scan within 90 days.');
+      case '7.2':
+      case '7.3':
+        var tr = trainingCheckResult(d.training || [], today);
+        return tr.result === 'pass' ? ok(tr.note) : no(tr.note);
+      case '7.5.2':
+      case '7.5.3':
+        var pol = policyCheckResult(d.docs || [], today);
+        return pol.result === 'pass' ? ok(pol.note) : no(pol.note);
+      case '9.2':
+        var aud = independentReviewResult(fwAudits, today, d.auditCadenceDays);
+        return aud.result === 'pass' ? ok(aud.note) : no(aud.note);
+      case '9.3':
+      case '10.1':
+        return reviewCurrent
+          ? ok('Management review held ' + lastReview.date + ' with recorded decisions.')
+          : no('No management review with recorded decisions in the last 12 months.');
+      case '10.2':
+        var ncs = (d.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+        var late = ncs.filter(function (a) { return !capaStatus(a).complete && a.due && a.due < today; });
+        return late.length
+          ? no(late.length + ' nonconformit' + (late.length > 1 ? 'ies are' : 'y is') + ' past due with the corrective-action loop still open.')
+          : ok(ncs.length ? 'All ' + ncs.length + ' nonconformities are closed out or within their due date.' : 'No nonconformities raised; the corrective-action procedure is approved and ready.');
+      default:
+        return no();
+    }
+  }
+
+  /* The automatic half of the clause register. For every clause whose
+     linked evidence is an APPROVED, in-date generated document for that
+     clause (CLAUSE_DOCUMENT_MAP), decides whether it is met:
+     - `implements: true` — the approved document is the requirement;
+     - otherwise — the approved procedure AND its records
+       (clauseOperatingEvidence()).
+     A met clause is marked Implemented if it is not already, and
+     re-verified today (by "Checkpoint (automated)") so it never goes
+     stale while its evidence stays current — the same way posture-scan
+     controls re-verify themselves every scan. It never downgrades: when
+     records lapse the verification simply stops being renewed, and the
+     clause turns overdue for re-verification on the register and in the
+     readiness report, where a person decides.
+     Returns [{ clause, set, note }] for rows that change. */
+  function clauseAutomationUpdates(map, clauses, docs, data, today) {
+    var docByUrl = {};
+    (docs || []).forEach(function (x) { if (x && x.url) docByUrl[x.url] = x; });
+    var out = [];
+    Object.keys(map || {}).forEach(function (tplId) {
+      map[tplId].forEach(function (m) {
+        var c = (clauses || []).find(function (x) { return (x.fw || 'iso27001') === m.fw && x.id === m.code; });
+        if (!c || !c.evidenceUrl) return;
+        var doc = docByUrl[c.evidenceUrl];
+        if (!doc || doc.status !== 'Approved' || doc.tplId !== tplId) return;
+        if (documentReviewState(doc, today).state === 'overdue') return;
+        var ev = m.implements ? { met: true, note: 'Approved ' + (doc.name || 'document') + ' is the requirement.' } : clauseOperatingEvidence(m.fw, m.code, data, today);
+        if (!ev.met) return;
+        var set = {};
+        if (c.st !== 'Implemented') set.st = 'Implemented';
+        if (c.verified !== today) { set.verified = today; set.verifiedBy = 'Checkpoint (automated)'; }
+        if (Object.keys(set).length) out.push({ clause: c, set: set, note: ev.note });
+      });
     });
     return out;
   }
@@ -5163,6 +5284,7 @@
     dedupeAudience: dedupeAudience,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS,
     buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft,
-    clauseUpdatesForDocument: clauseUpdatesForDocument
+    clauseUpdatesForDocument: clauseUpdatesForDocument,
+    clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates
   };
 });

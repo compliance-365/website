@@ -1662,6 +1662,69 @@ window.POLICY_TEMPLATES = [
     frameworks: ['iso27001', 'iso27701']
   },
   {
+    id: 'threat-intelligence-procedure',
+    title: 'Threat Intelligence Procedure',
+    purpose: 'This procedure sets out how the organisation collects, analyses and acts on information about threats relevant to it, so that security decisions are made with knowledge of what attackers are actually doing rather than on assumption.',
+    scope: 'Applies to threat information from all sources the organisation uses — including Checkpoint’s Threat intel view (CISA’s Known Exploited Vulnerabilities catalogue, filtered to the organisation’s technology and industry), Microsoft Defender and Entra alerts, government advisories and supplier notifications — and to everyone responsible for acting on it.',
+    whyItMatters: 'Most successful attacks use weaknesses that were already public: a vulnerability with a patch available, a phishing technique already circulating, a supplier breach already announced. Threat intelligence is simply making sure the organisation hears about those in time to act.\n\nFor most people this is invisible. Where it touches your work is when you are asked to patch something urgently, to watch for a particular kind of email, or to report something unusual — those requests usually come from exactly this process, and the urgency is real.',
+    inPractice: [
+      'A vendor your team relies on announces an actively exploited vulnerability. It appears in Checkpoint’s Threat intel view; the IT owner assesses whether the organisation runs the affected product and, if so, patches it within the timeframe the Vulnerability & Patch Management Policy sets for exploited vulnerabilities.',
+      'You receive a warning about a phishing campaign targeting your industry. Treat similar emails with extra care and report any you receive — reports from staff are one of the best sources of intelligence the organisation has.',
+      'A supplier notifies the organisation of a breach. That notification is threat intelligence too: it goes to the ISMS manager so the organisation can assess its own exposure, not just file the email.'
+    ],
+    policyStatements: [
+      {
+        rule: 'Threat information relevant to the organisation is collected from defined sources, including Checkpoint’s Threat intel view, Microsoft security alerts and advisories, the Australian Cyber Security Centre, and supplier notifications.',
+        because: 'Intelligence that depends on someone happening to read the right article arrives late or not at all; defined sources make it routine.'
+      },
+      {
+        rule: 'The organisation’s technology stack and industry are kept current in Checkpoint, so that threat information is filtered to what actually applies to it.',
+        because: 'Unfiltered threat feeds produce more noise than anyone can read, and the relevant item is lost among the irrelevant ones.'
+      },
+      {
+        rule: 'Threat information is reviewed at least weekly, and immediately when an actively exploited vulnerability affects a product the organisation uses.',
+        because: 'The time between public disclosure and mass exploitation is often days, so a monthly review is too slow for the items that matter most.'
+      },
+      {
+        rule: 'Each relevant item is assessed for exposure and, where the organisation is affected, results in an action with an owner and due date — patching, a configuration change, a detection rule or a staff warning.',
+        because: 'Intelligence that does not change anything is reading, not a control.'
+      },
+      {
+        rule: 'Significant threats are recorded on the risk register or used to update existing risks, and threat trends are an input to management review.',
+        because: 'The risk assessment is only as current as the threat picture behind it.'
+      },
+      {
+        rule: 'Staff are made aware of threats relevant to their roles — for example active phishing campaigns — through the organisation’s normal communication channels.',
+        because: 'People are often the target, and a warned person is much harder to deceive.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Owns this procedure, reviews threat information weekly, and ensures relevant items become actions or risk updates.'
+      },
+      {
+        role: 'IT / platform owner',
+        responsibility: 'Assesses exposure to technical threats and delivers the resulting patches and configuration changes.'
+      },
+      {
+        role: 'All personnel',
+        responsibility: 'Report suspicious emails and activity, and act on threat warnings they receive.'
+      }
+    ],
+    exceptions: 'Where an affected product cannot be patched in the required time, the exposure is recorded on the risk register with compensating controls and a date for resolution, approved by the ISMS manager.',
+    nonCompliance: 'Failing to act on a known, relevant, actively exploited vulnerability is treated as an information security incident and raised as a corrective action.',
+    relatedDocuments: [
+      'Vulnerability & Patch Management Policy',
+      'Incident Response Plan',
+      'Risk Management Framework',
+      'Communication Plan'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s threat sources or technology stack change materially.',
+    controls: ['A.5.7'],
+    frameworks: ['iso27001', 'iso27701']
+  },
+  {
     id: 'isms-scope',
     title: 'ISMS Scope Document',
     purpose: 'This document defines the scope and boundaries of the organisation’s information security management system (ISMS) — the parts of the business, the locations, the information and the technology it covers, and anything deliberately excluded. It satisfies the ISO/IEC 27001 Clause 4.3 requirement to determine and document the scope of the ISMS.',
