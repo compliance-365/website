@@ -2600,6 +2600,27 @@ function showModal(opts) {
         : '<p class="rpt-intro">None — every applicable control is marked Implemented.</p>';
       sections.push({ heading: 'Open control gaps (' + notImpl.length + ')', html: gapsHtml, pageBreak: sections.length === 0 });
 
+      /* Management-system clauses (Clauses 4-10) — mandatory, never
+         excludable, and the first thing a Stage 1 audit examines, so a
+         readiness report that covered only Annex A would overstate
+         readiness. ISO 27701 extends the ISO 27001 ISMS, so it reports
+         27001's clauses; ISO 42001 reports its own. Other frameworks
+         have no clause register. */
+      var clauseFw = activeFw === 'iso42001' ? 'iso42001' : (activeFw === 'iso27001' || activeFw === 'iso27701') ? 'iso27001' : null;
+      var fwClauses = clauseFw ? (S.clauses || []).filter(function (c) { return c.fw === clauseFw; }) : [];
+      var clausesImpl = fwClauses.filter(function (c) { return c.st === 'Implemented'; });
+      var clausesOpen = fwClauses.filter(function (c) { return c.st !== 'Implemented'; });
+      var clausesUnevidenced = clausesImpl.filter(function (c) { return !c.evidenceUrl; });
+      if (fwClauses.length) {
+        var clauseHtml = '<p class="rpt-intro">' + clausesImpl.length + ' of ' + fwClauses.length + ' ' + fwName(clauseFw) + ' management-system requirements are implemented. Unlike Annex A controls, none of these can be excluded — every one must be met and evidenced for certification.</p>' +
+          '<table class="rpt-table"><thead><tr><th>Clause</th><th>Requirement</th><th>Status</th><th>Owner</th><th>Evidence</th><th>Last verified</th></tr></thead><tbody>' +
+          fwClauses.map(function (c) {
+            var ev = c.evidenceUrl ? 'Linked' : (c.st === 'Implemented' ? '<b style="color:#b91c1c">None</b>' : '—');
+            return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + esc(c.st) + '</td><td>' + esc(c.own || '—') + '</td><td>' + ev + '</td><td>' + (c.verified ? fmtDate(c.verified) : '—') + '</td></tr>';
+          }).join('') + '</tbody></table>';
+        sections.push({ heading: 'Management system clauses (' + clausesImpl.length + '/' + fwClauses.length + ' implemented)', html: clauseHtml, pageBreak: true });
+      }
+
       /* the honesty gap: self-reported "Implemented" with no evidence
          on file is exactly what an auditor will challenge first */
       var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
@@ -2677,6 +2698,8 @@ function showModal(opts) {
       var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
       var capaOutstanding = allNcs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var recs = [];
+      if (clausesOpen.length) recs.push('Implement and evidence the ' + clausesOpen.length + ' management-system clause' + (clausesOpen.length > 1 ? 's' : '') + ' not yet Implemented (' + clausesOpen.map(function (c) { return c.id; }).join(', ') + ') — a Stage 1 audit examines these before any Annex A control.');
+      if (clausesUnevidenced.length) recs.push('Link evidence to the ' + clausesUnevidenced.length + ' clause' + (clausesUnevidenced.length > 1 ? 's' : '') + ' marked Implemented without it (' + clausesUnevidenced.map(function (c) { return c.id; }).join(', ') + ').');
       if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
       if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
       if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
@@ -2700,6 +2723,7 @@ function showModal(opts) {
         title: 'Audit Readiness Report — ' + fwLabel,
         dashboard: {
           intro: '<b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
+            (fwClauses.length ? clausesImpl.length + ' of ' + fwClauses.length + ' management-system clauses are implemented. ' : '') +
             crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.',
           /* 'ready' gets every chart function — the most detailed report
              type, matching its role as the pre-audit deep dive. */
@@ -3529,6 +3553,42 @@ function showModal(opts) {
      linked when three of the six do not exist for them — a count
      reported for work that did not happen. iso27001 wins a tie because
      the same Annex A id can appear in more than one framework's set. */
+  /* Applies CheckpointLib.clauseUpdatesForDocument() to the clause
+     register for a document just generated or approved: persists each
+     changed clause, audits it, and returns a one-line summary for the
+     caller's toast ('' when nothing changed). Automatic rather than
+     prompted, unlike the Annex A "Link as evidence?" offer — a clause
+     document is written FOR its clause, so the link is never a
+     judgement call, and the rules never claim more than the document
+     supports (see the function's comment in lib.js). */
+  function applyClauseDocumentUpdates(tplId, docUrl, stage) {
+    var mapping = (window.CLAUSE_DOCUMENT_MAP || {})[tplId];
+    if (!mapping || !docUrl) return '';
+    var updates = window.CheckpointLib.clauseUpdatesForDocument(mapping, S.clauses, docUrl, stage);
+    if (!updates.length) return '';
+    var implemented = [], progressed = [], linked = 0;
+    updates.forEach(function (u) {
+      var c = u.clause;
+      if (u.set.evidenceUrl) {
+        audit('Evidence link changed', 'Clause', clauseLabel(c), '(none)', u.set.evidenceUrl);
+        c.evidenceUrl = u.set.evidenceUrl;
+        linked++;
+      }
+      if (u.set.st) {
+        audit('Clause status changed', 'Clause', clauseLabel(c), c.st, u.set.st + (stage === 'approved' ? ' (document approved)' : ' (document generated)'));
+        c.st = u.set.st;
+        (u.set.st === 'Implemented' ? implemented : progressed).push(c.id);
+      }
+      Store.updateClause(c).catch(function (e) { warn(e); });
+    });
+    renderClauses(); renderNavCounts(); renderDash();
+    var parts = [];
+    if (linked) parts.push('linked as evidence to ' + linked + ' clause' + (linked > 1 ? 's' : ''));
+    if (implemented.length) parts.push('Clause ' + implemented.join(', ') + ' marked Implemented');
+    if (progressed.length) parts.push('Clause ' + progressed.join(', ') + ' moved to In progress');
+    return parts.join('; ');
+  }
+
   function templateControlsPresent(codes) {
     return (codes || []).map(function (code) {
       return S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) ||
@@ -14939,7 +14999,8 @@ function showModal(opts) {
         tailoredPurpose: tailored ? tailored.purpose : undefined, tailoredScope: tailored ? tailored.scope : undefined, tailoredStatements: tailored ? tailored.statements : undefined
       }));
       renderDocuments();
-      toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved' + (tailored ? ' (AI-assisted)' : '') + '.');
+      var clauseNote = applyClauseDocumentUpdates(t.id, doc.url, 'generated');
+      toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved' + (tailored ? ' (AI-assisted)' : '') + '.' + (clauseNote ? ' Management system clauses: ' + esc(clauseNote) + '.' : ''));
 
       var linkable = templateControlsPresent(t.controls);
       if (linkable.length) {
@@ -15058,8 +15119,9 @@ function showModal(opts) {
       await syncPolicyReviewCalendar(name, vals.nextReview, params.owner);
       renderDocuments();
       renderDash();
+      var clauseNoteApproved = approvedDoc && approvedDoc.url ? applyClauseDocumentUpdates(t.id, approvedDoc.url, 'approved') : '';
       if (approvedDoc && approvedDoc.metaError) toastError('<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.');
-      else toast('<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
+      else toast('<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.' + (clauseNoteApproved ? ' Management system clauses: ' + esc(clauseNoteApproved) + '.' : ''));
 
       /* Offers to close the loop the "Link as evidence?" prompt in
          generateTemplate() opened: a control whose CURRENT evidence is

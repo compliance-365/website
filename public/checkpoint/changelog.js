@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.96.0',
+    date: '2026-09-24',
+    entries: [
+      'The Audit Readiness Report now includes the management system clauses: every ISO 27001 clause for ISO 27001 and ISO 27701 reports, and every ISO 42001 clause for the ISO 42001 report, with status, owner, evidence and last verification. It flags clauses marked Implemented with no evidence, and the recommendations name each clause still to implement.',
+      'Generating a management-system document now updates the clauses it is written for automatically. Saving the draft links it as evidence and moves the clause to In progress. Approving it marks the clause Implemented where the document itself is what the clause requires — context (4.1/4.2), scope (4.3), policy (5.2), roles (5.3) and communication (7.4). Procedures for processes that must also be carried out, such as internal audit, management review or risk assessment, stay In progress until their records exist. A clause already linked to different evidence, or already Implemented, is never changed.'
+    ]
+  },
+  {
     version: '1.95.0',
     date: '2026-09-24',
     entries: [

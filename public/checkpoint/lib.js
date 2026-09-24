@@ -5066,6 +5066,37 @@
     return { aiSystems: systemsText, aiRole: role, aiIssues: sentenceList(issues), aimsScopeStatement: scopeStatement };
   }
 
+  /* The clause-register changes one generated document makes (see
+     CLAUSE_DOCUMENT_MAP in templates.js). `stage` is 'generated' (a
+     DRAFT was just saved) or 'approved'. Returns [{ clause, set }] for
+     the rows that actually change — `set` holds only changed fields.
+
+     Rules, in order of what they protect:
+     - Never downgrade: an Implemented clause is left alone, and nothing
+       ever moves backwards.
+     - Never overwrite someone else's evidence: a clause already linked
+       to a DIFFERENT document keeps that link and its status — the
+       practitioner chose that evidence deliberately.
+     - A draft is progress, not implementation: 'generated' links the
+       document and moves Not started → In progress, never further.
+     - 'approved' marks Implemented only where the mapping says the
+       document itself satisfies the clause; process clauses stop at
+       In progress until their records exist. */
+  function clauseUpdatesForDocument(mapping, clauses, docUrl, stage) {
+    var out = [];
+    (mapping || []).forEach(function (m) {
+      var c = (clauses || []).find(function (x) { return (x.fw || 'iso27001') === m.fw && x.id === m.code; });
+      if (!c || !docUrl || c.st === 'Implemented') return;
+      if (c.evidenceUrl && c.evidenceUrl !== docUrl) return;
+      var set = {};
+      if (!c.evidenceUrl) set.evidenceUrl = docUrl;
+      if (stage === 'approved' && m.implements) set.st = 'Implemented';
+      else if (c.st === 'Not started') set.st = 'In progress';
+      if (Object.keys(set).length) out.push({ clause: c, set: set });
+    });
+    return out;
+  }
+
   return {
     normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
@@ -5131,6 +5162,7 @@
     documentFocusRows: documentFocusRows, documentFocusLabel: documentFocusLabel,
     dedupeAudience: dedupeAudience,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS,
-    buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft
+    buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft,
+    clauseUpdatesForDocument: clauseUpdatesForDocument
   };
 });

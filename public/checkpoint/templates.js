@@ -3415,6 +3415,40 @@ window.ORG_PROFILE_FIELDS = [
   }
 ];
 
+/* Which management-system clauses each generated document evidences —
+   read by CheckpointLib.clauseUpdatesForDocument() (lib.js), which
+   links the document to those clauses in the register automatically.
+
+   `implements: true` only where writing and approving the document IS
+   what the clause requires: determining the context (4.1/4.2), the
+   scope (4.3), the policy (5.2), assigning roles (5.3), and determining
+   communications (7.4). Everywhere else the document defines a process
+   the clause also requires to be OPERATED — risks actually assessed,
+   audits actually run, reviews actually held — so an approved procedure
+   is evidence towards the clause, not proof it is met. Those clauses
+   get the evidence link and move to In progress; marking them
+   Implemented stays a practitioner's call, made once the records exist. */
+window.CLAUSE_DOCUMENT_MAP = {
+  'context-interested-parties': [{ fw: 'iso27001', code: '4.1', implements: true }, { fw: 'iso27001', code: '4.2', implements: true }],
+  'isms-scope': [{ fw: 'iso27001', code: '4.3', implements: true }],
+  'infosec-policy': [{ fw: 'iso27001', code: '5.2', implements: true }, { fw: 'iso27001', code: '5.1', implements: false }],
+  'roles-responsibilities': [{ fw: 'iso27001', code: '5.3', implements: true }, { fw: 'iso42001', code: '5.3', implements: true }],
+  'risk-management-framework': [{ fw: 'iso27001', code: '6.1.2', implements: false }, { fw: 'iso27001', code: '6.1.3', implements: false }],
+  'infosec-objectives-metrics': [{ fw: 'iso27001', code: '6.2', implements: false }, { fw: 'iso27001', code: '9.1', implements: false }],
+  'isms-change-planning': [{ fw: 'iso27001', code: '6.3', implements: false }],
+  'competence-awareness-plan': [{ fw: 'iso27001', code: '7.2', implements: false }, { fw: 'iso27001', code: '7.3', implements: false }],
+  'communication-plan': [{ fw: 'iso27001', code: '7.4', implements: true }],
+  'document-control-procedure': [{ fw: 'iso27001', code: '7.5.2', implements: false }, { fw: 'iso27001', code: '7.5.3', implements: false }],
+  'internal-audit-procedure': [{ fw: 'iso27001', code: '9.2', implements: false }],
+  'management-review-procedure': [{ fw: 'iso27001', code: '9.3', implements: false }, { fw: 'iso27001', code: '10.1', implements: false }],
+  'nonconformity-corrective-action': [{ fw: 'iso27001', code: '10.2', implements: false }],
+  'aims-scope': [{ fw: 'iso42001', code: '4.3', implements: true }, { fw: 'iso42001', code: '4.1', implements: false }, { fw: 'iso42001', code: '4.2', implements: false }],
+  'ai-policy': [{ fw: 'iso42001', code: '5.2', implements: true }],
+  'ai-risk-framework': [{ fw: 'iso42001', code: '6.1.2', implements: false }, { fw: 'iso42001', code: '6.1.3', implements: false }],
+  'ai-impact-assessment': [{ fw: 'iso42001', code: '6.1.4', implements: false }],
+  'ai-objectives-metrics': [{ fw: 'iso42001', code: '6.2', implements: false }]
+};
+
 /* The scope & context questionnaire — plain-English questions a client
    can answer without knowing ISO 27001, each one feeding
    CheckpointLib.buildOrgContextDraft() (lib.js), which drafts the
