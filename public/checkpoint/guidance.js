@@ -192,7 +192,7 @@ window.GUIDANCE = {
     how: "Enforce a real authentication policy through Entra — a sensible password policy or, better, passwordless/FIDO2 where feasible, banned-password lists, and MFA as the actual control rather than password complexity alone. Never share credentials for any account; use PIM or a password vault where an account genuinely must be shared. Where AWS is in scope, IAM access keys are the equivalent long-lived credential — Checkpoint checks they're rotated within policy. Checkpoint's mfa-registration check reads the authentication methods registration report directly and reports who is actually MFA-CAPABLE — distinct from the mfa-all check, which reads what Conditional Access requires. A tenant where the two disagree has users covered by a policy they cannot satisfy, and what usually follows is an exclusion group that quietly undoes it.",
     evidence: "The Entra authentication methods policy configuration, and Checkpoint's mfa-registration result as the MFA registration/coverage report itself.",
     link: "https://entra.microsoft.com",
-    checks: ["aws-key-age", "mfa-registration"]
+    checks: ["aws-key-age", "mfa-registration", "gh-secret-scanning", "gh-secret-alerts"]
   },
   'A.5.18': {
     how: "Grant access through group-based role assignment rather than one-off individual grants, require approval for privileged role activation through Entra PIM, and run a periodic access review to catch rights that should have been revoked but weren't. Checkpoint's PIM check verifies privileged roles are held as eligible assignments, not standing access; its access-review check confirms at least one Entra Access Review is actually configured to run that periodic check, though not that a cycle has recently completed. Between reviews, priv-role-changes reads the Entra directory audit log and reports every privileged role change in your window — who granted what, to whom, and when — so a role added the day after a review completed does not sit unnoticed until the next one. Self-service PIM activations are excluded from that list, since a user elevating into a role they are already eligible for is the control working rather than a change to who holds what. dormant-accounts closes the review from the other end: access rights that should have been removed and were not show up as enabled accounts nobody has signed into, which is what a periodic review is looking for between cycles.",
@@ -333,7 +333,7 @@ window.GUIDANCE = {
     how: "Deliver security awareness training at induction and refresh it at least annually — Microsoft Defender's Attack Simulation Training runs realistic phishing simulations with built-in training assignment for anyone who falls for one, which is a strong, low-effort way to satisfy this control with real data behind it.",
     evidence: "Training completion records for staff, and, where used, Attack Simulation Training campaign results.",
     link: "https://security.microsoft.com",
-    checks: ["training"]
+    checks: ["training", "phish-sim"]
   },
   'A.6.4': {
     how: "Have a documented disciplinary process for security policy violations, proportionate to the severity, and make sure staff know it exists — this is usually already covered by an HR policy, so the control is often just about explicitly cross-referencing security violations in it.",
@@ -479,14 +479,14 @@ window.GUIDANCE = {
     how: "Restrict source code access to the developers and systems that need it — Azure DevOps or GitHub repository permissions, branch protection rules, and no shared credentials for source control. Log and review access to production-facing repositories periodically.",
     evidence: "Repository access-control configuration and a periodic access review record.",
     link: "https://portal.azure.com",
-    checks: []
+    checks: ["gh-org-2fa"]
   },
   'A.8.5': {
     how: "Require MFA for every user without exception, block legacy authentication protocols that can't enforce MFA, and use phishing-resistant methods (FIDO2, certificate-based auth, or at minimum authenticator-app push with number matching) for privileged roles specifically. Where Entra ID Protection (P2) is licensed, add risk-based Conditional Access so a risky sign-in or a compromised-looking account is challenged or blocked automatically rather than relying on someone noticing, and bound privileged session lifetime with sign-in frequency so a stolen token doesn't stay useful forever. This is the control Checkpoint's posture scan checks most directly — mfa-all, mfa-priv, legacy, ca-risk and ca-sif all read your live Conditional Access configuration. Policy alone is not proof, though: legacy-auth-observed reads the Entra sign-in log to check whether any legacy sign-in actually succeeded despite the policy, which is what catches a policy scoped past the one service account that still uses IMAP. mfa-registration is the same idea applied to MFA itself: it reads who is actually capable of completing it, so a policy requiring MFA of users who have never registered a method shows up here rather than as a wave of lockouts.",
     evidence: "The Conditional Access policy set enforcing MFA, blocking legacy auth, acting on sign-in/user risk and bounding privileged session lifetime, Checkpoint's mfa-all/mfa-priv/legacy/ca-risk/ca-sif scan results, and the legacy-auth-observed result showing the sign-in log agrees with the policy.",
     link: "https://entra.microsoft.com",
     path: "Identity → Protection → Conditional Access → Policies",
-    checks: ["mfa-all", "mfa-priv", "mfa-registration", "legacy", "legacy-auth-observed", "ca-risk", "ca-sif", "aws-root-mfa", "aws-user-mfa"]
+    checks: ["mfa-all", "mfa-priv", "mfa-registration", "legacy", "legacy-auth-observed", "ca-risk", "ca-sif", "aws-root-mfa", "aws-user-mfa", "gh-org-2fa"]
   },
   'A.8.6': {
     how: "Monitor capacity for systems you're directly responsible for (on-premises servers, Azure resources) with alerting before thresholds are hit, and plan ahead for growth. For fully cloud-hosted Microsoft 365 services, capacity management is largely Microsoft's responsibility — document that scoping decision.",
@@ -502,13 +502,13 @@ window.GUIDANCE = {
        blade deep link this one IS a documented, dedicated page of the
        Defender portal, not an internal SPA route. */
     link: "https://security.microsoft.com/securescore",
-    checks: ["wdac", "macro"]
+    checks: ["wdac", "macro", "edr-coverage"]
   },
   'A.8.8': {
     how: "Patch operating systems and applications on a defined cadence, tightened for anything internet-facing, using Intune update rings or your existing patch management tooling. Checkpoint's patch check reads your Secure Score signal for patch currency on every scan, so gaps here surface automatically.",
     evidence: "The Intune update-ring configuration, a patch compliance report, and Checkpoint's patch scan result.",
     link: "https://intune.microsoft.com",
-    checks: ["patch"]
+    checks: ["patch", "gh-dependabot"]
   },
   'A.8.9': {
     how: "Define and enforce secure configuration baselines for devices and key services — Intune security baselines are a fast way to apply Microsoft-recommended hardening across the fleet — and track configuration drift rather than assuming a one-time setup stays correct. Where AWS is in scope, AWS Config is the equivalent: it records resource configuration state so drift is detectable rather than assumed away.",
@@ -556,7 +556,7 @@ window.GUIDANCE = {
     how: "Actively monitor security alerts rather than just collecting logs — Microsoft 365 Defender's alert and incident queue needs an assigned owner checking it regularly, with a documented triage process. Checkpoint's alerts check looks at whether threat-protection monitoring is genuinely in place via Secure Score. Where AWS is in scope, GuardDuty is the equivalent managed threat detection.",
     evidence: "Defender alert triage records showing regular review, and Checkpoint's alerts scan result.",
     link: "https://security.microsoft.com",
-    checks: ["alerts", "aws-guardduty"]
+    checks: ["alerts", "aws-guardduty", "edr-coverage"]
   },
   'A.8.17': {
     how: "Confirm systems use a consistent, accurate time source (NTP) so that logs from different systems can be correlated during an investigation — this is on by default for Microsoft 365 and Azure-hosted infrastructure and mainly needs verifying for any on-premises systems you still operate.",
@@ -608,9 +608,9 @@ window.GUIDANCE = {
   },
   'A.8.25': {
     how: "Follow a defined secure development life cycle for any software you build — security requirements gathered up front, code review before merge, security testing before release — rather than security being an afterthought. Organisations with no in-house development can scope this control as not applicable and record why.",
-    evidence: "The documented SDLC process and evidence it's followed for a sample of recent releases, or a not-applicable justification.",
+    evidence: "The documented SDLC process and evidence it's followed for a sample of recent releases, or a not-applicable justification. Where code lives in GitHub, the optional GitHub collector (public/checkpoint/github/) proves review-before-merge and required checks on every repository, every day.",
     link: "https://portal.azure.com",
-    checks: []
+    checks: ["gh-branch-review", "gh-status-checks"]
   },
   'A.8.26': {
     how: "Define security requirements (authentication, authorisation, input validation, logging) as part of application requirements gathering, not bolted on afterward, for any application you build or commission.",
@@ -626,15 +626,15 @@ window.GUIDANCE = {
   },
   'A.8.28': {
     how: "Follow secure coding practices (input validation, parameterised queries, dependency scanning for known vulnerabilities) and enforce them through code review and automated tooling in your CI/CD pipeline rather than relying on individual developer discipline alone.",
-    evidence: "Coding standards documentation and CI/CD pipeline configuration showing automated security scanning.",
+    evidence: "Coding standards documentation, plus the GitHub collector's secret scanning, dependency and code scanning results where code lives in GitHub.",
     link: "https://portal.azure.com",
-    checks: []
+    checks: ["gh-secret-scanning", "gh-secret-alerts", "gh-dependabot", "gh-code-scanning"]
   },
   'A.8.29': {
     how: "Test security specifically before release — static/dynamic application security testing, dependency vulnerability scanning, and penetration testing for higher-risk applications — rather than treating functional testing as sufficient coverage for security.",
     evidence: "Security testing results for a recent release, and evidence any findings were remediated before go-live.",
     link: "https://portal.azure.com",
-    checks: []
+    checks: ["gh-status-checks", "gh-code-scanning"]
   },
   'A.8.30': {
     how: "Apply the same security requirements to outsourced development as you would to in-house work — a documented security requirement in the development contract, code review or acceptance testing before deployment, and the same vulnerability management obligations.",
@@ -652,7 +652,7 @@ window.GUIDANCE = {
     how: "Run changes through a documented change management process — request, risk assessment, approval, testing, rollback plan — proportionate to the change's risk. A lightweight ticket-based workflow with a required approval step satisfies this for most SMEs; the point is changes aren't made ad hoc to production.",
     evidence: "Change records for a sample of recent changes showing the approval and testing steps were followed.",
     link: "https://admin.microsoft.com",
-    checks: []
+    checks: ["gh-branch-review"]
   },
   'A.8.33': {
     how: "Protect test data the same way you'd protect the production data it's derived from — mask or synthesise sensitive fields before use in testing, and apply the same access restrictions to test environments containing real data as you would in production.",

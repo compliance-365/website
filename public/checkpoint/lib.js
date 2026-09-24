@@ -1397,6 +1397,439 @@
     }
     return { total: list.length, published: published.length, withDisposition: withDisposition.length, result: 'pass' };
   }
+  /* ============================================================
+     Defender & Purview depth — direct reads replacing Secure Score
+     name-matching where a GA v1.0 Graph signal exists.
+     ------------------------------------------------------------
+     Four pure scorers behind graph.js's advanced-hunting, attack-
+     simulation and sensitivity-label reads. Same contract as every
+     scorer above: each takes the shape Graph returned and says what it
+     means, and none of them ever turns missing data into a finding. */
+
+  /* Defender Vulnerability Management exposure — the direct signal
+     behind the 'patch' check when advanced hunting is readable. Input is
+     one row per CVE from graph.js's hunting query: { CveId, Severity,
+     Devices, PublishedDate }, already filtered to CVEs with a known
+     public exploit.
+
+     Scored on EXPLOITABLE vulnerabilities older than the patch window,
+     not on vulnerability count. Every real fleet carries some CVEs; what
+     Essential Eight and ISO 27001 A.8.8 test is whether the ones that
+     are being exploited get fixed inside the committed timeframe.
+
+     PublishedDate is when the CVE was published, not when a given
+     device became exposed — so "older than the window" means "known
+     about for longer than the window". That is the honest reading of
+     what the table holds, and it is the question an assessor asks. An
+     unparseable date is never counted as overdue. */
+  function tvmExposureResult(rows, windowDays, nowMs) {
+    var list = (rows || []).filter(function (r) { return r && r.CveId; });
+    var winMs = (typeof windowDays === 'number' && windowDays >= 0 ? windowDays : 14) * 86400000;
+    function overdue(r) {
+      var p = Date.parse(r.PublishedDate || '');
+      return !isNaN(p) && (nowMs - p) > winMs;
+    }
+    var sev = function (r) { return String(r.Severity || r.VulnerabilitySeverityLevel || '').toLowerCase(); };
+    var critical = list.filter(function (r) { return sev(r) === 'critical'; });
+    var high = list.filter(function (r) { return sev(r) === 'high'; });
+    var criticalOverdue = critical.filter(overdue);
+    var highOverdue = high.filter(overdue);
+    var devices = list.reduce(function (m, r) { return Math.max(m, Number(r.Devices) || 0); }, 0);
+    return {
+      exploitable: list.length, critical: critical.length, high: high.length,
+      criticalOverdue: criticalOverdue.length, highOverdue: highOverdue.length,
+      maxDevicesOnOneCve: devices,
+      worst: criticalOverdue.concat(highOverdue).slice(0, 5).map(function (r) { return r.CveId; }),
+      result: criticalOverdue.length ? 'fail' : (highOverdue.length ? 'review' : 'pass')
+    };
+  }
+
+  /* Defender for Endpoint sensor coverage, from one summarised
+     advanced-hunting row: { Onboarded, CanBeOnboarded, Inactive }.
+
+     "Can be onboarded" devices are machines Defender's own device
+     discovery has SEEN on the network that run no sensor — the gap an
+     EDR coverage claim quietly skips over. Inactive sensors are
+     onboarded devices that have stopped reporting, which protect
+     nothing. Both count against coverage.
+
+     With device discovery switched off, Defender never reports a
+     "can be onboarded" device and coverage reads as complete; the note
+     in graph.js says so rather than letting the pass speak for itself. */
+  function edrCoverageResult(row, reviewPct) {
+    if (!row) return { onboarded: 0, unprotected: 0, inactive: 0, coveragePct: null, result: 'manual' };
+    var onboarded = Number(row.Onboarded) || 0;
+    var unprotected = Number(row.CanBeOnboarded) || 0;
+    var inactive = Number(row.Inactive) || 0;
+    var denom = onboarded + unprotected;
+    /* No onboarded device and nothing discovered: Defender for Endpoint
+       is licensed but not deployed. Nothing measured is not a pass. */
+    if (!denom) return { onboarded: 0, unprotected: 0, inactive: 0, coveragePct: null, result: 'fail' };
+    var healthy = Math.max(0, onboarded - inactive);
+    var pct = Math.floor(healthy / denom * 1000) / 10;
+    var floor = typeof reviewPct === 'number' ? reviewPct : 90;
+    return {
+      onboarded: onboarded, unprotected: unprotected, inactive: inactive, coveragePct: pct,
+      result: (unprotected === 0 && inactive === 0) ? 'pass' : (pct >= floor ? 'review' : 'fail')
+    };
+  }
+
+  /* Attack simulation training (Defender for Office 365 P2) — evidence
+     for A.6.3 that awareness is TESTED, not just delivered.
+
+     Deliberately never 'fail'. No standard Checkpoint maps to requires
+     phishing simulation specifically — A.6.3 asks for awareness,
+     education and training, which the Training register already scores.
+     A tenant that has the licence and has never run one gets 'review'
+     (a nudge that the evidence is there for the taking), not a failed
+     control. */
+  var SIM_DONE = { succeeded: 1, recentlyArchived: 1, fullyArchived: 1 };
+  function attackSimulationResult(sims, cadenceDays, maxCompromisePct, nowMs) {
+    var done = (sims || []).filter(function (s) { return s && SIM_DONE[s.status] && !isNaN(Date.parse(s.completionDateTime || '')); });
+    done.sort(function (a, b) { return Date.parse(b.completionDateTime) - Date.parse(a.completionDateTime); });
+    var running = (sims || []).filter(function (s) { return s && s.status === 'running'; }).length;
+    var latest = done[0] || null;
+    var cadMs = (typeof cadenceDays === 'number' && cadenceDays > 0 ? cadenceDays : 180) * 86400000;
+    var out = { completed: done.length, running: running, latestId: latest ? latest.id : null,
+      latestName: latest ? (latest.displayName || '') : '', latestCompleted: latest ? latest.completionDateTime : null,
+      daysSince: latest ? Math.floor((nowMs - Date.parse(latest.completionDateTime)) / 86400000) : null,
+      compromisedRate: null, result: 'review' };
+    if (!latest) return out;
+    if (nowMs - Date.parse(latest.completionDateTime) > cadMs) return out;
+    var rate = latest.report && latest.report.overview && latest.report.overview.simulationEventsContent
+      ? latest.report.overview.simulationEventsContent.compromisedRate : null;
+    if (typeof rate === 'number' && !isNaN(rate)) {
+      out.compromisedRate = Math.round(rate * 10) / 10;
+      var cap = typeof maxCompromisePct === 'number' ? maxCompromisePct : 20;
+      out.result = rate > cap ? 'review' : 'pass';
+    } else {
+      /* Ran recently, report not readable: the campaign itself is the
+         evidence A.6.3 needs; the rate is a bonus, not a precondition. */
+      out.result = 'pass';
+    }
+    return out;
+  }
+
+  /* Sensitivity labels that APPLY PROTECTION (encryption / rights
+     management) — the direct signal behind the 'encryption' check, from
+     /security/dataSecurityAndGovernance/sensitivityLabels' hasProtection.
+
+     Measures that encryption is AVAILABLE to users through a label, not
+     how much content carries it — Graph cannot count labelled items.
+     No protecting label is 'review' rather than 'fail': Purview Message
+     Encryption via transport rule, or a third-party product, can meet
+     the same control without a label, which this endpoint cannot see. */
+  function labelProtectionResult(labels) {
+    var flat = [];
+    (function walk(list) {
+      (list || []).forEach(function (l) { if (!l) return; flat.push(l); if (l.sublabels) walk(l.sublabels); });
+    })(labels);
+    var protecting = flat.filter(function (l) { return l.hasProtection === true; });
+    return {
+      total: flat.length, protecting: protecting.length,
+      names: protecting.slice(0, 5).map(function (l) { return l.displayName || l.name || l.id; }),
+      result: protecting.length ? 'pass' : 'review'
+    };
+  }
+  /* ============================================================
+     Security questionnaire responder
+     ------------------------------------------------------------
+     Answers inbound customer security questionnaires (a buyer's own
+     spreadsheet, CAIQ, SIG-style questions) from what this tenant can
+     actually SHOW: its Statement of Applicability, its latest posture
+     scan, and answers a practitioner has already approved.
+
+     Deliberately deterministic and AI-free, so it works on every
+     tenant. The AI add-on, where entitled, drafts prose on top of the
+     same evidence pack this produces (see ai.js's 'questionEvidence'
+     section) — it never replaces it, and it never sees more than it.
+
+     The honesty rule every scorer in this file follows applies here
+     too, and matters more, because the output leaves the building: a
+     draft answer is only ever written when the evidence says "yes".
+     Mixed or failing evidence produces a verdict and the facts behind
+     it, never a sentence claiming the control is in place.
+
+     Topic sentences are tool-neutral on purpose. The evidence behind a
+     "yes" may be a Microsoft signal, an AWS one, a GitHub one or only a
+     practitioner's SoA status, and a sentence naming the wrong product
+     would be an inaccurate statement to a customer. */
+  var QUESTION_TOPICS = [
+    { key: 'mfa', label: 'Multi-factor authentication', re: /\bmfa\b|multi[- ]?factor|two[- ]?factor|\b2fa\b|strong authentication/i,
+      controls: ['A.8.5', 'A.5.17'], checks: ['mfa-all', 'mfa-priv', 'mfa-registration', 'aws-user-mfa', 'aws-root-mfa', 'gh-org-2fa'],
+      yes: 'Multi-factor authentication is required for user access, including all privileged accounts.' },
+    { key: 'access', label: 'Access control & least privilege', re: /access control|least[- ]privilege|role[- ]based|\brbac\b|privileged (access|accounts?)|admin(istrator|istrative)? (access|rights|accounts?)|need[- ]to[- ]know/i,
+      controls: ['A.5.15', 'A.8.2'], checks: ['admins', 'pim', 'sod'],
+      yes: 'Access is granted on a least-privilege, role basis, and privileged access is restricted to named individuals.' },
+    { key: 'accessreview', label: 'Access reviews', re: /access reviews?|review(s|ed)? (of )?(user )?access|recertif|entitlement review/i,
+      controls: ['A.5.18'], checks: ['access-review'],
+      yes: 'User access rights are reviewed at planned intervals.' },
+    { key: 'offboarding', label: 'Joiners & leavers', re: /offboard|onboard|leavers?|joiners?|terminat\w* (of )?(employ|staff|user|contract)|revok\w* access|departing|staff (exit|departure)/i,
+      controls: ['A.5.11', 'A.5.16', 'A.6.5'], checks: ['leaver', 'lifecycle-workflows', 'dormant-accounts'],
+      yes: 'Access is provisioned through a defined joiner process and revoked promptly when staff leave.' },
+    { key: 'password', label: 'Passwords & authentication information', re: /password|passphrase|credential (policy|management)/i,
+      controls: ['A.5.17'], checks: ['mfa-registration', 'legacy'],
+      yes: 'Authentication information is managed under a documented policy, and passwords are never the only factor for access.' },
+    { key: 'encryptrest', label: 'Encryption at rest', re: /at[- ]rest|disk encryption|bitlocker|filevault|full[- ]disk|(storage|database|laptop|device)s? (are |is )?encrypt/i,
+      controls: ['A.8.24'], checks: ['device-encryption', 'aws-ebs-encryption', 'aws-rds-encryption'],
+      yes: 'Data is encrypted at rest.' },
+    { key: 'encrypttransit', label: 'Encryption in transit', re: /in[- ]transit|\btls\b|\bssl\b|\bhttps\b|transport (layer )?(security|encryption)/i,
+      controls: ['A.8.24', 'A.5.14'], checks: [],
+      yes: 'Data is encrypted in transit using current TLS.' },
+    { key: 'encryption', label: 'Encryption & key management', re: /encrypt|cryptograph|key management|\bkms\b|\bhsm\b/i,
+      controls: ['A.8.24'], checks: ['encryption', 'device-encryption'],
+      yes: 'Sensitive information is protected with encryption under a documented cryptography policy.' },
+    { key: 'backup', label: 'Backup & restore', re: /back[- ]?ups?\b|restore test|recovery point|\brpo\b/i,
+      controls: ['A.8.13'], checks: ['backup'],
+      yes: 'Data is backed up regularly, and restores are tested.' },
+    { key: 'bcp', label: 'Business continuity & disaster recovery', re: /business continuity|disaster recovery|\bbcp\b|\bdrp?\b|recovery time|\brto\b|resilien|failover/i,
+      controls: ['A.5.29', 'A.5.30'], checks: ['bcp'],
+      yes: 'A business continuity and disaster recovery plan is documented and tested.' },
+    { key: 'incident', label: 'Incident response', re: /incident|breach (notification|response)|notify (you|customers|clients)|security events?/i,
+      controls: ['A.5.24', 'A.5.25', 'A.5.26', 'A.6.8'], checks: ['xdr-incidents', 'incident-lessons'],
+      yes: 'A documented incident response process is in place; security incidents are triaged, responded to within defined timeframes and reviewed afterwards.' },
+    { key: 'logging', label: 'Logging & monitoring', re: /\blog(s|ging)?\b|audit (log|trail)s?|monitor|\bsiem\b|security operations|\bsoc\b(?!\s*[12])|alert/i,
+      controls: ['A.8.15', 'A.8.16'], checks: ['logging', 'alerts', 'xdr-incidents', 'aws-cloudtrail', 'aws-guardduty', 'edr-coverage'],
+      yes: 'Security-relevant activity is logged, and security alerts are monitored and triaged.' },
+    { key: 'malware', label: 'Malware protection & EDR', re: /anti[- ]?virus|anti[- ]?malware|malware|endpoint (detection|protection|security)|\bedr\b|\bxdr\b|\bav\b/i,
+      controls: ['A.8.7'], checks: ['edr-coverage', 'wdac', 'macro'],
+      yes: 'Endpoints run managed anti-malware protection with endpoint detection and response.' },
+    { key: 'vuln', label: 'Vulnerability & patch management', re: /patch|vulnerabilit|security updates?|\bcves?\b/i,
+      controls: ['A.8.8'], checks: ['patch', 'gh-dependabot'],
+      yes: 'Vulnerabilities are identified and remediated within defined timeframes based on severity.' },
+    { key: 'pentest', label: 'Penetration testing', re: /penetration test|pen[- ]?test|ethical hack|red[- ]team/i,
+      controls: ['A.8.8', 'A.8.29'], checks: [],
+      yes: 'Independent penetration testing is performed, and findings are tracked to remediation.' },
+    { key: 'devices', label: 'Device management', re: /mobile devices?|\bmdm\b|device management|managed devices?|laptops?|workstations?|endpoint (management|compliance)|\bbyod\b|bring your own/i,
+      controls: ['A.8.1'], checks: ['device', 'compliance-policy', 'device-checkin', 'device-encryption'],
+      yes: 'Company devices are centrally managed and must meet a security baseline to access company data.' },
+    { key: 'sdlc', label: 'Secure development', re: /secure (software )?development|\bsdlc\b|code reviews?|peer review|pull requests?|secure coding|\bowasp\b|static (code )?analysis|\bsast\b|\bdast\b|security testing/i,
+      controls: ['A.8.25', 'A.8.28', 'A.8.29'], checks: ['gh-branch-review', 'gh-status-checks', 'gh-code-scanning'],
+      yes: 'Software is built under a secure development life cycle: every change is peer-reviewed before merge, and automated security testing gates release.' },
+    { key: 'change', label: 'Change management', re: /change (management|control|approval)|changes to production|release (management|process)/i,
+      controls: ['A.8.32'], checks: ['gh-branch-review'],
+      yes: 'Changes to production systems follow a documented change management process, with approval before release.' },
+    { key: 'secrets', label: 'Secrets & credentials in code', re: /secrets?\b|hard[- ]?coded|api keys?|access keys?|credential leak/i,
+      controls: ['A.5.17', 'A.8.24'], checks: ['gh-secret-scanning', 'gh-secret-alerts', 'aws-key-age'],
+      yes: 'Secrets and keys are held in managed secret stores and rotated, and source code is scanned to prevent credential leaks.' },
+    { key: 'dependencies', label: 'Third-party code & dependencies', re: /open[- ]source|dependenc|software composition|\bsca\b|third[- ]party (libraries|components|packages|code)/i,
+      controls: ['A.8.28'], checks: ['gh-dependabot'],
+      yes: 'Third-party and open-source dependencies are monitored for known vulnerabilities and kept up to date.' },
+    { key: 'vendor', label: 'Supplier & vendor management', re: /vendors?|suppliers?|third[- ]part(y|ies)(?! (libraries|components|packages|code))|sub[- ]?processors?|outsourc|supply chain/i,
+      controls: ['A.5.19', 'A.5.20', 'A.5.21', 'A.5.22'], checks: ['supplier'],
+      yes: 'Suppliers are assessed for security before engagement and reviewed periodically, with security obligations set in contracts.' },
+    { key: 'training', label: 'Security awareness training', re: /training|awareness|educat/i,
+      controls: ['A.6.3'], checks: ['training', 'phish-sim'],
+      yes: 'All staff complete security awareness training at induction and at least annually.' },
+    { key: 'phishing', label: 'Phishing & social engineering', re: /phish|social engineering|simulat/i,
+      controls: ['A.6.3'], checks: ['phish-sim', 'training'],
+      yes: 'Staff awareness of phishing is tested with simulated phishing campaigns, followed by targeted training.' },
+    { key: 'screening', label: 'Personnel screening', re: /background (check|screening)|screening|vetting|criminal (history|record)|reference checks?/i,
+      controls: ['A.6.1'], checks: [],
+      yes: 'Personnel are screened before employment, proportionate to the role and the information they will access.' },
+    { key: 'nda', label: 'Confidentiality agreements', re: /\bndas?\b|non[- ]disclosure|confidentiality (agreement|undertaking)/i,
+      controls: ['A.6.6'], checks: [],
+      yes: 'Staff and contractors sign confidentiality agreements.' },
+    { key: 'policy', label: 'Security policies', re: /security polic(y|ies)|\bisms\b|polic(y|ies) (is |are )?(documented|reviewed|approved|in place)|written polic/i,
+      controls: ['A.5.1'], checks: ['policy'],
+      yes: 'A documented information security policy set is approved by management, communicated to staff and reviewed at least annually.' },
+    { key: 'risk', label: 'Risk management', re: /risk (assessment|management|register|treatment)|assess\w* (security )?risks?/i,
+      controls: [], checks: [], register: 'risks',
+      yes: 'Information security risks are assessed, recorded in a risk register and treated, with residual risk accepted by management.' },
+    { key: 'audit', label: 'Independent review & certification', re: /certif|iso ?27001|soc ?2|\bsoc 1\b|attestation|independent (audit|review|assessment)|external audit|internal audit/i,
+      controls: ['A.5.35', 'A.5.36'], checks: ['audit-review'], caution: 'Certification and audit-report status must be stated by you. Checkpoint never claims an audit outcome.',
+      yes: 'Information security is independently reviewed at planned intervals, and compliance with policies is checked.' },
+    { key: 'classification', label: 'Data classification & labelling', re: /classif|labell?ing|sensitivity labels?|data handling/i,
+      controls: ['A.5.12', 'A.5.13'], checks: ['labels'],
+      yes: 'Information is classified and labelled according to its sensitivity.' },
+    { key: 'dlp', label: 'Data loss prevention', re: /data loss|\bdlp\b|exfiltrat|data leak/i,
+      controls: ['A.8.12'], checks: ['dlp'],
+      yes: 'Data loss prevention controls monitor and restrict the movement of sensitive information.' },
+    { key: 'retention', label: 'Retention & secure deletion', re: /retention|retain|delet(e|ion)|dispos(e|al)|destroy|destruction|purg(e|ing)|sanitis|sanitiz/i,
+      controls: ['A.8.10', 'A.5.33'], checks: ['retention'],
+      yes: 'Information is retained and securely deleted according to a defined retention schedule.' },
+    { key: 'privacy', label: 'Privacy & personal information', re: /privacy|personal (data|information)|\bpii\b|\bgdpr\b|data subjects?|subject (access|rights)/i,
+      controls: ['A.5.34'], checks: ['privacy-srr', 'retention'],
+      yes: 'Personal information is handled in line with applicable privacy law, and requests from individuals are answered within statutory deadlines.' },
+    { key: 'physical', label: 'Physical security', re: /physical (security|access)|data ?cent(er|re)s?|office (access|security)|\bcctv\b|visitors?/i,
+      controls: ['A.7.1', 'A.7.2'], checks: [],
+      yes: 'Physical access to facilities that hold information is controlled.' },
+    { key: 'network', label: 'Network security', re: /firewall|network (security|segmentation|segregation|controls)|\bvpn\b|intrusion|\bids\b|\bips\b|open ports?/i,
+      controls: ['A.8.20', 'A.8.21', 'A.8.22'], checks: ['aws-sg-open'],
+      yes: 'Networks are protected and segmented, and no administrative service is exposed to the internet.' },
+    { key: 'sharing', label: 'External sharing & guest access', re: /external sharing|file sharing|share\w* (files|documents|data) (externally|with third)|guest (users|access|accounts)/i,
+      controls: ['A.5.14', 'A.5.16'], checks: ['sharing', 'guests'],
+      yes: 'External sharing is restricted, and guest access is governed and reviewed.' },
+    { key: 'hosting', label: 'Hosting & data location', re: /hosted|hosting|data (residency|location|sovereignty)|where (is|will) (your|our|the|my|customer) data|cloud (provider|service)s?|which region/i,
+      controls: ['A.5.23'], checks: ['ca-cas'], caution: 'Data location and hosting provider are facts only you can state. Checkpoint cannot see where your product is hosted.',
+      yes: 'Cloud services are selected, used and exited under a documented cloud security process.' },
+    { key: 'ai', label: 'Use of AI', re: /artificial intelligence|\bai\b|machine learning|\bllms?\b|generative|large language model/i,
+      controls: [], checks: [], register: 'aiSystems', caution: 'Say whether customer data is used to train models. Checkpoint cannot infer that.',
+      yes: 'AI systems in use are inventoried and governed under a documented AI policy.' }
+  ];
+
+  var Q_STOP = { the: 1, a: 1, an: 1, and: 1, or: 1, of: 1, to: 1, in: 1, on: 1, for: 1, is: 1, are: 1, do: 1, does: 1, you: 1, your: 1, we: 1, our: 1, it: 1, this: 1, that: 1, with: 1, by: 1, be: 1, have: 1, has: 1, any: 1, all: 1, please: 1, describe: 1, provide: 1, explain: 1, what: 1, how: 1, which: 1, if: 1, so: 1, as: 1, at: 1, from: 1, there: 1, yes: 1, no: 1, organisation: 1, organization: 1, company: 1 };
+  function questionTokens(text) {
+    var out = {};
+    String(text || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).forEach(function (w) {
+      if (!w || w.length < 2 || Q_STOP[w]) return;
+      out[w.replace(/(ing|ed|es|s)$/, '') || w] = 1;
+    });
+    return Object.keys(out);
+  }
+  /* Dice coefficient over normalised tokens: 1 = same words. */
+  function questionSimilarity(a, b) {
+    var ta = questionTokens(a), tb = questionTokens(b);
+    if (!ta.length || !tb.length) return 0;
+    var setB = {}; tb.forEach(function (t) { setB[t] = 1; });
+    var shared = ta.filter(function (t) { return setB[t]; }).length;
+    return 2 * shared / (ta.length + tb.length);
+  }
+
+  function matchQuestionTopics(question) {
+    var q = String(question || '');
+    return QUESTION_TOPICS.filter(function (t) { return t.re.test(q); });
+  }
+
+  /* Splits pasted text or a CSV export into questions. Accepts one
+     question per line, or CSV where the question column is named
+     (Question / Control question / Requirement…) or is the longest
+     text column. Numbering like "1.", "Q3)" or "A.2.1 -" is stripped. */
+  function parseQuestionnaireInput(text) {
+    var lines = String(text || '').replace(/\r\n?/g, '\n').split('\n').filter(function (l) { return l.trim(); });
+    if (!lines.length) return [];
+    function splitCsv(line) {
+      var out = [], cur = '', q = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+        else if (ch === '"') q = true; else if (ch === ',') { out.push(cur); cur = ''; } else cur += ch;
+      }
+      out.push(cur);
+      return out.map(function (s) { return s.trim(); });
+    }
+    var looksCsv = lines.length > 1 && lines.slice(0, 5).every(function (l) { return l.indexOf(',') > -1; }) &&
+      splitCsv(lines[0]).length > 1 && splitCsv(lines[0]).length === splitCsv(lines[1]).length;
+    var raw;
+    if (looksCsv) {
+      var header = splitCsv(lines[0]).map(function (h) { return h.toLowerCase(); });
+      var col = header.findIndex(function (h) { return /question|requirement|control (text|description)|query/.test(h); });
+      var body = lines.slice(1).map(splitCsv);
+      if (col < 0) {
+        /* No named column: take the column with the longest average text. */
+        var avg = header.map(function (_, i) { return body.reduce(function (s, r) { return s + String(r[i] || '').length; }, 0) / (body.length || 1); });
+        col = avg.indexOf(Math.max.apply(null, avg));
+        if (!/[a-z]{4,}/i.test(header[col] || '') || header[col].length > 40) body.unshift(splitCsv(lines[0]));
+      }
+      raw = body.map(function (r) { return r[col] || ''; });
+    } else {
+      raw = lines;
+    }
+    return raw.map(function (s) {
+      return String(s).replace(/^\s*(q(uestion)?\s*)?[a-z]{0,3}\.?\d+(\.\d+)*\s*[.):\-]?\s+/i, '').replace(/^\s*[-•*]\s+/, '').trim();
+    }).filter(function (s) { return s.length > 3; });
+  }
+
+  /* Builds one question's evidence pack and verdict.
+     ctx = {
+       controls:   [{ id, t, app, st, evidenceUrl, verified }]  — ISO 27001 SoA rows
+       results:    { checkId: 'pass'|'review'|'fail'|'manual' } — latest scan
+       notes:      { checkId: note }
+       checkLabels:{ checkId: label }
+       scanDate:   'YYYY-MM-DD' | ''
+       registers:  { risks: n, aiSystems: n }
+       library:    [{ id, question, answer, verdict, approvedBy, approvedDate }]
+     }
+     Verdicts: 'Yes' | 'Partial' | 'No' | 'Not evidenced'. */
+  function assessQuestion(question, ctx) {
+    ctx = ctx || {};
+    var topics = matchQuestionTopics(question);
+    var controlsById = {};
+    (ctx.controls || []).forEach(function (c) { controlsById[c.id] = c; });
+    var results = ctx.results || {};
+    var seenC = {}, seenK = {};
+    var controls = [], checks = [], registers = [], cautions = [];
+    topics.forEach(function (t) {
+      t.controls.forEach(function (code) {
+        if (seenC[code]) return; seenC[code] = 1;
+        var c = controlsById[code];
+        if (c) controls.push({ code: code, title: c.t || '', applicable: c.app !== false, status: c.st || 'Not started', evidenced: !!c.evidenceUrl });
+      });
+      t.checks.forEach(function (id) {
+        if (seenK[id]) return; seenK[id] = 1;
+        var r = results[id];
+        /* An unmeasured check (never run, licence-gated, collector not
+           deployed) is not evidence either way — left out entirely. */
+        if (r && r !== 'manual') checks.push({ id: id, label: (ctx.checkLabels || {})[id] || id, result: r, note: (ctx.notes || {})[id] || '' });
+      });
+      if (t.register) {
+        var n = Number((ctx.registers || {})[t.register]) || 0;
+        registers.push({ key: t.register, count: n });
+      }
+      if (t.caution && cautions.indexOf(t.caution) < 0) cautions.push(t.caution);
+    });
+
+    var applicable = controls.filter(function (c) { return c.applicable; });
+    var implemented = applicable.filter(function (c) { return c.status === 'Implemented'; });
+    var started = applicable.filter(function (c) { return c.status === 'Implemented' || c.status === 'In progress' || c.status === 'Partially implemented'; });
+    var pass = checks.filter(function (k) { return k.result === 'pass'; });
+    var fail = checks.filter(function (k) { return k.result === 'fail'; });
+    var regHits = registers.filter(function (r) { return r.count > 0; });
+    var signals = applicable.length + checks.length + registers.length;
+
+    var verdict;
+    if (!topics.length || !signals) verdict = 'Not evidenced';
+    else if ((!applicable.length || implemented.length === applicable.length) && !fail.length && pass.length === checks.length &&
+             (implemented.length || pass.length || regHits.length) && regHits.length === registers.length) verdict = 'Yes';
+    else if (!implemented.length && !pass.length && !regHits.length && !started.length) verdict = 'No';
+    else verdict = 'Partial';
+
+    /* Every applicable control the topics name was marked not
+       applicable in the SoA: say so, rather than "Not evidenced". */
+    var allExcluded = controls.length && !applicable.length && !checks.length && !registers.length;
+    if (allExcluded) verdict = 'Not applicable';
+
+    var lib = null, best = 0;
+    (ctx.library || []).forEach(function (e) {
+      var s = questionSimilarity(question, e.question);
+      if (s > best) { best = s; lib = e; }
+    });
+    if (best < 0.6) lib = null;
+
+    var draft = '', source = 'none';
+    if (lib) { draft = lib.answer || ''; source = 'library'; }
+    else if (verdict === 'Yes') {
+      draft = topics.map(function (t) { return t.yes; }).filter(function (s, i, a) { return a.indexOf(s) === i; }).slice(0, 2).join(' ');
+      source = 'evidence';
+    }
+    /* A reused answer approved under different evidence is the drift a
+       reviewer most needs to see: the words say yes, the tenant no
+       longer does. */
+    var evidenceChanged = !!(lib && lib.verdict && lib.verdict !== verdict && verdict !== 'Not evidenced');
+
+    var confidence = 'Low';
+    if (lib && best >= 0.8 && !evidenceChanged) confidence = 'High';
+    else if (verdict === 'Yes' && pass.length) confidence = 'High';
+    else if (lib || verdict === 'Yes' || verdict === 'Partial') confidence = 'Medium';
+
+    var evidence = [];
+    applicable.forEach(function (c) { evidence.push(c.code + ' ' + c.title + ': ' + c.status + (c.evidenced ? ' (evidence linked)' : '')); });
+    checks.forEach(function (k) { evidence.push('Posture check "' + k.label + '": ' + k.result + (ctx.scanDate ? ' (scan ' + ctx.scanDate + ')' : '') + (k.result !== 'pass' && k.note ? ' — ' + k.note : '')); });
+    registers.forEach(function (r) { evidence.push((r.key === 'risks' ? 'Risk register' : r.key === 'aiSystems' ? 'AI systems register' : r.key) + ': ' + r.count + ' record(s)'); });
+    controls.filter(function (c) { return !c.applicable; }).forEach(function (c) { evidence.push(c.code + ' ' + c.title + ': marked not applicable in the SoA'); });
+
+    return {
+      question: String(question || ''),
+      topics: topics.map(function (t) { return t.label; }),
+      verdict: verdict, draft: draft, source: source, confidence: confidence,
+      libraryId: lib ? lib.id : null, librarySimilarity: lib ? Math.round(best * 100) / 100 : 0,
+      evidenceChanged: evidenceChanged,
+      controls: controls, checks: checks, evidence: evidence, cautions: cautions,
+      failing: fail.map(function (k) { return k.label; })
+    };
+  }
+
+
 
   /* ============================================================
      Register-derived posture checks
@@ -5381,7 +5814,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

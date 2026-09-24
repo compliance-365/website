@@ -77,6 +77,8 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `SharePointTenantSettings.Read.All` | Tenant-wide external sharing setting (external-sharing check; the signed-in user must hold the SharePoint Administrator or Global Administrator role) | Yes |
 | `SecurityIncident.Read.All` | Read the Defender XDR incident queue (incident-triage check; requires a Defender XDR plan). Read-only by design — Checkpoint never assigns, classifies or resolves an incident | Yes |
 | `SecurityAlert.Read.All` | Read the Defender XDR alert queue (replaces the Secure Score proxy behind the alerts check where Defender XDR is present) | Yes |
+| `ThreatHunting.Read.All` | Run fixed, read-only Defender advanced hunting queries: exploitable vulnerabilities from Defender Vulnerability Management (the `patch` check, replacing its Secure Score proxy where available) and endpoint sensor coverage (`edr-coverage`). Needs Defender for Endpoint P2 or Defender Vulnerability Management, and a Security Reader-level role. Without it, `edr-coverage` is Manual and `patch` falls back to Secure Score | Yes |
+| `AttackSimulation.Read.All` | Read Defender attack simulation campaigns and their reports (`phish-sim`). Needs Defender for Office 365 Plan 2. Read-only: Checkpoint never launches a simulation | Yes |
 | `SubjectRightsRequest.Read.All` | Read Priva subject rights requests (privacy-request check; requires Microsoft Priva) | Yes |
 | `RecordsManagement.Read.All` | Read Purview retention labels (retention/disposal check; requires Purview records management). Delegated-only — no application-permission equivalent exists | Yes |
 | `AuditLog.Read.All` | Read the Entra sign-in log, directory audit log, per-account sign-in activity and the authentication methods registration report. Backs the checks that read what the tenant **did** rather than how it is **configured**: `legacy-auth-observed` (did any legacy sign-in actually succeed, whatever the Conditional Access policy claims) and `priv-role-changes` (every privileged role change in the review window, with who made it). Read-only, and Checkpoint never writes to or purges an audit log — the logs are the evidence. Graph gates both logs behind this one scope, so consenting enables both checks or neither. Sign-in logs additionally need Entra ID P1 and a reports-reading role (Reports Reader, Security Reader, Security Administrator or Global Reader); directory audit logs are available on every tier but still need one of those roles. Without them, these checks degrade to Manual rather than failing. The same scope also backs `dormant-accounts` (enabled accounts with no recent sign-in — the offboarding that was never *started*, where the `leaver` check covers the one left half-finished; needs Entra ID P1 for `signInActivity`) and `mfa-registration` (who is actually MFA-**capable**, as against what Conditional Access *requires*; no premium tier needed). Neither adds a consent decision — both spend a permission already granted | Yes |
@@ -2798,6 +2800,49 @@ values written by hand into SharePoint), `checkResult()`'s precedence
 against `scored:false`, the pre-scan state and the demo remediation flip,
 and `score()`'s pass-versus-excluded-from-denominator arithmetic.
 
+### Secure development (GitHub)
+
+The optional GitHub collector (`public/checkpoint/github/`, see its
+README) runs as a scheduled Actions workflow in the client's own GitHub
+organisation, as a read-only GitHub App. It merges seven `gh-*` checks
+into the day's scan row, the same way the AWS collector does. They
+cover review-before-merge, required status checks, secret scanning and
+push protection, open leaked-secret alerts, Dependabot alerts, code
+scanning, and organisation 2FA. Together they give ISO 27001 A.8.25,
+A.8.28, A.8.29 and A.8.32 their first automated evidence. A.8.26 and
+A.8.27 stay documentary on purpose. The checks are hidden and left out
+of the score until the first collector run lands.
+
+**Tests**: `test/github-collector.test.mjs`.
+
+### Security questionnaires
+
+**Reporting → Security questionnaires** answers a customer's security
+questionnaire from the tenant's own evidence. Paste the questions or
+load a CSV. Each question is matched to topics (MFA, backups, secure
+development, sub-processors and about 35 more), then to the ISO 27001
+controls and posture checks behind them, and gets one of these evidence
+verdicts: **Yes / Partial / No / Not applicable / Not evidenced**.
+
+- **It works without the AI add-on.** The matching is deterministic
+  (`assessQuestion()` in `lib.js`). A draft sentence is written only
+  when the verdict is *Yes*. Anything weaker shows the facts behind it
+  and leaves the wording to the practitioner.
+- **Approved answers are reused.** Approving an answer saves it to the
+  `Checkpoint Answers` list along with the verdict at the time. When a
+  similar question comes in later, that answer is offered again. If the
+  evidence has changed since approval, the answer is flagged.
+- **The AI add-on drafts on top of the evidence.** Where the `ai`
+  entitlement is on and configured, **Draft with AI** sends each question
+  with its own evidence pack and verdict to the client's own Azure
+  OpenAI resource. The prompt tells the model to agree with the verdict.
+  Library answers are never re-drafted.
+
+Nothing is stored except the answers someone approves. The questionnaire
+being worked on lives in the browser session only.
+
+**Tests**: `test/questionnaire-responder.test.mjs`.
+
 ## 9. Continuous monitoring (optional)
 
 By default Checkpoint is an interactive tool — a practitioner runs a
@@ -2897,11 +2942,37 @@ This is entirely additive:
   automated run and cadence, and lists any open drift alerts with a
   one-click Acknowledge action, once deployed.
 
-### Why three checks still use Secure Score
+### Defender and Purview depth
 
-`patch`, `logging`, `macro`, `wdac`, `dlp` and `encryption` are still
-inferred from Microsoft Secure Score control names rather than read
-directly. That is a genuine limitation, not an oversight — Secure Score
+Four signals that used to be inferred from Secure Score control names,
+or were not measured at all, now come from a direct read where the
+tenant is licensed. A tenant without the licence keeps exactly the
+signal it had before.
+
+| Check | Direct read | Falls back to |
+|---|---|---|
+| `patch` | Defender advanced hunting: critical/high CVEs **with a known exploit** still present on any device, older than `patchExploitWindowDays` (14). Critical overdue fails; high overdue is a Review | Secure Score, as before |
+| `encryption` | Tenant sensitivity labels that apply protection (`hasProtection`, `/security/dataSecurityAndGovernance/sensitivityLabels`). No protecting label is a Review, not a Fail: encryption may be applied another way | Secure Score, as before |
+| `edr-coverage` (new) | Defender advanced hunting: onboarded, inactive and discovered-but-unprotected devices over the last 7 days | Manual |
+| `phish-sim` (new) | Attack simulation campaigns: the latest completed one within `phishSimCadenceDays` (180), with its compromise rate against `phishSimMaxCompromisePct` (20). Never scored Fail, because no mapped standard mandates simulation | Manual |
+
+`/security/runHuntingQuery` is a Graph v1.0 action on
+`graph.microsoft.com`, so this adds no new CSP origin and no new token
+audience. That resolves the reason `patch` was parked below. The queries
+are fixed strings in `graph.js`, and nothing a user types reaches them.
+
+These four are browser-scan only for now. The Azure `PostureMonitor`
+would need the matching *application* permissions granted before it
+could score them unattended.
+
+**Tests**: `test/defender-purview-depth.test.mjs`.
+
+### Why some checks still use Secure Score
+
+`logging`, `macro`, `wdac` and `dlp` are still inferred from Microsoft
+Secure Score control names rather than read directly, and so are `patch`
+and `encryption` on a tenant without the licence for their direct read
+(see above). That is a genuine limitation, not an oversight — Secure Score
 is a *score about* a product, and its own drift-alert text says "verify
 in portal", which is an admission that it points at where evidence lives
 rather than being evidence. A Secure Score-derived check cannot honestly
@@ -2920,7 +2991,9 @@ asynchronous job model: POST to create a query, poll it, then retrieve
 records. That is a write, it is slow, and it is still described as
 preview with intermittent instability. Wrong tool, wrong question.
 
-**`patch` (patch currency) — available, but not on Graph.**
+**`patch` (patch currency) — resolved for licensed tenants.** Now read
+from Defender advanced hunting on Graph (see *Defender and Purview depth*
+above). The original note is kept for context:
 Device-level Defender Vulnerability Management lives on the Defender for
 Endpoint API (`api.securitycenter.microsoft.com`), a different host
 needing its own `connect-src` entry and a different token audience.

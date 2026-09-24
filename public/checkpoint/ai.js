@@ -68,7 +68,7 @@
     /* Questionnaire assistant — answers questionnaire questions from
        what's actually implemented/evidenced, plus posture, never raw
        risk/action detail (out of scope for "answer this questionnaire"). */
-    questionnaire: ['soaSummary', 'scanSummary'],
+    questionnaire: ['soaSummary', 'scanSummary', 'questionEvidence'],
     /* Mock auditor — deliberately sees the gap-shaped view of the
        register (unevidenced controls, failing checks, overdue actions)
        plus the same summaries every other feature can see. */
@@ -95,7 +95,10 @@
      derived from FEATURE_CONTEXT_ALLOW's own key order) so truncation
      behaviour never quietly changes if a feature's allow-list is
      reordered. */
-  var CONTEXT_SECTION_ORDER = ['scanSummary', 'soaSummary', 'risks', 'actions', 'calendar', 'auditFindings', 'checkDetail', 'gaps', 'controlList'];
+  /* questionEvidence goes FIRST: for the questionnaire responder it is
+     the evidence the answers must rest on, and the two summaries after
+     it are only background — if the budget runs out, they go. */
+  var CONTEXT_SECTION_ORDER = ['questionEvidence', 'scanSummary', 'soaSummary', 'risks', 'actions', 'calendar', 'auditFindings', 'checkDetail', 'gaps', 'controlList'];
   var SECTION_LABELS = {
     scanSummary: 'Latest scan summary',
     soaSummary: 'Statement of Applicability summary',
@@ -105,7 +108,8 @@
     auditFindings: 'Recent internal/external audits',
     checkDetail: 'Posture check detail',
     gaps: 'Current gaps (unevidenced controls, failing checks, overdue actions)',
-    controlList: 'Applicable controls for the selected framework (code: title) — the ONLY control codes that may be referenced'
+    controlList: 'Applicable controls for the selected framework (code: title) — the ONLY control codes that may be referenced',
+    questionEvidence: 'Per-question evidence from this tenant\'s registers and latest scan (verdict, then the facts behind it)'
   };
 
   /* ~4 characters/token is a standard rough estimate for English text;
@@ -209,6 +213,15 @@
     if (key === 'checkDetail') return fmtCheckDetail(data);
     if (key === 'gaps') return fmtGaps(data);
     if (key === 'controlList') return fmtListSection(data, function (c) { return '- ' + c.code + ': ' + c.title; });
+    if (key === 'questionEvidence') return fmtListSection(data, function (q) {
+      /* Capped per question so one evidence-heavy question cannot starve
+         the rest of the batch of budget. */
+      var ev = (q.evidence || []).slice(0, 6);
+      return 'Q' + q.n + ' — evidence verdict: ' + (q.verdict || 'Not evidenced') +
+        (ev.length ? '\n' + ev.map(function (e) { return '  - ' + String(e).slice(0, 220); }).join('\n') : '\n  - (no evidence found in the registers)') +
+        (q.approved ? '\n  - Previously approved answer: ' + String(q.approved).slice(0, 300) : '') +
+        (q.caution ? '\n  - Practitioner must state: ' + q.caution : '');
+    });
     return null;
   }
 
@@ -524,6 +537,23 @@
       'Q<n>: <restate the question>\nANSWER: <answer>\nCONFIDENCE: High, Medium or Low\nVERIFY: <what a practitioner should verify before sending this answer>\n\n(one Q/ANSWER/CONFIDENCE/VERIFY block per question, in order)';
   }
 
+  /* The grounded variant used by the Questionnaires view: each question
+     arrives with its OWN evidence pack (the questionEvidence section),
+     built deterministically by lib.js's assessQuestion(). The model is
+     asked to write prose from that pack and nothing else, and to match
+     the evidence verdict rather than soften or upgrade it — the verdict
+     is decided by the evidence, never by the model. Same response
+     format as buildQuestionnairePrompt(), so parseQuestionnaireAnswers()
+     reads both. */
+  function buildGroundedQuestionnairePrompt(questions) {
+    return 'Draft customer-facing answers to the security questionnaire questions below. Each question has its own evidence block (Q<n> in the per-question evidence section of the CONTEXT). ' +
+      'Use ONLY that question\'s evidence block. Your answer must agree with its evidence verdict: "Yes" may be answered affirmatively; "Partial" must say plainly what is and is not yet in place; "No" or "Not evidenced" must not claim the control exists — say what the evidence shows, or that the practitioner must confirm. ' +
+      'Never name a product, date, figure or control that is not in the evidence block. Where the block says "Practitioner must state", leave a bracketed placeholder such as [confirm hosting region] instead of guessing. Write in the first person plural ("We …"), two or three sentences, suitable to send to a customer after review.\n\n' +
+      'Questions:\n' + questions.map(function (q, i) { return (i + 1) + '. ' + q; }).join('\n') + '\n\n' +
+      'Respond in EXACTLY this format, repeated once per question, nothing before or after it:\n' +
+      'Q<n>: <restate the question>\nANSWER: <answer>\nCONFIDENCE: High, Medium or Low\nVERIFY: <what the practitioner should check before sending>\n\n(one Q/ANSWER/CONFIDENCE/VERIFY block per question, in order)';
+  }
+
   /* Splits on "Q<n>:" markers and parses each block independently, so
      one malformed block doesn't lose every other answer. Falls back to
      the original question text if a block's own restated question is
@@ -676,6 +706,7 @@
     buildPolicyTailorPrompt: buildPolicyTailorPrompt,
     parsePolicyTailor: parsePolicyTailor,
     buildQuestionnairePrompt: buildQuestionnairePrompt,
+    buildGroundedQuestionnairePrompt: buildGroundedQuestionnairePrompt,
     parseQuestionnaireAnswers: parseQuestionnaireAnswers,
     buildMockAuditPrompt: buildMockAuditPrompt,
     parseMockAuditQA: parseMockAuditQA,

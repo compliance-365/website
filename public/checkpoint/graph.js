@@ -322,6 +322,22 @@ window.Graph = (function () {
        licence — only the AuditLog.Read.All scope and a reports-reading
        role — so unlike the probe above, a Manual here is almost always
        consent or roles rather than tier. */
+    /* Defender advanced hunting — POST /security/runHuntingQuery, GA on
+       v1.0. The only GA route to Defender Vulnerability Management and
+       Defender for Endpoint device state from Graph, which is why the
+       'patch' check can finally stop name-matching Secure Score controls
+       and the new 'edr-coverage' check exists at all. Probed with the
+       cheapest real query rather than a GET, since the endpoint is an
+       action: a tenant without Defender for Endpoint P2 (or the
+       signed-in user without a Security Reader-level role) fails here,
+       not halfway through a scan. */
+    { key: 'threatHunting', label: 'Microsoft Defender advanced hunting', licence: 'Microsoft Defender for Endpoint P2 or Defender Vulnerability Management (Microsoft 365 E5 includes both), and a Security Reader-level role', path: '/security/runHuntingQuery',
+      opts: { method: 'POST', body: { Query: 'DeviceInfo | take 1' } },
+      note: 'Defender advanced hunting is not readable — endpoint sensor coverage will show as Manual and patch currency falls back to the weaker Secure Score signal.' },
+    /* Attack simulation training — GA on v1.0. Defender for Office 365
+       Plan 2 (included in Microsoft 365 E5). */
+    { key: 'attackSimulation', label: 'Defender for Office 365 attack simulation training', licence: 'Microsoft Defender for Office 365 Plan 2 (Microsoft 365 E5 includes it)', path: '/security/attackSimulation/simulations?$top=1',
+      note: 'Attack simulation training is not readable — the phishing-simulation check will show as Manual. Awareness training is still scored from the Checkpoint training register.' },
     { key: 'mfaRegistrationReport', label: 'Entra ID authentication methods registration report', licence: 'Any Entra ID tier, with a role that can read reports', path: '/reports/authenticationMethods/userRegistrationDetails?$top=1',
       note: 'The authentication methods registration report is not readable — the MFA-registration-coverage check will show as Manual. The Conditional Access MFA check above still reports what policy REQUIRES; only what users can actually do is unavailable.' }
   ];
@@ -331,7 +347,7 @@ window.Graph = (function () {
     for (var i = 0; i < CAPABILITY_PROBES.length; i++) {
       var p = CAPABILITY_PROBES[i];
       try {
-        await g(p.path);
+        await g(p.path, p.opts);
         out[p.key] = { key: p.key, label: p.label, licence: p.licence, available: true, status: 'available', note: '' };
       } catch (e) {
         /* Graph's error shape for "this doesn't exist for this tenant"
@@ -461,6 +477,10 @@ window.Graph = (function () {
     var dormantAccountDays = num('dormantAccountDays', 90);
     var dormantAccountReviewMax = num('dormantAccountReviewMax', 5);
     var mfaCoverageReviewPct = num('mfaCoverageReviewPct', 95);
+    var patchExploitWindowDays = num('patchExploitWindowDays', 14);
+    var edrCoverageReviewPct = num('edrCoverageReviewPct', 90);
+    var phishSimCadenceDays = num('phishSimCadenceDays', 180);
+    var phishSimMaxCompromisePct = num('phishSimMaxCompromisePct', 20);
 
     /* Consulted below so a licence/permission gap this tenant genuinely
        has (no Entra ID P2, no Intune, etc.) shows up as a clean,
@@ -1064,7 +1084,39 @@ window.Graph = (function () {
         Math.round(pct) + '% on ' + hits.length + ' related Secure Score control' + (hits.length > 1 ? 's' : '') +
         ' (' + matchKind + ' match on Secure Score control names — verify in portal)');
     }
-    fromSecureScore('patch',      'Verify patch currency in Intune / Defender TVM');
+    /* Advanced hunting runner. Returns the result rows, or throws —
+       callers decide whether that means Manual or a fallback. */
+    async function hunt(query) {
+      var r = await g('/security/runHuntingQuery', { method: 'POST', body: { Query: query } });
+      return (r && r.results) || [];
+    }
+
+    /* 'patch' prefers a DIRECT read of Defender Vulnerability Management
+       over the Secure Score name match, same direct-with-fallback shape
+       as 'alerts' below: a tenant without advanced hunting keeps exactly
+       the signal it had; a licensed one is scored on whether exploitable
+       vulnerabilities are actually being fixed inside the window. Only
+       CVEs with a known public exploit are read — the ones Essential
+       Eight's patching timeframes and A.8.8 care about first. */
+    var patchScored = false;
+    if (capabilities.threatHunting && capabilities.threatHunting.available) {
+      try {
+        var tvmRows = await hunt(
+          'DeviceTvmSoftwareVulnerabilities' +
+          ' | where VulnerabilitySeverityLevel in ("Critical", "High")' +
+          ' | join kind=inner (DeviceTvmSoftwareVulnerabilitiesKB | where IsExploitAvailable == true | project CveId, PublishedDate) on CveId' +
+          ' | summarize Devices = dcount(DeviceId), PublishedDate = min(PublishedDate) by CveId, Severity = VulnerabilitySeverityLevel' +
+          ' | order by Devices desc | take 500');
+        var tvm = window.CheckpointLib.tvmExposureResult(tvmRows, patchExploitWindowDays, Date.now());
+        raw['patch'] = { source: 'defenderTvm', windowDays: patchExploitWindowDays, summary: tvm, rows: tvmRows };
+        set('patch', tvm.result, tvm.exploitable === 0
+          ? 'No critical or high vulnerabilities with a known exploit on any onboarded device (Defender Vulnerability Management)'
+          : tvm.exploitable + ' exploitable critical/high CVE(s) present; ' + tvm.criticalOverdue + ' critical and ' + tvm.highOverdue +
+            ' high published more than ' + patchExploitWindowDays + ' days ago' + (tvm.worst.length ? ' (e.g. ' + tvm.worst.join(', ') + ')' : ''));
+        patchScored = true;
+      } catch (e) { /* fall through to the Secure Score proxy — an unreadable hunting query is not evidence of anything */ }
+    }
+    if (!patchScored) fromSecureScore('patch', 'Verify patch currency in Intune / Defender TVM');
     fromSecureScore('macro',      'Verify Office macro hardening policy');
     fromSecureScore('logging',    'Verify unified audit logging in Purview');
     fromSecureScore('wdac',       'Verify application control (WDAC / App Control for Business)');
@@ -1097,7 +1149,26 @@ window.Graph = (function () {
     }
     if (!alertsScored) fromSecureScore('alerts', 'Verify Defender/Purview threat protection policies and alert triage cadence');
     fromSecureScore('dlp',        'Verify Data Loss Prevention policy coverage in Microsoft Purview');
-    fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
+    /* 'encryption' prefers a DIRECT read of which sensitivity labels
+       apply protection (hasProtection on the tenant-wide label list, GA
+       on v1.0) over a substring match on Secure Score control names.
+       Gated on the same 'sensitivityLabels' capability as the 'labels'
+       check; if this particular endpoint is not readable under the
+       tenant's consent, the call throws and the check falls back to
+       Secure Score exactly as before — never to a guess. */
+    var encryptionScored = false;
+    if (capabilities.sensitivityLabels && capabilities.sensitivityLabels.available) {
+      try {
+        var tenantLabels = await gAll('/security/dataSecurityAndGovernance/sensitivityLabels?$select=id,name,displayName,hasProtection');
+        var lp = window.CheckpointLib.labelProtectionResult(tenantLabels);
+        raw['encryption'] = { source: 'sensitivityLabels', summary: lp };
+        set('encryption', lp.result, lp.protecting
+          ? lp.protecting + ' of ' + lp.total + ' sensitivity label(s) apply encryption (' + lp.names.join(', ') + ') — encryption is available to users; Graph cannot report how much content carries it'
+          : 'None of ' + lp.total + ' sensitivity label(s) apply encryption — confirm sensitive content is encrypted another way (e.g. Purview Message Encryption rules)');
+        encryptionScored = true;
+      } catch (e) { /* fall through to the Secure Score proxy */ }
+    }
+    if (!encryptionScored) fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
 
     /* --- Defender XDR incident triage ---
 
@@ -1138,6 +1209,61 @@ window.Graph = (function () {
         set('xdr-incidents', tri.result, incidentNote);
       } catch (e) {
         set('xdr-incidents', 'review', 'Defender XDR incidents not readable: ' + e.message);
+      }
+    }
+
+    /* --- Defender for Endpoint sensor coverage (advanced hunting) ---
+       A.8.7 and A.8.16 are about whether endpoints are actually
+       protected and monitored, which a device-compliance percentage
+       cannot say: Intune compliance does not require a Defender sensor,
+       and Defender's own device discovery sees machines Intune never
+       enrolled. Latest state per device over the last 7 days. */
+    if (!capabilities.threatHunting || !capabilities.threatHunting.available) {
+      set('edr-coverage', 'manual', capabilities.threatHunting ? capabilities.threatHunting.note : 'Defender advanced hunting not probed');
+    } else {
+      try {
+        var edrRows = await hunt(
+          'DeviceInfo | where Timestamp > ago(7d)' +
+          ' | summarize arg_max(Timestamp, OnboardingStatus, SensorHealthState) by DeviceId' +
+          ' | summarize Onboarded = countif(OnboardingStatus == "Onboarded"),' +
+          ' CanBeOnboarded = countif(OnboardingStatus == "Can be onboarded"),' +
+          ' Inactive = countif(OnboardingStatus == "Onboarded" and SensorHealthState != "Active")');
+        var edr = window.CheckpointLib.edrCoverageResult(edrRows[0] || { Onboarded: 0, CanBeOnboarded: 0, Inactive: 0 }, edrCoverageReviewPct);
+        raw['edr-coverage'] = edr;
+        set('edr-coverage', edr.result, edr.coveragePct === null
+          ? 'No devices onboarded to Defender for Endpoint in the last 7 days — the licence is present but no sensor is deployed'
+          : edr.coveragePct + '% of known devices have a healthy Defender sensor (' + edr.onboarded + ' onboarded, ' + edr.inactive + ' inactive, ' +
+            edr.unprotected + ' discovered without a sensor). Unprotected devices only appear when Defender device discovery is enabled.');
+      } catch (e) {
+        set('edr-coverage', 'review', 'Defender device inventory not readable: ' + e.message);
+      }
+    }
+
+    /* --- Attack simulation training (Defender for Office 365 P2) ---
+       A.6.3 evidence that awareness is tested, not only delivered. The
+       compromise rate comes from the most recent completed campaign's
+       report overview — one extra call, only for that one campaign. */
+    if (!capabilities.attackSimulation || !capabilities.attackSimulation.available) {
+      set('phish-sim', 'manual', capabilities.attackSimulation ? capabilities.attackSimulation.note : 'Attack simulation not probed');
+    } else {
+      try {
+        var sims = await gAll('/security/attackSimulation/simulations?$select=id,displayName,status,launchDateTime,completionDateTime');
+        var simPick = window.CheckpointLib.attackSimulationResult(sims, phishSimCadenceDays, phishSimMaxCompromisePct, Date.now());
+        if (simPick.latestId) {
+          try {
+            var overview = await g('/security/attackSimulation/simulations/' + encodeURIComponent(simPick.latestId) + '/report/overview');
+            sims = sims.map(function (x) { return x.id === simPick.latestId ? Object.assign({}, x, { report: { overview: overview } }) : x; });
+          } catch (e) { /* report unreadable — the campaign alone still counts, see attackSimulationResult() */ }
+        }
+        var sim = window.CheckpointLib.attackSimulationResult(sims, phishSimCadenceDays, phishSimMaxCompromisePct, Date.now());
+        raw['phish-sim'] = sim;
+        set('phish-sim', sim.result, !sim.completed
+          ? 'No completed phishing simulation on record' + (sim.running ? ' (' + sim.running + ' running now)' : '') + ' — the licence to test awareness is there but unused'
+          : 'Last completed simulation "' + sim.latestName + '" ' + sim.daysSince + ' day(s) ago' +
+            (sim.daysSince > phishSimCadenceDays ? ', outside the ' + phishSimCadenceDays + '-day cadence' :
+              (sim.compromisedRate !== null ? '; ' + sim.compromisedRate + '% of targeted users compromised' + (sim.compromisedRate > phishSimMaxCompromisePct ? ' (above the ' + phishSimMaxCompromisePct + '% threshold)' : '') : '')));
+      } catch (e) {
+        set('phish-sim', 'review', 'Attack simulations not readable: ' + e.message);
       }
     }
 

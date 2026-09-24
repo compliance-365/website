@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.99.0',
+    date: '2026-09-24',
+    entries: [
+      'New Security questionnaires view (Reporting → Security questionnaires). Paste a customer\'s questionnaire or load it as CSV, and each question is matched to your Statement of Applicability, your latest posture scan and answers you have approved before. Every question gets an evidence verdict: Yes, Partial, No, Not applicable or Not evidenced, with the controls and checks behind it one click away. A draft answer is only written where the evidence says yes. Approved answers go into an answer library and are offered again next time, flagged if your evidence has changed since they were approved. Works on every tenant. With the AI add-on, Draft with AI writes the remaining answers from each question\'s own evidence.',
+      'Defender depth: the patch check now reads Defender Vulnerability Management directly where advanced hunting is licensed. It fails on critical vulnerabilities with a known exploit that are older than your patch window (Settings → thresholds, default 14 days), in place of the Secure Score estimate. New Endpoint detection & response check: every device Defender knows about, including machines its discovery found that Intune never enrolled, must run a healthy sensor. New Phishing simulation check (Defender for Office 365 Plan 2) for ISO 27001 A.6.3. Both need a one-time consent prompt for two new read-only permissions. Without the licence they show as Manual.',
+      'Purview: the encryption check now reads which sensitivity labels actually apply encryption, in place of a Secure Score name match.',
+      'Secure development evidence from GitHub. The optional GitHub collector runs as a scheduled workflow in your own GitHub organisation and adds seven checks: reviewed pull requests, required status checks, secret scanning with push protection, open leaked secrets, Dependabot alerts, code scanning and organisation 2FA. These give ISO 27001 A.8.25, A.8.28, A.8.29 and A.8.32 automated evidence for the first time. They stay hidden until the collector first reports. See checkpoint/github/README.md.',
+      'SOC 2 and NIST CSF 2.0 scan suggestions now include the new Defender and GitHub checks, for example CC8.1 change management from reviewed pull requests.'
+    ]
+  },
+  {
     version: '1.98.0',
     date: '2026-09-24',
     entries: [

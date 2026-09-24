@@ -1,0 +1,51 @@
+# Checkpoint — GitHub secure development collector.
+#
+# Copy this file to .github/workflows/ in a private repository in YOUR
+# organisation, alongside a copy of the collector/ folder and
+# package.json (see README.md). It runs in your runner, as your GitHub
+# App, and writes only to your SharePoint. Compliance365 sees none of it.
+name: Checkpoint GitHub collector
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # daily, 18:00 UTC (early morning in Australia)
+  workflow_dispatch: {}
+
+# The workflow's own GITHUB_TOKEN needs nothing beyond reading this repo;
+# every organisation-wide read goes through the GitHub App token below.
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Short-lived installation token for the read-only Checkpoint
+      # Collector GitHub App — see README.md section 1 for its permissions.
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CHECKPOINT_GH_APP_ID }}
+          private-key: ${{ secrets.CHECKPOINT_GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Collect and merge into SharePoint
+        run: node collector/index.mjs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_ORG: ${{ github.repository_owner }}
+          REPOS: ${{ vars.CHECKPOINT_REPOS }}                 # optional: comma-separated allowlist
+          VULN_WINDOW_DAYS: ${{ vars.CHECKPOINT_VULN_WINDOW_DAYS }}     # optional, default 30
+          SECRET_WINDOW_DAYS: ${{ vars.CHECKPOINT_SECRET_WINDOW_DAYS }} # optional, default 7
+          TENANT_ID: ${{ vars.CHECKPOINT_TENANT_ID }}
+          CLIENT_ID: ${{ vars.CHECKPOINT_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHECKPOINT_CLIENT_SECRET }}
+          SP_HOSTNAME: ${{ vars.CHECKPOINT_SP_HOSTNAME }}
+          SP_SITE_PATH: ${{ vars.CHECKPOINT_SP_SITE_PATH }}
