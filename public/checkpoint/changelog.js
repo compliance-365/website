@@ -12,7 +12,7 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
-    version: '1.95.0',
+    version: '1.99.0',
     date: '2026-09-24',
     entries: [
       'New Security questionnaires view (Reporting → Security questionnaires). Paste a customer\'s questionnaire or load it as CSV, and each question is matched to your Statement of Applicability, your latest posture scan and answers you have approved before. Every question gets an evidence verdict: Yes, Partial, No, Not applicable or Not evidenced, with the controls and checks behind it one click away. A draft answer is only written where the evidence says yes. Approved answers go into an answer library and are offered again next time, flagged if your evidence has changed since they were approved. Works on every tenant. With the AI add-on, Draft with AI writes the remaining answers from each question\'s own evidence.',
@@ -20,6 +20,40 @@ window.CHECKPOINT_CHANGELOG = [
       'Purview: the encryption check now reads which sensitivity labels actually apply encryption, in place of a Secure Score name match.',
       'Secure development evidence from GitHub. The optional GitHub collector runs as a scheduled workflow in your own GitHub organisation and adds seven checks: reviewed pull requests, required status checks, secret scanning with push protection, open leaked secrets, Dependabot alerts, code scanning and organisation 2FA. These give ISO 27001 A.8.25, A.8.28, A.8.29 and A.8.32 automated evidence for the first time. They stay hidden until the collector first reports. See checkpoint/github/README.md.',
       'SOC 2 and NIST CSF 2.0 scan suggestions now include the new Defender and GitHub checks, for example CC8.1 change management from reviewed pull requests.'
+    ]
+  },
+  {
+    version: '1.98.0',
+    date: '2026-09-24',
+    entries: [
+      'A change that fails to save to SharePoint is no longer silent. Every save is retried once if the failure looks temporary; one that still fails puts a standing banner at the top of the app — "N changes have not saved to SharePoint" — with Retry and Details, instead of a toast that disappears while the screen goes on showing the edit as saved. Checkpoint retries automatically every minute and when the connection returns, and warns before the page is closed with unsaved changes.',
+      'The Dashboard\'s Getting started card is now "Your path to certification": every step from the scope & context questionnaire to booking the certification audit, in six phases — Set up, Document, Assess, Operate, Check, Certify. The next step is always shown with a button that does it (start the questionnaire, run the scan, generate or approve the document set) or opens where it is done, and each step ticks itself off as the work is recorded.'
+    ]
+  },
+  {
+    version: '1.97.0',
+    date: '2026-09-24',
+    entries: [
+      'New Threat Intelligence Procedure in the policy generator (ISO 27001 A.5.7), built around Checkpoint\'s own Threat intel view: defined sources, weekly review, exposure assessment, and every relevant item turned into an action or a risk update.',
+      '"Generate full document set" (Settings → Policy template library) generates every document the tenant\'s frameworks need that is not already in Documents, in one go — each saved as a draft and linked to its clauses and controls automatically. Existing documents are never regenerated.',
+      '"Approve drafts" approves every generated draft in one sitting, for the meeting where management signs off the policy set: one approver, version and review date, the same per-document approval record as approving one at a time, and segregation of duties applied to each document.',
+      'Management system clauses now complete themselves. When a clause\'s approved procedure is linked and its records exist — a completed internal audit in the last year (9.2), a management review with recorded decisions (9.3, 10.1), assessed and treated risks (6.1.2, 6.1.3), objectives on track (6.2), training complete (7.2, 7.3), a current document register (7.5), completed AI impact assessments (ISO 42001 6.1.4) — the clause is marked Implemented and re-verified automatically, and stays verified while those records stay current. When records lapse the clause is never downgraded; its verification simply turns overdue for a person to review.',
+      'Generating a document now links it as evidence to the controls it was written for automatically, instead of asking. A control that already has other evidence keeps it.'
+    ]
+  },
+  {
+    version: '1.96.0',
+    date: '2026-09-24',
+    entries: [
+      'The Audit Readiness Report now includes the management system clauses: every ISO 27001 clause for ISO 27001 and ISO 27701 reports, and every ISO 42001 clause for the ISO 42001 report, with status, owner, evidence and last verification. It flags clauses marked Implemented with no evidence, and the recommendations name each clause still to implement.',
+      'Generating a management-system document now updates the clauses it is written for automatically. Saving the draft links it as evidence and moves the clause to In progress. Approving it marks the clause Implemented where the document itself is what the clause requires — context (4.1/4.2), scope (4.3), policy (5.2), roles (5.3) and communication (7.4). Procedures for processes that must also be carried out, such as internal audit, management review or risk assessment, stay In progress until their records exist. A clause already linked to different evidence, or already Implemented, is never changed.'
+    ]
+  },
+  {
+    version: '1.95.0',
+    date: '2026-09-24',
+    entries: [
+      'The scope & context questionnaire now covers ISO 42001 too. For a tenant entitled to ISO 42001 it adds a sixth step that drafts the AI management system\'s Clause 4 content: the AI systems in scope (pre-filled from the AI system register), the organisation\'s role for AI (provider, user or both, from the AI-use answer), the AI-specific issues it faces, and an AIMS scope statement. The AI Management System Scope generates from them instead of asking for bracketed specifics to be filled in by hand.'
     ]
   },
   {

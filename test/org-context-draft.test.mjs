@@ -84,3 +84,40 @@ describe('questionnaire definitions', () => {
     });
   });
 });
+
+describe('buildAimsContextDraft()', () => {
+  const { buildAimsContextDraft } = require('../public/checkpoint/lib.js');
+
+  test('the systems line comes from the AI system register when it has entries', () => {
+    const d = buildAimsContextDraft({ ai: 'tools' }, [{ name: 'Microsoft 365 Copilot', purpose: 'Drafting assistance.' }], 'Acme');
+    assert.equal(d.aiSystems, 'Microsoft 365 Copilot (drafting assistance).');
+  });
+
+  test('with an empty register the systems line follows the AI-use answer, and is empty when unanswered', () => {
+    assert.match(buildAimsContextDraft({ ai: 'tools' }, [], '').aiSystems, /Generative AI tools used by staff/);
+    assert.equal(buildAimsContextDraft({}, [], '').aiSystems, '');
+  });
+
+  test('the role follows the AI-use answer: tools is a user, builds is provider and user', () => {
+    assert.match(buildAimsContextDraft({ ai: 'tools' }, [], '').aiRole, /user \(deployer\)/);
+    assert.doesNotMatch(buildAimsContextDraft({ ai: 'tools' }, [], '').aiRole, /both a provider/);
+    assert.match(buildAimsContextDraft({ ai: 'builds' }, [], '').aiRole, /both a provider/);
+    assert.equal(buildAimsContextDraft({ ai: 'none' }, [], '').aiRole, '');
+  });
+
+  test('personal information only appears among AI issues when the organisation uses AI and holds it', () => {
+    assert.match(buildAimsContextDraft({ ai: 'tools', personalData: 'customers' }, [], '').aiIssues, /personal information/);
+    assert.doesNotMatch(buildAimsContextDraft({ ai: 'tools', personalData: 'staff' }, [], '').aiIssues, /personal information/);
+    assert.equal(buildAimsContextDraft({ ai: 'none', personalData: 'sensitive' }, [], '').aiIssues, '');
+  });
+
+  test('the scope statement names development and provision only for an organisation that builds AI', () => {
+    assert.match(buildAimsContextDraft({ ai: 'builds' }, [], 'Acme').aimsScopeStatement, /^The AI management system of Acme covering the development, provision and use/);
+    assert.match(buildAimsContextDraft({ ai: 'tools' }, [], 'Acme').aimsScopeStatement, /covering the use of AI systems/);
+  });
+
+  test('the ISO 42001 profile fields are flagged, so tenants without it are not counted against them', () => {
+    const aims = ORG_PROFILE_FIELDS.filter((f) => f.aims).map((f) => f.token).sort();
+    assert.deepEqual(aims, ['aiIssues', 'aiRole', 'aiSystems', 'aimsScopeStatement']);
+  });
+});
