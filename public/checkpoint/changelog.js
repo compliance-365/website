@@ -28,6 +28,13 @@ window.CHECKPOINT_CHANGELOG = [
     ]
   },
   {
+    version: '1.90.1',
+    date: '2026-09-24',
+    entries: [
+      'Fixed the "Management system clauses" sidebar badge going stale after changing a clause\'s status, verifying it, or linking evidence — it now updates immediately, matching the "Not started" count on the page itself.'
+    ]
+  },
+  {
     version: '1.90.0',
     date: '2026-09-23',
     entries: [
