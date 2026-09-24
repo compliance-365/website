@@ -438,22 +438,48 @@ unset and no mail permission is required at all.
 A mail failure never rolls back an alert that was already written to
 SharePoint; it's logged and the run continues.
 
-### Optional: Microsoft Teams notification
+### Optional: Microsoft Teams notifications
 
-Also off by default, and independent of the email setting above — a
-tenant can turn on either, both, or neither. Posts the same governance-
-sweep and drift-alert notifications to a Teams channel, as a plain-text
-summary rather than the HTML built for email:
+Off by default, and independent of email — a tenant can turn on either,
+both, or neither. When connected, the monitor posts to a Teams channel:
+
+- **alerts as they are raised** — posture drift and every governance-
+  sweep finding (overdue actions, policies past review, lapsed supplier
+  reviews and so on), the same items the email notification carries;
+- **the compliance digest**, on the same schedule as the email digest
+  (Settings → Compliance digest), including documents waiting for
+  approval. The digest goes to Teams even if no email recipients or
+  `NOTIFY_FROM` are set.
+
+Each post is an Adaptive Card with an *Open Checkpoint* button.
+
+**Connecting a channel.** Microsoft retired Office 365 Connectors —
+including classic *Incoming Webhook* URLs on `webhook.office.com` — from
+Teams in May 2026; those no longer deliver. Use a Workflows webhook
+instead:
+
+1. In the Teams channel, open **Workflows** and choose *Post to a channel
+   when a webhook request is received*.
+2. Finish the wizard and copy the webhook URL it shows.
+3. In Checkpoint, go to **Settings → Microsoft Teams**, paste the URL and
+   save.
+
+On its next run the monitor posts a short "Checkpoint is connected"
+card, and Settings shows when that happened. If a later post fails (the
+workflow was deleted or turned off), Settings shows the error.
+
+The webhook URL can alternatively be set as an app setting on the
+Function App, which takes precedence over the one in Checkpoint:
 
 | Setting | Value |
 | --- | --- |
-| `TEAMS_WEBHOOK_URL` | An [Incoming Webhook](https://learn.microsoft.com/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) URL for the channel that should receive alerts |
+| `TEAMS_WEBHOOK_URL` | A Teams Workflows webhook URL for the channel |
+| `CHECKPOINT_URL` | Optional. Where the cards' *Open Checkpoint* button goes (defaults to Compliance365's hosted Checkpoint) |
 
-This needs no Graph permission at all — it's a plain HTTPS POST to a
-URL whose secrecy is the only auth, so it works even on a tenant that
-never grants `Mail.Send`. Leave the setting unset and nothing is posted.
-Like the mail path, a webhook failure never rolls back an alert already
-written to SharePoint.
+This needs no Graph permission — it is a plain HTTPS POST whose URL is
+the only credential, so keep it private and delete the workflow if it is
+ever exposed. A Teams failure never rolls back an alert already written
+to SharePoint.
 
 ## 5. Deploy the function code
 

@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.101.0',
+    date: '2026-09-24',
+    entries: [
+      'Microsoft Teams notifications, set up from Checkpoint (Settings → Microsoft Teams): paste a Teams Workflows webhook URL and the scheduled monitor posts compliance alerts — posture drift, overdue actions, policies past review and the other governance findings — to the channel as they are raised, plus the compliance digest on its schedule. Each post is a card with an Open Checkpoint button. The monitor posts a confirmation when a channel is first connected, and Settings shows it, or the error if a post fails.',
+      'Teams posts now use Teams Workflows webhooks. Microsoft retired Office 365 Connectors, including classic Incoming Webhooks, in May 2026, so a webhook.office.com URL no longer delivers — Checkpoint warns if one is pasted.',
+      'The compliance digest now lists documents waiting for approval, and can go to Teams without any email set up.'
+    ]
+  },
+  {
     version: '1.100.0',
     date: '2026-09-24',
     entries: [
