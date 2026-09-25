@@ -743,6 +743,20 @@ function showModal(opts) {
       { name: 'Source', text: {} }, { name: 'Context', text: { allowMultipleLines: true } },
       { name: 'AppVersion', text: {} }, { name: 'UserAgent', text: {} }, { name: 'Url', text: {} },
       { name: 'ReportedAt', text: {} }, { name: 'Acknowledged', boolean: {} }
+    ],
+    /* Populated by lambda/report-error.js's health branch — one row per
+       client tenant, replaced by each new report. Each client's
+       Checkpoint reports its own Setup health (status flags only: which
+       setup checks pass, the app version, the last scan date — never
+       register or scan content) when the status changes or every 12
+       hours, unless the client switched it off in Settings. Arrives
+       whether or not anyone here has synced that client. */
+    Health: [
+      { name: 'TenantId', text: {} }, { name: 'Domains', text: { allowMultipleLines: true } },
+      { name: 'ClientName', text: {} }, { name: 'AppVersion', text: {} },
+      { name: 'Status', text: {} }, { name: 'Headline', text: {} },
+      { name: 'Flags', text: { allowMultipleLines: true } }, { name: 'Details', text: { allowMultipleLines: true } },
+      { name: 'LastScanDate', text: {} }, { name: 'Frameworks', text: {} }, { name: 'ReportedAt', text: {} }
     ]
   };
   function partnerListName(k) { return 'Checkpoint Partner ' + k; }
@@ -871,6 +885,17 @@ function showModal(opts) {
     };
   }
 
+  function mapHealthReport(i) {
+    var f = i.fields, flags = {};
+    try { flags = JSON.parse(f.Flags || '{}'); } catch (e) { flags = {}; }
+    return {
+      _sp: i.id, tenantId: f.TenantId || '', domains: uncsv(f.Domains), clientName: f.ClientName || '',
+      appVersion: f.AppVersion || '', status: f.Status || '', headline: f.Headline || '', flags: flags,
+      details: String(f.Details || '').split('\n').filter(Boolean), lastScanDate: f.LastScanDate || '',
+      frameworks: uncsv(f.Frameworks), reportedAt: f.ReportedAt || ''
+    };
+  }
+
   async function loadPartnerConsoleData() {
     var clientItems = await items('PartnerClients');
     var entItems = await items('PartnerEntitlements');
@@ -881,9 +906,13 @@ function showModal(opts) {
        provisioning since this list was added still loads everything
        else instead of failing the whole load. */
     var errorItems = lists.ErrorReports ? await items('ErrorReports') : [];
+    /* Same leniency for Health, newer still. */
+    var healthItems = [];
+    if (lists.Health) { try { healthItems = await items('Health'); } catch (e) { healthItems = []; } }
     return {
       clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement),
-      prices: priceItems.map(mapPartnerPrice), errorReports: errorItems.map(mapErrorReport)
+      prices: priceItems.map(mapPartnerPrice), errorReports: errorItems.map(mapErrorReport),
+      health: healthItems.map(mapHealthReport)
     };
   }
   async function acknowledgeErrorReport(r) {
@@ -1106,15 +1135,22 @@ function showModal(opts) {
      record. Used by the roster row dot, the Module Adoption Matrix's
      dormancy check, the Client Health Strip, and the summary card, so
      all four always agree with each other. */
+  function setupReportFor(c) {
+    return window.CheckpointLib.matchHealthReport(c, (PARTNER_DATA && PARTNER_DATA.health) || []);
+  }
   function clientHealthFor(c) {
     var ent = partnerLatestEntitlementFor(c.tenantId);
     var today = todayStr();
+    var rep = setupReportFor(c);
+    /* the tenant's own report may know about a newer scan than our last sync */
+    var lastScan = [c.lastScanDate || '', (rep && rep.lastScanDate) || ''].sort().pop();
     /* Payment status only means something for a real client-type
        entitlement — a trial/demo has nothing to invoice. */
     var pay = (ent && ent.type === 'client') ? window.CheckpointLib.computePaymentStatus(ent, today) : null;
     return window.CheckpointLib.computeClientHealth({
-      syncError: c.syncError, lastSynced: c.lastSynced, lastScanDate: c.lastScanDate,
+      syncError: c.syncError, lastSynced: c.lastSynced, lastScanDate: lastScan,
       score: c.score, driftAlerts: c.driftAlerts,
+      setupStatus: rep ? rep.status : '', setupReason: rep ? rep.headline : '', lastSeen: rep ? rep.reportedAt : '',
       entitlementStatus: ent ? (ent.expiry && ent.expiry < today ? 'expired' : 'valid') : null,
       entitlementExpiry: ent ? ent.expiry : null,
       manualStatus: ent ? ent.manualStatus : '',
@@ -1230,11 +1266,38 @@ function showModal(opts) {
         '</select></td>' +
         '<td>' + partnerModuleChips(c.modules) + '</td>' +
         '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDateY(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
-        '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[health.color] + ';margin-right:6px;vertical-align:middle" title="' + esc(health.reason) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) + (c.lastSyncedBy ? '<div class="src">by ' + esc(c.lastSyncedBy) + '</div>' : '') : 'Never synced') + '</td>' +
+        '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[health.color] + ';margin-right:6px;vertical-align:middle" title="' + esc(health.reason) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) + (c.lastSyncedBy ? '<div class="src">by ' + esc(c.lastSyncedBy) + '</div>' : '') : 'Never synced') + setupLine(c) + '</td>' +
         '<td style="white-space:nowrap"><button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
         '</tr>';
     }).join('');
     revealRows(tbody);
+  }
+
+  /* The client's own Setup health report, under the sync date. */
+  var SETUP_STATUS_LABEL = { healthy: 'Setup healthy', warning: 'Setup: check', failing: 'Setup: fix needed' };
+  var SETUP_STATUS_COLOR = { healthy: 'var(--pass)', warning: 'var(--warn)', failing: 'var(--fail)' };
+  function setupLine(c) {
+    var r = setupReportFor(c);
+    if (!r) return '<div class="src">No setup report yet</div>';
+    return '<div class="src"><span style="color:' + (SETUP_STATUS_COLOR[r.status] || 'inherit') + ';font-weight:700">' + esc(SETUP_STATUS_LABEL[r.status] || r.status) + '</span>' +
+      (r.status !== 'healthy' && r.headline ? ' — ' + esc(r.headline) : '') +
+      (r.reportedAt ? '<br>seen ' + esc(fmtDate(r.reportedAt.slice(0, 10))) : '') + (r.appVersion ? ' · v' + esc(r.appVersion) : '') + '</div>';
+  }
+  function setupSection(c) {
+    var r = setupReportFor(c);
+    if (!r) return '<div class="d-sec"><h4>Setup health (reported by the client)</h4><div class="src">No report yet. Reports arrive when someone at the client opens Checkpoint 1.105 or later, unless they have switched sharing off in Settings.</div></div>';
+    var names = { activation: 'Activation', permissions: 'Graph permissions', lists: 'SharePoint lists', library: 'Documents library', packs: 'Framework content', evidence: 'Evidence folders', scan: 'Posture scan', capabilities: 'M365 capabilities' };
+    var word = { pass: 'OK', warn: 'Check', fail: 'Fix', info: 'Info' };
+    var col = { pass: 'var(--pass)', warn: 'var(--warn)', fail: 'var(--fail)', info: 'var(--paper-faint)' };
+    return '<div class="d-sec"><h4>Setup health (reported by the client)</h4>' +
+      '<div class="d-kv"><span>Status</span><b style="color:' + (SETUP_STATUS_COLOR[r.status] || 'inherit') + '">' + esc(SETUP_STATUS_LABEL[r.status] || r.status) + '</b></div>' +
+      '<div class="d-kv"><span>Last seen</span><b>' + (r.reportedAt ? esc(fmtDate(r.reportedAt.slice(0, 10))) : '—') + '</b></div>' +
+      '<div class="d-kv"><span>App version</span><b>' + esc(r.appVersion || '—') + '</b></div>' +
+      Object.keys(names).filter(function (k) { return r.flags[k]; }).map(function (k) {
+        return '<div class="d-kv"><span>' + esc(names[k]) + '</span><b style="color:' + col[r.flags[k]] + '">' + esc(word[r.flags[k]] || r.flags[k]) + '</b></div>';
+      }).join('') +
+      (r.details.length ? '<ul style="font-size:12px;color:var(--paper-dim);margin:8px 0 0 16px;line-height:1.6">' + r.details.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>' : '') +
+      '</div>';
   }
 
   /* ================= View 1: Revenue board ================= */
@@ -2588,6 +2651,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Drift alerts outstanding</span><b style="' + (c.driftAlerts ? 'color:var(--fail)' : '') + '">' + c.driftAlerts + '</b></div>' +
         (c.syncError ? '<div class="d-kv"><span>Last sync error</span><b style="color:var(--fail)">' + esc(c.syncError) + '</b></div>' : '') +
         '</div>' +
+        setupSection(c) +
         '<div class="d-sec"><h4>Readiness by framework</h4>' + readinessRows + '</div>' +
         adminConsentSection(c) +
         (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +

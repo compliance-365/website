@@ -73,6 +73,18 @@ window.Graph = (function () {
     }
   }
 
+  /* Graph permissions actually granted to this app in this tenant, read
+     from the scp claim of a silently-acquired token (never a redirect —
+     this feeds the Setup health check, which must not navigate away).
+     null when no token could be read. */
+  async function grantedScopes() {
+    if (!msalApp || !account) return null;
+    try {
+      var r = await msalApp.acquireTokenSilent({ scopes: CONFIG.scopesReadOnly, account: account });
+      return window.CheckpointLib.scopesFromAccessToken(r.accessToken);
+    } catch (e) { return null; }
+  }
+
   /* Incremental-consent token for the client's OWN Azure OpenAI resource
      (CONFIG.scopesAi, https://cognitiveservices.azure.com/.default) —
      requested the first time the AI assistant is actually used, exactly
@@ -2003,7 +2015,7 @@ window.Graph = (function () {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, listDriveFiles: listDriveFiles,
-    ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
+    batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,

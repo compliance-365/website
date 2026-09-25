@@ -4324,8 +4324,13 @@
   var CLIENT_HEALTH_RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
   function computeClientHealth(input, today) {
     input = input || {};
-    if (!input.lastSynced) return { color: 'unknown', reason: 'Never synced — no health data available' };
+    /* setupStatus/setupReason/lastSeen come from the tenant's own
+       setup-health report (lambda/report-error.js health branch) — it
+       arrives whether or not anyone has synced this client, so either
+       source is enough to know something. */
+    if (!input.lastSynced && !input.lastSeen) return { color: 'unknown', reason: 'Never synced — no health data available' };
     if (input.syncError) return { color: 'red', reason: 'Sync error: ' + input.syncError };
+    if (input.setupStatus === 'failing') return { color: 'red', reason: 'Setup problem: ' + (input.setupReason || 'see the client\'s Setup health') };
     if (input.entitlementStatus === 'expired') return { color: 'red', reason: 'Activation expired' };
     if (input.paymentOverdue) return { color: 'red', reason: 'Payment overdue' + (input.paymentOverdueDays ? ' (' + input.paymentOverdueDays + ' day(s))' : '') };
     if (input.manualStatus === 'At risk') return { color: 'red', reason: 'Flagged "At risk" by the owner' };
@@ -4336,6 +4341,8 @@
     if (daysToExpiry != null && daysToExpiry <= 30 && input.manualStatus !== 'Renewed') {
       return { color: 'red', reason: 'Renewal due in ' + daysToExpiry + ' day(s), not yet renewed' };
     }
+    if (input.setupStatus === 'warning') return { color: 'amber', reason: 'Setup: ' + (input.setupReason || 'needs attention') };
+    if (input.lastSeen && daysBetweenDateStr(String(input.lastSeen).slice(0, 10), today) > 30) return { color: 'amber', reason: 'Checkpoint not opened in 30+ days' };
     var dormant = !input.lastScanDate || daysBetweenDateStr(input.lastScanDate, today) > 30;
     if (dormant) return { color: 'amber', reason: input.lastScanDate ? 'No scan activity in 30+ days' : 'No scan on record yet' };
     if (daysToExpiry != null && daysToExpiry <= 60 && input.manualStatus !== 'Renewed') {
@@ -6128,6 +6135,149 @@
     var limit = parseInt(cadenceDays, 10) || 365;
     return { stale: age > limit, ageDays: age };
   }
+  /* ============================================================
+     Setup health — is this tenant's Checkpoint set up the way it
+     should be? Pure: app.js gathers the facts (lists and columns in
+     SharePoint, granted permissions, activation, content packs,
+     evidence folders, last scan) and this turns them into checks, each
+     pass / warn / fail / info with a fix action where one exists. The
+     same summary is what the tenant reports to the owner console, so
+     the two can never disagree.
+     A fact that could not be read (null) is 'info', never a guessed
+     pass or fail.
+     ============================================================ */
+  var SETUP_CHECK_IDS = ['activation', 'permissions', 'lists', 'library', 'packs', 'evidence', 'scan', 'capabilities'];
+
+  function setupHealthChecks(input, today) {
+    input = input || {};
+    var out = [];
+    /* input.fmtDate (optional) formats an ISO date for display; the
+       rules themselves always work on ISO strings. */
+    var fd = typeof input.fmtDate === 'function' ? input.fmtDate : function (d) { return d; };
+    function add(id, label, status, detail, fix) { out.push({ id: id, label: label, status: status, detail: detail, fix: fix || null }); }
+    function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+    var a = input.activation;
+    if (!a) add('activation', 'Activation', 'info', 'Not checked yet.');
+    else if (a.status === 'expired') add('activation', 'Activation', 'fail', 'Expired' + (a.expiry ? ' on ' + fd(a.expiry) : '') + '. Checkpoint is read-only until a renewed activation is applied.', 'openActivation');
+    else if (a.status === 'mismatch' || a.status === 'invalid' || a.status === 'none') add('activation', 'Activation', 'fail', 'No valid activation for this tenant.', 'openActivation');
+    else if (a.status === 'grace') add('activation', 'Activation', 'warn', 'Expired' + (a.expiry ? ' on ' + fd(a.expiry) : '') + ' and in its grace period' + (a.graceUntil ? ' until ' + fd(a.graceUntil) : '') + '. Apply the renewed activation before then.', 'openActivation');
+    else {
+      var left = a.expiry && today ? daysBetweenDateStr(today, a.expiry) : null;
+      if (left != null && left <= 30) add('activation', 'Activation', 'warn', 'Valid, but expires in ' + plural(left, 'day') + ' (' + fd(a.expiry) + ').', 'openActivation');
+      else add('activation', 'Activation', 'pass', 'Valid' + (a.expiry ? ' until ' + fd(a.expiry) : '') + '.');
+    }
+
+    var p = input.permissions;
+    if (!p || !Array.isArray(p.granted)) add('permissions', 'Microsoft Graph permissions', 'info', 'Could not read which permissions are granted in this session.');
+    else {
+      var have = {};
+      p.granted.forEach(function (s) { have[String(s).toLowerCase()] = true; });
+      var missing = (p.required || []).filter(function (s) { return !have[String(s).toLowerCase()]; });
+      var missingOpt = (p.optional || []).filter(function (s) { return !have[String(s).toLowerCase()]; });
+      var names = function (arr) { return arr.slice(0, 6).join(', ') + (arr.length > 6 ? ' and ' + (arr.length - 6) + ' more' : ''); };
+      if (missing.length) add('permissions', 'Microsoft Graph permissions', 'fail', plural(missing.length, 'permission') + ' not granted: ' + names(missing) + '. A Global Administrator needs to grant admin consent again.', 'openAdminConsent');
+      else if (missingOpt.length) add('permissions', 'Microsoft Graph permissions', 'warn', 'Not granted: ' + missingOpt.join(', ') + ' (needed only for sending email from Checkpoint).', 'openAdminConsent');
+      else add('permissions', 'Microsoft Graph permissions', 'pass', 'All ' + ((p.required || []).length + (p.optional || []).length) + ' permissions granted.');
+    }
+
+    var l = input.lists;
+    if (!l) add('lists', 'SharePoint lists', 'info', 'Not checked yet.');
+    else if (l.error) add('lists', 'SharePoint lists', 'fail', 'Could not read the Checkpoint site: ' + l.error, 'repairSetup');
+    else {
+      var cols = (l.columnsMissing || []).reduce(function (n, x) { return n + (x.columns || []).length; }, 0);
+      if ((l.missing || []).length || cols) {
+        var bits = [];
+        if (l.missing.length) bits.push(plural(l.missing.length, 'list') + ' missing (' + l.missing.slice(0, 4).join(', ') + (l.missing.length > 4 ? ', …' : '') + ')');
+        if (cols) bits.push(plural(cols, 'column') + ' missing across ' + plural(l.columnsMissing.length, 'list'));
+        add('lists', 'SharePoint lists', 'fail', bits.join('; ') + '. Saving to these registers can fail until repaired.', 'repairSetup');
+      } else add('lists', 'SharePoint lists', 'pass', 'All ' + (l.total || 0) + ' lists present with every column.');
+    }
+
+    var lib = input.library;
+    if (!lib) add('library', 'Documents library', 'info', 'Not checked yet.');
+    else if (!lib.present) add('library', 'Documents library', 'fail', 'The Checkpoint Documents library is missing, so documents and evidence cannot be stored.', 'repairSetup');
+    else if (!lib.driveReady) add('library', 'Documents library', 'warn', 'The library exists but its storage was not ready this session. It usually is on the next load.', 'repairSetup');
+    else if ((lib.columnsMissing || []).length) add('library', 'Documents library', 'warn', plural(lib.columnsMissing.length, 'document-control column') + ' missing (' + lib.columnsMissing.slice(0, 4).join(', ') + ').', 'repairSetup');
+    else add('library', 'Documents library', 'pass', 'Present, with the document-control columns.');
+
+    var k = input.packs;
+    if (!k) add('packs', 'Framework content', 'info', 'Not checked yet.');
+    else {
+      var failed = Object.keys(k.errors || {});
+      if (failed.length) add('packs', 'Framework content', 'fail', 'Could not load: ' + failed.map(function (m) { return m + ' (' + k.errors[m] + ')'; }).join('; ') + '. Those frameworks are unavailable until this is fixed. Contact Compliance365.');
+      else add('packs', 'Framework content', 'pass', (k.licensed || []).length ? 'All ' + plural(k.licensed.length, 'licensed framework') + ' loaded.' : 'ISO 27001 only, no premium frameworks licensed.');
+    }
+
+    var e = input.evidence;
+    if (!e || !e.checked) add('evidence', 'Evidence folders', 'info', e && e.busy ? 'Checking…' : 'Not checked yet this session.', 'syncEvidenceFolders');
+    else if ((e.errors || []).length) add('evidence', 'Evidence folders', 'warn', 'Some folders could not be read or created: ' + e.errors.join('; '), 'syncEvidenceFolders');
+    else if (e.planned > e.found) add('evidence', 'Evidence folders', 'warn', plural(e.planned - e.found, 'folder') + ' not created yet (a read-only session cannot create them).', 'syncEvidenceFolders');
+    else add('evidence', 'Evidence folders', 'pass', plural(e.found, 'folder') + ' in place, one per applicable control and clause.');
+
+    var s = input.scan;
+    if (!s) add('scan', 'Posture scan', 'info', 'Not checked yet.');
+    else if (!s.lastDate) add('scan', 'Posture scan', 'warn', 'No posture scan has been run yet.', 'runScan');
+    else {
+      var cadence = parseInt(s.cadenceDays, 10) || 30;
+      var age = today ? daysBetweenDateStr(s.lastDate, today) : 0;
+      if (age > cadence) add('scan', 'Posture scan', 'warn', 'Last scan ' + fd(s.lastDate) + ', ' + plural(age, 'day') + ' ago, longer than the ' + cadence + '-day cadence.', 'runScan');
+      else add('scan', 'Posture scan', 'pass', 'Last scan ' + fd(s.lastDate) + '.');
+    }
+
+    var c = input.capabilities;
+    if (!c) add('capabilities', 'Microsoft 365 capabilities', 'info', 'Not checked yet.');
+    else if ((c.unavailable || []).length) add('capabilities', 'Microsoft 365 capabilities', 'info', plural(c.unavailable.length, 'area') + ' not available in this tenant\'s licensing (' + c.unavailable.slice(0, 4).join(', ') + (c.unavailable.length > 4 ? ', …' : '') + '). Checks there are marked manual, not failed.');
+    else add('capabilities', 'Microsoft 365 capabilities', 'pass', 'Every capability area is available.');
+
+    return out;
+  }
+
+  /* One status for the whole setup plus a flag per check — the only
+     part that leaves the tenant (see app.js reportSetupHealth()). */
+  function setupHealthSummary(checks) {
+    var fail = (checks || []).filter(function (c) { return c.status === 'fail'; });
+    var warn = (checks || []).filter(function (c) { return c.status === 'warn'; });
+    var flags = {};
+    (checks || []).forEach(function (c) { flags[c.id] = c.status; });
+    return {
+      status: fail.length ? 'failing' : warn.length ? 'warning' : 'healthy',
+      failing: fail.length, warnings: warn.length, flags: flags,
+      headline: fail.length ? fail.map(function (c) { return c.label; }).join(', ')
+        : warn.length ? warn.map(function (c) { return c.label; }).join(', ') : 'Healthy'
+    };
+  }
+
+  /* The latest setup-health report for one owner-console roster row.
+     The roster may hold a tenant as its GUID or as a domain (either is
+     accepted when adding a client), and reports always carry the GUID
+     plus the tenant's verified domains, so either matches. */
+  function matchHealthReport(client, reports) {
+    var id = String((client && client.tenantId) || '').trim().toLowerCase();
+    if (!id) return null;
+    var best = null;
+    (reports || []).forEach(function (r) {
+      var hit = String(r.tenantId || '').toLowerCase() === id ||
+        (r.domains || []).some(function (d) { return String(d).toLowerCase() === id; });
+      if (hit && (!best || String(r.reportedAt || '') > String(best.reportedAt || ''))) best = r;
+    });
+    return best;
+  }
+
+  /* Graph permissions granted to a delegated access token, from its
+     scp claim. Returns null for anything that is not a readable JWT. */
+  function scopesFromAccessToken(token) {
+    try {
+      var part = String(token || '').split('.')[1];
+      if (!part) return null;
+      part = part.replace(/-/g, '+').replace(/_/g, '/');
+      while (part.length % 4) part += '=';
+      var json = typeof atob === 'function' ? atob(part) : Buffer.from(part, 'base64').toString('binary');
+      var claims = JSON.parse(json);
+      return typeof claims.scp === 'string' ? claims.scp.split(' ').filter(Boolean) : null;
+    } catch (e) { return null; }
+  }
+
 
   /* The guided path to certification — the ordered things a client has
      to do, from answering the scope questionnaire to booking the
@@ -6517,7 +6667,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

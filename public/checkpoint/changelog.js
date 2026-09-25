@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.105.0',
+    date: '2026-09-25',
+    entries: [
+      'New Setup health (Settings → Setup health): every time someone signs in, Checkpoint checks its own setup. It checks the activation, Microsoft Graph permissions, every SharePoint list and column, the Documents library, framework content, evidence folders, the last scan and which Microsoft 365 capabilities your licensing includes. Each line says OK, Check or Fix.',
+      'Problems come with a fix: Repair setup recreates any missing list, column or library, Grant admin consent opens the consent page for a missing permission, and Open licence goes straight to the activation. A banner tells anyone who can fix it when something is broken.',
+      'Checkpoint now shares this setup status with Compliance365, so we can spot and fix a problem before you notice it. It sends only OK/Check/Fix per line, the app version and the date of your last scan, never anything from your registers, scan results or documents. Switch it off in Settings → Setup health.'
+    ]
+  },
+  {
     version: '1.104.0',
     date: '2026-09-25',
     entries: [

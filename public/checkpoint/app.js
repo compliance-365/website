@@ -333,6 +333,7 @@ function showModal(opts) {
      load (wizard activation step + provisioning; pre-load check +
      post-load reconcile). */
   var PACKS_MERGED = {};
+  var PACK_ERRORS = {}; /* moduleId -> why its pack could not be loaded this session (Setup health) */
 
   /* Templates: a failed / review check proposes this risk + actions.
      Nothing enters the register without practitioner approval. */
@@ -787,6 +788,7 @@ function showModal(opts) {
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
     'setClauseStatus', 'verifyClause', 'setClauseEvidence', 'setClauseOwner',
     'addControlEvidenceFiles', 'addClauseEvidenceFiles', 'syncEvidenceFolders',
+    'toggleShareSetupHealth',
     /* Bulk equivalents of setSt/toggleApp — gated for the same reason
        the single-row versions are. The selection actions themselves
        (toggleSoaSel/soaSelectAllShown/clearSoaSel) are deliberately
@@ -1835,6 +1837,165 @@ function showModal(opts) {
     if (res.failed.length) toastError('<b>Not uploaded:</b> ' + res.failed.map(function (f) { return esc(f.name) + ' (' + esc(f.error) + ')'; }).join('; '));
     renderSoa(); renderClauses(); renderEvidenceFolderNote();
     if (kind === 'control') refreshControlDrawer(fw + '|' + rec.id);
+  }
+
+  /* ================= Setup health =================
+     Checkpoint checks its own setup on every sign-in: activation,
+     Graph permissions, SharePoint lists and columns, the Documents
+     library, framework content, evidence folders, the last scan and
+     licensed capabilities. Each problem gets a one-click fix where one
+     exists, and a failing check puts a banner in front of anyone who
+     can fix it. The rules are lib.js setupHealthChecks(); this gathers
+     the facts. The summary (status flags only, never compliance data)
+     is also reported to Compliance365's owner console — see
+     reportSetupHealth() and Settings → Setup health to turn that off. */
+  var _setupHealth = { busy: false, at: '', checks: [], summary: null };
+
+  async function gatherSetupHealthInput() {
+    var input = { fmtDate: fmtDateY };
+    var demo = Store.kind !== 'sharepoint';
+    var required = [], seen = {};
+    (CONFIG.scopesReadOnly || []).concat(CONFIG.scopesProvision || []).forEach(function (s) { if (!seen[s]) { seen[s] = true; required.push(s); } });
+    var optional = (CONFIG.scopesMail || []).filter(function (s) { return !seen[s]; });
+
+    if (demo) input.activation = { status: 'valid', expiry: window.CheckpointLib.addDaysToDateStr(new Date().toISOString().slice(0, 10), 200) };
+    else input.activation = ENTITLEMENT_STATE ? { status: ENTITLEMENT_STATE.status, expiry: ENTITLEMENT_STATE.expiry || '', graceUntil: ENTITLEMENT_STATE.graceUntil || '' } : { status: 'none' };
+
+    var granted = demo ? required.concat(optional) : await Graph.grantedScopes();
+    input.permissions = { granted: granted, required: required, optional: optional };
+
+    if (demo) {
+      input.lists = { total: (window.SpStore && window.SpStore.listCount) || 0, missing: [], columnsMissing: [] };
+      input.library = { present: true, driveReady: true, columnsMissing: [] };
+    } else {
+      try {
+        var rep = await Store.checkSetup();
+        input.lists = { total: rep.total, missing: rep.missing, columnsMissing: rep.columnsMissing };
+        input.library = rep.library;
+      } catch (e) {
+        input.lists = { error: e.message || String(e) };
+      }
+    }
+
+    input.packs = { licensed: entitledFrameworks().filter(function (fw) { return fw !== 'iso27001'; }), errors: Object.assign({}, PACK_ERRORS) };
+
+    var plan = window.CheckpointLib.planEvidenceFolders(evidenceFolderFrameworks(), S.controls, visibleClauses());
+    var planned = plan.reduce(function (n, p) { return n + p.items.length; }, 0);
+    input.evidence = demo
+      ? { checked: true, planned: planned, found: planned, errors: [] }
+      : { checked: !!_evSync.at, busy: _evSync.busy, planned: planned, found: Object.keys(_evFolders).length, errors: _evSync.errors || [] };
+
+    var last = S.scans && S.scans[S.scans.length - 1];
+    input.scan = { lastDate: last ? last.date : '', cadenceDays: (S.settings && S.settings.scanCadenceDays) || '30' };
+
+    if (CAP) {
+      /* aws/github are optional collectors a client deploys, not
+         Microsoft 365 licensing — their absence is not a setup gap. */
+      input.capabilities = { unavailable: Object.keys(CAP).filter(function (k) { return k !== 'aws' && k !== 'github' && CAP[k] && CAP[k].available === false; }).map(function (k) { return CAP[k].label || k; }) };
+    }
+    return input;
+  }
+
+  async function runSetupHealth(opts) {
+    opts = opts || {};
+    if (_setupHealth.busy || RESTRICTED_ACCESS) return null;
+    _setupHealth.busy = true;
+    renderSetupHealth();
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      var input = await gatherSetupHealthInput();
+      _setupHealth.checks = window.CheckpointLib.setupHealthChecks(input, today);
+      _setupHealth.summary = window.CheckpointLib.setupHealthSummary(_setupHealth.checks);
+      _setupHealth.at = new Date().toISOString();
+      _setupHealth.lastScanDate = input.scan.lastDate;
+      if (Store.kind === 'sharepoint' && !_setupHealth.domains) {
+        try { var ti = await Graph.tenantInfo(); _setupHealth.domains = (ti && ti.verifiedDomains) || []; } catch (e2) { _setupHealth.domains = []; }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      _setupHealth.busy = false;
+    }
+    renderSetupHealth();
+    if (_setupHealth.summary && opts.report !== false) reportSetupHealth(_setupHealth.summary, _setupHealth.checks, opts.force);
+    return _setupHealth.summary;
+  }
+
+  /* Status flags only: which checks pass, the problems' one-line
+     descriptions (missing list, column or permission names, a pack
+     error), the app version and the last scan date. Nothing from the
+     registers, scan results or documents. Sent when the status changes
+     or at most every 12 hours, reusing the error-reporting endpoint. */
+  var HEALTH_REPORT_KEY = 'checkpoint-setup-health-sent';
+  function reportSetupHealth(summary, checks, force) {
+    try {
+      if (!CONFIG.errorReportUrl || Store.kind !== 'sharepoint') return;
+      if (S.settings && S.settings.shareSetupHealth === 'false') return;
+      var acc = (window.Graph && window.Graph.getAccount && window.Graph.getAccount()) || null;
+      var tenantId = (acc && acc.tenantId) || '';
+      if (!tenantId) return;
+      var sig = summary.status + '|' + JSON.stringify(summary.flags) + '|' + (window.CHECKPOINT_VERSION || '');
+      var prev = null;
+      try { prev = JSON.parse(localStorage.getItem(HEALTH_REPORT_KEY) || 'null'); } catch (e) { prev = null; }
+      var fresh = prev && prev.tenantId === tenantId && prev.sig === sig && (Date.now() - prev.at) < 12 * 3600 * 1000;
+      if (fresh && !force) return;
+      var payload = {
+        type: 'health',
+        tenantId: tenantId,
+        clientName: clientDisplayLabel(''),
+        appVersion: window.CHECKPOINT_VERSION || '',
+        status: summary.status,
+        headline: summary.headline,
+        flags: summary.flags,
+        details: (checks || []).filter(function (c) { return c.status === 'fail' || c.status === 'warn'; }).map(function (c) { return c.label + ': ' + c.detail; }),
+        lastScanDate: _setupHealth.lastScanDate || '',
+        frameworks: entitledFrameworks(),
+        /* lets the owner console match a roster row entered by domain */
+        domains: _setupHealth.domains || []
+      };
+      fetch(CONFIG.errorReportUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(function () { try { localStorage.setItem(HEALTH_REPORT_KEY, JSON.stringify({ tenantId: tenantId, sig: sig, at: Date.now() })); } catch (e) { /* storage unavailable — the next load reports again */ } })
+        .catch(function () { /* fire-and-forget, like reportError() */ });
+    } catch (e) { /* must never throw */ }
+  }
+
+  var SETUP_FIX_LABELS = {
+    repairSetup: 'Repair setup', openAdminConsent: 'Grant admin consent', openActivation: 'Open licence',
+    syncEvidenceFolders: 'Check folders', runScan: 'Run a scan'
+  };
+  function renderSetupHealth() {
+    var el = document.getElementById('setupHealthRow');
+    var banner = document.getElementById('setupHealthBanner');
+    var sum = _setupHealth.summary;
+    if (banner) {
+      var show = sum && sum.failing && !READONLY && !RESTRICTED_ACCESS;
+      banner.style.display = show ? '' : 'none';
+      if (show) banner.innerHTML = icon('flag') + ' <b>Checkpoint setup needs attention:</b> ' + esc(sum.headline) + '. <button class="lnk" data-action="App.openSetupHealth">Review and fix</button>';
+    }
+    if (!el) return;
+    if (!sum) {
+      el.innerHTML = '<p class="src">' + (_setupHealth.busy ? 'Checking setup…' : 'Setup has not been checked yet this session.') + '</p>';
+      return;
+    }
+    var chip = { pass: 'st-Implemented', warn: 'st-Intreatment', fail: 'st-Open', info: 'st-Proposed' };
+    var word = { pass: 'OK', warn: 'Check', fail: 'Fix', info: 'Info' };
+    var headTone = sum.status === 'failing' ? 'var(--fail)' : sum.status === 'warning' ? 'var(--warn)' : 'var(--pass)';
+    var shareOn = !(S.settings && S.settings.shareSetupHealth === 'false');
+    el.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<b style="color:' + headTone + '">' + (sum.status === 'healthy' ? 'Everything is set up correctly.' : sum.failing ? sum.failing + ' problem' + (sum.failing === 1 ? '' : 's') + ' to fix' + (sum.warnings ? ', ' + sum.warnings + ' to check' : '') : sum.warnings + ' thing' + (sum.warnings === 1 ? '' : 's') + ' to check') + '</b>' +
+        '<span class="src">' + (_setupHealth.busy ? 'Checking…' : 'Checked ' + esc(new Date(_setupHealth.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))) +
+        ' <button class="lnk" data-action="App.runSetupHealthCheck">Check again</button></span>' +
+      '</div>' +
+      '<table><tbody>' + _setupHealth.checks.map(function (c) {
+        var fix = (c.fix && c.status !== 'pass' && c.status !== 'info' && !(READONLY && c.fix !== 'openAdminConsent' && c.fix !== 'openActivation'))
+          ? '<button class="btn ghost sm" data-action="App.setupFix" data-id="' + esc(c.fix) + '">' + esc(SETUP_FIX_LABELS[c.fix] || 'Fix') + '</button>' : '';
+        return '<tr><td style="white-space:nowrap"><span class="chip ' + chip[c.status] + '">' + word[c.status] + '</span></td>' +
+          '<td style="color:var(--paper)">' + esc(c.label) + '<div class="src">' + esc(c.detail) + '</div></td><td style="text-align:right">' + fix + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (Store.kind === 'sharepoint' && CONFIG.errorReportUrl
+        ? '<p class="src" style="margin-top:10px"><label><input type="checkbox" data-change-action="App.toggleShareSetupHealth"' + (shareOn ? ' checked' : '') + (READONLY ? ' disabled' : '') + '> Share this setup status with Compliance365</label> so we can spot and fix problems before you do. It sends the OK/Check/Fix result of each line above, the app version and the last scan date. It never sends anything from your registers, scan results or documents.</p>'
+        : '');
   }
 
   /* Registers Checkpoint's OWN AI assistant feature (ai.js) as an entry
@@ -12745,6 +12906,8 @@ function showModal(opts) {
         if (parts.length) toast('Scan complete — ' + parts.join(' · '));
       }, 2600);
       _scanBusy = false;
+      /* the scan line of Setup health is now out of date */
+      if (_setupHealth.summary) runSetupHealth().catch(function (e) { console.error(e); });
     },
 
     approve: async function (tpl) {
@@ -14742,6 +14905,57 @@ function showModal(opts) {
       renderSoa();
     },
 
+    runSetupHealthCheck: function () { return runSetupHealth({ force: true }); },
+    openSetupHealth: function () {
+      App.go('settings');
+      var el = document.getElementById('setupHealthRow');
+      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    /* One entry point for every fix button, so each stays available to
+       the role that can actually use it (see renderSetupHealth()). */
+    setupFix: async function (fix) {
+      if (fix === 'openAdminConsent') {
+        var acc = (window.Graph && window.Graph.getAccount && window.Graph.getAccount()) || null;
+        var url = window.CheckpointLib.buildAdminConsentUrl(CONFIG.clientId, (acc && acc.tenantId) || '', location.origin + location.pathname);
+        toast('Opening admin consent. A Global Administrator must approve it; then reload Checkpoint.');
+        window.open(url, '_blank', 'noopener');
+        return;
+      }
+      if (fix === 'openActivation') {
+        App.go('frameworks');
+        var lp = document.getElementById('licensePanel');
+        if (lp && lp.scrollIntoView) lp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (READONLY) { toast('A read-only session cannot change the setup.'); return; }
+      if (fix === 'runScan') { App.go('scan'); return App.runScan(); }
+      if (fix === 'syncEvidenceFolders') { await syncEvidenceFolders(); return runSetupHealth({ force: true }); }
+      if (fix === 'repairSetup') {
+        if (Store.kind !== 'sharepoint') { toast('Nothing to repair in demo mode.'); return; }
+        busy(true);
+        var msg = document.getElementById('busyMsg');
+        try {
+          await Store.repairSetup(function (m) { if (msg) msg.textContent = m; });
+          audit('Setup repaired', 'Settings', 'SharePoint', '', 'Missing lists, columns or library recreated from Setup health');
+        } catch (e) {
+          busy(false);
+          toastError('<b>Repair failed:</b> ' + esc(e.message || e));
+          return runSetupHealth({ force: true });
+        }
+        busy(false);
+        await runSetupHealth({ force: true });
+        var sum = _setupHealth.summary;
+        toast(sum && sum.flags.lists === 'pass' && sum.flags.library !== 'fail' ? 'Setup repaired.' : 'Repair ran, but some items could not be fixed. See Setup health.');
+      }
+    },
+    toggleShareSetupHealth: async function () {
+      var on = S.settings.shareSetupHealth === 'false';
+      S.settings.shareSetupHealth = on ? 'true' : 'false';
+      try { await Store.setSetting('shareSetupHealth', S.settings.shareSetupHealth); } catch (e) { warn(e); }
+      audit('Setting changed', 'Settings', 'shareSetupHealth', on ? 'false' : 'true', S.settings.shareSetupHealth);
+      renderSetupHealth();
+      if (on && _setupHealth.summary) reportSetupHealth(_setupHealth.summary, _setupHealth.checks, true);
+    },
     addControlEvidenceFiles: function (key) {
       var parts = String(key).split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
@@ -19218,7 +19432,13 @@ function showModal(opts) {
     busy(false);
     /* In the background: the console is usable while SharePoint is read. */
     renderEvidenceFolderNote();
-    if (Store.kind === 'sharepoint') syncEvidenceFolders().catch(function (e) { console.error(e); });
+    renderSetupHealth();
+    /* Setup health runs after the evidence-folder sync so its folder
+       line reflects this session, not "not checked yet". */
+    (Store.kind === 'sharepoint' ? syncEvidenceFolders() : Promise.resolve())
+      .catch(function (e) { console.error(e); })
+      .then(function () { return runSetupHealth(); })
+      .catch(function (e) { console.error(e); });
   }
 
   /* One-time "what's new" nudge: toasts only when this browser has
@@ -19816,6 +20036,7 @@ function showModal(opts) {
       manifest = await manifestResp.json();
     } catch (e) {
       warn('mergeLicensedPacks: could not load packs/manifest.json — every premium module stays unavailable this load: ' + (e.message || e));
+      toMerge.forEach(function (m) { PACK_ERRORS[m] = 'content manifest could not be loaded'; });
       return;
     }
 
@@ -19906,7 +20127,9 @@ function showModal(opts) {
           Object.assign(window.CHECK_PRIVACYACT, content.extra.checkPrivacyAct);
         }
         PACKS_MERGED[moduleId] = true;
+        delete PACK_ERRORS[moduleId];
       } catch (e) {
+        PACK_ERRORS[moduleId] = String(e.message || e).slice(0, 200);
         warn('mergeLicensedPacks: "' + moduleId + '" unavailable — treating it as unlicensed for this load: ' + (e.message || e));
       }
     }

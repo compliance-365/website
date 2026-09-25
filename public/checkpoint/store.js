@@ -2676,6 +2676,69 @@ window.SpStore = (function () {
     try { await ensureDocColumns(onStatus); } catch (e) { /* best-effort — see note above */ }
   }
 
+  /* Setup health (read-only): which Checkpoint lists are missing, and
+     which of their DEFS columns — every column, not just the ones
+     COLUMN_RECONCILE heals on load — are missing from the lists that
+     exist. Column reads are batched. See lib.js setupHealthChecks(). */
+  async function checkSetup() {
+    await resolveSite();
+    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+    var byName = {};
+    existing.forEach(function (l) { byName[l.displayName] = l.id; });
+    var keys = Object.keys(DEFS);
+    var missing = [], present = [];
+    keys.forEach(function (k) { if (byName[listName(k)]) present.push(k); else missing.push(listName(k)); });
+    var docId = byName[listName('Documents')];
+    var reqs = present.map(function (k) { return { url: '/sites/' + siteId + '/lists/' + byName[listName(k)] + '/columns?$select=name&$top=500' }; });
+    if (docId) reqs.push({ url: '/sites/' + siteId + '/lists/' + docId + '/columns?$select=name&$top=500' });
+    var res = reqs.length ? await Graph.batch(reqs, provisionOpts) : [];
+    var columnsMissing = [];
+    present.forEach(function (k, i) {
+      var r = res[i];
+      if (!r || r.status !== 200 || !r.body) return; /* unreadable schema: not evidence of a missing column */
+      var have = {};
+      (r.body.value || []).forEach(function (c) { have[c.name] = true; });
+      var gone = DEFS[k].map(function (d) { return d.name; }).filter(function (n) { return !have[n]; });
+      if (gone.length) columnsMissing.push({ list: listName(k), key: k, columns: gone });
+    });
+    var library = { present: !!docId, driveReady: !!docDriveId, columnsMissing: [] };
+    var dr = docId ? res[res.length - 1] : null;
+    if (dr && dr.status === 200 && dr.body) {
+      var haveDoc = {};
+      (dr.body.value || []).forEach(function (c) { haveDoc[c.name] = true; });
+      library.columnsMissing = window.DOC_META_COLUMNS.map(function (d) { return d.name; }).filter(function (n) { return !haveDoc[n]; });
+    }
+    return { total: keys.length, missing: missing, columnsMissing: columnsMissing, library: library };
+  }
+
+  /* The fix for whatever checkSetup() found: creates missing lists and
+     the library (ensureLists — needs a verified activation, as any
+     list creation does), then adds every missing DEFS column to every
+     list. Column adds are best-effort per column; the next checkSetup()
+     says what, if anything, still failed. */
+  async function repairSetup(onStatus) {
+    await ensureLists(onStatus);
+    var report = await checkSetup();
+    for (var i = 0; i < report.columnsMissing.length; i++) {
+      var m = report.columnsMissing[i];
+      if (!lists[m.key]) continue;
+      for (var j = 0; j < m.columns.length; j++) {
+        var def = DEFS[m.key].find(function (d) { return d.name === m.columns[j]; });
+        if (!def) continue;
+        if (onStatus) onStatus('Adding “' + def.name + '” to ' + m.list + '…');
+        try { await Graph.g('/sites/' + siteId + '/lists/' + lists[m.key] + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision }); }
+        catch (e) { /* reported by the re-check below */ }
+      }
+    }
+    if (!docDriveId && docLibraryId) {
+      try {
+        var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive', provisionOpts);
+        docDriveId = docList.drive && docList.drive.id;
+      } catch (e) { /* reported by the re-check */ }
+    }
+    return checkSetup();
+  }
+
   /* Same self-heal idea as reconcileColumns(), but for the document
      library, which isn't in DEFS (it's created as a documentLibrary
      template, not a genericList) and so isn't covered by that loop. */
@@ -3732,6 +3795,7 @@ window.SpStore = (function () {
     ensureNistSubcategories: ensureNistSubcategories,
     reconcileControls: reconcileControls,
     probeOnboardingState: probeOnboardingState,
+    checkSetup: checkSetup, repairSetup: repairSetup, listCount: Object.keys(DEFS).length,
     readCachedActivation: readCachedActivation,
     validateSitePath: validateSitePath,
     reset: null /* never bulk-delete client data from the console */
