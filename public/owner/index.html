@@ -153,7 +153,7 @@
       <button class="btn ghost" data-action="OwnerApp.partnerRefresh">Refresh</button>
     </div>
     <div class="card" id="partnerSyncAllBar" hidden style="margin-bottom:18px;font-size:12.5px"></div>
-    <div class="card" style="padding:0 10px;overflow-x:auto">
+    <div class="card" style="padding:0 10px">
       <table>
         <thead><tr><th scope="col">Client</th><th scope="col">Readiness</th><th scope="col">Status</th><th scope="col">Modules</th><th scope="col">Renewal</th><th scope="col">Last sync / health</th><th scope="col">Actions</th></tr></thead>
         <tbody id="partnerClientRows"><tr><td colspan="7" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
@@ -168,7 +168,7 @@
 
   <section class="view" id="ov-matrix">
     <div class="vhead"><div class="rule"></div><h1>Module adoption matrix</h1><p>Clients × modules — licensed and recently active, licensed but dormant (churn risk), or not licensed at all — plus each client's best upsell candidate, computed from their own cross-mapped control readiness.</p></div>
-    <div class="card" id="partnerMatrixWrap" style="padding:16px;overflow-x:auto"></div>
+    <div class="card" id="partnerMatrixWrap" style="padding:16px"></div>
   </section>
 
   <section class="view" id="ov-revenue">
@@ -194,7 +194,7 @@
   <section class="view" id="ov-prices">
     <div class="vhead"><div class="rule"></div><h1>Prices</h1><p>The annual list price per module — exists only in this tenant, read by the Revenue board and Renewals runway above. Never read by, or provisioned in, a client's own tenant.</p></div>
     <div style="margin-bottom:18px"><button class="btn" data-action="OwnerApp.partnerPromptAddPrice">+ Add price</button></div>
-    <div class="card" style="padding:0 10px;overflow-x:auto">
+    <div class="card" style="padding:0 10px">
       <table>
         <thead><tr><th scope="col">Module</th><th scope="col">Annual price</th><th scope="col">Currency</th><th scope="col">Notes</th><th scope="col">Actions</th></tr></thead>
         <tbody id="partnerPriceRows"><tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
@@ -204,7 +204,7 @@
 
   <section class="view" id="ov-errors">
     <div class="vhead"><div class="rule"></div><h1>Client-side errors</h1><p>Every crash the Checkpoint browser app has reported about itself, across every client tenant — the only visibility Compliance365 has into a signed-in practitioner hitting a genuine bug, since nothing else in this app reports back here. Never a client's own posture, risk or compliance data: only the error, the app's own state, and the browser's own info. Requires the reporting Lambda to be deployed and <code>errorReportUrl</code> set in config.js (lambda/DEPLOY-ERROR-REPORTING.md) — empty until then, not broken.</p></div>
-    <div class="card" style="padding:0 10px;overflow-x:auto">
+    <div class="card" style="padding:0 10px">
       <table>
         <thead><tr><th scope="col">When</th><th scope="col">Tenant</th><th scope="col">Error</th><th scope="col">Source</th><th scope="col">Status</th></tr></thead>
         <tbody id="errorReportRows"><tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr></tbody>

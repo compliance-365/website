@@ -18004,9 +18004,9 @@ function showModal(opts) {
          write failure otherwise (req 5: never a silent/false success). */
       if (tenantOk) {
         toast(result.evalResult.status === 'expired'
-          ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
+          ? 'Activation applied, but it expired ' + esc(fmtDateY(result.evalResult.expiry)) + ' — renewal needed.'
           : result.evalResult.status === 'grace'
-          ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
+          ? 'Activation applied — in its grace period until ' + esc(fmtDateY(result.evalResult.graceUntil)) + '.'
           : 'Activation verified and applied.');
       }
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
@@ -19880,16 +19880,16 @@ function showModal(opts) {
     }
     var note = '';
     if (ENTITLEMENT_STATE.status === 'expired') {
-      note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> (grace period ended ' + fmtDate(ENTITLEMENT_STATE.graceUntil) + ') — Checkpoint is read-only until a renewed activation is applied. Every register, dashboard and report stays fully viewable and exportable; nothing can be added, edited or uploaded. Contact Compliance365 to renew.</div>';
+      note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDateY(ENTITLEMENT_STATE.expiry) + '</b> (grace period ended ' + fmtDateY(ENTITLEMENT_STATE.graceUntil) + ') — Checkpoint is read-only until a renewed activation is applied. Every register, dashboard and report stays fully viewable and exportable; nothing can be added, edited or uploaded. Contact Compliance365 to renew.</div>';
     } else if (ENTITLEMENT_STATE.status === 'grace') {
-      note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDate(ENTITLEMENT_STATE.graceUntil) + '</b>. Checkpoint keeps working normally until then; renew before that date to avoid going read-only. Contact Compliance365 to renew.</div>';
+      note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDateY(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDateY(ENTITLEMENT_STATE.graceUntil) + '</b>. Checkpoint keeps working normally until then; renew before that date to avoid going read-only. Contact Compliance365 to renew.</div>';
     }
     el.innerHTML = warnBanner +
       '<div class="d-kv"><span>Type</span><b>' + esc(ENTITLEMENT_STATE.type) + '</b></div>' +
       '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
       '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
-      '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
-      '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
+      '<div class="d-kv"><span>Issued</span><b>' + fmtDateY(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
+      '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDateY(ENTITLEMENT_STATE.expiry) + '</b></div>' +
       '<div class="d-kv"><span>Verification</span><b>' + esc(ENTITLEMENT_STATE.status) + '</b></div>' +
       '<div class="d-kv"><span>Stored</span><b>' + where + '</b></div>' +
       note +
@@ -20560,7 +20560,7 @@ function showModal(opts) {
     else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
 
     if (result.evalResult.status === 'expired') {
-      if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">This activation expired ' + esc(fmtDate(result.evalResult.expiry)) + ' (grace period ended ' + esc(fmtDate(result.evalResult.graceUntil)) + ') — contact Compliance365 for a renewed file.</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">This activation expired ' + esc(fmtDateY(result.evalResult.expiry)) + ' (grace period ended ' + esc(fmtDateY(result.evalResult.graceUntil)) + ') — contact Compliance365 for a renewed file.</span>';
       if (nextBtn) nextBtn.disabled = true;
       return;
     }
@@ -20577,8 +20577,8 @@ function showModal(opts) {
     await mergeLicensedPacks(result.evalResult);
     if (statusEl) {
       statusEl.innerHTML = result.evalResult.status === 'grace'
-        ? '<span style="color:var(--gold-light)">Verified — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '. Frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + '.</span>'
-        : '<span style="color:var(--pass)">Verified ' + icon('check') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
+        ? '<span style="color:var(--gold-light)">Verified — in its grace period until ' + esc(fmtDateY(result.evalResult.graceUntil)) + '. Frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + '.</span>'
+        : '<span style="color:var(--pass)">Verified ' + icon('check') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDateY(result.evalResult.expiry)) + '.</span>';
     }
     if (nextBtn) nextBtn.disabled = false;
   }
@@ -20613,7 +20613,7 @@ function showModal(opts) {
     await mergeLicensedPacks(result.evalResult);
     var statusEl = document.getElementById('wizActStatus');
     var nextBtn = document.getElementById('wizStep4Next');
-    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file' + (result.source === 'local' ? ' in this browser' : ' for this tenant') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file' + (result.source === 'local' ? ' in this browser' : ' for this tenant') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDateY(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
     if (nextBtn) nextBtn.disabled = false;
   }
 
