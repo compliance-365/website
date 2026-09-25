@@ -391,9 +391,9 @@
           <tr>
             <th scope="row">Read your security configuration</th>
             <td>Conditional Access policies, admin role assignments, device compliance, risky sign-ins,
-              sensitivity labels, access reviews and Secure Score. This is what the posture scan reads
-              to tell you where you actually stand. All of it is read-only — Checkpoint cannot change
-              a single setting in your tenant.</td>
+              sensitivity labels, access reviews, joiner/leaver workflows and Secure Score. This is what
+              the posture scan reads to tell you where you actually stand. All of it is read-only —
+              Checkpoint cannot change a single setting in your tenant.</td>
             <td><span class="mono">Policy.Read.All</span> <span class="mono">SecurityEvents.Read.All</span>
               <span class="mono">DeviceManagementManagedDevices.Read.All</span>
               <span class="mono">DeviceManagementConfiguration.Read.All</span>
@@ -401,7 +401,33 @@
               <span class="mono">IdentityRiskyUser.Read.All</span>
               <span class="mono">SensitivityLabels.Read.All</span>
               <span class="mono">AccessReview.Read.All</span>
-              <span class="mono">SharePointTenantSettings.Read.All</span></td>
+              <span class="mono">SharePointTenantSettings.Read.All</span>
+              <span class="mono">LifecycleWorkflows.Read.All</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Read your security activity</th>
+            <td>Whether Microsoft Defender incidents and alerts are being worked, whether any sign-in
+              actually used legacy authentication, and who changed a privileged role. Configuration
+              says what should happen; these logs show what did. Checkpoint reports on them and never
+              assigns, closes or deletes anything.</td>
+            <td><span class="mono">SecurityIncident.Read.All</span>
+              <span class="mono">SecurityAlert.Read.All</span>
+              <span class="mono">AuditLog.Read.All</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Read Defender vulnerability and awareness data</th>
+            <td>Which devices still carry vulnerabilities with a known exploit, whether every device runs
+              an endpoint detection sensor, and the results of phishing simulations. Checkpoint runs only
+              its own fixed, read-only queries and never launches a simulation.</td>
+            <td><span class="mono">ThreatHunting.Read.All</span>
+              <span class="mono">AttackSimulation.Read.All</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Read privacy and retention settings</th>
+            <td>Whether requests from individuals to see or delete their personal information are answered
+              on time, and which retention labels are published. Read-only.</td>
+            <td><span class="mono">SubjectRightsRequest.Read.All</span>
+              <span class="mono">RecordsManagement.Read.All</span></td>
           </tr>
           <tr>
             <th scope="row">Read your directory</th>
@@ -440,8 +466,11 @@
           screen will say so. Delegated means Checkpoint can only ever act as the person signed in —
           it has no standing access of its own and cannot run when nobody is using it.</li>
       </ul>
-      <p>You should see thirteen permissions and nothing else. If the list does not match the third
-        column above, stop and contact us before approving.</p>
+      <p>You should see twenty-one Microsoft Graph permissions and nothing else. If the list does not
+        match the third column above, stop and contact us before approving.</p>
+      <p>Where a feature is not licensed in your tenant — Defender for Endpoint, Priva or ID Governance,
+        for example — approving its permission changes nothing: the check that uses it simply shows as
+        Manual.</p>
     </div>
     <div class="panel flag">
       <p>Checkpoint requests permissions progressively rather than all at once. Signing in asks only
@@ -468,6 +497,10 @@
       <li><strong>Ask staff to acknowledge the ones that apply to them</strong>, and assign the
         awareness training. Both record who did what, and when, against the specific version — which
         is what an auditor samples.</li>
+      <li><strong>Build your asset and legal registers.</strong> Sync devices, applications and
+        SharePoint sites from Microsoft 365, add the information itself (customer data, HR records,
+        source code) with an owner for each, and confirm which laws and contracts apply to you.
+        Certification auditors ask for both by name.</li>
       <li><strong>Work the gaps.</strong> The scan produces suggested risks and actions; you confirm or
         dismiss each one, so nothing lands in your registers that a person has not agreed to.</li>
     </ul>
