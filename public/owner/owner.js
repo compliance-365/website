@@ -179,6 +179,13 @@ function showModal(opts) {
     if (!s) return '—';
     return new Date(s + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
   }
+  /* With the year — for licence and renewal dates, which span years:
+     "10 Jul" issued and "10 Jul" expiry says nothing about which year. */
+  function fmtDateY(d) {
+    var s = window.CheckpointLib.normaliseDateInput(d);
+    if (!s) return '—';
+    return new Date(s + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
   function toast(msg) {
     var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
@@ -600,9 +607,9 @@ function showModal(opts) {
     } else {
       var note = '';
       if (ENTITLEMENT_STATE.status === 'expired') {
-        note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — renew to keep this console usable.</div>';
+        note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDateY(ENTITLEMENT_STATE.expiry) + '</b> — renew to keep this console usable.</div>';
       } else if (ENTITLEMENT_STATE.status === 'grace') {
-        note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDate(ENTITLEMENT_STATE.graceUntil) + '</b>.</div>';
+        note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDateY(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDateY(ENTITLEMENT_STATE.graceUntil) + '</b>.</div>';
       } else if (ENTITLEMENT_STATE.type !== 'partner') {
         note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>This activation is not type "partner"</b> — the owner console stays locked until a partner-type file is applied.</div>';
       }
@@ -610,8 +617,8 @@ function showModal(opts) {
         '<div class="d-kv"><span>Type</span><b>' + esc(ENTITLEMENT_STATE.type) + '</b></div>' +
         '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
         '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
-        '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
-        '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
+        '<div class="d-kv"><span>Issued</span><b>' + fmtDateY(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
+        '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDateY(ENTITLEMENT_STATE.expiry) + '</b></div>' +
         '<div class="d-kv"><span>Verification</span><b>' + esc(ENTITLEMENT_STATE.status) + '</b></div>' +
         '<div class="d-kv"><span>Stored</span><b>' + where + '</b></div>' +
         note +
@@ -1153,7 +1160,7 @@ function showModal(opts) {
     function overflowNote(list) { return list.length > DASH_CAP ? '<div class="src" style="margin-top:8px">+' + (list.length - DASH_CAP) + ' more — see the full tab</div>' : ''; }
 
     var atRiskHtml = atRisk.length
-      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col"></th><th scope="col">Why</th><th scope="col"></th></tr></thead><tbody>' +
+      ? '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Client</th><th scope="col"></th><th scope="col">Why</th><th scope="col"></th></tr></thead><tbody>' +
         atRisk.slice(0, DASH_CAP).map(function (r) {
           return '<tr>' +
             '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
@@ -1165,7 +1172,7 @@ function showModal(opts) {
       : '<p style="color:var(--paper-faint);font-size:12.5px">No clients flagged red or amber right now.</p>';
 
     var upsellHtml = upsell.length
-      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Suggested module</th><th scope="col">Readiness</th><th scope="col">Opportunity</th></tr></thead><tbody>' +
+      ? '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Client</th><th scope="col">Suggested module</th><th scope="col">Readiness</th><th scope="col">Opportunity</th></tr></thead><tbody>' +
         upsell.slice(0, DASH_CAP).map(function (u) {
           return '<tr>' +
             '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(u.tenantId) + '" style="font-weight:700">' + esc(u.name) + '</button></td>' +
@@ -1177,7 +1184,7 @@ function showModal(opts) {
       : '<p style="color:var(--paper-faint);font-size:12.5px">No strong upsell signal yet — a client needs at least a few synced controls cross-mapped to an unlicensed framework before a suggestion appears here.</p>';
 
     var dueSoonHtml = dueSoon.length
-      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Days left</th><th scope="col">Status</th></tr></thead><tbody>' +
+      ? '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Client</th><th scope="col">Days left</th><th scope="col">Status</th></tr></thead><tbody>' +
         dueSoon.slice(0, DASH_CAP).map(function (r) {
           var flag = partnerRenewalFlag(r.days);
           return '<tr>' +
@@ -1222,7 +1229,7 @@ function showModal(opts) {
         ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select></td>' +
         '<td>' + partnerModuleChips(c.modules) + '</td>' +
-        '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDate(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
+        '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDateY(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
         '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[health.color] + ';margin-right:6px;vertical-align:middle" title="' + esc(health.reason) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) + (c.lastSyncedBy ? '<div class="src">by ' + esc(c.lastSyncedBy) + '</div>' : '') : 'Never synced') + '</td>' +
         '<td style="white-space:nowrap"><button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
         '</tr>';
@@ -1304,7 +1311,7 @@ function showModal(opts) {
         '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(it.tenantId) + '" style="font-weight:700">' + esc(it.client ? it.client.name : it.tenantId) + '</button><div class="src">' + esc(it.tenantId) + '</div></td>' +
         '<td>' + partnerModuleChips(it.ent.modules) + '</td>' +
         '<td style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(it.value)) + '</td>' +
-        '<td style="color:' + flag.color + ';font-weight:700;white-space:nowrap">' + esc(flag.label) + '<div class="src" style="color:' + flag.color + '">' + esc(fmtDate(it.ent.expiry)) + '</div></td>' +
+        '<td style="color:' + flag.color + ';font-weight:700;white-space:nowrap">' + esc(flag.label) + '<div class="src" style="color:' + flag.color + '">' + esc(fmtDateY(it.ent.expiry)) + '</div></td>' +
         '<td><select class="mini" data-change-action="OwnerApp.partnerSetManualStatus" data-id="' + esc(it.ent._sp) + '">' +
         ['', 'In discussion', 'Renewed', 'At risk'].map(function (s) { return '<option value="' + esc(s) + '"' + (status === s ? ' selected' : '') + '>' + (s || '—') + '</option>'; }).join('') +
         '</select></td>' +
@@ -1318,7 +1325,7 @@ function showModal(opts) {
       '<div class="card kpi"><div class="kpi-num"><b style="color:' + (rev.expiringIn30Days > 0 ? 'var(--fail)' : 'var(--pass)') + '">' + esc(fmtMoneyCompact(rev.expiringIn30Days)) + '</b></div><span>Expiring in 30 days, unrenewed</span><div class="sub">The cash-flow number — act on this now</div></div>' +
       '</div>' +
       timelineHtml +
-      '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Modules</th><th scope="col">Annual value</th><th scope="col">Days left</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+      '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Client</th><th scope="col">Modules</th><th scope="col">Annual value</th><th scope="col">Days left</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
   }
 
   /* ================= Client costs — per-client cost + licensing scope ================= */
@@ -1361,7 +1368,7 @@ function showModal(opts) {
         '<td>' + renderPaymentCell(r.ent) + '</td>' +
         '<td style="font-variant-numeric:tabular-nums">' + (c.headcount != null ? c.headcount : '<span class="src">—</span>') + '</td>' +
         '<td style="font-variant-numeric:tabular-nums">' + (c.locations != null ? c.locations : '<span class="src">—</span>') + '</td>' +
-        '<td>' + (r.expiry ? fmtDate(r.expiry) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + (r.expiry ? fmtDateY(r.expiry) : '<span class="src">—</span>') + '</td>' +
         '<td style="max-width:220px"><span title="' + esc(c.scopeNotes || '') + '" style="font-size:12px;color:var(--paper-dim);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(c.scopeNotes || '—') + '</span></td>' +
         '<td><button class="btn ghost sm" data-action="OwnerApp.partnerEditClient" data-id="' + esc(c._sp) + '">Edit scope</button></td>' +
         '</tr>';
@@ -1375,7 +1382,7 @@ function showModal(opts) {
       '<div class="card kpi"><div class="kpi-num"><b style="color:' + (overdueRows.length ? 'var(--fail)' : 'var(--pass)') + '">' + esc(fmtMoneyCompact(overdueTotal)) + '</b></div><span>Overdue payments</span><div class="sub">' + overdueRows.length + ' client(s) past their invoice due date, unpaid</div></div>' +
       '</div>' +
       (rows.length
-        ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Frameworks subscribed</th><th scope="col">Annual cost</th><th scope="col">Payment</th><th scope="col">Headcount</th><th scope="col">Locations</th><th scope="col">Renewal</th><th scope="col">Scope notes</th><th scope="col">Actions</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>'
+        ? '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Client</th><th scope="col">Frameworks subscribed</th><th scope="col">Annual cost</th><th scope="col">Payment</th><th scope="col">Headcount</th><th scope="col">Locations</th><th scope="col">Renewal</th><th scope="col">Scope notes</th><th scope="col">Actions</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>'
         : emptyState({ text: 'No clients on the roster yet.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } }));
     var tbody = el.querySelector('tbody');
     if (tbody) revealRows(tbody);
@@ -1433,7 +1440,7 @@ function showModal(opts) {
 
     el.innerHTML =
       '<div class="src" style="margin-bottom:10px">Source: last sync per client (or "Never synced" if none) × latest PartnerEntitlements record — as at ' + esc(fmtAsAt()) + '. Sorted worst-first.</div>' +
-      '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">R/A/G</th><th scope="col">Readiness trend</th><th scope="col">Last scan</th><th scope="col">Drift alerts</th><th scope="col">Renewal</th></tr></thead><tbody>' +
+      '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Client</th><th scope="col">R/A/G</th><th scope="col">Readiness trend</th><th scope="col">Last scan</th><th scope="col">Drift alerts</th><th scope="col">Renewal</th></tr></thead><tbody>' +
       rows.map(function (r) {
         return '<tr>' +
           '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
@@ -1441,7 +1448,7 @@ function showModal(opts) {
           '<td>' + sparkline(r.c.scoreHistory) + '</td>' +
           '<td>' + (r.c.lastScanDate ? esc(fmtDate(r.c.lastScanDate)) : (r.c.lastSynced ? 'Never scanned' : 'Never synced')) + '</td>' +
           '<td style="' + ((r.c.driftAlerts || 0) > 0 ? 'color:var(--fail);font-weight:700' : '') + '">' + (r.c.lastSynced ? (r.c.driftAlerts || 0) : '—') + '</td>' +
-          '<td>' + (r.ent ? r.days + 'd (' + esc(fmtDate(r.ent.expiry)) + ')' : 'No record') + '</td>' +
+          '<td>' + (r.ent ? r.days + 'd (' + esc(fmtDateY(r.ent.expiry)) + ')' : 'No record') + '</td>' +
           '</tr>';
       }).join('') + '</tbody></table></div>';
 
@@ -2557,7 +2564,7 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Onboarding progress</h4>' + checklistRows + '</div>' +
         '<div class="d-sec"><h4>Licence</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
-        (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDate(ent.expiry) + '</b></div>'
+        (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDateY(ent.expiry) + '</b></div>'
           : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
         '<div class="d-kv"><span>Modules licensed (frameworks subscribed)</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
         (annualCost != null ? '<div class="d-kv"><span>Annual cost</span><b>' + esc(fmtMoneyFull(annualCost)) + '</b></div>' : '') +
