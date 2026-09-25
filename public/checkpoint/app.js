@@ -786,6 +786,7 @@ function showModal(opts) {
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
     'setClauseStatus', 'verifyClause', 'setClauseEvidence', 'setClauseOwner',
+    'addControlEvidenceFiles', 'addClauseEvidenceFiles', 'syncEvidenceFolders',
     /* Bulk equivalents of setSt/toggleApp — gated for the same reason
        the single-row versions are. The selection actions themselves
        (toggleSoaSel/soaSelectAllShown/clearSoaSel) are deliberately
@@ -1646,7 +1647,11 @@ function showModal(opts) {
         var targets = controlsForCheck(id);
         for (var j = 0; j < targets.length; j++) {
           var c = targets[j];
-          if (c.evidenceUrl && c.verifiedBy !== AUTO_EVIDENCE_TAG) continue; /* a human's own link — never touched */
+          /* A human's own link is never touched. A link the evidence-folder
+             sync made is not a human's: scan evidence replaces it so the
+             control keeps re-verifying itself every scan, and the folder
+             still shows beside it in the SoA. */
+          if (c.evidenceUrl && c.verifiedBy !== AUTO_EVIDENCE_TAG && !isEvidenceFolderUrl(c.evidenceUrl)) continue;
           c.evidenceUrl = uploaded.url;
           c.verifiedBy = AUTO_EVIDENCE_TAG;
           c.verified = today;
@@ -1656,6 +1661,180 @@ function showModal(opts) {
         console.error('Auto-evidence capture failed for ' + id + ':', e);
       }
     }
+  }
+
+  /* ================= Evidence folders =================
+     Every applicable control and every clause, in every framework this
+     tenant holds, gets its own folder under Documents › Evidence ›
+     <framework>. Files dropped there (from Checkpoint, SharePoint,
+     Teams or a synced OneDrive folder) are picked up on load and after
+     each scan: an unlinked control is linked to its folder and moved
+     from Not started to In progress. Nothing is ever marked
+     Implemented, and a link a person set is never replaced. The pure
+     rules live in lib.js (planEvidenceFolders and friends). */
+  var _evFolders = {}; /* evidenceKey -> { id, url, count, latest, names } */
+  var _evSync = { busy: false, at: '', created: 0, errors: [] };
+
+  function evidenceFolderFrameworks() {
+    var seen = {}, out = [];
+    ['iso27001'].concat(entitledFrameworks()).forEach(function (fw) {
+      if (seen[fw] || !window.FRAMEWORKS[fw]) return;
+      seen[fw] = true;
+      out.push({ fw: fw, name: fwName(fw) });
+    });
+    return out;
+  }
+  function evidenceFolderFor(kind, fw, id) {
+    return _evFolders[window.CheckpointLib.evidenceKey(kind, fw || 'iso27001', id)] || null;
+  }
+  function isEvidenceFolderUrl(url) {
+    if (!url) return false;
+    return Object.keys(_evFolders).some(function (k) { return _evFolders[k].url === url; });
+  }
+
+  async function applyEvidenceFolderLinks() {
+    var Lib = window.CheckpointLib, linked = [];
+    var sets = Lib.evidenceFolderLinkUpdates(S.controls, 'control', _evFolders).map(function (u) { return { kind: 'control', u: u }; })
+      .concat(Lib.evidenceFolderLinkUpdates(visibleClauses(), 'clause', _evFolders).map(function (u) { return { kind: 'clause', u: u }; }));
+    for (var i = 0; i < sets.length; i++) {
+      var kind = sets[i].kind, r = sets[i].u.record, set = sets[i].u.set;
+      var label = kind === 'control' ? r.fw + '|' + r.id : clauseLabel(r);
+      var entity = kind === 'control' ? 'Control' : 'Clause';
+      r.evidenceUrl = set.evidenceUrl;
+      audit('Evidence link changed', entity, label, '(none)', set.evidenceUrl + ' (evidence folder has files)');
+      if (set.st) {
+        audit(entity + ' status changed', entity, label, r.st, set.st + ' (evidence folder has files)');
+        r.st = set.st;
+      }
+      try { await (kind === 'control' ? Store.updateControl(r) : Store.updateClause(r)); } catch (e) { warn(e); }
+      linked.push(kind);
+    }
+    return linked;
+  }
+
+  /* Creates any missing folders (not for a read-only session), reads
+     file counts, and links. Single-flight: a second call while one is
+     running is a no-op. */
+  async function syncEvidenceFolders() {
+    if (Store.kind !== 'sharepoint' || _evSync.busy || RESTRICTED_ACCESS) return null;
+    _evSync.busy = true;
+    renderEvidenceFolderNote();
+    var res = null, linked = [];
+    try {
+      var plan = window.CheckpointLib.planEvidenceFolders(evidenceFolderFrameworks(), S.controls, visibleClauses());
+      res = await Store.syncEvidenceFolders(plan, { create: !READONLY });
+      if (res) {
+        _evFolders = res.folders;
+        _evSync.at = new Date().toISOString();
+        _evSync.created = res.created;
+        _evSync.errors = res.errors;
+        if (res.created) audit('Evidence folders created', 'Document', window.CheckpointLib.EVIDENCE_ROOT, '', res.created + ' folder' + (res.created === 1 ? '' : 's') + ' for applicable controls and clauses');
+        if (!READONLY) linked = await applyEvidenceFolderLinks();
+      }
+    } catch (e) {
+      console.error(e);
+      _evSync.errors = [e.message || String(e)];
+    } finally {
+      _evSync.busy = false;
+    }
+    renderEvidenceFolderNote();
+    renderSoa(); renderClauses();
+    if (linked.length) {
+      renderDash(); renderNavCounts();
+      var nC = linked.filter(function (k) { return k === 'control'; }).length, nL = linked.length - nC;
+      var what = [nC ? nC + ' control' + (nC === 1 ? '' : 's') : '', nL ? nL + ' clause' + (nL === 1 ? '' : 's') : ''].filter(Boolean).join(' and ');
+      toast('Linked evidence from SharePoint folders to <b>' + what + '</b>.');
+    }
+    return res;
+  }
+
+  function renderEvidenceFolderNote() {
+    ['soaEvidenceFolders', 'clauseEvidenceFolders'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (Store.kind !== 'sharepoint') {
+        el.innerHTML = 'In a live tenant, every applicable control and clause gets its own folder under Documents › Evidence. Files dropped into a folder are linked here automatically.';
+        return;
+      }
+      if (_evSync.busy) { el.innerHTML = 'Checking evidence folders in SharePoint…'; return; }
+      var keys = Object.keys(_evFolders);
+      var holding = keys.filter(function (k) { return _evFolders[k].count > 0; }).length;
+      var btn = READONLY ? '' : ' <button class="lnk" data-action="App.syncEvidenceFolders">Check now</button>';
+      var body = keys.length
+        ? '<b>' + keys.length + '</b> evidence folders in SharePoint (Documents › Evidence), <b>' + holding + '</b> holding files. Drop files into a folder from SharePoint, Teams or OneDrive and they are linked here automatically.'
+        : (_evSync.at ? 'No evidence folders yet.' : 'Evidence folders have not been checked yet this session.');
+      el.innerHTML = body + btn + (_evSync.errors.length ? '<div style="color:var(--fail);margin-top:4px">' + icon('flag') + ' ' + esc(_evSync.errors.join('; ')) + '</div>' : '');
+    });
+  }
+
+  /* The folder line under a row's evidence button: file count and the
+     newest file's date (flagged when older than the review cadence),
+     plus Add files. */
+  function evidenceFolderLine(f, action, key, linkIsFolder) {
+    if (Store.kind !== 'sharepoint') return '';
+    var parts = [];
+    if (f && f.count) {
+      var fresh = window.CheckpointLib.evidenceFolderFreshness(f.latest, new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
+      var countTxt = f.count + ' file' + (f.count === 1 ? '' : 's');
+      parts.push((linkIsFolder || !isSafeUrl(f.url) ? countTxt : '<a class="lnk" href="' + esc(f.url) + '" target="_blank" rel="noopener" title="Open this control’s evidence folder in SharePoint">' + countTxt + '</a>') +
+        (f.latest ? ', newest ' + fmtDateY(f.latest) : '') + (fresh.stale ? ' <span class="verify-stale">' + icon('flag') + ' stale</span>' : ''));
+    }
+    if (!READONLY) parts.push('<button class="lnk src" data-action="' + action + '" data-id="' + key + '">Add files</button>');
+    /* An empty folder is still worth one click: it is where a person
+       drops files straight from SharePoint or Teams. */
+    if (f && !f.count && isSafeUrl(f.url)) parts.push('<a class="lnk" href="' + esc(f.url) + '" target="_blank" rel="noopener">Open folder</a>');
+    return parts.length ? '<div class="src" style="margin-top:4px">' + parts.join(' · ') + '</div>' : '';
+  }
+
+  /* A file picker opened synchronously from the click, so the browser
+     treats it as user-initiated. */
+  function pickFiles(onPicked) {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.style.display = 'none';
+    input.addEventListener('change', function () {
+      var files = Array.prototype.slice.call(input.files || []);
+      input.remove();
+      if (files.length) onPicked(files);
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  async function addEvidenceFilesFor(kind, rec, files) {
+    var Lib = window.CheckpointLib, fw = rec.fw || 'iso27001';
+    var key = Lib.evidenceKey(kind, fw, rec.id);
+    var known = _evFolders[key];
+    var target = known ? { id: known.id, url: known.url }
+      : { fwFolder: Lib.evidenceFolderSegment(fwName(fw), 60), itemFolder: Lib.evidenceFolderName(rec, kind) };
+    var label = kind === 'control' ? fw + '|' + rec.id : clauseLabel(rec);
+    var entity = kind === 'control' ? 'Control' : 'Clause';
+    busy(true);
+    var msg = document.getElementById('busyMsg');
+    if (msg) msg.textContent = 'Uploading ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' to ' + rec.id + '’s evidence folder…';
+    var res;
+    try { res = await Store.addEvidenceFiles(target, files); }
+    catch (e) { busy(false); toastError('<b>Upload failed:</b> ' + esc(e.message || e)); return; }
+    busy(false);
+    if (res.uploaded.length) {
+      var today = new Date().toISOString().slice(0, 10);
+      _evFolders[key] = { id: res.folder.id, url: res.folder.url, count: ((known && known.count) || 0) + res.uploaded.length, latest: today, names: res.uploaded.slice(0, 5) };
+      audit('Evidence uploaded', entity, label, '', res.uploaded.join(', '));
+      var ups = Lib.evidenceFolderLinkUpdates([rec], kind, _evFolders);
+      if (ups.length) {
+        var set = ups[0].set;
+        rec.evidenceUrl = set.evidenceUrl;
+        audit('Evidence link changed', entity, label, '(none)', set.evidenceUrl + ' (evidence folder)');
+        if (set.st) { audit(entity + ' status changed', entity, label, rec.st, set.st + ' (evidence uploaded)'); rec.st = set.st; }
+        try { await (kind === 'control' ? Store.updateControl(rec) : Store.updateClause(rec)); } catch (e2) { warn(e2); }
+        renderDash(); renderNavCounts();
+      }
+      toast('Added ' + res.uploaded.length + ' file' + (res.uploaded.length === 1 ? '' : 's') + ' to <b>' + esc(rec.id) + '</b>’s evidence folder' + (ups.length ? ' and linked it' + (ups[0].set.st ? ' — moved to In progress' : '') : '') + '.');
+    }
+    if (res.failed.length) toastError('<b>Not uploaded:</b> ' + res.failed.map(function (f) { return esc(f.name) + ' (' + esc(f.error) + ')'; }).join('; '));
+    renderSoa(); renderClauses(); renderEvidenceFolderNote();
+    if (kind === 'control') refreshControlDrawer(fw + '|' + rec.id);
   }
 
   /* Registers Checkpoint's OWN AI assistant feature (ai.js) as an entry
@@ -7137,9 +7316,10 @@ function showModal(opts) {
        real <button> (same keyboard and screen-reader semantics, same
        action) and uses .lnk, the treatment this very table already uses
        for the control code and title. */
-    var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
+    var evidenceCell = ((c.evidenceUrl && isSafeUrl(c.evidenceUrl))
       ? evidenceLink + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="lnk src" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
-      : '<button class="lnk src" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
+      : '<button class="lnk src" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>') +
+      (c.app ? evidenceFolderLine(evidenceFolderFor('control', c.fw, c.id), 'App.addControlEvidenceFiles', key, isEvidenceFolderUrl(c.evidenceUrl)) : '');
     /* DISP ICT controls carry an ISM chapter reference, looked up
        definitionally (same treatment as maturity level/parent above) —
        shown under the title so an IRAP assessor can trace straight to
@@ -9765,6 +9945,7 @@ function showModal(opts) {
       var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
         ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + key + '">Edit</button>'
         : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + key + '">Link evidence</button>';
+      evidenceCell += evidenceFolderLine(evidenceFolderFor('clause', c.fw, c.id), 'App.addClauseEvidenceFiles', key, isEvidenceFolderUrl(c.evidenceUrl));
       return groupRow + '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + '</td>' +
         '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + key + '" aria-label="' + esc(clauseLabel(c)) + ' status">' +
         ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
@@ -12084,6 +12265,8 @@ function showModal(opts) {
         } catch (e) { warn(e); document.getElementById('gCap').textContent = 'Scan failed'; _scanBusy = false; return; }
         document.getElementById('gCap').textContent = 'Capturing evidence…';
         try { await captureAutoEvidence(out.raw, todayIso); } catch (e) { warn(e); }
+        document.getElementById('gCap').textContent = 'Checking evidence folders…';
+        try { await syncEvidenceFolders(); } catch (e) { warn(e); }
         if (S.entitlements.iso42001) {
           try { aiProposedTpl = (await discoverAiSystemsFromScan(out.raw)) || []; } catch (e) { warn(e); }
         }
@@ -13028,7 +13211,8 @@ function showModal(opts) {
     openEvidenceDoc: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;
-      if (Store.kind === 'demo') { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
+      /* a folder has no download URL — its SharePoint view is the destination */
+      if (Store.kind === 'demo' || isEvidenceFolderUrl(c.evidenceUrl)) { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
       var win = window.open('', '_blank');
       if (win) win.opener = null;
       try {
@@ -14558,6 +14742,18 @@ function showModal(opts) {
       renderSoa();
     },
 
+    addControlEvidenceFiles: function (key) {
+      var parts = String(key).split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      pickFiles(function (files) { addEvidenceFilesFor('control', c, files); });
+    },
+    addClauseEvidenceFiles: function (key) {
+      var c = findClause(key);
+      if (!c) return;
+      pickFiles(function (files) { addEvidenceFilesFor('clause', c, files); });
+    },
+    syncEvidenceFolders: function () { return syncEvidenceFolders(); },
+
     setControlEvidence: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
@@ -14757,7 +14953,8 @@ function showModal(opts) {
     openClauseEvidenceDoc: async function (key) {
       var c = findClause(key);
       if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;
-      if (Store.kind === 'demo') { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
+      /* a folder has no download URL — its SharePoint view is the destination */
+      if (Store.kind === 'demo' || isEvidenceFolderUrl(c.evidenceUrl)) { window.open(c.evidenceUrl, '_blank', 'noopener'); return; }
       var win = window.open('', '_blank');
       if (win) win.opener = null;
       try {
@@ -19019,6 +19216,9 @@ function showModal(opts) {
     if (versionTag) versionTag.textContent = window.CHECKPOINT_VERSION ? 'Checkpoint v' + window.CHECKPOINT_VERSION : 'Checkpoint';
     checkForNewVersion();
     busy(false);
+    /* In the background: the console is usable while SharePoint is read. */
+    renderEvidenceFolderNote();
+    if (Store.kind === 'sharepoint') syncEvidenceFolders().catch(function (e) { console.error(e); });
   }
 
   /* One-time "what's new" nudge: toasts only when this browser has

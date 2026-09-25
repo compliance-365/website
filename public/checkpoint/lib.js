@@ -6012,6 +6012,123 @@
     });
   }
 
+  /* ============================================================
+     Evidence folders — one SharePoint folder per applicable control
+     and per clause, under Documents/Evidence/<framework>/, so the
+     client can drop files where they already work (SharePoint, Teams,
+     a synced OneDrive folder) and Checkpoint links them without anyone
+     pasting a URL. These helpers are the pure half: naming, planning
+     and the link rule. graph.js/store.js do the Graph calls.
+     ============================================================ */
+  var EVIDENCE_ROOT = 'Evidence';
+
+  /* SharePoint rejects " * : < > ? / \ | in a name and misbehaves with
+     # and % in URLs, leading/trailing spaces and trailing dots. Long
+     control titles are cut so the full path stays well inside
+     SharePoint's 400-character limit however deep the library sits. */
+  function evidenceFolderSegment(s, max) {
+    var out = String(s || '').replace(/["*:<>?\/\\|#%\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim();
+    max = max || 80;
+    if (out.length > max) out = out.slice(0, max).trim();
+    return out.replace(/[.\s]+$/, '') || '-';
+  }
+
+  function evidenceFolderName(item, kind) {
+    var code = evidenceFolderSegment(item.id, 40);
+    var title = evidenceFolderSegment(item.t || '', 70);
+    var base = title && title !== '-' ? code + ' ' + title : code;
+    return kind === 'clause' ? 'Clause ' + base : base;
+  }
+
+  /* The inverse, and the only thing matching relies on: a folder is
+     recognised by its CODE, never its full name, so a title that was
+     reworded in a later release (or a folder a client renamed after
+     the code) still maps to the same control. */
+  function evidenceFolderCode(name) {
+    var n = String(name || '').trim();
+    var kind = 'control';
+    if (/^clause\s+/i.test(n)) { kind = 'clause'; n = n.replace(/^clause\s+/i, ''); }
+    var code = n.split(/\s+/)[0] || '';
+    return code ? { kind: kind, code: code } : null;
+  }
+
+  function evidenceKey(kind, fw, id) { return kind + ':' + fw + '|' + id; }
+
+  /* One entry per framework in scope: its folder name and the folders
+     that should exist inside it — every APPLICABLE control (an
+     excluded control needs a justification, not evidence) and every
+     clause. frameworks is [{ fw, name }]. */
+  function planEvidenceFolders(frameworks, controls, clauses) {
+    return (frameworks || []).map(function (f) {
+      var items = [];
+      (controls || []).forEach(function (c) {
+        if (c.fw !== f.fw || !c.app) return;
+        items.push({ key: evidenceKey('control', c.fw, c.id), kind: 'control', fw: c.fw, id: c.id, name: evidenceFolderName(c, 'control') });
+      });
+      (clauses || []).forEach(function (c) {
+        if ((c.fw || 'iso27001') !== f.fw) return;
+        items.push({ key: evidenceKey('clause', f.fw, c.id), kind: 'clause', fw: f.fw, id: c.id, name: evidenceFolderName(c, 'clause') });
+      });
+      return { fw: f.fw, folder: evidenceFolderSegment(f.name || f.fw, 60), items: items };
+    }).filter(function (p) { return p.items.length; });
+  }
+
+  /* Which planned folders already exist (matched by code) and which
+     still need creating. existing is the framework folder's children:
+     [{ name, id, webUrl, childCount }]. */
+  function diffEvidenceFolders(planned, existing) {
+    var byCode = {};
+    (existing || []).forEach(function (e) {
+      var p = evidenceFolderCode(e.name);
+      if (!p) return;
+      var k = p.kind + '|' + p.code;
+      if (!byCode[k]) byCode[k] = e;
+    });
+    var found = [], missing = [];
+    (planned || []).forEach(function (item) {
+      var e = byCode[item.kind + '|' + item.id];
+      if (e) found.push({ item: item, folder: e }); else missing.push(item);
+    });
+    return { found: found, missing: missing };
+  }
+
+  /* Summarises one folder's files. Folders inside it are ignored (a
+     client may organise within it, but only files are evidence). */
+  function evidenceFolderSummary(files) {
+    var real = (files || []).filter(function (f) { return f && f.name && !f.folder; });
+    var latest = real.reduce(function (m, f) { var d = String(f.lastModifiedDateTime || f.modified || '').slice(0, 10); return d > m ? d : m; }, '');
+    return { count: real.length, latest: latest, names: real.map(function (f) { return f.name; }).slice(0, 5) };
+  }
+
+  /* The link rule, applied to controls and clauses alike: a record
+     with files in its folder and no evidence link yet gets the folder
+     linked. A link a person set, or scan evidence, is never replaced.
+     "Not started" moves to "In progress" (a file is progress), never to
+     "Implemented" — whether the evidence is sufficient is a human's
+     call. folders maps evidenceKey -> { url, count }. */
+  function evidenceFolderLinkUpdates(records, kind, folders) {
+    var out = [];
+    (records || []).forEach(function (r) {
+      var f = folders && folders[evidenceKey(kind, r.fw || 'iso27001', r.id)];
+      if (!f || !f.count || !f.url || r.evidenceUrl) return;
+      if (kind === 'control' && !r.app) return;
+      var set = { evidenceUrl: f.url };
+      if (r.st === 'Not started') set.st = 'In progress';
+      out.push({ record: r, set: set });
+    });
+    return out;
+  }
+
+  /* Freshness of a folder's newest file against the review cadence —
+     an ISMS whose only evidence for a control is two years old is the
+     finding an auditor writes up. */
+  function evidenceFolderFreshness(latest, today, cadenceDays) {
+    if (!latest) return { stale: false, ageDays: null };
+    var age = Math.round((Date.parse(today) - Date.parse(latest)) / 86400000);
+    var limit = parseInt(cadenceDays, 10) || 365;
+    return { stale: age > limit, ageDays: age };
+  }
+
   /* The guided path to certification — the ordered things a client has
      to do, from answering the scope questionnaire to booking the
      certification audit, each with its done-state derived from real
@@ -6400,7 +6517,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, readinessPct: readinessPct,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

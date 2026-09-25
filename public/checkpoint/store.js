@@ -1956,6 +1956,8 @@ window.DemoStore = (function () {
     setSetting: async function (key, value) { S.settings[key] = value; persist(); },
     listDocuments: async function () { return (S.documents || []).slice(); },
     uploadDocument: async function () { throw new Error("Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents."); },
+    syncEvidenceFolders: async function () { return null; },
+    addEvidenceFiles: async function () { throw new Error("Demo mode has no real tenant to store files in — sign in to a real tenant to add evidence."); },
     /* Editing the register itself DOES work in demo mode — unlike
        uploading, it needs no file storage, and the register is one of
        the things a demo most needs to show working. */
@@ -3519,6 +3521,62 @@ window.SpStore = (function () {
         catch (e) { doc.metaError = e.message || String(e); }
       }
       return doc;
+    },
+    /* Evidence folders — see lib.js planEvidenceFolders(). Ensures
+       Documents/Evidence/<framework>/<control> exists for every planned
+       item (when opts.create), then reads how many files each holds and
+       the newest file's date. One framework failing (permissions, a
+       locked library) never stops the others. Returns
+       { folders: { evidenceKey: { id, url, count, latest, names } },
+         created, errors }. */
+    syncEvidenceFolders: async function (plan, opts) {
+      opts = opts || {};
+      var Lib = window.CheckpointLib;
+      var out = { folders: {}, created: 0, errors: [] };
+      if (!docDriveId) return out;
+      for (var i = 0; i < plan.length; i++) {
+        var p = plan[i];
+        try {
+          var fwFolder = await Graph.ensureFolderPath(docDriveId, [Lib.EVIDENCE_ROOT, p.folder]);
+          var existing = await Graph.listChildFolders(docDriveId, fwFolder.id);
+          var diff = Lib.diffEvidenceFolders(p.items, existing);
+          var linked = diff.found.map(function (f) { return { item: f.item, id: f.folder.id, url: f.folder.webUrl, childCount: f.folder.childCount }; });
+          if (opts.create && diff.missing.length) {
+            var made = await Graph.createChildFolders(docDriveId, fwFolder.id, diff.missing.map(function (m) { return m.name; }));
+            diff.missing.forEach(function (m) {
+              var f = made[m.name];
+              if (!f) return;
+              out.created++;
+              linked.push({ item: m, id: f.id, url: f.webUrl, childCount: 0 });
+            });
+          }
+          var toRead = linked.filter(function (l) { return l.childCount > 0; });
+          var files = await Graph.listChildrenMany(docDriveId, toRead.map(function (l) { return l.id; }));
+          linked.forEach(function (l) {
+            var sum = Lib.evidenceFolderSummary(files[l.id] || []);
+            out.folders[l.item.key] = { id: l.id, url: l.url, count: sum.count, latest: sum.latest, names: sum.names };
+          });
+        } catch (e) {
+          out.errors.push(p.folder + ': ' + (e.message || e));
+        }
+      }
+      return out;
+    },
+    /* Uploads files into one item's evidence folder. target is the
+       folder the sync already found ({ id, url }) — used as-is so a
+       folder someone renamed keeps receiving its files — or, before
+       any sync, { fwFolder, itemFolder } names to create. Returns
+       { folder: { id, url }, uploaded: [names], failed: [{ name, error }] }. */
+    addEvidenceFiles: async function (target, files) {
+      if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
+      var folder = target.id ? { id: target.id, webUrl: target.url }
+        : await Graph.ensureFolderPath(docDriveId, [window.CheckpointLib.EVIDENCE_ROOT, target.fwFolder, target.itemFolder]);
+      var res = { folder: { id: folder.id, url: folder.webUrl }, uploaded: [], failed: [] };
+      for (var i = 0; i < files.length; i++) {
+        try { await Graph.uploadSmallFileTo(docDriveId, folder.id, files[i].name, files[i]); res.uploaded.push(files[i].name); }
+        catch (e) { res.failed.push({ name: files[i].name, error: e.message || String(e) }); }
+      }
+      return res;
     },
     updateDocumentMeta: async function (itemId, meta) {
       if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
