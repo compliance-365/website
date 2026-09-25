@@ -47,6 +47,12 @@
  *   7. Open the owner console at least once (it provisions the
  *      "Checkpoint Partner ErrorReports" list automatically, same as
  *      every other Partner* list).
+ *   7b. The same endpoint also receives SETUP HEALTH reports (body
+ *       type: 'health', see shapeHealth() below and app.js
+ *       reportSetupHealth()). They upsert one row per tenant into
+ *       "Checkpoint Partner Health", which the owner console also
+ *       provisions on load. Redeploying this file is the only step —
+ *       no new env vars, route or CORS change.
  *   8. Copy the endpoint URL into public/checkpoint/config.js's
  *      errorReportUrl. Leave it blank and this feature is simply never
  *      attempted — the browser app degrades to no error reporting at
@@ -101,6 +107,47 @@ export function shapeReport(body) {
   };
 }
 
+/* Setup-health report (type: 'health'): status flags about a tenant's
+   Checkpoint setup, sent by app.js reportSetupHealth(). Everything is
+   client-supplied and unauthenticated, so it is whitelisted rather than
+   truncated: only known check ids and statuses survive, the tenant id
+   must look like a GUID, dates must look like dates. A forged report can
+   at worst make one roster row show the wrong colour until the real
+   tenant's next report replaces it; it can never write arbitrary
+   fields. Returns null for a body that cannot be a genuine report. */
+const HEALTH_CHECK_IDS = ['activation', 'permissions', 'lists', 'library', 'packs', 'evidence', 'scan', 'capabilities'];
+const HEALTH_STATUSES = ['healthy', 'warning', 'failing'];
+const FLAG_VALUES = ['pass', 'warn', 'fail', 'info'];
+export function shapeHealth(body) {
+  body = body && typeof body === 'object' ? body : {};
+  const tenantId = String(body.tenantId || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(tenantId)) return null;
+  const status = HEALTH_STATUSES.includes(body.status) ? body.status : null;
+  if (!status) return null;
+  const flags = {};
+  const inFlags = body.flags && typeof body.flags === 'object' ? body.flags : {};
+  HEALTH_CHECK_IDS.forEach((id) => { if (FLAG_VALUES.includes(inFlags[id])) flags[id] = inFlags[id]; });
+  const details = (Array.isArray(body.details) ? body.details : []).slice(0, 10).map((d) => truncate(d, 300));
+  const lastScanDate = /^\d{4}-\d{2}-\d{2}$/.test(String(body.lastScanDate || '')) ? body.lastScanDate : '';
+  const frameworks = (Array.isArray(body.frameworks) ? body.frameworks : [])
+    .map((f) => String(f)).filter((f) => /^[a-z0-9]{1,20}$/.test(f)).slice(0, 30);
+  const domains = (Array.isArray(body.domains) ? body.domains : [])
+    .map((d) => String(d).trim().toLowerCase()).filter((d) => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) && d.length <= 253).slice(0, 20);
+  return {
+    tenantId,
+    domains,
+    clientName: truncate(body.clientName, 200),
+    appVersion: truncate(body.appVersion, 20),
+    status,
+    headline: truncate(body.headline, 255),
+    flags,
+    details,
+    lastScanDate,
+    frameworks,
+    reportedAt: new Date().toISOString()
+  };
+}
+
 /* Same app-only client-credentials pattern as recordOnOwnerRoster() in
    provision.js — writes to OUR OWN roster only, never a customer's
    tenant. */
@@ -149,6 +196,32 @@ async function writeToRoster(report) {
   });
 }
 
+/* One row per tenant: the latest report replaces the previous one. The
+   list holds one row per client, so reading it whole to find the row is
+   cheaper and safer than a filter on an unindexed column. */
+async function upsertHealth(h) {
+  const token = await getOwnerGraphToken();
+  const site = await ownerGraph(token, '/sites/root?$select=id');
+  const lists = await ownerGraph(token, '/sites/' + site.id + '/lists?$select=id,displayName&$top=200');
+  const list = lists.value.find((l) => l.displayName === 'Checkpoint Partner Health');
+  if (!list) throw new Error('Checkpoint Partner Health list not found — open the owner console once (it provisions this automatically).');
+  const base = '/sites/' + site.id + '/lists/' + list.id + '/items';
+  const fields = {
+    Title: h.clientName || h.tenantId, TenantId: h.tenantId, Domains: h.domains.join(','), ClientName: h.clientName, AppVersion: h.appVersion,
+    Status: h.status, Headline: h.headline, Flags: JSON.stringify(h.flags), Details: h.details.join('\n'),
+    LastScanDate: h.lastScanDate, Frameworks: h.frameworks.join(','), ReportedAt: h.reportedAt
+  };
+  let url = base + '?$expand=fields($select=TenantId)&$select=id&$top=500';
+  let existing = null;
+  while (url && !existing) {
+    const page = await ownerGraph(token, url.replace('https://graph.microsoft.com/v1.0', ''));
+    existing = (page.value || []).find((i) => String(i.fields && i.fields.TenantId || '').toLowerCase() === h.tenantId) || null;
+    url = page['@odata.nextLink'] || null;
+  }
+  if (existing) await ownerGraph(token, base + '/' + existing.id + '/fields', { method: 'PATCH', body: fields });
+  else await ownerGraph(token, base, { method: 'POST', body: { fields } });
+}
+
 export const handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const allowed = [
@@ -173,6 +246,20 @@ export const handler = async (event) => {
     // status — the last thing a struggling client needs is its OWN
     // error-reporting call throwing a new error to report.
     return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'rate-limited' }) };
+  }
+
+  let parsed;
+  try { parsed = JSON.parse(event.body || '{}'); } catch (e) { parsed = null; }
+  if (parsed && parsed.type === 'health') {
+    const health = shapeHealth(parsed);
+    if (!health) return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'invalid health report' }) };
+    try {
+      await upsertHealth(health);
+    } catch (e) {
+      console.error('report-error: failed to write health report (dropped):', e && e.message ? e.message : e);
+      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'write failed' }) };
+    }
+    return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true }) };
   }
 
   let report;

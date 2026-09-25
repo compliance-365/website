@@ -112,3 +112,33 @@ not a broken feature.
    appears within a few seconds, with the message "Manual test".
 3. Acknowledge it from the row's "Acknowledge" button, or open its
    detail drawer to confirm the full context/stack render correctly.
+
+## 8. Setup health reports (Checkpoint 1.105+)
+
+The same endpoint also accepts setup-health reports: `{ type: 'health', ... }`
+bodies sent by each client's Checkpoint when its Setup health status changes,
+or at most every 12 hours (`reportSetupHealth()` in `public/checkpoint/app.js`).
+
+- **Deploy:** paste the updated `report-error.js` over the existing function.
+  No new env vars, route, CORS or timeout change.
+- **Storage:** one row per client tenant in **Checkpoint Partner Health**,
+  replaced by each new report. The owner console creates that list the next
+  time it loads.
+- **What is accepted:** only known check ids and statuses, a GUID tenant id,
+  the tenant's verified domains (so roster rows entered by domain still match),
+  up to 10 one-line problem descriptions, the app version and the last scan
+  date. Anything else in the body is dropped (`shapeHealth()`).
+- **Where it shows:** the roster's *Last sync / health* column, the health dot,
+  and a *Setup health* section in each client's drawer.
+- **Opt-out:** a client can switch reporting off in Settings → Setup health.
+
+Verify with:
+```js
+fetch(window.CHECKPOINT_CONFIG.errorReportUrl, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ type: 'health', tenantId: '00000000-0000-0000-0000-000000000001',
+    status: 'warning', headline: 'Posture scan', flags: { scan: 'warn' }, clientName: 'Manual test' })
+}).then(r => r.json()).then(console.log);
+```
+Expect `{ok: true}` and a *Manual test* row in the Health list. Delete that row
+afterwards.

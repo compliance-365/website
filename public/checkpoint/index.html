@@ -431,6 +431,7 @@
 
     <div class="trial-banner" id="trialBanner" style="display:none" role="status"></div>
     <div class="appetite-banner" id="saveFailBanner" style="display:none;margin-bottom:12px" role="alert"></div>
+    <div class="appetite-banner" id="setupHealthBanner" style="display:none;margin-bottom:12px" role="status"></div>
 
     <!-- DASHBOARD -->
     <section class="view on" id="v-dash">
@@ -855,6 +856,10 @@
          getElementById, so it is view-agnostic and needed no change. -->
     <section class="view" id="v-settings">
       <div class="vhead"><div class="rule"></div><h1>Settings</h1><p>How Checkpoint behaves for this tenant — reporting and branding, the automation cadences, posture thresholds, optional features, and the organisation profile generated documents fill themselves in from. Framework licensing and per-framework targets live in the Frameworks view.</p></div>
+
+      <div class="settings-subhead">Setup health</div>
+      <p class="settings-subdesc">Checkpoint checks its own setup every time someone signs in: activation, Microsoft Graph permissions, the SharePoint lists and Documents library, framework content, evidence folders and scans. Anything wrong comes with a fix.</p>
+      <div class="card" id="setupHealthRow" style="max-width:680px;margin-bottom:16px"></div>
 
       <div class="settings-subhead">Reporting &amp; branding</div>
       <p class="settings-subdesc">What generated reports and policy documents carry — the client's own name, logo, accent colour and classification marking.</p>
