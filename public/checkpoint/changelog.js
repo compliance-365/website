@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.104.0',
+    date: '2026-09-25',
+    entries: [
+      'Evidence folders: every applicable control and every clause, in every framework you hold, now has its own folder in the Checkpoint Documents library (Documents › Evidence › framework › control). Checkpoint creates them for you and adds new ones when you license a framework or mark a control applicable.',
+      'Add files straight from a control\'s row in the Statement of Applicability, or a clause\'s row in Management system clauses. You can also drop files into the folder from SharePoint, Teams or a synced OneDrive folder. Each row shows how many files its folder holds and the date of the newest, flagged when that is older than your review cadence.',
+      'Files in a folder link themselves: when Checkpoint loads and after each scan, a control or clause with files in its folder and no evidence linked is linked to the folder and moves from Not started to In progress. Nothing is ever marked Implemented automatically, and evidence you linked yourself is never replaced.'
+    ]
+  },
+  {
     version: '1.103.0',
     date: '2026-09-25',
     entries: [

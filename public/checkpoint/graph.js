@@ -1576,10 +1576,16 @@ window.Graph = (function () {
      straight up via a single PUT. Larger files are rejected with a
      clear message rather than silently failing or half-uploading. */
   async function uploadSmallFile(driveId, category, filename, file) {
+    var folderId = await ensureFolder(driveId, category);
+    return uploadSmallFileTo(driveId, folderId, filename, file);
+  }
+
+  /* The upload itself, into a folder already resolved to an item id —
+     shared by category uploads above and evidence-folder uploads. */
+  async function uploadSmallFileTo(driveId, folderId, filename, file) {
     if (file.size > MAX_SIMPLE_UPLOAD) {
       throw new Error('File is larger than 4 MB — upload it directly in SharePoint, then paste its link as evidence instead.');
     }
-    var folderId = await ensureFolder(driveId, category);
     var t = await token(CONFIG.scopesProvision);
     var url = 'https://graph.microsoft.com/v1.0/drives/' + driveId + '/items/' + folderId + ':/' + encodeURIComponent(filename) + ':/content';
     var res = await fetch(url, {
@@ -1590,6 +1596,138 @@ window.Graph = (function () {
     var j = await res.json().catch(function () { return {}; });
     if (!res.ok) throw new Error((j.error && j.error.message) || ('Upload failed: ' + res.status));
     return j;
+  }
+
+  /* ============================================================
+     Evidence folders (Documents/Evidence/<framework>/<control>) —
+     see lib.js's planEvidenceFolders(). A tenant can have several
+     hundred applicable controls and clauses across its frameworks, so
+     creation and listing go through Graph JSON batching (20 requests a
+     round trip) rather than one call per folder.
+     ============================================================ */
+  var GRAPH_BATCH_MAX = 20;
+
+  /* requests: [{ method, url (relative to v1.0), body }]. Returns the
+     responses in the same order, each { status, body }. A request
+     throttled inside the batch (429/503) is retried once in the next
+     round after the longest Retry-After it was given. */
+  async function graphBatch(requests, opts) {
+    opts = opts || {};
+    var results = new Array(requests.length);
+    var pending = requests.map(function (r, i) { return i; });
+    for (var round = 0; round < 2 && pending.length; round++) {
+      var retry = [], wait = 0;
+      for (var start = 0; start < pending.length; start += GRAPH_BATCH_MAX) {
+        var chunk = pending.slice(start, start + GRAPH_BATCH_MAX);
+        var body = { requests: chunk.map(function (idx) {
+          var r = requests[idx];
+          var req = { id: String(idx), method: r.method || 'GET', url: r.url };
+          if (r.body) { req.body = r.body; req.headers = { 'Content-Type': 'application/json' }; }
+          return req;
+        }) };
+        var j = await g('/$batch', { method: 'POST', body: body, scopes: opts.scopes });
+        ((j && j.responses) || []).forEach(function (resp) {
+          var idx = parseInt(resp.id, 10);
+          if ((resp.status === 429 || resp.status === 503) && round === 0) {
+            retry.push(idx);
+            var ra = parseInt(resp.headers && (resp.headers['Retry-After'] || resp.headers['retry-after']), 10);
+            if (ra > wait) wait = ra;
+            return;
+          }
+          results[idx] = { status: resp.status, body: resp.body };
+        });
+      }
+      pending = retry;
+      if (pending.length) await new Promise(function (resolve) { setTimeout(resolve, Math.min(wait || 2, 30) * 1000); });
+    }
+    pending.forEach(function (idx) { results[idx] = { status: 429, body: null }; });
+    return results;
+  }
+
+  function driveItemPath(segments) {
+    return segments.map(function (s) { return encodeURIComponent(s); }).join('/');
+  }
+
+  /* Resolves (creating as needed) a folder path from the library root,
+     e.g. ['Evidence', 'ISO-IEC 27001-2022']. Cached per session like
+     ensureFolder(). Returns { id, webUrl }. */
+  var folderPathCache = {};
+  async function ensureFolderPath(driveId, segments) {
+    var cacheKey = driveId + '|' + segments.join('/');
+    if (folderPathCache[cacheKey]) return folderPathCache[cacheKey];
+    var opts = { scopes: CONFIG.scopesProvision };
+    var item;
+    try {
+      item = await g('/drives/' + driveId + '/root:/' + driveItemPath(segments) + '?$select=id,webUrl', opts);
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      var parent = segments.length > 1 ? await ensureFolderPath(driveId, segments.slice(0, -1)) : null;
+      var url = parent ? '/drives/' + driveId + '/items/' + parent.id + '/children' : '/drives/' + driveId + '/root/children';
+      try {
+        item = await g(url, { method: 'POST', body: { name: segments[segments.length - 1], folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }, scopes: CONFIG.scopesProvision });
+      } catch (e2) {
+        /* created by another tab or person between our read and write */
+        if (e2.status !== 409) throw e2;
+        item = await g('/drives/' + driveId + '/root:/' + driveItemPath(segments) + '?$select=id,webUrl', opts);
+      }
+    }
+    folderPathCache[cacheKey] = { id: item.id, webUrl: item.webUrl };
+    return folderPathCache[cacheKey];
+  }
+
+  /* Child folders of one folder: [{ id, name, webUrl, childCount }]. */
+  async function listChildFolders(driveId, itemId) {
+    var rows = await gAll('/drives/' + driveId + '/items/' + itemId + '/children?$select=id,name,webUrl,folder&$top=200', { scopes: CONFIG.scopesProvision });
+    return rows.filter(function (r) { return r.folder; }).map(function (r) {
+      return { id: r.id, name: r.name, webUrl: r.webUrl, childCount: (r.folder && r.folder.childCount) || 0 };
+    });
+  }
+
+  /* Creates the named child folders under parentId. An existing name
+     (409) is not an error: it is looked up instead, so running this
+     twice, or from two browsers at once, converges on one folder each.
+     Returns { name: { id, webUrl } } for every folder that exists
+     afterwards; names that failed outright are absent. */
+  async function createChildFolders(driveId, parentId, names) {
+    var out = {};
+    if (!names.length) return out;
+    var res = await graphBatch(names.map(function (n) {
+      return { method: 'POST', url: '/drives/' + driveId + '/items/' + parentId + '/children', body: { name: n, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' } };
+    }), { scopes: CONFIG.scopesProvision });
+    var conflicted = [];
+    res.forEach(function (r, i) {
+      if (r && r.status >= 200 && r.status < 300 && r.body) out[names[i]] = { id: r.body.id, webUrl: r.body.webUrl };
+      else if (r && r.status === 409) conflicted.push(names[i]);
+    });
+    if (conflicted.length) {
+      var existing = await listChildFolders(driveId, parentId);
+      existing.forEach(function (e) { if (conflicted.indexOf(e.name) !== -1) out[e.name] = { id: e.id, webUrl: e.webUrl }; });
+    }
+    return out;
+  }
+
+  /* Files (and sub-folders, flagged) inside each of several folders,
+     batched. Returns { itemId: [{ name, lastModifiedDateTime, webUrl,
+     folder }] }. A folder whose listing needs more than one page has
+     its remaining pages followed individually. */
+  async function listChildrenMany(driveId, itemIds) {
+    var out = {};
+    if (!itemIds.length) return out;
+    var opts = { scopes: CONFIG.scopesProvision };
+    var res = await graphBatch(itemIds.map(function (id) {
+      return { url: '/drives/' + driveId + '/items/' + id + '/children?$select=id,name,webUrl,lastModifiedDateTime,file,folder&$top=200' };
+    }), opts);
+    for (var i = 0; i < res.length; i++) {
+      var r = res[i];
+      if (!r || r.status !== 200 || !r.body) continue;
+      var rows = (r.body.value || []).slice();
+      var next = r.body['@odata.nextLink'];
+      if (next) rows = rows.concat(await collectPages(next, function (u) { return g(u, opts); }));
+      out[itemIds[i]] = rows.map(function (f) {
+        return { id: f.id, name: f.name, webUrl: f.webUrl, lastModifiedDateTime: f.lastModifiedDateTime || '', folder: !!f.folder };
+      });
+    }
+    return out;
   }
 
   /* Each returned file carries its underlying SharePoint list item's
@@ -1609,6 +1747,10 @@ window.Graph = (function () {
     for (var i = 0; i < folders.length; i++) {
       var f = folders[i];
       if (!f.folder) continue; /* skip any stray root-level file uploaded before categorisation existed */
+      /* Evidence/ holds per-control folders, not documents — it is read
+         by the evidence-folder sync, and its framework sub-folders would
+         otherwise list here as if they were files. */
+      if (f.name === window.CheckpointLib.EVIDENCE_ROOT) continue;
       var base = '/drives/' + driveId + '/items/' + f.id + '/children?' + select;
       var files;
       try {
@@ -1860,7 +2002,8 @@ window.Graph = (function () {
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
-    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
+    uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, listDriveFiles: listDriveFiles,
+    ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
