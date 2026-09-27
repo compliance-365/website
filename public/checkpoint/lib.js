@@ -4596,6 +4596,17 @@
     };
   }
 
+  /* A tenant's SharePoint hostname from its verified domains: the
+     initial contoso.onmicrosoft.com domain maps to contoso.sharepoint.com.
+     '' when there is no initial .onmicrosoft.com domain to go on. */
+  function sharePointHostFromDomains(domains) {
+    var list = domains || [];
+    var initial = list.find(function (d) { return d && d.isInitial; });
+    var name = initial ? initial.name : ((list.find(function (d) { return d && /\.onmicrosoft\.com$/i.test(d.name) && !/\.mail\.onmicrosoft\.com$/i.test(d.name); }) || {}).name);
+    var m = String(name || '').toLowerCase().match(/^([a-z0-9-]+)\.onmicrosoft\.com$/);
+    return m ? m[1] + '.sharepoint.com' : '';
+  }
+
   function buildAdminConsentUrl(clientId, tenantId, redirectUri) {
     var tenant = String(tenantId || '').trim() || 'organizations';
     return 'https://login.microsoftonline.com/' + encodeURIComponent(tenant) +
@@ -6781,7 +6792,7 @@
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
     riskReviewStatus: riskReviewStatus,
-    buildAdminConsentUrl: buildAdminConsentUrl, normaliseSitePath: normaliseSitePath, welcomeGuideContent: welcomeGuideContent,
+    buildAdminConsentUrl: buildAdminConsentUrl, normaliseSitePath: normaliseSitePath, welcomeGuideContent: welcomeGuideContent, sharePointHostFromDomains: sharePointHostFromDomains,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     attestationFocusRows: attestationFocusRows, attestationSummary: attestationSummary,
