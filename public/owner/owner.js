@@ -164,9 +164,13 @@ function showModal(opts) {
   var FRAMEWORK_NAMES = {
     iso27001: 'ISO 27001', soc2: 'SOC 2', essential8: 'Essential Eight', is18: 'IS18 (QGEA)',
     iso42001: 'ISO 42001', iso27701: 'ISO 27701', dispirap: 'DISP / IRAP', nistcsf: 'NIST CSF',
+    rffr: 'RFFR (ISM SoA)', cps234: 'CPS 234', privacyact: 'Privacy Act (APPs)',
     ai: 'AI assistant'
   };
-  var FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+  /* Must match store.js's window.FRAMEWORK_ORDER exactly — enforced by
+     test/owner-framework-list.test.mjs, since this copy once fell three
+     frameworks behind and they could not be issued from the console. */
+  var FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr', 'cps234', 'privacyact'];
   function fwName(fw) { return FRAMEWORK_NAMES[fw] || fw; }
 
   /* ================= small DOM helpers (same shapes as app.js's) ================= */
@@ -760,6 +764,8 @@ function showModal(opts) {
     ]
   };
   function partnerListName(k) { return 'Checkpoint Partner ' + k; }
+  /* Lists added after consoles were already in use — see afterSignIn(). */
+  var LATE_PARTNER_LISTS = ['ErrorReports', 'Health'];
 
   async function addItem(listKey, fields) {
     var j = await Graph.g('/sites/' + siteId + '/lists/' + lists[listKey] + '/items', { method: 'POST', body: { fields: fields }, scopes: CONFIG.scopesProvision });
@@ -1135,6 +1141,21 @@ function showModal(opts) {
      record. Used by the roster row dot, the Module Adoption Matrix's
      dormancy check, the Client Health Strip, and the summary card, so
      all four always agree with each other. */
+  /* The roster row for a tenant: an exact match, or — when the row
+     holds a domain and we have the tenant ID — the row whose domain the
+     tenant's own setup-health report lists among its verified domains. */
+  function findRosterClientForTenant(tenantId) {
+    var id = String(tenantId || '').trim().toLowerCase();
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    var exact = clients.find(function (x) { return String(x.tenantId || '').toLowerCase() === id; });
+    if (exact) return exact;
+    var rep = ((PARTNER_DATA && PARTNER_DATA.health) || []).find(function (r) { return String(r.tenantId || '').toLowerCase() === id; });
+    if (!rep) return null;
+    return clients.find(function (x) {
+      var t = String(x.tenantId || '').toLowerCase();
+      return t && rep.domains.some(function (d) { return String(d).toLowerCase() === t; });
+    }) || null;
+  }
   function setupReportFor(c) {
     return window.CheckpointLib.matchHealthReport(c, (PARTNER_DATA && PARTNER_DATA.health) || []);
   }
@@ -1668,7 +1689,7 @@ function showModal(opts) {
       '<div style="margin-bottom:14px"><label style="' + labelStyle + '">Modules</label>' + moduleRowsHtml +
       '<div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700"><span>Total (annual, client)</span><span id="ncTotal" style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(issuanceTotalFromSet(checkedSet, prices))) + '</span></div>' +
       '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:8px">A trial activation technically unlocks every module for the trial period regardless of what\'s ticked here — ticked modules are recorded as this prospect\'s pipeline of interest for the Revenue board.</p>' +
-      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:6px">IS18 (QGEA) is a bundle: the CLI automatically adds ISO 27001 and Essential Eight to the issued file (IS18 is defined as an ISO 27001-aligned ISMS plus Essential Eight uplift). Tick just IS18 and price it as the bundle — don\'t also tick the bundled two unless you\'re charging for them separately.</p>' +
+      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:6px">IS18 (QGEA) and RFFR are bundles: issuing either automatically adds ISO 27001 and Essential Eight to the file (both are defined as an ISO 27001-aligned ISMS plus Essential Eight uplift). Tick just the bundle and price it as one — don\'t also tick the bundled two unless you\'re charging for them separately.</p>' +
       '</div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
       '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncTerm">Term</label><select class="mini" id="ncTerm" style="width:100%">' +
@@ -2249,7 +2270,11 @@ function showModal(opts) {
 
     busy(true);
     var found = await findExistingPartnerLists().catch(function () { return {}; });
-    var allProvisioned = Object.keys(PARTNER_DEFS).every(function (k) { return found[k]; });
+    /* Only the core lists gate the console. Lists added later
+       (ErrorReports, Health) are created automatically on load by
+       renderConsole(), so a console provisioned before they existed
+       goes straight in rather than back to the one-time setup screen. */
+    var allProvisioned = Object.keys(PARTNER_DEFS).filter(function (k) { return LATE_PARTNER_LISTS.indexOf(k) === -1; }).every(function (k) { return found[k]; });
     busy(false);
     if (!allProvisioned) { showScreen('provisionGate'); return; }
 
@@ -2860,7 +2885,14 @@ function showModal(opts) {
       var prefill = NEW_CLIENT_PREFILL;
       busy(true);
       try {
-        var c = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === plan.entitlementRecord.tenantId; });
+        var c = findRosterClientForTenant(plan.entitlementRecord.tenantId);
+        if (c && c.tenantId !== plan.entitlementRecord.tenantId) {
+          /* The row was entered by domain; the entitlement is recorded
+             against the tenant ID, and entitlements are matched to rows
+             by exact tenant — so move the row to the ID rather than
+             adding a second row for the same client. */
+          c.tenantId = plan.entitlementRecord.tenantId;
+        }
         if (!c) {
           c = {
             name: plan.clientName, tenantId: plan.entitlementRecord.tenantId, status: 'Prospect',
