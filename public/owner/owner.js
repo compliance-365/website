@@ -164,9 +164,13 @@ function showModal(opts) {
   var FRAMEWORK_NAMES = {
     iso27001: 'ISO 27001', soc2: 'SOC 2', essential8: 'Essential Eight', is18: 'IS18 (QGEA)',
     iso42001: 'ISO 42001', iso27701: 'ISO 27701', dispirap: 'DISP / IRAP', nistcsf: 'NIST CSF',
+    rffr: 'RFFR (ISM SoA)', cps234: 'CPS 234', privacyact: 'Privacy Act (APPs)',
     ai: 'AI assistant'
   };
-  var FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+  /* Must match store.js's window.FRAMEWORK_ORDER exactly — enforced by
+     test/owner-framework-list.test.mjs, since this copy once fell three
+     frameworks behind and they could not be issued from the console. */
+  var FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr', 'cps234', 'privacyact'];
   function fwName(fw) { return FRAMEWORK_NAMES[fw] || fw; }
 
   /* ================= small DOM helpers (same shapes as app.js's) ================= */
@@ -1668,7 +1672,7 @@ function showModal(opts) {
       '<div style="margin-bottom:14px"><label style="' + labelStyle + '">Modules</label>' + moduleRowsHtml +
       '<div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700"><span>Total (annual, client)</span><span id="ncTotal" style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(issuanceTotalFromSet(checkedSet, prices))) + '</span></div>' +
       '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:8px">A trial activation technically unlocks every module for the trial period regardless of what\'s ticked here — ticked modules are recorded as this prospect\'s pipeline of interest for the Revenue board.</p>' +
-      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:6px">IS18 (QGEA) is a bundle: the CLI automatically adds ISO 27001 and Essential Eight to the issued file (IS18 is defined as an ISO 27001-aligned ISMS plus Essential Eight uplift). Tick just IS18 and price it as the bundle — don\'t also tick the bundled two unless you\'re charging for them separately.</p>' +
+      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:6px">IS18 (QGEA) and RFFR are bundles: issuing either automatically adds ISO 27001 and Essential Eight to the file (both are defined as an ISO 27001-aligned ISMS plus Essential Eight uplift). Tick just the bundle and price it as one — don\'t also tick the bundled two unless you\'re charging for them separately.</p>' +
       '</div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
       '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncTerm">Term</label><select class="mini" id="ncTerm" style="width:100%">' +
