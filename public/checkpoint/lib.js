@@ -4202,9 +4202,36 @@
      behind every per-client "annual value" figure the owner console
      shows (Renewals runway, Client costs). Missing prices count as $0,
      same convention as computePartnerRevenue() below. */
-  function entitlementAnnualValue(modules, prices) {
+  function entitlementAnnualValue(modules, prices, agreedPrice) {
+    /* A price agreed with this client (a package or discount) replaces
+       the price-list sum outright — consultancy pricing is rarely the
+       sum of module list prices. null/undefined means "use the list". */
+    if (isAgreedPrice(agreedPrice)) return Number(agreedPrice);
     prices = prices || {};
     return (modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+  }
+  function isAgreedPrice(v) {
+    return v !== null && v !== undefined && v !== '' && isFinite(Number(v)) && Number(v) >= 0;
+  }
+  /* Splits one entitlement's value across its modules for the revenue-
+     by-module view: in proportion to list prices when there are any,
+     evenly when there are none. Always sums to the entitlement value. */
+  function moduleRevenueShares(modules, prices, agreedPrice) {
+    var mods = modules || [];
+    var out = {};
+    if (!mods.length) return out;
+    prices = prices || {};
+    if (!isAgreedPrice(agreedPrice)) {
+      mods.forEach(function (m) { out[m] = (out[m] || 0) + (Number(prices[m]) || 0); });
+      return out;
+    }
+    var total = Number(agreedPrice);
+    var listSum = mods.reduce(function (s, m) { return s + (Number(prices[m]) || 0); }, 0);
+    mods.forEach(function (m) {
+      var share = listSum > 0 ? total * (Number(prices[m]) || 0) / listSum : total / mods.length;
+      out[m] = (out[m] || 0) + share;
+    });
+    return out;
   }
 
   function computePartnerRevenue(entitlements, prices, today) {
@@ -4213,7 +4240,7 @@
     var demoByTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'demo'; }));
 
     function entitlementValue(e) {
-      return (e.modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+      return entitlementAnnualValue(e.modules, prices, e.agreedPrice);
     }
     function isActive(e) { return !!e.expiry && e.expiry >= today; }
 
@@ -4228,7 +4255,8 @@
       if (!isActive(e)) return;
       var value = entitlementValue(e);
       activeAnnualRevenue += value;
-      (e.modules || []).forEach(function (m) { revenueByModule[m] = (revenueByModule[m] || 0) + (Number(prices[m]) || 0); });
+      var shares = moduleRevenueShares(e.modules, prices, e.agreedPrice);
+      Object.keys(shares).forEach(function (m) { revenueByModule[m] = (revenueByModule[m] || 0) + shares[m]; });
 
       var daysToExpiry = daysBetweenDateStr(today, e.expiry);
       var renewed = !!e.renewedBy;
@@ -6744,7 +6772,7 @@
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
     evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
     latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
-    entitlementAnnualValue: entitlementAnnualValue, computePaymentStatus: computePaymentStatus,
+    entitlementAnnualValue: entitlementAnnualValue, isAgreedPrice: isAgreedPrice, moduleRevenueShares: moduleRevenueShares, computePaymentStatus: computePaymentStatus,
     computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     rankUpsellOpportunities: rankUpsellOpportunities,
     syncAllQueue: syncAllQueue, syncAllSummary: syncAllSummary,
