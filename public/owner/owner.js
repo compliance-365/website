@@ -53,12 +53,30 @@ function showModal(opts) {
       label.textContent = f.label;
       label.setAttribute('for', fieldId);
       wrap.appendChild(label);
-      var el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      var el = document.createElement(f.type === 'textarea' ? 'textarea' : f.type === 'select' ? 'select' : 'input');
       el.id = fieldId;
-      if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
-      el.value = f.value || '';
+      if (f.type === 'select') {
+        (f.options || []).forEach(function (o) {
+          var opt = document.createElement('option');
+          opt.value = o.value; opt.textContent = o.label;
+          if (String(o.value) === String(f.value)) opt.selected = true;
+          el.appendChild(opt);
+        });
+      } else {
+        if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
+        if (f.type === 'file') { if (f.accept) el.accept = f.accept; }
+        else el.value = f.value || '';
+      }
       if (f.placeholder) el.placeholder = f.placeholder;
+      if (f.rows && f.type === 'textarea') el.rows = f.rows;
       wrap.appendChild(el);
+      if (f.hint) {
+        var hint = document.createElement('div');
+        hint.className = 'src';
+        hint.style.cssText = 'font-size:11.5px;margin-top:4px';
+        hint.textContent = f.hint;
+        wrap.appendChild(hint);
+      }
       box.appendChild(wrap);
       inputs[f.id] = el;
     });
@@ -90,7 +108,10 @@ function showModal(opts) {
     function cancelResult() { return hasFields ? null : false; }
     function tryConfirm() {
       var values = {};
-      Object.keys(inputs).forEach(function (id) { values[id] = inputs[id].value.trim(); });
+      Object.keys(inputs).forEach(function (id) {
+        var inp = inputs[id];
+        values[id] = inp.type === 'file' ? ((inp.files && inp.files[0]) || null) : inp.value.trim();
+      });
       var err = opts.validate ? opts.validate(values) : null;
       if (err) { errorEl.textContent = err; errorEl.classList.add('show'); return; }
       close(hasFields ? values : true);
@@ -107,7 +128,7 @@ function showModal(opts) {
 
     overlay.classList.add('open');
     box.classList.add('open');
-    var firstField = box.querySelector('input,textarea');
+    var firstField = box.querySelector('input:not([type=file]),textarea,select');
     if (firstField) { firstField.focus(); if (firstField.select) firstField.select(); }
     else confirmBtn.focus();
   });
@@ -850,7 +871,9 @@ function showModal(opts) {
     try { scoreHistory = JSON.parse(f.ScoreHistory || '[]'); } catch (e) { }
     return {
       _sp: i.id, name: f.ClientName || f.Title || '', tenantId: f.TenantId || '', status: f.Status || 'Prospect',
-      sitePath: f.SitePath || '',
+      /* cleaned on read, so a row saved with a stray full stop or a
+         pasted URL (before the Edit form cleaned input) still works */
+      sitePath: window.CheckpointLib.normaliseSitePath(f.SitePath) || '',
       contactName: f.ContactName || '', contactEmail: f.ContactEmail || '', notes: f.Notes || '',
       modules: uncsv(f.Modules), lastSynced: f.LastSynced || '', lastSyncedBy: f.LastSyncedBy || '',
       onboarded: !!f.Onboarded, score: typeof f.PostureScore === 'number' ? f.PostureScore : null,
@@ -1067,6 +1090,14 @@ function showModal(opts) {
       '</div>';
   }
 
+  /* What a client has switched on (from their own tenant, via Sync) or,
+     until the first sync, what their latest licence grants — so a new
+     client's row shows its frameworks instead of "None". */
+  function clientModulesFor(c) {
+    if (c.modules && c.modules.length) return c.modules;
+    var ent = partnerLatestEntitlementFor(c.tenantId);
+    return (ent && ent.modules) || [];
+  }
   function partnerModuleChips(moduleIds) {
     if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
     return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
@@ -1285,10 +1316,12 @@ function showModal(opts) {
         '<td><select class="mini" data-change-action="OwnerApp.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
         ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select></td>' +
-        '<td>' + partnerModuleChips(c.modules) + '</td>' +
+        '<td>' + partnerModuleChips(clientModulesFor(c)) + (!(c.modules && c.modules.length) && clientModulesFor(c).length ? '<div class="src">licensed, not yet synced</div>' : '') + '</td>' +
         '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDateY(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
         '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[health.color] + ';margin-right:6px;vertical-align:middle" title="' + esc(health.reason) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) + (c.lastSyncedBy ? '<div class="src">by ' + esc(c.lastSyncedBy) + '</div>' : '') : 'Never synced') + setupLine(c) + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
+        /* Details is the visible way into the client panel (Edit, welcome
+           pack, consent link) — the name link alone was easy to miss. */
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '">Details</button> <button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
         '</tr>';
     }).join('');
     revealRows(tbody);
@@ -1743,25 +1776,28 @@ function showModal(opts) {
     fontHeading: "Georgia, 'Times New Roman', serif" /* email-safe stand-in for Bricolage Grotesque — see the PDF's use of the real font-shape equivalent (Times-Bold) for the same reason */
   };
 
-  function buildWelcomeEmailHtml(clientName, onboardingLink, bookingLink, hasActivationFile) {
+  /* The welcome email. Steps come from lib.js welcomeGuideContent(), the
+     same list the quick-start PDF prints, so the two always agree with
+     each other and with the setup wizard's real order. o: { clientName,
+     onboardingLink, bookingLink, note (plain text, optional), guide
+     (welcomeGuideContent result), hasActivationFile, activationFileName }. */
+  function buildWelcomeEmailHtml(o) {
     var logoUrl = new URL('/assets/logo-192.png', location.href).href;
     var btn = 'display:inline-block;background:' + BRAND.gold + ';color:' + BRAND.ink + ';font-family:' + BRAND.fontBody + ';font-weight:700;font-size:14px;text-decoration:none;padding:12px 26px;border-radius:4px';
-    var needsAttentionBox = hasActivationFile
-      ? '<tr><td style="background:' + BRAND.cream + ';border-left:3px solid ' + BRAND.gold + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>Your signed activation file is attached to this email</b> (' + esc('a small .json file') + ') — the setup wizard asks for it in step 2 below. You don\'t need to do anything with it now, just keep this email until you get there.</td></tr>'
-      : '<tr><td style="background:#FBF0DD;border-left:3px solid ' + BRAND.goldDark + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>One thing still to come:</b> your Compliance365 contact will send your signed activation file in a separate email — the setup wizard asks for it in step 2 below, so hold off starting until it arrives (or start anyway and paste it in when it does; the wizard saves your place).</td></tr>';
-    var steps = [
-      ['Sign in & grant admin consent', 'Open the button below and sign in with a Microsoft 365 <b>Global Administrator</b> or <b>Application Administrator</b> account — it has to be one of those two roles, or the consent screen won\'t let you continue. You\'ll see exactly which read-only permissions Checkpoint is asking for; nothing further is ever requested until a specific feature needs it.', '2 min'],
-      ['Paste in your activation file', (hasActivationFile ? 'Attached to this email' : 'Sent separately, as above') + ' — the wizard has a step that asks you to upload or paste it in. This is what switches your account from a trial preview to the real thing.', '1 min'],
-      ['Answer a few setup questions', 'Where should your compliance records live in SharePoint (your default site is fine if you\'re not sure), and which frameworks do you want to start with. Both are changeable later.', '5 min'],
-      ['Let it run your first scan', 'Checkpoint checks your tenant automatically and shows a plain-English readiness summary with suggested next actions — nothing left to configure.', '5 min']
-    ];
-    var stepsHtml = steps.map(function (s, i) {
-      return '<tr><td style="padding:16px 0;border-bottom:1px solid ' + BRAND.border + '">' +
+    var p = 'font-family:' + BRAND.fontBody + ';font-size:14px;color:' + BRAND.ink + ';line-height:1.6';
+    var noteHtml = o.note
+      ? '<tr><td style="' + p + ';padding-bottom:18px">' + o.note.split(/\n{2,}/).map(function (para) { return '<p style="margin:0 0 12px">' + esc(para).replace(/\n/g, '<br>') + '</p>'; }).join('') + '</td></tr>'
+      : '';
+    var fileBox = o.hasActivationFile
+      ? '<tr><td style="background:' + BRAND.cream + ';border-left:3px solid ' + BRAND.gold + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>Your activation file is attached</b>' + (o.activationFileName ? ' (' + esc(o.activationFileName) + ')' : '') + '. Keep this email handy, as setup asks you to upload it.</td></tr>'
+      : '<tr><td style="background:' + BRAND.cream + ';border-left:3px solid ' + BRAND.gold + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>Your activation file will follow in a separate email.</b> Setup asks you to upload it.</td></tr>';
+    var stepsHtml = o.guide.steps.map(function (s, i) {
+      return '<tr><td style="padding:14px 0;border-bottom:1px solid ' + BRAND.border + '">' +
         '<table role="presentation" cellpadding="0" cellspacing="0"><tr>' +
         '<td valign="top" style="width:34px"><div style="width:26px;height:26px;border-radius:50%;background:' + BRAND.gold + ';color:' + BRAND.ink + ';font-family:' + BRAND.fontBody + ';font-weight:800;font-size:13px;text-align:center;line-height:26px">' + (i + 1) + '</div></td>' +
         '<td valign="top">' +
-        '<div style="font-family:' + BRAND.fontBody + ';font-weight:700;font-size:14px;color:' + BRAND.ink + '">' + esc(s[0]) + ' <span style="font-weight:400;color:' + BRAND.muted + ';font-size:12px">(~' + s[2] + ')</span></div>' +
-        '<div style="font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';line-height:1.6;margin-top:3px">' + s[1] + '</div>' +
+        '<div style="font-family:' + BRAND.fontBody + ';font-weight:700;font-size:14px;color:' + BRAND.ink + '">' + esc(s[0]) + '</div>' +
+        '<div style="font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';line-height:1.6;margin-top:3px">' + esc(s[1]) + '</div>' +
         '</td></tr></table>' +
         '</td></tr>';
     }).join('');
@@ -1771,15 +1807,17 @@ function showModal(opts) {
       '<span style="font-family:' + BRAND.fontBody + ';font-size:18px;vertical-align:middle;margin-left:10px"><span style="color:' + BRAND.cream + ';font-weight:300">COMPLIANCE</span><span style="color:' + BRAND.gold + ';font-weight:800">365</span></span>' +
       '</td></tr></table>' +
       '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid ' + BRAND.border + ';border-top:0;border-radius:0 0 6px 6px"><tr><td style="padding:28px">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%"><tr><td style="font-family:' + BRAND.fontHeading + ';font-size:22px;color:' + BRAND.ink + ';padding-bottom:6px">Welcome, ' + esc(clientName) + '</td></tr>' +
-      '<tr><td style="font-family:' + BRAND.fontBody + ';font-size:14px;color:' + BRAND.muted + ';padding-bottom:18px">Setting Checkpoint up in your own Microsoft 365 tenant takes about 15 minutes end to end. A one-page quick-start guide is attached (PDF) — this email covers the same four steps.</td></tr>' +
-      needsAttentionBox +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%"><tr><td style="font-family:' + BRAND.fontHeading + ';font-size:22px;color:' + BRAND.ink + ';padding-bottom:12px">Welcome to Checkpoint, ' + esc(o.clientName) + '</td></tr>' +
+      noteHtml +
+      '<tr><td style="font-family:' + BRAND.fontBody + ';font-size:14px;color:' + BRAND.muted + ';padding-bottom:18px">Here are your next steps. ' + esc(o.guide.before) + ' A one-page quick-start guide with the same steps is attached.</td></tr>' +
+      fileBox +
       '<tr><td style="height:8px"></td></tr>' +
       stepsHtml +
-      '<tr><td style="padding:26px 0 10px;text-align:center"><a href="' + esc(onboardingLink) + '" style="' + btn + '">Start setup →</a></td></tr>' +
-      '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:11px;color:' + BRAND.muted + ';word-break:break-all;padding-bottom:8px">or paste this link into your browser: ' + esc(onboardingLink) + '</td></tr>' +
-      (bookingLink ? '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';padding-top:6px">Prefer a walkthrough first? <a href="' + esc(bookingLink) + '" style="color:' + BRAND.gold + '">Book a free 30-minute call</a>.</td></tr>' : '') +
-      '<tr><td style="border-top:1px solid ' + BRAND.border + ';padding-top:16px;margin-top:20px;font-family:' + BRAND.fontBody + ';font-size:12px;color:' + BRAND.muted + '">Any questions at any step, just reply to this email — a person reads it, not a bot.</td></tr>' +
+      '<tr><td style="' + p + ';padding-top:16px">' + esc(o.guide.after) + '</td></tr>' +
+      '<tr><td style="padding:22px 0 10px;text-align:center"><a href="' + esc(o.onboardingLink) + '" style="' + btn + '">Start setup</a></td></tr>' +
+      '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:11px;color:' + BRAND.muted + ';word-break:break-all;padding-bottom:8px">or paste this link into your browser: ' + esc(o.onboardingLink) + '</td></tr>' +
+      (o.bookingLink ? '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';padding-top:6px"><a href="' + esc(o.bookingLink) + '" style="color:' + BRAND.gold + '">Book a session</a> to go through your first results together.</td></tr>' : '') +
+      '<tr><td style="border-top:1px solid ' + BRAND.border + ';padding-top:16px;margin-top:20px;font-family:' + BRAND.fontBody + ';font-size:12px;color:' + BRAND.muted + '">Any questions, just reply to this email.</td></tr>' +
       '</table></td></tr></table>' +
       '</div>';
   }
@@ -1812,7 +1850,7 @@ function showModal(opts) {
     return lines;
   }
 
-  async function buildQuickStartGuidePdfBytes(clientName, onboardingLink, bookingLink) {
+  async function buildQuickStartGuidePdfBytes(clientName, onboardingLink, bookingLink, guide) {
     var PDFDocument = window.PDFLib.PDFDocument, StandardFonts = window.PDFLib.StandardFonts;
     var doc = await PDFDocument.create();
     doc.setTitle('Checkpoint quick-start guide — ' + clientName);
@@ -1848,7 +1886,7 @@ function showModal(opts) {
     y -= 26;
 
     // "Before you start" callout
-    var beforeLines = wrapPdfText(body, 'You\'ll need a Microsoft 365 Global Administrator or Application Administrator account for the first sign-in, about 15 minutes, and the signed activation file that came with (or will follow) this guide.', 10.5, contentW - 34);
+    var beforeLines = wrapPdfText(body, guide.before, 10.5, contentW - 34);
     var beforeH = 22 + beforeLines.length * 14;
     page.drawRectangle({ x: marginX, y: y - beforeH, width: 5, height: beforeH, color: pdfRgb(PDF_COLORS.gold) });
     page.drawRectangle({ x: marginX + 5, y: y - beforeH, width: contentW - 5, height: beforeH, color: pdfRgb(PDF_COLORS.cream) });
@@ -1857,12 +1895,7 @@ function showModal(opts) {
     y -= beforeH + 30;
 
     // Numbered steps
-    var steps = [
-      ['Sign in & grant admin consent', 'Open the setup link on the next page and sign in with a Global Administrator or Application Administrator account. One consent screen lists exactly the read-only permissions requested — nothing more is ever asked for until a specific feature needs it.'],
-      ['Paste in your activation file', 'The wizard has a step for this — upload or paste the file attached to (or following) the email this guide came with. This switches your account from a trial preview to the real thing.'],
-      ['Answer a few setup questions', 'Where your records should live in SharePoint (your default site is fine if unsure) and which frameworks to start with. Both are changeable later.'],
-      ['Let it run your first scan', 'Checkpoint checks your tenant automatically and shows a plain-English readiness summary with suggested next actions — nothing left to configure.']
-    ];
+    var steps = guide.steps;
     var badgeR = 11;
     steps.forEach(function (s, i) {
       var titleY = y;
@@ -1875,7 +1908,11 @@ function showModal(opts) {
       });
       y = titleY - 16 - descLines.length * 13.5 - 16;
     });
-
+    if (guide.after) {
+      var afterLines = wrapPdfText(body, guide.after, 10.5, contentW);
+      afterLines.forEach(function (line, li) { page.drawText(line, { x: marginX, y: y - li * 13.5, size: 10.5, font: body, color: pdfRgb(PDF_COLORS.ink) }); });
+      y -= afterLines.length * 13.5 + 12;
+    }
     y -= 6;
     // Start-here box with a real clickable link annotation
     var startH = 54;
@@ -1896,7 +1933,7 @@ function showModal(opts) {
     y -= startH + (bookingLink ? 22 : 10);
 
     if (bookingLink) {
-      page.drawText('Prefer a walkthrough first? Book a free 30-minute call: ' + bookingLink, { x: marginX, y: y, size: 10, font: body, color: pdfRgb(PDF_COLORS.muted) });
+      page.drawText('Book a session to go through your first results together: ' + bookingLink, { x: marginX, y: y, size: 10, font: body, color: pdfRgb(PDF_COLORS.muted) });
       y -= 20;
     }
 
@@ -1907,9 +1944,9 @@ function showModal(opts) {
     return doc.save();
   }
 
-  async function buildWelcomeAttachments(clientName, signedFileJson, outFile) {
+  async function buildWelcomeAttachments(clientName, signedFileJson, outFile, guide, bookingLink) {
     var onboardingLink = new URL('../checkpoint/', location.href).href;
-    var pdfBytes = await buildQuickStartGuidePdfBytes(clientName, onboardingLink, CONFIG.bookingLink || '');
+    var pdfBytes = await buildQuickStartGuidePdfBytes(clientName, onboardingLink, bookingLink || CONFIG.bookingLink || '', guide);
     var atts = [{
       '@odata.type': '#microsoft.graph.fileAttachment', name: 'quick-start-guide.pdf', contentType: 'application/pdf',
       contentBytes: window.CheckpointLib.bytesToBase64(pdfBytes)
@@ -2148,7 +2185,7 @@ function showModal(opts) {
        already surfaces "Sync failed: <message>" and records syncError —
        exactly the right place for this, not silence. */
     var site;
-    var path = String(sitePath || '').trim();
+    var path = window.CheckpointLib.normaliseSitePath(sitePath) || '';
     if (!path || path === 'root') {
       site = await g('/sites/root?$select=id');
     } else {
@@ -2475,7 +2512,7 @@ function showModal(opts) {
         fields: [
           { id: 'contactName', label: 'Contact name', value: c.contactName },
           { id: 'contactEmail', label: 'Contact email', value: c.contactEmail, type: 'email' },
-          { id: 'sitePath', label: 'SharePoint site path (blank = tenant root site; e.g. /sites/compliance if the wizard chose one)', value: c.sitePath, placeholder: '/sites/compliance' },
+          { id: 'sitePath', label: 'SharePoint site (e.g. /sites/compliance, or paste the site\'s address; blank = root site)', value: c.sitePath, placeholder: '/sites/compliance' },
           { id: 'headcount', label: 'Headcount (people in scope)', value: c.headcount != null ? c.headcount : '', type: 'number' },
           { id: 'locations', label: 'Locations (sites/offices in scope)', value: c.locations != null ? c.locations : '', type: 'number' },
           { id: 'scopeNotes', label: 'Scope notes (cloud/on-prem, subsidiaries, systems in scope, etc.)', value: c.scopeNotes, type: 'textarea' },
@@ -2484,7 +2521,7 @@ function showModal(opts) {
         confirmText: 'Save',
         validate: function (v) {
           if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
-          if (v.sitePath && v.sitePath !== 'root' && !/^\/[^\s]+$/.test(v.sitePath)) return 'Site path must be a server-relative path starting with "/" (e.g. /sites/compliance), the word "root", or blank for the root site.';
+          if (window.CheckpointLib.normaliseSitePath(v.sitePath) === null) return 'Enter the site as /sites/name, paste its SharePoint address, or leave blank for the root site.';
           if (v.headcount && (isNaN(Number(v.headcount)) || Number(v.headcount) < 0)) return 'Headcount must be a non-negative number, or left blank.';
           if (v.locations && (isNaN(Number(v.locations)) || Number(v.locations) < 0)) return 'Locations must be a non-negative number, or left blank.';
           return null;
@@ -2492,7 +2529,9 @@ function showModal(opts) {
       });
       if (!v) return;
       c.contactName = v.contactName; c.contactEmail = v.contactEmail; c.notes = v.notes;
-      c.sitePath = v.sitePath === 'root' ? '' : v.sitePath;
+      /* Accepts a pasted URL or stray punctuation — a trailing full stop
+         once made Sync look for a site that doesn't exist. */
+      c.sitePath = window.CheckpointLib.normaliseSitePath(v.sitePath) || '';
       c.headcount = v.headcount ? Number(v.headcount) : null;
       c.locations = v.locations ? Number(v.locations) : null;
       c.scopeNotes = v.scopeNotes;
@@ -2996,38 +3035,78 @@ function showModal(opts) {
     partnerPromptWelcomePack: async function (id) {
       var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
       if (!c) return;
-      if (!c.contactEmail) { toast('Add a contact email for this client first (Edit on the roster row).'); return; }
       var onboardingLink = new URL('../checkpoint/', location.href).href;
       // Prefer the in-memory copy only when it's actually fresher/matches
       // this tenant (same session, just signed); otherwise fall back to
       // what was persisted at "Record entitlement" time, which survives
       // page reloads and separate sessions — see LastActivationFileJson's
-      // field comment in PARTNER_DEFS above for why the in-memory value
-      // alone isn't reliable enough to build this email around.
+      // field comment in PARTNER_DEFS above. When neither exists (a file
+      // issued with the CLI), the form asks for the file instead.
       var signedInMemory = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === c.tenantId;
-      var activationFileJson = signedInMemory ? NEW_CLIENT_SIGNED_FILE.json : (c.lastActivationFileJson || '');
-      var activationFileName = signedInMemory ? NEW_CLIENT_SIGNED_FILE.outFile : (c.lastActivationFileName || '');
-      var hasActivationFile = !!activationFileJson;
+      var storedJson = signedInMemory ? NEW_CLIENT_SIGNED_FILE.json : (c.lastActivationFileJson || '');
+      var storedName = signedInMemory ? NEW_CLIENT_SIGNED_FILE.outFile : (c.lastActivationFileName || '');
+      var frameworks = clientModulesFor(c).filter(function (m) { return m !== 'ai'; }).map(fwName);
+      /* Consent has almost always happened by now: issuing a licence
+         needs the tenant ID, and the consent redirect is where it comes
+         from. A roster row keyed by domain may not have been through it. */
+      var consentDefault = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(c.tenantId) ? 'done' : 'include';
+      var firstName = String(c.contactName || '').trim().split(/\s+/)[0] || '';
+      var fields = [
+        { id: 'to', label: 'To (comma-separate several)', value: c.contactEmail || '' },
+        { id: 'cc', label: 'Cc (optional)', value: '' },
+        { id: 'subject', label: 'Subject', value: 'Your Checkpoint access is ready: next steps' },
+        { id: 'note', label: 'Personal note (optional, shown above the steps)', type: 'textarea', rows: 4,
+          value: (firstName ? 'Hi ' + firstName + ',' : 'Hi,') + '\n\nYour Checkpoint access is ready, and Checkpoint guides you through each step of setup.' },
+        { id: 'consent', label: 'Admin consent', type: 'select', value: consentDefault, options: [
+          { value: 'done', label: 'Already granted: leave the consent step out' },
+          { value: 'include', label: 'Not yet granted: include it as the first step' }
+        ] },
+        { id: 'bookingLink', label: 'Booking link (optional)', value: CONFIG.bookingLink || '' }
+      ];
+      if (!storedJson) {
+        fields.push({ id: 'file', label: 'Activation file (.json)', type: 'file', accept: '.json,application/json',
+          hint: 'This console has no stored copy of their licence (it was issued with the command line). Choose the file to attach it, or leave empty to say it will follow separately.' });
+      }
       var v = await showModal({
         title: 'Send welcome pack — ' + c.name,
-        message: 'Sends from your own mailbox via Mail.Send, with a quick-start guide' + (hasActivationFile ? ' and the signed activation file' : '') + ' attached. Review before sending.',
-        fields: [
-          { id: 'to', label: 'To', value: c.contactEmail, type: 'email' },
-          { id: 'subject', label: 'Subject', value: 'Welcome to Compliance365 — setting up ' + c.name },
-          { id: 'bookingLink', label: 'Booking link (optional)', value: CONFIG.bookingLink || '' }
-        ],
+        message: 'Sends from your own mailbox. Attached: quick-start guide (PDF)' + (storedJson ? ' and their activation file (' + (storedName || 'activation.json') + ')' : '') + '. ' +
+          'The steps name their SharePoint site ' + (c.sitePath ? '(' + c.sitePath + ')' : '(none set, so they are asked to choose one)') + ' and ' + (frameworks.length ? frameworks.join(', ') : 'their frameworks') + '.',
+        fields: fields,
         confirmText: 'Send',
-        validate: function (v) { return isValidEmail(v.to) ? null : 'Enter a valid recipient email address.'; }
+        validate: function (v) {
+          var addrs = function (s) { return String(s || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); };
+          if (!addrs(v.to).length || !addrs(v.to).every(isValidEmail)) return 'Enter valid recipient email addresses, separated by commas.';
+          if (v.cc && !addrs(v.cc).every(isValidEmail)) return 'Enter valid Cc addresses, separated by commas.';
+          if (v.file && v.file.size > 64 * 1024) return 'That file is too large to be an activation file.';
+          return null;
+        }
       });
       if (!v) return;
       busy(true);
       try {
-        var body = buildWelcomeEmailHtml(c.name, onboardingLink, v.bookingLink, hasActivationFile);
-        var attachments = await buildWelcomeAttachments(c.name, hasActivationFile ? activationFileJson : null, hasActivationFile ? activationFileName : null);
-        await Graph.sendMail(v.to, v.subject, body, attachments);
+        var fileJson = storedJson, fileName = storedName;
+        if (!fileJson && v.file) {
+          fileJson = await v.file.text();
+          fileName = v.file.name;
+          var parsed = null;
+          try { parsed = JSON.parse(fileJson); } catch (e) { parsed = null; }
+          if (!parsed || !parsed.payload || !parsed.signature) throw new Error('That file is not a Checkpoint activation file.');
+          var fileTenant = String(parsed.payload.tenantId || '').toLowerCase();
+          if (fileTenant && c.tenantId && fileTenant !== String(c.tenantId).toLowerCase()) {
+            throw new Error('That activation file is for tenant ' + fileTenant + ', not ' + c.tenantId + '.');
+          }
+        }
+        var hasFile = !!fileJson;
+        var guide = window.CheckpointLib.welcomeGuideContent({
+          consentDone: v.consent === 'done', hasActivationFile: hasFile, activationFileName: fileName || '',
+          sitePath: c.sitePath || '', frameworks: frameworks
+        });
+        var body = buildWelcomeEmailHtml({ clientName: c.name, onboardingLink: onboardingLink, bookingLink: v.bookingLink, note: v.note, guide: guide, hasActivationFile: hasFile, activationFileName: fileName || '' });
+        var attachments = await buildWelcomeAttachments(c.name, hasFile ? fileJson : null, hasFile ? (fileName || 'activation.json') : null, guide, v.bookingLink);
+        await Graph.sendMail(v.to, v.subject, body, attachments, v.cc);
         c.packSentAt = new Date().toISOString();
         await updatePartnerClient(c);
-        audit('Welcome pack sent', 'PartnerClient', c._sp, '', v.to);
+        audit('Welcome pack sent', 'PartnerClient', c._sp, '', v.to + (v.cc ? ' (cc ' + v.cc + ')' : '') + (hasFile ? ', with activation file' : ''));
         toast('Welcome pack sent to ' + esc(v.to));
         refreshInsightViews();
       } catch (e) {
@@ -3036,7 +3115,6 @@ function showModal(opts) {
       }
       busy(false);
     },
-
     /* Manual confirmation that the client's own SharePoint Practitioner/
        Viewer groups (wizard step 8, SETUP.md §5a) are set up — this
        console has no permission to read another tenant's SharePoint

@@ -1909,8 +1909,9 @@ window.Graph = (function () {
      (status-update email, digest, questionnaire send) passes 3 args and
      is unaffected — attachments is simply omitted from the request body
      when not given. */
-  async function sendMail(toCsv, subject, htmlBody, attachments) {
+  async function sendMail(toCsv, subject, htmlBody, attachments, ccCsv) {
     var recipients = toCsv.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    var cc = String(ccCsv || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     if (!recipients.length) throw new Error('Enter at least one recipient email address.');
     var t = await token(CONFIG.scopesMail);
     var message = {
@@ -1918,6 +1919,7 @@ window.Graph = (function () {
       body: { contentType: 'HTML', content: htmlBody },
       toRecipients: recipients.map(function (addr) { return { emailAddress: { address: addr } }; })
     };
+    if (cc.length) message.ccRecipients = cc.map(function (addr) { return { emailAddress: { address: addr } }; });
     if (attachments && attachments.length) message.attachments = attachments;
     var res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
