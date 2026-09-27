@@ -2066,7 +2066,7 @@ function showModal(opts) {
          stalest-first queue on resume. */
       if (blocked) return { ok: false, id: c._sp, name: c.name, error: 'Browser blocked the sign-in window', popupBlocked: true };
       c.syncError = code === 'user_cancelled' ? 'Sign-in cancelled'
-        : ('Sync failed: ' + (e && e.message ? e.message : e));
+        : String(e && e.message ? e.message : e); /* callers add their own "Sync failed" / "Sync error" label */
       c.lastSynced = new Date().toISOString();
       try { await updatePartnerClient(c); } catch (e2) { warn(e2); }
       audit('Partner client sync failed', 'PartnerClient', c._sp, '', c.syncError);
@@ -2200,15 +2200,41 @@ function showModal(opts) {
        exactly the right place for this, not silence. */
     var site;
     var path = window.CheckpointLib.normaliseSitePath(sitePath) || '';
-    if (!path || path === 'root') {
-      site = await g('/sites/root?$select=id');
-    } else {
-      var rootSite = await g('/sites/root?$select=webUrl');
-      var host = String(rootSite.webUrl || '').replace(/^https:\/\//, '').split('/')[0];
-      if (!host) throw new Error('Could not resolve the tenant\'s SharePoint hostname to look up site path "' + path + '"');
-      site = await g('/sites/' + host + ':' + path + '?$select=id');
+    /* Plain-language reasons for the failures a partner can act on —
+       a bare "Graph 403" gave no hint that the fix is SharePoint access
+       on the client's side. */
+    function syncStepError(e, what) {
+      var st = e && e.status;
+      var where = path ? 'the SharePoint site ' + path : 'the client\'s root SharePoint site';
+      if (st === 401 || st === 403) return new Error('Your account (' + signedInAs + ') can\'t open ' + where + ' (' + what + ', HTTP ' + st + '). Ask the client to give this account at least Visitor (read) access to that site, then Sync again.');
+      if (st === 404) return new Error(where.charAt(0).toUpperCase() + where.slice(1) + ' was not found in this tenant. Check the SharePoint site on the client\'s roster row (Details, then Edit).');
+      return e;
     }
-    var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
+    if (!path || path === 'root') {
+      try { site = await g('/sites/root?$select=id'); } catch (e) { throw syncStepError(e, 'reading the site'); }
+    } else {
+      /* The hostname, for a /sites/... path. Reading the root site is the
+         usual way, but a guest account (how a partner signs in to a
+         client tenant) is normally not allowed to open the root site, so
+         fall back to the tenant's initial domain: contoso.onmicrosoft.com
+         -> contoso.sharepoint.com. */
+      var host = '';
+      try {
+        var rootSite = await g('/sites/root?$select=webUrl');
+        host = String(rootSite.webUrl || '').replace(/^https:\/\//, '').split('/')[0];
+      } catch (e) { host = ''; }
+      if (!host) {
+        try {
+          var orgDomains = await g('/organization?$select=verifiedDomains');
+          host = window.CheckpointLib.sharePointHostFromDomains((orgDomains.value && orgDomains.value[0] && orgDomains.value[0].verifiedDomains) || []);
+        } catch (e) { host = ''; }
+      }
+      if (!host) throw new Error('Could not work out the client\'s SharePoint address to open ' + path + '. Your account may not have access to their tenant\'s directory.');
+      try { site = await g('/sites/' + host + ':' + path + '?$select=id'); } catch (e) { throw syncStepError(e, 'opening the site'); }
+    }
+    var siteLists;
+    try { siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || []; }
+    catch (e) { throw syncStepError(e, 'reading its lists'); }
     function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
     var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
 
