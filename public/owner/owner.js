@@ -733,7 +733,11 @@ function showModal(opts) {
          (trial→paid, cancelled, payment failed) without a human touching
          it. Blank for anything issued the manual/CLI way. PaddleStatus
          is the last status Paddle reported, for the owner's visibility. */
-      { name: 'SubscriptionId', text: {} }, { name: 'PaddleStatus', text: {} }
+      { name: 'SubscriptionId', text: {} }, { name: 'PaddleStatus', text: {} },
+      /* The annual price agreed with this client, when it isn't simply
+         the sum of module list prices (a package or a discount). Blank =
+         use the price list. Owner-set, never touched by a sync. */
+      { name: 'AgreedPrice', number: {} }
     ],
     /* Price book for what each module is actually billed. Read ONLY by
        the owner console's own revenue math (computePartnerRevenue() in
@@ -841,7 +845,7 @@ function showModal(opts) {
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
     PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName', 'Blocked', 'BlockedAt', 'BlockedReason'],
-    PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus']
+    PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus', 'AgreedPrice']
   };
   async function reconcilePartnerColumns(onStatus) {
     for (var k in PARTNER_COLUMN_RECONCILE) {
@@ -896,7 +900,8 @@ function showModal(opts) {
       _sp: i.id, tenantId: f.TenantId || '', type: f.Type || 'client', modules: uncsv(f.Modules),
       issuedAt: f.IssuedAt || '', expiry: f.Expiry || '', hash: f.EntitlementHash || '',
       manualStatus: f.ManualStatus || '', renewedBy: f.RenewedBy || '',
-      paymentStatus: f.PaymentStatus || '', invoiceDueDate: f.InvoiceDueDate || '', paidDate: f.PaidDate || ''
+      paymentStatus: f.PaymentStatus || '', invoiceDueDate: f.InvoiceDueDate || '', paidDate: f.PaidDate || '',
+      agreedPrice: typeof f.AgreedPrice === 'number' ? f.AgreedPrice : null
     };
   }
   function mapPartnerPrice(i) {
@@ -974,13 +979,15 @@ function showModal(opts) {
     e._sp = await addItem('PartnerEntitlements', {
       Title: e.tenantId, TenantId: e.tenantId, Type: e.type, Modules: csv(e.modules), IssuedAt: e.issuedAt, Expiry: e.expiry,
       EntitlementHash: e.hash || '', ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '',
-      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || ''
+      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || '',
+      AgreedPrice: window.CheckpointLib.isAgreedPrice(e.agreedPrice) ? Number(e.agreedPrice) : null
     });
   }
   async function updatePartnerEntitlementRecord(e) {
     await patchItem('PartnerEntitlements', e._sp, {
       ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '',
-      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || ''
+      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || '',
+      AgreedPrice: window.CheckpointLib.isAgreedPrice(e.agreedPrice) ? Number(e.agreedPrice) : null
     });
   }
   async function addPartnerPrice(p) {
@@ -1404,7 +1411,7 @@ function showModal(opts) {
       var days = partnerDaysUntil(ent.expiry);
       if (days == null || days > 365) return null;
       var client = clientsByTenant[tenantId];
-      var value = window.CheckpointLib.entitlementAnnualValue(ent.modules, prices);
+      var value = window.CheckpointLib.entitlementAnnualValue(ent.modules, prices, ent.agreedPrice);
       return { tenantId: tenantId, client: client, ent: ent, days: days, value: value };
     }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
 
@@ -1465,7 +1472,7 @@ function showModal(opts) {
       var ent = clientEnts[c.tenantId];
       var trial = !ent && demoEnts[c.tenantId];
       var modules = ent ? ent.modules : (trial ? trial.modules : []);
-      var value = ent ? window.CheckpointLib.entitlementAnnualValue(ent.modules, prices) : 0;
+      var value = ent ? window.CheckpointLib.entitlementAnnualValue(ent.modules, prices, ent.agreedPrice) : 0;
       var expiry = ent ? ent.expiry : (trial ? trial.expiry : '');
       return { c: c, ent: ent, trial: !!trial, modules: modules || [], value: value, expiry: expiry };
     }).sort(function (a, b) { return b.value - a.value; });
@@ -2684,7 +2691,8 @@ function showModal(opts) {
       var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
       if (!c) return;
       var ent = partnerLatestEntitlementFor(c.tenantId);
-      var annualCost = ent && ent.type === 'client' ? window.CheckpointLib.entitlementAnnualValue(ent.modules, pricesMap()) : null;
+      var annualCost = ent && ent.type === 'client' ? window.CheckpointLib.entitlementAnnualValue(ent.modules, pricesMap(), ent.agreedPrice) : null;
+      var hasAgreed = !!(ent && window.CheckpointLib.isAgreedPrice(ent.agreedPrice));
       var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
         return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
       }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
@@ -2701,7 +2709,9 @@ function showModal(opts) {
         (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDateY(ent.expiry) + '</b></div>'
           : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
         '<div class="d-kv"><span>Modules licensed (frameworks subscribed)</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
-        (annualCost != null ? '<div class="d-kv"><span>Annual cost</span><b>' + esc(fmtMoneyFull(annualCost)) + '</b></div>' : '') +
+        (annualCost != null ? '<div class="d-kv"><span>Annual cost</span><b>' + esc(fmtMoneyFull(annualCost)) +
+          '<div class="src" style="font-weight:400">' + (hasAgreed ? 'agreed price' : 'from the price list') + '</div>' +
+          '<button class="btn ghost sm" style="margin-top:4px" data-action="OwnerApp.partnerEditAgreedPrice" data-id="' + esc(ent._sp) + '">' + (hasAgreed ? 'Change' : 'Set agreed price') + '</button></b></div>' : '') +
         (ent && ent.type === 'client' ? '<div class="d-kv"><span>Payment</span><b>' + renderPaymentCell(ent) + '</b></div>' : '') +
         (c.blocked
           ? '<div class="d-kv"><span>Access</span><b style="color:var(--fail)">Revoked' + (c.blockedAt ? ' — ' + fmtDate(c.blockedAt.slice(0, 10)) : '') + '</b></div>' + (c.blockedReason ? '<div class="src" style="margin-top:2px">Reason: ' + esc(c.blockedReason) + '</div>' : '')
@@ -2772,6 +2782,31 @@ function showModal(opts) {
        credentials). "Overdue" itself is never set by hand — it's always
        derived from today vs. the due date you record here, so it can't
        go stale from being forgotten. */
+    /* The client's agreed annual price — replaces the price-list sum
+       for this licence everywhere revenue is shown (annual cost,
+       revenue board, renewals, client costs). Blank clears it. */
+    partnerEditAgreedPrice: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === e.tenantId; });
+      var listValue = window.CheckpointLib.entitlementAnnualValue(e.modules, pricesMap());
+      var v = await showModal({
+        title: 'Agreed annual price' + (c ? ' — ' + c.name : ''),
+        message: 'What this client pays per year for this licence. It replaces the price-list total (' + fmtMoneyFull(listValue) + ') in annual cost, revenue and renewals. Leave blank to use the price list.',
+        fields: [{ id: 'price', label: 'Annual price (ex GST)', type: 'number', value: window.CheckpointLib.isAgreedPrice(e.agreedPrice) ? e.agreedPrice : '', placeholder: 'e.g. 5000' }],
+        confirmText: 'Save',
+        validate: function (v) { return v.price === '' || window.CheckpointLib.isAgreedPrice(v.price) ? null : 'Enter an amount of 0 or more, or leave blank.'; }
+      });
+      if (!v) return;
+      var prev = e.agreedPrice;
+      e.agreedPrice = v.price === '' ? null : Number(v.price);
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { e.agreedPrice = prev; warn(ex); toast('Could not save'); return; }
+      audit('Agreed price changed', 'PartnerEntitlement', e._sp, prev == null ? '(price list)' : String(prev), e.agreedPrice == null ? '(price list)' : String(e.agreedPrice));
+      toast(e.agreedPrice == null ? 'Using the price list again.' : 'Agreed price saved: ' + esc(fmtMoneyFull(e.agreedPrice)));
+      refreshInsightViews();
+      if (c) OwnerApp.partnerOpenClientDrawer(c._sp);
+    },
+
     partnerMarkInvoiced: async function (entId) {
       var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
       if (!e) return;
@@ -2966,9 +3001,12 @@ function showModal(opts) {
         }
         await updatePartnerClient(c);
 
+        /* A renewal keeps the client's agreed price unless someone changes it. */
+        var renewed = prefill && prefill.renewsEntitlementId ? (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === prefill.renewsEntitlementId; }) : null;
         var e = {
           tenantId: plan.entitlementRecord.tenantId, type: plan.entitlementRecord.type, modules: plan.entitlementRecord.modules,
-          issuedAt: plan.entitlementRecord.issuedAt, expiry: plan.entitlementRecord.expiry, manualStatus: '', renewedBy: ''
+          issuedAt: plan.entitlementRecord.issuedAt, expiry: plan.entitlementRecord.expiry, manualStatus: '', renewedBy: '',
+          agreedPrice: renewed && window.CheckpointLib.isAgreedPrice(renewed.agreedPrice) ? renewed.agreedPrice : null
         };
         await addPartnerEntitlementRecord(e);
         PARTNER_DATA.entitlements.push(e);
