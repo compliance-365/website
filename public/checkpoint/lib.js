@@ -4513,6 +4513,61 @@
      to the generic path rather than producing a broken URL — there is
      nothing to pin to yet, which is itself informative to whoever is
      looking at it. */
+  /* A SharePoint site as the owner console stores it: a server-relative
+     path such as /sites/compliance, '' for the root site. Accepts what
+     people actually paste — a full URL copied from the browser (with
+     /SitePages/Home.aspx and a query string on the end), stray trailing
+     punctuation, a missing leading slash. Returns null for something
+     that cannot be a site path. */
+  function normaliseSitePath(input) {
+    var s = String(input == null ? '' : input).trim();
+    if (!s || /^root$/i.test(s)) return '';
+    s = s.replace(/^https?:\/\/[^/]+/i, '');
+    s = s.split(/[?#]/)[0];
+    var m = s.match(/^\/?((?:sites|teams)\/[^/\s]+)/i);
+    if (m) s = '/' + m[1];
+    else if (s.charAt(0) !== '/') s = '/' + s;
+    s = s.replace(/[\s.,;:/\\]+$/, '');
+    if (!s || s === '/') return '';
+    return /^\/[^\s]+$/.test(s) ? s : null;
+  }
+
+  /* The client-facing setup steps for a welcome pack — the email and the
+     quick-start PDF both render these, and they follow the setup wizard
+     in its real order: consent (only when not yet granted), sign in,
+     capability check, activation, where records live, frameworks.
+     o: { consentDone, hasActivationFile, activationFileName, sitePath,
+     frameworks: [display names] }. Plain text throughout; each renderer
+     escapes for its own format. */
+  function welcomeGuideContent(o) {
+    o = o || {};
+    var fws = (o.frameworks || []).filter(Boolean);
+    var fwText = fws.length === 0 ? 'your frameworks'
+      : fws.length === 1 ? fws[0]
+      : fws.slice(0, -1).join(', ') + ' and ' + fws[fws.length - 1];
+    var steps = [];
+    if (!o.consentDone) {
+      steps.push(['Grant admin consent', 'A Global Administrator opens the setup link and approves Checkpoint\'s access once for the whole organisation. The consent screen lists exactly what is requested.']);
+    }
+    steps.push(['Sign in', 'Open the setup link and sign in with your work account.']);
+    steps.push(['Capability check', 'Checkpoint shows which Microsoft 365 features your licences include. Anything not included is simply checked manually. Click Continue.']);
+    steps.push(['Upload your activation file', o.hasActivationFile
+      ? 'Upload the activation file attached to this email' + (o.activationFileName ? ' (' + o.activationFileName + ')' : '') + '.'
+      : 'Upload the activation file we send you separately.']);
+    steps.push(['Choose where your records live', o.sitePath
+      ? 'Choose the existing SharePoint site ' + o.sitePath + '.'
+      : 'Choose the SharePoint site for your compliance records. We recommend a dedicated site.']);
+    steps.push(['Confirm your frameworks', 'Confirm ' + fwText + '. Checkpoint then creates your registers, document library and evidence folders, and runs your first posture scan.']);
+    var before = (o.consentDone ? 'You\'ll need your work account' : 'You\'ll need a Global Administrator for the first step, then your work account')
+      + (o.sitePath ? ', owner access to the ' + o.sitePath + ' SharePoint site' : ', owner access to the SharePoint site your records will live in')
+      + ' and about 15 minutes.';
+    return {
+      before: before,
+      steps: steps,
+      after: 'Once you\'re in, open Settings, then Setup health, for an overview of your setup, and look over your first scan results on the Dashboard.'
+    };
+  }
+
   function buildAdminConsentUrl(clientId, tenantId, redirectUri) {
     var tenant = String(tenantId || '').trim() || 'organizations';
     return 'https://login.microsoftonline.com/' + encodeURIComponent(tenant) +
@@ -6698,7 +6753,7 @@
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
     riskReviewStatus: riskReviewStatus,
-    buildAdminConsentUrl: buildAdminConsentUrl,
+    buildAdminConsentUrl: buildAdminConsentUrl, normaliseSitePath: normaliseSitePath, welcomeGuideContent: welcomeGuideContent,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     attestationFocusRows: attestationFocusRows, attestationSummary: attestationSummary,
