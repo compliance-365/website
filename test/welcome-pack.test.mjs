@@ -79,4 +79,10 @@ describe('wiring', () => {
     assert.match(owner, /sitePath: window\.CheckpointLib\.normaliseSitePath\(f\.SitePath\) \|\| ''/);
     assert.match(owner, /c\.sitePath = window\.CheckpointLib\.normaliseSitePath\(v\.sitePath\) \|\| ''/);
   });
+  test('owner-console sync only asks for permissions the client already consented to', () => {
+    const cfg = readFileSync(new URL('../public/checkpoint/config.js', import.meta.url), 'utf8');
+    assert.doesNotMatch(owner, /SYNC_SCOPES = \[[^\]]*Sites\.Read\.All/);
+    assert.doesNotMatch(cfg, /Sites\.Read\.All/, 'if Sites.Read.All is ever added to the consented list, this test can change');
+    assert.match(owner, /var SYNC_SCOPES = \['User\.Read'\]\.concat\(CONFIG\.scopesProvision/);
+  });
 });

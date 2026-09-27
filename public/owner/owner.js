@@ -2116,7 +2116,14 @@ function showModal(opts) {
       cache: { cacheLocation: 'sessionStorage' }
     });
     await msalApp.initialize();
-    var SYNC_SCOPES = ['User.Read', 'Sites.Read.All'];
+    /* Only scopes the client's admin has already consented to (the
+       Checkpoint app's own list — config.js scopesReadOnly/
+       scopesProvision). Sites.Read.All is not on that list, so asking
+       for it sent every sync to a "Need admin approval" screen in a
+       client tenant. What the token can actually do is still limited
+       by the signed-in account's own SharePoint access — give the
+       partner's guest account Visitor (read) on the Checkpoint site. */
+    var SYNC_SCOPES = ['User.Read'].concat(CONFIG.scopesProvision || ['Sites.Manage.All']);
     var res = null;
 
     /* Try a cached token before opening a popup. This is what makes
