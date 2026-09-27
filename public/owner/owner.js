@@ -764,6 +764,8 @@ function showModal(opts) {
     ]
   };
   function partnerListName(k) { return 'Checkpoint Partner ' + k; }
+  /* Lists added after consoles were already in use — see afterSignIn(). */
+  var LATE_PARTNER_LISTS = ['ErrorReports', 'Health'];
 
   async function addItem(listKey, fields) {
     var j = await Graph.g('/sites/' + siteId + '/lists/' + lists[listKey] + '/items', { method: 'POST', body: { fields: fields }, scopes: CONFIG.scopesProvision });
@@ -1139,6 +1141,21 @@ function showModal(opts) {
      record. Used by the roster row dot, the Module Adoption Matrix's
      dormancy check, the Client Health Strip, and the summary card, so
      all four always agree with each other. */
+  /* The roster row for a tenant: an exact match, or — when the row
+     holds a domain and we have the tenant ID — the row whose domain the
+     tenant's own setup-health report lists among its verified domains. */
+  function findRosterClientForTenant(tenantId) {
+    var id = String(tenantId || '').trim().toLowerCase();
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    var exact = clients.find(function (x) { return String(x.tenantId || '').toLowerCase() === id; });
+    if (exact) return exact;
+    var rep = ((PARTNER_DATA && PARTNER_DATA.health) || []).find(function (r) { return String(r.tenantId || '').toLowerCase() === id; });
+    if (!rep) return null;
+    return clients.find(function (x) {
+      var t = String(x.tenantId || '').toLowerCase();
+      return t && rep.domains.some(function (d) { return String(d).toLowerCase() === t; });
+    }) || null;
+  }
   function setupReportFor(c) {
     return window.CheckpointLib.matchHealthReport(c, (PARTNER_DATA && PARTNER_DATA.health) || []);
   }
@@ -2253,7 +2270,11 @@ function showModal(opts) {
 
     busy(true);
     var found = await findExistingPartnerLists().catch(function () { return {}; });
-    var allProvisioned = Object.keys(PARTNER_DEFS).every(function (k) { return found[k]; });
+    /* Only the core lists gate the console. Lists added later
+       (ErrorReports, Health) are created automatically on load by
+       renderConsole(), so a console provisioned before they existed
+       goes straight in rather than back to the one-time setup screen. */
+    var allProvisioned = Object.keys(PARTNER_DEFS).filter(function (k) { return LATE_PARTNER_LISTS.indexOf(k) === -1; }).every(function (k) { return found[k]; });
     busy(false);
     if (!allProvisioned) { showScreen('provisionGate'); return; }
 
@@ -2864,7 +2885,14 @@ function showModal(opts) {
       var prefill = NEW_CLIENT_PREFILL;
       busy(true);
       try {
-        var c = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === plan.entitlementRecord.tenantId; });
+        var c = findRosterClientForTenant(plan.entitlementRecord.tenantId);
+        if (c && c.tenantId !== plan.entitlementRecord.tenantId) {
+          /* The row was entered by domain; the entitlement is recorded
+             against the tenant ID, and entitlements are matched to rows
+             by exact tenant — so move the row to the ID rather than
+             adding a second row for the same client. */
+          c.tenantId = plan.entitlementRecord.tenantId;
+        }
         if (!c) {
           c = {
             name: plan.clientName, tenantId: plan.entitlementRecord.tenantId, status: 'Prospect',

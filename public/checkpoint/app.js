@@ -19510,6 +19510,11 @@ function showModal(opts) {
      tenant that deploys the collector gets them the moment its first
      run lands, with no setting to remember to switch on. */
   function collectorResultsPresent(prefix) {
+    /* The onboarding wizard's capability step counts automatable checks
+       (relevantCheckDefs) before anything is provisioned, when S is
+       still null — and a tenant that has never been set up has no
+       collector results anyway. This read used to crash that step. */
+    if (!S) return false;
     if (S.lastResults && Object.keys(S.lastResults).some(function (k) { return k.indexOf(prefix) === 0; })) return true;
     return (S.scans || []).some(function (sc) {
       try { return Object.keys((JSON.parse(sc.detail || '{}').results) || {}).some(function (k) { return k.indexOf(prefix) === 0; }); }
@@ -21051,8 +21056,9 @@ function showModal(opts) {
   function renderWizardAiStep() {
     var endpointEl = document.getElementById('wizAiEndpoint');
     var deploymentEl = document.getElementById('wizAiDeployment');
-    if (endpointEl) endpointEl.value = (S.settings && S.settings.aiEndpoint) || '';
-    if (deploymentEl) deploymentEl.value = (S.settings && S.settings.aiDeployment) || '';
+    /* shown before provisioning, when S is still null */
+    if (endpointEl) endpointEl.value = (S && S.settings && S.settings.aiEndpoint) || '';
+    if (deploymentEl) deploymentEl.value = (S && S.settings && S.settings.aiDeployment) || '';
     var statusEl = document.getElementById('wizAiStatus');
     if (statusEl) statusEl.textContent = '';
   }

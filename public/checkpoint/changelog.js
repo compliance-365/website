@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.105.1',
+    date: '2026-09-27',
+    entries: [
+      'Fixed: setting up a new tenant could stop at the capability check, with Continue stuck on "Checking…". It now shows the summary and continues.'
+    ]
+  },
+  {
     version: '1.105.0',
     date: '2026-09-25',
     entries: [
