@@ -1733,6 +1733,8 @@ function showModal(opts) {
       '</div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
       '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncTerm">Term</label><select class="mini" id="ncTerm" style="width:100%">' +
+      /* "d7" = 7 days (trials); plain numbers are months. */
+      [7, 14, 30].map(function (d) { return '<option value="d' + d + '">' + d + ' days (trial)</option>'; }).join('') +
       [12, 24, 36].map(function (m) { return '<option value="' + m + '"' + ((prefill ? prefill.termMonths : 12) === m ? ' selected' : '') + '>' + m + ' months</option>'; }).join('') +
       '</select></div>' +
       '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncType">Type</label><select class="mini" id="ncType" style="width:100%">' +
@@ -2954,16 +2956,22 @@ function showModal(opts) {
       var contactEmail = issuanceFieldVal('ncContactEmail');
       var notes = issuanceFieldVal('ncNotes');
       var modules = checkedModuleIds();
-      var termMonths = Number(issuanceFieldVal('ncTerm')) || 12;
+      var termRaw = String(issuanceFieldVal('ncTerm') || '12');
+      var termDays = /^d\d+$/.test(termRaw) ? Number(termRaw.slice(1)) : 0;
+      var termMonths = termDays ? 0 : (Number(termRaw) || 12);
       var type = issuanceFieldVal('ncType') || 'client';
 
       if (!name) { toast('Enter a client name.'); return; }
       if (!window.CheckpointLib.isValidTenantIdentifier(tenantId)) { toast('Enter a valid tenant ID (GUID) or verified domain.'); return; }
       if (contactEmail && !isValidEmail(contactEmail)) { toast('Enter a valid contact email, or leave it blank.'); return; }
       if (!modules.length) { toast('Select at least one module.'); return; }
+      /* A trial measured in months, or a paid licence measured in days, is
+         almost certainly a mis-click — say so before anything is signed. */
+      if (type === 'trial' && !termDays) { toast('Choose a trial length (7, 14 or 30 days) for a trial.'); return; }
+      if (type !== 'trial' && termDays) { toast('Day-length terms are for trials. Choose Trial, or a term in months.'); return; }
 
       var plan = window.CheckpointLib.buildClientIssuancePlan({
-        tenantId: tenantId, modules: modules, termMonths: termMonths, type: type,
+        tenantId: tenantId, modules: modules, termMonths: termMonths, termDays: termDays, type: type,
         renewsEntitlementId: prefill ? prefill.renewsEntitlementId : ''
       }, todayStr());
       plan.clientName = name; plan.contactName = contactName; plan.contactEmail = contactEmail; plan.notes = notes;
