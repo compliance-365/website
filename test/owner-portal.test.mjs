@@ -401,6 +401,22 @@ describe('addMonthsToDateStr()', () => {
   });
 });
 
+describe('buildClientIssuancePlan() — trial terms in days', () => {
+  test('a 7-day trial expires 7 days after issue and is a demo-type file', () => {
+    const plan = buildClientIssuancePlan({ tenantId: '288f236a-f303-4ac9-930e-c25c7dc14afa', modules: ['iso27001', 'iso27701'], termDays: 7, type: 'trial' }, '2026-09-28');
+    assert.equal(plan.expiry, '2026-10-05');
+    assert.equal(plan.type, 'demo');
+    assert.equal(plan.termDays, 7);
+    assert.equal(plan.termMonths, null);
+    assert.match(plan.command, /--expiry 2026-10-05 --type demo/);
+  });
+  test('without termDays the term is still months', () => {
+    const plan = buildClientIssuancePlan({ tenantId: 'a.com', modules: ['iso27001'], termMonths: 12, type: 'client' }, '2026-09-28');
+    assert.equal(plan.expiry, '2027-09-28');
+    assert.equal(plan.termDays, null);
+  });
+});
+
 describe('buildClientIssuancePlan() — entitlement-generation payloads', () => {
   var today = '2026-07-13';
 

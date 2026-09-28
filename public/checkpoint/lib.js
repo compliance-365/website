@@ -4653,9 +4653,12 @@
     input = input || {};
     var type = input.type === 'trial' ? 'demo' : 'client';
     var modules = (input.modules || []).slice().sort();
-    var termMonths = Number(input.termMonths) || 12;
+    /* Trials run in days (7/14/30), paid terms in months. termDays wins
+       when given, so a trial can never silently become a 12-month file. */
+    var termDays = Number(input.termDays) > 0 ? Number(input.termDays) : null;
+    var termMonths = termDays ? null : (Number(input.termMonths) || 12);
     var issuedAt = today;
-    var expiry = addMonthsToDateStr(issuedAt, termMonths);
+    var expiry = termDays ? addDaysToDateStr(issuedAt, termDays) : addMonthsToDateStr(issuedAt, termMonths);
     var outFile = String(input.tenantId || 'client').replace(/[^a-z0-9.-]/gi, '-') + '-activation.json';
     var command = [
       'node tools/issue-entitlement.mjs issue',
@@ -4668,7 +4671,7 @@
       '--record'
     ].filter(Boolean).join(' ');
     return {
-      type: type, modules: modules, issuedAt: issuedAt, expiry: expiry, termMonths: termMonths,
+      type: type, modules: modules, issuedAt: issuedAt, expiry: expiry, termMonths: termMonths, termDays: termDays,
       command: command, outFile: outFile,
       entitlementRecord: {
         tenantId: input.tenantId, type: type, modules: modules, issuedAt: issuedAt, expiry: expiry,
