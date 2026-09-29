@@ -12,6 +12,23 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.110.0',
+    date: '2026-09-30',
+    entries: [
+      'Opportunities: the risk register now has an Opportunities section for uncertainty that could help the organisation (ISO 31000), as ISO 27001 Clause 6.1.1 asks for risks and opportunities. Each is rated by likelihood and benefit, owned, reviewed, and given a response: pursue, share, retain or decline. Opportunities never count towards risk levels, the heatmap or the risk appetite, and they appear in the risk register report. Clause 6.1.1 now checks that opportunities are recorded, owned and reviewed.',
+      'Confidentiality, integrity and availability are now three explicit choices when adding or editing a risk, instead of a free-text box. The register\u2019s CIA column shows which each risk threatens.'
+    ]
+  },
+  {
+    version: '1.109.0',
+    date: '2026-09-30',
+    entries: [
+      'The risk register now records each risk as an ISO/IEC 27005 risk scenario: the assets affected (from the asset register), the threat or risk source, the vulnerability it exploits and the consequence if it happens, alongside the confidentiality, integrity or availability it threatens. The risk drawer shows the scenario and flags what is missing, and it appears in the risk register report and the risk treatment plan. Risks raised from a failed posture scan check record that check as their vulnerability automatically.',
+      'Treatment decisions show their ISO/IEC 27005 names: Treat (risk modification), Tolerate (risk retention), Transfer (risk sharing) and Terminate (risk avoidance). Existing decisions are unchanged.',
+      'The Risk Management Framework document now follows the ISO 31000 process step by step (communication and consultation, scope, context and criteria, assessment, treatment, monitoring and review, recording and reporting) and ISO/IEC 27005. It states the exact likelihood and consequence scales, the risk level bands, the acceptance criteria tied to your risk appetite, when assessments must be repeated, and both asset-based and event-based identification. Regenerate and re-approve it to pick up the new wording.'
+    ]
+  },
+  {
     version: '1.108.0',
     date: '2026-09-30',
     entries: [

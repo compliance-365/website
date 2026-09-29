@@ -47,6 +47,23 @@
      `actions` is the full actions register (or any array of
      {id, status} objects) — the risk itself only stores action id
      references. */
+  /* Which parts of an ISO/IEC 27005:2022 risk scenario a risk has not
+     recorded yet. A scenario can be asset-based (the assets, the threat
+     and the vulnerability it exploits) or event-based (the risk source
+     and the consequence); 27005 accepts either, so a risk is complete
+     with a threat or risk source, a consequence, and either assets or a
+     vulnerability. Returns the missing parts in plain words. */
+  function riskScenarioGaps(r) {
+    r = r || {};
+    var has = function (v) { return !!String(v || '').trim(); };
+    var out = [];
+    if (!has(r.threat)) out.push('threat or risk source');
+    if (!has(r.consequence)) out.push('consequence');
+    if (!(r.assetRefs || []).length && !has(r.vulnerability)) out.push('assets affected or vulnerability');
+    if (!(r.cia || []).length) out.push('confidentiality, integrity or availability it threatens');
+    return out;
+  }
+
   function residual(r, actions) {
     if (typeof r.resL === 'number' && typeof r.resI === 'number') {
       return { L: Math.max(1, r.resL), I: Math.max(1, r.resI), derived: false };
@@ -6260,9 +6277,9 @@
     ],
     '6.1.1': [
       { id: 'determine', text: 'Determine the risks and opportunities that need addressing, drawing on the issues (4.1) and requirements (4.2).',
-        evidence: 'The risk register, reviewed within the last 12 months.',
-        evidence42: 'AI risks in the risk register (AI Governance), reviewed within the last 12 months.',
-        auto: { md: '8.2' }, auto42: { record: 'riskReviewed' } },
+        evidence: 'The risk register reviewed within the last 12 months, and opportunities recorded with an owner (the register\u2019s Opportunities section).',
+        evidence42: 'AI risks in the risk register (AI Governance) reviewed within the last 12 months, and opportunities recorded with an owner.',
+        auto: { md: '8.2', record: 'opportunities' }, auto42: { record: ['riskReviewed', 'opportunities'] } },
       { id: 'plan', text: 'Plan actions to address those risks and opportunities, build them into the management system’s processes, and evaluate whether they work.',
         evidence: 'The risk treatment plan, with actions, owners and due dates.',
         auto: { md: '6.1.3 e)' }, auto42: { record: 'riskTreated' } }
@@ -6678,6 +6695,10 @@
         if (!ai.length) gaps++;
         return gaps ? { st: gaps > need.length ? 'missing' : 'partial', note: gaps + ' of ' + (need.length + 1) + ' core AI management system items not yet in place (scope, policy, risk framework, impact assessment procedure, AI system register)' }
           : { st: 'done', note: 'AI scope, policy, risk framework and impact assessment procedure approved, and the AI system register in use' };
+      case 'opportunities':
+        var opps = (s.opportunities || []).filter(function (o) { return o && o.status !== 'Closed'; });
+        if (!opps.length) return { st: 'missing', note: 'No opportunities recorded \u2014 Clause 6.1.1 asks for risks and opportunities' };
+        return share(opps.filter(function (o) { return String(o.owner || '').trim() && within(o.lastReviewed, 365); }).length, opps.length, opps.length + ' opportunit' + (opps.length > 1 ? 'ies' : 'y') + ' recorded, each owned and reviewed within 12 months', 'opportunit' + 'ies without an owner or a review in the last 12 months');
       case 'legalPrivacy':
         var privacyLaws = (s.legal || []).filter(function (l) { return l && l.applies === 'Yes' && /privacy|personal (information|data)|data protection|gdpr|\bapps?\b|health records/i.test((l.title || '') + ' ' + (l.requirement || '')); });
         return privacyLaws.length ? { st: 'done', note: privacyLaws.length + ' privacy law or obligation(s) recorded as applying, in the legal and regulatory register' }
@@ -6705,7 +6726,7 @@
   var CLAUSE_RECORD_KINDS = ['risks', 'riskOwners', 'riskRated', 'riskReviewed', 'riskTreated', 'riskActioned', 'riskAccepted',
     'objectivePlans', 'kpis', 'trainingCurrent', 'policyAcknowledged', 'policyCurrent', 'legalTraced', 'mrIssues', 'mrResources',
     'mrInputs', 'improvement', 'auditDone', 'auditsPlanned', 'auditImpartial', 'operating', 'auditLog', 'soa', 'aiRegister',
-    'aiImpact', 'aimsCore', 'legalPrivacy', 'pimsCore', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
+    'aiImpact', 'aimsCore', 'opportunities', 'legalPrivacy', 'pimsCore', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
 
   /* One clause's checklist, resolved against the tenant's data.
      s = { fw, code, today, docs:[{tplId,status}], docsFull:[register rows], settings:{key:value},
@@ -7450,7 +7471,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport,
+    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

@@ -1880,36 +1880,60 @@ window.POLICY_TEMPLATES = [
   {
     id: 'risk-management-framework',
     title: 'Risk Management Framework',
-    purpose: 'This document defines how the organisation identifies, analyses, evaluates and treats information security risk consistently and repeatably, so that two people assessing the same risk reach comparable results. It satisfies the ISO/IEC 27001 Clause 6.1.2 (risk assessment) and Clause 6.1.3 (risk treatment) requirements.',
+    purpose: 'This document defines how the organisation identifies, analyses, evaluates and treats information security risk consistently and repeatably, so that two people assessing the same risk reach comparable results. It follows the risk management process of ISO 31000:2018, applied to information security as ISO/IEC 27005:2022 describes, and satisfies the ISO/IEC 27001 Clause 6.1.2 (risk assessment), 6.1.3 (risk treatment), 8.2 and 8.3 requirements.',
     scope: 'Applies to all information security risks to assets within the ISMS scope, and to everyone who identifies, owns or treats those risks. The organisation’s live risk register and Risk Treatment Plan are maintained in this console.',
     policyStatements: [
       {
-        rule: 'Risks are identified in terms of their effect on the confidentiality, integrity and availability of information assets within scope, and recorded in the risk register maintained in this console.',
-        because: 'Naming the effect rather than the threat keeps the register focused on consequences the organisation can actually treat.'
+        rule: 'Risk is managed through the ISO 31000 process: communication and consultation; establishing the scope, context and criteria; risk assessment (identification, analysis and evaluation); risk treatment; monitoring and review; and recording and reporting. The process is integrated into how the organisation plans, changes and operates, not run as a separate exercise.',
+        because: 'ISO 31000 is the process ISO/IEC 27005 and ISO/IEC 27001 build on; following it end to end is what makes the assessment repeatable and the register trustworthy.'
       },
       {
-        rule: 'Each risk is analysed for likelihood and impact using defined, consistent scales (for example 1–5 for each), and the two combine into an overall risk level — so risks are prioritised on evidence, not instinct.',
-        because: 'Without consistent scales, two assessors rate the same risk differently and the register cannot be used to prioritise anything.'
+        rule: 'Risk criteria are defined before risks are assessed. Likelihood is rated 1–5 (1 Rare, 2 Unlikely, 3 Possible, 4 Likely, 5 Almost certain) and consequence 1–5 (1 Negligible, 2 Minor, 3 Moderate, 4 Major, 5 Severe). Their product gives the risk level: 1–4 Low, 5–9 Medium, 10–14 High, 15–25 Critical.',
+        because: 'Without consistent scales, two assessors rate the same risk differently and the register cannot be used to prioritise anything (ISO/IEC 27001 6.1.2 b).'
       },
       {
-        rule: 'Risks are evaluated against documented risk acceptance criteria: a defined threshold above which a risk must be treated rather than simply accepted.',
-        because: 'Without a stated threshold, acceptance is decided case by case under pressure, which is how significant risks get accepted quietly.'
+        rule: 'Risk acceptance criteria follow the organisation’s risk appetite, set in this console. A risk whose residual level is within appetite may be retained by its risk owner. A risk above appetite must be treated further, or its retention accepted and recorded by the executive sponsor with a named accepter, a date and a review point.',
+        because: 'Without a stated threshold, acceptance is decided case by case under pressure, which is how significant risks get accepted quietly (ISO/IEC 27001 6.1.2 a).'
+      },
+      {
+        rule: 'Risk assessments are carried out at planned intervals (every open risk is reviewed at least quarterly, the review cadence set in this console) and whenever there is a significant change: a new system, supplier, process or site; a security incident; an audit finding; or a change in the threat landscape or in legal requirements.',
+        because: 'These are the criteria for performing assessments that ISO/IEC 27001 6.1.2 a) and 8.2 ask for; a register assessed once a year misses the changes that create new risk.'
+      },
+      {
+        rule: 'Risks are identified using both approaches ISO/IEC 27005 describes. Asset-based: the assets in the asset register, the threats to them and the vulnerabilities those threats could exploit. Event-based: the risk sources and events that could affect the organisation, and their consequences. Each risk is recorded as a scenario (the assets affected, the threat or risk source, the vulnerability, and the consequence for the confidentiality, integrity or availability of information).',
+        because: 'A risk written as a scenario can be analysed, treated and tested; a risk written as a single word (\u201cransomware\u201d) cannot.'
+      },
+      {
+        rule: 'Opportunities are identified and recorded alongside risks: uncertainty that could benefit the organisation or its information security, rated by likelihood and benefit, with a named owner and a response (pursue, share, retain or decline). They are reviewed with the risks and kept separate from risk levels and the risk appetite.',
+        because: 'ISO 31000 treats risk as the effect of uncertainty, positive or negative, and ISO/IEC 27001 Clause 6.1.1 asks for the risks and opportunities the management system must address.'
       },
       {
         rule: 'Every risk has a named risk owner, accountable for the treatment decision and for the residual risk that remains after it.',
-        because: 'A risk owned by a committee or a department is owned by nobody, and will still be open at the next review.'
+        because: 'A risk owned by a committee or a department is owned by nobody, and will still be open at the next review (ISO/IEC 27001 6.1.2 c).'
       },
       {
-        rule: 'Risks above the acceptance threshold are treated by one of the four recognised options — Treat (reduce it with controls), Terminate (stop or change the activity), Transfer (shift it to a third party, for example through insurance or an outsourced provider), or, only with documented management sign-off, Tolerate (accept the residual risk).',
-        because: 'Naming the four options prevents "we are monitoring it" being recorded as though it were a treatment.'
+        rule: 'Risks are analysed by assessing the realistic likelihood of the scenario and the consequences if it happens, taking account of the controls already in place, and are then evaluated against the acceptance criteria and prioritised for treatment by risk level.',
+        because: 'ISO/IEC 27005 analyses risk as it stands today, with existing controls, so treatment effort goes where the remaining exposure is largest.'
       },
       {
-        rule: 'Treatment decisions and the controls selected are recorded in the Risk Treatment Plan, and reconciled against ISO 27001 Annex A in the Statement of Applicability, with any excluded Annex A control justified.',
-        because: 'The SoA is the document an auditor reconciles everything else against, and an unjustified exclusion is the fastest finding available to them.'
+        rule: 'Each risk above the acceptance criteria receives one of the ISO/IEC 27005 treatment options, recorded in the register as: Treat (risk modification: reduce likelihood or consequence with controls), Terminate (risk avoidance: stop or change the activity that gives rise to it), Transfer (risk sharing: share it with a third party, for example through insurance or an outsourced provider) or Tolerate (risk retention: accept it, within the acceptance criteria above).',
+        because: 'Naming the options prevents \u201cwe are monitoring it\u201d being recorded as though it were a treatment, and sharing a risk never removes the organisation\u2019s own accountability for it.'
       },
       {
-        rule: 'Residual risk is reviewed at least quarterly and after any material change, and the framework itself is revisited if the organisation’s risk appetite or method changes.',
+        rule: 'The controls needed to implement each treatment are determined and compared with ISO/IEC 27001 Annex A, so no necessary control is omitted. Treatment decisions, controls, actions and owners are recorded in the Risk Treatment Plan, and every Annex A control is recorded in the Statement of Applicability with a justification for its inclusion or exclusion.',
+        because: 'The SoA is the document an auditor reconciles everything else against, and an unjustified exclusion is the fastest finding available to them (ISO/IEC 27001 6.1.3 b\u2013d).'
+      },
+      {
+        rule: 'Risk owners approve the treatment plan for their risks. Once treatment is in place, the residual risk is re-assessed (likelihood and consequence with the treatment working) and the risk owner records their acceptance of it.',
+        because: 'ISO/IEC 27001 6.1.3 f) requires the owners\u2019 approval and acceptance; an acceptance recorded against an older score is shown as stale until it is renewed.'
+      },
+      {
+        rule: 'Risks, their treatment and the effectiveness of controls are monitored and reviewed: residual risk at least quarterly and after any material change, and the framework itself whenever the risk appetite, scales or method change.',
         because: 'Residual risk moves as controls degrade and the business changes, so a residual rating is only true on the day it was set.'
+      },
+      {
+        rule: 'Risk owners and the people who know the processes and systems concerned are consulted when risks are assessed and treatment is chosen, and risk status is reported to top management through the management review and the risk register reports.',
+        because: 'ISO 31000 treats communication and consultation as part of every step: an assessment made without the people who run the process misses the risks they see every day.'
       }
     ],
     roles: [

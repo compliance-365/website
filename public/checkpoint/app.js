@@ -782,7 +782,7 @@ function showModal(opts) {
   var MUTATING_ACTIONS = new Set([
     'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
-    'closeRisk', 'reopenRisk', 'deleteRisk', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
+    'closeRisk', 'reopenRisk', 'deleteRisk', 'addOpportunity', 'editOpportunity', 'reviewOpportunity', 'deleteOpportunity', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
     'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'requestVendorQuestionnaireLink', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
@@ -1236,11 +1236,17 @@ function showModal(opts) {
      practitioner picking a treatment should see what each one means
      without having to already know the framework. */
   var TREATMENT_DESCRIPTIONS = {
-    Treat: 'reduce it with controls / actions',
-    Tolerate: 'accept the residual risk within appetite',
-    Transfer: 'shift it to a third party — e.g. insurance, an outsourced provider',
-    Terminate: 'stop or change the activity that causes it'
+    Treat: 'risk modification: reduce it with controls / actions',
+    Tolerate: 'risk retention: accept the residual risk within appetite',
+    Transfer: 'risk sharing: share it with a third party — e.g. insurance, an outsourced provider',
+    Terminate: 'risk avoidance: stop or change the activity that causes it'
   };
+  /* The ISO/IEC 27005:2022 name for each treatment option (ISO 31000
+     describes the same choices). Stored values stay Treat / Tolerate /
+     Transfer / Terminate so every existing risk keeps its decision; the
+     standard's term is shown beside it wherever a treatment is read. */
+  var TREATMENT_ISO = { Treat: 'modify', Tolerate: 'retain', Transfer: 'share', Terminate: 'avoid' };
+  function treatmentLabel(t) { return TREATMENT_ISO[t] ? t + ' (' + TREATMENT_ISO[t] + ')' : (t || ''); }
   var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
   var ACTION_PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
@@ -2891,7 +2897,7 @@ function showModal(opts) {
       var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
       var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
       var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
-        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>';
+        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + riskScenarioReportLine(r) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(treatmentLabel(r.treat)) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>';
       var sevCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
       openRisks.forEach(function (r) { var q = residual(r); sevCounts[band(q.L * q.I)]++; });
 
@@ -2968,7 +2974,7 @@ function showModal(opts) {
         },
         sections: [
           { heading: 'Risk register', html: tableHtml, pageBreak: true }
-        ].concat(movementSection ? [movementSection] : []).concat([
+        ].concat(movementSection ? [movementSection] : []).concat(opportunitiesReportSection()).concat([
           { heading: 'Financial risk analysis (Monte Carlo)', html: financialHtml, pageBreak: true }
         ])
       };
@@ -3013,7 +3019,7 @@ function showModal(opts) {
         var accHtml = r.acceptedBy
           ? esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + (stale ? '<br><b style="color:#b91c1c">STALE — accepted at ' + r.acceptedScore + ', now ' + (q.L * q.I) + '</b>' : '')
           : (band(q.L * q.I) !== 'Low' && r.status !== 'Closed' ? '<b style="color:#b91c1c">Not accepted</b>' : '—');
-        return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + esc(r.status) + '</div></td><td>' + esc(r.treat) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
+        return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + esc(r.status) + '</div>' + riskScenarioReportLine(r) + '</td><td>' + esc(treatmentLabel(r.treat)) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
       }).join('');
       var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Treatment</th><th>Controls</th><th>Treatment actions</th><th>Residual</th><th>Acceptance</th></tr>' + rows + '</table>';
       return {
@@ -6563,7 +6569,12 @@ function showModal(opts) {
     var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
     var actIds = t.actions.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
     try {
-      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl };
+      /* The failed check is the vulnerability in the ISO/IEC 27005
+         scenario — recorded as such, so a scan-raised risk starts with
+         that part of its scenario already filled in. */
+      var checkDef = (window.CHECK_DEFS || []).find(function (c) { return c.tpl === tpl; });
+      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl,
+        vulnerability: checkDef ? 'Posture scan check failed: ' + checkDef.label + ' (' + new Date().toISOString().slice(0, 10) + ')' : '' };
       await Store.addRisk(newRisk);
       for (var i = 0; i < t.actions.length; i++) {
         var a = t.actions[i];
@@ -6744,6 +6755,37 @@ function showModal(opts) {
     return '<span style="display:inline-flex;gap:4px">' + v.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</span>';
   }
 
+  /* The risk scenario (ISO/IEC 27005:2022): what is at stake, from what,
+     through which weakness, with what result. Asset ids resolve to their
+     names in the asset register. Missing parts are said, not hidden: a
+     scenario without a threat or a consequence is the first thing an
+     auditor sampling the register asks about. */
+  function riskAssetNames(r) {
+    return (r.assetRefs || []).map(function (id) {
+      var a = (S.assets || []).find(function (x) { return x.id === id; });
+      return a ? a.id + ' ' + a.name : id;
+    });
+  }
+  function riskScenarioReportLine(r) {
+    var parts = [];
+    var assets = riskAssetNames(r);
+    if (assets.length) parts.push('Assets: ' + esc(assets.join('; ')));
+    if (r.threat) parts.push('Threat: ' + esc(r.threat));
+    if (r.vulnerability) parts.push('Vulnerability: ' + esc(r.vulnerability));
+    if (r.consequence) parts.push('Consequence: ' + esc(r.consequence));
+    return parts.length ? '<div class="rpt-just">' + parts.join(' · ') + '</div>' : '';
+  }
+  function riskScenarioHtml(r) {
+    var assets = riskAssetNames(r);
+    var row = function (label, v) { return '<div class="d-kv"><span>' + label + '</span><b style="font-weight:500;text-align:right">' + (v ? esc(v) : '<span class="src">Not recorded</span>') + '</b></div>'; };
+    var missing = window.CheckpointLib.riskScenarioGaps(r);
+    return '<div class="d-sec"><h4>Risk scenario (ISO/IEC 27005)</h4>' +
+      row('Assets affected', assets.join('; ')) + row('Threat or risk source', r.threat) + row('Vulnerability', r.vulnerability) +
+      row('Consequence', r.consequence) + row('Threatens', (r.cia || []).join(', ')) +
+      (missing.length ? '<div class="src" style="margin-top:6px;color:var(--warn)">' + icon('flag') + ' Scenario incomplete: add the ' + esc(missing.join(', ')) + ' (Edit risk).</div>' : '') +
+      '</div>';
+  }
+
   /* Review state for one risk, against the tenant's own cadence. Closed
      risks render blank rather than "current": they are not being chased,
      and a green chip on a closed risk implies an assurance nobody gave. */
@@ -6768,9 +6810,51 @@ function showModal(opts) {
     return (S.risks || []).filter(function (r) { return riskReviewStatus(r).due; });
   }
 
+  function opportunityLevel(o) {
+    var sc = (Number(o.L) || 1) * (Number(o.I) || 1);
+    return { score: sc, band: sc >= 15 ? 'Very high' : sc >= 10 ? 'High' : sc >= 5 ? 'Medium' : 'Low' };
+  }
+  /* The opportunities, for the risk register report (ISO 27001 6.1.1
+     asks for risks AND opportunities). Empty when there are none. */
+  function opportunitiesReportSection() {
+    var list = (S.opportunities || []).filter(function (o) { return o.status !== 'Closed'; });
+    if (!list.length) return [];
+    return [{ heading: 'Opportunities', pageBreak: false, html: '<p class="rpt-intro">Uncertainty that could benefit the organisation (ISO 31000), rated by likelihood and benefit and kept separate from the risk levels above.</p>' +
+      '<table class="rpt-table"><thead><tr><th>ID</th><th>Opportunity</th><th>Likelihood × benefit</th><th>Response</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
+      list.map(function (o) {
+        var lv = opportunityLevel(o);
+        return '<tr><td class="rpt-idc">' + esc(o.id) + '</td><td>' + esc(o.title) + (o.consequence ? '<div class="rpt-just">Benefit: ' + esc(o.consequence) + '</div>' : '') + '</td><td>' + lv.score + ' — ' + lv.band + '</td><td>' + esc(o.treat) + '</td><td>' + esc(o.owner) + '</td><td>' + esc(o.status) + '</td></tr>';
+      }).join('') + '</tbody></table>' }];
+  }
+  function renderOpportunities() {
+    var wrap = document.getElementById('oppRows');
+    if (!wrap) return;
+    var list = (S.opportunities || []).slice().sort(function (a, b) {
+      return (a.status === 'Closed') - (b.status === 'Closed') || opportunityLevel(b).score - opportunityLevel(a).score;
+    });
+    if (!list.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 9, text: 'No opportunities recorded. ISO 27001 Clause 6.1.1 asks for the risks and opportunities the management system must address, for example a certification that opens new markets, or a platform change that retires tools.', cta: READONLY ? null : { label: '+ Add opportunity', action: 'App.addOpportunity' } });
+      return;
+    }
+    wrap.innerHTML = list.map(function (o) {
+      var lv = opportunityLevel(o);
+      return '<tr><td class="src">' + esc(o.id) + '</td>' +
+        '<td style="color:var(--paper);max-width:340px">' + esc(o.title) + (o.consequence ? '<div class="src">Benefit: ' + esc(o.consequence) + '</div>' : '') + '</td>' +
+        '<td>' + esc(o.cat || '—') + '</td>' +
+        '<td>' + o.L + ' × ' + o.I + ' = <b>' + lv.score + '</b><div class="src">' + lv.band + '</div></td>' +
+        '<td>' + esc(o.treat || '—') + '</td>' +
+        '<td>' + riskReviewChip(o) + '</td>' +
+        '<td>' + esc(o.owner || '—') + '</td>' +
+        '<td><span class="chip st-' + esc(String(o.status).replace(/ /g, '')) + '">' + esc(o.status) + '</span></td>' +
+        '<td style="white-space:nowrap">' + (READONLY ? '' : '<button class="btn ghost sm" data-action="App.editOpportunity" data-id="' + esc(o.id) + '">Edit</button> <button class="btn ghost sm" data-action="App.reviewOpportunity" data-id="' + esc(o.id) + '">Review</button>') + '</td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
+
   function renderRisks() {
     renderResidualHeatmapInto('riskHeat', 'riskHeatLegend');
     renderRisksDashboard();
+    renderOpportunities();
     var f = window._riskF || 'All';
     /* 'HighCritical' is a synthetic filter value, never one of the pills'
        own data-id — it exists only so a drill-down link (Dashboard/Board
@@ -6974,6 +7058,20 @@ function showModal(opts) {
      risk" panel, not just the bare word. */
   var TREATMENT_OPTS = RISK_TREATMENTS.map(function (t) { return { value: t, label: t + ' — ' + TREATMENT_DESCRIPTIONS[t] }; });
   var RISK_STATUS_OPTS = ['Open', 'In treatment', 'Monitored', 'Closed'];
+  var YES_NO_OPTS = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
+  /* Opportunities (ISO 31000's positive effects; ISO 27001 6.1.1).
+     Responses follow ISO 31000's options for an opportunity: take or
+     increase the risk to pursue it, share it, retain it under review, or
+     decline it. Stored in the risk's `treat` field. */
+  var OPPORTUNITY_RESPONSES = ['Pursue', 'Share', 'Retain', 'Decline'];
+  var OPPORTUNITY_RESPONSE_DESCRIPTIONS = {
+    Pursue: 'take or increase the risk to realise it',
+    Share: 'pursue it with a partner or supplier',
+    Retain: 'keep it under review, act later',
+    Decline: 'decide not to pursue it'
+  };
+  var OPPORTUNITY_STATUS_OPTS = ['Open', 'Pursuing', 'Realised', 'Closed'];
+  var BENEFIT_OPTS = [{ value: 1, label: '1 — Negligible' }, { value: 2, label: '2 — Minor' }, { value: 3, label: '3 — Moderate' }, { value: 4, label: '4 — Major' }, { value: 5, label: '5 — Significant' }];
   var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
   var OBJECTIVE_STATUS_OPTS = ['Not started', 'On track', 'At risk', 'Achieved', 'Missed'];
 
@@ -10170,7 +10268,7 @@ function showModal(opts) {
       md: mandatoryDocsStatus(),
       risks: S.risks, objectives: S.objectives, audits: S.audits, actions: S.actions, reviews: S.reviews,
       training: S.training, attestations: S.attestations, legal: S.legal, aiSystems: S.aiSystems,
-      scans: S.scans, auditLog: S.auditLog, clauses: S.clauses, soaByFw: soaByFw
+      scans: S.scans, auditLog: S.auditLog, clauses: S.clauses, soaByFw: soaByFw, opportunities: S.opportunities
     };
   }
   function clauseChecklistFor(c, ctx) {
@@ -13296,7 +13394,7 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(240, 169, 127,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
-        '<div class="d-kv"><span>Treatment</span><b>' + esc(r.treat) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
+        '<div class="d-kv"><span>Treatment</span><b>' + esc(treatmentLabel(r.treat)) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
         (r.acceptedBy
           ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' +
             (window.CheckpointLib.residualAcceptanceStale(r, q.L * q.I)
@@ -13305,6 +13403,7 @@ function showModal(opts) {
             (r.acceptanceNote ? '<div class="src" style="margin-top:4px">' + esc(r.acceptanceNote) + '</div>' : '')
           : (band(q.L * q.I) !== 'Low' ? '<div class="src" style="margin-top:4px;color:var(--warn)">No residual-acceptance sign-off recorded — auditors expect one on any Medium+ residual risk.</div>' : '')) +
         '</div>' +
+        riskScenarioHtml(r) +
         '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + (r.controls.length ? r.controls.map(function (c) {
           /* risk.controls store bare codes (e.g. "A.5.2"), and different
              frameworks legitimately reuse the same Annex A numbering —
@@ -13613,7 +13712,8 @@ function showModal(opts) {
       var showing = panel.style.display !== 'none';
       panel.style.display = showing ? 'none' : 'block';
       if (!showing) {
-        ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrCia', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
+        ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrOwner', 'nrActions', 'nrAssets', 'nrThreat', 'nrVulnerability', 'nrConsequence'].forEach(function (id) { document.getElementById(id).value = ''; });
+        ['nrCiaC', 'nrCiaI', 'nrCiaA'].forEach(function (id) { var el = document.getElementById(id); if (el) el.checked = false; });
         document.getElementById('nrLikelihood').value = '3';
         document.getElementById('nrImpact').value = '3';
         document.getElementById('nrTreatment').value = 'Treat';
@@ -13675,7 +13775,9 @@ function showModal(opts) {
         var newRisk = {
           id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
           L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
-          controls: [], cia: normaliseCia(document.getElementById('nrCia').value), owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Treat', actions: actIds,
+          controls: [], cia: ['C', 'I', 'A'].filter(function (k) { var el = document.getElementById('nrCia' + k); return el && el.checked; }), owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Treat', actions: actIds,
+          assetRefs: String(document.getElementById('nrAssets').value || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean),
+          threat: document.getElementById('nrThreat').value.trim(), vulnerability: document.getElementById('nrVulnerability').value.trim(), consequence: document.getElementById('nrConsequence').value.trim(),
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
@@ -13784,6 +13886,87 @@ function showModal(opts) {
       renderRisks();
     },
 
+    /* ── Opportunities (ISO 31000; ISO 27001 6.1.1) ──
+       Same SharePoint list as risks (RiskType 'Opportunity'), their own
+       O- ids and their own in-memory register, S.opportunities. */
+    addOpportunity: async function () { return App.editOpportunity(null); },
+    editOpportunity: async function (id) {
+      var o = id ? (S.opportunities || []).find(function (x) { return x.id === id; }) : null;
+      if (id && !o) return;
+      var v = await showModal({
+        title: o ? 'Edit ' + o.id : 'Add an opportunity',
+        message: 'Something uncertain that would benefit the organisation if it happens, for example a certification that opens a market, or a platform change that retires tools. Rated by how likely it is and how much it would help.',
+        fields: [
+          { id: 'title', label: 'Opportunity', type: 'textarea', value: o ? o.title : '', placeholder: 'e.g. ISO 27001 certification lets us bid for government contracts' },
+          { id: 'cat', label: 'Category', value: o ? o.cat : '', placeholder: 'e.g. Market, Technology, Efficiency' },
+          { id: 'benefit', label: 'Benefit if realised', type: 'textarea', value: o ? (o.consequence || '') : '', placeholder: 'e.g. Access to a $1m tender pipeline' },
+          { id: 'owner', label: 'Owner', value: o ? o.owner : '' },
+          { id: 'L', label: 'Likelihood', type: 'select', value: o ? o.L : 3, options: LIKELIHOOD_OPTS },
+          { id: 'I', label: 'Benefit', type: 'select', value: o ? o.I : 3, options: BENEFIT_OPTS },
+          { id: 'treat', label: 'Response', type: 'select', value: o ? o.treat : 'Pursue', options: OPPORTUNITY_RESPONSES.map(function (r) { return { value: r, label: r + ' — ' + OPPORTUNITY_RESPONSE_DESCRIPTIONS[r] }; }) },
+          { id: 'status', label: 'Status', type: 'select', value: o ? o.status : 'Open', options: OPPORTUNITY_STATUS_OPTS }
+        ].concat(o ? [{ id: 'del', label: 'Delete this opportunity?', type: 'select', value: 'no', options: YES_NO_OPTS }] : []),
+        confirmText: o ? 'Save changes' : 'Add opportunity',
+        validate: function (x) { return x.title ? (x.owner ? null : 'Name an owner — ISO 27001 6.1.1 expects each to be owned.') : 'Describe the opportunity.'; }
+      });
+      if (!v) return;
+      if (o && v.del === 'yes') return App.deleteOpportunity(o.id);
+      busy(true);
+      try {
+        if (o) {
+          var before = o.L + '×' + o.I + ' ' + o.status + ' / ' + o.treat;
+          o.title = v.title; o.cat = v.cat || 'Uncategorised'; o.consequence = v.benefit || ''; o.owner = v.owner;
+          o.L = parseInt(v.L, 10) || o.L; o.I = parseInt(v.I, 10) || o.I; o.treat = v.treat; o.status = v.status;
+          await Store.updateRisk(o);
+          audit('Opportunity updated', 'Risk', o.id, before, o.L + '×' + o.I + ' ' + o.status + ' / ' + o.treat);
+          toast('<b>' + o.id + '</b> updated');
+        } else {
+          var maxO = (S.opportunities || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+          var nid = 'O-' + String(maxO + 1).padStart(3, '0');
+          var today = new Date().toISOString().slice(0, 10);
+          var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+          await Store.addRisk({ id: nid, type: 'Opportunity', title: v.title, cat: v.cat || 'Uncategorised', src: 'Manual entry', L: parseInt(v.L, 10) || 3, I: parseInt(v.I, 10) || 3,
+            controls: [], cia: [], owner: v.owner, status: v.status || 'Open', treat: v.treat || 'Pursue', actions: [], consequence: v.benefit || '', lastReviewed: today, lastReviewedBy: who });
+          audit('Opportunity added', 'Risk', nid, '', v.title);
+          toast('<b>' + nid + '</b> added');
+        }
+      } catch (e) { warn(e); toastError('Could not save: ' + esc(e.message || e)); }
+      busy(false);
+      renderAll();
+    },
+    reviewOpportunity: async function (id) {
+      var o = (S.opportunities || []).find(function (x) { return x.id === id; });
+      if (!o) return;
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Record review — ' + o.id,
+        message: 'Confirms this opportunity was reviewed today: still relevant, rated correctly, and the response still right. Last reviewed: ' + (o.lastReviewed || 'never') + '.',
+        fields: [{ id: 'by', label: 'Reviewed by', value: who }, { id: 'note', label: 'Note (optional)', type: 'textarea' }],
+        confirmText: 'Record review',
+        validate: function (x) { return x.by ? null : 'Name who carried out the review.'; }
+      });
+      if (!v) return;
+      var prev = o.lastReviewed || 'never';
+      o.lastReviewed = new Date().toISOString().slice(0, 10); o.lastReviewedBy = v.by;
+      try { await Store.updateRisk(o); } catch (e) { warn(e); }
+      audit('Opportunity reviewed', 'Risk', o.id, prev, o.lastReviewed + ' by ' + v.by + (v.note ? ' — ' + v.note : ''));
+      toast('<b>' + o.id + '</b> review recorded');
+      renderAll();
+    },
+    deleteOpportunity: async function (id) {
+      var o = (S.opportunities || []).find(function (x) { return x.id === id; });
+      if (!o) return;
+      var ok = await showModal({ title: 'Delete ' + o.id + '?', message: 'Permanently remove this opportunity? History remains in the audit log and SharePoint version history.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      try {
+        await Store.deleteRisk(o);
+        S.opportunities = (S.opportunities || []).filter(function (x) { return x.id !== id; });
+        audit('Opportunity deleted', 'Risk', id, o.title, '');
+        toast('<b>' + id + '</b> deleted');
+      } catch (e) { warn(e); }
+      renderAll();
+    },
+
     editRisk: async function (id) {
       var r = risk(id);
       if (!r) return;
@@ -13796,7 +13979,15 @@ function showModal(opts) {
              and availability this risk threatens. Free text in the same
              comma-separated shape as Linked controls below, rather than
              a control this modal does not have; normalised on save. */
-          { id: 'cia', label: 'Threatens (C, I, A)', value: (r.cia || []).join(', '), placeholder: 'e.g. C, I' },
+          { id: 'ciaC', label: 'Threatens confidentiality?', type: 'select', value: (r.cia || []).indexOf('C') !== -1 ? 'yes' : 'no', options: YES_NO_OPTS },
+          { id: 'ciaI', label: 'Threatens integrity?', type: 'select', value: (r.cia || []).indexOf('I') !== -1 ? 'yes' : 'no', options: YES_NO_OPTS },
+          { id: 'ciaA', label: 'Threatens availability?', type: 'select', value: (r.cia || []).indexOf('A') !== -1 ? 'yes' : 'no', options: YES_NO_OPTS },
+          /* The ISO/IEC 27005 risk scenario: asset-based (assets, threat,
+             vulnerability) and event-based (risk source, consequence). */
+          { id: 'assets', label: 'Assets affected (asset register ids, comma-separated)', value: (r.assetRefs || []).join(', '), placeholder: 'e.g. AST-004, AST-012' },
+          { id: 'threat', label: 'Threat or risk source', type: 'textarea', value: r.threat || '', placeholder: 'e.g. Phishing campaign targeting staff credentials' },
+          { id: 'vulnerability', label: 'Vulnerability exploited', type: 'textarea', value: r.vulnerability || '', placeholder: 'e.g. MFA not enforced for all users' },
+          { id: 'consequence', label: 'Consequence if it happens', type: 'textarea', value: r.consequence || '', placeholder: 'e.g. Unauthorised access to client records; notifiable data breach' },
           { id: 'owner', label: 'Risk owner', value: r.owner },
           { id: 'L', label: 'Likelihood', type: 'select', value: r.L, options: LIKELIHOOD_OPTS },
           { id: 'I', label: 'Impact', type: 'select', value: r.I, options: IMPACT_OPTS },
@@ -13814,7 +14005,9 @@ function showModal(opts) {
         r.title = v.title; r.cat = v.cat || 'Uncategorised'; r.owner = v.owner || 'Unassigned';
         r.L = parseInt(v.L, 10) || r.L; r.I = parseInt(v.I, 10) || r.I; r.treat = v.treat; r.status = v.status;
         r.controls = v.controls.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-        r.cia = normaliseCia(v.cia);
+        r.cia = ['C', 'I', 'A'].filter(function (k) { return v['cia' + k] === 'yes'; });
+        r.assetRefs = String(v.assets || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+        r.threat = String(v.threat || '').trim(); r.vulnerability = String(v.vulnerability || '').trim(); r.consequence = String(v.consequence || '').trim();
         await Store.updateRisk(r);
         audit('Risk updated', 'Risk', r.id, before, r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat);
         toast('<b>' + r.id + '</b> updated');
