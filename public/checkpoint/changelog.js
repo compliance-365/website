@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.106.0',
+    date: '2026-09-30',
+    entries: [
+      'Every management system clause now lists what it actually requires. Open "Requirements" on any clause (Clauses 4\u201310, ISO 27001 and ISO 42001) to see each requirement in plain English, the evidence an auditor expects for it, and whether it is met. Checkpoint ticks off what it can see in your documents, answers and registers; for the rest, you record where the evidence is.',
+      'A clause can only be marked Implemented once every requirement is met and evidence is linked to it. The same rule applies when a document is approved, when Checkpoint updates clauses automatically, and when a clause is verified. Clauses already marked Implemented keep their status and show which requirements are still open.',
+      'Clause 4 documents no longer fill unanswered questions with generic wording. Anything the organisation has not yet determined (its issues, interested parties, scope, climate change determination) shows as a highlighted "[To be completed]" in the draft, and the document cannot be approved until it is answered in Settings \u2192 Scope & context.',
+      'Climate change (ISO/IEC 27001 and ISO/IEC 42001 Amendment 1, 2024): the scope & context questionnaire now also asks whether interested parties have climate-related requirements, and the AI Management System Scope records the climate change determination.'
+    ]
+  },
+  {
     version: '1.105.1',
     date: '2026-09-27',
     entries: [

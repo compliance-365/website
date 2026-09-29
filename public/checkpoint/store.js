@@ -950,9 +950,9 @@ window.DEFAULT_SETTINGS = {
   /* Organisation profile — the Clause 4.2/4.3 facts generated policy
      documents fill themselves in from (see ORG_PROFILE_FIELDS in
      templates.js and resolveOrgTokens() in app.js). Empty by default:
-     every token falls back to the generic wording the templates
-     carried before, so a tenant that never opens the wizard is
-     unaffected. Ordinary Settings rows, so no list schema changes and
+     an optional token falls back to generic wording, and a required
+     one (a Clause 4 determination) shows as "[To be completed: …]"
+     until it is answered. Ordinary Settings rows, so no list schema changes and
      nothing for COLUMN_RECONCILE to heal. */
   orgIndustry: '',
   orgBusinessUnits: '',
@@ -984,6 +984,7 @@ window.DEFAULT_SETTINGS = {
   orgAiUse: '',
   orgChange: '',
   orgClimateRelevant: '',
+  orgClimatePartyReqs: '',
   /* Comma-separated ids into window.TECH_STACK_OPTIONS (templates.js) —
      which of a short, self-declared list of technology categories this
      tenant actually runs. Drives the "relevant to you" sort in the
@@ -1654,7 +1655,16 @@ window.DemoStore = (function () {
         var verified = st === 'Implemented' ? daysFrom(i % 3 === 0 ? -100 : -20) : '';
         var evidenceUrl = st === 'Implemented' && i % 3 === 0 ? 'https://meridianhealthsaas.sharepoint.com/sites/compliance/Evidence/Clause-' + c.code + '.pdf' : '';
         var verifiedBy = st === 'Implemented' ? owners[i % owners.length] : '';
-        return { id: c.code, fw: c.fw, t: c.t, st: st, own: st === 'Not started' ? '' : owners[i % owners.length], verified: verified, evidenceUrl: evidenceUrl, verifiedBy: verifiedBy };
+        /* An Implemented demo clause has its requirement checklist
+           confirmed too, so the example tenant shows what a finished
+           clause looks like rather than a flag on every row. */
+        var reqs = {};
+        if (st === 'Implemented' && window.CheckpointLib && window.CheckpointLib.clauseRequirementsFor) {
+          window.CheckpointLib.clauseRequirementsFor(c.fw, c.code).forEach(function (r) {
+            reqs[r.id] = { by: verifiedBy, date: verified, note: 'Example evidence in Evidence \u203a ' + (c.fw === 'iso42001' ? 'ISO 42001' : 'ISO 27001') + ' \u203a Clause ' + c.code };
+          });
+        }
+        return { id: c.code, fw: c.fw, t: c.t, st: st, own: st === 'Not started' ? '' : owners[i % owners.length], verified: verified, evidenceUrl: evidenceUrl, verifiedBy: verifiedBy, reqs: reqs };
       }),
       /* Every framework is switched ON in demo mode. The demo exists to
          show how each module works, and the control sets behind them are
@@ -2214,7 +2224,11 @@ window.SpStore = (function () {
     Clauses: [
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Status', text: {} },
       { name: 'Owner', text: {} }, { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} },
-      { name: 'VerifiedBy', text: {} }
+      { name: 'VerifiedBy', text: {} },
+      /* Who confirmed each clause requirement Checkpoint cannot see
+         for itself, and where the evidence is — JSON, keyed by
+         requirement id (CheckpointLib.CLAUSE_REQUIREMENTS). */
+      { name: 'Requirements', text: { allowMultipleLines: true } }
     ],
     Scans: [
       { name: 'ScanDate', text: {} }, { name: 'Score', number: {} }, { name: 'Detail', text: { allowMultipleLines: true } }
@@ -2839,7 +2853,9 @@ window.SpStore = (function () {
        provisioned before either existed has a Vendors list missing
        them, same "Field not recognized" failure class as the others in
        this map. */
-    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate']
+    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate'],
+    /* Requirements added with the clause requirement checklists. */
+    Clauses: ['Requirements']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
@@ -3172,7 +3188,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         clauses: clauseItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, st: f.Status || 'Not started', own: f.Owner || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
+          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, st: f.Status || 'Not started', own: f.Owner || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '', reqs: window.CheckpointLib.parseClauseConfirmations(f.Requirements) };
         }).sort(function (a, b) {
           /* Grouped by framework (FRAMEWORK_ORDER), then numerically by
              code — two frameworks' "4.1" must not interleave. */
@@ -3436,7 +3452,7 @@ window.SpStore = (function () {
       await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
     },
     updateClause: async function (c) {
-      await patchItem('Clauses', c._sp, { Status: c.st, Owner: c.own, LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
+      await patchItem('Clauses', c._sp, { Status: c.st, Owner: c.own, LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '', Requirements: JSON.stringify(c.reqs || {}) });
     },
     addScan: async function (sc) {
       sc._sp = await addItem('Scans', { Title: 'Scan ' + sc.date, ScanDate: sc.date, Score: sc.score, Detail: sc.detail || '' });

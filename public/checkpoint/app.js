@@ -786,7 +786,7 @@ function showModal(opts) {
     'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'requestVendorQuestionnaireLink', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
-    'setClauseStatus', 'verifyClause', 'setClauseEvidence', 'setClauseOwner',
+    'setClauseStatus', 'verifyClause', 'setClauseEvidence', 'setClauseOwner', 'confirmClauseRequirement', 'removeClauseRequirement',
     'addControlEvidenceFiles', 'addClauseEvidenceFiles', 'syncEvidenceFolders',
     'toggleShareSetupHealth',
     /* Bulk equivalents of setSt/toggleApp — gated for the same reason
@@ -3593,8 +3593,11 @@ function showModal(opts) {
 
      An unanswered field falls back to the field's own `fallback` —
      the generic wording the template carried before profiles
-     existed — so a tenant that never opens the wizard generates
-     exactly the document it always did. An unknown token (a typo in
+     existed — except a `required` one (a Clause 4 determination),
+     which renders as a visible "[To be completed: …]" marker: generic
+     wording there would claim a determination nobody made, and a
+     document carrying a marker cannot be approved (see
+     templatePendingItems()). An unknown token (a typo in
      a template, or one removed from ORG_PROFILE_FIELDS later)
      resolves to its own fallback-less empty string rather than
      leaking a literal "{{token}}" into an approved policy, which is
@@ -3623,9 +3626,15 @@ function showModal(opts) {
     return str.replace(/\{\{(\w+)\}\}(?=(\.|,|;| —)?)/g, function (whole, token, next) {
       var f = orgProfileFieldByToken(token);
       if (!f) return '';
-      var v = orgProfileValue(f.key) || f.fallback || '';
+      var v = orgProfileValue(f.key) || (f.required ? window.CheckpointLib.pendingMarker(f.label) : f.fallback) || '';
       return next ? v.replace(/\.\s*$/, '') : v;
     });
+  }
+
+  /* The "[To be completed: …]" items still in a document's effective
+     content — what has to be answered before it can be approved. */
+  function templatePendingItems(content) {
+    return window.CheckpointLib.pendingMarkersIn(content);
   }
 
   /* Walks the text-bearing shape of a template. Deliberately explicit
@@ -4025,12 +4034,17 @@ function showModal(opts) {
         : '') +
       layoutCss(layout, accent, accentRgb) +
       standalonePrintCss({ classification: opts.classification, draft: !opts.approved }) +
+      'mark.tbc{background:#FFF1B8;color:#7A4B00;padding:0 3px;border-radius:3px;font-weight:600}' +
       '</style></head><body>' +
       standaloneRunningMarks({
         classification: opts.classification, draft: !opts.approved, title: t.title,
         meta: (opts.version ? 'v' + opts.version : '') + (opts.owner ? ' · ' + opts.owner : '')
       }) +
-      watermarkHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' + body +
+      /* An unanswered required answer (resolveOrgTokens()) is highlighted
+         so it cannot be missed in the draft. The marker text is already
+         escaped here, so this only wraps it. */
+      watermarkHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' +
+      body.replace(/\[To be completed: [^\]<]*\]/g, function (m) { return '<mark class="tbc">' + m + '</mark>'; }) +
       '<div class="pf"><span>Compliance365 — Checkpoint</span><span>' + (opts.approved ? 'Approved · ' : 'Draft · ') + esc(opts.generatedDate) + '</span></div>' +
       '</body></html>';
   }
@@ -4180,6 +4194,10 @@ function showModal(opts) {
         c.evidenceUrl = u.set.evidenceUrl;
         linked++;
       }
+      /* An approved document can complete a clause only when the
+         clause's other requirements are met too; otherwise it moves
+         the clause to In progress and the checklist shows what is left. */
+      if (u.set.st === 'Implemented' && !clauseGateFor(c).ok) u.set.st = c.st === 'In progress' ? '' : 'In progress';
       if (u.set.st) {
         audit('Clause status changed', 'Clause', clauseLabel(c), c.st, u.set.st + (stage === 'approved' ? ' (document approved)' : ' (document generated)'));
         c.st = u.set.st;
@@ -4279,6 +4297,11 @@ function showModal(opts) {
        defect, not a limitation; effectivePolicyContent() closes it. */
     var tailored = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
     var effective = effectivePolicyContent(tailored, name);
+    /* Never approve a document that still says "[To be completed: …]".
+       approveTemplate() explains this before asking; this is the
+       backstop for every other route here (bulk approval). */
+    var pending = templatePendingItems(effective);
+    if (pending.length) throw new Error('still to be completed: ' + pending.join('; '));
     /* The approved copy carries the review date just confirmed, not
        the one baked in at generation — otherwise the printed document
        and the register would disagree the moment anyone shifted the
@@ -4306,6 +4329,12 @@ function showModal(opts) {
        re-listing the document library after every document. */
     if (!quiet) { renderDocuments(); renderDash(); }
 
+    /* The document list refreshes asynchronously, but the clause
+       checklist below reads it now: record this approval in the cached
+       copy first, so the clause sees the document as Approved. */
+    var cachedDoc = (window._docs || []).find(function (x) { return x.name === name; });
+    if (cachedDoc) { cachedDoc.status = 'Approved'; cachedDoc.tplId = cachedDoc.tplId || t.id; }
+    else if (Array.isArray(window._docs)) window._docs.push({ name: name, status: 'Approved', tplId: t.id, url: approvedDoc && approvedDoc.url });
     var clauseNote = approvedDoc && approvedDoc.url ? applyClauseDocumentUpdates(t.id, approvedDoc.url, 'approved') : '';
     return { approvedDoc: approvedDoc, clauseNote: clauseNote };
   }
@@ -9577,6 +9606,11 @@ function showModal(opts) {
       risks: S.risks, training: S.training, audits: S.audits, reviews: S.reviews, objectives: S.objectives,
       actions: S.actions, aiSystems: S.aiSystems, docs: docs, scans: S.scans
     }, today);
+    /* The same gate as a manual change: automation never marks a clause
+       Implemented, or re-verifies one, while its requirement checklist
+       is incomplete or no evidence is linked. */
+    var md = mandatoryDocsStatus();
+    updates = updates.filter(function (u) { return clauseGateFor(Object.assign({}, u.clause, u.set), md).ok; });
     if (!updates.length) return;
     _clauseAutomationBusy = true;
     var promoted = [];
@@ -10049,6 +10083,23 @@ function showModal(opts) {
   function clauseReviewStatus(c) {
     return window.CheckpointLib.controlReviewStatus(Object.assign({}, c, { app: true }), new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
   }
+  /* The clause's requirement checklist (CheckpointLib.clauseChecklist)
+     resolved against this tenant's documents, profile and registers.
+     `md` is the Stage 1 checklist, passed in when rendering many
+     clauses so it is computed once. */
+  function clauseChecklistFor(c, md) {
+    return window.CheckpointLib.clauseChecklist({
+      fw: c.fw || 'iso27001', code: c.id,
+      docs: (window._docs || S.documents || []).map(function (d) { return { tplId: d.tplId, status: docStatusOf(d) }; }),
+      settings: S.settings || {},
+      md: md || mandatoryDocsStatus(),
+      risks: S.risks, objectives: S.objectives, audits: S.audits, actions: S.actions,
+      confirmed: c.reqs || {}
+    });
+  }
+  function clauseGateFor(c, md) {
+    return window.CheckpointLib.clauseImplementGate(clauseChecklistFor(c, md), c);
+  }
   function renderClausesDashboard() {
     var el = document.getElementById('clauseKpiRow');
     if (!el) return;
@@ -10086,10 +10137,21 @@ function showModal(opts) {
     var hints = {};
     (window.CLAUSE_DEFS || []).forEach(function (d) { if (d.hint) hints[d.fw + '|' + d.code] = d.hint; });
     var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
+    var md = mandatoryDocsStatus();
     var lastFw = null;
     wrap.innerHTML = clauses.map(function (c) {
       var rv = clauseReviewStatus(c);
       var key = esc(clauseKey(c));
+      /* What the clause actually requires, met or not — the auditor's
+         view of it. An Implemented clause whose checklist is no longer
+         complete (set before checklists existed, or a document since
+         moved back to draft) is flagged rather than silently changed. */
+      var cl = clauseChecklistFor(c, md);
+      var reqLine = cl.total
+        ? '<div style="margin-top:4px"><button class="lnk src" data-action="App.openClauseRequirements" data-id="' + key + '">' +
+          (cl.complete ? icon('check') + ' ' : '') + 'Requirements: ' + cl.met + ' of ' + cl.total + ' met</button>' +
+          (c.st === 'Implemented' && !cl.complete ? ' <span class="verify-stale">' + icon('flag') + ' Implemented, but ' + (cl.total - cl.met) + ' not met</span>' : '') + '</div>'
+        : '';
       /* A heading row per management system once there is more than
          one — otherwise 27001's and 42001's identical numbering reads
          as the same list twice. */
@@ -10107,7 +10169,7 @@ function showModal(opts) {
         ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + key + '">Edit</button>'
         : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + key + '">Link evidence</button>';
       evidenceCell += evidenceFolderLine(evidenceFolderFor('clause', c.fw, c.id), 'App.addClauseEvidenceFiles', key, isEvidenceFolderUrl(c.evidenceUrl));
-      return groupRow + '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + '</td>' +
+      return groupRow + '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + reqLine + '</td>' +
         '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + key + '" aria-label="' + esc(clauseLabel(c)) + ' status">' +
         ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
         '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
@@ -11918,7 +11980,7 @@ function showModal(opts) {
         '<div><b>Scope &amp; context (ISO 27001 Clause 4)</b><p>' +
         (orgFilled
           ? esc(orgIndLabel || 'Profile set') + ' · ' + orgFilled + ' of ' + orgTotal + ' answered. Generated documents fill themselves in from these.'
-          : 'Not set yet. A short questionnaire drafts the scope statement, internal and external issues, interested parties and their requirements, and interfaces. Until then, documents generate with generic wording — valid, but less specific than an auditor expects for Clause 4.') +
+          : 'Not set yet. A short questionnaire drafts the scope statement, internal and external issues, interested parties and their requirements, and interfaces. Until then, the Clause 4 documents generate with “[To be completed]” markers and cannot be approved.') +
         '</p></div>' +
         '<button class="btn ' + (orgFilled ? 'ghost ' : '') + 'sm" data-action="App.orgProfileWizard">' + (orgFilled ? 'Review answers' : 'Start questionnaire') + '</button>';
     }
@@ -15085,13 +15147,25 @@ function showModal(opts) {
     setClauseStatus: async function (key, v) {
       var c = findClause(key);
       if (!c) return;
-      if (v === 'Implemented' && !c.evidenceUrl) {
-        var proceed = await showModal({
-          title: 'No evidence linked',
-          message: 'Marking this Implemented with no linked evidence. Auditors typically require evidence for every implemented clause — continue anyway?',
-          confirmText: 'Mark Implemented'
-        });
-        if (!proceed) { renderClauses(); return; }
+      /* No evidence, no Implemented: every requirement of the clause met
+         (by Checkpoint's own records or a named confirmation of where
+         the evidence is), and evidence linked to the clause. A hard
+         stop, not a warning — "Implemented" is what the auditor reads. */
+      if (v === 'Implemented') {
+        var gate = clauseGateFor(c);
+        if (!gate.ok) {
+          renderClauses();
+          var show = await showModal({
+            title: clauseLabel(c) + ' is not ready to be Implemented',
+            message: 'Before a clause can be marked Implemented, every requirement must be met and evidence must be linked:\n\n' +
+              gate.reasons.map(function (r) { return '• ' + r.charAt(0).toUpperCase() + r.slice(1); }).join('\n') +
+              (gate.open.length ? '\n\nStill open:\n' + gate.open.slice(0, 6).map(function (i) { return '• ' + i.text; }).join('\n') + (gate.open.length > 6 ? '\n• …and ' + (gate.open.length - 6) + ' more' : '') : ''),
+            confirmText: 'Show the requirements',
+            cancelText: 'Close'
+          });
+          if (show) App.openClauseRequirements(key);
+          return;
+        }
       }
       var prevSt = c.st;
       c.st = v;
@@ -15100,9 +15174,98 @@ function showModal(opts) {
       renderClauses(); renderDash(); renderNavCounts();
     },
 
+    /* The clause's requirements, one by one, with what an auditor
+       expects to see for each and how each is met — by Checkpoint's own
+       records, or by someone recording where the evidence is. */
+    openClauseRequirements: function (key) {
+      var c = findClause(key);
+      if (!c) return;
+      var cl = clauseChecklistFor(c);
+      var gate = window.CheckpointLib.clauseImplementGate(cl, c);
+      var ro = !!READONLY;
+      var rows = cl.items.map(function (i) {
+        var chip = i.status === 'met' ? '<span class="chip st-Implemented">Met</span>'
+          : i.status === 'partial' ? '<span class="chip st-Intreatment">Partly</span>'
+          : '<span class="chip st-Notstarted">Not met</span>';
+        var how = i.how === 'auto' ? 'Met by Checkpoint\u2019s records: ' + esc(i.note)
+          : i.how === 'confirmed' ? 'Confirmed by ' + esc(i.by || 'someone') + (i.date ? ' on ' + fmtDate(i.date) : '') + ': ' + esc(i.note)
+          : i.note ? esc(i.note) : (i.auto ? '' : 'Checkpoint cannot see this in its records \u2014 record where the evidence is.');
+        var btn = ro ? '' : i.how === 'confirmed'
+          ? '<button class="btn ghost sm" style="margin-top:6px" data-action="App.removeClauseRequirement" data-id="' + esc(key + '#' + i.id) + '">Remove confirmation</button>'
+          : i.status !== 'met' ? '<button class="btn sm" style="margin-top:6px" data-action="App.confirmClauseRequirement" data-id="' + esc(key + '#' + i.id) + '">Record the evidence</button>' : '';
+        return '<div class="d-sec" style="padding-top:10px">' +
+          '<div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:0 0 auto">' + chip + '</div>' +
+          '<div style="font-size:12.5px;line-height:1.6"><div style="color:var(--paper)">' + esc(i.text) + '</div>' +
+          '<div class="src" style="margin-top:4px"><b>Evidence an auditor expects:</b> ' + esc(i.evidence) + '</div>' +
+          (how ? '<div class="src" style="margin-top:4px">' + how + '</div>' : '') + btn + '</div></div></div>';
+      }).join('');
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + esc(clauseLabel(c)) + '</div><h2>' + esc(c.t) + '</h2>' +
+        '<div class="d-sec"><h4>What this clause requires</h4>' +
+        '<div class="d-kv"><span>Requirements met</span><b>' + cl.met + ' of ' + cl.total + '</b></div>' +
+        '<div class="d-kv"><span>Evidence linked to the clause</span><b>' + (c.evidenceUrl ? 'Yes' : '<span class="verify-stale">' + icon('flag') + ' None</span>') + '</b></div>' +
+        '<div class="d-kv"><span>Can be marked Implemented</span><b>' + (gate.ok ? 'Yes' : 'Not yet \u2014 ' + esc(gate.reasons.join('; '))) + '</b></div>' +
+        '<p class="src" style="margin-top:8px">Written in plain English for Checkpoint, not quoted from the standard. Check each against your copy of the standard.</p></div>' +
+        rows;
+      openDrawerUi(clauseLabel(c) + ' requirements');
+    },
+
+    /* Records where the evidence for one requirement is — a named,
+       dated statement, never a bare tick. */
+    confirmClauseRequirement: async function (id) {
+      var parts = String(id).split('#'), key = parts[0], reqId = parts[1];
+      var c = findClause(key);
+      if (!c) return;
+      var req = window.CheckpointLib.clauseRequirementsFor(c.fw || 'iso27001', c.id).find(function (r) { return r.id === reqId; });
+      if (!req) return;
+      var v = await showModal({
+        title: 'Record the evidence — ' + clauseLabel(c),
+        message: req.text + '\n\nEvidence an auditor expects: ' + req.evidence,
+        fields: [{ id: 'note', label: 'Where is the evidence, and what does it show?', type: 'textarea', placeholder: 'e.g. Management review minutes 12 March 2026, item 4, in Evidence › ISO 27001 › Clause 5.1' }],
+        confirmText: 'Record',
+        validate: function (x) { return String(x.note || '').trim().length < 10 ? 'Say where the evidence is and what it shows — an auditor will ask to see it.' : null; }
+      });
+      if (!v) return;
+      var by = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+      c.reqs = Object.assign({}, c.reqs || {});
+      c.reqs[reqId] = { by: by, date: new Date().toISOString().slice(0, 10), note: String(v.note).trim() };
+      try { await Store.updateClause(c); } catch (e) { warn(e); toastError('Could not save: ' + esc(e.message || e)); return; }
+      audit('Clause requirement confirmed', 'Clause', clauseLabel(c), '', reqId + ' — ' + c.reqs[reqId].note);
+      renderClauses(); renderDash();
+      App.openClauseRequirements(key);
+    },
+
+    removeClauseRequirement: async function (id) {
+      var parts = String(id).split('#'), key = parts[0], reqId = parts[1];
+      var c = findClause(key);
+      if (!c || !c.reqs || !c.reqs[reqId]) return;
+      var ok = await showModal({ title: 'Remove this confirmation?', message: 'The requirement goes back to not met' + (c.st === 'Implemented' ? ', and the clause will show as Implemented with a requirement not met until it is confirmed again' : '') + '.', confirmText: 'Remove' });
+      if (!ok) return;
+      var prev = c.reqs[reqId].note;
+      c.reqs = Object.assign({}, c.reqs);
+      delete c.reqs[reqId];
+      try { await Store.updateClause(c); } catch (e) { warn(e); toastError('Could not save: ' + esc(e.message || e)); return; }
+      audit('Clause requirement confirmation removed', 'Clause', clauseLabel(c), reqId + ' — ' + prev, '');
+      renderClauses(); renderDash();
+      App.openClauseRequirements(key);
+    },
+
     verifyClause: async function (key) {
       var c = findClause(key);
       if (!c) return;
+      /* Verifying says the clause is still met, so its checklist must be. */
+      var vGate = clauseGateFor(c);
+      if (!vGate.ok && vGate.open.length) {
+        var showReqs = await showModal({
+          title: clauseLabel(c) + ' cannot be verified yet',
+          message: vGate.open.length + ' requirement' + (vGate.open.length > 1 ? 's are' : ' is') + ' not met:\n\n' + vGate.open.slice(0, 6).map(function (i) { return '• ' + i.text; }).join('\n') + (vGate.open.length > 6 ? '\n• …and ' + (vGate.open.length - 6) + ' more' : ''),
+          confirmText: 'Show the requirements',
+          cancelText: 'Close'
+        });
+        if (showReqs) App.openClauseRequirements(key);
+        return;
+      }
       if (!c.evidenceUrl) {
         var proceed = await showModal({
           title: 'No evidence linked',
@@ -16237,7 +16400,7 @@ function showModal(opts) {
 
       var step2 = await showModal({
         title: stepTitle(2, 'What is in scope'),
-        message: 'Where the ISMS boundary sits (Clause 4.3). Anything left blank falls back to the generic wording — "all business units", "all locations" — so a partial answer is fine.',
+        message: 'Where the ISMS boundary sits (Clause 4.3). These are required: anything left blank shows as “[To be completed]” in the scope document until it is answered. Exclusions can be left blank if nothing is excluded.',
         fields: [
           { id: 'businessUnits', label: fld('orgBusinessUnits').label, type: 'textarea', value: orgProfileValue('orgBusinessUnits'), placeholder: 'e.g. Engineering, Customer Support, Finance' },
           { id: 'locations', label: fld('orgLocations').label, type: 'textarea', value: orgProfileValue('orgLocations'), placeholder: 'e.g. the Brisbane office, and staff working remotely within Australia' },
@@ -16265,7 +16428,7 @@ function showModal(opts) {
         return existing;
       }
 
-      var draftNote = 'Drafted from your answers — edit freely. Anything left blank falls back to generic wording.';
+      var draftNote = 'Drafted from your answers — edit freely. Anything left blank shows as “[To be completed]” in the documents until it is answered.';
       var step3 = await showModal({
         title: stepTitle(3, 'Context of the organisation (Clause 4.1)'),
         message: 'The issues inside and outside the organisation that affect what its information security needs to achieve. ' + draftNote,
@@ -16415,7 +16578,7 @@ function showModal(opts) {
       if (todo.some(templateUsesOrgTokens) && !orgProfileStarted()) {
         var wants = await showModal({
           title: 'Answer the scope & context questionnaire first?',
-          message: 'Several of these documents — the ISMS Scope, the Context & Interested Parties, and others — fill themselves in from the client\'s answers. Answer it now and the whole set is specific to this organisation; skip, and they generate with generic wording.',
+          message: 'Several of these documents — the ISMS Scope, the Context & Interested Parties, and others — fill themselves in from the client\'s answers. Answer it now and the whole set is specific to this organisation; skip, and they generate with “[To be completed]” markers that must be answered before approval.',
           confirmText: 'Answer the questionnaire',
           cancelText: 'Skip for now'
         });
@@ -16503,7 +16666,7 @@ function showModal(opts) {
         }
       });
       if (!vals) return;
-      var approved = [], skipped = [], failed = [], clauseNotes = [];
+      var approved = [], skipped = [], failed = [], incomplete = [], clauseNotes = [];
       busy(true);
       for (var i = 0; i < drafts.length; i++) {
         var x = drafts[i];
@@ -16512,7 +16675,10 @@ function showModal(opts) {
           var res = await saveApprovedTemplate(x.doc.name, x.doc.category || 'Policies & Procedures', x.t, x.params, x.doc, vals, x.sod, true);
           approved.push(x.t.title);
           if (res.clauseNote) clauseNotes.push(res.clauseNote);
-        } catch (e) { warn(e); failed.push(x.t.title); }
+        } catch (e) {
+          if (/^still to be completed/.test(e && e.message)) { incomplete.push(x.t.title); continue; }
+          warn(e); failed.push(x.t.title);
+        }
       }
       busy(false);
       renderDocuments(); renderClauses(); renderDash(); renderNavCounts();
@@ -16521,8 +16687,9 @@ function showModal(opts) {
         (failed.length ? ', ' + failed.length + ' failed (' + esc(failed.join(', ')) + ')' : '') + '.');
       var msg = approved.length + ' document' + (approved.length === 1 ? '' : 's') + ' approved' +
         (skipped.length ? '; ' + skipped.length + ' need another approver' : '') +
+        (incomplete.length ? '; ' + incomplete.length + ' still have items to be completed (' + esc(incomplete.join(', ')) + ') — answer them in Settings → Scope & context' : '') +
         (failed.length ? '; ' + failed.length + ' could not be saved — approve those individually' : '') + '.';
-      (failed.length ? toastError : toast)(msg);
+      (failed.length || incomplete.length ? toastError : toast)(msg);
     },
 
     generateTemplate: async function () {
@@ -16542,7 +16709,7 @@ function showModal(opts) {
       if (templateUsesOrgTokens(t) && !orgProfileStarted()) {
         var wants = await showModal({
           title: 'Fill this document in automatically?',
-          message: '“' + t.title + '” asks the organisation to be specific about things no template can know — its business units, locations, interested parties and regulatory obligations.\n\nAnswer them once and every document that needs them is filled in from now on. Skip, and the document generates with generic wording you can edit later.',
+          message: '“' + t.title + '” asks the organisation to be specific about things no template can know — its business units, locations, interested parties and regulatory obligations.\n\nAnswer them once and every document that needs them is filled in from now on. Skip, and the document generates with “[To be completed]” markers where an answer is needed. It cannot be approved until they are filled in.',
           confirmText: 'Answer the questionnaire',
           cancelText: 'Skip for now'
         });
@@ -16596,6 +16763,8 @@ function showModal(opts) {
       var clauseNote = applyClauseDocumentUpdates(t.id, doc.url, 'generated');
       var controlNote = linkTemplateControls(t, doc.url);
       var notes = [clauseNote && 'management system clauses: ' + clauseNote, controlNote].filter(Boolean);
+      var pending = templatePendingItems(effective);
+      if (pending.length) notes.push(pending.length + ' item' + (pending.length > 1 ? 's' : '') + ' to be completed before it can be approved (Settings → Scope & context)');
       toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved' + (tailored ? ' (AI-assisted)' : '') + '.' + (notes.length ? ' ' + esc(notes.join('; ')) + '.' : ''));
     },
 
@@ -16612,6 +16781,21 @@ function showModal(opts) {
       try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
       var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
       if (!t) { toastError('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
+      /* A document still carrying "[To be completed: …]" markers is not
+         ready: approving it would put a gap on the record as final. */
+      var pendingBase = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
+      var pendingItems = templatePendingItems(effectivePolicyContent(pendingBase, name));
+      if (pendingItems.length) {
+        var answer = await showModal({
+          title: 'Not ready to approve',
+          message: '“' + name + '” still has ' + pendingItems.length + ' item' + (pendingItems.length > 1 ? 's' : '') + ' to be completed:\n\n' + pendingItems.map(function (x) { return '• ' + x; }).join('\n') +
+            '\n\nThese are determinations ISO 27001 expects the organisation to have made. Answer them in the scope & context questionnaire, then approve.',
+          confirmText: 'Open the questionnaire',
+          cancelText: 'Not now'
+        });
+        if (answer) await App.orgProfileWizard();
+        return;
+      }
       var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
       /* A.5.3 — checked before the approval dialog opens, so a refused
          approval doesn't waste the practitioner's time filling one in. */
