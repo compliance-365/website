@@ -2077,7 +2077,7 @@ window.POLICY_TEMPLATES = [
       },
       {
         rule: '{{climate}}',
-        because: 'Since ISO/IEC 27001:2022 Amendment 1 (2024), the organisation must determine whether climate change is a relevant issue, and auditors now ask to see the determination.'
+        because: 'Since ISO/IEC 27001:2022 Amendment 1 (2024), the organisation must determine whether climate change is a relevant issue and consider whether interested parties have climate-related requirements, and auditors now ask to see both.'
       },
       {
         rule: 'Context and interested parties are a standing input to management review, and this document is updated whenever a material change in either is identified.',
@@ -2604,6 +2604,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'The issues that affect how the organisation governs AI have been determined. They include: {{aiIssues}}',
         because: 'ISO 42001 Clause 4.1 asks what shapes the intended outcomes of the AIMS, and those issues are what its risk assessment must answer to.'
+      },
+      {
+        rule: 'Climate change has been considered for the AI management system as well as the ISMS. {{climate}}',
+        because: 'ISO/IEC 42001:2023 Amendment 1 (2024) adds the same climate change determination to Clause 4.1, and the note on climate-related requirements to Clause 4.2, as ISO 27001.'
       },
       {
         rule: 'The needs and expectations of interested parties affected by the organisation’s AI — {{interestedParties}} — have been considered in setting this scope, including individuals subject to AI-driven outputs and decisions.',
@@ -3436,10 +3440,16 @@ window.POLICY_TEMPLATES = [
 
    `token` is what a template writes as {{token}}; resolveOrgTokens()
    in app.js substitutes it. A field left blank falls back to its
-   `fallback` text — the original generic wording — so an
-   unanswered profile degrades to exactly the document Checkpoint
-   generated before this feature existed, never to an empty gap or
-   a literal "{{token}}" leaking into an approved policy. */
+   `fallback` text, never to an empty gap or a literal "{{token}}"
+   leaking into an approved policy.
+
+   `required: true` marks the facts ISO 27001 and ISO 42001 expect the
+   organisation to have actually determined (Clause 4). Generic
+   wording there would claim a determination nobody made, which is
+   the first thing an auditor tests, so a blank required field renders
+   as a visible "[To be completed: …]" marker instead, and a document
+   carrying one cannot be approved. Their `fallback` is kept only as
+   the wording to show in the questionnaire as an example. */
 window.ORG_PROFILE_FIELDS = [
   {
     key: 'orgIndustry', token: 'industry', label: 'Industry',
@@ -3448,30 +3458,35 @@ window.ORG_PROFILE_FIELDS = [
     fallback: 'the organisation’s sector'
   },
   {
+    required: true,
     key: 'orgBusinessUnits', token: 'businessUnits', label: 'Business units and teams in scope',
     type: 'textarea',
     hint: 'The parts of the business the ISMS covers — e.g. "Engineering, Customer Support, Finance". Clause 4.3.',
     fallback: 'all of them — no business unit or team is excluded'
   },
   {
+    required: true,
     key: 'orgLocations', token: 'locations', label: 'Locations in scope',
     type: 'textarea',
     hint: 'Offices, sites or "remote-first" — wherever work in scope actually happens.',
     fallback: 'all locations from which the organisation operates'
   },
   {
+    required: true,
     key: 'orgServices', token: 'services', label: 'Products or services in scope',
     type: 'textarea',
     hint: 'What the organisation actually delivers to its customers.',
     fallback: 'the services the organisation delivers'
   },
   {
+    required: true,
     key: 'orgInterestedParties', token: 'interestedParties', label: 'Interested parties',
     type: 'textarea',
     hint: 'Who depends on the organisation, or has a say in how it handles information. Clause 4.2. Pre-filled from your industry — edit freely.',
     fallback: 'customers, regulators, employees and key suppliers'
   },
   {
+    required: true,
     key: 'orgRegulatory', token: 'regulatory', label: 'Regulatory and contractual obligations',
     type: 'textarea',
     hint: 'The laws, standards and contract terms that bind this organisation. Pre-filled from your industry — edit freely.',
@@ -3490,36 +3505,42 @@ window.ORG_PROFILE_FIELDS = [
      every token sits at the end of a statement and its fallback is a
      complete sentence too. */
   {
+    required: true,
     key: 'orgExternalIssues', token: 'externalIssues', label: 'External issues (Clause 4.1)',
     type: 'textarea',
     hint: 'What outside the organisation affects its information security: sector, regulation, threats, customers, suppliers.',
     fallback: 'The regulatory environment, the threat landscape facing the sector, customer and market expectations, and dependence on cloud and other third-party providers.'
   },
   {
+    required: true,
     key: 'orgInternalIssues', token: 'internalIssues', label: 'Internal issues (Clause 4.1)',
     type: 'textarea',
     hint: 'What inside the organisation affects it: size, structure, ways of working, capability, change.',
     fallback: 'The organisation’s structure, culture, capability and capacity, its technology estate, and the maturity of its existing controls.'
   },
   {
+    required: true,
     key: 'orgPartyRequirements', token: 'partyRequirements', label: 'What interested parties require (Clause 4.2)',
     type: 'textarea',
     hint: 'What each interested party needs or expects of the organisation’s information security.',
     fallback: 'Customers expect confidentiality and availability of their information and services; regulators expect compliance with applicable law; employees expect their personal information to be protected; and owners expect information risk to be managed within appetite.'
   },
   {
+    required: true,
     key: 'orgClimate', token: 'climate', label: 'Climate change determination (Clause 4.1/4.2)',
     type: 'textarea',
-    hint: 'ISO/IEC 27001:2022 Amendment 1 (2024) requires the organisation to determine whether climate change is a relevant issue.',
+    hint: 'ISO/IEC 27001:2022 and ISO/IEC 42001:2023 Amendment 1 (2024) require the organisation to determine whether climate change is a relevant issue, and to consider whether interested parties have climate-related requirements. Say what was decided and why.',
     fallback: 'Whether climate change is a relevant issue has been considered, as ISO/IEC 27001:2022 Amendment 1 requires, and the determination is revisited at each management review.'
   },
   {
+    required: true,
     key: 'orgInterfaces', token: 'interfaces', label: 'Interfaces and dependencies (Clause 4.3 c)',
     type: 'textarea',
     hint: 'Where the organisation’s activities meet those performed by others: cloud platforms, IT providers, remote working, customers.',
     fallback: 'Microsoft 365 and other cloud services, the organisation’s IT and other suppliers, and the customers and partners with whom information is exchanged.'
   },
   {
+    required: true,
     key: 'orgScopeStatement', token: 'scopeStatement', label: 'Scope statement',
     type: 'textarea',
     hint: 'One sentence summarising the scope — the form a certification body prints on the certificate.',
@@ -3530,6 +3551,7 @@ window.ORG_PROFILE_FIELDS = [
      ISO 42001, and used by the AI Management System Scope. */
   {
     aims: true,
+    required: true,
     key: 'orgAiSystems', token: 'aiSystems', label: 'AI systems in scope',
     type: 'textarea',
     hint: 'Pre-filled from the AI system register. Name each system and what it is used for.',
@@ -3537,6 +3559,7 @@ window.ORG_PROFILE_FIELDS = [
   },
   {
     aims: true,
+    required: true,
     key: 'orgAiRole', token: 'aiRole', label: 'The organisation’s role for AI',
     type: 'textarea',
     hint: 'Provider (it supplies AI systems to others), user/deployer (it uses AI systems provided by others), or both. ISO 42001 Clause 4.1.',
@@ -3544,6 +3567,7 @@ window.ORG_PROFILE_FIELDS = [
   },
   {
     aims: true,
+    required: true,
     key: 'orgAiIssues', token: 'aiIssues', label: 'AI-specific issues (ISO 42001 Clause 4.1)',
     type: 'textarea',
     hint: 'What inside and outside the organisation affects how it governs AI: regulation, providers, adoption, data.',
@@ -3551,6 +3575,7 @@ window.ORG_PROFILE_FIELDS = [
   },
   {
     aims: true,
+    required: true,
     key: 'orgAimsScopeStatement', token: 'aimsScopeStatement', label: 'AI management system scope statement',
     type: 'textarea',
     hint: 'One sentence summarising the scope of the AI management system.',
@@ -3626,7 +3651,9 @@ window.ORG_CONTEXT_QUESTIONS = [
     { value: 'stable', label: 'No — broadly stable' }, { value: 'growing', label: 'Growing quickly' },
     { value: 'major', label: 'Major change, such as a restructure, merger or system migration' }] },
   { id: 'climate', key: 'orgClimateRelevant', label: 'Could climate change (for example extreme weather) disrupt the organisation, its sites or its key suppliers?', options: [
-    { value: 'relevant', label: 'Yes, it could' }, { value: 'not-relevant', label: 'No — not materially' }] }
+    { value: 'relevant', label: 'Yes, it could' }, { value: 'not-relevant', label: 'No — not materially' }] },
+  { id: 'climateReqs', key: 'orgClimatePartyReqs', label: 'Do customers, regulators or other interested parties have climate-related requirements of the organisation (for example services that withstand extreme weather, or climate reporting)?', options: [
+    { value: 'yes', label: 'Yes, some do' }, { value: 'no', label: 'No — none we are aware of' }] }
 ];
 
 /* Australian-market industry presets. These pre-fill the two fields
