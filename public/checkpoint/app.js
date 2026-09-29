@@ -339,7 +339,7 @@ function showModal(opts) {
      Nothing enters the register without practitioner approval. */
   var TPL = {
     'legacy': {
-      risk: { title: 'Legacy authentication protocols allow credential-stuffing & MFA bypass', cat: 'Access', L: 5, I: 4, controls: ['A.8.5', 'A.5.15'] },
+      risk: { title: 'Legacy authentication protocols allow credential-stuffing & MFA bypass', cat: 'Access', cia: ['C', 'I'], L: 5, I: 4, controls: ['A.8.5', 'A.5.15'] },
       actions: [{ t: 'Block legacy authentication via Conditional Access policy', pr: 'Critical', days: 14, control: 'A.8.5' }]
     },
     /* Only 'legacy-auth-observed' gets a template, and only it should.
@@ -354,7 +354,7 @@ function showModal(opts) {
        visible at all thanks to logging: if the sign-in log were not
        being kept and read, this check could not exist. */
     'legacy-auth-observed': {
-      risk: { title: 'Legacy authentication is in live use, bypassing MFA regardless of policy', cat: 'Access', L: 5, I: 5, controls: ['A.8.5', 'A.8.15'] },
+      risk: { title: 'Legacy authentication is in live use, bypassing MFA regardless of policy', cat: 'Access', cia: ['C', 'I'], L: 5, I: 5, controls: ['A.8.5', 'A.8.15'] },
       actions: [
         { t: 'Identify the accounts and clients still signing in over legacy protocols, and migrate or decommission each', pr: 'Critical', days: 14, control: 'A.8.5' },
         { t: 'Close the gap that let these sign-ins through — confirm the Conditional Access policy scope covers them, and disable the legacy protocols at the Exchange mailbox level as well', pr: 'Critical', days: 14, control: 'A.8.5' },
@@ -368,70 +368,70 @@ function showModal(opts) {
        'priv-role-changes' above, which deliberately has no template:
        it reports that role changes happened, which is not a defect. */
     'device-encryption': {
-      risk: { title: 'Fleet data is readable on loss or theft — disk encryption is not enforced everywhere', cat: 'Data', L: 3, I: 5, controls: ['A.8.24', 'A.8.1'] },
+      risk: { title: 'Fleet data is readable on loss or theft — disk encryption is not enforced everywhere', cat: 'Data', cia: ['C'], L: 3, I: 5, controls: ['A.8.24', 'A.8.1'] },
       actions: [
         { t: 'Encrypt the devices reporting as unencrypted, and confirm recovery keys escrow to Intune/Entra before enforcing', pr: 'High', days: 21, control: 'A.8.24' },
         { t: 'Add disk encryption as a requirement to the Intune compliance policy, so an unencrypted device is reported non-compliant rather than compliant', pr: 'High', days: 30, control: 'A.8.1' }
       ]
     },
     'device-jailbroken': {
-      risk: { title: 'Jailbroken/rooted mobile devices hold corporate access, and report themselves as compliant', cat: 'Ops', L: 3, I: 5, controls: ['A.8.1', 'A.8.19'] },
+      risk: { title: 'Jailbroken/rooted mobile devices hold corporate access, and report themselves as compliant', cat: 'Ops', cia: ['C', 'I'], L: 3, I: 5, controls: ['A.8.1', 'A.8.19'] },
       actions: [
         { t: 'Retire or wipe the jailbroken/rooted devices — the compliance state they report cannot be trusted while the controls asserting it can be defeated locally', pr: 'Critical', days: 7, control: 'A.8.1' },
         { t: 'Add a jailbreak/root detection rule to the Intune compliance policy so these devices are blocked by Conditional Access rather than merely visible', pr: 'High', days: 21, control: 'A.8.19' }
       ]
     },
     'dormant-accounts': {
-      risk: { title: 'Dormant enabled accounts remain live credentials with no one watching them', cat: 'Access', L: 4, I: 4, controls: ['A.5.16', 'A.5.18'] },
+      risk: { title: 'Dormant enabled accounts remain live credentials with no one watching them', cat: 'Access', cia: ['C', 'I'], L: 4, I: 4, controls: ['A.5.16', 'A.5.18'] },
       actions: [
         { t: 'Review each dormant account and disable the ones that are unfinished offboardings — recording which are deliberate (break-glass, seasonal) so the next review does not re-litigate them', pr: 'High', days: 21, control: 'A.5.18' },
         { t: 'Give every retained service account a named owner and a review date, so "nobody knows what this is for" stops being the reason it survives', pr: 'Medium', days: 45, control: 'A.5.16' }
       ]
     },
     'mfa-registration': {
-      risk: { title: 'Users are covered by an MFA policy they cannot satisfy, inviting exclusions that undo it', cat: 'Access', L: 4, I: 5, controls: ['A.5.17', 'A.8.5'] },
+      risk: { title: 'Users are covered by an MFA policy they cannot satisfy, inviting exclusions that undo it', cat: 'Access', cia: ['C', 'I'], L: 4, I: 5, controls: ['A.5.17', 'A.8.5'] },
       actions: [
         { t: 'Register a phishing-resistant method for every administrator who cannot currently complete MFA — before any other item here', pr: 'Critical', days: 7, control: 'A.8.5' },
         { t: 'Run a registration campaign for the remaining users, rather than excluding them from the Conditional Access policy to stop the lockouts', pr: 'High', days: 30, control: 'A.5.17' }
       ]
     },
     'wdac': {
-      risk: { title: 'Unhardened endpoints permit untrusted code execution across the fleet', cat: 'Ops', L: 4, I: 4, controls: ['A.8.7', 'A.8.19'] },
+      risk: { title: 'Unhardened endpoints permit untrusted code execution across the fleet', cat: 'Ops', cia: ['C', 'I', 'A'], L: 4, I: 4, controls: ['A.8.7', 'A.8.19'] },
       actions: [{ t: 'Deploy WDAC application control baseline via Intune', pr: 'High', days: 30, control: 'A.8.7' }, { t: 'Stand up pilot ring & exception process for app control', pr: 'Medium', days: 45, control: 'A.8.19' }]
     },
     'mfa-priv': {
-      risk: { title: 'Privileged accounts protected by phishable MFA methods', cat: 'Access', L: 4, I: 5, controls: ['A.8.2', 'A.8.5'] },
+      risk: { title: 'Privileged accounts protected by phishable MFA methods', cat: 'Access', cia: ['C', 'I', 'A'], L: 4, I: 5, controls: ['A.8.2', 'A.8.5'] },
       actions: [{ t: 'Enforce FIDO2/passkey sign-in for all privileged roles', pr: 'Critical', days: 14, control: 'A.8.2' }]
     },
     'ca-device': {
-      risk: { title: 'Cloud apps are reachable from unmanaged, non-compliant devices', cat: 'Access', L: 4, I: 4, controls: ['A.8.1', 'A.5.15'] },
+      risk: { title: 'Cloud apps are reachable from unmanaged, non-compliant devices', cat: 'Access', cia: ['C'], L: 4, I: 4, controls: ['A.8.1', 'A.5.15'] },
       actions: [{ t: 'Require a compliant or hybrid-joined device in the Conditional Access policy covering all cloud apps', pr: 'High', days: 21, control: 'A.8.1' }]
     },
     /* Risk-based CA is an Entra ID P2 feature — this template only ever
        fires for a tenant the capability probe already confirmed holds
        the licence, so the action is genuinely actionable, not aspirational. */
     'ca-risk': {
-      risk: { title: 'Sign-in and user risk signals from Entra ID Protection are not acted on', cat: 'Access', L: 3, I: 4, controls: ['A.8.5', 'A.5.15'] },
+      risk: { title: 'Sign-in and user risk signals from Entra ID Protection are not acted on', cat: 'Access', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.8.5', 'A.5.15'] },
       actions: [{ t: 'Add a Conditional Access policy that blocks or forces re-authentication on high sign-in/user risk', pr: 'High', days: 21, control: 'A.8.5' }]
     },
     'ca-sif': {
-      risk: { title: 'Privileged admin sessions are not bounded by a re-authentication interval', cat: 'Access', L: 3, I: 4, controls: ['A.8.2', 'A.8.5'] },
+      risk: { title: 'Privileged admin sessions are not bounded by a re-authentication interval', cat: 'Access', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.8.2', 'A.8.5'] },
       actions: [{ t: 'Add sign-in frequency to the Conditional Access policy covering privileged directory roles', pr: 'High', days: 21, control: 'A.8.2' }]
     },
     'ca-tou': {
-      risk: { title: 'Acceptable-use terms are not technically enforced at sign-in', cat: 'People', L: 2, I: 2, controls: ['A.5.10'] },
+      risk: { title: 'Acceptable-use terms are not technically enforced at sign-in', cat: 'People', cia: ['C'], L: 2, I: 2, controls: ['A.5.10'] },
       actions: [{ t: 'Confirm how acceptable-use acknowledgment is captured, or add a Conditional Access Terms of Use policy', pr: 'Low', days: 45, control: 'A.5.10' }]
     },
     'ca-cas': {
-      risk: { title: 'Cloud service adoption is not technically governed at sign-in', cat: 'Data', L: 2, I: 3, controls: ['A.5.23'] },
+      risk: { title: 'Cloud service adoption is not technically governed at sign-in', cat: 'Data', cia: ['C'], L: 2, I: 3, controls: ['A.5.23'] },
       actions: [{ t: 'Confirm how cloud service adoption is governed, or add a Conditional Access policy applying Defender for Cloud Apps session control', pr: 'Medium', days: 45, control: 'A.5.23' }]
     },
     'admins': {
-      risk: { title: 'Excess Global Administrator assignments widen the blast radius', cat: 'Access', L: 3, I: 5, controls: ['A.8.2'] },
+      risk: { title: 'Excess Global Administrator assignments widen the blast radius', cat: 'Access', cia: ['C', 'I', 'A'], L: 3, I: 5, controls: ['A.8.2'] },
       actions: [{ t: 'Reduce Global Admins to ≤4; move others to PIM-eligible roles', pr: 'High', days: 14, control: 'A.8.2' }]
     },
     'patch': {
-      risk: { title: 'Patch latency leaves known vulnerabilities exploitable', cat: 'Ops', L: 4, I: 4, controls: ['A.8.8'] },
+      risk: { title: 'Patch latency leaves known vulnerabilities exploitable', cat: 'Ops', cia: ['C', 'I', 'A'], L: 4, I: 4, controls: ['A.8.8'] },
       actions: [{ t: 'Tighten Intune update rings to 7-day deferral with compliance gate', pr: 'High', days: 21, control: 'A.8.8' }]
     },
     /* A.5.26 is response to incidents; A.5.25 is assessment and
@@ -439,7 +439,7 @@ function showModal(opts) {
        sit open — the gap is the response process, not detection, which
        is why neither action here is about buying more tooling. */
     'xdr-incidents': {
-      risk: { title: 'High-severity incidents remain open beyond the committed triage window', cat: 'Ops', L: 4, I: 4, controls: ['A.5.25', 'A.5.26'] },
+      risk: { title: 'High-severity incidents remain open beyond the committed triage window', cat: 'Ops', cia: ['C', 'I', 'A'], L: 4, I: 4, controls: ['A.5.25', 'A.5.26'] },
       actions: [
         { t: 'Triage and close the high-severity incidents open beyond the triage window', pr: 'Critical', days: 7, control: 'A.5.26' },
         { t: 'Assign a named owner to every unassigned high-severity incident', pr: 'High', days: 7, control: 'A.5.25' },
@@ -447,51 +447,51 @@ function showModal(opts) {
       ]
     },
     'edr-coverage': {
-      risk: { title: 'Devices on the network run without an endpoint detection & response sensor', cat: 'Ops', L: 4, I: 4, controls: ['A.8.7', 'A.8.16'] },
+      risk: { title: 'Devices on the network run without an endpoint detection & response sensor', cat: 'Ops', cia: ['C', 'I', 'A'], L: 4, I: 4, controls: ['A.8.7', 'A.8.16'] },
       actions: [
         { t: 'Onboard every device Defender discovered without a sensor, or record why each one is out of scope', pr: 'High', days: 21, control: 'A.8.7' },
         { t: 'Investigate onboarded sensors that have stopped reporting and restore or retire them', pr: 'High', days: 14, control: 'A.8.16' }
       ]
     },
     'gh-branch-review': {
-      risk: { title: 'Code reaches production branches without independent review', cat: 'Ops', L: 3, I: 4, controls: ['A.8.25', 'A.8.32'] },
+      risk: { title: 'Code reaches production branches without independent review', cat: 'Ops', cia: ['I'], L: 3, I: 4, controls: ['A.8.25', 'A.8.32'] },
       actions: [
         { t: 'Add an organisation ruleset requiring a pull request with at least one approving review on every default branch', pr: 'High', days: 21, control: 'A.8.32' },
         { t: 'Archive or exclude repositories that are not in ISMS scope so the rule applies where it matters', pr: 'Low', days: 45, control: 'A.8.25' }
       ]
     },
     'gh-secret-alerts': {
-      risk: { title: 'Leaked credentials in source control remain valid', cat: 'Access', L: 4, I: 5, controls: ['A.5.17', 'A.8.28'] },
+      risk: { title: 'Leaked credentials in source control remain valid', cat: 'Access', cia: ['C', 'I'], L: 4, I: 5, controls: ['A.5.17', 'A.8.28'] },
       actions: [
         { t: 'Revoke and rotate every credential behind an open secret scanning alert, then close the alert', pr: 'Critical', days: 3, control: 'A.5.17' },
         { t: 'Turn on push protection so the next secret is blocked before it lands in history', pr: 'High', days: 14, control: 'A.8.28' }
       ]
     },
     'gh-dependabot': {
-      risk: { title: 'Known-vulnerable dependencies ship in production code', cat: 'Ops', L: 4, I: 4, controls: ['A.8.8', 'A.8.28'] },
+      risk: { title: 'Known-vulnerable dependencies ship in production code', cat: 'Ops', cia: ['C', 'I', 'A'], L: 4, I: 4, controls: ['A.8.8', 'A.8.28'] },
       actions: [
         { t: 'Upgrade or patch every critical dependency vulnerability open beyond the window', pr: 'High', days: 14, control: 'A.8.8' },
         { t: 'Enable Dependabot security updates so fixes arrive as pull requests rather than alerts', pr: 'Medium', days: 30, control: 'A.8.28' }
       ]
     },
     'phish-sim': {
-      risk: { title: 'Security awareness is delivered but never tested', cat: 'People', L: 3, I: 3, controls: ['A.6.3'] },
+      risk: { title: 'Security awareness is delivered but never tested', cat: 'People', cia: ['C', 'I'], L: 3, I: 3, controls: ['A.6.3'] },
       actions: [
         { t: 'Run a Defender attack simulation campaign and assign follow-up training to users who were compromised', pr: 'Medium', days: 45, control: 'A.6.3' }
       ]
     },
     'backup': {
-      risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
+      risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', cia: ['I', 'A'], L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
     },
     'device-checkin': {
-      risk: { title: 'Managed devices no longer checking in, so their compliance state is stale', cat: 'Ops', L: 3, I: 4, controls: ['A.8.1'] },
+      risk: { title: 'Managed devices no longer checking in, so their compliance state is stale', cat: 'Ops', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.8.1'] },
       actions: [
         { t: 'Investigate devices that have stopped checking in — retire the disposed ones, re-enrol the rest', pr: 'High', days: 21, control: 'A.8.1' }
       ]
     },
     'leaver': {
-      risk: { title: 'Departed staff retain licences or privileged roles after offboarding', cat: 'Access', L: 3, I: 5, controls: ['A.5.11', 'A.5.18', 'A.6.5'] },
+      risk: { title: 'Departed staff retain licences or privileged roles after offboarding', cat: 'Access', cia: ['C', 'I'], L: 3, I: 5, controls: ['A.5.11', 'A.5.18', 'A.6.5'] },
       actions: [
         { t: 'Remove privileged directory roles from every disabled account', pr: 'Critical', days: 7, control: 'A.5.18' },
         { t: 'Review disabled accounts still holding licences and confirm each retention is deliberate and time-bound', pr: 'Medium', days: 30, control: 'A.5.11' },
@@ -499,22 +499,22 @@ function showModal(opts) {
       ]
     },
     'lifecycle-workflows': {
-      risk: { title: 'Joiner and leaver processing is manual, not technically enforced', cat: 'Access', L: 3, I: 4, controls: ['A.5.16', 'A.6.5'] },
+      risk: { title: 'Joiner and leaver processing is manual, not technically enforced', cat: 'Access', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.5.16', 'A.6.5'] },
       actions: [{ t: 'Configure and enable a Lifecycle Workflow covering whichever of joiner/leaver is not yet automated', pr: 'High', days: 30, control: 'A.5.16' }]
     },
     'sod': {
-      risk: { title: 'A Privileged Role Administrator also holds another directory role, able to grant itself further access', cat: 'Access', L: 3, I: 5, controls: ['A.5.3'] },
+      risk: { title: 'A Privileged Role Administrator also holds another directory role, able to grant itself further access', cat: 'Access', cia: ['C', 'I'], L: 3, I: 5, controls: ['A.5.3'] },
       actions: [{ t: 'Remove the Privileged Role Administrator assignment, or the other role(s), from each affected account so no single person can grant themselves further privilege', pr: 'Critical', days: 14, control: 'A.5.3' }]
     },
     'privacy-srr': {
-      risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', L: 4, I: 4, controls: ['A.5.34'] },
+      risk: { title: 'Subject rights requests running past their statutory response deadline', cat: 'Privacy', cia: ['C', 'I'], L: 4, I: 4, controls: ['A.5.34'] },
       actions: [
         { t: 'Close out every subject rights request past its due date', pr: 'Critical', days: 7, control: 'A.5.34' },
         { t: 'Assign a named owner and an internal target ahead of the statutory deadline for new requests', pr: 'High', days: 21, control: 'A.5.34' }
       ]
     },
     'retention': {
-      risk: { title: 'No published retention or disposal rules, so data is kept indefinitely by default', cat: 'Data', L: 3, I: 4, controls: ['A.5.33', 'A.8.10'] },
+      risk: { title: 'No published retention or disposal rules, so data is kept indefinitely by default', cat: 'Data', cia: ['C'], L: 3, I: 4, controls: ['A.5.33', 'A.8.10'] },
       actions: [
         { t: 'Publish retention labels covering each category of personal and business-critical information', pr: 'High', days: 30, control: 'A.5.33' },
         { t: 'Set an end-of-retention action on every label so retained content is actually disposed of', pr: 'High', days: 30, control: 'A.8.10' }
@@ -525,44 +525,44 @@ function showModal(opts) {
        does in Checkpoint or in the business — none of them say "buy a
        product", because none of these controls fail for want of one. */
     'bcp': {
-      risk: { title: 'Continuity plan untested, so recovery capability is assumed rather than known', cat: 'Ops', L: 3, I: 5, controls: ['A.5.29', 'A.5.30'] },
+      risk: { title: 'Continuity plan untested, so recovery capability is assumed rather than known', cat: 'Ops', cia: ['A'], L: 3, I: 5, controls: ['A.5.29', 'A.5.30'] },
       actions: [
         { t: 'Run a BCP/DR failover test and record the outcome against the calendar entry', pr: 'High', days: 30, control: 'A.5.30' },
         { t: 'Approve the BCP/DR plan document and set its next review date', pr: 'Medium', days: 21, control: 'A.5.29' }
       ]
     },
     'supplier': {
-      risk: { title: 'Critical suppliers operating without a current security assessment', cat: 'Supplier', L: 4, I: 4, controls: ['A.5.19', 'A.5.20', 'A.5.22'] },
+      risk: { title: 'Critical suppliers operating without a current security assessment', cat: 'Supplier', cia: ['C', 'I', 'A'], L: 4, I: 4, controls: ['A.5.19', 'A.5.20', 'A.5.22'] },
       actions: [
         { t: 'Complete security reviews for every critical and high-criticality supplier', pr: 'High', days: 30, control: 'A.5.22' },
         { t: 'Confirm security requirements are covered in each critical supplier agreement', pr: 'Medium', days: 60, control: 'A.5.20' }
       ]
     },
     'policy': {
-      risk: { title: 'Policy set incomplete, unapproved or past its review date', cat: 'Governance', L: 3, I: 3, controls: ['A.5.1'] },
+      risk: { title: 'Policy set incomplete, unapproved or past its review date', cat: 'Governance', cia: ['C', 'I', 'A'], L: 3, I: 3, controls: ['A.5.1'] },
       actions: [
         { t: 'Approve and publish outstanding policy documents', pr: 'High', days: 21, control: 'A.5.1' },
         { t: 'Review and re-date every policy past its review cadence', pr: 'Medium', days: 45, control: 'A.5.1' }
       ]
     },
     'audit-review': {
-      risk: { title: 'No current independent review of the ISMS, so effectiveness is assumed rather than tested', cat: 'Governance', L: 3, I: 4, controls: ['A.5.35'] },
+      risk: { title: 'No current independent review of the ISMS, so effectiveness is assumed rather than tested', cat: 'Governance', cia: ['C', 'I', 'A'], L: 3, I: 4, controls: ['A.5.35'] },
       actions: [{ t: 'Complete a scheduled internal audit, or schedule one if none is planned, and record its findings', pr: 'High', days: 30, control: 'A.5.35' }]
     },
     'incident-lessons': {
-      risk: { title: 'Incidents closed without a recorded root cause or lessons learned', cat: 'Ops', L: 3, I: 3, controls: ['A.5.27', 'A.5.28'] },
+      risk: { title: 'Incidents closed without a recorded root cause or lessons learned', cat: 'Ops', cia: ['C', 'I', 'A'], L: 3, I: 3, controls: ['A.5.27', 'A.5.28'] },
       actions: [{ t: 'Complete a post-incident review for each affected incident and record its root cause and lessons learned', pr: 'Medium', days: 21, control: 'A.5.27' }]
     },
     'pim': {
-      risk: { title: 'Privileged directory roles held as permanent assignments rather than time-bound, approved elevation', cat: 'Access', L: 3, I: 4, controls: ['A.8.2', 'A.5.18'] },
+      risk: { title: 'Privileged directory roles held as permanent assignments rather than time-bound, approved elevation', cat: 'Access', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.8.2', 'A.5.18'] },
       actions: [{ t: 'Convert permanent privileged role assignments to PIM-eligible with approval workflow', pr: 'High', days: 30, control: 'A.8.2' }]
     },
     'riskyusers': {
-      risk: { title: 'Risky sign-ins and risky user flags in Identity Protection are not being triaged', cat: 'Access', L: 4, I: 4, controls: ['A.5.25', 'A.5.26'] },
+      risk: { title: 'Risky sign-ins and risky user flags in Identity Protection are not being triaged', cat: 'Access', cia: ['C', 'I'], L: 4, I: 4, controls: ['A.5.25', 'A.5.26'] },
       actions: [{ t: 'Establish a weekly Identity Protection risky-user triage & remediation process', pr: 'High', days: 21, control: 'A.5.26' }]
     },
     'riskyapps': {
-      risk: { title: 'Third-party OAuth app grants with high-privilege scopes have not been reviewed', cat: 'Supplier', L: 3, I: 4, controls: ['A.5.21', 'A.8.3'] },
+      risk: { title: 'Third-party OAuth app grants with high-privilege scopes have not been reviewed', cat: 'Supplier', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.5.21', 'A.8.3'] },
       actions: [{ t: 'Review and revoke unnecessary high-privilege OAuth application consents', pr: 'Medium', days: 30, control: 'A.5.21' }]
     },
     /* Distinct from riskyapps: this is specifically a grant no admin
@@ -570,22 +570,22 @@ function showModal(opts) {
        not just accumulated app sprawl — hence Critical rather than
        Medium and a much shorter remediation window. */
     'oauth-consent': {
-      risk: { title: 'A high-privilege OAuth app grant was consented to by an end user with no admin review', cat: 'Access', L: 4, I: 4, controls: ['A.8.3', 'A.5.15'] },
+      risk: { title: 'A high-privilege OAuth app grant was consented to by an end user with no admin review', cat: 'Access', cia: ['C', 'I'], L: 4, I: 4, controls: ['A.8.3', 'A.5.15'] },
       actions: [
         { t: 'Investigate the user-consented high-privilege app grant and revoke it if unjustified', pr: 'Critical', days: 3, control: 'A.8.3' },
         { t: 'Restrict user consent to Microsoft-verified publishers / require admin consent for high-privilege scopes', pr: 'High', days: 14, control: 'A.5.15' }
       ]
     },
     'labels': {
-      risk: { title: 'Information is not classified or labelled, undermining handling rules and DLP controls that depend on it', cat: 'Data', L: 3, I: 3, controls: ['A.5.12', 'A.5.13'] },
+      risk: { title: 'Information is not classified or labelled, undermining handling rules and DLP controls that depend on it', cat: 'Data', cia: ['C'], L: 3, I: 3, controls: ['A.5.12', 'A.5.13'] },
       actions: [{ t: 'Publish a sensitivity label taxonomy in Microsoft Purview and roll it out tenant-wide', pr: 'Medium', days: 30, control: 'A.5.12' }]
     },
     'access-review': {
-      risk: { title: 'Access rights are not reviewed at a planned interval, letting stale or excessive grants accumulate unnoticed', cat: 'Access', L: 3, I: 4, controls: ['A.5.18', 'A.8.2'] },
+      risk: { title: 'Access rights are not reviewed at a planned interval, letting stale or excessive grants accumulate unnoticed', cat: 'Access', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.5.18', 'A.8.2'] },
       actions: [{ t: 'Configure a recurring Entra Access Review for privileged roles and sensitive groups', pr: 'High', days: 21, control: 'A.5.18' }]
     },
     'sharing': {
-      risk: { title: 'Tenant-wide SharePoint/OneDrive sharing allows anyone-with-a-link access with no sign-in required', cat: 'Data', L: 4, I: 4, controls: ['A.5.14', 'A.8.3'] },
+      risk: { title: 'Tenant-wide SharePoint/OneDrive sharing allows anyone-with-a-link access with no sign-in required', cat: 'Data', cia: ['C'], L: 4, I: 4, controls: ['A.5.14', 'A.8.3'] },
       actions: [{ t: 'Restrict tenant external sharing to authenticated guests only (or disable, per risk appetite)', pr: 'High', days: 14, control: 'A.5.14' }]
     }
   };
@@ -6573,7 +6573,7 @@ function showModal(opts) {
          scenario — recorded as such, so a scan-raised risk starts with
          that part of its scenario already filled in. */
       var checkDef = (window.CHECK_DEFS || []).find(function (c) { return c.tpl === tpl; });
-      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl,
+      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, cia: (t.risk.cia || []).slice(), src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl,
         vulnerability: checkDef ? 'Posture scan check failed: ' + checkDef.label + ' (' + new Date().toISOString().slice(0, 10) + ')' : '' };
       await Store.addRisk(newRisk);
       for (var i = 0; i < t.actions.length; i++) {
@@ -9759,6 +9759,23 @@ function showModal(opts) {
      the daily re-verification is not (it would bury the audit log),
      but it is attributed on the clause itself as
      "Checkpoint (automated)". */
+  /* Scan-raised risks created before the scan templates carried their
+     confidentiality / integrity / availability classification get it
+     from their template, once. Only where the risk has none: a
+     practitioner's own classification is never overwritten. */
+  var _ciaBackfillDone = false;
+  function backfillScanRiskCia() {
+    if (_ciaBackfillDone || READONLY || !S.risks) return;
+    _ciaBackfillDone = true;
+    S.risks.forEach(function (r) {
+      var t = r.tpl && TPL[r.tpl];
+      if (!t || !t.risk || !(t.risk.cia || []).length || (r.cia || []).length) return;
+      r.cia = t.risk.cia.slice();
+      Store.updateRisk(r).catch(function (e) { warn(e); });
+      audit('Risk updated', 'Risk', r.id, 'CIA not classified', 'CIA ' + r.cia.join(', ') + ' (from its posture scan finding)');
+    });
+  }
+
   var _clauseAutomationBusy = false;
   function runClauseAutomation() {
     if (READONLY || _clauseAutomationBusy || !S.clauses || !S.clauses.length) return;
@@ -12361,7 +12378,7 @@ function showModal(opts) {
     if (!STATIC_VIEWS[v]) warn('renderView: no renderer registered for view "' + v + '"');
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); runClauseAutomation(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -13746,6 +13763,7 @@ function showModal(opts) {
         document.getElementById('nrLikelihood').value = String(draft.likelihood);
         document.getElementById('nrImpact').value = String(draft.impact);
         document.getElementById('nrActions').value = draft.actions.join('\n');
+        ['C', 'I', 'A'].forEach(function (k) { var el = document.getElementById('nrCia' + k); if (el) el.checked = (draft.cia || []).indexOf(k) !== -1; });
         window._riskDraftFromAi = true;
         statusEl.innerHTML = '<div class="chip st-Intreatment" style="margin-bottom:4px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
           (draft.likelihoodReason ? '<div class="src">Likelihood: ' + esc(draft.likelihoodReason) + '</div>' : '') +

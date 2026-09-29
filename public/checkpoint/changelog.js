@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.110.1',
+    date: '2026-09-30',
+    entries: [
+      'Risks raised from a posture scan now arrive with the confidentiality, integrity and availability they threaten already set, and scan-raised risks created before this are filled in automatically (never overwriting a classification someone has already set). The AI risk draft also proposes C/I/A for review.'
+    ]
+  },
+  {
     version: '1.110.0',
     date: '2026-09-30',
     entries: [
