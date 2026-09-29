@@ -3652,6 +3652,11 @@ window.ORG_CONTEXT_QUESTIONS = [
     { value: 'major', label: 'Major change, such as a restructure, merger or system migration' }] },
   { id: 'climate', key: 'orgClimateRelevant', label: 'Could climate change (for example extreme weather) disrupt the organisation, its sites or its key suppliers?', options: [
     { value: 'relevant', label: 'Yes, it could' }, { value: 'not-relevant', label: 'No — not materially' }] },
+  /* ISO/IEC 27701:2025 Clause 4.1 — asked only of tenants entitled to
+     ISO 27701 (the `fw` filter in App.orgProfileWizard). */
+  { id: 'piiRole', key: 'orgPiiRole', fw: 'iso27701', label: 'For the personal information it handles, does the organisation decide why and how it is used (a PII controller), or process it on someone else\u2019s instructions (a PII processor)?', options: [
+    { value: 'controller', label: 'We decide (PII controller)' }, { value: 'processor', label: 'We process it for our customers, on their instructions (PII processor)' },
+    { value: 'both', label: 'Both, for different activities' }] },
   { id: 'climateReqs', key: 'orgClimatePartyReqs', label: 'Do customers, regulators or other interested parties have climate-related requirements of the organisation (for example services that withstand extreme weather, or climate reporting)?', options: [
     { value: 'yes', label: 'Yes, some do' }, { value: 'no', label: 'No — none we are aware of' }] }
 ];

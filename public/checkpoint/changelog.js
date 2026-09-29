@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.108.0',
+    date: '2026-09-30',
+    entries: [
+      'ISO 27701 now follows the 2025 edition: a standalone privacy information management system with its own Clauses 4\u201310, alongside ISO 27001 and ISO 42001 on the clause register. Each clause lists its requirements, including the privacy-specific ones: your role as PII controller or processor, the people the personal information is about, and a privacy risk assessment that considers the risks to them.',
+      'Most ISO 27701 requirements tick themselves off from your records: privacy risks in the risk register, the privacy training course, Privacy Policy acknowledgements, privacy law in the legal register, the privacy documents (record of processing activities, rights procedure, DPIA process) and ISO 27701 audits. The Management System Evidence Pack covers ISO 27701 when it is the framework in view.',
+      'The scope & context questionnaire asks ISO 27701 clients whether they act as a PII controller, a PII processor, or both. The Annex A privacy controls are unchanged in substance and keep their existing numbering, so nothing you have already recorded moves.'
+    ]
+  },
+  {
     version: '1.107.0',
     date: '2026-09-30',
     entries: [
