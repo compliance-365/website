@@ -2801,6 +2801,70 @@ function showModal(opts) {
      (see the task spec: which report type gets which of the six chart
      functions). */
   var REPORT_BUILDERS = {
+    /* Management system evidence pack — every clause, each requirement
+       it contains, how it is met (Checkpoint's own records, or a named
+       confirmation of where the evidence is) and the evidence behind
+       it. What a certification auditor walks through at Stage 1, and
+       the traceability from requirement to evidence in one document.
+       ISO 42001 when that is the framework in view, otherwise ISO 27001
+       (the base management system every tenant holds). */
+    clauses: function (activeFw) {
+      var fw = activeFw === 'iso42001' ? 'iso42001' : 'iso27001';
+      var label = fwName(fw);
+      var ctx = clauseContext();
+      var clauses = (S.clauses || []).filter(function (c) { return (c.fw || 'iso27001') === fw; });
+      var totals = { met: 0, partial: 0, open: 0 }, auto = 0, confirmed = 0, gated = 0;
+      var openItems = [];
+      var groups = {};
+      clauses.forEach(function (c) {
+        var cl = clauseChecklistFor(c, ctx);
+        if (window.CheckpointLib.clauseImplementGate(cl, c).ok) gated++;
+        cl.items.forEach(function (i) {
+          totals[i.status]++;
+          if (i.how === 'auto') auto++;
+          if (i.how === 'confirmed') confirmed++;
+          if (i.status !== 'met') openItems.push({ clause: c.id, text: i.text, note: i.note });
+        });
+        var top = String(c.id).split('.')[0];
+        (groups[top] = groups[top] || []).push({ c: c, cl: cl });
+      });
+      var STATUS = { met: 'Met', partial: 'Partly met', open: 'Not met' };
+      var sections = Object.keys(groups).sort(function (a, b) { return Number(a) - Number(b); }).map(function (top) {
+        var rows = groups[top].map(function (g) {
+          var c = g.c;
+          var ev = c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '">' + esc(c.evidenceUrl) + '</a>' : '<b style="color:#b91c1c">No evidence linked</b>';
+          var head = '<tr><td class="rpt-idc" colspan="4"><b>Clause ' + esc(c.id) + ' — ' + esc(c.t) + '</b>' +
+            '<div class="rpt-just">Status: ' + esc(c.st) + (c.own ? ' · Owner: ' + esc(c.own) : '') + (c.verified ? ' · Verified ' + fmtDate(c.verified) + (c.verifiedBy ? ' by ' + esc(c.verifiedBy) : '') : '') +
+            ' · Requirements met: ' + g.cl.met + ' of ' + g.cl.total + '</div><div class="rpt-just">Evidence: ' + ev + '</div></td></tr>';
+          return head + g.cl.items.map(function (i) {
+            var how = i.how === 'auto' ? 'Checkpoint records: ' + esc(i.note)
+              : i.how === 'confirmed' ? 'Confirmed by ' + esc(i.by || '—') + (i.date ? ', ' + fmtDate(i.date) : '') + ': ' + esc(i.note)
+              : (i.note ? esc(i.note) : '—');
+            return '<tr><td>' + esc(i.text) + '</td><td>' + (i.status === 'met' ? STATUS.met : '<b style="color:#b91c1c">' + STATUS[i.status] + '</b>') + '</td><td>' + how + '</td><td>' + esc(i.evidence) + '</td></tr>';
+          }).join('');
+        }).join('');
+        return { heading: 'Clause ' + top, html: '<table class="rpt-table"><thead><tr><th>Requirement</th><th>Status</th><th>How it is met</th><th>Evidence an auditor expects</th></tr></thead><tbody>' + rows + '</tbody></table>', pageBreak: true };
+      });
+      var total = totals.met + totals.partial + totals.open;
+      var openHtml = openItems.length
+        ? '<table class="rpt-table"><thead><tr><th>Clause</th><th>Requirement</th><th>What is missing</th></tr></thead><tbody>' +
+          openItems.map(function (o) { return '<tr><td class="rpt-idc">' + esc(o.clause) + '</td><td>' + esc(o.text) + '</td><td>' + esc(o.note || 'Evidence not yet recorded') + '</td></tr>'; }).join('') + '</tbody></table>'
+        : '<p class="rpt-plain">Every requirement of every clause is met.</p>';
+      return {
+        title: 'Management System Evidence Pack — ' + label,
+        frameworkAgnostic: fw === 'iso27001',
+        dashboard: {
+          intro: 'Every ' + label + ' clause (4\u201310), broken into the requirements an auditor tests, with how each is met and the evidence behind it. ' +
+            totals.met + ' of ' + total + ' requirements met: ' + auto + ' from Checkpoint\u2019s own records (documents, registers, scans, training and reviews) and ' + confirmed + ' by a named confirmation of where the evidence is. ' +
+            gated + ' of ' + clauses.length + ' clauses have every requirement met and evidence linked. Requirements are described in Checkpoint\u2019s own words, not quoted from the standard.',
+          charts: [
+            { figure: 1, title: 'Requirements — ' + label, caption: totals.met + ' met, ' + totals.partial + ' partly met, ' + totals.open + ' not met.', svg: RC.donut({ implemented: totals.met, inProgress: totals.partial, notStarted: totals.open, notApplicable: 0 }) }
+          ]
+        },
+        sections: [{ heading: 'Still open (' + openItems.length + ')', html: openHtml, pageBreak: true }].concat(sections)
+      };
+    },
+
     soa: function (activeFw, fwLabel) {
       var fwControls = frameworkVisibleRows(activeFw);
       var app = fwControls.filter(function (c) { return c.app; });
@@ -9609,8 +9673,8 @@ function showModal(opts) {
     /* The same gate as a manual change: automation never marks a clause
        Implemented, or re-verifies one, while its requirement checklist
        is incomplete or no evidence is linked. */
-    var md = mandatoryDocsStatus();
-    updates = updates.filter(function (u) { return clauseGateFor(Object.assign({}, u.clause, u.set), md).ok; });
+    var ctx = clauseContext();
+    updates = updates.filter(function (u) { return clauseGateFor(Object.assign({}, u.clause, u.set), ctx).ok; });
     if (!updates.length) return;
     _clauseAutomationBusy = true;
     var promoted = [];
@@ -10087,18 +10151,34 @@ function showModal(opts) {
      resolved against this tenant's documents, profile and registers.
      `md` is the Stage 1 checklist, passed in when rendering many
      clauses so it is computed once. */
-  function clauseChecklistFor(c, md) {
-    return window.CheckpointLib.clauseChecklist({
-      fw: c.fw || 'iso27001', code: c.id,
-      docs: (window._docs || S.documents || []).map(function (d) { return { tplId: d.tplId, status: docStatusOf(d) }; }),
-      settings: S.settings || {},
-      md: md || mandatoryDocsStatus(),
-      risks: S.risks, objectives: S.objectives, audits: S.audits, actions: S.actions,
-      confirmed: c.reqs || {}
+  /* Everything the checklists read, gathered once. Rendering the clause
+     register evaluates ~50 checklists, so callers that evaluate many
+     pass this in rather than rebuilding it per clause. */
+  function clauseContext() {
+    var soaByFw = {};
+    ['iso27001', 'iso42001'].forEach(function (fw) {
+      var app = frameworkAppRows(fw), all = frameworkVisibleRows(fw);
+      soaByFw[fw] = { applicable: app.length, notStarted: app.filter(function (c) { return c.st === 'Not started'; }).length, unjustified: all.filter(function (c) { return !c.app && !c.just; }).length };
     });
+    var docsFull = window._docs || S.documents || [];
+    return {
+      today: new Date().toISOString().slice(0, 10),
+      docs: docsFull.map(function (d) { return { tplId: d.tplId, status: docStatusOf(d) }; }),
+      docsFull: docsFull,
+      settings: S.settings || {},
+      md: mandatoryDocsStatus(),
+      risks: S.risks, objectives: S.objectives, audits: S.audits, actions: S.actions, reviews: S.reviews,
+      training: S.training, attestations: S.attestations, legal: S.legal, aiSystems: S.aiSystems,
+      scans: S.scans, auditLog: S.auditLog, clauses: S.clauses, soaByFw: soaByFw
+    };
   }
-  function clauseGateFor(c, md) {
-    return window.CheckpointLib.clauseImplementGate(clauseChecklistFor(c, md), c);
+  function clauseChecklistFor(c, ctx) {
+    return window.CheckpointLib.clauseChecklist(Object.assign({}, ctx || clauseContext(), {
+      fw: c.fw || 'iso27001', code: c.id, confirmed: c.reqs || {}
+    }));
+  }
+  function clauseGateFor(c, ctx) {
+    return window.CheckpointLib.clauseImplementGate(clauseChecklistFor(c, ctx), c);
   }
   function renderClausesDashboard() {
     var el = document.getElementById('clauseKpiRow');
@@ -10137,7 +10217,7 @@ function showModal(opts) {
     var hints = {};
     (window.CLAUSE_DEFS || []).forEach(function (d) { if (d.hint) hints[d.fw + '|' + d.code] = d.hint; });
     var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
-    var md = mandatoryDocsStatus();
+    var ctx = clauseContext();
     var lastFw = null;
     wrap.innerHTML = clauses.map(function (c) {
       var rv = clauseReviewStatus(c);
@@ -10146,7 +10226,7 @@ function showModal(opts) {
          view of it. An Implemented clause whose checklist is no longer
          complete (set before checklists existed, or a document since
          moved back to draft) is flagged rather than silently changed. */
-      var cl = clauseChecklistFor(c, md);
+      var cl = clauseChecklistFor(c, ctx);
       var reqLine = cl.total
         ? '<div style="margin-top:4px"><button class="lnk src" data-action="App.openClauseRequirements" data-id="' + key + '">' +
           (cl.complete ? icon('check') + ' ' : '') + 'Requirements: ' + cl.met + ' of ' + cl.total + ' met</button>' +
