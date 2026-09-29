@@ -1904,6 +1904,10 @@ window.POLICY_TEMPLATES = [
         because: 'A risk written as a scenario can be analysed, treated and tested; a risk written as a single word (\u201cransomware\u201d) cannot.'
       },
       {
+        rule: 'Opportunities are identified and recorded alongside risks: uncertainty that could benefit the organisation or its information security, rated by likelihood and benefit, with a named owner and a response (pursue, share, retain or decline). They are reviewed with the risks and kept separate from risk levels and the risk appetite.',
+        because: 'ISO 31000 treats risk as the effect of uncertainty, positive or negative, and ISO/IEC 27001 Clause 6.1.1 asks for the risks and opportunities the management system must address.'
+      },
+      {
         rule: 'Every risk has a named risk owner, accountable for the treatment decision and for the residual risk that remains after it.',
         because: 'A risk owned by a committee or a department is owned by nobody, and will still be open at the next review (ISO/IEC 27001 6.1.2 c).'
       },

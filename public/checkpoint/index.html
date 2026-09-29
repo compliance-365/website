@@ -625,7 +625,11 @@
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="nrTitle" placeholder="Risk statement" style="grid-column:1/-1">
           <input class="mini" id="nrCategory" placeholder="Category (e.g. Access control)">
-          <input class="mini" id="nrCia" placeholder="Threatens (C, I, A)" aria-label="Threatens confidentiality, integrity or availability">
+          <fieldset id="nrCia" class="mini" style="display:flex;gap:14px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:0"><legend class="src" style="padding:0 4px">Threatens</legend>
+            <label style="display:flex;gap:5px;align-items:center;font-size:12.5px"><input type="checkbox" id="nrCiaC"> Confidentiality</label>
+            <label style="display:flex;gap:5px;align-items:center;font-size:12.5px"><input type="checkbox" id="nrCiaI"> Integrity</label>
+            <label style="display:flex;gap:5px;align-items:center;font-size:12.5px"><input type="checkbox" id="nrCiaA"> Availability</label>
+          </fieldset>
           <input class="mini" id="nrOwner" placeholder="Owner">
           <select class="mini" id="nrLikelihood" aria-label="Likelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
           <select class="mini" id="nrImpact" aria-label="Impact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
@@ -653,7 +657,13 @@
       </div>
       <div class="filters" id="riskFilters" role="group" aria-label="Filter by severity"></div>
       <div id="riskCellFilterChip" style="margin-bottom:10px"></div>
-      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Category</th><th scope="col">CIA</th><th scope="col">Source</th><th scope="col">Inherent</th><th scope="col">Residual</th><th scope="col">Reviewed</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Category</th><th scope="col" title="Confidentiality, Integrity, Availability">CIA</th><th scope="col">Source</th><th scope="col">Inherent</th><th scope="col">Residual</th><th scope="col">Reviewed</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
+      <div class="sec-h" style="margin-top:28px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div><h3 style="margin:0">Opportunities</h3>
+        <p class="src" style="margin:4px 0 0;max-width:760px">Uncertainty that could help the organisation (ISO 31000), recorded alongside its risks as ISO 27001 Clause 6.1.1 asks. Rated by likelihood and benefit. Kept separate from the risks above, so they never count towards risk levels, the heatmap or the risk appetite.</p></div>
+        <button class="btn ghost sm" data-action="App.addOpportunity">+ Add opportunity</button>
+      </div>
+      <div class="card" style="padding:0 10px;margin-top:10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Opportunity</th><th scope="col">Category</th><th scope="col">Likelihood × benefit</th><th scope="col">Response</th><th scope="col">Reviewed</th><th scope="col">Owner</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="oppRows"></tbody></table></div>
     </section>
 
     <!-- FINANCIAL RISK ANALYSIS (Monte Carlo) -->

@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.110.0',
+    date: '2026-09-30',
+    entries: [
+      'Opportunities: the risk register now has an Opportunities section for uncertainty that could help the organisation (ISO 31000), as ISO 27001 Clause 6.1.1 asks for risks and opportunities. Each is rated by likelihood and benefit, owned, reviewed, and given a response: pursue, share, retain or decline. Opportunities never count towards risk levels, the heatmap or the risk appetite, and they appear in the risk register report. Clause 6.1.1 now checks that opportunities are recorded, owned and reviewed.',
+      'Confidentiality, integrity and availability are now three explicit choices when adding or editing a risk, instead of a free-text box. The register\u2019s CIA column shows which each risk threatens.'
+    ]
+  },
+  {
     version: '1.109.0',
     date: '2026-09-30',
     entries: [

@@ -126,7 +126,7 @@ describe('CIA classification', () => {
 
   test('the register and the add form both expose it', () => {
     assert.match(html, /id="nrCia"/, 'the add-risk form has no CIA input');
-    assert.match(html, /<th scope="col">CIA<\/th>/, 'the register has no CIA column');
+    assert.match(html, /<th scope="col"[^>]*>CIA<\/th>/, 'the register has no CIA column');
     assert.match(app, /function ciaChips\(/, 'nothing renders the CIA value');
   });
 

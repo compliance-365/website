@@ -1622,6 +1622,14 @@ window.DemoStore = (function () {
         { id: 'R-005', title: 'Cryptographic key handling undocumented for client-facing APIs', cat: 'Ops', src: 'Gap analysis', L: 2, I: 4, controls: ['A.8.24'], owner: 'S. Okafor', status: 'Open', treat: 'Treat', actions: ['ACT-006'],
           cia: ['C', 'I'], lastReviewed: daysFrom(-5), lastReviewedBy: 'S. Okafor' }
       ],
+      /* Opportunities (ISO 31000 positive effects, ISO 27001 6.1.1) —
+         L is likelihood, I the benefit if realised. */
+      opportunities: [
+        { id: 'O-001', type: 'Opportunity', title: 'ISO 27001 certification opens hospital tenders that currently exclude us', cat: 'Market', src: 'Management review', L: 4, I: 5, controls: [], owner: 'M. Chen', status: 'Pursuing', treat: 'Pursue', actions: [],
+          consequence: 'Eligibility for two state health procurement panels (est. $1.2m pipeline).', lastReviewed: daysFrom(-20), lastReviewedBy: 'M. Chen' },
+        { id: 'O-002', type: 'Opportunity', title: 'Consolidating on Microsoft 365 Business Premium retires three point security tools', cat: 'Technology', src: 'Gap analysis', L: 3, I: 3, controls: ['A.8.7', 'A.8.16'], owner: 'K. Patel', status: 'Open', treat: 'Pursue', actions: [],
+          consequence: 'Lower licensing cost and one console for endpoint, email and identity protection.', lastReviewed: daysFrom(-45), lastReviewedBy: 'K. Patel' }
+      ],
       actions: [
         { id: 'ACT-001', title: 'Issue updated security schedule to top-10 suppliers', risk: 'R-001', control: 'A.5.19', pr: 'High', owner: 'K. Patel', due: daysFrom(-6), status: 'In progress', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
         { id: 'ACT-002', title: 'Add supplier security clauses to procurement template', risk: 'R-001', control: 'A.5.19', pr: 'Medium', owner: 'Legal', due: daysFrom(14), status: 'Open', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
@@ -1958,9 +1966,14 @@ window.DemoStore = (function () {
       populateDemoDefinitionalRegistries();
       return S;
     },
-    addRisk: async function (r) { S.risks.push(r); persist(); },
+    addRisk: async function (r) { (r.type === 'Opportunity' ? (S.opportunities = S.opportunities || []) : S.risks).push(r); persist(); },
     updateRisk: async function () { persist(); },
-    deleteRisk: async function (r) { S.risks = S.risks.filter(function (x) { return x !== r && x._sp !== r._sp && x.id !== r.id; }); persist(); },
+    deleteRisk: async function (r) {
+      var keep = function (x) { return x !== r && x.id !== r.id; };
+      S.risks = S.risks.filter(keep);
+      S.opportunities = (S.opportunities || []).filter(keep);
+      persist();
+    },
     addAction: async function (a) { S.actions.push(a); persist(); },
     updateAction: async function () { persist(); },
     deleteAction: async function (a) { S.actions = S.actions.filter(function (x) { return x !== a && x._sp !== a._sp && x.id !== a.id; }); persist(); },
@@ -2206,7 +2219,12 @@ window.SpStore = (function () {
          is already specific, and a blank field reads as "not yet
          described" rather than inventing one. */
       { name: 'AssetRefs', text: {} }, { name: 'Threat', text: { allowMultipleLines: true } },
-      { name: 'Vulnerability', text: { allowMultipleLines: true } }, { name: 'Consequence', text: { allowMultipleLines: true } }
+      { name: 'Vulnerability', text: { allowMultipleLines: true } }, { name: 'Consequence', text: { allowMultipleLines: true } },
+      /* 'Opportunity' for an opportunity (ISO 31000's positive effects,
+         ISO 27001 6.1.1 "risks and opportunities"); blank or 'Threat' for
+         a risk. Opportunities load into S.opportunities, never S.risks, so
+         no threat count, heatmap or appetite check ever includes them. */
+      { name: 'RiskType', text: {} }
     ],
     Actions: [
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
@@ -2867,7 +2885,7 @@ window.SpStore = (function () {
        every column costs nothing for an up-to-date tenant and closes
        this bug class completely for whichever tenant is still missing
        one from years of incremental additions. */
-    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride', 'Cia', 'LastReviewed', 'LastReviewedBy', 'ResidualL', 'ResidualI', 'ResidualBy', 'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence'],
+    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride', 'Cia', 'LastReviewed', 'LastReviewedBy', 'ResidualL', 'ResidualI', 'ResidualBy', 'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence', 'RiskType'],
     Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
     /* Same incomplete-subset mistake as Risks/Actions above, caught the
        same way: this used to list only LastVerified/EvidenceUrl/
@@ -3208,7 +3226,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride), cia: uncsv(f.Cia), lastReviewed: f.LastReviewed || '', lastReviewedBy: f.LastReviewedBy || '', resL: (typeof f.ResidualL === 'number' ? f.ResidualL : null), resI: (typeof f.ResidualI === 'number' ? f.ResidualI : null), resBy: f.ResidualBy || '', resDate: f.ResidualDate || '', assetRefs: uncsv(f.AssetRefs), threat: f.Threat || '', vulnerability: f.Vulnerability || '', consequence: f.Consequence || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride), cia: uncsv(f.Cia), lastReviewed: f.LastReviewed || '', lastReviewedBy: f.LastReviewedBy || '', resL: (typeof f.ResidualL === 'number' ? f.ResidualL : null), resI: (typeof f.ResidualI === 'number' ? f.ResidualI : null), resBy: f.ResidualBy || '', resDate: f.ResidualDate || '', assetRefs: uncsv(f.AssetRefs), threat: f.Threat || '', vulnerability: f.Vulnerability || '', consequence: f.Consequence || '', type: f.RiskType === 'Opportunity' ? 'Opportunity' : 'Threat' };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -3388,6 +3406,8 @@ window.SpStore = (function () {
         nistcsfProposed: [], iso27001Proposed: [],
         handledTpl: [], aiCandidates: []
       };
+      S.opportunities = S.risks.filter(function (r) { return r.type === 'Opportunity'; });
+      S.risks = S.risks.filter(function (r) { return r.type !== 'Opportunity'; });
       /* restore last scan detail (results + handled templates) */
       var last = S.scans[S.scans.length - 1];
       if (last && last.detail) {
@@ -3429,9 +3449,10 @@ window.SpStore = (function () {
         Controls: csv(r.controls), Owner: r.owner, Status: r.status, Treatment: r.treat,
         ActionRefs: csv(r.actions), TplId: r.tpl || '', AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '',
         Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || '',
-        AssetRefs: csv(r.assetRefs || []), Threat: r.threat || '', Vulnerability: r.vulnerability || '', Consequence: r.consequence || ''
+        AssetRefs: csv(r.assetRefs || []), Threat: r.threat || '', Vulnerability: r.vulnerability || '', Consequence: r.consequence || '',
+        RiskType: r.type === 'Opportunity' ? 'Opportunity' : 'Threat'
       });
-      S.risks.push(r);
+      (r.type === 'Opportunity' ? (S.opportunities = S.opportunities || []) : S.risks).push(r);
     },
     /* Patches every field the risk drawer's edit/accept/close actions can
        change — Title/Category/Source/Controls added here (previously only

@@ -29,7 +29,7 @@ describe('risk scenario (ISO/IEC 27005)', () => {
     ['AssetRefs', 'Threat', 'Vulnerability', 'Consequence'].forEach((col) => {
       assert.match(store, new RegExp("name: '" + col + "'"), col + ' in DEFS');
     });
-    assert.match(store, /'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence'\],\n    Actions:/);
+    assert.match(store, /'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence', 'RiskType'\],\n    Actions:/);
     assert.match(store, /assetRefs: uncsv\(f\.AssetRefs\), threat: f\.Threat \|\| '', vulnerability: f\.Vulnerability \|\| '', consequence: f\.Consequence \|\| ''/);
     assert.equal((store.match(/AssetRefs: csv\(r\.assetRefs \|\| \[\]\), Threat: r\.threat \|\| '', Vulnerability: r\.vulnerability \|\| '', Consequence: r\.consequence \|\| ''/g) || []).length, 2, 'written on add and on update');
   });
@@ -81,5 +81,45 @@ describe('the Risk Management Framework states what the register does', () => {
 
   test('the review commitment still matches the default review cadence', () => {
     assert.match(text, /at least quarterly/);
+  });
+});
+
+describe('opportunities (ISO 31000; ISO 27001 6.1.1)', () => {
+  test('stored on the Risks list with a type, loaded into their own register', () => {
+    assert.match(store, /\{ name: 'RiskType', text: \{\} \}/);
+    assert.match(store, /type: f\.RiskType === 'Opportunity' \? 'Opportunity' : 'Threat'/);
+    assert.match(store, /S\.opportunities = S\.risks\.filter\(function \(r\) \{ return r\.type === 'Opportunity'; \}\);\n      S\.risks = S\.risks\.filter\(function \(r\) \{ return r\.type !== 'Opportunity'; \}\);/);
+    assert.match(store, /RiskType: r\.type === 'Opportunity' \? 'Opportunity' : 'Threat'/);
+  });
+
+  test('the register has an Opportunities section with add, edit and review', () => {
+    assert.match(html, /id="oppRows"/);
+    assert.match(html, /data-action="App\.addOpportunity"/);
+    ['addOpportunity', 'editOpportunity', 'reviewOpportunity', 'deleteOpportunity'].forEach((a) => assert.match(app, new RegExp("'" + a + "'"), a + ' is gated for read-only sessions'));
+    assert.match(app, /var OPPORTUNITY_RESPONSES = \['Pursue', 'Share', 'Retain', 'Decline'\];/);
+    assert.match(app, /concat\(opportunitiesReportSection\(\)\)/);
+  });
+
+  test('Clause 6.1.1 needs opportunities recorded, owned and reviewed', () => {
+    const rec = (x) => Lib.clauseRecordStatus('opportunities', Object.assign({ today: '2026-09-30' }, x));
+    assert.equal(rec({ opportunities: [] }).st, 'missing');
+    assert.equal(rec({ opportunities: [{ owner: 'A', lastReviewed: '2026-06-01', status: 'Open' }] }).st, 'done');
+    assert.equal(rec({ opportunities: [{ owner: '', lastReviewed: '2026-06-01', status: 'Open' }] }).st, 'partial');
+    ['iso27001', 'iso42001', 'iso27701'].forEach((fw) => {
+      const d = Lib.clauseRequirementsFor(fw, '6.1.1').find((r) => r.id === 'determine');
+      assert.ok([].concat(d.auto.record || []).includes('opportunities'), fw);
+    });
+  });
+
+  test('the framework document covers opportunities', () => {
+    const t = window.POLICY_TEMPLATES.find((x) => x.id === 'risk-management-framework');
+    assert.ok(t.policyStatements.some((s) => /Opportunities are identified and recorded alongside risks/.test(s.rule)));
+  });
+});
+
+describe('confidentiality, integrity and availability', () => {
+  test('captured as three explicit choices on a new risk and when editing', () => {
+    ['nrCiaC', 'nrCiaI', 'nrCiaA'].forEach((id) => assert.match(html, new RegExp('<input type="checkbox" id="' + id + '">')));
+    ['ciaC', 'ciaI', 'ciaA'].forEach((id) => assert.match(app, new RegExp("\\{ id: '" + id + "', label: 'Threatens")));
   });
 });

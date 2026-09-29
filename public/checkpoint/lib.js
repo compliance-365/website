@@ -6277,9 +6277,9 @@
     ],
     '6.1.1': [
       { id: 'determine', text: 'Determine the risks and opportunities that need addressing, drawing on the issues (4.1) and requirements (4.2).',
-        evidence: 'The risk register, reviewed within the last 12 months.',
-        evidence42: 'AI risks in the risk register (AI Governance), reviewed within the last 12 months.',
-        auto: { md: '8.2' }, auto42: { record: 'riskReviewed' } },
+        evidence: 'The risk register reviewed within the last 12 months, and opportunities recorded with an owner (the register\u2019s Opportunities section).',
+        evidence42: 'AI risks in the risk register (AI Governance) reviewed within the last 12 months, and opportunities recorded with an owner.',
+        auto: { md: '8.2', record: 'opportunities' }, auto42: { record: ['riskReviewed', 'opportunities'] } },
       { id: 'plan', text: 'Plan actions to address those risks and opportunities, build them into the management system’s processes, and evaluate whether they work.',
         evidence: 'The risk treatment plan, with actions, owners and due dates.',
         auto: { md: '6.1.3 e)' }, auto42: { record: 'riskTreated' } }
@@ -6695,6 +6695,10 @@
         if (!ai.length) gaps++;
         return gaps ? { st: gaps > need.length ? 'missing' : 'partial', note: gaps + ' of ' + (need.length + 1) + ' core AI management system items not yet in place (scope, policy, risk framework, impact assessment procedure, AI system register)' }
           : { st: 'done', note: 'AI scope, policy, risk framework and impact assessment procedure approved, and the AI system register in use' };
+      case 'opportunities':
+        var opps = (s.opportunities || []).filter(function (o) { return o && o.status !== 'Closed'; });
+        if (!opps.length) return { st: 'missing', note: 'No opportunities recorded \u2014 Clause 6.1.1 asks for risks and opportunities' };
+        return share(opps.filter(function (o) { return String(o.owner || '').trim() && within(o.lastReviewed, 365); }).length, opps.length, opps.length + ' opportunit' + (opps.length > 1 ? 'ies' : 'y') + ' recorded, each owned and reviewed within 12 months', 'opportunit' + 'ies without an owner or a review in the last 12 months');
       case 'legalPrivacy':
         var privacyLaws = (s.legal || []).filter(function (l) { return l && l.applies === 'Yes' && /privacy|personal (information|data)|data protection|gdpr|\bapps?\b|health records/i.test((l.title || '') + ' ' + (l.requirement || '')); });
         return privacyLaws.length ? { st: 'done', note: privacyLaws.length + ' privacy law or obligation(s) recorded as applying, in the legal and regulatory register' }
@@ -6722,7 +6726,7 @@
   var CLAUSE_RECORD_KINDS = ['risks', 'riskOwners', 'riskRated', 'riskReviewed', 'riskTreated', 'riskActioned', 'riskAccepted',
     'objectivePlans', 'kpis', 'trainingCurrent', 'policyAcknowledged', 'policyCurrent', 'legalTraced', 'mrIssues', 'mrResources',
     'mrInputs', 'improvement', 'auditDone', 'auditsPlanned', 'auditImpartial', 'operating', 'auditLog', 'soa', 'aiRegister',
-    'aiImpact', 'aimsCore', 'legalPrivacy', 'pimsCore', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
+    'aiImpact', 'aimsCore', 'opportunities', 'legalPrivacy', 'pimsCore', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
 
   /* One clause's checklist, resolved against the tenant's data.
      s = { fw, code, today, docs:[{tplId,status}], docsFull:[register rows], settings:{key:value},
