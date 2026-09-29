@@ -254,8 +254,10 @@ window.allControlSeeds = allControlSeeds;
    two requirements 27001 has no equivalent of: 6.1.4 and 8.4, the AI
    system impact assessment. Its rows are seeded for every tenant like
    27001's, and shown only when the tenant is entitled to ISO 42001.
-   ISO 27701 is not separately listed: the rows here serve a privacy
-   extension to the ISMS, which is how Checkpoint models 27701. */
+   ISO/IEC 27701:2025 is a standalone privacy information management
+   system (PIMS) with its own Clauses 4-10 in the same structure, so it
+   has its own rows too (the 2019 edition was an extension of the ISMS
+   and had none). Seeded for every tenant, shown only when entitled. */
 window.CLAUSE_DEFS = [
   { code: '4.1', t: 'Understanding the organization and its context', fw: 'iso27001' },
   { code: '4.2', t: 'Understanding the needs and expectations of interested parties', fw: 'iso27001' },
@@ -316,6 +318,35 @@ window.CLAUSE_DEFS = [
   { code: '10.1', t: 'Continual improvement', fw: 'iso42001',
     hint: 'Evidenced by management review outputs and the improvement actions they raise — see the Management Review Procedure and the Actions register.' },
   { code: '10.2', t: 'Nonconformity and corrective action', fw: 'iso42001',
+    hint: 'Evidenced by the corrective-action loop on each nonconformity in the Actions register — see the Nonconformity & Corrective Action Procedure.' },
+  { code: '4.1', t: 'Understanding the organization and its context', fw: 'iso27701' },
+  { code: '4.2', t: 'Understanding the needs and expectations of interested parties', fw: 'iso27701' },
+  { code: '4.3', t: 'Determining the scope of the privacy information management system', fw: 'iso27701' },
+  { code: '4.4', t: 'Privacy information management system', fw: 'iso27701' },
+  { code: '5.1', t: 'Leadership and commitment', fw: 'iso27701' },
+  { code: '5.2', t: 'Privacy policy', fw: 'iso27701' },
+  { code: '5.3', t: 'Roles, responsibilities and authorities', fw: 'iso27701' },
+  { code: '6.1.1', t: 'Actions to address risks and opportunities — general', fw: 'iso27701' },
+  { code: '6.1.2', t: 'Privacy risk assessment', fw: 'iso27701' },
+  { code: '6.1.3', t: 'Privacy risk treatment', fw: 'iso27701' },
+  { code: '6.2', t: 'Privacy objectives and planning to achieve them', fw: 'iso27701' },
+  { code: '6.3', t: 'Planning of changes', fw: 'iso27701' },
+  { code: '7.1', t: 'Resources', fw: 'iso27701' },
+  { code: '7.2', t: 'Competence', fw: 'iso27701' },
+  { code: '7.3', t: 'Awareness', fw: 'iso27701' },
+  { code: '7.4', t: 'Communication', fw: 'iso27701' },
+  { code: '7.5.1', t: 'Documented information — general', fw: 'iso27701' },
+  { code: '7.5.2', t: 'Creating and updating documented information', fw: 'iso27701' },
+  { code: '7.5.3', t: 'Control of documented information', fw: 'iso27701' },
+  { code: '8.1', t: 'Operational planning and control', fw: 'iso27701' },
+  { code: '8.2', t: 'Privacy risk assessment', fw: 'iso27701' },
+  { code: '8.3', t: 'Privacy risk treatment', fw: 'iso27701' },
+  { code: '9.1', t: 'Monitoring, measurement, analysis and evaluation', fw: 'iso27701' },
+  { code: '9.2', t: 'Internal audit', fw: 'iso27701' },
+  { code: '9.3', t: 'Management review', fw: 'iso27701' },
+  { code: '10.1', t: 'Continual improvement', fw: 'iso27701',
+    hint: 'Evidenced by management review outputs and the improvement actions they raise — see the Management Review Procedure and the Actions register.' },
+  { code: '10.2', t: 'Nonconformity and corrective action', fw: 'iso27701',
     hint: 'Evidenced by the corrective-action loop on each nonconformity in the Actions register — see the Nonconformity & Corrective Action Procedure.' }
 ];
 
@@ -985,6 +1016,7 @@ window.DEFAULT_SETTINGS = {
   orgChange: '',
   orgClimateRelevant: '',
   orgClimatePartyReqs: '',
+  orgPiiRole: '',
   /* Comma-separated ids into window.TECH_STACK_OPTIONS (templates.js) —
      which of a short, self-declared list of technology categories this
      tenant actually runs. Drives the "relevant to you" sort in the

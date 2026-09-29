@@ -2806,10 +2806,11 @@ function showModal(opts) {
        confirmation of where the evidence is) and the evidence behind
        it. What a certification auditor walks through at Stage 1, and
        the traceability from requirement to evidence in one document.
-       ISO 42001 when that is the framework in view, otherwise ISO 27001
-       (the base management system every tenant holds). */
+       ISO 42001 or ISO 27701 when that is the framework in view,
+       otherwise ISO 27001 (the base management system every tenant
+       holds). */
     clauses: function (activeFw) {
-      var fw = activeFw === 'iso42001' ? 'iso42001' : 'iso27001';
+      var fw = activeFw === 'iso42001' || activeFw === 'iso27701' ? activeFw : 'iso27001';
       var label = fwName(fw);
       var ctx = clauseContext();
       var clauses = (S.clauses || []).filter(function (c) { return (c.fw || 'iso27001') === fw; });
@@ -10156,7 +10157,7 @@ function showModal(opts) {
      pass this in rather than rebuilding it per clause. */
   function clauseContext() {
     var soaByFw = {};
-    ['iso27001', 'iso42001'].forEach(function (fw) {
+    ['iso27001', 'iso42001', 'iso27701'].forEach(function (fw) {
       var app = frameworkAppRows(fw), all = frameworkVisibleRows(fw);
       soaByFw[fw] = { applicable: app.length, notStarted: app.filter(function (c) { return c.st === 'Not started'; }).length, unjustified: all.filter(function (c) { return !c.app && !c.just; }).length };
     });
@@ -10237,7 +10238,7 @@ function showModal(opts) {
          as the same list twice. */
       var groupRow = '';
       if (multiFw && c.fw !== lastFw) {
-        groupRow = '<tr class="soa-group-row"><td colspan="6"><b>' + esc(fwName(c.fw)) + '</b> <span class="src">' + (c.fw === 'iso42001' ? 'AI management system' : 'Information security management system') + '</span></td></tr>';
+        groupRow = '<tr class="soa-group-row"><td colspan="6"><b>' + esc(fwName(c.fw)) + '</b> <span class="src">' + (c.fw === 'iso42001' ? 'AI management system' : c.fw === 'iso27701' ? 'Privacy information management system (2025 edition)' : 'Information security management system') + '</span></td></tr>';
         lastFw = c.fw;
       }
       var hint = hints[(c.fw || 'iso27001') + '|' + c.id] || '';
@@ -16442,7 +16443,10 @@ function showModal(opts) {
     orgProfileWizard: async function (opts) {
       opts = opts || {};
       var fields = window.ORG_PROFILE_FIELDS || [];
-      var questions = window.ORG_CONTEXT_QUESTIONS || [];
+      /* A question tied to a framework (the PII controller/processor role
+         for ISO 27701) is asked only of tenants entitled to it. */
+      var entitledForQs = entitledFrameworks();
+      var questions = (window.ORG_CONTEXT_QUESTIONS || []).filter(function (q) { return !q.fw || entitledForQs.indexOf(q.fw) !== -1; });
       function fld(key) { return fields.find(function (f) { return f.key === key; }); }
       /* The AI step only for tenants entitled to ISO 42001 — the one
          framework whose scope document uses it. */

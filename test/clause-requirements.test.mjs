@@ -285,7 +285,7 @@ describe('register rules added for full automation', () => {
   });
 
   test('every clause is automated except the three no register can see', () => {
-    ['iso27001', 'iso42001'].forEach((fw) => {
+    ['iso27001', 'iso42001', 'iso27701'].forEach((fw) => {
       const manual = [];
       CLAUSE_DEFS.filter((d) => d.fw === fw).forEach((d) => clauseRequirementsFor(fw, d.code).forEach((r) => { if (!r.auto) manual.push(d.code + '/' + r.id); }));
       assert.deepEqual(manual.sort(), ['5.1/communicates', '5.1/integration', '7.5.3/lifecycle'], fw);
@@ -300,5 +300,64 @@ describe('management system evidence pack', () => {
     assert.match(app, /clauses: function \(activeFw\) \{/);
     assert.match(app, /title: 'Management System Evidence Pack — ' \+ label/);
     assert.equal((html.match(/data-action="App\.report" data-id="clauses"/g) || []).length, 2);
+  });
+});
+
+describe('ISO/IEC 27701:2025 as a standalone privacy information management system', () => {
+  const today = '2026-09-30';
+  const rec = (kind, x) => Lib.clauseRecordStatus(kind, Object.assign({ today, fw: 'iso27701' }, x));
+
+  test('it has its own Clauses 4-10, the same codes as ISO 27001', () => {
+    const codes = (fw) => CLAUSE_DEFS.filter((d) => d.fw === fw).map((d) => d.code);
+    assert.deepEqual(codes('iso27701'), codes('iso27001'));
+    assert.match(CLAUSE_DEFS.find((d) => d.fw === 'iso27701' && d.code === '6.1.2').t, /Privacy risk assessment/);
+  });
+
+  test('PIMS-only requirements: role, PII principals and PII processing in scope', () => {
+    assert.ok(clauseRequirementsFor('iso27701', '4.1').some((r) => r.id === 'pii-role'));
+    assert.ok(clauseRequirementsFor('iso27701', '4.2').some((r) => r.id === 'pii-principals'));
+    assert.ok(clauseRequirementsFor('iso27701', '4.3').some((r) => r.id === 'pii-scope'));
+    ['iso27001', 'iso42001'].forEach((fw) => assert.ok(!clauseRequirementsFor(fw, '4.1').some((r) => r.id === 'pii-role'), fw));
+    assert.match(clauseRequirementsFor('iso27701', '6.1.2').find((r) => r.id === 'criteria').text, /risks to PII principals/);
+    assert.match(clauseRequirementsFor('iso27701', '6.1.3').find((r) => r.id === 'soa').text, /Table A\.1/);
+    assert.deepEqual(clauseRequirementsFor('iso27701', '5.2')[0].auto, { docs: ['privacy-policy-skeleton'] });
+  });
+
+  test('shared ISO 27001 sources carry over, scoped to privacy', () => {
+    assert.deepEqual(clauseRequirementsFor('iso27701', '8.2')[0].auto, { record: ['riskReviewed'] });
+    assert.deepEqual(clauseRequirementsFor('iso27701', '4.4')[0].auto, { record: ['pimsCore'] });
+    assert.deepEqual(clauseRequirementsFor('iso27701', '9.3').find((r) => r.id === 'held').auto, { md: '9.3' });
+  });
+
+  test('privacy rules read privacy risks, the privacy course, the Privacy Policy and ISO 27701 audits', () => {
+    const risks = [{ status: 'Open', cat: 'Supplier', owner: '' }, { status: 'Open', cat: 'Privacy', owner: 'A' }, { status: 'Open', controls: ['P.7.2.5'], owner: 'B' }];
+    const r = rec('riskOwners', { risks });
+    assert.equal(r.st, 'done');
+    assert.match(r.note, /2 privacy risk/);
+    assert.equal(rec('trainingCurrent', { training: [{ courseId: 'privacy-awareness', status: 'Completed' }, { courseId: 'security-awareness', status: 'Assigned', due: '2026-01-01' }] }).st, 'done');
+    const att = [{ campaign: 'P', docName: 'Privacy Policy.html', status: 'Acknowledged' }];
+    assert.equal(rec('policyAcknowledged', { attestations: att }).st, 'done');
+    assert.equal(rec('auditDone', { audits: [{ fw: 'iso27001', status: 'Completed', completed: '2026-08-01' }] }).st, 'missing');
+    assert.equal(rec('auditDone', { audits: [{ fw: 'iso27701', status: 'Completed', completed: '2026-08-01' }] }).st, 'done');
+    assert.equal(Lib.clauseRecordStatus('auditDone', { today, fw: 'iso27001', audits: [{ fw: 'iso27701', status: 'Completed', completed: '2026-08-01' }] }).st, 'missing', 'an ISO 27701 audit is not an ISO 27001 audit');
+  });
+
+  test('privacy law in the legal register, and the PIMS core', () => {
+    assert.equal(rec('legalPrivacy', { legal: [{ applies: 'Yes', title: 'Privacy Act 1988 (Cth)' }] }).st, 'done');
+    assert.equal(rec('legalPrivacy', { legal: [{ applies: 'Yes', title: 'Corporations Act 2001' }] }).st, 'missing');
+    const docs = ['privacy-policy-skeleton', 'ropa-data-handling-procedure', 'pii-principal-rights-procedure', 'privacy-impact-assessment-process'].map((tplId) => ({ tplId, status: 'Approved' }));
+    assert.equal(rec('pimsCore', { docs, soaByFw: { iso27701: { applicable: 49 } } }).st, 'done');
+    assert.equal(rec('pimsCore', { docs: docs.slice(1), soaByFw: {} }).st, 'partial');
+  });
+
+  test('the role question is asked only of ISO 27701 tenants, and audits read their own clauses', () => {
+    const q = ORG_CONTEXT_QUESTIONS.find((x) => x.id === 'piiRole');
+    assert.equal(q.fw, 'iso27701');
+    assert.equal(q.key, 'orgPiiRole');
+    const app = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+    assert.match(app, /filter\(function \(q\) \{ return !q\.fw \|\| entitledForQs\.indexOf\(q\.fw\) !== -1; \}\)/);
+    assert.match(app, /activeFw === 'iso42001' \|\| activeFw === 'iso27701' \? activeFw : 'iso27001'/);
+    const wp = Lib.auditWorkpack({ fw: 'iso27701', scope: 'Clauses 4-10' }, { clauses: [{ fw: 'iso27701', id: '4.1', st: 'Implemented', t: 'x' }, { fw: 'iso27001', id: '4.1', st: 'Implemented', t: 'y' }] }, today);
+    assert.deepEqual(wp.clauses.map((c) => c.title), ['x']);
   });
 });

@@ -6166,12 +6166,16 @@
         auto: { docs: ['context-interested-parties'], profile: ['orgExternalIssues', 'orgInternalIssues'] },
         auto42: { docs: ['aims-scope'], profile: ['orgAiIssues'] } },
       { id: 'climate', text: 'Determine whether climate change is a relevant issue, and record the determination and the reasoning behind it (Amendment 1, 2024).',
+        text701: 'Determine whether climate change is a relevant issue, and record the determination and the reasoning behind it (part of the 2025 edition’s Clause 4.1).',
         evidence: 'The recorded climate change determination in the context document. If it is relevant, the risks, continuity or supplier arrangements that address it.',
         auto: { docs: ['context-interested-parties'], profile: ['orgClimate'] },
         auto42: { docs: ['aims-scope'], profile: ['orgClimate'] } },
       { id: 'ai-role', only: 'iso42001', text: 'Determine the organisation’s role for each AI system (for example provider, developer or user) and the intended purpose of the AI systems it develops, provides or uses.',
         evidence: 'The AI system register and the AI Management System Scope recording each system’s role and purpose.',
         auto42: { docs: ['aims-scope'], profile: ['orgAiRole', 'orgAiSystems'], record: 'aiRegister' } },
+      { id: 'pii-role', only: 'iso27701', text: 'Determine the organisation’s role for each processing of personal information (PII): PII controller (including joint controller), PII processor, or both.',
+        evidence: 'The role recorded in the scope & context profile and, activity by activity, in the record of processing activities.',
+        auto701: { profile: ['orgPiiRole'], doc: 'ropa-data-handling-procedure' } },
       { id: 'current', text: 'Keep the issues current: review them when the organisation or its environment changes, and at each management review.',
         evidence: 'Management review minutes that record changes in external and internal issues.',
         auto: { record: 'mrIssues' }, auto42: { record: 'mrIssues' } }
@@ -6181,11 +6185,15 @@
         evidence: 'The list of interested parties in the approved context document.',
         auto: { docs: ['context-interested-parties'], profile: ['orgInterestedParties'] },
         auto42: { docs: ['aims-scope'], profile: ['orgInterestedParties'] } },
+      { id: 'pii-principals', only: 'iso27701', text: 'Include the PII principals (the people the personal information is about) among the interested parties, with the privacy obligations owed to them under applicable law, regulation and contracts.',
+        evidence: 'PII principals named in the context document, and the privacy laws that apply (for example the Privacy Act 1988) in the legal and regulatory register.',
+        auto701: { docs: ['context-interested-parties'], record: 'legalPrivacy' } },
       { id: 'requirements', text: 'Determine what those interested parties require, including legal, regulatory and contractual obligations.',
         evidence: 'The recorded requirements of each party, and the legal and regulatory register.',
         auto: { docs: ['context-interested-parties'], profile: ['orgPartyRequirements', 'orgRegulatory'], md: 'A.5.31' },
         auto42: { docs: ['aims-scope'], profile: ['orgPartyRequirements', 'orgRegulatory'], md: 'A.5.31' } },
       { id: 'climate-reqs', text: 'Consider whether interested parties have requirements related to climate change (Amendment 1, 2024).',
+        text701: 'Consider whether interested parties have requirements related to climate change (part of the 2025 edition’s Clause 4.2).',
         evidence: 'A recorded answer on climate-related requirements (for example customers expecting services to withstand extreme weather, or climate disclosure obligations), carried into the context document.',
         auto: { profile: ['orgClimatePartyReqs'] }, auto42: { profile: ['orgClimatePartyReqs'] } },
       { id: 'addressed', text: 'Decide which of those requirements the management system will address, and where each is met (a policy, a control, a contract or an objective).',
@@ -6204,6 +6212,9 @@
         evidence: 'The interfaces and dependencies recorded in the scope document.',
         evidence42: 'Dependencies on third-party AI systems, models and providers recorded in the AI Management System Scope and the AI system register.',
         auto: { docs: ['isms-scope'], profile: ['orgInterfaces'] }, auto42: { docs: ['aims-scope'], record: 'aiRegister' } },
+      { id: 'pii-scope', only: 'iso27701', text: 'Include the processing of personal information in the scope, and state the role(s) the organisation takes for it.',
+        evidence: 'The scope document and the record of processing activities covering the processing in scope and the organisation’s role for each.',
+        auto701: { docs: ['isms-scope', 'ropa-data-handling-procedure'], profile: ['orgPiiRole'] } },
       { id: 'exclusions', text: 'Record anything excluded from the scope and why, or that nothing is excluded.',
         evidence: 'The exclusions statement in the scope document, with a reason for each exclusion.',
         auto: { docs: ['isms-scope'] }, auto42: { docs: ['aims-scope'] } }
@@ -6233,6 +6244,7 @@
       { id: 'policy', text: 'Establish a policy that suits the organisation’s purpose, includes objectives or a framework for them, and commits to meeting applicable requirements and to continual improvement.',
         evidence: 'The approved policy containing those commitments.',
         text42: 'Establish an AI policy that suits the organisation’s purpose, provides a framework for AI objectives, and commits to meeting applicable requirements and to continual improvement.',
+        text701: 'Establish a privacy policy that suits the organisation’s purpose, provides a framework for privacy objectives, and commits to meeting applicable privacy requirements and to continual improvement.',
         auto: { doc: 'infosec-policy' }, auto42: { doc: 'ai-policy' } },
       { id: 'communicated', text: 'Make the policy available as documented information, communicate it within the organisation, and make it available to interested parties as appropriate.',
         evidence: 'The approved policy published, and staff acknowledgements from a policy attestation campaign.',
@@ -6259,6 +6271,9 @@
       { id: 'criteria', text: 'Define a risk assessment process, including risk acceptance criteria and criteria for when assessments are carried out.',
         evidence: 'The approved risk management framework, with likelihood and impact scales and acceptance criteria.',
         text42: 'Define an AI risk assessment process, including criteria for acceptable risk and for when assessments are carried out.',
+        text701: 'Define a privacy risk assessment process that considers the risks to PII principals as well as to the organisation, including criteria for acceptable risk and for when assessments are carried out.',
+        evidence701: 'The approved risk management framework and the approved data protection impact assessment (DPIA) process.',
+        auto701: { docs: ['risk-management-framework', 'privacy-impact-assessment-process'] },
         auto: { doc: 'risk-management-framework' }, auto42: { doc: 'ai-risk-framework' } },
       { id: 'consistent', text: 'Make sure repeated assessments produce consistent, valid and comparable results.',
         evidence: 'The same scales applied throughout the risk register, as defined in the framework.',
@@ -6266,6 +6281,8 @@
       { id: 'identify', text: 'Identify the risks of losing confidentiality, integrity and availability of information within the scope, and name an owner for each.',
         evidence: 'Risks in the register, each with an owner.',
         text42: 'Identify the risks that could prevent the AI management system achieving its objectives, and name an owner for each.',
+        text701: 'Identify the privacy risks related to the processing of personal information within the scope, including risks to PII principals, and name an owner for each.',
+        evidence701: 'Privacy risks in the register (category Privacy, or linked to an ISO 27701 control), each with an owner.',
         evidence42: 'AI risks in the register (AI Governance), each with an owner.',
         auto: { record: 'riskOwners' }, auto42: { record: 'riskOwners' } },
       { id: 'analyse', text: 'Analyse each risk: the realistic likelihood, the consequences if it happens, and the resulting risk level.',
@@ -6288,6 +6305,7 @@
       { id: 'soa', text: 'Produce a Statement of Applicability: the necessary controls, why each is included, whether it is implemented, and why any Annex A control is excluded.',
         evidence: 'The Statement of Applicability with a justification for every inclusion and exclusion.',
         text42: 'Produce a statement of applicability for the ISO 42001 Annex A controls: which apply, why, whether each is implemented, and why any is excluded.',
+        text701: 'Produce a statement of applicability for the ISO 27701 Annex A controls (Table A.1 for PII controllers, A.2 for PII processors, A.3 information security): which apply for the organisation’s role, why, whether each is implemented, and why any is excluded.',
         auto: { md: '6.1.3 d)' }, auto42: { record: 'soa' } },
       { id: 'plan', text: 'Formulate a risk treatment plan.',
         evidence: 'The risk treatment plan report: every open risk with its treatment, actions and owner.',
@@ -6377,12 +6395,14 @@
       { id: 'repeat', text: 'Carry out risk assessments at planned intervals and when significant changes happen, and keep the results.',
         evidence: 'Every open risk reviewed within the last 12 months, and reassessment after significant change.',
         text42: 'Carry out AI risk assessments at planned intervals and when significant changes happen, and keep the results.',
+        text701: 'Carry out privacy risk assessments, including data protection impact assessments where processing is high risk, at planned intervals and when significant changes happen, and keep the results.',
         auto: { md: '8.2' }, auto42: { record: 'riskReviewed' } }
     ],
     '8.3': [
       { id: 'implement', text: 'Put the risk treatment plan into effect, and keep the results.',
         evidence: 'Treatment actions completed or progressing, and every open risk with actions or a recorded acceptance.',
         text42: 'Put the AI risk treatment plan into effect, and keep the results.',
+        text701: 'Put the privacy risk treatment plan into effect, and keep the results.',
         auto: { md: '8.3' }, auto42: { record: 'riskActioned' } }
     ],
     '9.1': [
@@ -6457,15 +6477,39 @@
     ]
   };
 
+  /* ISO 27701 shares the Harmonized Structure with ISO 27001, and most
+     of its management-system requirements are met by the same
+     procedures and registers. Where a requirement has no `auto701` of
+     its own, its ISO 27001 source is carried over: documents that serve
+     both (their templates list iso27701) stay, the Information Security
+     Policy becomes the Privacy Policy, Stage 1 checklist items that
+     count every risk or audit become the privacy-scoped register rules,
+     and the ISMS core becomes the PIMS core. */
+  var DOC_701 = { 'infosec-policy': 'privacy-policy-skeleton' };
+  var MD_701 = { '8.2': 'riskReviewed', '8.3': 'riskActioned', '6.1.3 e)': 'riskTreated', '6.1.3 d)': 'soa', '9.2': 'auditDone', '9.1': 'kpis' };
+  var MD_SHARED_701 = ['9.3', '6.2', '7.2', '7.5', '10.2', 'A.5.31', 'A.5.19'];
+  function autoFor701(src) {
+    if (!src) return null;
+    var out = {}, records = [].concat(src.record || []).map(function (k) { return k === 'mandatoryAll' ? 'pimsCore' : k; });
+    var docs = (src.docs || (src.doc ? [src.doc] : [])).map(function (d) { return DOC_701[d] || d; });
+    if (docs.length) out.docs = docs;
+    if (src.profile) out.profile = src.profile;
+    if (src.md) {
+      if (MD_SHARED_701.indexOf(src.md) !== -1) out.md = src.md;
+      else if (MD_701[src.md] && records.indexOf(MD_701[src.md]) === -1) records.push(MD_701[src.md]);
+    }
+    if (records.length) out.record = records;
+    return Object.keys(out).length ? out : null;
+  }
   function clauseRequirementsFor(fw, code) {
-    var is42 = fw === 'iso42001';
+    var is42 = fw === 'iso42001', is701 = fw === 'iso27701';
     var list = (is42 && CLAUSE_REQUIREMENTS_42[code]) || CLAUSE_REQUIREMENTS[code] || [];
     return list.filter(function (r) { return !r.only || r.only === fw; }).map(function (r) {
       return {
         id: r.id,
-        text: (is42 && r.text42) || r.text,
-        evidence: (is42 && r.evidence42) || r.evidence,
-        auto: is42 ? (r.auto42 || null) : (r.auto || null)
+        text: (is42 && r.text42) || (is701 && r.text701) || r.text,
+        evidence: (is42 && r.evidence42) || (is701 && r.evidence701) || r.evidence,
+        auto: is42 ? (r.auto42 || null) : is701 ? (r.auto701 !== undefined ? r.auto701 : autoFor701(r.auto)) : (r.auto || null)
       };
     });
   }
@@ -6475,6 +6519,11 @@
   function isAiRisk(r) {
     return !!r && (r.cat === 'AI Governance' || (r.controls || []).some(function (c) { return /^AI\./.test(String(c)); }));
   }
+  /* The privacy risks: categorised as Privacy, or treated by an ISO
+     27701 Annex A control (P.* codes). */
+  function isPrivacyRisk(r) {
+    return !!r && (r.cat === 'Privacy' || (r.controls || []).some(function (c) { return /^P\./.test(String(c)); }));
+  }
 
   /* Register rules for `record` sources. Same shape as the Stage 1
      checklist: { st: 'done'|'partial'|'missing', note }. Each reuses the
@@ -6483,16 +6532,17 @@
      ISO 42001 the risk rules read the AI risks only, training reads the
      AI use course, and audits read ISO 42001 audits. */
   var AI_TRAINING_COURSE = 'ai-use-oversight';
+  var PRIVACY_TRAINING_COURSE = 'privacy-awareness';
   function clauseRecordStatus(kind, s) {
     var fw = s.fw || 'iso27001';
-    var is42 = fw === 'iso42001';
+    var is42 = fw === 'iso42001', is701 = fw === 'iso27701';
     var today = s.today || new Date().toISOString().slice(0, 10);
     var within = function (d, days) { return !!d && daysBetweenDateStr(String(d).slice(0, 10), today) <= days; };
-    var riskWord = is42 ? 'AI risk' : 'risk';
-    var openRisks = (s.risks || []).filter(function (r) { return r && r.status !== 'Closed' && (!is42 || isAiRisk(r)); });
-    var noRisks = { st: 'missing', note: is42 ? 'No AI risks in the register (category AI Governance)' : 'No risks in the register' };
+    var riskWord = is42 ? 'AI risk' : is701 ? 'privacy risk' : 'risk';
+    var openRisks = (s.risks || []).filter(function (r) { return r && r.status !== 'Closed' && (is42 ? isAiRisk(r) : is701 ? isPrivacyRisk(r) : true); });
+    var noRisks = { st: 'missing', note: is42 ? 'No AI risks in the register (category AI Governance)' : is701 ? 'No privacy risks in the register (category Privacy)' : 'No risks in the register' };
     var ncs = (s.actions || []).filter(function (a) { return a && a.type && String(a.type).indexOf('Non-conformity') === 0; });
-    var fwAudits = (s.audits || []).filter(function (a) { return a && (is42 ? a.fw === 'iso42001' : a.fw !== 'iso42001'); });
+    var fwAudits = (s.audits || []).filter(function (a) { return a && (is42 || is701 ? a.fw === fw : a.fw !== 'iso42001' && a.fw !== 'iso27701'); });
     var auditsDone = fwAudits.filter(function (a) { return a.status === 'Completed' && within(a.completed, 365); });
     var reviews = (s.reviews || []).filter(function (r) { return r && r.date; }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
     var lastReview = reviews[0] && within(reviews[0].date, 365) ? reviews[0] : null;
@@ -6545,12 +6595,13 @@
         return ob.st === 'done' && second.st === 'done' ? { st: 'done', note: ob.note + ' ' + second.note + '.' }
           : { st: ob.st === 'missing' && second.st === 'missing' ? 'missing' : 'partial', note: [ob, second].filter(function (p) { return p.st !== 'done'; }).map(function (p) { return p.note; }).join('; ') };
       case 'trainingCurrent':
-        var rows = (s.training || []).filter(function (t) { return !is42 || t.courseId === AI_TRAINING_COURSE; });
-        return fromCheck(trainingCheckResult(rows, today), is42 ? 'The AI use and oversight course has not been assigned' : 'No training assigned in Checkpoint');
+        var rows = (s.training || []).filter(function (t) { return is42 ? t.courseId === AI_TRAINING_COURSE : is701 ? t.courseId === PRIVACY_TRAINING_COURSE : true; });
+        return fromCheck(trainingCheckResult(rows, today), is42 ? 'The AI use and oversight course has not been assigned' : is701 ? 'The privacy and personal information course has not been assigned' : 'No training assigned in Checkpoint');
       case 'policyAcknowledged':
-        var title = is42 ? /\bAI Policy\b/i : /Information Security Policy/i;
+        var title = is42 ? /\bAI Policy\b/i : is701 ? /\bPrivacy Policy\b/i : /Information Security Policy/i;
+        var policyName = is42 ? 'AI Policy' : is701 ? 'Privacy Policy' : 'Information Security Policy';
         var camp = attestationCampaigns((s.attestations || []).filter(function (r) { return title.test(r.docName || ''); }))[0];
-        if (!camp) return { st: 'missing', note: 'No acknowledgement campaign for the ' + (is42 ? 'AI Policy' : 'Information Security Policy') + ' yet' };
+        if (!camp) return { st: 'missing', note: 'No acknowledgement campaign for the ' + policyName + ' yet' };
         return camp.pct >= 90 ? { st: 'done', note: camp.acknowledged + ' of ' + (camp.acknowledged + camp.outstanding) + ' staff acknowledged the policy (' + camp.pct + '%)' }
           : { st: 'partial', note: 'Policy acknowledged by ' + camp.pct + '% of staff (target 90%)' };
       case 'policyCurrent':
@@ -6579,9 +6630,9 @@
           : { st: 'partial', note: 'The latest management review records no improvement opportunities or decisions' };
       case 'auditDone':
         if (auditsDone.length) return { st: 'done', note: auditsDone.length + ' internal audit(s) completed in the last 12 months' };
-        return fwAudits.length ? { st: 'partial', note: 'Audit planned, none completed in the last 12 months' } : { st: 'missing', note: is42 ? 'No ISO 42001 internal audit recorded' : 'No internal audit recorded' };
+        return fwAudits.length ? { st: 'partial', note: 'Audit planned, none completed in the last 12 months' } : { st: 'missing', note: is42 ? 'No ISO 42001 internal audit recorded' : is701 ? 'No ISO 27701 internal audit recorded' : 'No internal audit recorded' };
       case 'auditsPlanned':
-        return fwAudits.length ? { st: 'done', note: fwAudits.length + ' audit(s) in the programme' } : { st: 'missing', note: is42 ? 'No ISO 42001 audits in the audits register' : 'No audits planned in the audits register' };
+        return fwAudits.length ? { st: 'done', note: fwAudits.length + ' audit(s) in the programme' } : { st: 'missing', note: is42 ? 'No ISO 42001 audits in the audits register' : is701 ? 'No ISO 27701 audits in the audits register' : 'No audits planned in the audits register' };
       case 'auditImpartial':
         if (!auditsDone.length) return { st: 'missing', note: 'No completed internal audit in the last 12 months' };
         var problems = [];
@@ -6627,6 +6678,19 @@
         if (!ai.length) gaps++;
         return gaps ? { st: gaps > need.length ? 'missing' : 'partial', note: gaps + ' of ' + (need.length + 1) + ' core AI management system items not yet in place (scope, policy, risk framework, impact assessment procedure, AI system register)' }
           : { st: 'done', note: 'AI scope, policy, risk framework and impact assessment procedure approved, and the AI system register in use' };
+      case 'legalPrivacy':
+        var privacyLaws = (s.legal || []).filter(function (l) { return l && l.applies === 'Yes' && /privacy|personal (information|data)|data protection|gdpr|\bapps?\b|health records/i.test((l.title || '') + ' ' + (l.requirement || '')); });
+        return privacyLaws.length ? { st: 'done', note: privacyLaws.length + ' privacy law or obligation(s) recorded as applying, in the legal and regulatory register' }
+          : { st: 'missing', note: 'No privacy law recorded as applying in the legal and regulatory register' };
+      case 'pimsCore':
+        var needP = ['privacy-policy-skeleton', 'ropa-data-handling-procedure', 'pii-principal-rights-procedure', 'privacy-impact-assessment-process'];
+        var approvedP = {};
+        (s.docs || []).forEach(function (d) { if (d && d.status === 'Approved') approvedP[d.tplId] = true; });
+        var gapsP = needP.filter(function (id) { return !approvedP[id]; }).length;
+        var sp = (s.soaByFw || {}).iso27701;
+        if (!(sp && sp.applicable)) gapsP++;
+        return gapsP ? { st: gapsP > needP.length ? 'missing' : 'partial', note: gapsP + ' of ' + (needP.length + 1) + ' core privacy management system items not yet in place (privacy policy, record of processing activities, PII principal rights procedure, DPIA process, ISO 27701 statement of applicability)' }
+          : { st: 'done', note: 'Privacy policy, record of processing activities, PII principal rights procedure and DPIA process approved, and the ISO 27701 statement of applicability in place' };
       case 'mandatoryAll':
         var md = (s.md || []).filter(function (m) { return /^\d/.test(m.ref); });
         if (!md.length) return { st: 'missing', note: 'Stage 1 checklist not available' };
@@ -6641,7 +6705,7 @@
   var CLAUSE_RECORD_KINDS = ['risks', 'riskOwners', 'riskRated', 'riskReviewed', 'riskTreated', 'riskActioned', 'riskAccepted',
     'objectivePlans', 'kpis', 'trainingCurrent', 'policyAcknowledged', 'policyCurrent', 'legalTraced', 'mrIssues', 'mrResources',
     'mrInputs', 'improvement', 'auditDone', 'auditsPlanned', 'auditImpartial', 'operating', 'auditLog', 'soa', 'aiRegister',
-    'aiImpact', 'aimsCore', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
+    'aiImpact', 'aimsCore', 'legalPrivacy', 'pimsCore', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
 
   /* One clause's checklist, resolved against the tenant's data.
      s = { fw, code, today, docs:[{tplId,status}], docsFull:[register rows], settings:{key:value},
@@ -7231,7 +7295,9 @@
   function auditWorkpack(audit, data, today) {
     var a = audit || {}, d = data || {};
     var fw = a.fw || 'iso27001';
-    var clauseFw = fw === 'iso27701' ? 'iso27001' : fw;
+    /* ISO 27701:2025 has its own Clauses 4-10 (a standalone PIMS), so
+       an ISO 27701 audit reads the ISO 27701 clause rows. */
+    var clauseFw = fw;
     var scope = parseAuditScope(a.scope);
     var yearAgo = addMonthsIso(today, -12);
     var cadence = d.cadenceDays;
@@ -7384,7 +7450,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
