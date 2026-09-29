@@ -34,3 +34,12 @@ test('sync falls back from the root site, and explains a refusal', () => {
   assert.match(owner, /throw syncStepError\(e, 'opening the site'\)/);
   assert.match(owner, /throw syncStepError\(e, 'reading its lists'\)/);
 });
+
+test('sync keeps the console\'s own sign-in: no cache clear, and silent renewal is allowed', () => {
+  const owner = readFileSync(new URL('../public/owner/owner.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(owner, /msalApp\.clearCache\(\)/);
+  assert.match(owner, /if \(res\.account && !accountsBefore\[res\.account\.homeAccountId\]\)/);
+  assert.match(owner, /msalApp\.clearCache\(\{ account: res\.account \}\)/);
+  const html = readFileSync(new URL('../public/owner/index.html', import.meta.url), 'utf8');
+  assert.match(html, /frame-src https:\/\/login\.microsoftonline\.com/);
+});

@@ -2134,6 +2134,10 @@ function showModal(opts) {
        partner's guest account Visitor (read) on the Checkpoint site. */
     var SYNC_SCOPES = ['User.Read'].concat(CONFIG.scopesProvision || ['Sites.Manage.All']);
     var res = null;
+    /* Accounts already signed in before this sync (the partner's own).
+       Only an account this sync added is cleared at the end. */
+    var accountsBefore = {};
+    try { (msalApp.getAllAccounts() || []).forEach(function (a) { accountsBefore[a.homeAccountId] = true; }); } catch (e) { /* none */ }
 
     /* Try a cached token before opening a popup. This is what makes
        "Sync all" viable rather than just automated: a browser only
@@ -2296,7 +2300,18 @@ function showModal(opts) {
       } catch (e) { /* best-effort — driftAlerts stays 0 */ }
     }
 
-    try { await msalApp.clearCache(); } catch (e) { /* best-effort teardown only */ }
+    /* The cache is deliberately not cleared here. This instance shares its cache with
+       the console's own sign-in (same app, same sessionStorage), so
+       clearing it also threw away the partner's own tokens. Saving the
+       synced row then needed a fresh token, MSAL tried a hidden iframe,
+       the page's CSP blocked it, and Sync stuck on "Syncing…". The
+       tokens stay for this browser tab only, and let "Sync all" reuse
+       them silently. An account signed in only for this sync (not the
+       partner's own) is still removed, so the console never picks it
+       up as its own sign-in on the next page load. */
+    if (res.account && !accountsBefore[res.account.homeAccountId]) {
+      try { await msalApp.clearCache({ account: res.account }); } catch (e) { /* best-effort teardown only */ }
+    }
     return out;
   }
 
