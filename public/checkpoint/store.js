@@ -2197,7 +2197,16 @@ window.SpStore = (function () {
          parser and the row writer for a field most rows never set.
          Same "extra fields live in a JSON column" pattern the scan
          Detail already uses. */
-      { name: 'FinancialOverride', text: { allowMultipleLines: true } }
+      { name: 'FinancialOverride', text: { allowMultipleLines: true } },
+      /* The risk scenario, as ISO/IEC 27005:2022 describes one: the
+         assets affected (asset register ids, for asset-based
+         identification), the threat or risk source and the vulnerability
+         it exploits, and the consequence if it happens (event-based
+         identification). All optional: a risk raised from a scan finding
+         is already specific, and a blank field reads as "not yet
+         described" rather than inventing one. */
+      { name: 'AssetRefs', text: {} }, { name: 'Threat', text: { allowMultipleLines: true } },
+      { name: 'Vulnerability', text: { allowMultipleLines: true } }, { name: 'Consequence', text: { allowMultipleLines: true } }
     ],
     Actions: [
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
@@ -2858,7 +2867,7 @@ window.SpStore = (function () {
        every column costs nothing for an up-to-date tenant and closes
        this bug class completely for whichever tenant is still missing
        one from years of incremental additions. */
-    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride', 'Cia', 'LastReviewed', 'LastReviewedBy', 'ResidualL', 'ResidualI', 'ResidualBy', 'ResidualDate'],
+    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride', 'Cia', 'LastReviewed', 'LastReviewedBy', 'ResidualL', 'ResidualI', 'ResidualBy', 'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence'],
     Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
     /* Same incomplete-subset mistake as Risks/Actions above, caught the
        same way: this used to list only LastVerified/EvidenceUrl/
@@ -3199,7 +3208,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride), cia: uncsv(f.Cia), lastReviewed: f.LastReviewed || '', lastReviewedBy: f.LastReviewedBy || '', resL: (typeof f.ResidualL === 'number' ? f.ResidualL : null), resI: (typeof f.ResidualI === 'number' ? f.ResidualI : null), resBy: f.ResidualBy || '', resDate: f.ResidualDate || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride), cia: uncsv(f.Cia), lastReviewed: f.LastReviewed || '', lastReviewedBy: f.LastReviewedBy || '', resL: (typeof f.ResidualL === 'number' ? f.ResidualL : null), resI: (typeof f.ResidualI === 'number' ? f.ResidualI : null), resBy: f.ResidualBy || '', resDate: f.ResidualDate || '', assetRefs: uncsv(f.AssetRefs), threat: f.Threat || '', vulnerability: f.Vulnerability || '', consequence: f.Consequence || '' };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -3419,7 +3428,8 @@ window.SpStore = (function () {
         Title: r.title, RefId: r.id, Category: r.cat, Source: r.src, Likelihood: r.L, Impact: r.I,
         Controls: csv(r.controls), Owner: r.owner, Status: r.status, Treatment: r.treat,
         ActionRefs: csv(r.actions), TplId: r.tpl || '', AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '',
-        Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || ''
+        Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || '',
+        AssetRefs: csv(r.assetRefs || []), Threat: r.threat || '', Vulnerability: r.vulnerability || '', Consequence: r.consequence || ''
       });
       S.risks.push(r);
     },
@@ -3438,7 +3448,8 @@ window.SpStore = (function () {
         ResolutionDismissed: !!r.resolutionDismissed,
         Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || '',
         ResidualL: (typeof r.resL === 'number' ? r.resL : null), ResidualI: (typeof r.resI === 'number' ? r.resI : null),
-        ResidualBy: r.resBy || '', ResidualDate: r.resDate || ''
+        ResidualBy: r.resBy || '', ResidualDate: r.resDate || '',
+        AssetRefs: csv(r.assetRefs || []), Threat: r.threat || '', Vulnerability: r.vulnerability || '', Consequence: r.consequence || ''
       });
     },
     deleteRisk: async function (r) {

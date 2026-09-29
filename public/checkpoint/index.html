@@ -630,12 +630,19 @@
           <select class="mini" id="nrLikelihood" aria-label="Likelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
           <select class="mini" id="nrImpact" aria-label="Impact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
         </div>
+        <div class="d-kv" style="padding:10px 0 4px"><span>Risk scenario (ISO/IEC 27005) — optional, and what an auditor samples first</span></div>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="nrAssets" placeholder="Assets affected (e.g. AST-004, AST-012)" aria-label="Assets affected, asset register ids">
+          <input class="mini" id="nrThreat" placeholder="Threat or risk source" aria-label="Threat or risk source">
+          <input class="mini" id="nrVulnerability" placeholder="Vulnerability exploited" aria-label="Vulnerability exploited">
+          <input class="mini" id="nrConsequence" placeholder="Consequence if it happens" aria-label="Consequence if it happens">
+        </div>
         <div class="d-kv" style="padding:10px 0 4px"><span>Treatment decision</span></div>
         <select class="mini" id="nrTreatment" aria-label="Treatment" style="width:100%">
-          <option value="Treat">Treat — reduce it with controls / actions</option>
-          <option value="Tolerate">Tolerate — accept the residual risk within appetite</option>
-          <option value="Transfer">Transfer — shift it to a third party (e.g. insurance, an outsourced provider)</option>
-          <option value="Terminate">Terminate — stop or change the activity that causes it</option>
+          <option value="Treat">Treat — risk modification: reduce it with controls / actions</option>
+          <option value="Tolerate">Tolerate — risk retention: accept the residual risk within appetite</option>
+          <option value="Transfer">Transfer — risk sharing: share it with a third party (e.g. insurance, an outsourced provider)</option>
+          <option value="Terminate">Terminate — risk avoidance: stop or change the activity that causes it</option>
         </select>
         <div class="d-kv" style="padding:10px 0 6px"><span>Treatment actions (one per line)</span></div>
         <textarea class="mini" id="nrActions" style="width:100%;min-height:70px;font-family:Manrope" placeholder="e.g. Apply latest security patches"></textarea>

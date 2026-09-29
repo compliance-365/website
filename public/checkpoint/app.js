@@ -1236,11 +1236,17 @@ function showModal(opts) {
      practitioner picking a treatment should see what each one means
      without having to already know the framework. */
   var TREATMENT_DESCRIPTIONS = {
-    Treat: 'reduce it with controls / actions',
-    Tolerate: 'accept the residual risk within appetite',
-    Transfer: 'shift it to a third party — e.g. insurance, an outsourced provider',
-    Terminate: 'stop or change the activity that causes it'
+    Treat: 'risk modification: reduce it with controls / actions',
+    Tolerate: 'risk retention: accept the residual risk within appetite',
+    Transfer: 'risk sharing: share it with a third party — e.g. insurance, an outsourced provider',
+    Terminate: 'risk avoidance: stop or change the activity that causes it'
   };
+  /* The ISO/IEC 27005:2022 name for each treatment option (ISO 31000
+     describes the same choices). Stored values stay Treat / Tolerate /
+     Transfer / Terminate so every existing risk keeps its decision; the
+     standard's term is shown beside it wherever a treatment is read. */
+  var TREATMENT_ISO = { Treat: 'modify', Tolerate: 'retain', Transfer: 'share', Terminate: 'avoid' };
+  function treatmentLabel(t) { return TREATMENT_ISO[t] ? t + ' (' + TREATMENT_ISO[t] + ')' : (t || ''); }
   var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
   var ACTION_PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
@@ -2891,7 +2897,7 @@ function showModal(opts) {
       var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
       var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
       var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
-        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>';
+        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + riskScenarioReportLine(r) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(treatmentLabel(r.treat)) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>';
       var sevCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
       openRisks.forEach(function (r) { var q = residual(r); sevCounts[band(q.L * q.I)]++; });
 
@@ -3013,7 +3019,7 @@ function showModal(opts) {
         var accHtml = r.acceptedBy
           ? esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + (stale ? '<br><b style="color:#b91c1c">STALE — accepted at ' + r.acceptedScore + ', now ' + (q.L * q.I) + '</b>' : '')
           : (band(q.L * q.I) !== 'Low' && r.status !== 'Closed' ? '<b style="color:#b91c1c">Not accepted</b>' : '—');
-        return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + esc(r.status) + '</div></td><td>' + esc(r.treat) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
+        return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + esc(r.status) + '</div>' + riskScenarioReportLine(r) + '</td><td>' + esc(treatmentLabel(r.treat)) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
       }).join('');
       var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Treatment</th><th>Controls</th><th>Treatment actions</th><th>Residual</th><th>Acceptance</th></tr>' + rows + '</table>';
       return {
@@ -6563,7 +6569,12 @@ function showModal(opts) {
     var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
     var actIds = t.actions.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
     try {
-      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl };
+      /* The failed check is the vulnerability in the ISO/IEC 27005
+         scenario — recorded as such, so a scan-raised risk starts with
+         that part of its scenario already filled in. */
+      var checkDef = (window.CHECK_DEFS || []).find(function (c) { return c.tpl === tpl; });
+      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl,
+        vulnerability: checkDef ? 'Posture scan check failed: ' + checkDef.label + ' (' + new Date().toISOString().slice(0, 10) + ')' : '' };
       await Store.addRisk(newRisk);
       for (var i = 0; i < t.actions.length; i++) {
         var a = t.actions[i];
@@ -6742,6 +6753,37 @@ function showModal(opts) {
     var v = (r.cia || []).filter(Boolean);
     if (!v.length) return '<span class="src" title="Not yet classified against confidentiality / integrity / availability">—</span>';
     return '<span style="display:inline-flex;gap:4px">' + v.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</span>';
+  }
+
+  /* The risk scenario (ISO/IEC 27005:2022): what is at stake, from what,
+     through which weakness, with what result. Asset ids resolve to their
+     names in the asset register. Missing parts are said, not hidden: a
+     scenario without a threat or a consequence is the first thing an
+     auditor sampling the register asks about. */
+  function riskAssetNames(r) {
+    return (r.assetRefs || []).map(function (id) {
+      var a = (S.assets || []).find(function (x) { return x.id === id; });
+      return a ? a.id + ' ' + a.name : id;
+    });
+  }
+  function riskScenarioReportLine(r) {
+    var parts = [];
+    var assets = riskAssetNames(r);
+    if (assets.length) parts.push('Assets: ' + esc(assets.join('; ')));
+    if (r.threat) parts.push('Threat: ' + esc(r.threat));
+    if (r.vulnerability) parts.push('Vulnerability: ' + esc(r.vulnerability));
+    if (r.consequence) parts.push('Consequence: ' + esc(r.consequence));
+    return parts.length ? '<div class="rpt-just">' + parts.join(' · ') + '</div>' : '';
+  }
+  function riskScenarioHtml(r) {
+    var assets = riskAssetNames(r);
+    var row = function (label, v) { return '<div class="d-kv"><span>' + label + '</span><b style="font-weight:500;text-align:right">' + (v ? esc(v) : '<span class="src">Not recorded</span>') + '</b></div>'; };
+    var missing = window.CheckpointLib.riskScenarioGaps(r);
+    return '<div class="d-sec"><h4>Risk scenario (ISO/IEC 27005)</h4>' +
+      row('Assets affected', assets.join('; ')) + row('Threat or risk source', r.threat) + row('Vulnerability', r.vulnerability) +
+      row('Consequence', r.consequence) + row('Threatens', (r.cia || []).join(', ')) +
+      (missing.length ? '<div class="src" style="margin-top:6px;color:var(--warn)">' + icon('flag') + ' Scenario incomplete: add the ' + esc(missing.join(', ')) + ' (Edit risk).</div>' : '') +
+      '</div>';
   }
 
   /* Review state for one risk, against the tenant's own cadence. Closed
@@ -13296,7 +13338,7 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(240, 169, 127,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
-        '<div class="d-kv"><span>Treatment</span><b>' + esc(r.treat) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
+        '<div class="d-kv"><span>Treatment</span><b>' + esc(treatmentLabel(r.treat)) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
         (r.acceptedBy
           ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' +
             (window.CheckpointLib.residualAcceptanceStale(r, q.L * q.I)
@@ -13305,6 +13347,7 @@ function showModal(opts) {
             (r.acceptanceNote ? '<div class="src" style="margin-top:4px">' + esc(r.acceptanceNote) + '</div>' : '')
           : (band(q.L * q.I) !== 'Low' ? '<div class="src" style="margin-top:4px;color:var(--warn)">No residual-acceptance sign-off recorded — auditors expect one on any Medium+ residual risk.</div>' : '')) +
         '</div>' +
+        riskScenarioHtml(r) +
         '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + (r.controls.length ? r.controls.map(function (c) {
           /* risk.controls store bare codes (e.g. "A.5.2"), and different
              frameworks legitimately reuse the same Annex A numbering —
@@ -13613,7 +13656,7 @@ function showModal(opts) {
       var showing = panel.style.display !== 'none';
       panel.style.display = showing ? 'none' : 'block';
       if (!showing) {
-        ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrCia', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
+        ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrCia', 'nrOwner', 'nrActions', 'nrAssets', 'nrThreat', 'nrVulnerability', 'nrConsequence'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('nrLikelihood').value = '3';
         document.getElementById('nrImpact').value = '3';
         document.getElementById('nrTreatment').value = 'Treat';
@@ -13676,6 +13719,8 @@ function showModal(opts) {
           id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
           L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
           controls: [], cia: normaliseCia(document.getElementById('nrCia').value), owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Treat', actions: actIds,
+          assetRefs: String(document.getElementById('nrAssets').value || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean),
+          threat: document.getElementById('nrThreat').value.trim(), vulnerability: document.getElementById('nrVulnerability').value.trim(), consequence: document.getElementById('nrConsequence').value.trim(),
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
@@ -13797,6 +13842,12 @@ function showModal(opts) {
              comma-separated shape as Linked controls below, rather than
              a control this modal does not have; normalised on save. */
           { id: 'cia', label: 'Threatens (C, I, A)', value: (r.cia || []).join(', '), placeholder: 'e.g. C, I' },
+          /* The ISO/IEC 27005 risk scenario: asset-based (assets, threat,
+             vulnerability) and event-based (risk source, consequence). */
+          { id: 'assets', label: 'Assets affected (asset register ids, comma-separated)', value: (r.assetRefs || []).join(', '), placeholder: 'e.g. AST-004, AST-012' },
+          { id: 'threat', label: 'Threat or risk source', type: 'textarea', value: r.threat || '', placeholder: 'e.g. Phishing campaign targeting staff credentials' },
+          { id: 'vulnerability', label: 'Vulnerability exploited', type: 'textarea', value: r.vulnerability || '', placeholder: 'e.g. MFA not enforced for all users' },
+          { id: 'consequence', label: 'Consequence if it happens', type: 'textarea', value: r.consequence || '', placeholder: 'e.g. Unauthorised access to client records; notifiable data breach' },
           { id: 'owner', label: 'Risk owner', value: r.owner },
           { id: 'L', label: 'Likelihood', type: 'select', value: r.L, options: LIKELIHOOD_OPTS },
           { id: 'I', label: 'Impact', type: 'select', value: r.I, options: IMPACT_OPTS },
@@ -13815,6 +13866,8 @@ function showModal(opts) {
         r.L = parseInt(v.L, 10) || r.L; r.I = parseInt(v.I, 10) || r.I; r.treat = v.treat; r.status = v.status;
         r.controls = v.controls.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
         r.cia = normaliseCia(v.cia);
+        r.assetRefs = String(v.assets || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+        r.threat = String(v.threat || '').trim(); r.vulnerability = String(v.vulnerability || '').trim(); r.consequence = String(v.consequence || '').trim();
         await Store.updateRisk(r);
         audit('Risk updated', 'Risk', r.id, before, r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat);
         toast('<b>' + r.id + '</b> updated');
