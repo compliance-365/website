@@ -6171,10 +6171,10 @@
         auto42: { docs: ['aims-scope'], profile: ['orgClimate'] } },
       { id: 'ai-role', only: 'iso42001', text: 'Determine the organisation’s role for each AI system (for example provider, developer or user) and the intended purpose of the AI systems it develops, provides or uses.',
         evidence: 'The AI system register and the AI Management System Scope recording each system’s role and purpose.',
-        auto42: { docs: ['aims-scope'], profile: ['orgAiRole', 'orgAiSystems'] } },
+        auto42: { docs: ['aims-scope'], profile: ['orgAiRole', 'orgAiSystems'], record: 'aiRegister' } },
       { id: 'current', text: 'Keep the issues current: review them when the organisation or its environment changes, and at each management review.',
-        evidence: 'Management review minutes that consider changes in external and internal issues.',
-        auto: { md: '9.3' } }
+        evidence: 'Management review minutes that record changes in external and internal issues.',
+        auto: { record: 'mrIssues' }, auto42: { record: 'mrIssues' } }
     ],
     '4.2': [
       { id: 'parties', text: 'Identify the interested parties that are relevant to the management system.',
@@ -6184,12 +6184,13 @@
       { id: 'requirements', text: 'Determine what those interested parties require, including legal, regulatory and contractual obligations.',
         evidence: 'The recorded requirements of each party, and the legal and regulatory register.',
         auto: { docs: ['context-interested-parties'], profile: ['orgPartyRequirements', 'orgRegulatory'], md: 'A.5.31' },
-        auto42: { docs: ['aims-scope'], profile: ['orgPartyRequirements', 'orgRegulatory'] } },
+        auto42: { docs: ['aims-scope'], profile: ['orgPartyRequirements', 'orgRegulatory'], md: 'A.5.31' } },
       { id: 'climate-reqs', text: 'Consider whether interested parties have requirements related to climate change (Amendment 1, 2024).',
         evidence: 'A recorded answer on climate-related requirements (for example customers expecting services to withstand extreme weather, or climate disclosure obligations), carried into the context document.',
         auto: { profile: ['orgClimatePartyReqs'] }, auto42: { profile: ['orgClimatePartyReqs'] } },
       { id: 'addressed', text: 'Decide which of those requirements the management system will address, and where each is met (a policy, a control, a contract or an objective).',
-        evidence: 'A traceable link from each requirement to what meets it, such as the legal register’s linked controls or a requirements table.' }
+        evidence: 'A traceable link from each requirement to what meets it: the legal register’s linked controls, and the context document recording where each party’s requirements are addressed.',
+        auto: { docs: ['context-interested-parties'], record: 'legalTraced' }, auto42: { docs: ['aims-scope'], record: 'legalTraced' } }
     ],
     '4.3': [
       { id: 'boundaries', text: 'Determine the boundaries and applicability of the management system and document its scope.',
@@ -6201,51 +6202,58 @@
         auto: { docs: ['isms-scope', 'context-interested-parties'] }, auto42: { docs: ['aims-scope'] } },
       { id: 'interfaces', text: 'Consider the interfaces and dependencies between the organisation’s activities and those performed by others, such as cloud providers and IT suppliers.',
         evidence: 'The interfaces and dependencies recorded in the scope document.',
-        auto: { docs: ['isms-scope'], profile: ['orgInterfaces'] } },
+        evidence42: 'Dependencies on third-party AI systems, models and providers recorded in the AI Management System Scope and the AI system register.',
+        auto: { docs: ['isms-scope'], profile: ['orgInterfaces'] }, auto42: { docs: ['aims-scope'], record: 'aiRegister' } },
       { id: 'exclusions', text: 'Record anything excluded from the scope and why, or that nothing is excluded.',
         evidence: 'The exclusions statement in the scope document, with a reason for each exclusion.',
         auto: { docs: ['isms-scope'] }, auto42: { docs: ['aims-scope'] } }
     ],
     '4.4': [
       { id: 'system', text: 'Establish, implement, maintain and continually improve the management system, including the processes it needs and how they interact.',
-        evidence: 'The approved policy set, the registers in active use, and a description of how the processes fit together (for example in the scope document or an ISMS overview).' }
+        evidence: 'The documents the standard requires, approved, and the registers in active use: risks, actions, objectives, audits and management reviews.',
+        evidence42: 'The AI scope, policy, risk framework and impact assessment procedure approved, and the AI system register in active use.',
+        auto: { record: 'mandatoryAll' }, auto42: { record: 'aimsCore' } }
     ],
     '5.1': [
       { id: 'direction', text: 'Top management ensures the policy and objectives are set and fit the organisation’s strategic direction.',
         evidence: 'The policy approved by a named member of top management, and approved objectives.',
-        auto: { docs: ['infosec-policy'], md: '6.2' }, auto42: { docs: ['ai-policy'] } },
+        auto: { docs: ['infosec-policy'], md: '6.2' }, auto42: { docs: ['ai-policy', 'ai-objectives-metrics'] } },
       { id: 'integration', text: 'The management system’s requirements are built into the organisation’s business processes, not run alongside them.',
         evidence: 'Security steps inside everyday processes: onboarding and offboarding, procurement, change, project delivery.' },
       { id: 'resources', text: 'Top management makes the resources the management system needs available.',
-        evidence: 'Resourcing decisions in management review minutes, a budget, or named roles with time allocated.' },
+        evidence: 'Resourcing decisions recorded in management review, or a budget and named roles with time allocated.',
+        auto: { record: 'mrResources' }, auto42: { record: 'mrResources' } },
       { id: 'communicates', text: 'Top management communicates why effective security and conformity with the management system matter.',
         evidence: 'Messages from leadership to staff (an all-staff email, a town hall, an induction message).' },
       { id: 'outcomes', text: 'Top management ensures the management system achieves its intended outcomes, directs and supports the people contributing to it, and promotes continual improvement.',
         evidence: 'A management review attended by top management, with decisions recorded.',
-        auto: { md: '9.3' } }
+        auto: { md: '9.3' }, auto42: { md: '9.3' } }
     ],
     '5.2': [
-      { id: 'policy', text: 'Establish a policy that suits the organisation’s purpose, includes objectives or a framework for setting them, and commits to meeting applicable requirements and to continual improvement.',
+      { id: 'policy', text: 'Establish a policy that suits the organisation’s purpose, includes objectives or a framework for them, and commits to meeting applicable requirements and to continual improvement.',
         evidence: 'The approved policy containing those commitments.',
         text42: 'Establish an AI policy that suits the organisation’s purpose, provides a framework for AI objectives, and commits to meeting applicable requirements and to continual improvement.',
         auto: { doc: 'infosec-policy' }, auto42: { doc: 'ai-policy' } },
       { id: 'communicated', text: 'Make the policy available as documented information, communicate it within the organisation, and make it available to interested parties as appropriate.',
-        evidence: 'Where the policy is published, and staff acknowledgements (an attestation campaign or training record).' }
+        evidence: 'The approved policy published, and staff acknowledgements from a policy attestation campaign.',
+        auto: { doc: 'infosec-policy', record: 'policyAcknowledged' }, auto42: { doc: 'ai-policy', record: 'policyAcknowledged' } }
     ],
     '5.3': [
       { id: 'assigned', text: 'Assign and communicate the responsibilities and authorities for roles relevant to the management system.',
         evidence: 'The approved roles and responsibilities register, and how it was communicated.',
         auto: { doc: 'roles-responsibilities' }, auto42: { doc: 'roles-responsibilities' } },
       { id: 'reporting', text: 'Assign someone the responsibility and authority to ensure the management system conforms, and to report on its performance to top management.',
-        evidence: 'A named management-system owner in the roles register, and their reports to management review.' }
+        evidence: 'A named management-system owner in the approved roles register, reporting to a management review.',
+        auto: { doc: 'roles-responsibilities', md: '9.3' }, auto42: { doc: 'roles-responsibilities', md: '9.3' } }
     ],
     '6.1.1': [
       { id: 'determine', text: 'Determine the risks and opportunities that need addressing, drawing on the issues (4.1) and requirements (4.2).',
-        evidence: 'The risk register, including opportunities, linked to the context.',
-        auto: { md: '8.2' } },
+        evidence: 'The risk register, reviewed within the last 12 months.',
+        evidence42: 'AI risks in the risk register (AI Governance), reviewed within the last 12 months.',
+        auto: { md: '8.2' }, auto42: { record: 'riskReviewed' } },
       { id: 'plan', text: 'Plan actions to address those risks and opportunities, build them into the management system’s processes, and evaluate whether they work.',
         evidence: 'The risk treatment plan, with actions, owners and due dates.',
-        auto: { md: '6.1.3 e)' } }
+        auto: { md: '6.1.3 e)' }, auto42: { record: 'riskTreated' } }
     ],
     '6.1.2': [
       { id: 'criteria', text: 'Define a risk assessment process, including risk acceptance criteria and criteria for when assessments are carried out.',
@@ -6254,17 +6262,18 @@
         auto: { doc: 'risk-management-framework' }, auto42: { doc: 'ai-risk-framework' } },
       { id: 'consistent', text: 'Make sure repeated assessments produce consistent, valid and comparable results.',
         evidence: 'The same scales applied throughout the risk register, as defined in the framework.',
-        auto: { doc: 'risk-management-framework', record: 'risks' }, auto42: { doc: 'ai-risk-framework' } },
+        auto: { doc: 'risk-management-framework', record: 'riskRated' }, auto42: { doc: 'ai-risk-framework', record: 'riskRated' } },
       { id: 'identify', text: 'Identify the risks of losing confidentiality, integrity and availability of information within the scope, and name an owner for each.',
         evidence: 'Risks in the register, each with an owner.',
         text42: 'Identify the risks that could prevent the AI management system achieving its objectives, and name an owner for each.',
-        auto: { record: 'riskOwners' } },
+        evidence42: 'AI risks in the register (AI Governance), each with an owner.',
+        auto: { record: 'riskOwners' }, auto42: { record: 'riskOwners' } },
       { id: 'analyse', text: 'Analyse each risk: the realistic likelihood, the consequences if it happens, and the resulting risk level.',
         evidence: 'A likelihood and impact rating on every risk.',
-        auto: { record: 'riskRated' } },
+        auto: { record: 'riskRated' }, auto42: { record: 'riskRated' } },
       { id: 'evaluate', text: 'Evaluate each risk against the acceptance criteria and set priorities for treatment.',
         evidence: 'A treatment decision on every open risk, prioritised by risk level.',
-        auto: { md: '6.1.3 e)' } },
+        auto: { md: '6.1.3 e)' }, auto42: { record: 'riskTreated' } },
       { id: 'documented', text: 'Keep documented information about the risk assessment process.',
         evidence: 'The approved risk management framework.',
         auto: { doc: 'risk-management-framework' }, auto42: { doc: 'ai-risk-framework' } }
@@ -6272,20 +6281,20 @@
     '6.1.3': [
       { id: 'options', text: 'Select appropriate treatment options for each risk (reduce, accept, avoid or transfer).',
         evidence: 'The treatment recorded on every open risk.',
-        auto: { md: '6.1.3 e)' } },
+        auto: { md: '6.1.3 e)' }, auto42: { record: 'riskTreated' } },
       { id: 'controls', text: 'Determine the controls needed to put the chosen treatments in place, and compare them with Annex A so nothing necessary is missed.',
         evidence: 'Controls linked to risks, and the Statement of Applicability covering every Annex A control.',
-        auto: { md: '6.1.3 d)' } },
+        auto: { md: '6.1.3 d)' }, auto42: { record: 'soa' } },
       { id: 'soa', text: 'Produce a Statement of Applicability: the necessary controls, why each is included, whether it is implemented, and why any Annex A control is excluded.',
         evidence: 'The Statement of Applicability with a justification for every inclusion and exclusion.',
         text42: 'Produce a statement of applicability for the ISO 42001 Annex A controls: which apply, why, whether each is implemented, and why any is excluded.',
-        auto: { md: '6.1.3 d)' } },
+        auto: { md: '6.1.3 d)' }, auto42: { record: 'soa' } },
       { id: 'plan', text: 'Formulate a risk treatment plan.',
         evidence: 'The risk treatment plan report: every open risk with its treatment, actions and owner.',
-        auto: { md: '6.1.3 e)' } },
+        auto: { md: '6.1.3 e)' }, auto42: { record: 'riskTreated' } },
       { id: 'owners', text: 'Get the risk owners’ approval of the treatment plan and their acceptance of the residual risks.',
         evidence: 'A recorded acceptance by the risk owner on every open risk.',
-        auto: { record: 'riskAccepted' } },
+        auto: { record: 'riskAccepted' }, auto42: { record: 'riskAccepted' } },
       { id: 'documented', text: 'Keep documented information about the risk treatment process.',
         evidence: 'The approved risk management framework.',
         auto: { doc: 'risk-management-framework' }, auto42: { doc: 'ai-risk-framework' } }
@@ -6293,130 +6302,141 @@
     '6.2': [
       { id: 'objectives', text: 'Set objectives that are consistent with the policy, measurable where practicable, take requirements and risk results into account, and are monitored, communicated and updated.',
         evidence: 'Objectives with a metric and a target, in the objectives register.',
-        auto: { md: '6.2' }, auto42: { doc: 'ai-objectives-metrics' } },
+        auto: { md: '6.2' }, auto42: { doc: 'ai-objectives-metrics', record: 'objectivePlans' } },
       { id: 'planning', text: 'Plan how each objective will be achieved: what will be done, the resources, who is responsible, when it will be completed and how results will be evaluated.',
         evidence: 'Each objective with an owner and a due date, and how progress is measured.',
-        auto: { record: 'objectivePlans' } }
+        auto: { record: 'objectivePlans' }, auto42: { record: 'objectivePlans' } }
     ],
     '6.3': [
       { id: 'planned', text: 'Carry out changes to the management system in a planned way.',
         evidence: 'The approved change planning procedure, and records of changes made to the management system.',
-        auto: { doc: 'isms-change-planning' } }
+        auto: { doc: 'isms-change-planning' }, auto42: { doc: 'isms-change-planning' } }
     ],
     '7.1': [
       { id: 'resources', text: 'Determine and provide the resources needed to establish, run and improve the management system.',
-        evidence: 'Named roles with time allocated, budget, tools, and resourcing decisions in management review minutes.' }
+        evidence: 'Resourcing decisions recorded in management review, or named roles with time allocated, budget and tools.',
+        auto: { record: 'mrResources' }, auto42: { record: 'mrResources' } }
     ],
     '7.2': [
       { id: 'determine', text: 'Determine the competence needed by people whose work affects the management system’s performance.',
         evidence: 'The approved competence and awareness plan, with required competence per role.',
-        auto: { doc: 'competence-awareness-plan' } },
+        auto: { doc: 'competence-awareness-plan' }, auto42: { doc: 'competence-awareness-plan' } },
       { id: 'ensure', text: 'Make sure those people are competent through education, training or experience, act where they are not, and check that the action worked.',
-        evidence: 'Training completions, qualifications or experience records for each key role.',
-        auto: { md: '7.2' } },
+        evidence: 'Assigned training at least 90% complete, with none overdue.',
+        evidence42: 'The AI use and oversight course at least 90% complete, with none overdue.',
+        auto: { record: 'trainingCurrent' }, auto42: { record: 'trainingCurrent' } },
       { id: 'records', text: 'Keep records as evidence of competence.',
         evidence: 'Training and competence records held in Checkpoint or the HR system.',
-        auto: { md: '7.2' } }
+        auto: { md: '7.2' }, auto42: { record: 'trainingCurrent' } }
     ],
     '7.3': [
       { id: 'aware', text: 'Make sure people are aware of the policy, how they contribute to the management system, and what happens if they do not follow it.',
         evidence: 'Completed awareness training and policy acknowledgements.',
-        auto: { doc: 'competence-awareness-plan', md: '7.2' } }
+        auto: { record: 'trainingCurrent', md: '7.2' }, auto42: { record: 'trainingCurrent' } }
     ],
     '7.4': [
       { id: 'plan', text: 'Determine what the organisation communicates about the management system, internally and externally: what, when, to whom and how.',
         evidence: 'The approved communication plan.',
-        auto: { doc: 'communication-plan' } }
+        auto: { doc: 'communication-plan' }, auto42: { doc: 'communication-plan' } }
     ],
     '7.5.1': [
       { id: 'required', text: 'Hold the documented information the standard requires, plus whatever else the organisation decides it needs for the management system to work.',
         evidence: 'Every item on the Stage 1 mandatory documents checklist in place.',
-        auto: { record: 'mandatoryAll' } }
+        evidence42: 'The AI scope, policy, risk framework and impact assessment procedure approved, and the AI system register in use.',
+        auto: { record: 'mandatoryAll' }, auto42: { record: 'aimsCore' } }
     ],
     '7.5.2': [
       { id: 'identify', text: 'When documents are created or updated, give each proper identification (title, date, author or reference), a suitable format, and a review and approval.',
-        evidence: 'The document control procedure, and approved documents showing version, approver and next review date.',
-        auto: { md: '7.5' } }
+        evidence: 'The document control procedure, and approved documents showing version, owner, approver and next review date.',
+        auto: { doc: 'document-control-procedure', record: 'policyCurrent' }, auto42: { doc: 'document-control-procedure', record: 'policyCurrent' } }
     ],
     '7.5.3': [
       { id: 'available', text: 'Control documented information so it is available where and when it is needed and adequately protected.',
         evidence: 'The document control procedure, and documents held in a controlled SharePoint library with appropriate permissions.',
-        auto: { md: '7.5' } },
+        auto: { doc: 'document-control-procedure', record: 'policyCurrent' }, auto42: { doc: 'document-control-procedure', record: 'policyCurrent' } },
       { id: 'lifecycle', text: 'Control distribution, access, storage, version history, retention and disposal, including documents of external origin.',
         evidence: 'SharePoint version history, permissions and retention settings, and how external documents (contracts, standards) are controlled.' }
     ],
     '8.1': [
       { id: 'operate', text: 'Plan, run and control the processes needed to meet the management system’s requirements and carry out the actions from Clause 6, with criteria for each process.',
-        evidence: 'The registers in operation: risks reviewed, actions progressing, controls verified on schedule.' },
+        evidence: 'The processes visibly running: a posture scan within 90 days, risks reviewed within 12 months, and no treatment action more than 30 days overdue.',
+        evidence42: 'The AI system register reviewed within 12 months, AI risks reviewed, and no treatment action more than 30 days overdue.',
+        auto: { record: 'operating' }, auto42: { record: 'operating' } },
       { id: 'records', text: 'Keep enough documented information to be confident the processes have been carried out as planned.',
-        evidence: 'Dated records in the registers and the audit log.' },
+        evidence: 'Dated records in the registers and the tamper-evident audit log, with activity in the last 90 days.',
+        auto: { record: 'auditLog' }, auto42: { record: 'auditLog' } },
       { id: 'change', text: 'Control planned changes, and review the consequences of unintended ones.',
         evidence: 'The change planning procedure and change records.',
-        auto: { doc: 'isms-change-planning' } },
+        auto: { doc: 'isms-change-planning' }, auto42: { doc: 'isms-change-planning' } },
       { id: 'external', text: 'Control externally provided processes, products and services that are relevant to the management system.',
         evidence: 'The supplier security policy and the vendor register with assessments.',
-        auto: { md: 'A.5.19' } }
+        evidence42: 'Third-party AI systems recorded with their vendor in the AI system register, governed through the supplier security policy.',
+        auto: { md: 'A.5.19' }, auto42: { md: 'A.5.19', record: 'aiRegister' } }
     ],
     '8.2': [
       { id: 'repeat', text: 'Carry out risk assessments at planned intervals and when significant changes happen, and keep the results.',
         evidence: 'Every open risk reviewed within the last 12 months, and reassessment after significant change.',
         text42: 'Carry out AI risk assessments at planned intervals and when significant changes happen, and keep the results.',
-        auto: { md: '8.2' } }
+        auto: { md: '8.2' }, auto42: { record: 'riskReviewed' } }
     ],
     '8.3': [
       { id: 'implement', text: 'Put the risk treatment plan into effect, and keep the results.',
         evidence: 'Treatment actions completed or progressing, and every open risk with actions or a recorded acceptance.',
         text42: 'Put the AI risk treatment plan into effect, and keep the results.',
-        auto: { md: '8.3' } }
+        auto: { md: '8.3' }, auto42: { record: 'riskActioned' } }
     ],
     '9.1': [
       { id: 'determine', text: 'Determine what is monitored and measured, how, when, by whom, and when the results are analysed and evaluated.',
         evidence: 'The approved objectives and metrics document.',
         auto: { doc: 'infosec-objectives-metrics' }, auto42: { doc: 'ai-objectives-metrics' } },
       { id: 'evaluate', text: 'Keep the monitoring results, and evaluate the security performance and effectiveness of the management system.',
-        evidence: 'Posture scans, metric results and objective progress, reviewed at management review.',
-        auto: { md: '9.1' } }
+        evidence: 'A posture scan within 90 days, and every objective measurable and on track or achieved.',
+        evidence42: 'Every AI objective measurable and on track or achieved, and the AI system register reviewed within 12 months.',
+        auto: { record: 'kpis' }, auto42: { record: 'kpis' } }
     ],
     '9.2': [
       { id: 'conduct', text: 'Carry out internal audits at planned intervals to check the management system conforms to the organisation’s own requirements and the standard, and is effectively implemented.',
         evidence: 'A completed internal audit within the last 12 months.',
-        auto: { md: '9.2' } },
+        auto: { record: 'auditDone' }, auto42: { record: 'auditDone' } },
       { id: 'programme', text: 'Plan and maintain an audit programme covering frequency, methods, responsibilities and reporting, taking account of the importance of the processes and previous results.',
         evidence: 'The approved internal audit procedure and the audit programme in the audits register.',
-        auto: { doc: 'internal-audit-procedure', record: 'auditsPlanned' } },
+        auto: { doc: 'internal-audit-procedure', record: 'auditsPlanned' }, auto42: { doc: 'internal-audit-procedure', record: 'auditsPlanned' } },
       { id: 'impartial', text: 'Set the criteria and scope of each audit, choose auditors who are objective and impartial (never auditing their own work), and report the results to management.',
-        evidence: 'Each audit’s scope and auditor recorded, the auditor independent of the areas audited, and the report presented to management.' },
+        evidence: 'Each audit’s scope, auditor and summary recorded, and the auditor not the owner of any clause the audit covered.',
+        auto: { record: 'auditImpartial' }, auto42: { record: 'auditImpartial' } },
       { id: 'records', text: 'Keep evidence of the audit programme and the audit results.',
         evidence: 'Audit reports and findings recorded in the audits register.',
-        auto: { md: '9.2' } }
+        auto: { md: '9.2' }, auto42: { record: 'auditDone' } }
     ],
     '9.3': [
       { id: 'held', text: 'Top management reviews the management system at planned intervals.',
         evidence: 'A management review within the last 12 months, attended by top management.',
-        auto: { md: '9.3' } },
+        auto: { md: '9.3' }, auto42: { md: '9.3' } },
       { id: 'inputs', text: 'The review covers every required input: actions from previous reviews; changes in issues and in interested parties’ needs; performance (nonconformities, monitoring results, audit results, objectives); interested party feedback; risk assessment results and the treatment plan; and opportunities for improvement.',
-        evidence: 'Minutes that address each input in turn.' },
+        evidence: 'The latest management review, recorded in the structured form, with every input section completed.',
+        auto: { record: 'mrInputs' }, auto42: { record: 'mrInputs' } },
       { id: 'outputs', text: 'The review records decisions on improvement opportunities and any changes needed to the management system.',
         evidence: 'Decisions and actions recorded in the management review.',
-        auto: { md: '9.3' } }
+        auto: { md: '9.3' }, auto42: { md: '9.3' } }
     ],
     '10.1': [
       { id: 'improve', text: 'Continually improve how suitable, adequate and effective the management system is.',
-        evidence: 'Improvement actions raised by management review, audits and incidents, and completed over time.' }
+        evidence: 'A management review within 12 months that considered improvement opportunities and recorded decisions.',
+        auto: { record: 'improvement' }, auto42: { record: 'improvement' } }
     ],
     '10.2': [
       { id: 'react', text: 'When a nonconformity occurs, act to control and correct it and deal with its consequences.',
         evidence: 'Each nonconformity in the actions register with its immediate correction.',
-        auto: { record: 'capaCorrection' } },
+        auto: { record: 'capaCorrection' }, auto42: { record: 'capaCorrection' } },
       { id: 'cause', text: 'Decide whether action is needed to remove the cause: review it, find the root cause, and check whether similar nonconformities exist or could occur.',
         evidence: 'A root cause recorded on each nonconformity.',
-        auto: { record: 'capaRootCause' } },
+        auto: { record: 'capaRootCause' }, auto42: { record: 'capaRootCause' } },
       { id: 'effective', text: 'Carry out the corrective action, review whether it was effective, and change the management system if needed.',
         evidence: 'A completed corrective action and an effectiveness review on each nonconformity.',
-        auto: { record: 'capaEffective' } },
+        auto: { record: 'capaEffective' }, auto42: { record: 'capaEffective' } },
       { id: 'records', text: 'Keep evidence of the nonconformities, the actions taken and their results.',
         evidence: 'The nonconformity and corrective action procedure, and the corrective-action records.',
-        auto: { md: '10.2' } }
+        auto: { md: '10.2' }, auto42: { md: '10.2' } }
     ]
   };
 
@@ -6427,11 +6447,13 @@
         evidence: 'The approved AI impact assessment procedure.',
         auto42: { doc: 'ai-impact-assessment' } },
       { id: 'results', text: 'Document the impact assessment results and take them into account in the AI risk assessment.',
-        evidence: 'Completed impact assessments for the AI systems in scope, referenced from the AI risk register.' }
+        evidence: 'A completed impact assessment for every AI system in the register, and AI risks in the risk register.',
+        auto42: { record: ['aiImpact', 'riskOwners'] } }
     ],
     '8.4': [
       { id: 'repeat', text: 'Carry out AI system impact assessments at planned intervals and when significant changes happen, and keep the results.',
-        evidence: 'Current impact assessments for each AI system in the register, reassessed after significant change.' }
+        evidence: 'A completed impact assessment for every AI system, each system reviewed within the last 12 months.',
+        auto42: { record: ['aiImpact', 'aiRegister'] } }
     ]
   };
 
@@ -6448,38 +6470,163 @@
     });
   }
 
+  /* The AI risks in the shared risk register: those categorised as AI
+     Governance, or treated by an ISO 42001 Annex A control. */
+  function isAiRisk(r) {
+    return !!r && (r.cat === 'AI Governance' || (r.controls || []).some(function (c) { return /^AI\./.test(String(c)); }));
+  }
+
   /* Register rules for `record` sources. Same shape as the Stage 1
-     checklist: { st: 'done'|'partial'|'missing', note }. */
+     checklist: { st: 'done'|'partial'|'missing', note }. Each reuses the
+     register checks the posture scan already scores with where one
+     exists, so a clause and its related check can never disagree. For
+     ISO 42001 the risk rules read the AI risks only, training reads the
+     AI use course, and audits read ISO 42001 audits. */
+  var AI_TRAINING_COURSE = 'ai-use-oversight';
   function clauseRecordStatus(kind, s) {
-    var openRisks = (s.risks || []).filter(function (r) { return r && r.status !== 'Closed'; });
+    var fw = s.fw || 'iso27001';
+    var is42 = fw === 'iso42001';
+    var today = s.today || new Date().toISOString().slice(0, 10);
+    var within = function (d, days) { return !!d && daysBetweenDateStr(String(d).slice(0, 10), today) <= days; };
+    var riskWord = is42 ? 'AI risk' : 'risk';
+    var openRisks = (s.risks || []).filter(function (r) { return r && r.status !== 'Closed' && (!is42 || isAiRisk(r)); });
+    var noRisks = { st: 'missing', note: is42 ? 'No AI risks in the register (category AI Governance)' : 'No risks in the register' };
     var ncs = (s.actions || []).filter(function (a) { return a && a.type && String(a.type).indexOf('Non-conformity') === 0; });
+    var fwAudits = (s.audits || []).filter(function (a) { return a && (is42 ? a.fw === 'iso42001' : a.fw !== 'iso42001'); });
+    var auditsDone = fwAudits.filter(function (a) { return a.status === 'Completed' && within(a.completed, 365); });
+    var reviews = (s.reviews || []).filter(function (r) { return r && r.date; }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    var lastReview = reviews[0] && within(reviews[0].date, 365) ? reviews[0] : null;
+    var lastInputs = lastReview ? parseReviewInputs(lastReview.inputs) : {};
+    var noReview = { st: 'missing', note: 'No management review in the last 12 months' };
+    var ai = s.aiSystems || [];
+    function share(n, total, what, whatNot) {
+      return n === total ? { st: 'done', note: what } : { st: 'partial', note: (total - n) + ' of ' + total + ' ' + whatNot };
+    }
     function capa(test, what) {
       if (!ncs.length) return { st: 'missing', note: 'No nonconformity recorded yet — confirm how one would be handled, with the procedure as evidence' };
       var short = ncs.filter(function (a) { return !test(capaStatus(a), a); }).length;
       return short ? { st: 'partial', note: short + ' of ' + ncs.length + ' nonconformit' + (ncs.length > 1 ? 'ies' : 'y') + ' without ' + what } : { st: 'done', note: 'Every nonconformity has ' + what };
     }
+    function fromCheck(r, missingNote) {
+      if (!r || r.result === 'manual') return { st: 'missing', note: missingNote || (r && r.note) || '' };
+      return { st: r.result === 'pass' ? 'done' : 'partial', note: r.note };
+    }
+    var lastScan = (s.scans || []).reduce(function (m, x) { return x && x.date && String(x.date) > m ? String(x.date).slice(0, 10) : m; }, '');
     switch (kind) {
       case 'risks':
-        return openRisks.length ? { st: 'done', note: openRisks.length + ' risk(s) assessed on the same scales' } : { st: 'missing', note: 'No risks in the register' };
+        return openRisks.length ? { st: 'done', note: openRisks.length + ' ' + riskWord + '(s) assessed on the same scales' } : noRisks;
       case 'riskOwners':
-        if (!openRisks.length) return { st: 'missing', note: 'No risks in the register' };
-        var noOwner = openRisks.filter(function (r) { return !String(r.owner || '').trim(); }).length;
-        return noOwner ? { st: 'partial', note: noOwner + ' risk(s) without an owner' } : { st: 'done', note: openRisks.length + ' risk(s), each with an owner' };
+        if (!openRisks.length) return noRisks;
+        return share(openRisks.filter(function (r) { return String(r.owner || '').trim(); }).length, openRisks.length, openRisks.length + ' ' + riskWord + '(s), each with an owner', riskWord + '(s) without an owner');
       case 'riskRated':
-        if (!openRisks.length) return { st: 'missing', note: 'No risks in the register' };
-        var unrated = openRisks.filter(function (r) { return !(Number(r.L) > 0 && Number(r.I) > 0); }).length;
-        return unrated ? { st: 'partial', note: unrated + ' risk(s) without a likelihood and impact' } : { st: 'done', note: 'Every risk rated for likelihood and impact' };
+        if (!openRisks.length) return noRisks;
+        return share(openRisks.filter(function (r) { return Number(r.L) > 0 && Number(r.I) > 0; }).length, openRisks.length, 'Every ' + riskWord + ' rated for likelihood and impact on the framework’s scales', riskWord + '(s) without a likelihood and impact');
+      case 'riskReviewed':
+        if (!openRisks.length) return noRisks;
+        return share(openRisks.filter(function (r) { return within(r.lastReviewed, 365); }).length, openRisks.length, openRisks.length + ' ' + riskWord + '(s), all reviewed in the last 12 months', riskWord + '(s) not reviewed in the last 12 months');
+      case 'riskTreated':
+        if (!openRisks.length) return noRisks;
+        return share(openRisks.filter(function (r) { return r.treat && String(r.owner || '').trim(); }).length, openRisks.length, 'Every ' + riskWord + ' has a treatment decision and an owner', riskWord + '(s) without a treatment decision or owner');
+      case 'riskActioned':
+        if (!openRisks.length) return noRisks;
+        return share(openRisks.filter(function (r) { return (r.actions || []).length || r.treat === 'Tolerate' || String(r.acceptedBy || '').trim(); }).length, openRisks.length, 'Every ' + riskWord + ' has treatment actions or a recorded acceptance', riskWord + '(s) with no action and no acceptance');
       case 'riskAccepted':
-        if (!openRisks.length) return { st: 'missing', note: 'No risks in the register' };
-        var unaccepted = openRisks.filter(function (r) { return !String(r.acceptedBy || '').trim(); }).length;
-        return unaccepted ? { st: 'partial', note: unaccepted + ' risk(s) without the owner’s recorded acceptance of the residual risk' } : { st: 'done', note: 'Residual risk accepted by the owner on every open risk' };
+        if (!openRisks.length) return noRisks;
+        return share(openRisks.filter(function (r) { return String(r.acceptedBy || '').trim(); }).length, openRisks.length, 'Residual risk accepted by the owner on every open ' + riskWord, riskWord + '(s) without the owner’s recorded acceptance of the residual risk');
       case 'objectivePlans':
         var objs = (s.objectives || []).filter(function (o) { return o && o.metric && o.target; });
         if (!objs.length) return { st: 'missing', note: 'No measurable objective recorded' };
-        var unplanned = objs.filter(function (o) { return !(String(o.owner || '').trim() && o.due); }).length;
-        return unplanned ? { st: 'partial', note: unplanned + ' objective(s) without an owner or due date' } : { st: 'done', note: objs.length + ' objective(s), each with an owner and a due date' };
+        return share(objs.filter(function (o) { return String(o.owner || '').trim() && o.due; }).length, objs.length, objs.length + ' objective(s), each with an owner and a due date', 'objective(s) without an owner or due date');
+      case 'kpis':
+        var ob = fromCheck(objectivesCheckResult(s.objectives || [], today), 'No measurable objectives recorded');
+        var second = is42
+          ? (ai.length && ai.every(function (x) { return within(x.lastReviewed, 365); }) ? { st: 'done', note: 'AI system register reviewed within 12 months' } : { st: ai.length ? 'partial' : 'missing', note: 'AI system register not reviewed within 12 months' })
+          : (within(lastScan, 90) ? { st: 'done', note: 'Posture scan on ' + lastScan } : { st: lastScan ? 'partial' : 'missing', note: lastScan ? 'Last posture scan more than 90 days ago' : 'No posture scan yet' });
+        return ob.st === 'done' && second.st === 'done' ? { st: 'done', note: ob.note + ' ' + second.note + '.' }
+          : { st: ob.st === 'missing' && second.st === 'missing' ? 'missing' : 'partial', note: [ob, second].filter(function (p) { return p.st !== 'done'; }).map(function (p) { return p.note; }).join('; ') };
+      case 'trainingCurrent':
+        var rows = (s.training || []).filter(function (t) { return !is42 || t.courseId === AI_TRAINING_COURSE; });
+        return fromCheck(trainingCheckResult(rows, today), is42 ? 'The AI use and oversight course has not been assigned' : 'No training assigned in Checkpoint');
+      case 'policyAcknowledged':
+        var title = is42 ? /\bAI Policy\b/i : /Information Security Policy/i;
+        var camp = attestationCampaigns((s.attestations || []).filter(function (r) { return title.test(r.docName || ''); }))[0];
+        if (!camp) return { st: 'missing', note: 'No acknowledgement campaign for the ' + (is42 ? 'AI Policy' : 'Information Security Policy') + ' yet' };
+        return camp.pct >= 90 ? { st: 'done', note: camp.acknowledged + ' of ' + (camp.acknowledged + camp.outstanding) + ' staff acknowledged the policy (' + camp.pct + '%)' }
+          : { st: 'partial', note: 'Policy acknowledged by ' + camp.pct + '% of staff (target 90%)' };
+      case 'policyCurrent':
+        return fromCheck(policyCheckResult(s.docsFull || [], today), 'No controlled documents in the register');
+      case 'legalTraced':
+        var applying = (s.legal || []).filter(function (l) { return l && l.applies === 'Yes'; });
+        if (!applying.length) return { st: 'missing', note: 'No applicable requirements in the legal and regulatory register' };
+        return share(applying.filter(function (l) { return (l.controls || []).length; }).length, applying.length, 'Every applicable legal, regulatory and contractual requirement is linked to the controls that meet it', 'applicable requirement(s) not linked to any control');
+      case 'mrIssues':
+        if (!lastReview) return noReview;
+        return lastInputs.issues ? { st: 'done', note: 'Management review of ' + lastReview.date + ' recorded changes in issues' } : { st: 'partial', note: 'The latest management review has no recorded input on changes in issues' };
+      case 'mrResources':
+        if (!lastReview) return noReview;
+        return /resourc|budget|fund|hire|recruit|headcount|allocat|time for/i.test(String(lastReview.decisions || '') + ' ' + String(lastReview.inputs || ''))
+          ? { st: 'done', note: 'Management review of ' + lastReview.date + ' records a resourcing decision' }
+          : { st: 'partial', note: 'The latest management review records no resourcing decision' };
+      case 'mrInputs':
+        if (!lastReview) return noReview;
+        if (lastInputs.legacy) return { st: 'partial', note: 'The latest management review was recorded as free text — record it in the structured form so each input is shown' };
+        var missingInputs = MR_INPUT_SECTIONS.filter(function (x) { return !String(lastInputs[x.key] || '').trim(); });
+        return missingInputs.length ? { st: 'partial', note: missingInputs.length + ' of ' + MR_INPUT_SECTIONS.length + ' required inputs not recorded (' + missingInputs.map(function (x) { return x.clause; }).join(', ') + ')' }
+          : { st: 'done', note: 'Management review of ' + lastReview.date + ' covers every required input' };
+      case 'improvement':
+        if (!lastReview) return noReview;
+        return lastReview.decisions && String(lastInputs.improvement || '').trim() ? { st: 'done', note: 'Management review of ' + lastReview.date + ' considered improvement opportunities and recorded decisions' }
+          : { st: 'partial', note: 'The latest management review records no improvement opportunities or decisions' };
+      case 'auditDone':
+        if (auditsDone.length) return { st: 'done', note: auditsDone.length + ' internal audit(s) completed in the last 12 months' };
+        return fwAudits.length ? { st: 'partial', note: 'Audit planned, none completed in the last 12 months' } : { st: 'missing', note: is42 ? 'No ISO 42001 internal audit recorded' : 'No internal audit recorded' };
       case 'auditsPlanned':
-        return (s.audits || []).length ? { st: 'done', note: (s.audits || []).length + ' audit(s) in the programme' } : { st: 'missing', note: 'No audits planned in the audits register' };
+        return fwAudits.length ? { st: 'done', note: fwAudits.length + ' audit(s) in the programme' } : { st: 'missing', note: is42 ? 'No ISO 42001 audits in the audits register' : 'No audits planned in the audits register' };
+      case 'auditImpartial':
+        if (!auditsDone.length) return { st: 'missing', note: 'No completed internal audit in the last 12 months' };
+        var problems = [];
+        auditsDone.forEach(function (a) {
+          if (!String(a.auditor || '').trim() || !String(a.scope || '').trim() || !String(a.summary || '').trim()) { problems.push(a.id + ' is missing its auditor, scope or summary'); return; }
+          var who = String(a.auditor).trim().toLowerCase();
+          var sc = parseAuditScope(a.scope);
+          var own = (s.clauses || []).filter(function (c) {
+            return (c.fw || 'iso27001') === fw && sc.clauses.indexOf(String(c.id).split('.')[0]) !== -1 && String(c.own || '').trim().toLowerCase() === who;
+          });
+          if (own.length) problems.push(a.id + ': the auditor owns Clause ' + own.map(function (c) { return c.id; }).join(', '));
+        });
+        return problems.length ? { st: 'partial', note: problems.join('; ') } : { st: 'done', note: 'Every completed audit has its scope, auditor and summary recorded, and no auditor audited a clause they own' };
+      case 'operating':
+        var overdue = (s.actions || []).filter(function (a) { return a && a.status !== 'Done' && a.status !== 'Closed' && a.status !== 'Cancelled' && a.due && daysBetweenDateStr(a.due, today) > 30; }).length;
+        var parts = [];
+        if (is42) {
+          if (!(ai.length && ai.every(function (x) { return within(x.lastReviewed, 365); }))) parts.push('AI system register not reviewed within 12 months');
+        } else if (!within(lastScan, 90)) parts.push(lastScan ? 'last posture scan more than 90 days ago' : 'no posture scan yet');
+        if (!openRisks.length) parts.push(is42 ? 'no AI risks recorded' : 'no risks recorded');
+        else if (!openRisks.every(function (r) { return within(r.lastReviewed, 365); })) parts.push(riskWord + 's not all reviewed in 12 months');
+        if (overdue) parts.push(overdue + ' action(s) more than 30 days overdue');
+        return parts.length ? { st: 'partial', note: parts.join('; ') } : { st: 'done', note: is42 ? 'AI register and AI risks reviewed within 12 months, no action more than 30 days overdue' : 'Posture scan within 90 days, risks reviewed within 12 months, no action more than 30 days overdue' };
+      case 'auditLog':
+        var recent = (s.auditLog || []).filter(function (e) { return within(e.entryDateTime, 90); }).length;
+        return recent ? { st: 'done', note: recent + ' dated audit log entries in the last 90 days' } : { st: 'missing', note: 'No recorded activity in the last 90 days' };
+      case 'soa':
+        var sa = (s.soaByFw || {})[fw];
+        if (!sa || !sa.applicable) return { st: 'missing', note: 'No applicable controls recorded' };
+        if (sa.notStarted || sa.unjustified) return { st: 'partial', note: (sa.notStarted ? sa.notStarted + ' control(s) not started' : '') + (sa.notStarted && sa.unjustified ? '; ' : '') + (sa.unjustified ? sa.unjustified + ' exclusion(s) without a justification' : '') };
+        return { st: 'done', note: sa.applicable + ' applicable controls, inclusions and exclusions justified' };
+      case 'aiRegister':
+        if (!ai.length) return { st: 'missing', note: 'No AI systems in the AI system register' };
+        return share(ai.filter(function (x) { return String(x.owner || '').trim() && String(x.purpose || '').trim() && within(x.lastReviewed, 365); }).length, ai.length, ai.length + ' AI system(s), each with an owner and purpose, reviewed within 12 months', 'AI system(s) without an owner, a purpose or a review in the last 12 months');
+      case 'aiImpact':
+        if (!ai.length) return { st: 'missing', note: 'No AI systems in the AI system register' };
+        return share(ai.filter(function (x) { return x.impactAssessmentStatus === 'Completed'; }).length, ai.length, 'Impact assessment completed for all ' + ai.length + ' AI system(s)', 'AI system(s) without a completed impact assessment');
+      case 'aimsCore':
+        var need = ['aims-scope', 'ai-policy', 'ai-risk-framework', 'ai-impact-assessment'];
+        var approved = {};
+        (s.docs || []).forEach(function (d) { if (d && d.status === 'Approved') approved[d.tplId] = true; });
+        var gaps = need.filter(function (id) { return !approved[id]; }).length;
+        if (!ai.length) gaps++;
+        return gaps ? { st: gaps > need.length ? 'missing' : 'partial', note: gaps + ' of ' + (need.length + 1) + ' core AI management system items not yet in place (scope, policy, risk framework, impact assessment procedure, AI system register)' }
+          : { st: 'done', note: 'AI scope, policy, risk framework and impact assessment procedure approved, and the AI system register in use' };
       case 'mandatoryAll':
         var md = (s.md || []).filter(function (m) { return /^\d/.test(m.ref); });
         if (!md.length) return { st: 'missing', note: 'Stage 1 checklist not available' };
@@ -6491,10 +6638,16 @@
     }
     return { st: 'missing', note: '' };
   }
+  var CLAUSE_RECORD_KINDS = ['risks', 'riskOwners', 'riskRated', 'riskReviewed', 'riskTreated', 'riskActioned', 'riskAccepted',
+    'objectivePlans', 'kpis', 'trainingCurrent', 'policyAcknowledged', 'policyCurrent', 'legalTraced', 'mrIssues', 'mrResources',
+    'mrInputs', 'improvement', 'auditDone', 'auditsPlanned', 'auditImpartial', 'operating', 'auditLog', 'soa', 'aiRegister',
+    'aiImpact', 'aimsCore', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
 
   /* One clause's checklist, resolved against the tenant's data.
-     s = { fw, code, docs:[{tplId,status}], settings:{key:value}, md:[mandatoryDocumentation() rows],
-           risks, objectives, audits, actions, confirmed:{ reqId:{ by, date, note } } }
+     s = { fw, code, today, docs:[{tplId,status}], docsFull:[register rows], settings:{key:value},
+           md:[mandatoryDocumentation() rows], risks, objectives, audits, actions, reviews, training,
+           attestations, legal, aiSystems, scans, auditLog, clauses, soaByFw:{ fw:{ applicable, notStarted, unjustified } },
+           confirmed:{ reqId:{ by, date, note } } }
      Returns { items:[{ id, text, evidence, status:'met'|'partial'|'open', how:'auto'|'confirmed'|'', note }],
                met, total, complete }. A confirmation always wins: it is a
      named person saying where the evidence is. */
@@ -6522,7 +6675,7 @@
         var m = md[src.md];
         parts.push(m ? { st: m.status, note: m.note } : { st: 'missing', note: 'Not yet recorded' });
       }
-      if (src.record) parts.push(clauseRecordStatus(src.record, s));
+      [].concat(src.record || []).forEach(function (k) { parts.push(clauseRecordStatus(k, s)); });
       if (!parts.length) return null;
       var worst = parts.reduce(function (w, p) { return rank[p.st] < rank[w.st] ? p : w; }, parts[0]);
       return { st: worst.st, note: parts.filter(function (p) { return p.st !== 'done'; }).map(function (p) { return p.note; }).filter(Boolean).join('; ') || parts.map(function (p) { return p.note; }).filter(Boolean).join('; ') };
@@ -7231,7 +7384,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport,
+    band: band, residual: residual, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

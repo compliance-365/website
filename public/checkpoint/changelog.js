@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.107.0',
+    date: '2026-09-30',
+    entries: [
+      'Clause requirements now tick themselves off from your registers. The risk register (owners, ratings, reviews, treatment, owner acceptance), built-in training completion, objectives and KPIs, policy acknowledgements, the legal register, internal audits (including whether an auditor audited a clause they own) and each management review input (9.3) are all read automatically. 65 of 68 ISO 27001 requirements are now checked from Checkpoint\u2019s own records.',
+      'ISO 42001 clauses read the AI registers: AI risks in the risk register, the AI system register and its impact assessments, the AI use course, the AI Policy acknowledgement campaign, ISO 42001 audits and the ISO 42001 statement of applicability. 69 of 72 requirements are now checked automatically.',
+      'New report: the Management System Evidence Pack (Reports, or Evidence pack on the clause register). Every clause, each requirement, how it is met and the evidence behind it, with everything still open listed first. Built for a Stage 1 audit.'
+    ]
+  },
+  {
     version: '1.106.0',
     date: '2026-09-30',
     entries: [

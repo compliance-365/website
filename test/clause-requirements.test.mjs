@@ -23,7 +23,7 @@ const { clauseRequirementsFor, clauseChecklist, clauseImplementGate, parseClause
 const tplIds = new Set(POLICY_TEMPLATES.map((t) => t.id));
 const mdRefs = new Set(MANDATORY_DOCS.map((m) => m.ref));
 const profileKeys = new Set(ORG_PROFILE_FIELDS.map((f) => f.key).concat(ORG_CONTEXT_QUESTIONS.map((q) => q.key)));
-const RECORDS = ['risks', 'riskOwners', 'riskRated', 'riskAccepted', 'objectivePlans', 'auditsPlanned', 'mandatoryAll', 'capaCorrection', 'capaRootCause', 'capaEffective'];
+const RECORDS = Lib.CLAUSE_RECORD_KINDS;
 
 describe('clause requirement definitions', () => {
   test('every clause of every framework has at least one requirement', () => {
@@ -50,7 +50,7 @@ describe('clause requirement definitions', () => {
         (src.docs || (src.doc ? [src.doc] : [])).forEach((id) => assert.ok(tplIds.has(id), `${code}/${r.id}: no template ${id}`));
         (src.profile || []).forEach((k) => assert.ok(profileKeys.has(k), `${code}/${r.id}: no profile key ${k}`));
         if (src.md) assert.ok(mdRefs.has(src.md), `${code}/${r.id}: no Stage 1 item ${src.md}`);
-        if (src.record) assert.ok(RECORDS.includes(src.record), `${code}/${r.id}: unknown record ${src.record}`);
+        [].concat(src.record || []).forEach((k) => assert.ok(RECORDS.includes(k), `${code}/${r.id}: unknown record ${k}`));
       });
     }));
   });
@@ -190,7 +190,7 @@ describe('the clause gate is enforced in the app', () => {
   test('manual status change, document approval, automation and verification all go through it', () => {
     assert.match(app, /is not ready to be Implemented/);
     assert.match(app, /if \(u\.set\.st === 'Implemented' && !clauseGateFor\(c\)\.ok\)/);
-    assert.match(app, /updates = updates\.filter\(function \(u\) \{ return clauseGateFor\(Object\.assign\(\{\}, u\.clause, u\.set\), md\)\.ok; \}\)/);
+    assert.match(app, /updates = updates\.filter\(function \(u\) \{ return clauseGateFor\(Object\.assign\(\{\}, u\.clause, u\.set\), ctx\)\.ok; \}\)/);
     assert.match(app, /cannot be verified yet/);
   });
   test('confirmations are saved on the Clauses list', () => {
@@ -214,5 +214,91 @@ describe('climate change amendment in the drafts and documents', () => {
   test('the AI Management System Scope carries the climate determination too', () => {
     const aims = POLICY_TEMPLATES.find((t) => t.id === 'aims-scope');
     assert.ok(aims.policyStatements.some((s) => /\{\{climate\}\}/.test(s.rule)));
+  });
+});
+
+describe('register rules added for full automation', () => {
+  const today = '2026-09-30';
+  const rec = (kind, s) => Lib.clauseRecordStatus(kind, Object.assign({ today }, s));
+
+  test('ISO 42001 risk rules read only the AI risks', () => {
+    const risks = [
+      { status: 'Open', cat: 'Supplier', owner: '', L: 0, I: 0 },
+      { status: 'Open', cat: 'AI Governance', owner: 'A', L: 3, I: 3, treat: 'Treat', lastReviewed: '2026-06-01', acceptedBy: 'A' }
+    ];
+    assert.equal(rec('riskOwners', { fw: 'iso42001', risks }).st, 'done');
+    assert.equal(rec('riskOwners', { fw: 'iso27001', risks }).st, 'partial');
+    assert.equal(rec('riskReviewed', { fw: 'iso42001', risks }).st, 'done');
+    assert.equal(rec('riskOwners', { fw: 'iso42001', risks: [{ status: 'Open', cat: 'Supplier', owner: 'x' }] }).st, 'missing');
+    assert.ok(Lib.isAiRisk({ controls: ['AI.6.2.4'] }));
+  });
+
+  test('training uses the built-in courses, and ISO 42001 only the AI use course', () => {
+    const training = [
+      { courseId: 'security-awareness', status: 'Completed' },
+      { courseId: 'ai-use-oversight', status: 'Assigned', due: '2026-01-01' }
+    ];
+    assert.equal(rec('trainingCurrent', { fw: 'iso42001', training }).st, 'partial');
+    assert.equal(rec('trainingCurrent', { fw: 'iso27001', training: [training[0]] }).st, 'done');
+    assert.equal(rec('trainingCurrent', { fw: 'iso27001', training: [] }).st, 'missing');
+  });
+
+  test('KPIs: objectives on track plus a posture scan within 90 days', () => {
+    const objectives = [{ metric: 'MFA %', target: '100', owner: 'A', due: '2026-12-31', status: 'On track' }];
+    assert.equal(rec('kpis', { objectives, scans: [{ date: '2026-09-01' }] }).st, 'done');
+    assert.equal(rec('kpis', { objectives, scans: [{ date: '2026-01-01' }] }).st, 'partial');
+    assert.equal(rec('kpis', { objectives: [], scans: [] }).st, 'missing');
+  });
+
+  test('management review inputs are checked against every 9.3 section', () => {
+    const all = Object.fromEntries(Lib.MR_INPUT_SECTIONS.map((x) => [x.key, 'covered']));
+    assert.equal(rec('mrInputs', { reviews: [{ date: '2026-08-01', inputs: JSON.stringify(all), decisions: 'd' }] }).st, 'done');
+    const some = rec('mrInputs', { reviews: [{ date: '2026-08-01', inputs: JSON.stringify({ issues: 'x' }), decisions: 'd' }] });
+    assert.equal(some.st, 'partial');
+    assert.match(some.note, /6 of 7 required inputs not recorded/);
+    assert.equal(rec('mrInputs', { reviews: [{ date: '2026-08-01', inputs: 'free text', decisions: 'd' }] }).st, 'partial');
+    assert.equal(rec('mrInputs', { reviews: [{ date: '2024-01-01', inputs: JSON.stringify(all) }] }).st, 'missing');
+    assert.equal(rec('improvement', { reviews: [{ date: '2026-08-01', inputs: JSON.stringify({ improvement: 'x' }), decisions: 'Invest in X' }] }).st, 'done');
+    assert.equal(rec('mrResources', { reviews: [{ date: '2026-08-01', inputs: '{}', decisions: 'Approved budget for a part-time ISMS manager' }] }).st, 'done');
+  });
+
+  test('audit impartiality: an auditor who owns a clause in scope is flagged', () => {
+    const audits = [{ id: 'AUD-1', status: 'Completed', completed: '2026-08-01', scope: 'Clauses 4-10', auditor: 'K. Patel', summary: 's' }];
+    const clauses = [{ fw: 'iso27001', id: '6.1.2', own: 'K. Patel' }];
+    const r = rec('auditImpartial', { audits, clauses });
+    assert.equal(r.st, 'partial');
+    assert.match(r.note, /owns Clause 6\.1\.2/);
+    assert.equal(rec('auditImpartial', { audits, clauses: [{ fw: 'iso27001', id: '6.1.2', own: 'S. Okafor' }] }).st, 'done');
+    assert.equal(rec('auditDone', { fw: 'iso42001', audits }).st, 'missing', 'an ISO 27001 audit is not an ISO 42001 audit');
+  });
+
+  test('policy acknowledgement, legal traceability and the AI registers', () => {
+    const att = (n, st) => Array.from({ length: n }, () => ({ campaign: 'C1', docName: 'Information Security Policy.html', status: st }));
+    assert.equal(rec('policyAcknowledged', { attestations: att(9, 'Acknowledged').concat(att(1, 'Assigned')) }).st, 'done');
+    assert.equal(rec('policyAcknowledged', { attestations: att(5, 'Acknowledged').concat(att(5, 'Assigned')) }).st, 'partial');
+    assert.equal(rec('policyAcknowledged', { fw: 'iso42001', attestations: att(9, 'Acknowledged') }).st, 'missing', 'ISO 42001 needs the AI Policy');
+    assert.equal(rec('legalTraced', { legal: [{ applies: 'Yes', controls: ['A.5.31'] }, { applies: 'To confirm' }] }).st, 'done');
+    assert.equal(rec('legalTraced', { legal: [{ applies: 'Yes', controls: [] }] }).st, 'partial');
+    const ai = [{ owner: 'A', purpose: 'p', lastReviewed: '2026-05-01', impactAssessmentStatus: 'Completed' }];
+    assert.equal(rec('aiRegister', { aiSystems: ai }).st, 'done');
+    assert.equal(rec('aiImpact', { aiSystems: ai.concat([{ impactAssessmentStatus: 'In progress' }]) }).st, 'partial');
+  });
+
+  test('every clause is automated except the three no register can see', () => {
+    ['iso27001', 'iso42001'].forEach((fw) => {
+      const manual = [];
+      CLAUSE_DEFS.filter((d) => d.fw === fw).forEach((d) => clauseRequirementsFor(fw, d.code).forEach((r) => { if (!r.auto) manual.push(d.code + '/' + r.id); }));
+      assert.deepEqual(manual.sort(), ['5.1/communicates', '5.1/integration', '7.5.3/lifecycle'], fw);
+    });
+  });
+});
+
+describe('management system evidence pack', () => {
+  const app = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../public/checkpoint/index.html', import.meta.url), 'utf8');
+  test('is a report builder reachable from Reports and the clause register', () => {
+    assert.match(app, /clauses: function \(activeFw\) \{/);
+    assert.match(app, /title: 'Management System Evidence Pack — ' \+ label/);
+    assert.equal((html.match(/data-action="App\.report" data-id="clauses"/g) || []).length, 2);
   });
 });
