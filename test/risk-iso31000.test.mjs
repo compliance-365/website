@@ -123,3 +123,35 @@ describe('confidentiality, integrity and availability', () => {
     ['ciaC', 'ciaI', 'ciaA'].forEach((id) => assert.match(app, new RegExp("\\{ id: '" + id + "', label: 'Threatens")));
   });
 });
+
+describe('C/I/A on automatically created risks', () => {
+  const AI = require('../public/checkpoint/ai.js');
+  test('every posture scan risk template carries a C/I/A classification', () => {
+    const tplBlock = app.slice(app.indexOf('  var TPL = {'));
+    const risks = [...tplBlock.matchAll(/risk: \{ title: '((?:[^'\\]|\\.)*)', cat: '[^']*', cia: \[([^\]]*)\]/g)];
+    const all = (tplBlock.match(/risk: \{ title:/g) || []).length;
+    assert.ok(all >= 40, 'expected the full template set');
+    assert.equal(risks.length, all, 'a scan template has no cia');
+    risks.forEach((m) => {
+      const v = m[2].split(',').map((x) => x.trim().replace(/'/g, '')).filter(Boolean);
+      assert.ok(v.length && v.every((x) => ['C', 'I', 'A'].includes(x)), m[1]);
+      assert.deepEqual(v, ['C', 'I', 'A'].filter((x) => v.includes(x)), 'canonical order: ' + m[1]);
+    });
+  });
+
+  test('approving a scan finding copies it, and older scan risks are backfilled once, never overwriting', () => {
+    assert.match(app, /cia: \(t\.risk\.cia \|\| \[\]\)\.slice\(\), src: 'Posture scan'/);
+    assert.match(app, /function backfillScanRiskCia\(\)/);
+    assert.match(app, /\|\| \(r\.cia \|\| \[\]\)\.length\) return;/);
+    assert.match(app, /backfillScanRiskCia\(\); runClauseAutomation\(\);/);
+  });
+
+  test('the AI risk draft proposes C/I/A and only ever C, I or A', () => {
+    assert.match(AI.buildRiskDraftPrompt('x'), /THREATENS:/);
+    const base = 'TITLE: t\nLIKELIHOOD: 3\nIMPACT: 3\n';
+    assert.deepEqual(AI.parseRiskDraft(base + 'THREATENS: C, I\nACTIONS:\n1. a').cia, ['C', 'I']);
+    assert.deepEqual(AI.parseRiskDraft(base + 'THREATENS: availability and confidentiality\nACTIONS:\n1. a').cia, ['C', 'A']);
+    assert.deepEqual(AI.parseRiskDraft(base + 'ACTIONS:\n1. a').cia, []);
+    assert.match(app, /el\.checked = \(draft\.cia \|\| \[\]\)\.indexOf\(k\) !== -1/);
+  });
+});

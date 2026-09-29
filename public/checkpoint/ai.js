@@ -488,6 +488,7 @@
       'LIKELIHOOD_REASON: <one sentence>\n' +
       'IMPACT: <a single whole number, 1-5>\n' +
       'IMPACT_REASON: <one sentence>\n' +
+      'THREATENS: <which of confidentiality, integrity, availability the risk threatens, as letters, e.g. C, I>\n' +
       'ACTIONS:\n1. <treatment action>\n2. <treatment action>\n3. <treatment action>';
   }
 
@@ -497,10 +498,16 @@
      title. The caller always still has to review/edit/save through
      the normal form. */
   function parseRiskDraft(text) {
-    var f = extractLabelledLines(text, ['TITLE', 'LIKELIHOOD', 'LIKELIHOOD_REASON', 'IMPACT', 'IMPACT_REASON']);
+    var f = extractLabelledLines(text, ['TITLE', 'LIKELIHOOD', 'LIKELIHOOD_REASON', 'IMPACT', 'IMPACT_REASON', 'THREATENS']);
     var actions = extractNumberedList(text, 'ACTIONS');
+    /* C/I/A as letters or words; anything else is dropped, in a fixed
+       order, so a stray value never reaches the register. */
+    var said = String(f.threatens || '').toUpperCase();
+    var cia = [['C', /\bC\b|CONFIDENTIAL/], ['I', /\bI\b|INTEGRITY/], ['A', /\bA\b|AVAILAB/]]
+      .filter(function (x) { return x[1].test(said); }).map(function (x) { return x[0]; });
     return {
       title: f.title || '',
+      cia: cia,
       likelihood: clampScore(f.likelihood, 3),
       likelihoodReason: f.likelihood_reason || '',
       impact: clampScore(f.impact, 3),
