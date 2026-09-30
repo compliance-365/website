@@ -4172,6 +4172,40 @@ function showModal(opts) {
   /* The validated client brand accent for reports — '' (Checkpoint
      gold) unless a plausible #rrggbb was saved. Validated here as well
      as on save so a hand-edited Settings list row can't inject CSS. */
+  /* Saves the logo chosen in a file input as the client's logo: a
+     small data URL in Settings (it travels inside every generated
+     document), plus a copy in the Documents library. Shared by the
+     Settings branding card and the setup wizard's last step, so
+     branding can be set before the first documents are generated. */
+  async function saveClientLogoFromInput(input) {
+    var file = input && input.files && input.files[0];
+    if (!file) { toast('Choose an image file first'); return false; }
+    if (!/^image\//.test(file.type)) { toast('Choose an image file (PNG, JPG or SVG)'); return false; }
+    var MAX_BYTES = 40 * 1024;
+    if (file.size > MAX_BYTES) { toast('Logo must be under 40 KB — use a small wordmark/icon file, not a full-resolution image.'); return false; }
+    busy(true);
+    var dataUrl;
+    try {
+      dataUrl = await new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () { resolve(reader.result); };
+        reader.onerror = function () { reject(reader.error || new Error('Could not read file')); };
+        reader.readAsDataURL(file);
+      });
+    } catch (e) { warn(e); busy(false); return false; }
+    S.settings.clientLogoUrl = dataUrl;
+    try { await Store.setSetting('clientLogoUrl', dataUrl); } catch (e) { warn(e); busy(false); return false; }
+    audit('Client logo uploaded', 'Setting', 'clientLogoUrl', '', file.name);
+    if (Store.kind !== 'demo') {
+      try { await Store.uploadDocument(file, 'Branding'); } catch (e) { warn(e); /* logo is already saved above — a Documents copy is a nice-to-have, not a blocker */ }
+    }
+    applyClientIdentity();
+    toast('Client logo saved — it appears in the top bar, on report covers, and on every document generated from now on.');
+    input.value = '';
+    busy(false);
+    return true;
+  }
+
   function clientBrandColor() {
     var c = (S.settings && S.settings.clientBrandColor) || '';
     return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
@@ -19650,34 +19684,7 @@ function showModal(opts) {
        mode) doesn't block the logo from being saved and used. */
     uploadClientLogo: async function () {
       var input = document.getElementById('clientLogoFileInput');
-      var file = input && input.files && input.files[0];
-      if (!file) { toast('Choose an image file first'); return; }
-      if (!/^image\//.test(file.type)) { toast('Choose an image file (PNG, JPG or SVG)'); return; }
-      var MAX_BYTES = 40 * 1024;
-      if (file.size > MAX_BYTES) { toast('Logo must be under 40 KB — use a small wordmark/icon file, not a full-resolution image.'); return; }
-      busy(true);
-      var dataUrl;
-      try {
-        dataUrl = await new Promise(function (resolve, reject) {
-          var reader = new FileReader();
-          reader.onload = function () { resolve(reader.result); };
-          reader.onerror = function () { reject(reader.error || new Error('Could not read file')); };
-          reader.readAsDataURL(file);
-        });
-      } catch (e) { warn(e); busy(false); return; }
-
-      S.settings.clientLogoUrl = dataUrl;
-      try { await Store.setSetting('clientLogoUrl', dataUrl); } catch (e) { warn(e); busy(false); return; }
-      audit('Client logo uploaded', 'Setting', 'clientLogoUrl', '', file.name);
-
-      if (Store.kind !== 'demo') {
-        try { await Store.uploadDocument(file, 'Branding'); } catch (e) { warn(e); /* logo is already saved above — a Documents copy is a nice-to-have, not a blocker */ }
-      }
-      applyClientIdentity();
-      toast('Client logo saved — it appears in the top bar, on report covers and in every printed page header.');
-      input.value = '';
-      busy(false);
-      renderFrameworksAdmin();
+      if (await saveClientLogoFromInput(input)) renderFrameworksAdmin();
     },
 
     clearClientLogo: async function () {
@@ -21815,6 +21822,17 @@ function showModal(opts) {
   }
 
   window.Wizard = {
+    /* Optional branding on the last step: the logo every generated
+       document and report carries. After provisioning, so Settings
+       exists to hold it. */
+    uploadLogo: async function () {
+      var ok = await saveClientLogoFromInput(document.getElementById('wizLogoInput'));
+      var st = document.getElementById('wizLogoStatus');
+      if (ok && st) {
+        var url = (S.settings && S.settings.clientLogoUrl) || '';
+        st.innerHTML = /^data:image\//.test(url) ? '<img src="' + esc(url) + '" alt="Logo" style="max-height:40px;max-width:160px;object-fit:contain;background:#fff;border-radius:4px;padding:4px;vertical-align:middle"> <span style="color:var(--pass)">Saved</span>' : '';
+      }
+    },
     start: function () {
       W = { step: 1, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
       document.getElementById('gate').style.display = 'none';
