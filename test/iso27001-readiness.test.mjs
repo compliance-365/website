@@ -55,6 +55,15 @@ describe('mergeDiscoveredAssets() — re-syncing Microsoft 365 into the register
     mergeDiscoveredAssets(ex, [], TODAY);
     assert.equal(ex[3].status, 'Active');
   });
+  test('a retired asset stays retired when the sync still finds it', () => {
+    const ex = existing();
+    ex[2].status = 'Retired';
+    const r = mergeDiscoveredAssets(ex, [{ source: 'SharePoint', sourceId: 's1', name: 'Finance renamed' }], TODAY);
+    assert.equal(ex[2].status, 'Retired');
+    assert.equal(ex[2].name, 'Finance', 'not refreshed either');
+    assert.equal(r.toAdd.length, 0, 'and not re-added as a new asset');
+    assert.equal(r.toUpdate.length, 0);
+  });
   test('a re-found asset returns to Active', () => {
     const ex = existing();
     ex[1].status = 'Not found in last sync';

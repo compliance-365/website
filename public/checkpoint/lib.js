@@ -5879,7 +5879,8 @@
      everything a person set — classification, criticality, notes, an
      owner typed over a blank — is left alone; and a synced asset that
      has disappeared from its source is flagged, never deleted, because
-     a device missing from Intune is itself something to look into. */
+     a device missing from Intune is itself something to look into. A
+     synced asset someone has retired stays retired on every later sync. */
   var ASSET_TYPES = ['Information', 'Application', 'Cloud service', 'Device', 'Information location', 'Other'];
   var ASSET_CLASSIFICATIONS = ['Public', 'Internal', 'Confidential', 'Restricted'];
 
@@ -5894,6 +5895,10 @@
       if (seen[key]) return;
       seen[key] = 1;
       var cur = byKey[key];
+      /* Retired is a person's decision (a laptop disposed of, or a synced
+         app that is sign-in plumbing rather than an asset), so a sync that
+         still finds it leaves it retired instead of reviving it. */
+      if (cur && cur.status === 'Retired') return;
       if (!cur) {
         toAdd.push({ name: d.name, type: d.type, owner: d.owner || '', classification: d.classification || '', criticality: d.criticality || '',
           location: d.location || '', source: d.source, sourceId: d.sourceId, status: 'Active', lastSynced: today, lastReviewed: '', notes: d.notes || '' });
