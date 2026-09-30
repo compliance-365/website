@@ -3688,6 +3688,18 @@ function showModal(opts) {
     return (window.ORG_PROFILE_FIELDS || []).some(function (f) { return !!orgProfileValue(f.key); });
   }
 
+  /* A starting point for "Technology in scope": the applications,
+     cloud services and information locations in the asset register.
+     Only a draft; the practitioner adds the hosting platform and
+     anything the register cannot see. */
+  function technologyDraftFromRegister() {
+    var names = (S && S.assets || []).filter(function (a) {
+      return a && a.status !== 'Retired' && ['Application', 'Cloud service', 'Information location'].indexOf(a.type) !== -1;
+    }).map(function (a) { return a.name; }).filter(Boolean);
+    if (!names.length) return '';
+    return 'Microsoft 365 and the following systems from the asset register: ' + names.slice(0, 40).join(', ') + '. ' + window.CheckpointLib.pendingMarker('the hosting platform and region for the products, and code repositories');
+  }
+
   function resolveOrgTokens(str) {
     if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
     /* Answers are free text and often end in a full stop; the template
@@ -3697,7 +3709,7 @@ function showModal(opts) {
     return str.replace(/\{\{(\w+)\}\}(?=(\.|,|;| —)?)/g, function (whole, token, next) {
       var f = orgProfileFieldByToken(token);
       if (!f) return '';
-      var v = orgProfileValue(f.key) || (f.required ? window.CheckpointLib.pendingMarker(f.label) : f.fallback) || '';
+      var v = window.CheckpointLib.tidyProfileAnswer(orgProfileValue(f.key)) || (f.required ? window.CheckpointLib.pendingMarker(f.label) : f.fallback) || '';
       return next ? v.replace(/\.\s*$/, '') : v;
     });
   }
@@ -3726,6 +3738,11 @@ function showModal(opts) {
       out.policyStatements = out.policyStatements.map(function (s) {
         if (typeof s === 'string') return resolveOrgTokens(s);
         return Object.assign({}, s, { rule: resolveOrgTokens(s.rule), because: resolveOrgTokens(s.because) });
+      });
+    }
+    if (Array.isArray(out.tables)) {
+      out.tables = out.tables.map(function (tb) {
+        return Object.assign({}, tb, { intro: resolveOrgTokens(tb.intro), note: resolveOrgTokens(tb.note), rows: (tb.rows || []).map(function (r) { return r.map(resolveOrgTokens); }) });
       });
     }
     if (Array.isArray(out.roles)) {
@@ -3864,6 +3881,7 @@ function showModal(opts) {
         '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:13px;font-weight:700;color:#1A1A1A;vertical-align:top;font-family:Georgia,serif}' +
         '.roles td{padding:8px 0;font-size:13px;color:#333}' +
         '.roles tr+tr th,.roles tr+tr td{border-top:1px solid #ddd}' +
+        '.mtx{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}.mtx th{text-align:left;padding:7px 9px;background:rgba(11,11,12,.05);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;vertical-align:bottom}.mtx td{padding:7px 9px;border-top:1px solid rgba(11,11,12,.1);vertical-align:top}.mtx td:first-child{font-weight:700}.mtx-note{font-size:12px;margin:4px 0 0}@media print{.mtx tr{break-inside:avoid;page-break-inside:avoid}}' +
         '.dctl{width:100%;border-collapse:collapse;margin:22px 0;border:1px solid #1A1A1A}' +
         '.dctl th{text-align:left;width:170px;padding:8px 14px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5a5650;font-weight:700;vertical-align:top;background:#F7F5F2;font-family:Georgia,serif}' +
         '.dctl td{padding:8px 14px;font-size:13px;color:#1A1A1A}' +
@@ -3900,6 +3918,7 @@ function showModal(opts) {
         '.roles th{text-align:left;width:200px;padding:10px 14px 10px 0;font-size:12px;font-weight:500;color:#111;vertical-align:top}' +
         '.roles td{padding:10px 0;font-size:13px;color:#444;font-weight:300}' +
         '.roles tr+tr th,.roles tr+tr td{border-top:1px solid #eee}' +
+        '.mtx{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}.mtx th{text-align:left;padding:7px 9px;background:rgba(11,11,12,.05);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;vertical-align:bottom}.mtx td{padding:7px 9px;border-top:1px solid rgba(11,11,12,.1);vertical-align:top}.mtx td:first-child{font-weight:700}.mtx-note{font-size:12px;margin:4px 0 0}@media print{.mtx tr{break-inside:avoid;page-break-inside:avoid}}' +
         '.dctl{width:100%;border-collapse:collapse;margin:26px 0;border-top:none;border-bottom:none}' +
         '.dctl th{text-align:left;width:160px;padding:6px 12px 6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#999;font-weight:500;vertical-align:top}' +
         '.dctl td{padding:6px 0;font-size:12.5px;color:#111}' +
@@ -3935,6 +3954,7 @@ function showModal(opts) {
       '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
       '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
       '.roles tr+tr th,.roles tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
+      '.mtx{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}.mtx th{text-align:left;padding:7px 9px;background:rgba(11,11,12,.05);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;vertical-align:bottom}.mtx td{padding:7px 9px;border-top:1px solid rgba(11,11,12,.1);vertical-align:top}.mtx td:first-child{font-weight:700}.mtx-note{font-size:12px;margin:4px 0 0}@media print{.mtx tr{break-inside:avoid;page-break-inside:avoid}}' +
       '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
       '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
       '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
@@ -3999,6 +4019,17 @@ function showModal(opts) {
       var because = typeof s === 'string' ? '' : (s.because || '');
       return '<div class="stmt"><span class="stmt-n">' + (i + 1) + '</span><div class="stmt-body"><p class="stmt-rule">' + esc(rule) + '</p>' + (because ? '<p class="because">' + esc(because) + '</p>' : '') + '</div></div>';
     }).join('') + '</div>';
+
+    /* Reference tables a policy states its rules against (a risk
+       framework's scales and matrix). Optional: { title, intro, head,
+       rows, note }; cells are plain text. */
+    var tablesHtml = (t.tables || []).map(function (tb) {
+      return sectionHeading('policy', tb.title) +
+        (tb.intro ? '<p class="intro">' + esc(tb.intro) + '</p>' : '') +
+        '<table class="mtx"><thead><tr>' + (tb.head || []).map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        (tb.rows || []).map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
+        '</tbody></table>' + (tb.note ? '<p class="intro mtx-note">' + esc(tb.note) + '</p>' : '');
+    }).join('');
 
     /* The staff-facing half. Deliberately the only place in the
        document written in second person: the normative sections below
@@ -4089,7 +4120,7 @@ function showModal(opts) {
       readerHtml +
       sectionHeading('purpose', 'Purpose') + '<p class="intro">' + esc(t.purpose) + '</p>' +
       sectionHeading('scope', 'Scope') + '<p class="intro">' + esc(t.scope) + '</p>' +
-      sectionHeading('policy', 'Policy') + statementsHtml +
+      sectionHeading('policy', 'Policy') + statementsHtml + tablesHtml +
       govHtml +
       sectionHeading('review', 'Review') + '<p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? sectionHeading('satisfies', 'Helps satisfy') + '<div class="chips">' + t.controls.map(function (c) { return '<span class="chip-ctrl">' + esc(c) + '</span>'; }).join('') + '</div>' : '');
@@ -16744,9 +16775,12 @@ function showModal(opts) {
         title: stepTitle(2, 'What is in scope'),
         message: 'Where the ISMS boundary sits (Clause 4.3). These are required: anything left blank shows as “[To be completed]” in the scope document until it is answered. Exclusions can be left blank if nothing is excluded.',
         fields: [
+          { id: 'legalName', label: fld('orgLegalName').label, value: orgProfileValue('orgLegalName'), placeholder: 'e.g. Contoso Pty Ltd (ABN 12 345 678 901)' },
           { id: 'businessUnits', label: fld('orgBusinessUnits').label, type: 'textarea', value: orgProfileValue('orgBusinessUnits'), placeholder: 'e.g. Engineering, Customer Support, Finance' },
           { id: 'locations', label: fld('orgLocations').label, type: 'textarea', value: orgProfileValue('orgLocations'), placeholder: 'e.g. the Brisbane office, and staff working remotely within Australia' },
           { id: 'services', label: fld('orgServices').label, type: 'textarea', value: orgProfileValue('orgServices'), placeholder: 'e.g. the hosted claims-processing platform and its support services' },
+          { id: 'people', label: fld('orgPeople').label, type: 'textarea', value: orgProfileValue('orgPeople'), placeholder: 'e.g. All employees. Contractors in Canada are in scope as personnel: they use company accounts and devices and work under our policies.' },
+          { id: 'technology', label: fld('orgTechnology').label, type: 'textarea', value: orgProfileValue('orgTechnology') || technologyDraftFromRegister(), placeholder: 'e.g. The platform hosted on Microsoft Azure (Australia East), source code in GitHub, Azure OpenAI, Microsoft 365, and staff laptops' },
           { id: 'exclusions', label: fld('orgExclusions').label, type: 'textarea', value: orgProfileValue('orgExclusions'), placeholder: 'Leave blank if nothing is excluded' }
         ],
         confirmText: 'Next'
@@ -16777,7 +16811,8 @@ function showModal(opts) {
         fields: [
           { id: 'externalIssues', label: fld('orgExternalIssues').label, type: 'textarea', value: drafted('orgExternalIssues', 'externalIssues') },
           { id: 'internalIssues', label: fld('orgInternalIssues').label, type: 'textarea', value: drafted('orgInternalIssues', 'internalIssues') },
-          { id: 'climate', label: fld('orgClimate').label, type: 'textarea', value: drafted('orgClimate', 'climate') }
+          { id: 'climate', label: fld('orgClimate').label, type: 'textarea', value: drafted('orgClimate', 'climate') },
+          { id: 'riskFinancial', label: fld('orgRiskFinancial').label, type: 'textarea', value: orgProfileValue('orgRiskFinancial'), placeholder: 'e.g. Minor $10k–$50k; Moderate $50k–$150k; Major $150k–$500k; Severe over $500k. Leave blank to use a percentage of revenue.' }
         ],
         confirmText: 'Next'
       });
@@ -16837,9 +16872,10 @@ function showModal(opts) {
       try {
         var map = {
           orgIndustry: step1.industry,
+          orgLegalName: step2.legalName, orgPeople: step2.people, orgTechnology: step2.technology,
           orgBusinessUnits: step2.businessUnits, orgLocations: step2.locations,
           orgServices: step2.services, orgExclusions: step2.exclusions,
-          orgExternalIssues: step3.externalIssues, orgInternalIssues: step3.internalIssues, orgClimate: step3.climate,
+          orgExternalIssues: step3.externalIssues, orgInternalIssues: step3.internalIssues, orgClimate: step3.climate, orgRiskFinancial: step3.riskFinancial,
           orgInterestedParties: step4.interestedParties, orgPartyRequirements: step4.partyRequirements, orgRegulatory: step4.regulatory,
           orgInterfaces: step5.interfaces, orgScopeStatement: step5.scopeStatement
         };
@@ -17137,6 +17173,22 @@ function showModal(opts) {
         });
         if (answer) await App.orgProfileWizard();
         return;
+      }
+      /* The scope is the document an auditor reads first, so its answers
+         are checked for the stage 1 contradictions before approval. Not
+         blocking: some have answers the check cannot see. */
+      if (t.id === 'isms-scope') {
+        var scopeWarnings = window.CheckpointLib.scopeProfileWarnings(S.settings || {});
+        if (scopeWarnings.length) {
+          var goOn = await showModal({
+            title: 'Check the scope before approving',
+            message: 'An auditor is likely to ask about ' + (scopeWarnings.length > 1 ? 'these' : 'this') + ':\n\n' + scopeWarnings.map(function (x) { return '• ' + x; }).join('\n') +
+              '\n\nFix it in Settings → Scope & context and regenerate, or approve as it stands if it is already right.',
+            confirmText: 'Approve anyway',
+            cancelText: 'Fix first'
+          });
+          if (!goOn) return;
+        }
       }
       var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
       /* A.5.3 — checked before the approval dialog opens, so a refused

@@ -3801,6 +3801,23 @@
       parts.push(docxStatement(i + 1, rule, because, accent, layout));
     });
 
+    /* Reference tables (a risk framework's scales and matrix), the same
+       ones buildTemplateHtml() renders after the statements. The
+       9400-twip text width is shared evenly; the header row is bold. */
+    (t.tables || []).forEach(function (tb) {
+      var cols = (tb.head || []).length || ((tb.rows || [])[0] || []).length || 1;
+      var w = Math.floor(9400 / cols);
+      var widths = []; for (var k = 0; k < cols; k++) widths.push(w);
+      parts.push(docxHeading(tb.title || ''));
+      if (tb.intro) parts.push(docxP(tb.intro, { after: 80 }));
+      var head = tb.head ? '<w:tr>' + tb.head.map(function (h, i) {
+        return '<w:tc><w:tcPr><w:tcW w:w="' + widths[i] + '" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F1EEE8"/></w:tcPr><w:p>' + docxRun(h, { bold: true }) + '</w:p></w:tc>';
+      }).join('') + '</w:tr>' : '';
+      var tbl = docxTable(tb.rows || [], widths, { borderColor: tableBorder });
+      parts.push(head ? tbl.replace('</w:tblGrid>', '</w:tblGrid>' + head) : tbl);
+      if (tb.note) parts.push(docxP(tb.note, { before: 60, after: 120 }, { sz: 18 }));
+      else parts.push(docxP('', { after: 120 }));
+    });
     if (t.roles && t.roles.length) {
       parts.push(docxHeading('Who is responsible'));
       parts.push(docxTable(t.roles.map(function (r) { return [r.role, r.responsibility]; }), [2600, 6800], { borderColor: tableBorder }));
@@ -6224,8 +6241,8 @@
     ],
     '4.3': [
       { id: 'boundaries', text: 'Determine the boundaries and applicability of the management system and document its scope.',
-        evidence: 'The approved scope document with a scope statement, and the business units, locations and services it covers.',
-        auto: { docs: ['isms-scope'], profile: ['orgScopeStatement', 'orgBusinessUnits', 'orgLocations', 'orgServices'] },
+        evidence: 'The approved scope document with a scope statement naming the legal entity, and the business units, people, locations, services and technology it covers.',
+        auto: { docs: ['isms-scope'], profile: ['orgScopeStatement', 'orgLegalName', 'orgBusinessUnits', 'orgPeople', 'orgLocations', 'orgServices', 'orgTechnology'] },
         auto42: { docs: ['aims-scope'], profile: ['orgAimsScopeStatement'] } },
       { id: 'context', text: 'Take the issues (4.1) and the interested parties’ requirements (4.2) into account when setting the scope.',
         evidence: 'The scope document drawing on the approved context document.',
@@ -7155,6 +7172,48 @@
     } catch (e) { return null; }
   }
 
+  /* Free-text questionnaire answers go straight into approved
+     documents, so stray punctuation left when an answer was edited
+     ("Canada.," or "Australia ." or doubled spaces) is tidied before it
+     is written into one. Wording is never changed. */
+  function tidyProfileAnswer(v) {
+    return String(v || '').trim()
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\s+([,.;:])/g, '$1')
+      .replace(/\.\s*,/g, ',')
+      .replace(/,\s*\./g, '.')
+      .replace(/([,;])\1+/g, '$1')
+      .replace(/\.{2,}/g, '.');
+  }
+
+  /* Checks the ISMS scope answers for the contradictions an auditor
+     picks up at stage 1. Not blocking: each is a question to answer
+     before approving, shown with an "approve anyway" option, because
+     some have legitimate answers the check cannot see. */
+  function scopeProfileWarnings(p) {
+    p = p || {};
+    var out = [];
+    var t = function (k) { return String(p[k] || '').trim(); };
+    var units = t('orgBusinessUnits'), excl = t('orgExclusions'), stmt = t('orgScopeStatement'), legal = t('orgLegalName'), people = t('orgPeople');
+    var noExclusions = !excl || /^(none|nothing|n\/?a|nil)\b/i.test(excl);
+    if (units && noExclusions && !/\b(all|entire|whole|every)\b/i.test(units)) {
+      out.push('Business units lists only some teams, but nothing is excluded. List every function (leadership, sales, finance and so on), or add the others to Exclusions with a reason.');
+    }
+    if (stmt && legal) {
+      var core = legal.replace(/\(.*?\)/g, '').replace(/\b(pty|ltd|limited|inc|llc|plc|pte)\b\.?/gi, '').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/)[0] || '';
+      if (core && stmt.toLowerCase().indexOf(core.toLowerCase()) === -1) out.push('The scope statement does not name the organisation (' + legal + '). The statement is what a certificate prints, so it should.');
+    }
+    if (stmt && /(\.\s*,|,\s*\.|\s[,.;]|\.\s+and\b)/i.test(stmt)) out.push('The scope statement has stray punctuation. It will be printed on the certificate, so make it one clean sentence.');
+    var mentionsContractors = ['orgBusinessUnits', 'orgLocations', 'orgScopeStatement', 'orgPeople', 'orgServices'].some(function (k) { return /contractor|outsourc|offshore/i.test(t(k)); });
+    if (mentionsContractors && !/(personnel|supplier|company[- ]issued|our (accounts|devices|policies)|under (our|the organisation)|excluded)/i.test(people)) {
+      out.push('Contractors are mentioned, but People in scope does not say how they are treated: in scope as personnel, or managed as suppliers.');
+    }
+    if (t('orgInterfaces') && !/[A-Z][a-z]+/.test(t('orgInterfaces').replace(/^[A-Z]/, ''))) {
+      out.push('Interfaces and dependencies do not name any provider. Name each one (hosting, AI services, code repositories, Microsoft 365, key suppliers).');
+    }
+    return out;
+  }
+
   function matchHealthReport(client, reports) {
     var id = String((client && client.tenantId) || '').trim().toLowerCase();
     if (!id) return null;
@@ -7572,7 +7631,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, parseProgressSnapshot: parseProgressSnapshot,
+    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

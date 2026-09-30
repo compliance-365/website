@@ -155,3 +155,44 @@ describe('C/I/A on automatically created risks', () => {
     assert.match(app, /el\.checked = \(draft\.cia \|\| \[\]\)\.indexOf\(k\) !== -1/);
   });
 });
+
+describe('the Risk Management Framework covers ISO 31000 principles, framework and process', () => {
+  test('the principles and the framework (leadership, integration, evaluation, improvement) are stated', () => {
+    ['integrated into all organisational activities', 'structured and comprehensive', 'customised', 'inclusive', 'dynamic',
+      'best available information', 'human and cultural factors', 'continually improved'].forEach((p) => assert.match(text, new RegExp(p), p));
+    assert.match(text, /Top management leads and commits to risk management/);
+    assert.match(text, /procurement and supplier onboarding/);
+    assert.match(text, /ISO 31000 clauses 5\.6 and 5\.7/);
+  });
+  test('treatment plans, interim measures, register contents, identification sources and time-limited acceptance', () => {
+    assert.match(text, /interim measures are put in place/);
+    assert.match(text, /Each risk records at least/);
+    assert.match(text, /posture scan findings, security incidents/);
+    assert.match(text, /valid for no more than 12 months/);
+  });
+  test('criteria tables: consequence by area, likelihood, the matrix and the response at each level', () => {
+    const titles = rmf.tables.map((t) => t.title);
+    assert.deepEqual(titles, ['Consequence criteria', 'Likelihood criteria', 'Risk level matrix', 'Response at each risk level']);
+    const cons = rmf.tables[0];
+    assert.deepEqual(cons.head.slice(1), ['Financial', 'Legal and regulatory', 'Reputation', 'Customers and service', 'Information', 'People']);
+    assert.deepEqual(cons.rows.map((r) => r[0]), ['1 Negligible', '2 Minor', '3 Moderate', '4 Major', '5 Severe']);
+    assert.match(cons.note, /\{\{riskFinancial\}\}/);
+  });
+  test('every cell of the matrix is the level band() gives', () => {
+    const m = rmf.tables[2];
+    m.rows.forEach((row) => {
+      const c = Number(row[0][0]);
+      row.slice(1).forEach((cell, i) => {
+        const score = c * (i + 1);
+        assert.equal(cell, Lib.band(score) + ' ' + score, row[0] + ' x ' + (i + 1));
+      });
+    });
+  });
+  test('tables render in the document and resolve tokens; the thresholds are asked in the questionnaire', () => {
+    assert.match(app, /var tablesHtml = \(t\.tables \|\| \[\]\)\.map/);
+    assert.match(app, /sectionHeading\('policy', 'Policy'\) \+ statementsHtml \+ tablesHtml \+/);
+    assert.match(app, /if \(Array\.isArray\(out\.tables\)\) \{/);
+    assert.match(app, /\{ id: 'riskFinancial', label: fld\('orgRiskFinancial'\)\.label/);
+    assert.match(app, /orgRiskFinancial: step3\.riskFinancial,/);
+  });
+});
