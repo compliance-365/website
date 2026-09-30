@@ -7089,6 +7089,72 @@
     return out;
   }
 
+  /* The progress snapshot a client's Checkpoint saves to its own
+     Settings list (key 'progressSnapshot') for the owner console's Sync
+     to read. Setup health says whether the app works; this says how far
+     the client has got: the path to certification, the management
+     system clauses (4-10) and the Annex A controls as two separate
+     measures, documents, the registers, and the scope statement so the
+     partner can review it. Built from what the client's own dashboard
+     shows, so the two always agree. Counts and short labels only, plus
+     the scope statement, capped. */
+  var PROGRESS_SNAPSHOT_VERSION = 1;
+  function buildProgressSnapshot(s) {
+    s = s || {};
+    var steps = s.pathSteps || [];
+    var next = steps.filter(function (x) { return !x.done; })[0] || null;
+    var phases = [];
+    steps.forEach(function (x) {
+      var ph = phases.filter(function (p) { return p.phase === x.phase; })[0];
+      if (!ph) { ph = { phase: x.phase, done: 0, total: 0 }; phases.push(ph); }
+      ph.total++; if (x.done) ph.done++;
+    });
+    var clauses = {};
+    Object.keys(s.clausesByFw || {}).forEach(function (fw) {
+      var rows = s.clausesByFw[fw] || [];
+      clauses[fw] = {
+        clauses: rows.length,
+        implemented: rows.filter(function (r) { return r.status === 'Implemented'; }).length,
+        complete: rows.filter(function (r) { return r.total > 0 && r.met === r.total; }).length,
+        reqMet: rows.reduce(function (n, r) { return n + (r.met || 0); }, 0),
+        reqTotal: rows.reduce(function (n, r) { return n + (r.total || 0); }, 0)
+      };
+    });
+    var annexA = {};
+    Object.keys(s.controlsByFw || {}).forEach(function (fw) {
+      var app = (s.controlsByFw[fw] || []).filter(function (c) { return c && c.app; });
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var notStarted = app.filter(function (c) { return !c.st || c.st === 'Not started'; }).length;
+      annexA[fw] = { applicable: app.length, implemented: impl, inProgress: app.length - impl - notStarted, notStarted: notStarted, pct: readinessPct(app) };
+    });
+    var docs = s.docs || [];
+    var today = s.today || '';
+    var actions = s.actions || [];
+    var assets = s.assets || {};
+    return {
+      v: PROGRESS_SNAPSHOT_VERSION,
+      path: { done: steps.filter(function (x) { return x.done; }).length, total: steps.length, next: next ? { label: next.label, phase: next.phase } : null, phases: phases },
+      clauses: clauses,
+      annexA: annexA,
+      docs: { generated: docs.length, approved: docs.filter(function (d) { return d.status === 'Approved'; }).length },
+      registers: {
+        assets: assets.total || 0, assetsNoOwner: assets.noOwner || 0,
+        openRisks: (s.risks || []).filter(function (r) { return r && r.status !== 'Closed'; }).length,
+        overdueActions: actions.filter(function (a) { return a && a.status !== 'Done' && a.status !== 'Cancelled' && a.due && today && a.due < today; }).length
+      },
+      scope: { statement: String(s.scopeStatement || '').slice(0, 2000) }
+    };
+  }
+  /* Parses a stored snapshot defensively: a missing, malformed or
+     newer-than-understood value reads as null, never throws. */
+  function parseProgressSnapshot(raw) {
+    if (!raw) return null;
+    try {
+      var o = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return o && typeof o === 'object' && o.v === PROGRESS_SNAPSHOT_VERSION && o.path ? o : null;
+    } catch (e) { return null; }
+  }
+
   function matchHealthReport(client, reports) {
     var id = String((client && client.tenantId) || '').trim().toLowerCase();
     if (!id) return null;
@@ -7506,7 +7572,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits,
+    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, parseProgressSnapshot: parseProgressSnapshot,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
