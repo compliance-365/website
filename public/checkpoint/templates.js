@@ -117,7 +117,7 @@ window.POLICY_TEMPLATES = [
     id: 'infosec-policy',
     title: 'Information Security Policy',
     purpose: 'This policy sets out the organisation’s commitment to protecting the confidentiality, integrity and availability of the information it holds, and establishes the framework of subordinate policies, roles and controls used to manage information security risk.',
-    scope: 'Applies to every employee, contractor and third party who accesses the organisation’s systems, data or Microsoft 365 tenant, and to every information asset the organisation owns, processes or is otherwise responsible for.',
+    scope: 'Applies to every employee, contractor and third party who accesses the organisation’s systems or data, and to every information asset the organisation owns, processes or is otherwise responsible for.',
     leadershipCommitment: 'Information security is a leadership responsibility, not a delegated one. We commit the resources this programme needs, hold the people who run it accountable, and expect information security to be a normal part of how we decide things as leaders — a new product, a new supplier, a new market — not a review raised after the decision is already made.\n\nWe expect to be told when something is wrong. A risk or a near-miss reported early is this programme working as intended; one hidden to avoid an awkward conversation is a failure of it, whoever caused it.',
     whyItMatters: 'This is the policy the others hang off, so most of what it asks of you is indirect. The part that is not: the organisation has decided to treat security as something managed deliberately rather than left to individual judgement, which means when you are unsure, there is a documented answer and a named person to ask rather than a guess you have to defend later.\n\nIt also commits the organisation in the other direction. Security measures have to be proportionate to real risk, and you are entitled to ask why a control exists and to have that answered. A control nobody can explain is a control worth challenging.',
     inPractice: [
@@ -149,6 +149,30 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'This policy, and every subordinate policy it references, is reviewed by management at least annually, or sooner after a material change to the business or its risk profile.',
         because: 'A policy describing an organisation that no longer exists cannot direct behaviour, and stale documented information is a finding in its own right.'
+      },
+      {
+        rule: 'This policy is appropriate to the purpose of the organisation and to the information it holds, and provides the framework for setting information security objectives, which are set, measured and reviewed as described in the Information Security Objectives & Metrics.',
+        because: 'ISO/IEC 27001 Clause 5.2 a) and b): the policy must fit the organisation and give the framework its objectives are set within.'
+      },
+      {
+        rule: 'The organisation commits to satisfying the requirements that apply to its information security: legal, regulatory and contractual obligations and the requirements of its interested parties.',
+        because: 'Clause 5.2 c) requires this commitment in the policy itself.'
+      },
+      {
+        rule: 'The organisation commits to the continual improvement of the information security management system.',
+        because: 'Clause 5.2 d) requires this commitment in the policy itself; Clause 10.1 is where it is carried out.'
+      },
+      {
+        rule: 'Top management demonstrates leadership of the ISMS: it ensures this policy and the objectives are compatible with the organisation’s strategic direction; integrates the ISMS requirements into the organisation’s processes; provides the resources needed; communicates why effective information security and conformity with the ISMS matter; ensures the ISMS achieves its intended outcomes; directs and supports the people who contribute to it; promotes continual improvement; and supports other managers to demonstrate leadership in their areas.',
+        because: 'Clause 5.1 a) to h) list what top management must do; an auditor tests each by interview and by the records of management review.'
+      },
+      {
+        rule: 'The resources needed to establish, implement, maintain and continually improve the ISMS (people, time, budget, tools and external expertise) are determined and provided, and are reviewed at each management review.',
+        because: 'Clause 7.1 requires the resources to be determined and provided, not assumed.'
+      },
+      {
+        rule: 'This policy is available as documented information, communicated within the organisation (every person in scope acknowledges it), and made available to interested parties, such as customers and auditors, on request as appropriate.',
+        because: 'Clause 5.2 e) to g): a policy nobody has seen does not direct anyone.'
       }
     ],
     roles: [
@@ -158,7 +182,7 @@ window.POLICY_TEMPLATES = [
       },
       {
         role: 'ISMS manager',
-        responsibility: 'Runs the programme day to day: risk register, internal audit schedule, corrective actions, and the review cycle for every subordinate policy.'
+        responsibility: 'Runs the programme day to day: risk register, internal audit schedule, corrective actions, and the review cycle for every subordinate policy. Has the responsibility and authority to ensure the ISMS conforms to ISO/IEC 27001, and reports on its performance to top management.'
       },
       {
         role: 'System and information owners',
@@ -1956,7 +1980,7 @@ window.POLICY_TEMPLATES = [
         because: 'Naming the option makes the decision explicit and auditable.'
       },
       {
-        rule: 'The controls needed to implement each treatment are determined and compared with ISO/IEC 27001 Annex A, so no necessary control is omitted. Treatment decisions, controls, actions and owners are recorded in the Risk Treatment Plan, and every Annex A control is recorded in the Statement of Applicability with a justification for its inclusion or exclusion.',
+        rule: 'The controls needed to implement each treatment are determined and compared with ISO/IEC 27001 Annex A, so no necessary control is omitted. Treatment decisions, controls, actions and owners are recorded in the Risk Treatment Plan, and every Annex A control is recorded in the Statement of Applicability with a justification for its inclusion or exclusion and whether it is implemented.',
         because: 'ISO/IEC 27001 Clause 6.1.3 b) to d) require the comparison with Annex A and the Statement of Applicability.'
       },
       {
@@ -1982,6 +2006,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'The framework itself is evaluated and improved (ISO 31000 clauses 5.6 and 5.7): at each management review its performance is measured by risks reviewed on time, treatment actions overdue, residual risks above appetite, and incidents that arose from risks nobody had recorded; the scales, appetite and method are adjusted when they no longer fit.',
         because: 'A method that is never measured cannot be shown to work, and ISO/IEC 27001 Clause 10.1 requires continual improvement.'
+      },
+      {
+        rule: 'When planning the ISMS, the organisation considers the issues in Clause 4.1 and the requirements in Clause 4.2 and determines the risks and opportunities that need to be addressed, so that the ISMS achieves its intended outcomes, undesired effects are prevented or reduced, and it continually improves. The actions to address them are planned, integrated into the ISMS processes (the risk treatment plan, objectives, policies and actions), and evaluated for effectiveness at management review (Clause 6.1.1).',
+        because: 'Clause 6.1.1 is the planning step that ties context to action; the risk and opportunity registers are where it is carried out.'
       }
     ],
     tables: [
@@ -2096,6 +2124,14 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Objectives and metrics are a standing input to the management review, and are revised when an objective is met, ceases to be relevant, or the organisation’s risk profile changes.',
         because: 'Objectives that outlive their relevance crowd out the ones that matter and make the whole set easy to ignore.'
+      },
+      {
+        rule: 'Objectives take into account the applicable information security requirements and the results of risk assessment and treatment, are monitored against their measures, and are communicated to the people responsible for achieving them and to top management.',
+        because: 'Clause 6.2 c), d) and e) require objectives to reflect requirements and risk, to be monitored, and to be communicated.'
+      },
+      {
+        rule: 'For each metric, the organisation determines what is monitored and measured, the method (so results are valid, comparable and reproducible), when it is measured, who measures it, and when and by whom the results are analysed and evaluated. The evaluation covers both the performance and the effectiveness of the ISMS.',
+        because: 'Clause 9.1 a) to f) set out exactly these determinations, and require methods that give comparable results over time.'
       }
     ],
     roles: [
@@ -2148,6 +2184,14 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'A role named as responsible for something in more than one source document appears here once, with its responsibilities from each source combined and each source named.',
         because: 'The same title doing different things in different documents is exactly what Clause 5.3 asks an organisation to be able to show, not hide behind one line per document.'
+      },
+      {
+        rule: 'The responsibility and authority for ensuring the ISMS conforms to ISO/IEC 27001, and for reporting on its performance to top management, are assigned to the ISMS manager, as recorded below.',
+        because: 'Clause 5.3 a) and b) name these two responsibilities specifically; an auditor asks who holds them.'
+      },
+      {
+        rule: 'Roles and responsibilities are communicated within the organisation: this register is published with the policy set, and people are told of the roles they hold when they are assigned.',
+        because: 'Clause 5.3 requires responsibilities to be assigned and communicated; a role nobody knows they hold is not assigned.'
       }
     ],
     roles: [
@@ -2287,7 +2331,65 @@ window.POLICY_TEMPLATES = [
     reviewCadence: 'Annually, alongside the management review.',
     controls: [],
     frameworks: ['iso27001', 'iso27701']
+  },  {
+    id: 'operational-planning-control',
+    title: 'Operational Planning & Control Procedure',
+    purpose: 'This procedure describes how the organisation plans, implements and controls the processes its information security management system needs, so that they run as intended and meet the ISMS requirements. It satisfies ISO/IEC 27001 Clause 8.1.',
+    scope: 'Applies to every process that implements the ISMS, including those carried out for the organisation by suppliers, and to planned and unplanned changes to them.',
+    policyStatements: [
+      {
+        rule: 'The processes needed to meet the ISMS requirements and to carry out the actions determined in planning (Clause 6) are identified: risk assessment and treatment, the controls in the Statement of Applicability, training and awareness, supplier management, incident management, monitoring and measurement, internal audit, management review and corrective action.',
+        because: 'Clause 8.1 starts with knowing which processes the ISMS depends on.'
+      },
+      {
+        rule: 'Each process has criteria it must meet, set in the policy or procedure that governs it (for example review cadences, response times, approval rules and the thresholds in the risk framework), and is operated in line with those criteria.',
+        because: 'Clause 8.1 requires criteria for the processes and control of the processes in accordance with them.'
+      },
+      {
+        rule: 'Documented information is kept to the extent needed to have confidence that the processes have been carried out as planned: the registers, scan results, training records, approvals, actions and the audit log kept in this console.',
+        because: 'An auditor tests operation by sampling these records; a process with no trace cannot be shown to have run.'
+      },
+      {
+        rule: 'Planned changes are controlled through the change management process and, where they affect the ISMS itself, the ISMS Change Planning procedure. The consequences of unintended changes, such as configuration drift detected by the posture scan, are reviewed and action is taken to mitigate any adverse effects.',
+        because: 'Clause 8.1 requires planned changes to be controlled and unintended ones to be reviewed.'
+      },
+      {
+        rule: 'Externally provided processes, products or services relevant to the ISMS, including cloud platforms, AI services and outsourced work, are determined and controlled through the Supplier Security Policy and the vendor register: requirements are set in agreements, and suppliers are assessed before use and reviewed while in use.',
+        because: 'Clause 8.1 requires externally provided processes to be controlled; outsourcing a process does not outsource accountability for it.'
+      },
+      {
+        rule: 'Process owners confirm their processes are operating to their criteria, and exceptions are raised in the Actions register and handled under the Nonconformity & Corrective Action Procedure.',
+        because: 'Control means knowing when a process is not operating as planned, and acting on it.'
+      }
+    ],
+    roles: [
+      {
+        role: 'ISMS manager',
+        responsibility: 'Maintains the list of ISMS processes and their criteria, and reports on their operation to management review.'
+      },
+      {
+        role: 'Process owners',
+        responsibility: 'Operate their processes to the defined criteria, keep the records that show it, and raise exceptions.'
+      },
+      {
+        role: 'Supplier owners',
+        responsibility: 'Control the externally provided processes and services they are responsible for, under the Supplier Security Policy.'
+      }
+    ],
+    exceptions: 'A process that cannot meet its criteria is recorded as an exception with its reason and compensating measures, approved by the ISMS manager, and tracked in the Actions register until resolved.',
+    nonCompliance: 'Operating an ISMS process outside its criteria without an approved exception is a management-system nonconformity, raised as a corrective action under Clause 10.2.',
+    relatedDocuments: [
+      'ISMS Change Planning Procedure',
+      'Change Management Policy',
+      'Supplier Security Policy',
+      'Risk Management Framework',
+      'Nonconformity & Corrective Action Procedure'
+    ],
+    reviewCadence: 'Annually, and whenever the ISMS processes, key suppliers or the organisation change materially.',
+    controls: ['A.5.37'],
+    frameworks: ['iso27001', 'iso27701']
   },
+
   {
     id: 'competence-awareness-plan',
     title: 'Competence, Training & Awareness Plan',
@@ -2435,6 +2537,14 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Documents of external origin needed by the ISMS (for example standards, regulatory guidance and supplier assurance reports) are identified and controlled.',
         because: 'Clause 7.5.3 applies to external documents too; a policy that cites an outdated standard leaves the organisation meeting the wrong requirement.'
+      },
+      {
+        rule: 'Documented information has an appropriate format (language, software version, graphics) and media (electronic by default), and is available and suitable for use where and when it is needed.',
+        because: 'Clause 7.5.2 b) and 7.5.3 a) require the right format and media, and availability at the point of use.'
+      },
+      {
+        rule: 'Distribution, access, retrieval and use are controlled; documented information is stored and preserved, including its legibility, for as long as it is retained; and changes are controlled through version history.',
+        because: 'Clause 7.5.3 lists distribution, access, retrieval, use, storage, preservation, legibility and change control as activities to address.'
       }
     ],
     roles: [
@@ -2491,6 +2601,14 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'The audit programme, audit plans and audit reports are retained as documented information, and the programme’s results are an input to management review.',
         because: 'Clause 9.2.2 requires evidence of both the programme and its results, and Clause 9.3 requires audit results to reach top management.'
+      },
+      {
+        rule: 'The audit programme defines the frequency, methods, responsibilities, planning requirements and reporting for audits.',
+        because: 'Clause 9.2.2 requires the programme to include each of these.'
+      },
+      {
+        rule: 'Each audit determines whether the ISMS conforms to the organisation’s own requirements and to ISO/IEC 27001, and whether it is effectively implemented and maintained.',
+        because: 'Clause 9.2.1 states what internal audit must provide information on.'
       }
     ],
     roles: [
@@ -2613,6 +2731,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Trends in nonconformities, incidents, audit results and metrics are reviewed at management review to identify opportunities for continual improvement, and improvement actions are recorded in the Actions register.',
         because: 'Clause 10.1 asks for the suitability, adequacy and effectiveness of the ISMS to be improved continually, not only when something breaks.'
+      },
+      {
+        rule: 'The organisation continually improves the suitability, adequacy and effectiveness of the ISMS, using corrective actions, audit and monitoring results, and management review decisions as the drivers.',
+        because: 'Clause 10.1 requires continual improvement of the ISMS itself, not only the correction of individual nonconformities.'
       }
     ],
     roles: [
@@ -3751,11 +3873,12 @@ window.ORG_PROFILE_FIELDS = [
 window.CLAUSE_DOCUMENT_MAP = {
   'context-interested-parties': [{ fw: 'iso27001', code: '4.1', implements: true }, { fw: 'iso27001', code: '4.2', implements: true }],
   'isms-scope': [{ fw: 'iso27001', code: '4.3', implements: true }],
-  'infosec-policy': [{ fw: 'iso27001', code: '5.2', implements: true }, { fw: 'iso27001', code: '5.1', implements: false }],
+  'infosec-policy': [{ fw: 'iso27001', code: '5.2', implements: true }, { fw: 'iso27001', code: '5.1', implements: false }, { fw: 'iso27001', code: '7.1', implements: false }],
   'roles-responsibilities': [{ fw: 'iso27001', code: '5.3', implements: true }, { fw: 'iso42001', code: '5.3', implements: true }],
-  'risk-management-framework': [{ fw: 'iso27001', code: '6.1.2', implements: false }, { fw: 'iso27001', code: '6.1.3', implements: false }],
+  'risk-management-framework': [{ fw: 'iso27001', code: '6.1.1', implements: false }, { fw: 'iso27001', code: '6.1.2', implements: false }, { fw: 'iso27001', code: '6.1.3', implements: false }, { fw: 'iso27001', code: '8.2', implements: false }, { fw: 'iso27001', code: '8.3', implements: false }],
   'infosec-objectives-metrics': [{ fw: 'iso27001', code: '6.2', implements: false }, { fw: 'iso27001', code: '9.1', implements: false }],
   'isms-change-planning': [{ fw: 'iso27001', code: '6.3', implements: false }],
+  'operational-planning-control': [{ fw: 'iso27001', code: '8.1', implements: false }],
   'competence-awareness-plan': [{ fw: 'iso27001', code: '7.2', implements: false }, { fw: 'iso27001', code: '7.3', implements: false }],
   'communication-plan': [{ fw: 'iso27001', code: '7.4', implements: true }],
   'document-control-procedure': [{ fw: 'iso27001', code: '7.5.2', implements: false }, { fw: 'iso27001', code: '7.5.3', implements: false }],

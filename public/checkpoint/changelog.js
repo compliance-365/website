@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.4',
+    date: '2026-09-30',
+    entries: [
+      'Every ISO 27001 clause from 4.1 to 10.2 is now covered by a document written to its intent. The Information Security Policy states the Clause 5.2 commitments (a framework for objectives, meeting applicable requirements, continual improvement, communication and availability), top management’s Clause 5.1 leadership and Clause 7.1 resources. The roles register assigns conformity and performance reporting (5.3). The risk framework covers 6.1.1; objectives are communicated and monitored (6.2, 9.1); document control covers format, media, preservation and legibility (7.5); the audit programme, methods and responsibilities are defined (9.2); and continual improvement is stated (10.1).',
+      'New document: the Operational Planning & Control Procedure (Clause 8.1): the ISMS processes and their criteria, the records that show they ran, control of planned and unintended changes, and control of externally provided services. It is part of the document set and the Clause 8.1 checklist.'
+    ]
+  },
+  {
     version: '1.112.3',
     date: '2026-09-30',
     entries: [
