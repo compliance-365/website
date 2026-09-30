@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.110.3',
+    date: '2026-09-30',
+    entries: [
+      'Clause 5.1 (leadership communicates why the management system matters) is now checked automatically: it is met when the policy has been approved and at least 90% of staff have acknowledged it through a policy acknowledgement campaign. A leadership message can still be added as extra evidence.'
+    ]
+  },
+  {
     version: '1.110.2',
     date: '2026-09-30',
     entries: [

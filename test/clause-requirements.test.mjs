@@ -284,11 +284,11 @@ describe('register rules added for full automation', () => {
     assert.equal(rec('aiImpact', { aiSystems: ai.concat([{ impactAssessmentStatus: 'In progress' }]) }).st, 'partial');
   });
 
-  test('every clause is automated except the three no register can see', () => {
+  test('every clause is automated except the two no register can see', () => {
     ['iso27001', 'iso42001', 'iso27701'].forEach((fw) => {
       const manual = [];
       CLAUSE_DEFS.filter((d) => d.fw === fw).forEach((d) => clauseRequirementsFor(fw, d.code).forEach((r) => { if (!r.auto) manual.push(d.code + '/' + r.id); }));
-      assert.deepEqual(manual.sort(), ['5.1/communicates', '5.1/integration', '7.5.3/lifecycle'], fw);
+      assert.deepEqual(manual.sort(), ['5.1/integration', '7.5.3/lifecycle'], fw);
     });
   });
 });
@@ -359,5 +359,17 @@ describe('ISO/IEC 27701:2025 as a standalone privacy information management syst
     assert.match(app, /activeFw === 'iso42001' \|\| activeFw === 'iso27701' \? activeFw : 'iso27001'/);
     const wp = Lib.auditWorkpack({ fw: 'iso27701', scope: 'Clauses 4-10' }, { clauses: [{ fw: 'iso27701', id: '4.1', st: 'Implemented', t: 'x' }, { fw: 'iso27001', id: '4.1', st: 'Implemented', t: 'y' }] }, today);
     assert.deepEqual(wp.clauses.map((c) => c.title), ['x']);
+  });
+});
+
+describe('Clause 5.1 communication is evidenced by the approved, acknowledged policy', () => {
+  test('each framework checks its own policy and the acknowledgement campaign', () => {
+    const want = { iso27001: 'infosec-policy', iso42001: 'ai-policy' };
+    ['iso27001', 'iso42001', 'iso27701'].forEach((fw) => {
+      const r = Lib.clauseRequirementsFor(fw, '5.1').find((x) => x.id === 'communicates');
+      assert.ok(r.auto, fw + ' is automated');
+      assert.ok([].concat(r.auto.record || []).includes('policyAcknowledged'), fw + ' needs staff acknowledgement');
+      if (want[fw]) assert.equal(r.auto.doc, want[fw], fw);
+    });
   });
 });
