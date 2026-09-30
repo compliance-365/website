@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.3',
+    date: '2026-09-30',
+    entries: [
+      'Approving a document now marks Implemented the controls where the approved document is the control itself: A.5.1 (information security policy), A.5.2 (roles and responsibilities), A.5.10 (acceptable use) and A.5.24 (incident management planning), plus their ISO 27701 and ISO 42001 counterparts. Documents approved before this update count too. Every other control a policy supports stays In progress until scan results or operating records show it working, because that is what an auditor tests.'
+    ]
+  },
+  {
     version: '1.112.2',
     date: '2026-09-30',
     entries: [

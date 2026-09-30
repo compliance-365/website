@@ -4472,7 +4472,35 @@ function showModal(opts) {
     if (cachedDoc) { cachedDoc.status = 'Approved'; cachedDoc.tplId = cachedDoc.tplId || t.id; }
     else if (Array.isArray(window._docs)) window._docs.push({ name: name, status: 'Approved', tplId: t.id, url: approvedDoc && approvedDoc.url });
     var clauseNote = approvedDoc && approvedDoc.url ? applyClauseDocumentUpdates(t.id, approvedDoc.url, 'approved') : '';
+    if (approvedDoc && approvedDoc.url) implementDocumentControls(t.id, approvedDoc.url, vals.approvedBy, new Date().toISOString().slice(0, 10));
     return { approvedDoc: approvedDoc, clauseNote: clauseNote };
+  }
+
+  /* Marks Implemented the few controls whose requirement is the approved
+     document itself (DOCUMENT_IMPLEMENTED_CONTROLS in lib.js), with the
+     document as evidence and the approval as the verification. Runs on
+     approval, and on load for documents approved before this existed. */
+  function implementDocumentControls(tplId, docUrl, approvedBy, approvalDate) {
+    if (!S || !S.controls || READONLY) return 0;
+    var list = window.CheckpointLib.controlsImplementedByDocument(tplId, S.controls, docUrl);
+    list.forEach(function (c) {
+      var before = c.st;
+      c.st = 'Implemented';
+      if (!c.evidenceUrl) c.evidenceUrl = docUrl;
+      c.verified = approvalDate || c.verified || '';
+      c.verifiedBy = approvedBy || c.verifiedBy || '';
+      audit('Control status changed', 'Control', c.fw + '|' + c.id, before, 'Implemented (approved document is the control)');
+      Store.updateControl(c).catch(function (e) { warn(e); });
+    });
+    return list.length;
+  }
+  function implementControlsFromApprovedDocuments(docs) {
+    var n = 0;
+    (docs || []).forEach(function (d) {
+      if (d && d.tplId && d.url && docStatusOf(d) === 'Approved') n += implementDocumentControls(d.tplId, d.url, d.approvedBy || '', d.approvalDate || '');
+    });
+    if (n) { renderSoa(); renderDash(); }
+    return n;
   }
 
   function templateControlsPresent(codes) {
@@ -4903,6 +4931,7 @@ function showModal(opts) {
     if (window._docs) return;
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      implementControlsFromApprovedDocuments(docs);
       /* The policy and bcp checks score from this register, and it was
          empty when applyRegisterCheckResults() last ran — recompute now
          that it is loaded, or those two would sit on a first-paint
