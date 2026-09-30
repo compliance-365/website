@@ -21101,6 +21101,23 @@ function showModal(opts) {
     try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
     if (probe.onboarded) { await startLive(); return; }
 
+    /* Nothing at the site this browser knows about (none remembered, so
+       the root site, or a remembered one that has since moved). Before
+       sending an already-onboarded client back through the wizard,
+       look for their Checkpoint elsewhere in the tenant: exactly one
+       onboarded site is unambiguous, so open it and remember it here.
+       None, or more than one, goes to the wizard as before, where the
+       site step lets them choose. */
+    if (msg) msg.textContent = 'Looking for your Checkpoint site…';
+    var found = [];
+    try { found = await window.SpStore.discoverOnboardedSites(); } catch (e) { found = []; }
+    if (found.length === 1) {
+      window.CHECKPOINT_CONFIG.site = found[0];
+      try { localStorage.setItem('cpSite:' + tenantStorageKey(), found[0]); } catch (e) { /* private browsing etc. — found again on the next sign-in */ }
+      await startLive();
+      return;
+    }
+
     busy(false);
     Wizard.startAt(3);
   }
