@@ -1896,92 +1896,177 @@ window.POLICY_TEMPLATES = [
   {
     id: 'risk-management-framework',
     title: 'Risk Management Framework',
-    purpose: 'This document defines how the organisation identifies, analyses, evaluates and treats information security risk consistently and repeatably, so that two people assessing the same risk reach comparable results. It follows the risk management process of ISO 31000:2018, applied to information security as ISO/IEC 27005:2022 describes, and satisfies the ISO/IEC 27001 Clause 6.1.2 (risk assessment), 6.1.3 (risk treatment), 8.2 and 8.3 requirements.',
-    scope: 'Applies to all information security risks to assets within the ISMS scope, and to everyone who identifies, owns or treats those risks. The organisation’s live risk register and Risk Treatment Plan are maintained in this console.',
+    purpose: 'This document defines how the organisation manages information security risk, so that risk is identified, analysed, evaluated and treated consistently and repeatably, and two people assessing the same risk reach comparable results. It follows ISO 31000:2018 (its principles, framework and process), applied to information security as ISO/IEC 27005:2022 describes, and satisfies the ISO/IEC 27001 Clause 6.1.2 (risk assessment), 6.1.3 (risk treatment), 8.2 and 8.3 requirements.',
+    scope: 'Applies to all information security risks to assets within the ISMS scope, and to everyone who identifies, owns or treats those risks. The organisation’s live risk register, action register and Risk Treatment Plan are maintained in this console.',
     policyStatements: [
       {
+        rule: 'Risk management follows the principles of ISO 31000: it is integrated into all organisational activities; structured and comprehensive; customised to the organisation; inclusive of the people affected; dynamic as the organisation and its threats change; based on the best available information; mindful of human and cultural factors; and continually improved.',
+        because: 'The principles are what make the process worth running; an assessment done once, alone and from assumptions satisfies none of them.'
+      },
+      {
+        rule: 'Top management leads and commits to risk management (ISO 31000 framework): it approves this framework and the risk appetite, assigns the authority and accountability for managing risk, provides the resources needed, and reviews risk at management review.',
+        because: 'Clause 5.1 of ISO/IEC 27001 and clause 5.2 of ISO 31000 both start with leadership: risks are decided by the people accountable for the business, not only by the security function.'
+      },
+      {
+        rule: 'Risk management is integrated into how the organisation works: planning and objectives, change management, product and project delivery, procurement and supplier onboarding, and the introduction of new systems or AI services all include a risk assessment before commitment.',
+        because: 'Risk found after a decision is made is risk the organisation has already accepted without meaning to.'
+      },
+      {
         rule: 'Risk is managed through the ISO 31000 process: communication and consultation; establishing the scope, context and criteria; risk assessment (identification, analysis and evaluation); risk treatment; monitoring and review; and recording and reporting. The process is integrated into how the organisation plans, changes and operates, not run as a separate exercise.',
-        because: 'ISO 31000 is the process ISO/IEC 27005 and ISO/IEC 27001 build on; following it end to end is what makes the assessment repeatable and the register trustworthy.'
+        because: 'A defined process is what makes results comparable across people and over time (ISO/IEC 27001 Clause 6.1.2 b).'
       },
       {
-        rule: 'Risk criteria are defined before risks are assessed. Likelihood is rated 1–5 (1 Rare, 2 Unlikely, 3 Possible, 4 Likely, 5 Almost certain) and consequence 1–5 (1 Negligible, 2 Minor, 3 Moderate, 4 Major, 5 Severe). Their product gives the risk level: 1–4 Low, 5–9 Medium, 10–14 High, 15–25 Critical.',
-        because: 'Without consistent scales, two assessors rate the same risk differently and the register cannot be used to prioritise anything (ISO/IEC 27001 6.1.2 b).'
+        rule: 'The scope, context and criteria are established before risks are assessed. The context is the organisation’s external and internal issues and interested parties’ requirements, recorded in the Organisational Context & Interested Parties document; the criteria are the consequence and likelihood scales, the risk level matrix, the risk appetite and the response required at each level, set out in the tables below.',
+        because: 'Criteria set after the risks are known tend to be fitted to the answer; ISO/IEC 27001 Clause 6.1.2 a) requires them first.'
       },
       {
-        rule: 'Risk acceptance criteria follow the organisation’s risk appetite, set in this console. A risk whose residual level is within appetite may be retained by its risk owner. A risk above appetite must be treated further, or its retention accepted and recorded by the executive sponsor with a named accepter, a date and a review point.',
-        because: 'Without a stated threshold, acceptance is decided case by case under pressure, which is how significant risks get accepted quietly (ISO/IEC 27001 6.1.2 a).'
+        rule: 'Risk criteria are defined before risks are assessed. Likelihood is rated 1–5 (1 Rare, 2 Unlikely, 3 Possible, 4 Likely, 5 Almost certain) and consequence 1–5 (1 Negligible, 2 Minor, 3 Moderate, 4 Major, 5 Severe). Their product gives the risk level: 1–4 Low, 5–9 Medium, 10–14 High, 15–25 Critical. Where a scenario has consequences in more than one area, the most severe applies.',
+        because: 'A shared scale is what lets a risk raised by engineering be compared with one raised by finance.'
       },
       {
-        rule: 'Risk assessments are carried out at planned intervals (every open risk is reviewed at least quarterly, the review cadence set in this console) and whenever there is a significant change: a new system, supplier, process or site; a security incident; an audit finding; or a change in the threat landscape or in legal requirements.',
-        because: 'These are the criteria for performing assessments that ISO/IEC 27001 6.1.2 a) and 8.2 ask for; a register assessed once a year misses the changes that create new risk.'
+        rule: 'Risk acceptance criteria follow the organisation’s risk appetite, set in this console. A risk whose residual level is within appetite may be retained by its risk owner. A risk above appetite must be treated further, or its retention accepted and recorded by the executive sponsor with a named accepter, a date and a review point. An acceptance is valid for no more than 12 months, and lapses earlier if the risk level changes.',
+        because: 'ISO/IEC 27001 Clause 6.1.2 a) 1) requires acceptance criteria, and an acceptance with no end date is a decision nobody revisits.'
+      },
+      {
+        rule: 'Risk assessments are carried out at planned intervals (every open risk is reviewed at least quarterly, the review cadence set in this console) and whenever there is a significant change: a new system, supplier, AI service, product feature, process or site; a security incident; an audit finding; or a change in the threat landscape or in legal requirements.',
+        because: 'ISO/IEC 27001 Clause 8.2 requires assessment at planned intervals and on significant change.'
       },
       {
         rule: 'Risks are identified using both approaches ISO/IEC 27005 describes. Asset-based: the assets in the asset register, the threats to them and the vulnerabilities those threats could exploit. Event-based: the risk sources and events that could affect the organisation, and their consequences. Each risk is recorded as a scenario (the assets affected, the threat or risk source, the vulnerability, and the consequence for the confidentiality, integrity or availability of information).',
-        because: 'A risk written as a scenario can be analysed, treated and tested; a risk written as a single word (\u201cransomware\u201d) cannot.'
+        because: 'A scenario is what can be analysed and treated; a heading such as "cyber attack" cannot.'
+      },
+      {
+        rule: 'Risks are identified from the best available information: posture scan findings, security incidents and near misses, internal and external audit findings, supplier and third-party assessments, threat intelligence, changes to legal and contractual obligations, new products and systems, self-assessments, and reports from staff.',
+        because: 'Each source sees risks the others miss; relying on one produces a register that reflects where the organisation looked, not where the risk is.'
       },
       {
         rule: 'Opportunities are identified and recorded alongside risks: uncertainty that could benefit the organisation or its information security, rated by likelihood and benefit, with a named owner and a response (pursue, share, retain or decline). They are reviewed with the risks and kept separate from risk levels and the risk appetite.',
-        because: 'ISO 31000 treats risk as the effect of uncertainty, positive or negative, and ISO/IEC 27001 Clause 6.1.1 asks for the risks and opportunities the management system must address.'
+        because: 'ISO 31000 defines risk as the effect of uncertainty on objectives, positive or negative, and ISO/IEC 27001 Clause 6.1.1 asks for both.'
       },
       {
         rule: 'Every risk has a named risk owner, accountable for the treatment decision and for the residual risk that remains after it.',
-        because: 'A risk owned by a committee or a department is owned by nobody, and will still be open at the next review (ISO/IEC 27001 6.1.2 c).'
+        because: 'ISO/IEC 27001 Clause 6.1.2 c) 2) requires risk owners; a risk owned by a team is owned by nobody.'
       },
       {
-        rule: 'Risks are analysed by assessing the realistic likelihood of the scenario and the consequences if it happens, taking account of the controls already in place, and are then evaluated against the acceptance criteria and prioritised for treatment by risk level.',
-        because: 'ISO/IEC 27005 analyses risk as it stands today, with existing controls, so treatment effort goes where the remaining exposure is largest.'
+        rule: 'Risks are analysed by assessing the realistic likelihood of the scenario and the consequences if it happens, taking account of the controls already in place and how well they work, the people and culture involved, and the uncertainty in the information used. They are then evaluated against the acceptance criteria and prioritised for treatment by risk level.',
+        because: 'Analysis that ignores existing controls overstates risk; analysis that assumes they work understates it.'
       },
       {
         rule: 'Each risk above the acceptance criteria receives one of the ISO/IEC 27005 treatment options, recorded in the register as: Treat (risk modification: reduce likelihood or consequence with controls), Terminate (risk avoidance: stop or change the activity that gives rise to it), Transfer (risk sharing: share it with a third party, for example through insurance or an outsourced provider) or Tolerate (risk retention: accept it, within the acceptance criteria above).',
-        because: 'Naming the options prevents \u201cwe are monitoring it\u201d being recorded as though it were a treatment, and sharing a risk never removes the organisation\u2019s own accountability for it.'
+        because: 'Naming the option makes the decision explicit and auditable.'
       },
       {
         rule: 'The controls needed to implement each treatment are determined and compared with ISO/IEC 27001 Annex A, so no necessary control is omitted. Treatment decisions, controls, actions and owners are recorded in the Risk Treatment Plan, and every Annex A control is recorded in the Statement of Applicability with a justification for its inclusion or exclusion.',
-        because: 'The SoA is the document an auditor reconciles everything else against, and an unjustified exclusion is the fastest finding available to them (ISO/IEC 27001 6.1.3 b\u2013d).'
+        because: 'ISO/IEC 27001 Clause 6.1.3 b) to d) require the comparison with Annex A and the Statement of Applicability.'
+      },
+      {
+        rule: 'Each treatment action records what will be done, who is responsible, the resources needed, the due date, and how its effect will be measured. Where a treatment has a long lead time, interim measures are put in place and recorded until it is complete.',
+        because: 'ISO 31000 clause 6.5.3 sets out what a treatment plan contains; a plan without owners and dates is an intention.'
       },
       {
         rule: 'Risk owners approve the treatment plan for their risks. Once treatment is in place, the residual risk is re-assessed (likelihood and consequence with the treatment working) and the risk owner records their acceptance of it.',
-        because: 'ISO/IEC 27001 6.1.3 f) requires the owners\u2019 approval and acceptance; an acceptance recorded against an older score is shown as stale until it is renewed.'
+        because: 'ISO/IEC 27001 Clause 6.1.3 f) requires risk owners to approve the plan and accept the residual risk.'
       },
       {
-        rule: 'Risks, their treatment and the effectiveness of controls are monitored and reviewed: residual risk at least quarterly and after any material change, and the framework itself whenever the risk appetite, scales or method change.',
-        because: 'Residual risk moves as controls degrade and the business changes, so a residual rating is only true on the day it was set.'
+        rule: 'Risks, their treatment and the effectiveness of controls are monitored and reviewed: residual risk at least quarterly and after any material change, treatment actions until closed and verified, and the register in full at least annually, considering the issues of the past year, changes in the business and in regulation, and how well the method worked.',
+        because: 'Risks change, cease and emerge; a register reviewed only when an auditor is due describes the past.'
       },
       {
         rule: 'Risk owners and the people who know the processes and systems concerned are consulted when risks are assessed and treatment is chosen, and risk status is reported to top management through the management review and the risk register reports.',
-        because: 'ISO 31000 treats communication and consultation as part of every step: an assessment made without the people who run the process misses the risks they see every day.'
+        because: 'Consultation brings the knowledge the assessment needs; reporting gives the decisions to the people accountable for them.'
+      },
+      {
+        rule: 'Risk records are kept in the risk register and action register in this console. Each risk records at least: the scenario and the information and assets affected; which of confidentiality, integrity and availability it threatens; the owner; the likelihood, consequence and level before treatment; the existing controls; the treatment option, actions and linked Annex A controls; the residual likelihood, consequence and level; the acceptance with its date; and the date of the last review.',
+        because: 'ISO/IEC 27001 Clauses 6.1.2 e), 8.2 and 8.3 require the assessment and treatment results to be retained as documented information.'
+      },
+      {
+        rule: 'The framework itself is evaluated and improved (ISO 31000 clauses 5.6 and 5.7): at each management review its performance is measured by risks reviewed on time, treatment actions overdue, residual risks above appetite, and incidents that arose from risks nobody had recorded; the scales, appetite and method are adjusted when they no longer fit.',
+        because: 'A method that is never measured cannot be shown to work, and ISO/IEC 27001 Clause 10.1 requires continual improvement.'
+      }
+    ],
+    tables: [
+      {
+        title: 'Consequence criteria',
+        intro: 'The consequence of a risk scenario is rated on the most severe of these areas.',
+        head: ['Level', 'Financial', 'Legal and regulatory', 'Reputation', 'Customers and service', 'Information', 'People'],
+        rows: [
+          ['1 Negligible', 'Absorbed within normal budgets', 'No breach of law or contract', 'Internal only', 'No noticeable effect', 'No information exposed or corrupted', 'No harm'],
+          ['2 Minor', 'Small unplanned cost', 'Minor breach, not reportable', 'Limited external awareness, no media', 'Brief degradation of a service', 'Internal information exposed within the organisation', 'Minor injury or distress'],
+          ['3 Moderate', 'Noticeable cost needing reallocation', 'Reportable breach, no penalty', 'Short-term negative coverage', 'Outage of a service for some customers', 'Confidential or personal information of a few people exposed', 'Injury needing treatment; wellbeing affected'],
+          ['4 Major', 'Material to annual results', 'Notifiable data breach, or penalty or regulatory action', 'Sustained coverage; customers question trust', 'Prolonged outage of key services, or loss of a major customer', 'Sensitive or customer information exposed at scale', 'Serious injury or harm'],
+          ['5 Severe', 'Threatens the organisation’s viability', 'Loss of licence, major penalties or prosecution', 'Lasting damage to trust in the organisation', 'Services cannot be delivered; widespread customer loss', 'Large-scale breach or loss of critical information', 'Death or permanent disability']
+        ],
+        note: 'Financial thresholds: {{riskFinancial}}'
+      },
+      {
+        title: 'Likelihood criteria',
+        intro: 'Likelihood is the realistic chance the scenario happens, taking account of the controls in place.',
+        head: ['Level', 'Description', 'Indicative frequency'],
+        rows: [
+          ['1 Rare', 'May occur only in exceptional circumstances', 'Less than once in 5 years'],
+          ['2 Unlikely', 'Could occur but is not expected', 'Once in 3 to 5 years'],
+          ['3 Possible', 'Might occur; has happened in similar organisations', 'Once in 1 to 3 years'],
+          ['4 Likely', 'Will probably occur in most circumstances', 'About once a year'],
+          ['5 Almost certain', 'Expected to occur, or already occurring', 'Several times a year']
+        ]
+      },
+      {
+        title: 'Risk level matrix',
+        intro: 'Risk level is likelihood multiplied by consequence: 1–4 Low, 5–9 Medium, 10–14 High, 15–25 Critical.',
+        head: ['Consequence \u2193 / Likelihood \u2192', '1 Rare', '2 Unlikely', '3 Possible', '4 Likely', '5 Almost certain'],
+        rows: [
+          ['5 Severe', 'Medium 5', 'High 10', 'Critical 15', 'Critical 20', 'Critical 25'],
+          ['4 Major', 'Low 4', 'Medium 8', 'High 12', 'Critical 16', 'Critical 20'],
+          ['3 Moderate', 'Low 3', 'Medium 6', 'Medium 9', 'High 12', 'Critical 15'],
+          ['2 Minor', 'Low 2', 'Low 4', 'Medium 6', 'Medium 8', 'High 10'],
+          ['1 Negligible', 'Low 1', 'Low 2', 'Low 3', 'Low 4', 'Medium 5']
+        ]
+      },
+      {
+        title: 'Response at each risk level',
+        intro: 'What each level requires. Levels above the risk appetite set in this console must be treated, or their retention accepted by the executive sponsor.',
+        head: ['Level', 'Response', 'Reported to', 'Treatment plan agreed', 'Retention accepted by'],
+        rows: [
+          ['Critical', 'Not acceptable. Highest priority; interim measures immediately', 'Executive sponsor within 24 hours', 'Within 1 week; treatment within 30 days', 'Executive sponsor only, for up to 3 months'],
+          ['High', 'Not acceptable without treatment. Priority action', 'Executive sponsor within 1 week', 'Within 2 weeks; treatment within 90 days', 'Executive sponsor'],
+          ['Medium', 'Tolerable where further reduction is not reasonably practicable; treat where the benefit justifies it', 'ISMS manager; management review', 'Within 1 month where treated', 'Risk owner, if within appetite; otherwise the executive sponsor'],
+          ['Low', 'Acceptable. Monitor to confirm it stays low', 'Risk register reports', 'Not required', 'Risk owner']
+        ]
       }
     ],
     roles: [
       {
         role: 'Executive sponsor',
-        responsibility: 'Sets and approves the risk appetite, and formally accepts residual risks that exceed it.'
+        responsibility: 'Approves this framework and the risk appetite, provides the resources to manage risk, and formally accepts residual risks that exceed the appetite.'
       },
       {
         role: 'ISMS manager',
-        responsibility: 'Owns this framework and the risk register, facilitates assessment, and reports risk status to management review.'
+        responsibility: 'Owns this framework and the risk register, facilitates assessment, measures how well the framework works, and reports risk status to management review.'
       },
       {
         role: 'Risk owners',
-        responsibility: 'Named for each risk; accountable for its assessment remaining current and for delivering its treatment.'
+        responsibility: 'Named for each risk; accountable for its assessment remaining current, for approving and delivering its treatment, and for accepting its residual risk.'
       },
       {
         role: 'All personnel',
         responsibility: 'Raise risks they become aware of, rather than assuming they are already known.'
       }
     ],
-    exceptions: 'Accepting a residual risk above appetite is not an exception to this framework — it is a decision the framework provides for, and it requires the executive sponsor\'s recorded acceptance with a named accepter, a date and a review point. Risks are never closed by lapse of time.',
-    nonCompliance: 'Operating a system or process with a known unassessed risk, or treating a risk without recording the decision, is a management-system nonconformity raised as a corrective action.',
+    exceptions: 'Retention of a risk above the risk appetite is the only exception, and it follows the acceptance rules above: a named accepter, a date, a review point and a validity of no more than 12 months (3 months for a Critical risk).',
+    nonCompliance: 'Operating a new system, supplier or process without the risk assessment this framework requires, or leaving a risk above appetite untreated and unaccepted, is a management-system nonconformity, raised as a corrective action under Clause 10.2.',
     relatedDocuments: [
-      'Information Security Policy',
-      'Statement of Applicability',
       'ISMS Scope Document',
-      'Information Security Objectives & Metrics'
+      'Organisational Context & Interested Parties',
+      'Statement of Applicability',
+      'Information Security Objectives & Metrics',
+      'Management Review Procedure',
+      'Nonconformity & Corrective Action Procedure'
     ],
-    reviewCadence: 'Annually, or when the organisation’s risk appetite, scales or assessment method change materially.',
+    reviewCadence: 'At least annually as part of management review, and whenever the risk appetite, scales or method change or the organisation changes materially.',
     controls: [],
     frameworks: ['iso27001', 'iso27701']
   },
+
   {
     id: 'infosec-objectives-metrics',
     title: 'Information Security Objectives & Metrics',
@@ -3517,6 +3602,12 @@ window.ORG_PROFILE_FIELDS = [
     type: 'textarea',
     hint: 'What the organisation actually delivers to its customers.',
     fallback: 'the services the organisation delivers'
+  },
+  {
+    key: 'orgRiskFinancial', token: 'riskFinancial', label: 'Financial consequence thresholds (risk criteria)',
+    type: 'textarea',
+    hint: 'The dollar amounts that make a financial consequence Minor, Moderate, Major or Severe for this organisation. Leave blank to use the percentage-of-revenue scale.',
+    fallback: 'Negligible under 0.1% of annual revenue; Minor 0.1% to 0.5%; Moderate 0.5% to 2%; Major 2% to 5%; Severe over 5%, or as set by the executive sponsor.'
   },
   {
     required: true,

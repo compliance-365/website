@@ -3801,6 +3801,23 @@
       parts.push(docxStatement(i + 1, rule, because, accent, layout));
     });
 
+    /* Reference tables (a risk framework's scales and matrix), the same
+       ones buildTemplateHtml() renders after the statements. The
+       9400-twip text width is shared evenly; the header row is bold. */
+    (t.tables || []).forEach(function (tb) {
+      var cols = (tb.head || []).length || ((tb.rows || [])[0] || []).length || 1;
+      var w = Math.floor(9400 / cols);
+      var widths = []; for (var k = 0; k < cols; k++) widths.push(w);
+      parts.push(docxHeading(tb.title || ''));
+      if (tb.intro) parts.push(docxP(tb.intro, { after: 80 }));
+      var head = tb.head ? '<w:tr>' + tb.head.map(function (h, i) {
+        return '<w:tc><w:tcPr><w:tcW w:w="' + widths[i] + '" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F1EEE8"/></w:tcPr><w:p>' + docxRun(h, { bold: true }) + '</w:p></w:tc>';
+      }).join('') + '</w:tr>' : '';
+      var tbl = docxTable(tb.rows || [], widths, { borderColor: tableBorder });
+      parts.push(head ? tbl.replace('</w:tblGrid>', '</w:tblGrid>' + head) : tbl);
+      if (tb.note) parts.push(docxP(tb.note, { before: 60, after: 120 }, { sz: 18 }));
+      else parts.push(docxP('', { after: 120 }));
+    });
     if (t.roles && t.roles.length) {
       parts.push(docxHeading('Who is responsible'));
       parts.push(docxTable(t.roles.map(function (r) { return [r.role, r.responsibility]; }), [2600, 6800], { borderColor: tableBorder }));

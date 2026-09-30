@@ -3740,6 +3740,11 @@ function showModal(opts) {
         return Object.assign({}, s, { rule: resolveOrgTokens(s.rule), because: resolveOrgTokens(s.because) });
       });
     }
+    if (Array.isArray(out.tables)) {
+      out.tables = out.tables.map(function (tb) {
+        return Object.assign({}, tb, { intro: resolveOrgTokens(tb.intro), note: resolveOrgTokens(tb.note), rows: (tb.rows || []).map(function (r) { return r.map(resolveOrgTokens); }) });
+      });
+    }
     if (Array.isArray(out.roles)) {
       out.roles = out.roles.map(function (r) {
         return Object.assign({}, r, { role: resolveOrgTokens(r.role), responsibility: resolveOrgTokens(r.responsibility) });
@@ -3876,6 +3881,7 @@ function showModal(opts) {
         '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:13px;font-weight:700;color:#1A1A1A;vertical-align:top;font-family:Georgia,serif}' +
         '.roles td{padding:8px 0;font-size:13px;color:#333}' +
         '.roles tr+tr th,.roles tr+tr td{border-top:1px solid #ddd}' +
+        '.mtx{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}.mtx th{text-align:left;padding:7px 9px;background:rgba(11,11,12,.05);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;vertical-align:bottom}.mtx td{padding:7px 9px;border-top:1px solid rgba(11,11,12,.1);vertical-align:top}.mtx td:first-child{font-weight:700}.mtx-note{font-size:12px;margin:4px 0 0}@media print{.mtx tr{break-inside:avoid;page-break-inside:avoid}}' +
         '.dctl{width:100%;border-collapse:collapse;margin:22px 0;border:1px solid #1A1A1A}' +
         '.dctl th{text-align:left;width:170px;padding:8px 14px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5a5650;font-weight:700;vertical-align:top;background:#F7F5F2;font-family:Georgia,serif}' +
         '.dctl td{padding:8px 14px;font-size:13px;color:#1A1A1A}' +
@@ -3912,6 +3918,7 @@ function showModal(opts) {
         '.roles th{text-align:left;width:200px;padding:10px 14px 10px 0;font-size:12px;font-weight:500;color:#111;vertical-align:top}' +
         '.roles td{padding:10px 0;font-size:13px;color:#444;font-weight:300}' +
         '.roles tr+tr th,.roles tr+tr td{border-top:1px solid #eee}' +
+        '.mtx{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}.mtx th{text-align:left;padding:7px 9px;background:rgba(11,11,12,.05);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;vertical-align:bottom}.mtx td{padding:7px 9px;border-top:1px solid rgba(11,11,12,.1);vertical-align:top}.mtx td:first-child{font-weight:700}.mtx-note{font-size:12px;margin:4px 0 0}@media print{.mtx tr{break-inside:avoid;page-break-inside:avoid}}' +
         '.dctl{width:100%;border-collapse:collapse;margin:26px 0;border-top:none;border-bottom:none}' +
         '.dctl th{text-align:left;width:160px;padding:6px 12px 6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#999;font-weight:500;vertical-align:top}' +
         '.dctl td{padding:6px 0;font-size:12.5px;color:#111}' +
@@ -3947,6 +3954,7 @@ function showModal(opts) {
       '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
       '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
       '.roles tr+tr th,.roles tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
+      '.mtx{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}.mtx th{text-align:left;padding:7px 9px;background:rgba(11,11,12,.05);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;vertical-align:bottom}.mtx td{padding:7px 9px;border-top:1px solid rgba(11,11,12,.1);vertical-align:top}.mtx td:first-child{font-weight:700}.mtx-note{font-size:12px;margin:4px 0 0}@media print{.mtx tr{break-inside:avoid;page-break-inside:avoid}}' +
       '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
       '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
       '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
@@ -4011,6 +4019,17 @@ function showModal(opts) {
       var because = typeof s === 'string' ? '' : (s.because || '');
       return '<div class="stmt"><span class="stmt-n">' + (i + 1) + '</span><div class="stmt-body"><p class="stmt-rule">' + esc(rule) + '</p>' + (because ? '<p class="because">' + esc(because) + '</p>' : '') + '</div></div>';
     }).join('') + '</div>';
+
+    /* Reference tables a policy states its rules against (a risk
+       framework's scales and matrix). Optional: { title, intro, head,
+       rows, note }; cells are plain text. */
+    var tablesHtml = (t.tables || []).map(function (tb) {
+      return sectionHeading('policy', tb.title) +
+        (tb.intro ? '<p class="intro">' + esc(tb.intro) + '</p>' : '') +
+        '<table class="mtx"><thead><tr>' + (tb.head || []).map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        (tb.rows || []).map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
+        '</tbody></table>' + (tb.note ? '<p class="intro mtx-note">' + esc(tb.note) + '</p>' : '');
+    }).join('');
 
     /* The staff-facing half. Deliberately the only place in the
        document written in second person: the normative sections below
@@ -4101,7 +4120,7 @@ function showModal(opts) {
       readerHtml +
       sectionHeading('purpose', 'Purpose') + '<p class="intro">' + esc(t.purpose) + '</p>' +
       sectionHeading('scope', 'Scope') + '<p class="intro">' + esc(t.scope) + '</p>' +
-      sectionHeading('policy', 'Policy') + statementsHtml +
+      sectionHeading('policy', 'Policy') + statementsHtml + tablesHtml +
       govHtml +
       sectionHeading('review', 'Review') + '<p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? sectionHeading('satisfies', 'Helps satisfy') + '<div class="chips">' + t.controls.map(function (c) { return '<span class="chip-ctrl">' + esc(c) + '</span>'; }).join('') + '</div>' : '');
@@ -16792,7 +16811,8 @@ function showModal(opts) {
         fields: [
           { id: 'externalIssues', label: fld('orgExternalIssues').label, type: 'textarea', value: drafted('orgExternalIssues', 'externalIssues') },
           { id: 'internalIssues', label: fld('orgInternalIssues').label, type: 'textarea', value: drafted('orgInternalIssues', 'internalIssues') },
-          { id: 'climate', label: fld('orgClimate').label, type: 'textarea', value: drafted('orgClimate', 'climate') }
+          { id: 'climate', label: fld('orgClimate').label, type: 'textarea', value: drafted('orgClimate', 'climate') },
+          { id: 'riskFinancial', label: fld('orgRiskFinancial').label, type: 'textarea', value: orgProfileValue('orgRiskFinancial'), placeholder: 'e.g. Minor $10k–$50k; Moderate $50k–$150k; Major $150k–$500k; Severe over $500k. Leave blank to use a percentage of revenue.' }
         ],
         confirmText: 'Next'
       });
@@ -16855,7 +16875,7 @@ function showModal(opts) {
           orgLegalName: step2.legalName, orgPeople: step2.people, orgTechnology: step2.technology,
           orgBusinessUnits: step2.businessUnits, orgLocations: step2.locations,
           orgServices: step2.services, orgExclusions: step2.exclusions,
-          orgExternalIssues: step3.externalIssues, orgInternalIssues: step3.internalIssues, orgClimate: step3.climate,
+          orgExternalIssues: step3.externalIssues, orgInternalIssues: step3.internalIssues, orgClimate: step3.climate, orgRiskFinancial: step3.riskFinancial,
           orgInterestedParties: step4.interestedParties, orgPartyRequirements: step4.partyRequirements, orgRegulatory: step4.regulatory,
           orgInterfaces: step5.interfaces, orgScopeStatement: step5.scopeStatement
         };
