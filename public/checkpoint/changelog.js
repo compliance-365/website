@@ -12,10 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.2',
+    date: '2026-09-30',
+    entries: [
+      'Setup now offers your organisation’s logo on its last step, so the first policies and reports Checkpoint generates carry it. It can still be changed in Settings → Client branding.'
+    ]
+  },
+  {
     version: '1.112.1',
     date: '2026-09-30',
     entries: [
-      'Setup now offers your organisation’s logo on its last step, so the first policies and reports Checkpoint generates carry it. It can still be changed in Settings → Client branding.',
       'The Risk Management Framework now covers ISO 31000 in full: its principles; the framework (leadership and commitment, integration into change, procurement and product work, and evaluating and improving the framework at management review); and the process, with the sources risks are identified from, what each treatment plan and register entry records, interim measures, and acceptances valid for no more than 12 months. It includes the criteria as tables: consequence by area (financial, legal and regulatory, reputation, customers, information, people), likelihood with indicative frequencies, the risk level matrix, and the response, reporting and approval required at each level. The questionnaire asks for your financial thresholds.',
       'The ISMS Scope Document now covers every Clause 4.3 requirement explicitly: the legal entity, products and services, business functions, people (including how contractors are treated), locations, technology, the Clause 4.1 issues and 4.2 requirements it was based on, the interfaces with other organisations, exclusions, and Clause 4.4. The scope questionnaire asks three new questions (legal name, people, technology; technology starts from your asset register), stray punctuation in answers is tidied, and approving the scope first checks for the contradictions an auditor picks up at stage 1.'
     ]
