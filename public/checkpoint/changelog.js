@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.2',
+    date: '2026-09-30',
+    entries: [
+      'Setup now offers your organisation’s logo on its last step, so the first policies and reports Checkpoint generates carry it. It can still be changed in Settings → Client branding.'
+    ]
+  },
+  {
     version: '1.112.1',
     date: '2026-09-30',
     entries: [
