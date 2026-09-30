@@ -6252,7 +6252,8 @@
         evidence: 'Resourcing decisions recorded in management review, or a budget and named roles with time allocated.',
         auto: { record: 'mrResources' }, auto42: { record: 'mrResources' } },
       { id: 'communicates', text: 'Top management communicates why effective security and conformity with the management system matter.',
-        evidence: 'Messages from leadership to staff (an all-staff email, a town hall, an induction message).' },
+        evidence: 'The policy, approved by a named member of top management, distributed to staff and acknowledged by them. A leadership message (an all-staff email, a town hall, an induction message) strengthens it.',
+        auto: { doc: 'infosec-policy', record: 'policyAcknowledged' }, auto42: { doc: 'ai-policy', record: 'policyAcknowledged' } },
       { id: 'outcomes', text: 'Top management ensures the management system achieves its intended outcomes, directs and supports the people contributing to it, and promotes continual improvement.',
         evidence: 'A management review attended by top management, with decisions recorded.',
         auto: { md: '9.3' }, auto42: { md: '9.3' } }
