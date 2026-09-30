@@ -2619,6 +2619,42 @@ window.SpStore = (function () {
     }
   }
 
+  /* Read-only: finds every site in this tenant that already holds an
+     onboarded Checkpoint, for a browser with no remembered site (see
+     sitePathsFromSearchHits() in lib.js for why that matters). Searches
+     for the Settings list by name, then confirms each candidate with
+     probeOnboardingState() so a stray list of the same name, or one
+     from an abandoned setup, is never picked. CONFIG.site is restored
+     before returning; the caller decides what to use. Search needs
+     SharePoint read access and can lag a new site by a few minutes, so
+     any failure returns [] and the caller falls back to the wizard,
+     exactly as before. */
+  async function discoverOnboardedSites() {
+    var original = CONFIG.site;
+    try {
+      var host = (await Graph.g('/sites/root?$select=webUrl', provisionOpts)).webUrl.replace(/^https:\/\//, '').split('/')[0];
+      var res = await Graph.g('/search/query', Object.assign({ method: 'POST', body: {
+        requests: [{ entityTypes: ['list'], query: { queryString: '"' + listName('Settings') + '"' }, from: 0, size: 25 }]
+      } }, provisionOpts));
+      var hits = [];
+      ((res && res.value) || []).forEach(function (v) {
+        (v.hitsContainers || []).forEach(function (c) { hits = hits.concat(c.hits || []); });
+      });
+      var paths = window.CheckpointLib.sitePathsFromSearchHits(hits, listName('Settings'), host);
+      var found = [];
+      for (var i = 0; i < paths.length; i++) {
+        CONFIG.site = paths[i];
+        var probe = await probeOnboardingState();
+        if (probe.onboarded) found.push(paths[i]);
+      }
+      return found;
+    } catch (e) {
+      return [];
+    } finally {
+      CONFIG.site = original;
+    }
+  }
+
   /* Read-only sibling of probeOnboardingState() — resolves the site and
      reads the Settings list's cached activation blob (if any) WITHOUT
      provisioning anything. Used by app.js at the very top of every live
@@ -3875,6 +3911,7 @@ window.SpStore = (function () {
     ensureNistSubcategories: ensureNistSubcategories,
     reconcileControls: reconcileControls,
     probeOnboardingState: probeOnboardingState,
+    discoverOnboardedSites: discoverOnboardedSites,
     checkSetup: checkSetup, repairSetup: repairSetup, listCount: Object.keys(DEFS).length,
     readCachedActivation: readCachedActivation,
     validateSitePath: validateSitePath,

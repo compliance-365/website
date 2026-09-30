@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.110.2',
+    date: '2026-09-30',
+    entries: [
+      'Signing in on a new computer (or as a colleague) now finds your Checkpoint site on its own. Previously only the computer that ran setup remembered which SharePoint site holds your records, so any other computer was sent back through setup and asked for the licence again. Checkpoint now looks for your site in the tenant and opens it directly when there is exactly one.'
+    ]
+  },
+  {
     version: '1.110.1',
     date: '2026-09-30',
     entries: [
