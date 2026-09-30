@@ -6419,7 +6419,7 @@
       { id: 'operate', text: 'Plan, run and control the processes needed to meet the management system’s requirements and carry out the actions from Clause 6, with criteria for each process.',
         evidence: 'The processes visibly running: a posture scan within 90 days, risks reviewed within 12 months, and no treatment action more than 30 days overdue.',
         evidence42: 'The AI system register reviewed within 12 months, AI risks reviewed, and no treatment action more than 30 days overdue.',
-        auto: { record: 'operating' }, auto42: { record: 'operating' } },
+        auto: { docs: ['operational-planning-control'], record: 'operating' }, auto42: { record: 'operating' } },
       { id: 'records', text: 'Keep enough documented information to be confident the processes have been carried out as planned.',
         evidence: 'Dated records in the registers and the tamper-evident audit log, with activity in the last 90 days.',
         auto: { record: 'auditLog' }, auto42: { record: 'auditLog' } },

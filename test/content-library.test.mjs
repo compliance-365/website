@@ -70,7 +70,7 @@ const CLAUSE_DOCUMENTS = new Set([
   'aims-scope', 'ai-risk-framework', 'ai-objectives-metrics', 'roles-responsibilities',
   'context-interested-parties', 'isms-change-planning', 'competence-awareness-plan',
   'communication-plan', 'document-control-procedure', 'internal-audit-procedure',
-  'management-review-procedure', 'nonconformity-corrective-action'
+  'management-review-procedure', 'nonconformity-corrective-action', 'operational-planning-control'
 ]);
 
 describe('policy template library — shape', () => {
