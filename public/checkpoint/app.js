@@ -4847,6 +4847,7 @@ function showModal(opts) {
       runClauseAutomation();
       renderDash();
       renderScanChecks(true);
+      scheduleProgressSnapshot();
     }).catch(function (e) { console.error(e); });
   }
 
@@ -12378,7 +12379,53 @@ function showModal(opts) {
     if (!STATIC_VIEWS[v]) warn('renderView: no renderer registered for view "' + v + '"');
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  /* Progress snapshot for the partner's owner console (see
+     buildProgressSnapshot() in lib.js): saved to this tenant's own
+     Settings list, where the console's Sync reads it with the access it
+     already has. Debounced, written only when the numbers change, and
+     never from demo mode or a read-only session. */
+  var _progressTimer = null;
+  function scheduleProgressSnapshot() {
+    if (!Store || Store.kind !== 'sharepoint' || READONLY || !S) return;
+    clearTimeout(_progressTimer);
+    _progressTimer = setTimeout(saveProgressSnapshot, 5000);
+  }
+  async function saveProgressSnapshot() {
+    try {
+      if (!Store || Store.kind !== 'sharepoint' || READONLY || !S) return;
+      var today = new Date().toISOString().slice(0, 10);
+      var ent = entitledFrameworks();
+      var ctx = clauseContext();
+      var clausesByFw = {}, controlsByFw = {};
+      ['iso27001', 'iso42001', 'iso27701'].forEach(function (fw) {
+        if (fw !== 'iso27001' && ent.indexOf(fw) === -1) return;
+        clausesByFw[fw] = visibleClauses().filter(function (c) { return (c.fw || 'iso27001') === fw; }).map(function (c) {
+          var cl = clauseChecklistFor(c, ctx);
+          return { status: c.st, met: cl.met, total: cl.total };
+        });
+      });
+      ent.forEach(function (fw) { controlsByFw[fw] = frameworkVisibleRows(fw); });
+      var snap = window.CheckpointLib.buildProgressSnapshot({
+        today: today,
+        pathSteps: gettingStartedSteps(),
+        clausesByFw: clausesByFw,
+        controlsByFw: controlsByFw,
+        docs: (window._docs || S.documents || []).map(function (d) { return { status: docStatusOf(d) }; }),
+        assets: window.CheckpointLib.assetRegisterSummary(S.assets || [], today, 365),
+        risks: S.risks, actions: S.actions,
+        scopeStatement: orgProfileValue('orgScopeStatement')
+      });
+      var body = JSON.stringify(snap);
+      var prev = window.CheckpointLib.parseProgressSnapshot(S.settings && S.settings.progressSnapshot);
+      if (prev) { delete prev.at; if (JSON.stringify(prev) === body) return; }
+      snap.at = new Date().toISOString();
+      var raw = JSON.stringify(snap);
+      await Store.setSetting('progressSnapshot', raw);
+      S.settings.progressSnapshot = raw;
+    } catch (e) { warn(e); }
+  }
+
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;

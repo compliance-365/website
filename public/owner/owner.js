@@ -677,6 +677,7 @@ function showModal(opts) {
       { name: 'NextBestModule', text: {} } /* unlicensed framework id with the highest cross-mapped readiness, or blank */,
       { name: 'NextBestModulePct', number: {} },
       { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */,
+      { name: 'Progress', text: { allowMultipleLines: true } } /* the client's progress snapshot (buildProgressSnapshot() in lib.js), as last synced */,
       { name: 'PackSentAt', text: {} } /* ISO datetime the welcome pack email was last sent, or blank — the one input to computeClientChecklist() not already derived from a sync */,
       { name: 'RolesConfiguredAt', text: {} } /* ISO datetime the owner last confirmed the client's SharePoint Practitioner/Viewer groups (wizard step 8, SETUP.md §5a) are set up — manual, since this console can't read the client tenant's own SharePoint permissions */,
       /* Licensing scope — owner-set, never inferred from a sync. Feeds
@@ -844,7 +845,7 @@ function showModal(opts) {
      as store.js's reconcileColumns() for the client-facing lists. Add a
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
-    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName', 'Blocked', 'BlockedAt', 'BlockedReason'],
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName', 'Blocked', 'BlockedAt', 'BlockedReason', 'Progress'],
     PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus', 'AgreedPrice']
   };
   async function reconcilePartnerColumns(onStatus) {
@@ -885,6 +886,7 @@ function showModal(opts) {
       driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || '',
       nextBestModule: f.NextBestModule || '', nextBestModulePct: typeof f.NextBestModulePct === 'number' ? f.NextBestModulePct : null,
       scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : [], packSentAt: f.PackSentAt || '',
+      progress: window.CheckpointLib.parseProgressSnapshot(f.Progress),
       headcount: typeof f.Headcount === 'number' ? f.Headcount : null,
       locations: typeof f.Locations === 'number' ? f.Locations : null,
       scopeNotes: f.ScopeNotes || '',
@@ -966,6 +968,7 @@ function showModal(opts) {
       DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || '',
       NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
       ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || '',
+      Progress: c.progress ? JSON.stringify(c.progress) : '',
       Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '',
       RolesConfiguredAt: c.rolesConfiguredAt || '',
       LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || '',
@@ -1343,6 +1346,38 @@ function showModal(opts) {
     return '<div class="src"><span style="color:' + (SETUP_STATUS_COLOR[r.status] || 'inherit') + ';font-weight:700">' + esc(SETUP_STATUS_LABEL[r.status] || r.status) + '</span>' +
       (r.status !== 'healthy' && r.headline ? ' — ' + esc(r.headline) : '') +
       (r.reportedAt ? '<br>seen ' + esc(fmtDate(r.reportedAt.slice(0, 10))) : '') + (r.appVersion ? ' · v' + esc(r.appVersion) : '') + '</div>';
+  }
+  /* How far the client has got — from the snapshot their own Checkpoint
+     saves (buildProgressSnapshot() in lib.js). Clauses 4-10 and the
+     Annex A controls are separate measures, as the auditor tests them. */
+  var PROGRESS_FW_LABEL = { iso27001: 'ISO 27001', iso42001: 'ISO 42001', iso27701: 'ISO 27701' };
+  function progressBar(done, total) {
+    var pct = total ? Math.round(done / total * 100) : 0;
+    return '<div style="height:6px;border-radius:3px;background:var(--line);margin:4px 0 8px"><div style="height:6px;border-radius:3px;width:' + pct + '%;background:var(--gold)"></div></div>';
+  }
+  function progressSection(c) {
+    var p = c.progress;
+    if (!p) return '<div class="d-sec"><h4>Progress</h4><div class="src">No progress yet. It arrives on the next Sync after someone at the client opens Checkpoint 1.112 or later.</div></div>';
+    var kv = function (k, v) { return '<div class="d-kv"><span>' + k + '</span><b>' + v + '</b></div>'; };
+    var fwLabel = function (fw) { return PROGRESS_FW_LABEL[fw] || fw; };
+    var html = '<div class="d-sec"><h4>Progress' + (p.at ? ' <span class="src" style="font-weight:400;text-transform:none;letter-spacing:0">as of ' + esc(fmtDate(String(p.at).slice(0, 10))) + '</span>' : '') + '</h4>';
+    html += kv('Path to certification', esc(p.path.done + ' of ' + p.path.total + ' steps')) + progressBar(p.path.done, p.path.total);
+    if (p.path.next) html += '<div class="src" style="margin:-4px 0 8px">Next: <b>' + esc(p.path.next.label) + '</b> (' + esc(p.path.next.phase) + ')</div>';
+    Object.keys(p.clauses || {}).forEach(function (fw) {
+      var x = p.clauses[fw];
+      html += kv(esc(fwLabel(fw)) + ' clauses 4–10', esc(x.reqMet + ' of ' + x.reqTotal + ' requirements met') + '<div class="src" style="font-weight:400">' + esc(x.complete + ' of ' + x.clauses + ' clauses fully evidenced, ' + x.implemented + ' marked Implemented') + '</div>') + progressBar(x.reqMet, x.reqTotal);
+    });
+    Object.keys(p.annexA || {}).forEach(function (fw) {
+      var x = p.annexA[fw];
+      html += kv(esc(fwLabel(fw)) + ' controls', esc(x.implemented + ' of ' + x.applicable + ' implemented') + '<div class="src" style="font-weight:400">' + esc(x.inProgress + ' in progress, ' + x.notStarted + ' not started') + '</div>') + progressBar(x.implemented, x.applicable);
+    });
+    html += kv('Documents', esc(p.docs.approved + ' approved of ' + p.docs.generated + ' generated'));
+    html += kv('Assets', esc(p.registers.assets + (p.registers.assetsNoOwner ? ', ' + p.registers.assetsNoOwner + ' without an owner' : '')));
+    html += kv('Open risks', esc(String(p.registers.openRisks)));
+    html += kv('Overdue actions', p.registers.overdueActions ? '<span style="color:var(--warn)">' + esc(String(p.registers.overdueActions)) + '</span>' : '0');
+    html += '<div style="margin-top:10px"><div class="src" style="margin-bottom:4px">Scope statement</div>' +
+      (p.scope && p.scope.statement ? '<div style="font-size:12.5px;line-height:1.55;white-space:pre-wrap;border-left:2px solid var(--line);padding-left:10px">' + esc(p.scope.statement) + '</div>' : '<div class="src">Not written yet</div>') + '</div>';
+    return html + '</div>';
   }
   function setupSection(c) {
     var r = setupReportFor(c);
@@ -2037,6 +2072,7 @@ function showModal(opts) {
       c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
       c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
       c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
+      if (summary.progress) c.progress = summary.progress;
       c.syncError = '';
       /* Next-best-module and readiness trend are both computed HERE,
          from this same sync's own fetched data, then persisted as
@@ -2182,7 +2218,7 @@ function showModal(opts) {
       return r.json();
     }
 
-    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs, controlRows: [] };
+    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs, controlRows: [], progress: null };
     try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
 
     /* The client's Checkpoint lists live wherever their onboarding
@@ -2291,6 +2327,8 @@ function showModal(opts) {
         var setItems = (await g('/sites/' + site.id + '/lists/' + setList.id + '/items?$expand=fields&$top=200')).value || [];
         var verRow = setItems.find(function (i) { return i.fields.SettingKey === 'lastSeenVersion'; });
         out.appVersion = (verRow && verRow.fields.SettingValue) || '';
+        var progRow = setItems.find(function (i) { return i.fields.SettingKey === 'progressSnapshot'; });
+        out.progress = window.CheckpointLib.parseProgressSnapshot(progRow && progRow.fields.SettingValue);
       } catch (e) { /* best-effort — appVersion stays '' */ }
     }
     if (alertList) {
@@ -2776,7 +2814,8 @@ function showModal(opts) {
         (c.syncError ? '<div class="d-kv"><span>Last sync error</span><b style="color:var(--fail)">' + esc(c.syncError) + '</b></div>' : '') +
         '</div>' +
         setupSection(c) +
-        '<div class="d-sec"><h4>Readiness by framework</h4>' + readinessRows + '</div>' +
+        progressSection(c) +
+        '<div class="d-sec"><h4>Controls implemented (Annex A readiness)</h4>' + readinessRows + '</div>' +
         adminConsentSection(c) +
         (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +

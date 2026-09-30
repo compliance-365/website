@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.0',
+    date: '2026-09-30',
+    entries: [
+      'Checkpoint now keeps a short progress summary in your own Settings list: steps done on the path to certification, clause requirements met, controls implemented, documents approved, register counts and your scope statement. Your Compliance365 partner sees it when they sync, so they can see where you are and help where you are stuck. It stays in your Microsoft 365 tenant.'
+    ]
+  },
+  {
     version: '1.111.1',
     date: '2026-09-30',
     entries: [
