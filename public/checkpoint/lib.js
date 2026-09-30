@@ -7115,6 +7115,19 @@
      partner can review it. Built from what the client's own dashboard
      shows, so the two always agree. Counts and short labels only, plus
      the scope statement, capped. */
+  /* Clause (4-10) readiness: the share of clause requirements met,
+     from each clause's checklist ({met, total}). The management-system
+     counterpart of readinessPct(), which measures Annex A controls; the
+     two are shown side by side because an auditor tests them apart
+     (the clauses mostly at stage 1, the controls operating at stage 2).
+     Same rounding rule: 100 only when every requirement is met. */
+  function clauseReadiness(rows) {
+    var met = 0, total = 0;
+    (rows || []).forEach(function (r) { met += (r && r.met) || 0; total += (r && r.total) || 0; });
+    var pct = !total ? 0 : met === total ? 100 : Math.min(99, Math.round(met / total * 100));
+    return { met: met, total: total, pct: pct };
+  }
+
   var PROGRESS_SNAPSHOT_VERSION = 1;
   function buildProgressSnapshot(s) {
     s = s || {};
@@ -7134,7 +7147,8 @@
         implemented: rows.filter(function (r) { return r.status === 'Implemented'; }).length,
         complete: rows.filter(function (r) { return r.total > 0 && r.met === r.total; }).length,
         reqMet: rows.reduce(function (n, r) { return n + (r.met || 0); }, 0),
-        reqTotal: rows.reduce(function (n, r) { return n + (r.total || 0); }, 0)
+        reqTotal: rows.reduce(function (n, r) { return n + (r.total || 0); }, 0),
+        pct: clauseReadiness(rows).pct
       };
     });
     var annexA = {};
@@ -7212,6 +7226,36 @@
       out.push('Interfaces and dependencies do not name any provider. Name each one (hosting, AI services, code repositories, Microsoft 365, key suppliers).');
     }
     return out;
+  }
+
+  /* Controls whose requirement IS an approved document, so approving
+     the document implements them. Deliberately short: for most controls
+     a policy states intent and an auditor tests whether the control
+     operates (an approved Cryptography Policy is not encrypted devices),
+     so those stay In progress until scan or operating evidence shows
+     them working. These are the exceptions:
+       A.5.1  policies defined, approved and published (27701 A.3.3)
+       A.5.2  roles and responsibilities defined and allocated (A.3.4)
+       A.5.10 rules for acceptable use documented
+       A.5.24 incident management planned and prepared (A.3.11)
+       AI.2.2 AI policy, AI.2.3 its alignment with other policies,
+       AI.3.2 AI roles and responsibilities (ISO 42001). */
+  var DOCUMENT_IMPLEMENTED_CONTROLS = {
+    'infosec-policy': ['A.5.1', 'A.3.3'],
+    'roles-responsibilities': ['A.5.2', 'A.3.4'],
+    'acceptable-use-policy': ['A.5.10'],
+    'incident-response-plan': ['A.5.24', 'A.3.11'],
+    'ai-policy': ['AI.2.2', 'AI.2.3', 'AI.3.2']
+  };
+  /* The applicable controls an approved document implements that are
+     not already Implemented. A control holding different evidence is
+     left alone: someone chose that evidence on purpose. */
+  function controlsImplementedByDocument(tplId, controls, docUrl) {
+    var codes = DOCUMENT_IMPLEMENTED_CONTROLS[tplId] || [];
+    return (controls || []).filter(function (c) {
+      return c && codes.indexOf(c.id) !== -1 && c.app !== false && c.st !== 'Implemented' && c.st !== 'Not applicable' &&
+        (!c.evidenceUrl || !docUrl || c.evidenceUrl === docUrl);
+    });
   }
 
   function matchHealthReport(client, reports) {
@@ -7631,7 +7675,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
+    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, clauseReadiness: clauseReadiness, DOCUMENT_IMPLEMENTED_CONTROLS: DOCUMENT_IMPLEMENTED_CONTROLS, controlsImplementedByDocument: controlsImplementedByDocument, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,

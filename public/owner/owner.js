@@ -1365,11 +1365,11 @@ function showModal(opts) {
     if (p.path.next) html += '<div class="src" style="margin:-4px 0 8px">Next: <b>' + esc(p.path.next.label) + '</b> (' + esc(p.path.next.phase) + ')</div>';
     Object.keys(p.clauses || {}).forEach(function (fw) {
       var x = p.clauses[fw];
-      html += kv(esc(fwLabel(fw)) + ' clauses 4–10', esc(x.reqMet + ' of ' + x.reqTotal + ' requirements met') + '<div class="src" style="font-weight:400">' + esc(x.complete + ' of ' + x.clauses + ' clauses fully evidenced, ' + x.implemented + ' marked Implemented') + '</div>') + progressBar(x.reqMet, x.reqTotal);
+      html += kv(esc(fwLabel(fw)) + ' clauses 4–10', esc((typeof x.pct === 'number' ? x.pct + '% · ' : '') + x.reqMet + ' of ' + x.reqTotal + ' requirements met') + '<div class="src" style="font-weight:400">' + esc(x.complete + ' of ' + x.clauses + ' clauses fully evidenced, ' + x.implemented + ' marked Implemented') + '</div>') + progressBar(x.reqMet, x.reqTotal);
     });
     Object.keys(p.annexA || {}).forEach(function (fw) {
       var x = p.annexA[fw];
-      html += kv(esc(fwLabel(fw)) + ' controls', esc(x.implemented + ' of ' + x.applicable + ' implemented') + '<div class="src" style="font-weight:400">' + esc(x.inProgress + ' in progress, ' + x.notStarted + ' not started') + '</div>') + progressBar(x.implemented, x.applicable);
+      html += kv(esc(fwLabel(fw)) + ' Annex A controls', esc(x.pct + '% · ' + x.implemented + ' of ' + x.applicable + ' implemented') + '<div class="src" style="font-weight:400">' + esc(x.inProgress + ' in progress, ' + x.notStarted + ' not started') + '</div>') + progressBar(x.implemented, x.applicable);
     });
     html += kv('Documents', esc(p.docs.approved + ' approved of ' + p.docs.generated + ' generated'));
     html += kv('Assets', esc(p.registers.assets + (p.registers.assetsNoOwner ? ', ' + p.registers.assetsNoOwner + ' without an owner' : '')));
@@ -2774,8 +2774,10 @@ function showModal(opts) {
       var ent = partnerLatestEntitlementFor(c.tenantId);
       var annualCost = ent && ent.type === 'client' ? window.CheckpointLib.entitlementAnnualValue(ent.modules, pricesMap(), ent.agreedPrice) : null;
       var hasAgreed = !!(ent && window.CheckpointLib.isAgreedPrice(ent.agreedPrice));
+      var clausePct = (c.progress && c.progress.clauses) || {};
       var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
-        return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
+        var cp = clausePct[fw] && typeof clausePct[fw].pct === 'number' ? '<div class="d-kv"><span>' + esc(fwName(fw)) + ' clauses 4–10</span><b>' + clausePct[fw].pct + '%</b></div>' : '';
+        return cp + '<div class="d-kv"><span>' + esc(fwName(fw)) + (clausePct[fw] ? ' Annex A controls' : '') + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
       }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
       var checklist = window.CheckpointLib.computeClientChecklist(c);
       var checklistRows = checklist.map(function (s) {
@@ -2815,7 +2817,7 @@ function showModal(opts) {
         '</div>' +
         setupSection(c) +
         progressSection(c) +
-        '<div class="d-sec"><h4>Controls implemented (Annex A readiness)</h4>' + readinessRows + '</div>' +
+        '<div class="d-sec"><h4>Readiness</h4>' + readinessRows + '</div>' +
         adminConsentSection(c) +
         (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +

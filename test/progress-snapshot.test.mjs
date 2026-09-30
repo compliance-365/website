@@ -31,7 +31,7 @@ describe('buildProgressSnapshot()', () => {
     assert.deepEqual(snap.path.phases, [{ phase: 'Set up', done: 1, total: 2 }, { phase: 'Document', done: 0, total: 1 }]);
   });
   test('clauses and Annex A are separate measures', () => {
-    assert.deepEqual(snap.clauses.iso27001, { clauses: 2, implemented: 1, complete: 1, reqMet: 4, reqTotal: 7 });
+    assert.deepEqual(snap.clauses.iso27001, { clauses: 2, implemented: 1, complete: 1, reqMet: 4, reqTotal: 7, pct: 57 });
     assert.deepEqual(snap.annexA.iso27001, { applicable: 3, implemented: 1, inProgress: 1, notStarted: 1, pct: 33 });
   });
   test('documents, registers and the scope statement', () => {
@@ -65,5 +65,28 @@ describe('the client saves it, the console syncs and shows it', () => {
   test('the client panel shows it', () => {
     assert.match(owner, /setupSection\(c\) \+\n\s+progressSection\(c\) \+/);
     assert.match(owner, /clauses 4–10/);
+  });
+});
+
+describe('clauses and Annex A as two percentages', () => {
+  test('clauseReadiness(): requirements met over total, 100 only when all are met', () => {
+    assert.deepEqual(Lib.clauseReadiness([{ met: 3, total: 3 }, { met: 1, total: 4 }]), { met: 4, total: 7, pct: 57 });
+    assert.equal(Lib.clauseReadiness([{ met: 199, total: 200 }]).pct, 99);
+    assert.equal(Lib.clauseReadiness([{ met: 2, total: 2 }]).pct, 100);
+    assert.deepEqual(Lib.clauseReadiness([]), { met: 0, total: 0, pct: 0 });
+  });
+  test('the snapshot carries the clause percentage', () => {
+    const s = Lib.buildProgressSnapshot({ clausesByFw: { iso27001: [{ status: 'Implemented', met: 3, total: 3 }, { status: 'Not started', met: 1, total: 4 }] } });
+    assert.equal(s.clauses.iso27001.pct, 57);
+  });
+  test('the dashboard shows a clause tile beside each ISO framework’s Annex A tile', () => {
+    assert.match(app, /var MS_CLAUSE_FWS = \['iso27001', 'iso42001', 'iso27701'\];/);
+    assert.match(app, /' clauses 4–10<\/span><div class="sub">' \+ cr\.met \+ ' of ' \+ cr\.total \+ ' clause requirements met<\/div>'/);
+    assert.match(app, /\(isMs \? ' Annex A controls' : ''\)/);
+  });
+  test('the console shows both percentages', () => {
+    assert.match(owner, /<h4>Readiness<\/h4>/);
+    assert.match(owner, /' clauses 4–10<\/span><b>' \+ clausePct\[fw\]\.pct \+ '%<\/b>/);
+    assert.match(owner, /' Annex A controls', esc\(x\.pct \+ '% · '/);
   });
 });

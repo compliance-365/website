@@ -4472,7 +4472,35 @@ function showModal(opts) {
     if (cachedDoc) { cachedDoc.status = 'Approved'; cachedDoc.tplId = cachedDoc.tplId || t.id; }
     else if (Array.isArray(window._docs)) window._docs.push({ name: name, status: 'Approved', tplId: t.id, url: approvedDoc && approvedDoc.url });
     var clauseNote = approvedDoc && approvedDoc.url ? applyClauseDocumentUpdates(t.id, approvedDoc.url, 'approved') : '';
+    if (approvedDoc && approvedDoc.url) implementDocumentControls(t.id, approvedDoc.url, vals.approvedBy, new Date().toISOString().slice(0, 10));
     return { approvedDoc: approvedDoc, clauseNote: clauseNote };
+  }
+
+  /* Marks Implemented the few controls whose requirement is the approved
+     document itself (DOCUMENT_IMPLEMENTED_CONTROLS in lib.js), with the
+     document as evidence and the approval as the verification. Runs on
+     approval, and on load for documents approved before this existed. */
+  function implementDocumentControls(tplId, docUrl, approvedBy, approvalDate) {
+    if (!S || !S.controls || READONLY) return 0;
+    var list = window.CheckpointLib.controlsImplementedByDocument(tplId, S.controls, docUrl);
+    list.forEach(function (c) {
+      var before = c.st;
+      c.st = 'Implemented';
+      if (!c.evidenceUrl) c.evidenceUrl = docUrl;
+      c.verified = approvalDate || c.verified || '';
+      c.verifiedBy = approvedBy || c.verifiedBy || '';
+      audit('Control status changed', 'Control', c.fw + '|' + c.id, before, 'Implemented (approved document is the control)');
+      Store.updateControl(c).catch(function (e) { warn(e); });
+    });
+    return list.length;
+  }
+  function implementControlsFromApprovedDocuments(docs) {
+    var n = 0;
+    (docs || []).forEach(function (d) {
+      if (d && d.tplId && d.url && docStatusOf(d) === 'Approved') n += implementDocumentControls(d.tplId, d.url, d.approvedBy || '', d.approvalDate || '');
+    });
+    if (n) { renderSoa(); renderDash(); }
+    return n;
   }
 
   function templateControlsPresent(codes) {
@@ -4903,6 +4931,7 @@ function showModal(opts) {
     if (window._docs) return;
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      implementControlsFromApprovedDocuments(docs);
       /* The policy and bcp checks score from this register, and it was
          empty when applyRegisterCheckResults() last ran — recompute now
          that it is loaded, or those two would sit on a first-paint
@@ -5411,6 +5440,7 @@ function showModal(opts) {
 
     /* one readiness tile per purchased framework, each with its own trend
        vs the per-framework readiness snapshotted at the last scan */
+    var clauseCtx = clauseContext();
     var fwTiles = entitledFrameworks().map(function (fw) {
       var applicable = frameworkAppRows(fw);
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
@@ -5423,7 +5453,18 @@ function showModal(opts) {
          strip now says what it is once, in its section heading, and each
          tile says only which framework it is; the readiness reading is
          carried by the figure, the % sign and the meter beneath it. */
-      return '<div class="card kpi" data-action="App.goSoaFw" data-id="' + fw + '"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div>' + kpiMeter({ value: impl, max: applicable.length }) + '</div>';
+      /* ISO management-system frameworks get two tiles: the clauses
+         (4-10) and the Annex A controls, measured apart as an auditor
+         tests them apart. */
+      var isMs = MS_CLAUSE_FWS.indexOf(fw) !== -1;
+      var clauseTile = '';
+      if (isMs) {
+        var cr = window.CheckpointLib.clauseReadiness(visibleClauses().filter(function (c) { return (c.fw || 'iso27001') === fw; }).map(function (c) {
+          var cl = clauseChecklistFor(c, clauseCtx); return { met: cl.met, total: cl.total };
+        }));
+        clauseTile = '<div class="card kpi" data-action="App.go" data-id="clauses"><div class="kpi-num"><b data-count="' + cr.pct + '">' + cr.pct + '<small>%</small></b></div><span>' + esc(fwName(fw)) + ' clauses 4–10</span><div class="sub">' + cr.met + ' of ' + cr.total + ' clause requirements met</div>' + kpiMeter({ value: cr.met, max: cr.total }) + '</div>';
+      }
+      return clauseTile + '<div class="card kpi" data-action="App.goSoaFw" data-id="' + fw + '"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>' + esc(fwName(fw)) + (isMs ? ' Annex A controls' : '') + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div>' + kpiMeter({ value: impl, max: applicable.length }) + '</div>';
     }).join('');
     /* The posture score leads the view on its own, at hero size — it is
        the number the gauge, the trend chart and the favicon are all
@@ -12490,6 +12531,7 @@ function showModal(opts) {
     } catch (e) { warn(e); }
   }
 
+  var MS_CLAUSE_FWS = ['iso27001', 'iso42001', 'iso27701'];
   function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
