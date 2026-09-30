@@ -2618,7 +2618,7 @@
      framework's code format is documented at each seed site (see
      store.js's ISO 27001 seed and the checkpoint-content/*.json packs
      for the others): ISO 27001/42001/27701 codes are dot-segmented
-     (e.g. "A.5.29", "AI.3.2", "P.7.2.8") and the first two segments are
+     (e.g. "A.5.29", "AI.3.2", "A.1.2.9") and the first two segments are
      the theme; SOC 2 codes are a letter prefix + number run together
      (e.g. "CC6.1", "A1.2", "PI1.3") so the leading letters are the
      theme; Essential Eight codes share a "<strategy>-MLx" suffix
@@ -6540,7 +6540,7 @@
   /* The privacy risks: categorised as Privacy, or treated by an ISO
      27701 Annex A control (P.* codes). */
   function isPrivacyRisk(r) {
-    return !!r && (r.cat === 'Privacy' || (r.controls || []).some(function (c) { return /^P\./.test(String(c)); }));
+    return !!r && (r.cat === 'Privacy' || (r.controls || []).some(function (c) { return /^A\.[123]\.\d/.test(String(c)); }));
   }
 
   /* Register rules for `record` sources. Same shape as the Stage 1

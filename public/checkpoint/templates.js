@@ -27,7 +27,7 @@
         SaaS vendor, rather than only as controller of its own data).
         Several of these are also tagged 'iso42001', not by assumption
         but because store.js's own control map cross-references them
-        (e.g. P.7.2.5 Privacy impact assessment maps to AI.5.2 AI system
+        (e.g. A.1.2.6 Privacy impact assessment maps to AI.5.2 AI system
         impact assessment) — the same underlying discipline serves both
         frameworks' risk-to-individuals concern.
    The ISO 27001 portion covers two things:
@@ -184,7 +184,7 @@ window.POLICY_TEMPLATES = [
        responsibilities section (see the `roles` array above), so
        linking it as A.5.2's evidence too is earned, not claimed: any
        OTHER policy template with no roles section stays unmapped. */
-    controls: ['A.5.1', 'A.5.2', 'A.5.4', 'CPS234.13', 'CPS234.14', 'CPS234.15', 'CPS234.18', 'CPS234.19'],
+    controls: ['A.5.1', 'A.5.2', 'A.5.4', 'CPS234.13', 'CPS234.14', 'CPS234.15', 'CPS234.18', 'CPS234.19', 'A.3.3', 'A.3.4'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf', 'cps234']
   },
   {
@@ -315,7 +315,7 @@ window.POLICY_TEMPLATES = [
       'Logging & Monitoring Policy'
     ],
     reviewCadence: 'Every six months, alongside the scheduled access review, or sooner following a significant access-related incident.',
-    controls: ['A.5.15', 'A.5.16', 'A.5.18'],
+    controls: ['A.5.15', 'A.5.16', 'A.5.18', 'A.3.8', 'A.3.9'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
@@ -410,7 +410,7 @@ window.POLICY_TEMPLATES = [
        APRA named and everyone else sees their own regime. The specific
        clocks live in the CPS 234 pack's guidance, which is where
        framework-specific numbers belong. */
-    controls: ['A.5.5', 'A.5.24', 'A.5.25', 'A.5.26', 'A.5.27', 'A.5.28', 'A.6.8', 'CPS234.23', 'CPS234.24', 'CPS234.25', 'CPS234.26', 'CPS234.35', 'CPS234.36'],
+    controls: ['A.5.5', 'A.5.24', 'A.5.25', 'A.5.26', 'A.5.27', 'A.5.28', 'A.6.8', 'CPS234.23', 'CPS234.24', 'CPS234.25', 'CPS234.26', 'CPS234.35', 'CPS234.36', 'A.3.11', 'A.3.12'],
     frameworks: ['iso27001', 'iso27701', 'nistcsf', 'dispirap', 'cps234']
   },
   {
@@ -540,7 +540,7 @@ window.POLICY_TEMPLATES = [
       'Business Continuity & Disaster Recovery Plan'
     ],
     reviewCadence: 'Annually for standard suppliers; more frequently for any supplier assessed as Critical or High risk.',
-    controls: ['A.5.19', 'A.5.20', 'A.5.22', 'CPS234.16', 'CPS234.22', 'CPS234.28'],
+    controls: ['A.5.19', 'A.5.20', 'A.5.22', 'CPS234.16', 'CPS234.22', 'CPS234.28', 'A.3.10'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap', 'cps234']
   },
   {
@@ -603,7 +603,7 @@ window.POLICY_TEMPLATES = [
       'Record of Processing Activities & Data Handling Procedure'
     ],
     reviewCadence: 'Annually, or when a new category of sensitive information is introduced into the business.',
-    controls: ['A.5.12', 'A.5.13', 'A.5.14', 'CPS234.20'],
+    controls: ['A.5.12', 'A.5.13', 'A.5.14', 'CPS234.20', 'A.3.5', 'A.3.6', 'A.3.7'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'cps234']
   },
   {
@@ -672,7 +672,7 @@ window.POLICY_TEMPLATES = [
        "significant changes are threat-modelled before implementation"
        is A.8.27, and "production data is not used in lower environments
        without de-identification" is A.8.33 (test information). */
-    controls: ['A.8.25', 'A.8.26', 'A.8.27', 'A.8.28', 'A.8.31', 'A.8.33'],
+    controls: ['A.8.25', 'A.8.26', 'A.8.27', 'A.8.28', 'A.8.31', 'A.8.33', 'A.3.27', 'A.3.28', 'A.3.29', 'A.3.31'],
     frameworks: ['iso27001', 'iso27701', 'iso42001', 'soc2']
   },
   {
@@ -811,7 +811,7 @@ window.POLICY_TEMPLATES = [
       'Incident Response Plan'
     ],
     reviewCadence: 'Annually, or whenever privacy law or the organisation’s data handling practices change materially.',
-    controls: ['A.5.34', 'P.7.2.2'],
+    controls: ['A.5.34', 'A.1.2.3'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -874,7 +874,7 @@ window.POLICY_TEMPLATES = [
       'Asset Management Policy'
     ],
     reviewCadence: 'Annually, or sooner if a cryptographic weakness is disclosed that affects the algorithms or protocols the organisation relies on.',
-    controls: ['A.8.24'],
+    controls: ['A.8.24', 'A.3.26'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
@@ -937,7 +937,7 @@ window.POLICY_TEMPLATES = [
       'Cryptography Policy'
     ],
     reviewCadence: 'Annually, or when the organisation’s logging tooling, retention obligations or monitored event set changes materially.',
-    controls: ['A.8.15', 'A.8.16', 'A.8.17'],
+    controls: ['A.8.15', 'A.8.16', 'A.8.17', 'A.3.25'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
@@ -1133,7 +1133,7 @@ window.POLICY_TEMPLATES = [
     /* A.6.3 added — this document's own policyStatements commit to
        "Security awareness training... completed at induction... and
        refreshed at least annually", which is A.6.3 verbatim. */
-    controls: ['A.6.1', 'A.6.2', 'A.6.3', 'A.6.4', 'A.6.5', 'A.6.6'],
+    controls: ['A.6.1', 'A.6.2', 'A.6.3', 'A.6.4', 'A.6.5', 'A.6.6', 'A.3.17', 'A.3.18'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap']
   },
   {
@@ -1326,7 +1326,7 @@ window.POLICY_TEMPLATES = [
        appropriate to its criticality, including power, temperature and
        water" is A.7.5's own definition (protecting against physical and
        environmental threats), not just a paraphrase of A.7.1/A.7.2/A.7.7. */
-    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.5', 'A.7.7'],
+    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.5', 'A.7.7', 'A.3.19'],
     frameworks: ['iso27001', 'iso27701', 'dispirap']
   },
   {
@@ -1465,7 +1465,7 @@ window.POLICY_TEMPLATES = [
       'Supplier Security Policy'
     ],
     reviewCadence: 'Annually, and on any material change in law, regulation, jurisdiction or contractual commitment.',
-    controls: ['A.5.31', 'A.5.32', 'A.5.33'],
+    controls: ['A.5.31', 'A.5.32', 'A.5.33', 'A.3.13', 'A.3.14'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -1532,7 +1532,7 @@ window.POLICY_TEMPLATES = [
       'Asset Management Policy'
     ],
     reviewCadence: 'Annually, or when the organisation’s device platform or working arrangements change materially.',
-    controls: ['A.6.7', 'A.8.1', 'A.7.9'],
+    controls: ['A.6.7', 'A.8.1', 'A.7.9', 'A.3.22'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -1595,7 +1595,7 @@ window.POLICY_TEMPLATES = [
       'Incident Response Plan'
     ],
     reviewCadence: 'Annually, or when sharing platforms or data loss prevention controls change materially.',
-    controls: ['A.5.14'],
+    controls: ['A.5.14', 'A.3.7'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -2066,7 +2066,7 @@ window.POLICY_TEMPLATES = [
       'ISMS Scope Document'
     ],
     reviewCadence: 'Regenerate whenever a policy\'s roles table changes, so this register never drifts from the documents it is drawn from — at minimum, alongside the annual management review.',
-    controls: ['A.5.2'],
+    controls: ['A.5.2', 'A.3.4'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'iso42001']
   },
   {
@@ -2245,7 +2245,7 @@ window.POLICY_TEMPLATES = [
       'Communication Plan'
     ],
     reviewCadence: 'Annually, and after any significant incident attributed to human error.',
-    controls: ['A.6.3'],
+    controls: ['A.6.3', 'A.3.17'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -3114,7 +3114,7 @@ window.POLICY_TEMPLATES = [
       'International PII Transfer Policy'
     ],
     reviewCadence: 'Annually, or whenever a new processing activity, system or category of personal information is introduced.',
-    controls: ['P.7.2.1', 'P.7.2.2', 'P.7.2.6', 'P.7.2.7', 'P.7.2.8', 'P.7.4.1', 'P.7.4.2', 'P.7.4.3', 'P.7.4.4', 'P.7.4.5', 'P.7.4.6', 'P.7.4.7', 'P.7.4.8', 'P.7.4.9'],
+    controls: ['A.1.2.2', 'A.1.2.3', 'A.1.2.7', 'A.1.2.8', 'A.1.2.9', 'A.1.4.2', 'A.1.4.3', 'A.1.4.4', 'A.1.4.5', 'A.1.4.6', 'A.1.4.7', 'A.1.4.8', 'A.1.4.9', 'A.1.4.10'],
     frameworks: ['iso27701', 'iso42001']
   },
   {
@@ -3181,7 +3181,7 @@ window.POLICY_TEMPLATES = [
       'AI Transparency & Information Policy'
     ],
     reviewCadence: 'Annually, or whenever the organisation’s systems or the privacy law governing individual rights change materially.',
-    controls: ['P.7.3.1', 'P.7.3.2', 'P.7.3.3', 'P.7.3.4', 'P.7.3.5', 'P.7.3.6', 'P.7.3.7', 'P.7.3.8', 'P.7.3.9', 'P.7.3.10'],
+    controls: ['A.1.3.2', 'A.1.3.3', 'A.1.3.4', 'A.1.3.5', 'A.1.3.6', 'A.1.3.7', 'A.1.3.8', 'A.1.3.9', 'A.1.3.10', 'A.1.3.11'],
     frameworks: ['iso27701', 'iso42001']
   },
   {
@@ -3243,7 +3243,7 @@ window.POLICY_TEMPLATES = [
       'Record of Processing Activities & Data Handling Procedure'
     ],
     reviewCadence: 'Annually, or when the organisation introduces a new consent-based processing activity or its consent mechanism changes.',
-    controls: ['P.7.2.3', 'P.7.2.4', 'P.7.3.4'],
+    controls: ['A.1.2.4', 'A.1.2.5', 'A.1.3.5'],
     frameworks: ['iso27701']
   },
   {
@@ -3306,7 +3306,7 @@ window.POLICY_TEMPLATES = [
       'Privacy Policy'
     ],
     reviewCadence: 'The process is reviewed annually; individual assessments are revisited whenever the processing activity they cover changes materially.',
-    controls: ['P.7.2.5'],
+    controls: ['A.1.2.6'],
     frameworks: ['iso27701', 'iso42001']
   },
   {
@@ -3369,7 +3369,7 @@ window.POLICY_TEMPLATES = [
       'PII Processor Obligations Policy'
     ],
     reviewCadence: 'Annually, or whenever a new cross-border processing arrangement, supplier or hosting location is introduced.',
-    controls: ['P.7.5.1', 'P.7.5.2', 'P.7.5.3', 'P.7.5.4', 'APP8.1'],
+    controls: ['A.1.5.2', 'A.1.5.3', 'A.1.5.4', 'A.1.5.5', 'APP8.1'],
     frameworks: ['iso27701', 'privacyact']
   },
   {
@@ -3436,7 +3436,7 @@ window.POLICY_TEMPLATES = [
       'AI Data Governance Policy'
     ],
     reviewCadence: 'Annually, or whenever the organisation takes on a new processor engagement or subcontractor arrangement.',
-    controls: ['P.8.2.1', 'P.8.2.2', 'P.8.2.3', 'P.8.2.4', 'P.8.2.5', 'P.8.2.6', 'P.8.3.1', 'P.8.4.1', 'P.8.4.2', 'P.8.4.3', 'P.8.5.1', 'P.8.5.2', 'P.8.5.3', 'P.8.5.4', 'P.8.5.5', 'P.8.5.6', 'P.8.5.7', 'P.8.5.8'],
+    controls: ['A.2.2.2', 'A.2.2.3', 'A.2.2.4', 'A.2.2.5', 'A.2.2.6', 'A.2.2.7', 'A.2.3.2', 'A.2.4.2', 'A.2.4.3', 'A.2.4.4', 'A.2.5.2', 'A.2.5.3', 'A.2.5.4', 'A.2.5.5', 'A.2.5.6', 'A.2.5.7', 'A.2.5.8', 'A.2.5.9'],
     frameworks: ['iso27701', 'iso42001']
   }
 ];

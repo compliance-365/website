@@ -20,8 +20,8 @@ window.FRAMEWORKS = {
     blurb: 'Information security management system — the full 93-control Annex A (2022 revision), across Organizational, People, Physical and Technological themes.',
     controls: [
       /* A.5 — Organizational controls (37) */
-      { code: 'A.5.1',  t: 'Policies for information security',                              app: true, map: 'SOC2 CC1.1 · NIST GV.PO' },
-      { code: 'A.5.2',  t: 'Information security roles and responsibilities',                app: true, map: 'ISO42001 AI.3.2 · NIST GV.RR' },
+      { code: 'A.5.1',  t: 'Policies for information security',                              app: true, map: 'SOC2 CC1.1 · NIST GV.PO · ISO27701 A.3.3' },
+      { code: 'A.5.2',  t: 'Information security roles and responsibilities',                app: true, map: 'ISO42001 AI.3.2 · NIST GV.RR · ISO27701 A.3.4' },
       { code: 'A.5.3',  t: 'Segregation of duties',                                          app: true, map: 'SOC2 CC5.2' },
       { code: 'A.5.4',  t: 'Management responsibilities',                                    app: true, map: 'SOC2 CC1.1' },
       { code: 'A.5.5',  t: 'Contact with authorities',                                       app: true, map: 'DISP.30' },
@@ -31,39 +31,39 @@ window.FRAMEWORKS = {
       { code: 'A.5.9',  t: 'Inventory of information and other associated assets',           app: true, map: 'SOC2 CC6.1 · NIST ID.AM' },
       { code: 'A.5.10', t: 'Acceptable use of information and other associated assets',      app: true, map: '' },
       { code: 'A.5.11', t: 'Return of assets',                                               app: true, map: '' },
-      { code: 'A.5.12', t: 'Classification of information',                                  app: true, map: 'ISO27701 P.7.2.8' },
-      { code: 'A.5.13', t: 'Labelling of information',                                        app: true, map: '' },
-      { code: 'A.5.14', t: 'Information transfer',                                            app: true, map: 'SOC2 CC6.7' },
+      { code: 'A.5.12', t: 'Classification of information',                                  app: true, map: 'ISO27701 A.3.5' },
+      { code: 'A.5.13', t: 'Labelling of information',                                        app: true, map: 'ISO27701 A.3.6' },
+      { code: 'A.5.14', t: 'Information transfer',                                            app: true, map: 'SOC2 CC6.7 · ISO27701 A.3.7' },
       { code: 'A.5.15', t: 'Access control',                                                  app: true, map: 'SOC2 CC6.1 · NIST PR.AA' },
-      { code: 'A.5.16', t: 'Identity management',                                             app: true, map: 'SOC2 CC6.2 · NIST PR.AA' },
+      { code: 'A.5.16', t: 'Identity management',                                             app: true, map: 'SOC2 CC6.2 · NIST PR.AA · ISO27701 A.3.8' },
       { code: 'A.5.17', t: 'Authentication information',                                      app: true, map: 'SOC2 CC6.1 · E8.7' },
-      { code: 'A.5.18', t: 'Access rights',                                                   app: true, map: 'SOC2 CC6.3' },
+      { code: 'A.5.18', t: 'Access rights',                                                   app: true, map: 'SOC2 CC6.3 · ISO27701 A.3.9' },
       { code: 'A.5.19', t: 'Information security in supplier relationships',                  app: true, map: 'SOC2 CC9.2 · DISP.26' },
-      { code: 'A.5.20', t: 'Addressing information security within supplier agreements',      app: true, map: 'SOC2 CC9.2' },
+      { code: 'A.5.20', t: 'Addressing information security within supplier agreements',      app: true, map: 'SOC2 CC9.2 · ISO27701 A.3.10' },
       { code: 'A.5.21', t: 'Managing information security in the ICT supply chain',           app: true, map: 'DISP.26' },
       { code: 'A.5.22', t: 'Monitoring, review and change management of supplier services',   app: true, map: 'SOC2 CC9.2' },
       { code: 'A.5.23', t: 'Information security for use of cloud services',                  app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
-      { code: 'A.5.24', t: 'Information security incident management planning & preparation', app: true, map: 'NIST RS.MA' },
+      { code: 'A.5.24', t: 'Information security incident management planning & preparation', app: true, map: 'NIST RS.MA · ISO27701 A.3.11' },
       { code: 'A.5.25', t: 'Assessment and decision on information security events',          app: true, map: 'NIST DE.AE' },
-      { code: 'A.5.26', t: 'Response to information security incidents',                      app: true, map: 'NIST RS.CO · DISP.34' },
+      { code: 'A.5.26', t: 'Response to information security incidents',                      app: true, map: 'NIST RS.CO · DISP.34 · ISO27701 A.3.12' },
       { code: 'A.5.27', t: 'Learning from information security incidents',                    app: true, map: 'NIST RC.CO' },
       { code: 'A.5.28', t: 'Collection of evidence',                                          app: true, map: '' },
       { code: 'A.5.29', t: 'Information security during disruption',                          app: true, map: 'NIST RC.RP' },
       { code: 'A.5.30', t: 'ICT readiness for business continuity',                           app: true, map: 'SOC2 A1.2 · NIST RC.RP' },
-      { code: 'A.5.31', t: 'Legal, statutory, regulatory and contractual requirements',       app: true, map: 'ISO27701 P.7.2.2' },
+      { code: 'A.5.31', t: 'Legal, statutory, regulatory and contractual requirements',       app: true, map: 'ISO27701 A.3.13' },
       { code: 'A.5.32', t: 'Intellectual property rights',                                    app: true, map: '' },
-      { code: 'A.5.33', t: 'Protection of records',                                           app: true, map: 'ISO27701 P.7.2.8' },
-      { code: 'A.5.34', t: 'Privacy and protection of PII',                                   app: true, map: 'ISO27701 P.6.2.1' },
-      { code: 'A.5.35', t: 'Independent review of information security',                      app: true, map: 'SOC2 CC4.1' },
-      { code: 'A.5.36', t: 'Compliance with policies, rules and standards',                   app: true, map: 'SOC2 CC4.1' },
+      { code: 'A.5.33', t: 'Protection of records',                                           app: true, map: 'ISO27701 A.3.14' },
+      { code: 'A.5.34', t: 'Privacy and protection of PII',                                   app: true, map: 'ISO27701 A.1.2.3 · A.3.13' },
+      { code: 'A.5.35', t: 'Independent review of information security',                      app: true, map: 'SOC2 CC4.1 · ISO27701 A.3.15' },
+      { code: 'A.5.36', t: 'Compliance with policies, rules and standards',                   app: true, map: 'SOC2 CC4.1 · ISO27701 A.3.16' },
       { code: 'A.5.37', t: 'Documented operating procedures',                                 app: true, map: 'SOC2 CC5.2' },
       /* A.6 — People controls (8) */
       { code: 'A.6.1',  t: 'Screening',                                                       app: true, map: 'DISP.4' },
       { code: 'A.6.2',  t: 'Terms and conditions of employment',                              app: true, map: '' },
-      { code: 'A.6.3',  t: 'Information security awareness, education and training',          app: true, map: 'SOC2 CC1.4 · NIST PR.AT' },
+      { code: 'A.6.3',  t: 'Information security awareness, education and training',          app: true, map: 'SOC2 CC1.4 · NIST PR.AT · ISO27701 A.3.17' },
       { code: 'A.6.4',  t: 'Disciplinary process',                                            app: true, map: '' },
       { code: 'A.6.5',  t: 'Responsibilities after termination or change of employment',      app: true, map: 'SOC2 CC6.3' },
-      { code: 'A.6.6',  t: 'Confidentiality or non-disclosure agreements',                    app: true, map: 'DISP.4' },
+      { code: 'A.6.6',  t: 'Confidentiality or non-disclosure agreements',                    app: true, map: 'DISP.4 · ISO27701 A.3.18' },
       { code: 'A.6.7',  t: 'Remote working',                                                  app: true, map: '' },
       { code: 'A.6.8',  t: 'Information security event reporting',                            app: true, map: 'ISO42001 AI.4.4' },
       /* A.7 — Physical controls (14) */
@@ -73,30 +73,30 @@ window.FRAMEWORKS = {
       { code: 'A.7.4',  t: 'Physical security monitoring',                                    app: true, map: '' },
       { code: 'A.7.5',  t: 'Protecting against physical and environmental threats',           app: true, map: '' },
       { code: 'A.7.6',  t: 'Working in secure areas',                                         app: true, map: 'DISP.13' },
-      { code: 'A.7.7',  t: 'Clear desk and clear screen',                                     app: true, map: '' },
+      { code: 'A.7.7',  t: 'Clear desk and clear screen',                                     app: true, map: 'ISO27701 A.3.19' },
       { code: 'A.7.8',  t: 'Equipment siting and protection',                                 app: true, map: '' },
       { code: 'A.7.9',  t: 'Security of assets off-premises',                                 app: true, map: '' },
-      { code: 'A.7.10', t: 'Storage media',                                                   app: true, map: 'SOC2 CC6.7' },
+      { code: 'A.7.10', t: 'Storage media',                                                   app: true, map: 'SOC2 CC6.7 · ISO27701 A.3.20' },
       { code: 'A.7.11', t: 'Supporting utilities',                                            app: true, map: '' },
       { code: 'A.7.12', t: 'Cabling security',                                                app: true, map: '' },
       { code: 'A.7.13', t: 'Equipment maintenance',                                           app: true, map: '' },
-      { code: 'A.7.14', t: 'Secure disposal or re-use of equipment',                          app: true, map: 'ISO27701 P.7.4.9' },
+      { code: 'A.7.14', t: 'Secure disposal or re-use of equipment',                          app: true, map: 'ISO27701 A.3.21' },
       /* A.8 — Technological controls (34) */
-      { code: 'A.8.1',  t: 'User endpoint devices',                                           app: true, map: 'NIST PR.DS' },
+      { code: 'A.8.1',  t: 'User endpoint devices',                                           app: true, map: 'NIST PR.DS · ISO27701 A.3.22' },
       { code: 'A.8.2',  t: 'Privileged access rights',                                        app: true, map: 'SOC2 CC6.3 · E8.5 · NIST PR.AA' },
       { code: 'A.8.3',  t: 'Information access restriction',                                  app: true, map: 'SOC2 CC6.1' },
       { code: 'A.8.4',  t: 'Access to source code',                                            app: true, map: 'SOC2 CC8.1' },
-      { code: 'A.8.5',  t: 'Secure authentication',                                            app: true, map: 'SOC2 CC6.1 · E8.7 · NIST PR.AA' },
+      { code: 'A.8.5',  t: 'Secure authentication',                                            app: true, map: 'SOC2 CC6.1 · E8.7 · NIST PR.AA · ISO27701 A.3.23' },
       { code: 'A.8.6',  t: 'Capacity management',                                             app: true, map: '' },
       { code: 'A.8.7',  t: 'Protection against malware',                                      app: true, map: 'SOC2 CC6.8 · E8.1 · NIST DE.CM' },
       { code: 'A.8.8',  t: 'Management of technical vulnerabilities',                         app: true, map: 'SOC2 CC7.1 · E8.2 · NIST ID.RA' },
       { code: 'A.8.9',  t: 'Configuration management',                                        app: true, map: 'SOC2 CC5.2' },
-      { code: 'A.8.10', t: 'Information deletion',                                            app: true, map: 'ISO27701 P.7.4.9' },
-      { code: 'A.8.11', t: 'Data masking',                                                     app: true, map: 'ISO27701 P.7.4.4' },
+      { code: 'A.8.10', t: 'Information deletion',                                            app: true, map: 'ISO27701 A.1.4.6' },
+      { code: 'A.8.11', t: 'Data masking',                                                     app: true, map: 'ISO27701 A.1.4.5' },
       { code: 'A.8.12', t: 'Data leakage prevention',                                          app: true, map: 'NIST PR.DS' },
-      { code: 'A.8.13', t: 'Information backup',                                              app: true, map: 'SOC2 A1.2 · E8.8 · NIST PR.DS' },
+      { code: 'A.8.13', t: 'Information backup',                                              app: true, map: 'SOC2 A1.2 · E8.8 · NIST PR.DS · ISO27701 A.3.24' },
       { code: 'A.8.14', t: 'Redundancy of information processing facilities',                 app: true, map: 'NIST PR.IR' },
-      { code: 'A.8.15', t: 'Logging',                                                         app: true, map: 'SOC2 CC7.2 · NIST DE.AE' },
+      { code: 'A.8.15', t: 'Logging',                                                         app: true, map: 'SOC2 CC7.2 · NIST DE.AE · ISO27701 A.3.25' },
       { code: 'A.8.16', t: 'Monitoring activities',                                           app: true, map: 'SOC2 CC4.1 · NIST DE.CM' },
       { code: 'A.8.17', t: 'Clock synchronization',                                           app: true, map: '' },
       { code: 'A.8.18', t: 'Use of privileged utility programs',                              app: true, map: 'SOC2 CC6.3' },
@@ -105,16 +105,16 @@ window.FRAMEWORKS = {
       { code: 'A.8.21', t: 'Security of network services',                                    app: true, map: '' },
       { code: 'A.8.22', t: 'Segregation of networks',                                         app: true, map: 'NIST PR.IR' },
       { code: 'A.8.23', t: 'Web filtering',                                                   app: true, map: '' },
-      { code: 'A.8.24', t: 'Use of cryptography',                                             app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
-      { code: 'A.8.25', t: 'Secure development life cycle',                                   app: true, map: 'ISO42001 AI.6.2.3' },
-      { code: 'A.8.26', t: 'Application security requirements',                               app: true, map: 'SOC2 CC8.1' },
-      { code: 'A.8.27', t: 'Secure system architecture and engineering principles',           app: true, map: '' },
+      { code: 'A.8.24', t: 'Use of cryptography',                                             app: true, map: 'SOC2 CC6.7 · NIST PR.DS · ISO27701 A.3.26' },
+      { code: 'A.8.25', t: 'Secure development life cycle',                                   app: true, map: 'ISO42001 AI.6.2.3 · ISO27701 A.3.27' },
+      { code: 'A.8.26', t: 'Application security requirements',                               app: true, map: 'SOC2 CC8.1 · ISO27701 A.3.28' },
+      { code: 'A.8.27', t: 'Secure system architecture and engineering principles',           app: true, map: 'ISO27701 A.3.29' },
       { code: 'A.8.28', t: 'Secure coding',                                                   app: true, map: 'SOC2 CC8.1' },
       { code: 'A.8.29', t: 'Security testing in development and acceptance',                  app: true, map: 'ISO42001 AI.6.2.6' },
-      { code: 'A.8.30', t: 'Outsourced development',                                          app: true, map: 'SOC2 CC9.2' },
+      { code: 'A.8.30', t: 'Outsourced development',                                          app: true, map: 'SOC2 CC9.2 · ISO27701 A.3.30' },
       { code: 'A.8.31', t: 'Separation of development, test and production environments',     app: true, map: '' },
       { code: 'A.8.32', t: 'Change management',                                               app: true, map: 'SOC2 CC8.1 · ISO42001 AI.6.2.3' },
-      { code: 'A.8.33', t: 'Test information',                                                app: true, map: '' },
+      { code: 'A.8.33', t: 'Test information',                                                app: true, map: 'ISO27701 A.3.31' },
       { code: 'A.8.34', t: 'Protection of information systems during audit testing',          app: true, map: 'DISP.16' }
     ]
   },
@@ -144,7 +144,7 @@ window.FRAMEWORKS = {
   },
   iso27701: {
     id: "iso27701", name: "ISO 27701", tag: "Privacy",
-    blurb: "Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Full Annex A (31 PII controller controls) and Annex B (18 PII processor controls), 2019 edition.",
+    blurb: "Privacy Information Management System (ISO/IEC 27701:2025) — a standalone privacy management system, certifiable on its own or alongside ISO 27001, for organisations handling personal information under the Privacy Act, GDPR or health regulation. Clauses 4–10 plus the 78 Annex A controls: 31 for PII controllers (Table A.1), 18 for PII processors (Table A.2) and 29 shared information security controls (Table A.3), each A.3 control mapped to its ISO 27001 counterpart.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/iso27701.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
@@ -370,7 +370,7 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "soc2", code: "CC7.3", t: "Evaluation of security incidents", app: true, map: "ISO27001 A.5.25", cat: "CC" },
     { fw: "soc2", code: "A1.1", t: "Capacity monitoring and forecasting against current and projected demand", app: true, map: "ISO27001 A.8.6", cat: "A" },
     { fw: "soc2", code: "PI1.1", t: "Data quality requirements defined for processing inputs", app: true, map: "ISO42001 AI.7.4", cat: "PI" },
-    { fw: "soc2", code: "P2.1", t: "Choice and consent obtained for collection and use of personal information", app: true, map: "ISO27701 P.7.2.3 · P.7.2.4", cat: "P" },
+    { fw: "soc2", code: "P2.1", t: "Choice and consent obtained for collection and use of personal information", app: true, map: "ISO27701 A.1.2.4 · A.1.2.5", cat: "P" },
     { fw: "soc2", code: "P8.1", t: "Ongoing monitoring and enforcement of privacy commitments, including complaint handling", app: true, map: "ISO27001 A.5.35", cat: "P" }
   ],
   /* Three strategies carry their COMPLETE ML1-ML3 ladder; the other
@@ -428,16 +428,16 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "iso42001", code: "AI.10.4", t: "Customers", app: true, map: "" }
   ],
   iso27701: [
-    { fw: "iso27701", code: "P.6.2.1", t: "Policies for information security addressing privacy", app: true, map: "ISO27001 A.5.1" },
-    { fw: "iso27701", code: "P.7.2.5", t: "Privacy impact assessment", app: true, map: "ISO42001 AI.5.2" },
-    { fw: "iso27701", code: "P.7.3.3", t: "Information for decisions on automated processing", app: true, map: "ISO42001 AI.9.3" },
-    { fw: "iso27701", code: "P.7.3.8", t: "Respond to PII principal requests within a defined timeframe", app: true, map: "" },
-    { fw: "iso27701", code: "P.7.4.4", t: "PII minimisation objectives", app: true, map: "ISO42001 AI.7.4" },
-    { fw: "iso27701", code: "P.7.4.9", t: "De-identification and deletion at end of processing", app: true, map: "ISO27001 A.8.13" },
-    { fw: "iso27701", code: "P.8.2.2", t: "Organization's purposes for processing PII", app: true, map: "ISO27001 A.5.19" },
-    { fw: "iso27701", code: "P.8.3.1", t: "Determine and fulfil obligations to PII principals (processor)", app: true, map: "ISO42001 AI.9.2" },
-    { fw: "iso27701", code: "P.8.5.2", t: "Maintain a list of countries and organisations PII may be transferred to, on the customer's behalf", app: true, map: "ISO27001 A.5.31" },
-    { fw: "iso27701", code: "P.8.5.8", t: "Notify the customer of, and allow objection to, any change of subcontractor processing PII", app: true, map: "ISO27001 A.5.22" }
+    { fw: "iso27701", code: "A.3.3", t: "Policies for information security", app: true, map: "ISO27001 A.5.1" },
+    { fw: "iso27701", code: "A.1.2.6", t: "Privacy impact assessment", app: true, map: "ISO42001 AI.5.2" },
+    { fw: "iso27701", code: "A.1.3.4", t: "Providing information to PII principals", app: true, map: "ISO42001 AI.9.3" },
+    { fw: "iso27701", code: "A.1.3.9", t: "Providing copy of PII processed", app: true, map: "" },
+    { fw: "iso27701", code: "A.1.4.5", t: "PII minimization objectives", app: true, map: "ISO42001 AI.7.4" },
+    { fw: "iso27701", code: "A.1.4.10", t: "PII transmission controls", app: true, map: "ISO27001 A.5.14" },
+    { fw: "iso27701", code: "A.2.2.3", t: "Organization’s purposes", app: true, map: "ISO27001 A.5.19" },
+    { fw: "iso27701", code: "A.2.3.2", t: "Comply with obligations to PII principals", app: true, map: "ISO42001 AI.9.2" },
+    { fw: "iso27701", code: "A.2.5.3", t: "Countries and international organizations for PII transfer", app: true, map: "ISO27001 A.5.31" },
+    { fw: "iso27701", code: "A.2.5.9", t: "Change of subcontractor to process PII", app: true, map: "ISO27001 A.5.22" }
   ],
   dispirap: [
     { fw: "dispirap", code: "DISP.1", t: "Membership eligibility criteria maintained (Australian entity, ownership/control disclosed, no adverse security information)", app: true, map: "ISO27001 A.5.1", domain: "Governance", membershipLevel: "Entry" },
@@ -564,7 +564,7 @@ window.DEMO_CHECK_SEEDS = {
   essential8: { macro: ['E8.3'], 'mfa-all': ['E8.7'], patch: ['E8.6'] },
   is18: { 'mfa-all': ['IS18.4.7'], dlp: ['IS18.3.3'] },
   iso42001: { riskyapps: ['AI.4.4'] },
-  iso27701: { dlp: ['P.7.4.9'] },
+  iso27701: { dlp: ['A.1.4.10'] },
   soc2: { riskyusers: ['CC7.3'], alerts: ['CC7.3'] },
   nistcsf: { 'mfa-all': ['PR.AA'], device: ['PR.DS'], alerts: ['DE.CM'] },
   rffr: { 'mfa-all': ['ISM-1504'], patch: ['ISM-1876'] }
@@ -1399,25 +1399,19 @@ window.CHECK_RFFR = {};
    20 checks across the same 10 distinct codes. */
 window.CHECK_ISO42001 = {};
 
-/* Posture check id -> ISO 27701 (PIMS, 2019 edition) control code(s) it
-   speaks to — same flat, suggest-only contract as CHECK_ISO42001 above.
-   Ships as part of the encrypted iso27701 content pack
-   (checkpoint-content/iso27701.json, extra.checkIso27701); empty until a
-   verified activation licenses iso27701. ISO 27701's own P.7.x/P.8.x
-   control set is deliberately the privacy-specific layer on top of an
-   ISMS — consent, data-subject rights, cross-border transfer, processor
-   contracts — so unlike ISO 42001's Annex A, most of it is legal/process
-   and genuinely has no live Graph signal. The honest automatable subset:
-   data-in-transit protection for PII (P.7.4.9, P.8.4.3), logging of
-   third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3), processor
-   due-diligence evidence via external access (P.7.2.6), and PII
-   classification records (P.7.2.8, via 'labels' — the same
-   correspondence ISO 27001's own A.5.12 already carries in its map
-   field). P.8.5.6/P.8.5.7 (subcontractor disclosure/authorisation to
-   the customer) would need 'supplier', which is scored:false — dropped
-   rather than left as dead weight. Consent records, DSAR handling,
-   retention schedules and cross-border legal basis stay self-reported.
-   6 checks across 7 distinct codes. */
+/* Posture check id -> ISO 27701:2025 control code(s) it speaks to —
+   same flat, suggest-only contract as CHECK_ISO42001 above. Ships as part
+   of the encrypted iso27701 content pack (checkpoint-content/
+   iso27701.json, extra.checkIso27701); empty until a verified activation
+   licenses iso27701. Tables A.1 (controllers) and A.2 (processors) are
+   mostly legal and process controls with no live Graph signal; the
+   automatable part there is PII transmission (A.1.4.10, A.2.4.4),
+   disclosure logging (A.1.5.4, A.1.5.5, A.2.5.4), processor contracts via
+   external access (A.1.2.7) and records of processing via labels
+   (A.1.2.9). Table A.3's shared security controls take the same checks
+   as their ISO 27001 counterparts (A.3.23 Secure authentication from the
+   MFA checks, A.3.25 Logging, and so on). Consent records, requests from
+   individuals, retention schedules and transfer bases stay self-reported. */
 window.CHECK_ISO27701 = {};
 
 /* Posture check id -> SOC 2 Trust Services Criteria control code(s) it

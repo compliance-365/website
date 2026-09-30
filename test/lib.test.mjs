@@ -1393,7 +1393,8 @@ describe('constellationTheme()', () => {
   test('ISO 27001/42001/27701 use the first two dot-segments', () => {
     assert.equal(constellationTheme('iso27001', 'A.5.29'), 'A.5');
     assert.equal(constellationTheme('iso42001', 'AI.3.2'), 'AI.3');
-    assert.equal(constellationTheme('iso27701', 'P.7.2.8'), 'P.7');
+    assert.equal(constellationTheme('iso27701', 'A.1.2.9'), 'A.1');
+    assert.equal(constellationTheme('iso27701', 'A.3.23'), 'A.3');
   });
   test('SOC 2 uses the leading letter prefix', () => {
     assert.equal(constellationTheme('soc2', 'CC6.1'), 'CC');

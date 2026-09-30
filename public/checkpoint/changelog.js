@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.111.0',
+    date: '2026-09-30',
+    entries: [
+      'ISO 27701 now uses the 2025 edition\u2019s Annex A exactly: 78 controls across Table A.1 (31 for PII controllers), Table A.2 (18 for PII processors) and the new Table A.3 (29 shared information security controls). Each A.3 control is mapped to its ISO 27001 counterpart, takes the same posture scan checks, and is linked from the same policy templates, so work done for ISO 27001 counts towards it.',
+      'Risks linked to any ISO 27701 control are recognised as privacy risks, and the privacy awareness course now counts towards A.3.17.'
+    ]
+  },
+  {
     version: '1.110.3',
     date: '2026-09-30',
     entries: [

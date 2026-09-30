@@ -226,7 +226,7 @@ window.TRAINING_COURSES = [
     audience: 'Everyone who handles personal information — in practice, almost everyone',
     duration: 15,
     frameworks: ['iso27701', 'iso27001', 'soc2'],
-    controls: ['A.5.34', 'A.6.3', 'A.5.12', 'P.7.2.1', 'P.7.3.1', 'P.7.4.1'],
+    controls: ['A.5.34', 'A.6.3', 'A.5.12', 'A.1.2.2', 'A.1.3.2', 'A.1.4.2', 'A.3.17'],
     clauses: 'ISO 27701 Clause 7 (PII controller obligations); ISO 27001 Clause 7.3',
     purpose: 'Privacy obligations are mostly discharged in ordinary work — what you collect, who you send it to, how long you keep it — not in a legal department. This course covers the handful of judgements that come up routinely, and what to do in the first hour after something goes wrong.',
     modules: [
