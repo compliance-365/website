@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.111.1',
+    date: '2026-09-30',
+    entries: [
+      'Asset register: retiring a synced asset now sticks. Previously the next Sync from Microsoft 365 set any asset it still found back to Active, so retiring a synced app that is not really an asset (sign-in plumbing, for example) was undone.'
+    ]
+  },
+  {
     version: '1.111.0',
     date: '2026-09-30',
     entries: [
