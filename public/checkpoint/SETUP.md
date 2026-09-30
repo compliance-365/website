@@ -1211,9 +1211,9 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
 
 - **Full framework control sets**: ISO 27001 (93), ISO 42001 (38), SOC 2
   (61 — the full mandatory Common Criteria series plus Availability,
-  Confidentiality, Processing Integrity and Privacy), ISO 27701 (50 — the
-  full Annex A/B PII controller and processor control sets, 2019
-  edition), DISP/IRAP (34 — organised by DISP membership level, see
+  Confidentiality, Processing Integrity and Privacy), ISO 27701 (78 — the
+  2025 edition's full Annex A: Table A.1 PII controllers, A.2 PII
+  processors and A.3 shared security controls), DISP/IRAP (34 — organised by DISP membership level, see
   below), NIST CSF (22 categories seeded by default, optionally 106
   subcategories on top — see below), Essential Eight (32 — 8 strategies
   × the ACSC Essential Eight Maturity Model's 3 maturity levels, see
@@ -1299,10 +1299,10 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   on top of an ISMS (consent, data-subject rights, cross-border
   transfer, processor contracts), so most of it is genuinely legal/
   process rather than technical. 6 checks across 7 distinct codes:
-  data-in-transit protection for PII (P.7.4.9, P.8.4.3), logging of
-  third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3), processor
-  due diligence via external access (P.7.2.6), and PII classification
-  records (P.7.2.8).
+  data-in-transit protection for PII (A.1.4.10, A.2.4.4), logging of
+  third-party PII disclosures (A.1.5.4, A.1.5.5, A.2.5.4), processor
+  due diligence via external access (A.1.2.7), and PII classification
+  records (A.1.2.9).
 - **SOC 2 automated subset**: the largest automated subset of any
   framework (`CHECK_SOC2` in store.js — 19 checks across 13 Trust
   Services Criteria codes), because the Common Criteria's CC6.x

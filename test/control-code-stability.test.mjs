@@ -13,6 +13,11 @@
 // it. To add codes: run `node scripts/snapshot-control-codes.mjs` (with
 // checkpoint-content/ linked) and commit the fixture. To retire a code,
 // don't — mark it not applicable or supersede it in its title instead.
+//
+// One deliberate exception, in 1.111.0: ISO 27701's 2019 codes (P.6.2.1,
+// P.7.x.x, P.8.x.x) were removed when the 2025 edition's Annex A (A.1.x,
+// A.2.x, A.3.x) replaced them. No client held ISO 27701 records, so
+// nothing was orphaned. Do not repeat this for a framework in use.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

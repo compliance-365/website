@@ -330,7 +330,7 @@ describe('ISO/IEC 27701:2025 as a standalone privacy information management syst
   });
 
   test('privacy rules read privacy risks, the privacy course, the Privacy Policy and ISO 27701 audits', () => {
-    const risks = [{ status: 'Open', cat: 'Supplier', owner: '' }, { status: 'Open', cat: 'Privacy', owner: 'A' }, { status: 'Open', controls: ['P.7.2.5'], owner: 'B' }];
+    const risks = [{ status: 'Open', cat: 'Supplier', owner: '' }, { status: 'Open', cat: 'Privacy', owner: 'A' }, { status: 'Open', controls: ['A.1.2.6'], owner: 'B' }];
     const r = rec('riskOwners', { risks });
     assert.equal(r.st, 'done');
     assert.match(r.note, /2 privacy risk/);

@@ -529,7 +529,10 @@ describe('content packs — checks no pack maps', { skip: SKIP }, () => {
     // 11.2), privacy-srr (APP 12.1/13.1), xdr-incidents and
     // incident-lessons (NDB 30-day assessment) — the first pack to map
     // any of the four.
-    assert.equal(unmapped.length, 14, 'unmapped checks:\n  ' + unmapped.join('\n  '));
+    // 14 -> 6 when ISO 27701:2025's Table A.3 shared security controls
+    // took the same checks as their ISO 27001 counterparts (A.3.23
+    // Secure authentication, A.3.25 Logging, and so on).
+    assert.equal(unmapped.length, 6, 'unmapped checks:\n  ' + unmapped.join('\n  '));
   });
 });
 
