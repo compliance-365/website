@@ -3688,6 +3688,18 @@ function showModal(opts) {
     return (window.ORG_PROFILE_FIELDS || []).some(function (f) { return !!orgProfileValue(f.key); });
   }
 
+  /* A starting point for "Technology in scope": the applications,
+     cloud services and information locations in the asset register.
+     Only a draft; the practitioner adds the hosting platform and
+     anything the register cannot see. */
+  function technologyDraftFromRegister() {
+    var names = (S && S.assets || []).filter(function (a) {
+      return a && a.status !== 'Retired' && ['Application', 'Cloud service', 'Information location'].indexOf(a.type) !== -1;
+    }).map(function (a) { return a.name; }).filter(Boolean);
+    if (!names.length) return '';
+    return 'Microsoft 365 and the following systems from the asset register: ' + names.slice(0, 40).join(', ') + '. ' + window.CheckpointLib.pendingMarker('the hosting platform and region for the products, and code repositories');
+  }
+
   function resolveOrgTokens(str) {
     if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
     /* Answers are free text and often end in a full stop; the template
@@ -3697,7 +3709,7 @@ function showModal(opts) {
     return str.replace(/\{\{(\w+)\}\}(?=(\.|,|;| —)?)/g, function (whole, token, next) {
       var f = orgProfileFieldByToken(token);
       if (!f) return '';
-      var v = orgProfileValue(f.key) || (f.required ? window.CheckpointLib.pendingMarker(f.label) : f.fallback) || '';
+      var v = window.CheckpointLib.tidyProfileAnswer(orgProfileValue(f.key)) || (f.required ? window.CheckpointLib.pendingMarker(f.label) : f.fallback) || '';
       return next ? v.replace(/\.\s*$/, '') : v;
     });
   }
@@ -16744,9 +16756,12 @@ function showModal(opts) {
         title: stepTitle(2, 'What is in scope'),
         message: 'Where the ISMS boundary sits (Clause 4.3). These are required: anything left blank shows as “[To be completed]” in the scope document until it is answered. Exclusions can be left blank if nothing is excluded.',
         fields: [
+          { id: 'legalName', label: fld('orgLegalName').label, value: orgProfileValue('orgLegalName'), placeholder: 'e.g. Contoso Pty Ltd (ABN 12 345 678 901)' },
           { id: 'businessUnits', label: fld('orgBusinessUnits').label, type: 'textarea', value: orgProfileValue('orgBusinessUnits'), placeholder: 'e.g. Engineering, Customer Support, Finance' },
           { id: 'locations', label: fld('orgLocations').label, type: 'textarea', value: orgProfileValue('orgLocations'), placeholder: 'e.g. the Brisbane office, and staff working remotely within Australia' },
           { id: 'services', label: fld('orgServices').label, type: 'textarea', value: orgProfileValue('orgServices'), placeholder: 'e.g. the hosted claims-processing platform and its support services' },
+          { id: 'people', label: fld('orgPeople').label, type: 'textarea', value: orgProfileValue('orgPeople'), placeholder: 'e.g. All employees. Contractors in Canada are in scope as personnel: they use company accounts and devices and work under our policies.' },
+          { id: 'technology', label: fld('orgTechnology').label, type: 'textarea', value: orgProfileValue('orgTechnology') || technologyDraftFromRegister(), placeholder: 'e.g. The platform hosted on Microsoft Azure (Australia East), source code in GitHub, Azure OpenAI, Microsoft 365, and staff laptops' },
           { id: 'exclusions', label: fld('orgExclusions').label, type: 'textarea', value: orgProfileValue('orgExclusions'), placeholder: 'Leave blank if nothing is excluded' }
         ],
         confirmText: 'Next'
@@ -16837,6 +16852,7 @@ function showModal(opts) {
       try {
         var map = {
           orgIndustry: step1.industry,
+          orgLegalName: step2.legalName, orgPeople: step2.people, orgTechnology: step2.technology,
           orgBusinessUnits: step2.businessUnits, orgLocations: step2.locations,
           orgServices: step2.services, orgExclusions: step2.exclusions,
           orgExternalIssues: step3.externalIssues, orgInternalIssues: step3.internalIssues, orgClimate: step3.climate,
@@ -17137,6 +17153,22 @@ function showModal(opts) {
         });
         if (answer) await App.orgProfileWizard();
         return;
+      }
+      /* The scope is the document an auditor reads first, so its answers
+         are checked for the stage 1 contradictions before approval. Not
+         blocking: some have answers the check cannot see. */
+      if (t.id === 'isms-scope') {
+        var scopeWarnings = window.CheckpointLib.scopeProfileWarnings(S.settings || {});
+        if (scopeWarnings.length) {
+          var goOn = await showModal({
+            title: 'Check the scope before approving',
+            message: 'An auditor is likely to ask about ' + (scopeWarnings.length > 1 ? 'these' : 'this') + ':\n\n' + scopeWarnings.map(function (x) { return '• ' + x; }).join('\n') +
+              '\n\nFix it in Settings → Scope & context and regenerate, or approve as it stands if it is already right.',
+            confirmText: 'Approve anyway',
+            cancelText: 'Fix first'
+          });
+          if (!goOn) return;
+        }
       }
       var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
       /* A.5.3 — checked before the approval dialog opens, so a refused

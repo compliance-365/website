@@ -1807,47 +1807,63 @@ window.POLICY_TEMPLATES = [
   {
     id: 'isms-scope',
     title: 'ISMS Scope Document',
-    purpose: 'This document defines the scope and boundaries of the organisation’s information security management system (ISMS) — the parts of the business, the locations, the information and the technology it covers, and anything deliberately excluded. It satisfies the ISO/IEC 27001 Clause 4.3 requirement to determine and document the scope of the ISMS.',
+    purpose: 'This document defines the scope and boundaries of the organisation’s information security management system (ISMS): the legal entity, products and services, business functions, people, locations and technology it covers, the interfaces with other organisations, and anything deliberately excluded. It records how the issues (Clause 4.1) and interested parties’ requirements (Clause 4.2) shaped that scope, and satisfies the ISO/IEC 27001 Clause 4.3 requirement to determine and document it.',
     scope: 'This document describes the ISMS itself: what it does and does not cover — the business units, locations and services in scope, and anything deliberately excluded.',
     policyStatements: [
       {
         rule: 'Scope statement: {{scopeStatement}}',
-        because: 'A one-sentence statement is what appears on a certificate and in customer assurance, so it must agree with the detailed scope below.'
+        because: 'A one-sentence statement is what appears on a certificate and in customer assurance, so it must name the legal entity and agree with the detailed scope below.'
       },
       {
-        rule: 'The ISMS covers the organisation’s information and the systems that process it, centred on its Microsoft 365 tenant. In scope are the following business units and teams: {{businessUnits}}.',
-        because: 'A scope stated only in general terms cannot be audited, and cannot tell anyone whether a given system is inside it.'
+        rule: 'The ISMS is that of {{legalName}}. It covers the following products and services: {{services}}.',
+        because: 'The certificate is issued to a legal entity for what it delivers, so both are stated exactly.'
       },
       {
-        rule: 'The ISMS covers work carried out at {{locations}}, in support of {{services}}.',
-        because: 'Scope is bounded by where work happens and what the organisation delivers, not by which systems happen to be easiest to assess.'
+        rule: 'Business units and functions in scope: {{businessUnits}}.',
+        because: 'A scope stated only in general terms cannot be audited, and cannot tell anyone whether a given team is inside it.'
       },
       {
-        rule: 'The needs and requirements of interested parties — {{interestedParties}} — have been identified (Clauses 4.1 and 4.2) and inform the boundaries set here.',
+        rule: 'People in scope: {{people}}',
+        because: 'Contractors are where scopes most often go wrong: they are either personnel working under the organisation’s controls or suppliers overseen through agreements, and the auditor will ask which.'
+      },
+      {
+        rule: 'Locations in scope: {{locations}}. Remote working environments are in scope for the controls the organisation applies to them, though the premises themselves are not under its control.',
+        because: 'Where work happens decides which physical and remote-working controls apply.'
+      },
+      {
+        rule: 'Technology in scope: {{technology}} Each system is recorded in the asset register with an owner and a classification.',
+        because: 'The systems that hold the organisation’s and its customers’ information are what the controls protect; a scope that does not name them cannot show they are covered.'
+      },
+      {
+        rule: 'In determining this scope, the external and internal issues identified under Clause 4.1 were considered (Clause 4.3 a). External issues: {{externalIssues}} Internal issues: {{internalIssues}}',
+        because: 'The scope has to follow from the organisation’s situation, not from which systems are easiest to assess.'
+      },
+      {
+        rule: 'The requirements of interested parties identified under Clause 4.2 were considered (Clause 4.3 b). The interested parties are {{interestedParties}}. Their requirements: {{partyRequirements}} The obligations include {{regulatory}}.',
         because: 'A scope drawn without reference to who depends on the organisation tends to exclude precisely what they care about.'
       },
       {
-        rule: 'The obligations the organisation must satisfy within this scope include: {{regulatory}}.',
-        because: 'Clause 4.2 asks not just who the interested parties are but what they require — an obligation nobody has written down is one nobody is demonstrably meeting.'
+        rule: '{{climate}}',
+        because: 'Since ISO/IEC 27001:2022 Amendment 1 (2024), the organisation must determine whether climate change is a relevant issue and consider whether interested parties have climate-related requirements.'
       },
       {
-        rule: 'The interfaces and dependencies between activities performed by the organisation and those performed by other organisations are: {{interfaces}}',
-        because: 'Clause 4.3 requires these to be considered, because the boundary of the ISMS is usually drawn at exactly these points.'
-      },
-      {
-        rule: 'The scope includes the organisation’s people, its processes, and the technology it controls; reliance on Microsoft 365 and other third-party services is in scope for oversight and managed through the Supplier Security Policy, even though those providers’ internal operations are not the organisation’s to run.',
-        because: 'Accountability for outsourced processing stays with the organisation, so excluding suppliers from scope excludes most of the actual risk.'
+        rule: 'The interfaces and dependencies between activities performed by the organisation and those performed by other organisations (Clause 4.3 c) are: {{interfaces}} The boundary of the ISMS is drawn at these points: the organisation is responsible for its side of each, and oversees the other through the Supplier Security Policy and the vendor register.',
+        because: 'Accountability for outsourced processing stays with the organisation, so these interfaces are where the ISMS boundary is tested.'
       },
       {
         rule: 'Excluded from the scope: {{exclusions}}. Any exclusion is stated explicitly with a justification, and no exclusion leaves a real information risk unmanaged.',
         because: 'An unstated exclusion is indistinguishable from an oversight, and an unjustified one is a finding.'
       },
       {
+        rule: 'The organisation establishes, implements, maintains and continually improves the ISMS within this scope, including the processes needed and their interactions (Clause 4.4).',
+        because: 'The scope is only meaningful if the management system is actually operated across all of it.'
+      },
+      {
         rule: 'This scope is documented, approved by management, and maintained as controlled documented information available to those who need it.',
         because: 'Clause 4.3 requires the scope to be available as documented information; an approved scope nobody can find does not satisfy it.'
       },
       {
-        rule: 'The scope is reviewed at least annually and whenever the organisation’s structure, locations, services, technology estate or risk profile changes materially.',
+        rule: 'The scope is reviewed at least annually as an input to management review, and whenever the organisation’s structure, products, locations, people, technology, contractors or key suppliers change materially.',
         because: 'Organisations change faster than their documentation, and a scope describing last year\'s business quietly excludes this year\'s systems.'
       }
     ],
@@ -3504,6 +3520,27 @@ window.ORG_PROFILE_FIELDS = [
   },
   {
     required: true,
+    key: 'orgLegalName', token: 'legalName', label: 'Legal name of the organisation',
+    type: 'text',
+    hint: 'As registered, with the ABN or company number. This is the name a certificate is issued to. Clause 4.3.',
+    fallback: 'the organisation'
+  },
+  {
+    required: true,
+    key: 'orgPeople', token: 'people', label: 'People in scope',
+    type: 'textarea',
+    hint: 'Employees and contractors who work inside the ISMS. Say how contractors are treated: in scope as personnel (company accounts and devices, bound by the policies), or managed as suppliers through the Supplier Security Policy.',
+    fallback: 'All employees, and contractors who work under the organisation’s policies using its accounts and devices.'
+  },
+  {
+    required: true,
+    key: 'orgTechnology', token: 'technology', label: 'Technology in scope',
+    type: 'textarea',
+    hint: 'Where the products and information live: hosting platform and region, code repositories, AI or other key services, Microsoft 365, business applications and endpoints. The asset register holds the detail.',
+    fallback: 'The organisation’s cloud platforms, business applications and endpoints, as recorded in the asset register.'
+  },
+  {
+    required: true,
     key: 'orgInterestedParties', token: 'interestedParties', label: 'Interested parties',
     type: 'textarea',
     hint: 'Who depends on the organisation, or has a say in how it handles information. Clause 4.2. Pre-filled from your industry — edit freely.',
@@ -3560,7 +3597,7 @@ window.ORG_PROFILE_FIELDS = [
     required: true,
     key: 'orgInterfaces', token: 'interfaces', label: 'Interfaces and dependencies (Clause 4.3 c)',
     type: 'textarea',
-    hint: 'Where the organisation’s activities meet those performed by others: cloud platforms, IT providers, remote working, customers.',
+    hint: 'Where the organisation’s activities meet those performed by others, naming each provider: product hosting, AI or other platform services, code repositories, Microsoft 365, IT providers, contractors, customers and remote working. Say what the organisation is responsible for at each.',
     fallback: 'Microsoft 365 and other cloud services, the organisation’s IT and other suppliers, and the customers and partners with whom information is exchanged.'
   },
   {

@@ -171,7 +171,8 @@ describe('"[To be completed]" markers', () => {
 
   test('every Clause 4 determination used by a document is required, so it can never default to a claim', () => {
     ['orgExternalIssues', 'orgInternalIssues', 'orgPartyRequirements', 'orgClimate', 'orgInterestedParties',
-      'orgRegulatory', 'orgInterfaces', 'orgScopeStatement', 'orgBusinessUnits', 'orgLocations', 'orgServices'].forEach((k) => {
+      'orgRegulatory', 'orgInterfaces', 'orgScopeStatement', 'orgBusinessUnits', 'orgLocations', 'orgServices',
+      'orgLegalName', 'orgPeople', 'orgTechnology'].forEach((k) => {
       assert.equal(ORG_PROFILE_FIELDS.find((f) => f.key === k).required, true, k);
     });
     assert.ok(!ORG_PROFILE_FIELDS.find((f) => f.key === 'orgExclusions').required, 'no exclusions is a valid answer');

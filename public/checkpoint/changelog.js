@@ -15,6 +15,7 @@ window.CHECKPOINT_CHANGELOG = [
     version: '1.112.0',
     date: '2026-09-30',
     entries: [
+      'The ISMS Scope Document now covers every Clause 4.3 requirement explicitly: the legal entity, products and services, business functions, people (including how contractors are treated), locations, technology, the Clause 4.1 issues and 4.2 requirements it was based on, the interfaces with other organisations, exclusions, and Clause 4.4. The scope questionnaire asks three new questions (legal name, people, technology; technology starts from your asset register), stray punctuation in answers is tidied, and approving the scope first checks for the contradictions an auditor picks up at stage 1.',
       'Checkpoint now keeps a short progress summary in your own Settings list: steps done on the path to certification, clause requirements met, controls implemented, documents approved, register counts and your scope statement. Your Compliance365 partner sees it when they sync, so they can see where you are and help where you are stuck. It stays in your Microsoft 365 tenant.'
     ]
   },
