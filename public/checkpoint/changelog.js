@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.6',
+    date: '2026-10-01',
+    entries: [
+      'A control’s detail panel (opened from its code or title in the Statement of Applicability) is now editable: switch Applicable on or off, set the implementation status, verify it, and link or change its evidence, without going back to the table. It also shows why the control is included, and asks for a justification as soon as a control is excluded.'
+    ]
+  },
+  {
     version: '1.112.5',
     date: '2026-10-01',
     entries: [

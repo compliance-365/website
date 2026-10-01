@@ -927,9 +927,14 @@ function showModal(opts) {
      is inert whenever ANY drawer (control, risk, action, …) is open —
      so an open drawer here can only ever be showing THIS same control,
      never a different one. */
+  /* Only when the open drawer is this control's own (openControlGuidance
+     stamps data-control-drawer on its heading): an edit made from the
+     SoA row must never swap some other open drawer for this one. */
   function refreshControlDrawer(key) {
     var drawer = document.getElementById('drawer');
-    if (drawer && drawer.classList.contains('open')) App.openControlGuidance(key);
+    if (!drawer || !drawer.classList.contains('open')) return;
+    var mark = drawer.querySelector('[data-control-drawer]');
+    if (mark && mark.getAttribute('data-control-drawer') === key) App.openControlGuidance(key);
   }
 
   /* Mobile-only off-canvas sidebar (<=860px — see index.html's own
@@ -13668,10 +13673,19 @@ function showModal(opts) {
       }
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
-        '<div class="id-t">' + esc(c.id) + '</div><h2>' + esc(c.t) + '</h2>' +
+        '<div class="id-t">' + esc(c.id) + '</div><h2 data-control-drawer="' + esc(key) + '">' + esc(c.t) + '</h2>' +
         '<div class="d-sec"><h4>Status</h4>' +
-        '<div class="d-kv"><span>Applicable</span><b>' + (c.app ? 'Yes' : 'No') + '</b></div>' +
-        '<div class="d-kv"><span>Status</span><b>' + (c.app ? c.st : 'N/A') + '</b></div>' +
+        /* Editable in place, with the same actions the SoA row uses
+           (toggleApp/setSt/verifyControl/setControlEvidence), so a
+           practitioner reading the guidance can act on it without
+           closing the drawer and finding the row. Each action calls
+           refreshControlDrawer() so the drawer shows the saved value.
+           A read-only session sees plain values instead. */
+        '<div class="d-kv"><span>Applicable</span><b>' + (READONLY ? (c.app ? 'Yes' : 'No')
+          : '<button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + esc(key) + '"></button>') + '</b></div>' +
+        '<div class="d-kv"><span>Status</span><b>' + (!c.app ? 'N/A' : READONLY ? esc(c.st)
+          : '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + esc(key) + '" aria-label="' + esc(c.id) + ' implementation status">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>') + '</b></div>' +
+        (c.app ? '<div class="d-kv"><span>Why included</span><b style="font-weight:400;text-align:right">' + esc(soaInclusionReasons(c).join(' · ')) + '</b></div>' : '') +
         /* Only shown while excluded — same condition renderSoaRow()'s
            justificationLine already uses, and the same field: an SoA
            auditors read control-by-control, so the drawer for an
@@ -13680,12 +13694,14 @@ function showModal(opts) {
            row behind it. */
         (!c.app ? '<div class="d-kv"><span>Justification</span><b>' + (c.just ? esc(c.just) : '<span class="verify-stale">' + icon('flag') + ' None recorded</span>') + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlJustification" data-id="' + esc(key) + '">' + (c.just ? 'Edit' : 'Add') + '</button></b></div>' : '') +
         '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlOwner" data-id="' + esc(key) + '">Edit</button></b></div>' +
-        '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) : '—') + '</b></div>' +
+        '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) + (c.verifiedBy && c.verifiedBy !== AUTO_EVIDENCE_TAG ? ' by ' + esc(c.verifiedBy) : '') : '—') +
+          (!READONLY && c.app && c.st === 'Implemented' ? ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.verifyControl" data-id="' + esc(key) + '">' + (c.verified ? 'Re-verify' : 'Verify now') + '</button>' : '') + '</b></div>' +
         '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl)
           ? (c.verifiedBy === AUTO_EVIDENCE_TAG
             ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + esc(key) + '">View evidence</button>'
-            : '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + esc(key) + '">Link ' + icon('external') + '</button>')
-          : '—') + '</b></div></div>' +
+            : '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + esc(key) + '">Open ' + icon('external') + '</button>')
+          : '—') +
+          (READONLY ? '' : ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlEvidence" data-id="' + esc(key) + '">' + (c.evidenceUrl ? 'Edit' : 'Link evidence') + '</button>') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         linkedRisksHtml(c) +
         assuranceExceptionsHtml(c) +
@@ -15131,6 +15147,7 @@ function showModal(opts) {
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       audit('Applicability toggled', 'Control', key, wasApp ? 'Applicable' : 'Not applicable', c.app ? 'Applicable' : 'Not applicable');
       renderSoa(); renderDash();
+      refreshControlDrawer(key);
     },
 
     setSt: async function (key, v) {
@@ -15142,7 +15159,7 @@ function showModal(opts) {
           message: 'Marking this Implemented with no linked evidence. Auditors typically require evidence for every implemented control — continue anyway?',
           confirmText: 'Mark Implemented'
         });
-        if (!proceed) { renderSoa(); return; } /* reset the <select> back to the real value */
+        if (!proceed) { renderSoa(); refreshControlDrawer(key); return; } /* reset the <select> back to the real value */
       }
       var prevSt = c.st;
       c.st = v;
@@ -15150,6 +15167,7 @@ function showModal(opts) {
       log('<b>' + c.id + '</b> ' + esc(c.t) + ' → ' + v + '.');
       audit('Control status changed', 'Control', key, prevSt, v);
       renderSoa(); renderDash();
+      refreshControlDrawer(key);
       await offerCrossFrameworkPropagation(c);
     },
 
@@ -15411,6 +15429,7 @@ function showModal(opts) {
       toast('<b>' + c.id + '</b> verified by ' + esc(attester));
       audit('Control verified', 'Control', key, prevVerified || 'never verified', c.verified + ' by ' + attester);
       renderSoa();
+      refreshControlDrawer(key);
     },
 
     runSetupHealthCheck: function () { return runSetupHealth({ force: true }); },
@@ -15512,6 +15531,7 @@ function showModal(opts) {
       audit('Evidence link changed', 'Control', key, prevUrl || '(none)', url || '(none)');
       renderSoa();
       if (bumped) { renderDash(); toast('<b>' + esc(c.id) + '</b> moved to In progress.'); }
+      refreshControlDrawer(key);
       /* Attaching evidence is the other way a control becomes eligible
          to propagate: the common order is "mark Implemented" (warned
          about missing evidence, so nothing propagates yet) and then
