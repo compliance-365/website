@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.5',
+    date: '2026-10-01',
+    entries: [
+      'Fixed: opening Checkpoint in the minutes after an update could briefly hide purchased modules (such as ISO 27701, NIST CSF or the AI add-on) until the next reload. The app now always checks for the current module files and retries once if one has just moved or the host has a brief outage.'
+    ]
+  },
+  {
     version: '1.112.4',
     date: '2026-09-30',
     entries: [

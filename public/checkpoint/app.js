@@ -20661,11 +20661,20 @@ function showModal(opts) {
     var toMerge = granted.filter(function (fw) { return !PACKS_MERGED[fw]; });
     if (!toMerge.length) return;
 
+    /* The manifest is small and changes on every deploy, so the browser
+       must check with the server rather than trust its HTTP cache
+       ('no-cache' revalidates via ETag; 'reload' when a pack 404s and
+       the manifest is known stale). A cached manifest from the previous
+       deploy names pack files that no longer exist. */
+    async function loadManifest(forceReload) {
+      var manifestResp = await fetch('packs/manifest.json', { cache: forceReload ? 'reload' : 'no-cache' });
+      if (!manifestResp.ok) throw new Error('HTTP ' + manifestResp.status);
+      return manifestResp.json();
+    }
+
     var manifest;
     try {
-      var manifestResp = await fetch('packs/manifest.json');
-      if (!manifestResp.ok) throw new Error('HTTP ' + manifestResp.status);
-      manifest = await manifestResp.json();
+      manifest = await loadManifest(false);
     } catch (e) {
       warn('mergeLicensedPacks: could not load packs/manifest.json — every premium module stays unavailable this load: ' + (e.message || e));
       toMerge.forEach(function (m) { PACK_ERRORS[m] = 'content manifest could not be loaded'; });
@@ -20675,14 +20684,14 @@ function showModal(opts) {
     for (var i = 0; i < toMerge.length; i++) {
       var moduleId = toMerge[i];
       try {
-        var entry = manifest[moduleId];
         var key = moduleKeys[moduleId];
-        if (!entry) throw new Error('no pack published for this module');
+        if (!manifest[moduleId]) throw new Error('no pack published for this module');
         if (!key) throw new Error('this activation carries no content key for this module');
 
-        var packResp = await fetch('packs/' + entry.file);
-        if (!packResp.ok) throw new Error('HTTP ' + packResp.status + ' fetching pack file');
-        var packText = await packResp.text();
+        var fetched = await window.CheckpointLib.fetchPackText(function (url) { return fetch(url); }, moduleId, manifest, loadManifest);
+        manifest = fetched.manifest;
+        var entry = fetched.entry;
+        var packText = fetched.text;
 
         var actualHash = await window.CheckpointLib.sha256Hex(crypto.subtle, new TextEncoder().encode(packText));
         if (actualHash !== entry.sha256) throw new Error('pack file does not match the published manifest hash — refusing to decrypt');

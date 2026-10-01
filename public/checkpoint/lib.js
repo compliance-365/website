@@ -5109,6 +5109,31 @@
      modules that both happen to produce syntactically valid JSON)
      before any of it is merged into window.FRAMEWORKS/GUIDANCE. Returns
      an error string, or null if the pack looks right. */
+  /* Fetches one premium pack's ciphertext, surviving a deploy. Pack file
+     names are content-hashed and change on every build (AES-GCM uses a
+     fresh IV each time), so a manifest the browser still holds from the
+     previous deploy names files that no longer exist: a 404. On a 404
+     the manifest is re-read straight from the server (loadManifest(true))
+     and the fetch retried once against the new file name. A 5xx (a
+     hosting blip) is retried once as-is. Returns { text, entry,
+     manifest } with the entry actually used, since the caller hash-checks
+     against it; throws with the final HTTP status otherwise. */
+  async function fetchPackText(fetchFn, moduleId, manifest, loadManifest) {
+    var entry = manifest && manifest[moduleId];
+    if (!entry) throw new Error('no pack published for this module');
+    var resp = await fetchFn('packs/' + entry.file);
+    if (!resp.ok && resp.status === 404 && loadManifest) {
+      manifest = await loadManifest(true);
+      entry = manifest && manifest[moduleId];
+      if (!entry) throw new Error('no pack published for this module');
+      resp = await fetchFn('packs/' + entry.file);
+    } else if (!resp.ok && resp.status >= 500) {
+      resp = await fetchFn('packs/' + entry.file);
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' fetching pack file');
+    return { text: await resp.text(), entry: entry, manifest: manifest };
+  }
+
   function validatePackShape(moduleId, content) {
     if (!content || typeof content !== 'object') return 'decrypted content is not an object';
     if (!content.framework || content.framework.id !== moduleId) return 'framework.id does not match the expected module';
@@ -7727,7 +7752,7 @@
     evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
-    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
+    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, fetchPackText: fetchPackText,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
     VENDOR_QUESTIONNAIRE: VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS: VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers: vendorAiActAnswers,
