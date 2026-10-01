@@ -48,3 +48,20 @@ test('7.5, 8.1, 9.1, 9.2, 10.1', () => {
   assert.ok(T('internal-audit-procedure').includes('frequency, methods, responsibilities, planning requirements and reporting'));
   assert.ok(T('nonconformity-corrective-action').includes('suitability, adequacy and effectiveness'));
 });
+
+/* Checked line by line against the ISO/IEC 27001:2022 text: the
+   checklist wording for each clause carries the qualifiers the standard
+   states (functions and levels, media, planning requirements,
+   proportionate correction, ...), not a paraphrase that drops them. */
+test('checklist wording keeps the standard’s qualifiers', () => {
+  const req = (code, id) => Lib.clauseRequirementsFor('iso27001', code).find((r) => r.id === id).text;
+  assert.match(req('5.1', 'outcomes'), /other managers to show leadership/);
+  assert.match(req('6.1.2', 'criteria'), /criteria for performing assessments/);
+  assert.match(req('6.2', 'objectives'), /relevant functions and levels.*documented information/);
+  assert.match(req('7.5.2', 'identify'), /format and media.*suitability and adequacy/);
+  assert.match(req('7.5.3', 'lifecycle'), /retrieval and use.*legibility.*external origin/);
+  assert.match(req('9.2', 'programme'), /planning requirements/);
+  assert.match(req('9.3', 'held'), /suitable, adequate and effective/);
+  assert.match(req('10.2', 'effective'), /proportionate to the effects/);
+  assert.ok(T('infosec-objectives-metrics').includes('relevant functions and levels'));
+});
