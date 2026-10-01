@@ -173,6 +173,44 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* The control drawer (opened from an SoA row) edits the control in
+     place: applicability, status, verification and evidence, and the
+     drawer re-renders with the saved value rather than going stale. */
+  test('the control drawer edits applicability and status in place', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.evaluate(() => window.App.go('soa'));
+    await page.waitForSelector('#soaRows tr', { timeout: 10000 });
+
+    const key = await page.$eval('#soaRows tr[data-id] button[data-action="App.openControlGuidance"]', (b) => b.dataset.id);
+    await page.evaluate((k) => window.App.openControlGuidance(k), key);
+    const drawerToggle = '#drawer button[data-action="App.toggleApp"]';
+    await page.waitForSelector(drawerToggle);
+
+    // Set the status from the drawer's own select.
+    const before = await page.$eval(drawerToggle, (b) => b.getAttribute('aria-checked'));
+    if (before !== 'true') { await page.click(drawerToggle); await page.waitForTimeout(200); }
+    await page.selectOption('#drawer select[data-change-action="App.setSt"]', 'In progress');
+    await page.waitForTimeout(200);
+    assert.equal(await page.$eval('#drawer select[data-change-action="App.setSt"]', (s) => s.value), 'In progress');
+    assert.ok(await page.$('#drawer button[data-action="App.setControlEvidence"]'), 'evidence can be linked from the drawer');
+
+    // Exclude it: the drawer re-renders with the toggle off and asks for a justification.
+    await page.click(drawerToggle);
+    await page.waitForTimeout(200);
+    assert.equal(await page.$eval(drawerToggle, (b) => b.getAttribute('aria-checked')), 'false');
+    assert.ok(await page.$('#drawer button[data-action="App.setControlJustification"]'), 'an excluded control offers a justification');
+    assert.equal(await page.$('#drawer select[data-change-action="App.setSt"]'), null, 'no status select while excluded');
+    const row = await page.$eval('#soaRows tr[data-id="' + key + '"] button[data-action="App.toggleApp"]', (b) => b.getAttribute('aria-checked'));
+    assert.equal(row, 'false', 'the SoA row behind the drawer shows the same value');
+
+    assert.deepEqual(errors, [], 'no console errors editing a control from its drawer');
+    await context.close();
+  });
+
   /* ===== Interaction paths, not just render paths =====
      Everything above navigates and asserts nothing threw while
      RENDERING. That leaves a whole class of bug untouched: a handler
