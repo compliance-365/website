@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.7',
+    date: '2026-10-01',
+    entries: [
+      'The ISO 27001 clause checklist was re-checked line by line against the ISO/IEC 27001:2022 text, and its wording now carries every qualifier the standard states: supporting other managers’ leadership (5.1 h), criteria for performing risk assessments (6.1.2), objectives at relevant functions and levels kept as documented information (6.2), format and media (7.5.2), retrieval, use and legibility (7.5.3), audit planning requirements (9.2), the purpose of management review (9.3), and corrective action proportionate to its effects (10.2). The Objectives & Metrics document states the 6.2 additions too; regenerate it to pick them up.'
+    ]
+  },
+  {
     version: '1.112.6',
     date: '2026-10-01',
     entries: [

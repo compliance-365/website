@@ -6301,7 +6301,7 @@
       { id: 'communicates', text: 'Top management communicates why effective security and conformity with the management system matter.',
         evidence: 'The policy, approved by a named member of top management, distributed to staff and acknowledged by them. A leadership message (an all-staff email, a town hall, an induction message) strengthens it.',
         auto: { doc: 'infosec-policy', record: 'policyAcknowledged' }, auto42: { doc: 'ai-policy', record: 'policyAcknowledged' } },
-      { id: 'outcomes', text: 'Top management ensures the management system achieves its intended outcomes, directs and supports the people contributing to it, and promotes continual improvement.',
+      { id: 'outcomes', text: 'Top management ensures the management system achieves its intended outcomes, directs and supports the people contributing to it, promotes continual improvement, and supports other managers to show leadership in their own areas.',
         evidence: 'A management review attended by top management, with decisions recorded.',
         auto: { md: '9.3' }, auto42: { md: '9.3' } }
     ],
@@ -6333,7 +6333,7 @@
         auto: { md: '6.1.3 e)' }, auto42: { record: 'riskTreated' } }
     ],
     '6.1.2': [
-      { id: 'criteria', text: 'Define a risk assessment process, including risk acceptance criteria and criteria for when assessments are carried out.',
+      { id: 'criteria', text: 'Define a risk assessment process, including risk acceptance criteria and criteria for performing assessments.',
         evidence: 'The approved risk management framework, with likelihood and impact scales and acceptance criteria.',
         text42: 'Define an AI risk assessment process, including criteria for acceptable risk and for when assessments are carried out.',
         text701: 'Define a privacy risk assessment process that considers the risks to PII principals as well as to the organisation, including criteria for acceptable risk and for when assessments are carried out.',
@@ -6383,7 +6383,7 @@
         auto: { doc: 'risk-management-framework' }, auto42: { doc: 'ai-risk-framework' } }
     ],
     '6.2': [
-      { id: 'objectives', text: 'Set objectives that are consistent with the policy, measurable where practicable, take requirements and risk results into account, and are monitored, communicated and updated.',
+      { id: 'objectives', text: 'Set objectives at relevant functions and levels that are consistent with the policy, measurable where practicable, take requirements and risk results into account, are monitored, communicated and updated, and are kept as documented information.',
         evidence: 'Objectives with a metric and a target, in the objectives register.',
         auto: { md: '6.2' }, auto42: { doc: 'ai-objectives-metrics', record: 'objectivePlans' } },
       { id: 'planning', text: 'Plan how each objective will be achieved: what will be done, the resources, who is responsible, when it will be completed and how results will be evaluated.',
@@ -6429,7 +6429,7 @@
         auto: { record: 'mandatoryAll' }, auto42: { record: 'aimsCore' } }
     ],
     '7.5.2': [
-      { id: 'identify', text: 'When documents are created or updated, give each proper identification (title, date, author or reference), a suitable format, and a review and approval.',
+      { id: 'identify', text: 'When documents are created or updated, give each proper identification (title, date, author or reference), a suitable format and media, and a review and approval for suitability and adequacy.',
         evidence: 'The document control procedure, and approved documents showing version, owner, approver and next review date.',
         auto: { doc: 'document-control-procedure', record: 'policyCurrent' }, auto42: { doc: 'document-control-procedure', record: 'policyCurrent' } }
     ],
@@ -6437,8 +6437,8 @@
       { id: 'available', text: 'Control documented information so it is available where and when it is needed and adequately protected.',
         evidence: 'The document control procedure, and documents held in a controlled SharePoint library with appropriate permissions.',
         auto: { doc: 'document-control-procedure', record: 'policyCurrent' }, auto42: { doc: 'document-control-procedure', record: 'policyCurrent' } },
-      { id: 'lifecycle', text: 'Control distribution, access, storage, version history, retention and disposal, including documents of external origin.',
-        evidence: 'SharePoint version history, permissions and retention settings, and how external documents (contracts, standards) are controlled.' }
+      { id: 'lifecycle', text: 'Control distribution, access, retrieval and use; storage and preservation, including legibility; changes (version control); and retention and disposal. Identify and control documents of external origin.',
+        evidence: 'The document control procedure, plus SharePoint version history, permissions and retention settings, and how external documents (contracts, standards) are controlled.' }
     ],
     '8.1': [
       { id: 'operate', text: 'Plan, run and control the processes needed to meet the management system’s requirements and carry out the actions from Clause 6, with criteria for each process.',
@@ -6483,7 +6483,7 @@
       { id: 'conduct', text: 'Carry out internal audits at planned intervals to check the management system conforms to the organisation’s own requirements and the standard, and is effectively implemented.',
         evidence: 'A completed internal audit within the last 12 months.',
         auto: { record: 'auditDone' }, auto42: { record: 'auditDone' } },
-      { id: 'programme', text: 'Plan and maintain an audit programme covering frequency, methods, responsibilities and reporting, taking account of the importance of the processes and previous results.',
+      { id: 'programme', text: 'Plan and maintain an audit programme covering frequency, methods, responsibilities, planning requirements and reporting, taking account of the importance of the processes and previous results.',
         evidence: 'The approved internal audit procedure and the audit programme in the audits register.',
         auto: { doc: 'internal-audit-procedure', record: 'auditsPlanned' }, auto42: { doc: 'internal-audit-procedure', record: 'auditsPlanned' } },
       { id: 'impartial', text: 'Set the criteria and scope of each audit, choose auditors who are objective and impartial (never auditing their own work), and report the results to management.',
@@ -6494,7 +6494,7 @@
         auto: { md: '9.2' }, auto42: { record: 'auditDone' } }
     ],
     '9.3': [
-      { id: 'held', text: 'Top management reviews the management system at planned intervals.',
+      { id: 'held', text: 'Top management reviews the management system at planned intervals to ensure it remains suitable, adequate and effective.',
         evidence: 'A management review within the last 12 months, attended by top management.',
         auto: { md: '9.3' }, auto42: { md: '9.3' } },
       { id: 'inputs', text: 'The review covers every required input: actions from previous reviews; changes in issues and in interested parties’ needs; performance (nonconformities, monitoring results, audit results, objectives); interested party feedback; risk assessment results and the treatment plan; and opportunities for improvement.',
@@ -6516,7 +6516,7 @@
       { id: 'cause', text: 'Decide whether action is needed to remove the cause: review it, find the root cause, and check whether similar nonconformities exist or could occur.',
         evidence: 'A root cause recorded on each nonconformity.',
         auto: { record: 'capaRootCause' }, auto42: { record: 'capaRootCause' } },
-      { id: 'effective', text: 'Carry out the corrective action, review whether it was effective, and change the management system if needed.',
+      { id: 'effective', text: 'Carry out corrective action proportionate to the effects of the nonconformity, review whether it was effective, and change the management system if needed.',
         evidence: 'A completed corrective action and an effectiveness review on each nonconformity.',
         auto: { record: 'capaEffective' }, auto42: { record: 'capaEffective' } },
       { id: 'records', text: 'Keep evidence of the nonconformities, the actions taken and their results.',

@@ -2102,8 +2102,8 @@ window.POLICY_TEMPLATES = [
     scope: 'Applies to the information security management system and the objectives set for it. Many of the metrics below are computed live by this console; the specific objectives and targets must be set by the organisation.',
     policyStatements: [
       {
-        rule: 'Information security objectives are set that are measurable, consistent with the information security policy, and aligned to the organisation’s highest-priority risks.',
-        because: 'An objective that is not measurable cannot be shown to have been met, which is what Clause 6.2 actually asks for.'
+        rule: 'Information security objectives are set at relevant functions and levels, are measurable, are consistent with the information security policy, are aligned to the organisation’s highest-priority risks, and are kept as documented information in this document and the objectives register.',
+        because: 'An objective that is not measurable cannot be shown to have been met, and Clause 6.2 requires objectives at relevant functions and levels, available as documented information.'
       },
       {
         rule: 'Each objective records what will be achieved, what resource it needs, who is responsible, when it is due, and how the result will be evaluated.',
