@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.112.8',
+    date: '2026-10-02',
+    entries: [
+      'Your own documents now count like Checkpoint’s. When you upload a policy or procedure you wrote yourself, choose which Checkpoint document it is your version of (or set it later under Details). Recording its approval then updates the ISO 27001 clauses and controls exactly as approving Checkpoint’s version would, and offers to mark Checkpoint’s generated copy Superseded, moving any evidence links to your document. Your file is never re-rendered or edited from template text.'
+    ]
+  },
+  {
     version: '1.112.7',
     date: '2026-10-01',
     entries: [
