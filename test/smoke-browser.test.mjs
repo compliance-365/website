@@ -211,6 +211,32 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* An uploaded file declared as the organisation's own version of a
+     Checkpoint document: recorded in the register, labelled in the row,
+     and never offered the generated-document text editor. */
+  test('an uploaded document can be declared our version of a Checkpoint document', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.evaluate(() => window.App.go('documents'));
+    await page.waitForSelector('#docRows tr[data-id="demo-doc-6"]', { timeout: 10000 });
+    assert.ok(await page.$('#docReplaces option[value="infosec-policy"]'), 'upload offers the Checkpoint documents to replace');
+
+    // Not awaited inside the page: the handler resolves only when the dialog closes.
+    await page.evaluate(() => { window.App.editDocumentMeta('demo-doc-6'); });
+    const modal = page.locator('#modalBox');
+    await modal.getByLabel('This is our version of (a Checkpoint document)', { exact: true }).selectOption('infosec-policy', { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Save', exact: true }).click({ timeout: 5000 });
+    const row = '#docRows tr[data-id="demo-doc-6"]';
+    await page.waitForFunction((sel) => /Our version of: Information Security Policy/.test((document.querySelector(sel) || {}).innerText || ''), row, { timeout: 5000 });
+    assert.equal(await page.$(row + ' button[data-action="App.editPolicyContent"]'), null, 'no template text editor for our own document');
+
+    assert.deepEqual(errors, [], 'no console errors declaring an own document');
+    await context.close();
+  });
+
   /* ===== Interaction paths, not just render paths =====
      Everything above navigates and asserts nothing threw while
      RENDERING. That leaves a whole class of bug untouched: a handler

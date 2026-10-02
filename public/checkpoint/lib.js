@@ -7275,6 +7275,31 @@
   /* The applicable controls an approved document implements that are
      not already Implemented. A control holding different evidence is
      left alone: someone chose that evidence on purpose. */
+  /* An organisation's own document, uploaded as its version of a
+     Checkpoint document (doc.origin 'own', doc.tplId the template it
+     replaces). Once it is approved, the generated copy of the same
+     template should drop out of the live register, and any control or
+     clause still pointing at that copy as evidence should point at the
+     organisation's own document instead. Returns what to change:
+       supersede  generated documents with the same template id that are
+                  not already Superseded
+       repoint    { kind: 'control'|'clause', item } whose evidenceUrl is
+                  one of those documents' urls
+     Pure: the caller writes the changes. */
+  function ownDocumentReplacement(ownDoc, docs, controls, clauses) {
+    var out = { supersede: [], repoint: [] };
+    if (!ownDoc || ownDoc.origin !== 'own' || !ownDoc.tplId) return out;
+    out.supersede = (docs || []).filter(function (d) {
+      return d && d !== ownDoc && d.id !== ownDoc.id && d.tplId === ownDoc.tplId &&
+        d.origin !== 'own' && String(d.status || '') !== 'Superseded';
+    });
+    var urls = {};
+    out.supersede.forEach(function (d) { if (d.url) urls[d.url] = true; });
+    (controls || []).forEach(function (c) { if (c && c.evidenceUrl && urls[c.evidenceUrl]) out.repoint.push({ kind: 'control', item: c }); });
+    (clauses || []).forEach(function (c) { if (c && c.evidenceUrl && urls[c.evidenceUrl]) out.repoint.push({ kind: 'clause', item: c }); });
+    return out;
+  }
+
   function controlsImplementedByDocument(tplId, controls, docUrl) {
     var codes = DOCUMENT_IMPLEMENTED_CONTROLS[tplId] || [];
     return (controls || []).filter(function (c) {
@@ -7752,7 +7777,7 @@
     evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
-    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, fetchPackText: fetchPackText,
+    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
     VENDOR_QUESTIONNAIRE: VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS: VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers: vendorAiActAnswers,

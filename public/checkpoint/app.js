@@ -4499,6 +4499,62 @@ function showModal(opts) {
     });
     return list.length;
   }
+  /* An organisation's own document standing in for a Checkpoint one
+     (isOwnDoc + tplId). While in draft or review it links as clause
+     evidence and moves untouched clauses to In progress, like a
+     generated draft. Once Approved it does what approving the generated
+     copy does, and offers to retire that copy: Superseded in the
+     register, and any evidence link pointing at it moved to this file. */
+  async function applyOwnDocument(d) {
+    if (!d || !d.url || READONLY) return '';
+    var status = docStatusOf(d);
+    if (status === 'Superseded') return '';
+    var approved = status === 'Approved';
+    var notes = [];
+    var plan = approved ? window.CheckpointLib.ownDocumentReplacement(d, window._docs || [], S.controls, S.clauses) : { supersede: [], repoint: [] };
+    if (plan.supersede.length) {
+      var ok = await showModal({
+        title: 'Retire Checkpoint’s version?',
+        message: '“' + d.name + '” is now your approved ' + templateTitle(d.tplId) + '. Mark Checkpoint’s generated copy Superseded so only one version is live?\n\n' +
+          plan.supersede.map(function (x) { return '• ' + x.name; }).join('\n') +
+          (plan.repoint.length ? '\n\n' + plan.repoint.length + ' evidence link' + (plan.repoint.length > 1 ? 's' : '') + ' pointing at it will move to your document.' : '') +
+          '\n\nThe superseded copy stays in the library for the retention period.',
+        confirmText: 'Mark superseded',
+        cancelText: 'Keep both'
+      });
+      if (ok) {
+        for (var i = 0; i < plan.supersede.length; i++) {
+          var old = plan.supersede[i];
+          try {
+            await Store.updateDocumentMeta(old.id, { status: 'Superseded' });
+            audit('Document details changed', 'Document', old.name, docStatusOf(old), 'Superseded by ' + d.name);
+            old.status = 'Superseded';
+          } catch (e) { warn(e); }
+        }
+        plan.repoint.forEach(function (r) {
+          var it = r.item, prev = it.evidenceUrl;
+          it.evidenceUrl = d.url;
+          if (r.kind === 'control') {
+            audit('Evidence link changed', 'Control', it.fw + '|' + it.id, prev, d.url);
+            Store.updateControl(it).catch(function (e) { warn(e); });
+          } else {
+            audit('Evidence link changed', 'Clause', clauseLabel(it), prev, d.url);
+            Store.updateClause(it).catch(function (e) { warn(e); });
+          }
+        });
+        notes.push(plan.supersede.length + ' generated cop' + (plan.supersede.length > 1 ? 'ies' : 'y') + ' marked Superseded');
+      }
+    }
+    var clauseNote = applyClauseDocumentUpdates(d.tplId, d.url, approved ? 'approved' : 'generated');
+    if (clauseNote) notes.push(clauseNote);
+    if (approved) {
+      var n = implementDocumentControls(d.tplId, d.url, d.approvedBy || '', d.approvalDate || '');
+      if (n) notes.push(n + ' control' + (n > 1 ? 's' : '') + ' marked Implemented');
+      renderSoa();
+    }
+    return notes.join('; ');
+  }
+
   function implementControlsFromApprovedDocuments(docs) {
     var n = 0;
     (docs || []).forEach(function (d) {
@@ -9240,6 +9296,7 @@ function showModal(opts) {
     var box = document.getElementById('policyEditor');
     if (!box) return;
     var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+    if (isOwnDoc(doc)) { toast('This is your own document, so edit it in SharePoint or Word and upload the new version.'); return; }
     var tplId = (doc && doc.tplId) || null;
     if (!tplId) {
       var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
@@ -9344,8 +9401,29 @@ function showModal(opts) {
     toast('<b>' + esc(docName) + '</b> re-rendered from your edited content.');
   }
 
+  /* The Checkpoint documents an organisation's own upload can stand in
+     for: every template in a framework this tenant holds (ISO 27001 is
+     the baseline everyone has), by title. */
+  function ownDocTemplateOptions() {
+    var ent = (S && S.entitlements) || {};
+    return (window.POLICY_TEMPLATES || []).filter(function (t) {
+      return (t.frameworks || []).some(function (fw) { return fw === 'iso27001' || ent[fw]; });
+    }).slice().sort(function (a, b) { return a.title.localeCompare(b.title); })
+      .map(function (t) { return { value: t.id, label: t.title }; });
+  }
+  function isOwnDoc(d) { return !!d && d.origin === 'own'; }
+  function templateTitle(tplId) {
+    var t = (window.POLICY_TEMPLATES || []).find(function (x) { return x.id === tplId; });
+    return t ? t.title : tplId;
+  }
+
   function renderDocuments() {
     renderTemplatesPicker();
+    var replSelect = document.getElementById('docReplaces');
+    if (replSelect && !replSelect.options.length) {
+      replSelect.innerHTML = '<option value="">Nothing: a supporting document or evidence</option>' +
+        ownDocTemplateOptions().map(function (o) { return '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>'; }).join('');
+    }
     var rows = document.getElementById('docRows');
     if (!rows) return;
     var catSelect = document.getElementById('docCategory');
@@ -9414,7 +9492,11 @@ function showModal(opts) {
            one line at the widths this table actually renders at. */
         var actions = [];
         if (status === 'Draft' || status === 'In review') {
-          actions.push('<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
+          /* An organisation's own document has no template text to
+             re-render: its approval is recorded in the register. */
+          actions.push(isOwnDoc(d)
+            ? '<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Approve</button>'
+            : '<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
         }
         actions.push('<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Details</button>');
         /* Content editing only makes sense for a document Checkpoint
@@ -9422,7 +9504,7 @@ function showModal(opts) {
            edit. Recognised either by the register's DocTplId or, for
            documents generated before that column existed, by the audit
            log entry the approval path already relies on. */
-        if (d.tplId || templateDraftStatus(d.name)) {
+        if (!isOwnDoc(d) && (d.tplId || templateDraftStatus(d.name))) {
           actions.push('<button class="btn ghost sm" data-action="App.editPolicyContent" data-id="' + esc(d.name) + '">Edit text</button>');
           /* Word export is offered on approved documents only. An
              uncontrolled copy of an unapproved draft is the worst
@@ -9441,7 +9523,8 @@ function showModal(opts) {
             (d.url
               ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link" style="font-size:inherit">' + esc(d.name) + ' ' + icon('external') + '</a>'
               : esc(d.name)) +
-            '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div></td>' +
+            '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div>' +
+            (isOwnDoc(d) && d.tplId ? '<div class="src">Our version of: ' + esc(templateTitle(d.tplId)) + '</div>' : '') + '</td>' +
           '<td>' + (d.owner ? esc(d.owner) : controlled ? '<span class="verify-stale">' + icon('flag') + ' unassigned</span>' : '<span class="src">—</span>') + '</td>' +
           '<td>' + (d.version ? esc(d.version) : '<span class="src">—</span>') + '</td>' +
           '<td>' + statusCell + (d.approvedBy ? '<div class="src">by ' + esc(d.approvedBy) + (d.approvalDate ? ' · ' + fmtDocDate(d.approvalDate) : '') + '</div>' : '') + '</td>' +
@@ -16099,14 +16182,25 @@ function showModal(opts) {
       var file = input.files && input.files[0];
       if (!file) { toast('Choose a file first'); return; }
       var category = document.getElementById('docCategory').value || 'Other';
+      var replSel = document.getElementById('docReplaces');
+      var replaces = (replSel && replSel.value) || '';
+      var t = replaces && window.POLICY_TEMPLATES.find(function (x) { return x.id === replaces; });
+      /* Registered as a Draft of the document it replaces: the template
+         id drives the clause and control automation once its approval
+         is recorded under Details, exactly as a generated copy would. */
+      var meta = t ? { status: 'Draft', tplId: t.id, origin: 'own', frameworks: (t.frameworks || []).join(','), classification: 'Internal' } : null;
       busy(true);
+      var uploaded = null;
       try {
-        await Store.uploadDocument(file, category);
-        log('Document uploaded to <b>' + esc(category) + '</b>: <b>' + esc(file.name) + '</b>.');
-        toast('<b>' + esc(file.name) + '</b> uploaded');
+        uploaded = await Store.uploadDocument(file, category, meta);
+        log('Document uploaded to <b>' + esc(category) + '</b>: <b>' + esc(file.name) + '</b>' + (t ? ' as our version of <b>' + esc(t.title) + '</b>' : '') + '.');
+        if (t) audit('Own document uploaded', 'Document', file.name, '', 'Replaces ' + t.title + ' (' + t.id + ')');
+        toast('<b>' + esc(file.name) + '</b> uploaded' + (t ? '. Record its owner, version and approval under Details to count it for ' + esc(t.title) + '.' : ''));
         input.value = '';
+        if (replSel) replSel.value = '';
       } catch (e) { warn(e); }
       busy(false);
+      if (uploaded && uploaded.metaError) toastError('Uploaded, but the register details could not be saved: ' + esc(uploaded.metaError));
       renderDocuments();
     },
 
@@ -16230,6 +16324,7 @@ function showModal(opts) {
        what the confirmation modal and the in-document banner both say. */
     exportPolicyWord: async function (docName) {
       var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      if (isOwnDoc(doc)) { toastError('This is your own document: open it from the register instead.'); return; }
       var tplId = doc && doc.tplId;
       if (!tplId) {
         var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
@@ -16268,6 +16363,7 @@ function showModal(opts) {
        current version doesn't require regenerating it. */
     exportPolicyPdf: async function (docName) {
       var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      if (isOwnDoc(doc)) { toastError('This is your own document: open it from the register instead.'); return; }
       var tplId = doc && doc.tplId;
       if (!tplId) {
         var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
@@ -16747,9 +16843,14 @@ function showModal(opts) {
     editDocumentMeta: async function (itemId) {
       var d = (window._docs || []).find(function (x) { return x.id === itemId; });
       if (!d) { toast('Reload the Documents view and try again.'); return; }
+      /* A document Checkpoint generated already IS its template; only an
+         uploaded file can be declared the organisation's own version. */
+      var generated = !isOwnDoc(d) && !!(d.tplId || templateDraftStatus(d.name));
+      var replField = generated ? [] : [{ id: 'replaces', label: 'This is our version of (a Checkpoint document)', type: 'select', value: isOwnDoc(d) ? d.tplId : '',
+        options: [{ value: '', label: 'Nothing: a supporting document or evidence' }].concat(ownDocTemplateOptions()) }];
       var vals = await showModal({
         title: 'Document details — ' + d.name,
-        fields: [
+        fields: replField.concat([
           { id: 'owner', label: 'Document owner (name or role)', value: d.owner, placeholder: 'e.g. ISMS Manager' },
           { id: 'version', label: 'Version', value: d.version, placeholder: 'e.g. 1.0' },
           { id: 'status', label: 'Status', type: 'select', value: docStatusOf(d) || 'Draft', options: window.DOC_STATUSES },
@@ -16757,7 +16858,7 @@ function showModal(opts) {
           { id: 'nextReview', label: 'Next review due', type: 'date', value: d.nextReview },
           { id: 'approvedBy', label: 'Approved by (leave blank until approved)', value: d.approvedBy, placeholder: 'e.g. M. Chen (CEO)' },
           { id: 'approvalDate', label: 'Approval date', type: 'date', value: d.approvalDate }
-        ],
+        ]),
         confirmText: 'Save',
         validate: function (v) {
           if (v.status === 'Approved' && !v.approvedBy) return 'An approved document needs an approver recorded — Clause 7.5.2 c).';
@@ -16767,16 +16868,29 @@ function showModal(opts) {
       });
       if (!vals) return;
       var before = [d.owner, d.version, docStatusOf(d), d.nextReview, d.approvedBy].join(' | ');
+      var prevTpl = isOwnDoc(d) ? d.tplId : '';
+      if ('replaces' in vals) {
+        var replTpl = window.POLICY_TEMPLATES.find(function (x) { return x.id === vals.replaces; });
+        vals.tplId = replTpl ? replTpl.id : '';
+        vals.origin = replTpl ? 'own' : '';
+        if (replTpl) vals.frameworks = (replTpl.frameworks || []).join(',');
+        delete vals.replaces;
+      }
+      if (vals.status === 'Approved' && !vals.approvalDate) vals.approvalDate = new Date().toISOString().slice(0, 10);
       try {
         await Store.updateDocumentMeta(itemId, vals);
       } catch (e) { warn(e); toastError('Could not save the document details: ' + esc(e.message || e)); return; }
       Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
+      if ((vals.tplId || '') !== prevTpl && 'origin' in vals) {
+        audit('Own document mapping changed', 'Document', d.name, prevTpl ? templateTitle(prevTpl) : '(none)', vals.tplId ? templateTitle(vals.tplId) : '(none)');
+      }
+      var ownNote = isOwnDoc(d) && d.tplId ? await applyOwnDocument(d) : '';
       audit('Document details changed', 'Document', d.name, before,
         [vals.owner, vals.version, vals.status, vals.nextReview, vals.approvedBy].join(' | '));
       if (vals.status !== 'Superseded') await syncPolicyReviewCalendar(d.name, vals.nextReview, vals.owner);
       renderDocuments();
       renderDash();
-      toast('Register updated for <b>' + esc(d.name) + '</b>.');
+      toast('Register updated for <b>' + esc(d.name) + '</b>.' + (ownNote ? ' ' + ownNote + '.' : ''));
     },
 
     previewTemplate: function () { renderTemplatePreview(); },
@@ -19918,6 +20032,7 @@ function showModal(opts) {
          an uploaded evidence PDF in the same library is not a generated
          policy and has nothing to render. */
       var candidates = (window._docs || []).map(function (d) {
+        if (isOwnDoc(d)) return null; /* the organisation's own file: nothing to render from template text */
         var tplId = d.tplId;
         if (!tplId) {
           var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === d.name && e.action === 'Policy template generated'; });
