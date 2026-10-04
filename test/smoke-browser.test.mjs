@@ -237,6 +237,39 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* The operating rhythm end to end: schedule the recommended recurring
+     activities, complete one with its evidence, and see the control it
+     covers verified and Implemented. */
+  test('scheduling the operating rhythm and completing an activity verifies its controls', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.evaluate(() => window.App.go('calendar'));
+    await page.waitForSelector('#calRhythmCard button[data-action="App.setupOperatingRhythm"]', { timeout: 5000 });
+
+    const modal = page.locator('#modalBox');
+    // Not awaited inside the page: the handler resolves only when the dialog closes.
+    await page.evaluate(() => { window.App.setupOperatingRhythm(); });
+    await modal.getByRole('button', { name: /^Schedule \d+ activit/ }).click({ timeout: 5000 });
+    const row = page.locator('#calRows tr', { hasText: 'Security log and alert review' });
+    await row.waitFor({ timeout: 5000 });
+    assert.equal(await page.locator('#calRhythmCard').isVisible(), false, 'the prompt goes once everything is scheduled');
+
+    await row.locator('button[data-action="App.completeCalItem"]').click();
+    await modal.getByLabel('Link to the evidence (SharePoint or OneDrive)', { exact: true }).fill('https://contoso.sharepoint.com/evidence/log-review.pdf', { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Complete', exact: true }).click({ timeout: 5000 });
+    await page.waitForFunction(() => /Last evidence/.test((Array.from(document.querySelectorAll('#calRows tr')).find((r) => /Security log and alert review/.test(r.innerText)) || {}).innerText || ''), null, { timeout: 5000 });
+
+    await page.evaluate(() => { window.App.go('soa'); window.App.openControlGuidance('iso27001|A.8.15'); });
+    await page.waitForSelector('#drawer select[data-change-action="App.setSt"]', { timeout: 5000 });
+    assert.equal(await page.$eval('#drawer select[data-change-action="App.setSt"]', (el) => el.value), 'Implemented');
+
+    assert.deepEqual(errors, [], 'no console errors running the operating rhythm');
+    await context.close();
+  });
+
   /* ===== Interaction paths, not just render paths =====
      Everything above navigates and asserts nothing threw while
      RENDERING. That leaves a whole class of bug untouched: a handler

@@ -1471,7 +1471,7 @@ window.CHECK_PRIVACYACT = {};
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
-window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'External surveillance audit', 'Certificate expiry', 'Other'];
+window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'Log and alert review', 'Vulnerability review', 'Threat intelligence review', 'Asset register review', 'Incident response exercise', 'Legal register review', 'External surveillance audit', 'Certificate expiry', 'Other'];
 window.CALENDAR_FREQUENCIES = ['Annual', 'Biannual', 'Quarterly', 'Monthly', 'One-off'];
 
 /* Vendor data-access classification — a fixed taxonomy so "what data

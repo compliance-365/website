@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.113.0',
+    date: '2026-10-04',
+    entries: [
+      'New: the operating rhythm. The Compliance calendar can now schedule the recurring activities an auditor samples to see controls working: access reviews, log and alert reviews, vulnerability reviews, threat intelligence reviews, backup restore tests, asset and supplier reviews, awareness training, an incident response exercise, a continuity test and a legal register review. Each one says what evidence to keep. Complete it with a link to that evidence and the Annex A controls it covers are verified and marked Implemented (or kept In progress if only partly in place). It is also a step on the path to certification.',
+      'New: suggested risks beyond Microsoft 365. Your scope & context answers now propose the risks a scan cannot see, such as reliance on an external development partner, source code access, untested backups, lost laptops for remote teams, SaaS suppliers, personal information and AI features, each with its controls and remediation actions. They appear with the scan findings in the Risk register to approve or dismiss, and a dismissal is remembered. The questionnaire now also asks whether software is developed by an external partner.',
+      'Policies reviewed for sufficiency. Regenerate these to pick up the changes: Access Control (no longer requires Privileged Identity Management where your licence lacks it; adds joiner-mover-leaver, password and passkey rules, a break-glass account, source code and admin tool access, and segregation of duties; reviews are now quarterly), Secure Development (secure coding standard, repository access, security testing and penetration testing, outsourced development, test data and testing in production), Business Continuity (SaaS and source code backups, restore tests every six months, security during disruption, capacity), Logging (clock synchronisation and a monthly review), Supplier Security, Cloud Services (network security), Data Classification (data loss prevention and masking), Asset Management, Physical Security (organisations without premises), Change Management (security in projects), Control Testing (checking compliance with policies), Threat Intelligence (special interest groups) and Acceptable Use (AI tools). Documents now address 91 of the 93 Annex A controls.'
+    ]
+  },
+  {
     version: '1.112.8',
     date: '2026-10-02',
     entries: [

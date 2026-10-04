@@ -1879,6 +1879,110 @@
      BCP/DR failover tests. Returns null when the tenant has no such
      activity scheduled at all, so each caller can decide what silence
      means for its own control. */
+  /* The ISMS operating rhythm: the recurring activities whose records an
+     auditor samples to see that Annex A controls are operating, not just
+     documented. Each becomes a compliance-calendar item carrying a
+     [rhythm:key] marker in its notes; completing one with evidence
+     links that evidence to the controls listed here and records the
+     verification (rhythmCompletionUpdates). Categories reuse the
+     calendar's own, so the existing backup and BCP checks
+     (recurringActivityState) read these items too. firstDueDays
+     staggers the first round so it does not all land in one week. */
+  var OPERATING_RHYTHM = [
+    { key: 'access-review', title: 'Access review: user, guest and admin accounts', category: 'Access control review', freq: 'Quarterly', firstDueDays: 30,
+      controls: ['A.5.15', 'A.5.18', 'A.8.2'],
+      evidence: 'An export of users, guests and admin role holders (Entra ID), each account confirmed or removed, signed off by the reviewer.' },
+    { key: 'log-review', title: 'Security log and alert review', category: 'Log and alert review', freq: 'Monthly', firstDueDays: 14,
+      controls: ['A.8.15', 'A.8.16'],
+      evidence: 'The month’s risky sign-ins, Defender alerts and audit-log anomalies reviewed, with anything notable raised as an incident or action.' },
+    { key: 'vuln-review', title: 'Vulnerability and patch review', category: 'Vulnerability review', freq: 'Monthly', firstDueDays: 21,
+      controls: ['A.8.7', 'A.8.8'],
+      evidence: 'The Defender exposure or vulnerability report and device update compliance, with overdue critical items actioned.' },
+    { key: 'threat-intel', title: 'Threat intelligence review', category: 'Threat intelligence review', freq: 'Quarterly', firstDueDays: 45,
+      controls: ['A.5.6', 'A.5.7'],
+      evidence: 'A summary of the quarter’s advisories (ACSC, Microsoft, key suppliers) and the actions raised from them, and the special interest group memberships confirmed current.' },
+    { key: 'backup-restore', title: 'Backup restore test', category: 'Backup restore test', freq: 'Biannual', firstDueDays: 45,
+      controls: ['A.8.13'],
+      evidence: 'A record of data restored from backup: what was restored, when, how long it took, and that it was intact.' },
+    { key: 'asset-review', title: 'Asset register review', category: 'Asset register review', freq: 'Biannual', firstDueDays: 60,
+      controls: ['A.5.9', 'A.5.11'],
+      evidence: 'The asset register checked against Intune and Entra, owners confirmed, and leavers’ devices returned.' },
+    { key: 'supplier-review', title: 'Supplier security review', category: 'Supplier security review', freq: 'Annual', firstDueDays: 60,
+      controls: ['A.5.19', 'A.5.22'],
+      evidence: 'For each critical supplier: its certification or assurance report reviewed, contract security terms checked, and subprocessor changes noted.' },
+    { key: 'awareness', title: 'Security awareness training refresher', category: 'Security awareness training', freq: 'Annual', firstDueDays: 30,
+      controls: ['A.6.3'],
+      evidence: 'Completion records for everyone in scope, from Checkpoint’s Training register.' },
+    { key: 'ir-exercise', title: 'Incident response exercise', category: 'Incident response exercise', freq: 'Annual', firstDueDays: 75,
+      controls: ['A.5.24', 'A.5.26', 'A.5.27'],
+      evidence: 'The tabletop exercise record: scenario, who took part, decisions made, and lessons learned fed back into the plan.' },
+    { key: 'bcp-test', title: 'Business continuity and disaster recovery test', category: 'BCP/DR test', freq: 'Annual', firstDueDays: 90,
+      controls: ['A.5.29', 'A.5.30'],
+      evidence: 'The exercise record: scenario, who took part, recovery times achieved against the targets, and actions raised.' },
+    { key: 'legal-review', title: 'Legal and contractual requirements review', category: 'Legal register review', freq: 'Annual', firstDueDays: 90,
+      controls: ['A.5.31'],
+      evidence: 'The legal register reviewed: new laws and contract obligations added, owners confirmed.' }
+  ];
+
+  function rhythmKeyOf(cal) {
+    var m = /\[rhythm:([a-z0-9-]+)\]/.exec((cal && cal.notes) || '');
+    return m ? m[1] : '';
+  }
+  function rhythmDef(key) {
+    return OPERATING_RHYTHM.find(function (r) { return r.key === key; }) || null;
+  }
+  /* The rhythm activity a calendar item performs: by its marker, or,
+     for an item someone added by hand, by its category. Either way its
+     completion captures evidence for the same controls. */
+  function rhythmDefFor(cal) {
+    return rhythmDef(rhythmKeyOf(cal)) || OPERATING_RHYTHM.find(function (r) { return cal && r.category === cal.category; }) || null;
+  }
+  /* Notes without the marker or the stored evidence line, for display. */
+  function rhythmNotesText(notes) {
+    return String(notes || '').replace(/\[rhythm:[a-z0-9-]+\]\s*/g, '').replace(/(^|\s)Last evidence: \S+( \(\d{4}-\d{2}-\d{2}\))?/g, '').trim();
+  }
+  function rhythmLastEvidence(notes) {
+    var m = /Last evidence: (\S+)/.exec(String(notes || ''));
+    return m ? m[1] : '';
+  }
+
+  /* Which rhythm activities a tenant does not yet run. An activity is
+     already covered by an item carrying its marker, or by any active
+     item in the same calendar category (a backup restore test someone
+     added by hand counts). Returns the calendar items to add, with
+     first due dates from `today`. */
+  function planOperatingRhythm(calendar, today) {
+    var active = (calendar || []).filter(function (c) { return c && c.status !== 'Retired' && c.status !== 'Inactive' && c.status !== 'Done'; });
+    return OPERATING_RHYTHM.filter(function (r) {
+      return !active.some(function (c) { return rhythmKeyOf(c) === r.key || c.category === r.category; });
+    }).map(function (r) {
+      return { key: r.key, title: r.title, category: r.category, freq: r.freq, nextDue: addDaysToDateStr(today, r.firstDueDays),
+        notes: '[rhythm:' + r.key + '] Evidence: ' + r.evidence, controls: r.controls.slice() };
+    });
+  }
+
+  /* What completing a rhythm activity does to its linked controls
+     (ISO 27001 rows, applicable only). With evidence: the evidence is
+     linked where the control has none, the control is verified today
+     by the attester, and its status moves to In progress, or to
+     Implemented when markImplemented (the activity IS the control
+     operating). Without evidence nothing changes: a completion nobody
+     can show is not evidence. Pure; returns [{ control, set }]. */
+  function rhythmCompletionUpdates(def, controls, evidenceUrl, today, attester, markImplemented) {
+    if (!def || !evidenceUrl) return [];
+    var out = [];
+    (def.controls || []).forEach(function (code) {
+      var c = (controls || []).find(function (x) { return x.fw === 'iso27001' && x.id === code; });
+      if (!c || !c.app) return;
+      var set = { verified: today, verifiedBy: attester || 'Practitioner' };
+      if (!c.evidenceUrl) set.evidenceUrl = evidenceUrl;
+      if (markImplemented && c.st !== 'Implemented') set.st = 'Implemented';
+      else if (c.st === 'Not started') set.st = 'In progress';
+      out.push({ control: c, set: set });
+    });
+    return out;
+  }
+
   function recurringActivityState(calendar, category, today) {
     var rows = (calendar || []).filter(function (c) {
       return c && c.category === category && c.status !== 'Retired' && c.status !== 'Inactive';
@@ -4956,6 +5060,124 @@
      that one-way flag behaves if the check later regresses. Risks with
      no `tpl` (workshop-captured, not scan-derived) never match, since
      there's no check to have "resolved" them. */
+  /* Risks a Microsoft 365 scan cannot see, suggested from the scope &
+     context questionnaire's answers (ORG_CONTEXT_QUESTIONS, stored as
+     org* Settings). Same shape as the scan's risk templates in app.js
+     (risk + actions), proposed into the same approve-or-dismiss queue,
+     so nothing enters the register without a practitioner deciding.
+     `when(p)` reads the answers; `why(p)` says which answer raised it.
+     Keys are 'ctx-' prefixed and never collide with a check id. */
+  var CONTEXT_RISKS = [
+    { key: 'ctx-bec', when: function () { return true; },
+      why: function () { return 'Applies to every organisation using email.'; },
+      risk: { title: 'Business email compromise leads to a fraudulent payment or data theft', cat: 'People', cia: ['C', 'I'], L: 4, I: 4, controls: ['A.6.3', 'A.5.14', 'A.8.5'] },
+      actions: [
+        { t: 'Require call-back verification on a known number for any new or changed payment details, and record it in the finance procedure', pr: 'High', days: 30, control: 'A.5.14' },
+        { t: 'Cover payment fraud and impersonation in the next awareness training round', pr: 'Medium', days: 45, control: 'A.6.3' }] },
+    { key: 'ctx-leaver-access', when: function () { return true; },
+      why: function () { return 'Applies to every organisation with staff or contractors.'; },
+      risk: { title: 'Former staff or contractors keep access to systems or data after they leave', cat: 'Access', cia: ['C', 'I'], L: 3, I: 4, controls: ['A.5.18', 'A.6.5', 'A.5.11'] },
+      actions: [
+        { t: 'Adopt a leaver checklist: disable the account on the last day, remove app and shared-mailbox access, recover devices, and record it', pr: 'High', days: 30, control: 'A.6.5' },
+        { t: 'Reconcile active accounts against the staff and contractor list in the quarterly access review', pr: 'Medium', days: 60, control: 'A.5.18' }] },
+    { key: 'ctx-backup', when: function () { return true; },
+      why: function () { return 'Cloud services keep data available, but deletion, ransomware or account compromise can still destroy it.'; },
+      risk: { title: 'Information in cloud services cannot be recovered after deletion, ransomware or provider failure', cat: 'Resilience', cia: ['I', 'A'], L: 3, I: 5, controls: ['A.8.13', 'A.5.30'] },
+      actions: [
+        { t: 'Confirm what is backed up (Microsoft 365, product data, source code), the retention, and who can restore it', pr: 'High', days: 30, control: 'A.8.13' },
+        { t: 'Run and record a restore test for each critical data set', pr: 'High', days: 45, control: 'A.8.13' }] },
+    { key: 'ctx-key-person', when: function (p) { return p.orgSize === 'micro' || p.orgSize === 'small'; },
+      why: function () { return 'You told us the organisation is small.'; },
+      risk: { title: 'One or two people hold all administrative access and knowledge, with no cover if they are unavailable', cat: 'Resilience', cia: ['A'], L: 3, I: 4, controls: ['A.5.3', 'A.5.37', 'A.8.2'] },
+      actions: [
+        { t: 'Keep a tested emergency (break-glass) admin account with its credentials held securely, and document how it is used', pr: 'High', days: 30, control: 'A.8.2' },
+        { t: 'Document the critical admin procedures so a second person or the IT provider can follow them', pr: 'Medium', days: 60, control: 'A.5.37' }] },
+    { key: 'ctx-lost-device', when: function (p) { return p.orgWorkModel === 'remote' || p.orgWorkModel === 'hybrid'; },
+      why: function (p) { return p.orgWorkModel === 'remote' ? 'You told us people work fully remotely.' : 'You told us people work partly from home or remotely.'; },
+      risk: { title: 'A lost or stolen laptop or phone exposes company or customer information', cat: 'Endpoint', cia: ['C'], L: 3, I: 4, controls: ['A.8.1', 'A.7.9', 'A.8.24'] },
+      actions: [
+        { t: 'Enrol every company laptop and phone in Intune with encryption and a screen lock enforced', pr: 'High', days: 30, control: 'A.8.1' },
+        { t: 'Confirm a lost device can be wiped remotely, and add the reporting step to the incident procedure', pr: 'Medium', days: 45, control: 'A.7.9' }] },
+    { key: 'ctx-msp-access', when: function (p) { return p.orgItModel === 'msp' || p.orgItModel === 'mixed'; },
+      why: function () { return 'You told us a managed service provider runs some or all of your IT.'; },
+      risk: { title: 'The IT provider’s privileged access is misused, or their systems are compromised and used to reach ours', cat: 'Supplier', cia: ['C', 'I', 'A'], L: 3, I: 5, controls: ['A.5.19', 'A.5.20', 'A.8.2'] },
+      actions: [
+        { t: 'List the IT provider’s admin accounts and permissions, remove standing access that is not needed, and require MFA on all of them', pr: 'High', days: 30, control: 'A.8.2' },
+        { t: 'Check the IT provider contract covers security obligations, breach notification and access logging', pr: 'Medium', days: 60, control: 'A.5.20' }] },
+    { key: 'ctx-saas-supplier', when: function (p) { return p.orgCloud === 'saas' || p.orgCloud === 'iaas'; },
+      why: function () { return 'You told us your information is held in SaaS applications beyond Microsoft 365.'; },
+      risk: { title: 'A cloud or SaaS provider holding our information is breached, or changes how it handles it without our knowledge', cat: 'Supplier', cia: ['C', 'A'], L: 3, I: 4, controls: ['A.5.19', 'A.5.21', 'A.5.23'] },
+      actions: [
+        { t: 'Record each SaaS application holding company or customer data in the supplier register, with its assurance (ISO 27001 or SOC 2) and data location', pr: 'Medium', days: 45, control: 'A.5.23' },
+        { t: 'Enable single sign-on and MFA on each of those applications where available', pr: 'Medium', days: 60, control: 'A.5.19' }] },
+    { key: 'ctx-cloud-misconfig', when: function (p) { return p.orgCloud === 'iaas'; },
+      why: function () { return 'You told us you run your own workloads in Azure, AWS or similar.'; },
+      risk: { title: 'Cloud infrastructure is misconfigured, exposing data, services or management interfaces to the internet', cat: 'Cloud', cia: ['C', 'I', 'A'], L: 3, I: 5, controls: ['A.8.9', 'A.8.20', 'A.8.22'] },
+      actions: [
+        { t: 'Turn on the cloud provider’s security posture tooling (Defender for Cloud or AWS Security Hub) and work its high findings', pr: 'High', days: 30, control: 'A.8.9' },
+        { t: 'Document the network boundaries: what is internet-facing, how production is separated, and who can change it', pr: 'Medium', days: 60, control: 'A.8.22' }] },
+    { key: 'ctx-source-code', when: function (p) { return p.orgDevelops === 'yes' || p.orgDevelops === 'outsourced'; },
+      why: function () { return 'You told us the organisation develops software.'; },
+      risk: { title: 'Source code, secrets or the build pipeline are exposed through over-broad repository access', cat: 'Development', cia: ['C', 'I'], L: 3, I: 5, controls: ['A.8.4', 'A.8.25', 'A.5.32'] },
+      actions: [
+        { t: 'Review who has access to each code repository, remove anyone who does not need it, and require MFA and branch protection', pr: 'High', days: 30, control: 'A.8.4' },
+        { t: 'Scan repositories for committed secrets and move any found into a secrets store, rotating them', pr: 'High', days: 30, control: 'A.8.25' }] },
+    { key: 'ctx-release-testing', when: function (p) { return p.orgDevelops === 'yes' || p.orgDevelops === 'outsourced'; },
+      why: function () { return 'You told us the organisation develops software.'; },
+      risk: { title: 'A security flaw reaches production because changes are not reviewed and tested before release', cat: 'Development', cia: ['C', 'I', 'A'], L: 3, I: 4, controls: ['A.8.29', 'A.8.32', 'A.8.31'] },
+      actions: [
+        { t: 'Require peer review and automated dependency and security scanning on every change before it is merged', pr: 'High', days: 45, control: 'A.8.29' },
+        { t: 'Confirm production is separate from development and test, and that production data is not used in test without masking', pr: 'Medium', days: 60, control: 'A.8.31' }] },
+    { key: 'ctx-outsourced-dev', when: function (p) { return p.orgDevelops === 'outsourced'; },
+      why: function () { return 'You told us software is developed by an external development partner.'; },
+      risk: { title: 'The external development partner introduces vulnerabilities, mishandles our code or data, or keeps access after the engagement', cat: 'Supplier', cia: ['C', 'I'], L: 3, I: 5, controls: ['A.8.30', 'A.5.20', 'A.5.19'] },
+      actions: [
+        { t: 'Confirm the development agreement covers secure coding, IP ownership, confidentiality, vulnerability disclosure and return of code and data', pr: 'High', days: 30, control: 'A.8.30' },
+        { t: 'Give the partner named accounts with least-privilege access to repositories and environments, reviewed quarterly', pr: 'High', days: 30, control: 'A.8.30' }] },
+    { key: 'ctx-privacy-breach', when: function (p) { return p.orgPersonalData === 'customers' || p.orgPersonalData === 'sensitive'; },
+      why: function (p) { return p.orgPersonalData === 'sensitive' ? 'You told us you hold sensitive personal information.' : 'You told us you hold personal information about customers or the public.'; },
+      risk: { title: 'Personal information is disclosed or mishandled, triggering notifiable data breach obligations', cat: 'Privacy', cia: ['C'], L: 3, I: 5, controls: ['A.5.34', 'A.5.33', 'A.8.12'] },
+      actions: [
+        { t: 'Map where personal information is held and who can access it, and record it in the asset register', pr: 'High', days: 45, control: 'A.5.34' },
+        { t: 'Add the notifiable data breach assessment (30-day test, OAIC notification) to the incident procedure', pr: 'High', days: 30, control: 'A.5.34' }] },
+    { key: 'ctx-ai-tools', when: function (p) { return p.orgAiUse === 'tools' || p.orgAiUse === 'builds'; },
+      why: function () { return 'You told us staff use AI tools.'; },
+      risk: { title: 'Staff put confidential or personal information into unapproved AI tools', cat: 'People', cia: ['C'], L: 4, I: 3, controls: ['A.5.10', 'A.8.12', 'A.5.23'] },
+      actions: [
+        { t: 'Publish the list of approved AI tools and what may not be entered into them, in the acceptable use rules', pr: 'Medium', days: 30, control: 'A.5.10' },
+        { t: 'Block or warn on unapproved AI sites with Defender for Cloud Apps or web filtering', pr: 'Medium', days: 60, control: 'A.8.12' }] },
+    { key: 'ctx-ai-product', when: function (p) { return p.orgAiUse === 'builds'; },
+      why: function () { return 'You told us you build AI into your products or services.'; },
+      risk: { title: 'AI features in our product leak customer data across customers, or produce harmful or incorrect output that is relied on', cat: 'Development', cia: ['C', 'I'], L: 3, I: 5, controls: ['A.8.26', 'A.8.25', 'A.5.34'] },
+      actions: [
+        { t: 'Define security and privacy requirements for AI features: tenant isolation, what data the model provider receives, and retention', pr: 'High', days: 45, control: 'A.8.26' },
+        { t: 'Test AI features for prompt injection and cross-customer data exposure before each major release', pr: 'High', days: 60, control: 'A.8.25' }] },
+    { key: 'ctx-rapid-change', when: function (p) { return p.orgChange === 'growing' || p.orgChange === 'major'; },
+      why: function (p) { return p.orgChange === 'major' ? 'You told us the organisation is going through major change.' : 'You told us the organisation is growing quickly.'; },
+      risk: { title: 'Rapid change introduces systems, suppliers or access that bypass security review', cat: 'Governance', cia: ['C', 'I', 'A'], L: 3, I: 4, controls: ['A.5.8', 'A.8.32', 'A.5.18'] },
+      actions: [
+        { t: 'Add a security check to new projects, systems and suppliers before they go live', pr: 'Medium', days: 45, control: 'A.5.8' }] },
+    { key: 'ctx-contract-obligations', when: function (p) { return p.orgCustomerDemand === 'contract'; },
+      why: function () { return 'You told us security or certification is written into your customer contracts.'; },
+      risk: { title: 'We fail a contractual security obligation or certification commitment, putting key customer contracts at risk', cat: 'Compliance', cia: ['C', 'I', 'A'], L: 2, I: 5, controls: ['A.5.31', 'A.5.36', 'A.5.20'] },
+      actions: [
+        { t: 'Record each customer’s contractual security obligations in the legal register with an owner, and check them at each management review', pr: 'High', days: 45, control: 'A.5.31' }] }
+  ];
+
+  /* The context risks to propose now: those whose answers apply, that
+     are not already in the register (risk.tpl) or dismissed. */
+  function contextRiskSuggestions(profile, risks, dismissed) {
+    var p = profile || {};
+    var inRegister = {};
+    (risks || []).forEach(function (r) { if (r && r.tpl) inRegister[r.tpl] = true; });
+    var gone = {};
+    (dismissed || []).forEach(function (k) { gone[k] = true; });
+    var answered = ['orgSize', 'orgWorkModel', 'orgItModel', 'orgCloud', 'orgDevelops', 'orgPersonalData', 'orgAiUse', 'orgChange', 'orgCustomerDemand'].some(function (k) { return !!p[k]; });
+    if (!answered) return [];
+    return CONTEXT_RISKS.filter(function (c) { return !inRegister[c.key] && !gone[c.key] && c.when(p); })
+      .map(function (c) { return { key: c.key, why: c.why(p), risk: c.risk, actions: c.actions }; });
+  }
+
   function resolvableFindings(risks, actions, checkResultsById) {
     var actionsById = {};
     (actions || []).forEach(function (a) { if (a && a.id) actionsById[a.id] = a; });
@@ -5568,6 +5790,7 @@
     if (a.itModel === 'inhouse') internal.push('an in-house IT capability whose time is shared between day-to-day operations and security improvement');
     if (msp) internal.push('reliance on external IT expertise, which requires a clear division of security responsibilities with the provider');
     if (a.develops === 'yes') internal.push('in-house software development, which brings secure development, change control and protection of source code into scope');
+    if (a.develops === 'outsourced') internal.push('software development carried out wholly or partly by an external development partner, which brings outsourced development, secure development, change control and protection of source code into scope');
     if (sensitive) internal.push('processing of sensitive personal information (such as health or financial information), which raises the impact of any breach');
     if (a.ai === 'builds') internal.push('development of AI capabilities within the organisation’s own products or services');
     if (a.change === 'growing') internal.push('rapid growth, with people, systems and suppliers being added faster than controls are usually updated');
@@ -5664,7 +5887,7 @@
     if (a.ai === 'tools') issues.push('staff adopting AI tools faster than they can be assessed, including tools that have not been approved');
     if (a.ai === 'builds') issues.push('the organisation’s obligations as a provider — transparency to users, testing for accuracy and bias, and monitoring AI systems after release');
     if ((a.ai === 'tools' || a.ai === 'builds') && (a.personalData === 'customers' || a.personalData === 'sensitive')) issues.push('personal information' + (a.personalData === 'sensitive' ? ', including sensitive information,' : '') + ' that may be entered into or processed by AI systems');
-    if (a.ai === 'builds' && a.develops === 'yes') issues.push('in-house development and change of AI capabilities, which brings data quality, model evaluation and life-cycle controls into scope');
+    if (a.ai === 'builds' && (a.develops === 'yes' || a.develops === 'outsourced')) issues.push('in-house development and change of AI capabilities, which brings data quality, model evaluation and life-cycle controls into scope');
 
     function or(v, d) { return (v && String(v).trim()) || d; }
     var scopeStatement = 'The AI management system of ' + or(orgName, 'the organisation') +
@@ -7403,6 +7626,12 @@
     if (iso) {
       var as = s.assets || {}, lg = s.legal || {};
       /* Before risk treatment: the risk assessment draws on both. */
+      var rhythmMissing = planOperatingRhythm(s.calendar || [], today || '1970-01-01').length;
+      steps.splice(steps.findIndex(function (x) { return x.id === 'suppliers'; }) + 1, 0,
+        { id: 'rhythm', phase: 'Operate', label: 'Set up the operating rhythm',
+          why: 'The recurring checks an auditor samples to see controls working: access reviews, log reviews, restore tests and more, each completed with its evidence.',
+          done: rhythmMissing === 0,
+          detail: rhythmMissing && rhythmMissing < OPERATING_RHYTHM.length ? rhythmMissing + ' activit' + (rhythmMissing === 1 ? 'y' : 'ies') + ' not yet scheduled' : '' });
       steps.splice(steps.findIndex(function (x) { return x.id === 'risks'; }), 0,
         { id: 'assets', phase: 'Assess', label: 'Build the asset register',
           why: 'Sync devices, applications and sites from Microsoft 365, then add the information assets themselves, each with an owner (A.5.9).',
@@ -7794,6 +8023,9 @@
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
+    OPERATING_RHYTHM: OPERATING_RHYTHM, rhythmKeyOf: rhythmKeyOf, rhythmDef: rhythmDef, rhythmDefFor: rhythmDefFor, rhythmNotesText: rhythmNotesText, rhythmLastEvidence: rhythmLastEvidence,
+    planOperatingRhythm: planOperatingRhythm, rhythmCompletionUpdates: rhythmCompletionUpdates,
+    CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,
     addMonthsIso: addMonthsIso, certificationCycle: certificationCycle, internalAuditCoverage: internalAuditCoverage, internalAuditProgramme: internalAuditProgramme
   };
 });

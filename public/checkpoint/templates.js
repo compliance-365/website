@@ -246,6 +246,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Users must not attempt to bypass, disable or test security controls without explicit authorisation.',
         because: 'Well-intentioned testing is indistinguishable from an attack in the logs, and consumes the response capacity a real incident would need.'
+      },
+      {
+        rule: 'Only AI tools approved by the organisation are used with organisational information, and confidential or personal information is not entered into public AI services.',
+        because: 'Information typed into a public AI tool may be retained and used by its provider, outside the organisation’s control.'
       }
     ],
     roles: [
@@ -292,7 +296,7 @@ window.POLICY_TEMPLATES = [
         because: 'Access granted first and reviewed later is almost never reviewed, and retrospective approval records a decision that was not actually made.'
       },
       {
-        rule: 'Privileged (administrative) roles are assigned through Microsoft Entra Privileged Identity Management with time-bound activation, not standing admin rights.',
+        rule: 'Privileged (administrative) roles are held by as few named people as the work needs, using separate administrator accounts where practical, and activated for a limited time through Microsoft Entra Privileged Identity Management where the licence includes it, rather than held as standing rights.',
         because: 'A standing administrative account is valuable to an attacker continuously; an activated one is valuable only during the window it is in use.'
       },
       {
@@ -300,7 +304,7 @@ window.POLICY_TEMPLATES = [
         because: 'A password alone is one leaked breach corpus away from being public, and exceptions are precisely where attackers look first.'
       },
       {
-        rule: 'Access rights are formally reviewed at least every six months, and immediately on role change or termination.',
+        rule: 'Access rights are formally reviewed at least quarterly, and immediately on role change or termination; each review is recorded with the accounts confirmed or removed.',
         because: 'Entitlements accumulate silently as people move around, and a leaver\'s live account is the single most exploitable artefact an organisation leaves lying about.'
       },
       {
@@ -310,12 +314,32 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Guest access to Microsoft 365 resources is time-limited, reviewed periodically, and removed the moment it is no longer required.',
         because: 'Guest access outlives the project that justified it by default, leaving external parties holding access nobody remembers granting.'
+      },
+      {
+        rule: 'Every identity is created only against an approved request for a named person, changed when their role changes, and disabled on the day they leave; accounts unused for 90 days are reviewed and disabled if not needed.',
+        because: 'Identity lifecycle is where access goes wrong quietly: accounts created informally and never removed outlive everyone who remembers why they exist.'
+      },
+      {
+        rule: 'Passwords are long passphrases that are not reused across services and are stored only in an approved password manager; administrators use phishing-resistant authentication (passkeys or security keys), and temporary credentials are changed at first use.',
+        because: 'Authentication information is the key to every other control, and phishing-resistant methods remove the attack that defeats most other multi-factor methods.'
+      },
+      {
+        rule: 'At least one emergency (break-glass) administrator account is kept for when normal sign-in fails: cloud-only, with a long credential held securely offline, its sign-ins alerted, and its use tested and recorded at least annually.',
+        because: 'Without a tested way back in, a misconfigured sign-in policy or a lost authenticator locks the organisation out of its own tenant.'
+      },
+      {
+        rule: 'Access to source code repositories, production environments and powerful administrative tools is restricted to named people who need it, and included in every access review.',
+        because: 'These are the paths by which a single compromised account can change the product or reach every customer’s data.'
+      },
+      {
+        rule: 'Conflicting duties are separated: no one person can request, approve and carry out a sensitive change on their own. Where the organisation is too small to separate them, the activity is logged and reviewed by someone else.',
+        because: 'Segregation stops one mistake or one bad actor going unnoticed; independent review of the log is the accepted substitute when headcount does not allow it.'
       }
     ],
     roles: [
       {
         role: 'System owners',
-        responsibility: 'Approve access requests for their systems, and complete the six-monthly review of who currently holds access.'
+        responsibility: 'Approve access requests for their systems, and complete the quarterly review of who currently holds access.'
       },
       {
         role: 'IT / administrators',
@@ -339,7 +363,7 @@ window.POLICY_TEMPLATES = [
       'Logging & Monitoring Policy'
     ],
     reviewCadence: 'Every six months, alongside the scheduled access review, or sooner following a significant access-related incident.',
-    controls: ['A.5.15', 'A.5.16', 'A.5.18', 'A.3.8', 'A.3.9'],
+    controls: ['A.5.15', 'A.5.16', 'A.5.18', 'A.3.8', 'A.3.9', 'A.5.3', 'A.5.17', 'A.8.2', 'A.8.3', 'A.8.4', 'A.8.5', 'A.8.18'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
@@ -458,7 +482,7 @@ window.POLICY_TEMPLATES = [
         because: 'Ransomware deliberately targets reachable backups, so a backup an attacker can also reach is not a backup.'
       },
       {
-        rule: 'Backup restoration is tested at least quarterly, and the test result recorded.',
+        rule: 'Backup restoration is tested at least every six months, and after any significant change to the backup arrangement, with the test result recorded.',
         because: 'Backup jobs report success on backups that cannot actually be restored, and restoration is the only step that proves otherwise.'
       },
       {
@@ -472,6 +496,18 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Recovery dependencies on third parties are documented, with the supplier\'s own commitments and contact routes recorded alongside.',
         because: 'Recovery targets that assume a supplier will respond faster than their contract requires are aspirations, not plans.'
+      },
+      {
+        rule: 'Backups cover every critical data set, including data held in Microsoft 365 and other SaaS applications and the source code of any software the organisation develops; a provider’s retention or recycle bin is not treated as a backup.',
+        because: 'Cloud services keep data available, but they do not protect it from deletion, ransomware or a compromised account, and the restore you need is usually the one nobody set up.'
+      },
+      {
+        rule: 'Information security is maintained during a disruption: security controls stay in force unless the continuity plan says otherwise, and any temporary relaxation is approved, time-limited and reversed once normal operation resumes.',
+        because: 'Disruption is when attackers and mistakes thrive, and a control switched off to restore service is easy to forget to switch back on.'
+      },
+      {
+        rule: 'The capacity of critical services (storage, licences, compute and service limits) is monitored, with alerts before limits are reached and capacity planned for known growth.',
+        because: 'Running out of capacity is an availability incident, and one that monitoring nearly always makes avoidable.'
       }
     ],
     roles: [
@@ -501,7 +537,7 @@ window.POLICY_TEMPLATES = [
       'Asset Management Policy'
     ],
     reviewCadence: 'Annually, and after any exercise or real invocation that surfaces a material gap.',
-    controls: ['A.5.29', 'A.5.30', 'A.8.14'],
+    controls: ['A.5.29', 'A.5.30', 'A.8.14', 'A.8.13', 'A.8.6'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
@@ -539,6 +575,14 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'On termination, supplier access is revoked and the return or deletion of organisational data is confirmed.',
         because: 'Access and data both persist by default after a relationship ends unless someone explicitly closes them out.'
+      },
+      {
+        rule: 'Suppliers that process organisational data are required to apply equivalent security requirements to their own subcontractors and subprocessors, and to notify the organisation before adding or changing any that will handle its data.',
+        because: 'Most supply-chain incidents arrive through a supplier’s supplier; the organisation cannot assess a party it does not know exists.'
+      },
+      {
+        rule: 'Changes to a supplier’s service, ownership, hosting location or security posture are assessed for their effect on the organisation before they are accepted.',
+        because: 'A supplier assessed once and never again is assessed against a service that may no longer exist in that form.'
       }
     ],
     roles: [
@@ -564,7 +608,7 @@ window.POLICY_TEMPLATES = [
       'Business Continuity & Disaster Recovery Plan'
     ],
     reviewCadence: 'Annually for standard suppliers; more frequently for any supplier assessed as Critical or High risk.',
-    controls: ['A.5.19', 'A.5.20', 'A.5.22', 'CPS234.16', 'CPS234.22', 'CPS234.28', 'A.3.10'],
+    controls: ['A.5.19', 'A.5.20', 'A.5.22', 'CPS234.16', 'CPS234.22', 'CPS234.28', 'A.3.10', 'A.5.21'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap', 'cps234']
   },
   {
@@ -602,6 +646,14 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Physical and electronic disposal uses methods appropriate to the classification, with secure destruction for anything above the lowest level.',
         because: 'Discarded media and paper are among the least defended and most easily obtained sources of organisational data.'
+      },
+      {
+        rule: 'Data loss prevention is used where the platform allows it to detect and block sensitive information leaving through email, sharing links or endpoints, and its alerts are reviewed.',
+        because: 'Classification tells people how to handle information; data loss prevention catches the occasions when they do not.'
+      },
+      {
+        rule: 'Where personal or sensitive information is used outside the system that holds it, for reporting, analytics, support or testing, it is masked, pseudonymised or de-identified unless the full data is genuinely required.',
+        because: 'Every extra copy of identifiable data is another place it can leak from; most uses do not need the identifiable version.'
       }
     ],
     roles: [
@@ -627,7 +679,7 @@ window.POLICY_TEMPLATES = [
       'Record of Processing Activities & Data Handling Procedure'
     ],
     reviewCadence: 'Annually, or when a new category of sensitive information is introduced into the business.',
-    controls: ['A.5.12', 'A.5.13', 'A.5.14', 'CPS234.20', 'A.3.5', 'A.3.6', 'A.3.7'],
+    controls: ['A.5.12', 'A.5.13', 'A.5.14', 'CPS234.20', 'A.3.5', 'A.3.6', 'A.3.7', 'A.8.10', 'A.8.11', 'A.8.12'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'cps234']
   },
   {
@@ -665,6 +717,34 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Changes are deployed through a controlled pipeline with an auditable record of what was released, by whom, and when.',
         because: 'Recovering from a bad release requires knowing exactly what changed, and attributing a change is a control in its own right.'
+      },
+      {
+        rule: 'Developers follow a defined secure coding standard, based on the OWASP Top 10 and Application Security Verification Standard, covering input validation, authentication, session and error handling, and the use of approved libraries.',
+        because: 'A standard is what code review checks against; without one, “secure” means whatever the reviewer happens to remember.'
+      },
+      {
+        rule: 'Access to source code repositories is limited to named individuals, protected by multi-factor authentication and branch protection, and reviewed at least quarterly.',
+        because: 'Source code is both intellectual property and a map of the product’s weaknesses; write access to it is write access to production.'
+      },
+      {
+        rule: 'Security testing is part of every release: automated static analysis and dependency scanning in the pipeline, security-focused testing of significant changes, and an independent penetration test of internet-facing services at least annually and before major releases. Findings are fixed before release according to their severity.',
+        because: 'Testing before release is far cheaper than finding the same flaw in production, and an independent test is the evidence customers and auditors ask for.'
+      },
+      {
+        rule: 'Changes to the product follow the Change Management Policy: reviewed, tested, approved and deployed through the controlled pipeline, with the ability to roll back.',
+        because: 'Release discipline is where secure development becomes observable, and an unrecorded change cannot be investigated afterwards.'
+      },
+      {
+        rule: 'Outsourced development is governed by a written agreement covering secure coding, confidentiality, intellectual property ownership, vulnerability notification and the return or deletion of code and data at the end of the engagement. External developers use named, least-privilege accounts, their work is reviewed and tested exactly as in-house work is, and their access is removed when the engagement ends.',
+        because: 'An external developer has the same reach into the product as an employee, but sits outside the organisation’s day-to-day oversight; the contract and the access model are what close that gap.'
+      },
+      {
+        rule: 'Personal or confidential production data is not copied into development or test. Where realistic data is genuinely needed, it is masked or de-identified first, and its use is approved and recorded.',
+        because: 'Test environments are less protected than production by design, so real data placed there is exposed by design too.'
+      },
+      {
+        rule: 'Security testing and audit activity against live systems is planned and authorised in advance, scheduled to minimise disruption, and limited to read-only access wherever possible.',
+        because: 'A test that takes production down, or an auditor’s tool left with broad access, creates the incident the test was meant to prevent.'
       }
     ],
     roles: [
@@ -696,7 +776,7 @@ window.POLICY_TEMPLATES = [
        "significant changes are threat-modelled before implementation"
        is A.8.27, and "production data is not used in lower environments
        without de-identification" is A.8.33 (test information). */
-    controls: ['A.8.25', 'A.8.26', 'A.8.27', 'A.8.28', 'A.8.31', 'A.8.33', 'A.3.27', 'A.3.28', 'A.3.29', 'A.3.31'],
+    controls: ['A.8.25', 'A.8.26', 'A.8.27', 'A.8.28', 'A.8.31', 'A.8.33', 'A.3.27', 'A.3.28', 'A.3.29', 'A.3.31', 'A.8.4', 'A.8.11', 'A.8.29', 'A.8.30', 'A.8.32', 'A.8.34'],
     frameworks: ['iso27001', 'iso27701', 'iso42001', 'soc2']
   },
   {
@@ -936,6 +1016,14 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Monitoring is directed at systems and security events; it is not used for general surveillance of individuals, and any monitoring of personal data respects the applicable privacy obligations.',
         because: 'Monitoring that exceeds its stated purpose is both a privacy problem and the fastest way to lose the goodwill the reporting culture depends on.'
+      },
+      {
+        rule: 'System clocks are synchronised to an authoritative time source, so that events can be correlated reliably across systems and providers.',
+        because: 'An investigation that cannot put events from different systems in order cannot establish what happened.'
+      },
+      {
+        rule: 'Security logs and alerts are reviewed at least monthly by a named person, the review is recorded, and anything significant is raised as an incident or action.',
+        because: 'Logs that are collected but never read provide evidence only after the fact, and only if someone thinks to look.'
       }
     ],
     roles: [
@@ -999,6 +1087,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Systems that cannot be patched are isolated, compensated for, and scheduled for replacement.',
         because: 'An unpatchable system does not stop being exploitable because patching it is inconvenient.'
+      },
+      {
+        rule: 'Secure configuration baselines are defined for endpoints, Microsoft 365 and any cloud infrastructure; configuration is checked against them regularly (for example by Checkpoint’s posture scan) and drift is corrected or recorded as an accepted exception.',
+        because: 'Most breaches exploit a setting rather than a missing patch, and a baseline is what makes a setting checkable.'
       }
     ],
     roles: [
@@ -1087,7 +1179,7 @@ window.POLICY_TEMPLATES = [
       'Asset Management Policy'
     ],
     reviewCadence: 'Annually, or when the organisation’s endpoint or email security tooling changes materially.',
-    controls: ['A.8.7'],
+    controls: ['A.8.7', 'A.8.19', 'A.8.23', 'A.7.10'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'essential8', 'nistcsf']
   },
   {
@@ -1195,6 +1287,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Cloud services and data stores are inventoried alongside physical assets.',
         because: 'Most organisational data now sits in services rather than on devices, and an inventory covering only hardware describes a minority of the estate.'
+      },
+      {
+        rule: 'Equipment is maintained in line with the supplier’s recommendations, repaired only by authorised providers, and has organisational data removed or protected before it leaves for repair.',
+        because: 'A device sent for repair with its data intact is a disclosure waiting to happen, and unmaintained equipment fails when it is needed most.'
       }
     ],
     roles: [
@@ -1220,7 +1316,7 @@ window.POLICY_TEMPLATES = [
       'Cryptography Policy'
     ],
     reviewCadence: 'Annually, or when the organisation’s device management or asset tracking approach changes materially.',
-    controls: ['A.5.9', 'A.5.11', 'CPS234.21'],
+    controls: ['A.5.9', 'A.5.11', 'CPS234.21', 'A.7.13', 'A.7.14'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf', 'cps234']
   },
   {
@@ -1258,6 +1354,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Changes are reviewed after implementation for unintended effects, particularly on access and data flows.',
         because: 'Permission and data-flow side effects rarely announce themselves and are typically found much later, by someone else.'
+      },
+      {
+        rule: 'Information security is built into project management: every project that introduces or changes systems, suppliers or the handling of information identifies its security requirements and risks at the start and confirms they are met before go-live.',
+        because: 'Security added at the end of a project is either expensive or skipped; added at the start, it is usually just a design decision.'
       }
     ],
     roles: [
@@ -1283,7 +1383,7 @@ window.POLICY_TEMPLATES = [
       'Business Continuity & Disaster Recovery Plan'
     ],
     reviewCadence: 'Annually, or when the organisation’s change or release process changes materially.',
-    controls: ['A.8.32'],
+    controls: ['A.8.32', 'A.5.8', 'A.5.3'],
     frameworks: ['iso27001', 'iso27701', 'soc2', 'iso42001']
   },
   {
@@ -1321,6 +1421,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Devices are not left unattended in public places or vehicles, and are reported immediately if lost or stolen.',
         because: 'Opportunistic theft is the most common way an organisational device is lost, and remote wipe depends on prompt reporting.'
+      },
+      {
+        rule: 'Where the organisation has no premises of its own, these requirements apply to the places people work, including home workspaces and shared spaces, and the physical security of cloud providers’ facilities is assured through their certifications and assurance reports.',
+        because: 'Being office-free removes the office, not the physical risk: it moves to the laptop, the home desk and the provider’s data centre.'
       }
     ],
     roles: [
@@ -1350,7 +1454,7 @@ window.POLICY_TEMPLATES = [
        appropriate to its criticality, including power, temperature and
        water" is A.7.5's own definition (protecting against physical and
        environmental threats), not just a paraphrase of A.7.1/A.7.2/A.7.7. */
-    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.5', 'A.7.7', 'A.3.19'],
+    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.5', 'A.7.7', 'A.3.19', 'A.7.3', 'A.7.8', 'A.7.11'],
     frameworks: ['iso27001', 'iso27701', 'dispirap']
   },
   {
@@ -1389,6 +1493,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Assurance over information security controls is provided by personnel with demonstrable skill in the area being assured, and specialist capability is co-sourced where it is not available internally.',
         because: 'An assurance opinion is only worth the expertise behind it, and a generalist review of a specialist control produces a clean report that means very little.'
+      },
+      {
+        rule: 'Managers regularly check that the policies, rules and standards applying to their area are being followed; non-compliance found is recorded as a nonconformity, its cause addressed, and the result reported to management review.',
+        because: 'Policies are only as good as their observance, and Clause 9 expects the organisation to look for its own departures before an auditor does.'
       }
     ],
     roles: [
@@ -1426,7 +1534,7 @@ window.POLICY_TEMPLATES = [
        statement about audit coverage rather than a rule this policy
        can carry \u2014 see CPS234_NOT_A_DOCUMENT_CLAIM in
        test/content-library.test.mjs. */
-    controls: ['A.5.35', 'CPS234.27', 'CPS234.29', 'CPS234.30', 'CPS234.31', 'CPS234.33'],
+    controls: ['A.5.35', 'CPS234.27', 'CPS234.29', 'CPS234.30', 'CPS234.31', 'CPS234.33', 'A.5.36'],
     frameworks: ['iso27001', 'soc2', 'nistcsf', 'cps234']
   },
   {
@@ -1619,7 +1727,7 @@ window.POLICY_TEMPLATES = [
       'Incident Response Plan'
     ],
     reviewCadence: 'Annually, or when sharing platforms or data loss prevention controls change materially.',
-    controls: ['A.5.14', 'A.3.7'],
+    controls: ['A.5.14', 'A.3.7', 'A.8.12'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -1657,6 +1765,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Each approved service holding significant organisation information has an exit plan covering data return in a usable format and confirmed deletion.',
         because: 'The time to negotiate getting data back is before signing, not when the relationship ends.'
+      },
+      {
+        rule: 'Networks and network services are secured: only intended services are reachable from the internet, management interfaces are not publicly exposed, production is separated from development and test, and the security commitments of network and connectivity providers are recorded.',
+        because: 'In a cloud environment the network boundary is a configuration, and one mistaken setting can expose a whole environment.'
       }
     ],
     roles: [
@@ -1682,7 +1794,7 @@ window.POLICY_TEMPLATES = [
       'Data Classification & Handling Policy'
     ],
     reviewCadence: 'Annually, and whenever a significant new cloud platform is adopted.',
-    controls: ['A.5.23'],
+    controls: ['A.5.23', 'A.8.20', 'A.8.21', 'A.8.22'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -1720,6 +1832,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Staff are made aware of threats relevant to their roles — for example active phishing campaigns — through the organisation’s normal communication channels.',
         because: 'People are often the target, and a warned person is much harder to deceive.'
+      },
+      {
+        rule: 'The organisation maintains contact with relevant special interest groups and security forums, such as the ACSC Partnership Program, an industry or peer information-sharing group, and its key vendors’ security bulletins, and records which it belongs to.',
+        because: 'Early warning usually arrives through these channels first, and contact established before an incident is far more useful than contact sought during one.'
       }
     ],
     roles: [
@@ -1745,7 +1861,7 @@ window.POLICY_TEMPLATES = [
       'Communication Plan'
     ],
     reviewCadence: 'Annually, or when the organisation’s threat sources or technology stack change materially.',
-    controls: ['A.5.7'],
+    controls: ['A.5.7', 'A.5.6'],
     frameworks: ['iso27001', 'iso27701']
   },
   {
@@ -3912,7 +4028,8 @@ window.ORG_CONTEXT_QUESTIONS = [
     { value: 'm365', label: 'Microsoft 365 only' }, { value: 'saas', label: 'Microsoft 365 plus other online (SaaS) applications' },
     { value: 'iaas', label: 'All of those, plus our own servers in Azure, AWS or similar' }] },
   { id: 'develops', key: 'orgDevelops', label: 'Does the organisation develop its own software?', options: [
-    { value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] },
+    { value: 'no', label: 'No' }, { value: 'yes', label: 'Yes, with our own developers' },
+    { value: 'outsourced', label: 'Yes, partly or wholly through an external development partner' }] },
   { id: 'personalData', key: 'orgPersonalData', label: 'What personal information does it hold?', options: [
     { value: 'staff', label: 'Only about our own staff' }, { value: 'customers', label: 'About customers or members of the public' },
     { value: 'sensitive', label: 'Sensitive information, such as health or financial records' }] },
