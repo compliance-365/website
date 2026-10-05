@@ -71,6 +71,18 @@ function showModal(opts) {
       label.setAttribute('for', fieldId);
       wrap.appendChild(label);
       var el;
+      if (f.type === 'checkbox') {
+        /* Box first, then its label, on one line. */
+        el = document.createElement('input');
+        el.type = 'checkbox';
+        el.checked = !!f.value;
+        wrap.className = 'm-field m-check';
+        el.id = fieldId;
+        wrap.insertBefore(el, label);
+        box.appendChild(wrap);
+        inputs[f.id] = el;
+        return;
+      }
       if (f.type === 'select') {
         el = document.createElement('select');
         (f.options || []).forEach(function (o) {
@@ -121,7 +133,7 @@ function showModal(opts) {
     function cancelResult() { return hasFields ? null : false; }
     function tryConfirm() {
       var values = {};
-      Object.keys(inputs).forEach(function (id) { values[id] = inputs[id].value.trim(); });
+      Object.keys(inputs).forEach(function (id) { values[id] = inputs[id].type === 'checkbox' ? (inputs[id].checked ? 'yes' : '') : inputs[id].value.trim(); });
       var err = opts.validate ? opts.validate(values) : null;
       if (err) { errorEl.textContent = err; errorEl.classList.add('show'); return; }
       close(hasFields ? values : true);
@@ -820,7 +832,7 @@ function showModal(opts) {
     'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
     'addManualAsset', 'syncAssets', 'editAsset', 'seedLegalBaseline', 'addLegalReq', 'editLegalReq',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
-    'addCalItem', 'completeCalItem', 'setupOperatingRhythm', 'setRiskAppetite', 'setScanCadence',
+    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
@@ -3705,8 +3717,16 @@ function showModal(opts) {
     return 'Microsoft 365 and the following systems from the asset register: ' + names.slice(0, 40).join(', ') + '. ' + window.CheckpointLib.pendingMarker('the hosting platform and region for the products, and code repositories');
   }
 
+  /* Where the frequencies a document states come from: the
+     organisation's own calendar and settings (lib CADENCES). */
+  function cadenceState() {
+    return { calendar: (S && S.calendar) || [], settings: (S && S.settings) || {} };
+  }
+
   function resolveOrgTokens(str) {
     if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
+    str = window.CheckpointLib.resolveCadenceTokens(str, cadenceState());
+    if (str.indexOf('{{') === -1) return str;
     /* Answers are free text and often end in a full stop; the template
        text around a token often supplies its own punctuation. Where
        both do, keep the template's — "contract.." and "sold into. —"
@@ -3740,7 +3760,11 @@ function showModal(opts) {
       if (Array.isArray(out[k])) out[k] = out[k].map(resolveOrgTokens);
     });
     if (Array.isArray(out.policyStatements)) {
-      out.policyStatements = out.policyStatements.map(function (s) {
+      /* Statements that only apply to some organisations (`when`) are
+         left out where the scope & context answers say they do not. */
+      out.policyStatements = out.policyStatements.filter(function (s) {
+        return window.CheckpointLib.statementApplies(s, S && S.settings);
+      }).map(function (s) {
         if (typeof s === 'string') return resolveOrgTokens(s);
         return Object.assign({}, s, { rule: resolveOrgTokens(s.rule), because: resolveOrgTokens(s.because) });
       });
@@ -3764,7 +3788,7 @@ function showModal(opts) {
      be the wizard getting in the way rather than helping. */
   function templateUsesOrgTokens(t) {
     if (!t) return false;
-    try { return JSON.stringify(t).indexOf('{{') > -1; }
+    try { return /\{\{\w+\}\}/.test(JSON.stringify(t)); }
     catch (e) { return false; }
   }
 
@@ -3830,15 +3854,25 @@ function showModal(opts) {
      (if they've added or annotated a row by hand) still wins over the
      freshly-computed aggregate, same precedence every other field
      already has. */
-  function effectivePolicyContent(t, docName) {
+  function mergedPolicyContent(t, docName) {
     var base = t.id === 'roles-responsibilities' ? Object.assign({}, t, { roles: aggregateRolesAndResponsibilities() }) : t;
     var draft = docName && (S.policyDrafts || []).find(function (d) { return d.docName === docName; });
-    if (!draft || !draft.content) return applyOrgTokens(base);
+    if (!draft || !draft.content) return base;
     var merged = Object.assign({}, base);
     EDITABLE_POLICY_FIELDS.forEach(function (k) {
       if (draft.content[k] !== undefined) merged[k] = draft.content[k];
     });
-    return applyOrgTokens(merged);
+    return merged;
+  }
+  function effectivePolicyContent(t, docName) {
+    return applyOrgTokens(mergedPolicyContent(t, docName));
+  }
+  /* The frequencies this document states as it is rendered now, as the
+     JSON recorded on the document (DocCadences). */
+  function docCadenceSnapshot(t, docName) {
+    var L = window.CheckpointLib;
+    var keys = L.cadenceKeysIn(mergedPolicyContent(t, docName));
+    return keys.length ? JSON.stringify(L.cadenceSnapshot(keys, cadenceState())) : '';
   }
 
   function policyDraftFor(docName) {
@@ -4380,7 +4414,8 @@ function showModal(opts) {
       /* Internal, not the tenant's report classification: a policy is
          meant to be readable by every employee who has to follow it.
          Overridable per document via Details. */
-      classification: 'Internal', frameworks: (t.frameworks || []).join(','), tplId: t.id
+      classification: 'Internal', frameworks: (t.frameworks || []).join(','), tplId: t.id,
+      cadences: docCadenceSnapshot(t, filename)
     });
     audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify(Object.assign({ tplId: t.id }, params)));
     return doc;
@@ -4456,7 +4491,7 @@ function showModal(opts) {
         owner: params.owner, version: vals.version, status: 'Approved',
         approvedBy: vals.approvedBy, approvalDate: new Date().toISOString().slice(0, 10),
         nextReview: vals.nextReview, classification: existing.classification || 'Internal',
-        frameworks: (t.frameworks || []).join(','), tplId: t.id
+        frameworks: (t.frameworks || []).join(','), tplId: t.id, cadences: docCadenceSnapshot(t, name)
       });
     } catch (e) { warn(e); throw e; }
     audit('Policy document approved', 'Document', name, 'Draft',
@@ -4479,6 +4514,70 @@ function showModal(opts) {
     var clauseNote = approvedDoc && approvedDoc.url ? applyClauseDocumentUpdates(t.id, approvedDoc.url, 'approved') : '';
     if (approvedDoc && approvedDoc.url) implementDocumentControls(t.id, approvedDoc.url, vals.approvedBy, new Date().toISOString().slice(0, 10));
     return { approvedDoc: approvedDoc, clauseNote: clauseNote };
+  }
+
+  /* The default next review date for a document: the organisation's
+     own document review interval from today. */
+  function reviewDateDefault() {
+    var d = new Date();
+    d.setMonth(d.getMonth() + (parseInt(S.settings && S.settings.documentReviewMonths, 10) || 12));
+    return d.toISOString().slice(0, 10);
+  }
+
+  /* "Do you do this?" before an operational policy is approved. A
+     policy statement the organisation does not actually follow is an
+     audit finding waiting to happen, so each one is confirmed: ticked
+     statements stay, unticked ones come out of the document (saved as
+     its edited content, tokens intact) and, if asked, each becomes an
+     action to put it in place. Management-system documents (the clause
+     documents) are not offered this: their content is what the standard
+     itself requires. Returns false if the approver cancels. */
+  async function confirmPractices(t, docName) {
+    if (!t || (window.CLAUSE_DOCUMENT_MAP || {})[t.id]) return true;
+    var raw = mergedPolicyContent(t, docName);
+    var stmts = (raw.policyStatements || []).filter(function (st) { return window.CheckpointLib.statementApplies(st, S.settings); });
+    if (!stmts.length) return true;
+    var fields = stmts.map(function (st, i) {
+      var text = resolveOrgTokens(typeof st === 'string' ? st : st.rule);
+      return { id: 's' + i, type: 'checkbox', value: true, label: text };
+    });
+    fields.push({ id: 'raise', type: 'checkbox', value: true, label: 'Raise an action for each statement we do not do yet' });
+    fields.push({ id: 'attest', type: 'checkbox', value: false, label: 'Every ticked statement describes what we do today' });
+    var vals = await showModal({
+      title: 'Do you do this? “' + docName.replace(/\.html$/, '') + '”',
+      message: 'An auditor tests that you do what your policies say. Untick anything you do not do yet: it is taken out of this document, and can become an action. To reword a statement instead, cancel and use Edit text.',
+      fields: fields,
+      confirmText: 'Continue to approval',
+      validate: function (v) {
+        if (!v.attest) return 'Confirm that the ticked statements describe what you do today.';
+        if (!stmts.some(function (_, i) { return v['s' + i]; })) return 'A policy needs at least one statement you follow.';
+        return null;
+      }
+    });
+    if (!vals) return false;
+    var kept = stmts.filter(function (_, i) { return vals['s' + i]; });
+    var dropped = stmts.filter(function (_, i) { return !vals['s' + i]; });
+    var who = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+    if (dropped.length) {
+      var existingDraft = policyDraftFor(docName);
+      var content = Object.assign({}, (existingDraft && existingDraft.content) || {}, { policyStatements: kept });
+      try {
+        await Store.savePolicyDraft({ docName: docName, tplId: t.id, content: content, updatedBy: who, updatedDate: new Date().toISOString().slice(0, 10) });
+      } catch (e) { warn(e); toastError('Could not save the confirmed statements: ' + esc(e.message || e)); return false; }
+      if (vals.raise) {
+        var control = (t.controls || []).find(function (c) { return /^A\.[5-8]\./.test(c); }) || '';
+        var maxA = (S.actions || []).reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+        for (var i = 0; i < dropped.length; i++) {
+          var text = resolveOrgTokens(typeof dropped[i] === 'string' ? dropped[i] : dropped[i].rule);
+          try {
+            await Store.addAction({ id: 'ACT-' + String(maxA + 1 + i).padStart(3, '0'), title: 'Put in place, then add back to the ' + t.title + ': ' + text, risk: '', control: control, pr: 'Medium', owner: who, due: dueForPriority('Medium'), status: 'Open', src: 'Policy approval' });
+          } catch (e) { warn(e); }
+        }
+        renderActions(); renderNavCounts();
+      }
+    }
+    audit('Policy practices confirmed', 'Document', docName, stmts.length + ' statements', kept.length + ' confirmed' + (dropped.length ? ', ' + dropped.length + ' removed as not yet in place' + (vals.raise ? ' (actions raised)' : '') : ''));
+    return true;
   }
 
   /* Marks Implemented the few controls whose requirement is the approved
@@ -9148,7 +9247,7 @@ function showModal(opts) {
       }).join('');
       var dateInput = document.getElementById('tplReviewDate');
       if (dateInput && !dateInput.value) {
-        var d = new Date(); d.setFullYear(d.getFullYear() + 1);
+        var d = new Date(); d.setMonth(d.getMonth() + (parseInt(S.settings && S.settings.documentReviewMonths, 10) || 12));
         dateInput.value = d.toISOString().slice(0, 10);
       }
     }
@@ -9398,7 +9497,8 @@ function showModal(opts) {
     });
     try {
       var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], docName, { type: 'text/html;charset=utf-8' });
-      await Store.uploadDocument(file, doc.category || 'Policies & Procedures');
+      await Store.uploadDocument(file, doc.category || 'Policies & Procedures', { cadences: docCadenceSnapshot(t, docName) });
+      doc.cadences = docCadenceSnapshot(t, docName);
     } catch (e) { warn(e); toastError('Content saved, but the document could not be re-rendered: ' + esc(e.message || e)); return; }
     audit('Policy document regenerated', 'Document', docName, '(previous rendering)', 'Re-rendered from edited content');
     renderDocuments();
@@ -9416,9 +9516,62 @@ function showModal(opts) {
       .map(function (t) { return { value: t.id, label: t.title }; });
   }
   function isOwnDoc(d) { return !!d && d.origin === 'own'; }
+  /* A document generated for a framework this tenant does not hold
+     (an AI policy in an ISO 27001-only tenant, say), typically from
+     before the template set was scoped per framework. Kept, not hidden:
+     the organisation decides whether it still wants it. */
+  function outsideFrameworksNote(d) {
+    if (!d || !d.tplId || docStatusOf(d) === 'Superseded') return '';
+    var t = (window.POLICY_TEMPLATES || []).find(function (x) { return x.id === d.tplId; });
+    if (!t) return '';
+    var ent = entitledFrameworks();
+    if ((t.frameworks || []).some(function (fw) { return ent.indexOf(fw) !== -1; })) return '';
+    return 'Belongs to ' + (t.frameworks || []).map(fwName).join(' / ') + ', which this tenant does not hold. Mark it Superseded under Details if you do not use it.';
+  }
   function templateTitle(tplId) {
     var t = (window.POLICY_TEMPLATES || []).find(function (x) { return x.id === tplId; });
     return t ? t.title : tplId;
+  }
+
+  /* Policy versus practice (lib policyPracticeGaps): documents that no
+     longer say what the organisation does, or say it does something it
+     is not doing. Each comes with the one action that closes it. */
+  function policyPracticeGapList() {
+    return window.CheckpointLib.policyPracticeGaps({
+      docs: (window._docs || []).map(function (d) { return Object.assign({}, d, { status: docStatusOf(d) }); }),
+      templates: window.POLICY_TEMPLATES, calendar: S.calendar || [], settings: S.settings || {},
+      today: new Date().toISOString().slice(0, 10)
+    });
+  }
+  function renderPracticeCard() {
+    var card = document.getElementById('docPracticeCard');
+    if (!card) return;
+    var gaps = policyPracticeGapList();
+    if (!gaps.length) { card.style.display = 'none'; card.innerHTML = ''; return; }
+    var C = window.CheckpointLib.CADENCES;
+    var byDoc = {}, order = [];
+    gaps.forEach(function (g) {
+      var k = g.doc.name;
+      if (!byDoc[k]) { byDoc[k] = { doc: g.doc, lines: [], stale: false, schedule: false, overdue: false }; order.push(k); }
+      var e = byDoc[k];
+      if (g.kind === 'legacy') { e.stale = true; e.lines.push('Generated before frequencies came from your own settings, so it may state a fixed one.'); }
+      else if (g.kind === 'changed') { e.stale = true; e.lines.push(C[g.key].label + ': it says ' + (g.was || 'not scheduled') + ', you now have ' + (g.now || 'nothing scheduled') + '.'); }
+      else if (g.kind === 'unscheduled') { e.schedule = true; e.lines.push('Commits to a ' + C[g.key].label.toLowerCase() + ', but none is scheduled in the compliance calendar.'); }
+      else if (g.kind === 'overdue') { e.overdue = true; e.lines.push(C[g.key].label + ' is overdue (due ' + fmtDate(g.item.nextDue) + ').'); }
+    });
+    card.style.display = '';
+    card.innerHTML = '<h3>Policy vs practice</h3><p class="src" style="margin:0 0 10px">An auditor checks that each document says what you do, and that you do what it says. ' +
+      order.length + ' document' + (order.length === 1 ? ' needs' : 's need') + ' attention.</p>' +
+      order.map(function (k) {
+        var e = byDoc[k], d = e.doc, approved = d.status === 'Approved', acts = [];
+        if (!READONLY && e.stale) acts.push(approved
+          ? '<button class="btn sm" data-action="App.approveTemplate" data-id="' + esc((d.category || 'Policies & Procedures') + '|' + d.name) + '">Re-approve with current frequencies</button>'
+          : '<button class="btn sm" data-action="App.regenerateForPractice" data-id="' + esc(d.name) + '">Regenerate</button>');
+        if (!READONLY && e.schedule) acts.push('<button class="btn ghost sm" data-action="App.setupOperatingRhythm">Schedule it</button>');
+        if (e.overdue) acts.push('<button class="btn ghost sm" data-action="App.go" data-id="calendar">Open the calendar</button>');
+        return '<div class="proposed-card"><h4>' + esc(d.name) + ' <span class="chip ' + (DOC_STATUS_CLASS[d.status] || 'st-Proposed') + '">' + esc(d.status) + '</span></h4>' +
+          '<ul style="margin:4px 0 8px 18px;font-size:12.5px;color:var(--paper-dim);line-height:1.6">' + e.lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>' + acts.join(' ') + '</div>';
+      }).join('');
   }
 
   function renderDocuments() {
@@ -9441,6 +9594,7 @@ function showModal(opts) {
          already exist (e.g. an audit procedure approved after the audit
          was run) — re-evaluate now rather than on the next reload. */
       runClauseAutomation();
+      renderPracticeCard();
       renderDocRegisterSummary(docs);
       var cf = window._docCatF || 'All';
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
@@ -9528,7 +9682,8 @@ function showModal(opts) {
               ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link" style="font-size:inherit">' + esc(d.name) + ' ' + icon('external') + '</a>'
               : esc(d.name)) +
             '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div>' +
-            (isOwnDoc(d) && d.tplId ? '<div class="src">Our version of: ' + esc(templateTitle(d.tplId)) + '</div>' : '') + '</td>' +
+            (isOwnDoc(d) && d.tplId ? '<div class="src">Our version of: ' + esc(templateTitle(d.tplId)) + '</div>' : '') +
+            (outsideFrameworksNote(d) ? '<div class="src" style="color:var(--warn)">' + esc(outsideFrameworksNote(d)) + '</div>' : '') + '</td>' +
           '<td>' + (d.owner ? esc(d.owner) : controlled ? '<span class="verify-stale">' + icon('flag') + ' unassigned</span>' : '<span class="src">—</span>') + '</td>' +
           '<td>' + (d.version ? esc(d.version) : '<span class="src">—</span>') + '</td>' +
           '<td>' + statusCell + (d.approvedBy ? '<div class="src">by ' + esc(d.approvedBy) + (d.approvalDate ? ' · ' + fmtDocDate(d.approvalDate) : '') + '</div>' : '') + '</td>' +
@@ -9983,7 +10138,8 @@ function showModal(opts) {
     var today = new Date().toISOString().slice(0, 10);
     var updates = window.CheckpointLib.clauseAutomationUpdates(window.CLAUSE_DOCUMENT_MAP || {}, S.clauses, docs, {
       risks: S.risks, training: S.training, audits: S.audits, reviews: S.reviews, objectives: S.objectives,
-      actions: S.actions, aiSystems: S.aiSystems, docs: docs, scans: S.scans
+      actions: S.actions, aiSystems: S.aiSystems, docs: docs, scans: S.scans,
+      auditCadenceDays: Math.round((parseInt(S.settings && S.settings.internalAuditMonths, 10) || 12) * 365 / 12)
     }, today);
     /* The same gate as a manual change: automation never marks a clause
        Implemented, or re-verifies one, while its requirement checklist
@@ -10982,7 +11138,7 @@ function showModal(opts) {
       return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (noteText ? '<div class="src" style="margin-top:4px">' + esc(noteText) + '</div>' : '') + ctlLine + evLine + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
         '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
-        '<td><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button></td></tr>';
+        '<td style="white-space:nowrap"><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button> <button class="btn ghost sm" data-action="App.editCalItem" data-id="' + c.id + '">Edit</button></td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -17221,7 +17377,8 @@ function showModal(opts) {
       var have = {};
       (window._docs || []).forEach(function (d) { have[d.name] = true; });
       var todo = window.POLICY_TEMPLATES.filter(function (t) {
-        return (t.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; }) && !have[t.title + '.html'];
+        return (t.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; }) && !have[t.title + '.html'] &&
+          window.CheckpointLib.statementApplies(t, S.settings);
       });
       /* Roles & Responsibilities is assembled from every other document's
          roles table, so it goes last. */
@@ -17238,7 +17395,7 @@ function showModal(opts) {
         if (wants && !(await App.orgProfileWizard())) return;
       }
 
-      var nextYear = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+      var nextYear = reviewDateDefault();
       var vals = await showModal({
         title: 'Generate the document set',
         message: todo.length + ' document' + (todo.length > 1 ? 's' : '') + ' for ' + entitled.map(fwName).join(', ') + ' are not in Documents yet:\n\n' +
@@ -17292,6 +17449,7 @@ function showModal(opts) {
         var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === d.name && e.action === 'Policy template generated'; });
         var params = null;
         try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
+        if (!params && d.tplId && !isOwnDoc(d)) params = { tplId: d.tplId, owner: d.owner || '', reviewDate: d.nextReview || '' };
         var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
         return (d.status === 'Draft' && t) ? { doc: d, params: params, t: t, sod: segregationFinding('Document', d.name) } : null;
       }).filter(Boolean);
@@ -17300,7 +17458,7 @@ function showModal(opts) {
       var sodNote = !selfRaised.length ? '' : sodEnforced()
         ? '\n\n' + selfRaised.length + ' of these were generated by the account you are signed in as. Segregation of duties is on, so they will be skipped — someone else must approve them.'
         : '\n\n' + selfRaised.length + ' of these were generated by the account you are signed in as; approving them will be recorded on the audit log as self-approval (ISO 27001 A.5.3).';
-      var nextYear = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+      var nextYear = reviewDateDefault();
       var vals = await showModal({
         title: 'Approve ' + drafts.length + ' draft' + (drafts.length > 1 ? 's' : ''),
         message: 'Each document is re-saved without the draft watermark, with the approval recorded on the register and its review date added to the calendar:\n\n' +
@@ -17308,10 +17466,12 @@ function showModal(opts) {
         fields: [
           { id: 'approvedBy', label: 'Approved by', value: (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
           { id: 'version', label: 'Version being approved', value: '1.0' },
-          { id: 'nextReview', label: 'Next review due', type: 'date', value: nextYear }
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: nextYear },
+          { id: 'attest', type: 'checkbox', value: false, label: 'These documents describe what we do today. Anything we do not do has been removed or reworded with Edit text, or will be before we rely on it.' }
         ],
         confirmText: 'Approve all',
         validate: function (v) {
+          if (!v.attest) return 'Confirm the documents describe what you do. To check them statement by statement, approve each one from the register instead.';
           if (!v.approvedBy) return 'Record who approved these documents.';
           if (!v.version) return 'Record the version being approved.';
           if (!v.nextReview) return 'Set the next review date.';
@@ -17432,6 +17592,12 @@ function showModal(opts) {
       var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === name && e.action === 'Policy template generated'; });
       var params = null;
       try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
+      /* The register's own DocTplId is enough when the generation entry
+         is not in the loaded audit log (older documents, a trimmed log). */
+      if (!params) {
+        var regDoc = (window._docs || []).find(function (x) { return x.name === name; });
+        if (regDoc && regDoc.tplId && !isOwnDoc(regDoc)) params = { tplId: regDoc.tplId, owner: regDoc.owner || '', reviewDate: regDoc.nextReview || '' };
+      }
       var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
       if (!t) { toastError('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
       /* A document still carrying "[To be completed: …]" markers is not
@@ -17470,6 +17636,7 @@ function showModal(opts) {
          approval doesn't waste the practitioner's time filling one in. */
       var sodFinding = segregationFinding('Document', name);
       if (!(await segregationGate(sodFinding, 'this document'))) return;
+      if (!params.aiAssisted && !(await confirmPractices(t, name))) return;
       /* Approval is a named act by a named person on a dated version,
          not a checkbox — Clause 7.5.2 c). The approver defaults to the
          signed-in practitioner but is editable, because the person
@@ -18597,6 +18764,13 @@ function showModal(opts) {
       renderCalendar(); renderNavCounts();
     },
 
+    regenerateForPractice: async function (docName) {
+      var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      if (!doc || !doc.tplId) return;
+      await regeneratePolicyDocument(docName, doc.tplId);
+      renderDocuments();
+    },
+
     /* Adds the recommended recurring activities the tenant does not yet
        run (lib OPERATING_RHYTHM), staggered so the first round does not
        all fall due in one week. Never duplicates: an activity already
@@ -18630,6 +18804,36 @@ function showModal(opts) {
       busy(false);
       log('Operating rhythm scheduled: <b>' + added + '</b> recurring activit' + (added === 1 ? 'y' : 'ies') + ' added to the compliance calendar.');
       toast('<b>' + added + '</b> recurring activit' + (added === 1 ? 'y' : 'ies') + ' scheduled');
+      renderCalendar(); renderNavCounts(); renderDash();
+    },
+
+    /* The organisation owns its calendar: frequency, owner, title and
+       next date are all its own call. A frequency the documents state
+       (lib CADENCES) changes with it; the Documents view then lists the
+       documents to regenerate so they keep saying what is done. */
+    editCalItem: async function (id) {
+      var c = (S.calendar || []).find(function (x) { return x.id === id; });
+      if (!c) return;
+      var vals = await showModal({
+        title: 'Edit ' + c.id,
+        fields: [
+          { id: 'title', label: 'Activity', value: c.title },
+          { id: 'freq', label: 'Frequency', type: 'select', value: c.freq, options: window.CALENDAR_FREQUENCIES },
+          { id: 'owner', label: 'Owner', value: c.owner || '' },
+          { id: 'nextDue', label: 'Next due', type: 'date', value: c.nextDue || '' },
+          { id: 'status', label: 'Status', type: 'select', value: c.status === 'Retired' ? 'Retired' : 'Active', options: [{ value: 'Active', label: 'Active' }, { value: 'Retired', label: 'Retired (no longer done)' }] }
+        ],
+        confirmText: 'Save',
+        validate: function (v) { return v.title ? null : 'The activity needs a name.'; }
+      });
+      if (!vals) return;
+      var before = [c.title, c.freq, c.owner, c.nextDue, c.status].join(' | ');
+      var freqChanged = vals.freq !== c.freq || vals.status !== (c.status === 'Retired' ? 'Retired' : 'Active');
+      c.title = vals.title; c.freq = vals.freq; c.owner = vals.owner || 'Unassigned'; c.nextDue = vals.nextDue || c.nextDue; c.status = vals.status;
+      try { await Store.updateCalendarItem(c); } catch (e) { warn(e); toastError('Could not save: ' + esc(e.message || e)); return; }
+      audit('Compliance calendar item changed', 'Calendar', c.id, before, [c.title, c.freq, c.owner, c.nextDue, c.status].join(' | '));
+      var stale = freqChanged ? policyPracticeGapList().filter(function (g) { return g.kind === 'changed'; }).length : 0;
+      toast('<b>' + esc(c.id) + '</b> updated' + (stale ? '. ' + stale + ' document' + (stale === 1 ? ' now states' : 's now state') + ' an old frequency: see Documents → Policy vs practice' : ''));
       renderCalendar(); renderNavCounts(); renderDash();
     },
 

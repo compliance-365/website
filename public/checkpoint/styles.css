@@ -1343,13 +1343,16 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 /* ===== modal (replaces prompt()/confirm()) ===== */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,11,12,.75);z-index:90}
 .modal-overlay.open{display:block}
-.modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:31px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:var(--elev-3)}
+.modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:31px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:var(--elev-3);max-height:calc(100vh - 40px);overflow-y:auto}
 .modal-box.open{display:block}
 .modal-box h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
 .modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px;white-space:pre-line}
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:6px}
 .modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
+.modal-box .m-field.m-check{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.modal-box .m-field.m-check input{width:auto;flex:0 0 auto;margin-top:3px;accent-color:var(--gold)}
+.modal-box .m-field.m-check label{margin:0;color:var(--paper);line-height:1.5;font-size:var(--fs-2)}
 .modal-box .m-field input:hover,.modal-box .m-field textarea:hover,.modal-box .m-field select:hover{border-color:rgba(190, 74, 30,.6)}
 .modal-box .m-field input:focus,.modal-box .m-field textarea:focus,.modal-box .m-field select:focus{outline:none;border-color:var(--gold)}
 .modal-box .m-field textarea{min-height:70px;resize:vertical}

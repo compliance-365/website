@@ -15,14 +15,14 @@ test('access control does not assume a licence the client may not hold', () => {
   assert.match(text('access-control-policy'), /Privileged Identity Management where the licence includes it/);
   assert.match(text('access-control-policy'), /break-glass/);
   assert.match(text('access-control-policy'), /phishing-resistant/);
-  assert.match(text('access-control-policy'), /at least quarterly/);
+  assert.match(text('access-control-policy'), /reviewed \{\{cadence:access-review\}\}/);
 });
 
 test('statements land in the policy they belong to', () => {
   const expect = {
     'secure-development-policy': [/Outsourced development is governed/, /penetration test/, /masked or de-identified/, /OWASP/],
-    'logging-monitoring-policy': [/authoritative time source/, /reviewed at least monthly/],
-    'bcp-dr-plan': [/not treated as a backup/, /at least every six months/, /capacity of critical services/],
+    'logging-monitoring-policy': [/authoritative time source/, /reviewed \{\{cadence:log-review\}\}/],
+    'bcp-dr-plan': [/not treated as a backup/, /tested \{\{cadence:backup-restore\}\}/, /capacity of critical services/],
     'supplier-security-policy': [/subcontractors and subprocessors/],
     'cloud-services-policy': [/management interfaces are not publicly exposed/],
     'threat-intelligence-procedure': [/special interest groups/],

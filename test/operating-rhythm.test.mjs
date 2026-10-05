@@ -74,7 +74,7 @@ describe('operating rhythm', () => {
 
   test('the app schedules it, and completion asks for evidence and updates the controls', () => {
     assert.match(app, /setupOperatingRhythm: async function \(\)/);
-    assert.match(app, /'addCalItem', 'completeCalItem', 'setupOperatingRhythm'/);
+    assert.match(app, /'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm'/);
     assert.match(app, /rhythmCompletionUpdates\(rdef, S\.controls, evidenceUrl, c\.lastCompleted, attester, markImplemented\)/);
     assert.match(app, /rhythm: \{ action: 'App\.setupOperatingRhythm'/);
   });

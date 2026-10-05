@@ -1946,6 +1946,163 @@
     return m ? m[1] : '';
   }
 
+  /* Frequencies the documents state, each read from where the
+     organisation actually sets it, so a document says what the
+     organisation does instead of prescribing a number:
+       calendar  an operating-rhythm activity (its calendar item's
+                 frequency, whatever the organisation chose)
+       setting   a Checkpoint setting, in days or months
+     Templates write {{cadence:key}} (a clause: "at the interval the
+     organisation has set (currently quarterly)") or {{Interval:key}}
+     (a heading phrase: "Annually"). Change the calendar or the
+     setting, regenerate, and the document follows. */
+  var CADENCES = {
+    'access-review': { label: 'Access review', calendar: 'access-review' },
+    'log-review': { label: 'Security log and alert review', calendar: 'log-review' },
+    'vuln-review': { label: 'Vulnerability and patch review', calendar: 'vuln-review' },
+    'threat-intel': { label: 'Threat intelligence review', calendar: 'threat-intel' },
+    'backup-restore': { label: 'Backup restore test', calendar: 'backup-restore' },
+    'asset-review': { label: 'Asset register review', calendar: 'asset-review' },
+    'supplier-review': { label: 'Supplier security review', calendar: 'supplier-review' },
+    'awareness': { label: 'Security awareness training', calendar: 'awareness' },
+    'ir-exercise': { label: 'Incident response exercise', calendar: 'ir-exercise' },
+    'bcp-test': { label: 'Continuity and recovery test', calendar: 'bcp-test' },
+    'legal-review': { label: 'Legal register review', calendar: 'legal-review' },
+    'risk-review': { label: 'Risk review', setting: 'riskReviewCadenceDays', unit: 'days', def: 90 },
+    'dormant-account': { label: 'Inactive account period', setting: 'dormantAccountDays', unit: 'days', def: 90, period: true },
+    'document-review': { label: 'Document review', setting: 'documentReviewMonths', unit: 'months', def: 12 },
+    'management-review': { label: 'Management review', setting: 'managementReviewMonths', unit: 'months', def: 12 },
+    'internal-audit': { label: 'Internal audit of the management system clauses', setting: 'internalAuditMonths', unit: 'months', def: 12 }
+  };
+  var FREQ_PHRASE = { Monthly: 'monthly', Quarterly: 'quarterly', Biannual: 'every six months', Annual: 'annually' };
+  function daysPhrase(n) {
+    if (n === 30 || n === 31) return 'monthly';
+    if (n >= 89 && n <= 92) return 'quarterly';
+    if (n >= 180 && n <= 184) return 'every six months';
+    if (n === 365 || n === 366) return 'annually';
+    return 'every ' + n + ' days';
+  }
+  function monthsPhrase(n) {
+    return { 1: 'monthly', 3: 'quarterly', 6: 'every six months', 12: 'annually', 24: 'every two years' }[n] || ('every ' + n + ' months');
+  }
+  /* The organisation's current value for a cadence: { value, phrase }.
+     value is what a document records at generation, to notice later
+     that practice moved on; phrase is '' while nothing is scheduled. */
+  function cadenceCurrent(key, state) {
+    var c = CADENCES[key];
+    if (!c) return { value: '', phrase: '' };
+    state = state || {};
+    if (c.calendar) {
+      var item = (state.calendar || []).find(function (x) {
+        if (!x || x.status === 'Retired' || x.status === 'Inactive' || x.status === 'Done') return false;
+        var d = rhythmDefFor(x);
+        return d && d.key === c.calendar;
+      });
+      var ph = item && FREQ_PHRASE[item.freq];
+      return ph ? { value: item.freq, phrase: ph } : { value: '', phrase: '' };
+    }
+    var raw = parseInt(((state.settings || {})[c.setting]), 10);
+    var n = raw > 0 ? raw : c.def;
+    if (c.period) return { value: n + ' ' + c.unit, phrase: n + ' ' + c.unit };
+    return { value: n + ' ' + c.unit, phrase: c.unit === 'days' ? daysPhrase(n) : monthsPhrase(n) };
+  }
+  /* {{cadence:key}} and {{Interval:key}}, resolved. */
+  function resolveCadenceTokens(str, state) {
+    if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
+    return str.replace(/\{\{(cadence|Interval):([a-z-]+)\}\}/g, function (whole, kind, key) {
+      var c = CADENCES[key];
+      if (!c) return '';
+      var cur = cadenceCurrent(key, state);
+      if (kind === 'Interval') {
+        var p = cur.phrase || 'at planned intervals';
+        return p.charAt(0).toUpperCase() + p.slice(1);
+      }
+      if (c.period) return 'longer than the period the organisation has set (currently ' + cur.phrase + ')';
+      return cur.phrase
+        ? 'at the interval the organisation has set (currently ' + cur.phrase + ')'
+        : 'at an interval the organisation sets and records in its compliance calendar';
+    });
+  }
+  /* Every cadence key a piece of (unresolved) content refers to. */
+  function cadenceKeysIn(content) {
+    var json = typeof content === 'string' ? content : JSON.stringify(content || '');
+    var out = [];
+    var re = /\{\{(?:cadence|Interval):([a-z-]+)\}\}/g, m;
+    while ((m = re.exec(json))) if (CADENCES[m[1]] && out.indexOf(m[1]) === -1) out.push(m[1]);
+    return out;
+  }
+  /* What a document records at generation: { key: value } for each
+     cadence it states. */
+  function cadenceSnapshot(keys, state) {
+    var out = {};
+    (keys || []).forEach(function (k) { out[k] = cadenceCurrent(k, state).value; });
+    return out;
+  }
+
+  /* Policy versus practice: where a generated document no longer says
+     what the organisation does, or says it does something it is not
+     doing. For each live generated document (not the organisation's own
+     upload, not Superseded):
+       legacy       generated before frequencies came from the
+                    organisation's settings, so it may state a fixed one
+       changed      a frequency it states has since been changed
+       unscheduled  approved, commits to a recurring activity that is
+                    not in the compliance calendar
+       overdue      approved, and that activity is overdue
+     s = { docs:[{ id, name, category, tplId, origin, status, cadences }],
+           templates:[template], calendar, settings, today }. */
+  function policyPracticeGaps(s) {
+    s = s || {};
+    var state = { calendar: s.calendar || [], settings: s.settings || {} };
+    var tpls = {};
+    (s.templates || []).forEach(function (t) { tpls[t.id] = t; });
+    var out = [];
+    (s.docs || []).forEach(function (d) {
+      if (!d || !d.tplId || d.origin === 'own' || String(d.status || '') === 'Superseded' || !d.status) return;
+      var t = tpls[d.tplId];
+      if (!t) return;
+      var keys = cadenceKeysIn(t);
+      if (!keys.length) return;
+      var snap = null;
+      try { snap = d.cadences ? JSON.parse(d.cadences) : null; } catch (e) { snap = null; }
+      if (!snap) {
+        out.push({ kind: 'legacy', doc: d, keys: keys });
+      } else {
+        Object.keys(snap).forEach(function (k) {
+          if (!CADENCES[k]) return;
+          var now = cadenceCurrent(k, state).value;
+          if (now !== snap[k]) out.push({ kind: 'changed', doc: d, key: k, was: snap[k], now: now });
+        });
+      }
+      if (d.status !== 'Approved') return;
+      keys.forEach(function (k) {
+        var c = CADENCES[k];
+        if (!c.calendar) return;
+        var item = (state.calendar || []).find(function (x) {
+          if (!x || x.status === 'Retired' || x.status === 'Inactive' || x.status === 'Done') return false;
+          var def = rhythmDefFor(x);
+          return def && def.key === c.calendar;
+        });
+        if (!item) out.push({ kind: 'unscheduled', doc: d, key: k });
+        else if (item.nextDue && s.today && item.nextDue < s.today) out.push({ kind: 'overdue', doc: d, key: k, item: item });
+      });
+    });
+    return out;
+  }
+
+  /* A statement may carry `when: { orgKey: [values] }`: it applies only
+     where the scope & context answer is one of those values. An
+     unanswered question keeps the statement, so nothing is dropped on a
+     guess; the approver still confirms it applies. */
+  function statementApplies(stmt, profile) {
+    if (!stmt || typeof stmt !== 'object' || !stmt.when) return true;
+    var p = profile || {};
+    return Object.keys(stmt.when).every(function (k) {
+      var v = p[k];
+      return !v || stmt.when[k].indexOf(v) !== -1;
+    });
+  }
+
   /* Which rhythm activities a tenant does not yet run. An activity is
      already covered by an item carrying its marker, or by any active
      item in the same calendar category (a backup restore test someone
@@ -8026,6 +8183,7 @@
     OPERATING_RHYTHM: OPERATING_RHYTHM, rhythmKeyOf: rhythmKeyOf, rhythmDef: rhythmDef, rhythmDefFor: rhythmDefFor, rhythmNotesText: rhythmNotesText, rhythmLastEvidence: rhythmLastEvidence,
     planOperatingRhythm: planOperatingRhythm, rhythmCompletionUpdates: rhythmCompletionUpdates,
     CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,
+    CADENCES: CADENCES, cadenceCurrent: cadenceCurrent, resolveCadenceTokens: resolveCadenceTokens, cadenceKeysIn: cadenceKeysIn, cadenceSnapshot: cadenceSnapshot, statementApplies: statementApplies, policyPracticeGaps: policyPracticeGaps,
     addMonthsIso: addMonthsIso, certificationCycle: certificationCycle, internalAuditCoverage: internalAuditCoverage, internalAuditProgramme: internalAuditProgramme
   };
 });

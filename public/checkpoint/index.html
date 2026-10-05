@@ -904,8 +904,8 @@
       <div class="card" id="digestRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card" id="teamsRow" style="max-width:680px;margin-bottom:16px"></div>
 
-      <div class="settings-subhead">Scan thresholds</div>
-      <p class="settings-subdesc">Posture-scan pass/review/fail thresholds, tunable per client. Each falls back to the default shown if left blank.</p>
+      <div class="settings-subhead">Thresholds and intervals</div>
+      <p class="settings-subdesc">Posture-scan thresholds, and the intervals your ISMS runs on: risk review, document review, management review, internal audit and remediation windows. Generated documents state these intervals rather than a fixed number, so change one here, regenerate, and the documents say what you do. Recurring activities such as access reviews take their frequency from the compliance calendar. Each falls back to the default shown if left blank.</p>
       <div class="grid" id="thresholdRows" style="max-width:680px"></div>
 
       <div class="settings-subhead">Features</div>
@@ -1037,6 +1037,7 @@
         <p class="src" id="docReplacesHelp" style="margin:6px 0 0">Wrote your own policy or procedure? Choose the Checkpoint document it replaces. Once you record its approval under Details, it updates the clauses and controls exactly as Checkpoint’s own version would, and the generated copy is marked Superseded.</p>
       </div>
       <div class="section-head"><h2>Document control register</h2><p>ISO 27001 clause 7.5.2/7.5.3 — every controlled document carries an owner, a version, an approval and a next-review date. These are real SharePoint columns on the library, so the same register is visible natively in SharePoint too.</p></div>
+      <div class="card" id="docPracticeCard" style="margin-bottom:16px;display:none"></div>
       <div class="grid kpis" id="docRegisterSummary" style="margin-bottom:16px"></div>
       <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button><button class="btn ghost sm" data-action="App.exportAllPolicies">Export all policies (ZIP)</button>
