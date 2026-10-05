@@ -832,7 +832,7 @@ function showModal(opts) {
     'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
     'addManualAsset', 'syncAssets', 'editAsset', 'seedLegalBaseline', 'addLegalReq', 'editLegalReq',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
-    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'setRiskAppetite', 'setScanCadence',
+    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'annexAcceptScanProven', 'setAuditResult', 'setAuditNote', 'fileReviewMinutes', 'fileAuditReport', 'fileClauseSnapshots', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
@@ -2824,6 +2824,100 @@ function showModal(opts) {
      (see the task spec: which report type gets which of the six chart
      functions). */
   var REPORT_BUILDERS = {
+    /* Management review minutes (Clause 9.3.3): the inputs considered,
+       the decisions and resources agreed, and the actions raised, for
+       window._minutesReview (or the latest review). */
+    minutes: function () {
+      var r = (S.reviews || []).find(function (x) { return x.id === window._minutesReview; }) ||
+        (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      if (!r) { toast('Record a management review first.'); return null; }
+      var parsed = window.CheckpointLib.parseReviewInputs(r.inputs);
+      var refs = (String(r.decisions || '').match(/\bACT-\d+\b/g) || []).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      var acts = refs.map(function (id) { return (S.actions || []).find(function (a) { return a.id === id; }); }).filter(Boolean);
+      var inputsHtml = parsed.legacy ? '<p>' + esc(parsed.legacy) + '</p>' :
+        '<table class="rpt-table"><thead><tr><th>Clause</th><th>Input</th><th>Considered</th></tr></thead><tbody>' +
+        window.CheckpointLib.MR_INPUT_SECTIONS.map(function (x) { return '<tr><td class="rpt-idc">' + esc(x.clause) + '</td><td>' + esc(x.label) + '</td><td>' + (parsed[x.key] ? esc(parsed[x.key]) : '<i>Not recorded</i>') + '</td></tr>'; }).join('') + '</tbody></table>';
+      return {
+        title: 'Management review minutes — ' + r.id,
+        frameworkAgnostic: true,
+        dashboard: { intro: 'Held ' + fmtDateY(r.date) + '. Attendees: ' + (r.attendees || 'not recorded') + '. Next review due ' + (r.nextDue ? fmtDateY(r.nextDue) : 'not set') + '.' },
+        sections: [
+          { heading: 'Inputs considered (Clause 9.3.2)', html: inputsHtml, pageBreak: false },
+          { heading: 'Decisions, changes and resources (Clause 9.3.3)', html: '<p style="white-space:pre-wrap">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p>', pageBreak: false },
+          { heading: 'Actions agreed', pageBreak: false, html: acts.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
+            acts.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.owner || '') + '</td><td>' + (a.due ? fmtDateY(a.due) : '') + '</td><td>' + esc(a.status) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No actions raised.</p>' },
+          { heading: 'Approval', pageBreak: false, html: '<table class="rpt-table"><tbody><tr><td style="width:35%"><b>Approved by (top management)</b></td><td style="height:48px"></td></tr><tr><td><b>Date</b></td><td></td></tr></tbody></table>' }
+        ]
+      };
+    },
+
+    /* Objectives with Checkpoint's measurement (Clauses 6.2 and 9.1). */
+    objectives: function () {
+      var rows = (S.objectives || []).map(function (o) {
+        var m = objectiveMeasure(o);
+        return '<tr><td class="rpt-idc">' + esc(o.id) + '</td><td>' + esc(o.title) + '</td><td>' + esc(o.metric || '') + '</td><td>' + esc(o.target || '') + '</td><td>' + (m ? esc(m.display) : 'Measured by the owner') + '</td><td>' + esc(o.owner || '') + '</td><td>' + (o.due ? fmtDateY(o.due) : '') + '</td><td>' + esc(o.status) + '</td></tr>';
+      }).join('');
+      return {
+        title: 'Objectives and measurement', frameworkAgnostic: true,
+        dashboard: { intro: (S.objectives || []).length + ' objective(s), measured at ' + fmtDateY(new Date().toISOString().slice(0, 10)) + '.' },
+        sections: [{ heading: 'Objectives', pageBreak: false, html: rows ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Objective</th><th>Metric</th><th>Target</th><th>Measured</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p>No objectives recorded.</p>' }]
+      };
+    },
+
+    /* Training records: evidence of competence and awareness (Clauses 7.2, 7.3). */
+    training: function () {
+      var list = (S.training || []).slice().sort(function (a, b) { return String(a.courseTitle || '').localeCompare(String(b.courseTitle || '')) || String(a.userName || '').localeCompare(String(b.userName || '')); });
+      var done = list.filter(function (t) { return t.status === 'Completed'; }).length;
+      return {
+        title: 'Training and awareness records', frameworkAgnostic: true,
+        dashboard: { intro: done + ' of ' + list.length + ' assignments completed.' },
+        sections: [{ heading: 'Training records', pageBreak: false, html: list.length ? '<table class="rpt-table"><thead><tr><th>Person</th><th>Course</th><th>Assigned</th><th>Due</th><th>Status</th><th>Completed</th></tr></thead><tbody>' +
+          list.map(function (t) { return '<tr><td>' + esc(t.userName || t.upn || '') + '</td><td>' + esc(t.courseTitle || t.courseId || '') + '</td><td>' + esc(t.assigned || '') + '</td><td>' + esc(t.due || '') + '</td><td>' + esc(t.status || '') + '</td><td>' + esc(t.completed || t.completedDate || '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No training assigned.</p>' }]
+      };
+    },
+
+    /* Nonconformities and corrective action (Clause 10.2). */
+    capa: function () {
+      var ncs = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      return {
+        title: 'Nonconformities and corrective action', frameworkAgnostic: true,
+        dashboard: { intro: ncs.length + ' nonconformit' + (ncs.length === 1 ? 'y' : 'ies') + ' recorded, ' + ncs.filter(function (a) { return window.CheckpointLib.capaStatus(a).complete; }).length + ' with the corrective-action loop complete.' },
+        sections: [{ heading: 'Nonconformities', pageBreak: false, html: ncs.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Nonconformity</th><th>Source</th><th>Correction</th><th>Root cause</th><th>Status</th><th>Effectiveness</th></tr></thead><tbody>' +
+          ncs.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '<div>' + esc(a.type) + '</div></td><td>' + esc(a.src || '') + '</td><td>' + esc(a.correction || '') + '</td><td>' + esc(a.rootCause || '') + '</td><td>' + esc(a.status) + '</td><td>' + esc(a.effectivenessReview || '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No nonconformities recorded.</p>' }]
+      };
+    },
+
+    /* Stage 1 pack: what the certification body asks for before Stage 1,
+       in one document — readiness and the mandatory documents, the
+       Statement of Applicability, the risk treatment plan, objectives,
+       the latest internal audit report and management review minutes. */
+    stage1: function (activeFw, fwLabel) {
+      var parts = [];
+      var add = function (type, label) {
+        var b = REPORT_BUILDERS[type] && REPORT_BUILDERS[type](activeFw, fwLabel);
+        if (!b) return;
+        (b.sections || []).forEach(function (sec, i) { parts.push(Object.assign({}, sec, { heading: (i === 0 ? label + ': ' : '') + sec.heading, pageBreak: i === 0 ? true : sec.pageBreak })); });
+      };
+      var lastAudit = (S.audits || []).filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return (b.completed || '').localeCompare(a.completed || ''); })[0];
+      var lastReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      var savedAudit = window._workpackAudit, savedReview = window._minutesReview;
+      add('ready', 'Readiness');
+      add('soa', 'Statement of Applicability');
+      add('rtp', 'Risk treatment plan');
+      add('objectives', 'Objectives');
+      if (lastAudit) { window._workpackAudit = lastAudit.id; add('workpack', 'Internal audit ' + lastAudit.id); }
+      if (lastReview) { window._minutesReview = lastReview.id; add('minutes', 'Management review ' + lastReview.id); }
+      window._workpackAudit = savedAudit; window._minutesReview = savedReview;
+      var missing = [];
+      if (!lastAudit) missing.push('no completed internal audit');
+      if (!lastReview) missing.push('no management review');
+      return {
+        title: 'Stage 1 certification pack — ' + fwLabel,
+        dashboard: { intro: 'Prepared for the certification body ahead of Stage 1. ' + (missing.length ? 'Not yet included: ' + missing.join(' and ') + '. Both are required before Stage 2.' : 'Includes the latest internal audit report and management review minutes.') },
+        sections: parts
+      };
+    },
+
     /* Management system evidence pack — every clause, each requirement
        it contains, how it is met (Checkpoint's own records, or a named
        confirmation of where the evidence is) and the evidence behind
@@ -3179,7 +3273,15 @@ function showModal(opts) {
       }
       var link = function (u) { return u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener">Evidence</a>' : '—'; };
       var flagCell = function (f) { return f.length ? esc(f.join('; ')) : '—'; };
-      var blank = '<td style="min-width:70px"></td><td style="min-width:120px"></td>';
+      var results = a.results || {};
+      var resultLabel = {}; window.CheckpointLib.AUDIT_RESULTS.forEach(function (o) { resultLabel[o.value] = o.label; });
+      var resultCells = function (key) {
+        var r = results[key];
+        if (!r || !r.r) return '<td style="min-width:70px"></td><td style="min-width:120px"></td>';
+        return '<td>' + esc(resultLabel[r.r] || r.r) + (r.ref ? ' (' + esc(r.ref) + ')' : '') + '</td><td>' + esc(r.note || '') + '</td>';
+      };
+      var resultSum = window.CheckpointLib.auditResultsSummary(window.CheckpointLib.auditWorkpackLines(wp), results);
+      var isReport = a.status === 'Completed' || resultSum.assessed > 0;
       var flaggedClauses = wp.clauses.filter(function (c) { return c.flags.length; }).length;
       var flaggedControls = wp.controls.filter(function (c) { return c.priority; }).length;
       var ownWork = wp.clauses.concat(wp.controls).filter(function (r) { return r.flags.some(function (f) { return /^Auditor owns/.test(f); }); }).length;
@@ -3190,7 +3292,7 @@ function showModal(opts) {
         '<ul class="rpt-plain">' +
         '<li>Each row lists what Checkpoint already holds: status, owner and the linked evidence. Examine the evidence, then record a result: C (conforms), NC (nonconformity) or OFI (opportunity for improvement).</li>' +
         '<li>Start with flagged rows. They are where findings are most likely.</li>' +
-        '<li>Raise each NC or OFI with "Raise finding" on the audit in Checkpoint. It goes into the corrective action loop and is linked to this audit.</li>' +
+        '<li>Record results in Checkpoint as you go: open the audit and choose Conduct the audit. Each line saves straight away, and a nonconformity or opportunity for improvement raises its finding in the corrective action loop, linked to this audit. This document then becomes the audit report.</li>' +
         (ownWork ? '<li><b>' + ownWork + ' item' + (ownWork > 1 ? 's are' : ' is') + ' owned by the auditor.</b> Clause 9.2.2 requires auditors not to audit their own work, so assign another auditor for ' + (ownWork > 1 ? 'those' : 'that item') + '.</li>' : '') +
         '</ul>' +
         (wp.previous ? '<p class="rpt-intro">Previous audit: ' + esc(wp.previous.id) + ' (' + esc(wp.previous.scope) + '), completed ' + fmtDateY(wp.previous.completed) + (wp.previous.summary ? '. Outcome: ' + esc(wp.previous.summary) : '') + '</p>' : '') });
@@ -3199,7 +3301,7 @@ function showModal(opts) {
         sections.push({ heading: 'Open findings to follow up (' + wp.followUps.length + ')', pageBreak: false, html:
           '<p class="rpt-intro">Check whether each has been corrected and the correction was effective.</p>' +
           '<table class="rpt-table"><thead><tr><th>ID</th><th>Finding</th><th>Type</th><th>Source</th><th>Due</th><th>Result</th><th>Notes</th></tr></thead><tbody>' +
-          wp.followUps.map(function (f) { return '<tr><td class="rpt-idc">' + esc(f.id) + '</td><td>' + esc(f.title) + '</td><td>' + esc(f.type) + '</td><td>' + esc(f.src) + '</td><td>' + (f.due ? fmtDateY(f.due) : '—') + '</td>' + blank + '</tr>'; }).join('') +
+          wp.followUps.map(function (f) { return '<tr><td class="rpt-idc">' + esc(f.id) + '</td><td>' + esc(f.title) + '</td><td>' + esc(f.type) + '</td><td>' + esc(f.src) + '</td><td>' + (f.due ? fmtDateY(f.due) : '—') + '</td>' + resultCells('follow|' + f.id) + '</tr>'; }).join('') +
           '</tbody></table>' });
       }
 
@@ -3207,7 +3309,7 @@ function showModal(opts) {
         sections.push({ heading: 'Management-system clauses (' + wp.clauses.length + ')', pageBreak: true, html:
           wp.prompts.map(function (p) { return '<p class="rpt-intro"><b>Clause ' + esc(p.clause) + '.</b> ' + esc(p.prompt) + '</p>'; }).join('') +
           '<table class="rpt-table"><thead><tr><th>Clause</th><th>Requirement</th><th>Status</th><th>Owner</th><th>Evidence</th><th>Look at first</th><th>Result</th><th>Notes</th></tr></thead><tbody>' +
-          wp.clauses.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.title) + '</td><td>' + esc(c.status) + '</td><td>' + esc(c.owner || '—') + '</td><td>' + link(c.evidenceUrl) + '</td><td>' + flagCell(c.flags) + '</td>' + blank + '</tr>'; }).join('') +
+          wp.clauses.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.title) + '</td><td>' + esc(c.status) + '</td><td>' + esc(c.owner || '—') + '</td><td>' + link(c.evidenceUrl) + '</td><td>' + flagCell(c.flags) + '</td>' + resultCells('clause|' + c.id) + '</tr>'; }).join('') +
           '</tbody></table>' });
       }
 
@@ -3215,17 +3317,23 @@ function showModal(opts) {
         sections.push({ heading: 'Controls (' + wp.controls.length + ')', pageBreak: true, html:
           '<p class="rpt-intro">Applicable controls in scope, flagged ones first. For each, check the evidence shows the control operating, not just documented.</p>' +
           '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Status</th><th>Owner</th><th>Evidence</th><th>Look at first</th><th>Result</th><th>Notes</th></tr></thead><tbody>' +
-          wp.controls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.title) + '</td><td>' + esc(c.status) + '</td><td>' + esc(c.owner || '—') + '</td><td>' + link(c.evidenceUrl) + '</td><td>' + flagCell(c.flags) + '</td>' + blank + '</tr>'; }).join('') +
+          wp.controls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.title) + '</td><td>' + esc(c.status) + '</td><td>' + esc(c.owner || '—') + '</td><td>' + link(c.evidenceUrl) + '</td><td>' + flagCell(c.flags) + '</td>' + resultCells('control|' + c.id) + '</tr>'; }).join('') +
           '</tbody></table>' });
       }
 
       sections.push({ heading: 'Audit conclusion', pageBreak: false, html:
         '<table class="rpt-table"><tbody>' +
-        ['Overall conclusion', 'Nonconformities raised', 'Opportunities for improvement', 'Auditor signature and date'].map(function (k) { return '<tr><td style="width:35%"><b>' + k + '</b></td><td style="height:48px"></td></tr>'; }).join('') +
+        (isReport
+          ? [['Items audited', resultSum.assessed + ' of ' + resultSum.total], ['Conforming', String(resultSum.C)],
+             ['Nonconformities raised', (resultSum.Minor + resultSum.Major) + ' (' + resultSum.Major + ' major, ' + resultSum.Minor + ' minor)'],
+             ['Opportunities for improvement', String(resultSum.OFI)], ['Findings in the Actions register', resultSum.refs.join(', ') || 'None'],
+             ['Overall conclusion', a.summary || resultSum.conclusion], ['Auditor', (a.auditor || 'Unassigned') + (a.completed ? ', completed ' + fmtDateY(a.completed) : '')]]
+            .map(function (k) { return '<tr><td style="width:35%"><b>' + esc(k[0]) + '</b></td><td>' + esc(k[1]) + '</td></tr>'; }).join('')
+          : ['Overall conclusion', 'Nonconformities raised', 'Opportunities for improvement', 'Auditor signature and date'].map(function (k) { return '<tr><td style="width:35%"><b>' + k + '</b></td><td style="height:48px"></td></tr>'; }).join('')) +
         '</tbody></table>' });
 
       return {
-        title: 'Internal audit workpack — ' + a.id,
+        title: (a.status === 'Completed' ? 'Internal audit report — ' : 'Internal audit workpack — ') + a.id,
         dashboard: {
           intro: wp.clauses.length + ' clause' + (wp.clauses.length === 1 ? '' : 's') + ' and ' + wp.controls.length + ' control' + (wp.controls.length === 1 ? '' : 's') + ' in scope. ' + (flaggedClauses + flaggedControls) + ' flagged to look at first, ' + wp.followUps.length + ' open finding' + (wp.followUps.length === 1 ? '' : 's') + ' to follow up.',
           charts: [
@@ -8849,6 +8957,187 @@ function showModal(opts) {
     });
   }
 
+  /* Creates one internal audit finding in the Actions register, linked
+     to the audit: the modal is pre-filled from `preset` ({ title, type,
+     control }). Returns the action, or null when cancelled. */
+  async function createAuditFinding(a, preset) {
+    preset = preset || {};
+    var v = await showModal({
+      title: 'Raise finding — ' + a.id,
+      message: 'Creates a finding in the Actions register, sourced "Internal audit" and linked to this audit. No need to create it separately first.',
+      fields: [
+        { id: 'title', label: 'Finding description', type: 'textarea', value: preset.title || '', placeholder: 'What the audit found.' },
+        { id: 'type', label: 'Type', type: 'select', value: preset.type || 'Non-conformity (Minor)', options: ['Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'] },
+        { id: 'control', label: 'Related control (optional)', value: preset.control || '', placeholder: 'e.g. A.8.5' },
+        { id: 'risk', label: 'Linked risk (optional)', type: 'select', value: '', options: riskLinkOptions('') },
+        { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
+        { id: 'owner', label: 'Owner', value: a.auditor || '' },
+        /* The audit-finding clock, NOT the severity bands the rest of
+           the app uses. A nonconformity answers to the body that
+           raised it — a certification body typically wants a
+           corrective action plan within 30 days for a major, and
+           closure by the next surveillance visit for a minor — and
+           that is not a function of the finding's own priority. So a
+           High audit finding and a High posture-scan action
+           legitimately carry different dates, and this one is
+           tenant-configurable separately (auditFindingDueDays).
+           Editable per finding either way. */
+        { id: 'due', label: 'Due date', type: 'date', value: daysFrom(auditFindingDays()) }
+      ],
+      confirmText: 'Raise finding',
+      validate: function (v) { return v.title ? null : 'Describe the finding.'; }
+    });
+    if (!v) return null;
+    var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(auditFindingDays()), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+    busy(true);
+    try {
+      await Store.addAction(act);
+      if (v.risk) {
+        await setActionRiskLink(act, v.risk);
+        await Store.updateAction(act);
+        var lr = risk(act.risk);
+        if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
+      }
+      a.findingRefs = (a.findingRefs || []).concat([act.id]);
+      await Store.updateAudit(a);
+      audit('Audit finding raised', 'Action', act.id, '', v.type + ' from ' + a.id + ': ' + v.title);
+      toast('<b>' + act.id + '</b> (' + esc(v.type) + ') raised from ' + a.id);
+    } catch (e) { warn(e); busy(false); return null; }
+    busy(false);
+    return act;
+  }
+
+  /* Builds one report: { spec, html, parts, activeFw, version }, or null
+     when the builder declines. Shared by the preview (App.report) and by
+     reports filed straight into an evidence folder. */
+  function buildReportFor(type) {
+    var entitledNow = entitledFrameworks();
+    var activeFw = (window._soaFw && entitledNow.indexOf(window._soaFw) > -1) ? window._soaFw : (entitledNow[0] || 'iso27001');
+    /* Re-check at the point a framework-scoped report is actually
+       generated, the same defense-in-depth generateAuditorPack()
+       already applies before it hands a document to a third party —
+       window._soaFw tracking a framework this tenant no longer holds
+       (a licence change with no intervening renderSoa() call) must
+       never produce a report full of a framework's own data that
+       isn't entitled. A frameworkAgnostic report (risk register) has
+       no single framework to check against, so this only applies to
+       the rest. */
+    var builder = REPORT_BUILDERS[type];
+    if (!builder) return null;
+    var parts = builder(activeFw, fwName(activeFw));
+    if (!parts) return null;
+    if (!parts.frameworkAgnostic && (!S.entitlements || !S.entitlements[activeFw])) {
+      toast('That framework isn\'t currently entitled on this tenant.');
+      return null;
+    }
+    var fwLabel = fwName(activeFw);
+
+    var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+    var clientLabel = clientDisplayLabel();
+    var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+    var version = peekReportVersion(type);
+
+    var spec = {
+      type: type,
+      reportTitle: parts.title,
+      framework: parts.frameworkAgnostic ? '' : fwLabel,
+      client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null, brandColor: clientBrandColor() || null },
+      classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+      footerText: (S.settings && (S.settings.reportFooterText || '').trim()) || '',
+      version: version,
+      date: today,
+      dateIso: new Date().toISOString().slice(0, 10),
+      preparedBy: practitioner,
+      nextReviewDate: '',
+      dashboard: parts.dashboard || null,
+      sections: parts.sections || [],
+      methodology: buildMethodology(),
+      signOff: { preparedBy: practitioner, clientApprover: '' }
+    };
+
+    return { spec: spec, html: window.ReportEngine.buildReport(spec), parts: parts, activeFw: activeFw, version: version };
+  }
+
+  /* Files a report into a clause's evidence folder as a dated HTML
+     document, and links the folder as the clause's evidence when it has
+     none. `globals` sets the report's subject (an audit, a review). */
+  async function fileReportAsEvidence(type, clause, globals) {
+    var saved = {};
+    Object.keys(globals || {}).forEach(function (k) { saved[k] = window[k]; window[k] = globals[k]; });
+    var prevFw = window._soaFw;
+    if (clause.fw && clause.fw !== 'iso27001') window._soaFw = clause.fw;
+    var built;
+    try { built = buildReportFor(type); } finally {
+      Object.keys(saved).forEach(function (k) { window[k] = saved[k]; });
+      window._soaFw = prevFw;
+    }
+    if (!built) return false;
+    var today = new Date().toISOString().slice(0, 10);
+    var name = (built.parts.title + ' ' + today).replace(/[\\/:*?"<>|#%]+/g, '-').replace(/\s+/g, ' ').trim() + '.html';
+    await addEvidenceFilesFor('clause', clause, [new File([built.html], name, { type: 'text/html' })]);
+    audit('Report filed as evidence', 'Clause', clauseLabel(clause), '', built.parts.title);
+    return true;
+  }
+  function findClauseByCode(fw, code) {
+    return (S.clauses || []).find(function (c) { return (c.fw || 'iso27001') === fw && c.id === code; });
+  }
+
+  function auditWorkpackFor(a) {
+    return window.CheckpointLib.auditWorkpack(a, {
+      clauses: S.clauses || [], controls: S.controls || [], actions: S.actions || [], risks: S.risks || [], audits: S.audits || [],
+      cadenceDays: S.settings && S.settings.controlReviewCadenceDays
+    }, new Date().toISOString().slice(0, 10));
+  }
+
+  /* Annex A is the organisation's to deliver: one next step per
+     control that is not finished, grouped, Checkpoint's own first. */
+  function annexPlanFor(fw) {
+    return window.CheckpointLib.annexAPlan(S.controls || [], {
+      fw: fw, today: new Date().toISOString().slice(0, 10),
+      docs: (window._docs || S.documents || []).map(function (d) { return { tplId: d.tplId, status: docStatusOf(d) }; }),
+      templates: (window.POLICY_TEMPLATES || []).filter(function (t) { return window.CheckpointLib.statementApplies(t, S.settings); }),
+      checkControls: window.CHECK_CONTROLS || {}, lastResults: S.lastResults || null, calendar: S.calendar || [],
+      reviewCadenceDays: S.settings && S.settings.controlReviewCadenceDays
+    });
+  }
+  function renderAnnexPlan(fw) {
+    var el = document.getElementById('soaAnnexPlan');
+    if (!el) return;
+    var app = (S.controls || []).filter(function (c) { return c.fw === fw && c.app; });
+    var isIso = fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701';
+    var name = isIso ? 'Annex A' : fwName(fw) + ' controls';
+    var groups = window.CheckpointLib.annexAPlanGroups(annexPlanFor(fw));
+    var pending = groups.reduce(function (n, g) { return n + g.controls.length; }, 0);
+    var done = app.filter(function (c) { return c.st === 'Implemented' && c.evidenceUrl; }).length;
+    if (!groups.length) {
+      el.innerHTML = app.length ? '<div class="card" style="padding:14px 16px;margin:12px 0">' + icon('check') + ' <b>Every applicable control is Implemented with evidence.</b> <span class="src">Keep the operating rhythm running and re-verify each control when its review falls due.</span></div>' : '';
+      return;
+    }
+    var heads = { checkpoint: 'Checkpoint does it', meeting: 'Scheduled for you', you: 'Needs you' };
+    var open = window._annexOpen || '';
+    var ro = !!READONLY;
+    el.innerHTML = '<div class="card" style="padding:14px 16px;margin:12px 0">' +
+      '<h3 style="margin:0 0 4px">Getting ' + esc(name) + ' to 100%</h3>' +
+      '<p class="src" style="margin:0 0 8px">' + done + ' of ' + app.length + ' applicable controls Implemented with evidence. ' + pending + ' control' + (pending === 1 ? '' : 's') + ' with a next step, one each:</p>' +
+      groups.map(function (g) {
+        var expanded = open === g.step;
+        return '<div style="padding:6px 0;border-top:1px solid var(--line)">' +
+          '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between">' +
+          '<div style="font-size:12.5px"><span class="src">' + esc(heads[g.fix.by]) + ' · </span>' + esc(g.fix.label) +
+          '<div class="src">' + g.controls.length + ' control' + (g.controls.length === 1 ? '' : 's') + ': ' + esc(g.controls.slice(0, 8).map(function (x) { return x.control.id; }).join(', ') + (g.controls.length > 8 ? ' and ' + (g.controls.length - 8) + ' more' : '')) + '</div></div>' +
+          '<div style="flex:0 0 auto;display:flex;gap:6px">' +
+          '<button class="btn ghost sm" data-action="App.annexFocus" data-id="' + g.step + '">' + (expanded ? 'Hide' : 'Show') + '</button>' +
+          (ro || g.fix.action === 'App.annexFocus' ? '' : '<button class="btn ' + (g.fix.by === 'checkpoint' ? '' : 'ghost ') + 'sm" data-action="' + esc(g.fix.action) + '"' + (g.fix.arg ? ' data-id="' + esc(g.fix.arg) + '"' : '') + '>' + (g.fix.by === 'checkpoint' ? 'Do it' : 'Open') + '</button>') +
+          '</div></div>' +
+          (expanded ? '<div style="margin-top:6px">' + g.controls.map(function (x) {
+            return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0 4px 10px;font-size:12px"><span><b>' + esc(x.control.id) + '</b> ' + esc(x.control.t || '') + ' <span class="src">— ' + esc(x.why) + '</span></span>' +
+              '<button class="lnk src" data-action="App.openControlGuidance" data-id="' + esc(x.control.fw + '|' + x.control.id) + '">Open</button></div>';
+          }).join('') + '</div>' : '') +
+          '</div>';
+      }).join('') + '</div>';
+  }
+
   function renderSoa() {
     var entitled = entitledFrameworks();
     if (!entitled.length) {
@@ -8877,6 +9166,8 @@ function showModal(opts) {
       return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) +
         (pending ? '<span class="pill-n" title="' + pending + ' scan suggestion' + (pending > 1 ? 's' : '') + ' awaiting review">' + pending + '</span>' : '') + '</button>';
     }).join('');
+
+    renderAnnexPlan(activeFw);
 
     /* Category lookup is definitional (from the framework registry), not
        per-tenant state, so it's never persisted to SharePoint — just
@@ -10566,6 +10857,33 @@ function showModal(opts) {
       kpiTile({ value: achieved.length, label: 'Achieved', meter: { value: achieved.length, max: objectives.length } });
     runCountUps(el);
   }
+  /* Objectives Checkpoint suggested are measured from its records: the
+     reading shows in the register and the status follows it, so 6.2 and
+     9.1 need no manual upkeep. An objective the client wrote is theirs. */
+  function objectiveMeasure(o) {
+    return window.CheckpointLib.measureObjective(o, { scans: S.scans, training: S.training, attestations: S.attestations, risks: S.risks,
+      actions: S.actions, incidents: S.incidents, aiSystems: S.aiSystems }, new Date().toISOString().slice(0, 10));
+  }
+  var _objectiveSyncBusy = false;
+  function syncObjectiveMeasures() {
+    if (READONLY || _objectiveSyncBusy || !(S.objectives || []).length) return;
+    var changed = [];
+    S.objectives.forEach(function (o) {
+      var m = objectiveMeasure(o);
+      if (!m || o.status === m.status) return;
+      if (o.status === 'Achieved' || o.status === 'Missed') return;
+      changed.push({ o: o, m: m });
+    });
+    if (!changed.length) return;
+    _objectiveSyncBusy = true;
+    changed.forEach(function (c) {
+      audit('Objective status measured', 'Objective', c.o.id, c.o.status, c.m.status + ' (' + c.m.display + ')');
+      c.o.status = c.m.status;
+      Store.updateObjective(c.o).catch(function (e) { warn(e); });
+    });
+    _objectiveSyncBusy = false;
+  }
+
   function renderObjectives() {
     var wrap = document.getElementById('objRows');
     if (!wrap) return;
@@ -10578,7 +10896,9 @@ function showModal(opts) {
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = objectives.map(function (o) {
       var overdue = o.status !== 'Achieved' && o.due && o.due < today;
-      return '<tr><td style="color:var(--paper)">' + esc(o.title) + (o.metric ? '<div class="src">' + esc(o.metric) + (o.target ? ' — ' + esc(o.target) : '') + '</div>' : '') + '</td>' +
+      var m = objectiveMeasure(o);
+      return '<tr><td style="color:var(--paper)">' + esc(o.title) + (o.metric ? '<div class="src">' + esc(o.metric) + (o.target ? ' — ' + esc(o.target) : '') + '</div>' : '') +
+        (m ? '<div class="src" style="color:' + (m.met ? 'var(--pass)' : 'var(--warn)') + '">Measured by Checkpoint: ' + esc(m.display) + '</div>' : '') + '</td>' +
         '<td>' + esc(o.owner || '—') + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(o.due) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + objectiveStatusCls(o.status) + '">' + esc(o.status) + '</span></td>' +
@@ -10689,6 +11009,10 @@ function showModal(opts) {
       return cl;
     });
     var plan = window.CheckpointLib.clauseAutopilot(lists, clauseFixContext());
+    var snapMap = window.CheckpointLib.CLAUSE_SNAPSHOTS;
+    var noEvidence = visibleClauses().filter(function (c) { return snapMap[c.id] && !c.evidenceUrl; });
+    if (noEvidence.length) plan.unshift({ fix: { by: 'checkpoint', key: 'snapshots', label: 'File register snapshots as the evidence for the record-based clauses', action: 'App.fileClauseSnapshots' },
+      reqs: noEvidence.map(function (c) { return { clause: clauseLabel(c), text: 'Evidence linked to the clause' }; }) });
     var total = lists.reduce(function (n, l) { return n + l.total; }, 0), met = lists.reduce(function (n, l) { return n + l.met; }, 0);
     if (!plan.length) {
       el.innerHTML = '<div class="card" style="padding:14px 16px;margin-bottom:16px"><b>' + icon('check') + ' Every clause requirement is met (' + met + ' of ' + total + ').</b> <span class="src">Checkpoint keeps them current; your work is Annex A in the Statement of Applicability.</span></div>';
@@ -11073,7 +11397,7 @@ function showModal(opts) {
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
-        '<td style="white-space:nowrap">' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + a.id + '">Workpack</button> <button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button></td></tr>';
+        '<td style="white-space:nowrap">' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.conductAudit" data-id="' + a.id + '">Conduct</button> ' : '') + '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + a.id + '">' + (a.status === 'Completed' ? 'Report' : 'Workpack') + '</button> <button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button></td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -12881,7 +13205,7 @@ function showModal(opts) {
     try { await Store.setSetting('dismissedContextRisks', S.settings.dismissedContextRisks); } catch (e) { warn(e); }
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -18034,10 +18358,17 @@ function showModal(opts) {
     completeAudit: async function (id) {
       var a = (S.audits || []).find(function (x) { return x.id === id; });
       if (!a) return;
+      var lines = [], sum = null;
+      var wpc = auditWorkpackFor(a);
+      if (wpc.readable && a.results && Object.keys(a.results).length) {
+        lines = window.CheckpointLib.auditWorkpackLines(wpc);
+        sum = window.CheckpointLib.auditResultsSummary(lines, a.results);
+      }
       var vals = await showModal({
         title: 'Complete internal audit',
+        message: sum && sum.unassessed.length ? sum.unassessed.length + ' of ' + sum.total + ' workpack lines have no result yet. Complete anyway only if they were deliberately left out of this audit.' : '',
         fields: [
-          { id: 'summary', label: 'Audit outcome / findings summary', type: 'textarea', value: a.summary || '' },
+          { id: 'summary', label: 'Audit outcome / findings summary', type: 'textarea', value: a.summary || (sum ? sum.text : '') },
           { id: 'refs', label: 'Linked finding IDs (comma-separated — use "Raise finding" on the audit to create these directly)', value: (a.findingRefs || []).join(', ') }
         ],
         confirmText: 'Complete'
@@ -18046,6 +18377,7 @@ function showModal(opts) {
       var prevStatus = a.status;
       a.summary = vals.summary;
       a.findingRefs = vals.refs ? vals.refs.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+      if (sum) sum.refs.forEach(function (r) { if (a.findingRefs.indexOf(r) === -1) a.findingRefs.push(r); });
       a.completed = new Date().toISOString().slice(0, 10);
       a.status = 'Completed';
       try { await Store.updateAudit(a); } catch (e) { warn(e); }
@@ -18443,11 +18775,88 @@ function showModal(opts) {
         }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>' +
         (READONLY ? '' :
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
-          '<button class="btn sm" data-action="App.raiseAuditFinding" data-id="' + a.id + '">Raise finding</button>' +
+          (a.status === 'Planned' ? '<button class="btn sm" data-action="App.conductAudit" data-id="' + a.id + '">Conduct the audit</button>' : '<button class="btn ghost sm" data-action="App.conductAudit" data-id="' + a.id + '">Results</button>') +
+          '<button class="btn ghost sm" data-action="App.raiseAuditFinding" data-id="' + a.id + '">Raise finding</button>' +
           '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + a.id + '">Workpack</button>' +
           (a.status === 'Planned' ? '<button class="btn ghost sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '') +
           '</div>');
       openDrawerUi('Audit ' + a.id);
+    },
+
+    /* The internal audit, run in Checkpoint: every workpack line with
+       its result and note, saved as the auditor goes. A nonconformity
+       or opportunity for improvement raises its finding in the Actions
+       register there and then, linked to the audit and the line. */
+    conductAudit: function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var wp = auditWorkpackFor(a);
+      if (!wp.readable) { App.auditWorkpack(id); return; }
+      var lines = window.CheckpointLib.auditWorkpackLines(wp);
+      a.results = a.results || {};
+      var sum = window.CheckpointLib.auditResultsSummary(lines, a.results);
+      var ro = !!READONLY || a.status === 'Completed';
+      var opts = [{ value: '', label: 'Not yet audited' }].concat(window.CheckpointLib.AUDIT_RESULTS);
+      var heads = { follow: 'Open findings to follow up', clause: 'Management-system clauses', control: 'Controls' };
+      var lastKind = '';
+      var rows = lines.map(function (l) {
+        var r = a.results[l.key] || {};
+        var head = l.kind !== lastKind ? '<h4 style="margin:16px 0 4px">' + heads[l.kind] + '</h4>' : '';
+        lastKind = l.kind;
+        var prompt = l.kind === 'clause' ? (wp.prompts.find(function (p) { return p.clause === String(l.id).split('.')[0]; }) || {}).prompt : '';
+        return head + '<div class="d-sec" style="padding-top:8px" data-audit-line="' + esc(l.key) + '">' +
+          '<div style="font-size:12.5px"><b>' + esc(l.id) + '</b> ' + esc(l.title || '') +
+          (l.evidenceUrl && isSafeUrl(l.evidenceUrl) ? ' <a class="src" href="' + esc(l.evidenceUrl) + '" target="_blank" rel="noopener">Evidence ' + icon('external') + '</a>' : ' <span class="src">No evidence linked</span>') + '</div>' +
+          (l.flags && l.flags.length ? '<div class="src">Look at first: ' + esc(l.flags.join('; ')) + '</div>' : '') +
+          (prompt && l.id.indexOf('.') === -1 ? '<div class="src">' + esc(prompt) + '</div>' : '') +
+          '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">' +
+          '<select class="mini" aria-label="Result for ' + esc(l.id) + '" data-change-action="App.setAuditResult" data-id="' + esc(a.id + '#' + l.key) + '"' + (ro ? ' disabled' : '') + '>' +
+          opts.map(function (o) { return '<option value="' + o.value + '"' + (o.value === (r.r || '') ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
+          '<input class="mini" style="flex:1;min-width:160px" aria-label="Note for ' + esc(l.id) + '" placeholder="What you sampled and saw" value="' + esc(r.note || '') + '" data-change-action="App.setAuditNote" data-id="' + esc(a.id + '#' + l.key) + '"' + (ro ? ' disabled' : '') + '>' +
+          (r.ref ? '<span class="chip" style="align-self:center">' + esc(r.ref) + '</span>' : '') +
+          '</div></div>';
+      }).join('');
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + esc(a.id) + ' \u00b7 ' + esc(fwName(a.fw)) + '</div><h2>Conduct the audit</h2>' +
+        '<div class="d-sec"><p class="src" style="margin:0">' + esc(a.scope) + '. Auditor: ' + esc(a.auditor || 'Unassigned') + '. Record a result for each line as you go: it is saved straight away. A nonconformity or opportunity for improvement raises its finding in the Actions register.</p>' +
+        '<div class="d-kv" style="margin-top:8px"><span>Progress</span><b id="auditProgress">' + esc(sum.assessed + ' of ' + sum.total + ' audited') + '</b></div>' +
+        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' +
+        (ro ? '' : '<button class="btn sm" data-action="App.completeAudit" data-id="' + esc(a.id) + '">Complete the audit</button>') +
+        '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + esc(a.id) + '">' + (a.status === 'Completed' ? 'Audit report' : 'Workpack') + '</button>' +
+        (a.status === 'Completed' && !READONLY ? '<button class="btn ghost sm" data-action="App.fileAuditReport" data-id="' + esc(a.id) + '">Save report as Clause 9.2 evidence</button>' : '') + '</div>' +
+        '</div>' + rows;
+      openDrawerUi('Audit ' + a.id);
+    },
+
+    setAuditResult: async function (ref, value) {
+      var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
+      if (!a) return;
+      var key = parts.slice(1).join('#');
+      a.results = a.results || {};
+      var r = a.results[key] = Object.assign({}, a.results[key] || {}, { r: value, by: (Graph.getAccount() && Graph.getAccount().name) || a.auditor || '', date: new Date().toISOString().slice(0, 10) });
+      if (!value) delete a.results[key];
+      if (value && value !== 'C' && !r.ref) {
+        var kind = key.split('|')[0], id = key.split('|').slice(1).join('|');
+        var act = await createAuditFinding(a, {
+          type: value === 'Major' ? 'Non-conformity (Major)' : value === 'Minor' ? 'Non-conformity (Minor)' : 'Observation',
+          title: (kind === 'clause' ? 'Clause ' : kind === 'control' ? '' : 'Follow-up of ') + id + ': ' + (r.note || ''),
+          control: kind === 'control' ? id : ''
+        });
+        if (act) r.ref = act.id;
+        else { delete r.r; }
+      }
+      try { await Store.updateAudit(a); } catch (e) { warn(e); }
+      App.conductAudit(a.id);
+    },
+
+    setAuditNote: async function (ref, value) {
+      var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
+      if (!a) return;
+      var key = parts.slice(1).join('#');
+      a.results = a.results || {};
+      a.results[key] = Object.assign({}, a.results[key] || {}, { note: String(value || '').trim() });
+      try { await Store.updateAudit(a); } catch (e) { warn(e); }
     },
 
     /* Raise a finding straight from an internal audit — creates the
@@ -18458,51 +18867,7 @@ function showModal(opts) {
     raiseAuditFinding: async function (id) {
       var a = (S.audits || []).find(function (x) { return x.id === id; });
       if (!a) return;
-      var v = await showModal({
-        title: 'Raise finding — ' + a.id,
-        message: 'Creates a finding in the Actions register, sourced "Internal audit" and linked to this audit. No need to create it separately first.',
-        fields: [
-          { id: 'title', label: 'Finding description', type: 'textarea', placeholder: 'What the audit found.' },
-          { id: 'type', label: 'Type', type: 'select', value: 'Non-conformity (Minor)', options: ['Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'] },
-          { id: 'control', label: 'Related control (optional)', placeholder: 'e.g. A.8.5' },
-          { id: 'risk', label: 'Linked risk (optional)', type: 'select', value: '', options: riskLinkOptions('') },
-          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
-          { id: 'owner', label: 'Owner', value: a.auditor || '' },
-          /* The audit-finding clock, NOT the severity bands the rest of
-             the app uses. A nonconformity answers to the body that
-             raised it — a certification body typically wants a
-             corrective action plan within 30 days for a major, and
-             closure by the next surveillance visit for a minor — and
-             that is not a function of the finding's own priority. So a
-             High audit finding and a High posture-scan action
-             legitimately carry different dates, and this one is
-             tenant-configurable separately (auditFindingDueDays).
-             Editable per finding either way. */
-          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(auditFindingDays()) }
-        ],
-        confirmText: 'Raise finding',
-        validate: function (v) { return v.title ? null : 'Describe the finding.'; }
-      });
-      if (!v) return;
-      var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(auditFindingDays()), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
-      busy(true);
-      try {
-        await Store.addAction(act);
-        if (v.risk) {
-          await setActionRiskLink(act, v.risk);
-          await Store.updateAction(act);
-          var lr = risk(act.risk);
-          if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
-        }
-        a.findingRefs = (a.findingRefs || []).concat([act.id]);
-        await Store.updateAudit(a);
-        audit('Audit finding raised', 'Action', act.id, '', v.type + ' from ' + a.id + ': ' + v.title);
-        toast('<b>' + act.id + '</b> (' + esc(v.type) + ') raised from ' + a.id);
-      } catch (e) { warn(e); }
-      busy(false);
-      renderAll();
-      App.openAudit(id);
+      if (await createAuditFinding(a, {})) { renderAll(); App.openAudit(id); }
     },
 
     toggleAddIncident: function () {
@@ -18691,6 +19056,8 @@ function showModal(opts) {
         document.getElementById('naReviewDecisions').value = '';
         var resEl = document.getElementById('naReviewResources');
         if (resEl) resEl.value = '';
+        var actsEl = document.getElementById('naReviewActions');
+        if (actsEl) actsEl.value = '';
         var auto = App.autoReviewInputs();
         var autoKeys = {};
         Object.keys(auto).forEach(function (k) { if (auto[k]) autoKeys[k] = 1; });
@@ -18789,7 +19156,19 @@ function showModal(opts) {
         })(),
         nextDue: document.getElementById('naReviewNextDue').value || ''
       };
+      var actEl = document.getElementById('naReviewActions');
+      var agreed = window.CheckpointLib.parseReviewActionLines(actEl ? actEl.value : '', new Date().toISOString().slice(0, 10));
       busy(true);
+      if (agreed.length) {
+        var raised = [];
+        for (var ai = 0; ai < agreed.length; ai++) {
+          var maxAct = S.actions.reduce(function (m, x) { var k = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+          var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: agreed[ai].title, type: 'Action', risk: '', control: '', pr: 'Medium',
+            owner: agreed[ai].owner || 'Unassigned', due: agreed[ai].due, status: 'Open', evidenceUrl: '', src: 'Management review ' + r.id };
+          try { await Store.addAction(act); raised.push(act.id); audit('Action raised', 'Action', act.id, '', 'From management review ' + r.id + ': ' + act.title); } catch (e) { warn(e); }
+        }
+        if (raised.length) r.decisions = (r.decisions ? r.decisions + '\n' : '') + 'Actions: ' + raised.join(', ');
+      }
       try {
         await Store.addReview(r);
         log('<b>' + r.id + '</b> management review recorded (' + fmtDate(r.date) + ').');
@@ -18810,7 +19189,9 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
         '<div class="d-sec"><h4>Inputs at time of review (Clause 9.3.2)</h4>' + reviewInputsHtml(r.inputs) + '</div>' +
         '<div class="d-sec"><h4>Decisions & actions agreed</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p></div>' +
-        '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>';
+        '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px"><button class="btn sm" data-action="App.reviewMinutes" data-id="' + esc(r.id) + '">Minutes</button>' +
+        (READONLY ? '' : '<button class="btn ghost sm" data-action="App.fileReviewMinutes" data-id="' + esc(r.id) + '">Save minutes as Clause 9.3 evidence</button>') + '</div>';
       openDrawerUi('Review ' + r.id);
     },
 
@@ -18848,6 +19229,87 @@ function showModal(opts) {
       busy(false);
       App.toggleAddCalItem();
       renderCalendar(); renderNavCounts();
+    },
+
+    /* Clause 9.3 evidence: the minutes of one review. */
+    reviewMinutes: function (id) { window._minutesReview = id; App.report('minutes'); },
+    fileReviewMinutes: async function (id) {
+      if (Store.kind === 'demo') { toast('Filing evidence needs a real tenant. Open the minutes to preview them.'); return; }
+      var c = findClauseByCode('iso27001', '9.3');
+      if (!c) return;
+      if (await fileReportAsEvidence('minutes', c, { _minutesReview: id })) renderClauses();
+    },
+    fileAuditReport: async function (id) {
+      if (Store.kind === 'demo') { toast('Filing evidence needs a real tenant. Open the report to preview it.'); return; }
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      var c = a && findClauseByCode(a.fw === 'iso42001' ? 'iso42001' : 'iso27001', '9.2');
+      if (!c) return;
+      if (await fileReportAsEvidence('workpack', c, { _workpackAudit: id })) renderClauses();
+    },
+
+    /* The registers that are the evidence for record-based clauses
+       (lib CLAUSE_SNAPSHOTS), each filed as a dated snapshot into its
+       clause's evidence folder: the risk register for 6.1.2, the
+       treatment plan and SoA for 6.1.3, objectives for 6.2 and 9.1,
+       training for 7.2, corrective action for 10.2. */
+    fileClauseSnapshots: async function () {
+      if (Store.kind === 'demo') { toast('Filing evidence needs a real tenant: each snapshot is saved into the clause’s evidence folder in SharePoint.'); return; }
+      var map = window.CheckpointLib.CLAUSE_SNAPSHOTS;
+      var plan = [];
+      visibleClauses().forEach(function (c) { (map[c.id] || []).forEach(function (type) { plan.push({ clause: c, type: type }); }); });
+      if (!plan.length) return;
+      var ok = await showModal({
+        title: 'File register snapshots as clause evidence',
+        message: 'Checkpoint saves a dated copy of each register into the evidence folder of the clause it proves, and links the folder where the clause has no evidence yet:\n\n' +
+          plan.map(function (p) { return '• ' + clauseLabel(p.clause) + ': ' + p.type; }).join('\n') + '\n\nRun it again before each audit for a fresh, dated set.',
+        confirmText: 'File ' + plan.length + ' snapshot' + (plan.length > 1 ? 's' : '')
+      });
+      if (!ok) return;
+      var n = 0;
+      for (var i = 0; i < plan.length; i++) {
+        try { if (await fileReportAsEvidence(plan[i].type, plan[i].clause)) n++; } catch (e) { warn(e); }
+      }
+      toast(n + ' snapshot' + (n === 1 ? '' : 's') + ' filed as clause evidence.');
+      renderClauses();
+    },
+
+    stage1Pack: function () { App.report('stage1'); },
+
+    annexDocuments: function () {
+      var plan = annexPlanFor(window._soaFw || 'iso27001').filter(function (p) { return p.step === 'doc'; });
+      if (plan.some(function (p) { return /^Generate /.test(p.why); })) return App.generateDocumentSet();
+      return App.approveDraftSet();
+    },
+
+    annexFocus: function (step) {
+      window._annexOpen = window._annexOpen === step ? '' : step;
+      renderAnnexPlan(window._soaFw);
+    },
+
+    /* Controls every mapped posture check passes, with the scan's own
+       evidence already linked: marked Implemented together, each with
+       its own audit entry. */
+    annexAcceptScanProven: async function () {
+      var fw = window._soaFw || 'iso27001';
+      var rows = annexPlanFor(fw).filter(function (p) { return p.step === 'scan'; }).map(function (p) { return p.control; });
+      if (!rows.length) { toast('No control is waiting on the scan.'); return; }
+      var ok = await showModal({
+        title: 'Mark ' + rows.length + ' control' + (rows.length > 1 ? 's' : '') + ' Implemented',
+        message: 'Every posture check mapped to these controls passes, and the scan has captured and linked its evidence:\n\n' +
+          rows.slice(0, 20).map(function (c) { return '\u2022 ' + c.id + ' ' + (c.t || ''); }).join('\n') + (rows.length > 20 ? '\n\u2026and ' + (rows.length - 20) + ' more' : '') +
+          '\n\nIf a check later fails, the control shows in Getting Annex A to 100% again.',
+        confirmText: 'Mark Implemented'
+      });
+      if (!ok) return;
+      busy(true);
+      for (var i = 0; i < rows.length; i++) {
+        var c = rows[i], prev = c.st;
+        c.st = 'Implemented';
+        try { await Store.updateControl(c); audit('Control status changed', 'Control', c.fw + '|' + c.id, prev, 'Implemented (posture scan: every mapped check passes)'); } catch (e) { warn(e); }
+      }
+      busy(false);
+      toast(rows.length + ' control' + (rows.length > 1 ? 's' : '') + ' marked Implemented.');
+      renderSoa(); renderDash(); renderNavCounts();
     },
 
     /* ── Clause autopilot steps (see renderClauseAutopilot) ── */
@@ -20374,51 +20836,9 @@ function showModal(opts) {
     },
 
     report: async function (type) {
-      var entitledNow = entitledFrameworks();
-      var activeFw = (window._soaFw && entitledNow.indexOf(window._soaFw) > -1) ? window._soaFw : (entitledNow[0] || 'iso27001');
-      /* Re-check at the point a framework-scoped report is actually
-         generated, the same defense-in-depth generateAuditorPack()
-         already applies before it hands a document to a third party —
-         window._soaFw tracking a framework this tenant no longer holds
-         (a licence change with no intervening renderSoa() call) must
-         never produce a report full of a framework's own data that
-         isn't entitled. A frameworkAgnostic report (risk register) has
-         no single framework to check against, so this only applies to
-         the rest. */
-      var builder = REPORT_BUILDERS[type];
-      if (!builder) return;
-      var parts = builder(activeFw, fwName(activeFw));
-      if (!parts) return;
-      if (!parts.frameworkAgnostic && (!S.entitlements || !S.entitlements[activeFw])) {
-        toast('That framework isn\'t currently entitled on this tenant.');
-        return;
-      }
-      var fwLabel = fwName(activeFw);
-
-      var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      var clientLabel = clientDisplayLabel();
-      var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
-      var version = peekReportVersion(type);
-
-      var spec = {
-        type: type,
-        reportTitle: parts.title,
-        framework: parts.frameworkAgnostic ? '' : fwLabel,
-        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null, brandColor: clientBrandColor() || null },
-        classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
-        footerText: (S.settings && (S.settings.reportFooterText || '').trim()) || '',
-        version: version,
-        date: today,
-        dateIso: new Date().toISOString().slice(0, 10),
-        preparedBy: practitioner,
-        nextReviewDate: '',
-        dashboard: parts.dashboard || null,
-        sections: parts.sections || [],
-        methodology: buildMethodology(),
-        signOff: { preparedBy: practitioner, clientApprover: '' }
-      };
-
-      var reportHtml = window.ReportEngine.buildReport(spec);
+      var built = buildReportFor(type);
+      if (!built) return;
+      var spec = built.spec, reportHtml = built.html, parts = built.parts, activeFw = built.activeFw, version = built.version;
       if (!reportPreview(spec, reportHtml)) return;
       await commitReportVersion(type, version);
       audit('Report generated', 'Report', type, '', JSON.stringify({ framework: activeFw, version: version }));

@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.116.0',
+    date: '2026-10-05',
+    entries: [
+      'Objectives now measure themselves. Each objective Checkpoint suggested reads its own number from your records (posture score, training completion, policy acknowledgement, high-risk treatment, actions closed on time, incident handling, AI impact assessments). The register shows the reading, and the status follows it: On track or At risk, then Achieved or Missed once the date passes. Objectives you wrote yourself stay yours to update.',
+      'New in the Statement of Applicability: Getting Annex A to 100%. Every applicable control that is not finished gets one next step, grouped. First come Checkpoint’s own steps: mark the controls the posture scan proves (evidence already captured), generate and approve the documents written for them, and schedule the activities that operate them. Then the scheduled activities to complete, and the controls that need you: failing checks, evidence to link, exclusions to justify and overdue re-verifications. Show lists the controls in each group, each opening its guidance.',
+      'Internal audits are now conducted in Checkpoint. Conduct the audit lists every workpack line: open findings to follow up, then clauses, then controls, each with its evidence link and what to look at first. Record a result as you go (conforms, opportunity for improvement, minor or major nonconformity) with a note; each saves immediately. A nonconformity or opportunity raises its finding in the Actions register, linked to the audit and the line. Completing the audit drafts the summary and conclusion from the results, and the workpack becomes the internal audit report.',
+      'Management review outputs. The review form has an Actions agreed field: one line per action (what; owner; due date), and each becomes an action in the Actions register, listed in the decisions. Each review now has Minutes (inputs considered, decisions and resources, actions agreed, and an approval block), which can be saved as Clause 9.3 evidence.',
+      'Evidence for record-based clauses, filed for you. File register snapshots saves a dated copy of the register that proves each clause into its evidence folder and links it: the risk register (6.1.2, 8.2), the risk treatment plan and Statement of Applicability (6.1.3, 8.3), objectives and their measurement (6.2, 9.1), training records (7.2) and corrective actions (10.2). The internal audit report and management review minutes can be saved as Clause 9.2 and 9.3 evidence the same way.',
+      'New: the Stage 1 pack, on the Management system clauses page. One document for the certification body before Stage 1: certification readiness and the mandatory documents, the Statement of Applicability, the risk treatment plan, objectives, the latest internal audit report and the latest management review minutes. It says what is still missing.'
+    ]
+  },
+  {
     version: '1.115.0',
     date: '2026-10-05',
     entries: [
