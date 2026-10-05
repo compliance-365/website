@@ -416,6 +416,21 @@ successful send**, so a failed send retries on the next run rather than
 silently skipping a period. It needs `NOTIFY_FROM` set (below) — an
 app-only identity has no mailbox of its own to send from.
 
+### Owner reminders
+
+If the tenant has turned on Owner reminders in Checkpoint (Frameworks &
+Settings → Email digest), this Function emails each named owner their own
+list once a week: open actions due within 14 days or overdue, scheduled
+activities, approved documents due for review within 30 days, objectives
+at risk and evidence requested from them. Owners are matched to directory
+users by exact display name, mail or UPN (an action's `OwnerEmail` wins);
+an owner who matches nobody is skipped, never guessed. It reads the
+Objectives list as well as those the governance sweep reads, uses
+`User.Read.All` (already granted) to match owners, needs `NOTIFY_FROM`
+like the digest, and stamps `ownerDigestLastSent` only after at least one
+send. The browser app sends the same reminders on load when no monitor is
+deployed; whichever runs first stamps the date, so nobody is emailed twice.
+
 ### Optional: email notification
 
 Off by default. To have new findings emailed as they're raised — both

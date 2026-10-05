@@ -112,7 +112,8 @@ async function resolveOptionalLists(g, siteId) {
     Incidents: byName[prefix + ' Incidents'] || null,
     Vendors: byName[prefix + ' Vendors'] || null,
     Calendar: byName[prefix + ' Calendar'] || null,
-    Audits: byName[prefix + ' Audits'] || null
+    Audits: byName[prefix + ' Audits'] || null,
+    Objectives: byName[prefix + ' Objectives'] || null
   };
 }
 

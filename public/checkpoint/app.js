@@ -832,7 +832,7 @@ function showModal(opts) {
     'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
     'addManualAsset', 'syncAssets', 'editAsset', 'seedLegalBaseline', 'addLegalReq', 'editLegalReq',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
-    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'annexAcceptScanProven', 'setAuditResult', 'setAuditNote', 'fileReviewMinutes', 'fileAuditReport', 'fileClauseSnapshots', 'setRiskAppetite', 'setScanCadence',
+    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'annexAcceptScanProven', 'setAuditResult', 'setAuditNote', 'fileReviewMinutes', 'fileAuditReport', 'fileClauseSnapshots', 'toggleOwnerDigest', 'sendOwnerRemindersNow', 'requestAnnexEvidence', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
@@ -3834,6 +3834,7 @@ function showModal(opts) {
   function resolveOrgTokens(str) {
     if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
     str = window.CheckpointLib.resolveCadenceTokens(str, cadenceState());
+    if (str.indexOf('{{register:objectives}}') !== -1) str = str.split('{{register:objectives}}').join(window.CheckpointLib.objectivesStatement(S.objectives || []));
     if (str.indexOf('{{') === -1) return str;
     /* Answers are free text and often end in a full stop; the template
        text around a token often supplies its own punctuation. Where
@@ -5266,6 +5267,8 @@ function showModal(opts) {
     var wanted = [];
     if (cyc.next) wanted.push({ marker: 'cert:' + fw + ':audit', title: fwName(fw) + ' ' + cyc.next.label + body, category: 'External surveillance audit', nextDue: cyc.next.dueBy });
     if (cyc.expires) wanted.push({ marker: 'cert:' + fw + ':expiry', title: fwName(fw) + ' certificate expiry' + body, category: 'Certificate expiry', nextDue: cyc.expires });
+    /* The run-up to that audit: confirm dates, management review, prepare. */
+    window.CheckpointLib.certificationPrepSteps(Object.assign({ fw: fw }, cert), new Date().toISOString().slice(0, 10), fwName(fw)).forEach(function (st) { wanted.push(st); });
     for (var i = 0; i < wanted.length; i++) {
       var w = wanted[i];
       var cal = (S.calendar || []).find(function (c) { return (c.notes || '').indexOf(w.marker) !== -1; });
@@ -5484,7 +5487,16 @@ function showModal(opts) {
         if (i === phases.length - 1) return node;
         return node + '<span class="gs-conn ' + (state === 'done' ? 'done' : '') + '"><i></i></span>';
       }).join('') + '</div>';
-    var nextHtml = '<div class="gs-row" style="border:1px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:12px">' +
+    /* The dated plan: which week of the engagement this is, what is due
+       this week and what has slipped. Starts from the setup date, or the
+       first scan for a tenant set up before that was recorded. */
+    var startDate = (S.settings && S.settings.onboardedDate) || ((S.scans || [])[0] || {}).date || new Date().toISOString().slice(0, 10);
+    var plan = window.CheckpointLib.onboardingSchedule(steps, String(startDate).slice(0, 10), new Date().toISOString().slice(0, 10));
+    var planRow = function (st) { return '<div class="gs-row"><span class="gs-check"></span><div class="gs-text"><b>' + esc(st.label) + '</b><span>' + (st.late ? '<span style="color:var(--fail)">Was due ' + fmtDate(st.target) + '</span>' : 'Due ' + fmtDate(st.target)) + '</span></div>' + pathStepButton(st, false) + '</div>'; };
+    var planHtml = '<div style="margin:0 0 12px"><p class="src" style="margin:0 0 6px"><b>Week ' + plan.week + ' of your plan</b> (' + fmtDate(plan.weekStart) + ' to ' + fmtDate(plan.weekEnd) + '). Ready for Stage 1 by ' + fmtDate(plan.steps[plan.steps.length - 1].target) + ' on this plan.</p>' +
+      (plan.behind.length ? '<div class="src" style="color:var(--fail);margin:6px 0 2px">Behind plan (' + plan.behind.length + ')</div>' + plan.behind.filter(function (x) { return x.id !== next.id; }).slice(0, 4).map(planRow).join('') : '') +
+      (plan.thisWeek.length ? '<div class="src" style="margin:6px 0 2px">Due this week</div>' + plan.thisWeek.filter(function (x) { return x.id !== next.id; }).map(planRow).join('') : '') + '</div>';
+    var nextHtml = planHtml + '<div class="gs-row" style="border:1px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:12px">' +
       '<span class="gs-check"></span>' +
       '<div class="gs-text"><b>Next: ' + esc(next.label) + '</b><span>' + esc(next.why) + (next.detail ? ' — ' + esc(next.detail) + '.' : '') + '</span></div>' +
       pathStepButton(next, true) + '</div>';
@@ -5492,7 +5504,7 @@ function showModal(opts) {
       steps.map(function (s) {
         return '<div class="gs-row' + (s.done ? ' done' : '') + '">' +
           '<span class="gs-check">' + (s.done ? icon('check') : '') + '</span>' +
-          '<div class="gs-text"><b>' + esc(s.label) + '</b><span>' + esc(s.phase) + ' · ' + esc(s.why) + (s.detail && !s.done ? ' — ' + esc(s.detail) + '.' : '') + '</span></div>' +
+          '<div class="gs-text"><b>' + esc(s.label) + '</b><span>' + esc(s.phase) + (plan.steps.find(function (p) { return p.id === s.id; }) && !s.done ? ' · due ' + fmtDate(plan.steps.find(function (p) { return p.id === s.id; }).target) : '') + ' · ' + esc(s.why) + (s.detail && !s.done ? ' — ' + esc(s.detail) + '.' : '') + '</span></div>' +
           (s.done ? '' : pathStepButton(s, false)) +
           '</div>';
       }).join('') + '</details>';
@@ -9083,6 +9095,62 @@ function showModal(opts) {
     return (S.clauses || []).find(function (c) { return (c.fw || 'iso27001') === fw && c.id === code; });
   }
 
+  /* Everything owner reminders read, from the live registers. */
+  function evidenceRequestsMap() {
+    try { var o = JSON.parse((S.settings && S.settings.evidenceRequests) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+  }
+  function ownerDigestData() {
+    var req = evidenceRequestsMap();
+    var evidence = Object.keys(req).map(function (k) {
+      var p = k.split('|'), c = (S.controls || []).find(function (x) { return x.fw === p[0] && x.id === p[1]; });
+      if (!c || (c.evidenceUrl && c.st === 'Implemented')) return null;
+      return { control: c.id, title: c.t || '', owner: req[k].owner, email: req[k].email || '', requested: req[k].date || '' };
+    }).filter(Boolean);
+    return {
+      actions: S.actions || [], calendar: S.calendar || [], objectives: S.objectives || [], evidence: evidence,
+      docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, owner: d.owner, nextReview: d.nextReview, status: docStatusOf(d) }; })
+    };
+  }
+  /* Sends each owner their list. `quiet` (the weekly send on load)
+     skips the confirmation and reports only a toast. */
+  async function sendOwnerReminders(quiet) {
+    if (Store.kind === 'demo') { if (!quiet) toast('Sending email needs a real tenant.'); return; }
+    var today = new Date().toISOString().slice(0, 10);
+    var list = window.CheckpointLib.ownerWorkItems(ownerDigestData(), today);
+    if (!list.length) { if (!quiet) toast('No owner has anything due in the next 14 days.'); return; }
+    var users = [];
+    try { users = await Graph.listTenantUsers(); } catch (e) { warn(e); return; }
+    var send = [], unmatched = [];
+    list.forEach(function (o) {
+      var to = o.email || ((window.CheckpointLib.matchOwnerToUser(o.owner, users) || {}).mail) || ((window.CheckpointLib.matchOwnerToUser(o.owner, users) || {}).upn);
+      if (to) send.push({ o: o, to: to }); else unmatched.push(o.owner);
+    });
+    if (!quiet) {
+      var ok = await showModal({
+        title: 'Send owner reminders',
+        message: send.map(function (x) { return '\u2022 ' + x.o.owner + ' (' + x.to + '): ' + x.o.items.length + ' item(s)'; }).join('\n') +
+          (unmatched.length ? '\n\nNot matched to anyone in the directory, so not sent: ' + unmatched.join(', ') + '. Write the owner as their name or email exactly as in Microsoft 365.' : ''),
+        confirmText: 'Send ' + send.length
+      });
+      if (!ok) return;
+    }
+    var sent = 0, label = clientDisplayLabel();
+    for (var i = 0; i < send.length; i++) {
+      try { await Graph.sendMail(send[i].to, 'Your security tasks \u2014 ' + label, window.CheckpointLib.ownerDigestHtml(send[i].o, label, location.origin + location.pathname)); sent++; } catch (e) { warn(e); }
+    }
+    S.settings.ownerDigestLastSent = today;
+    try { await Store.setSetting('ownerDigestLastSent', today); } catch (e) { warn(e); }
+    audit('Owner reminders sent', 'Setting', 'ownerDigestLastSent', '', sent + ' owner(s)' + (unmatched.length ? '; not matched: ' + unmatched.join(', ') : ''));
+    toast('Reminders sent to ' + sent + ' owner' + (sent === 1 ? '' : 's') + (unmatched.length ? ' (' + unmatched.length + ' not matched)' : '') + '.');
+    renderFrameworksAdmin();
+  }
+  /* Weekly, on load, when nobody has deployed the monitor to do it. */
+  function ownerRemindersDue() {
+    var st = S.settings || {};
+    if (st.ownerDigestEnabled !== 'true' || READONLY || Store.kind !== 'sharepoint') return false;
+    return !st.ownerDigestLastSent || window.CheckpointLib.daysBetweenDateStr(st.ownerDigestLastSent, new Date().toISOString().slice(0, 10)) >= 7;
+  }
+
   function auditWorkpackFor(a) {
     return window.CheckpointLib.auditWorkpack(a, {
       clauses: S.clauses || [], controls: S.controls || [], actions: S.actions || [], risks: S.risks || [], audits: S.audits || [],
@@ -9129,9 +9197,11 @@ function showModal(opts) {
           '<div style="flex:0 0 auto;display:flex;gap:6px">' +
           '<button class="btn ghost sm" data-action="App.annexFocus" data-id="' + g.step + '">' + (expanded ? 'Hide' : 'Show') + '</button>' +
           (ro || g.fix.action === 'App.annexFocus' ? '' : '<button class="btn ' + (g.fix.by === 'checkpoint' ? '' : 'ghost ') + 'sm" data-action="' + esc(g.fix.action) + '"' + (g.fix.arg ? ' data-id="' + esc(g.fix.arg) + '"' : '') + '>' + (g.fix.by === 'checkpoint' ? 'Do it' : 'Open') + '</button>') +
+          (!ro && (g.step === 'evidence' || g.step === 'reverify') ? '<button class="btn sm" data-action="App.requestAnnexEvidence" data-id="' + g.step + '">Request from owners</button>' : '') +
           '</div></div>' +
           (expanded ? '<div style="margin-top:6px">' + g.controls.map(function (x) {
-            return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0 4px 10px;font-size:12px"><span><b>' + esc(x.control.id) + '</b> ' + esc(x.control.t || '') + ' <span class="src">— ' + esc(x.why) + '</span></span>' +
+            var rq = evidenceRequestsMap()[x.control.fw + '|' + x.control.id];
+            return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0 4px 10px;font-size:12px"><span><b>' + esc(x.control.id) + '</b> ' + esc(x.control.t || '') + ' <span class="src">— ' + esc(x.why) + (x.control.own ? ' · owner ' + esc(x.control.own) : '') + (rq ? ' · evidence requested ' + esc(fmtDate(rq.date)) : '') + '</span></span>' +
               '<button class="lnk src" data-action="App.openControlGuidance" data-id="' + esc(x.control.fw + '|' + x.control.id) + '">Open</button></div>';
           }).join('') + '</div>' : '') +
           '</div>';
@@ -10862,7 +10932,7 @@ function showModal(opts) {
      9.1 need no manual upkeep. An objective the client wrote is theirs. */
   function objectiveMeasure(o) {
     return window.CheckpointLib.measureObjective(o, { scans: S.scans, training: S.training, attestations: S.attestations, risks: S.risks,
-      actions: S.actions, incidents: S.incidents, aiSystems: S.aiSystems }, new Date().toISOString().slice(0, 10));
+      actions: S.actions, incidents: S.incidents, aiSystems: S.aiSystems, lastResults: S.lastResults, calendar: S.calendar }, new Date().toISOString().slice(0, 10));
   }
   var _objectiveSyncBusy = false;
   function syncObjectiveMeasures() {
@@ -10898,7 +10968,8 @@ function showModal(opts) {
       var overdue = o.status !== 'Achieved' && o.due && o.due < today;
       var m = objectiveMeasure(o);
       return '<tr><td style="color:var(--paper)">' + esc(o.title) + (o.metric ? '<div class="src">' + esc(o.metric) + (o.target ? ' — ' + esc(o.target) : '') + '</div>' : '') +
-        (m ? '<div class="src" style="color:' + (m.met ? 'var(--pass)' : 'var(--warn)') + '">Measured by Checkpoint: ' + esc(m.display) + '</div>' : '') + '</td>' +
+        (m ? '<div class="src" style="color:' + (m.met ? 'var(--pass)' : 'var(--warn)') + '">Measured by Checkpoint: ' + esc(m.display) + '</div>' : '') +
+        (m && m.cia ? '<div class="src">Protects: ' + esc(m.cia.map(function (x) { return { C: 'confidentiality', I: 'integrity', A: 'availability' }[x]; }).join(', ')) + '</div>' : '') + '</td>' +
         '<td>' + esc(o.owner || '—') + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(o.due) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + objectiveStatusCls(o.status) + '">' + esc(o.status) + '</span></td>' +
@@ -12877,7 +12948,15 @@ function showModal(opts) {
         '<button class="btn ghost sm" data-action="App.saveDigestRecipients">Save recipients</button>' +
         '<button class="btn sm" data-action="App.sendDigestNow">Send digest now</button>' +
         '</div>' +
-        '<p class="src" style="margin-top:8px">Last sent: ' + (digestLastSentCurrent ? fmtDate(digestLastSentCurrent) : 'Never') + '</p>';
+        '<p class="src" style="margin-top:8px">Last sent: ' + (digestLastSentCurrent ? fmtDate(digestLastSentCurrent) : 'Never') + '</p>' +
+        (function () {
+          var on = (S.settings && S.settings.ownerDigestEnabled) === 'true';
+          var last = S.settings && S.settings.ownerDigestLastSent;
+          var owners = window.CheckpointLib.ownerWorkItems(ownerDigestData(), new Date().toISOString().slice(0, 10));
+          return '<div class="fw-admin-row" style="margin-top:18px"><div><b>Owner reminders</b><p>Once a week, each person named as an owner gets their own list: actions, scheduled activities, documents to review, objectives at risk and evidence requested. Owners are matched to the directory by name or email. Sent by the scheduled monitor when it is deployed, otherwise when someone opens Checkpoint.</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="Owner reminders enabled" data-action="App.toggleOwnerDigest"></button></div>' +
+            '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px"><span class="src">' + owners.length + ' owner' + (owners.length === 1 ? '' : 's') + ' with something due. Last sent: ' + (last ? fmtDate(last) : 'Never') + '</span>' +
+            '<button class="btn sm" data-action="App.sendOwnerRemindersNow">Send owner reminders now</button></div>';
+        })();
     }
 
     /* Microsoft Teams — the scheduled monitor posts to a channel through
@@ -13205,7 +13284,8 @@ function showModal(opts) {
     try { await Store.setSetting('dismissedContextRisks', S.settings.dismissedContextRisks); } catch (e) { warn(e); }
   }
 
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  var _ownerRemindersTried = false;
+  function renderAll() { if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -18179,10 +18259,13 @@ function showModal(opts) {
         await saveCertRecords(all);
         await syncCertCalendar(fw);
         audit('Certificate recorded', 'Certification', fwName(fw), cur.issued ? 'issued ' + cur.issued : '(none)', (v.body || 'CB') + ' ' + (v.number || '') + ', issued ' + v.issued);
-        toast(fwName(fw) + ' certificate saved — the next audit is on the compliance calendar.');
+        toast(fwName(fw) + ' certificate saved. The next audit and the steps before it are on the compliance calendar.');
       } catch (e) { warn(e); }
       busy(false);
-      renderCertification(); renderCertDashCard(); renderGettingStarted(); renderNavCounts();
+      renderCertification(); renderCertDashCard(); renderGettingStarted(); renderNavCounts(); renderCalendar();
+      /* A new cycle needs its internal audit programme: offered straight
+         away (it only lists audits not already scheduled). */
+      if (!cur.issued || cur.issued !== v.issued) await App.planInternalAudits(fw);
     },
 
     recordCertAudit: async function (fw) {
@@ -19275,6 +19358,56 @@ function showModal(opts) {
 
     stage1Pack: function () { App.report('stage1'); },
 
+    toggleOwnerDigest: async function () {
+      var next = (S.settings && S.settings.ownerDigestEnabled) === 'true' ? 'false' : 'true';
+      S.settings.ownerDigestEnabled = next;
+      try { await Store.setSetting('ownerDigestEnabled', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'ownerDigestEnabled', next === 'true' ? 'false' : 'true', next);
+      renderFrameworksAdmin();
+    },
+    sendOwnerRemindersNow: function () { return sendOwnerReminders(false); },
+
+    /* Emails each control owner the controls waiting on their evidence,
+       what to provide and where to put it. Requests are recorded, show
+       in the owner's weekly reminder until the evidence arrives, and
+       appear against the control here. */
+    requestAnnexEvidence: async function (step) {
+      var fw = window._soaFw || 'iso27001';
+      var Lib = window.CheckpointLib;
+      var items = annexPlanFor(fw).filter(function (p) { return p.step === (step || 'evidence'); }).map(function (p) {
+        var f = _evFolders[Lib.evidenceKey('control', p.control.fw, p.control.id)];
+        return { control: p.control, folderUrl: f && f.url ? f.url : '' };
+      });
+      var plan = Lib.evidenceRequestsByOwner(items, window.GUIDANCE || {});
+      if (!plan.byOwner.length) { toast(plan.unowned.length ? 'None of these controls has an owner yet. Name an owner on each control first.' : 'No control is waiting on evidence.'); return; }
+      if (Store.kind === 'demo') { toast('Sending email needs a real tenant. ' + plan.byOwner.length + ' owner(s) would be asked for evidence on ' + (items.length - plan.unowned.length) + ' control(s).'); return; }
+      var users = [];
+      try { users = await Graph.listTenantUsers(); } catch (e) { warn(e); return; }
+      var send = plan.byOwner.map(function (o) { var u = Lib.matchOwnerToUser(o.owner, users); return { o: o, to: u ? (u.mail || u.upn) : '' }; });
+      var ok = await showModal({
+        title: 'Request evidence from control owners',
+        message: send.map(function (x) { return '• ' + x.o.owner + (x.to ? ' (' + x.to + ')' : ' (not found in the directory, not sent)') + ': ' + x.o.controls.map(function (c) { return c.id; }).join(', '); }).join('\n') +
+          (plan.unowned.length ? '\n\nNo owner, so not requested: ' + plan.unowned.join(', ') + '.' : '') +
+          '\n\nEach owner is told what to provide for each control and given a link to its evidence folder. Outstanding requests appear in their weekly owner reminder until the evidence arrives.',
+        confirmText: 'Send requests'
+      });
+      if (!ok) return;
+      var req = evidenceRequestsMap(), today = new Date().toISOString().slice(0, 10), label = clientDisplayLabel(), sent = 0;
+      for (var i = 0; i < send.length; i++) {
+        if (!send[i].to) continue;
+        try {
+          await Graph.sendMail(send[i].to, 'Evidence needed for the certification audit — ' + label, Lib.evidenceRequestHtml(send[i].o, label, location.origin + location.pathname));
+          send[i].o.controls.forEach(function (c) { req[c.key] = { owner: send[i].o.owner, email: send[i].to, date: today }; });
+          sent++;
+        } catch (e) { warn(e); }
+      }
+      S.settings.evidenceRequests = JSON.stringify(req);
+      try { await Store.setSetting('evidenceRequests', S.settings.evidenceRequests); } catch (e) { warn(e); }
+      audit('Evidence requested', 'Setting', 'evidenceRequests', '', sent + ' owner(s): ' + send.filter(function (x) { return x.to; }).map(function (x) { return x.o.owner + ' (' + x.o.controls.map(function (c) { return c.id; }).join(', ') + ')'; }).join('; '));
+      toast('Evidence requested from ' + sent + ' owner' + (sent === 1 ? '' : 's') + '.');
+      renderSoa();
+    },
+
     annexDocuments: function () {
       var plan = annexPlanFor(window._soaFw || 'iso27001').filter(function (p) { return p.step === 'doc'; });
       if (plan.some(function (p) { return /^Generate /.test(p.why); })) return App.generateDocumentSet();
@@ -19335,12 +19468,12 @@ function showModal(opts) {
 
     adoptSuggestedObjectives: async function () {
       App.closeDrawer && App.closeDrawer();
-      var sugg = window.CheckpointLib.suggestedObjectives(entitledFrameworks().concat('iso27001'), S.objectives || []);
+      var sugg = window.CheckpointLib.suggestedObjectives(entitledFrameworks().concat('iso27001'), S.objectives || [], S.risks || []);
       if (!sugg.length) { App.go('objectives'); toast('The suggested objectives are already in the register.'); return; }
       var v = await showModal({
         title: 'Adopt measurable objectives',
-        message: 'Clause 6.2 asks for objectives that are measurable, monitored, owned and dated. Checkpoint measures each of these from its own records, so progress is reported without extra work. Untick any you do not want.',
-        fields: sugg.map(function (o, i) { return { id: 'o' + i, label: o.title + ' — ' + o.target + ' (' + o.metric.toLowerCase() + ')', type: 'checkbox', value: 'yes' }; })
+        message: 'Clause 6.2 asks for objectives that are measurable, monitored, owned and dated. Each serves the policy\u2019s aim of protecting confidentiality (C), integrity (I) and availability (A), and Checkpoint measures it from its own records. Those aimed at your open risks come first. Untick any you do not want.',
+        fields: sugg.map(function (o, i) { return { id: 'o' + i, label: o.title + ' [' + o.cia.join(', ') + '] — ' + o.target + ' (' + o.metric.toLowerCase() + ')' + (o.why ? '. ' + o.why : ''), type: 'checkbox', value: 'yes' }; })
           .concat([{ id: 'owner', label: 'Owner', value: '', placeholder: 'e.g. ISMS Manager' }, { id: 'due', label: 'Achieve by', type: 'date', value: daysFrom(365) }]),
         confirmText: 'Adopt',
         validate: function (x) { return String(x.owner || '').trim() ? null : 'Name an owner — Clause 6.2 expects each objective to be owned.'; }

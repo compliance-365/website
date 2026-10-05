@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.117.0',
+    date: '2026-10-05',
+    entries: [
+      'Objectives now serve confidentiality, integrity and availability. The Information Security Policy states the ISMS aim (to protect the confidentiality, integrity and availability of information by identifying, analysing, evaluating and treating risk) and lists the current objectives from the Objectives register, with targets, dates and owners, each marked C, I or A. Regenerate the policy to pick up changed objectives. Suggested objectives now include multi-factor authentication coverage and backup restore tests (both measured by Checkpoint). Any objective aimed at one of your open risks is listed first and names the risk. The register shows what each objective protects.',
+      'Owner reminders. Once a week, each person named as an owner is emailed their own list: actions due or overdue, scheduled activities, documents due for review, objectives at risk and evidence requested from them. Owners are matched to Microsoft 365 by exact name or email, and anyone who cannot be matched is reported, never guessed. Turn it on in Settings › Email digest. The scheduled monitor sends it when deployed, otherwise Checkpoint sends it when someone opens it, and nobody is emailed twice.',
+      'Evidence requests. From Getting Annex A to 100%, Request from owners emails each control owner the controls waiting on their evidence, what to provide for each, and a link to its evidence folder. Requests show against the control and stay in the owner’s weekly reminder until the evidence arrives.',
+      'After certification. Recording a certificate now puts the run-up to the next certification body audit on the compliance calendar: confirm the dates with the body (90 days before), a management review that considers the internal audit results (45 days before), and preparation with the surveillance pack, closed findings and fresh evidence snapshots (14 days before). These steps roll forward to the next audit when one is recorded. Recording a new certificate also offers the internal audit programme for the cycle.',
+      'A dated plan for new clients. Your path to certification now shows which week of the plan you are in, what is due this week and what is behind. The first 30 days cover set-up, documents, risks and the Statement of Applicability; a typical organisation is ready for Stage 1 in about 90 days.'
+    ]
+  },
+  {
     version: '1.116.0',
     date: '2026-10-05',
     entries: [

@@ -970,6 +970,14 @@ window.DEFAULT_SETTINGS = {
   digestRecipients: '',
   digestFrequency: 'Weekly',
   digestLastSent: '',
+  /* Owner reminders: each named owner is emailed their own list (actions,
+     scheduled activities, documents to review, objectives at risk,
+     evidence requested) once a week. Opt-in. Sent by the scheduled
+     monitor when deployed, otherwise from the browser on load. */
+  ownerDigestEnabled: 'false',
+  ownerDigestLastSent: '',
+  /* Evidence requested from control owners: JSON { 'fw|code': { owner, email, date } }. */
+  evidenceRequests: '',
   /* Microsoft Teams notifications, sent by the scheduled monitor (azure/
      PostureMonitor) through a Teams Workflows webhook. teamsWebhookUrl is
      the webhook itself; teamsAlerts/teamsDigest choose what is posted.
@@ -1482,7 +1490,7 @@ window.CHECK_PRIVACYACT = {};
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
-window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'Log and alert review', 'Vulnerability review', 'Threat intelligence review', 'Asset register review', 'Incident response exercise', 'Legal register review', 'External surveillance audit', 'Certificate expiry', 'Other'];
+window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'Log and alert review', 'Vulnerability review', 'Threat intelligence review', 'Asset register review', 'Incident response exercise', 'Legal register review', 'External surveillance audit', 'Certificate expiry', 'Management review', 'Other'];
 window.CALENDAR_FREQUENCIES = ['Annual', 'Biannual', 'Quarterly', 'Monthly', 'One-off'];
 
 /* Vendor data-access classification — a fixed taxonomy so "what data

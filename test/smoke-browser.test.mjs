@@ -337,6 +337,44 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* 1.117.0 in demo: the dated plan on the dashboard, objectives tied to
+     C/I/A and stated in the policy, owner reminders in Settings, and the
+     evidence request offered from the Annex A plan. */
+  test('dated plan, C/I/A objectives in the policy, owner reminders and evidence requests', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    const card = await page.$eval('#gettingStartedCard', (el) => el.innerText).catch(() => '');
+    if (card) assert.match(card, /week \d+ of your plan/i);
+
+    const modal = page.locator('#modalBox');
+    await page.evaluate(() => { window.App.adoptSuggestedObjectives(); });
+    await modal.getByLabel('Owner', { exact: true }).fill('ISMS Manager', { timeout: 5000 });
+    assert.match(await modal.innerText(), /\[C\]|\[A, I\]|\[C, I\]/);
+    await modal.getByRole('button', { name: 'Adopt', exact: true }).click();
+    await page.evaluate(() => window.App.go('objectives'));
+    await page.waitForFunction(() => /Protects: /.test(document.getElementById('objRows').innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => window.App.go('documents'));
+    await page.selectOption('#tplSelect', 'infosec-policy');
+    await page.waitForTimeout(300);
+    const preview = await page.$eval('#tplPreview', (el) => el.innerText);
+    assert.ok(!/\{\{register:/.test(preview), 'the objectives token is resolved, never shown');
+
+    await page.evaluate(() => window.App.go('settings'));
+    await page.waitForFunction(() => /Owner reminders/.test(document.body.innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => window.App.go('soa'));
+    await page.waitForSelector('#soaAnnexPlan', { timeout: 5000 });
+    const req = page.locator('#soaAnnexPlan button[data-action="App.requestAnnexEvidence"]').first();
+    if (await req.count()) { await req.click(); await page.waitForTimeout(300); }
+
+    assert.deepEqual(errors, [], 'no console errors in the 1.117.0 flows');
+    await context.close();
+  });
+
   /* The operating rhythm end to end: schedule the recommended recurring
      activities, complete one with its evidence, and see the control it
      covers verified and Implemented. */

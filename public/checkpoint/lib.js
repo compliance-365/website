@@ -7367,23 +7367,42 @@
      data (Clause 6.2: measurable, monitored, owned, with a due date).
      A suggestion already in the register (same title) is left out. */
   var SUGGESTED_OBJECTIVES = [
-    { key: 'obj-posture', fws: ['iso27001'], title: 'Keep our Microsoft 365 security configuration strong', metric: 'Checkpoint posture score', target: 'At least 80 out of 100 at every scan' },
-    { key: 'obj-training', fws: ['iso27001'], title: 'Everyone knows their security responsibilities', metric: 'Staff with current security awareness training', target: 'At least 95%' },
-    { key: 'obj-policy', fws: ['iso27001'], title: 'Everyone has read and accepted the information security policy', metric: 'Staff acknowledgement of the current policy', target: 'At least 90%' },
-    { key: 'obj-risk', fws: ['iso27001'], title: 'Treat high and critical risks on time', metric: 'High and critical risks with treatment actions on schedule', target: '100%, no treatment action more than 30 days overdue' },
-    { key: 'obj-actions', fws: ['iso27001'], title: 'Close corrective and improvement actions when we said we would', metric: 'Actions closed by their due date', target: 'At least 90%' },
-    { key: 'obj-incident', fws: ['iso27001'], title: 'Handle security incidents quickly and learn from them', metric: 'Incidents triaged within one business day, with lessons recorded', target: '100%' },
-    { key: 'obj-ai-impact', fws: ['iso42001'], title: 'Every AI system is assessed before use and kept under review', metric: 'AI systems with a completed impact assessment, reviewed within 12 months', target: '100%' },
-    { key: 'obj-ai-training', fws: ['iso42001'], title: 'Everyone using AI knows how to use it responsibly', metric: 'Staff with current AI use and oversight training', target: 'At least 95%' },
-    { key: 'obj-privacy-rights', fws: ['iso27701', 'privacyact'], title: 'Answer privacy requests on time', metric: 'Requests from individuals answered within the legal time limit', target: '100%' }
+    { key: 'obj-posture', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Keep our Microsoft 365 security configuration strong', metric: 'Checkpoint posture score', target: 'At least 80 out of 100 at every scan', risks: [] },
+    { key: 'obj-mfa', fws: ['iso27001'], cia: ['C'], title: 'Only the right people can sign in to our systems', metric: 'Accounts protected by multi-factor authentication', target: '100% of accounts, confirmed at every scan', risks: ['ctx-bec', 'ctx-leaver-access', 'mfa-all', 'mfa-priv', 'mfa-registration'] },
+    { key: 'obj-training', fws: ['iso27001'], cia: ['C', 'I'], title: 'Everyone knows their security responsibilities', metric: 'Staff with current security awareness training', target: 'At least 95%', risks: ['ctx-bec'] },
+    { key: 'obj-policy', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Everyone has read and accepted the information security policy', metric: 'Staff acknowledgement of the current policy', target: 'At least 90%', risks: [] },
+    { key: 'obj-risk', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Treat high and critical risks on time', metric: 'High and critical risks with treatment actions on schedule', target: '100%, no treatment action more than 30 days overdue', risks: [] },
+    { key: 'obj-actions', fws: ['iso27001'], cia: ['I'], title: 'Close corrective and improvement actions when we said we would', metric: 'Actions closed by their due date', target: 'At least 90%', risks: [] },
+    { key: 'obj-restore', fws: ['iso27001'], cia: ['A', 'I'], title: 'We can recover our information when we need to', metric: 'Backup restore tests completed successfully on schedule', target: 'Every scheduled restore test done, none overdue', risks: ['ctx-backup', 'backup'] },
+    { key: 'obj-incident', fws: ['iso27001'], cia: ['A', 'I'], title: 'Handle security incidents quickly and learn from them', metric: 'Incidents triaged within one business day, with lessons recorded', target: '100%', risks: [] },
+    { key: 'obj-ai-impact', fws: ['iso42001'], cia: ['I'], title: 'Every AI system is assessed before use and kept under review', metric: 'AI systems with a completed impact assessment, reviewed within 12 months', target: '100%', risks: ['ctx-ai-tools', 'ctx-ai-product'] },
+    { key: 'obj-ai-training', fws: ['iso42001'], cia: ['C', 'I'], title: 'Everyone using AI knows how to use it responsibly', metric: 'Staff with current AI use and oversight training', target: 'At least 95%', risks: ['ctx-ai-tools'] },
+    { key: 'obj-privacy-rights', fws: ['iso27701', 'privacyact'], cia: ['C'], title: 'Answer privacy requests on time', metric: 'Requests from individuals answered within the legal time limit', target: '100%', risks: ['ctx-privacy-breach'] }
   ];
-  function suggestedObjectives(frameworks, objectives) {
+  /* `risks` (optional): open risks from the register. A suggestion
+     aimed at one of them carries `why` naming it and comes first, so the
+     objectives follow the organisation's own top risks. */
+  function suggestedObjectives(frameworks, objectives, risks) {
     var fws = frameworks || ['iso27001'];
     var have = {};
     (objectives || []).forEach(function (o) { if (o && o.title) have[String(o.title).trim().toLowerCase()] = true; });
+    var open = (risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
     return SUGGESTED_OBJECTIVES.filter(function (o) {
       return o.fws.some(function (f) { return fws.indexOf(f) !== -1; }) && !have[o.title.toLowerCase()];
-    });
+    }).map(function (o) {
+      var hit = open.filter(function (r) { return r.tpl && o.risks.indexOf(r.tpl) !== -1; })[0];
+      return hit ? Object.assign({}, o, { why: 'Targets ' + hit.id + ': ' + hit.title }) : o;
+    }).sort(function (a, b) { return (b.why ? 1 : 0) - (a.why ? 1 : 0); });
+  }
+  /* The objectives as the policy states them, at generation time. */
+  function objectivesStatement(objectives) {
+    var list = (objectives || []).filter(function (o) { return o && o.title && o.status !== 'Achieved' && o.status !== 'Missed'; });
+    if (!list.length) return 'set each year in the objectives register and approved by top management';
+    return list.map(function (o) {
+      var def = SUGGESTED_OBJECTIVES.find(function (x) { return x.metric.toLowerCase() === String(o.metric || '').trim().toLowerCase(); });
+      var cia = def ? ' [' + def.cia.join(', ') + ']' : '';
+      return o.title + (o.target ? ' (' + o.target + (o.due ? ', by ' + o.due : '') + ')' : '') + (o.owner && o.owner !== 'Unassigned' ? ', owned by ' + o.owner : '') + cia;
+    }).join('; ');
   }
 
   /* Measures an objective from Checkpoint's own records, when its
@@ -7445,6 +7464,19 @@
         var handled = inc.filter(function (n) { return n.status !== 'Closed' || String(n.lessonsLearned || '').trim(); }).length;
         value = pctOf(handled, inc.length); display = handled + ' of ' + inc.length + ' incidents handled with lessons recorded';
         break;
+      case 'obj-mfa':
+        var r = d.lastResults || null;
+        var ids = ['mfa-all', 'mfa-registration'].filter(function (id) { return r && r[id] && r[id] !== 'manual'; });
+        if (!ids.length) return null;
+        var passing = ids.filter(function (id) { return r[id] === 'pass'; }).length;
+        value = pctOf(passing, ids.length); display = passing === ids.length ? 'MFA checks passing at the last scan' : (ids.length - passing) + ' MFA check(s) not passing at the last scan';
+        break;
+      case 'obj-restore':
+        var tests = (d.calendar || []).filter(function (c) { var rd = c && c.status !== 'Retired' && rhythmDefFor(c); return rd && rd.key === 'backup-restore'; });
+        if (!tests.length) return null;
+        var onTime = tests.filter(function (c) { return c.lastCompleted && (!c.nextDue || c.nextDue >= today); }).length;
+        value = pctOf(onTime, tests.length); display = onTime + ' of ' + tests.length + ' restore test schedule(s) done and not overdue';
+        break;
       case 'obj-ai-impact':
         var ai = d.aiSystems || [];
         if (!ai.length) return null;
@@ -7456,7 +7488,7 @@
     }
     var met = value >= threshold;
     var past = o.due && o.due < today;
-    return { key: def.key, value: value, display: display, met: met, status: past ? (met ? 'Achieved' : 'Missed') : (met ? 'On track' : 'At risk') };
+    return { key: def.key, cia: def.cia, value: value, display: display, met: met, status: past ? (met ? 'Achieved' : 'Missed') : (met ? 'On track' : 'At risk') };
   }
 
   /* ============================================================
@@ -7550,6 +7582,120 @@
     });
     var order = { checkpoint: 0, meeting: 1, you: 2 };
     return list.sort(function (a, b) { return order[a.fix.by] - order[b.fix.by] || b.controls.length - a.controls.length; });
+  }
+
+  /* ============================================================
+     Owner reminders
+     ------------------------------------------------------------
+     What each named owner has due, so "do what you document" does not
+     depend on anyone opening Checkpoint. Pure: the browser app and the
+     scheduled Azure Function (azure/lib/ownerDigest.js, kept identical
+     and tested against this one) both build the same lists.
+     d = { actions:[{id,title,owner,ownerEmail,due,status}],
+           calendar:[{id,title,owner,nextDue,status}],
+           docs:[{name,owner,nextReview,status}],
+           objectives:[{id,title,owner,status}],
+           evidence:[{control,title,owner,email,requested}] }
+     Returns [{ owner, email, items:[{ kind, ref, title, due, overdue }] }],
+     owners with something overdue first. Nothing due → not listed. */
+  function ownerWorkItems(d, today, horizonDays) {
+    d = d || {};
+    var h = horizonDays == null ? 14 : horizonDays;
+    var limit = (function () { var x = new Date(String(today).slice(0, 10) + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + h); return x.toISOString().slice(0, 10); })();
+    var docLimit = (function () { var x = new Date(String(today).slice(0, 10) + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + 30); return x.toISOString().slice(0, 10); })();
+    var by = {}, order = [];
+    function add(owner, email, item) {
+      var name = String(owner || '').trim();
+      if (!name || /^unassigned$/i.test(name)) return;
+      var k = name.toLowerCase();
+      if (!by[k]) { by[k] = { owner: name, email: '', items: [] }; order.push(k); }
+      if (email && !by[k].email) by[k].email = String(email).trim();
+      by[k].items.push(item);
+    }
+    var closed = { Done: 1, Closed: 1, Cancelled: 1 };
+    (d.actions || []).forEach(function (a) {
+      if (!a || closed[a.status] || !a.due || a.due > limit) return;
+      add(a.owner, a.ownerEmail, { kind: 'Action', ref: a.id || '', title: a.title || '', due: a.due, overdue: a.due < today });
+    });
+    (d.calendar || []).forEach(function (c) {
+      if (!c || c.status === 'Retired' || c.status === 'Done' || !c.nextDue || c.nextDue > limit) return;
+      add(c.owner, '', { kind: 'Activity', ref: c.id || '', title: c.title || '', due: c.nextDue, overdue: c.nextDue < today });
+    });
+    (d.docs || []).forEach(function (x) {
+      if (!x || x.status !== 'Approved' || !x.nextReview || x.nextReview > docLimit) return;
+      add(x.owner, '', { kind: 'Document review', ref: '', title: String(x.name || '').replace(/\.html$/i, ''), due: x.nextReview, overdue: x.nextReview < today });
+    });
+    (d.objectives || []).forEach(function (o) {
+      if (!o || (o.status !== 'At risk' && o.status !== 'Missed')) return;
+      add(o.owner, '', { kind: 'Objective ' + String(o.status).toLowerCase(), ref: o.id || '', title: o.title || '', due: '', overdue: o.status === 'Missed' });
+    });
+    (d.evidence || []).forEach(function (e) {
+      if (!e) return;
+      add(e.owner, e.email, { kind: 'Evidence requested', ref: e.control || '', title: e.title || '', due: e.requested || '', overdue: false });
+    });
+    return order.map(function (k) {
+      var o = by[k];
+      o.items.sort(function (a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999')); });
+      return o;
+    }).sort(function (a, b) {
+      var ao = a.items.filter(function (i) { return i.overdue; }).length, bo = b.items.filter(function (i) { return i.overdue; }).length;
+      return bo - ao || a.owner.localeCompare(b.owner);
+    });
+  }
+  /* Evidence requests: the controls waiting on evidence, grouped by
+     owner, each with what to provide (window.GUIDANCE evidence text)
+     and where to put it. items = [{ control, folderUrl }].
+     Returns { byOwner:[{ owner, controls:[{ key, id, title, evidence, folderUrl }] }], unowned:[ids] }. */
+  function evidenceRequestsByOwner(items, guidance) {
+    var by = {}, order = [], unowned = [];
+    (items || []).forEach(function (it) {
+      var c = it && it.control;
+      if (!c) return;
+      var owner = String(c.own || '').trim();
+      if (!owner || /^unassigned$/i.test(owner)) { unowned.push(c.id); return; }
+      var k = owner.toLowerCase();
+      if (!by[k]) { by[k] = { owner: owner, controls: [] }; order.push(k); }
+      var g = (guidance || {})[c.id] || {};
+      by[k].controls.push({ key: (c.fw || 'iso27001') + '|' + c.id, id: c.id, title: c.t || '', evidence: g.evidence || 'Evidence that this control is in place and operating: a record, export, screenshot or signed-off review.', folderUrl: it.folderUrl || '' });
+    });
+    return { byOwner: order.map(function (k) { return by[k]; }), unowned: unowned };
+  }
+  function evidenceRequestHtml(entry, clientLabel, appUrl) {
+    var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    return '<div style="font-family:Arial,sans-serif;color:#222;max-width:640px">' +
+      '<h2 style="margin-bottom:4px">Evidence needed — ' + e(clientLabel) + '</h2>' +
+      '<p style="font-size:13px">Hi ' + e(entry.owner) + ', you own ' + entry.controls.length + ' security control' + (entry.controls.length === 1 ? '' : 's') + ' that need evidence for the certification audit. For each, please add the evidence described below.</p>' +
+      entry.controls.map(function (c) {
+        return '<div style="border-top:1px solid #eee;padding:10px 0;font-size:13px"><b>' + e(c.id) + ' ' + e(c.title) + '</b><br><span style="color:#444">What to provide: ' + e(c.evidence) + '</span><br>' +
+          (c.folderUrl ? '<a href="' + e(c.folderUrl) + '">Add it to this control’s evidence folder</a>' : (appUrl ? '<a href="' + e(appUrl) + '">Open Checkpoint</a> › Statement of Applicability › ' + e(c.id) + ' › Add evidence' : '')) + '</div>';
+      }).join('') +
+      '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365. Files you add are picked up automatically and linked to the control.</p></div>';
+  }
+
+  /* Matches an owner as written in a register (a name, an email or a
+     UPN) to a directory user. Exact matches only, case-insensitive:
+     a near-miss sends someone else's list to the wrong person. */
+  function matchOwnerToUser(owner, users) {
+    var o = String(owner || '').trim().toLowerCase();
+    if (!o) return null;
+    var hits = (users || []).filter(function (u) {
+      return u && [u.displayName, u.mail, u.userPrincipalName, u.upn, u.name].some(function (v) { return v && String(v).trim().toLowerCase() === o; });
+    });
+    return hits.length === 1 ? hits[0] : null;
+  }
+  function ownerDigestHtml(entry, clientLabel, appUrl) {
+    var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    var od = entry.items.filter(function (i) { return i.overdue; }).length;
+    return '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
+      '<h2 style="margin-bottom:4px">Your security tasks — ' + e(clientLabel) + '</h2>' +
+      '<p style="color:#666;font-size:13px;margin-top:0">Hi ' + e(entry.owner) + ', here is what is assigned to you in the information security management system' + (od ? ', including ' + od + ' overdue' : '') + '.</p>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+      entry.items.map(function (i) {
+        return '<tr><td style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap;color:#666">' + e(i.kind) + '</td><td style="padding:6px;border-bottom:1px solid #eee">' + (i.ref ? '<b>' + e(i.ref) + '</b> ' : '') + e(i.title) + '</td>' +
+          '<td style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap;' + (i.overdue ? 'color:#b00020;font-weight:bold' : '') + '">' + (i.due ? (i.overdue ? 'Overdue: ' : (i.kind === 'Evidence requested' ? 'Requested ' : 'Due ')) + e(i.due) : '') + '</td></tr>';
+      }).join('') + '</table>' +
+      (appUrl ? '<p style="margin-top:16px"><a href="' + e(appUrl) + '">Open Checkpoint</a> to complete them and attach evidence.</p>' : '') +
+      '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365. You receive this because you are named as an owner.</p></div>';
   }
 
   /* Opportunities (Clause 6.1.1) drawn from the scope & context
@@ -8125,6 +8271,33 @@
          training, vendors, aiSystems, audits, reviews, clauses:[{st}],
          calendar, today }
      Returns [{ id, phase, label, why, done, detail }] in order. */
+  /* The path to certification as a dated plan: the days after the start
+     of the engagement by which each step should be done. The first 30
+     days set up, document and assess; operating, checking and booking
+     follow, so a typical organisation is ready for Stage 1 in about 90
+     days. */
+  var ONBOARDING_DAYS = { scope: 3, scan: 3, docs: 7, approve: 14, risks: 14, assets: 21, legal: 21, training: 21, rhythm: 21,
+    soa: 30, objectives: 30, suppliers: 30, ai: 30, audit: 60, review: 75, clauses: 80, mandatory: 85, book: 90 };
+  /* steps from certificationPathSteps(); start = the engagement start
+     (ISO date). Returns { week, weekStart, weekEnd, steps:[step + { target, late }],
+     thisWeek:[], behind:[] }: behind = not done and past its target. */
+  function onboardingSchedule(steps, start, today) {
+    var addD = function (iso, n) { var d = new Date(String(iso).slice(0, 10) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    var begin = start || today;
+    var elapsed = Math.max(0, daysBetweenDateStr(begin, today));
+    var week = Math.floor(elapsed / 7) + 1;
+    var weekStart = addD(begin, (week - 1) * 7), weekEnd = addD(begin, week * 7 - 1);
+    var out = (steps || []).map(function (st) {
+      var target = addD(begin, ONBOARDING_DAYS[st.id] != null ? ONBOARDING_DAYS[st.id] : 90);
+      return Object.assign({}, st, { target: target, late: !st.done && target < today });
+    }).sort(function (a, b) { return a.target.localeCompare(b.target); });
+    return {
+      week: week, weekStart: weekStart, weekEnd: weekEnd, steps: out,
+      thisWeek: out.filter(function (x) { return !x.done && !x.late && x.target <= weekEnd; }),
+      behind: out.filter(function (x) { return x.late; })
+    };
+  }
+
   function certificationPathSteps(s) {
     s = s || {};
     var today = s.today;
@@ -8276,6 +8449,26 @@
       expiresDays: expires && today ? daysBetweenDateStr(today, expires) : null,
       cycleStart: issued
     };
+  }
+
+  /* The run-up to the next certification body audit, as calendar
+     steps: confirm the dates with the body, hold a management review
+     that considers the internal audit results, and prepare the
+     surveillance pack with findings closed. Dates count back from the
+     audit's due date; a step whose date has passed is due now. Returns
+     [{ marker, title, category, nextDue }]. */
+  function certificationPrepSteps(cert, today, fwLabel) {
+    var cyc = certificationCycle(cert, today);
+    if (!cyc.next || !cyc.next.dueBy) return [];
+    var fw = (cert && cert.fw) || 'iso27001';
+    var due = cyc.next.dueBy, label = cyc.next.label, body = cert && cert.body ? cert.body : 'the certification body';
+    var at = function (days) { var d = new Date(due + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - days); var iso = d.toISOString().slice(0, 10); return iso < today ? today : iso; };
+    var name = (fwLabel || fw) + ' ' + label;
+    return [
+      { marker: 'cert:' + fw + ':prep-confirm', title: 'Confirm the ' + name + ' dates and auditor with ' + body, category: 'External surveillance audit', nextDue: at(90) },
+      { marker: 'cert:' + fw + ':prep-review', title: 'Management review before the ' + name + ' (consider the internal audit results)', category: 'Management review', nextDue: at(45) },
+      { marker: 'cert:' + fw + ':prep-pack', title: 'Prepare for the ' + name + ': surveillance pack, close open findings, file fresh evidence snapshots', category: 'External surveillance audit', nextDue: at(14) }
+    ];
   }
 
   /* Which management-system clauses (4-10) and Annex A themes (A.5-A.8)
@@ -8618,7 +8811,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, measureObjective: measureObjective, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
@@ -8628,6 +8821,6 @@
     planOperatingRhythm: planOperatingRhythm, rhythmCompletionUpdates: rhythmCompletionUpdates,
     CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,
     CADENCES: CADENCES, cadenceCurrent: cadenceCurrent, resolveCadenceTokens: resolveCadenceTokens, cadenceKeysIn: cadenceKeysIn, cadenceSnapshot: cadenceSnapshot, statementApplies: statementApplies, policyPracticeGaps: policyPracticeGaps,
-    addMonthsIso: addMonthsIso, certificationCycle: certificationCycle, internalAuditCoverage: internalAuditCoverage, internalAuditProgramme: internalAuditProgramme
+    addMonthsIso: addMonthsIso, certificationCycle: certificationCycle, certificationPrepSteps: certificationPrepSteps, ONBOARDING_DAYS: ONBOARDING_DAYS, onboardingSchedule: onboardingSchedule, internalAuditCoverage: internalAuditCoverage, internalAuditProgramme: internalAuditProgramme
   };
 });

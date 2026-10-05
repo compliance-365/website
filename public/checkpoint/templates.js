@@ -151,7 +151,7 @@ window.POLICY_TEMPLATES = [
         because: 'A policy describing an organisation that no longer exists cannot direct behaviour, and stale documented information is a finding in its own right.'
       },
       {
-        rule: 'This policy is appropriate to the purpose of the organisation and to the information it holds, and provides the framework for setting information security objectives, which are set, measured and reviewed as described in the Information Security Objectives & Metrics.',
+        rule: 'The ISMS exists to protect the confidentiality, integrity and availability of the organisation’s information by identifying, analysing, evaluating and treating the risks to it. This policy is appropriate to the purpose of the organisation and to the information it holds, and provides the framework for setting information security objectives in support of that aim: each is measurable, owned, dated and reviewed at management review, as described in the Information Security Objectives & Metrics. The current objectives are: {{register:objectives}}.',
         because: 'ISO/IEC 27001 Clause 5.2 a) and b): the policy must fit the organisation and give the framework its objectives are set within.'
       },
       {
