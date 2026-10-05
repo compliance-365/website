@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.114.0',
+    date: '2026-10-05',
+    entries: [
+      'Documents now state your frequencies, not ours. Policies no longer fix how often things happen (“at least quarterly”); they state the interval you have set, for example “at the interval the organisation has set (currently every six months)”. Recurring activities take their frequency from the compliance calendar, which you can now edit (frequency, owner, title, next date, or retire an activity). Risk review, document review, management review, internal audit and the inactive account period come from Settings → Thresholds and intervals. Change one, regenerate, and the documents follow. Statutory deadlines, such as the Privacy Act’s 30-day breach assessment, stay as the law sets them.',
+      'Policies describe what you do. Statements that only apply to some organisations follow your scope & context answers: a fully remote organisation no longer gets office visitor and secure-area rules, outsourced-development rules appear only if you outsource development, and the Secure Development and Remote Working policies are only generated where they apply. Before an operational policy is approved, Checkpoint now asks “Do you do this?” for each statement: untick anything you do not do yet and it is taken out of the document, with an action raised to put it in place. Bulk approval asks you to confirm the documents describe what you do.',
+      'New in Documents: Policy vs practice. It lists any document that no longer says what you do (generated before this release, or a frequency you have since changed) and any approved document committing to an activity that is not scheduled or is overdue, each with the button that fixes it: re-approve, regenerate, schedule, or open the calendar.',
+      'Each framework now sees its own documents. An ISO 27001 client is offered information security documents only; AI documents belong to ISO 42001, and privacy documents to ISO 27701 or the Privacy Act. The ISO 27001 Legal & Regulatory policy now covers privacy obligations (A.5.34) itself. Documents already generated for a framework you do not hold are labelled in the register so you can mark them Superseded.',
+      'Fixed: in a live tenant, editing or completing a compliance calendar item only saved its dates and status. Its notes, including the evidence link recorded when an operating-rhythm activity is completed, are now saved too.'
+    ]
+  },
+  {
     version: '1.113.0',
     date: '2026-10-04',
     entries: [

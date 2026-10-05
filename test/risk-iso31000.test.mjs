@@ -79,8 +79,11 @@ describe('the Risk Management Framework states what the register does', () => {
     assert.equal(opts('nrLikelihood').length, 5);
   });
 
-  test('the review commitment still matches the default review cadence', () => {
-    assert.match(text, /at least quarterly/);
+  test('the review commitment is the organisation\'s own risk review setting, not a fixed number', () => {
+    // Stated through {{cadence:risk-review}}, which reads riskReviewCadenceDays,
+    // so the document and the register's overdue flag can never disagree.
+    assert.match(text, /\{\{cadence:risk-review\}\}/);
+    assert.doesNotMatch(text, /at least quarterly/);
   });
 });
 

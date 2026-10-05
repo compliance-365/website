@@ -270,6 +270,59 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* Document what you do: a calendar frequency is the organisation's to
+     change, documents generated before that are flagged, and approving
+     an operational policy confirms each statement first. Unticking one
+     removes it from the document. */
+  test('frequencies are editable, drift is flagged, and approval confirms each statement', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    const modal = page.locator('#modalBox');
+
+    await page.evaluate(() => window.App.go('calendar'));
+    const row = page.locator('#calRows tr').first();
+    await row.waitFor({ timeout: 5000 });
+    const id = await row.getAttribute('data-id');
+    // Not awaited inside the page: the handler resolves only when the dialog closes.
+    await page.evaluate((x) => { window.App.editCalItem(x); }, id);
+    await modal.getByLabel('Frequency', { exact: true }).selectOption('Monthly', { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Save', exact: true }).click({ timeout: 5000 });
+    await page.waitForFunction((x) => /Monthly/.test((document.querySelector('#calRows tr[data-id="' + x + '"]') || {}).innerText || ''), id, { timeout: 5000 });
+
+    await page.evaluate(() => window.App.go('documents'));
+    await page.waitForSelector('#docPracticeCard h3', { timeout: 5000 });
+    assert.match(await page.locator('#docPracticeCard').innerText(), /Access Control Policy/);
+
+    const openConfirm = () => page.evaluate(() => { window.App.approveTemplate('Policies & Procedures|Access Control Policy.html'); });
+    await openConfirm();
+    await modal.getByText('Do you do this?').waitFor({ timeout: 5000 });
+    const boxes = modal.locator('input[type="checkbox"]');
+    const before = await boxes.count();
+    assert.match(await modal.innerText(), /currently/, 'statements show the organisation’s own frequencies');
+    await boxes.nth(0).uncheck();
+    await modal.getByRole('button', { name: 'Continue to approval' }).click();
+    assert.match(await modal.innerText(), /Confirm that the ticked statements/, 'the attestation is required');
+    await boxes.nth(before - 1).check();
+    await modal.getByRole('button', { name: 'Continue to approval' }).click();
+    await modal.getByText(/^Approve “/).waitFor({ timeout: 5000 });
+    await modal.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+    await openConfirm();
+    // Editing the document made this account its author, so the
+    // segregation-of-duties warning comes first now; record anyway.
+    const recordAnyway = modal.getByRole('button', { name: 'Record anyway' });
+    if (await recordAnyway.isVisible({ timeout: 1500 }).catch(() => false)) await recordAnyway.click();
+    await modal.getByText('Do you do this?').waitFor({ timeout: 5000 });
+    assert.equal(await modal.locator('input[type="checkbox"]').count(), before - 1, 'the unticked statement is no longer in the document');
+    await modal.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+    assert.deepEqual(errors, [], 'no console errors');
+    await context.close();
+  });
+
   /* ===== Interaction paths, not just render paths =====
      Everything above navigates and asserts nothing threw while
      RENDERING. That leaves a whole class of bug untouched: a handler

@@ -827,6 +827,12 @@ window.THRESHOLD_DEFS = [
   { key: 'auditLogWindowDays', label: 'Audit log review window (days)', desc: 'How far back the two Entra audit-log checks look — observed legacy authentication, and privileged role changes. Set this to match the review cadence your own ISMS commits to rather than leaving the 30-day default; a quarterly access review wants 90. Entra itself retains sign-in and directory audit logs for 30 days on P1/P2 (7 days on the free tier), so a longer window here silently returns only what Entra still holds.', def: '30' },
   { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' },
   { key: 'riskReviewCadenceDays', label: 'Risk review cadence (days)', desc: 'An open risk not reviewed within this many days shows as overdue for review on the Risk register, the Dashboard and the Audit Readiness Report. ISO 27001 clause 8.2 requires risk assessments at planned intervals or on significant change, and the Risk Management Framework policy template commits to reviewing residual risk at least quarterly — which is where the 90-day default comes from. Set it to whatever your own framework actually says.', def: '90' },
+  /* Document-wide frequencies. A generated document states these
+     rather than a fixed number (lib CADENCES), so changing one here and
+     regenerating keeps the documents saying what the organisation does. */
+  { key: 'documentReviewMonths', label: 'Document review interval (months)', desc: 'How often each policy and procedure is reviewed. Generated documents state this interval, and it sets the default next review date when one is generated. ISO 27001 asks for planned intervals, not a particular number.', def: '12' },
+  { key: 'managementReviewMonths', label: 'Management review interval (months)', desc: 'How often top management reviews the ISMS (Clause 9.3). The Management Review Procedure states this interval.', def: '12' },
+  { key: 'internalAuditMonths', label: 'Internal audit interval (months)', desc: 'How often the management system clauses are internally audited (Clause 9.2). The Internal Audit Procedure states this interval, and the audit check uses it.', def: '12' },
   /* Remediation windows, one per action priority. ISO prescribes no
      numbers here — 27001 clause 6.1.3 wants a risk treatment plan, 10.2
      wants a nonconformity reacted to and its cause evaluated, neither
@@ -1141,6 +1147,11 @@ window.DOC_META_COLUMNS = [
      file as one it can re-render, edit or export from template text.
      Blank on generated documents and ordinary uploads. */
   { name: 'DocOrigin', text: {} },
+  /* The frequencies a generated document stated when it was last
+     rendered ({ cadenceKey: value }, JSON — lib CADENCES), so the
+     policy-vs-practice check can tell when the organisation has since
+     changed one and the document no longer says what it does. */
+  { name: 'DocCadences', text: {} },
   /* Set only on an auto-evidence document (captureAutoEvidence() in
      app.js) — the same JSON the uploaded file itself contains, mirrored
      onto this column so the in-app evidence viewer (App.viewEvidence())
@@ -2887,7 +2898,7 @@ window.SpStore = (function () {
     owner: 'DocOwner', version: 'DocVersion', status: 'DocStatus',
     approvedBy: 'DocApprovedBy', approvalDate: 'DocApprovalDate',
     nextReview: 'DocNextReview', classification: 'DocClassification',
-    frameworks: 'DocFrameworks', tplId: 'DocTplId', origin: 'DocOrigin'
+    frameworks: 'DocFrameworks', tplId: 'DocTplId', origin: 'DocOrigin', cadences: 'DocCadences'
   };
   function docFieldsFrom(meta) {
     var out = {};
@@ -3887,8 +3898,14 @@ window.SpStore = (function () {
       });
       S.calendar.push(c);
     },
+    /* Every editable field, not just the dates: completing an
+       operating-rhythm activity records its evidence in Notes, and an
+       organisation can change an activity's frequency, owner or title. */
     updateCalendarItem: async function (c) {
-      await patchItem('Calendar', c._sp, { NextDue: c.nextDue || '', LastCompleted: c.lastCompleted || '', Status: c.status || 'Active' });
+      await patchItem('Calendar', c._sp, {
+        Title: c.title, Category: c.category, Frequency: c.freq, Owner: c.owner || '',
+        NextDue: c.nextDue || '', LastCompleted: c.lastCompleted || '', Notes: c.notes || '', Status: c.status || 'Active'
+      });
     },
     appendAudit: async function (entry) {
       /* Chain to the newest entry we currently hold. S.auditLog is
