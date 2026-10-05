@@ -1094,9 +1094,9 @@ function showModal(opts) {
     },
     {
       key: 'objectives', label: 'Objectives', filename: 'objectives.csv',
-      header: ['ID', 'Objective', 'Metric', 'Target', 'Owner', 'Due', 'Status', 'Progress notes'],
+      header: ['ID', 'Objective', 'Metric', 'Target', 'Owner', 'Due', 'Status', 'Progress notes', 'Resources'],
       rows: function () {
-        return (S.objectives || []).map(function (o) { return [o.id, o.title, o.metric, o.target, o.owner, o.due, o.status, o.notes]; });
+        return (S.objectives || []).map(function (o) { return [o.id, o.title, o.metric, o.target, o.owner, o.due, o.status, o.notes, o.resources || '']; });
       }
     },
     {
@@ -2855,12 +2855,12 @@ function showModal(opts) {
     objectives: function () {
       var rows = (S.objectives || []).map(function (o) {
         var m = objectiveMeasure(o);
-        return '<tr><td class="rpt-idc">' + esc(o.id) + '</td><td>' + esc(o.title) + '</td><td>' + esc(o.metric || '') + '</td><td>' + esc(o.target || '') + '</td><td>' + (m ? esc(m.display) : 'Measured by the owner') + '</td><td>' + esc(o.owner || '') + '</td><td>' + (o.due ? fmtDateY(o.due) : '') + '</td><td>' + esc(o.status) + '</td></tr>';
+        return '<tr><td class="rpt-idc">' + esc(o.id) + '</td><td>' + esc(o.title) + '</td><td>' + esc(o.metric || '') + '</td><td>' + esc(o.target || '') + '</td><td>' + (m ? esc(m.display) : 'Measured by the owner') + '</td><td>' + esc(o.owner || '') + '</td><td>' + esc(o.resources || '') + '</td><td>' + (o.due ? fmtDateY(o.due) : '') + '</td><td>' + esc(o.status) + '</td></tr>';
       }).join('');
       return {
         title: 'Objectives and measurement', frameworkAgnostic: true,
         dashboard: { intro: (S.objectives || []).length + ' objective(s), measured at ' + fmtDateY(new Date().toISOString().slice(0, 10)) + '.' },
-        sections: [{ heading: 'Objectives', pageBreak: false, html: rows ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Objective</th><th>Metric</th><th>Target</th><th>Measured</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p>No objectives recorded.</p>' }]
+        sections: [{ heading: 'Objectives', pageBreak: false, html: rows ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Objective</th><th>Metric</th><th>Target</th><th>Measured</th><th>Owner</th><th>Resources</th><th>Due</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p>No objectives recorded.</p>' }]
       };
     },
 
@@ -5103,7 +5103,7 @@ function showModal(opts) {
     var oEl = document.getElementById('nObjectives');
     if (oEl) { oEl.textContent = atRiskObjectives || ''; oEl.style.display = atRiskObjectives ? 'inline-block' : 'none'; }
 
-    var overdueCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && c.nextDue && c.nextDue < today; }).length;
+    var overdueCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c) && c.nextDue && c.nextDue < today; }).length;
     var cEl = document.getElementById('nCalendar');
     cEl.textContent = overdueCal || ''; cEl.style.display = overdueCal ? 'inline-block' : 'none';
 
@@ -5995,7 +5995,7 @@ function showModal(opts) {
       var lastReview = reviews[reviews.length - 1];
       var reviewOverdue = lastReview && lastReview.nextDue && lastReview.nextDue < new Date().toISOString().slice(0, 10);
       var today2 = new Date().toISOString().slice(0, 10);
-      var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+      var upcomingCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
       var calOverdue = upcomingCal && upcomingCal.nextDue && upcomingCal.nextDue < today2;
       var overdueVendorList = (S.vendors || []).filter(vendorOverdue);
       govEl.innerHTML =
@@ -6168,7 +6168,7 @@ function showModal(opts) {
     var nextAudit = plannedAudits.filter(function (a) { return a.fw === primaryFw; })[0] || plannedAudits[0];
     var nextInternalAuditDate = nextAudit ? nextAudit.planned : null;
 
-    var externalAuditItem = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && /audit/i.test(c.category || ''); })
+    var externalAuditItem = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c) && /audit/i.test(c.category || ''); })
       .sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
     var externalAuditDate = externalAuditItem ? externalAuditItem.nextDue : null;
 
@@ -10969,7 +10969,8 @@ function showModal(opts) {
       var m = objectiveMeasure(o);
       return '<tr><td style="color:var(--paper)">' + esc(o.title) + (o.metric ? '<div class="src">' + esc(o.metric) + (o.target ? ' — ' + esc(o.target) : '') + '</div>' : '') +
         (m ? '<div class="src" style="color:' + (m.met ? 'var(--pass)' : 'var(--warn)') + '">Measured by Checkpoint: ' + esc(m.display) + '</div>' : '') +
-        (m && m.cia ? '<div class="src">Protects: ' + esc(m.cia.map(function (x) { return { C: 'confidentiality', I: 'integrity', A: 'availability' }[x]; }).join(', ')) + '</div>' : '') + '</td>' +
+        (m && m.cia ? '<div class="src">Protects: ' + esc(m.cia.map(function (x) { return { C: 'confidentiality', I: 'integrity', A: 'availability' }[x]; }).join(', ')) + '</div>' : '') +
+        (o.resources ? '<div class="src">Resources: ' + esc(o.resources) + '</div>' : '<div class="src" style="color:var(--warn)">No resources recorded (Clause 6.2)</div>') + '</td>' +
         '<td>' + esc(o.owner || '—') + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(o.due) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + objectiveStatusCls(o.status) + '">' + esc(o.status) + '</span></td>' +
@@ -11430,7 +11431,7 @@ function showModal(opts) {
   function renderCalendarDashboard() {
     var el = document.getElementById('calKpiRow');
     if (!el) return;
-    var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
+    var items = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); });
     var today = new Date().toISOString().slice(0, 10);
     var soon = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
     var overdue = items.filter(function (c) { return c.nextDue && c.nextDue < today; });
@@ -11564,7 +11565,11 @@ function showModal(opts) {
     var freqSelect = document.getElementById('naCalFreq');
     if (freqSelect && !freqSelect.options.length) freqSelect.innerHTML = window.CALENDAR_FREQUENCIES.map(function (f) { return '<option>' + esc(f) + '</option>'; }).join('');
     renderRhythmCard();
-    var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
+    var allCal = S.calendar || [];
+    var finished = allCal.filter(function (c) { return !window.CheckpointLib.calendarItemLive(c); }).length;
+    var toggleEl = document.getElementById('calShowFinished');
+    if (toggleEl) toggleEl.innerHTML = finished ? '<button class="btn ghost sm" data-action="App.toggleCalFinished">' + (window._calShowFinished ? 'Hide' : 'Show') + ' completed, closed and retired (' + finished + ')</button>' : '';
+    var items = allCal.filter(function (c) { return window._calShowFinished || window.CheckpointLib.calendarItemLive(c); });
     if (!items.length) {
       wrap.innerHTML = emptyState({ kind: 'calendar', asRow: true, colspan: 8, text: 'No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.', cta: { label: '+ Add recurring activity', action: 'App.toggleAddCalItem' } });
       return;
@@ -11577,10 +11582,12 @@ function showModal(opts) {
       var lastEv = rdef ? L.rhythmLastEvidence(c.notes) : '';
       var ctlLine = rdef ? '<div class="fw-chips" style="margin-top:6px">' + rdef.controls.map(function (code) { return '<span>' + esc(code) + '</span>'; }).join('') + '</div>' : '';
       var evLine = lastEv && isSafeUrl(lastEv) ? '<div class="src" style="margin-top:4px"><a class="evidence-link" href="' + esc(lastEv) + '" target="_blank" rel="noopener">Last evidence ' + icon('external') + '</a></div>' : '';
-      return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (noteText ? '<div class="src" style="margin-top:4px">' + esc(noteText) + '</div>' : '') + ctlLine + evLine + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
+      var live = window.CheckpointLib.calendarItemLive(c);
+      var stLabel = (window.CheckpointLib.CALENDAR_STATUSES.find(function (x) { return x.value === c.status; }) || {}).label || '';
+      return '<tr data-id="' + c.id + '" data-action="App.editCalItem" style="cursor:pointer' + (live ? '' : ';opacity:.6') + '"><td class="id-t">' + c.id + (live ? '' : '<div class="src">' + esc(stLabel.replace(/ \(.*$/, '')) + '</div>') + '</td><td style="color:var(--paper)">' + esc(c.title) + (noteText ? '<div class="src" style="margin-top:4px">' + esc(noteText) + '</div>' : '') + ctlLine + evLine + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
         '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button> <button class="btn ghost sm" data-action="App.editCalItem" data-id="' + c.id + '">Edit</button></td></tr>';
+        '<td style="white-space:nowrap">' + (live ? '<button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.editCalItem" data-id="' + c.id + '">Edit</button></td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -11689,7 +11696,7 @@ function showModal(opts) {
   function boardroomSlideMilestones() {
     var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
     var lastReview = (S.reviews || [])[S.reviews.length - 1];
-    var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+    var upcomingCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
     var rows = [
       ['Next internal audit', nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled'],
       ['Next management review', lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set'],
@@ -12191,7 +12198,7 @@ function showModal(opts) {
       var today = new Date().toISOString().slice(0, 10);
       var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
       var lastReview = (S.reviews || [])[S.reviews.length - 1];
-      var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+      var upcomingCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
       msEl.innerHTML =
         '<div class="d-kv clickable" data-action="App.go" data-id="audits"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
         '<div class="d-kv clickable" data-action="App.go" data-id="reviews"><span>Next management review</span><b>' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set') + '</b></div>' +
@@ -12508,7 +12515,7 @@ function showModal(opts) {
     var openActions = (S.actions || []).filter(function (a) { return a.status !== 'Done'; })
       .slice().sort(function (a, b) { return (a.dueDate || '9999').localeCompare(b.dueDate || '9999'); })
       .map(function (a) { return { id: a.id, title: a.title, dueDate: a.dueDate, status: a.status }; });
-    var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; })
+    var upcomingCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); })
       .slice().sort(function (a, b) { return (a.nextDue || '9999').localeCompare(b.nextDue || '9999'); })
       .map(function (c) { return { title: c.title, dueDate: c.nextDue }; });
     var recentAudits = (S.audits || []).slice()
@@ -18189,7 +18196,7 @@ function showModal(opts) {
           .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
         var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
         var lastReview = (S.reviews || [])[S.reviews.length - 1];
-        var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+        var upcomingCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
         var clientLabel = clientDisplayLabel();
         var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -18480,6 +18487,8 @@ function showModal(opts) {
         document.getElementById('naObjTarget').value = '';
         document.getElementById('naObjOwner').value = '';
         document.getElementById('naObjDue').value = daysFrom(365);
+        var resIn = document.getElementById('naObjResources');
+        if (resIn) resIn.value = '';
       }
     },
 
@@ -18494,6 +18503,7 @@ function showModal(opts) {
         target: document.getElementById('naObjTarget').value.trim(),
         owner: document.getElementById('naObjOwner').value.trim() || 'Unassigned',
         due: document.getElementById('naObjDue').value || daysFrom(365),
+        resources: ((document.getElementById('naObjResources') || {}).value || '').trim(),
         status: 'Not started', notes: ''
       };
       busy(true);
@@ -18519,6 +18529,7 @@ function showModal(opts) {
           { id: 'target', label: 'Target — what counts as met', value: o.target || '' },
           { id: 'owner', label: 'Owner', value: o.owner },
           { id: 'due', label: 'Due date', type: 'date', value: o.due },
+          { id: 'resources', label: 'Resources needed (people, time, budget, tools)', type: 'textarea', value: o.resources || '' },
           { id: 'status', label: 'Status', type: 'select', value: o.status, options: OBJECTIVE_STATUS_OPTS },
           { id: 'notes', label: 'Progress notes', type: 'textarea', value: o.notes || '' }
         ],
@@ -18530,7 +18541,7 @@ function showModal(opts) {
       busy(true);
       try {
         o.title = v.title; o.metric = v.metric; o.target = v.target;
-        o.owner = v.owner || 'Unassigned'; o.due = v.due || o.due; o.status = v.status; o.notes = v.notes;
+        o.owner = v.owner || 'Unassigned'; o.due = v.due || o.due; o.status = v.status; o.notes = v.notes; o.resources = v.resources || '';
         await Store.updateObjective(o);
         audit('Objective updated', 'Objective', o.id, prevStatus, o.status + (o.notes ? ' — ' + o.notes : ''));
         toast('<b>' + o.id + '</b> updated');
@@ -19278,6 +19289,8 @@ function showModal(opts) {
       openDrawerUi('Review ' + r.id);
     },
 
+    toggleCalFinished: function () { window._calShowFinished = !window._calShowFinished; renderCalendar(); },
+
     toggleAddCalItem: function () {
       var panel = document.getElementById('addCalPanel');
       var showing = panel.style.display !== 'none';
@@ -19472,8 +19485,8 @@ function showModal(opts) {
       if (!sugg.length) { App.go('objectives'); toast('The suggested objectives are already in the register.'); return; }
       var v = await showModal({
         title: 'Adopt measurable objectives',
-        message: 'Clause 6.2 asks for objectives that are measurable, monitored, owned and dated. Each serves the policy\u2019s aim of protecting confidentiality (C), integrity (I) and availability (A), and Checkpoint measures it from its own records. Those aimed at your open risks come first. Untick any you do not want.',
-        fields: sugg.map(function (o, i) { return { id: 'o' + i, label: o.title + ' [' + o.cia.join(', ') + '] — ' + o.target + ' (' + o.metric.toLowerCase() + ')' + (o.why ? '. ' + o.why : ''), type: 'checkbox', value: 'yes' }; })
+        message: 'Clause 6.2 asks for objectives that are measurable, monitored, owned and dated, with the resources each needs. The five ticked are a balanced starting set covering confidentiality (C), integrity (I) and availability (A); tick any others you want, and add your own afterwards with + Add objective. Checkpoint measures all of these from its own records. Those aimed at your open risks come first.',
+        fields: sugg.map(function (o, i) { return { id: 'o' + i, label: o.title + ' [' + o.cia.join(', ') + '] — ' + o.target + ' (' + o.metric.toLowerCase() + ')' + (o.why ? '. ' + o.why : ''), type: 'checkbox', value: o.starter || o.why ? 'yes' : '' }; })
           .concat([{ id: 'owner', label: 'Owner', value: '', placeholder: 'e.g. ISMS Manager' }, { id: 'due', label: 'Achieve by', type: 'date', value: daysFrom(365) }]),
         confirmText: 'Adopt',
         validate: function (x) { return String(x.owner || '').trim() ? null : 'Name an owner — Clause 6.2 expects each objective to be owned.'; }
@@ -19485,7 +19498,7 @@ function showModal(opts) {
       for (var i = 0; i < sugg.length; i++) {
         if (v['o' + i] !== 'yes') continue;
         var o = { id: 'OBJ-' + String(maxO + 1 + n).padStart(3, '0'), title: sugg[i].title, metric: sugg[i].metric, target: sugg[i].target,
-          owner: v.owner.trim(), due: v.due || daysFrom(365), status: 'Not started', notes: 'Measured by Checkpoint.' };
+          owner: v.owner.trim(), due: v.due || daysFrom(365), resources: sugg[i].resources || '', status: 'Not started', notes: 'Measured by Checkpoint.' };
         try { await Store.addObjective(o); n++; audit('Objective added', 'Objective', o.id, '', o.title + ' — ' + o.metric); } catch (e) { warn(e); break; }
       }
       busy(false);
@@ -19651,14 +19664,14 @@ function showModal(opts) {
           { id: 'freq', label: 'Frequency', type: 'select', value: c.freq, options: window.CALENDAR_FREQUENCIES },
           { id: 'owner', label: 'Owner', value: c.owner || '' },
           { id: 'nextDue', label: 'Next due', type: 'date', value: c.nextDue || '' },
-          { id: 'status', label: 'Status', type: 'select', value: c.status === 'Retired' ? 'Retired' : 'Active', options: [{ value: 'Active', label: 'Active' }, { value: 'Retired', label: 'Retired (no longer done)' }] }
+          { id: 'status', label: 'Status', type: 'select', value: c.status || 'Active', options: window.CheckpointLib.CALENDAR_STATUSES }
         ],
         confirmText: 'Save',
         validate: function (v) { return v.title ? null : 'The activity needs a name.'; }
       });
       if (!vals) return;
       var before = [c.title, c.freq, c.owner, c.nextDue, c.status].join(' | ');
-      var freqChanged = vals.freq !== c.freq || vals.status !== (c.status === 'Retired' ? 'Retired' : 'Active');
+      var freqChanged = vals.freq !== c.freq || vals.status !== (c.status || 'Active');
       c.title = vals.title; c.freq = vals.freq; c.owner = vals.owner || 'Unassigned'; c.nextDue = vals.nextDue || c.nextDue; c.status = vals.status;
       try { await Store.updateCalendarItem(c); } catch (e) { warn(e); toastError('Could not save: ' + esc(e.message || e)); return; }
       audit('Compliance calendar item changed', 'Calendar', c.id, before, [c.title, c.freq, c.owner, c.nextDue, c.status].join(' | '));
@@ -19850,7 +19863,7 @@ function showModal(opts) {
 
         var odActions = S.actions.filter(overdue);
         var dueSoon = S.actions.filter(function (a) { return a.status !== 'Done' && a.due && a.due >= today && a.due <= daysFrom(14); });
-        var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).slice(0, 5);
+        var upcomingCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).slice(0, 5);
         var openAlerts = (S.alerts || []).filter(function (a) { return !a.ack; });
         var topRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice()
           .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);

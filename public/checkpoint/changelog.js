@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.118.0',
+    date: '2026-10-05',
+    entries: [
+      'A head start on objectives. Adopting the suggested objectives now ticks a balanced starter set of five, covering confidentiality, integrity and availability, all measured by Checkpoint: multi-factor authentication on every account, security awareness training, high and critical risks treated on time, backup restore tests on schedule, and incidents triaged within a business day. The others stay available to tick, and you can still add your own with + Add objective.',
+      'Objectives now record their resources (people, time, budget and tools), as ISO 27001 Clause 6.2 asks. Suggested objectives arrive with theirs filled in; you can set them when adding an objective or change them with Edit. The register flags any objective without resources, and the objectives report and CSV export include them.',
+      'Compliance calendar: click anywhere on an activity to open it. Activities can now be Completed or Closed as well as Active or Retired. Anything not Active drops out of what is due, overdue counts, owner reminders and the operating rhythm checks, and Show completed, closed and retired brings those items back into view.'
+    ]
+  },
+  {
     version: '1.117.0',
     date: '2026-10-05',
     entries: [

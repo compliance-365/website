@@ -256,7 +256,7 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await page.evaluate(() => { window.App.adoptSuggestedObjectives(); });
     await modal.getByLabel('Owner', { exact: true }).fill('ISMS Manager', { timeout: 5000 });
     await modal.getByRole('button', { name: 'Adopt', exact: true }).click();
-    await page.waitForFunction(() => /Keep our Microsoft 365 security configuration strong/.test(document.getElementById('v-objectives').innerText), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Only the right people can sign in to our systems/.test(document.getElementById('v-objectives').innerText), null, { timeout: 5000 });
 
     await page.evaluate(() => { window.App.planAuditProgramme(); });
     await modal.getByLabel('Internal auditor', { exact: true }).fill('Compliance365', { timeout: 5000 });
@@ -372,6 +372,36 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     if (await req.count()) { await req.click(); await page.waitForTimeout(300); }
 
     assert.deepEqual(errors, [], 'no console errors in the 1.117.0 flows');
+    await context.close();
+  });
+
+  /* 1.118.0: the five starter objectives come pre-ticked with their
+     resources; a calendar row opens on click and can be closed. */
+  test('starter objectives with resources, and calendar rows that open and close', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    const modal = page.locator('#modalBox');
+    await page.evaluate(() => { window.App.adoptSuggestedObjectives(); });
+    await modal.getByLabel('Owner', { exact: true }).fill('ISMS Manager', { timeout: 5000 });
+    const ticked = await modal.locator('input[type=checkbox]:checked').count();
+    assert.ok(ticked >= 5 && ticked < await modal.locator('input[type=checkbox]').count(), 'the starter set is ticked, the rest left optional');
+    await modal.getByRole('button', { name: 'Adopt', exact: true }).click();
+    await page.evaluate(() => window.App.go('objectives'));
+    await page.waitForFunction(() => /Resources: /.test(document.getElementById('objRows').innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => window.App.go('calendar'));
+    const row = page.locator('#calRows tr[data-action="App.editCalItem"]').first();
+    await row.waitFor({ timeout: 5000 });
+    await row.locator('td').nth(1).click();
+    const status = modal.getByLabel('Status', { exact: true });
+    await status.selectOption('Closed', { timeout: 5000 });
+    await modal.getByRole('button', { name: /^Save/ }).click();
+    await page.waitForSelector('#calShowFinished button', { timeout: 5000 });
+
+    assert.deepEqual(errors, [], 'no console errors');
     await context.close();
   });
 
