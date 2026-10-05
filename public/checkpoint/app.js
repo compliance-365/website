@@ -832,7 +832,7 @@ function showModal(opts) {
     'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
     'addManualAsset', 'syncAssets', 'editAsset', 'seedLegalBaseline', 'addLegalReq', 'editLegalReq',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
-    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'setRiskAppetite', 'setScanCadence',
+    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
@@ -10671,6 +10671,52 @@ function showModal(opts) {
         sub: overdue.length ? 'past the review cadence' : 'nothing overdue' });
     runCountUps(el);
   }
+  /* Clauses 4-10 are Checkpoint's to deliver: every requirement not yet
+     met, grouped by the one step that meets it, Checkpoint's own steps
+     first. Annex A stays the organisation's (Statement of Applicability). */
+  function clauseFixContext() {
+    var titles = {};
+    (window.POLICY_TEMPLATES || []).forEach(function (t) { titles[t.id] = t.name || t.title || t.id; });
+    var docs = (window._docs || S.documents || []).map(function (d) { return { tplId: d.tplId, status: docStatusOf(d) }; });
+    return { titles: titles, docs: docs };
+  }
+  function renderClauseAutopilot(ctx) {
+    var el = document.getElementById('clauseAutopilot');
+    if (!el) return;
+    var lists = visibleClauses().map(function (c) {
+      var cl = clauseChecklistFor(c, ctx);
+      cl.label = clauseLabel(c);
+      return cl;
+    });
+    var plan = window.CheckpointLib.clauseAutopilot(lists, clauseFixContext());
+    var total = lists.reduce(function (n, l) { return n + l.total; }, 0), met = lists.reduce(function (n, l) { return n + l.met; }, 0);
+    if (!plan.length) {
+      el.innerHTML = '<div class="card" style="padding:14px 16px;margin-bottom:16px"><b>' + icon('check') + ' Every clause requirement is met (' + met + ' of ' + total + ').</b> <span class="src">Checkpoint keeps them current; your work is Annex A in the Statement of Applicability.</span></div>';
+      return;
+    }
+    var groups = [
+      { by: 'checkpoint', head: 'Checkpoint does it', sub: 'One click: Checkpoint produces the record.' },
+      { by: 'meeting', head: 'Checkpoint prepares it, you hold it', sub: 'Everything is filled in; top management or the auditor still has to sit down.' },
+      { by: 'you', head: 'Needs your decision', sub: 'A judgement only the organisation can make.' }
+    ];
+    var ro = !!READONLY;
+    el.innerHTML = '<div class="card" style="padding:14px 16px;margin-bottom:16px">' +
+      '<h3 style="margin:0 0 4px">Getting the clauses to 100%</h3>' +
+      '<p class="src" style="margin:0 0 10px">' + met + ' of ' + total + ' clause requirements met. Checkpoint runs the management system (Clauses 4-10); the Annex A controls in the Statement of Applicability are yours.</p>' +
+      groups.map(function (g) {
+        var rows = plan.filter(function (p) { return p.fix.by === g.by; });
+        if (!rows.length) return '';
+        return '<div style="margin-top:10px"><b style="font-size:12.5px">' + esc(g.head) + '</b> <span class="src">' + esc(g.sub) + '</span>' +
+          rows.map(function (p) {
+            var clauses = p.reqs.map(function (r) { return r.clause; }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+            return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid var(--line)">' +
+              '<div style="font-size:12.5px">' + esc(p.fix.label) + '<div class="src">Meets ' + p.reqs.length + ' requirement' + (p.reqs.length > 1 ? 's' : '') + ' in ' + esc(clauses.length > 6 ? clauses.slice(0, 6).join(', ') + ' and ' + (clauses.length - 6) + ' more clauses' : clauses.join(', ')) + '</div></div>' +
+              (ro ? '' : '<button class="btn ' + (g.by === 'checkpoint' ? '' : 'ghost ') + 'sm" style="flex:0 0 auto" data-action="' + esc(p.fix.action) + '"' + (p.fix.arg ? ' data-id="' + esc(p.fix.arg) + '"' : '') + '>' + (g.by === 'checkpoint' ? 'Do it' : 'Open') + '</button>') +
+              '</div>';
+          }).join('') + '</div>';
+      }).join('') + '</div>';
+  }
+
   function renderClauses() {
     var wrap = document.getElementById('clauseRows');
     if (!wrap) return;
@@ -10689,6 +10735,7 @@ function showModal(opts) {
     (window.CLAUSE_DEFS || []).forEach(function (d) { if (d.hint) hints[d.fw + '|' + d.code] = d.hint; });
     var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
     var ctx = clauseContext();
+    renderClauseAutopilot(ctx);
     var lastFw = null;
     wrap.innerHTML = clauses.map(function (c) {
       var rv = clauseReviewStatus(c);
@@ -15950,6 +15997,7 @@ function showModal(opts) {
       var cl = clauseChecklistFor(c);
       var gate = window.CheckpointLib.clauseImplementGate(cl, c);
       var ro = !!READONLY;
+      var fixCtx = clauseFixContext();
       var rows = cl.items.map(function (i) {
         var chip = i.status === 'met' ? '<span class="chip st-Implemented">Met</span>'
           : i.status === 'partial' ? '<span class="chip st-Intreatment">Partly</span>'
@@ -15959,7 +16007,9 @@ function showModal(opts) {
           : i.note ? esc(i.note) : (i.auto ? '' : 'Checkpoint cannot see this in its records \u2014 record where the evidence is.');
         var btn = ro ? '' : i.how === 'confirmed'
           ? '<button class="btn ghost sm" style="margin-top:6px" data-action="App.removeClauseRequirement" data-id="' + esc(key + '#' + i.id) + '">Remove confirmation</button>'
-          : i.status !== 'met' ? '<button class="btn sm" style="margin-top:6px" data-action="App.confirmClauseRequirement" data-id="' + esc(key + '#' + i.id) + '">Record the evidence</button>' : '';
+          : i.status !== 'met' ? window.CheckpointLib.clauseRequirementFixes(i, fixCtx).map(function (f) {
+              return '<button class="btn ' + (f.by === 'checkpoint' ? '' : 'ghost ') + 'sm" style="margin:6px 6px 0 0" data-action="' + esc(f.action) + '"' + (f.arg ? ' data-id="' + esc(f.arg) + '"' : '') + '>' + esc(f.label) + '</button>';
+            }).join('') + '<button class="btn ghost sm" style="margin-top:6px" data-action="App.confirmClauseRequirement" data-id="' + esc(key + '#' + i.id) + '">Record the evidence</button>' : '';
         return '<div class="d-sec" style="padding-top:10px">' +
           '<div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:0 0 auto">' + chip + '</div>' +
           '<div style="font-size:12.5px;line-height:1.6"><div style="color:var(--paper)">' + esc(i.text) + '</div>' +
@@ -18636,11 +18686,14 @@ function showModal(opts) {
       panel.style.display = showing ? 'none' : 'block';
       if (!showing) {
         document.getElementById('naReviewDate').value = new Date().toISOString().slice(0, 10);
-        document.getElementById('naReviewNextDue').value = daysFrom(90);
+        document.getElementById('naReviewNextDue').value = daysFrom(Math.round((parseInt(S.settings && S.settings.managementReviewMonths, 10) || 12) * 365 / 12));
         document.getElementById('naReviewAttendees').value = '';
         document.getElementById('naReviewDecisions').value = '';
+        var resEl = document.getElementById('naReviewResources');
+        if (resEl) resEl.value = '';
         var auto = App.autoReviewInputs();
-        var autoKeys = { priorActions: 1, performance: 1, riskStatus: 1 };
+        var autoKeys = {};
+        Object.keys(auto).forEach(function (k) { if (auto[k]) autoKeys[k] = 1; });
         document.getElementById('naReviewInputSections').innerHTML = window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
           var isAuto = !!autoKeys[s.key];
           return '<div style="margin-top:14px">' +
@@ -18651,11 +18704,11 @@ function showModal(opts) {
       }
     },
 
-    /* The Clause 9.3.2 inputs Checkpoint can measure from live data —
-       prior-review actions (a), security performance (d) and risk-
-       treatment status (f). The qualitative inputs (b, c, e, g) are the
-       practitioner's to add; the form leaves those blank rather than
-       inventing them. */
+    /* Every Clause 9.3.2 input, drafted from live data: prior-review
+       actions (a), changes in issues (b) and interested parties (c)
+       since the last review, performance (d), feedback (e), risk
+       treatment (f) and improvement opportunities (g). Facts only —
+       what management concludes from them goes in the decisions. */
     autoReviewInputs: function () {
       var last = S.scans[S.scans.length - 1];
       var openActs = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; });
@@ -18675,7 +18728,35 @@ function showModal(opts) {
       var lastAuditRec = (S.audits || []).filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return (b.completed || '').localeCompare(a.completed || ''); })[0];
       var prevReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
       var accepted = openRisks.filter(function (r) { return r.acceptedBy; }).length;
+      var since = prevReview && prevReview.date ? prevReview.date : daysFrom(-365);
+      var sinceTxt = prevReview ? 'Since the last review' : 'In the last 12 months';
+      var logSince = (S.auditLog || []).filter(function (e) { return String(e.entryDateTime || '').slice(0, 10) >= since; });
+      var countLog = function (re) { return logSince.filter(function (e) { return re.test(e.action || ''); }).length; };
+      var newRisks = countLog(/^Risk (added|created|raised|approved)|suggested risk|Proposed risk/i);
+      var profileChanged = countLog(/profile|scope/i);
+      var legalRows = (S.legal || []).filter(function (l) { return l && l.applies === 'Yes'; }).length;
+      var legalConfirm = (S.legal || []).filter(function (l) { return l && l.applies !== 'Yes' && l.applies !== 'No'; }).length;
+      var legalAdded = countLog(/^Legal/i);
+      var incSince = (S.incidents || []).filter(function (n) { return String(n.detected || '').slice(0, 10) >= since; });
+      var certFind = (S.actions || []).filter(function (a) { return /^Certification audit/.test(a.src || ''); }).length;
+      var auditFind = (S.actions || []).filter(function (a) { return /internal audit/i.test(a.src || '') || (a.type && a.type.indexOf('Non-conformity') === 0); }).length;
+      var opps = (S.opportunities || []).filter(function (o) { return o.status !== 'Closed'; });
+      var failing = S.lastResults ? Object.keys(S.lastResults).filter(function (k) { return S.lastResults[k] === 'fail'; }).length : 0;
+      var practice = typeof policyPracticeGapList === 'function' ? policyPracticeGapList().length : 0;
+      var att = window.CheckpointLib.attestationCampaigns(S.attestations || [])[0];
       return {
+        issues: sinceTxt + ': ' + newRisks + ' risk(s) added to the register (including from the posture scan and scope & context), ' +
+          (profileChanged ? profileChanged + ' change(s) to the scope or scope & context answers. ' : 'no change to the scope or scope & context answers recorded. ') +
+          'Review whether the business, its technology, suppliers or threats have changed beyond this.',
+        interestedParties: legalRows + ' legal, regulatory and contractual requirement(s) apply' + (legalConfirm ? ', ' + legalConfirm + ' still to confirm' : '') + '; ' +
+          legalAdded + ' change(s) to the register ' + sinceTxt.toLowerCase() + '.' +
+          (S.settings && S.settings.orgCustomerDemand === 'contract' ? ' Customers require certification or security terms in contracts.' : S.settings && S.settings.orgCustomerDemand === 'often' ? ' Customers often ask for security evidence.' : ''),
+        feedback: incSince.length + ' security incident(s) ' + sinceTxt.toLowerCase() + (incSince.length ? ' (' + incSince.filter(function (n) { return n.status !== 'Closed'; }).length + ' still open)' : '') + '; ' +
+          auditFind + ' audit finding(s) and nonconformit' + (auditFind === 1 ? 'y' : 'ies') + ' recorded; ' + certFind + ' certification body finding(s).' +
+          (att ? ' Latest policy acknowledgement: ' + att.pct + '% of staff.' : ''),
+        improvement: opps.length + ' open opportunit' + (opps.length === 1 ? 'y' : 'ies') + (opps.length ? ' (' + opps.slice(0, 3).map(function (o) { return o.title; }).join('; ') + ')' : '') + '. ' +
+          (S.lastResults ? failing + ' posture check(s) failing at the last scan. ' : '') +
+          (practice ? practice + ' document(s) where the written practice and the console differ.' : 'Documents match the console’s settings.'),
         priorActions: (prevReview ? 'Previous review ' + prevReview.id + ' (' + fmtDate(prevReview.date) + '). ' : 'No previous management review on record. ') +
           openActs.length + ' action(s) currently open, ' + od + ' overdue.',
         performance: 'Posture score ' + (last ? last.score + '/100' : 'no scan run') + '. ' + (readiness ? readiness + '. ' : '') +
@@ -18700,7 +18781,12 @@ function showModal(opts) {
         date: document.getElementById('naReviewDate').value || new Date().toISOString().slice(0, 10),
         attendees: attendees,
         inputs: window.CheckpointLib.serializeReviewInputs(inputsObj),
-        decisions: document.getElementById('naReviewDecisions').value.trim(),
+        decisions: (function () {
+          var dec = document.getElementById('naReviewDecisions').value.trim();
+          var resEl = document.getElementById('naReviewResources');
+          var res = resEl ? resEl.value.trim() : '';
+          return res ? (dec ? dec + '\n' : '') + 'Resources: ' + res : dec;
+        })(),
         nextDue: document.getElementById('naReviewNextDue').value || ''
       };
       busy(true);
@@ -18762,6 +18848,155 @@ function showModal(opts) {
       busy(false);
       App.toggleAddCalItem();
       renderCalendar(); renderNavCounts();
+    },
+
+    /* ── Clause autopilot steps (see renderClauseAutopilot) ── */
+    fixGenerateDocument: function (tplId) {
+      App.closeDrawer && App.closeDrawer();
+      App.go('documents');
+      var sel = document.getElementById('tplSelect');
+      if (sel && Array.prototype.some.call(sel.options, function (o) { return o.value === tplId; })) {
+        sel.value = tplId;
+        App.previewTemplate && App.previewTemplate(tplId);
+      }
+      var own = document.getElementById('tplOwner');
+      if (own) { own.scrollIntoView({ block: 'center' }); own.focus(); }
+      toast('The template is selected: name its owner, generate it, then approve it.');
+    },
+
+    fixRisks: function () {
+      App.closeDrawer && App.closeDrawer();
+      if (!(S.scans || []).length) { App.go('scan'); toast('Run the posture scan: each finding becomes a risk with its treatment actions.'); return; }
+      App.go('risks');
+      toast('Approve the suggested risks at the top of the register: each comes with its treatment actions.');
+    },
+
+    adoptSuggestedObjectives: async function () {
+      App.closeDrawer && App.closeDrawer();
+      var sugg = window.CheckpointLib.suggestedObjectives(entitledFrameworks().concat('iso27001'), S.objectives || []);
+      if (!sugg.length) { App.go('objectives'); toast('The suggested objectives are already in the register.'); return; }
+      var v = await showModal({
+        title: 'Adopt measurable objectives',
+        message: 'Clause 6.2 asks for objectives that are measurable, monitored, owned and dated. Checkpoint measures each of these from its own records, so progress is reported without extra work. Untick any you do not want.',
+        fields: sugg.map(function (o, i) { return { id: 'o' + i, label: o.title + ' — ' + o.target + ' (' + o.metric.toLowerCase() + ')', type: 'checkbox', value: 'yes' }; })
+          .concat([{ id: 'owner', label: 'Owner', value: '', placeholder: 'e.g. ISMS Manager' }, { id: 'due', label: 'Achieve by', type: 'date', value: daysFrom(365) }]),
+        confirmText: 'Adopt',
+        validate: function (x) { return String(x.owner || '').trim() ? null : 'Name an owner — Clause 6.2 expects each objective to be owned.'; }
+      });
+      if (!v) return;
+      var maxO = (S.objectives || []).reduce(function (m, o) { var n = parseInt(String(o.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < sugg.length; i++) {
+        if (v['o' + i] !== 'yes') continue;
+        var o = { id: 'OBJ-' + String(maxO + 1 + n).padStart(3, '0'), title: sugg[i].title, metric: sugg[i].metric, target: sugg[i].target,
+          owner: v.owner.trim(), due: v.due || daysFrom(365), status: 'Not started', notes: 'Measured by Checkpoint.' };
+        try { await Store.addObjective(o); n++; audit('Objective added', 'Objective', o.id, '', o.title + ' — ' + o.metric); } catch (e) { warn(e); break; }
+      }
+      busy(false);
+      if (n) toast(n + ' objective' + (n > 1 ? 's' : '') + ' adopted.');
+      renderObjectives(); renderClauses(); renderNavCounts();
+    },
+
+    adoptSuggestedOpportunities: async function () {
+      App.closeDrawer && App.closeDrawer();
+      var sugg = window.CheckpointLib.contextOpportunitySuggestions(S.settings || {}, S.opportunities || []);
+      if (!sugg.length) { App.go('risks'); toast('The suggested opportunities are already in the register.'); return; }
+      var v = await showModal({
+        title: 'Add opportunities',
+        message: 'Clause 6.1.1 asks for the opportunities as well as the risks. These follow from your scope & context answers. Untick any that do not fit.',
+        fields: sugg.map(function (o, i) { return { id: 'o' + i, label: o.opp.title + ' — ' + o.why, type: 'checkbox', value: 'yes' }; })
+          .concat([{ id: 'owner', label: 'Owner', value: '', placeholder: 'e.g. Managing Director' }]),
+        confirmText: 'Add',
+        validate: function (x) { return String(x.owner || '').trim() ? null : 'Name an owner — Clause 6.1.1 expects each to be owned.'; }
+      });
+      if (!v) return;
+      var maxO = (S.opportunities || []).reduce(function (m, x) { var k = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+      var today = new Date().toISOString().slice(0, 10);
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < sugg.length; i++) {
+        if (v['o' + i] !== 'yes') continue;
+        var q = sugg[i].opp, nid = 'O-' + String(maxO + 1 + n).padStart(3, '0');
+        try {
+          await Store.addRisk({ id: nid, type: 'Opportunity', tpl: sugg[i].key, title: q.title, cat: q.cat, src: 'Scope & context', L: q.L, I: q.I,
+            controls: [], cia: [], owner: v.owner.trim(), status: 'Open', treat: 'Pursue', actions: [], consequence: q.benefit, lastReviewed: today, lastReviewedBy: who });
+          n++;
+          audit('Opportunity added', 'Risk', nid, '', q.title);
+        } catch (e) { warn(e); break; }
+      }
+      busy(false);
+      if (n) toast(n + ' opportunit' + (n > 1 ? 'ies' : 'y') + ' added.');
+      renderAll();
+    },
+
+    startPolicyCampaign: function () {
+      App.closeDrawer && App.closeDrawer();
+      App.go('attestations');
+      var panel = document.getElementById('newCampaignPanel');
+      if (panel && panel.style.display === 'none') App.toggleNewCampaign();
+      var want = entitledFrameworks().indexOf('iso27001') === -1 && entitledFrameworks().indexOf('iso42001') !== -1 ? /\bAI Policy\b/i : /Information Security Policy/i;
+      var pick = function () {
+        var sel = document.getElementById('campaignDoc');
+        if (!sel) return;
+        var opt = Array.prototype.find.call(sel.options, function (o) { return want.test(o.textContent || ''); });
+        if (opt) sel.value = opt.value;
+      };
+      pick();
+      setTimeout(pick, 800);
+      if (panel) panel.scrollIntoView({ block: 'start' });
+      toast('The policy is selected: choose who receives it and launch.');
+    },
+
+    startManagementReview: function () {
+      App.closeDrawer && App.closeDrawer();
+      App.go('reviews');
+      var panel = document.getElementById('addReviewPanel');
+      if (panel && panel.style.display === 'none') App.toggleAddReview();
+      if (panel) panel.scrollIntoView({ block: 'start' });
+      toast('Every input is drafted from your records. Hold the meeting, then record attendees, decisions and resources.');
+    },
+
+    /* After certification, the three-year programme; before it, the
+       one full internal audit Stage 2 expects to see. */
+    planAuditProgramme: async function () {
+      App.closeDrawer && App.closeDrawer();
+      var fws = entitledFrameworks().filter(function (f) { return f === 'iso27001' || f === 'iso42001'; });
+      if (!fws.length) fws = ['iso27001'];
+      var certs = certRecords();
+      var certified = fws.filter(function (f) { return certs[f] && certs[f].issued; });
+      if (certified.length) { for (var c = 0; c < certified.length; c++) await App.planInternalAudits(certified[c]); }
+      var pre = fws.filter(function (f) { return certified.indexOf(f) === -1; });
+      if (!pre.length) return;
+      var today = new Date().toISOString().slice(0, 10);
+      var plan = [];
+      pre.forEach(function (f) {
+        window.CheckpointLib.preCertificationAudits(today, f, (S.audits || []).filter(function (a) { return (a.fw || 'iso27001') === f; }))
+          .forEach(function (p) { plan.push({ fw: f, planned: p.planned, scope: p.scope }); });
+      });
+      if (!plan.length) { App.go('audits'); toast('The pre-certification internal audit is already scheduled.'); return; }
+      var v = await showModal({
+        title: 'Schedule the pre-certification internal audit',
+        message: 'Stage 2 expects one full internal audit before the certification body visits, with its findings closed and reviewed by management:\n\n' +
+          plan.map(function (p) { return '• ' + fmtDate(p.planned) + ' — ' + (pre.length > 1 ? fwName(p.fw) + ': ' : '') + p.scope; }).join('\n') +
+          '\n\nEach comes with a workpack listing what to sample. The auditor must not audit their own work: an independent person, or Compliance365 as your internal auditor.',
+        fields: [{ id: 'auditor', label: 'Internal auditor', value: '', placeholder: 'e.g. Compliance365' }],
+        confirmText: 'Schedule ' + plan.length + ' audit' + (plan.length > 1 ? 's' : '')
+      });
+      if (!v) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < plan.length; i++) {
+        var maxA = (S.audits || []).reduce(function (m, a) { var k = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+        var a = { id: 'AUD-' + String(maxA + 1).padStart(3, '0'), fw: plan[i].fw, scope: plan[i].scope, auditor: (v.auditor || '').trim() || 'Unassigned',
+          planned: plan[i].planned, completed: '', status: 'Planned', summary: '', findingRefs: [] };
+        try { await Store.addAudit(a); n++; audit('Internal audit scheduled', 'Audit', a.id, '', a.scope + ' — planned ' + a.planned); }
+        catch (e) { warn(e); break; }
+      }
+      busy(false);
+      toast(n + ' internal audit' + (n > 1 ? 's' : '') + ' scheduled.');
+      renderAudits(); renderClauses(); renderNavCounts();
     },
 
     regenerateForPractice: async function (docName) {

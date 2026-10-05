@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.115.0',
+    date: '2026-10-05',
+    entries: [
+      'New: Getting the clauses to 100%. The Management system clauses page now lists every Clause 4-10 requirement not yet met, grouped by the one step that meets it. Checkpoint’s own steps come first, each with a Do it button: generate the missing documents, approve the drafts, adopt objectives, add opportunities, schedule the internal audit, assign training, send the policy for acknowledgement and schedule the operating rhythm. Next come the meetings Checkpoint prepares for you, then the few decisions only you can make. Each clause’s requirements drawer offers the same steps. The Annex A controls in the Statement of Applicability stay yours.',
+      'New: suggested objectives. Checkpoint proposes measurable information security objectives that it can measure from its own records (posture score, training, policy acknowledgement, risk treatment, actions closed on time, incident handling), plus AI and privacy objectives where you hold those frameworks. Name an owner and a date, and Clause 6.2 is met.',
+      'New: suggested opportunities. Clause 6.1.1 asks for opportunities as well as risks. Checkpoint now proposes them from your scope & context answers, for example certification opening tenders, reusing evidence for customer questionnaires, using security features already in your Microsoft 365 licence, and adopting AI safely.',
+      'New: the pre-certification internal audit. Before you are certified, Schedule the internal audit plans the full audit that Stage 2 expects to see: the management-system clauses, then Annex A, far enough ahead for findings to be closed. Each audit comes with its workpack. After certification, the same step plans the three-year programme.',
+      'The management review form now drafts all seven Clause 9.3.2 inputs from your records, not just three. Changes in issues and interested parties, feedback (incidents, audit and certification findings, policy acknowledgement) and improvement opportunities are now included. It also has a Resources field for top management’s decision on people, time, budget and tools (Clauses 5.1 and 7.1). The next review date follows your management review interval.',
+      'Every clause requirement is now met by Checkpoint’s records. Clause 5.1 “built into business processes” is met by the approved HR security, supplier security, change management and operational planning documents. Clause 7.5.3 “document lifecycle” is met by the document control procedure and Checkpoint’s controlled, versioned document register.'
+    ]
+  },
+  {
     version: '1.114.0',
     date: '2026-10-05',
     entries: [

@@ -970,6 +970,7 @@
       <div style="margin-bottom:14px;display:flex;gap:8px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="clauses">Export CSV</button><button class="btn ghost sm" data-action="App.report" data-id="clauses">Evidence pack</button></div>
       <p class="src" id="clauseEvidenceFolders" style="margin:-6px 0 14px;font-size:12px"></p>
       <div class="grid kpis" id="clauseKpiRow" style="margin:0 0 16px"></div>
+      <div id="clauseAutopilot"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Clause</th><th scope="col">Title</th><th scope="col">Status</th><th scope="col">Owner</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="clauseRows"></tbody></table></div>
     </section>
 
@@ -1255,6 +1256,7 @@
         <p class="src" style="margin:16px 0 4px">Review inputs — ISO 27001 Clause 9.3.2. The measurable ones are pre-filled from live data; fill in the rest.</p>
         <div id="naReviewInputSections"></div>
         <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Decisions & actions agreed (outputs — Clause 9.3.3)</b><textarea class="mini" id="naReviewDecisions" rows="3" style="width:100%;margin-top:8px;resize:vertical" placeholder="Decisions on continual improvement and any changes to the ISMS, and who owns them"></textarea></div>
+        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Resources (Clauses 5.1 and 7.1)</b><textarea class="mini" id="naReviewResources" rows="2" style="width:100%;margin-top:8px;resize:vertical" placeholder="What top management decided about people, time, budget and tools for the management system, e.g. current resources are sufficient; ISMS Manager has one day a week"></textarea></div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.recordReview">Save review</button>
           <button class="btn ghost sm" data-action="App.toggleAddReview">Cancel</button>
