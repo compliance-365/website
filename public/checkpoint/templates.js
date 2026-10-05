@@ -919,7 +919,7 @@ window.POLICY_TEMPLATES = [
       'Incident Response Plan'
     ],
     reviewCadence: '{{Interval:document-review}}, or whenever privacy law or the organisation’s data handling practices change materially.',
-    controls: ['A.5.34', 'A.1.2.3'],
+    controls: ['A.1.2.3'],
     frameworks: ['iso27701', 'privacyact']
   },
   {
@@ -1955,7 +1955,7 @@ window.POLICY_TEMPLATES = [
       'Legal, Regulatory & Contractual Requirements Policy'
     ],
     reviewCadence: '{{Interval:document-review}}, after any eligible data breach, and when privacy law changes.',
-    controls: ['A.5.34', 'APP1.2', 'APP3.2', 'APP5.1', 'APP6.1', 'APP8.1', 'APP11.1', 'APP11.2', 'APP12.1', 'APP12.4', 'APP12.9', 'APP13.1', 'APP13.3', 'APP13.5', 'NDB.26WH', 'NDB.26WK', 'NDB.26WL'],
+    controls: ['APP1.2', 'APP3.2', 'APP5.1', 'APP6.1', 'APP8.1', 'APP11.1', 'APP11.2', 'APP12.1', 'APP12.4', 'APP12.9', 'APP13.1', 'APP13.3', 'APP13.5', 'NDB.26WH', 'NDB.26WK', 'NDB.26WL'],
     frameworks: ['privacyact', 'iso27701']
   },
   {
