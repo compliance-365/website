@@ -163,8 +163,11 @@ describe('every path that raises an action uses the table', () => {
   test('posture-scan findings keep their own per-finding timeframe', () => {
     // Deliberately exempt: a template that names a specific remediation
     // carries a considered number of days with it, which is more precise
-    // than a band default. Pinned so the exemption stays a decision.
-    const line = app.split('\n').find(l => l.includes("src: 'Posture scan'") && l.includes('due:'));
+    // than a band default. Pinned so the exemption stays a decision. The
+    // same line raises the actions of scope & context suggestions, whose
+    // templates carry their own days too.
+    assert.match(app, /var src = t\.ctx \? 'Scope & context' : 'Posture scan';/);
+    const line = app.split('\n').find(l => l.includes('src: src') && l.includes('due:'));
     assert.ok(line, 'the posture-scan action-creating line has moved');
     assert.match(line, /due: daysFrom\(a\.days\)/);
   });

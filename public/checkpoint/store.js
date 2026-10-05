@@ -1134,6 +1134,13 @@ window.DOC_META_COLUMNS = [
      which template (and therefore which controls) a file came from
      without parsing the audit log. Blank for an ordinary upload. */
   { name: 'DocTplId', text: {} },
+  /* 'own' on a document the organisation wrote itself and uploaded as
+     its version of a Checkpoint document (DocTplId names which one).
+     The template id drives the same clause and control automation a
+     generated copy would; this flag keeps Checkpoint from treating the
+     file as one it can re-render, edit or export from template text.
+     Blank on generated documents and ordinary uploads. */
+  { name: 'DocOrigin', text: {} },
   /* Set only on an auto-evidence document (captureAutoEvidence() in
      app.js) — the same JSON the uploaded file itself contains, mirrored
      onto this column so the in-app evidence viewer (App.viewEvidence())
@@ -1464,7 +1471,7 @@ window.CHECK_PRIVACYACT = {};
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
-window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'External surveillance audit', 'Certificate expiry', 'Other'];
+window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'Log and alert review', 'Vulnerability review', 'Threat intelligence review', 'Asset register review', 'Incident response exercise', 'Legal register review', 'External surveillance audit', 'Certificate expiry', 'Other'];
 window.CALENDAR_FREQUENCIES = ['Annual', 'Biannual', 'Quarterly', 'Monthly', 'One-off'];
 
 /* Vendor data-access classification — a fixed taxonomy so "what data
@@ -2880,7 +2887,7 @@ window.SpStore = (function () {
     owner: 'DocOwner', version: 'DocVersion', status: 'DocStatus',
     approvedBy: 'DocApprovedBy', approvalDate: 'DocApprovalDate',
     nextReview: 'DocNextReview', classification: 'DocClassification',
-    frameworks: 'DocFrameworks', tplId: 'DocTplId'
+    frameworks: 'DocFrameworks', tplId: 'DocTplId', origin: 'DocOrigin'
   };
   function docFieldsFrom(meta) {
     var out = {};

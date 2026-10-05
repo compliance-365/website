@@ -13,7 +13,7 @@ const byId = (s) => Object.fromEntries(certificationPathSteps(Object.assign({ to
 describe('certificationPathSteps()', () => {
   test('a brand-new tenant has every step outstanding, in the intended order', () => {
     const steps = certificationPathSteps({ today: TODAY, entitled: ['iso27001'] });
-    assert.deepEqual(steps.map((s) => s.id), ['scope', 'scan', 'docs', 'approve', 'assets', 'legal', 'risks', 'soa', 'objectives', 'training', 'suppliers', 'audit', 'review', 'clauses', 'mandatory', 'book']);
+    assert.deepEqual(steps.map((s) => s.id), ['scope', 'scan', 'docs', 'approve', 'assets', 'legal', 'risks', 'soa', 'objectives', 'training', 'suppliers', 'rhythm', 'audit', 'review', 'clauses', 'mandatory', 'book']);
     assert.ok(steps.every((s) => !s.done));
   });
 

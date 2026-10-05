@@ -140,7 +140,7 @@ describe('C/I/A on automatically created risks', () => {
   });
 
   test('approving a scan finding copies it, and older scan risks are backfilled once, never overwriting', () => {
-    assert.match(app, /cia: \(t\.risk\.cia \|\| \[\]\)\.slice\(\), src: 'Posture scan'/);
+    assert.match(app, /cia: \(t\.risk\.cia \|\| \[\]\)\.slice\(\), src: src,/);
     assert.match(app, /function backfillScanRiskCia\(\)/);
     assert.match(app, /\|\| \(r\.cia \|\| \[\]\)\.length\) return;/);
     assert.match(app, /backfillScanRiskCia\(\); runClauseAutomation\(\);/);

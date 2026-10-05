@@ -820,7 +820,7 @@ function showModal(opts) {
     'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
     'addManualAsset', 'syncAssets', 'editAsset', 'seedLegalBaseline', 'addLegalReq', 'editLegalReq',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
-    'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
+    'addCalItem', 'completeCalItem', 'setupOperatingRhythm', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
@@ -4499,6 +4499,62 @@ function showModal(opts) {
     });
     return list.length;
   }
+  /* An organisation's own document standing in for a Checkpoint one
+     (isOwnDoc + tplId). While in draft or review it links as clause
+     evidence and moves untouched clauses to In progress, like a
+     generated draft. Once Approved it does what approving the generated
+     copy does, and offers to retire that copy: Superseded in the
+     register, and any evidence link pointing at it moved to this file. */
+  async function applyOwnDocument(d) {
+    if (!d || !d.url || READONLY) return '';
+    var status = docStatusOf(d);
+    if (status === 'Superseded') return '';
+    var approved = status === 'Approved';
+    var notes = [];
+    var plan = approved ? window.CheckpointLib.ownDocumentReplacement(d, window._docs || [], S.controls, S.clauses) : { supersede: [], repoint: [] };
+    if (plan.supersede.length) {
+      var ok = await showModal({
+        title: 'Retire Checkpoint’s version?',
+        message: '“' + d.name + '” is now your approved ' + templateTitle(d.tplId) + '. Mark Checkpoint’s generated copy Superseded so only one version is live?\n\n' +
+          plan.supersede.map(function (x) { return '• ' + x.name; }).join('\n') +
+          (plan.repoint.length ? '\n\n' + plan.repoint.length + ' evidence link' + (plan.repoint.length > 1 ? 's' : '') + ' pointing at it will move to your document.' : '') +
+          '\n\nThe superseded copy stays in the library for the retention period.',
+        confirmText: 'Mark superseded',
+        cancelText: 'Keep both'
+      });
+      if (ok) {
+        for (var i = 0; i < plan.supersede.length; i++) {
+          var old = plan.supersede[i];
+          try {
+            await Store.updateDocumentMeta(old.id, { status: 'Superseded' });
+            audit('Document details changed', 'Document', old.name, docStatusOf(old), 'Superseded by ' + d.name);
+            old.status = 'Superseded';
+          } catch (e) { warn(e); }
+        }
+        plan.repoint.forEach(function (r) {
+          var it = r.item, prev = it.evidenceUrl;
+          it.evidenceUrl = d.url;
+          if (r.kind === 'control') {
+            audit('Evidence link changed', 'Control', it.fw + '|' + it.id, prev, d.url);
+            Store.updateControl(it).catch(function (e) { warn(e); });
+          } else {
+            audit('Evidence link changed', 'Clause', clauseLabel(it), prev, d.url);
+            Store.updateClause(it).catch(function (e) { warn(e); });
+          }
+        });
+        notes.push(plan.supersede.length + ' generated cop' + (plan.supersede.length > 1 ? 'ies' : 'y') + ' marked Superseded');
+      }
+    }
+    var clauseNote = applyClauseDocumentUpdates(d.tplId, d.url, approved ? 'approved' : 'generated');
+    if (clauseNote) notes.push(clauseNote);
+    if (approved) {
+      var n = implementDocumentControls(d.tplId, d.url, d.approvedBy || '', d.approvalDate || '');
+      if (n) notes.push(n + ' control' + (n > 1 ? 's' : '') + ' marked Implemented');
+      renderSoa();
+    }
+    return notes.join('; ');
+  }
+
   function implementControlsFromApprovedDocuments(docs) {
     var n = 0;
     (docs || []).forEach(function (d) {
@@ -5144,7 +5200,8 @@ function showModal(opts) {
     assets: { view: 'assets', cta: 'Open the asset register' },
     legal: { view: 'legal', cta: 'Open the legal register' },
     mandatory: { action: 'App.report', id: 'ready', cta: 'Open the readiness report' },
-    book: { view: 'calendar', cta: 'Open the calendar' }
+    book: { view: 'calendar', cta: 'Open the calendar' },
+    rhythm: { action: 'App.setupOperatingRhythm', cta: 'Set up the rhythm' }
   };
   function pathStepButton(step, primary) {
     var a = PATH_STEP_ACTIONS[step.id] || {};
@@ -6685,18 +6742,19 @@ function showModal(opts) {
          scenario — recorded as such, so a scan-raised risk starts with
          that part of its scenario already filled in. */
       var checkDef = (window.CHECK_DEFS || []).find(function (c) { return c.tpl === tpl; });
-      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, cia: (t.risk.cia || []).slice(), src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl,
+      var src = t.ctx ? 'Scope & context' : 'Posture scan';
+      var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, cia: (t.risk.cia || []).slice(), src: src, L: t.risk.L, I: t.risk.I, controls: t.risk.controls.slice(), owner: owner, status: 'Open', treat: 'Treat', actions: actIds, tpl: tpl,
         vulnerability: checkDef ? 'Posture scan check failed: ' + checkDef.label + ' (' + new Date().toISOString().slice(0, 10) + ')' : '' };
       await Store.addRisk(newRisk);
       for (var i = 0; i < t.actions.length; i++) {
         var a = t.actions[i];
-        await Store.addAction({ id: actIds[i], title: a.t, risk: rid, control: a.control, pr: a.pr, owner: owner, due: daysFrom(a.days), status: 'Open', src: 'Posture scan' });
+        await Store.addAction({ id: actIds[i], title: a.t, risk: rid, control: a.control, pr: a.pr, owner: owner, due: daysFrom(a.days), status: 'Open', src: src });
       }
       S.handledTpl.push(tpl);
       S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
       delete _riskInsightCache[tpl];
-      log('Risk <b>' + rid + '</b> approved into register from posture scan, with ' + actIds.length + ' action(s) assigned.');
-      audit('Risk approved from scan finding', 'Risk', rid, '(proposed finding: ' + tpl + ')', 'Open — ' + actIds.length + ' action(s) created');
+      log('Risk <b>' + rid + '</b> approved into register from ' + (t.ctx ? 'the scope & context suggestions' : 'posture scan') + ', with ' + actIds.length + ' action(s) assigned.');
+      audit(t.ctx ? 'Risk approved from scope suggestion' : 'Risk approved from scan finding', 'Risk', rid, '(proposed finding: ' + tpl + ')', 'Open — ' + actIds.length + ' action(s) created');
       return { rid: rid, actIds: actIds };
     } catch (e) { warn(e); return null; }
   }
@@ -6731,12 +6789,14 @@ function showModal(opts) {
         '<button class="btn sm" data-action="App.approveAllProposed">Approve all ' + S.proposed.length + '</button> ' +
         '<button class="btn ghost sm" data-action="App.dismissAllProposed">Dismiss all</button>' +
       '</div>';
-    w.innerHTML = '<div class="card"><h3>Proposed for the register — practitioner approval required</h3>' + bulkBar + S.proposed.map(function (p) {
+    w.innerHTML = '<div class="card"><h3>Proposed for the register — practitioner approval required</h3>' +
+      (S.proposed.some(function (k) { return k.indexOf('ctx-') === 0; }) ? '<p class="src" style="margin:0 0 10px">Some of these come from your scope & context answers rather than a scan: risks a Microsoft 365 check cannot see. Approve the ones that apply, adjust the scores to your situation, and dismiss the rest.</p>' : '') + bulkBar + S.proposed.map(function (p) {
       var t = TPL[p];
-      var insightBtn = aiOn ? '<button class="btn ghost sm" data-action="App.aiInsightProposed" data-id="' + esc(p) + '">AI insight</button> ' : '';
+      var insightBtn = aiOn && !t.ctx ? '<button class="btn ghost sm" data-action="App.aiInsightProposed" data-id="' + esc(p) + '">AI insight</button> ' : '';
       var cached = _riskInsightCache[p];
       var insightBlock = cached ? '<div class="card" style="margin-top:10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
       return '<div class="proposed-card"><h4>' + esc(t.risk.title) + '</h4>' +
+        (t.ctx ? '<div class="src" style="margin:2px 0 6px">Suggested from your scope answers: ' + esc(t.why) + '</div>' : '') +
         '<div class="meta">Inherent <b>' + t.risk.L + ' × ' + t.risk.I + ' — ' + band(t.risk.L * t.risk.I) + '</b> · Controls <b>' + t.risk.controls.join(', ') + '</b> · ' + t.actions.length + ' remediation action' + (t.actions.length > 1 ? 's' : '') + ' will be created and assigned</div>' +
         '<button class="btn sm" data-action="App.approve" data-id="' + p + '">Approve → register</button> ' +
         '<button class="btn ghost sm" data-action="App.dismiss" data-id="' + p + '">Dismiss</button> ' + insightBtn +
@@ -9240,6 +9300,7 @@ function showModal(opts) {
     var box = document.getElementById('policyEditor');
     if (!box) return;
     var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+    if (isOwnDoc(doc)) { toast('This is your own document, so edit it in SharePoint or Word and upload the new version.'); return; }
     var tplId = (doc && doc.tplId) || null;
     if (!tplId) {
       var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
@@ -9344,8 +9405,29 @@ function showModal(opts) {
     toast('<b>' + esc(docName) + '</b> re-rendered from your edited content.');
   }
 
+  /* The Checkpoint documents an organisation's own upload can stand in
+     for: every template in a framework this tenant holds (ISO 27001 is
+     the baseline everyone has), by title. */
+  function ownDocTemplateOptions() {
+    var ent = (S && S.entitlements) || {};
+    return (window.POLICY_TEMPLATES || []).filter(function (t) {
+      return (t.frameworks || []).some(function (fw) { return fw === 'iso27001' || ent[fw]; });
+    }).slice().sort(function (a, b) { return a.title.localeCompare(b.title); })
+      .map(function (t) { return { value: t.id, label: t.title }; });
+  }
+  function isOwnDoc(d) { return !!d && d.origin === 'own'; }
+  function templateTitle(tplId) {
+    var t = (window.POLICY_TEMPLATES || []).find(function (x) { return x.id === tplId; });
+    return t ? t.title : tplId;
+  }
+
   function renderDocuments() {
     renderTemplatesPicker();
+    var replSelect = document.getElementById('docReplaces');
+    if (replSelect && !replSelect.options.length) {
+      replSelect.innerHTML = '<option value="">Nothing: a supporting document or evidence</option>' +
+        ownDocTemplateOptions().map(function (o) { return '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>'; }).join('');
+    }
     var rows = document.getElementById('docRows');
     if (!rows) return;
     var catSelect = document.getElementById('docCategory');
@@ -9414,7 +9496,11 @@ function showModal(opts) {
            one line at the widths this table actually renders at. */
         var actions = [];
         if (status === 'Draft' || status === 'In review') {
-          actions.push('<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
+          /* An organisation's own document has no template text to
+             re-render: its approval is recorded in the register. */
+          actions.push(isOwnDoc(d)
+            ? '<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Approve</button>'
+            : '<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
         }
         actions.push('<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Details</button>');
         /* Content editing only makes sense for a document Checkpoint
@@ -9422,7 +9508,7 @@ function showModal(opts) {
            edit. Recognised either by the register's DocTplId or, for
            documents generated before that column existed, by the audit
            log entry the approval path already relies on. */
-        if (d.tplId || templateDraftStatus(d.name)) {
+        if (!isOwnDoc(d) && (d.tplId || templateDraftStatus(d.name))) {
           actions.push('<button class="btn ghost sm" data-action="App.editPolicyContent" data-id="' + esc(d.name) + '">Edit text</button>');
           /* Word export is offered on approved documents only. An
              uncontrolled copy of an unapproved draft is the worst
@@ -9441,7 +9527,8 @@ function showModal(opts) {
             (d.url
               ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link" style="font-size:inherit">' + esc(d.name) + ' ' + icon('external') + '</a>'
               : esc(d.name)) +
-            '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div></td>' +
+            '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div>' +
+            (isOwnDoc(d) && d.tplId ? '<div class="src">Our version of: ' + esc(templateTitle(d.tplId)) + '</div>' : '') + '</td>' +
           '<td>' + (d.owner ? esc(d.owner) : controlled ? '<span class="verify-stale">' + icon('flag') + ' unassigned</span>' : '<span class="src">—</span>') + '</td>' +
           '<td>' + (d.version ? esc(d.version) : '<span class="src">—</span>') + '</td>' +
           '<td>' + statusCell + (d.approvedBy ? '<div class="src">by ' + esc(d.approvedBy) + (d.approvalDate ? ' · ' + fmtDocDate(d.approvalDate) : '') + '</div>' : '') + '</td>' +
@@ -10852,6 +10939,24 @@ function showModal(opts) {
     revealRows(wrap);
   }
 
+  /* The operating-rhythm prompt above the calendar: shown only while
+     some recommended activity is not yet scheduled, and only for a
+     tenant running ISO 27001 (the activities evidence its controls). */
+  function renderRhythmCard() {
+    var card = document.getElementById('calRhythmCard');
+    if (!card) return;
+    var missing = entitledFrameworks().indexOf('iso27001') > -1
+      ? window.CheckpointLib.planOperatingRhythm(S.calendar || [], new Date().toISOString().slice(0, 10)) : [];
+    if (!missing.length) { card.style.display = 'none'; card.innerHTML = ''; return; }
+    var total = window.CheckpointLib.OPERATING_RHYTHM.length;
+    card.style.display = '';
+    card.innerHTML = '<h3>Operating rhythm</h3><p style="font-size:12.5px;color:var(--paper-dim);line-height:1.7;margin:0 0 10px">' +
+      (missing.length === total ? 'Auditors check that controls are working by sampling the records of recurring activities. ' : '') +
+      missing.length + ' recommended activit' + (missing.length === 1 ? 'y is' : 'ies are') + ' not yet scheduled: ' +
+      esc(missing.map(function (m) { return m.title; }).join('; ')) + '. Completing each one with its evidence verifies the controls it covers.</p>' +
+      (READONLY ? '' : '<button class="btn sm" data-action="App.setupOperatingRhythm">Schedule ' + (missing.length === total ? 'the operating rhythm' : 'the missing activities') + '</button>');
+  }
+
   function renderCalendar() {
     var wrap = document.getElementById('calRows');
     if (!wrap) return;
@@ -10860,6 +10965,7 @@ function showModal(opts) {
     if (catSelect && !catSelect.options.length) catSelect.innerHTML = window.CALENDAR_CATEGORIES.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
     var freqSelect = document.getElementById('naCalFreq');
     if (freqSelect && !freqSelect.options.length) freqSelect.innerHTML = window.CALENDAR_FREQUENCIES.map(function (f) { return '<option>' + esc(f) + '</option>'; }).join('');
+    renderRhythmCard();
     var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
     if (!items.length) {
       wrap.innerHTML = emptyState({ kind: 'calendar', asRow: true, colspan: 8, text: 'No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.', cta: { label: '+ Add recurring activity', action: 'App.toggleAddCalItem' } });
@@ -10868,7 +10974,12 @@ function showModal(opts) {
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = items.slice().sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).map(function (c) {
       var isOverdue = c.nextDue && c.nextDue < today;
-      return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (c.notes ? '<div class="src" style="margin-top:4px">' + esc(c.notes) + '</div>' : '') + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
+      var L = window.CheckpointLib, rdef = L.rhythmDefFor(c);
+      var noteText = rdef ? L.rhythmNotesText(c.notes) : c.notes;
+      var lastEv = rdef ? L.rhythmLastEvidence(c.notes) : '';
+      var ctlLine = rdef ? '<div class="fw-chips" style="margin-top:6px">' + rdef.controls.map(function (code) { return '<span>' + esc(code) + '</span>'; }).join('') + '</div>' : '';
+      var evLine = lastEv && isSafeUrl(lastEv) ? '<div class="src" style="margin-top:4px"><a class="evidence-link" href="' + esc(lastEv) + '" target="_blank" rel="noopener">Last evidence ' + icon('external') + '</a></div>' : '';
+      return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (noteText ? '<div class="src" style="margin-top:4px">' + esc(noteText) + '</div>' : '') + ctlLine + evLine + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
         '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
         '<td><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button></td></tr>';
@@ -12537,7 +12648,37 @@ function showModal(opts) {
   }
 
   var MS_CLAUSE_FWS = ['iso27001', 'iso42001', 'iso27701'];
-  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  /* Risks the scan cannot see, suggested from the scope & context
+     answers (lib CONTEXT_RISKS). They join the scan's proposals in the
+     same approve-or-dismiss queue; TPL gains each one's template so
+     approval runs the same path. A dismissal is kept in Settings
+     (dismissedContextRisks), since unlike a scan finding nothing would
+     ever re-raise it with new information. */
+  function contextDismissed() {
+    return String((S.settings && S.settings.dismissedContextRisks) || '').split(',').filter(Boolean);
+  }
+  function refreshContextProposals() {
+    if (!S || !S.proposed || !window.CheckpointLib.contextRiskSuggestions) return;
+    var sugg = window.CheckpointLib.contextRiskSuggestions(S.settings || {}, S.risks, contextDismissed());
+    var keep = {};
+    sugg.forEach(function (c) {
+      keep[c.key] = true;
+      TPL[c.key] = { risk: c.risk, actions: c.actions, ctx: true, why: c.why };
+      if (S.proposed.indexOf(c.key) === -1 && (S.handledTpl || []).indexOf(c.key) === -1) S.proposed.push(c.key);
+    });
+    /* An answer changed so a suggestion no longer applies: withdraw it. */
+    S.proposed = S.proposed.filter(function (k) { return k.indexOf('ctx-') !== 0 || keep[k]; });
+  }
+  async function rememberContextDismissal(keys) {
+    var ctx = keys.filter(function (k) { return k.indexOf('ctx-') === 0; });
+    if (!ctx.length) return;
+    var list = contextDismissed();
+    ctx.forEach(function (k) { if (list.indexOf(k) === -1) list.push(k); });
+    S.settings.dismissedContextRisks = list.join(',');
+    try { await Store.setSetting('dismissedContextRisks', S.settings.dismissedContextRisks); } catch (e) { warn(e); }
+  }
+
+  function renderAll() { applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -13375,9 +13516,11 @@ function showModal(opts) {
       queued.forEach(function (tpl) {
         S.handledTpl.push(tpl);
         delete _riskInsightCache[tpl];
-        audit('Scan finding dismissed', 'ScanFinding', tpl, 'Proposed', 'Dismissed (bulk)');
+        var ctx = tpl.indexOf('ctx-') === 0;
+        audit(ctx ? 'Suggested risk dismissed' : 'Scan finding dismissed', ctx ? 'SuggestedRisk' : 'ScanFinding', tpl, 'Proposed', 'Dismissed (bulk)');
       });
       S.proposed = [];
+      await rememberContextDismissal(queued);
       log('<b>' + queued.length + '</b> scan finding(s) dismissed by practitioner — recorded with rationale.');
       toast(queued.length + ' finding' + (queued.length === 1 ? '' : 's') + ' dismissed');
       renderAll();
@@ -13433,12 +13576,14 @@ function showModal(opts) {
       renderSoa(); renderNavCounts();
     },
 
-    dismiss: function (tpl) {
+    dismiss: async function (tpl) {
       S.handledTpl.push(tpl);
       S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
       delete _riskInsightCache[tpl];
-      log('Scan finding dismissed by practitioner (' + tpl + ') — recorded with rationale.');
-      audit('Scan finding dismissed', 'ScanFinding', tpl, 'Proposed', 'Dismissed');
+      var ctx = tpl.indexOf('ctx-') === 0;
+      log((ctx ? 'Suggested risk' : 'Scan finding') + ' dismissed by practitioner (' + tpl + ') — recorded with rationale.');
+      audit(ctx ? 'Suggested risk dismissed' : 'Scan finding dismissed', ctx ? 'SuggestedRisk' : 'ScanFinding', tpl, 'Proposed', 'Dismissed');
+      await rememberContextDismissal([tpl]);
       renderAll();
     },
 
@@ -16099,14 +16244,25 @@ function showModal(opts) {
       var file = input.files && input.files[0];
       if (!file) { toast('Choose a file first'); return; }
       var category = document.getElementById('docCategory').value || 'Other';
+      var replSel = document.getElementById('docReplaces');
+      var replaces = (replSel && replSel.value) || '';
+      var t = replaces && window.POLICY_TEMPLATES.find(function (x) { return x.id === replaces; });
+      /* Registered as a Draft of the document it replaces: the template
+         id drives the clause and control automation once its approval
+         is recorded under Details, exactly as a generated copy would. */
+      var meta = t ? { status: 'Draft', tplId: t.id, origin: 'own', frameworks: (t.frameworks || []).join(','), classification: 'Internal' } : null;
       busy(true);
+      var uploaded = null;
       try {
-        await Store.uploadDocument(file, category);
-        log('Document uploaded to <b>' + esc(category) + '</b>: <b>' + esc(file.name) + '</b>.');
-        toast('<b>' + esc(file.name) + '</b> uploaded');
+        uploaded = await Store.uploadDocument(file, category, meta);
+        log('Document uploaded to <b>' + esc(category) + '</b>: <b>' + esc(file.name) + '</b>' + (t ? ' as our version of <b>' + esc(t.title) + '</b>' : '') + '.');
+        if (t) audit('Own document uploaded', 'Document', file.name, '', 'Replaces ' + t.title + ' (' + t.id + ')');
+        toast('<b>' + esc(file.name) + '</b> uploaded' + (t ? '. Record its owner, version and approval under Details to count it for ' + esc(t.title) + '.' : ''));
         input.value = '';
+        if (replSel) replSel.value = '';
       } catch (e) { warn(e); }
       busy(false);
+      if (uploaded && uploaded.metaError) toastError('Uploaded, but the register details could not be saved: ' + esc(uploaded.metaError));
       renderDocuments();
     },
 
@@ -16230,6 +16386,7 @@ function showModal(opts) {
        what the confirmation modal and the in-document banner both say. */
     exportPolicyWord: async function (docName) {
       var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      if (isOwnDoc(doc)) { toastError('This is your own document: open it from the register instead.'); return; }
       var tplId = doc && doc.tplId;
       if (!tplId) {
         var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
@@ -16268,6 +16425,7 @@ function showModal(opts) {
        current version doesn't require regenerating it. */
     exportPolicyPdf: async function (docName) {
       var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      if (isOwnDoc(doc)) { toastError('This is your own document: open it from the register instead.'); return; }
       var tplId = doc && doc.tplId;
       if (!tplId) {
         var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
@@ -16747,9 +16905,14 @@ function showModal(opts) {
     editDocumentMeta: async function (itemId) {
       var d = (window._docs || []).find(function (x) { return x.id === itemId; });
       if (!d) { toast('Reload the Documents view and try again.'); return; }
+      /* A document Checkpoint generated already IS its template; only an
+         uploaded file can be declared the organisation's own version. */
+      var generated = !isOwnDoc(d) && !!(d.tplId || templateDraftStatus(d.name));
+      var replField = generated ? [] : [{ id: 'replaces', label: 'This is our version of (a Checkpoint document)', type: 'select', value: isOwnDoc(d) ? d.tplId : '',
+        options: [{ value: '', label: 'Nothing: a supporting document or evidence' }].concat(ownDocTemplateOptions()) }];
       var vals = await showModal({
         title: 'Document details — ' + d.name,
-        fields: [
+        fields: replField.concat([
           { id: 'owner', label: 'Document owner (name or role)', value: d.owner, placeholder: 'e.g. ISMS Manager' },
           { id: 'version', label: 'Version', value: d.version, placeholder: 'e.g. 1.0' },
           { id: 'status', label: 'Status', type: 'select', value: docStatusOf(d) || 'Draft', options: window.DOC_STATUSES },
@@ -16757,7 +16920,7 @@ function showModal(opts) {
           { id: 'nextReview', label: 'Next review due', type: 'date', value: d.nextReview },
           { id: 'approvedBy', label: 'Approved by (leave blank until approved)', value: d.approvedBy, placeholder: 'e.g. M. Chen (CEO)' },
           { id: 'approvalDate', label: 'Approval date', type: 'date', value: d.approvalDate }
-        ],
+        ]),
         confirmText: 'Save',
         validate: function (v) {
           if (v.status === 'Approved' && !v.approvedBy) return 'An approved document needs an approver recorded — Clause 7.5.2 c).';
@@ -16767,16 +16930,29 @@ function showModal(opts) {
       });
       if (!vals) return;
       var before = [d.owner, d.version, docStatusOf(d), d.nextReview, d.approvedBy].join(' | ');
+      var prevTpl = isOwnDoc(d) ? d.tplId : '';
+      if ('replaces' in vals) {
+        var replTpl = window.POLICY_TEMPLATES.find(function (x) { return x.id === vals.replaces; });
+        vals.tplId = replTpl ? replTpl.id : '';
+        vals.origin = replTpl ? 'own' : '';
+        if (replTpl) vals.frameworks = (replTpl.frameworks || []).join(',');
+        delete vals.replaces;
+      }
+      if (vals.status === 'Approved' && !vals.approvalDate) vals.approvalDate = new Date().toISOString().slice(0, 10);
       try {
         await Store.updateDocumentMeta(itemId, vals);
       } catch (e) { warn(e); toastError('Could not save the document details: ' + esc(e.message || e)); return; }
       Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
+      if ((vals.tplId || '') !== prevTpl && 'origin' in vals) {
+        audit('Own document mapping changed', 'Document', d.name, prevTpl ? templateTitle(prevTpl) : '(none)', vals.tplId ? templateTitle(vals.tplId) : '(none)');
+      }
+      var ownNote = isOwnDoc(d) && d.tplId ? await applyOwnDocument(d) : '';
       audit('Document details changed', 'Document', d.name, before,
         [vals.owner, vals.version, vals.status, vals.nextReview, vals.approvedBy].join(' | '));
       if (vals.status !== 'Superseded') await syncPolicyReviewCalendar(d.name, vals.nextReview, vals.owner);
       renderDocuments();
       renderDash();
-      toast('Register updated for <b>' + esc(d.name) + '</b>.');
+      toast('Register updated for <b>' + esc(d.name) + '</b>.' + (ownNote ? ' ' + ownNote + '.' : ''));
     },
 
     previewTemplate: function () { renderTemplatePreview(); },
@@ -16994,8 +17170,11 @@ function showModal(opts) {
       var industryLabel = ((window.INDUSTRY_PROFILES || []).find(function (p) { return p.id === step1.industry; }) || {}).label || step1.industry;
       audit('Organisation profile updated', 'Settings', 'orgProfile', '', industryLabel);
       log('Scope & context saved — <b>' + esc(industryLabel) + '</b>. Generate the ISMS Scope Document' + (withAims ? ', AI Management System Scope' : '') + ' and Organisational Context & Interested Parties to use it.');
-      toast('Scope & context saved');
-      renderFrameworksAdmin(); renderGettingStarted();
+      /* New answers can raise (or withdraw) suggested risks. */
+      refreshContextProposals();
+      var nCtx = S.proposed.filter(function (k) { return k.indexOf('ctx-') === 0; }).length;
+      toast('Scope & context saved' + (nCtx ? '. ' + nCtx + ' suggested risk' + (nCtx === 1 ? ' is' : 's are') + ' waiting in the Risk register' : ''));
+      renderFrameworksAdmin(); renderGettingStarted(); renderProposed(); renderNavCounts();
       return true;
     },
 
@@ -18418,11 +18597,75 @@ function showModal(opts) {
       renderCalendar(); renderNavCounts();
     },
 
+    /* Adds the recommended recurring activities the tenant does not yet
+       run (lib OPERATING_RHYTHM), staggered so the first round does not
+       all fall due in one week. Never duplicates: an activity already
+       covered by an item in its category is skipped. */
+    setupOperatingRhythm: async function () {
+      var L = window.CheckpointLib;
+      var plan = L.planOperatingRhythm(S.calendar || [], new Date().toISOString().slice(0, 10));
+      if (!plan.length) { toast('The operating rhythm is already scheduled.'); return; }
+      var vals = await showModal({
+        title: 'Schedule the operating rhythm',
+        message: 'These recurring activities are what an auditor samples to see controls working, not just written down:\n\n' +
+          plan.map(function (p) { return '• ' + p.title + ' (' + p.freq.toLowerCase() + ', first due ' + fmtDate(p.nextDue) + '): ' + p.controls.join(', '); }).join('\n') +
+          '\n\nWhen one is done, complete it here with a link to its evidence: the controls it covers are verified and move forward.',
+        fields: [{ id: 'owner', label: 'Owner (you can change each one later)', value: '', placeholder: 'e.g. ISMS Manager' }],
+        confirmText: 'Schedule ' + plan.length + ' activit' + (plan.length === 1 ? 'y' : 'ies')
+      });
+      if (!vals) return;
+      var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      busy(true);
+      var added = 0;
+      for (var i = 0; i < plan.length; i++) {
+        var p = plan[i];
+        var item = { id: 'CAL-' + String(maxC + 1 + i).padStart(3, '0'), title: p.title, category: p.category, freq: p.freq,
+          nextDue: p.nextDue, lastCompleted: '', owner: (vals.owner || '').trim() || 'Unassigned', notes: p.notes, status: 'Active' };
+        try {
+          await Store.addCalendarItem(item);
+          audit('Compliance calendar item added', 'Calendar', item.id, '', item.title + ' (' + item.freq + ', operating rhythm)');
+          added++;
+        } catch (e) { warn(e); }
+      }
+      busy(false);
+      log('Operating rhythm scheduled: <b>' + added + '</b> recurring activit' + (added === 1 ? 'y' : 'ies') + ' added to the compliance calendar.');
+      toast('<b>' + added + '</b> recurring activit' + (added === 1 ? 'y' : 'ies') + ' scheduled');
+      renderCalendar(); renderNavCounts(); renderDash();
+    },
+
     completeCalItem: async function (id) {
       var c = (S.calendar || []).find(function (x) { return x.id === id; });
       if (!c) return;
+      var L = window.CheckpointLib, rdef = L.rhythmDefFor(c);
+      var evidenceUrl = '', markImplemented = false;
+      /* A rhythm activity is completed with its evidence: that link is
+         what verifies the controls it covers. */
+      if (rdef) {
+        var cv = await showModal({
+          title: 'Complete: ' + c.title,
+          message: 'Evidence to keep: ' + rdef.evidence + '\n\nControls this verifies: ' + rdef.controls.join(', ') + '.',
+          fields: [
+            { id: 'url', label: 'Link to the evidence (SharePoint or OneDrive)', value: '', placeholder: 'https://…' },
+            { id: 'mark', label: 'What this shows', type: 'select', value: 'implemented', options: [
+              { value: 'implemented', label: 'The controls are operating: mark them Implemented' },
+              { value: 'progress', label: 'Partly in place: keep them In progress' }] }
+          ],
+          confirmText: 'Complete',
+          validate: function (v) {
+            if (v.url && !isSafeUrl(v.url)) return 'The evidence link must start with https://';
+            if (!v.url && v.mark === 'implemented') return 'Add the evidence link to mark the controls Implemented, or choose “Partly in place”.';
+            return null;
+          }
+        });
+        if (!cv) return;
+        evidenceUrl = (cv.url || '').trim();
+        markImplemented = cv.mark === 'implemented';
+      }
       var prevDue = c.nextDue;
       c.lastCompleted = new Date().toISOString().slice(0, 10);
+      if (rdef && evidenceUrl) {
+        c.notes = (String(c.notes || '').replace(/\s*Last evidence: \S+( \(\d{4}-\d{2}-\d{2}\))?/g, '') + ' Last evidence: ' + evidenceUrl + ' (' + c.lastCompleted + ')').trim();
+      }
       var advanceDays = { Annual: 365, Biannual: 182, Quarterly: 91, Monthly: 30 }[c.freq];
       if (advanceDays) {
         c.nextDue = daysFrom(advanceDays);
@@ -18432,7 +18675,21 @@ function showModal(opts) {
       try { await Store.updateCalendarItem(c); } catch (e) { warn(e); }
       log('<b>' + c.id + '</b> completed: ' + esc(c.title) + (advanceDays ? '. Next due ' + fmtDate(c.nextDue) + '.' : ' (one-off — marked done).'));
       toast('<b>' + c.id + '</b> marked complete');
-      audit('Compliance calendar item completed', 'Calendar', c.id, 'Due ' + prevDue, advanceDays ? 'Next due ' + c.nextDue : 'Done (one-off)');
+      audit('Compliance calendar item completed', 'Calendar', c.id, 'Due ' + prevDue, (advanceDays ? 'Next due ' + c.nextDue : 'Done (one-off)') + (evidenceUrl ? ' · evidence ' + evidenceUrl : ''));
+      if (rdef && evidenceUrl) {
+        var attester = (typeof Graph !== 'undefined' && Graph.getAccount && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+        var ups = L.rhythmCompletionUpdates(rdef, S.controls, evidenceUrl, c.lastCompleted, attester, markImplemented);
+        ups.forEach(function (u) {
+          var ctl = u.control, key = ctl.fw + '|' + ctl.id;
+          if (u.set.evidenceUrl) audit('Evidence link changed', 'Control', key, '(none)', u.set.evidenceUrl);
+          if (u.set.st) audit('Control status changed', 'Control', key, ctl.st, u.set.st + ' (' + c.title + ' completed)');
+          audit('Control verified', 'Control', key, ctl.verified || 'never verified', u.set.verified + ' by ' + u.set.verifiedBy);
+          Object.keys(u.set).forEach(function (k) { ctl[k] = u.set[k]; });
+          Store.updateControl(ctl).catch(function (e) { warn(e); });
+        });
+        if (ups.length) toast(ups.length + ' control' + (ups.length > 1 ? 's' : '') + ' verified: ' + esc(ups.map(function (u) { return u.control.id; }).join(', ')));
+        renderSoa();
+      }
       renderCalendar(); renderNavCounts(); renderDash();
     },
 
@@ -19918,6 +20175,7 @@ function showModal(opts) {
          an uploaded evidence PDF in the same library is not a generated
          policy and has nothing to render. */
       var candidates = (window._docs || []).map(function (d) {
+        if (isOwnDoc(d)) return null; /* the organisation's own file: nothing to render from template text */
         var tplId = d.tplId;
         if (!tplId) {
           var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === d.name && e.action === 'Policy template generated'; });
