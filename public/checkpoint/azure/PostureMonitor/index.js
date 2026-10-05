@@ -22,6 +22,7 @@
 const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = require('../lib/graph');
 const { mintEvidenceToken } = require('../lib/evidenceToken');
 const { mintVendorToken } = require('../lib/vendorToken');
+const { ownerWorkItems, matchOwnerToUser, ownerDigestHtml } = require('../lib/ownerDigest');
 
 /* Where the owner-driven evidence page lives — Compliance365's own
    public site (GitHub Pages, per RELEASE.md), the same domain the
@@ -2068,6 +2069,64 @@ async function recordTeamsStatus(g, context, siteId, lists, settings) {
   catch (e) { context.log.error('Checkpoint: could not record the Teams delivery status: ' + (e && e.message ? e.message : e)); }
 }
 
+/* Owner reminders — each named owner emailed their own list once a
+   week (settings.ownerDigestEnabled), the unattended half of the
+   browser's Settings › Owner reminders. Needs NOTIFY_FROM like the
+   digest. Owners are matched to directory users by exact name, mail or
+   UPN; anyone unmatched is skipped, never guessed. ownerDigestLastSent
+   is stamped only after a send so a failed run tries again tomorrow. */
+function ownerRemindersDue(settings, today) {
+  if ((settings.ownerDigestEnabled || '') !== 'true') return false;
+  const last = settings.ownerDigestLastSent;
+  return !last || daysBetween(last, today) >= 7;
+}
+async function sendOwnerReminders(g, gAll, context, siteId, lists, optional, settings, today) {
+  const from = process.env.NOTIFY_FROM;
+  if (!from) { context.log('Checkpoint owner reminders are on but NOTIFY_FROM is not set, so they cannot be emailed. See azure/README.md.'); return 0; }
+  const read = async (id) => {
+    if (!id) return [];
+    try { return (await gAll(`/sites/${siteId}/lists/${id}/items?$expand=fields&$top=999`)).map(i => i.fields || {}); }
+    catch (e) { context.log.error('Checkpoint owner reminders: could not read a register: ' + e.message); return []; }
+  };
+  const actions = (await read(optional.Actions)).map(f => ({ id: f.RefId || '', title: f.Title || '', owner: f.Owner || '', ownerEmail: f.OwnerEmail || '', due: f.DueDate || '', status: f.Status || 'Open' }));
+  const calendar = (await read(optional.Calendar)).map(f => ({ id: f.RefId || '', title: f.Title || '', owner: f.Owner || '', nextDue: f.NextDue || '', status: f.Status || 'Active' }));
+  const objectives = (await read(optional.Objectives)).map(f => ({ id: f.RefId || '', title: f.Title || '', owner: f.Owner || '', status: f.Status || '' }));
+  let docs = [];
+  if (optional.Documents) { try { docs = await readDocumentRegister(g, gAll, siteId, optional.Documents); } catch (e) { docs = []; } }
+  let requests = {};
+  try { requests = JSON.parse(settings.evidenceRequests || '{}') || {}; } catch (e) { requests = {}; }
+  const controls = Object.keys(requests).length ? await read(optional.Controls) : [];
+  const evidence = Object.keys(requests).map(k => {
+    const [fw, code] = k.split('|');
+    const c = controls.find(x => (x.Framework || 'iso27001') === fw && x.Code === code);
+    if (!c || (c.EvidenceUrl && c.Status === 'Implemented')) return null;
+    return { control: code, title: c.Title || '', owner: requests[k].owner, email: requests[k].email || '', requested: requests[k].date || '' };
+  }).filter(Boolean);
+  const list = ownerWorkItems({ actions, calendar, objectives, docs, evidence }, today);
+  if (!list.length) return 0;
+  let users = [];
+  try { users = await gAll('/users?$select=displayName,mail,userPrincipalName&$top=999'); } catch (e) { context.log.error('Checkpoint owner reminders: could not read the directory: ' + e.message); }
+  const label = settings.clientDisplayName || 'Checkpoint';
+  let sent = 0;
+  for (const o of list) {
+    const u = matchOwnerToUser(o.owner, users);
+    const to = o.email || (u && (u.mail || u.userPrincipalName));
+    if (!to) continue;
+    try {
+      await g(`/users/${encodeURIComponent(from)}/sendMail`, { method: 'POST', body: { message: {
+        subject: 'Your security tasks — ' + label,
+        body: { contentType: 'HTML', content: ownerDigestHtml(o, label, 'https://www.compliance365.com.au/checkpoint/') },
+        toRecipients: [{ emailAddress: { address: to } }] }, saveToSentItems: false } });
+      sent++;
+    } catch (e) { context.log.error('Checkpoint owner reminder to ' + o.owner + ' failed: ' + (e && e.message ? e.message : e)); }
+  }
+  if (sent) {
+    try { await setSetting(g, siteId, lists.Settings, 'ownerDigestLastSent', today); }
+    catch (e) { context.log.error('Checkpoint owner reminders sent but ownerDigestLastSent could not be recorded: ' + e.message); }
+  }
+  return sent;
+}
+
 module.exports = async function (context, myTimer) {
   const today = new Date().toISOString().slice(0, 10);
   try {
@@ -2203,6 +2262,16 @@ module.exports = async function (context, myTimer) {
       context.log.error('Checkpoint digest step failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));
     }
 
+    let ownersReminded = 0;
+    try {
+      if (ownerRemindersDue(settings, today)) {
+        ownersReminded = await sendOwnerReminders(g, gAll, context, siteId, lists, optional, settings, today);
+      }
+    } catch (e) {
+      context.log.error('Checkpoint owner reminders failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));
+    }
+    if (ownersReminded) context.log(`Checkpoint owner reminders sent to ${ownersReminded} owner(s).`);
+
     await recordTeamsStatus(g, context, siteId, lists, settings);
     context.log(`Checkpoint posture monitor: scored ${score}, ${alertsWritten} drift alert(s) and ${governanceAlerts} governance alert(s) written${digestSent ? ', digest sent' : ''}.`);
   } catch (e) {
@@ -2218,6 +2287,7 @@ module.exports = async function (context, myTimer) {
    covered by test/posture-monitor.test.mjs without standing up a
    Function host or a tenant. */
 module.exports.__test = {
+  ownerRemindersDue, sendOwnerReminders,
   digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep,
   configureTeams, buildTeamsCard, buildDigestTeamsCard, notifyTeams, sendDigest, announceTeamsConnection, recordTeamsStatus, teamsUrlFingerprint,
   runPostureChecks, runRegisterChecks, readDocumentRegister,
