@@ -6674,7 +6674,9 @@
         evidence: 'The policy approved by a named member of top management, and approved objectives.',
         auto: { docs: ['infosec-policy'], md: '6.2' }, auto42: { docs: ['ai-policy', 'ai-objectives-metrics'] } },
       { id: 'integration', text: 'The management system’s requirements are built into the organisation’s business processes, not run alongside them.',
-        evidence: 'Security steps inside everyday processes: onboarding and offboarding, procurement, change, project delivery.' },
+        evidence: 'Security steps inside everyday processes: onboarding and offboarding (HR security policy), procurement (supplier security policy), change (change management policy) and planning and delivery (operational planning and control), each approved and run through Checkpoint.',
+        auto: { docs: ['operational-planning-control', 'hr-security-policy', 'supplier-security-policy', 'change-management-policy'] },
+        auto42: { docs: ['ai-policy', 'ai-lifecycle-policy'] } },
       { id: 'resources', text: 'Top management makes the resources the management system needs available.',
         evidence: 'Resourcing decisions recorded in management review, or a budget and named roles with time allocated.',
         auto: { record: 'mrResources' }, auto42: { record: 'mrResources' } },
@@ -6818,7 +6820,8 @@
         evidence: 'The document control procedure, and documents held in a controlled SharePoint library with appropriate permissions.',
         auto: { doc: 'document-control-procedure', record: 'policyCurrent' }, auto42: { doc: 'document-control-procedure', record: 'policyCurrent' } },
       { id: 'lifecycle', text: 'Control distribution, access, retrieval and use; storage and preservation, including legibility; changes (version control); and retention and disposal. Identify and control documents of external origin.',
-        evidence: 'The document control procedure, plus SharePoint version history, permissions and retention settings, and how external documents (contracts, standards) are controlled.' }
+        evidence: 'The document control procedure, plus the controlled register Checkpoint keeps: every document versioned in SharePoint, with an owner, an approver and a review date; external documents uploaded as your own versions or linked from the register.',
+        auto: { doc: 'document-control-procedure', record: 'policyCurrent' }, auto42: { doc: 'document-control-procedure', record: 'policyCurrent' } }
     ],
     '8.1': [
       { id: 'operate', text: 'Plan, run and control the processes needed to meet the management system’s requirements and carry out the actions from Clause 6, with criteria for each process.',
@@ -7179,19 +7182,28 @@
     }
     function autoStatus(src) {
       var parts = [];
-      (src.docs || (src.doc ? [src.doc] : [])).forEach(function (id) { parts.push(docPart(id)); });
+      (src.docs || (src.doc ? [src.doc] : [])).forEach(function (id) { var p = docPart(id); p.gap = { kind: 'doc', id: id, st: p.st }; parts.push(p); });
       if (src.profile) {
         var blank = src.profile.filter(function (k) { return !String(settings[k] || '').trim(); });
-        parts.push(blank.length ? { st: 'missing', note: 'Scope & context questionnaire not answered' } : { st: 'done', note: 'Recorded in the scope & context profile' });
+        parts.push(blank.length ? { st: 'missing', note: 'Scope & context questionnaire not answered', gap: { kind: 'profile' } } : { st: 'done', note: 'Recorded in the scope & context profile' });
       }
       if (src.md) {
         var m = md[src.md];
-        parts.push(m ? { st: m.status, note: m.note } : { st: 'missing', note: 'Not yet recorded' });
+        var mdGaps = [];
+        if (!m || m.status !== 'done') {
+          /* Name the part that is missing: the document, the record, or both. */
+          var def = MANDATORY_DOCS.find(function (x) { return x.ref === src.md; });
+          if (def && def.tpl) { var dp = docPart(def.tpl); if (dp.st !== 'done') mdGaps.push({ kind: 'doc', id: def.tpl, st: dp.st }); }
+          if (def && def.record && MD_RECORD_FIX[def.record] && clauseRecordStatus(MD_RECORD_FIX[def.record], s).st !== 'done') mdGaps.push({ kind: 'record', id: MD_RECORD_FIX[def.record] });
+          if (!mdGaps.length) mdGaps.push({ kind: 'md', id: src.md });
+        }
+        parts.push(m ? { st: m.status, note: m.note, gaps: mdGaps } : { st: 'missing', note: 'Not yet recorded', gaps: mdGaps });
       }
-      [].concat(src.record || []).forEach(function (k) { parts.push(clauseRecordStatus(k, s)); });
+      [].concat(src.record || []).forEach(function (k) { var p = clauseRecordStatus(k, s); p.gap = { kind: 'record', id: k }; parts.push(p); });
       if (!parts.length) return null;
       var worst = parts.reduce(function (w, p) { return rank[p.st] < rank[w.st] ? p : w; }, parts[0]);
-      return { st: worst.st, note: parts.filter(function (p) { return p.st !== 'done'; }).map(function (p) { return p.note; }).filter(Boolean).join('; ') || parts.map(function (p) { return p.note; }).filter(Boolean).join('; ') };
+      return { st: worst.st, gaps: parts.filter(function (p) { return p.st !== 'done'; }).reduce(function (a, p) { return a.concat(p.gaps || [p.gap]); }, []),
+        note: parts.filter(function (p) { return p.st !== 'done'; }).map(function (p) { return p.note; }).filter(Boolean).join('; ') || parts.map(function (p) { return p.note; }).filter(Boolean).join('; ') };
     }
     var items = clauseRequirementsFor(s.fw || 'iso27001', s.code).map(function (r) {
       var conf = confirmed[r.id];
@@ -7200,10 +7212,192 @@
       }
       var a = r.auto ? autoStatus(r.auto) : null;
       if (a && a.st === 'done') return { id: r.id, text: r.text, evidence: r.evidence, auto: true, status: 'met', how: 'auto', note: a.note };
-      return { id: r.id, text: r.text, evidence: r.evidence, auto: !!a, status: a && a.st === 'partial' ? 'partial' : 'open', how: '', note: a ? a.note : '' };
+      return { id: r.id, text: r.text, evidence: r.evidence, auto: !!a, status: a && a.st === 'partial' ? 'partial' : 'open', how: '', note: a ? a.note : '', gaps: a ? a.gaps : [] };
     });
     var met = items.filter(function (i) { return i.status === 'met'; }).length;
     return { items: items, met: met, total: items.length, complete: items.length > 0 && met === items.length };
+  }
+
+  /* ============================================================
+     Clause autopilot
+     ------------------------------------------------------------
+     Clauses 4-10 are the management system: Checkpoint runs it, so
+     every unmet requirement maps to the one thing that meets it. `by`
+     says who does it: 'checkpoint' (one click, Checkpoint produces
+     the record), 'meeting' (Checkpoint prepares everything, top
+     management or the auditor still has to sit down) or 'you' (a
+     judgement only the organisation can make). Annex A is the
+     client's to deliver; these fixes never cover it. */
+  var CLAUSE_RECORD_FIXES = {
+    risks: { by: 'checkpoint', key: 'risks', label: 'Run the posture scan and add the suggested risks from your scope & context', action: 'App.fixRisks' },
+    riskOwners: { by: 'you', key: 'riskOwners', label: 'Name an owner for every open risk', action: 'App.go', arg: 'risks' },
+    riskRated: { by: 'you', key: 'riskRated', label: 'Rate every open risk', action: 'App.go', arg: 'risks' },
+    riskReviewed: { by: 'you', key: 'riskReviewed', label: 'Review the risks that are due', action: 'App.go', arg: 'risks' },
+    riskTreated: { by: 'you', key: 'riskTreated', label: 'Choose a treatment for every open risk', action: 'App.go', arg: 'risks' },
+    riskActioned: { by: 'you', key: 'riskActioned', label: 'Raise treatment actions or record acceptance for each risk', action: 'App.go', arg: 'risks' },
+    riskAccepted: { by: 'meeting', key: 'riskAccepted', label: 'Risk owners accept their residual risk (one sitting, from the risk register)', action: 'App.go', arg: 'risks' },
+    objectivePlans: { by: 'checkpoint', key: 'objectives', label: 'Adopt the suggested objectives, measured by Checkpoint', action: 'App.adoptSuggestedObjectives' },
+    kpis: { by: 'checkpoint', key: 'objectives', label: 'Adopt the suggested objectives, measured by Checkpoint', action: 'App.adoptSuggestedObjectives' },
+    opportunities: { by: 'checkpoint', key: 'opportunities', label: 'Add the suggested opportunities from your scope & context', action: 'App.adoptSuggestedOpportunities' },
+    trainingCurrent: { by: 'checkpoint', key: 'training', label: 'Assign awareness training to everyone in the directory', action: 'App.assignInductionTraining' },
+    policyAcknowledged: { by: 'checkpoint', key: 'acknowledge', label: 'Send the policy to staff to acknowledge', action: 'App.startPolicyCampaign' },
+    policyCurrent: { by: 'you', key: 'policyCurrent', label: 'Review the documents that are due', action: 'App.go', arg: 'documents' },
+    legalTraced: { by: 'checkpoint', key: 'legal', label: 'Add the legal and regulatory starting set, already linked to controls', action: 'App.seedLegalBaseline' },
+    legalPrivacy: { by: 'checkpoint', key: 'legal', label: 'Add the legal and regulatory starting set, already linked to controls', action: 'App.seedLegalBaseline' },
+    mrIssues: { by: 'meeting', key: 'review', label: 'Hold the management review: Checkpoint fills in every input', action: 'App.startManagementReview' },
+    mrResources: { by: 'meeting', key: 'review', label: 'Hold the management review: Checkpoint fills in every input', action: 'App.startManagementReview' },
+    mrInputs: { by: 'meeting', key: 'review', label: 'Hold the management review: Checkpoint fills in every input', action: 'App.startManagementReview' },
+    improvement: { by: 'meeting', key: 'review', label: 'Hold the management review: Checkpoint fills in every input', action: 'App.startManagementReview' },
+    auditsPlanned: { by: 'checkpoint', key: 'auditPlan', label: 'Schedule the internal audit programme', action: 'App.planAuditProgramme' },
+    auditDone: { by: 'meeting', key: 'auditRun', label: 'Run the scheduled internal audit with its workpack', action: 'App.go', arg: 'audits' },
+    auditImpartial: { by: 'meeting', key: 'auditRun', label: 'Run the scheduled internal audit with its workpack', action: 'App.go', arg: 'audits' },
+    auditLog: { by: 'checkpoint', key: 'rhythm', label: 'Schedule the operating rhythm and run the posture scan', action: 'App.setupOperatingRhythm' },
+    operating: { by: 'checkpoint', key: 'rhythm', label: 'Schedule the operating rhythm and run the posture scan', action: 'App.setupOperatingRhythm' },
+    soa: { by: 'you', key: 'soa', label: 'Annex A: decide and progress each control in the Statement of Applicability', action: 'App.go', arg: 'soa' },
+    aiRegister: { by: 'you', key: 'aiRegister', label: 'Record each AI system with its owner and purpose', action: 'App.go', arg: 'aisystems' },
+    aiImpact: { by: 'you', key: 'aiImpact', label: 'Complete the impact assessment for each AI system', action: 'App.go', arg: 'aisystems' },
+    capaCorrection: { by: 'you', key: 'capa', label: 'Complete the corrective action record for each nonconformity', action: 'App.go', arg: 'actions' },
+    capaRootCause: { by: 'you', key: 'capa', label: 'Complete the corrective action record for each nonconformity', action: 'App.go', arg: 'actions' },
+    capaEffective: { by: 'you', key: 'capa', label: 'Complete the corrective action record for each nonconformity', action: 'App.go', arg: 'actions' }
+  };
+  /* Mandatory-documentation records, mapped to the same fixes. */
+  var MD_RECORD_FIX = { objectives: 'objectivePlans', training: 'trainingCurrent', riskAssessment: 'riskReviewed', riskTreatment: 'riskActioned',
+    monitoring: 'operating', audit: 'auditDone', review: 'mrInputs', soa: 'soa', rtp: 'riskTreated', legal: 'legalTraced' };
+
+  function docFix(id, titles, st) {
+    return { by: 'checkpoint', key: 'doc:' + id, doc: id, docSt: st || 'missing', label: (st === 'partial' ? 'Approve the ' : 'Generate and approve the ') + ((titles && titles[id]) || id), action: 'App.fixGenerateDocument', arg: id };
+  }
+  /* The fixes for one checklist item (an item from clauseChecklist):
+     deduplicated, Checkpoint's own first. `ctx.docs` is [{tplId,status}],
+     `ctx.titles` maps template ids to names. */
+  function clauseRequirementFixes(item, ctx) {
+    ctx = ctx || {};
+    if (!item || item.status === 'met') return [];
+    var approved = {};
+    (ctx.docs || []).forEach(function (d) { if (d && d.status === 'Approved') approved[d.tplId] = true; });
+    var out = [], seen = {};
+    function add(f) { if (f && !seen[f.key]) { seen[f.key] = true; out.push(f); } }
+    (item.gaps || []).forEach(function (g) {
+      if (g.kind === 'doc') add(docFix(g.id, ctx.titles, g.st));
+      else if (g.kind === 'profile') add({ by: 'you', key: 'profile', label: 'Answer the scope & context questionnaire', action: 'App.orgProfileWizard' });
+      else if (g.kind === 'record') {
+        if (g.id === 'mandatoryAll' || g.id === 'pimsCore' || g.id === 'aimsCore') add({ by: 'checkpoint', key: 'stage1', label: 'Work through the Stage 1 checklist', action: 'App.go', arg: 'certification' });
+        else add(CLAUSE_RECORD_FIXES[g.id]);
+      } else if (g.kind === 'md') {
+        var m = MANDATORY_DOCS.find(function (x) { return x.ref === g.id; });
+        if (!m) return;
+        if (m.tpl && !approved[m.tpl]) add(docFix(m.tpl, ctx.titles, (ctx.docs || []).some(function (d) { return d && d.tplId === m.tpl; }) ? 'partial' : 'missing'));
+        if (m.record && MD_RECORD_FIX[m.record]) add(CLAUSE_RECORD_FIXES[MD_RECORD_FIX[m.record]]);
+      }
+    });
+    var order = { checkpoint: 0, meeting: 1, you: 2 };
+    return out.sort(function (a, b) { return order[a.by] - order[b.by]; });
+  }
+  /* Every outstanding fix across a set of checklists, each with the
+     requirements it would meet: [{ fix, reqs:[{ clause, text }] }].
+     Documents collapse into two steps, generate the missing set and
+     approve the drafts, rather than one row per document. */
+  function clauseAutopilot(checklists, ctx) {
+    var byKey = {}, list = [];
+    var titles = (ctx && ctx.titles) || {};
+    var docSets = {
+      missing: { by: 'checkpoint', key: 'docs:missing', docs: [], action: 'App.generateDocumentSet' },
+      partial: { by: 'checkpoint', key: 'docs:draft', docs: [], action: 'App.approveDraftSet' }
+    };
+    (checklists || []).forEach(function (cl) {
+      (cl.items || []).forEach(function (i) {
+        clauseRequirementFixes(i, ctx).map(function (f) {
+          if (!f.doc) return f;
+          var set = docSets[f.docSt === 'partial' ? 'partial' : 'missing'];
+          if (set.docs.indexOf(f.doc) === -1) set.docs.push(f.doc);
+          return set;
+        }).forEach(function (f) {
+          if (!byKey[f.key]) { byKey[f.key] = { fix: f, reqs: [] }; list.push(byKey[f.key]); }
+          byKey[f.key].reqs.push({ clause: cl.label || cl.code || '', text: i.text });
+        });
+      });
+    });
+    function names(d) { var n = d.map(function (id) { return titles[id] || id; }); return n.length > 4 ? n.slice(0, 4).join(', ') + ' and ' + (n.length - 4) + ' more' : n.join(', '); }
+    docSets.missing.label = 'Generate the ' + docSets.missing.docs.length + ' document' + (docSets.missing.docs.length === 1 ? '' : 's') + ' the clauses need (' + names(docSets.missing.docs) + '), then approve them';
+    docSets.partial.label = 'Approve the ' + docSets.partial.docs.length + ' draft document' + (docSets.partial.docs.length === 1 ? '' : 's') + ' (' + names(docSets.partial.docs) + ')';
+    var order = { checkpoint: 0, meeting: 1, you: 2 };
+    return list.sort(function (a, b) { return order[a.fix.by] - order[b.fix.by] || b.reqs.length - a.reqs.length; });
+  }
+
+  /* Objectives Checkpoint can propose and then measure from its own
+     data (Clause 6.2: measurable, monitored, owned, with a due date).
+     A suggestion already in the register (same title) is left out. */
+  var SUGGESTED_OBJECTIVES = [
+    { key: 'obj-posture', fws: ['iso27001'], title: 'Keep our Microsoft 365 security configuration strong', metric: 'Checkpoint posture score', target: 'At least 80 out of 100 at every scan' },
+    { key: 'obj-training', fws: ['iso27001'], title: 'Everyone knows their security responsibilities', metric: 'Staff with current security awareness training', target: 'At least 95%' },
+    { key: 'obj-policy', fws: ['iso27001'], title: 'Everyone has read and accepted the information security policy', metric: 'Staff acknowledgement of the current policy', target: 'At least 90%' },
+    { key: 'obj-risk', fws: ['iso27001'], title: 'Treat high and critical risks on time', metric: 'High and critical risks with treatment actions on schedule', target: '100%, no treatment action more than 30 days overdue' },
+    { key: 'obj-actions', fws: ['iso27001'], title: 'Close corrective and improvement actions when we said we would', metric: 'Actions closed by their due date', target: 'At least 90%' },
+    { key: 'obj-incident', fws: ['iso27001'], title: 'Handle security incidents quickly and learn from them', metric: 'Incidents triaged within one business day, with lessons recorded', target: '100%' },
+    { key: 'obj-ai-impact', fws: ['iso42001'], title: 'Every AI system is assessed before use and kept under review', metric: 'AI systems with a completed impact assessment, reviewed within 12 months', target: '100%' },
+    { key: 'obj-ai-training', fws: ['iso42001'], title: 'Everyone using AI knows how to use it responsibly', metric: 'Staff with current AI use and oversight training', target: 'At least 95%' },
+    { key: 'obj-privacy-rights', fws: ['iso27701', 'privacyact'], title: 'Answer privacy requests on time', metric: 'Requests from individuals answered within the legal time limit', target: '100%' }
+  ];
+  function suggestedObjectives(frameworks, objectives) {
+    var fws = frameworks || ['iso27001'];
+    var have = {};
+    (objectives || []).forEach(function (o) { if (o && o.title) have[String(o.title).trim().toLowerCase()] = true; });
+    return SUGGESTED_OBJECTIVES.filter(function (o) {
+      return o.fws.some(function (f) { return fws.indexOf(f) !== -1; }) && !have[o.title.toLowerCase()];
+    });
+  }
+
+  /* Opportunities (Clause 6.1.1) drawn from the scope & context
+     answers, the counterpart of CONTEXT_RISKS. */
+  var CONTEXT_OPPORTUNITIES = [
+    { key: 'opp-certification', when: function () { return true; },
+      why: function (p) { return p.orgCustomerDemand === 'contract' || p.orgCustomerDemand === 'often' ? 'You told us customers ask for evidence of your security.' : 'Applies to every organisation seeking certification.'; },
+      opp: { title: 'Certification shortens customer security reviews and opens tenders that require it', cat: 'Market', benefit: 'Faster sales cycles and access to customers who require certification', L: 4, I: 4 } },
+    { key: 'opp-questionnaires', when: function (p) { return p.orgCustomerDemand === 'often' || p.orgCustomerDemand === 'contract'; },
+      why: function () { return 'You told us customers often ask for security evidence.'; },
+      opp: { title: 'Reuse one evidence set to answer customer security questionnaires', cat: 'Efficiency', benefit: 'Less time answering questionnaires; consistent answers', L: 4, I: 3 } },
+    { key: 'opp-consolidate', when: function (p) { return p.orgCloud === 'saas' || p.orgCloud === 'iaas' || p.orgItModel === 'internal' || p.orgItModel === 'mixed'; },
+      why: function () { return 'Your Microsoft 365 licensing already includes security tools that may replace separate products.'; },
+      opp: { title: 'Use the security features already in our Microsoft 365 licence to retire separate tools', cat: 'Technology', benefit: 'Lower cost and fewer systems to secure and monitor', L: 3, I: 3 } },
+    { key: 'opp-automation', when: function () { return true; },
+      why: function () { return 'Applies to every organisation running the management system in Checkpoint.'; },
+      opp: { title: 'Automate evidence collection so the management system runs with little manual effort', cat: 'Efficiency', benefit: 'Audit-ready evidence all year rather than a scramble before each audit', L: 4, I: 3 } },
+    { key: 'opp-ai', when: function (p) { return p.orgAiUse === 'tools' || p.orgAiUse === 'builds'; },
+      why: function () { return 'You told us the organisation uses AI.'; },
+      opp: { title: 'Adopt AI safely to improve productivity, with clear rules that customers can trust', cat: 'Technology', benefit: 'Productivity gains without data leakage, and a story customers trust', L: 3, I: 4 } },
+    { key: 'opp-privacy-trust', when: function (p) { return p.orgPersonalData === 'customers' || p.orgPersonalData === 'sensitive'; },
+      why: function () { return 'You told us you hold personal information about customers.'; },
+      opp: { title: 'Show customers how we protect their personal information, as a point of difference', cat: 'Market', benefit: 'Customer trust and fewer privacy objections in sales', L: 3, I: 3 } },
+    { key: 'opp-growth', when: function (p) { return p.orgChange === 'growing' || p.orgChange === 'major'; },
+      why: function () { return 'You told us the organisation is changing.'; },
+      opp: { title: 'Build security into new processes and systems while they are being set up, rather than retrofitting', cat: 'Organisation', benefit: 'Lower cost of security as the organisation grows', L: 3, I: 3 } }
+  ];
+  function contextOpportunitySuggestions(profile, opportunities) {
+    var p = profile || {};
+    var have = {};
+    (opportunities || []).forEach(function (o) { if (o) { if (o.tpl) have[o.tpl] = true; if (o.title) have[String(o.title).trim().toLowerCase()] = true; } });
+    return CONTEXT_OPPORTUNITIES.filter(function (c) { return c.when(p) && !have[c.key] && !have[c.opp.title.toLowerCase()]; })
+      .map(function (c) { return { key: c.key, why: c.why(p), opp: c.opp }; });
+  }
+
+  /* Before certification there is no cycle to spread audits over, but
+     Stage 2 expects one full internal audit and the management review
+     that follows it: the management-system clauses, then Annex A,
+     far enough ahead of Stage 2 for findings to be closed. */
+  function addDaysIso(iso, days) {
+    var d = new Date(String(iso).slice(0, 10) + 'T00:00:00Z');
+    if (isNaN(d)) return '';
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+  function preCertificationAudits(today, fw, existing) {
+    var fwLabel = fw === 'iso42001' ? 'Annex A (AI controls)' : 'Annex A (all themes)';
+    var have = {};
+    (existing || []).forEach(function (a) { if (a && a.scope) have[a.scope] = true; });
+    return [
+      { planned: addDaysIso(today, 30), scope: 'Clauses 4-10 (management system), pre-certification internal audit' },
+      { planned: addDaysIso(today, 45), scope: fwLabel + ', pre-certification internal audit' }
+    ].filter(function (p) { return !have[p.scope]; });
   }
 
   /* Whether a clause may be marked Implemented: every requirement met,
@@ -8177,6 +8371,9 @@
     buildOrgContextDraft: buildOrgContextDraft, buildAimsContextDraft: buildAimsContextDraft,
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
+    clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,

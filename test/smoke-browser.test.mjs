@@ -237,6 +237,45 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* Clause autopilot: the clauses page lists what is left on Clauses
+     4-10 with Checkpoint's own steps first; running them produces the
+     records, the management review form drafts every input, and the
+     requirements drawer offers the same steps. */
+  test('the clause autopilot runs Checkpoint\'s steps and drafts the management review', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.evaluate(() => window.App.go('clauses'));
+    await page.waitForSelector('#clauseAutopilot', { timeout: 5000 });
+    const panel = await page.locator('#clauseAutopilot').innerText();
+    assert.match(panel, /clause requirements met|Every clause requirement is met/);
+
+    const modal = page.locator('#modalBox');
+    await page.evaluate(() => { window.App.adoptSuggestedObjectives(); });
+    await modal.getByLabel('Owner', { exact: true }).fill('ISMS Manager', { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Adopt', exact: true }).click();
+    await page.waitForFunction(() => /Keep our Microsoft 365 security configuration strong/.test(document.getElementById('v-objectives').innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => { window.App.planAuditProgramme(); });
+    await modal.getByLabel('Internal auditor', { exact: true }).fill('Compliance365', { timeout: 5000 });
+    await modal.getByRole('button', { name: /^Schedule \d+ audit/ }).click();
+    await page.waitForFunction(() => /pre-certification internal audit/.test(document.getElementById('v-audits').innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => window.App.startManagementReview());
+    await page.waitForSelector('#addReviewPanel #naMR_issues', { timeout: 5000 });
+    for (const k of ['priorActions', 'issues', 'interestedParties', 'performance', 'feedback', 'riskStatus', 'improvement']) {
+      assert.ok((await page.$eval('#naMR_' + k, (el) => el.value)).length > 10, k + ' is drafted');
+    }
+    assert.ok(await page.locator('#naReviewResources').isVisible());
+
+    await page.evaluate(() => { window.App.go('clauses'); window.App.openClauseRequirements('iso27001|9.3'); });
+    await page.waitForSelector('#drawer .d-sec', { timeout: 5000 });
+    assert.deepEqual(errors, [], 'no console errors running the clause autopilot');
+    await context.close();
+  });
+
   /* The operating rhythm end to end: schedule the recommended recurring
      activities, complete one with its evidence, and see the control it
      covers verified and Implemented. */

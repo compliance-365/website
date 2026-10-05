@@ -285,11 +285,11 @@ describe('register rules added for full automation', () => {
     assert.equal(rec('aiImpact', { aiSystems: ai.concat([{ impactAssessmentStatus: 'In progress' }]) }).st, 'partial');
   });
 
-  test('every clause is automated except the two no register can see', () => {
+  test('every clause requirement is automated: Checkpoint delivers Clauses 4-10', () => {
     ['iso27001', 'iso42001', 'iso27701'].forEach((fw) => {
       const manual = [];
       CLAUSE_DEFS.filter((d) => d.fw === fw).forEach((d) => clauseRequirementsFor(fw, d.code).forEach((r) => { if (!r.auto) manual.push(d.code + '/' + r.id); }));
-      assert.deepEqual(manual.sort(), ['5.1/integration', '7.5.3/lifecycle'], fw);
+      assert.deepEqual(manual, [], fw);
     });
   });
 });
