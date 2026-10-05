@@ -276,6 +276,67 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* The certification workflow end to end in demo: objectives measured,
+     the Annex A plan, an internal audit conducted in the app with a
+     finding raised from a line, a management review whose agreed
+     actions land in the Actions register, and the Stage 1 pack. */
+  test('objectives, Annex A plan, in-app audit, review actions and the Stage 1 pack', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    const modal = page.locator('#modalBox');
+
+    await page.evaluate(() => { window.App.adoptSuggestedObjectives(); });
+    await modal.getByLabel('Owner', { exact: true }).fill('ISMS Manager', { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Adopt', exact: true }).click();
+    await page.evaluate(() => window.App.go('objectives'));
+    await page.waitForFunction(() => /Measured by Checkpoint: /.test(document.getElementById('objRows').innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => window.App.go('soa'));
+    await page.waitForFunction(() => /Getting Annex A to 100%|Every applicable control/i.test(document.getElementById('soaAnnexPlan').innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => { window.App.planAuditProgramme(); });
+    await modal.getByLabel('Internal auditor', { exact: true }).fill('Compliance365', { timeout: 5000 });
+    await modal.getByRole('button', { name: /^Schedule \d+ audit/ }).click();
+    const audId = await page.evaluate(() => { const r = Array.from(document.querySelectorAll('#v-audits tr')).find((x) => /Clauses 4-10 \(management system\), pre-certification/.test(x.innerText)); return r && (r.innerText.match(/AUD-\d+/) || [])[0]; });
+    assert.ok(audId, 'the pre-certification audit is listed');
+    await page.evaluate((id) => window.App.conductAudit(id), audId);
+    const selects = page.locator('#drawer select[data-change-action="App.setAuditResult"]');
+    await selects.first().waitFor({ timeout: 5000 });
+    await selects.nth(0).selectOption('C');
+    await page.waitForFunction(() => /1 of \d+ audited/.test(document.getElementById('auditProgress').innerText), null, { timeout: 5000 });
+    await page.locator('#drawer select[data-change-action="App.setAuditResult"]').nth(1).selectOption('Minor');
+    await modal.getByLabel('Finding description', { exact: true }).fill('Interested parties not reviewed since last year', { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Raise finding', exact: true }).click();
+    await page.waitForFunction(() => /ACT-\d+/.test(document.getElementById('drawer').innerText) && /2 of \d+ audited/.test(document.getElementById('auditProgress').innerText), null, { timeout: 5000 });
+    await page.evaluate((id) => { window.App.completeAudit(id); }, audId);
+    await modal.getByRole('button', { name: 'Complete', exact: true }).click({ timeout: 5000 });
+
+    await page.evaluate(() => window.App.startManagementReview());
+    await page.waitForSelector('#naReviewActions', { timeout: 5000 });
+    await page.fill('#naReviewAttendees', 'Managing Director, ISMS Manager');
+    await page.fill('#naReviewDecisions', 'Continue the certification plan.');
+    await page.fill('#naReviewResources', 'Current resources are sufficient.');
+    await page.fill('#naReviewActions', 'Run a phishing simulation; IT Manager; 2026-12-01');
+    await page.evaluate(() => window.App.recordReview());
+    await page.evaluate(() => window.App.go('actions'));
+    await page.waitForFunction(() => /Run a phishing simulation/.test(document.getElementById('v-actions').innerText), null, { timeout: 5000 });
+
+    const popup = page.waitForEvent('popup', { timeout: 10000 });
+    await page.evaluate(() => { window.App.stage1Pack(); });
+    const pack = await popup;
+    await pack.waitForLoadState('domcontentloaded');
+    await pack.waitForFunction(() => /Stage 1 certification pack/.test(document.documentElement.innerHTML), null, { timeout: 10000 });
+    const packHtml = await pack.content();
+    assert.match(packHtml, /Internal audit report|Internal audit AUD-/);
+    assert.match(packHtml, /Management review/);
+
+    assert.deepEqual(errors, [], 'no console errors in the certification workflow');
+    await context.close();
+  });
+
   /* The operating rhythm end to end: schedule the recommended recurring
      activities, complete one with its evidence, and see the control it
      covers verified and Implemented. */

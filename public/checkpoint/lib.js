@@ -5414,6 +5414,45 @@
     return JSON.stringify(out);
   }
 
+  /* Actions agreed at a management review, one per line:
+     "what; owner; due date" (also "what - owner - due" or "what | owner | due").
+     Owner and date are optional; a line with no date is due in 90 days. */
+  function parseReviewActionLines(text, today) {
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (line) {
+      var l = line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim();
+      if (!l) return;
+      var parts = l.split(/\s*(?:;|\|| — | – | - )\s*/).map(function (x) { return x.trim(); }).filter(Boolean);
+      var due = '', owner = '';
+      for (var i = parts.length - 1; i > 0; i--) {
+        var p = parts[i], d = '';
+        var au = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(p);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(p)) d = p;
+        else if (au) d = au[3] + '-' + ('0' + au[2]).slice(-2) + '-' + ('0' + au[1]).slice(-2);
+        else if (/^\d{1,2} [A-Za-z]{3,9} \d{4}$/.test(p)) d = normaliseDateInput(p + ' UTC');
+        if (!due && d) { due = d; parts.splice(i, 1); continue; }
+      }
+      if (parts.length > 1) owner = parts.pop();
+      var title = parts.join(' - ');
+      if (!title) return;
+      var dd = new Date(String(today).slice(0, 10) + 'T00:00:00Z');
+      if (!due && !isNaN(dd)) { dd.setUTCDate(dd.getUTCDate() + 90); due = dd.toISOString().slice(0, 10); }
+      out.push({ title: title, owner: owner, due: due });
+    });
+    return out;
+  }
+
+  /* The register snapshot that is the evidence for each record-based
+     clause, filed into that clause's evidence folder: { code: [report types] }.
+     Reports are the ones Checkpoint already builds. */
+  var CLAUSE_SNAPSHOTS = {
+    '6.1.2': ['risk'], '8.2': ['risk'],
+    '6.1.3': ['rtp', 'soa'], '8.3': ['rtp'],
+    '6.2': ['objectives'], '9.1': ['objectives'],
+    '7.2': ['training'],
+    '10.2': ['capa']
+  };
+
   /* The local-development bypass's ONE piece of testable logic — see
      public/checkpoint/devflag.js and scripts/hash-checkpoint-assets.mjs
      for the rest of the design. Requires BOTH a truthy dev flag AND a
@@ -7347,6 +7386,172 @@
     });
   }
 
+  /* Measures an objective from Checkpoint's own records, when its
+     metric is one Checkpoint suggested (matched by metric text, so an
+     objective the client wrote themselves is left to them).
+     d = { scans, training, attestations, risks, actions, incidents, aiSystems }.
+     Returns null when Checkpoint cannot measure it, else
+     { key, value (0-100), display, met, status }. Status follows the
+     measurement: met → On track (Achieved once the due date passes),
+     not met → At risk (Missed once the due date passes). */
+  function measureObjective(o, d, today) {
+    if (!o) return null;
+    d = d || {};
+    var def = SUGGESTED_OBJECTIVES.find(function (x) { return String(o.metric || '').trim().toLowerCase() === x.metric.toLowerCase(); });
+    if (!def) return null;
+    var within = function (dt, days) { return dt && daysBetweenDateStr(String(dt).slice(0, 10), today) <= days; };
+    var pctOf = function (n, total) { return total ? Math.round(n / total * 100) : null; };
+    var value = null, display = '', threshold = 100;
+    var openRisks = (d.risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    var actionsById = {};
+    (d.actions || []).forEach(function (a) { if (a && a.id) actionsById[a.id] = a; });
+    switch (def.key) {
+      case 'obj-posture':
+        var scans = (d.scans || []).filter(function (x) { return typeof x.score === 'number'; });
+        if (!scans.length) return null;
+        value = scans[scans.length - 1].score; threshold = 80; display = value + '/100 at the last scan';
+        break;
+      case 'obj-training':
+      case 'obj-ai-training':
+        var rows = (d.training || []).filter(function (t) { return def.key === 'obj-ai-training' ? t.courseId === AI_TRAINING_COURSE : t.courseId !== AI_TRAINING_COURSE && t.courseId !== PRIVACY_TRAINING_COURSE; });
+        var tr = trainingCheckResult(rows, today);
+        if (tr.pct == null) return null;
+        value = tr.pct; threshold = 95; display = tr.completed + ' of ' + tr.total + ' completed (' + value + '%)';
+        break;
+      case 'obj-policy':
+        var camp = attestationCampaigns((d.attestations || []).filter(function (r) { return /Information Security Policy/i.test(r.docName || ''); }))[0];
+        if (!camp) return null;
+        value = camp.pct; threshold = 90; display = value + '% acknowledged';
+        break;
+      case 'obj-risk':
+        var high = openRisks.filter(function (r) { var q = residual(r, d.actions || []); var b = band(q.L * q.I); return b === 'High' || b === 'Critical'; });
+        if (!high.length) { value = 100; display = 'No high or critical risks open'; break; }
+        var onTime = high.filter(function (r) {
+          var acts = (r.actions || []).map(function (id) { return actionsById[id]; }).filter(Boolean);
+          if (!acts.length) return !!String(r.acceptedBy || '').trim();
+          return !acts.some(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled' && a.due && daysBetweenDateStr(a.due, today) > 30; });
+        }).length;
+        value = pctOf(onTime, high.length); display = onTime + ' of ' + high.length + ' high or critical risks on schedule';
+        break;
+      case 'obj-actions':
+        var due = (d.actions || []).filter(function (a) { return a && a.due && a.due <= today && a.status !== 'Cancelled'; });
+        if (!due.length) return null;
+        var closed = due.filter(function (a) { return a.status === 'Done' || a.status === 'Closed'; }).length;
+        value = pctOf(closed, due.length); threshold = 90; display = closed + ' of ' + due.length + ' actions due so far are closed (' + value + '%)';
+        break;
+      case 'obj-incident':
+        var inc = (d.incidents || []).filter(function (n) { return within(n.detected, 365); });
+        if (!inc.length) { value = 100; display = 'No incidents in the last 12 months'; break; }
+        var handled = inc.filter(function (n) { return n.status !== 'Closed' || String(n.lessonsLearned || '').trim(); }).length;
+        value = pctOf(handled, inc.length); display = handled + ' of ' + inc.length + ' incidents handled with lessons recorded';
+        break;
+      case 'obj-ai-impact':
+        var ai = d.aiSystems || [];
+        if (!ai.length) return null;
+        var ok = ai.filter(function (x) { return x.impactAssessmentStatus === 'Completed' && within(x.lastReviewed, 365); }).length;
+        value = pctOf(ok, ai.length); display = ok + ' of ' + ai.length + ' AI systems assessed and reviewed';
+        break;
+      default:
+        return null;
+    }
+    var met = value >= threshold;
+    var past = o.due && o.due < today;
+    return { key: def.key, value: value, display: display, met: met, status: past ? (met ? 'Achieved' : 'Missed') : (met ? 'On track' : 'At risk') };
+  }
+
+  /* ============================================================
+     Annex A plan
+     ------------------------------------------------------------
+     The organisation delivers Annex A; Checkpoint tells it, control by
+     control, the one next step, and does the steps it can. Each
+     applicable control that is not finished gets exactly one step,
+     checked in this order:
+       justify   — excluded with no justification (you)
+       scan      — every mapped posture check passes and the scan has
+                   captured evidence: mark Implemented (Checkpoint)
+       scanFix   — a mapped posture check fails (you, from the scan)
+       doc       — a document written for it is not yet approved
+                   (Checkpoint generates, you approve)
+       rhythm    — a recurring activity covers it but is not scheduled
+                   (Checkpoint)
+       rhythmRun — the activity is scheduled but has never been
+                   completed with evidence (you)
+       evidence  — record how it is done and link the evidence (you)
+       reverify  — Implemented, but its review is overdue (you)
+     d = { fw, today, docs:[{tplId,status}], templates:[{id,title,controls,frameworks}],
+           checkControls:{checkId:[code]}, lastResults:{checkId:result}, calendar:[], reviewCadenceDays } */
+  var ANNEX_STEPS = {
+    justify: { by: 'you', label: 'Record why each excluded control does not apply', action: 'App.annexFocus', arg: 'justify' },
+    scan: { by: 'checkpoint', label: 'Mark the controls the posture scan proves as Implemented (evidence already captured)', action: 'App.annexAcceptScanProven' },
+    scanFix: { by: 'you', label: 'Fix the failing posture checks behind these controls', action: 'App.go', arg: 'scan' },
+    doc: { by: 'checkpoint', label: 'Generate and approve the documents written for these controls', action: 'App.annexDocuments' },
+    rhythm: { by: 'checkpoint', label: 'Schedule the recurring activities that operate these controls', action: 'App.setupOperatingRhythm' },
+    rhythmRun: { by: 'meeting', label: 'Complete the scheduled activities with their evidence', action: 'App.go', arg: 'calendar' },
+    evidence: { by: 'you', label: 'Record how each control is done and link its evidence', action: 'App.annexFocus', arg: 'evidence' },
+    reverify: { by: 'you', label: 'Re-verify the controls whose review is overdue', action: 'App.annexFocus', arg: 'reverify' }
+  };
+  function annexAPlan(controls, d) {
+    d = d || {};
+    var fw = d.fw || 'iso27001', today = d.today;
+    var approved = {}, generated = {};
+    (d.docs || []).forEach(function (x) { if (!x) return; generated[x.tplId] = true; if (x.status === 'Approved') approved[x.tplId] = true; });
+    var checksFor = {};
+    Object.keys(d.checkControls || {}).forEach(function (id) {
+      (d.checkControls[id] || []).forEach(function (code) { (checksFor[code] = checksFor[code] || []).push(id); });
+    });
+    var tplFor = {};
+    (d.templates || []).forEach(function (t) {
+      if (t.frameworks && t.frameworks.indexOf(fw) === -1 && !(fw === 'iso27701' && t.frameworks.indexOf('iso27001') !== -1)) return;
+      (t.controls || []).forEach(function (code) { (tplFor[code] = tplFor[code] || []).push(t); });
+    });
+    var rhythmFor = {};
+    OPERATING_RHYTHM.forEach(function (r) { r.controls.forEach(function (code) { (rhythmFor[code] = rhythmFor[code] || []).push(r); }); });
+    var scheduled = {}, completed = {};
+    (d.calendar || []).forEach(function (cal) {
+      if (!cal || cal.status === 'Retired') return;
+      var r = rhythmDefFor(cal);
+      if (!r) return;
+      scheduled[r.key] = true;
+      if (cal.lastCompleted) completed[r.key] = true;
+    });
+    var results = d.lastResults || null;
+    var out = [];
+    (controls || []).forEach(function (c) {
+      if (!c || (c.fw || 'iso27001') !== fw) return;
+      var step = null, why = '';
+      if (!c.app) {
+        if (!String(c.just || '').trim()) { step = 'justify'; why = 'Excluded with no justification'; }
+      } else if (c.st === 'Implemented') {
+        if (!c.evidenceUrl) { step = 'evidence'; why = 'Implemented, but no evidence linked'; }
+        else if (controlReviewStatus(c, today, d.reviewCadenceDays).due) { step = 'reverify'; why = 'Review overdue'; }
+      } else {
+        var checks = fw === 'iso27001' || fw === 'iso27701' ? (checksFor[c.id] || []) : [];
+        var res = results ? checks.map(function (id) { return results[id]; }).filter(function (r) { return r && r !== 'manual'; }) : [];
+        var docs = (tplFor[c.id] || []).filter(function (t) { return !approved[t.id]; });
+        var rh = (rhythmFor[c.id] || []);
+        if (res.length && res.some(function (r) { return r === 'fail' || r === 'review'; })) { step = 'scanFix'; why = 'A posture check for it is not passing'; }
+        else if (res.length && res.every(function (r) { return r === 'pass'; }) && c.evidenceUrl) { step = 'scan'; why = 'Every posture check for it passes, evidence captured'; }
+        else if (docs.length) { step = 'doc'; why = (generated[docs[0].id] ? 'Approve the ' : 'Generate the ') + docs[0].title; }
+        else if (rh.length && rh.some(function (r) { return !scheduled[r.key]; })) { step = 'rhythm'; why = 'Schedule: ' + rh.filter(function (r) { return !scheduled[r.key]; })[0].title; }
+        else if (rh.length && !rh.some(function (r) { return completed[r.key]; })) { step = 'rhythmRun'; why = 'Complete: ' + rh[0].title; }
+        else { step = 'evidence'; why = c.evidenceUrl ? 'Evidence linked: confirm it is in place and mark Implemented' : 'Record how it is done and link evidence'; }
+      }
+      if (step) out.push({ control: c, step: step, why: why });
+    });
+    return out;
+  }
+  /* The plan grouped by step: [{ step, fix, controls:[{control, why}] }],
+     Checkpoint's steps first. */
+  function annexAPlanGroups(plan) {
+    var by = {}, list = [];
+    (plan || []).forEach(function (p) {
+      if (!by[p.step]) { by[p.step] = { step: p.step, fix: ANNEX_STEPS[p.step], controls: [] }; list.push(by[p.step]); }
+      by[p.step].controls.push({ control: p.control, why: p.why });
+    });
+    var order = { checkpoint: 0, meeting: 1, you: 2 };
+    return list.sort(function (a, b) { return order[a.fix.by] - order[b.fix.by] || b.controls.length - a.controls.length; });
+  }
+
   /* Opportunities (Clause 6.1.1) drawn from the scope & context
      answers, the counterpart of CONTEXT_RISKS. */
   var CONTEXT_OPPORTUNITIES = [
@@ -8147,6 +8352,47 @@
      and control its scope covers, the evidence already linked in
      Checkpoint, and what an auditor should look at first. The auditor
      still does the audit; this removes the preparation. */
+  /* In-app internal audits: each workpack line's result, keyed
+     'follow|ACT-1', 'clause|4.1' or 'control|A.5.15'.
+     { key: { r: 'C'|'OFI'|'Minor'|'Major', note, ref (the action raised), by, date } } */
+  var AUDIT_RESULTS = [
+    { value: 'C', label: 'Conforms' },
+    { value: 'OFI', label: 'Opportunity for improvement' },
+    { value: 'Minor', label: 'Minor nonconformity' },
+    { value: 'Major', label: 'Major nonconformity' }
+  ];
+  function parseAuditResults(json) {
+    if (!json) return {};
+    if (typeof json === 'object') return json;
+    try { var o = JSON.parse(json); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+  }
+  /* The lines of a workpack, in audit order: follow-ups, clauses, controls. */
+  function auditWorkpackLines(wp) {
+    wp = wp || {};
+    return (wp.followUps || []).map(function (f) { return { key: 'follow|' + f.id, kind: 'follow', id: f.id, title: f.title, flags: [] }; })
+      .concat((wp.clauses || []).map(function (c) { return { key: 'clause|' + c.id, kind: 'clause', id: c.id, title: c.title, flags: c.flags, evidenceUrl: c.evidenceUrl }; }))
+      .concat((wp.controls || []).map(function (c) { return { key: 'control|' + c.id, kind: 'control', id: c.id, title: c.title, flags: c.flags, evidenceUrl: c.evidenceUrl }; }));
+  }
+  /* What the audit found so far, and the conclusion it supports. */
+  function auditResultsSummary(lines, results) {
+    results = results || {};
+    var out = { total: (lines || []).length, assessed: 0, C: 0, OFI: 0, Minor: 0, Major: 0, refs: [], unassessed: [] };
+    (lines || []).forEach(function (l) {
+      var r = results[l.key];
+      if (!r || !r.r) { out.unassessed.push(l.key); return; }
+      out.assessed++;
+      if (out[r.r] !== undefined) out[r.r]++;
+      if (r.ref) out.refs.push(r.ref);
+    });
+    var ncs = out.Minor + out.Major;
+    out.conclusion = out.Major ? 'The management system does not conform: ' + out.Major + ' major nonconformit' + (out.Major === 1 ? 'y' : 'ies') + ' must be corrected before certification.'
+      : ncs ? 'The management system conforms, except for ' + ncs + ' minor nonconformit' + (ncs === 1 ? 'y' : 'ies') + ' with corrective action under way.'
+      : 'The management system conforms to the requirements audited and is effectively implemented and maintained.';
+    out.text = out.assessed + ' of ' + out.total + ' items audited: ' + out.C + ' conform, ' + out.OFI + ' opportunit' + (out.OFI === 1 ? 'y' : 'ies') + ' for improvement, ' +
+      out.Minor + ' minor and ' + out.Major + ' major nonconformit' + (out.Major === 1 ? 'y' : 'ies') + '. ' + out.conclusion;
+    return out;
+  }
+
   function auditWorkpack(audit, data, today) {
     var a = audit || {}, d = data || {};
     var fw = a.fw || 'iso27001';
@@ -8346,7 +8592,7 @@
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
     objectivesCheckResult: objectivesCheckResult,
-    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
+    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,
@@ -8372,9 +8618,10 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, measureObjective: measureObjective, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
     OPERATING_RHYTHM: OPERATING_RHYTHM, rhythmKeyOf: rhythmKeyOf, rhythmDef: rhythmDef, rhythmDefFor: rhythmDefFor, rhythmNotesText: rhythmNotesText, rhythmLastEvidence: rhythmLastEvidence,

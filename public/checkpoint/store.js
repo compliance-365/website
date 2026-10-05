@@ -2392,7 +2392,8 @@ window.SpStore = (function () {
     Audits: [
       { name: 'RefId', text: {} }, { name: 'Framework', text: {} }, { name: 'Scope', text: {} },
       { name: 'Auditor', text: {} }, { name: 'PlannedDate', text: {} }, { name: 'CompletedDate', text: {} },
-      { name: 'Status', text: {} }, { name: 'Summary', text: { allowMultipleLines: true } }, { name: 'FindingRefs', text: {} }
+      { name: 'Status', text: {} }, { name: 'Summary', text: { allowMultipleLines: true } }, { name: 'FindingRefs', text: {} },
+      { name: 'Results', text: { allowMultipleLines: true } }
     ],
     Reviews: [
       { name: 'RefId', text: {} }, { name: 'ReviewDate', text: {} }, { name: 'Attendees', text: {} },
@@ -2962,7 +2963,10 @@ window.SpStore = (function () {
        this map. */
     Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate'],
     /* Requirements added with the clause requirement checklists. */
-    Clauses: ['Requirements']
+    Clauses: ['Requirements'],
+    /* Results added with in-app internal audits: each workpack line's
+       result, note and finding, as JSON. */
+    Audits: ['Results']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
@@ -3334,7 +3338,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return (b.t || '').localeCompare(a.t || ''); }),
         audits: audItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, fw: f.Framework || '', scope: f.Scope || '', auditor: f.Auditor || '', planned: f.PlannedDate || '', completed: f.CompletedDate || '', status: f.Status || 'Planned', summary: f.Summary || '', findingRefs: uncsv(f.FindingRefs) };
+          return { _sp: i.id, id: f.RefId, fw: f.Framework || '', scope: f.Scope || '', auditor: f.Auditor || '', planned: f.PlannedDate || '', completed: f.CompletedDate || '', status: f.Status || 'Planned', summary: f.Summary || '', findingRefs: uncsv(f.FindingRefs), results: window.CheckpointLib.parseAuditResults(f.Results) };
         }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); }),
         incidents: incItems.map(function (i) {
           var f = i.fields;
@@ -3824,12 +3828,12 @@ window.SpStore = (function () {
       a._sp = await addItem('Audits', {
         Title: a.id, RefId: a.id, Framework: a.fw, Scope: a.scope, Auditor: a.auditor,
         PlannedDate: a.planned, CompletedDate: a.completed || '', Status: a.status,
-        Summary: a.summary || '', FindingRefs: csv(a.findingRefs)
+        Summary: a.summary || '', FindingRefs: csv(a.findingRefs), Results: JSON.stringify(a.results || {})
       });
       S.audits.push(a);
     },
     updateAudit: async function (a) {
-      await patchItem('Audits', a._sp, { CompletedDate: a.completed || '', Status: a.status, Summary: a.summary || '', FindingRefs: csv(a.findingRefs) });
+      await patchItem('Audits', a._sp, { CompletedDate: a.completed || '', Status: a.status, Summary: a.summary || '', FindingRefs: csv(a.findingRefs), Results: JSON.stringify(a.results || {}) });
     },
     addIncident: async function (n) {
       n._sp = await addItem('Incidents', incidentFields(n));
