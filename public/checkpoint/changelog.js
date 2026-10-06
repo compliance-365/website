@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.121.0',
+    date: '2026-10-06',
+    entries: [
+      'Your consultant now sees where you are against plan. The progress Checkpoint shares at each sync also carries the week of your plan and any steps behind, the date you will be ready for Stage 1, booked Stage 1 and Stage 2 dates, certificate and next audit dates, how many objectives are at risk, how many people have overdue tasks, and when Checkpoint was last used. Counts and dates only: no records leave your tenant.',
+      'Partner console: a new Delivery tab shows every client\u2019s stage, path, Clauses 4-10 and Annex A progress with a trend line across syncs, the plan, booked audits and what needs attention, sortable and filterable to the clients that need attention. The dashboard lists clients off track: stalled for over 14 days, behind plan, Stage 1 or Stage 2 booked but not ready, a certificate expiring without recertification booked, an overdue surveillance audit, or auditor access left open.',
+      'Partner console: a status note for each client, in plain English with the next steps, ready to review, copy and send from your own mailbox. Clients certified to ISO 27001 that use AI are flagged as ready for an ISO 42001 conversation.'
+    ]
+  },
+  {
     version: '1.120.0',
     date: '2026-10-06',
     entries: [

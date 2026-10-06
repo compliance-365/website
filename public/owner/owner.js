@@ -678,6 +678,7 @@ function showModal(opts) {
       { name: 'NextBestModulePct', number: {} },
       { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */,
       { name: 'Progress', text: { allowMultipleLines: true } } /* the client's progress snapshot (buildProgressSnapshot() in lib.js), as last synced */,
+      { name: 'ProgressHistory', text: { allowMultipleLines: true } } /* JSON array of {d, path, clauses, annexA}, one point per sync where a headline number moved, capped (mergeProgressHistory() in lib.js) */,
       { name: 'PackSentAt', text: {} } /* ISO datetime the welcome pack email was last sent, or blank — the one input to computeClientChecklist() not already derived from a sync */,
       { name: 'RolesConfiguredAt', text: {} } /* ISO datetime the owner last confirmed the client's SharePoint Practitioner/Viewer groups (wizard step 8, SETUP.md §5a) are set up — manual, since this console can't read the client tenant's own SharePoint permissions */,
       /* Licensing scope — owner-set, never inferred from a sync. Feeds
@@ -845,7 +846,7 @@ function showModal(opts) {
      as store.js's reconcileColumns() for the client-facing lists. Add a
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
-    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName', 'Blocked', 'BlockedAt', 'BlockedReason', 'Progress'],
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName', 'Blocked', 'BlockedAt', 'BlockedReason', 'Progress', 'ProgressHistory'],
     PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus', 'AgreedPrice']
   };
   async function reconcilePartnerColumns(onStatus) {
@@ -874,6 +875,8 @@ function showModal(opts) {
     var readiness = {}, scoreHistory = [];
     try { readiness = JSON.parse(f.Readiness || '{}'); } catch (e) { }
     try { scoreHistory = JSON.parse(f.ScoreHistory || '[]'); } catch (e) { }
+    var progressHistory = [];
+    try { progressHistory = JSON.parse(f.ProgressHistory || '[]'); } catch (e) { }
     return {
       _sp: i.id, name: f.ClientName || f.Title || '', tenantId: f.TenantId || '', status: f.Status || 'Prospect',
       /* cleaned on read, so a row saved with a stray full stop or a
@@ -887,6 +890,7 @@ function showModal(opts) {
       nextBestModule: f.NextBestModule || '', nextBestModulePct: typeof f.NextBestModulePct === 'number' ? f.NextBestModulePct : null,
       scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : [], packSentAt: f.PackSentAt || '',
       progress: window.CheckpointLib.parseProgressSnapshot(f.Progress),
+      progressHistory: Array.isArray(progressHistory) ? progressHistory : [],
       headcount: typeof f.Headcount === 'number' ? f.Headcount : null,
       locations: typeof f.Locations === 'number' ? f.Locations : null,
       scopeNotes: f.ScopeNotes || '',
@@ -969,6 +973,7 @@ function showModal(opts) {
       NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
       ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || '',
       Progress: c.progress ? JSON.stringify(c.progress) : '',
+      ProgressHistory: JSON.stringify(c.progressHistory || []),
       Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '',
       RolesConfiguredAt: c.rolesConfiguredAt || '',
       LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || '',
@@ -1293,6 +1298,20 @@ function showModal(opts) {
         }).join('') + '</tbody></table></div>' + overflowNote(dueSoon)
       : '<p style="color:var(--paper-faint);font-size:12.5px">Nothing renewing in the next 90 days.</p>';
 
+    var flagged = deliveryRows().filter(function (r) { return r.flags.length; })
+      .sort(function (a, b) { return a.rank - b.rank; });
+    var deliveryHtml = flagged.length
+      ? '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">What needs attention</th><th scope="col"></th></tr></thead><tbody>' +
+        flagged.slice(0, DASH_CAP).map(function (r) {
+          return '<tr>' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+            '<td style="font-size:12.5px">' + esc(r.stage) + '</td>' +
+            '<td>' + flagList(r.flags) + '</td>' +
+            '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerStatusNote" data-id="' + esc(r.c._sp) + '">Status note</button></td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' + overflowNote(flagged)
+      : '<p style="color:var(--paper-faint);font-size:12.5px">Every client is on track against plan.</p>';
+
     el.innerHTML =
       '<div class="src" style="margin-bottom:14px">As at ' + esc(fmtAsAt()) + '.</div>' +
       '<div class="grid kpis" style="margin-bottom:24px">' +
@@ -1305,7 +1324,85 @@ function showModal(opts) {
       '<div><h3 style="margin-bottom:10px">Needs attention</h3>' + atRiskHtml + '</div>' +
       '<div><h3 style="margin-bottom:10px">Upsell opportunities</h3>' + upsellHtml + '</div>' +
       '</div>' +
+      '<div style="margin-bottom:20px"><h3 style="margin-bottom:10px">Delivery: clients off track</h3>' + deliveryHtml + '</div>' +
       '<div><h3 style="margin-bottom:10px">Renewals due within 90 days</h3>' + dueSoonHtml + '</div>';
+  }
+
+  /* ================= Delivery: progress across the portfolio =================
+     From each client's synced progress snapshot and its history. Flags
+     and the status note are computed in lib (clientAttentionFlags,
+     clientStatusNote) so they are tested and the same everywhere. */
+  var FLAG_COLOR = { red: 'var(--fail)', amber: 'var(--warn)', info: 'var(--gold-light)' };
+  var FLAG_RANK = { red: 0, amber: 1, info: 2 };
+  function flagList(flags) {
+    if (!flags.length) return '<span style="color:var(--pass);font-size:12.5px">On track</span>';
+    return flags.map(function (f) { return '<div style="font-size:12.5px;line-height:1.5"><i class="dot" style="background:' + FLAG_COLOR[f.level] + ';margin-right:6px;vertical-align:middle"></i>' + esc(f.text) + '</div>'; }).join('');
+  }
+  function deliveryRows() {
+    var today = todayStr();
+    return ((PARTNER_DATA && PARTNER_DATA.clients) || []).filter(function (c) { return c.status !== 'Churned' && c.status !== 'Prospect'; }).map(function (c) {
+      var ent = partnerLatestEntitlementFor(c.tenantId);
+      var flags = window.CheckpointLib.clientAttentionFlags({ name: c.name, modules: ent ? ent.modules : (c.modules || []), progress: c.progress, progressHistory: c.progressHistory, lastSynced: c.lastSynced }, today);
+      var head = window.CheckpointLib.progressHeadline(c.progress);
+      var d = (c.progress && c.progress.delivery) || {};
+      return {
+        c: c, flags: flags, stage: window.CheckpointLib.clientStage(c.progress), head: head, d: d,
+        rank: flags.length ? Math.min.apply(null, flags.map(function (f) { return FLAG_RANK[f.level]; })) : 3
+      };
+    });
+  }
+  /* Up to 26 synced points as a tiny line: Annex A % over time. */
+  function sparkline(hist, key) {
+    var pts = (hist || []).filter(function (h) { return typeof h[key] === 'number'; });
+    if (pts.length < 2) return '';
+    var w = 80, h = 20;
+    var xy = pts.map(function (p, i) { return (i / (pts.length - 1) * w).toFixed(1) + ',' + (h - p[key] / 100 * h).toFixed(1); }).join(' ');
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true" style="vertical-align:middle;margin-left:6px"><polyline points="' + xy + '" fill="none" stroke="var(--gold)" stroke-width="1.5"/></svg>';
+  }
+  var _deliveryFilter = 'all', _deliverySort = 'attention';
+  function renderDeliveryBoard() {
+    var el = document.getElementById('deliveryBoardWrap');
+    if (!el) return;
+    var rows = deliveryRows();
+    if (!rows.length) { el.innerHTML = emptyState({ text: 'No active clients yet.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } }); return; }
+    var shown = _deliveryFilter === 'attention' ? rows.filter(function (r) { return r.rank < 2; }) : _deliveryFilter === 'upsell' ? rows.filter(function (r) { return r.flags.some(function (f) { return f.key === 'iso42001'; }); }) : rows;
+    var pathPct = function (r) { return r.head ? r.head.path : -1; };
+    shown.sort(function (a, b) {
+      if (_deliverySort === 'progress') return pathPct(b) - pathPct(a);
+      if (_deliverySort === 'name') return a.c.name.localeCompare(b.c.name);
+      return a.rank - b.rank || pathPct(a) - pathPct(b);
+    });
+    var count = function (pred) { return rows.filter(pred).length; };
+    var opt = function (v, label, cur) { return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + label + '</option>'; };
+    var pct = function (n) { return n == null ? '<span style="color:var(--paper-faint)">—</span>' : '<b>' + n + '%</b>'; };
+    el.innerHTML =
+      '<div class="grid kpis" style="margin-bottom:20px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + rows.length + '</b></div><span>Active clients</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--pass)">' + count(function (r) { return r.stage === 'Certified'; }) + '</b></div><span>Certified</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (count(function (r) { return r.rank === 0; }) ? 'var(--fail)' : 'var(--pass)') + '">' + count(function (r) { return r.rank === 0; }) + '</b></div><span>Off track</span><div class="sub">At least one red flag</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--gold-light)">' + count(function (r) { return r.flags.some(function (f) { return f.key === 'iso42001'; }); }) + '</b></div><span>ISO 42001 opportunities</span><div class="sub">Certified and using AI</div></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">' +
+      '<label class="src">Show <select class="mini" id="deliveryFilter" data-change-action="OwnerApp.setDeliveryFilter">' + opt('all', 'All clients', _deliveryFilter) + opt('attention', 'Needs attention', _deliveryFilter) + opt('upsell', 'ISO 42001 opportunities', _deliveryFilter) + '</select></label>' +
+      '<label class="src">Sort by <select class="mini" id="deliverySort" data-change-action="OwnerApp.setDeliverySort">' + opt('attention', 'Most urgent first', _deliverySort) + opt('progress', 'Most progress first', _deliverySort) + opt('name', 'Name', _deliverySort) + '</select></label>' +
+      '</div>' +
+      (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
+        shown.map(function (r) {
+          var d = r.d, plan = d.plan, b = d.bookings || {};
+          var moved = (r.c.progressHistory || []).length ? r.c.progressHistory[r.c.progressHistory.length - 1].d : '';
+          return '<tr data-client="' + esc(r.c._sp) + '">' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button>' + (moved ? '<div class="src">moved ' + esc(fmtDate(moved)) + '</div>' : '') + '</td>' +
+            '<td style="font-size:12.5px">' + esc(r.stage) + '</td>' +
+            '<td style="white-space:nowrap">' + (r.head ? pct(r.head.path) + sparkline(r.c.progressHistory, 'path') : pct(null)) + '</td>' +
+            '<td>' + pct(r.head && r.head.clauses) + '</td>' +
+            '<td style="white-space:nowrap">' + pct(r.head && r.head.annexA) + sparkline(r.c.progressHistory, 'annexA') + '</td>' +
+            '<td style="font-size:12.5px">' + (plan ? 'Week ' + esc(String(plan.week)) + (plan.behind ? ', <span style="color:var(--warn)">' + esc(String(plan.behind)) + ' behind</span>' : ', on plan') + (plan.readyBy && r.stage !== 'Certified' ? '<div class="src">ready ' + esc(fmtDate(plan.readyBy)) + '</div>' : '') : '—') + '</td>' +
+            '<td style="font-size:12.5px">' + ([b.stage1 ? 'S1 ' + esc(fmtDate(b.stage1)) : '', b.stage2 ? 'S2 ' + esc(fmtDate(b.stage2)) : ''].filter(Boolean).join('<br>') || '—') + '</td>' +
+            '<td>' + flagList(r.flags) + '</td>' +
+            '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerStatusNote" data-id="' + esc(r.c._sp) + '">Status note</button></td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>'
+        : '<p style="color:var(--paper-faint);font-size:12.5px">No clients match this filter.</p>');
   }
 
   async function renderPartnerClientRows() {
@@ -1371,6 +1468,20 @@ function showModal(opts) {
       var x = p.annexA[fw];
       html += kv(esc(fwLabel(fw)) + ' Annex A controls', esc(x.pct + '% · ' + x.implemented + ' of ' + x.applicable + ' implemented') + '<div class="src" style="font-weight:400">' + esc(x.inProgress + ' in progress, ' + x.notStarted + ' not started') + '</div>') + progressBar(x.implemented, x.applicable);
     });
+    var d = p.delivery;
+    if (d) {
+      if (d.plan) html += kv('Plan', esc('Week ' + d.plan.week + (d.plan.behind ? ', ' + d.plan.behind + ' step(s) behind' : ', on plan') + (d.plan.readyBy ? ', ready for Stage 1 by ' + fmtDate(d.plan.readyBy) : '')));
+      if (d.bookings && (d.bookings.stage1 || d.bookings.stage2)) html += kv('Audits booked', esc([d.bookings.stage1 ? 'Stage 1 ' + fmtDate(d.bookings.stage1) : '', d.bookings.stage2 ? 'Stage 2 ' + fmtDate(d.bookings.stage2) : ''].filter(Boolean).join(', ')));
+      Object.keys(d.certs || {}).forEach(function (fw) {
+        var ce = d.certs[fw];
+        html += kv(esc(fwLabel(fw)) + ' certificate', esc('Issued ' + fmtDateY(ce.issued) + ', expires ' + fmtDateY(ce.expires)) + (ce.nextAudit ? '<div class="src" style="font-weight:400">' + esc('Next: ' + ce.nextAudit + (ce.nextDue ? ' by ' + fmtDate(ce.nextDue) : '') + (ce.booked ? ' (booked)' : '')) + '</div>' : ''));
+      });
+      if (d.objectives && d.objectives.total) html += kv('Objectives', esc(d.objectives.total + (d.objectives.atRisk ? ', ' + d.objectives.atRisk + ' at risk' : ', none at risk')));
+      if (d.ownersOverdue) html += kv('Owners with overdue tasks', '<span style="color:var(--warn)">' + esc(String(d.ownersOverdue)) + '</span>');
+      if (d.lastActivity) html += kv('Last activity in Checkpoint', esc(fmtDate(d.lastActivity)));
+    }
+    var hist = c.progressHistory || [];
+    if (hist.length > 1) html += kv('Trend', esc('Path ' + hist[0].path + '% → ' + hist[hist.length - 1].path + '% since ' + fmtDate(hist[0].d)) + sparkline(hist, 'path'));
     html += kv('Documents', esc(p.docs.approved + ' approved of ' + p.docs.generated + ' generated'));
     html += kv('Assets', esc(p.registers.assets + (p.registers.assetsNoOwner ? ', ' + p.registers.assetsNoOwner + ' without an owner' : '')));
     html += kv('Open risks', esc(String(p.registers.openRisks)));
@@ -2012,6 +2123,7 @@ function showModal(opts) {
      switches to it). */
   function refreshInsightViews() {
     renderDashboard();
+    renderDeliveryBoard();
     renderPartnerClientRows();
     renderClientCosts();
     renderModuleMatrix();
@@ -2072,7 +2184,10 @@ function showModal(opts) {
       c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
       c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
       c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
-      if (summary.progress) c.progress = summary.progress;
+      if (summary.progress) {
+        c.progress = summary.progress;
+        c.progressHistory = window.CheckpointLib.mergeProgressHistory(c.progressHistory, summary.progress, new Date().toISOString().slice(0, 10)).history;
+      }
       c.syncError = '';
       /* Next-best-module and readiness trend are both computed HERE,
          from this same sync's own fetched data, then persisted as
@@ -2426,6 +2541,24 @@ function showModal(opts) {
        same .view/.on toggle convention as the client app's own
        App.go(), just flat tabs instead of a sidebar (this console has
        one screen's worth of navigation, not dozens of views). */
+    setDeliveryFilter: function (v) { _deliveryFilter = v || 'all'; renderDeliveryBoard(); },
+    setDeliverySort: function (v) { _deliverySort = v || 'attention'; renderDeliveryBoard(); },
+    /* A plain-English progress note for the client contact, to review,
+       copy and send from the partner's own mailbox. Never sent from here. */
+    partnerStatusNote: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var note = window.CheckpointLib.clientStatusNote(c, todayStr());
+      var v = await showModal({
+        title: 'Status note for ' + c.name,
+        message: 'Review and edit, then copy it into an email' + (c.contactEmail ? ' to ' + c.contactEmail : '') + '. Nothing is sent from here.',
+        fields: [{ id: 'note', label: 'Note', type: 'textarea', value: note }],
+        confirmText: 'Copy'
+      });
+      if (!v) return;
+      if (!navigator.clipboard) { toast('Select the text and copy it manually.'); return; }
+      navigator.clipboard.writeText(v.note).then(function () { toast('Status note copied.'); }, function () { toast('Copy failed: select the text and copy it manually.'); });
+    },
     go: function (id) {
       document.querySelectorAll('.owner-tab').forEach(function (t) {
         var on = t.dataset.ov === id;
@@ -2786,6 +2919,7 @@ function showModal(opts) {
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="OwnerApp.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
+        (function () { var fl = window.CheckpointLib.clientAttentionFlags({ name: c.name, modules: ent ? ent.modules : (c.modules || []), progress: c.progress, progressHistory: c.progressHistory, lastSynced: c.lastSynced }, todayStr()); return fl.length ? '<div class="d-sec"><h4>Needs attention</h4>' + flagList(fl) + '</div>' : ''; })() +
         '<div class="d-sec"><h4>Onboarding progress</h4>' + checklistRows + '</div>' +
         '<div class="d-sec"><h4>Licence</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
@@ -2823,6 +2957,7 @@ function showModal(opts) {
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
         '<button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
         '<button class="btn ghost sm" data-action="OwnerApp.partnerEditClient" data-id="' + esc(c._sp) + '">Edit</button>' +
+        '<button class="btn ghost sm" data-action="OwnerApp.partnerStatusNote" data-id="' + esc(c._sp) + '">Status note</button>' +
         '<button class="btn ghost sm" data-action="OwnerApp.partnerPromptWelcomePack" data-id="' + esc(c._sp) + '">Send welcome pack</button>' +
         (c.rolesConfiguredAt
           ? '<button class="btn ghost sm" data-action="OwnerApp.partnerResetRolesConfigured" data-id="' + esc(c._sp) + '">Roles configured ✓ (undo)</button>'

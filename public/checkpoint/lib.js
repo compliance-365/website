@@ -8293,9 +8293,132 @@
         openRisks: (s.risks || []).filter(function (r) { return r && r.status !== 'Closed'; }).length,
         overdueActions: actions.filter(function (a) { return a && a.status !== 'Done' && a.status !== 'Cancelled' && a.due && today && a.due < today; }).length
       },
-      scope: { statement: String(s.scopeStatement || '').slice(0, 2000) }
+      scope: { statement: String(s.scopeStatement || '').slice(0, 2000) },
+      /* Delivery: what the partner console needs to see where a client is
+         against plan. Counts and dates only. */
+      delivery: s.delivery ? {
+        plan: s.delivery.plan || null,
+        bookings: s.delivery.bookings || {},
+        certs: s.delivery.certs || {},
+        objectives: { total: (s.delivery.objectives || []).length, atRisk: (s.delivery.objectives || []).filter(function (o) { return o && (o.status === 'At risk' || o.status === 'Missed'); }).length },
+        ownersOverdue: s.delivery.ownersOverdue || 0,
+        lastActivity: s.delivery.lastActivity || '',
+        aiUse: s.delivery.aiUse || '',
+        stage1Ready: !!s.delivery.stage1Ready, stage2Ready: !!s.delivery.stage2Ready,
+        auditorOverdue: s.delivery.auditorOverdue || 0
+      } : null
     };
   }
+  /* ============================================================
+     Partner console: delivery across the portfolio
+     ------------------------------------------------------------
+     Each sync's headline numbers are kept (capped) so the console can
+     show a client's trend and the date progress last moved. */
+  function progressHeadline(p) {
+    if (!p || !p.path) return null;
+    var first = function (o) { var k = Object.keys(o || {}); return k.indexOf('iso27001') !== -1 ? o.iso27001 : (k.length ? o[k[0]] : null); };
+    var cl = first(p.clauses), an = first(p.annexA);
+    return {
+      path: p.path.total ? Math.round(p.path.done / p.path.total * 100) : 0,
+      clauses: cl && typeof cl.pct === 'number' ? cl.pct : null,
+      annexA: an && typeof an.pct === 'number' ? an.pct : null
+    };
+  }
+  /* history = [{ d, path, clauses, annexA }], oldest first. Returns
+     { history, changedAt }: a new point only when a headline number
+     moved (or the first sync), at most 26 points. */
+  function mergeProgressHistory(history, snap, today) {
+    var h = (history || []).slice();
+    var head = progressHeadline(snap);
+    if (head) {
+      var last = h[h.length - 1];
+      var same = last && last.path === head.path && last.clauses === head.clauses && last.annexA === head.annexA;
+      if (!same) h.push({ d: today, path: head.path, clauses: head.clauses, annexA: head.annexA });
+    }
+    if (h.length > 26) h = h.slice(h.length - 26);
+    return { history: h, changedAt: h.length ? h[h.length - 1].d : '' };
+  }
+  /* Where a client is: Certified, or the phase of their next step. */
+  function clientStage(p) {
+    var d = p && p.delivery;
+    if (d && d.certs && Object.keys(d.certs).some(function (k) { return d.certs[k] && d.certs[k].issued; })) return 'Certified';
+    if (!p || !p.path) return 'Not started';
+    if (p.path.next) return p.path.next.phase;
+    return p.path.total ? 'Ready to certify' : 'Not started';
+  }
+  /* What needs the partner's attention for one client. c = { name, modules,
+     progress, progressHistory, lastSynced }. Returns [{ level:'red'|'amber'|'info', key, text }]. */
+  function clientAttentionFlags(c, today) {
+    c = c || {};
+    var out = [];
+    var p = c.progress, d = p && p.delivery;
+    var days = function (from) { return from ? daysBetweenDateStr(String(from).slice(0, 10), today) : null; };
+    var stage = clientStage(p);
+    var hist = c.progressHistory || [];
+    var moved = hist.length ? hist[hist.length - 1].d : '';
+    var syncAge = days(c.lastSynced);
+    if (syncAge === null) out.push({ level: 'amber', key: 'nosync', text: 'Never synced' });
+    else if (syncAge > 14) out.push({ level: 'amber', key: 'stale-sync', text: 'Not synced for ' + syncAge + ' days' });
+    if (p && stage !== 'Certified') {
+      var still = days(moved);
+      if (still !== null && still > 14) out.push({ level: still > 30 ? 'red' : 'amber', key: 'stalled', text: 'No progress for ' + still + ' days' });
+      var act = d && days(d.lastActivity);
+      if (act !== null && act > 14) out.push({ level: 'amber', key: 'inactive', text: 'Nobody has worked in Checkpoint for ' + act + ' days' });
+    }
+    if (d && d.plan && d.plan.behind) out.push({ level: d.plan.behind > 3 ? 'red' : 'amber', key: 'behind', text: d.plan.behind + ' step(s) behind plan (week ' + d.plan.week + ')' });
+    if (stage !== 'Certified' && d && d.bookings && d.bookings.stage2 && !d.stage2Ready && -days(d.bookings.stage2) >= 0) {
+      var to = -days(d.bookings.stage2);
+      out.push({ level: to <= 30 ? 'red' : 'amber', key: 'stage2', text: 'Stage 2 booked for ' + d.bookings.stage2 + ' but not yet ready' });
+    }
+    if (stage !== 'Certified' && d && d.bookings && d.bookings.stage1 && !d.stage1Ready && -days(d.bookings.stage1) >= 0 && -days(d.bookings.stage1) <= 30) out.push({ level: 'red', key: 'stage1', text: 'Stage 1 on ' + d.bookings.stage1 + ' and the documented ISMS is not complete' });
+    Object.keys((d && d.certs) || {}).forEach(function (fw) {
+      var ce = d.certs[fw];
+      if (!ce || !ce.issued) return;
+      var exp = ce.expires ? -days(ce.expires) : null;
+      if (exp !== null && exp <= 120 && !ce.booked) out.push({ level: exp <= 60 ? 'red' : 'amber', key: 'expiry-' + fw, text: fw.toUpperCase().replace('ISO', 'ISO ') + ' certificate expires ' + ce.expires + ': recertification not booked' });
+      var nd = ce.nextDue ? -days(ce.nextDue) : null;
+      if (nd !== null && nd < 0) out.push({ level: 'red', key: 'overdue-' + fw, text: (ce.nextAudit || 'Certification audit') + ' overdue' });
+    });
+    if (p && p.registers && p.registers.overdueActions > 5) out.push({ level: 'amber', key: 'actions', text: p.registers.overdueActions + ' overdue actions' });
+    if (d && d.objectives && d.objectives.atRisk) out.push({ level: 'amber', key: 'objectives', text: d.objectives.atRisk + ' objective(s) at risk' });
+    if (d && d.auditorOverdue) out.push({ level: 'red', key: 'auditor', text: 'Auditor access window ended but not removed' });
+    var mods = c.modules || [];
+    if (stage === 'Certified' && d && d.certs && d.certs.iso27001 && d.certs.iso27001.issued && mods.indexOf('iso42001') === -1 && (d.aiUse === 'tools' || d.aiUse === 'builds')) {
+      out.push({ level: 'info', key: 'iso42001', text: 'Certified to ISO 27001 and ' + (d.aiUse === 'builds' ? 'builds AI into its products' : 'uses AI tools') + ': ready for an ISO 42001 conversation' });
+    }
+    return out;
+  }
+  /* A short, plain-English progress note for the client, for the partner
+     to review and send. No upsell, nothing internal. */
+  function clientStatusNote(c, today) {
+    c = c || {};
+    var p = c.progress;
+    var name = c.contactName ? String(c.contactName).split(' ')[0] : 'there';
+    if (!p) return 'Hi ' + name + ',\n\nWe have not yet received progress from Checkpoint. Could someone open Checkpoint this week so we can see where things stand?\n\nKind regards,';
+    var d = p.delivery || {};
+    var stage = clientStage(p);
+    var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var dt = function (iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : (iso || ''); };
+    var lines = ['Hi ' + name + ',', '', 'Here is where ' + (c.name || 'your organisation') + ' is up to with certification.', ''];
+    if (stage === 'Certified') lines.push('You are certified. ' + Object.keys(d.certs || {}).filter(function (k) { return d.certs[k] && d.certs[k].issued; }).map(function (k) { var ce = d.certs[k]; return (ce.nextAudit ? 'The next audit is the ' + ce.nextAudit.toLowerCase() + (ce.nextDue ? ', due by ' + dt(ce.nextDue) : '') : 'The certificate runs until ' + dt(ce.expires)) + '.'; }).join(' '));
+    else lines.push('Progress: ' + p.path.done + ' of ' + p.path.total + ' steps on the path to certification are done.' + (d.plan && d.plan.readyBy ? ' On the current plan you will be ready for Stage 1 by ' + dt(d.plan.readyBy) + '.' : ''));
+    var cl = p.clauses && (p.clauses.iso27001 || p.clauses[Object.keys(p.clauses)[0]]);
+    var an = p.annexA && (p.annexA.iso27001 || p.annexA[Object.keys(p.annexA)[0]]);
+    if (cl || an) lines.push('Management system (Clauses 4-10): ' + (cl ? cl.pct + '%' : 'n/a') + '. Controls (Annex A): ' + (an ? an.implemented + ' of ' + an.applicable + ' in place' : 'n/a') + '.');
+    if (d.bookings && (d.bookings.stage1 || d.bookings.stage2)) lines.push('Audits booked: ' + [d.bookings.stage1 ? 'Stage 1 on ' + dt(d.bookings.stage1) : '', d.bookings.stage2 ? 'Stage 2 on ' + dt(d.bookings.stage2) : ''].filter(Boolean).join(', ') + '.');
+    lines.push('');
+    var todo = [];
+    if (p.path.next && stage !== 'Certified') todo.push(p.path.next.label);
+    if (d.plan && d.plan.behind) todo.push('catch up on ' + d.plan.behind + ' step(s) that are behind plan');
+    if (p.registers && p.registers.overdueActions) todo.push('close the ' + p.registers.overdueActions + ' overdue action(s)');
+    if (d.ownersOverdue) todo.push(d.ownersOverdue + ' person(s) have overdue tasks: they can see them under My tasks');
+    if (d.objectives && d.objectives.atRisk) todo.push('look at the ' + d.objectives.atRisk + ' objective(s) at risk');
+    if (todo.length) { lines.push('Over the next fortnight:'); todo.forEach(function (t) { lines.push('- ' + t.charAt(0).toUpperCase() + t.slice(1)); }); }
+    else lines.push('Nothing is outstanding right now. Keep the scheduled activities going and we will check in again soon.');
+    lines.push('', 'Everything is in Checkpoint, and each person can see their own tasks under My tasks. Happy to talk any of it through.', '', 'Kind regards,');
+    return lines.join('\n');
+  }
+
   /* Parses a stored snapshot defensively: a missing, malformed or
      newer-than-understood value reads as null, never throws. */
   function parseProgressSnapshot(raw) {
@@ -8914,7 +9037,7 @@
 
   return {
     normaliseDateInput: normaliseDateInput,
-    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, clauseReadiness: clauseReadiness, DOCUMENT_IMPLEMENTED_CONTROLS: DOCUMENT_IMPLEMENTED_CONTROLS, controlsImplementedByDocument: controlsImplementedByDocument, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
+    band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, progressHeadline: progressHeadline, mergeProgressHistory: mergeProgressHistory, clientStage: clientStage, clientAttentionFlags: clientAttentionFlags, clientStatusNote: clientStatusNote, clauseReadiness: clauseReadiness, DOCUMENT_IMPLEMENTED_CONTROLS: DOCUMENT_IMPLEMENTED_CONTROLS, controlsImplementedByDocument: controlsImplementedByDocument, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
