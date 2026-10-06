@@ -333,6 +333,7 @@
     <div class="prod">Checkpoint</div>
     <nav class="nav-scroll" aria-label="Main">
       <div class="nav-group">
+        <button class="nav-item" data-v="mytasks">My tasks <span class="n" id="nMyTasks"></span></button>
         <button class="nav-item on" data-v="dash" aria-current="page">Dashboard</button>
         <button class="nav-item" data-v="board">Board view</button>
         <button class="nav-item" data-v="constellation">Cross-framework mapping</button>
@@ -384,6 +385,7 @@
       <details class="nav-group" data-group="assurance">
         <summary class="nav-label">Assurance</summary>
         <button class="nav-item" data-v="certification">Certification <span class="n" id="nCert"></span></button>
+        <button class="nav-item" data-v="auditor">Auditor guide</button>
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="objectives">Objectives register <span class="n" id="nObjectives"></span></button>
@@ -963,6 +965,18 @@
            renderSoaBulkBar(); hidden whenever nothing is selected. -->
       <div class="bulk-bar" id="soaBulkBar" role="region" aria-label="Bulk actions" hidden></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Applicable</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
+    </section>
+
+    <!-- AUDITOR GUIDE -->
+    <section class="view" id="v-auditor">
+      <div class="vhead"><div class="rule"></div><h1>Auditor guide</h1><p>For the certification body's auditor: where each piece of evidence is, in the order a Stage 1 and Stage 2 audit usually works through it. Everything here is read-only.</p></div>
+      <div id="auditorBody"></div>
+    </section>
+
+    <!-- MY TASKS -->
+    <section class="view" id="v-mytasks">
+      <div class="vhead"><div class="rule"></div><h1>My tasks</h1><p>Everything assigned to you in the information security management system, with the one button that does each. Nothing else to learn.</p></div>
+      <div id="myTasksBody"></div>
     </section>
 
     <!-- MANAGEMENT SYSTEM CLAUSES -->
