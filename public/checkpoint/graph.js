@@ -1989,6 +1989,24 @@ window.Graph = (function () {
     return { items: items, errors: errors };
   }
 
+  /* Third-party enterprise applications, for vendor discovery: name and
+     publisher of every non-Microsoft application service principal.
+     Read only. */
+  async function discoverVendorApps() {
+    var sps;
+    try {
+      sps = await gAll("/servicePrincipals?$filter=tags/any(t:t eq 'WindowsAzureActiveDirectoryIntegratedApp')&$select=id,displayName,appOwnerOrganizationId,servicePrincipalType,publisherName,verifiedPublisher&$top=999");
+    } catch (e) {
+      sps = (await gCapped('/servicePrincipals?$select=id,displayName,appOwnerOrganizationId,servicePrincipalType,publisherName,verifiedPublisher,tags&$top=999', 5000)).rows
+        .filter(function (x) { return (x.tags || []).indexOf('WindowsAzureActiveDirectoryIntegratedApp') !== -1; });
+    }
+    return sps.filter(function (x) { return x.servicePrincipalType === 'Application' && MICROSOFT_TENANT_IDS.indexOf(x.appOwnerOrganizationId) === -1; })
+      .map(function (x) {
+        var pub = (x.verifiedPublisher && x.verifiedPublisher.displayName) || x.publisherName || '';
+        return { id: x.id, name: x.displayName || x.id, publisher: /microsoft/i.test(pub) ? '' : pub };
+      });
+  }
+
   async function discoverAiSystems(oauthGrants) {
     var sps = await gAll('/servicePrincipals?$select=id,appId,displayName&$top=999');
     var byId = {};
@@ -2019,7 +2037,7 @@ window.Graph = (function () {
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
-    listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
+    listTenantUsers: listTenantUsers, discoverVendorApps: discoverVendorApps, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop

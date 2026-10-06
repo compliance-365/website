@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.123.0',
+    date: '2026-10-06',
+    entries: [
+      'The registers lead with the register. Risks, actions, vendors, assets and legal requirements now open with a compact row of summary tiles and the table straight after; the heatmap and charts are folded underneath, one click away.',
+      'Needs tidying, on every register: actions without a due date, risks with no controls or no treatment actions, risks whose treatment is finished and need reassessing, vendors with an expired certification or personal information but no data processing agreement, and records with no owner. Click one to see exactly those records.',
+      'Owners come from Microsoft 365. Every owner field offers your directory as you type, and Match owners links existing free-text owners (for example K. Patel) to the right person in one reviewed step, so owner reminders and My tasks reach them.',
+      'Risk register: each risk shows its treatment progress (for example 2 of 3 actions done, next due 14 Oct), prompts you to reassess the residual risk once its last action is completed, and can be marked Reviewed, no change in one click. The risk panel shows the findings, vendors and assets connected to it.',
+      'Actions register: change the owner, due date and status from the row, group the list by owner or by risk, and upload the evidence file when you complete an action (it is saved to Documents, Evidence).',
+      'Vendor register: Find vendors in Microsoft 365 proposes the suppliers behind the third-party applications connected to your tenant. Four tiering questions set a vendor\u2019s criticality; the next review date follows its criticality and is brought forward to its certification expiry; the contract and data processing agreement are recorded; and Critical and High vendors are linked to the third-party business risk.'
+    ]
+  },
+  {
     version: '1.122.0',
     date: '2026-10-06',
     entries: [

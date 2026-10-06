@@ -5529,6 +5529,163 @@
   }
 
   /* ============================================================
+     Register fundamentals
+     ------------------------------------------------------------ */
+  var DONE_ACTION = function (a) { return a && (a.status === 'Done' || a.status === 'Cancelled'); };
+  /* A risk's treatment: how many of its actions are finished, the next
+     open due date, and how many are overdue. */
+  function riskTreatmentProgress(r, actions, today) {
+    var mine = (actions || []).filter(function (a) { return a && ((r.actions || []).indexOf(a.id) !== -1 || a.risk === r.id); });
+    var open = mine.filter(function (a) { return !DONE_ACTION(a); });
+    var dues = open.map(function (a) { return a.due; }).filter(Boolean).sort();
+    return {
+      total: mine.length, done: mine.length - open.length, open: open.length,
+      nextDue: dues[0] || '', overdue: open.filter(function (a) { return a.due && a.due < today; }).length
+    };
+  }
+  /* Every treatment action is finished but the residual is still the
+     arithmetic estimate, or was assessed before the last one closed:
+     time to reassess. */
+  function riskNeedsReassessment(r, actions, updates) {
+    if (!r || r.status === 'Closed' || r.type === 'Opportunity') return false;
+    var mine = (actions || []).filter(function (a) { return a && ((r.actions || []).indexOf(a.id) !== -1 || a.risk === r.id); });
+    if (!mine.length || !mine.every(DONE_ACTION)) return false;
+    if (typeof r.resL !== 'number' || typeof r.resI !== 'number' || !r.resDate) return true;
+    var ids = mine.map(function (a) { return a.id; });
+    var lastClosed = (updates || []).filter(function (u) { return u && ids.indexOf(u.action) !== -1 && (u.status === 'Done' || u.status === 'Cancelled'); })
+      .map(function (u) { return String(u.date || '').slice(0, 10); }).sort().pop() || '';
+    return !!lastClosed && lastClosed > r.resDate;
+  }
+
+  /* What needs tidying in a register, each item with the filter that
+     shows it. kind: 'risks' | 'actions' | 'vendors' | 'assets' | 'legal'.
+     ctx = { actions, today, users } (users optional: owners not found
+     in the Microsoft 365 directory are listed when it is given). */
+  function registerTidy(kind, rows, ctx) {
+    ctx = ctx || {};
+    var today = ctx.today || '';
+    var live, out = [];
+    var add = function (key, list, one, many) { if (list.length) out.push({ key: key, n: list.length, label: list.length === 1 ? one : list.length + ' ' + many, ids: list.map(function (x) { return x.id; }) }); };
+    var noOwner = function (x) { return !String(x.owner || '').trim(); };
+    var unknownOwner = function (x) { return ctx.users && String(x.owner || '').trim() && !x.ownerEmail && !matchOwnerToUser(x.owner, ctx.users); };
+    if (kind === 'risks') {
+      live = (rows || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+      add('noOwner', live.filter(noOwner), '1 risk without an owner', 'risks without an owner');
+      add('noControls', live.filter(function (r) { return !(r.controls || []).length; }), '1 risk without linked controls', 'risks without linked controls');
+      add('noActions', live.filter(function (r) { return (r.treat || 'Treat') === 'Treat' && !riskTreatmentProgress(r, ctx.actions, today).total; }), '1 risk being treated with no actions', 'risks being treated with no actions');
+      add('reassess', live.filter(function (r) { return riskNeedsReassessment(r, ctx.actions, ctx.updates); }), '1 risk to reassess (treatment finished)', 'risks to reassess (treatment finished)');
+      add('unknownOwner', live.filter(unknownOwner), '1 owner to link to Microsoft 365', 'owners to link to Microsoft 365');
+    } else if (kind === 'actions') {
+      live = (rows || []).filter(function (a) { return a && !DONE_ACTION(a); });
+      add('noDue', live.filter(function (a) { return !a.due; }), '1 action without a due date', 'actions without a due date');
+      add('noOwner', live.filter(noOwner), '1 action without an owner', 'actions without an owner');
+      add('unlinked', live.filter(function (a) { return !a.risk && !a.control; }), '1 action not linked to a risk or control', 'actions not linked to a risk or control');
+      add('unknownOwner', live.filter(unknownOwner), '1 owner to link to Microsoft 365', 'owners to link to Microsoft 365');
+    } else if (kind === 'vendors') {
+      live = (rows || []).filter(Boolean);
+      add('noOwner', live.filter(noOwner), '1 vendor without an owner', 'vendors without an owner');
+      add('noReview', live.filter(function (v) { return !v.nextReviewDue; }), '1 vendor without a review date', 'vendors without a review date');
+      add('certExpired', live.filter(function (v) { return v.certExpiryDate && v.certExpiryDate < today; }), '1 vendor whose certification has expired', 'vendors whose certification has expired');
+      add('noDpa', live.filter(function (v) { return vendorHandlesPersonalData(v) && !v.dpa; }), '1 vendor with personal information and no data processing agreement', 'vendors with personal information and no data processing agreement');
+      add('unknownOwner', live.filter(unknownOwner), '1 owner to link to Microsoft 365', 'owners to link to Microsoft 365');
+    } else if (kind === 'assets') {
+      live = (rows || []).filter(function (a) { return a && a.status !== 'Retired' && a.status !== 'Missing'; });
+      add('noOwner', live.filter(noOwner), '1 asset without an owner', 'assets without an owner');
+      add('noClass', live.filter(function (a) { return !a.classification; }), '1 asset not classified', 'assets not classified');
+    } else if (kind === 'legal') {
+      live = (rows || []).filter(function (l) { return l && l.applies !== 'No'; });
+      add('noOwner', live.filter(noOwner), '1 requirement without an owner', 'requirements without an owner');
+      add('noControls', live.filter(function (l) { return !(l.controls || []).length; }), '1 requirement not linked to controls', 'requirements not linked to controls');
+    }
+    return out;
+  }
+
+  /* Vendors. */
+  function vendorHandlesPersonalData(v) {
+    if (!v) return false;
+    if (v.tier && v.tier.personal) return true;
+    return (v.dataCategories || []).some(function (c) { return /personal|PII|health|employee|customer/i.test(c); });
+  }
+  /* Four tiering questions set the criticality: production access with
+     sensitive data, or three of the four, is Critical; production access
+     or two is High; one is Medium; none is Low. */
+  function vendorCriticalityFromTier(t) {
+    t = t || {};
+    var n = ['prod', 'personal', 'confidential', 'hard'].filter(function (k) { return !!t[k]; }).length;
+    if ((t.prod && (t.personal || t.confidential)) || n >= 3) return 'Critical';
+    if (t.prod || n === 2) return 'High';
+    return n === 1 ? 'Medium' : 'Low';
+  }
+  var VENDOR_REVIEW_MONTHS = { Critical: 12, High: 12, Medium: 24, Low: 36 };
+  /* When a vendor is next due for review: its cadence from the last
+     review (or today), brought forward to the certification or report
+     expiry when that comes first, since an expired report is the moment
+     the assurance runs out. */
+  function vendorNextReview(v, today) {
+    var months = VENDOR_REVIEW_MONTHS[(v && v.criticality) || 'Medium'] || 24;
+    var from = (v && v.lastReviewed) || today;
+    var due = addMonthsIso(String(from).slice(0, 10), months);
+    if (v && v.certExpiryDate && v.certExpiryDate < due) due = v.certExpiryDate;
+    return due;
+  }
+  function normaliseVendorName(n) {
+    return String(n || '').toLowerCase().replace(/\b(inc|llc|ltd|pty|limited|corp|corporation|co|gmbh|plc)\b\.?/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  /* Third-party applications in the tenant as proposed vendors, one per
+     publisher. apps = [{ id, name, publisher }]. Skips any already in
+     the register (by vendor or app name) or dismissed. */
+  function vendorCandidates(apps, vendors, dismissed) {
+    var known = {};
+    (vendors || []).forEach(function (v) { known[normaliseVendorName(v.name)] = true; (v.apps || []).forEach(function (a) { known[normaliseVendorName(a)] = true; }); });
+    var gone = {};
+    (dismissed || []).forEach(function (d) { gone[normaliseVendorName(d)] = true; });
+    /* "Zoom" and "Zoom Video" are the same supplier: a whole-word prefix
+       either way counts as known. */
+    var knownKeys = Object.keys(known);
+    var isKnown = function (k) { return !!k && (known[k] || knownKeys.some(function (n) { return n.indexOf(k + ' ') === 0 || k.indexOf(n + ' ') === 0; })); };
+    var byPub = {}, order = [];
+    (apps || []).forEach(function (a) {
+      if (!a || !a.name) return;
+      var vendor = a.publisher || a.name;
+      var k = normaliseVendorName(vendor);
+      if (!k || gone[k] || isKnown(k) || isKnown(normaliseVendorName(a.name))) return;
+      if (!byPub[k]) { byPub[k] = { key: k, name: vendor, apps: [] }; order.push(k); }
+      if (byPub[k].apps.indexOf(a.name) === -1) byPub[k].apps.push(a.name);
+    });
+    return order.map(function (k) { return byPub[k]; }).sort(function (a, b) { return b.apps.length - a.apps.length || a.name.localeCompare(b.name); });
+  }
+
+  /* Owners: who each free-text owner is in the directory. Returns
+     { matched: [{ owner, user }], unmatched: [owner] } over the distinct
+     owners given. */
+  function matchOwners(owners, users) {
+    var seen = {}, matched = [], unmatched = [];
+    (owners || []).forEach(function (o) {
+      var k = String(o || '').trim();
+      if (!k || seen[k.toLowerCase()]) return;
+      seen[k.toLowerCase()] = true;
+      var u = matchOwnerToUser(k, users) || fuzzyOwnerMatch(k, users);
+      if (u) matched.push({ owner: k, user: u }); else unmatched.push(k);
+    });
+    return { matched: matched, unmatched: unmatched };
+  }
+  /* "K. Patel" or "Kim P" against display names: an initial plus the
+     surname, only when exactly one person fits. */
+  function fuzzyOwnerMatch(owner, users) {
+    var parts = String(owner).toLowerCase().replace(/[.,]/g, ' ').split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return null;
+    var first = parts[0], last = parts[parts.length - 1];
+    var hits = (users || []).filter(function (u) {
+      var n = String(u.displayName || u.name || '').toLowerCase().split(/\s+/).filter(Boolean);
+      if (n.length < 2) return false;
+      var uf = n[0], ul = n[n.length - 1];
+      return ul === last && (uf === first || (first.length === 1 && uf.charAt(0) === first)) ||
+        uf === first && last.length === 1 && ul.charAt(0) === last;
+    });
+    return hits.length === 1 ? hits[0] : null;
+  }
+
+  /* ============================================================
      Posture scan presentation
      ------------------------------------------------------------ */
   /* The one-line result for a check row: the note's first clause, cut
@@ -9297,7 +9454,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
-    resolvableFindings: resolvableFindings, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,
+    resolvableFindings: resolvableFindings, riskTreatmentProgress: riskTreatmentProgress, riskNeedsReassessment: riskNeedsReassessment, registerTidy: registerTidy, vendorHandlesPersonalData: vendorHandlesPersonalData, vendorCriticalityFromTier: vendorCriticalityFromTier, VENDOR_REVIEW_MONTHS: VENDOR_REVIEW_MONTHS, vendorNextReview: vendorNextReview, normaliseVendorName: normaliseVendorName, vendorCandidates: vendorCandidates, matchOwners: matchOwners, fuzzyOwnerMatch: fuzzyOwnerMatch, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,
     isRetryableGraphStatus: isRetryableGraphStatus, graphRetryDelayMs: graphRetryDelayMs,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

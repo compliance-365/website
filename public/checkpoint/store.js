@@ -2498,7 +2498,13 @@ window.SpStore = (function () {
       { name: 'QuestionnaireStatus', text: {} }, { name: 'QuestionnaireSentDate', text: {} },
       { name: 'QuestionnaireAnswers', text: { allowMultipleLines: true } }, { name: 'QuestionnaireReceivedDate', text: {} },
       { name: 'CalRef', text: {} }, { name: 'PublicListed', boolean: {} },
-      { name: 'DataCategories', text: {} }, { name: 'CertExpiryDate', text: {} }
+      { name: 'DataCategories', text: {} }, { name: 'CertExpiryDate', text: {} },
+      /* Tiering answers (JSON: prod, personal, confidential, hard) that
+         set the criticality; whether a contract with security terms and
+         a data processing agreement are in place; and the Microsoft 365
+         applications this vendor supplies (from discovery). */
+      { name: 'Tier', text: {} }, { name: 'ContractInPlace', boolean: {} }, { name: 'DpaInPlace', boolean: {} },
+      { name: 'Apps', text: { allowMultipleLines: true } }
     ],
     /* AI Governance (ISO 42001) — only shown/populated while iso42001 is
        entitled (app.js gates the nav item, the register view, and the
@@ -2978,7 +2984,7 @@ window.SpStore = (function () {
        provisioned before either existed has a Vendors list missing
        them, same "Field not recognized" failure class as the others in
        this map. */
-    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate'],
+    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate', 'Tier', 'ContractInPlace', 'DpaInPlace', 'Apps'],
     /* Requirements added with the clause requirement checklists. */
     Clauses: ['Requirements'],
     /* Results added with in-app internal audits: each workpack line's
@@ -3151,6 +3157,7 @@ window.SpStore = (function () {
   }
 
   function csv(a) { return (a || []).join(','); }
+  function parseTier(t) { try { var o = JSON.parse(t || ''); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } }
   function uncsv(s) { return s ? String(s).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; }
   /* Risk treatment terminology moved from Mitigate/Accept/Transfer/Avoid
      to the ISO 27005 "4 Ts" (Treat/Tolerate/Transfer/Terminate) — this
@@ -3419,7 +3426,8 @@ window.SpStore = (function () {
             questionnaireStatus: f.QuestionnaireStatus || 'Not sent', questionnaireSentDate: f.QuestionnaireSentDate || '',
             questionnaireAnswers: questionnaireAnswers, questionnaireReceivedDate: f.QuestionnaireReceivedDate || '',
             calRef: f.CalRef || '', publicListed: !!f.PublicListed, dataCategories: uncsv(f.DataCategories),
-            certExpiryDate: f.CertExpiryDate || ''
+            certExpiryDate: f.CertExpiryDate || '', tier: parseTier(f.Tier),
+            contract: !!f.ContractInPlace, dpa: !!f.DpaInPlace, apps: uncsv(f.Apps)
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         aiSystems: aiItems.map(function (i) {
@@ -3614,7 +3622,8 @@ window.SpStore = (function () {
         QuestionnaireStatus: v.questionnaireStatus || 'Not sent', QuestionnaireSentDate: v.questionnaireSentDate || '',
         QuestionnaireAnswers: JSON.stringify(v.questionnaireAnswers || {}), QuestionnaireReceivedDate: v.questionnaireReceivedDate || '',
         CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories),
-        CertExpiryDate: v.certExpiryDate || ''
+        CertExpiryDate: v.certExpiryDate || '', Tier: v.tier ? JSON.stringify(v.tier) : '',
+        ContractInPlace: !!v.contract, DpaInPlace: !!v.dpa, Apps: csv(v.apps || [])
       });
       S.vendors.push(v);
     },
@@ -3627,7 +3636,8 @@ window.SpStore = (function () {
         QuestionnaireSentDate: v.questionnaireSentDate || '',
         QuestionnaireAnswers: JSON.stringify(v.questionnaireAnswers || {}), QuestionnaireReceivedDate: v.questionnaireReceivedDate || '',
         CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories),
-        CertExpiryDate: v.certExpiryDate || ''
+        CertExpiryDate: v.certExpiryDate || '', Tier: v.tier ? JSON.stringify(v.tier) : '',
+        ContractInPlace: !!v.contract, DpaInPlace: !!v.dpa, Apps: csv(v.apps || [])
       });
     },
     addAiSystem: async function (a) {

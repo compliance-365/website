@@ -1639,3 +1639,30 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
   .drift-row{flex-direction:column;gap:2px}
   .drift-row .drift-move{white-space:normal}
 }
+
+/* ===== Registers: table first ===== */
+.reg-strip{margin-bottom:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.reg-strip .kpi{padding:12px 14px}
+.reg-strip .kpi b{font-size:var(--fs-4,24px)}
+.reg-strip .kpi span{margin-top:3px}
+.reg-strip .kpi .sub{margin-top:3px}
+.reg-strip .kpi-meter{padding-top:8px}
+.reg-tidy{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 14px;font-size:var(--fs-1)}
+.reg-tidy-h{font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:var(--warn);font-weight:700;margin-right:4px}
+.tidy-item{font:inherit;font-size:var(--fs-1);padding:4px 10px;border-radius:99px;border:1px solid rgba(224,138,110,.45);background:none;color:var(--paper-dim);cursor:pointer}
+.tidy-item:hover,.tidy-item:focus-visible{color:var(--paper);border-color:var(--warn)}
+.tidy-item.on{background:var(--warn);color:var(--on-accent,#111);border-color:var(--warn)}
+.reg-charts{margin-top:18px}
+.reg-charts > summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:2px}
+.reg-charts > summary::-webkit-details-marker{display:none}
+.reg-charts > summary h3{margin:0}
+.reg-charts > summary h3::after{content:' \25BE';color:var(--paper-faint)}
+.reg-charts[open] > summary{margin-bottom:14px}
+.treat-cell{display:flex;flex-direction:column;gap:3px;min-width:110px;font-size:var(--fs-1)}
+.treat-bar{display:block;height:4px;border-radius:3px;background:rgba(var(--paper-rgb),.12);overflow:hidden}
+.treat-bar b{display:block;height:100%;background:var(--pass)}
+.inline-edit{width:100%;min-width:0;max-width:130px;font-size:var(--fs-1);padding:4px 5px}
+select.inline-edit{max-width:112px}
+.grp-row td{background:rgba(var(--paper-rgb),.04);padding-top:12px;font-size:var(--fs-2)}
+.vtier{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.vtier label{display:flex;gap:8px;align-items:center}
