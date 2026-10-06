@@ -7709,6 +7709,111 @@
       '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365. You receive this because you are named as an owner.</p></div>';
   }
 
+  /* ============================================================
+     Certification body application
+     ------------------------------------------------------------
+     The answers a certification body's application form asks for
+     (BSI PF142 and its equivalents), drawn from what the ISMS already
+     records, so the application matches the ISMS the auditor will see.
+     The ISO/IEC 27006-1 complexity factors set the audit time; each is
+     rated from the organisation's own data with the reason, never
+     rounded up "to be safe" (that only buys audit days) or down (the
+     body re-rates at Stage 1 and re-quotes).
+     d = { profile:{org* answers}, vendors, legal, audits, reviews, onboardedDate,
+           readyDate, today, consultant }. */
+  function certApplicationAnswers(d) {
+    d = d || {};
+    var p = d.profile || {}, today = d.today;
+    var txt = function (k) { return String(p[k] || '').trim(); };
+    var services = txt('orgServices').split(/\n|;|,(?![^(]*\))/).map(function (x) { return x.trim(); }).filter(Boolean);
+    var software = /software|saas|platform|app|product/i.test(txt('orgServices') + ' ' + txt('orgScopeStatement'));
+    var critical = (d.vendors || []).filter(function (v) { return v && (v.criticality === 'Critical' || v.criticality === 'High'); });
+    var within = function (dt, days) { return dt && today && daysBetweenDateStr(String(dt).slice(0, 10), today) <= days; };
+    var certified = function (v) { return /27001|soc ?2|iso|csa star|irap/i.test(v.certifications || ''); };
+    var reviewed = function (v) { return within(v.lastReviewed, 365); };
+    var applying = (d.legal || []).filter(function (l) { return l && l.applies === 'Yes'; });
+    var ageDays = d.onboardedDate && today ? daysBetweenDateStr(String(d.onboardedDate).slice(0, 10), today) : 0;
+    var regulatedIndustry = /bank|insur|financ|health|hospital|defen[cs]e|government|energy|utilit|telecom|critical infrastructure/i.test(txt('orgIndustry'));
+    var availability = p.orgCustomerDemand === 'contract' || (software && p.orgDevelops && p.orgDevelops !== 'no') ? 2 : 1;
+
+    var f = function (factor, level, options, why) { return { factor: factor, level: level, answer: options[level - 1], why: why }; };
+    var factors = [
+      f('Complexity of processes', services.length > 4 ? 2 : 1,
+        ['Standard processes with standard and repetitive tasks, few products or services', 'Standard but non-repetitive processes, with high number of products or services', 'Complex processes, high number of products and services'],
+        services.length ? services.length + ' product or service line(s) in scope' + (services.length > 4 ? '' : ': few products or services') : 'Products and services not yet recorded in the scope & context answers'),
+      f('Type of business', regulatedIndustry ? 3 : (p.orgCustomerDemand === 'contract' || p.orgPersonalData === 'sensitive' || applying.length) ? 2 : 1,
+        ['Non-critical / non-regulated', 'Critical business customers / some regulation', 'Critical business operation / highly regulated'],
+        regulatedIndustry ? 'The organisation itself operates in a highly regulated sector' : (p.orgCustomerDemand === 'contract' || applying.length) ? 'Customers require security in contracts, or legal requirements apply, but the organisation is not itself a regulated operator' : 'No sector regulation or contractual security requirements recorded'),
+      f('Information confidentiality', p.orgPersonalData === 'sensitive' ? 3 : p.orgPersonalData === 'customers' ? 2 : 1,
+        ['Only little sensitive or confidential information or few critical assets', 'Some sensitive / confidential information or some critical assets', 'Higher amount of sensitive or confidential information or many critical assets'],
+        p.orgPersonalData === 'sensitive' ? 'Sensitive personal information (health, financial) is held' : p.orgPersonalData === 'customers' ? 'Personal information about customers or the public is held, not sensitive categories' : 'Personal information only about staff'),
+      f('Virtual organisation', p.orgWorkModel === 'remote' ? 1 : p.orgWorkModel === 'hybrid' ? 2 : 2,
+        ['No employees assigned to an office, fully cloud-based, third parties manage employee PII and assets', 'Partially cloud-based, or a shared workspace with minimal infrastructure', 'Assets set up and managed by the organisation, or employee PII managed in-house'],
+        p.orgWorkModel === 'remote' ? 'Fully remote and cloud-based' : 'People work from an office at least part of the time'),
+      f('Previous knowledge of the organisation', 3,
+        ['Certified with this body, same scope / integrated management system', 'Certified with this body, combined management system', 'No certification associated with the ISMS scope'],
+        d.onboardedDate ? 'ISMS operating since ' + String(d.onboardedDate).slice(0, 10) + ' (' + Math.round(ageDays / 30) + ' months)' : 'First certification'),
+      f('IT infrastructure complexity', p.orgCloud === 'iaas' ? 2 : 1,
+        ['Few or highly standardised IT platforms, servers, operating systems, databases, networks', 'Several different IT platforms, servers, operating systems, databases, networks', 'Many different IT platforms, servers, operating systems, databases, networks'],
+        p.orgCloud === 'iaas' ? 'Runs its own servers or databases in a cloud platform' : 'Managed cloud and SaaS services only: no servers, operating systems or networks of its own to run'),
+      f('Availability requirements', availability,
+        ['Low availability requirements', 'Higher availability requirements (disruption of business)', 'High availability requirements (non-stop operation, 24 x 7 contracts)'],
+        availability === 2 ? 'Customers rely on the service; no contracted 24 x 7 availability recorded' : 'No customer-facing service availability requirement recorded'),
+      f('Development', !p.orgDevelops || p.orgDevelops === 'no' ? 1 : software ? 3 : 2,
+        ['No in-house system / application development', 'Some in-house or outsourced development for some important business purposes', 'Extensive in-house or outsourced development for important business purposes'],
+        !p.orgDevelops || p.orgDevelops === 'no' ? 'No software development' : software ? 'Software is the product: development is core to the business' : 'Some development supports the business'),
+      (function () {
+        if (!(d.vendors || []).length) return f('Outsourcing and third parties', 3,
+          ['Well-defined, managed and monitored outsourcing; outsourcers have a certified ISMS', 'Several partly managed outsourcing arrangements', 'High dependency, unknown extent, or unmanaged outsourcing'],
+          'No suppliers recorded in the supplier register yet: record them before applying, or this reads as unknown');
+        var bad = critical.filter(function (v) { return !(reviewed(v) && certified(v)); });
+        var lvl = !bad.length ? 1 : bad.length < critical.length ? 2 : 2;
+        return f('Outsourcing and third parties', lvl,
+          ['Well-defined, managed and monitored outsourcing; outsourcers have a certified ISMS', 'Several partly managed outsourcing arrangements', 'High dependency, unknown extent, or unmanaged outsourcing'],
+          !bad.length ? 'Every critical or high supplier is reviewed within 12 months and holds ISO 27001, SOC 2 or similar' : bad.length + ' critical or high supplier(s) not yet reviewed or without a recorded certification: ' + bad.map(function (v) { return v.name; }).join(', '));
+      })(),
+      f('Disaster recovery sites', availability > 1 ? 2 : 1,
+        ['Low availability requirements and no or one alternative DR site', 'Medium or high availability requirements and no or one alternative DR site', 'High availability, several DR sites or data centres'],
+        'Recovery relies on the cloud providers’ redundancy and backups; no DR sites of its own')
+    ];
+
+    var vendorsLine = (d.vendors || []).map(function (v) { return v.name + (v.service ? ' (' + v.service + ')' : '') + (v.certifications ? ', ' + v.certifications : ''); }).join('; ');
+    var completedAudit = (d.audits || []).some(function (a) { return a.status === 'Completed' && within(a.completed, 365); });
+    var review = (d.reviews || []).some(function (r) { return r.decisions && within(r.date, 365); });
+    var answers = [
+      { q: 'Company name to appear on the certificate', a: txt('orgLegalName'), src: 'Scope & context: legal name' },
+      { q: 'Proposed scope statement', a: txt('orgScopeStatement'), src: 'Scope & context: scope statement (also the ISMS Scope document)' },
+      { q: 'People in the scope of certification', a: txt('orgPeople'), src: 'Scope & context: people in scope. Count everyone who does work within the scope, including contractors' },
+      { q: 'Locations in scope', a: txt('orgLocations'), src: 'Scope & context: locations in scope. List the head office even when staff work remotely' },
+      { q: 'Outsourced activities and suppliers', a: vendorsLine, src: 'Supplier register' },
+      { q: 'Specific legal or regulatory requirements applicable to the scope?', a: applying.length ? 'Yes: ' + applying.map(function (l) { return l.title; }).join('; ') : 'No applicable requirement recorded', src: 'Legal and regulatory register' },
+      { q: 'How long have you been operating your ISMS?', a: d.onboardedDate ? 'Since ' + String(d.onboardedDate).slice(0, 10) : 'Implementation under way', src: 'Checkpoint set-up date' },
+      { q: 'When are you planning the certification audit?', a: d.readyDate ? 'Stage 1 from ' + d.readyDate + ', Stage 2 once the internal audit and management review are complete' : '', src: 'Your path to certification (dated plan)' },
+      { q: 'Has a consultancy been used?', a: d.consultant ? 'Yes: ' + d.consultant : '', src: 'Who supports the ISMS' }
+    ];
+    var warnings = [];
+    answers.forEach(function (x) { if (!x.a) warnings.push('No answer recorded for: ' + x.q); });
+    if (!applying.length) warnings.push('No legal or regulatory requirement is recorded as applying. Most organisations holding personal information have at least privacy law and customer contracts: check the legal register before answering "No".');
+    if (!completedAudit || !review) warnings.push('Stage 2 needs a completed internal audit' + (review ? '' : ' and management review') + ' first: book Stage 2 after ' + (!completedAudit && !review ? 'both are' : 'it is') + ' done.');
+    factors.forEach(function (x) { if (/not yet|No suppliers|not yet recorded/i.test(x.why)) warnings.push(x.factor + ': ' + x.why + '.'); });
+    return { answers: answers, factors: factors, warnings: warnings };
+  }
+
+  /* Keeping the certification scope proportionate: what to look at
+     before submitting the scope statement. Pure advice, from the
+     profile, so every client gets the same discipline. */
+  function scopeAdvice(profile) {
+    var p = profile || {}, out = [];
+    var stmt = String(p.orgScopeStatement || '');
+    if (/business operations|all (activities|operations)|entire|whole (company|organisation)/i.test(stmt)) out.push('The scope statement includes general business operations. Scope it to the products and services customers ask about; supporting functions stay in the ISMS as interfaces, not as certified activities.');
+    if ((stmt.match(/,/g) || []).length > 5) out.push('The scope statement lists many activities. A certificate scope is one sentence about what you deliver; detail belongs in the ISMS Scope document.');
+    if (p.orgDevelops === 'outsourced') out.push('A development company you engage is a supplier, controlled through supplier management (A.5.19-A.5.22, A.8.30); its staff are not counted. Individual contractors who work as part of your own team are counted as people in scope.');
+    out.push('Count only people who do work within the scope. Directors and contractors who work on the product are in; a bookkeeper or a marketing contractor with no access to customer data can be left out.');
+    out.push('Name the head office as the one location. Remote staff are covered by the remote working controls, not as separate sites.');
+    out.push('Rate each complexity factor on the facts. Rounding up "to be safe" only adds audit days; the body re-rates at Stage 1 either way.');
+    return out;
+  }
+
   /* Opportunities (Clause 6.1.1) drawn from the scope & context
      answers, the counterpart of CONTEXT_RISKS. */
   var CONTEXT_OPPORTUNITIES = [
@@ -8822,7 +8927,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,

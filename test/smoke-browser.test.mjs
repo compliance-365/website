@@ -405,6 +405,26 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* 1.119.0: certification application answers open from the
+     Certification page and include the 27006 complexity factors. */
+  test('certification application answers', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    await page.evaluate(() => window.App.go('certification'));
+    const popup = page.waitForEvent('popup', { timeout: 10000 });
+    await page.locator('button[data-action="App.certApplication"]').first().click();
+    const rpt = await popup;
+    await rpt.waitForFunction(() => /Complexity factors/.test(document.documentElement.innerHTML), null, { timeout: 10000 });
+    const html = await rpt.content();
+    assert.match(html, /Keeping the scope proportionate/);
+    assert.match(html, /IT infrastructure complexity/);
+    assert.deepEqual(errors, [], 'no console errors');
+    await context.close();
+  });
+
   /* The operating rhythm end to end: schedule the recommended recurring
      activities, complete one with its evidence, and see the control it
      covers verified and Implemented. */
