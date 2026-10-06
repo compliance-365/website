@@ -425,6 +425,52 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await context.close();
   });
 
+  /* 1.120.0: My tasks (demo "viewing as"), the booking gate refusing
+     Stage 2, auditor access and the auditor's landing, and action
+     statuses that read Completed. */
+  test('My tasks, booking gate, auditor access and action statuses', async () => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#kpiRow .kpi', { timeout: 10000 });
+    const modal = page.locator('#modalBox');
+
+    await page.evaluate(() => window.App.go('mytasks'));
+    await page.waitForSelector('#myTasksBody', { timeout: 5000 });
+    const picker = page.locator('#myTasksBody select[data-change-action="App.setMyTasksAs"]');
+    await picker.waitFor({ timeout: 5000 });
+    await picker.selectOption({ index: 1 });
+    await page.waitForFunction(() => /task/.test(document.getElementById('myTasksBody').innerText) && document.querySelectorAll('#myTasksBody .btn').length > 0, null, { timeout: 5000 });
+    assert.match(await page.locator('#myTasksBody').innerText(), /Progress towards certification/i);
+
+    await page.evaluate(() => { window.App.bookCertificationAudit('iso27001'); });
+    await modal.getByLabel('Stage 2 date', { exact: true }).fill('2027-03-01', { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Book', exact: true }).click();
+    await page.waitForFunction(() => /Stage 2 cannot be booked yet/.test(document.getElementById('modalBox').innerText), null, { timeout: 5000 });
+    await modal.getByRole('button', { name: /Cancel/ }).click();
+
+    await page.evaluate(() => window.App.go('auditor'));
+    await page.evaluate(() => { window.App.grantAuditorAccess(); });
+    await modal.getByLabel('Auditor name', { exact: true }).fill('Alex Auditor', { timeout: 5000 });
+    await modal.getByLabel('Auditor email', { exact: true }).fill('alex@bsi.example');
+    await modal.getByRole('button', { name: 'Record access', exact: true }).click();
+    await page.waitForFunction(() => /Checkpoint Viewers group/.test(document.getElementById('modalBox').innerText), null, { timeout: 5000 });
+    await modal.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.waitForFunction(() => /alex@bsi\.example/.test(document.getElementById('auditorBody').innerText), null, { timeout: 5000 });
+
+    await page.evaluate(() => window.App.go('actions'));
+    await page.locator('#actFilters button[data-id="Done"]').click();
+    assert.equal((await page.locator('#actFilters button[data-id="Done"]').innerText()).trim().toLowerCase(), 'completed');
+
+    const page2 = await context.newPage();
+    await page2.goto(baseUrl + '/checkpoint/index.html?demo=1&auditor=alex@bsi.example', { waitUntil: 'networkidle' });
+    await page2.waitForFunction(() => document.getElementById('v-auditor').classList.contains('on') && /Welcome, Alex Auditor/.test(document.getElementById('auditorBody').innerText), null, { timeout: 10000 });
+
+    assert.deepEqual(errors, [], 'no console errors');
+    await context.close();
+  });
+
   /* The operating rhythm end to end: schedule the recommended recurring
      activities, complete one with its evidence, and see the control it
      covers verified and Implemented. */

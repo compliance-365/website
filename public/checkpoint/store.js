@@ -978,6 +978,10 @@ window.DEFAULT_SETTINGS = {
   ownerDigestLastSent: '',
   /* Evidence requested from control owners: JSON { 'fw|code': { owner, email, date } }. */
   evidenceRequests: '',
+  /* Certification auditors given read-only access: JSON [{ name, email, body, from, to, added, removed }].
+     Access itself is the guest's membership of Checkpoint Viewers; this
+     records the window so Checkpoint can guide them and remind you to remove it. */
+  auditorAccess: '',
   /* Microsoft Teams notifications, sent by the scheduled monitor (azure/
      PostureMonitor) through a Teams Workflows webhook. teamsWebhookUrl is
      the webhook itself; teamsAlerts/teamsDigest choose what is posted.

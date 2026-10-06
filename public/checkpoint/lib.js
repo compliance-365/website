@@ -7799,6 +7799,60 @@
     return { answers: answers, factors: factors, warnings: warnings };
   }
 
+  /* Whether the organisation is ready to book Stage 1 and Stage 2.
+     Stage 1 reviews the documented ISMS; Stage 2 audits it operating, so
+     it needs a completed internal audit of Clauses 4-10 and a
+     management review after it, with no major nonconformity open.
+     d = { scopeStatement, md:[mandatoryDocumentation rows], risks, soa:{ applicable, notStarted, unjustified },
+           audits, reviews, actions, onboardedDate, today }.
+     Returns { stage1:{ ok, missing:[] }, stage2:{ ok, missing:[] }, advice:[] }. */
+  function certificationBookingReadiness(d) {
+    d = d || {};
+    var today = d.today;
+    var s1 = [], s2 = [], advice = [];
+    if (!String(d.scopeStatement || '').trim()) s1.push('the ISMS scope statement (scope & context questionnaire)');
+    var docRows = (d.md || []).filter(function (m) { return /^\d/.test(m.ref) && m.status !== 'done'; });
+    if (docRows.length) s1.push(docRows.length + ' Stage 1 checklist item(s): ' + docRows.map(function (m) { return m.ref + ' ' + m.item; }).join('; '));
+    var open = (d.risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    if (!open.length) s1.push('a risk assessment (no risks in the register)');
+    else {
+      var untreated = open.filter(function (r) { return !(r.treat && r.owner); }).length;
+      if (untreated) s1.push(untreated + ' risk(s) without a treatment or owner');
+    }
+    var soa = d.soa || {};
+    if (!soa.applicable) s1.push('the Statement of Applicability');
+    else if (soa.unjustified) s1.push(soa.unjustified + ' Statement of Applicability exclusion(s) without a justification');
+
+    var within = function (dt) { return dt && today && daysBetweenDateStr(String(dt).slice(0, 10), today) <= 365; };
+    var full = (d.audits || []).filter(function (a) {
+      if (!a || a.status !== 'Completed' || !within(a.completed)) return false;
+      return parseAuditScope(a.scope).clauses.length === 7;
+    }).sort(function (a, b) { return String(b.completed).localeCompare(String(a.completed)); })[0];
+    if (!full) s2.push('a completed internal audit of Clauses 4-10');
+    var review = (d.reviews || []).filter(function (r) { return r && r.decisions && within(r.date) && (!full || r.date >= full.completed); })[0];
+    if (!review) s2.push(full ? 'a management review held after the internal audit of ' + full.completed : 'a management review after the internal audit');
+    var majors = (d.actions || []).filter(function (a) { return a && a.type === 'Non-conformity (Major)' && a.status !== 'Done' && a.status !== 'Cancelled'; });
+    if (majors.length) s2.push('closing ' + majors.length + ' open major nonconformit' + (majors.length === 1 ? 'y' : 'ies') + ' (' + majors.map(function (a) { return a.id; }).join(', ') + ')');
+    if (soa.notStarted) s2.push(soa.notStarted + ' applicable control(s) still not started');
+    var age = d.onboardedDate && today ? daysBetweenDateStr(String(d.onboardedDate).slice(0, 10), today) : null;
+    if (age !== null && age < 90) advice.push('The ISMS has been running for ' + Math.max(0, Math.round(age / 30)) + ' month(s). Certification bodies expect records of it operating, typically about three months, before Stage 2.');
+    var stage2Missing = s1.concat(s2);
+    return { stage1: { ok: !s1.length, missing: s1 }, stage2: { ok: !stage2Missing.length, missing: stage2Missing }, advice: advice };
+  }
+
+  /* Auditor access windows: the state of each, and whether the signed-in
+     person is one of them. entries = [{ name, email, from, to, removed }]. */
+  function auditorAccessState(entries, email, today) {
+    var e = String(email || '').trim().toLowerCase();
+    var list = (entries || []).map(function (a) {
+      var st = a.removed ? 'removed' : (a.to && a.to < today) ? 'expired' : (a.from && a.from > today) ? 'upcoming' : 'active';
+      return Object.assign({}, a, { state: st });
+    });
+    var mine = e ? list.filter(function (a) { return String(a.email || '').trim().toLowerCase() === e; })
+      .sort(function (a, b) { return String(b.to || '').localeCompare(String(a.to || '')); })[0] || null : null;
+    return { list: list, me: mine, overdueRemoval: list.filter(function (a) { return a.state === 'expired'; }) };
+  }
+
   /* Keeping the certification scope proportionate: what to look at
      before submitting the scope statement. Pure advice, from the
      profile, so every client gets the same discipline. */
@@ -8927,7 +8981,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,

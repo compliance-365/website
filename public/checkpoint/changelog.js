@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.120.0',
+    date: '2026-10-06',
+    entries: [
+      'New: My tasks, at the top of the menu. One page for each person: the actions, scheduled activities, document reviews, objectives at risk, evidence requests, policies to acknowledge and training assigned to them, each with the one button that does it, plus a single progress bar towards certification. Client owners no longer need to learn the rest of Checkpoint, and staff with attestation-only access see it too.',
+      'New: auditor access and the Auditor guide. Record the certification auditor’s access window, and Checkpoint explains exactly how to set it up: invite them as a guest and add them to Checkpoint Viewers for read-only access. It can email the auditor their link and puts a reminder to remove access on the calendar for the day the window ends. The auditor lands on the Auditor guide, which lists where each piece of Stage 1 and Stage 2 evidence is, and sees a notice once their window has ended.',
+      'Booking the certification audit now checks readiness. Stage 1 can be booked once the scope, mandatory documents, risk assessment and Statement of Applicability are in place. Stage 2 can only be booked after a completed internal audit of Clauses 4-10, a management review held after it, no open major nonconformity and no applicable control still not started. Checkpoint also advises when the ISMS has run for less than about three months. Both bookings go on the compliance calendar.',
+      'Actions now read Completed and Closed, matching the compliance calendar: a finished action shows as Completed, and one stopped without being done as Closed. The Actions register can be filtered by either.'
+    ]
+  },
+  {
     version: '1.119.0',
     date: '2026-10-06',
     entries: [

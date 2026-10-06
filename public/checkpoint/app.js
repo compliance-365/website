@@ -832,7 +832,7 @@ function showModal(opts) {
     'qrApprove', 'qrApproveAll', 'qrDraftWithAi', 'editAnswer', 'deleteAnswer',
     'addManualAsset', 'syncAssets', 'editAsset', 'seedLegalBaseline', 'addLegalReq', 'editLegalReq',
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
-    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'annexAcceptScanProven', 'setAuditResult', 'setAuditNote', 'fileReviewMinutes', 'fileAuditReport', 'fileClauseSnapshots', 'toggleOwnerDigest', 'sendOwnerRemindersNow', 'requestAnnexEvidence', 'setRiskAppetite', 'setScanCadence',
+    'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'annexAcceptScanProven', 'setAuditResult', 'setAuditNote', 'fileReviewMinutes', 'fileAuditReport', 'fileClauseSnapshots', 'toggleOwnerDigest', 'sendOwnerRemindersNow', 'requestAnnexEvidence', 'bookCertificationAudit', 'grantAuditorAccess', 'removeAuditorAccess', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
@@ -2873,7 +2873,7 @@ function showModal(opts) {
           { heading: 'Inputs considered (Clause 9.3.2)', html: inputsHtml, pageBreak: false },
           { heading: 'Decisions, changes and resources (Clause 9.3.3)', html: '<p style="white-space:pre-wrap">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p>', pageBreak: false },
           { heading: 'Actions agreed', pageBreak: false, html: acts.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
-            acts.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.owner || '') + '</td><td>' + (a.due ? fmtDateY(a.due) : '') + '</td><td>' + esc(a.status) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No actions raised.</p>' },
+            acts.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.owner || '') + '</td><td>' + (a.due ? fmtDateY(a.due) : '') + '</td><td>' + esc(actionStatusLabel(a.status)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No actions raised.</p>' },
           { heading: 'Approval', pageBreak: false, html: '<table class="rpt-table"><tbody><tr><td style="width:35%"><b>Approved by (top management)</b></td><td style="height:48px"></td></tr><tr><td><b>Date</b></td><td></td></tr></tbody></table>' }
         ]
       };
@@ -2911,7 +2911,7 @@ function showModal(opts) {
         title: 'Nonconformities and corrective action', frameworkAgnostic: true,
         dashboard: { intro: ncs.length + ' nonconformit' + (ncs.length === 1 ? 'y' : 'ies') + ' recorded, ' + ncs.filter(function (a) { return window.CheckpointLib.capaStatus(a).complete; }).length + ' with the corrective-action loop complete.' },
         sections: [{ heading: 'Nonconformities', pageBreak: false, html: ncs.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Nonconformity</th><th>Source</th><th>Correction</th><th>Root cause</th><th>Status</th><th>Effectiveness</th></tr></thead><tbody>' +
-          ncs.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '<div>' + esc(a.type) + '</div></td><td>' + esc(a.src || '') + '</td><td>' + esc(a.correction || '') + '</td><td>' + esc(a.rootCause || '') + '</td><td>' + esc(a.status) + '</td><td>' + esc(a.effectivenessReview || '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No nonconformities recorded.</p>' }]
+          ncs.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '<div>' + esc(a.type) + '</div></td><td>' + esc(a.src || '') + '</td><td>' + esc(a.correction || '') + '</td><td>' + esc(a.rootCause || '') + '</td><td>' + esc(actionStatusLabel(a.status)) + '</td><td>' + esc(a.effectivenessReview || '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No nonconformities recorded.</p>' }]
       };
     },
 
@@ -3521,7 +3521,7 @@ function showModal(opts) {
       var ncScopeNote = entitledFrameworks().length > 1 ? ' — all frameworks' : '';
       if (allNcs.length) {
         var ncTableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
-          allNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>';
+          allNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(actionStatusLabel(a.status)) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>';
         sections.push({ heading: 'Nonconformities & corrective actions (' + allNcs.length + ')' + ncScopeNote, html: ncTableHtml, pageBreak: false });
       }
 
@@ -3703,7 +3703,7 @@ function showModal(opts) {
       var mgmtNcScopeNote = entitledFrameworks().length > 1 ? ' (all frameworks)' : '';
       var ncHtml = mgmtNcs.length
         ? '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
-          mgmtNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>'
+          mgmtNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(actionStatusLabel(a.status)) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>'
         : '<p class="rpt-plain">No nonconformities on record.</p>';
 
       return {
@@ -5083,8 +5083,10 @@ function showModal(opts) {
 
   /* ================= render ================= */
   function renderNavCounts() {
+    var nMine = document.getElementById('nMyTasks');
+    if (nMine) { try { nMine.textContent = myTasks().items.length || ''; } catch (e) { nMine.textContent = ''; } }
     document.getElementById('nRisks').textContent = S.risks.filter(function (r) { return r.status !== 'Closed'; }).length;
-    document.getElementById('nActions').textContent = S.actions.filter(function (a) { return a.status !== 'Done'; }).length;
+    document.getElementById('nActions').textContent = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; }).length;
     var p = S.proposed.length; var el = document.getElementById('nScan');
     el.textContent = p || ''; el.style.display = p ? 'inline-block' : 'none';
 
@@ -5341,7 +5343,7 @@ function showModal(opts) {
       if (!cert || !cert.issued) {
         return '<div class="card" style="margin-bottom:16px"><h3>' + esc(fwName(fw)) + '</h3>' +
           '<p style="color:var(--paper-dim);font-size:12.5px">Not certified yet. Once the certification body issues the certificate, record it here and Checkpoint schedules the rest of the three-year cycle.</p>' +
-          '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.certApplication" data-id="' + fw + '">Application form answers</button><button class="btn ghost sm" data-action="App.recordCertificate" data-id="' + fw + '">Record certificate</button></div>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.certApplication" data-id="' + fw + '">Application form answers</button><button class="btn ghost sm" data-action="App.bookCertificationAudit" data-id="' + fw + '">Book Stage 1 / Stage 2</button><button class="btn ghost sm" data-action="App.go" data-id="auditor">Auditor access</button><button class="btn ghost sm" data-action="App.recordCertificate" data-id="' + fw + '">Record certificate</button></div>' +
           '<p class="src" style="margin-top:8px">Application form answers fills in what the certification body\u2019s application asks (scope, people, suppliers, legal requirements and the complexity factors that set the audit time) from your ISMS.</p></div>';
       }
       var cyc = window.CheckpointLib.certificationCycle(cert, today);
@@ -5440,7 +5442,7 @@ function showModal(opts) {
     assets: { view: 'assets', cta: 'Open the asset register' },
     legal: { view: 'legal', cta: 'Open the legal register' },
     mandatory: { action: 'App.report', id: 'ready', cta: 'Open the readiness report' },
-    book: { view: 'calendar', cta: 'Open the calendar' },
+    book: { action: 'App.bookCertificationAudit', id: 'iso27001', cta: 'Book the certification audit' },
     rhythm: { action: 'App.setupOperatingRhythm', cta: 'Set up the rhythm' }
   };
   function pathStepButton(step, primary) {
@@ -7417,8 +7419,8 @@ function showModal(opts) {
     renderActionsDashboard();
     var f = window._actF || 'Open';
     var tf = window._actTypeF || 'All';
-    document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {
-      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterAct" data-id="' + x + '">' + x + '</button>';
+    document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'Cancelled', 'All'].map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterAct" data-id="' + x + '">' + actionStatusLabel(x) + '</button>';
     }).join('');
     document.getElementById('actTypeFilters').innerHTML = ['All'].concat(ACTION_TYPES).map(function (x) {
       return '<button class="f-pill' + (tf === x ? ' on' : '') + '" aria-pressed="' + (tf === x ? 'true' : 'false') + '" data-action="App.filterActType" data-id="' + x + '">' + x + '</button>';
@@ -7427,8 +7429,8 @@ function showModal(opts) {
     (S.actionUpdates || []).forEach(function (u) { updateCounts[u.action] = (updateCounts[u.action] || 0) + 1; });
     var rows = S.actions.filter(function (a) {
       if (tf !== 'All' && (a.type || 'Action') !== tf) return false;
-      if (f === 'All') return true; if (f === 'Done') return a.status === 'Done';
-      if (f === 'Overdue') return overdue(a); return a.status !== 'Done';
+      if (f === 'All') return true; if (f === 'Done') return a.status === 'Done'; if (f === 'Cancelled') return a.status === 'Cancelled';
+      if (f === 'Overdue') return overdue(a); return a.status !== 'Done' && a.status !== 'Cancelled';
     }).map(function (a) {
       var od = overdue(a);
       var days = overdueDays(a);
@@ -7446,7 +7448,7 @@ function showModal(opts) {
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
-        '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
+        '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(actionStatusLabel(a.status)) + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
         /* Was up to four buttons wide (Complete, Corrective action, Edit,
            Delete) — the biggest single reason this table couldn't fit a
@@ -7457,7 +7459,7 @@ function showModal(opts) {
            only the single most-reached-for action stays inline; the rest
            are one click into the drawer, not gone. */
         '<td style="white-space:nowrap">' +
-        (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ' + icon('check') + '</span>') +
+        (a.status !== 'Done' && a.status !== 'Cancelled' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">' + esc(actionStatusLabel(a.status)) + ' ' + icon('check') + '</span>') +
         '</td></tr>';
     }).join('');
     var actRowsEl = document.getElementById('actRows');
@@ -7494,6 +7496,13 @@ function showModal(opts) {
   var OPPORTUNITY_STATUS_OPTS = ['Open', 'Pursuing', 'Realised', 'Closed'];
   var BENEFIT_OPTS = [{ value: 1, label: '1 — Negligible' }, { value: 2, label: '2 — Minor' }, { value: 3, label: '3 — Moderate' }, { value: 4, label: '4 — Major' }, { value: 5, label: '5 — Significant' }];
   var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
+  /* What people read. The stored values stay Done and Cancelled (every
+     register, report and the scheduled monitor read them); a finished
+     action shows as Completed and one stopped without being done as
+     Closed, matching the compliance calendar. */
+  var ACTION_STATUS_LABELS = { Done: 'Completed', Cancelled: 'Closed' };
+  function actionStatusLabel(s) { return ACTION_STATUS_LABELS[s] || s; }
+  var ACTION_STATUS_SELECT = ACTION_STATUS_OPTS.map(function (v) { return { value: v, label: actionStatusLabel(v) }; });
   var OBJECTIVE_STATUS_OPTS = ['Not started', 'On track', 'At risk', 'Achieved', 'Missed'];
 
   /* Options for a "link to risk" <select> — open risks first, plus the
@@ -8827,8 +8836,9 @@ function showModal(opts) {
   function bulkSelect(action, label, values) {
     return '<label class="bulk-field"><span>' + esc(label) + '</span>' +
       '<select class="mini" data-change-action="' + esc(action) + '" aria-label="' + esc(label) + ' on selected rows">' +
-      [''].concat(values).map(function (v) {
-        return '<option value="' + esc(v) + '"' + (v ? '' : ' selected') + '>' + (v ? esc(v) : 'Choose…') + '</option>';
+      [''].concat(values).map(function (o) {
+        var v = o && typeof o === 'object' ? o.value : o, l = o && typeof o === 'object' ? o.label : o;
+        return '<option value="' + esc(v) + '"' + (v ? '' : ' selected') + '>' + (v ? esc(l) : 'Choose…') + '</option>';
       }).join('') + '</select></label>';
   }
 
@@ -8969,7 +8979,7 @@ function showModal(opts) {
       barId: 'actBulkBar', viewId: 'v-actions', sel: _actSel, shownKeys: actShownKeys,
       selectAllAction: 'App.actSelectAllShown', clearAction: 'App.clearActSel',
       fields: function () {
-        return bulkSelect('App.bulkActStatus', 'Set status', ACTION_STATUS_OPTS) +
+        return bulkSelect('App.bulkActStatus', 'Set status', ACTION_STATUS_SELECT) +
           bulkSelect('App.bulkActPriority', 'Set priority', ['Critical', 'High', 'Medium', 'Low']) +
           '<button class="btn ghost sm" data-action="App.bulkActOwner">Set owner…</button>';
       }
@@ -9179,6 +9189,139 @@ function showModal(opts) {
     var st = S.settings || {};
     if (st.ownerDigestEnabled !== 'true' || READONLY || Store.kind !== 'sharepoint') return false;
     return !st.ownerDigestLastSent || window.CheckpointLib.daysBetweenDateStr(st.ownerDigestLastSent, new Date().toISOString().slice(0, 10)) >= 7;
+  }
+
+  function bookingReadinessFor(fw) {
+    var ctx = clauseContext();
+    return window.CheckpointLib.certificationBookingReadiness({
+      scopeStatement: orgProfileValue(fw === 'iso42001' ? 'orgAimsScopeStatement' : 'orgScopeStatement'),
+      md: fw === 'iso27001' ? mandatoryDocsStatus() : [], risks: S.risks, soa: ctx.soaByFw[fw] || {},
+      audits: (S.audits || []).filter(function (a) { return (a.fw || 'iso27001') === (fw === 'iso27701' ? 'iso27001' : fw); }),
+      reviews: S.reviews, actions: S.actions, onboardedDate: S.settings && S.settings.onboardedDate, today: new Date().toISOString().slice(0, 10)
+    });
+  }
+
+  /* ================= My tasks =================
+     One page for a client owner: what is assigned to them (the same
+     lists owner reminders email) plus policies to acknowledge and
+     training to complete, each with the one button that does it. Matched
+     on display name, email or UPN. In demo mode, "Viewing as" picks an
+     owner so the page can be previewed. */
+  function myTasks() {
+    var lists = window.CheckpointLib.ownerWorkItems(ownerDigestData(), new Date().toISOString().slice(0, 10));
+    var me = Store.kind === 'demo' && window._myTasksAs ? [String(window._myTasksAs).toLowerCase()] : [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+    var items = [];
+    lists.forEach(function (o) {
+      if (me.indexOf(o.owner.toLowerCase()) !== -1 || (o.email && me.indexOf(o.email.toLowerCase()) !== -1)) items = items.concat(o.items);
+    });
+    if (!(Store.kind === 'demo' && window._myTasksAs)) {
+      myOutstandingAttestations().forEach(function (a) { items.push({ kind: 'Acknowledge policy', ref: a.id, title: a.docName, due: a.due || '', overdue: false }); });
+      myOutstandingTraining().forEach(function (t) { items.push({ kind: 'Training', ref: t.id, title: t.courseTitle || t.courseId, due: t.due || '', overdue: !!(t.due && t.due < new Date().toISOString().slice(0, 10)) }); });
+    }
+    items.sort(function (a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999')); });
+    return { items: items, owners: lists.map(function (o) { return o.owner; }) };
+  }
+  function myTaskButton(i) {
+    var b = function (action, id, label) { return '<button class="btn sm" data-action="' + action + '"' + (id ? ' data-id="' + esc(id) + '"' : '') + '>' + esc(label) + '</button>'; };
+    if (i.kind === 'Action') return b('App.openAction', i.ref, 'Open');
+    if (i.kind === 'Activity') return b('App.completeCalItem', i.ref, 'Mark done');
+    if (i.kind === 'Document review') return b('App.go', 'documents', 'Review');
+    if (/^Objective/.test(i.kind)) return b('App.editObjective', i.ref, 'Update');
+    if (i.kind === 'Evidence requested') return b('App.addControlEvidenceFiles', 'iso27001|' + i.ref, 'Upload evidence');
+    if (i.kind === 'Acknowledge policy') return b('App.acknowledgeAttestation', i.ref, 'Read and acknowledge');
+    if (i.kind === 'Training') return b('App.go', 'training', 'Start');
+    return '';
+  }
+  function renderMyTasks() {
+    var el = document.getElementById('myTasksBody');
+    var t = myTasks();
+    var n = document.getElementById('nMyTasks');
+    if (n) n.textContent = t.items.length || '';
+    if (!el) return;
+    var steps = [];
+    try { steps = gettingStartedSteps(); } catch (e) { steps = []; }
+    var done = steps.filter(function (s) { return s.done; }).length;
+    var pct = steps.length ? Math.round(done / steps.length * 100) : 0;
+    var picker = Store.kind === 'demo' && t.owners.length
+      ? '<p class="src" style="margin:0 0 10px">Demo: viewing as <select class="mini" data-change-action="App.setMyTasksAs" aria-label="Viewing as"><option value="">You</option>' +
+        t.owners.map(function (o) { return '<option' + (window._myTasksAs === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></p>'
+      : '';
+    var od = t.items.filter(function (i) { return i.overdue; }).length;
+    el.innerHTML = picker +
+      '<div class="card" style="padding:14px 16px;margin-bottom:16px"><b>Progress towards certification</b>' +
+      '<div style="height:10px;border-radius:6px;background:var(--line);margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--gold)"></div></div>' +
+      '<span class="src">' + done + ' of ' + steps.length + ' steps done (' + pct + '%)</span></div>' +
+      '<div class="card" style="padding:6px 16px">' +
+      (t.items.length
+        ? '<p class="src" style="margin:10px 0">' + t.items.length + ' task' + (t.items.length === 1 ? '' : 's') + (od ? ', ' + od + ' overdue' : '') + '.</p>' +
+          t.items.map(function (i) {
+            return '<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)">' +
+              '<div style="font-size:13px"><span class="src">' + esc(i.kind) + (i.ref ? ' · ' + esc(i.ref) : '') + '</span><div style="color:var(--paper)">' + esc(i.title || '') + '</div>' +
+              (i.due ? '<span class="src" style="' + (i.overdue ? 'color:var(--fail)' : '') + '">' + (i.overdue ? 'Overdue: ' : (i.kind === 'Evidence requested' ? 'Requested ' : 'Due ')) + fmtDate(i.due) + '</span>' : '') + '</div>' +
+              '<div style="flex:0 0 auto">' + myTaskButton(i) + '</div></div>';
+          }).join('')
+        : '<p style="margin:14px 0">' + icon('check') + ' Nothing assigned to you right now.</p>') + '</div>';
+  }
+
+  /* ================= Auditor access =================
+     A certification auditor works in Checkpoint read-only: a guest in
+     the Checkpoint Viewers group (what actually limits them is that
+     group's SharePoint permissions). Checkpoint records the window, tells
+     the practitioner exactly what to set up, gives the auditor a guide
+     to the evidence, and reminds you to remove access when it ends. */
+  function auditorEntries() {
+    try { var a = JSON.parse((S.settings && S.settings.auditorAccess) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  function auditorState() {
+    var email = Store.kind === 'demo' ? (new URLSearchParams(location.search).get('auditor') || '') : myUpn();
+    return window.CheckpointLib.auditorAccessState(auditorEntries(), email, new Date().toISOString().slice(0, 10));
+  }
+  async function saveAuditorEntries(list) {
+    S.settings.auditorAccess = JSON.stringify(list);
+    try { await Store.setSetting('auditorAccess', S.settings.auditorAccess); } catch (e) { warn(e); }
+  }
+  function renderAuditorGuide() {
+    var el = document.getElementById('auditorBody');
+    if (!el) return;
+    var st = auditorState();
+    var me = st.me;
+    var link = function (label, action, id, what) {
+      return '<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)">' +
+        '<div style="font-size:13px"><div style="color:var(--paper)">' + esc(label) + '</div><span class="src">' + esc(what) + '</span></div>' +
+        '<button class="btn ghost sm" data-action="' + action + '"' + (id ? ' data-id="' + esc(id) + '"' : '') + '>Open</button></div>';
+    };
+    var notice = '';
+    if (me && me.state === 'expired') notice = '<div class="card" style="padding:14px 16px;margin-bottom:16px;border-color:var(--fail)"><b>Your access window ended on ' + fmtDate(me.to) + '.</b> <span class="src">Ask the organisation to extend it if the audit is still under way.</span></div>';
+    else if (me) notice = '<div class="card" style="padding:14px 16px;margin-bottom:16px"><b>Welcome' + (me.name ? ', ' + esc(me.name) : '') + '.</b> <span class="src">Read-only access ' + (me.from ? 'from ' + fmtDate(me.from) + ' ' : '') + 'until ' + fmtDate(me.to) + '.</span></div>';
+    var guide = me && me.state === 'expired' ? '' :
+      '<div class="card" style="padding:6px 16px;margin-bottom:16px"><h3 style="margin:12px 0 4px">Stage 1: the documented ISMS</h3>' +
+      link('Stage 1 pack', 'App.stage1Pack', '', 'Readiness, Statement of Applicability, risk treatment plan, objectives, latest internal audit and management review, in one document') +
+      link('Scope, policies and procedures', 'App.go', 'documents', 'Every controlled document with its owner, version, approval and review date') +
+      link('Statement of Applicability', 'App.go', 'soa', 'Each Annex A control: applicable or not and why, status, owner and linked evidence') +
+      link('Management system clauses', 'App.go', 'clauses', 'Clauses 4-10, each requirement with how it is met and the evidence behind it') +
+      link('Clause evidence pack', 'App.report', 'clauses', 'Traceability from each requirement to its evidence') +
+      '<h3 style="margin:18px 0 4px">Stage 2: the ISMS operating</h3>' +
+      link('Risk register and treatment plan', 'App.report', 'rtp', 'Each risk with its owner, treatment, controls, actions and residual acceptance') +
+      link('Objectives and measurement', 'App.go', 'objectives', 'Measurable objectives with owner, resources, due date and the current reading') +
+      link('Internal audits', 'App.go', 'audits', 'The audit programme, each audit’s results line by line and its report') +
+      link('Management reviews', 'App.go', 'reviews', 'Inputs, decisions, resources and actions, with minutes') +
+      link('Actions and corrective action', 'App.go', 'actions', 'Treatment actions and nonconformities with correction, root cause and effectiveness') +
+      link('Operating rhythm', 'App.go', 'calendar', 'Recurring control activities with the evidence of each completion') +
+      link('Training and policy acknowledgement', 'App.go', 'training', 'Who has completed what, and when') +
+      link('Audit log', 'App.go', 'auditlog', 'Every change to the ISMS records, with who and when') + '</div>';
+    var admin = '';
+    if (!me && !READONLY) {
+      var rows = st.list.filter(function (a) { return a.state !== 'removed'; });
+      admin = '<div class="card" style="padding:14px 16px"><h3 style="margin:0 0 6px">Auditor access</h3>' +
+        '<p class="src" style="margin:0 0 10px">Give the certification body’s auditor read-only access for the audit window. Checkpoint tells you what to set up and reminds you to remove it afterwards.</p>' +
+        (rows.length ? rows.map(function (a) {
+          return '<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:13px"><div><b>' + esc(a.name || a.email) + '</b> <span class="src">' + esc(a.email) + (a.body ? ' · ' + esc(a.body) : '') + ' · ' + (a.from ? fmtDate(a.from) + ' to ' : 'until ') + fmtDate(a.to) + '</span>' +
+            '<div class="src" style="' + (a.state === 'expired' ? 'color:var(--fail)' : '') + '">' + ({ active: 'Active', upcoming: 'Not started yet', expired: 'Window ended: remove their access now' })[a.state] + '</div></div>' +
+            '<button class="btn ghost sm" data-action="App.removeAuditorAccess" data-id="' + esc(a.email) + '">Remove</button></div>';
+        }).join('') : '<p class="src">No auditor has access.</p>') +
+        '<button class="btn sm" style="margin-top:10px" data-action="App.grantAuditorAccess">Give an auditor access</button></div>';
+    }
+    el.innerHTML = notice + guide + admin;
   }
 
   function auditWorkpackFor(a) {
@@ -13199,6 +13342,8 @@ function showModal(opts) {
      absent, which is the same distinction .kpi-empty draws between "no
      data" and "not wired up". */
   var VIEW_RENDERERS = {
+    mytasks: renderMyTasks,
+    auditor: renderAuditorGuide,
     dash: renderDash,
     board: renderBoard,
     constellation: renderConstellation,
@@ -13322,7 +13467,18 @@ function showModal(opts) {
   }
 
   var _ownerRemindersTried = false;
-  function renderAll() { if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  var _auditorLanded = false;
+  function landAuditorOnce() {
+    if (_auditorLanded) return;
+    var st = auditorState();
+    if (!st.me) return;
+    _auditorLanded = true;
+    if (st.me.state === 'expired') {
+      document.querySelectorAll('.nav-item[data-v]').forEach(function (el) { if (el.dataset.v !== 'auditor') el.style.display = 'none'; });
+    }
+    App.go('auditor');
+  }
+  function renderAll() { setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -14280,7 +14436,7 @@ function showModal(opts) {
         title: 'Add progress update — ' + a.id,
         fields: [
           { id: 'note', label: 'What happened', type: 'textarea', value: '', placeholder: 'e.g. Vendor confirmed remediation date of 14 March; following up if it slips.' },
-          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS },
+          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_SELECT },
           { id: 'url', label: 'Evidence link for this update (optional)', value: '', placeholder: 'https://…' }
         ],
         confirmText: 'Add update',
@@ -14320,7 +14476,7 @@ function showModal(opts) {
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(a.type || 'Action') + (r ? ' · Treats ' + r.id : '') + '</div><h2>' + esc(a.title) + '</h2>' +
-        '<div class="d-kv"><span>Status</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(a.status) + '</span></b></div>' +
+        '<div class="d-kv"><span>Status</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(actionStatusLabel(a.status)) + '</span></b></div>' +
         '<div class="d-kv"><span>Priority</span><b>' + esc(a.pr) + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + (a.ownerEmail ? ' <span style="color:var(--paper-faint);font-weight:400">&lt;' + esc(a.ownerEmail) + '&gt;</span>' : '') + '</b></div>' +
         '<div class="d-kv"><span>Due</span><b style="' + (overdue(a) ? 'color:var(--fail)' : '') + '">' + fmtDate(a.due) + (overdue(a) ? ' ' + icon('flag') + ' ' + overdueDays(a) + 'd overdue' : '') + '</b></div>' +
@@ -14379,7 +14535,7 @@ function showModal(opts) {
           return '<div class="d-kv"><span>' + c + ' — ' + (ctl ? esc(ctl.t) : '') + '</span><b>' + (ctl ? ctl.st : '') + '</b></div>';
         }).join('') : '<div class="d-kv"><span>None linked yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Treatment actions</h4>' + (acts.length ? acts.map(function (a) {
-          return '<div class="d-kv"><span>' + a.id + ' — ' + esc(a.title) + '</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></b></div>';
+          return '<div class="d-kv"><span>' + a.id + ' — ' + esc(a.title) + '</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(actionStatusLabel(a.status)) + '</span></b></div>';
         }).join('') : '<div class="d-kv"><span>None yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Audit trail</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' +
         (Store.kind === 'sharepoint'
@@ -15306,7 +15462,7 @@ function showModal(opts) {
           { id: 'owner', label: 'Owner', value: a.owner },
           { id: 'ownerEmail', label: 'Owner email (optional — lets the scheduled monitor chase them directly, with a no-sign-in link to record progress themselves)', type: 'email', value: a.ownerEmail || '', placeholder: 'name@example.com' },
           { id: 'due', label: 'Due date', type: 'date', value: a.due },
-          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS }
+          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_SELECT }
         ],
         confirmText: 'Save changes',
         validate: function (v) { return v.title ? null : 'Enter a title.'; }
@@ -18446,6 +18602,57 @@ function showModal(opts) {
       catch (e) { await showModal({ title: 'Value summary', message: 'Copy this text:', fields: [{ id: 't', label: 'Summary', type: 'textarea', value: text }], confirmText: 'Done' }); }
     },
 
+    /* Books the certification body's Stage 1 and Stage 2 on the
+       calendar. Stage 1 can be booked once the documented ISMS is in
+       place; Stage 2 only once the ISMS has been audited internally and
+       reviewed by management (certificationBookingReadiness). */
+    bookCertificationAudit: async function (fw) {
+      fw = fw || 'iso27001';
+      var r = bookingReadinessFor(fw);
+      var list = function (xs) { return xs.map(function (x) { return '• ' + x; }).join('\n'); };
+      var v = await showModal({
+        title: 'Book the ' + fwName(fw) + ' certification audit',
+        message: (r.stage1.ok ? 'Stage 1 can be booked now.' : 'Stage 1 needs, first:\n' + list(r.stage1.missing)) + '\n\n' +
+          (r.stage2.ok ? 'Stage 2 can be booked now.' : 'Stage 2 cannot be booked until these are done:\n' + list(r.stage2.missing.filter(function (x) { return r.stage1.missing.indexOf(x) === -1; }))) +
+          (r.advice.length ? '\n\n' + r.advice.join('\n') : '') +
+          '\n\nEnter the dates the certification body has offered. Leave a date blank to book it later.',
+        fields: [
+          { id: 'body', label: 'Certification body', value: (certRecords()[fw] || {}).body || '', placeholder: 'e.g. BSI' },
+          { id: 's1', label: 'Stage 1 date', type: 'date', value: '' },
+          { id: 's2', label: 'Stage 2 date', type: 'date', value: '' }
+        ],
+        confirmText: 'Book',
+        validate: function (x) {
+          if (!x.s1 && !x.s2) return 'Enter a Stage 1 or Stage 2 date.';
+          if (x.s1 && !r.stage1.ok) return 'Stage 1 cannot be booked yet: ' + r.stage1.missing.join('; ') + '.';
+          if (x.s2 && !r.stage2.ok) return 'Stage 2 cannot be booked yet: ' + r.stage2.missing.join('; ') + '.';
+          if (x.s1 && x.s2 && x.s2 <= x.s1) return 'Stage 2 must come after Stage 1.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var wanted = [];
+      if (v.s1) wanted.push({ marker: 'cert:' + fw + ':stage1', title: fwName(fw) + ' Stage 1 certification audit' + (v.body ? ' — ' + v.body : ''), nextDue: v.s1 });
+      if (v.s2) wanted.push({ marker: 'cert:' + fw + ':stage2', title: fwName(fw) + ' Stage 2 certification audit' + (v.body ? ' — ' + v.body : ''), nextDue: v.s2 });
+      busy(true);
+      for (var i = 0; i < wanted.length; i++) {
+        var w = wanted[i];
+        var cal = (S.calendar || []).find(function (c) { return (c.notes || '').indexOf(w.marker) !== -1; });
+        try {
+          if (cal) { cal.title = w.title; cal.nextDue = w.nextDue; cal.status = 'Active'; await Store.updateCalendarItem(cal); }
+          else {
+            var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+            await Store.addCalendarItem({ id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: w.title, category: 'External surveillance audit', freq: 'One-off',
+              nextDue: w.nextDue, lastCompleted: '', owner: '', notes: 'Certification audit booking (' + w.marker + ')', status: 'Active' });
+          }
+          audit('Certification audit booked', 'Calendar', w.marker, '', w.title + ' on ' + w.nextDue);
+        } catch (e) { warn(e); }
+      }
+      busy(false);
+      toast(wanted.length === 2 ? 'Stage 1 and Stage 2 booked on the compliance calendar.' : (v.s1 ? 'Stage 1' : 'Stage 2') + ' booked on the compliance calendar.');
+      renderCalendar(); renderGettingStarted(); renderCertification(); renderNavCounts();
+    },
+
     certApplication: function (fw) { window._soaFw = fw; App.report('certapp'); },
 
     certPack: function (fw) {
@@ -19457,6 +19664,77 @@ function showModal(opts) {
       var plan = annexPlanFor(window._soaFw || 'iso27001').filter(function (p) { return p.step === 'doc'; });
       if (plan.some(function (p) { return /^Generate /.test(p.why); })) return App.generateDocumentSet();
       return App.approveDraftSet();
+    },
+
+    setMyTasksAs: function (v) { window._myTasksAs = v || ''; renderMyTasks(); },
+
+    grantAuditorAccess: async function () {
+      var today = new Date().toISOString().slice(0, 10);
+      var v = await showModal({
+        title: 'Give an auditor read-only access',
+        message: 'The auditor signs in as a guest and sees Checkpoint read-only, opening on the Auditor guide. Checkpoint records the window and reminds you to remove access when it ends.',
+        fields: [
+          { id: 'name', label: 'Auditor name', value: '' },
+          { id: 'email', label: 'Auditor email', value: '' },
+          { id: 'body', label: 'Certification body', value: (certRecords().iso27001 || {}).body || '', placeholder: 'e.g. BSI' },
+          { id: 'from', label: 'Access from', type: 'date', value: today },
+          { id: 'to', label: 'Access until', type: 'date', value: daysFrom(14) }
+        ],
+        confirmText: 'Record access',
+        validate: function (x) {
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(x.email || '').trim())) return 'Enter the auditor’s email.';
+          if (!x.to || (x.from && x.to < x.from)) return 'Enter when access ends, after it starts.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var list = auditorEntries().filter(function (a) { return String(a.email).toLowerCase() !== v.email.trim().toLowerCase(); });
+      list.push({ name: v.name.trim(), email: v.email.trim(), body: v.body.trim(), from: v.from || today, to: v.to, added: today });
+      busy(true);
+      await saveAuditorEntries(list);
+      var marker = 'auditor:' + v.email.trim().toLowerCase();
+      var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var existing = (S.calendar || []).find(function (c) { return (c.notes || '').indexOf(marker) !== -1; });
+      try {
+        if (existing) { existing.nextDue = v.to; existing.status = 'Active'; await Store.updateCalendarItem(existing); }
+        else await Store.addCalendarItem({ id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: 'Remove auditor access: ' + (v.name.trim() || v.email.trim()), category: 'Other', freq: 'One-off',
+          nextDue: v.to, lastCompleted: '', owner: '', notes: 'Remove the guest from Checkpoint Viewers and the tenant (' + marker + ')', status: 'Active' });
+      } catch (e) { warn(e); }
+      audit('Auditor access recorded', 'Setting', 'auditorAccess', '', (v.name || v.email) + ' ' + (v.from || today) + ' to ' + v.to);
+      busy(false);
+      renderAuditorGuide(); renderCalendar();
+      var url = location.origin + location.pathname;
+      var send = await showModal({
+        title: 'Set up ' + (v.name || 'the auditor') + '’s access',
+        message: '1. In the Microsoft Entra admin centre, invite ' + v.email + ' as a guest user (Users › New user › Invite external user).\n' +
+          '2. Add the guest to the Checkpoint Viewers group. That gives read-only access to Checkpoint and its SharePoint site, and nothing else.\n' +
+          '3. On ' + fmtDate(v.to) + ', remove them from the group and delete the guest. It is on your compliance calendar.\n\n' +
+          'Then send the auditor their link. They sign in with their own email and land on the Auditor guide.',
+        confirmText: Store.kind === 'demo' ? 'Done' : 'Email the auditor their link',
+        cancelText: 'Later'
+      });
+      if (!send || Store.kind === 'demo') return;
+      var label = clientDisplayLabel();
+      var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px"><p>Hello' + (v.name ? ' ' + esc(v.name) : '') + ',</p>' +
+        '<p>You have read-only access to ' + esc(label) + '’s information security management system in Checkpoint from ' + esc(fmtDate(v.from || today)) + ' until ' + esc(fmtDate(v.to)) + '.</p>' +
+        '<p><a href="' + esc(url) + '">Open Checkpoint</a> and sign in with this email address. Accept the Microsoft guest invitation first if you have not already. You will land on the Auditor guide, which lists where each piece of evidence is.</p>' +
+        '<p>Kind regards,<br>' + esc(myDisplayName()) + '</p></div>';
+      try { await Graph.sendMail(v.email.trim(), 'Read-only access to ' + label + '’s ISMS in Checkpoint', body); toast('Link emailed to ' + esc(v.email)); }
+      catch (e) { warn(e); }
+    },
+
+    removeAuditorAccess: async function (email) {
+      var list = auditorEntries();
+      var a = list.find(function (x) { return String(x.email).toLowerCase() === String(email).toLowerCase(); });
+      if (!a) return;
+      var ok = await showModal({ title: 'Remove ' + (a.name || a.email) + '’s access', message: 'Remove the guest from the Checkpoint Viewers group and delete the guest account in Microsoft Entra, then confirm here. Checkpoint marks the access removed and closes the calendar reminder.', confirmText: 'Access removed' });
+      if (!ok) return;
+      a.removed = new Date().toISOString().slice(0, 10);
+      await saveAuditorEntries(list);
+      var cal = (S.calendar || []).find(function (c) { return (c.notes || '').indexOf('auditor:' + String(email).toLowerCase()) !== -1; });
+      if (cal) { cal.status = 'Done'; cal.lastCompleted = a.removed; try { await Store.updateCalendarItem(cal); } catch (e) { warn(e); } }
+      audit('Auditor access removed', 'Setting', 'auditorAccess', a.email, 'removed ' + a.removed);
+      renderAuditorGuide(); renderCalendar();
     },
 
     annexFocus: function (step) {
@@ -21564,7 +21842,7 @@ function showModal(opts) {
      remembered here. A nav-group whose every item ends up hidden is
      hidden too, so a restricted session never sees an empty expandable
      section. A no-op, run once at boot, for every other session. */
-  var RESTRICTED_NAV_KEEP = { attestations: true, training: true };
+  var RESTRICTED_NAV_KEEP = { mytasks: true, attestations: true, training: true };
   function applyRestrictedNav() {
     if (!RESTRICTED_ACCESS) return;
     document.querySelectorAll('.nav-item[data-v]').forEach(function (el) {
