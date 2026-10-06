@@ -119,6 +119,7 @@
 
   <nav class="owner-tabs" aria-label="Owner console views">
     <button class="owner-tab on" data-ov="dashboard" aria-current="page">Dashboard</button>
+    <button class="owner-tab" data-ov="delivery">Delivery</button>
     <button class="owner-tab" data-ov="roster">Roster</button>
     <button class="owner-tab" data-ov="newclient">+ New client</button>
     <button class="owner-tab" data-ov="matrix">Module matrix</button>
@@ -133,6 +134,11 @@
   <section class="view on" id="ov-dashboard">
     <div class="vhead"><div class="rule"></div><h1>Dashboard</h1><p>The single view for "what needs my attention today" — clients at churn risk, the strongest upsell signals, and renewals coming up soon. Every number here is the same computation the Roster, Revenue, Renewals, Module matrix and Client health tabs already make individually; this just puts what's actionable in one place instead of five.</p></div>
     <div id="ownerDashboardWrap"></div>
+  </section>
+
+  <section class="view" id="ov-delivery">
+    <div class="vhead"><div class="rule"></div><h1>Delivery</h1><p>Where every client is against their plan, from the progress their own Checkpoint reports at each Sync: the stage, how far along the path, Clauses 4–10 and Annex A, the dated plan, booked audits, and what needs your attention. The small lines show the trend across syncs.</p></div>
+    <div id="deliveryBoardWrap"></div>
   </section>
 
   <section class="view" id="ov-roster">

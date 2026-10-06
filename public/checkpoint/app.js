@@ -13400,6 +13400,45 @@ function showModal(opts) {
     clearTimeout(_progressTimer);
     _progressTimer = setTimeout(saveProgressSnapshot, 5000);
   }
+  /* Delivery facts for the partner console: the dated plan, booked
+     certification audits, certificates, objectives, overdue owners,
+     last activity and AI use. Each part fails soft. */
+  function progressDelivery(today) {
+    var L = window.CheckpointLib, out = {};
+    try {
+      var steps = gettingStartedSteps();
+      var start = (S.settings && S.settings.onboardedDate) || ((S.scans || [])[0] || {}).date || today;
+      var plan = L.onboardingSchedule(steps, String(start).slice(0, 10), today);
+      out.plan = { week: plan.week, behind: plan.behind.length, readyBy: plan.steps.length ? plan.steps[plan.steps.length - 1].target : '' };
+    } catch (e) { warn(e); }
+    var bookings = {};
+    (S.calendar || []).forEach(function (c) {
+      var m = /cert:iso27001:(stage[12])/.exec(c.notes || '');
+      if (m && c.nextDue && window.CheckpointLib.calendarItemLive(c)) bookings[m[1]] = String(c.nextDue).slice(0, 10);
+    });
+    out.bookings = bookings;
+    var certs = {};
+    try {
+      var all = certRecords();
+      Object.keys(all).forEach(function (fw) {
+        var ce = all[fw];
+        if (!ce || !ce.issued) return;
+        var cyc = L.certificationCycle(ce, today);
+        var booked = cyc.next && (S.calendar || []).some(function (c) { return (c.notes || '').indexOf('cert:' + fw + ':') !== -1 && window.CheckpointLib.calendarItemLive(c) && c.nextDue && c.nextDue >= today && /audit/i.test(c.title || ''); });
+        certs[fw] = { issued: ce.issued, expires: cyc.expires, nextAudit: cyc.next ? cyc.next.label : '', nextDue: cyc.next ? cyc.next.dueBy : '', booked: !!booked };
+      });
+    } catch (e) { warn(e); }
+    out.certs = certs;
+    out.objectives = (S.objectives || []).map(function (o) { return { status: o.status }; });
+    try {
+      out.ownersOverdue = L.ownerWorkItems(ownerDigestData(), today).filter(function (o) { return o.items.some(function (i) { return i.overdue; }); }).length;
+    } catch (e) { warn(e); }
+    out.lastActivity = ((S.auditLog || []).map(function (e) { return String(e.entryDateTime || '').slice(0, 10); }).sort().pop()) || '';
+    out.aiUse = orgProfileValue('orgAiUse') || '';
+    try { var r = bookingReadinessFor('iso27001'); out.stage1Ready = r.stage1.ok; out.stage2Ready = r.stage2.ok; } catch (e) { warn(e); }
+    try { out.auditorOverdue = L.auditorAccessState(auditorEntries(), '', today).overdueRemoval.length; } catch (e) { warn(e); }
+    return out;
+  }
   async function saveProgressSnapshot() {
     try {
       if (!Store || Store.kind !== 'sharepoint' || READONLY || !S) return;
@@ -13423,7 +13462,8 @@ function showModal(opts) {
         docs: (window._docs || S.documents || []).map(function (d) { return { status: docStatusOf(d) }; }),
         assets: window.CheckpointLib.assetRegisterSummary(S.assets || [], today, 365),
         risks: S.risks, actions: S.actions,
-        scopeStatement: orgProfileValue('orgScopeStatement')
+        scopeStatement: orgProfileValue('orgScopeStatement'),
+        delivery: progressDelivery(today)
       });
       var body = JSON.stringify(snap);
       var prev = window.CheckpointLib.parseProgressSnapshot(S.settings && S.settings.progressSnapshot);

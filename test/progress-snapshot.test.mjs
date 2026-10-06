@@ -57,9 +57,9 @@ describe('the client saves it, the console syncs and shows it', () => {
   });
   test('Sync reads it and keeps the last good one; the roster stores it', () => {
     assert.match(owner, /i\.fields\.SettingKey === 'progressSnapshot'/);
-    assert.match(owner, /if \(summary\.progress\) c\.progress = summary\.progress;/);
+    assert.match(owner, /if \(summary\.progress\) \{\n\s+c\.progress = summary\.progress;/);
     assert.match(owner, /\{ name: 'Progress', text: \{ allowMultipleLines: true \} \}/);
-    assert.match(owner, /'BlockedReason', 'Progress'\]/);
+    assert.match(owner, /'BlockedReason', 'Progress', 'ProgressHistory'\]/);
     assert.match(owner, /Progress: c\.progress \? JSON\.stringify\(c\.progress\) : ''/);
   });
   test('the client panel shows it', () => {
