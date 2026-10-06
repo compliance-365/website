@@ -2824,6 +2824,34 @@ function showModal(opts) {
      (see the task spec: which report type gets which of the six chart
      functions). */
   var REPORT_BUILDERS = {
+    /* Answers for the certification body's application form (BSI PF142
+       and equivalents) from the ISMS's own records, including the
+       ISO/IEC 27006-1 complexity factors that set the audit time. */
+    certapp: function (activeFw, fwLabel) {
+      var steps = gettingStartedSteps();
+      var start = (S.settings && S.settings.onboardedDate) || ((S.scans || [])[0] || {}).date || new Date().toISOString().slice(0, 10);
+      var plan = window.CheckpointLib.onboardingSchedule(steps, String(start).slice(0, 10), new Date().toISOString().slice(0, 10));
+      var ready = plan.steps.length ? plan.steps[plan.steps.length - 1].target : '';
+      var r = window.CheckpointLib.certApplicationAnswers({
+        profile: S.settings || {}, vendors: S.vendors || [], legal: S.legal || [], audits: S.audits || [], reviews: S.reviews || [],
+        onboardedDate: S.settings && S.settings.onboardedDate, readyDate: ready, today: new Date().toISOString().slice(0, 10), consultant: 'Compliance365'
+      });
+      var advice = window.CheckpointLib.scopeAdvice(S.settings || {});
+      return {
+        title: 'Certification application answers — ' + fwLabel,
+        dashboard: { intro: 'Copy these into the certification body’s application form. Each answer comes from the ISMS itself, so the application matches what the auditor will see at Stage 1.' + (r.warnings.length ? ' ' + r.warnings.length + ' item(s) to resolve before submitting.' : '') },
+        sections: [
+          { heading: 'Before you submit', pageBreak: false, html: r.warnings.length ? '<ul class="rpt-plain">' + r.warnings.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>' : '<p>Nothing outstanding.</p>' },
+          { heading: 'About the organisation and scope', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Question</th><th>Answer</th><th>From</th></tr></thead><tbody>' +
+            r.answers.map(function (x) { return '<tr><td>' + esc(x.q) + '</td><td>' + (x.a ? esc(x.a) : '<i>Not recorded</i>') + '</td><td>' + esc(x.src) + '</td></tr>'; }).join('') + '</tbody></table>' },
+          { heading: 'Complexity factors (ISO/IEC 27006-1)', pageBreak: true, html: '<p class="rpt-intro">These set the audit time. Select the answer shown for each: it is rated from your own records, with the reason. Rating higher does not make the audit safer, it makes it longer; the body re-rates at Stage 1 either way.</p>' +
+            '<table class="rpt-table"><thead><tr><th>Factor</th><th>Select</th><th>Why</th></tr></thead><tbody>' +
+            r.factors.map(function (x) { return '<tr><td>' + esc(x.factor) + '</td><td><b>' + x.level + '.</b> ' + esc(x.answer) + '</td><td>' + esc(x.why) + '</td></tr>'; }).join('') + '</tbody></table>' },
+          { heading: 'Keeping the scope proportionate', pageBreak: false, html: '<ul class="rpt-plain">' + advice.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul>' }
+        ]
+      };
+    },
+
     /* Management review minutes (Clause 9.3.3): the inputs considered,
        the decisions and resources agreed, and the actions raised, for
        window._minutesReview (or the latest review). */
@@ -5313,7 +5341,8 @@ function showModal(opts) {
       if (!cert || !cert.issued) {
         return '<div class="card" style="margin-bottom:16px"><h3>' + esc(fwName(fw)) + '</h3>' +
           '<p style="color:var(--paper-dim);font-size:12.5px">Not certified yet. Once the certification body issues the certificate, record it here and Checkpoint schedules the rest of the three-year cycle.</p>' +
-          '<button class="btn sm" data-action="App.recordCertificate" data-id="' + fw + '">Record certificate</button></div>';
+          '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.certApplication" data-id="' + fw + '">Application form answers</button><button class="btn ghost sm" data-action="App.recordCertificate" data-id="' + fw + '">Record certificate</button></div>' +
+          '<p class="src" style="margin-top:8px">Application form answers fills in what the certification body\u2019s application asks (scope, people, suppliers, legal requirements and the complexity factors that set the audit time) from your ISMS.</p></div>';
       }
       var cyc = window.CheckpointLib.certificationCycle(cert, today);
       var cov = window.CheckpointLib.internalAuditCoverage(S.audits || [], fw === 'iso27701' ? '' : fw, cyc.cycleStart);
@@ -5333,6 +5362,7 @@ function showModal(opts) {
         (cyc.next ? '<button class="btn sm" data-action="App.recordCertAudit" data-id="' + fw + '">Record ' + esc(cyc.next.label.toLowerCase()) + ' outcome</button>' : '') +
         '<button class="btn ghost sm" data-action="App.raiseCertFinding" data-id="' + fw + '">Raise certification body finding</button>' +
         '<button class="btn ghost sm" data-action="App.certPack" data-id="' + fw + '">Pre-audit pack</button>' +
+        '<button class="btn ghost sm" data-action="App.certApplication" data-id="' + fw + '">Application form answers</button>' +
         '</div>' +
         (openCb.length ? '<p style="margin-top:10px;font-size:12.5px"><b>' + openCb.length + ' open finding' + (openCb.length > 1 ? 's' : '') + '</b> from the certification body: ' + openCb.map(function (a) { return esc(a.id) + ' (' + esc(a.type.replace('Non-conformity ', 'NC ')) + ', due ' + fmtDateY(a.due) + ')'; }).join(', ') + '</p>' : '') +
         '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">' +
@@ -18415,6 +18445,8 @@ function showModal(opts) {
       try { await navigator.clipboard.writeText(text); toast('Summary copied'); }
       catch (e) { await showModal({ title: 'Value summary', message: 'Copy this text:', fields: [{ id: 't', label: 'Summary', type: 'textarea', value: text }], confirmText: 'Done' }); }
     },
+
+    certApplication: function (fw) { window._soaFw = fw; App.report('certapp'); },
 
     certPack: function (fw) {
       window._soaFw = fw;

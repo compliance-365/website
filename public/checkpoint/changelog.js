@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.119.0',
+    date: '2026-10-06',
+    entries: [
+      'New: Application form answers, on the Certification page. It fills in what a certification body’s application asks (BSI’s Certificate Information Form and its equivalents) from your ISMS: legal name, scope statement, people and locations in scope, outsourced suppliers with their certifications, applicable legal and regulatory requirements, how long the ISMS has run, when the audit can be booked, and the consultancy used. The application then matches what the auditor sees at Stage 1.',
+      'The ISO/IEC 27006-1 complexity factors that set the audit time (process complexity, type of business, confidentiality, virtual organisation, IT complexity, availability, development, outsourcing and disaster recovery) are each rated from your own records, with the reason. Rating higher than the facts only adds audit days, and the body re-rates at Stage 1. Suppliers that are reviewed and certified are rated as managed outsourcing.',
+      'Before you submit lists anything to fix first: unanswered questions, no legal requirement recorded, suppliers not yet reviewed, and Stage 2 booked before the internal audit and management review. Keeping the scope proportionate gives advice on the scope statement, people and locations.'
+    ]
+  },
+  {
     version: '1.118.0',
     date: '2026-10-05',
     entries: [
