@@ -29,7 +29,7 @@ describe('risk scenario (ISO/IEC 27005)', () => {
     ['AssetRefs', 'Threat', 'Vulnerability', 'Consequence'].forEach((col) => {
       assert.match(store, new RegExp("name: '" + col + "'"), col + ' in DEFS');
     });
-    assert.match(store, /'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence', 'RiskType'\],\n    Actions:/);
+    assert.match(store, /'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence', 'RiskType', 'Findings'\],\n    Actions:/);
     assert.match(store, /assetRefs: uncsv\(f\.AssetRefs\), threat: f\.Threat \|\| '', vulnerability: f\.Vulnerability \|\| '', consequence: f\.Consequence \|\| ''/);
     assert.equal((store.match(/AssetRefs: csv\(r\.assetRefs \|\| \[\]\), Threat: r\.threat \|\| '', Vulnerability: r\.vulnerability \|\| '', Consequence: r\.consequence \|\| ''/g) || []).length, 2, 'written on add and on update');
   });

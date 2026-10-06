@@ -2248,7 +2248,11 @@ window.SpStore = (function () {
          ISO 27001 6.1.1 "risks and opportunities"); blank or 'Threat' for
          a risk. Opportunities load into S.opportunities, never S.risks, so
          no threat count, heatmap or appetite check ever includes them. */
-      { name: 'RiskType', text: {} }
+      { name: 'RiskType', text: {} },
+      /* A business risk's findings: the scan and scope & context
+         templates it covers (CheckpointLib.BUSINESS_RISKS), comma
+         separated. TplId holds the business risk's own key. */
+      { name: 'Findings', text: { allowMultipleLines: true } }
     ],
     Actions: [
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
@@ -2947,7 +2951,7 @@ window.SpStore = (function () {
        every column costs nothing for an up-to-date tenant and closes
        this bug class completely for whichever tenant is still missing
        one from years of incremental additions. */
-    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride', 'Cia', 'LastReviewed', 'LastReviewedBy', 'ResidualL', 'ResidualI', 'ResidualBy', 'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence', 'RiskType'],
+    Risks: ['RefId', 'Category', 'Source', 'Likelihood', 'Impact', 'Controls', 'Owner', 'Status', 'Treatment', 'ActionRefs', 'TplId', 'AcceptedBy', 'AcceptedDate', 'AcceptanceNote', 'AcceptedScore', 'AiAssisted', 'AiReviewer', 'ResolutionDismissed', 'FinancialOverride', 'Cia', 'LastReviewed', 'LastReviewedBy', 'ResidualL', 'ResidualI', 'ResidualBy', 'ResidualDate', 'AssetRefs', 'Threat', 'Vulnerability', 'Consequence', 'RiskType', 'Findings'],
     Actions: ['RefId', 'RiskRef', 'Control', 'Priority', 'Owner', 'DueDate', 'Status', 'Evidence', 'Source', 'EvidenceUrl', 'FindingType', 'Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy', 'AiAssisted', 'AiReviewer', 'OwnerEmail'],
     /* Same incomplete-subset mistake as Risks/Actions above, caught the
        same way: this used to list only LastVerified/EvidenceUrl/
@@ -3293,7 +3297,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride), cia: uncsv(f.Cia), lastReviewed: f.LastReviewed || '', lastReviewedBy: f.LastReviewedBy || '', resL: (typeof f.ResidualL === 'number' ? f.ResidualL : null), resI: (typeof f.ResidualI === 'number' ? f.ResidualI : null), resBy: f.ResidualBy || '', resDate: f.ResidualDate || '', assetRefs: uncsv(f.AssetRefs), threat: f.Threat || '', vulnerability: f.Vulnerability || '', consequence: f.Consequence || '', type: f.RiskType === 'Opportunity' ? 'Opportunity' : 'Threat' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: normalizeTreatment(f.Treatment), actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '', acceptedScore: (typeof f.AcceptedScore === 'number' ? f.AcceptedScore : null), resolutionDismissed: !!f.ResolutionDismissed, finOverride: parseFinOverride(f.FinancialOverride), cia: uncsv(f.Cia), lastReviewed: f.LastReviewed || '', lastReviewedBy: f.LastReviewedBy || '', resL: (typeof f.ResidualL === 'number' ? f.ResidualL : null), resI: (typeof f.ResidualI === 'number' ? f.ResidualI : null), resBy: f.ResidualBy || '', resDate: f.ResidualDate || '', assetRefs: uncsv(f.AssetRefs), threat: f.Threat || '', vulnerability: f.Vulnerability || '', consequence: f.Consequence || '', type: f.RiskType === 'Opportunity' ? 'Opportunity' : 'Threat', findings: uncsv(f.Findings) };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -3484,7 +3488,10 @@ window.SpStore = (function () {
           S.lastNotes = d.notes || {};
         } catch (e) { }
       }
-      S.handledTpl = S.risks.filter(function (r) { return r.tpl; }).map(function (r) { return r.tpl; });
+      /* A business risk handles every finding it covers, so none of them
+         is proposed again. */
+      S.handledTpl = [];
+      S.risks.forEach(function (r) { if (r.tpl) S.handledTpl.push(r.tpl); (r.findings || []).forEach(function (f) { S.handledTpl.push(f); }); });
 
       S.entitlements = {};
       entRowId = {};
@@ -3517,7 +3524,7 @@ window.SpStore = (function () {
         ActionRefs: csv(r.actions), TplId: r.tpl || '', AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '',
         Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || '',
         AssetRefs: csv(r.assetRefs || []), Threat: r.threat || '', Vulnerability: r.vulnerability || '', Consequence: r.consequence || '',
-        RiskType: r.type === 'Opportunity' ? 'Opportunity' : 'Threat'
+        RiskType: r.type === 'Opportunity' ? 'Opportunity' : 'Threat', Findings: csv(r.findings || [])
       });
       (r.type === 'Opportunity' ? (S.opportunities = S.opportunities || []) : S.risks).push(r);
     },
@@ -3537,7 +3544,8 @@ window.SpStore = (function () {
         Cia: csv(r.cia || []), LastReviewed: r.lastReviewed || '', LastReviewedBy: r.lastReviewedBy || '',
         ResidualL: (typeof r.resL === 'number' ? r.resL : null), ResidualI: (typeof r.resI === 'number' ? r.resI : null),
         ResidualBy: r.resBy || '', ResidualDate: r.resDate || '',
-        AssetRefs: csv(r.assetRefs || []), Threat: r.threat || '', Vulnerability: r.vulnerability || '', Consequence: r.consequence || ''
+        AssetRefs: csv(r.assetRefs || []), Threat: r.threat || '', Vulnerability: r.vulnerability || '', Consequence: r.consequence || '',
+        TplId: r.tpl || '', Findings: csv(r.findings || [])
       });
     },
     deleteRisk: async function (r) {

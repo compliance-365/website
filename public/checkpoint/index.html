@@ -568,42 +568,40 @@
 
     <!-- SCAN -->
     <section class="view" id="v-scan">
-      <div class="vhead"><div class="rule"></div><h1>Posture scan</h1><p>Reads Conditional Access, directory roles, PIM, Identity Protection, Intune, OAuth app grants and Secure Score via Microsoft Graph — read-only, inside the tenant — across Identity, Devices, Apps &amp; Data, Monitoring, Continuity, Supplier and Governance. Failed and review-grade checks become <b style="color:var(--gold-light)">proposed risks and actions</b> for your approval; checks with no automatable signal show <b style="color:var(--paper-dim)">Manual — verify</b> rather than a false pass. Nothing enters the client register without a practitioner's sign-off.</p></div>
-      <div class="grid scan-grid">
-        <div class="scan-side">
-        <div class="card">
-          <h3>Tenant posture</h3>
-          <div class="gauge">
-            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(var(--paper-rgb),.12)" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="var(--gold)" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
-            <div><div class="gauge-num"><span id="gNum">—</span><small> /100</small></div><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);margin-top:6px" id="gCap">No scan yet this session</div></div>
-          </div>
-          <div style="margin-top:18px"><button class="btn" data-action="App.runScan">Run scan now</button></div>
-        </div>
-        <div class="card" id="coverageCard">
-        <h3>Coverage</h3>
-        <p style="color:var(--paper-dim);font-size:12.5px;margin:4px 0 14px;line-height:1.6">What Checkpoint can check automatically in this tenant, based on the Microsoft 365 licensing and access actually in place — not every tenant has every premium licence, and the checks that need one show as Manual rather than a guess when it's missing.</p>
-        <div id="coverageRows"></div>
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(var(--paper-rgb),.1);font-size:12px;line-height:1.65;color:var(--paper-dim)">
-          <strong style="display:block;margin-bottom:7px;color:var(--paper)">How automation works in Checkpoint</strong>
-          <div><b style="color:var(--gold-light)">Observe automatically.</b> Read-only Microsoft signals and their supporting evidence are collected in your tenant.</div>
-          <div style="margin-top:5px"><b style="color:var(--gold-light)">Propose, never decide.</b> A failed or review-grade check can propose a risk, action or control status; a practitioner must approve it before the register changes.</div>
-          <div style="margin-top:5px"><b style="color:var(--gold-light)">Stay honest where a signal does not exist.</b> Manual — verify means Checkpoint has no defensible technical proxy, not that the control has passed.</div>
-        </div>
-        </div>
-        </div>
-        <!-- What moved between the two most recent scans. Distinct from
-             the Dashboard's "Continuous monitoring" card, which is the
-             scheduled monitor's persistent, acknowledgeable ALERT queue
-             (written server-side, emailed, survives until someone acts
-             on it). This one is immediate and informational: it needs
-             no deployed monitor, appears for a manual scan too, and
-             reports improvements and lost signal as well as
-             regressions. See renderScanDrift(). -->
-        <div class="card" id="scanDriftCard" style="display:none"><h3>Changed since the previous scan</h3><div id="scanDriftBody"></div></div>
-        <div class="card"><h3>Checks</h3><div id="checkList"></div></div>
+      <div class="vhead"><div class="rule"></div><h1>Posture scan</h1><p>A read-only check of your Microsoft 365 security settings. Findings are proposed as business risks for you to approve: nothing changes in your registers without your sign-off. <button class="lnk" style="color:var(--gold-light)" data-action="App.toggleScanHow" id="scanHowBtn">How the scan works</button></p></div>
+      <div class="card scan-how" id="scanHow" hidden>
+        <p>Checkpoint reads Conditional Access, directory roles, PIM, Identity Protection, Intune, OAuth app grants and Secure Score through Microsoft Graph, read-only and inside your tenant.</p>
+        <div><b>Observe automatically.</b> Microsoft signals and their supporting evidence are collected in your tenant.</div>
+        <div><b>Propose, never decide.</b> A failed or review-grade check proposes a risk, actions or a control status; someone must approve it before a register changes.</div>
+        <div><b>Stay honest where no signal exists.</b> <i>Manual — verify</i> means there is no reliable technical signal, not that the control passed.</div>
       </div>
-      <div id="proposedWrap" style="margin-top:22px"></div>
-      <div id="resolvableWrap" style="margin-top:22px"></div>
+      <!-- Summary strip: the score and trend, the three status counts
+           (each one filters the list below), proposals waiting, and the
+           coverage line. renderScanSummary(). The gauge ids are animated
+           by runScan(). -->
+      <div class="card scan-summary">
+        <div class="gauge">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(var(--paper-rgb),.12)" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="var(--gold)" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+          <div><div class="gauge-num"><span id="gNum">—</span><small> /100</small></div><div class="scan-cap" id="gCap">No scan yet this session</div><div id="scanTrend"></div></div>
+        </div>
+        <div class="scan-tiles" id="scanTiles"></div>
+        <div class="scan-run"><button class="btn" data-action="App.runScan">Run scan now</button><div class="src" id="scanCoverageLine"></div></div>
+      </div>
+      <div id="scanFixFirst"></div>
+      <div id="proposedWrap"></div>
+      <!-- What moved between the two most recent scans: immediate and
+           informational, unlike the Dashboard's monitor alert queue. See
+           renderScanDrift(). -->
+      <div class="card" id="scanDriftCard" style="display:none"><h3>Changed since the previous scan</h3><div id="scanDriftBody"></div></div>
+      <div class="card" id="scanChecksCard"><h3>All checks</h3><div id="checkList"></div></div>
+      <div id="resolvableWrap"></div>
+      <div class="card" id="coverageCard">
+        <button class="check-area-toggle" data-action="App.toggleCoverage" id="coverageToggle" aria-expanded="false"><span class="check-area-name">Coverage</span><span class="check-area-summary" id="coverageSummary"></span><span class="check-area-chevron">&#9662;</span></button>
+        <div id="coverageBody" hidden>
+          <p class="src" style="margin:8px 0 10px">What Checkpoint can check automatically in this tenant, from the Microsoft 365 licensing and access in place. A check that needs a missing licence shows as Manual rather than a guess.</p>
+          <div id="coverageRows"></div>
+        </div>
+      </div>
     </section>
 
     <!-- RISKS -->
@@ -626,6 +624,7 @@
         <div class="grid kpis" id="riskKpiRow"></div>
       </div>
       <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button><button class="btn ghost sm" data-action="App.importCsv" data-id="risks">Import CSV</button></div>
+      <div id="riskGroupingWrap"></div>
       <div class="card" id="addRiskPanel" style="margin-bottom:16px;display:none">
         <h3>New risk</h3>
         <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px" id="riskAiDraftRow">

@@ -1180,6 +1180,53 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;font-size:var(--fs-2);opacity:.25;transition:opacity .4s var(--ease)}
 .check-row.show{opacity:1}
 .check-row .lbl{flex:1;color:var(--paper-dim)}
+/* Posture scan, one line per check that opens in place. */
+#v-scan > .card,#v-scan > div > .card{margin-bottom:19px}
+.scan-how{font-size:var(--fs-2);line-height:1.65;color:var(--paper-dim)}
+.scan-how p{margin:0 0 8px}
+.scan-how b{color:var(--gold-light)}
+.scan-summary{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.scan-summary .gauge svg{width:92px}
+.scan-cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);margin-top:6px}
+#scanTrend{display:flex;align-items:center;gap:8px;margin-top:6px}
+.scan-tiles{display:grid;grid-template-columns:repeat(4,minmax(96px,1fr));gap:10px;flex:1 1 420px}
+.scan-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm,6px);background:none;color:var(--paper-dim);font:inherit;cursor:pointer;text-align:left}
+.scan-tile b{font-size:var(--fs-4,24px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.scan-tile span{font-size:var(--fs-1);letter-spacing:.04em}
+.scan-tile:hover:not(:disabled),.scan-tile:focus-visible{border-color:var(--accent-fill,var(--gold))}
+.scan-tile.on{border-color:var(--gold);background:var(--surface-hover)}
+.scan-tile:disabled{opacity:.55;cursor:default}
+.scan-run{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+@media(max-width:700px){.scan-tiles{grid-template-columns:repeat(2,1fr)}}
+.chk-main{width:100%;background:none;border:none;font:inherit;text-align:left;cursor:pointer;justify-content:flex-start}
+.chk-main:hover,.chk-main:focus-visible{background:var(--surface-hover)}
+.chk-main .chip{flex:none;min-width:64px;text-align:center}
+.chk-main .lbl{display:flex;flex-direction:column;gap:2px;min-width:0;color:var(--paper)}
+.chk-head{color:var(--paper-faint);font-size:var(--fs-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chk-detail{padding:2px 6px 14px 84px;font-size:var(--fs-2);color:var(--paper-dim);line-height:1.6}
+.chk-note{margin:0 0 6px;overflow-wrap:anywhere}
+.chk-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+@media(max-width:700px){.chk-detail{padding-left:6px}}
+.fix-list{display:flex;flex-direction:column}
+.fix-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 4px;border:none;border-bottom:1px solid var(--line);background:none;font:inherit;text-align:left;cursor:pointer;color:var(--paper)}
+.fix-row:last-child{border-bottom:none}
+.fix-row:hover,.fix-row:focus-visible{background:var(--surface-hover)}
+.fix-row .lbl{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fix-n{flex:none;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:var(--fs-1);background:rgba(190,74,30,.18);color:var(--gold-light)}
+/* Proposed risks: a compact queue, one row per business risk. */
+.prop-list{display:flex;flex-direction:column}
+.prop-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;border-bottom:1px solid var(--line);padding:4px 0}
+.prop-row:last-child{border-bottom:none}
+.prop-main{display:flex;align-items:center;gap:12px;background:none;border:none;font:inherit;color:var(--paper);text-align:left;cursor:pointer;padding:10px 4px;min-width:0}
+.prop-main:hover,.prop-main:focus-visible{background:var(--surface-hover)}
+.prop-main .chip{flex:none;min-width:64px;text-align:center}
+.prop-title{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.prop-title .src{font-size:var(--fs-1)}
+.prop-btns{display:flex;gap:6px}
+.prop-detail{grid-column:1/-1;padding:0 6px 12px 88px;font-size:var(--fs-2);color:var(--paper-dim)}
+.prop-finding{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)}
+.prop-actions{margin:2px 0 6px 18px;line-height:1.6}
+@media(max-width:700px){.prop-row{grid-template-columns:1fr}.prop-detail{padding-left:6px}}
 .proposed-card{border:1px solid rgba(240, 169, 127,.35);border-radius:6px;padding:22px 24px;margin-top:14px;background:rgba(190, 74, 30,.05)}
 .proposed-card h4{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
 .proposed-card .meta{margin:8px 0 12px;font-size:var(--fs-1);color:var(--paper-dim);line-height:1.7}

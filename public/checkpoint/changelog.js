@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.122.0',
+    date: '2026-10-06',
+    entries: [
+      'The Posture scan page is simpler. The top shows your score and its trend, how many checks need attention, need review or are clear (click one to filter the list), how many risks are waiting for approval, and whether every data source is available. Fix these first lists the five most important findings, one click from their detail.',
+      'Each check is now one line: its status, its name and the result in a few words. Open it for the full result, how to fix it, the business risk it feeds and the option to record that it is covered another way. Coverage and how the scan works are folded away until you want them.',
+      'Business risks. Scan findings and the risks suggested from your scope answers now roll up into at most 14 business risks, written the way an auditor and a certification body expect to read a register: for example, staff accounts taken over through phishing or weak sign-in controls, rather than one risk per setting. Each carries the threat, the consequence, every finding as a vulnerability and every finding\u2019s fix as a treatment action. A full demo scan now proposes 12 risks instead of 36.',
+      'The proposals are a short queue: one row per business risk with Approve and Dismiss, opening to show its findings and actions. A finding can still be dismissed on its own, critical risks can be approved in one go, and a finding about a business risk already in the register is added to it rather than creating a second one. A business risk is ready to close once every finding behind it passes.',
+      'Risk register: Group into business risks. Risks already raised from scans and scope answers can be merged into their business risk after you review the grouping. Their actions move across, the originals close and show where they went, and the register shrinks to what matters. Risks you entered yourself are never touched.'
+    ]
+  },
+  {
     version: '1.121.0',
     date: '2026-10-06',
     entries: [
