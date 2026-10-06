@@ -844,7 +844,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'approveAllProposed', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -5087,7 +5087,7 @@ function showModal(opts) {
     if (nMine) { try { nMine.textContent = myTasks().items.length || ''; } catch (e) { nMine.textContent = ''; } }
     document.getElementById('nRisks').textContent = S.risks.filter(function (r) { return r.status !== 'Closed'; }).length;
     document.getElementById('nActions').textContent = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; }).length;
-    var p = S.proposed.length; var el = document.getElementById('nScan');
+    var p = proposalGroups().length; var el = document.getElementById('nScan');
     el.textContent = p || ''; el.style.display = p ? 'inline-block' : 'none';
 
     /* Scan-suggested SoA statuses, summed across every entitled
@@ -5856,7 +5856,7 @@ function showModal(opts) {
       var automationControls = entitledFrameworks().reduce(function (all, fw) { return all.concat(frameworkAppRows(fw)); }, []);
       var automationEvidence = evidenceCoverageFor(automationControls);
       var evidenceLinked = automationEvidence.autoCaptured + automationEvidence.manual;
-      var pendingApprovalCount = (S.proposed || []).length + totalPendingSuggestions();
+      var pendingApprovalCount = proposalGroups().length + totalPendingSuggestions();
       var automatedScans = (S.scans || []).filter(function (s) { return s.source === 'automated'; });
       var latestAutomatedScan = automatedScans[automatedScans.length - 1];
       var monitorCadence = parseInt((S.settings && S.settings.scanCadenceDays) || '30', 10) || 30;
@@ -6766,27 +6766,7 @@ function showModal(opts) {
          leaving an empty accordion behind would make the reader open it
          to discover it is empty, once per category, every time. */
       if (!visible.length) return '';
-      var rows = visible.map(function (c) {
-        var d = checkDisplay(c);
-        var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
-        if (d.disp) {
-          var dueSoon = d.disp.reviewDue && d.disp.reviewDue < new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-          note += '<div class="src" style="margin-top:2px">Not scored from Microsoft signal' +
-            (d.disp.reviewDue ? ' · review due ' + esc(d.disp.reviewDue) + (dueSoon ? ' (soon)' : '') : ' · no review date set') + '</div>';
-        }
-        /* Quiet by default: on a 40+ row list this button appears on
-           EVERY check, and in the overwhelming majority of cases there's
-           nothing to set — full ghost-button weight next to every single
-           pass/fail/review result competed with the one signal that
-           actually matters. Once a disposition IS set, though, that's
-           exactly the state a reader most needs to notice (this row's
-           result isn't a real scan), so it keeps the fuller treatment. */
-        var dispBtn = '<button class="btn ' + (d.disp ? 'ghost sm' : 'quiet sm') + '" data-action="App.setDisposition" data-id="' + esc(c.id) + '">' + (d.disp ? 'Edit coverage' : 'Not via Microsoft?') + '</button>';
-        var explainBtn = aiOn ? '<button class="btn ghost sm" data-action="App.explainCheck" data-id="' + esc(c.id) + '">Explain this</button>' : '';
-        var cached = _checkExplainCache[c.id];
-        var explainBlock = cached ? '<div class="card" style="margin:0 2px 10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
-        return '<div class="check-row-group"><div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + d.cls + '">' + esc(d.lbl) + '</span>' + dispBtn + explainBtn + '</div><div id="checkExplain-' + esc(c.id) + '">' + explainBlock + '</div></div>';
-      }).join('');
+      var rows = visible.map(function (c) { return checkRowHtml(c, instant, aiOn); }).join('');
       var catRag = counts.red ? 'red' : counts.amber ? 'amber' : 'green';
       var open = _scanCatOpen[area];
       if (open === undefined) open = catRag !== 'green';
@@ -6814,10 +6794,94 @@ function showModal(opts) {
     /* Every category filtered away. Only reachable with a filter on (an
        unfiltered list always has rows), so the way out is offered
        rather than described. */
+    setTimeout(renderScanSummary, 0);
     el.innerHTML = toolbar + (areaHtml ||
       '<p class="scan-empty">No checks in this tenant are ' +
       (_scanStatusF === 'red' ? 'failing' : _scanStatusF === 'amber' ? 'awaiting review' : 'clear') +
       ' right now. <button class="btn quiet sm" data-action="App.setScanStatusFilter" data-id="all">Show all checks</button></p>');
+  }
+
+  /* One check: a single line (status, name, the result in a few words)
+     that opens to the full result, how to fix it, the business risk it
+     feeds and the coverage and AI options. */
+  var _checkOpen = {};
+  function checkRowHtml(c, instant, aiOn) {
+    var d = checkDisplay(c);
+    var noteText = (S.lastNotes && S.lastNotes[c.id]) || '';
+    var open = !!_checkOpen[c.id];
+    var head = d.disp ? (d.disp.disposition === 'alternative' ? 'Covered outside Microsoft 365' : 'Recorded as not applicable') : window.CheckpointLib.checkHeadline(noteText, 80);
+    var main = '<button class="check-row chk-main' + (instant ? ' show' : '') + '" data-action="App.toggleCheckRow" data-id="' + esc(c.id) + '" aria-expanded="' + open + '">' +
+      '<span class="chip ' + d.cls + '">' + esc(d.lbl) + '</span>' +
+      '<span class="lbl">' + esc(c.label) + (head ? '<span class="chk-head">' + esc(head) + '</span>' : '') + '</span>' +
+      '<span class="check-area-chevron" style="' + (open ? 'transform:rotate(180deg)' : '') + '">' + icon('chevron') + '</span></button>';
+    if (!open) return '<div class="check-row-group" data-check="' + esc(c.id) + '">' + main + '</div>';
+    var t = c.tpl && TPL[c.tpl];
+    var bizKey = c.tpl && window.CheckpointLib.businessRiskKeyFor(c.tpl);
+    var biz = bizKey && window.CheckpointLib.businessRiskDef(bizKey);
+    var inReg = biz && (S.risks || []).find(function (r) { return r.status !== 'Closed' && (r.tpl === bizKey || window.CheckpointLib.riskFindings(r).indexOf(c.tpl) !== -1); });
+    var pending = c.tpl && (S.proposed || []).indexOf(c.tpl) !== -1;
+    var detail = '<div class="chk-detail">' +
+      (noteText ? '<p class="chk-note">' + esc(noteText) + '</p>' : '<p class="chk-note src">' + (d.r === null ? 'Not scanned yet. Run a scan to check this.' : 'No further detail from this check.') + '</p>') +
+      (d.disp ? '<div class="src">Not scored from Microsoft signal' + (d.disp.reviewDue ? ' · review due ' + esc(d.disp.reviewDue) : ' · no review date set') + '</div>' : '') +
+      (t && d.rag !== 'green' ? '<div class="src" style="margin:8px 0 2px">How to fix</div><ul class="prop-actions">' + t.actions.map(function (a) { return '<li>' + esc(a.t) + '</li>'; }).join('') + '</ul>' : '') +
+      (biz ? '<div class="src" style="margin-top:6px">Feeds the business risk: <b>' + esc(biz.title) + '</b>' + (inReg ? ' (' + esc(inReg.id) + ' in the register)' : pending ? ' (proposed below)' : '') + '</div>' : '') +
+      '<div class="chk-btns">' +
+      (pending && !READONLY ? '<button class="btn sm" data-action="App.showProposal" data-id="' + esc(bizKey || c.tpl) + '">Review the proposal</button>' : '') +
+      (READONLY ? '' : '<button class="btn ' + (d.disp ? 'ghost' : 'quiet') + ' sm" data-action="App.setDisposition" data-id="' + esc(c.id) + '">' + (d.disp ? 'Edit coverage' : 'Covered another way?') + '</button>') +
+      (aiOn ? '<button class="btn ghost sm" data-action="App.explainCheck" data-id="' + esc(c.id) + '">Explain this</button>' : '') +
+      '</div>' +
+      '<div id="checkExplain-' + esc(c.id) + '">' + (_checkExplainCache[c.id] ? '<div class="card" style="margin:8px 0;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(_checkExplainCache[c.id]) + '</div>' : '') + '</div>' +
+      '</div>';
+    return '<div class="check-row-group open" data-check="' + esc(c.id) + '">' + main + detail + '</div>';
+  }
+
+  /* The top of the scan page: score trend, the three status counts
+     (each filters the list), proposals waiting and coverage. */
+  function renderScanSummary() {
+    var tiles = document.getElementById('scanTiles');
+    if (!tiles) return;
+    var tot = { red: 0, amber: 0, green: 0 };
+    relevantCheckDefs().forEach(function (c) { tot[checkDisplay(c).rag]++; });
+    var nProp = proposalGroups().length;
+    var tile = function (k, n, label, tone) {
+      return '<button class="scan-tile' + (_scanStatusF === k ? ' on' : '') + '" data-action="App.setScanStatusFilter" data-id="' + k + '"' + (n ? '' : ' disabled') + '><b style="color:' + tone + '">' + n + '</b><span>' + label + '</span></button>';
+    };
+    tiles.innerHTML = tile('red', tot.red, 'Need attention', 'var(--fail)') + tile('amber', tot.amber, 'To review', 'var(--warn)') + tile('green', tot.green, 'Clear', 'var(--pass)') +
+      '<button class="scan-tile" data-action="App.showProposal" data-id=""' + (nProp ? '' : ' disabled') + '><b style="color:var(--gold-light)">' + nProp + '</b><span>Risks to approve</span></button>';
+    var scores = (S.scans || []).map(function (x) { return x.score; }).filter(function (x) { return typeof x === 'number'; }).slice(-8);
+    var tr = document.getElementById('scanTrend');
+    if (tr) {
+      if (scores.length > 1) {
+        var w = 90, h = 22, d = scores[scores.length - 1] - scores[0];
+        var pts = scores.map(function (v, i) { return (i / (scores.length - 1) * w).toFixed(1) + ',' + (h - v / 100 * h).toFixed(1); }).join(' ');
+        tr.innerHTML = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="var(--gold)" stroke-width="1.5"/></svg>' +
+          '<span class="src">' + (d === 0 ? 'No change' : (d > 0 ? '+' : '') + d) + ' over ' + scores.length + ' scans</span>';
+      } else tr.innerHTML = '';
+    }
+    var cov = document.getElementById('scanCoverageLine');
+    if (cov) {
+      var keys = CAP ? CAPABILITY_KEYS.filter(function (k) { return CAP[k]; }) : [];
+      var avail = keys.filter(function (k) { return CAP[k].available; }).length;
+      cov.innerHTML = keys.length ? '<button class="lnk" data-action="App.toggleCoverage" data-id="open">' + avail + ' of ' + keys.length + ' data sources available</button>' + (avail < keys.length ? ' <span style="color:var(--warn)">· ' + (keys.length - avail) + ' missing</span>' : '') : '';
+    }
+    renderScanFixFirst();
+  }
+  /* The five most important things to fix, each one click from its
+     detail. */
+  function renderScanFixFirst() {
+    var el = document.getElementById('scanFixFirst');
+    if (!el) return;
+    var list = window.CheckpointLib.scanFixFirst(relevantCheckDefs().map(function (c) {
+      var t = c.tpl && TPL[c.tpl];
+      return { id: c.id, label: c.label, rag: checkDisplay(c).rag, score: t ? t.risk.L * t.risk.I : 0 };
+    }), 5);
+    if (!list.length || !S.lastResults) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="card"><h3>Fix these first</h3><div class="fix-list">' + list.map(function (x, i) {
+      var head = window.CheckpointLib.checkHeadline((S.lastNotes && S.lastNotes[x.id]) || '', 110);
+      return '<button class="fix-row" data-action="App.openCheck" data-id="' + esc(x.id) + '"><span class="fix-n">' + (i + 1) + '</span>' +
+        '<span class="lbl">' + esc(x.label) + (head ? '<span class="chk-head">' + esc(head) + '</span>' : '') + '</span>' +
+        '<span class="chip ' + (x.rag === 'red' ? 'st-Open' : 'st-Intreatment') + '">' + (x.rag === 'red' ? 'Fail' : 'Review') + '</span></button>';
+    }).join('') + '</div></div>';
   }
 
   /* In-memory only, keyed by check id — never persisted, never sent
@@ -6850,6 +6914,10 @@ function showModal(opts) {
       return;
     }
     var keys = CAPABILITY_KEYS;
+    var have = keys.filter(function (k) { return CAP[k]; });
+    var avail = have.filter(function (k) { return CAP[k].available; }).length;
+    var sum = document.getElementById('coverageSummary');
+    if (sum) sum.innerHTML = avail + ' of ' + have.length + ' data sources available' + (avail < have.length ? ' · <span style="color:var(--warn)">' + (have.length - avail) + ' need a licence or access</span>' : '');
     el.innerHTML = keys.map(function (k) {
       var c = CAP[k];
       if (!c) return '';
@@ -7010,6 +7078,90 @@ function showModal(opts) {
     } catch (e) { warn(e); return null; }
   }
 
+  /* The proposed findings, grouped under their business risk
+     (CheckpointLib.groupProposals). The queue, the nav badge and the
+     scan toast all count these groups, not the raw findings. */
+  function proposalGroups() {
+    return window.CheckpointLib.groupProposals(S.proposed || [], TPL, S.risks || []);
+  }
+  function findingLabel(tpl) {
+    var c = (window.CHECK_DEFS || []).find(function (x) { return x.tpl === tpl; });
+    if (c) return c.label;
+    var t = TPL[tpl];
+    return t ? t.risk.title : tpl;
+  }
+  /* Approves one group: a new business risk carrying every finding's
+     treatment actions, or, when that business risk is already in the
+     register, the findings and their actions added to it (its inherent
+     rating rises only if a new finding is worse). An unmapped finding
+     is approved as its own risk, as before. Returns { rid, actIds,
+     added } or null. No toast or re-render: the caller owns both. */
+  async function approveProposalGroup(g) {
+    if (!g) return null;
+    if (!g.biz) return approveProposedTemplate(g.tpls[0]);
+    var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+    var today = new Date().toISOString().slice(0, 10);
+    var vuln = g.tpls.map(function (tpl) { return findingLabel(tpl); }).join('; ');
+    var src = g.tpls.every(function (tpl) { return TPL[tpl] && TPL[tpl].ctx; }) ? 'Scope & context' : 'Posture scan';
+    try {
+      var r = g.target, rid;
+      var known = {};
+      if (r) (r.actions || []).forEach(function (aid) { var a = S.actions.find(function (x) { return x.id === aid; }); if (a) known[String(a.title).toLowerCase()] = true; });
+      var acts = g.actions.filter(function (a) { return !known[String(a.t).toLowerCase()]; });
+      var actIds = acts.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
+      if (r) {
+        rid = r.id;
+        var before = r.L + '×' + r.I;
+        r.findings = window.CheckpointLib.riskFindings(r).concat(g.tpls.filter(function (t) { return window.CheckpointLib.riskFindings(r).indexOf(t) === -1; }));
+        r.actions = (r.actions || []).concat(actIds);
+        r.controls = uniqList((r.controls || []).concat(g.controls));
+        r.cia = uniqList((r.cia || []).concat(g.cia));
+        if (g.L * g.I > r.L * r.I) { r.L = g.L; r.I = g.I; }
+        r.vulnerability = (r.vulnerability ? r.vulnerability + '; ' : '') + vuln + ' (' + today + ')';
+        await Store.updateRisk(r);
+        audit('Findings added to business risk', 'Risk', rid, before, g.tpls.length + ' finding(s): ' + g.tpls.join(', ') + '; inherent ' + r.L + '×' + r.I);
+      } else {
+        var maxR = S.risks.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+        rid = 'R-' + String(maxR + 1).padStart(3, '0');
+        r = { id: rid, title: g.biz.title, cat: g.biz.cat, cia: g.cia.slice(), src: src, L: g.L, I: g.I, controls: g.controls.slice(), owner: owner, status: 'Open', treat: 'Treat',
+          actions: actIds, tpl: g.key, findings: g.tpls.slice(), threat: g.biz.threat, consequence: g.biz.consequence, vulnerability: vuln + ' (' + today + ')' };
+        await Store.addRisk(r);
+        audit('Business risk approved from findings', 'Risk', rid, '(proposed: ' + g.tpls.join(', ') + ')', 'Open — ' + actIds.length + ' action(s) created');
+      }
+      for (var i = 0; i < acts.length; i++) {
+        var a = acts[i];
+        await Store.addAction({ id: actIds[i], title: a.t, risk: rid, control: a.control, pr: a.pr, owner: owner, due: daysFrom(a.days), status: 'Open', src: src });
+      }
+      g.tpls.forEach(function (tpl) { S.handledTpl.push(tpl); delete _riskInsightCache[tpl]; });
+      S.proposed = S.proposed.filter(function (p) { return g.tpls.indexOf(p) === -1; });
+      log('Risk <b>' + esc(rid) + '</b> ' + (g.target ? 'updated with ' : 'approved from ') + g.tpls.length + ' finding(s), with ' + actIds.length + ' action(s) assigned.');
+      return { rid: rid, actIds: actIds, added: !!g.target };
+    } catch (e) { warn(e); return null; }
+  }
+  /* Bulk approve: one confirmation, one pass, one summary. */
+  async function approveGroups(groups, label) {
+    if (!groups.length) return;
+    var actionCount = groups.reduce(function (n, g) { return n + g.actions.length; }, 0);
+    var ok = await showModal({
+      title: 'Approve ' + label + 'proposed risks',
+      message: 'Add ' + groups.length + ' ' + label + 'risk' + (groups.length === 1 ? '' : 's') + ' to the register (or add their findings to the business risk already there), creating ' + actionCount + ' treatment action' + (actionCount === 1 ? '' : 's') + ' assigned to you? Each can still be edited or closed afterwards.',
+      confirmText: 'Approve ' + groups.length,
+      cancelText: 'Cancel'
+    });
+    if (!ok) return;
+    busy(true);
+    var done = 0, actionsMade = 0;
+    for (var i = 0; i < groups.length; i++) {
+      var res = await approveProposalGroup(groups[i]);
+      if (res) { done++; actionsMade += res.actIds.length; }
+    }
+    busy(false);
+    toast('<b>' + done + ' risk' + (done === 1 ? '' : 's') + '</b> approved · ' + actionsMade + ' action' + (actionsMade === 1 ? '' : 's') + ' created');
+    renderAll();
+  }
+  function uniqList(list) { var seen = {}; return (list || []).filter(function (x) { if (!x || seen[x]) return false; seen[x] = true; return true; }); }
+
   /* Applies one suggested status to its control and records the audit
      entry — the shared core of App.confirm<X>Suggestion() and the
      confirm-all bulk action, so a bulk confirm can never diverge from
@@ -7024,35 +7176,58 @@ function showModal(opts) {
     return true;
   }
 
+  var _proposalOpen = {};
   function renderProposed() {
     var w = document.getElementById('proposedWrap');
-    if (!S.proposed.length) {
-      w.innerHTML = S.lastResults ? '<div class="card" style="color:var(--paper-dim);font-size:13px">No new findings require risk treatment. Existing register covers current posture.</div>' : '';
+    var groups = proposalGroups();
+    renderScanSummary();
+    if (!groups.length) {
+      w.innerHTML = S.lastResults ? '<div class="card" style="color:var(--paper-dim);font-size:13px">No new findings require risk treatment. The register already covers the current posture.</div>' : '';
       return;
     }
     var aiOn = !!(S.entitlements && S.entitlements.ai);
-    /* Bulk bar: a single scan can propose a dozen findings, and every one
-       of them used to need its own two-button decision with no way to
-       clear the queue in one go. */
-    var bulkBar = READONLY || S.proposed.length < 2 ? '' :
+    var crit = groups.filter(function (g) { return band(g.score) === 'Critical'; });
+    var nFindings = groups.reduce(function (n, g) { return n + g.tpls.length; }, 0);
+    var bulkBar = READONLY ? '' :
       '<div class="bulk-bar">' +
-        '<span class="bulk-count">' + S.proposed.length + ' awaiting a decision</span>' +
-        '<button class="btn sm" data-action="App.approveAllProposed">Approve all ' + S.proposed.length + '</button> ' +
-        '<button class="btn ghost sm" data-action="App.dismissAllProposed">Dismiss all</button>' +
+        '<span class="bulk-count">' + groups.length + ' risk' + (groups.length === 1 ? '' : 's') + ' from ' + nFindings + ' finding' + (nFindings === 1 ? '' : 's') + '</span>' +
+        (crit.length && crit.length < groups.length ? '<button class="btn sm" data-action="App.approveCriticalProposed">Approve ' + crit.length + ' critical</button> ' : '') +
+        (groups.length > 1 ? '<button class="btn ' + (crit.length && crit.length < groups.length ? 'ghost ' : '') + 'sm" data-action="App.approveAllProposed">Approve all ' + groups.length + '</button> ' : '') +
+        (groups.length > 1 ? '<button class="btn ghost sm" data-action="App.dismissAllProposed">Dismiss all</button>' : '') +
       '</div>';
-    w.innerHTML = '<div class="card"><h3>Proposed for the register — practitioner approval required</h3>' +
-      (S.proposed.some(function (k) { return k.indexOf('ctx-') === 0; }) ? '<p class="src" style="margin:0 0 10px">Some of these come from your scope & context answers rather than a scan: risks a Microsoft 365 check cannot see. Approve the ones that apply, adjust the scores to your situation, and dismiss the rest.</p>' : '') + bulkBar + S.proposed.map(function (p) {
-      var t = TPL[p];
-      var insightBtn = aiOn && !t.ctx ? '<button class="btn ghost sm" data-action="App.aiInsightProposed" data-id="' + esc(p) + '">AI insight</button> ' : '';
-      var cached = _riskInsightCache[p];
-      var insightBlock = cached ? '<div class="card" style="margin-top:10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
-      return '<div class="proposed-card"><h4>' + esc(t.risk.title) + '</h4>' +
-        (t.ctx ? '<div class="src" style="margin:2px 0 6px">Suggested from your scope answers: ' + esc(t.why) + '</div>' : '') +
-        '<div class="meta">Inherent <b>' + t.risk.L + ' × ' + t.risk.I + ' — ' + band(t.risk.L * t.risk.I) + '</b> · Controls <b>' + t.risk.controls.join(', ') + '</b> · ' + t.actions.length + ' remediation action' + (t.actions.length > 1 ? 's' : '') + ' will be created and assigned</div>' +
-        '<button class="btn sm" data-action="App.approve" data-id="' + p + '">Approve → register</button> ' +
-        '<button class="btn ghost sm" data-action="App.dismiss" data-id="' + p + '">Dismiss</button> ' + insightBtn +
-        '<div id="riskInsight-' + esc(p) + '">' + insightBlock + '</div></div>';
-    }).join('') + '</div>';
+    var rows = groups.map(function (g) {
+      var open = !!_proposalOpen[g.key];
+      var sc = band(g.score);
+      var what = g.target
+        ? 'Adds to <b>' + esc(g.target.id) + '</b>' + (g.score > g.target.L * g.target.I ? ', raising it to ' + g.L + '×' + g.I : '')
+        : 'New risk';
+      var anyCtx = g.tpls.some(function (tpl) { return TPL[tpl] && TPL[tpl].ctx; });
+      var detail = !open ? '' :
+        '<div class="prop-detail">' +
+        (g.biz ? '<div class="src" style="margin-bottom:6px">' + esc(g.biz.consequence) + '</div>' : '') +
+        '<div class="src" style="margin:6px 0 2px">Findings</div>' +
+        g.tpls.map(function (tpl) {
+          var t = TPL[tpl];
+          return '<div class="prop-finding"><span>' + esc(findingLabel(tpl)) + (t && t.ctx && t.why ? ' <span class="src">(' + esc(t.why) + ')</span>' : '') + '</span>' +
+            (READONLY ? '' : '<button class="btn quiet sm" data-action="App.dismiss" data-id="' + esc(tpl) + '" title="Dismiss this finding only">Dismiss</button>') +
+            (aiOn && t && !t.ctx ? '<button class="btn quiet sm" data-action="App.aiInsightProposed" data-id="' + esc(tpl) + '">AI insight</button>' : '') +
+            '</div><div id="riskInsight-' + esc(tpl) + '">' + (_riskInsightCache[tpl] ? '<div class="card" style="margin:4px 0 8px;font-size:12.5px">' + escAiText(_riskInsightCache[tpl]) + '</div>' : '') + '</div>';
+        }).join('') +
+        '<div class="src" style="margin:8px 0 2px">Treatment actions (' + g.actions.length + ')</div>' +
+        '<ul class="prop-actions">' + g.actions.map(function (a) { return '<li>' + esc(a.t) + ' <span class="src">' + esc(a.pr) + ', ' + esc(a.control) + '</span></li>'; }).join('') + '</ul>' +
+        '<div class="src">Controls ' + esc(g.controls.join(', ')) + '</div></div>';
+      return '<div class="prop-row' + (open ? ' open' : '') + '" data-group="' + esc(g.key) + '">' +
+        '<button class="prop-main" data-action="App.toggleProposal" data-id="' + esc(g.key) + '" aria-expanded="' + open + '">' +
+          '<span class="chip ' + (sc === 'Critical' || sc === 'High' ? 'st-Open' : 'st-Intreatment') + '">' + esc(sc) + '</span>' +
+          '<span class="prop-title">' + esc(g.title) + '<span class="src">' + what + ' · ' + g.tpls.length + ' finding' + (g.tpls.length === 1 ? '' : 's') + (anyCtx ? ' (incl. scope answers)' : '') + ' · ' + g.actions.length + ' action' + (g.actions.length === 1 ? '' : 's') + '</span></span>' +
+          '<span class="check-area-chevron" style="' + (open ? 'transform:rotate(180deg)' : '') + '">' + icon('chevron') + '</span>' +
+        '</button>' +
+        (READONLY ? '' : '<span class="prop-btns"><button class="btn sm" data-action="App.approve" data-id="' + esc(g.key) + '">Approve</button><button class="btn ghost sm" data-action="App.dismissGroup" data-id="' + esc(g.key) + '">Dismiss</button></span>') +
+        detail + '</div>';
+    }).join('');
+    w.innerHTML = '<div class="card"><h3>Proposed for the risk register</h3>' +
+      '<p class="src" style="margin:0 0 10px">Findings are grouped into business risks, the way an auditor reads a register. Nothing is added until you approve it. Open a row to see its findings and the actions it creates.</p>' +
+      bulkBar + '<div class="prop-list">' + rows + '</div></div>';
   }
 
   /* "Ready to close" — the flip side of renderProposed() above. A risk
@@ -7072,7 +7247,7 @@ function showModal(opts) {
     if (!resolvable.length) { w.innerHTML = ''; return; }
     w.innerHTML = '<div class="card"><h3>Ready to close — underlying check now passes</h3>' + resolvable.map(function (item) {
       var r = item.risk;
-      var label = checkLabelsById[r.tpl] || r.tpl;
+      var label = window.CheckpointLib.riskFindings(r).map(function (f) { return checkLabelsById[f] || findingLabel(f); }).join('”, “');
       var actTitles = item.openActionIds.map(function (aid) {
         var a = S.actions.find(function (x) { return x.id === aid; });
         return a ? esc(a.title) : aid;
@@ -7274,7 +7449,73 @@ function showModal(opts) {
     revealRows(wrap);
   }
 
+  /* Existing scan- and scope-raised risks that belong under one
+     business risk (CheckpointLib.groupExistingRisks): offered for a
+     reviewed merge, one group or all at once. */
+  var _groupingOpen = false;
+  function renderRiskGrouping() {
+    var w = document.getElementById('riskGroupingWrap');
+    if (!w) return;
+    var groups = window.CheckpointLib.groupExistingRisks(S.risks || []);
+    if (!groups.length || READONLY) { w.innerHTML = ''; return; }
+    var size = window.CheckpointLib.registerSizeAfterGrouping(S.risks || []);
+    var moved = groups.reduce(function (n, g) { return n + g.risks.length; }, 0);
+    var head = '<div class="card" style="margin-bottom:16px;border-color:rgba(var(--gold-rgb,169,129,46),.45)">' +
+      '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h3 style="margin:0 0 4px">Group into business risks</h3>' +
+      '<div class="src">' + moved + ' technical risk' + (moved === 1 ? '' : 's') + ' from scans and scope answers belong under ' + groups.length + ' business risk' + (groups.length === 1 ? '' : 's') + '. Grouping takes the open register from ' + size.now + ' to ' + size.after + ' risks: what an auditor expects to read. Their actions move across and the originals close with a note saying where they went.</div></div>' +
+      '<button class="btn ghost sm" data-action="App.toggleRiskGrouping">' + (_groupingOpen ? 'Hide' : 'Review') + '</button>' +
+      '<button class="btn sm" data-action="App.groupExistingRisks" data-id="*">Group all ' + groups.length + '</button></div>';
+    if (_groupingOpen) {
+      head += '<div class="prop-list" style="margin-top:12px">' + groups.map(function (g) {
+        return '<div class="prop-row open"><div class="prop-main" style="cursor:default"><span class="prop-title">' + esc(g.biz.title) +
+          '<span class="src">' + (g.target ? 'Into ' + esc(g.target.id) + ' (already in the register)' : 'New business risk') + ' · inherent ' + g.L + '×' + g.I + ' · ' + g.actions.length + ' action' + (g.actions.length === 1 ? '' : 's') + '</span></span></div>' +
+          '<span class="prop-btns"><button class="btn sm" data-action="App.groupExistingRisks" data-id="' + esc(g.key) + '">Group</button></span>' +
+          '<div class="prop-detail">' + g.risks.map(function (r) { return '<div class="prop-finding"><span><b>' + esc(r.id) + '</b> ' + esc(r.title) + ' <span class="src">' + r.L + '×' + r.I + (r.owner ? ', ' + esc(r.owner) : '') + '</span></span></div>'; }).join('') + '</div></div>';
+      }).join('') + '</div>';
+    }
+    w.innerHTML = head + '</div>';
+  }
+  /* Merges one group: into the business risk already in the register,
+     or a new one (worst inherent rating, the highest-rated risk's owner,
+     every control, C/I/A and action). The originals close, pointing to
+     it. Residual ratings are not carried over: the business risk is
+     re-assessed as a whole. */
+  async function mergeRiskGroup(g) {
+    var target = g.target, rid;
+    if (target) {
+      rid = target.id;
+      target.findings = uniqList(window.CheckpointLib.riskFindings(target).concat(g.findings));
+      target.actions = uniqList((target.actions || []).concat(g.actions));
+      target.controls = uniqList((target.controls || []).concat(g.controls));
+      target.cia = uniqList((target.cia || []).concat(g.cia));
+      if (g.L * g.I > target.L * target.I) { target.L = g.L; target.I = g.I; }
+      target.vulnerability = (target.vulnerability ? target.vulnerability + '; ' : '') + g.risks.map(function (r) { return r.title; }).join('; ');
+      await Store.updateRisk(target);
+    } else {
+      var maxR = S.risks.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      rid = 'R-' + String(maxR + 1).padStart(3, '0');
+      target = { id: rid, title: g.biz.title, cat: g.biz.cat, cia: g.cia.slice(), src: 'Grouped', L: g.L, I: g.I, controls: g.controls.slice(),
+        owner: g.owner || ((Graph.getAccount() && Graph.getAccount().name) || 'Practitioner'), status: 'Open', treat: 'Treat',
+        actions: g.actions.slice(), tpl: g.key, findings: g.findings.slice(), threat: g.biz.threat, consequence: g.biz.consequence,
+        vulnerability: g.risks.map(function (r) { return r.title; }).join('; ') };
+      await Store.addRisk(target);
+    }
+    for (var i = 0; i < g.actions.length; i++) {
+      var a = S.actions.find(function (x) { return x.id === g.actions[i]; });
+      if (a && a.risk !== rid) { a.risk = rid; await Store.updateAction(a); }
+    }
+    for (var j = 0; j < g.risks.length; j++) {
+      var r = g.risks[j];
+      r.status = 'Closed';
+      await Store.updateRisk(r);
+      audit('Risk merged into business risk', 'Risk', r.id, 'Open', 'Closed — merged into ' + rid);
+    }
+    audit(g.target ? 'Risks grouped into business risk' : 'Business risk created by grouping', 'Risk', rid, '', g.risks.map(function (r) { return r.id; }).join(', '));
+    return rid;
+  }
+
   function renderRisks() {
+    renderRiskGrouping();
     renderResidualHeatmapInto('riskHeat', 'riskHeatLegend');
     renderRisksDashboard();
     renderOpportunities();
@@ -13881,7 +14122,7 @@ function showModal(opts) {
            one place that already walks every check's live result every
            scan, rather than a second pass over CHECK_DEFS. */
         S.risks.forEach(function (dr) {
-          if (dr.tpl === c.id && dr.resolutionDismissed) {
+          if (window.CheckpointLib.riskFindings(dr).indexOf(c.id) !== -1 && dr.resolutionDismissed) {
             dr.resolutionDismissed = false;
             Store.updateRisk(dr).catch(function (e) { warn(e); });
           }
@@ -14296,7 +14537,8 @@ function showModal(opts) {
         var suggTotal = totalPendingSuggestions();
         var suggFws = entitledFrameworks().filter(function (fw) { return pendingSuggestions(fw); });
         var parts = [];
-        if (S.proposed.length) parts.push('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting approval below');
+        var nGroups = proposalGroups().length;
+        if (nGroups) parts.push('<b>' + nGroups + ' proposed risk' + (nGroups > 1 ? 's' : '') + '</b> awaiting approval below');
         if (suggTotal) {
           parts.push('<b>' + suggTotal + ' SoA suggestion' + (suggTotal > 1 ? 's' : '') + '</b> across ' +
             (suggFws.length > 1 ? suggFws.length + ' frameworks' : esc(fwName(suggFws[0]))));
@@ -14308,40 +14550,89 @@ function showModal(opts) {
       if (_setupHealth.summary) runSetupHealth().catch(function (e) { console.error(e); });
     },
 
-    approve: async function (tpl) {
+    /* id = a business risk key, or an unmapped finding's template. */
+    approve: async function (id) {
+      var g = proposalGroups().find(function (x) { return x.key === id || x.tpls.indexOf(id) !== -1; });
+      if (!g) return;
       busy(true);
-      var res = await approveProposedTemplate(tpl);
+      var res = await approveProposalGroup(g);
       busy(false);
-      if (res) toast('<b>' + res.rid + '</b> added to risk register · ' + res.actIds.length + ' action(s) created');
+      if (res) toast('<b>' + esc(res.rid) + '</b> ' + (res.added ? 'updated' : 'added to the risk register') + ' · ' + res.actIds.length + ' action(s) created');
       renderAll();
     },
+    toggleCheckRow: function (id) { _checkOpen[id] = !_checkOpen[id]; renderScanChecks(true); },
+    /* From "Fix these first": clear the filter, open the check's area
+       and the check, and bring it into view. */
+    openCheck: function (id) {
+      var c = relevantCheckDefs().find(function (x) { return x.id === id; });
+      if (!c) return;
+      _scanStatusF = 'all'; _scanCatOpen[c.area] = true; _checkOpen[id] = true;
+      renderScanChecks(true);
+      var el = document.querySelector('#checkList [data-check="' + id + '"]');
+      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    },
+    /* Opens the proposal a check feeds (or the queue) and scrolls to it. */
+    showProposal: function (key) {
+      if (key) _proposalOpen[key] = true;
+      renderProposed();
+      var el = (key && document.querySelector('#proposedWrap [data-group="' + key + '"]')) || document.getElementById('proposedWrap');
+      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    },
+    toggleCoverage: function (v) {
+      var body = document.getElementById('coverageBody'), btn = document.getElementById('coverageToggle');
+      if (!body) return;
+      var open = v === 'open' ? true : body.hidden;
+      body.hidden = !open;
+      if (btn) { btn.setAttribute('aria-expanded', String(open)); var ch = btn.querySelector('.check-area-chevron'); if (ch) ch.style.transform = open ? 'rotate(180deg)' : ''; }
+      if (open && v === 'open') { var card = document.getElementById('coverageCard'); if (card && card.scrollIntoView) card.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
+    },
+    toggleScanHow: function () { var el = document.getElementById('scanHow'); if (el) el.hidden = !el.hidden; },
+    toggleRiskGrouping: function () { _groupingOpen = !_groupingOpen; renderRiskGrouping(); },
+    /* key = one business risk key, or '*' for every group. */
+    groupExistingRisks: async function (key) {
+      var groups = window.CheckpointLib.groupExistingRisks(S.risks || []).filter(function (g) { return key === '*' || g.key === key; });
+      if (!groups.length) return;
+      var n = groups.reduce(function (s, g) { return s + g.risks.length; }, 0);
+      var ok = await showModal({
+        title: 'Group into business risks',
+        message: 'Merge ' + n + ' risk' + (n === 1 ? '' : 's') + ' into ' + groups.length + ' business risk' + (groups.length === 1 ? '' : 's') + '? Their actions move across, and each original is closed with a note naming the business risk it went into. Re-assess the residual rating of each business risk afterwards.',
+        confirmText: 'Group ' + n,
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      busy(true);
+      var made = [];
+      for (var i = 0; i < groups.length; i++) {
+        try { made.push(await mergeRiskGroup(groups[i])); } catch (e) { warn(e); }
+      }
+      busy(false);
+      log(n + ' risk(s) grouped into business risk(s) ' + made.join(', ') + '.');
+      toast('<b>' + n + '</b> risk' + (n === 1 ? '' : 's') + ' grouped into ' + made.length + ' business risk' + (made.length === 1 ? '' : 's'));
+      renderAll();
+    },
+    toggleProposal: function (key) { _proposalOpen[key] = !_proposalOpen[key]; renderProposed(); },
+    dismissGroup: async function (key) {
+      var g = proposalGroups().find(function (x) { return x.key === key; });
+      if (!g) return;
+      g.tpls.forEach(function (tpl) {
+        S.handledTpl.push(tpl);
+        delete _riskInsightCache[tpl];
+        var ctx = tpl.indexOf('ctx-') === 0;
+        audit(ctx ? 'Suggested risk dismissed' : 'Scan finding dismissed', ctx ? 'SuggestedRisk' : 'ScanFinding', tpl, 'Proposed', 'Dismissed (with ' + key + ')');
+      });
+      S.proposed = S.proposed.filter(function (p) { return g.tpls.indexOf(p) === -1; });
+      await rememberContextDismissal(g.tpls);
+      log(g.tpls.length + ' finding(s) dismissed by practitioner (' + esc(key) + ').');
+      renderAll();
+    },
+    approveCriticalProposed: async function () { return approveGroups(proposalGroups().filter(function (g) { return band(g.score) === 'Critical'; }), 'critical '); },
 
     /* Bulk approve — one confirmation, one pass, one summary. A scan can
        propose a dozen findings and every one of them used to need its
        own decision; approving twelve meant twelve clicks, twelve
        re-renders and twelve toasts of which only the last was ever
        visible (see the scan-summary note in runScan()). */
-    approveAllProposed: async function () {
-      var queued = S.proposed.slice();
-      if (!queued.length) return;
-      var actionCount = queued.reduce(function (n, tpl) { return n + ((TPL[tpl] && TPL[tpl].actions.length) || 0); }, 0);
-      var ok = await showModal({
-        title: 'Approve all proposed findings',
-        message: 'Add all ' + queued.length + ' proposed finding' + (queued.length === 1 ? '' : 's') + ' to the risk register, creating ' + actionCount + ' remediation action' + (actionCount === 1 ? '' : 's') + ' assigned to you? Each one can still be edited or closed afterwards.',
-        confirmText: 'Approve all ' + queued.length,
-        cancelText: 'Cancel'
-      });
-      if (!ok) return;
-      busy(true);
-      var added = 0, actionsMade = 0;
-      for (var i = 0; i < queued.length; i++) {
-        var res = await approveProposedTemplate(queued[i]);
-        if (res) { added++; actionsMade += res.actIds.length; }
-      }
-      busy(false);
-      toast('<b>' + added + ' risk' + (added === 1 ? '' : 's') + '</b> added to the register · ' + actionsMade + ' action' + (actionsMade === 1 ? '' : 's') + ' created');
-      renderAll();
-    },
+    approveAllProposed: async function () { return approveGroups(proposalGroups(), ''); },
 
     dismissAllProposed: async function () {
       var queued = S.proposed.slice();
@@ -14556,6 +14847,7 @@ function showModal(opts) {
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(240, 169, 127,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
         '<div class="d-kv"><span>Treatment</span><b>' + esc(treatmentLabel(r.treat)) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
+        (function () { if (r.status !== 'Closed' || !r.tpl || window.CheckpointLib.isBusinessRisk(r)) return ''; var into = S.risks.find(function (x) { return x !== r && window.CheckpointLib.isBusinessRisk(x) && (x.findings || []).indexOf(r.tpl) !== -1; }); return into ? '<div class="d-kv"><span>Merged into</span><b><button class="lnk" data-action="App.openRisk" data-id="' + esc(into.id) + '">' + esc(into.id) + '</button> ' + esc(into.title) + '</b></div>' : ''; })() +
         (r.acceptedBy
           ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' +
             (window.CheckpointLib.residualAcceptanceStale(r, q.L * q.I)
@@ -14828,6 +15120,8 @@ function showModal(opts) {
          way back. */
       _scanStatusF = (_scanStatusF === k && k !== 'all') ? 'all' : k;
       renderScanChecks(true);
+      var tiles = document.getElementById('scanTiles');
+      if (tiles && tiles.contains(document.activeElement)) { var card = document.getElementById('scanChecksCard'); if (card && card.scrollIntoView) card.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
     },
 
     setFingerprintFw: function (fw) { window._fpFw = fw; renderComplianceFingerprint(); },
@@ -20539,7 +20833,7 @@ function showModal(opts) {
       var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
       var match = window.CheckpointLib.resolvableFindings(S.risks, S.actions, checkResultsById).find(function (x) { return x.risk.id === id; });
       if (!match) return;
-      var label = checkLabelsById[r.tpl] || r.tpl;
+      var label = window.CheckpointLib.riskFindings(r).map(function (f) { return checkLabelsById[f] || findingLabel(f); }).join('”, “');
       var openActs = match.openActionIds.map(function (aid) { return S.actions.find(function (a) { return a.id === aid; }); }).filter(Boolean);
       var msg = 'The check behind this risk — “' + label + '” — now passes on the latest scan. Close ' + r.id +
         (openActs.length ? ' and mark ' + openActs.length + ' linked action' + (openActs.length > 1 ? 's' : '') + ' done' : '') + '?';
@@ -23452,7 +23746,7 @@ function showModal(opts) {
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
     var pct = primaryFw ? window.CheckpointLib.readinessPct(frameworkAppRows(primaryFw)) : 0;
     var gaps = primaryFw ? frameworkAppRows(primaryFw).filter(function (c) { return c.st !== 'Implemented'; }).slice(0, 5) : [];
-    var nextActions = (S.proposed || []).slice(0, 3).map(function (tpl) { return TPL[tpl] ? TPL[tpl].risk.title : null; }).filter(Boolean);
+    var nextActions = proposalGroups().slice(0, 3).map(function (g) { return g.title; });
     var fillers = ['Review your Statement of Applicability and confirm which controls apply to you', 'Invite your team and assign control owners', 'Set your scan reminder cadence in Settings'];
     for (var i = 0; nextActions.length < 3 && i < fillers.length; i++) {
       if (nextActions.indexOf(fillers[i]) === -1) nextActions.push(fillers[i]);

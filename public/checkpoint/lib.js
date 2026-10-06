@@ -5334,7 +5334,7 @@
   function contextRiskSuggestions(profile, risks, dismissed) {
     var p = profile || {};
     var inRegister = {};
-    (risks || []).forEach(function (r) { if (r && r.tpl) inRegister[r.tpl] = true; });
+    (risks || []).forEach(function (r) { if (r && r.tpl) inRegister[r.tpl] = true; ((r && r.findings) || []).forEach(function (f) { inRegister[f] = true; }); });
     var gone = {};
     (dismissed || []).forEach(function (k) { gone[k] = true; });
     var answered = ['orgSize', 'orgWorkModel', 'orgItModel', 'orgCloud', 'orgDevelops', 'orgPersonalData', 'orgAiUse', 'orgChange', 'orgCustomerDemand'].some(function (k) { return !!p[k]; });
@@ -5343,13 +5343,229 @@
       .map(function (c) { return { key: c.key, why: c.why(p), risk: c.risk, actions: c.actions }; });
   }
 
+  /* ============================================================
+     Business risks
+     ------------------------------------------------------------
+     A certification body reads the risk register as a business
+     document: "too technical" is what an auditor says of a register
+     that holds one risk per failed setting. Every scan finding and
+     every scope & context suggestion maps to one of these business
+     risks (at most 15); the findings become its vulnerabilities and
+     their fixes its treatment actions. One risk per business outcome,
+     however many settings feed it. */
+  var BUSINESS_RISKS = [
+    { key: 'biz-account-takeover', cat: 'Access', cia: ['C', 'I'], controls: ['A.5.17', 'A.8.5'],
+      title: 'Staff accounts are taken over through phishing, stolen passwords or weak sign-in controls, exposing information or enabling fraud',
+      threat: 'External attacker using phishing, password spraying or stolen credentials',
+      consequence: 'Unauthorised access to email, files and customer information; fraudulent payments; loss of customer trust' },
+    { key: 'biz-privileged-access', cat: 'Access', cia: ['C', 'I', 'A'], controls: ['A.8.2', 'A.5.15'],
+      title: 'Administrator access is misused or compromised, giving control of the whole environment',
+      threat: 'Attacker or insider with administrator rights, including the IT provider',
+      consequence: 'Tenant-wide data exposure, deletion or lock-out; long recovery' },
+    { key: 'biz-access-not-removed', cat: 'Access', cia: ['C'], controls: ['A.5.18', 'A.5.16'],
+      title: 'People keep access they no longer need, including former staff and unused accounts',
+      threat: 'Former staff, contractors or an attacker using an unattended account',
+      consequence: 'Information accessed by people with no right to it, unnoticed' },
+    { key: 'biz-device', cat: 'Devices', cia: ['C', 'I'], controls: ['A.8.1', 'A.8.7'],
+      title: 'A lost, stolen or insecure laptop or phone exposes company or customer information',
+      threat: 'Theft or loss of a device, or malware on an unmanaged device',
+      consequence: 'Information on or reachable from the device is exposed' },
+    { key: 'biz-attack-undetected', cat: 'Operations', cia: ['C', 'I', 'A'], controls: ['A.8.8', 'A.8.16', 'A.5.26'],
+      title: 'A cyber attack or known weakness is not detected, fixed or contained in time',
+      threat: 'Malware, ransomware or exploitation of an unpatched weakness',
+      consequence: 'Disruption to services, data loss or exposure, and cost of recovery' },
+    { key: 'biz-data-exposure', cat: 'Data', cia: ['C'], controls: ['A.5.12', 'A.5.14', 'A.8.12'],
+      title: 'Information is shared more widely or kept longer than it should be',
+      threat: 'Over-broad sharing links, unlabelled information, unmanaged cloud apps',
+      consequence: 'Confidential or personal information reaches the wrong people' },
+    { key: 'biz-third-party', cat: 'Suppliers', cia: ['C', 'I', 'A'], controls: ['A.5.19', 'A.5.21', 'A.5.22'],
+      title: 'A supplier or connected third-party app is breached or has more access than it should',
+      threat: 'Compromise or misuse at a cloud provider, SaaS supplier or consented app',
+      consequence: 'Our information exposed through someone else’s systems' },
+    { key: 'biz-insecure-product', cat: 'Development', cia: ['C', 'I', 'A'], controls: ['A.8.25', 'A.8.28', 'A.8.32'],
+      title: 'Security flaws, exposed secrets or misconfiguration reach our product or platform',
+      threat: 'Unreviewed changes, vulnerable dependencies, leaked keys, misconfigured cloud services',
+      consequence: 'Customer data exposed or service compromised through our own product' },
+    { key: 'biz-recovery', cat: 'Continuity', cia: ['A'], controls: ['A.8.13', 'A.5.29', 'A.5.30'],
+      title: 'Information or services cannot be recovered quickly after an incident, outage or loss of key people',
+      threat: 'Ransomware, accidental deletion, provider outage, unavailability of key staff',
+      consequence: 'Extended outage, permanent data loss, failure to meet customer commitments' },
+    { key: 'biz-privacy', cat: 'Privacy', cia: ['C'], controls: ['A.5.34', 'A.5.24'],
+      title: 'Personal information is mishandled, breaching privacy law or a notifiable data breach obligation',
+      threat: 'Disclosure, misuse or slow handling of personal information',
+      consequence: 'Regulatory action, notification obligations and harm to individuals' },
+    { key: 'biz-people', cat: 'People', cia: ['C', 'I'], controls: ['A.6.3', 'A.5.10'],
+      title: 'Staff do not follow security rules because they are unaware of them or never tested',
+      threat: 'Human error, social engineering',
+      consequence: 'Incidents caused by avoidable mistakes' },
+    { key: 'biz-ai', cat: 'AI', cia: ['C', 'I'], controls: ['A.5.10', 'A.5.19'],
+      title: 'AI tools or AI features leak information or produce harmful output that is relied on',
+      threat: 'Confidential data entered into AI tools; AI apps with broad access; model errors',
+      consequence: 'Information disclosed to AI providers or other customers; wrong decisions' },
+    { key: 'biz-isms', cat: 'Governance', cia: ['C', 'I', 'A'], controls: ['A.5.1', 'A.5.35', 'A.5.27'],
+      title: 'Security is not managed as documented, so weaknesses and change go unnoticed',
+      threat: 'Out-of-date policies, no independent review, lessons not learned, change outpacing review',
+      consequence: 'Controls drift from what is documented; nonconformities at audit' },
+    { key: 'biz-contract', cat: 'Compliance', cia: ['C', 'I', 'A'], controls: ['A.5.31', 'A.5.36'],
+      title: 'We fail a customer contract or certification commitment, putting key customer contracts at risk',
+      threat: 'Security obligations not tracked or met',
+      consequence: 'Loss of contracts, revenue and certification' }
+  ];
+  var BUSINESS_RISK_OF = {
+    'legacy': 'biz-account-takeover', 'legacy-auth-observed': 'biz-account-takeover', 'mfa-registration': 'biz-account-takeover',
+    'ca-risk': 'biz-account-takeover', 'riskyusers': 'biz-account-takeover', 'ctx-bec': 'biz-account-takeover', 'gh-secret-alerts': 'biz-insecure-product',
+    'mfa-priv': 'biz-privileged-access', 'ca-sif': 'biz-privileged-access', 'admins': 'biz-privileged-access', 'pim': 'biz-privileged-access',
+    'sod': 'biz-privileged-access', 'ctx-msp-access': 'biz-privileged-access',
+    'dormant-accounts': 'biz-access-not-removed', 'leaver': 'biz-access-not-removed', 'lifecycle-workflows': 'biz-access-not-removed',
+    'access-review': 'biz-access-not-removed', 'ctx-leaver-access': 'biz-access-not-removed',
+    'device-encryption': 'biz-device', 'device-jailbroken': 'biz-device', 'wdac': 'biz-device', 'ca-device': 'biz-device',
+    'device-checkin': 'biz-device', 'ctx-lost-device': 'biz-device',
+    'patch': 'biz-attack-undetected', 'edr-coverage': 'biz-attack-undetected', 'xdr-incidents': 'biz-attack-undetected',
+    'sharing': 'biz-data-exposure', 'labels': 'biz-data-exposure', 'retention': 'biz-data-exposure', 'ca-cas': 'biz-data-exposure',
+    'riskyapps': 'biz-third-party', 'oauth-consent': 'biz-third-party', 'supplier': 'biz-third-party', 'ctx-saas-supplier': 'biz-third-party',
+    'gh-branch-review': 'biz-insecure-product', 'gh-dependabot': 'biz-insecure-product', 'ctx-source-code': 'biz-insecure-product',
+    'ctx-release-testing': 'biz-insecure-product', 'ctx-outsourced-dev': 'biz-insecure-product', 'ctx-cloud-misconfig': 'biz-insecure-product',
+    'backup': 'biz-recovery', 'bcp': 'biz-recovery', 'ctx-backup': 'biz-recovery', 'ctx-key-person': 'biz-recovery',
+    'privacy-srr': 'biz-privacy', 'ctx-privacy-breach': 'biz-privacy',
+    'phish-sim': 'biz-people', 'ca-tou': 'biz-people',
+    'ctx-ai-tools': 'biz-ai', 'ctx-ai-product': 'biz-ai',
+    'policy': 'biz-isms', 'audit-review': 'biz-isms', 'incident-lessons': 'biz-isms', 'ctx-rapid-change': 'biz-isms',
+    'ctx-contract-obligations': 'biz-contract'
+  };
+  function businessRiskKeyFor(tpl) {
+    if (!tpl) return null;
+    if (/^ai-risk-/.test(tpl)) return 'biz-ai';
+    return BUSINESS_RISK_OF[tpl] || null;
+  }
+  function businessRiskDef(key) { return BUSINESS_RISKS.find(function (b) { return b.key === key; }) || null; }
+  function isBusinessRisk(r) { return !!(r && r.tpl && businessRiskDef(r.tpl)); }
+  /* The finding templates a risk record covers: a business risk's
+     findings list, else its own template. */
+  function riskFindings(r) {
+    if (!r) return [];
+    if (r.findings && r.findings.length) return r.findings.slice();
+    return r.tpl && !businessRiskDef(r.tpl) ? [r.tpl] : [];
+  }
+  function uniq(list) { var seen = {}, out = []; (list || []).forEach(function (x) { if (x && !seen[x]) { seen[x] = true; out.push(x); } }); return out; }
+  /* Groups proposed finding templates under their business risk.
+     templates = { tpl: { risk: {title, L, I, controls, cia}, actions: [{t,...}] } };
+     risks = the register (an open business risk already there gets the
+     findings added rather than a second copy). An unmapped template
+     stays on its own. Returns groups, most severe first:
+     { key, biz, tpls, target, L, I, score, controls, cia, actions }. */
+  function groupProposals(proposed, templates, risks) {
+    var groups = {}, order = [];
+    (proposed || []).forEach(function (tpl) {
+      var t = (templates || {})[tpl];
+      if (!t) return;
+      var key = businessRiskKeyFor(tpl) || tpl;
+      if (!groups[key]) { groups[key] = { key: key, biz: businessRiskDef(key), tpls: [] }; order.push(key); }
+      groups[key].tpls.push(tpl);
+    });
+    var open = (risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    return order.map(function (key) {
+      var g = groups[key];
+      var worst = null;
+      g.tpls.forEach(function (tpl) { var r = templates[tpl].risk; if (!worst || r.L * r.I > worst.L * worst.I) worst = r; });
+      var seenAct = {};
+      var actions = [];
+      g.tpls.forEach(function (tpl) {
+        (templates[tpl].actions || []).forEach(function (a) {
+          var k = String(a.t).toLowerCase();
+          if (seenAct[k]) return;
+          seenAct[k] = true;
+          actions.push(Object.assign({ fromTpl: tpl }, a));
+        });
+      });
+      var target = g.biz ? open.find(function (r) { return r.tpl === key; }) || null : null;
+      return {
+        key: key, biz: g.biz, tpls: g.tpls, target: target,
+        L: worst.L, I: worst.I, score: worst.L * worst.I,
+        title: g.biz ? g.biz.title : templates[g.tpls[0]].risk.title,
+        controls: uniq([].concat.apply((g.biz ? g.biz.controls : []).slice(), g.tpls.map(function (tpl) { return templates[tpl].risk.controls || []; }))),
+        cia: uniq([].concat.apply((g.biz ? g.biz.cia : []).slice(), g.tpls.map(function (tpl) { return templates[tpl].risk.cia || []; }))),
+        actions: actions
+      };
+    }).sort(function (a, b) { return b.score - a.score; });
+  }
+  /* Existing risks that are really findings of one business risk: open
+     threats raised from a scan or a scope suggestion (risk.tpl) that are
+     not business risks themselves. Grouped for a reviewed merge: the
+     findings move under the business risk (an existing one in the
+     register, or a new one), their actions with them, and the old
+     records close with a note pointing to where they went. A risk
+     entered by hand has no template and is never touched. */
+  function groupExistingRisks(risks) {
+    var open = (risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    var groups = {}, order = [];
+    open.forEach(function (r) {
+      if (isBusinessRisk(r) || !r.tpl) return;
+      var key = businessRiskKeyFor(r.tpl);
+      if (!key) return;
+      if (!groups[key]) { groups[key] = { key: key, biz: businessRiskDef(key), risks: [] }; order.push(key); }
+      groups[key].risks.push(r);
+    });
+    return order.map(function (key) {
+      var g = groups[key];
+      var target = open.find(function (r) { return r.tpl === key; }) || null;
+      var worst = g.risks.reduce(function (w, r) { return !w || r.L * r.I > w.L * w.I ? r : w; }, null);
+      return {
+        key: key, biz: g.biz, risks: g.risks, target: target,
+        L: worst.L, I: worst.I, owner: worst.owner || '',
+        findings: uniq(g.risks.map(function (r) { return r.tpl; })),
+        actions: uniq([].concat.apply([], g.risks.map(function (r) { return r.actions || []; }))),
+        controls: uniq([].concat.apply(g.biz.controls.slice(), g.risks.map(function (r) { return r.controls || []; }))),
+        cia: uniq([].concat.apply(g.biz.cia.slice(), g.risks.map(function (r) { return r.cia || []; })))
+      };
+    }).sort(function (a, b) { return b.L * b.I - a.L * a.I; });
+  }
+  /* How many risks the register would hold after grouping. */
+  function registerSizeAfterGrouping(risks) {
+    var open = (risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    var gs = groupExistingRisks(risks);
+    var moved = gs.reduce(function (n, g) { return n + g.risks.length; }, 0);
+    var created = gs.filter(function (g) { return !g.target; }).length;
+    return { now: open.length, after: open.length - moved + created };
+  }
+
+  /* ============================================================
+     Posture scan presentation
+     ------------------------------------------------------------ */
+  /* The one-line result for a check row: the note's first clause, cut
+     at a word boundary. The full note shows when the row is opened. */
+  function checkHeadline(note, max) {
+    max = max || 90;
+    var s = String(note || '').replace(/\s+/g, ' ').trim();
+    if (!s) return '';
+    var cut = s.search(/ — |\. |; /);
+    if (cut > 0) s = s.slice(0, cut);
+    s = s.replace(/\.$/, '');
+    if ((s.match(/\(/g) || []).length > (s.match(/\)/g) || []).length) s = s.slice(0, s.lastIndexOf('(')).trim();
+    if (s.length <= max) return s;
+    var sp = s.lastIndexOf(' ', max - 1);
+    return s.slice(0, sp > max / 2 ? sp : max - 1) + '…';
+  }
+  /* What to fix first: failing checks, most severe first (by the
+     inherent score of the risk each would raise), then review-grade.
+     checks = [{ id, label, rag, score }]. */
+  function scanFixFirst(checks, n) {
+    var rank = { red: 0, amber: 1 };
+    return (checks || []).filter(function (c) { return c && (c.rag === 'red' || c.rag === 'amber'); })
+      .sort(function (a, b) { return rank[a.rag] - rank[b.rag] || (b.score || 0) - (a.score || 0) || String(a.label).localeCompare(String(b.label)); })
+      .slice(0, n || 5);
+  }
+
   function resolvableFindings(risks, actions, checkResultsById) {
     var actionsById = {};
     (actions || []).forEach(function (a) { if (a && a.id) actionsById[a.id] = a; });
     var out = [];
     (risks || []).forEach(function (r) {
-      if (!r || r.status === 'Closed' || !r.tpl || r.resolutionDismissed) return;
-      if ((checkResultsById || {})[r.tpl] !== 'pass') return;
+      if (!r || r.status === 'Closed' || r.resolutionDismissed) return;
+      /* A business risk covers several findings: ready to close only
+         when every one of them now passes. Context-only findings have
+         no check, so a risk holding one is never closed by a scan. */
+      var fs = riskFindings(r);
+      if (!fs.length || !fs.every(function (f) { return (checkResultsById || {})[f] === 'pass'; })) return;
       var openActionIds = (r.actions || []).filter(function (aid) {
         var a = actionsById[aid];
         return a && a.status !== 'Done' && a.status !== 'Cancelled';
@@ -9081,7 +9297,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
-    resolvableFindings: resolvableFindings,
+    resolvableFindings: resolvableFindings, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,
     isRetryableGraphStatus: isRetryableGraphStatus, graphRetryDelayMs: graphRetryDelayMs,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
