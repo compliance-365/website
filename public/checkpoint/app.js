@@ -99,6 +99,8 @@ function showModal(opts) {
         if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
         el.value = f.value || '';
         if (f.placeholder) el.placeholder = f.placeholder;
+        /* Every owner field offers the Microsoft 365 directory. */
+        if (f.list || (f.id === 'owner' && !f.type)) el.setAttribute('list', f.list || 'peopleList');
       }
       el.id = fieldId;
       wrap.appendChild(el);
@@ -133,7 +135,7 @@ function showModal(opts) {
     function cancelResult() { return hasFields ? null : false; }
     function tryConfirm() {
       var values = {};
-      Object.keys(inputs).forEach(function (id) { values[id] = inputs[id].type === 'checkbox' ? (inputs[id].checked ? 'yes' : '') : inputs[id].value.trim(); });
+      Object.keys(inputs).forEach(function (id) { values[id] = inputs[id].type === 'checkbox' ? (inputs[id].checked ? 'yes' : '') : inputs[id].type === 'file' ? ((inputs[id].files && inputs[id].files[0]) || null) : inputs[id].value.trim(); });
       var err = opts.validate ? opts.validate(values) : null;
       if (err) { errorEl.textContent = err; errorEl.classList.add('show'); return; }
       close(hasFields ? values : true);
@@ -844,7 +846,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -7514,7 +7516,95 @@ function showModal(opts) {
     return rid;
   }
 
+  /* ===== Owners from the Microsoft 365 directory =====
+     Loaded once per session and offered as a type-ahead on every owner
+     field (#peopleList). Owners saved as the directory's display name
+     match owner reminders and My tasks exactly. */
+  var _dirUsers = null, _dirLoading = null;
+  var DEMO_DIRECTORY = [
+    { name: 'Kim Patel', mail: 'k.patel@meridianhealth.example', upn: 'k.patel@meridianhealth.example', jobTitle: 'Head of Engineering' },
+    { name: 'Sam Okafor', mail: 's.okafor@meridianhealth.example', upn: 's.okafor@meridianhealth.example', jobTitle: 'IT Manager' },
+    { name: 'Mei Chen', mail: 'm.chen@meridianhealth.example', upn: 'm.chen@meridianhealth.example', jobTitle: 'Chief Executive Officer' },
+    { name: 'Jordan Reyes', mail: 'j.reyes@meridianhealth.example', upn: 'j.reyes@meridianhealth.example', jobTitle: 'Operations Lead' }
+  ];
+  function loadDirectory() {
+    if (_dirUsers) return Promise.resolve(_dirUsers);
+    if (_dirLoading) return _dirLoading;
+    _dirLoading = (Store.kind === 'demo' ? Promise.resolve(DEMO_DIRECTORY.slice()) : Store.kind === 'sharepoint' ? Graph.listTenantUsers() : Promise.resolve([]))
+      .then(function (u) { _dirUsers = (u || []).map(function (x) { return Object.assign({ displayName: x.name }, x); }); fillPeopleList(); return _dirUsers; })
+      .catch(function (e) { warn(e); _dirUsers = []; return _dirUsers; });
+    return _dirLoading;
+  }
+  function fillPeopleList() {
+    var el = document.getElementById('peopleList');
+    if (!el || !_dirUsers) return;
+    el.innerHTML = _dirUsers.map(function (u) { return '<option value="' + esc(u.name) + '">' + esc((u.mail || u.upn || '') + (u.jobTitle ? ' · ' + u.jobTitle : '')) + '</option>'; }).join('');
+  }
+  function directoryUser(owner) { return _dirUsers ? window.CheckpointLib.matchOwnerToUser(owner, _dirUsers) : null; }
+
+  /* ===== Needs tidying =====
+     One line per register (CheckpointLib.registerTidy); each item
+     filters the table to the records it counts. */
+  var _tidyF = null;
+  var TIDY = {
+    risks: { el: 'riskTidy', rows: function () { return S.risks || []; }, render: function () { renderRisks(); } },
+    actions: { el: 'actTidy', rows: function () { return S.actions || []; }, render: function () { renderActions(); } },
+    vendors: { el: 'vendorTidy', rows: function () { return S.vendors || []; }, render: function () { renderVendors(); } },
+    assets: { el: 'assetTidy', rows: function () { return S.assets || []; }, render: function () { renderAssets(); } },
+    legal: { el: 'legalTidy', rows: function () { return S.legal || []; }, render: function () { renderLegal(); } }
+  };
+  function tidyItems(kind) {
+    return window.CheckpointLib.registerTidy(kind, TIDY[kind].rows(), { actions: S.actions || [], updates: S.actionUpdates || [], today: new Date().toISOString().slice(0, 10), users: _dirUsers && _dirUsers.length ? _dirUsers : null });
+  }
+  function renderTidy(kind) {
+    var el = document.getElementById(TIDY[kind].el);
+    if (!el) return;
+    var items = tidyItems(kind);
+    var active = _tidyF && _tidyF.kind === kind ? _tidyF : null;
+    if (!items.length && !active) { el.innerHTML = '<span class="src">' + icon('check') + ' Nothing to tidy.</span>'; return; }
+    el.innerHTML = '<span class="reg-tidy-h">Needs tidying</span>' + items.map(function (it) {
+      var on = active && active.key === it.key;
+      var act = it.key === 'unknownOwner' ? 'App.matchOwners' : 'App.tidyFilter';
+      return '<button class="tidy-item' + (on ? ' on' : '') + '" data-action="' + act + '" data-id="' + kind + '|' + it.key + '" aria-pressed="' + !!on + '">' + esc(it.label) + '</button>';
+    }).join('') + (active ? '<button class="btn quiet sm" data-action="App.tidyFilter" data-id="' + kind + '|">Show all</button>' : '');
+  }
+  /* Whether a row passes the tidy filter for its register. */
+  function tidyKeep(kind, id) { return !_tidyF || _tidyF.kind !== kind || _tidyF.ids.indexOf(id) !== -1; }
+  function tidyOn(kind) { return !!(_tidyF && _tidyF.kind === kind); }
+
+  /* A risk's treatment, in the register row: progress through its
+     actions, the next due date, and a prompt when the residual needs
+     reassessing. */
+  function treatmentCell(r) {
+    var treat = r.treat || 'Treat';
+    if (treat !== 'Treat') return '<span class="src">' + esc(treat) + '</span>';
+    var p = window.CheckpointLib.riskTreatmentProgress(r, S.actions, new Date().toISOString().slice(0, 10));
+    if (!p.total) return '<span class="verify-stale">' + icon('flag') + ' No actions</span>';
+    var pct = Math.round(p.done / p.total * 100);
+    var reassess = window.CheckpointLib.riskNeedsReassessment(r, S.actions, S.actionUpdates);
+    return '<div class="treat-cell"><span>' + p.done + ' of ' + p.total + ' done</span><i class="treat-bar"><b style="width:' + pct + '%"></b></i>' +
+      (p.open ? '<span class="src"' + (p.overdue ? ' style="color:var(--fail)"' : '') + '>' + (p.overdue ? p.overdue + ' overdue' : p.nextDue ? 'next ' + fmtDate(p.nextDue) : 'no due date') + '</span>' : '') +
+      (reassess && !READONLY ? '<button class="btn quiet sm" data-action="App.recordAssessedResidual" data-id="' + esc(r.id) + '">Reassess</button>' : '') + '</div>';
+  }
+
+  /* In the risk drawer: the findings behind a business risk, the
+     vendors and assets it touches, and its treatment progress. */
+  function riskConnectionsHtml(r) {
+    var parts = [];
+    var findings = window.CheckpointLib.riskFindings(r);
+    if (window.CheckpointLib.isBusinessRisk(r) && findings.length) parts.push('<div class="d-kv"><span>Findings</span><b style="font-weight:400">' + findings.map(function (f) { return esc(findingLabel(f)); }).join('<br>') + '</b></div>');
+    var vendors = (S.vendors || []).filter(function (v) { return (v.riskRefs || []).indexOf(r.id) !== -1; });
+    if (vendors.length) parts.push('<div class="d-kv"><span>Vendors</span><b>' + vendors.map(function (v) { return '<button class="lnk" data-action="App.openVendor" data-id="' + esc(v.id) + '">' + esc(v.name) + '</button>'; }).join(', ') + '</b></div>');
+    var assets = (r.assetRefs || []).map(function (id) { return (S.assets || []).find(function (a) { return a.id === id; }); }).filter(Boolean);
+    if (assets.length) parts.push('<div class="d-kv"><span>Assets</span><b>' + assets.map(function (a) { return esc(a.name); }).join(', ') + '</b></div>');
+    var p = window.CheckpointLib.riskTreatmentProgress(r, S.actions, new Date().toISOString().slice(0, 10));
+    if (p.total) parts.push('<div class="d-kv"><span>Treatment</span><b>' + p.done + ' of ' + p.total + ' actions done' + (p.overdue ? ', <span style="color:var(--fail)">' + p.overdue + ' overdue</span>' : p.nextDue ? ', next due ' + fmtDate(p.nextDue) : '') + '</b></div>');
+    if (window.CheckpointLib.riskNeedsReassessment(r, S.actions, S.actionUpdates)) parts.push('<div class="src" style="color:var(--warn);margin-top:4px">' + icon('flag') + ' Treatment is complete: reassess the residual risk.</div>');
+    return parts.length ? '<div class="d-sec"><h4>Connected</h4>' + parts.join('') + '</div>' : '';
+  }
+
   function renderRisks() {
+    renderTidy('risks');
     renderRiskGrouping();
     renderResidualHeatmapInto('riskHeat', 'riskHeatLegend');
     renderRisksDashboard();
@@ -7543,6 +7633,7 @@ function showModal(opts) {
         : '';
     }
     var rows = S.risks.filter(function (r) {
+      if (tidyOn('risks')) return tidyKeep('risks', r.id);
       var q = residual(r);
       if (cellFilter) return q.L === cellFilter.L && q.I === cellFilter.I;
       if (f === 'All') return true;
@@ -7576,11 +7667,12 @@ function showModal(opts) {
         '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td>' +
         '<td><span class="chip sev-' + rb + '" title="' + esc(resTitle) + '">' + (q.L * q.I) + ' ' + rb + (q.derived ? '' : ' \u2713') + '</span></td>' +
         '<td>' + riskReviewChip(r) + '</td>' +
+        '<td>' + treatmentCell(r) + '</td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
     var riskRowsEl = document.getElementById('riskRows');
     var emptyText = cellFilter ? 'No open risks scored exactly this way. Try a nearby cell, or clear the filter above.' : 'No risks in this band. The register builds as scans are approved and workshops are captured.';
-    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 10, text: emptyText, cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
+    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: emptyText, cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
     revealRows(riskRowsEl);
   }
 
@@ -7656,8 +7748,52 @@ function showModal(opts) {
     if (breakdownEl) breakdownEl.innerHTML = RC.stackedBars(onScreen(actionPriorityBreakdown()), onScreen(ACTION_STATUS_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
   }
 
+  /* Grouping for the actions table: none, by owner or by risk. */
+  var _actGroup = 'none';
+  function actionGroupKey(a) { return _actGroup === 'owner' ? (a.owner || 'No owner') : _actGroup === 'risk' ? (a.risk || 'No linked risk') : ''; }
+  function sortActionsForGroup(list) {
+    if (_actGroup === 'none') return list;
+    return list.slice().sort(function (a, b) {
+      return actionGroupKey(a).localeCompare(actionGroupKey(b)) || (overdue(b) ? 1 : 0) - (overdue(a) ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999'));
+    });
+  }
+  function actionGroupRows(list, rowStrs) {
+    if (_actGroup === 'none') return rowStrs.join('');
+    var out = '', last = null;
+    list.forEach(function (a, i) {
+      var k = actionGroupKey(a);
+      if (k !== last) {
+        var inGroup = list.filter(function (x) { return actionGroupKey(x) === k; });
+        var od = inGroup.filter(overdue).length;
+        var r = _actGroup === 'risk' && a.risk ? risk(a.risk) : null;
+        out += '<tr class="grp-row"><td colspan="10"><b>' + esc(k) + '</b>' + (r ? ' <span class="src">' + esc(r.title) + '</span>' : '') + ' <span class="src">· ' + inGroup.length + (od ? ', <span style="color:var(--fail)">' + od + ' overdue</span>' : '') + '</span></td></tr>';
+        last = k;
+      }
+      out += rowStrs[i];
+    });
+    return out;
+  }
+  /* Owner, due date and status edited in the row. */
+  function actionInlineCells(a, od, days) {
+    var live = a.status !== 'Done' && a.status !== 'Cancelled';
+    if (READONLY || !live) {
+      return '<td>' + esc(a.owner) + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
+        '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(actionStatusLabel(a.status)) + '</span></td>';
+    }
+    return '<td><input class="mini inline-edit" list="peopleList" value="' + esc(a.owner || '') + '" aria-label="Owner of ' + esc(a.id) + '" data-change-action="App.setActionField" data-id="' + esc(a.id) + '|owner"></td>' +
+      '<td><input class="mini inline-edit" type="date" value="' + esc(a.due || '') + '" aria-label="Due date of ' + esc(a.id) + '" data-change-action="App.setActionField" data-id="' + esc(a.id) + '|due"' + (od ? ' style="color:var(--fail);border-color:var(--fail)"' : '') + '>' + (od ? '<div class="src" style="color:var(--fail)">' + days + 'd overdue</div>' : '') + '</td>' +
+      '<td><select class="mini inline-edit" aria-label="Status of ' + esc(a.id) + '" data-change-action="App.setActionField" data-id="' + esc(a.id) + '|status">' +
+      ACTION_STATUS_SELECT.map(function (o) { return '<option value="' + o.value + '"' + (o.value === a.status ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select></td>';
+  }
+
   function renderActions() {
+    renderTidy('actions');
     renderActionsDashboard();
+    var ag = document.getElementById('actGroupBy');
+    if (ag) ag.innerHTML = '<span class="src" style="align-self:center;margin-right:4px">Group by</span>' + [['none', 'None'], ['owner', 'Owner'], ['risk', 'Risk']].map(function (g) {
+      return '<button class="f-pill' + (_actGroup === g[0] ? ' on' : '') + '" aria-pressed="' + (_actGroup === g[0]) + '" data-action="App.groupActions" data-id="' + g[0] + '">' + g[1] + '</button>';
+    }).join('');
     var f = window._actF || 'Open';
     var tf = window._actTypeF || 'All';
     document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'Cancelled', 'All'].map(function (x) {
@@ -7668,11 +7804,14 @@ function showModal(opts) {
     }).join('');
     var updateCounts = {};
     (S.actionUpdates || []).forEach(function (u) { updateCounts[u.action] = (updateCounts[u.action] || 0) + 1; });
-    var rows = S.actions.filter(function (a) {
+    var actList = S.actions.filter(function (a) {
+      if (tidyOn('actions')) return tidyKeep('actions', a.id);
       if (tf !== 'All' && (a.type || 'Action') !== tf) return false;
       if (f === 'All') return true; if (f === 'Done') return a.status === 'Done'; if (f === 'Cancelled') return a.status === 'Cancelled';
       if (f === 'Overdue') return overdue(a); return a.status !== 'Done' && a.status !== 'Cancelled';
-    }).map(function (a) {
+    });
+    actList = sortActionsForGroup(actList);
+    var rowStrs = actList.map(function (a) {
       var od = overdue(a);
       var days = overdueDays(a);
       var type = a.type || 'Action';
@@ -7686,10 +7825,9 @@ function showModal(opts) {
         (updCount ? '<div class="src">' + updCount + ' update' + (updCount > 1 ? 's' : '') + '</div>' : '') +
         '</td><td class="act-title" style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
-        '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
-        '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
-        '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(actionStatusLabel(a.status)) + '</span></td>' +
+        '<td class="id-t">' + (a.risk ? esc(a.risk) : '—') + '<div class="src">' + esc(a.control || '') + '</div></td>' +
+        '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td>' +
+        actionInlineCells(a, od, days) +
         '<td>' + evidenceCell + '</td>' +
         /* Was up to four buttons wide (Complete, Corrective action, Edit,
            Delete) — the biggest single reason this table couldn't fit a
@@ -7702,11 +7840,12 @@ function showModal(opts) {
         '<td style="white-space:nowrap">' +
         (a.status !== 'Done' && a.status !== 'Cancelled' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">' + esc(actionStatusLabel(a.status)) + ' ' + icon('check') + '</span>') +
         '</td></tr>';
-    }).join('');
+    });
+    var rows = actionGroupRows(actList, rowStrs);
     var actRowsEl = document.getElementById('actRows');
     /* Runs after the rows exist, because it reads them to know what is
        currently selectable. */
-    actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
+    actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 10, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
     renderActBulkBar();
     revealRows(actRowsEl);
   }
@@ -8062,9 +8201,61 @@ function showModal(opts) {
     if (chartEl) chartEl.innerHTML = RC.stackedBars(onScreen(vendorCriticalityBreakdown()), onScreen(VENDOR_STATUS_LEGEND), { palette: 'app', showValues: true, scaleByCount: true });
   }
 
+  /* Vendors found in Microsoft 365: third-party enterprise apps, one
+     proposal per publisher (CheckpointLib.vendorCandidates). */
+  var _vendorApps = null;
+  var DEMO_VENDOR_APPS = [
+    { id: 'd1', name: 'Jira Cloud', publisher: 'Atlassian' }, { id: 'd2', name: 'Confluence', publisher: 'Atlassian' },
+    { id: 'd3', name: 'Slack', publisher: 'Slack Technologies' }, { id: 'd4', name: 'Xero', publisher: 'Xero' },
+    { id: 'd5', name: 'DocuSign eSignature', publisher: 'DocuSign' }, { id: 'd6', name: 'Northwind Cloud Console', publisher: 'Northwind Cloud Hosting' }
+  ];
+  function vendorDismissed() { return String((S.settings && S.settings.dismissedVendorApps) || '').split('|').filter(Boolean); }
+  function vendorCandidatesNow() { return _vendorApps ? window.CheckpointLib.vendorCandidates(_vendorApps, S.vendors || [], vendorDismissed()) : []; }
+  function renderVendorDiscover() {
+    var w = document.getElementById('vendorDiscoverWrap');
+    if (!w) return;
+    if (!_vendorApps) { w.innerHTML = ''; return; }
+    var c = vendorCandidatesNow();
+    if (!c.length) { w.innerHTML = '<div class="card" style="margin-bottom:16px"><span class="src">' + icon('check') + ' Every third-party application in Microsoft 365 is in the register or set aside.</span></div>'; return; }
+    w.innerHTML = '<div class="card" style="margin-bottom:16px"><h3>Found in Microsoft 365</h3><p class="src" style="margin:0 0 8px">Third-party applications connected to your tenant. Add the suppliers behind them, or set aside the ones that are not suppliers to you.</p>' +
+      '<div class="prop-list">' + c.map(function (x) {
+        return '<div class="prop-row"><div class="prop-main" style="cursor:default"><span class="prop-title">' + esc(x.name) + '<span class="src">' + esc(x.apps.join(', ')) + '</span></span></div>' +
+          (READONLY ? '' : '<span class="prop-btns"><button class="btn sm" data-action="App.addDiscoveredVendor" data-id="' + esc(x.key) + '">Add</button><button class="btn ghost sm" data-action="App.dismissVendorCandidate" data-id="' + esc(x.key) + '">Not a supplier</button></span>') + '</div>';
+      }).join('') + '</div></div>';
+  }
+  function readVendorTier() {
+    var t = {};
+    [['prod', 'vTierProd'], ['personal', 'vTierPersonal'], ['confidential', 'vTierConfidential'], ['hard', 'vTierHard']].forEach(function (k) { var el = document.getElementById(k[1]); if (el && el.checked) t[k[0]] = true; });
+    return t;
+  }
+  function setVendorTier(t, contract, dpa) {
+    t = t || {};
+    [['prod', 'vTierProd'], ['personal', 'vTierPersonal'], ['confidential', 'vTierConfidential'], ['hard', 'vTierHard']].forEach(function (k) { var el = document.getElementById(k[1]); if (el) el.checked = !!t[k[0]]; });
+    var c = document.getElementById('vContract'), d = document.getElementById('vDpa');
+    if (c) c.checked = !!contract; if (d) d.checked = !!dpa;
+  }
+  /* Saving a vendor: the tiering answers, contract and DPA flags, the
+     review date from criticality and certification expiry, and a
+     Critical or High vendor linked to the third-party business risk. */
+  function applyVendorFundamentals(v) {
+    var t = readVendorTier();
+    v.tier = Object.keys(t).length ? t : (v.tier || null);
+    v.contract = !!(document.getElementById('vContract') || {}).checked;
+    v.dpa = !!(document.getElementById('vDpa') || {}).checked;
+    var today = new Date().toISOString().slice(0, 10);
+    if (!v.nextReviewDue) v.nextReviewDue = window.CheckpointLib.vendorNextReview(v, today);
+    if (v.certExpiryDate && v.certExpiryDate >= today && v.certExpiryDate < v.nextReviewDue) v.nextReviewDue = v.certExpiryDate;
+    if (v.criticality === 'Critical' || v.criticality === 'High') {
+      var tp = (S.risks || []).find(function (r) { return r.status !== 'Closed' && r.tpl === 'biz-third-party'; });
+      if (tp && (v.riskRefs || []).indexOf(tp.id) === -1) v.riskRefs = (v.riskRefs || []).concat([tp.id]);
+    }
+  }
+
   function renderVendors() {
     var wrap = document.getElementById('vendorRows');
     if (!wrap) return;
+    renderTidy('vendors');
+    renderVendorDiscover();
     renderVendorsDashboard();
     var cf = window._vendorCritF || 'All';
     var sf = window._vendorStatusF || 'All';
@@ -8075,6 +8266,7 @@ function showModal(opts) {
       return '<button class="f-pill' + (sf === x ? ' on' : '') + '" aria-pressed="' + (sf === x ? 'true' : 'false') + '" data-action="App.filterVendorStatus" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var vendors = (S.vendors || []).filter(function (v) {
+      if (tidyOn('vendors')) return tidyKeep('vendors', v.id);
       if (cf !== 'All' && v.criticality !== cf) return false;
       if (sf === 'Overdue') return vendorOverdue(v);
       if (sf === 'Unclassified') return !v.dataCategories || !v.dataCategories.length;
@@ -8086,6 +8278,7 @@ function showModal(opts) {
       var catLine = (v.dataCategories && v.dataCategories.length)
         ? '<div class="src" style="color:var(--gold-light)">' + esc(v.dataCategories.join(' · ')) + '</div>'
         : '<div class="src" style="color:var(--warn)">Data access not classified</div>';
+      if (window.CheckpointLib.vendorHandlesPersonalData(v) && !v.dpa) catLine += '<div class="src" style="color:var(--warn)">' + icon('flag') + ' No data processing agreement recorded</div>';
       return '<tr data-id="' + v.id + '"' + (_vendorSel.has(v.id) ? ' class="row-sel"' : '') + ' data-action="App.openVendor"><td class="id-t">' +
         bulkCheckbox('vendor-sel', 'App.toggleVendorSel', v.id, v.id, _vendorSel.has(v.id)) +
         '<button class="lnk" data-action="App.openVendor" data-id="' + v.id + '">' + esc(v.id) + '</button></td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
@@ -11593,6 +11786,7 @@ function showModal(opts) {
   function renderAssets() {
     var wrap = document.getElementById('assetRows');
     if (!wrap) return;
+    renderTidy('assets');
     var sum = assetSummary();
     var kpi = document.getElementById('assetKpiRow');
     kpi.innerHTML =
@@ -11606,7 +11800,7 @@ function showModal(opts) {
       var n = t === 'all' ? sum.total : (sum.byType[t] || 0);
       return '<button class="f-pill' + (_assetFilter === t ? ' on' : '') + '" aria-pressed="' + (_assetFilter === t) + '" data-action="App.setAssetFilter" data-id="' + esc(t) + '">' + esc(t === 'all' ? 'All' : t) + ' ' + n + '</button>';
     }).join('');
-    var list = (S.assets || []).filter(function (a) { return a.status !== 'Retired' && (_assetFilter === 'all' || a.type === _assetFilter); });
+    var list = (S.assets || []).filter(function (a) { return tidyOn('assets') ? tidyKeep('assets', a.id) : a.status !== 'Retired' && (_assetFilter === 'all' || a.type === _assetFilter); });
     if (!list.length) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No assets yet. Sync from Microsoft 365 for devices, applications and sites, then add the information assets no system can see.', cta: { label: 'Sync from Microsoft 365', action: 'App.syncAssets' } });
       return;
@@ -11636,6 +11830,7 @@ function showModal(opts) {
   function renderLegal() {
     var wrap = document.getElementById('legalRows');
     if (!wrap) return;
+    renderTidy('legal');
     var sum = legalSummary();
     var kpi = document.getElementById('legalKpiRow');
     kpi.innerHTML =
@@ -11644,8 +11839,8 @@ function showModal(opts) {
       kpiTile({ value: sum.noOwner, label: 'Applying, no owner', tone: 'fail', sub: 'every requirement needs an owner' }) +
       kpiTile({ value: sum.stale, label: 'Not reviewed in 12 months', tone: 'warn', sub: 'review when the law or business changes' });
     runCountUps(kpi);
-    var list = S.legal || [];
-    if (!list.length) {
+    var list = (S.legal || []).filter(function (r) { return tidyKeep('legal', r.id); });
+    if (!(S.legal || []).length) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 7, text: 'No requirements recorded. Start from the Australian set and confirm which apply, then add your customer contract obligations.', cta: { label: 'Add Australian starting set', action: 'App.seedLegalBaseline' } });
       return;
     }
@@ -13759,7 +13954,7 @@ function showModal(opts) {
     }
     App.go('auditor');
   }
-  function renderAll() { setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -14587,6 +14782,146 @@ function showModal(opts) {
       if (open && v === 'open') { var card = document.getElementById('coverageCard'); if (card && card.scrollIntoView) card.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
     },
     toggleScanHow: function () { var el = document.getElementById('scanHow'); if (el) el.hidden = !el.hidden; },
+    vendorTierChanged: function () {
+      var crit = window.CheckpointLib.vendorCriticalityFromTier(readVendorTier());
+      var sel = document.getElementById('vCriticality');
+      if (sel) sel.value = crit;
+      var t = readVendorTier();
+      if (t.personal && document.getElementById('vDpa') && !document.getElementById('vDpa').checked) toast('This vendor handles personal information: record whether a data processing agreement is in place.');
+    },
+    discoverVendors: async function () {
+      busy(true);
+      try { _vendorApps = Store.kind === 'demo' ? DEMO_VENDOR_APPS.slice() : await Graph.discoverVendorApps(); }
+      catch (e) { warn(e); toast('Could not read the enterprise applications: ' + esc(e.message || String(e)), 'error'); }
+      busy(false);
+      renderVendorDiscover();
+      var n = vendorCandidatesNow().length;
+      toast(n ? n + ' possible supplier' + (n === 1 ? '' : 's') + ' found' : 'No new suppliers found');
+    },
+    addDiscoveredVendor: function (key) {
+      var c = vendorCandidatesNow().find(function (x) { return x.key === key; });
+      if (!c) return;
+      if (document.getElementById('addVendorPanel').style.display === 'none') App.toggleAddVendor();
+      else { window._editingVendorId = null; document.getElementById('vendorPanelTitle').textContent = 'New vendor'; }
+      document.getElementById('vName').value = c.name;
+      document.getElementById('vService').value = c.apps.join(', ');
+      window._vendorNewApps = c.apps.slice();
+      document.getElementById('addVendorPanel').scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+      toast('Answer the tiering questions to set ' + esc(c.name) + '\u2019s criticality, then save.');
+    },
+    dismissVendorCandidate: async function (key) {
+      var c = vendorCandidatesNow().find(function (x) { return x.key === key; });
+      if (!c) return;
+      var list = vendorDismissed().concat([c.name]);
+      S.settings.dismissedVendorApps = list.join('|');
+      try { await Store.setSetting('dismissedVendorApps', S.settings.dismissedVendorApps); } catch (e) { warn(e); }
+      audit('Vendor candidate set aside', 'Vendor', c.name, '', 'Not a supplier: ' + c.apps.join(', '));
+      renderVendorDiscover();
+    },
+    tidyFilter: function (id) {
+      var kind = id.split('|')[0], key = id.split('|')[1];
+      if (!TIDY[kind]) return;
+      if (!key || (_tidyF && _tidyF.kind === kind && _tidyF.key === key)) _tidyF = null;
+      else {
+        var it = tidyItems(kind).find(function (x) { return x.key === key; });
+        _tidyF = it ? { kind: kind, key: key, ids: it.ids } : null;
+      }
+      TIDY[kind].render();
+    },
+    groupActions: function (g) { _actGroup = g || 'none'; renderActions(); },
+    /* id = 'ACT-001|owner' etc. A status change is logged like any other
+       progress update; Completed asks for the evidence. */
+    setActionField: async function (id, value) {
+      var parts = String(id).split('|'), a = S.actions.find(function (x) { return x.id === parts[0]; });
+      if (!a) return;
+      var field = parts[1], before;
+      if (field === 'status') {
+        if (value === a.status) return;
+        if (value === 'Done') { renderActions(); return App.complete(a.id); }
+        busy(true);
+        var upd = await recordActionUpdate(a, { note: 'Status changed to ' + actionStatusLabel(value) + '.', status: value });
+        if (upd) { var r = risk(a.risk); if (r) { recomputeRiskStatus(r); try { await Store.updateRisk(r); } catch (e) { warn(e); } } }
+        busy(false);
+        renderAll();
+        return;
+      }
+      if (field === 'owner') {
+        before = a.owner;
+        var u = directoryUser(value);
+        a.owner = u ? u.name : String(value || '').trim();
+        if (u) a.ownerEmail = u.mail || u.upn || a.ownerEmail;
+      } else if (field === 'due') {
+        before = a.due;
+        a.due = value;
+      } else return;
+      try { await Store.updateAction(a); } catch (e) { warn(e); toast('Could not save ' + esc(a.id), 'error'); return; }
+      audit('Action updated', 'Action', a.id, field + ': ' + (before || 'unset'), field + ': ' + (a[field] || 'unset'));
+      toast('<b>' + esc(a.id) + '</b> ' + (field === 'owner' ? 'owner set to ' + esc(a.owner) : 'due ' + (a.due ? fmtDate(a.due) : 'cleared')));
+      renderActions(); renderNavCounts();
+    },
+    /* Rewrites free-text owners across the registers to the matching
+       Microsoft 365 user, after showing every change. */
+    matchOwners: async function () {
+      busy(true);
+      var users = await loadDirectory();
+      busy(false);
+      if (!users || !users.length) { toast('The Microsoft 365 directory could not be read.'); return; }
+      var regs = [
+        { list: S.risks || [], save: function (x) { return Store.updateRisk(x); } },
+        { list: S.actions || [], save: function (x) { return Store.updateAction(x); } },
+        { list: S.vendors || [], save: function (x) { return Store.updateVendor(x); } },
+        { list: S.assets || [], save: function (x) { return Store.updateAsset(x); } },
+        { list: S.legal || [], save: function (x) { return Store.updateLegal(x); } }
+      ];
+      var owners = [];
+      regs.forEach(function (g) { g.list.forEach(function (x) { if (x && x.owner) owners.push(x.owner); }); });
+      var m = window.CheckpointLib.matchOwners(owners, users);
+      var changes = m.matched.filter(function (x) { return x.owner !== x.user.name; });
+      var needEmail = m.matched.some(function (x) { return (S.actions || []).some(function (a) { return a.owner === x.owner && !a.ownerEmail; }); });
+      if (!changes.length && !needEmail) {
+        toast(m.unmatched.length ? 'Owners not in the directory: ' + esc(m.unmatched.join(', ')) + '. Edit them to a person, or leave them if they are a team.' : 'Every owner already matches someone in Microsoft 365.');
+        return;
+      }
+      var ok = await showModal({
+        title: 'Match owners to Microsoft 365',
+        message: (changes.length ? 'These owners will be updated everywhere they appear:\n' + changes.map(function (x) { return '\u2022 ' + x.owner + ' \u2192 ' + x.user.name + ' (' + (x.user.mail || x.user.upn) + ')'; }).join('\n') : 'Actions will get their owner\u2019s email so reminders reach them.') +
+          (m.unmatched.length ? '\n\nNot found, left as they are: ' + m.unmatched.join(', ') + '.' : ''),
+        confirmText: 'Update owners'
+      });
+      if (!ok) return;
+      busy(true);
+      var map = {};
+      m.matched.forEach(function (x) { map[x.owner.toLowerCase()] = x.user; });
+      var n = 0;
+      for (var gi = 0; gi < regs.length; gi++) {
+        for (var i = 0; i < regs[gi].list.length; i++) {
+          var x = regs[gi].list[i], u = x && x.owner && map[String(x.owner).trim().toLowerCase()];
+          if (!u) continue;
+          var changed = x.owner !== u.name || (gi === 1 && !x.ownerEmail);
+          if (!changed) continue;
+          x.owner = u.name;
+          if (gi === 1) x.ownerEmail = u.mail || u.upn;
+          try { await regs[gi].save(x); n++; } catch (e) { warn(e); }
+        }
+      }
+      busy(false);
+      audit('Owners matched to directory', 'Settings', 'owners', '', n + ' record(s) updated');
+      toast('<b>' + n + '</b> record' + (n === 1 ? '' : 's') + ' updated to their Microsoft 365 owner');
+      renderAll();
+    },
+    /* One click: reviewed today, nothing changed. */
+    reviewNoChange: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var prev = r.lastReviewed || 'never';
+      r.lastReviewed = new Date().toISOString().slice(0, 10);
+      r.lastReviewedBy = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      try { await Store.updateRisk(r); } catch (e) { warn(e); return; }
+      audit('Risk reviewed', 'Risk', r.id, prev, r.lastReviewed + ' by ' + r.lastReviewedBy + ' — no change');
+      toast('<b>' + esc(r.id) + '</b> reviewed: no change');
+      renderRisks(); renderNavCounts();
+      if (document.getElementById('drawer') && document.getElementById('drawer').classList.contains('open')) App.openRisk(id);
+    },
     toggleRiskGrouping: function () { _groupingOpen = !_groupingOpen; renderRiskGrouping(); },
     /* key = one business risk key, or '*' for every group. */
     groupExistingRisks: async function (key) {
@@ -14726,7 +15061,8 @@ function showModal(opts) {
         message: 'This is recorded as the final entry in ' + a.id + '\'s progress log — an auditor reading it should see exactly what was done.',
         fields: [
           { id: 'ev', label: 'Evidence note for the audit trail', type: 'textarea', value: 'Configuration export captured to Evidence library', placeholder: 'e.g. CA policy export saved to Evidence/A.8.5' },
-          { id: 'url', label: 'Evidence link (optional)', value: a.evidenceUrl || '', placeholder: 'https://…' }
+          { id: 'url', label: 'Evidence link (optional)', value: a.evidenceUrl || '', placeholder: 'https://…' },
+          { id: 'file', label: 'Or upload the evidence file (up to 4 MB, saved to Documents › Evidence)', type: 'file' }
         ],
         confirmText: 'Complete',
         validate: function (v) { return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://'; }
@@ -14734,6 +15070,16 @@ function showModal(opts) {
       if (!vals) return;
       var r = risk(a.risk);
       busy(true);
+      if (vals.file) {
+        if (Store.kind === 'demo') toast('Uploading needs a real tenant: the action is completed with the note and link only.');
+        else {
+          try {
+            var doc = await Store.uploadDocument(vals.file, 'Evidence');
+            if (!vals.url) vals.url = doc.url;
+            audit('Evidence uploaded', 'Action', a.id, '', vals.file.name);
+          } catch (e) { warn(e); busy(false); toast('Upload failed: ' + esc(e.message || String(e)), 'error'); return; }
+        }
+      }
       var upd = await recordActionUpdate(a, { note: vals.ev, evidenceUrl: vals.url, status: 'Done' });
       if (upd) {
         try {
@@ -14751,6 +15097,12 @@ function showModal(opts) {
       }
       busy(false);
       renderAll();
+      /* The last treatment action done: the residual is now a guess
+         until someone reassesses it. */
+      if (r && window.CheckpointLib.riskNeedsReassessment(r, S.actions, S.actionUpdates)) {
+        var again = await showModal({ title: 'Treatment of ' + r.id + ' is complete', message: 'Every treatment action for "' + r.title + '" is finished. Reassess its residual risk now, so the register shows what the treatment achieved rather than an estimate?', confirmText: 'Reassess now', cancelText: 'Later' });
+        if (again) App.recordAssessedResidual(r.id);
+      }
     },
 
     /* Records a progress update without necessarily completing the
@@ -14843,6 +15195,7 @@ function showModal(opts) {
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + ' · ' + esc(r.cat) + ' · Source: ' + esc(r.src) + '</div><h2>' + esc(r.title) + '</h2>' +
+        riskConnectionsHtml(r) +
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(240, 169, 127,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
@@ -14877,6 +15230,7 @@ function showModal(opts) {
           '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">' +
           '<button class="btn sm" data-action="App.editRisk" data-id="' + r.id + '">Edit risk</button>' +
           '<button class="btn ghost sm" data-action="App.addTreatmentAction" data-id="' + r.id + '">Add treatment action</button>' +
+          '<button class="btn ghost sm" data-action="App.reviewNoChange" data-id="' + r.id + '">Reviewed, no change</button>' +
           '<button class="btn ghost sm" data-action="App.markRiskReviewed" data-id="' + r.id + '">Record review</button>' +
           '<button class="btn ghost sm" data-action="App.recordAssessedResidual" data-id="' + r.id + '">Assess residual</button>' +
           '<button class="btn ghost sm" data-action="App.acceptRisk" data-id="' + r.id + '">Accept residual</button>' +
@@ -15919,7 +16273,8 @@ function showModal(opts) {
         ['vName', 'vService', 'vDataAccessed', 'vOwner', 'vCertifications', 'vCertExpiryDate', 'vContactEmail', 'vControls', 'vRiskRefs', 'vNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('vCriticality').value = 'Medium';
         document.getElementById('vReviewStatus').value = 'Not started';
-        document.getElementById('vNextReviewDue').value = daysFrom(365);
+        document.getElementById('vNextReviewDue').value = '';
+        setVendorTier(null, false, false);
       }
     },
 
@@ -15943,6 +16298,7 @@ function showModal(opts) {
       document.getElementById('vNotes').value = v.notes || '';
       window._vendorCatSel = (v.dataCategories || []).slice();
       App.renderVendorCategoryPicker();
+      setVendorTier(v.tier, v.contract, v.dpa);
       App.closeDrawer();
       document.getElementById('addVendorPanel').style.display = 'block';
       document.getElementById('addVendorPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -15974,6 +16330,7 @@ function showModal(opts) {
           v.controls = controls; v.riskRefs = riskRefs;
           v.dataCategories = (window._vendorCatSel || []).slice();
           v.notes = document.getElementById('vNotes').value.trim();
+          applyVendorFundamentals(v);
           await Store.updateVendor(v);
           await syncVendorCalendar(v);
           audit('Vendor updated', 'Vendor', v.id, prevStatus + ' / due ' + (prevDue || 'unset'), v.reviewStatus + ' / due ' + (v.nextReviewDue || 'unset'));
@@ -15995,8 +16352,11 @@ function showModal(opts) {
             controls: controls, riskRefs: riskRefs,
             dataCategories: (window._vendorCatSel || []).slice(),
             notes: document.getElementById('vNotes').value.trim(),
-            questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: ''
+            questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '',
+            apps: (window._vendorNewApps || []).slice()
           };
+          window._vendorNewApps = null;
+          applyVendorFundamentals(nv);
           await Store.addVendor(nv);
           await syncVendorCalendar(nv);
           audit('Vendor added', 'Vendor', nv.id, '', nv.name + ' (' + nv.criticality + ')');
@@ -16039,6 +16399,10 @@ function showModal(opts) {
           ? '<div class="d-kv"><span>Suggested criticality</span><b style="color:var(--gold-light)">' + esc(window.CheckpointLib.suggestVendorCriticality(v.dataCategories)) + ' (currently ' + esc(v.criticality) + ')</b></div>'
           : '') +
         '<div class="d-kv"><span>Data access detail</span><b>' + esc(v.dataAccessed || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Contract with security terms</span><b>' + (v.contract ? 'In place' : '<span style="color:var(--warn)">Not recorded</span>') + '</b></div>' +
+        '<div class="d-kv"><span>Data processing agreement</span><b>' + (v.dpa ? 'In place' : window.CheckpointLib.vendorHandlesPersonalData(v) ? '<span style="color:var(--warn)">' + icon('flag') + ' Needed: handles personal information</span>' : 'Not needed') + '</b></div>' +
+        ((v.apps || []).length ? '<div class="d-kv"><span>Microsoft 365 apps</span><b>' + esc(v.apps.join(', ')) + '</b></div>' : '') +
+        (v.tier ? '<div class="d-kv"><span>Tiering</span><b style="font-weight:400">' + [v.tier.prod ? 'production access' : '', v.tier.personal ? 'personal information' : '', v.tier.confidential ? 'confidential information' : '', v.tier.hard ? 'hard to replace' : ''].filter(Boolean).join(', ') + '</b></div>' : '') +
         (v.notes ? '<div class="d-kv"><span>Notes</span><b>' + esc(v.notes) + '</b></div>' : '') + '</div>' +
         '<div class="d-sec"><h4>Security questionnaire</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(v.questionnaireStatus || 'Not sent') + '</b></div>' +
