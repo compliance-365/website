@@ -175,3 +175,42 @@ describe('dated onboarding plan', () => {
     assert.ok(L.ONBOARDING_DAYS.soa <= 30 && L.ONBOARDING_DAYS.book <= 90);
   });
 });
+
+describe('starter objectives and resources (1.118.0)', () => {
+  test('five starters cover C, I and A, every suggestion states its resources', () => {
+    const st = L.SUGGESTED_OBJECTIVES.filter((o) => o.starter);
+    assert.deepEqual(st.map((o) => o.key), ['obj-mfa', 'obj-training', 'obj-risk', 'obj-restore', 'obj-incident']);
+    assert.deepEqual([...new Set(st.flatMap((o) => o.cia))].sort(), ['A', 'C', 'I']);
+    L.SUGGESTED_OBJECTIVES.forEach((o) => assert.ok(o.resources && o.resources.length > 10, o.key));
+  });
+  test('resources are stored, reconciled on older tenants, editable and exported', () => {
+    const store = readFileSync(new URL('../public/checkpoint/store.js', import.meta.url), 'utf8');
+    const html = readFileSync(new URL('../public/checkpoint/index.html', import.meta.url), 'utf8');
+    assert.ok(store.includes("Objectives: ['Resources']"));
+    assert.equal((store.match(/Resources: o\.resources/g) || []).length, 2);
+    assert.ok(html.includes('id="naObjResources"') && html.includes('data-action="App.toggleAddObjective"'));
+    assert.ok(app.includes("{ id: 'resources', label: 'Resources needed"));
+    assert.ok(app.includes("'Progress notes', 'Resources']"));
+    assert.ok(app.includes("value: o.starter || o.why ? 'yes' : ''"));
+  });
+});
+
+describe('compliance calendar statuses (1.118.0)', () => {
+  test('Active, Completed, Closed and Retired; only Active counts as due', () => {
+    assert.deepEqual(L.CALENDAR_STATUSES.map((s) => s.label.replace(/ \(.*$/, '')), ['Active', 'Completed', 'Closed', 'Retired']);
+    assert.equal(L.calendarItemLive({ status: 'Active' }), true);
+    assert.equal(L.calendarItemLive({}), true);
+    ['Done', 'Closed', 'Retired', 'Inactive'].forEach((s) => assert.equal(L.calendarItemLive({ status: s }), false, s));
+  });
+  test('a closed item drops out of owner reminders, in the browser and the monitor alike', () => {
+    const d = { calendar: [{ id: 'CAL-1', title: 'x', owner: 'A', nextDue: '2026-10-06', status: 'Closed' }] };
+    assert.deepEqual(L.ownerWorkItems(d, today), []);
+    assert.deepEqual(A.ownerWorkItems(d, today), []);
+    assert.equal(monitor.recurringActivityState([{ category: 'Backup restore test', status: 'Closed' }], 'Backup restore test', today), null);
+  });
+  test('rows open on click and finished items can be shown', () => {
+    assert.ok(app.includes('data-action="App.editCalItem" style="cursor:pointer'));
+    assert.ok(app.includes('toggleCalFinished'));
+    assert.ok(!/filter\(function \(c\) \{ return c\.status !== 'Done'/.test(app), 'every calendar count uses calendarItemLive');
+  });
+});

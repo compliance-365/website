@@ -38,7 +38,7 @@
       add(a.owner, a.ownerEmail, { kind: 'Action', ref: a.id || '', title: a.title || '', due: a.due, overdue: a.due < today });
     });
     (d.calendar || []).forEach(function (c) {
-      if (!c || c.status === 'Retired' || c.status === 'Done' || !c.nextDue || c.nextDue > limit) return;
+      if (!c || c.status === 'Retired' || c.status === 'Done' || c.status === 'Closed' || !c.nextDue || c.nextDue > limit) return;
       add(c.owner, '', { kind: 'Activity', ref: c.id || '', title: c.title || '', due: c.nextDue, overdue: c.nextDue < today });
     });
     (d.docs || []).forEach(function (x) {

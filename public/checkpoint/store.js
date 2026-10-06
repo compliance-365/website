@@ -2416,7 +2416,8 @@ window.SpStore = (function () {
     Objectives: [
       { name: 'RefId', text: {} }, { name: 'Metric', text: {} }, { name: 'Target', text: {} },
       { name: 'Owner', text: {} }, { name: 'DueDate', text: {} }, { name: 'Status', text: {} },
-      { name: 'ProgressNotes', text: { allowMultipleLines: true } }
+      { name: 'ProgressNotes', text: { allowMultipleLines: true } },
+      { name: 'Resources', text: { allowMultipleLines: true } }
     ],
     /* Information asset register, ISO 27001 A.5.9. Title carries the
        asset name. Source/SourceId key rows synced from Microsoft 365
@@ -2974,7 +2975,9 @@ window.SpStore = (function () {
     Clauses: ['Requirements'],
     /* Results added with in-app internal audits: each workpack line's
        result, note and finding, as JSON. */
-    Audits: ['Results']
+    Audits: ['Results'],
+    /* Resources: what each objective needs (Clause 6.2 b). */
+    Objectives: ['Resources']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
@@ -3381,7 +3384,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
         objectives: objItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, metric: f.Metric || '', target: f.Target || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Not started', notes: f.ProgressNotes || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, metric: f.Metric || '', target: f.Target || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Not started', notes: f.ProgressNotes || '', resources: f.Resources || '' };
         }).sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); }),
         calendar: calItems.map(function (i) {
           var f = i.fields;
@@ -3892,14 +3895,14 @@ window.SpStore = (function () {
     addObjective: async function (o) {
       o._sp = await addItem('Objectives', {
         Title: o.title, RefId: o.id, Metric: o.metric || '', Target: o.target || '',
-        Owner: o.owner, DueDate: o.due || '', Status: o.status || 'Not started', ProgressNotes: o.notes || ''
+        Owner: o.owner, DueDate: o.due || '', Status: o.status || 'Not started', ProgressNotes: o.notes || '', Resources: o.resources || ''
       });
       S.objectives.push(o);
     },
     updateObjective: async function (o) {
       await patchItem('Objectives', o._sp, {
         Title: o.title, Metric: o.metric || '', Target: o.target || '',
-        Owner: o.owner, DueDate: o.due || '', Status: o.status, ProgressNotes: o.notes || ''
+        Owner: o.owner, DueDate: o.due || '', Status: o.status, ProgressNotes: o.notes || '', Resources: o.resources || ''
       });
     },
     addCalendarItem: async function (c) {

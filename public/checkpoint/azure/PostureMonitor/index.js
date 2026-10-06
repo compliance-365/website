@@ -268,7 +268,7 @@ async function runTrainingCheck(g, context, siteId, trainingListId, today) {
    well-covered test suite to share pre-fetched rows across both. */
 
 function recurringActivityState(calendar, category, today) {
-  const rows = (calendar || []).filter(c => c && c.category === category && c.status !== 'Retired' && c.status !== 'Inactive');
+  const rows = (calendar || []).filter(c => c && c.category === category && c.status !== 'Retired' && c.status !== 'Inactive' && c.status !== 'Closed' && c.status !== 'Done');
   if (!rows.length) return null;
   const overdue = rows.filter(c => c.nextDue && c.nextDue < today).length;
   const neverDone = rows.filter(c => !c.lastCompleted).length;

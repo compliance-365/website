@@ -1928,6 +1928,14 @@
     var m = /\[rhythm:([a-z0-9-]+)\]/.exec((cal && cal.notes) || '');
     return m ? m[1] : '';
   }
+  /* Compliance calendar statuses. Active is still being done; Completed
+     (stored as 'Done', the value one-off items have always used),
+     Closed and Retired are not, so they drop out of everything that
+     counts what is due. */
+  var CALENDAR_STATUSES = [{ value: 'Active', label: 'Active' }, { value: 'Done', label: 'Completed' }, { value: 'Closed', label: 'Closed' }, { value: 'Retired', label: 'Retired (no longer done)' }];
+  function calendarItemLive(c) {
+    return !!c && ['Done', 'Closed', 'Retired', 'Inactive'].indexOf(c.status) === -1;
+  }
   function rhythmDef(key) {
     return OPERATING_RHYTHM.find(function (r) { return r.key === key; }) || null;
   }
@@ -1994,7 +2002,7 @@
     state = state || {};
     if (c.calendar) {
       var item = (state.calendar || []).find(function (x) {
-        if (!x || x.status === 'Retired' || x.status === 'Inactive' || x.status === 'Done') return false;
+        if (!calendarItemLive(x)) return false;
         var d = rhythmDefFor(x);
         return d && d.key === c.calendar;
       });
@@ -2079,7 +2087,7 @@
         var c = CADENCES[k];
         if (!c.calendar) return;
         var item = (state.calendar || []).find(function (x) {
-          if (!x || x.status === 'Retired' || x.status === 'Inactive' || x.status === 'Done') return false;
+          if (!calendarItemLive(x)) return false;
           var def = rhythmDefFor(x);
           return def && def.key === c.calendar;
         });
@@ -2109,7 +2117,7 @@
      added by hand counts). Returns the calendar items to add, with
      first due dates from `today`. */
   function planOperatingRhythm(calendar, today) {
-    var active = (calendar || []).filter(function (c) { return c && c.status !== 'Retired' && c.status !== 'Inactive' && c.status !== 'Done'; });
+    var active = (calendar || []).filter(calendarItemLive);
     return OPERATING_RHYTHM.filter(function (r) {
       return !active.some(function (c) { return rhythmKeyOf(c) === r.key || c.category === r.category; });
     }).map(function (r) {
@@ -2142,7 +2150,7 @@
 
   function recurringActivityState(calendar, category, today) {
     var rows = (calendar || []).filter(function (c) {
-      return c && c.category === category && c.status !== 'Retired' && c.status !== 'Inactive';
+      return calendarItemLive(c) && c.category === category;
     });
     if (!rows.length) return null;
     var overdue = rows.filter(function (c) { return c.nextDue && c.nextDue < today; });
@@ -7366,18 +7374,21 @@
   /* Objectives Checkpoint can propose and then measure from its own
      data (Clause 6.2: measurable, monitored, owned, with a due date).
      A suggestion already in the register (same title) is left out. */
+  /* `starter`: the balanced first set (C, I and A each covered, all
+     measured by Checkpoint) pre-ticked when a client adopts objectives.
+     `resources`: what Clause 6.2 b) asks the plan to state. */
   var SUGGESTED_OBJECTIVES = [
-    { key: 'obj-posture', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Keep our Microsoft 365 security configuration strong', metric: 'Checkpoint posture score', target: 'At least 80 out of 100 at every scan', risks: [] },
-    { key: 'obj-mfa', fws: ['iso27001'], cia: ['C'], title: 'Only the right people can sign in to our systems', metric: 'Accounts protected by multi-factor authentication', target: '100% of accounts, confirmed at every scan', risks: ['ctx-bec', 'ctx-leaver-access', 'mfa-all', 'mfa-priv', 'mfa-registration'] },
-    { key: 'obj-training', fws: ['iso27001'], cia: ['C', 'I'], title: 'Everyone knows their security responsibilities', metric: 'Staff with current security awareness training', target: 'At least 95%', risks: ['ctx-bec'] },
-    { key: 'obj-policy', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Everyone has read and accepted the information security policy', metric: 'Staff acknowledgement of the current policy', target: 'At least 90%', risks: [] },
-    { key: 'obj-risk', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Treat high and critical risks on time', metric: 'High and critical risks with treatment actions on schedule', target: '100%, no treatment action more than 30 days overdue', risks: [] },
-    { key: 'obj-actions', fws: ['iso27001'], cia: ['I'], title: 'Close corrective and improvement actions when we said we would', metric: 'Actions closed by their due date', target: 'At least 90%', risks: [] },
-    { key: 'obj-restore', fws: ['iso27001'], cia: ['A', 'I'], title: 'We can recover our information when we need to', metric: 'Backup restore tests completed successfully on schedule', target: 'Every scheduled restore test done, none overdue', risks: ['ctx-backup', 'backup'] },
-    { key: 'obj-incident', fws: ['iso27001'], cia: ['A', 'I'], title: 'Handle security incidents quickly and learn from them', metric: 'Incidents triaged within one business day, with lessons recorded', target: '100%', risks: [] },
-    { key: 'obj-ai-impact', fws: ['iso42001'], cia: ['I'], title: 'Every AI system is assessed before use and kept under review', metric: 'AI systems with a completed impact assessment, reviewed within 12 months', target: '100%', risks: ['ctx-ai-tools', 'ctx-ai-product'] },
-    { key: 'obj-ai-training', fws: ['iso42001'], cia: ['C', 'I'], title: 'Everyone using AI knows how to use it responsibly', metric: 'Staff with current AI use and oversight training', target: 'At least 95%', risks: ['ctx-ai-tools'] },
-    { key: 'obj-privacy-rights', fws: ['iso27701', 'privacyact'], cia: ['C'], title: 'Answer privacy requests on time', metric: 'Requests from individuals answered within the legal time limit', target: '100%', risks: ['ctx-privacy-breach'] }
+    { key: 'obj-posture', resources: 'Checkpoint posture scan (included); time to fix failing checks', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Keep our Microsoft 365 security configuration strong', metric: 'Checkpoint posture score', target: 'At least 80 out of 100 at every scan', risks: [] },
+    { key: 'obj-mfa', resources: 'Microsoft 365 Conditional Access (already licensed); about a day to enforce and register users', starter: true, fws: ['iso27001'], cia: ['C'], title: 'Only the right people can sign in to our systems', metric: 'Accounts protected by multi-factor authentication', target: '100% of accounts, confirmed at every scan', risks: ['ctx-bec', 'ctx-leaver-access', 'mfa-all', 'mfa-priv', 'mfa-registration'] },
+    { key: 'obj-training', resources: 'Checkpoint training courses; about 30 minutes per person per year', starter: true, fws: ['iso27001'], cia: ['C', 'I'], title: 'Everyone knows their security responsibilities', metric: 'Staff with current security awareness training', target: 'At least 95%', risks: ['ctx-bec'] },
+    { key: 'obj-policy', resources: 'Checkpoint attestation campaign; a few minutes per person', fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Everyone has read and accepted the information security policy', metric: 'Staff acknowledgement of the current policy', target: 'At least 90%', risks: [] },
+    { key: 'obj-risk', resources: 'Risk owners\' time, as agreed at management review', starter: true, fws: ['iso27001'], cia: ['C', 'I', 'A'], title: 'Treat high and critical risks on time', metric: 'High and critical risks with treatment actions on schedule', target: '100%, no treatment action more than 30 days overdue', risks: [] },
+    { key: 'obj-actions', resources: 'Action owners\' time; weekly owner reminders', fws: ['iso27001'], cia: ['I'], title: 'Close corrective and improvement actions when we said we would', metric: 'Actions closed by their due date', target: 'At least 90%', risks: [] },
+    { key: 'obj-restore', resources: 'Existing backup tooling; about two hours per restore test', starter: true, fws: ['iso27001'], cia: ['A', 'I'], title: 'We can recover our information when we need to', metric: 'Backup restore tests completed successfully on schedule', target: 'Every scheduled restore test done, none overdue', risks: ['ctx-backup', 'backup'] },
+    { key: 'obj-incident', resources: 'The incident response plan and the contacts named in it', starter: true, fws: ['iso27001'], cia: ['A', 'I'], title: 'Handle security incidents quickly and learn from them', metric: 'Incidents triaged within one business day, with lessons recorded', target: '100%', risks: [] },
+    { key: 'obj-ai-impact', resources: 'AI system owners\' time; Checkpoint impact assessment template', fws: ['iso42001'], cia: ['I'], title: 'Every AI system is assessed before use and kept under review', metric: 'AI systems with a completed impact assessment, reviewed within 12 months', target: '100%', risks: ['ctx-ai-tools', 'ctx-ai-product'] },
+    { key: 'obj-ai-training', resources: 'Checkpoint AI use and oversight course; about 30 minutes per person', fws: ['iso42001'], cia: ['C', 'I'], title: 'Everyone using AI knows how to use it responsibly', metric: 'Staff with current AI use and oversight training', target: 'At least 95%', risks: ['ctx-ai-tools'] },
+    { key: 'obj-privacy-rights', resources: 'Privacy officer\'s time; the PII principal rights procedure', fws: ['iso27701', 'privacyact'], cia: ['C'], title: 'Answer privacy requests on time', metric: 'Requests from individuals answered within the legal time limit', target: '100%', risks: ['ctx-privacy-breach'] }
   ];
   /* `risks` (optional): open risks from the register. A suggestion
      aimed at one of them carries `why` naming it and comes first, so the
@@ -7472,7 +7483,7 @@
         value = pctOf(passing, ids.length); display = passing === ids.length ? 'MFA checks passing at the last scan' : (ids.length - passing) + ' MFA check(s) not passing at the last scan';
         break;
       case 'obj-restore':
-        var tests = (d.calendar || []).filter(function (c) { var rd = c && c.status !== 'Retired' && rhythmDefFor(c); return rd && rd.key === 'backup-restore'; });
+        var tests = (d.calendar || []).filter(function (c) { var rd = calendarItemLive(c) && rhythmDefFor(c); return rd && rd.key === 'backup-restore'; });
         if (!tests.length) return null;
         var onTime = tests.filter(function (c) { return c.lastCompleted && (!c.nextDue || c.nextDue >= today); }).length;
         value = pctOf(onTime, tests.length); display = onTime + ' of ' + tests.length + ' restore test schedule(s) done and not overdue';
@@ -7540,7 +7551,7 @@
     OPERATING_RHYTHM.forEach(function (r) { r.controls.forEach(function (code) { (rhythmFor[code] = rhythmFor[code] || []).push(r); }); });
     var scheduled = {}, completed = {};
     (d.calendar || []).forEach(function (cal) {
-      if (!cal || cal.status === 'Retired') return;
+      if (!calendarItemLive(cal)) return;
       var r = rhythmDefFor(cal);
       if (!r) return;
       scheduled[r.key] = true;
@@ -7618,7 +7629,7 @@
       add(a.owner, a.ownerEmail, { kind: 'Action', ref: a.id || '', title: a.title || '', due: a.due, overdue: a.due < today });
     });
     (d.calendar || []).forEach(function (c) {
-      if (!c || c.status === 'Retired' || c.status === 'Done' || !c.nextDue || c.nextDue > limit) return;
+      if (!c || c.status === 'Retired' || c.status === 'Done' || c.status === 'Closed' || !c.nextDue || c.nextDue > limit) return;
       add(c.owner, '', { kind: 'Activity', ref: c.id || '', title: c.title || '', due: c.nextDue, overdue: c.nextDue < today });
     });
     (d.docs || []).forEach(function (x) {
@@ -8817,7 +8828,7 @@
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
-    OPERATING_RHYTHM: OPERATING_RHYTHM, rhythmKeyOf: rhythmKeyOf, rhythmDef: rhythmDef, rhythmDefFor: rhythmDefFor, rhythmNotesText: rhythmNotesText, rhythmLastEvidence: rhythmLastEvidence,
+    OPERATING_RHYTHM: OPERATING_RHYTHM, rhythmKeyOf: rhythmKeyOf, rhythmDef: rhythmDef, rhythmDefFor: rhythmDefFor, CALENDAR_STATUSES: CALENDAR_STATUSES, calendarItemLive: calendarItemLive, rhythmNotesText: rhythmNotesText, rhythmLastEvidence: rhythmLastEvidence,
     planOperatingRhythm: planOperatingRhythm, rhythmCompletionUpdates: rhythmCompletionUpdates,
     CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,
     CADENCES: CADENCES, cadenceCurrent: cadenceCurrent, resolveCadenceTokens: resolveCadenceTokens, cadenceKeysIn: cadenceKeysIn, cadenceSnapshot: cadenceSnapshot, statementApplies: statementApplies, policyPracticeGaps: policyPracticeGaps,
