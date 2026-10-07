@@ -846,7 +846,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -1106,6 +1106,16 @@ function showModal(opts) {
       header: ['ID', 'Asset', 'Type', 'Owner', 'Classification', 'Criticality', 'Where held', 'Source', 'Status', 'Last synced', 'Last reviewed', 'Notes'],
       rows: function () {
         return (S.assets || []).map(function (a) { return [a.id, a.name, a.type, a.owner, a.classification, a.criticality, a.location, a.source, a.status, a.lastSynced, a.lastReviewed, a.notes]; });
+      }
+    },
+    {
+      key: 'disposals', label: 'Asset disposal records', filename: 'asset-disposals.csv',
+      header: ['ID', 'Asset', 'Type', 'Retired', 'Reason', 'What happened to the data', 'Evidence', 'Signed off by', 'Note', 'Record complete'],
+      rows: function () {
+        return window.CheckpointLib.retiredAssets(S.assets || [], new Date().toISOString().slice(0, 10), 365).rows.map(function (x) {
+          var a = x.asset, r = a.retirement || {};
+          return [a.id, a.name, a.type, r.date || '', r.reason || '', r.method || '', r.evidenceUrl || '', r.by || '', r.note || '', x.gaps.length ? 'No: ' + x.gaps.join(', ') : 'Yes'];
+        });
       }
     },
     {
@@ -7570,6 +7580,138 @@ function showModal(opts) {
   }
   function directoryUser(owner) { return _dirUsers ? window.CheckpointLib.matchOwnerToUser(owner, _dirUsers) : null; }
 
+  /* ===== Owners who have left =====
+     Everything a person can own, across the registers, as one list for
+     CheckpointLib.departedOwners(). Controls and clauses keep their
+     owner in `own`. */
+  var DEMO_DEPARTED = [
+    { name: 'Riley Morgan', mail: 'r.morgan@meridianhealth.example', upn: 'r.morgan@meridianhealth.example', jobTitle: 'Marketing Manager' }
+  ];
+  var _leaverGroups = [];
+  var OWNED_KIND_LABEL = { risk: 'Risk', action: 'Action', vendor: 'Supplier', asset: 'Asset', legal: 'Requirement', control: 'Control', clause: 'Clause', objective: 'Objective', activity: 'Activity' };
+  var OWNED_AUDIT_TYPE = { risk: 'Risk', action: 'Action', vendor: 'Vendor', asset: 'Asset', legal: 'Legal', control: 'Control', clause: 'Clause', objective: 'Objective', activity: 'Calendar' };
+  var OWNED_SAVE = {
+    risk: function (x) { return Store.updateRisk(x); }, action: function (x) { return Store.updateAction(x); },
+    vendor: function (x) { return Store.updateVendor(x); }, asset: function (x) { return Store.updateAsset(x); },
+    legal: function (x) { return Store.updateLegal(x); }, control: function (x) { return Store.updateControl(x); },
+    clause: function (x) { return Store.updateClause(x); }, objective: function (x) { return Store.updateObjective(x); },
+    activity: function (x) { return Store.updateCalendarItem(x); }
+  };
+  function ownedRecords() {
+    var out = [];
+    var add = function (kind, ref, id, title, auditId, field) {
+      var owner = ref[field || 'owner'];
+      if (owner && owner !== 'Unassigned') out.push({ kind: kind, ref: ref, id: id, title: title || '', owner: owner, auditId: auditId || id, field: field || 'owner' });
+    };
+    (S.risks || []).forEach(function (r) { if (r.status !== 'Closed') add('risk', r, r.id, r.title); });
+    (S.actions || []).forEach(function (a) { if (['Done', 'Closed', 'Cancelled'].indexOf(a.status) === -1) add('action', a, a.id, a.title); });
+    (S.vendors || []).forEach(function (v) { add('vendor', v, v.id, v.name); });
+    (S.assets || []).forEach(function (a) { if (a.status !== 'Retired') add('asset', a, a.id, a.name); });
+    (S.legal || []).forEach(function (r) { if (r.applies !== 'No') add('legal', r, r.id, r.title); });
+    (S.controls || []).forEach(function (c) { if (c.app) add('control', c, c.id, c.t, c.fw + '|' + c.id, 'own'); });
+    (S.clauses || []).forEach(function (c) { add('clause', c, clauseLabel(c), c.t, clauseLabel(c), 'own'); });
+    (S.objectives || []).forEach(function (o) { if (o.status !== 'Achieved' && o.status !== 'Closed') add('objective', o, o.id, o.title); });
+    (S.calendar || []).forEach(function (c) { if (window.CheckpointLib.calendarItemLive(c)) add('activity', c, c.id, c.title); });
+    return out;
+  }
+  function renderLeavers() {
+    var groups = _leaverGroups || [];
+    var body;
+    if (!groups.length) {
+      body = '<p style="color:var(--paper-dim);font-size:13px">' + icon('check') + ' Every owner is an active person in Microsoft 365, or a team.</p>';
+    } else {
+      body = groups.map(function (g, i) {
+        var byKind = {};
+        g.items.forEach(function (x) { byKind[x.kind] = (byKind[x.kind] || 0) + 1; });
+        return '<div class="d-sec leaver"><h4>' + esc(g.owner) + ' <span class="chip ' + (g.status === 'left' ? 'st-Overdue' : 'st-Notstarted') + '">' + (g.status === 'left' ? 'Account disabled' : 'Not in the directory') + '</span></h4>' +
+          ((g.aliases || []).filter(function (x) { return x !== g.owner; }).length ? '<div class="src">Recorded as ' + esc(g.aliases.join(', ')) + '</div>' : '') +
+          (g.status === 'left' ? '' : '<div class="src">Not found in Microsoft 365. Hand over if this person has left; leave it if it is a team or a role.</div>') +
+          '<div class="src" style="margin:4px 0 8px">' + Object.keys(byKind).map(function (k) { return byKind[k] + ' ' + OWNED_KIND_LABEL[k].toLowerCase() + (byKind[k] === 1 ? '' : 's'); }).join(' · ') + '</div>' +
+          '<ul class="ev-check-list">' + g.items.map(function (x) { return '<li><span class="src">' + esc(OWNED_KIND_LABEL[x.kind]) + ' ' + esc(x.id) + '</span> ' + esc(x.title) + '</li>'; }).join('') + '</ul>' +
+          (READONLY ? '' : '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><input class="mini" id="leaverTo-' + i + '" list="peopleList" placeholder="Hand over to…" aria-label="Hand over ' + esc(g.owner) + '’s items to"><button class="btn sm" data-action="App.handOver" data-id="' + i + '">Hand over ' + g.items.length + '</button></div>') +
+          '</div>';
+      }).join('');
+    }
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">A.5.11 Return of assets · A.6.5 Responsibilities after termination</div><h2>Owners who have left</h2>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">Owners whose Microsoft 365 account is disabled, across risks, actions, suppliers, assets, requirements, controls, clauses, objectives and activities. Hand each person’s items to someone else in one step; every change is logged against the record.</p>' + body;
+  }
+
+  /* ===== Annual register review ===== */
+  var _rrKind = '', _rrDone = { kept: 0, changed: 0, retired: 0 }, _rrSkipped = {};
+  var RR_KINDS = {
+    asset: { label: 'Asset', audit: 'Asset', list: function () { return S.assets || []; }, save: function (x) { return Store.updateAsset(x); }, edit: function (id) { App.editAsset(id); }, retire: function (id) { App.retireAsset(id); }, retireLabel: 'Retire' },
+    vendor: { label: 'Supplier', audit: 'Vendor', list: function () { return S.vendors || []; }, save: function (x) { return Store.updateVendor(x); }, edit: function (id) { App.go('vendors'); App.editVendor(id); } },
+    legal: { label: 'Requirement', audit: 'Legal', list: function () { return S.legal || []; }, save: function (x) { return Store.updateLegal(x); }, edit: function (id) { App.editLegalReq(id); } },
+    risk: { label: 'Risk', audit: 'Risk', list: function () { return S.risks || []; }, save: function (x) { return Store.updateRisk(x); }, edit: function (id) { App.editRisk(id); }, retire: function (id) { App.closeRisk(id); }, retireLabel: 'Close' }
+  };
+  function rrQueue() {
+    var q = window.CheckpointLib.registerReviewQueue({ assets: S.assets, vendors: S.vendors, legal: S.legal, risks: S.risks }, new Date().toISOString().slice(0, 10), 365);
+    return q.items.filter(function (x) { return (!_rrKind || x.kind === _rrKind) && !_rrSkipped[x.kind + '|' + x.id]; });
+  }
+  function rrItem(key) {
+    var p = String(key).split('|'), kind = p[0], id = p.slice(1).join('|');
+    var def = RR_KINDS[kind];
+    var rec = def && def.list().find(function (x) { return x.id === id; });
+    return rec ? { kind: kind, rec: rec } : null;
+  }
+  function rrFacts(kind, r) {
+    var kv = function (k, v) { return v ? '<div class="d-kv"><span>' + k + '</span><b>' + esc(v) + '</b></div>' : ''; };
+    if (kind === 'asset') return kv('Type', r.type) + kv('Owner', r.owner || 'None') + kv('Classification', r.classification || 'Not classified') + kv('Where it is held', r.location) + kv('Status', r.status);
+    if (kind === 'vendor') return kv('Owner', r.owner || 'None') + kv('Criticality', r.criticality) + kv('Service', r.service || r.category) + kv('Certification expires', r.certExpiryDate ? fmtDate(r.certExpiryDate) : '');
+    if (kind === 'legal') return kv('Applies', r.applies) + kv('Owner', r.owner || 'None') + kv('Requirement', r.requirement) + kv('Controls', (r.controls || []).join(', '));
+    var q = residual(r);
+    return kv('Owner', r.owner || 'None') + kv('Treatment', treatmentLabel(r.treat)) + kv('Residual score', String(q.L * q.I) + ' (' + band(q.L * q.I) + ')') + kv('Status', r.status);
+  }
+  function renderRegisterReview() {
+    var q = rrQueue();
+    var it = q[0];
+    var scope = _rrKind ? RR_KINDS[_rrKind].label.toLowerCase() + 's' : 'assets, suppliers, requirements and risks';
+    var done = _rrDone.kept + _rrDone.changed + _rrDone.retired;
+    var tabs = '<div class="f-row" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px">' + [''].concat(Object.keys(RR_KINDS)).map(function (k) {
+      return '<button class="f-pill' + (_rrKind === k ? ' on' : '') + '" aria-pressed="' + (_rrKind === k) + '" data-action="App.openRegisterReview" data-id="' + k + '">' + (k ? RR_KINDS[k].label + 's' : 'All') + '</button>';
+    }).join('') + '</div>';
+    var card;
+    if (!it) {
+      card = '<div class="d-sec"><p style="font-size:13px">' + icon('check') + ' ' + (done ? 'Review finished: ' + _rrDone.kept + ' kept, ' + _rrDone.changed + ' changed, ' + _rrDone.retired + ' retired or closed.' : 'Every one of the ' + scope + ' has been reviewed in the last 12 months.') + '</p></div>';
+    } else {
+      var def = RR_KINDS[it.kind], key = it.kind + '|' + it.id;
+      card = '<div class="d-sec rr-card"><div class="src">' + esc(def.label) + ' ' + esc(it.id) + ' · ' + (it.lastReviewed ? 'last reviewed ' + fmtDate(it.lastReviewed) : 'never reviewed') + '</div>' +
+        '<h3 style="margin:4px 0 10px">' + esc(it.title) + '</h3>' + rrFacts(it.kind, rrItem(key).rec) +
+        (READONLY ? '' : '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
+          '<button class="btn sm" data-action="App.registerReviewKeep" data-id="' + esc(key) + '">Keep: still right</button>' +
+          '<button class="btn ghost sm" data-action="App.registerReviewChange" data-id="' + esc(key) + '">Change</button>' +
+          (def.retire ? '<button class="btn ghost sm" data-action="App.registerReviewRetire" data-id="' + esc(key) + '">' + def.retireLabel + '</button>' : '') +
+          '<button class="btn quiet sm" data-action="App.registerReviewSkip" data-id="' + esc(key) + '">Skip</button></div>') + '</div>';
+    }
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">Annual review · ' + (it ? q.length + ' to go' : 'done') + (done ? ' · ' + done + ' reviewed this session' : '') + '</div><h2>Review register</h2>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">Your documents say these registers are reviewed at least once a year. Step through each record not reviewed in the last 12 months, oldest first. <b>Keep</b> records today as its review date, and every decision is logged.</p>' +
+      tabs + card;
+  }
+
+  /* ===== A record's history, from the audit log ===== */
+  function historyRecord(type, id) {
+    if (type === 'Control') {
+      var c = (S.controls || []).find(function (x) { return x.fw + '|' + x.id === id || x.id === id; });
+      return { label: c ? c.id + ' ' + c.t : id, ids: c ? [c.fw + '|' + c.id, c.id] : [id] };
+    }
+    return { label: id, ids: [id] };
+  }
+  /* limit 0 = everything. */
+  function recordHistoryHtml(type, ids, limit) {
+    var all = window.CheckpointLib.recordHistory(S.auditLog || [], type, ids);
+    var rows = limit ? all.slice(0, limit) : all;
+    if (!rows.length) return '<div class="d-sec"><h4>History</h4><p style="font-size:12.5px;color:var(--paper-dim)">No changes logged yet. From now on every change is recorded here, from the tamper-evident audit log.</p></div>';
+    return '<div class="d-sec"><h4>History' + (all.length > 1 ? ' (' + all.length + ')' : '') + '</h4>' + rows.map(function (e) {
+      return '<div class="d-kv hist-row"><span>' + fmtDate(String(e.entryDateTime || '').slice(0, 10)) + '<div class="src">' + esc(e.actor || '') + '</div></span>' +
+        '<b>' + esc(e.action) + (e.before || e.after ? '<div class="src">' + (e.before ? esc(e.before) + ' → ' : '') + esc(e.after || '') + '</div>' : '') + '</b></div>';
+    }).join('') +
+      (limit && all.length > limit ? '<button class="lnk" data-action="App.openHistory" data-id="' + esc(type + '|' + ids[0]) + '">Show all ' + all.length + '</button>' : '') + '</div>';
+  }
+
   /* ===== Needs tidying =====
      One line per register (CheckpointLib.registerTidy); each item
      filters the table to the records it counts. */
@@ -10358,7 +10500,7 @@ function showModal(opts) {
     return {
       scopeStatement: orgProfileValue('orgScopeStatement'),
       docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, status: docStatusOf(d) }; }),
-      audits: S.audits || [], reviews: S.reviews || [], actions: S.actions || [], risks: S.risks || [],
+      audits: S.audits || [], reviews: S.reviews || [], actions: S.actions || [], risks: S.risks || [], assets: S.assets || [],
       controls: (S.controls || []).filter(function (c) { return c.fw === fw; }),
       reviewOverdue: (S.risks || []).filter(function (r) { return riskReviewStatus(r).due; }).map(function (r) { return r.id; }),
       aboveAppetite: risksAboveAppetite().map(function (r) { return r.id; })
@@ -10378,7 +10520,7 @@ function showModal(opts) {
       return;
     }
     el.innerHTML = '<div class="card" style="margin-bottom:16px">' + head +
-      '<div class="mock-score"><b style="color:' + tone(m.counts) + '">' + m.score + '</b><span>' + esc(m.verdict) + '<span class="src">' + m.counts.Major + ' major · ' + m.counts.Minor + ' minor · ' + m.counts.Observation + ' observation' + (m.counts.Observation === 1 ? '' : 's') + '. Sampled controls ' + esc(m.sample.controls.join(', ') || 'none') + '; risks ' + esc(m.sample.risks.join(', ') || 'none') + '; actions ' + esc(m.sample.actions.join(', ') || 'none') + '.</span></span></div>' +
+      '<div class="mock-score"><b style="color:' + tone(m.counts) + '">' + m.score + '</b><span>' + esc(m.verdict) + '<span class="src">' + m.counts.Major + ' major · ' + m.counts.Minor + ' minor · ' + m.counts.Observation + ' observation' + (m.counts.Observation === 1 ? '' : 's') + '. Sampled controls ' + esc(m.sample.controls.join(', ') || 'none') + '; risks ' + esc(m.sample.risks.join(', ') || 'none') + '; actions ' + esc(m.sample.actions.join(', ') || 'none') + ((m.sample.assets || []).length ? '; disposals ' + esc(m.sample.assets.join(', ')) : '') + '.</span></span></div>' +
       (m.findings.length ? '<div class="prop-list">' + m.findings.map(function (f) {
         return '<div class="prop-finding"><span><span class="chip ' + (f.severity === 'Major' ? 'sev-Critical' : f.severity === 'Minor' ? 'sev-High' : 'sev-Low') + '">' + esc(f.severity) + '</span> <b>' + esc(f.area) + (f.ref ? ' ' + esc(f.ref) : '') + '</b> ' + esc(f.text) + '</span>' +
           (f.fix && !READONLY ? '<button class="btn quiet sm" data-action="' + esc(f.fix.action) + '"' + (f.fix.id ? ' data-id="' + esc(f.fix.id) + '"' : '') + '>' + esc(f.fix.label) + '</button>' : '') + '</div>';
@@ -11926,6 +12068,30 @@ function showModal(opts) {
   function assetSummary() {
     return window.CheckpointLib.assetRegisterSummary(S.assets || [], new Date().toISOString().slice(0, 10), 365);
   }
+  /* A retired asset: its disposal record in place of owner and
+     classification, with whatever an auditor would find missing. */
+  /* Re-renders the asset panel after an edit made from it. */
+  function refreshAssetDrawer() {
+    var d = document.getElementById('drawer');
+    var m = d && d.classList.contains('open') && /^Asset (.+)$/.exec(d.getAttribute('aria-label') || '');
+    if (m) App.openAsset(m[1]);
+  }
+  function retiredAssetRow(a, gaps) {
+    var r = a.retirement || {};
+    var ev = r.evidenceUrl && isSafeUrl(r.evidenceUrl) ? ' · <a href="' + esc(r.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' : '';
+    return '<tr class="asset-retired"><td class="src">' + esc(a.id) + '</td>' +
+      '<td style="color:var(--paper-dim);max-width:300px"><button class="lnk asset-name" data-action="App.openAsset" data-id="' + esc(a.id) + '">' + esc(a.name) + '</button>' +
+      '<div class="src">Retired' + (r.date ? ' ' + fmtDate(r.date) : '') + (r.reason ? ' · ' + esc(r.reason) : '') + (r.method ? ' · ' + esc(r.method) : '') + (r.by ? ' · signed off by ' + esc(r.by) : '') + ev + '</div>' +
+      (r.note ? '<div class="src">' + esc(r.note) + '</div>' : '') +
+      (gaps.length ? '<div class="src" style="color:var(--warn)">' + icon('flag') + ' Disposal record incomplete: ' + esc(gaps.join(', ')) + '</div>' : '') + '</td>' +
+      '<td>' + esc(a.type) + '</td>' +
+      '<td class="src">' + (a.owner ? esc(a.owner) : '—') + '</td>' +
+      '<td class="src">' + (a.classification ? esc(a.classification) : '—') + '</td>' +
+      '<td class="src">' + esc(a.source) + '</td>' +
+      '<td class="src">' + (a.lastReviewed ? fmtDate(a.lastReviewed) : '—') + '</td>' +
+      '<td style="white-space:nowrap">' + (READONLY ? '' :
+        '<button class="btn ghost sm" data-action="App.retireAsset" data-id="' + esc(a.id) + '">' + (gaps.length ? 'Complete record' : 'Edit record') + '</button>') + '</td></tr>';
+  }
   function renderAssets() {
     var wrap = document.getElementById('assetRows');
     if (!wrap) return;
@@ -11933,31 +12099,55 @@ function showModal(opts) {
     var sum = assetSummary();
     var kpi = document.getElementById('assetKpiRow');
     kpi.innerHTML =
-      kpiTile({ value: sum.total, label: 'Assets', sub: sum.information + ' information asset' + (sum.information === 1 ? '' : 's') }) +
+      kpiTile({ value: sum.total, label: 'Assets', sub: sum.information + ' information asset' + (sum.information === 1 ? '' : 's') + (sum.retired ? ' · ' + sum.retired + ' retired' : '') }) +
       kpiTile({ value: sum.noOwner, label: 'Without an owner', tone: 'fail', meter: { value: sum.noOwner, max: sum.total }, sub: sum.noOwner ? 'A.5.9 requires an owner' : 'every asset owned' }) +
       kpiTile({ value: sum.unclassified, label: 'Information unclassified', tone: 'warn', sub: 'A.5.12 classification' }) +
       kpiTile({ value: sum.missing, label: 'Not found in last sync', tone: 'warn', sub: sum.missing ? 'disposed, or no longer managed?' : 'register matches Microsoft 365' });
     runCountUps(kpi);
     var types = ['all'].concat(window.CheckpointLib.ASSET_TYPES);
+    var retired = window.CheckpointLib.retiredAssets(S.assets || [], new Date().toISOString().slice(0, 10), 365);
+    var pill = function (t, label, n) { return '<button class="f-pill' + (_assetFilter === t ? ' on' : '') + '" aria-pressed="' + (_assetFilter === t) + '" data-action="App.setAssetFilter" data-id="' + esc(t) + '">' + esc(label) + ' ' + n + '</button>'; };
     document.getElementById('assetFilter').innerHTML = types.map(function (t) {
-      var n = t === 'all' ? sum.total : (sum.byType[t] || 0);
-      return '<button class="f-pill' + (_assetFilter === t ? ' on' : '') + '" aria-pressed="' + (_assetFilter === t) + '" data-action="App.setAssetFilter" data-id="' + esc(t) + '">' + esc(t === 'all' ? 'All' : t) + ' ' + n + '</button>';
-    }).join('');
-    var list = (S.assets || []).filter(function (a) { return tidyOn('assets') ? tidyKeep('assets', a.id) : a.status !== 'Retired' && (_assetFilter === 'all' || a.type === _assetFilter); });
+      return pill(t, t === 'all' ? 'All' : t, t === 'all' ? sum.total : (sum.byType[t] || 0));
+    }).join('') + (sum.missing ? pill('missing', 'Not found in last sync', sum.missing) : '') + (retired.total ? pill('retired', 'Retired', retired.total) : '');
+    var queue = document.getElementById('assetMissingQueue');
+    if (queue) {
+      var missingIds = (S.assets || []).filter(function (a) { return a.status === 'Not found in last sync'; }).map(function (a) { return a.id; });
+      queue.innerHTML = missingIds.length && _assetFilter !== 'retired' && !READONLY
+        ? '<div class="card asset-queue"><span>' + icon('flag') + ' ' + missingIds.length + ' asset' + (missingIds.length === 1 ? ' was' : 's were') + ' not found in the last sync. Confirm each is still in use, or retire it with a disposal record.</span>' +
+          (_assetFilter !== 'missing' ? '<button class="btn ghost sm" data-action="App.setAssetFilter" data-id="missing">Review</button>' : '') +
+          '<button class="btn ghost sm" data-action="App.retireAsset" data-id="' + esc(missingIds.join(',')) + '">' + (missingIds.length > 1 ? 'Retire all ' + missingIds.length : 'Retire') + '</button>' + '</div>'
+        : '';
+    }
+    if (_assetFilter === 'retired' && !tidyOn('assets')) {
+      wrap.innerHTML = retired.rows.length ? retired.rows.map(function (x) { return retiredAssetRow(x.asset, x.gaps); }).join('') :
+        emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No assets have been retired.' });
+      revealRows(wrap);
+      return;
+    }
+    var list = (S.assets || []).filter(function (a) {
+      if (tidyOn('assets')) return tidyKeep('assets', a.id);
+      if (a.status === 'Retired') return false;
+      if (_assetFilter === 'missing') return a.status === 'Not found in last sync';
+      return _assetFilter === 'all' || a.type === _assetFilter;
+    });
     if (!list.length) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No assets yet. Sync from Microsoft 365 for devices, applications and sites, then add the information assets no system can see.', cta: { label: 'Sync from Microsoft 365', action: 'App.syncAssets' } });
       return;
     }
     wrap.innerHTML = list.map(function (a) {
+      if (a.status === 'Retired') return retiredAssetRow(a, window.CheckpointLib.retirementGaps(a));
       var flag = a.status === 'Not found in last sync';
       return '<tr><td class="src">' + esc(a.id) + '</td>' +
-        '<td style="color:var(--paper);max-width:300px">' + esc(a.name) + (a.location ? '<div class="src">' + esc(a.location) + '</div>' : '') + (flag ? '<div class="src" style="color:var(--fail)">' + icon('flag') + ' Not found in the last sync — disposed of, or no longer managed?</div>' : '') + '</td>' +
+        '<td style="color:var(--paper);max-width:300px"><button class="lnk asset-name" data-action="App.openAsset" data-id="' + esc(a.id) + '">' + esc(a.name) + '</button>' + (a.location ? '<div class="src">' + esc(a.location) + '</div>' : '') + (flag ? '<div class="src" style="color:var(--fail)">' + icon('flag') + ' Not found in the last sync — disposed of, or no longer managed?</div>' : '') + '</td>' +
         '<td>' + esc(a.type) + '</td>' +
         '<td>' + (a.owner ? esc(a.owner) : '<span class="verify-stale">' + icon('flag') + ' None</span>') + '</td>' +
         '<td>' + (a.classification ? '<span class="chip st-Notstarted">' + esc(a.classification) + '</span>' : '—') + (a.criticality ? '<div class="src">' + esc(a.criticality) + ' criticality</div>' : '') + '</td>' +
         '<td class="src">' + esc(a.source) + (a.lastSynced ? '<br>synced ' + fmtDate(a.lastSynced) : '') + '</td>' +
         '<td class="src">' + (a.lastReviewed ? fmtDate(a.lastReviewed) : '—') + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editAsset" data-id="' + esc(a.id) + '">Edit</button></td></tr>';
+        '<td style="white-space:nowrap">' + (READONLY ? '' :
+          (flag ? '<button class="btn ghost sm" data-action="App.keepAsset" data-id="' + esc(a.id) + '">Still in use</button> ' : '') +
+          '<button class="btn ghost sm" data-action="App.editAsset" data-id="' + esc(a.id) + '">Edit</button>') + '</td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -11995,7 +12185,7 @@ function showModal(opts) {
         '<td>' + (r.owner ? esc(r.owner) : (r.applies === 'No' ? '—' : '<span class="verify-stale">' + icon('flag') + ' None</span>')) + '</td>' +
         '<td class="src">' + esc((r.controls || []).join(', ') || '—') + '</td>' +
         '<td class="src">' + (r.lastReviewed ? fmtDate(r.lastReviewed) : '—') + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editLegalReq" data-id="' + esc(r.id) + '">Edit</button></td></tr>';
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="App.editLegalReq" data-id="' + esc(r.id) + '">Edit</button> <button class="btn quiet sm" data-action="App.openHistory" data-id="Legal|' + esc(r.id) + '" aria-label="History of ' + esc(r.id) + '">History</button></td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -15440,7 +15630,7 @@ function showModal(opts) {
                 '</b></div>';
             }).join('')
           : '<p style="color:var(--paper-dim);font-size:12.5px">No updates recorded yet — use "Add update" to start the progress log an auditor would read.</p>') +
-        '</div>';
+        '</div>' + recordHistoryHtml('Action', [a.id], 8);
       openDrawerUi('Action ' + a.id);
     },
 
@@ -15477,10 +15667,7 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Treatment actions</h4>' + (acts.length ? acts.map(function (a) {
           return '<div class="d-kv"><span>' + a.id + ' — ' + esc(a.title) + '</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(actionStatusLabel(a.status)) + '</span></b></div>';
         }).join('') : '<div class="d-kv"><span>None yet</span></div>') + '</div>' +
-        '<div class="d-sec"><h4>Audit trail</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' +
-        (Store.kind === 'sharepoint'
-          ? 'Every change to this risk is versioned in this tenant\'s SharePoint list history — scoring changes, treatment decisions and evidence links are automatically audit-ready.'
-          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>' +
+        recordHistoryHtml('Risk', [r.id], 8) +
         (READONLY ? '' :
           '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">' +
           '<button class="btn sm" data-action="App.editRisk" data-id="' + r.id + '">Edit risk</button>' +
@@ -15592,7 +15779,7 @@ function showModal(opts) {
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         linkedRisksHtml(c) +
         assuranceExceptionsHtml(c) +
-        guidanceHtml;
+        guidanceHtml + recordHistoryHtml('Control', [c.fw + '|' + c.id, c.id], 6);
       openDrawerUi('Control ' + c.id);
     },
 
@@ -16679,7 +16866,7 @@ function showModal(opts) {
         '<button class="btn ghost sm" data-action="App.recordVendorQuestionnaire" data-id="' + v.id + '">Record answers</button>' +
         '<button class="btn sm" data-action="App.markVendorReviewed" data-id="' + v.id + '">Mark reviewed</button>' +
         '<button class="btn ghost sm" data-action="App.editVendor" data-id="' + v.id + '">Edit</button>' +
-        '</div>';
+        '</div>' + recordHistoryHtml('Vendor', [v.id], 6);
       openDrawerUi('Vendor ' + v.name);
     },
 
@@ -16969,7 +17156,7 @@ function showModal(opts) {
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
         '<button class="btn sm" data-action="App.advanceAiImpactStatus" data-id="' + a.id + '">Advance impact assessment</button>' +
         '<button class="btn ghost sm" data-action="App.editAiSystem" data-id="' + a.id + '">Edit</button>' +
-        '</div>';
+        '</div>' + recordHistoryHtml('AISystem', [a.id], 6);
       openDrawerUi('AI system ' + a.name);
     },
 
@@ -17577,7 +17764,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Can be marked Implemented</span><b>' + (gate.ok ? 'Yes' : 'Not yet \u2014 ' + esc(gate.reasons.join('; '))) + '</b></div>' +
         '<p class="src" style="margin-top:8px">Written in plain English for Checkpoint, not quoted from the standard. Check each against your copy of the standard.</p></div>' +
         clauseRecordHtml(c, key) +
-        rows;
+        rows + recordHistoryHtml('Clause', [clauseLabel(c)], 6);
       openDrawerUi(clauseLabel(c) + ' requirements');
     },
 
@@ -19836,7 +20023,7 @@ function showModal(opts) {
           { id: 'classification', label: 'Classification', type: 'select', value: a.classification, options: [''].concat(window.CheckpointLib.ASSET_CLASSIFICATIONS) },
           { id: 'criticality', label: 'Criticality', type: 'select', value: a.criticality, options: ['', 'Low', 'Medium', 'High', 'Critical'] },
           { id: 'location', label: 'Where it is held', value: a.location },
-          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ['Active', 'Not found in last sync', 'Retired'] },
+          { id: 'status', label: 'Status' + (a.status === 'Retired' ? '' : ' — to retire it, use Retire, which records the disposal'), type: 'select', value: a.status, options: a.status === 'Retired' ? ['Retired', 'Active'] : ['Active', 'Not found in last sync'] },
           { id: 'reviewed', label: 'Mark as reviewed today', type: 'select', value: 'Yes', options: ['Yes', 'No'] },
           { id: 'notes', label: 'Notes', type: 'textarea', value: a.notes }
         ],
@@ -19856,6 +20043,197 @@ function showModal(opts) {
       } catch (e) { warn(e); }
       busy(false);
       renderAssets(); renderNavCounts();
+    },
+
+    /* ---------- Asset retirement (A.5.11, A.7.14) ---------- */
+    /* One asset, or several (comma-separated ids) sharing one record:
+       retiring is a disposal record an auditor can sample, not a
+       status flip. Also completes or corrects an existing record. */
+    retireAsset: async function (ids) {
+      var list = String(ids || '').split(',').map(function (id) { return (S.assets || []).find(function (x) { return x.id === id.trim(); }); }).filter(Boolean);
+      if (!list.length) return;
+      var one = list.length === 1 ? list[0] : null;
+      var r = (one && one.retirement) || {};
+      var today = new Date().toISOString().slice(0, 10);
+      var editing = !!(one && one.status === 'Retired');
+      var device = list.some(function (a) { return a.type === 'Device'; });
+      var v = await showModal({
+        title: editing ? 'Disposal record for ' + one.id : one ? 'Retire ' + one.id : 'Retire ' + list.length + ' assets',
+        message: (one ? one.name : list.map(function (a) { return a.id + ' ' + a.name; }).join('\n')) + '\n\nAn auditor samples recent disposals for A.7.14: when, why, what happened to the data, the proof, and who signed it off.',
+        fields: [
+          { id: 'date', label: 'Date retired', type: 'date', value: r.date || today },
+          { id: 'reason', label: 'Reason', type: 'select', value: r.reason || (one && one.status === 'Not found in last sync' ? 'No longer used' : 'Disposed of'), options: window.CheckpointLib.ASSET_RETIRE_REASONS },
+          { id: 'method', label: 'What happened to the data', type: 'select', value: r.method || (device ? 'Wiped (certificate or report)' : 'Data deleted from the service'), options: window.CheckpointLib.ASSET_DISPOSAL_METHODS },
+          { id: 'evidenceUrl', label: 'Evidence link (wipe report, destruction certificate, deletion confirmation)', value: r.evidenceUrl || '', placeholder: 'https://' },
+          { id: 'by', label: 'Signed off by', value: r.by || currentActor().name, list: 'peopleList' },
+          { id: 'note', label: 'Note', type: 'textarea', value: r.note || '' }
+        ],
+        confirmText: editing ? 'Save record' : 'Retire',
+        validate: function (x) { return !x.date ? 'Enter the date it was retired.' : (x.evidenceUrl && !isSafeUrl(x.evidenceUrl.trim()) ? 'The evidence link must start with https://' : null); }
+      });
+      if (!v) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < list.length; i++) {
+        var a = list[i], before = a.status;
+        a.status = 'Retired';
+        a.retirement = { date: v.date, reason: v.reason, method: v.method, evidenceUrl: String(v.evidenceUrl || '').trim(), by: String(v.by || '').trim(), note: v.note || '' };
+        a.lastReviewed = today;
+        try {
+          await Store.updateAsset(a);
+          audit(before === 'Retired' ? 'Asset disposal record updated' : 'Asset retired', 'Asset', a.id, before, 'Retired ' + v.date + ' — ' + v.reason + ' · ' + v.method + (a.retirement.evidenceUrl ? ' · evidence linked' : '') + (a.retirement.by ? ' · signed off by ' + a.retirement.by : ''));
+          n++;
+        } catch (e) { warn(e); }
+      }
+      busy(false);
+      var gaps = window.CheckpointLib.retirementGaps(list[0]);
+      toast(n + ' asset' + (n === 1 ? '' : 's') + (editing ? ' updated' : ' retired') + (gaps.length ? ' · still missing: ' + esc(gaps.join(', ')) : ''));
+      renderAssets(); renderNavCounts(); refreshAssetDrawer();
+    },
+    /* "Not found in last sync" but still in use: back to Active, and
+       reviewed today, so the question is answered on the record. */
+    keepAsset: async function (ids) {
+      var list = String(ids || '').split(',').map(function (id) { return (S.assets || []).find(function (x) { return x.id === id.trim(); }); }).filter(Boolean);
+      var today = new Date().toISOString().slice(0, 10);
+      busy(true);
+      for (var i = 0; i < list.length; i++) {
+        var a = list[i], before = a.status;
+        a.status = 'Active'; a.lastReviewed = today;
+        try { await Store.updateAsset(a); audit('Asset confirmed in use', 'Asset', a.id, before, 'Active'); } catch (e) { warn(e); }
+      }
+      busy(false);
+      toast(list.length === 1 ? '<b>' + esc(list[0].id) + '</b> confirmed in use' : list.length + ' assets confirmed in use');
+      renderAssets(); renderNavCounts(); refreshAssetDrawer();
+    },
+    /* The asset's panel: what it is, its disposal record once retired,
+       and its history. */
+    openAsset: function (id) {
+      var a = (S.assets || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var kv = function (k, v) { return '<div class="d-kv"><span>' + k + '</span><b>' + (v ? esc(v) : '—') + '</b></div>'; };
+      var r = a.retirement, gaps = a.status === 'Retired' ? window.CheckpointLib.retirementGaps(a) : [];
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + esc(a.id) + ' · ' + esc(a.type) + ' · ' + esc(a.source) + '</div><h2>' + esc(a.name) + '</h2>' +
+        kv('Status', a.status) + kv('Owner', a.owner) + kv('Classification', a.classification) + kv('Criticality', a.criticality) + kv('Where it is held', a.location) +
+        kv('Last synced', a.lastSynced ? fmtDate(a.lastSynced) : '') + kv('Last reviewed', a.lastReviewed ? fmtDate(a.lastReviewed) : '') +
+        (a.notes ? '<div class="src" style="margin-top:6px">' + esc(a.notes) + '</div>' : '') +
+        (a.status === 'Retired' ? '<div class="d-sec"><h4>Disposal record (A.7.14)</h4>' +
+          kv('Retired', r && r.date ? fmtDate(r.date) : '') + kv('Reason', r && r.reason) + kv('What happened to the data', r && r.method) +
+          '<div class="d-kv"><span>Evidence</span><b>' + (r && r.evidenceUrl && isSafeUrl(r.evidenceUrl) ? '<a href="' + esc(r.evidenceUrl) + '" target="_blank" rel="noopener">Open ' + icon('external') + '</a>' : '—') + '</b></div>' +
+          kv('Signed off by', r && r.by) + (r && r.note ? '<div class="src">' + esc(r.note) + '</div>' : '') +
+          (gaps.length ? '<div class="src" style="color:var(--warn);margin-top:4px">' + icon('flag') + ' Incomplete: ' + esc(gaps.join(', ')) + '</div>' : '') + '</div>' : '') +
+        (READONLY ? '' : '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0">' +
+          (a.status === 'Retired'
+            ? '<button class="btn sm" data-action="App.retireAsset" data-id="' + esc(a.id) + '">' + (gaps.length ? 'Complete record' : 'Edit record') + '</button><button class="btn ghost sm" data-action="App.restoreAsset" data-id="' + esc(a.id) + '">Restore</button>'
+            : (a.status === 'Not found in last sync' ? '<button class="btn sm" data-action="App.keepAsset" data-id="' + esc(a.id) + '">Still in use</button>' : '') +
+              '<button class="btn ghost sm" data-action="App.editAsset" data-id="' + esc(a.id) + '">Edit</button><button class="btn ghost sm" data-action="App.retireAsset" data-id="' + esc(a.id) + '">Retire</button>') + '</div>') +
+        recordHistoryHtml('Asset', [a.id], 8);
+      openDrawerUi('Asset ' + a.id);
+    },
+    restoreAsset: async function (id) {
+      var a = (S.assets || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var ok = await showModal({ title: 'Restore ' + a.id + '?', message: a.name + ' goes back into the live register as Active. The disposal record is removed from the asset; the audit log keeps it.', confirmText: 'Restore', cancelText: 'Cancel' });
+      if (!ok) return;
+      var r = a.retirement || {};
+      a.status = 'Active'; a.retirement = null;
+      try { await Store.updateAsset(a); } catch (e) { warn(e); return; }
+      audit('Asset restored', 'Asset', a.id, 'Retired' + (r.date ? ' ' + r.date : '') + (r.reason ? ' — ' + r.reason : ''), 'Active');
+      toast('<b>' + esc(a.id) + '</b> restored');
+      renderAssets(); renderNavCounts(); refreshAssetDrawer();
+    },
+
+    /* ---------- Owners who have left (A.5.11, A.6.5) ---------- */
+    openLeavers: async function () {
+      busy(true);
+      var users = await loadDirectory();
+      var disabled = [];
+      try { disabled = Store.kind === 'demo' ? DEMO_DEPARTED.slice() : Store.kind === 'sharepoint' ? await Graph.listDisabledUsers() : []; } catch (e) { warn(e); }
+      busy(false);
+      _leaverGroups = window.CheckpointLib.departedOwners(ownedRecords(), users || [], disabled || []);
+      renderLeavers();
+      openDrawerUi('Owners who have left');
+    },
+    handOver: async function (idx) {
+      var g = _leaverGroups && _leaverGroups[+idx];
+      if (!g) return;
+      var input = document.getElementById('leaverTo-' + idx);
+      var to = input ? input.value.trim() : '';
+      if (!to) { toast('Choose who takes these over.'); if (input) input.focus(); return; }
+      if ((g.aliases || [g.owner]).concat(g.owner).some(function (x) { return x.toLowerCase() === to.toLowerCase(); })) { toast('Choose someone other than ' + esc(g.owner) + '.'); return; }
+      var ok = await showModal({
+        title: 'Hand over ' + g.items.length + ' item' + (g.items.length === 1 ? '' : 's') + ' to ' + to + '?',
+        message: g.items.map(function (x) { return '• ' + OWNED_KIND_LABEL[x.kind] + ' ' + x.id + ' — ' + x.title; }).join('\n') + '\n\nEach change is recorded in the audit log against the record.',
+        confirmText: 'Hand over', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var u = directoryUser(to);
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < g.items.length; i++) {
+        var it = g.items[i], rec = it.ref;
+        rec[it.field] = u ? u.name : to;
+        if (it.kind === 'action') rec.ownerEmail = u ? (u.mail || u.upn || '') : '';
+        try { await OWNED_SAVE[it.kind](rec); audit('Ownership handed over', OWNED_AUDIT_TYPE[it.kind], it.auditId, it.owner, rec[it.field]); n++; } catch (e) { warn(e); }
+      }
+      busy(false);
+      audit('Leaver hand-over', 'Owner', g.owner, g.items.length + ' item(s)', (u ? u.name : to) + ' (' + n + ' saved)');
+      toast(n + ' item' + (n === 1 ? '' : 's') + ' handed over from ' + esc(g.owner) + ' to <b>' + esc(u ? u.name : to) + '</b>');
+      _leaverGroups.splice(+idx, 1);
+      renderLeavers();
+      [renderRisks, renderActions, renderVendors, renderAssets, renderLegal, renderObjectives, renderCalendar, renderSoa].forEach(function (f) { try { f(); } catch (e) { /* view not built yet */ } });
+      renderNavCounts();
+    },
+
+    /* ---------- Annual register review ---------- */
+    openRegisterReview: function (kind) {
+      _rrKind = kind || '';
+      _rrDone = { kept: 0, changed: 0, retired: 0 };
+      _rrSkipped = {};
+      renderRegisterReview();
+      openDrawerUi('Register review');
+    },
+    registerReviewKeep: async function (key) {
+      var it = rrItem(key);
+      if (!it) return;
+      var rec = it.rec, today = new Date().toISOString().slice(0, 10), prev = rec.lastReviewed || 'never';
+      rec.lastReviewed = today;
+      if (it.kind === 'risk') rec.lastReviewedBy = currentActor().name;
+      if (it.kind === 'vendor') { rec.reviewStatus = 'Reviewed'; rec.nextReviewDue = window.CheckpointLib.vendorNextReview(rec, today); }
+      try { await RR_KINDS[it.kind].save(rec); } catch (e) { warn(e); return; }
+      audit('Reviewed, no change', RR_KINDS[it.kind].audit, rec.id, prev, today + ' by ' + currentActor().name + ' — annual register review');
+      _rrDone.kept++;
+      renderRegisterReview();
+    },
+    registerReviewSkip: function (key) { _rrSkipped[key] = 1; renderRegisterReview(); },
+    registerReviewChange: function (key) {
+      var it = rrItem(key);
+      if (!it) return;
+      _rrDone.changed++;
+      _rrSkipped[key] = 1;
+      App.closeDrawer();
+      RR_KINDS[it.kind].edit(it.rec.id);
+    },
+    registerReviewRetire: function (key) {
+      var it = rrItem(key);
+      if (!it) return;
+      _rrDone.retired++;
+      _rrSkipped[key] = 1;
+      App.closeDrawer();
+      RR_KINDS[it.kind].retire(it.rec.id);
+    },
+
+    /* ---------- A record's history ---------- */
+    openHistory: function (key) {
+      var p = String(key || '').split('|');
+      var type = p.shift(), id = p.join('|');
+      var rec = historyRecord(type, id);
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + esc(type) + ' · ' + esc(rec.label) + '</div><h2>History</h2>' +
+        recordHistoryHtml(type, rec.ids, 0);
+      openDrawerUi('History of ' + rec.label);
     },
 
     /* ---------- Legal & regulatory register ---------- */
@@ -20255,7 +20633,7 @@ function showModal(opts) {
           '<button class="btn sm" data-action="App.updateIncidentDetails" data-id="' + n.id + '">Update details</button>' +
           (n.isPrivacyBreach ? '<button class="btn ghost sm" data-action="App.recordIncidentAssessment" data-id="' + n.id + '">Record assessment</button>' : '') +
           (n.status !== 'Closed' ? '<button class="btn ghost sm" data-action="App.closeIncident" data-id="' + n.id + '">Close incident</button>' : '') +
-          '</div>');
+          '</div>') + recordHistoryHtml('Incident', [n.id], 6);
       openDrawerUi('Incident ' + n.id);
     },
 

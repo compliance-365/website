@@ -1793,7 +1793,9 @@ window.DemoStore = (function () {
         { id: 'AST-005', name: 'Salesforce', type: 'Application', owner: 'M. Chen', classification: '', criticality: 'High', location: 'Entra enterprise application', source: 'Entra', sourceId: 'sp-salesforce', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: '', notes: '' },
         { id: 'AST-006', name: 'MER-LT-0142', type: 'Device', owner: 'k.patel@meridianhealth.example', classification: '', criticality: '', location: 'Windows 11 · compliant', source: 'Intune', sourceId: 'dev-0142', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: '', notes: '' },
         { id: 'AST-007', name: 'MER-LT-0098', type: 'Device', owner: 's.okafor@meridianhealth.example', classification: '', criticality: '', location: 'macOS 14 · compliant', source: 'Intune', sourceId: 'dev-0098', status: 'Not found in last sync', lastSynced: daysFrom(-30), lastReviewed: '', notes: '' },
-        { id: 'AST-008', name: 'Northwind Cloud Hosting', type: 'Cloud service', owner: 'K. Patel', classification: '', criticality: 'Critical', location: 'Vendor register (VEN-001)', source: 'Vendor', sourceId: 'VEN-001', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: '', notes: '' }
+        { id: 'AST-008', name: 'Northwind Cloud Hosting', type: 'Cloud service', owner: 'K. Patel', classification: '', criticality: 'Critical', location: 'Vendor register (VEN-001)', source: 'Vendor', sourceId: 'VEN-001', status: 'Active', lastSynced: daysFrom(-2), lastReviewed: '', notes: '' },
+        { id: 'AST-009', name: 'Marketing asset library', type: 'Information location', owner: 'Riley Morgan', classification: 'Internal', criticality: 'Low', location: 'SharePoint site', source: 'Manual', sourceId: '', status: 'Active', lastSynced: '', lastReviewed: daysFrom(-400), notes: '' },
+        { id: 'AST-010', name: 'MER-LT-0031', type: 'Device', owner: 'm.chen@meridianhealth.example', classification: '', criticality: '', location: 'Windows 10 · end of life', source: 'Intune', sourceId: 'dev-0031', status: 'Retired', lastSynced: daysFrom(-90), lastReviewed: daysFrom(-85), notes: '', retirement: { date: daysFrom(-85), reason: 'Replaced', method: 'Wiped (certificate or report)', evidenceUrl: 'https://meridianhealth.sharepoint.com/sites/isms/Evidence/MER-LT-0031-wipe.pdf', by: 'S. Okafor', note: 'Collected by the recycler; wipe certificate on file.' } }
       ],
       legal: [
         { id: 'LEG-001', title: 'Privacy Act 1988 (Cth) — Australian Privacy Principles', type: 'Legislation', jurisdiction: 'Australia (Cth)', requirement: 'Handle personal information in line with the 13 APPs. Health service provider, so the small-business exemption does not apply.', applies: 'Yes', owner: 'S. Okafor', controls: ['A.5.34', 'A.5.31'], lastReviewed: daysFrom(-90), notes: '' },
@@ -2436,7 +2438,9 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'AssetType', text: {} }, { name: 'Owner', text: {} },
       { name: 'Classification', text: {} }, { name: 'Criticality', text: {} }, { name: 'Location', text: {} },
       { name: 'Source', text: {} }, { name: 'SourceId', text: {} }, { name: 'Status', text: {} },
-      { name: 'LastSynced', text: {} }, { name: 'LastReviewed', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } }
+      { name: 'LastSynced', text: {} }, { name: 'LastReviewed', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } },
+      /* JSON { date, reason, method, evidenceUrl, by, note } once retired (A.7.14). */
+      { name: 'Retirement', text: { allowMultipleLines: true } }
     ],
     /* Legal, statutory, regulatory and contractual requirements, ISO
        27001 A.5.31 / Clause 4.2. Title carries the requirement's name;
@@ -2991,7 +2995,9 @@ window.SpStore = (function () {
        result, note and finding, as JSON. */
     Audits: ['Results'],
     /* Resources: what each objective needs (Clause 6.2 b). */
-    Objectives: ['Resources']
+    Objectives: ['Resources'],
+    /* Retirement: the disposal record (A.7.14). */
+    Assets: ['Retirement']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
@@ -3182,7 +3188,8 @@ window.SpStore = (function () {
   function assetFields(a, withRef) {
     var f = { Title: String(a.name || '').slice(0, 255), AssetType: a.type || 'Other', Owner: a.owner || '', Classification: a.classification || '',
       Criticality: a.criticality || '', Location: a.location || '', Source: a.source || 'Manual', SourceId: a.sourceId || '',
-      Status: a.status || 'Active', LastSynced: a.lastSynced || '', LastReviewed: a.lastReviewed || '', Notes: a.notes || '' };
+      Status: a.status || 'Active', LastSynced: a.lastSynced || '', LastReviewed: a.lastReviewed || '', Notes: a.notes || '',
+      Retirement: a.retirement ? JSON.stringify(a.retirement) : '' };
     if (withRef) f.RefId = a.id;
     return f;
   }
@@ -3387,7 +3394,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         assets: assetItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, name: f.Title || '', type: f.AssetType || 'Other', owner: f.Owner || '', classification: f.Classification || '', criticality: f.Criticality || '', location: f.Location || '', source: f.Source || 'Manual', sourceId: f.SourceId || '', status: f.Status || 'Active', lastSynced: f.LastSynced || '', lastReviewed: f.LastReviewed || '', notes: f.Notes || '' };
+          return { _sp: i.id, id: f.RefId, name: f.Title || '', type: f.AssetType || 'Other', owner: f.Owner || '', classification: f.Classification || '', criticality: f.Criticality || '', location: f.Location || '', source: f.Source || 'Manual', sourceId: f.SourceId || '', status: f.Status || 'Active', lastSynced: f.LastSynced || '', lastReviewed: f.LastReviewed || '', notes: f.Notes || '', retirement: window.CheckpointLib.parseRetirement(f.Retirement) };
         }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
         legal: legalItems.map(function (i) {
           var f = i.fields;

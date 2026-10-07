@@ -1712,3 +1712,14 @@ body.nav-simple .nav-full{display:none!important}
 
 .doc-tools{margin-top:18px}
 .doc-tools > .reg-charts{margin-top:12px}
+
+/* Retired assets, record history, leavers, register review (1.126.0) */
+tr.asset-retired td { opacity: .85; }
+.hist-row { align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.hist-row > span { min-width: 96px; }
+.hist-row > b { font-weight: 400; text-align: left; color: var(--paper); }
+.d-sec.leaver h4 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rr-card h3 { font-size: 16px; }
+.asset-queue { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 10px; font-size: 13px; }
+.asset-queue > span { flex: 1; min-width: 240px; }
+.lnk.asset-name { color: inherit; text-align: left; font: inherit; }

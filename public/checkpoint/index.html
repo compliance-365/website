@@ -607,7 +607,7 @@
       <div class="grid kpis reg-strip" id="riskKpiRow"></div>
       <div class="reg-tidy" id="riskTidy"></div>
       <div id="riskGroupingWrap"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button><button class="btn ghost sm" data-action="App.importCsv" data-id="risks">Import CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button><button class="btn ghost sm" data-action="App.importCsv" data-id="risks">Import CSV</button><button class="btn ghost sm" data-action="App.openRegisterReview" data-id="risk">Review register</button><button class="btn ghost sm" data-action="App.openLeavers">Owners who have left</button></div>
       <div class="card" id="addRiskPanel" style="margin-bottom:16px;display:none">
         <h3>New risk</h3>
         <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px" id="riskAiDraftRow">
@@ -746,7 +746,7 @@
       <div class="grid kpis reg-strip" id="vendorKpiRow"></div>
       <div class="reg-tidy" id="vendorTidy"></div>
       <div id="vendorDiscoverWrap"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddVendor">+ Add vendor</button><button class="btn ghost sm" data-action="App.discoverVendors">Find vendors in Microsoft 365</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="vendors">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddVendor">+ Add vendor</button><button class="btn ghost sm" data-action="App.discoverVendors">Find vendors in Microsoft 365</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="vendors">Export CSV</button><button class="btn ghost sm" data-action="App.openRegisterReview" data-id="vendor">Review register</button></div>
       <div class="card" id="addVendorPanel" style="margin-bottom:16px;display:none">
         <h3 id="vendorPanelTitle">New vendor</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -1345,6 +1345,8 @@
         <button class="btn sm" data-action="App.syncAssets" id="assetSyncBtn">Sync from Microsoft 365</button>
         <button class="btn ghost sm" data-action="App.toggleAddAsset">+ Add asset</button>
         <button class="btn ghost sm" data-action="App.exportCsv" data-id="assets">Export CSV</button>
+        <button class="btn ghost sm" data-action="App.openRegisterReview" data-id="asset">Review register</button>
+        <button class="btn ghost sm" data-action="App.openLeavers">Owners who have left</button>
       </div>
       <div class="card" id="addAssetPanel" style="margin-bottom:16px;display:none">
         <h3>New asset</h3>
@@ -1361,6 +1363,7 @@
       <div class="grid kpis reg-strip" id="assetKpiRow"></div>
       <div class="reg-tidy" id="assetTidy"></div>
       <div id="assetFilter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div id="assetMissingQueue"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Asset</th><th scope="col">Type</th><th scope="col">Owner</th><th scope="col">Classification</th><th scope="col">Source</th><th scope="col">Reviewed</th><th scope="col"></th></tr></thead><tbody id="assetRows"></tbody></table></div>
     </section>
 
@@ -1371,6 +1374,7 @@
         <button class="btn sm" data-action="App.seedLegalBaseline">Add Australian starting set</button>
         <button class="btn ghost sm" data-action="App.addLegalReq">+ Add requirement</button>
         <button class="btn ghost sm" data-action="App.exportCsv" data-id="legal">Export CSV</button>
+        <button class="btn ghost sm" data-action="App.openRegisterReview" data-id="legal">Review register</button>
       </div>
       <div class="grid kpis reg-strip" id="legalKpiRow"></div>
       <div class="reg-tidy" id="legalTidy"></div>
