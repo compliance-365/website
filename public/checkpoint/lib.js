@@ -5529,6 +5529,122 @@
   }
 
   /* ============================================================
+     Evidence check
+     ------------------------------------------------------------
+     Every evidence link on a control, clause or completed action, and
+     what its probe found: the file no longer there, or older than the
+     review cycle. Plus implemented controls and clauses with no
+     evidence at all. probes = { url: { ok: true|false, modified } }; a
+     link with no probe (not SharePoint, or the check could not reach
+     it) is never reported as missing. */
+  function evidenceTargets(d) {
+    d = d || {};
+    var out = [];
+    (d.controls || []).forEach(function (c) { if (c && c.app) out.push({ kind: 'control', key: c.fw + '|' + c.id, label: c.id + ' ' + (c.t || ''), url: c.evidenceUrl || '', implemented: c.st === 'Implemented' }); });
+    (d.clauses || []).forEach(function (c) { if (c) out.push({ kind: 'clause', key: (c.fw || 'iso27001') + '|' + c.id, label: 'Clause ' + c.id + ' ' + (c.t || ''), url: c.evidenceUrl || '', implemented: c.st === 'Implemented' }); });
+    (d.actions || []).forEach(function (a) { if (a && a.status === 'Done') out.push({ kind: 'action', key: a.id, label: a.id + ' ' + (a.title || ''), url: a.evidenceUrl || '', implemented: true }); });
+    return out;
+  }
+  function evidenceCheckIssues(targets, probes, today, maxAgeDays) {
+    maxAgeDays = maxAgeDays || 365;
+    var out = [];
+    (targets || []).forEach(function (t) {
+      if (!t.url) {
+        if (t.implemented && t.kind !== 'action') out.push({ kind: t.kind, key: t.key, label: t.label, issue: 'none' });
+        return;
+      }
+      var p = (probes || {})[t.url];
+      if (!p) return;
+      if (p.ok === false) out.push({ kind: t.kind, key: t.key, label: t.label, issue: 'missing', url: t.url });
+      else if (p.modified && daysBetweenDateStr(String(p.modified).slice(0, 10), today) > maxAgeDays) out.push({ kind: t.kind, key: t.key, label: t.label, issue: 'stale', url: t.url, modified: String(p.modified).slice(0, 10) });
+    });
+    return out;
+  }
+  function isSharePointUrl(u) { return /^https:\/\/[a-z0-9-]+(-my)?\.sharepoint\.com\//i.test(String(u || '')); }
+
+  /* ============================================================
+     Mock audit
+     ------------------------------------------------------------
+     Checkpoint as the certification auditor: a sample of controls,
+     risks and actions, plus the records every audit opens (scope,
+     policy, internal audit, management review), each tested the way an
+     auditor tests it. Deterministic for a given seed, so the same
+     sample can be re-run after fixing. Findings are graded Major
+     (the management system is missing something required), Minor (a
+     requirement is not met for one item) or Observation. */
+  function seededPick(list, n, seed) {
+    var h = 2166136261;
+    String(seed || '').split('').forEach(function (ch) { h ^= ch.charCodeAt(0); h = (h * 16777619) >>> 0; });
+    var arr = (list || []).slice(), out = [];
+    while (arr.length && out.length < n) {
+      h = (h * 1103515245 + 12345) >>> 0;
+      out.push(arr.splice(h % arr.length, 1)[0]);
+    }
+    return out;
+  }
+  function mockAudit(d, today, seed) {
+    d = d || {};
+    var F = [];
+    var add = function (sev, area, ref, text, fix) { F.push({ severity: sev, area: area, ref: ref || '', text: text, fix: fix || null }); };
+    var within = function (dt, days) { return dt && daysBetweenDateStr(String(dt).slice(0, 10), today) <= days; };
+    /* The records every audit opens. */
+    if (!String(d.scopeStatement || '').trim()) add('Major', 'Scope', '4.3', 'No ISMS scope statement is recorded.', { action: 'App.orgProfileWizard', label: 'Answer the scope questions' });
+    var policy = (d.docs || []).find(function (x) { return /information security policy/i.test(x.name || ''); });
+    if (!policy) add('Major', 'Policy', '5.2', 'There is no information security policy.', { action: 'App.go', id: 'documents', label: 'Generate it' });
+    else if (policy.status !== 'Approved') add('Major', 'Policy', '5.2', 'The information security policy is not approved.', { action: 'App.go', id: 'documents', label: 'Request approval' });
+    var audit = (d.audits || []).filter(function (a) { return a && a.status === 'Completed' && within(a.completed, 365); })
+      .sort(function (a, b) { return String(b.completed).localeCompare(String(a.completed)); })[0];
+    if (!audit) add('Major', 'Internal audit', '9.2', 'No internal audit has been completed in the last 12 months.', { action: 'App.go', id: 'audits', label: 'Plan the internal audit' });
+    var review = (d.reviews || []).filter(function (r) { return r && within(r.date, 365); }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); })[0];
+    if (!review) add('Major', 'Management review', '9.3', 'No management review has been held in the last 12 months.', { action: 'App.go', id: 'reviews', label: 'Hold the management review' });
+    else if (!review.decisions) add('Minor', 'Management review', '9.3.3', 'The latest management review (' + review.date + ') records no decisions or outputs.', { action: 'App.go', id: 'reviews', label: 'Record the outputs' });
+    else if (audit && review.date < audit.completed) add('Observation', 'Management review', '9.3.2', 'The latest management review was held before the latest internal audit, so it could not consider its results.', { action: 'App.go', id: 'reviews', label: 'Review the audit results' });
+    var openNc = (d.actions || []).filter(function (a) { return a && a.type === 'Non-conformity (Major)' && a.status !== 'Done' && a.status !== 'Cancelled'; });
+    if (openNc.length) add('Major', 'Corrective action', '10.2', openNc.length + ' major nonconformit' + (openNc.length === 1 ? 'y is' : 'ies are') + ' still open (' + openNc.map(function (a) { return a.id; }).join(', ') + ').', { action: 'App.openAction', id: openNc[0].id, label: 'Open it' });
+    /* The sample. Implemented controls first, as an auditor tests what
+       is claimed. */
+    var ctrls = (d.controls || []).filter(function (c) { return c && c.app; });
+    var claimed = ctrls.filter(function (c) { return c.st === 'Implemented'; });
+    var sampleC = seededPick(claimed, Math.min(7, claimed.length), seed + 'c').concat(seededPick(ctrls.filter(function (c) { return c.st !== 'Implemented'; }), 3, seed + 'n'));
+    sampleC.forEach(function (c) {
+      var key = c.fw + '|' + c.id;
+      if (c.st === 'Implemented') {
+        if (!c.evidenceUrl) add('Minor', 'Control', c.id, c.id + ' ' + (c.t || '') + ' is marked Implemented with no evidence.', { action: 'App.setControlEvidence', id: key, label: 'Link evidence' });
+        else if (c.verified && !within(c.verified, 365)) add('Observation', 'Control', c.id, c.id + ' was last verified on ' + c.verified + ', over a year ago.', { action: 'App.verifyControl', id: key, label: 'Re-verify' });
+        if (!c.own) add('Observation', 'Control', c.id, c.id + ' has no owner.', { action: 'App.setControlOwner', id: key, label: 'Set owner' });
+      } else {
+        add('Observation', 'Control', c.id, c.id + ' ' + (c.t || '') + ' is applicable but ' + String(c.st || 'Not started').toLowerCase() + '; the auditor will ask for the plan and date.', { action: 'App.openControlGuidance', id: key, label: 'Open' });
+      }
+    });
+    var risks = (d.risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    var sampleR = seededPick(risks, 3, seed + 'r');
+    sampleR.forEach(function (r) {
+      if (!String(r.owner || '').trim()) add('Minor', 'Risk', r.id, r.id + ' has no risk owner (6.1.2 c).', { action: 'App.openRisk', id: r.id, label: 'Open' });
+      var mine = (d.actions || []).filter(function (a) { return a && ((r.actions || []).indexOf(a.id) !== -1 || a.risk === r.id); });
+      if ((r.treat || 'Treat') === 'Treat' && !mine.length) add('Minor', 'Risk', r.id, r.id + ' is being treated but has no treatment actions (6.1.3).', { action: 'App.openRisk', id: r.id, label: 'Add treatment' });
+      if ((d.reviewOverdue || []).indexOf(r.id) !== -1) add('Observation', 'Risk', r.id, r.id + ' is overdue for review.', { action: 'App.openRisk', id: r.id, label: 'Review it' });
+      if ((d.aboveAppetite || []).indexOf(r.id) !== -1 && !r.acceptedBy) add('Minor', 'Risk', r.id, r.id + ' is above the risk appetite with no residual risk acceptance recorded (6.1.3 f).', { action: 'App.openRisk', id: r.id, label: 'Open' });
+    });
+    var sampleA = seededPick((d.actions || []).filter(Boolean), 3, seed + 'a');
+    sampleA.forEach(function (a) {
+      var st = capaStatus(a);
+      if (st.isNc && !st.complete) add(a.type === 'Non-conformity (Major)' ? 'Major' : 'Minor', 'Action', a.id, a.id + ' (' + a.type + '): ' + st.nextStep.toLowerCase() + '.', { action: 'App.openAction', id: a.id, label: 'Open' });
+      else if (a.status === 'Done' && !a.evidenceUrl) add('Observation', 'Action', a.id, a.id + ' is completed with no evidence link.', { action: 'App.openAction', id: a.id, label: 'Open' });
+      else if (a.status !== 'Done' && a.status !== 'Cancelled' && a.due && a.due < today) add('Observation', 'Action', a.id, a.id + ' is overdue (due ' + a.due + ').', { action: 'App.openAction', id: a.id, label: 'Open' });
+    });
+    var n = { Major: 0, Minor: 0, Observation: 0 };
+    F.forEach(function (f) { n[f.severity]++; });
+    var score = Math.max(0, 100 - 25 * n.Major - 8 * n.Minor - 2 * n.Observation);
+    var verdict = n.Major ? 'Not ready: a certification auditor would raise a major nonconformity' : n.Minor > 2 ? 'Nearly ready: close the minor findings first' : 'Ready, with the observations noted';
+    var rank = { Major: 0, Minor: 1, Observation: 2 };
+    F.sort(function (a, b) { return rank[a.severity] - rank[b.severity]; });
+    return {
+      findings: F, counts: n, score: score, verdict: verdict,
+      sample: { controls: sampleC.map(function (c) { return c.id; }), risks: sampleR.map(function (r) { return r.id; }), actions: sampleA.map(function (a) { return a.id; }), audit: audit ? audit.id || audit.completed : '', review: review ? review.date : '' }
+    };
+  }
+
+  /* ============================================================
      Register fundamentals
      ------------------------------------------------------------ */
   var DONE_ACTION = function (a) { return a && (a.status === 'Done' || a.status === 'Cancelled'); };
@@ -9454,7 +9570,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
-    resolvableFindings: resolvableFindings, riskTreatmentProgress: riskTreatmentProgress, riskNeedsReassessment: riskNeedsReassessment, registerTidy: registerTidy, vendorHandlesPersonalData: vendorHandlesPersonalData, vendorCriticalityFromTier: vendorCriticalityFromTier, VENDOR_REVIEW_MONTHS: VENDOR_REVIEW_MONTHS, vendorNextReview: vendorNextReview, normaliseVendorName: normaliseVendorName, vendorCandidates: vendorCandidates, matchOwners: matchOwners, fuzzyOwnerMatch: fuzzyOwnerMatch, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,
+    resolvableFindings: resolvableFindings, evidenceTargets: evidenceTargets, evidenceCheckIssues: evidenceCheckIssues, isSharePointUrl: isSharePointUrl, seededPick: seededPick, mockAudit: mockAudit, riskTreatmentProgress: riskTreatmentProgress, riskNeedsReassessment: riskNeedsReassessment, registerTidy: registerTidy, vendorHandlesPersonalData: vendorHandlesPersonalData, vendorCriticalityFromTier: vendorCriticalityFromTier, VENDOR_REVIEW_MONTHS: VENDOR_REVIEW_MONTHS, vendorNextReview: vendorNextReview, normaliseVendorName: normaliseVendorName, vendorCandidates: vendorCandidates, matchOwners: matchOwners, fuzzyOwnerMatch: fuzzyOwnerMatch, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,
     isRetryableGraphStatus: isRetryableGraphStatus, graphRetryDelayMs: graphRetryDelayMs,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

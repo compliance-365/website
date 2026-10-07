@@ -962,6 +962,7 @@
       <div class="vhead"><div class="rule"></div><h1>Statement of Applicability</h1><p>One control set per purchased framework, cross-mapped to the others so shared evidence is never duplicated. Essential Eight is assessed by maturity level (ML1-ML3) per strategy against your target level, set in Frameworks — every other framework's full published control set ships ready to use.</p></div>
       <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="controls">Export CSV — every framework</button></div>
       <p class="src" id="soaEvidenceFolders" style="margin:-6px 0 14px;font-size:12px"></p>
+      <div id="soaEvidenceCheck"></div>
       <div class="filters" id="soaFwTabs" role="group" aria-label="Framework"></div>
       <div class="filters" id="soaCatFilters" style="margin-top:6px" role="group" aria-label="Filter by category"></div>
       <div id="soaE8Suggestions"></div>
@@ -1011,6 +1012,7 @@
       <div class="vhead"><div class="rule"></div><h1>Management system clauses</h1><p>ISO 27001 Clauses 4-10 (and ISO 42001's, when the tenant is entitled to it) — the management-system requirements themselves, as distinct from the Annex A controls in the Statement of Applicability. Every clause here is mandatory: unlike a control, a clause can never be marked Not Applicable, which is why this is its own register rather than more rows in the SoA. Clause 10.2's evidence is the corrective-action loop on each nonconformity in the Actions register; its row here shows how many are still open.</p></div>
       <div style="margin-bottom:14px;display:flex;gap:8px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="clauses">Export CSV</button><button class="btn ghost sm" data-action="App.report" data-id="clauses">Evidence pack</button><button class="btn ghost sm" data-action="App.stage1Pack">Stage 1 pack</button></div>
       <p class="src" id="clauseEvidenceFolders" style="margin:-6px 0 14px;font-size:12px"></p>
+      <div id="clauseEvidenceCheck"></div>
       <div class="grid kpis" id="clauseKpiRow" style="margin:0 0 16px"></div>
       <div id="clauseAutopilot"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Clause</th><th scope="col">Title</th><th scope="col">Status</th><th scope="col">Owner</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="clauseRows"></tbody></table></div>
@@ -1033,17 +1035,33 @@
       <div id="policyEditor" style="display:none"></div>
       <div id="documentsMain">
       <div class="vhead"><div class="rule"></div><h1>Documents</h1><p>Real evidence storage in this tenant's SharePoint — the ISMS manual, policies, risk treatment plan, training records. Upload here, or upload directly in SharePoint and paste the link when linking evidence to a control or action. Files over 4&nbsp;MB: upload in SharePoint directly, then paste the link.</p></div>
+      <div class="section-head"><h2>Document control register</h2><p>ISO 27001 clause 7.5.2/7.5.3 — every controlled document carries an owner, a version, an approval and a next-review date. These are real SharePoint columns on the library, so the same register is visible natively in SharePoint too.</p></div>
+      <div class="grid kpis reg-strip" id="docRegisterSummary"></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn sm" data-action="App.openDocTool" data-id="docGenerate">+ Generate a document</button><button class="btn ghost sm" data-action="App.generateDocumentSet">Generate full set</button><button class="btn ghost sm" data-action="App.openDocTool" data-id="docUpload">Upload</button>
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button><button class="btn ghost sm" data-action="App.exportAllPolicies">Export all policies (ZIP)</button>
+      </div>
+      <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
+      <!-- Filled by renderFocusBar() when a summary tile above is filtering
+           the register; aria-live so a screen reader hears it narrow. -->
+      <div class="focus-bar" id="docFocusBar" role="status" aria-live="polite" hidden></div>
+      <div class="card" style="padding:0 10px">
+        <div class="bulk-bar" id="docBulkBar" role="region" aria-label="Bulk actions" hidden></div>
+        <table><thead><tr><th scope="col">Document</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Next review</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
+      </div>
+      <div class="card" id="docPracticeCard" style="margin:18px 0 0;display:none"></div>
+      <div class="doc-tools">
       <!-- Evidence interpretation (AI). Hidden entirely unless the `ai`
            entitlement is on — renderFeatureVisibility() owns that, same
            as every other AI surface. -->
-      <div class="card" id="evidenceInterpretCard" style="margin-bottom:16px">
-        <h3>Interpret evidence with AI</h3>
+      <details class="card reg-charts" id="evidenceInterpretCard">
+        <summary><h3>Interpret evidence with AI</h3></summary>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Paste the text of an assurance artefact you already hold — a supplier's SOC 2 report, a penetration test summary, an access review sign-off, a backup job report — and get a draft of which of your controls it evidences, the period it covers, and, just as usefully, what it does <b>not</b> cover. Nothing is linked to a control until you say so.</p>
         <button class="btn sm" data-action="App.aiInterpretEvidence">Interpret an artefact</button>
         <div id="evidenceInterpretResult"></div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <h3>Policy template library</h3>
+      </details>
+      <details class="card reg-charts" id="docGenerate">
+        <summary><h3>Policy template library</h3><span class="src">Generate a policy or management-system document, or the full set.</span></summary>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Starter policies and management-system documents, written for a Microsoft 365 environment and grouped by the frameworks this tenant is licensed for. Personalise, generate a print-ready document, and save a copy straight into Policies &amp; Procedures below — registered as DRAFT with its owner and review date until a practitioner approves it.</p>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <select class="mini" id="tplSelect" aria-label="Policy template" style="min-width:260px" data-change-action="App.previewTemplate"></select>
@@ -1065,9 +1083,9 @@
           </div>
           <div id="tplAiTailorStatus" style="font-size:12.5px;margin-top:8px"></div>
         </div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <h3>Upload a document</h3>
+      </details>
+      <details class="card reg-charts" id="docUpload">
+        <summary><h3>Upload a document</h3><span class="src">Your own policy, procedure or evidence file, up to 4 MB.</span></summary>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <input type="file" id="docFileInput" aria-label="Document file" class="mini">
           <select class="mini" id="docCategory" aria-label="Document category"></select>
@@ -1078,20 +1096,7 @@
           <select class="mini" id="docReplaces" aria-describedby="docReplacesHelp"></select>
         </div>
         <p class="src" id="docReplacesHelp" style="margin:6px 0 0">Wrote your own policy or procedure? Choose the Checkpoint document it replaces. Once you record its approval under Details, it updates the clauses and controls exactly as Checkpoint’s own version would, and the generated copy is marked Superseded.</p>
-      </div>
-      <div class="section-head"><h2>Document control register</h2><p>ISO 27001 clause 7.5.2/7.5.3 — every controlled document carries an owner, a version, an approval and a next-review date. These are real SharePoint columns on the library, so the same register is visible natively in SharePoint too.</p></div>
-      <div class="card" id="docPracticeCard" style="margin-bottom:16px;display:none"></div>
-      <div class="grid kpis" id="docRegisterSummary" style="margin-bottom:16px"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button><button class="btn ghost sm" data-action="App.exportAllPolicies">Export all policies (ZIP)</button>
-      </div>
-      <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
-      <!-- Filled by renderFocusBar() when a summary tile above is filtering
-           the register; aria-live so a screen reader hears it narrow. -->
-      <div class="focus-bar" id="docFocusBar" role="status" aria-live="polite" hidden></div>
-      <div class="card" style="padding:0 10px">
-        <div class="bulk-bar" id="docBulkBar" role="region" aria-label="Bulk actions" hidden></div>
-        <table><thead><tr><th scope="col">Document</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Next review</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
+      </details>
       </div>
       </div>
     </section>
@@ -1226,6 +1231,7 @@
     <!-- CERTIFICATION -->
     <section class="view" id="v-certification">
       <div class="vhead"><div class="rule"></div><h1>Certification</h1><p>Staying certified after the first audit. Record the certificate and Checkpoint lays out the three-year cycle — two surveillance audits, then recertification before the certificate expires — puts each audit on the compliance calendar, tracks what the certification body found, and shows whether this cycle's internal audits have covered every clause and Annex A theme the recertification auditor will expect.</p></div>
+      <div id="mockAuditWrap"></div>
       <div id="certCards"></div>
     </section>
 

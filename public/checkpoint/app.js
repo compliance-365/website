@@ -846,7 +846,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -5363,6 +5363,7 @@ function showModal(opts) {
   }
 
   function renderCertification() {
+    renderMockAudit();
     var wrap = document.getElementById('certCards');
     if (!wrap) return;
     var all = certRecords();
@@ -9644,12 +9645,15 @@ function showModal(opts) {
     lists.forEach(function (o) {
       if (me.indexOf(o.owner.toLowerCase()) !== -1 || (o.email && me.indexOf(o.email.toLowerCase()) !== -1)) items = items.concat(o.items);
     });
+    myApprovalRequests().forEach(function (r) { items.push({ kind: 'Approve document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
     if (!(Store.kind === 'demo' && window._myTasksAs)) {
       myOutstandingAttestations().forEach(function (a) { items.push({ kind: 'Acknowledge policy', ref: a.id, title: a.docName, due: a.due || '', overdue: false }); });
       myOutstandingTraining().forEach(function (t) { items.push({ kind: 'Training', ref: t.id, title: t.courseTitle || t.courseId, due: t.due || '', overdue: !!(t.due && t.due < new Date().toISOString().slice(0, 10)) }); });
     }
     items.sort(function (a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999')); });
-    return { items: items, owners: lists.map(function (o) { return o.owner; }) };
+    var owners = lists.map(function (o) { return o.owner; });
+    approvalRequests().forEach(function (r) { if (r.approver && owners.indexOf(r.approver) === -1) owners.push(r.approver); });
+    return { items: items, owners: owners };
   }
   function myTaskButton(i) {
     var b = function (action, id, label) { return '<button class="btn sm" data-action="' + action + '"' + (id ? ' data-id="' + esc(id) + '"' : '') + '>' + esc(label) + '</button>'; };
@@ -9660,6 +9664,7 @@ function showModal(opts) {
     if (i.kind === 'Evidence requested') return b('App.addControlEvidenceFiles', 'iso27001|' + i.ref, 'Upload evidence');
     if (i.kind === 'Acknowledge policy') return b('App.acknowledgeAttestation', i.ref, 'Read and acknowledge');
     if (i.kind === 'Training') return b('App.go', 'training', 'Start');
+    if (i.kind === 'Approve document') return b('App.approveRequested', i.ref, 'Review and approve');
     return '';
   }
   function renderMyTasks() {
@@ -9812,6 +9817,7 @@ function showModal(opts) {
   }
 
   function renderSoa() {
+    renderEvidenceChecks();
     var entitled = entitledFrameworks();
     if (!entitled.length) {
       document.getElementById('soaFwTabs').innerHTML = '';
@@ -10285,6 +10291,122 @@ function showModal(opts) {
      column value, so fall back to deriving it from the audit log
      exactly as this used to, rather than showing them as unregistered.
      Anything with neither is an ordinary upload and gets no chip. */
+  /* ===== Evidence check =====
+     Probes every SharePoint evidence link (CheckpointLib.evidenceTargets
+     / evidenceCheckIssues): gone, out of date, or an implemented
+     control or clause with none. The result is kept in Settings
+     (evidenceCheck) and shown on the SoA and clauses pages. */
+  function evidenceCheckState() {
+    try { var o = JSON.parse((S.settings && S.settings.evidenceCheck) || 'null'); return o && o.at ? o : null; } catch (e) { return null; }
+  }
+  function evidenceCheckTargetsNow() {
+    var ent = entitledFrameworks();
+    return window.CheckpointLib.evidenceTargets({
+      controls: (S.controls || []).filter(function (c) { return ent.indexOf(c.fw) !== -1; }),
+      clauses: visibleClauses(), actions: S.actions || []
+    });
+  }
+  async function runEvidenceCheck() {
+    var targets = evidenceCheckTargetsNow();
+    var today = new Date().toISOString().slice(0, 10);
+    var urls = [];
+    targets.forEach(function (t) { if (t.url && window.CheckpointLib.isSharePointUrl(t.url) && urls.indexOf(t.url) === -1) urls.push(t.url); });
+    var probes = {};
+    if (Store.kind === 'sharepoint') {
+      for (var i = 0; i < urls.length; i += 5) {
+        var chunk = urls.slice(i, i + 5);
+        var res = await Promise.all(chunk.map(function (u) { return Graph.probeEvidence(u).catch(function () { return null; }); }));
+        chunk.forEach(function (u, k) { if (res[k]) probes[u] = res[k]; });
+      }
+    }
+    var issues = window.CheckpointLib.evidenceCheckIssues(targets, probes, today, 365);
+    var state = { at: today, checked: Object.keys(probes).length, issues: issues.slice(0, 300) };
+    S.settings.evidenceCheck = JSON.stringify(state);
+    try { await Store.setSetting('evidenceCheck', S.settings.evidenceCheck); } catch (e) { warn(e); }
+    audit('Evidence check run', 'Setting', 'evidenceCheck', '', state.checked + ' link(s) checked; ' + issues.length + ' issue(s)');
+    return state;
+  }
+  var EVIDENCE_ISSUE_LABEL = { missing: 'Link no longer works', stale: 'Not updated in over a year', none: 'Implemented with no evidence' };
+  function evidenceCheckCardHtml(kinds) {
+    var st = evidenceCheckState();
+    var issues = st ? st.issues.filter(function (x) { return kinds.indexOf(x.kind) !== -1; }) : [];
+    var count = function (k) { return issues.filter(function (x) { return x.issue === k; }).length; };
+    var open = function (x) { return x.kind === 'control' ? 'App.openControlGuidance' : x.kind === 'clause' ? 'App.openClauseRequirements' : 'App.openAction'; };
+    var head = st
+      ? 'Checked ' + fmtDate(st.at) + ': ' + (issues.length ? [count('missing') ? count('missing') + ' link' + (count('missing') === 1 ? '' : 's') + ' no longer work' : '', count('stale') ? count('stale') + ' not updated in over a year' : '', count('none') ? count('none') + ' implemented with no evidence' : ''].filter(Boolean).join(' · ') : 'every evidence link works and is current.')
+      : 'Not checked yet. Checkpoint opens every evidence link to confirm it still works and is current.';
+    return '<div class="card ev-check" style="margin-bottom:14px"><div class="ev-check-head"><span><b>Evidence check</b> <span class="src">' + esc(head) + '</span></span>' +
+      (READONLY ? '' : '<button class="btn ghost sm" data-action="App.checkEvidence">' + (st ? 'Check again' : 'Check evidence') + '</button>') + '</div>' +
+      (issues.length ? '<details class="ev-check-list"><summary class="src">Show ' + issues.length + '</summary>' + issues.slice(0, 100).map(function (x) {
+        return '<div class="prop-finding"><span><span class="chip ' + (x.issue === 'missing' ? 'st-Open' : 'st-Intreatment') + '">' + esc(EVIDENCE_ISSUE_LABEL[x.issue]) + '</span> ' + esc(x.label) + (x.modified ? ' <span class="src">last changed ' + esc(fmtDate(x.modified)) + '</span>' : '') + '</span>' +
+          '<button class="btn quiet sm" data-action="' + open(x) + '" data-id="' + esc(x.key) + '">Fix</button></div>';
+      }).join('') + '</details>' : '') + '</div>';
+  }
+  function renderEvidenceChecks() {
+    var a = document.getElementById('soaEvidenceCheck'); if (a) a.innerHTML = evidenceCheckCardHtml(['control', 'action']);
+    var b = document.getElementById('clauseEvidenceCheck'); if (b) b.innerHTML = evidenceCheckCardHtml(['clause']);
+  }
+
+  /* ===== Mock audit =====
+     CheckpointLib.mockAudit over this tenant's records, re-runnable
+     on the same sample after fixing ("Draw a new sample" changes it).
+     The last result's headline is kept in Settings (mockAuditLast). */
+  var _mockAudit = null, _mockSeed = '';
+  function mockAuditInput() {
+    var ent = entitledFrameworks();
+    var fw = ent.indexOf('iso27001') !== -1 ? 'iso27001' : ent[0];
+    return {
+      scopeStatement: orgProfileValue('orgScopeStatement'),
+      docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, status: docStatusOf(d) }; }),
+      audits: S.audits || [], reviews: S.reviews || [], actions: S.actions || [], risks: S.risks || [],
+      controls: (S.controls || []).filter(function (c) { return c.fw === fw; }),
+      reviewOverdue: (S.risks || []).filter(function (r) { return riskReviewStatus(r).due; }).map(function (r) { return r.id; }),
+      aboveAppetite: risksAboveAppetite().map(function (r) { return r.id; })
+    };
+  }
+  function renderMockAudit() {
+    var el = document.getElementById('mockAuditWrap');
+    if (!el) return;
+    var last = null;
+    try { last = JSON.parse((S.settings && S.settings.mockAuditLast) || 'null'); } catch (e) { last = null; }
+    var m = _mockAudit;
+    var tone = function (x) { return x.Major ? 'var(--fail)' : x.Minor ? 'var(--warn)' : 'var(--pass)'; };
+    var head = '<div class="ev-check-head"><span><h3 style="margin:0">Mock audit</h3><span class="src">Checkpoint samples your records the way a certification auditor does and grades what it finds. Run it before Stage 1, Stage 2 and each surveillance audit.</span></span>' +
+      '<span style="display:flex;gap:8px">' + (m ? '<button class="btn ghost sm" data-action="App.runMockAudit" data-id="new">Draw a new sample</button>' : '') + '<button class="btn sm" data-action="App.runMockAudit">' + (m ? 'Run again' : 'Run the mock audit') + '</button></span></div>';
+    if (!m) {
+      el.innerHTML = '<div class="card" style="margin-bottom:16px">' + head + (last ? '<p class="src" style="margin:8px 0 0">Last run ' + esc(fmtDate(last.at)) + ': score ' + last.score + ', ' + last.counts.Major + ' major, ' + last.counts.Minor + ' minor, ' + last.counts.Observation + ' observations.</p>' : '') + '</div>';
+      return;
+    }
+    el.innerHTML = '<div class="card" style="margin-bottom:16px">' + head +
+      '<div class="mock-score"><b style="color:' + tone(m.counts) + '">' + m.score + '</b><span>' + esc(m.verdict) + '<span class="src">' + m.counts.Major + ' major · ' + m.counts.Minor + ' minor · ' + m.counts.Observation + ' observation' + (m.counts.Observation === 1 ? '' : 's') + '. Sampled controls ' + esc(m.sample.controls.join(', ') || 'none') + '; risks ' + esc(m.sample.risks.join(', ') || 'none') + '; actions ' + esc(m.sample.actions.join(', ') || 'none') + '.</span></span></div>' +
+      (m.findings.length ? '<div class="prop-list">' + m.findings.map(function (f) {
+        return '<div class="prop-finding"><span><span class="chip ' + (f.severity === 'Major' ? 'sev-Critical' : f.severity === 'Minor' ? 'sev-High' : 'sev-Low') + '">' + esc(f.severity) + '</span> <b>' + esc(f.area) + (f.ref ? ' ' + esc(f.ref) : '') + '</b> ' + esc(f.text) + '</span>' +
+          (f.fix && !READONLY ? '<button class="btn quiet sm" data-action="' + esc(f.fix.action) + '"' + (f.fix.id ? ' data-id="' + esc(f.fix.id) + '"' : '') + '>' + esc(f.fix.label) + '</button>' : '') + '</div>';
+      }).join('') + '</div>' : '<p class="src">No findings in this sample.</p>') + '</div>';
+  }
+
+  /* ===== Approval requests =====
+     A draft sent to the person who should approve it (for the
+     information security policy, top management: Clause 5.2). Kept in
+     Settings (approvalRequests, JSON); shown in that person's My tasks,
+     where Approve opens the same approval dialog, signed in as them. */
+  function approvalRequests() {
+    try { var a = JSON.parse((S.settings && S.settings.approvalRequests) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  async function saveApprovalRequests(list) {
+    S.settings.approvalRequests = JSON.stringify(list);
+    await Store.setSetting('approvalRequests', S.settings.approvalRequests);
+  }
+  function approvalRequestFor(key) { return approvalRequests().find(function (r) { return r.key === key; }) || null; }
+  /* Requests addressed to the signed-in person (or, in the demo, the
+     person being viewed as). */
+  function myApprovalRequests() {
+    var me = Store.kind === 'demo' && window._myTasksAs ? [String(window._myTasksAs).toLowerCase()] : [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+    return approvalRequests().filter(function (r) {
+      return me.indexOf(String(r.approver || '').toLowerCase()) !== -1 || (r.approverEmail && me.indexOf(String(r.approverEmail).toLowerCase()) !== -1);
+    });
+  }
+
   function docStatusOf(d) {
     return d.status || (templateDraftStatus(d.name) === 'approved' ? 'Approved' : templateDraftStatus(d.name) === 'draft' ? 'Draft' : '');
   }
@@ -10619,6 +10741,12 @@ function showModal(opts) {
           actions.push(isOwnDoc(d)
             ? '<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Approve</button>'
             : '<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
+          if (!isOwnDoc(d) && !READONLY) {
+            var reqd = approvalRequestFor(d.category + '|' + d.name);
+            actions.push(reqd
+              ? '<span class="src" title="Requested ' + esc(reqd.requested) + '">Awaiting ' + esc(reqd.approver) + '</span>'
+              : '<button class="btn ghost sm" data-action="App.requestApproval" data-id="' + esc(d.category + '|' + d.name) + '">Request approval</button>');
+          }
         }
         actions.push('<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Details</button>');
         /* Content editing only makes sense for a document Checkpoint
@@ -11737,6 +11865,7 @@ function showModal(opts) {
 
   var _clauseFwOpen = {};
   function renderClauses() {
+    renderEvidenceChecks();
     var wrap = document.getElementById('clauseRows');
     if (!wrap) return;
     renderClausesDashboard();
@@ -14965,6 +15094,83 @@ function showModal(opts) {
       fams.forEach(function (f) { st[fw + '|' + f[1]] = v === '1'; });
       st[fw + '|Other controls'] = v === '1';
       renderSoa();
+    },
+    openDocTool: function (id) {
+      var d = document.getElementById(id);
+      if (!d) return;
+      d.open = true;
+      if (d.scrollIntoView) d.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    },
+    checkEvidence: async function () {
+      busy(true);
+      var st;
+      try { st = await runEvidenceCheck(); } catch (e) { warn(e); busy(false); toastError('The evidence check could not finish.'); return; }
+      busy(false);
+      var n = st.issues.length;
+      toast(n ? '<b>' + n + '</b> evidence issue' + (n === 1 ? '' : 's') + ' found' : 'Every evidence link works and is current' + (Store.kind === 'demo' ? ' (links are only opened in a real tenant)' : ''));
+      renderEvidenceChecks();
+    },
+    runMockAudit: function (mode) {
+      if (mode === 'new' || !_mockSeed) _mockSeed = new Date().toISOString() + Math.random();
+      _mockAudit = window.CheckpointLib.mockAudit(mockAuditInput(), new Date().toISOString().slice(0, 10), _mockSeed);
+      var last = { at: new Date().toISOString().slice(0, 10), score: _mockAudit.score, counts: _mockAudit.counts };
+      S.settings.mockAuditLast = JSON.stringify(last);
+      Store.setSetting('mockAuditLast', S.settings.mockAuditLast).catch(warn);
+      audit('Mock audit run', 'Setting', 'mockAuditLast', '', 'Score ' + last.score + '; ' + last.counts.Major + ' major, ' + last.counts.Minor + ' minor, ' + last.counts.Observation + ' observation(s)');
+      renderMockAudit();
+    },
+    requestApproval: async function (key) {
+      var name = key.split('|').slice(1).join('|');
+      var users = await loadDirectory();
+      var suggested = (S.settings && S.settings.topManagementApprover) || '';
+      var isPolicy = /information security policy/i.test(name);
+      var v = await showModal({
+        title: 'Request approval of “' + name + '”',
+        message: (isPolicy ? 'ISO 27001 Clause 5.2 expects top management to approve the information security policy. ' : '') +
+          'The request appears in the approver\u2019s My tasks' + (Store.kind === 'sharepoint' ? ' and they are emailed a link' : '') + '. When they approve, their name, the date and the version are recorded on the document.',
+        fields: [
+          { id: 'owner', label: 'Approver', value: suggested, placeholder: 'e.g. the CEO' },
+          { id: 'note', label: 'Note to the approver (optional)', type: 'textarea', placeholder: 'e.g. Please review before the management review on 20 Oct.' },
+          { id: 'top', label: 'This person is our top management for approvals', type: 'checkbox', value: isPolicy || !suggested }
+        ],
+        confirmText: 'Send request',
+        validate: function (x) { return x.owner ? null : 'Choose who should approve it.'; }
+      });
+      if (!v) return;
+      var u = users && users.length ? window.CheckpointLib.matchOwnerToUser(v.owner, users) : null;
+      var req = { key: key, name: name, approver: u ? u.name : v.owner, approverEmail: u ? (u.mail || u.upn || '') : '', requestedBy: myDisplayName() || 'Practitioner', requested: new Date().toISOString().slice(0, 10), note: v.note || '' };
+      busy(true);
+      try {
+        await saveApprovalRequests(approvalRequests().filter(function (r) { return r.key !== key; }).concat([req]));
+        if (v.top === 'yes') { S.settings.topManagementApprover = req.approver; await Store.setSetting('topManagementApprover', req.approver); }
+        audit('Document approval requested', 'Document', name, '', 'From ' + req.approver + (req.approverEmail ? ' (' + req.approverEmail + ')' : ''));
+        if (Store.kind === 'sharepoint' && req.approverEmail) {
+          try {
+            await Graph.sendMail(req.approverEmail, 'Please approve: ' + name + ' \u2014 ' + clientDisplayLabel(),
+              '<p>Hi ' + esc(req.approver.split(' ')[0]) + ',</p><p>' + esc(req.requestedBy) + ' has asked you to approve <b>' + esc(name) + '</b> in Checkpoint.' + (req.note ? '</p><p>' + esc(req.note) : '') + '</p><p>Open <a href="' + esc(location.origin + location.pathname) + '">Checkpoint</a> and go to <b>My tasks</b>. Your approval is recorded with your name, the date and the version.</p>');
+          } catch (e) { warn(e); toast('Request saved, but the email could not be sent. It is waiting in their My tasks.'); }
+        }
+      } catch (e) { warn(e); busy(false); toastError('Could not save the request.'); return; }
+      busy(false);
+      toast('Approval requested from <b>' + esc(req.approver) + '</b>');
+      renderDocuments(); renderNavCounts();
+    },
+    /* The approver's own approval: the same dialog, which defaults the
+       approver to the signed-in person; once the document reads
+       Approved the request is closed. */
+    approveRequested: async function (key) {
+      var req = approvalRequestFor(key);
+      /* Signed in as the approver, their own name is the default; in
+         the demo, the requested approver's. */
+      window._approvalBy = Store.kind === 'demo' && req ? req.approver : '';
+      try { await App.approveTemplate(key); } finally { window._approvalBy = ''; }
+      var name = key.split('|').slice(1).join('|');
+      var doc = (window._docs || []).find(function (x) { return x.name === name; });
+      if (req && doc && docStatusOf(doc) === 'Approved') {
+        await saveApprovalRequests(approvalRequests().filter(function (r) { return r.key !== key; }));
+        audit('Document approval request completed', 'Document', name, 'Requested ' + req.requested, 'Approved by ' + (doc.approvedBy || req.approver));
+        renderMyTasks(); renderNavCounts();
+      }
     },
     toggleNavMode: function () {
       try { localStorage.setItem(NAV_MODE_KEY, navMode() === 'simple' ? 'full' : 'simple'); } catch (e) { }
@@ -18861,7 +19067,7 @@ function showModal(opts) {
         message: 'Each document is re-saved without the draft watermark, with the approval recorded on the register and its review date added to the calendar:\n\n' +
           shortList(drafts.map(function (x) { return x.doc.name.replace(/\.html$/, ''); })) + sodNote,
         fields: [
-          { id: 'approvedBy', label: 'Approved by', value: (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'approvedBy', label: 'Approved by', value: window._approvalBy || (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
           { id: 'version', label: 'Version being approved', value: '1.0' },
           { id: 'nextReview', label: 'Next review due', type: 'date', value: nextYear },
           { id: 'attest', type: 'checkbox', value: false, label: 'These documents describe what we do today. Anything we do not do has been removed or reworded with Edit text, or will be before we rely on it.' }
@@ -19043,7 +19249,7 @@ function showModal(opts) {
         title: 'Approve “' + name + '”',
         message: 'This re-saves the document without the draft watermark and records the approval on the register.',
         fields: [
-          { id: 'approvedBy', label: 'Approved by', value: (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'approvedBy', label: 'Approved by', value: window._approvalBy || (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
           { id: 'version', label: 'Version being approved', value: bumpDocVersion(existing.version), placeholder: 'e.g. 1.0' },
           { id: 'nextReview', label: 'Next review due', type: 'date', value: existing.nextReview || params.reviewDate || '' }
         ],
@@ -19358,6 +19564,16 @@ function showModal(opts) {
        reviewed by management (certificationBookingReadiness). */
     bookCertificationAudit: async function (fw) {
       fw = fw || 'iso27001';
+      /* An auditor opens the evidence: the links are checked (read
+         only) if that has not been done in the last fortnight. */
+      var ec = evidenceCheckState();
+      if (!READONLY && (!ec || window.CheckpointLib.daysBetweenDateStr(ec.at, new Date().toISOString().slice(0, 10)) > 14)) {
+        try {
+          var st2 = await runEvidenceCheck();
+          renderEvidenceChecks();
+          if (st2.issues.length) toast('<b>' + st2.issues.length + '</b> evidence issue' + (st2.issues.length === 1 ? '' : 's') + ' to fix before the audit: see the Statement of Applicability.');
+        } catch (e) { warn(e); }
+      }
       var r = bookingReadinessFor(fw);
       var list = function (xs) { return xs.map(function (x) { return '• ' + x; }).join('\n'); };
       var v = await showModal({
