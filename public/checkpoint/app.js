@@ -1988,7 +1988,34 @@ function showModal(opts) {
     repairSetup: 'Repair setup', openAdminConsent: 'Grant admin consent', openActivation: 'Open licence',
     syncEvidenceFolders: 'Check folders', runScan: 'Run a scan'
   };
+  /* Settings: one section at a time, or every section matching the
+     search. A failing or warning setup check is pinned above the tabs. */
+  var _settingsSec = 'health', _settingsQ = '';
+  function applySettingsSection() {
+    var q = _settingsQ.trim().toLowerCase(), shown = 0;
+    document.querySelectorAll('#v-settings .set-sec').forEach(function (sec) {
+      var on = q ? sec.textContent.toLowerCase().indexOf(q) !== -1 : sec.dataset.sec === _settingsSec;
+      sec.hidden = !on;
+      if (on) shown++;
+    });
+    document.querySelectorAll('#settingsTabs .f-pill').forEach(function (b) {
+      var on = !q && b.dataset.id === _settingsSec;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
+    });
+    var none = document.getElementById('settingsSearchNone');
+    if (none) none.hidden = !(q && !shown);
+  }
+  function renderSettingsPinned() {
+    var el = document.getElementById('settingsPinned');
+    if (!el) return;
+    var sum = _setupHealth.summary;
+    el.innerHTML = sum && sum.status !== 'healthy' && _settingsSec !== 'health'
+      ? '<div class="card" style="margin-bottom:14px;border-color:' + (sum.status === 'failing' ? 'var(--fail)' : 'var(--warn)') + '">' + icon('flag') + ' <b>Setup ' + (sum.status === 'failing' ? 'needs fixing' : 'needs a check') + ':</b> ' + esc(sum.headline || '') + ' <button class="lnk" data-action="App.settingsSection" data-id="health">Open setup health</button></div>'
+      : '';
+  }
+
   function renderSetupHealth() {
+    renderSettingsPinned();
     var el = document.getElementById('setupHealthRow');
     var banner = document.getElementById('setupHealthBanner');
     var sum = _setupHealth.summary;
@@ -8482,23 +8509,35 @@ function showModal(opts) {
       else ungrouped.push(c);
     });
 
+    /* Each theme folds: the first open and the rest closed by default,
+       so the whole SoA fits a few screens; all open under a category
+       filter. The header shows the
+       theme's progress and anything in it that needs attention. */
+    var openState = window._soaFamOpen || (window._soaFamOpen = {});
+    var filtered = !!((window._soaCat && window._soaCat !== 'All') || window._soaFocus);
+    var firstFam = (fams.filter(function (f) { return byFamily[f[1]] && byFamily[f[1]].length; })[0] || [])[1];
+    function isOpen(label) { var k = fw + '|' + label; return filtered || (openState[k] !== undefined ? openState[k] : label === firstFam); }
     function familyHeader(label, subset) {
       var applicable = subset.filter(function (c) { return c.app; });
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var unjust = subset.filter(function (c) { return !c.app && !c.just; }).length;
+      var noOwner = applicable.filter(function (c) { return !c.own; }).length;
       var detail = applicable.length
         ? impl + ' of ' + applicable.length + ' implemented'
         : subset.length + ' control' + (subset.length === 1 ? '' : 's') + ', none applicable';
-      return '<tr class="soa-family"><th scope="rowgroup" colspan="9">' +
-        '<span>' + esc(label) + '</span><b>' + esc(detail) + '</b></th></tr>';
+      var flags = [unjust ? unjust + ' exclusion' + (unjust === 1 ? '' : 's') + ' without justification' : '', noOwner ? noOwner + ' without an owner' : ''].filter(Boolean).join(' · ');
+      var open = isOpen(label);
+      return '<tr class="soa-family"><th scope="rowgroup" colspan="9"><button class="soa-fam-toggle" data-action="App.toggleSoaFamily" data-id="' + esc(fw + '|' + label) + '" aria-expanded="' + open + '">' +
+        '<span>' + esc(label) + '</span><b>' + esc(detail) + (flags ? ' · ' : '') + (flags ? '<em class="soa-fam-flag">' + esc(flags) + '</em>' : '') + ' <i class="check-area-chevron" style="' + (open ? 'transform:rotate(180deg)' : '') + '">' + icon('chevron') + '</i></b></button></th></tr>';
     }
 
-    var out = '';
+    var out = filtered ? '' : '<tr class="soa-tools"><td colspan="9"><button class="lnk src" data-action="App.setAllSoaFamilies" data-id="1">Expand all</button> · <button class="lnk src" data-action="App.setAllSoaFamilies" data-id="0">Collapse all</button></td></tr>';
     fams.forEach(function (f) {
       var subset = byFamily[f[1]];
       if (!subset || !subset.length) return;
-      out += familyHeader(f[1], subset) + subset.map(renderSoaRow).join('');
+      out += familyHeader(f[1], subset) + (isOpen(f[1]) ? subset.map(renderSoaRow).join('') : '');
     });
-    if (ungrouped.length) out += familyHeader('Other controls', ungrouped) + ungrouped.map(renderSoaRow).join('');
+    if (ungrouped.length) out += familyHeader('Other controls', ungrouped) + (isOpen('Other controls') ? ungrouped.map(renderSoaRow).join('') : '');
     return out;
   }
 
@@ -8507,73 +8546,30 @@ function showModal(opts) {
     var key = c.fw + '|' + c.id;
     var rv = controlReviewStatus(c);
     var stale = rv.due;
-    var verifiedCell = !c.app ? '—'
-      : c.st !== 'Implemented' ? '<span class="src">—</span>'
-      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
-      : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
+    /* One line per control: the detail (why it is included, who
+       verified it, the evidence and its folder, every framework it also
+       satisfies) is in the control's panel, opened from the code or
+       title. The row keeps what is scanned and changed most. */
+    var verifiedCell = !c.app || c.st !== 'Implemented' ? '<span class="src">—</span>'
+      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') : '') + '</span>'
+      : '<button class="lnk src" data-action="App.verifyControl" data-id="' + key + '">Verify</button>';
     var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
-    /* Auto-captured evidence is a raw JSON file — a plain link to it
-       just downloads the file, which reads as broken to a practitioner
-       reviewing the SoA. Opens the in-app viewer (App.viewEvidence)
-       instead. A human-linked URL (a generated policy, an uploaded
-       file) opens via App.openEvidenceDoc — confirmed live, a plain
-       `<a target=_blank>` straight to the document's webUrl can strand
-       a brand-new tab on a blank page (Safari blocking the cross-site
-       cookies a fresh SharePoint sign-in handshake needs);
-       openEvidenceDoc resolves the same file to a pre-authenticated
-       download link first, which has no handshake to strand. */
-    var evidenceLink = isAutoEvidence
-      ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + key + '">View evidence</button>'
-      : (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button>' : '');
-    /* A quiet link, not a bordered button. Most controls have no
-       evidence yet, so a `btn` here put a boxed, upper-case, tracked-out
-       control on nearly all 93 rows — a column of them outweighing the
-       control titles they sit beside, which is the same "the repeated
-       thing shouts loudest" problem the status chips had. It stays a
-       real <button> (same keyboard and screen-reader semantics, same
-       action) and uses .lnk, the treatment this very table already uses
-       for the control code and title. */
-    var evidenceCell = ((c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-      ? evidenceLink + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="lnk src" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
-      : '<button class="lnk src" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>') +
-      (c.app ? evidenceFolderLine(evidenceFolderFor('control', c.fw, c.id), 'App.addControlEvidenceFiles', key, isEvidenceFolderUrl(c.evidenceUrl)) : '');
-    /* DISP ICT controls carry an ISM chapter reference, looked up
-       definitionally (same treatment as maturity level/parent above) —
-       shown under the title so an IRAP assessor can trace straight to
-       the relevant ISM guideline without a dedicated table column. */
-    var ismLine = (c.fw === 'dispirap' && dispIsmChapterOfCode(c.id)) ? '<div class="src" style="margin-top:2px">ISM: ' + esc(dispIsmChapterOfCode(c.id)) + '</div>' : '';
-    /* An excluded control with no recorded justification is exactly the
-       gap a certification auditor tests first (ISO 27001 clause
-       6.1.3(d) requires it explicitly) — flagged inline, not just in
-       the Auditor Pack's exclusion summary, so it's visible the moment
-       a control is marked Not Applicable rather than discovered for
-       the first time while generating a report for the auditor. */
-    var justificationLine = !c.app
-      ? (c.just
-          ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlJustification" data-id="' + key + '">Edit</button></div>'
-          : '<div style="margin-top:4px"><span class="verify-stale">' + icon('flag') + ' No justification recorded</span> <button class="btn sm" data-action="App.setControlJustification" data-id="' + key + '">Add justification</button></div>')
-      /* 6.1.3 d) wants the reason for INCLUDING a control too — derived
-         from the risks, requirements and checks already linked to it. */
-      : '<div class="src" style="margin-top:4px">Included: ' + esc(soaInclusionReasons(c).join(' · ')) + '</div>';
-    /* The control code alone used to be the only way into the guidance
-       drawer, and with no visible affordance at rest (the .lnk
-       underline only appears on hover) — a practitioner scanning
-       titles, not three-character codes, had no visual cue there was
-       anything to click. The title is now the SAME button, so the
-       thing someone actually reads is the thing that opens "how to
-       implement this / what evidence" — see App.openControlGuidance. */
-    /* Checkbox first inside the Control cell — see the _soaSel note. A
-       read-only session gets no checkbox at all rather than a disabled
-       one: there is no bulk action behind it to explain. */
+    var hasEvidence = c.evidenceUrl && isSafeUrl(c.evidenceUrl);
+    var evidenceCell = hasEvidence
+      ? '<button class="lnk" data-action="' + (isAutoEvidence ? 'App.viewEvidence' : 'App.openEvidenceDoc') + '" data-id="' + key + '">' + icon('check') + ' ' + (isAutoEvidence ? 'Auto' : 'View') + '</button>'
+      : (c.app ? '<button class="lnk src" data-action="App.setControlEvidence" data-id="' + key + '">Link</button>' : '<span class="src">—</span>');
+    var ismLine = (c.fw === 'dispirap' && dispIsmChapterOfCode(c.id)) ? '<div class="src">ISM: ' + esc(dispIsmChapterOfCode(c.id)) + '</div>' : '';
+    /* An exclusion with no justification is what an auditor tests first
+       (6.1.3 d)), so it stays flagged on the row itself. */
+    var justificationLine = !c.app && !c.just
+      ? '<div><span class="verify-stale">' + icon('flag') + ' No justification recorded</span> <button class="lnk src" data-action="App.setControlJustification" data-id="' + key + '">Add</button></div>'
+      : (!c.app ? '<div class="src soa-just">Excluded: ' + esc(c.just) + '</div>' : '');
+    var mapsCell = maps.length ? '<div class="fw-chips soa-maps">' + maps.slice(0, 2).map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + (maps.length > 2 ? '<span title="' + esc(maps.slice(2).join(', ')) + '">+' + (maps.length - 2) + '</span>' : '') + '</div>' : '';
     var selCell = bulkCheckbox('soa-sel', 'App.toggleSoaSel', key, c.id, _soaSel.has(key));
-    return '<tr data-id="' + key + '"' + (_soaSel.has(key) ? ' class="soa-row-sel"' : '') + '><td class="id-t">' + selCell + '<button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + esc(c.t) + '</button>' + ismLine + justificationLine + '</td>' +
+    return '<tr class="soa-row' + (_soaSel.has(key) ? ' soa-row-sel' : '') + '" data-id="' + key + '"><td class="id-t">' + selCell + '<button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td class="soa-title"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + esc(c.t) + '</button>' + ismLine + justificationLine + '</td>' +
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
-      /* Same "st-" + status-with-spaces-stripped class already used for
-         every status chip elsewhere (Risks/Actions/Vendors/etc) — reused
-         here on the <select> itself so the dropdown is colour-coded at
-         rest, not just readable after opening it. */
       '<td>' + (c.app ? '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + key + '" aria-label="' + esc(c.id) + ' implementation status">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
-      '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td>' +
+      '<td>' + mapsCell + '</td>' +
       '<td><button class="lnk" data-action="App.setControlOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
       '<td>' + assuranceCell(assuranceForControl(c)) + '</td>' +
       '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
@@ -11720,6 +11716,26 @@ function showModal(opts) {
       }).join('') + '</div>';
   }
 
+  /* The clause's record in its panel: where else its evidence lives,
+     owner, verification and evidence with its folder. */
+  function clauseRecordHtml(c, key) {
+    var hint = ((window.CLAUSE_DEFS || []).find(function (d) { return d.hint && (d.fw || 'iso27001') === (c.fw || 'iso27001') && d.code === c.id; }) || {}).hint || '';
+    var rv = clauseReviewStatus(c), ro = !!READONLY;
+    if (c.id === '10.2' && hint) {
+      var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
+      hint += ' ' + (capaOpen ? capaOpen + ' nonconformit' + (capaOpen > 1 ? 'ies' : 'y') + ' with the corrective-action loop still open.' : 'No nonconformity has an open corrective-action loop.');
+    }
+    return '<div class="d-sec"><h4>Record</h4>' +
+      (hint ? '<p class="src" style="margin:0 0 8px">' + esc(hint) + '</p>' : '') +
+      '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + (ro ? '' : ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setClauseOwner" data-id="' + esc(key) + '">Edit</button>') + '</b></div>' +
+      '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? ' by ' + esc(c.verifiedBy) : '') : '—') +
+        (!ro && c.st === 'Implemented' ? ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.verifyClause" data-id="' + esc(key) + '">' + (c.verified ? 'Re-verify' : 'Verify now') + '</button>' : '') + '</b></div>' +
+      '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + esc(key) + '">Open ' + icon('external') + '</button>' : '—') +
+        (ro ? '' : ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setClauseEvidence" data-id="' + esc(key) + '">' + (c.evidenceUrl ? 'Edit' : 'Link evidence') + '</button>') + '</b></div>' +
+      '<div class="d-kv"><span>Evidence folder</span><b style="font-weight:400">' + evidenceFolderLine(evidenceFolderFor('clause', c.fw, c.id), 'App.addClauseEvidenceFiles', key, isEvidenceFolderUrl(c.evidenceUrl)) + '</b></div></div>';
+  }
+
+  var _clauseFwOpen = {};
   function renderClauses() {
     var wrap = document.getElementById('clauseRows');
     if (!wrap) return;
@@ -11730,13 +11746,6 @@ function showModal(opts) {
       wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 5, text: 'No management system clauses loaded yet.' });
       return;
     }
-    /* Where a clause's evidence lives elsewhere in the console (Clause
-       10 — see window.CLAUSE_DEFS), say so under its title, and for
-       10.2 give the live count the auditor will ask about rather than
-       a static pointer. */
-    var hints = {};
-    (window.CLAUSE_DEFS || []).forEach(function (d) { if (d.hint) hints[d.fw + '|' + d.code] = d.hint; });
-    var capaOpen = (S.actions || []).filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0 && !window.CheckpointLib.capaStatus(a).complete; }).length;
     var ctx = clauseContext();
     renderClauseAutopilot(ctx);
     var lastFw = null;
@@ -11749,7 +11758,7 @@ function showModal(opts) {
          moved back to draft) is flagged rather than silently changed. */
       var cl = clauseChecklistFor(c, ctx);
       var reqLine = cl.total
-        ? '<div style="margin-top:4px"><button class="lnk src" data-action="App.openClauseRequirements" data-id="' + key + '">' +
+        ? '<div><button class="lnk src" data-action="App.openClauseRequirements" data-id="' + key + '">' +
           (cl.complete ? icon('check') + ' ' : '') + 'Requirements: ' + cl.met + ' of ' + cl.total + ' met</button>' +
           (c.st === 'Implemented' && !cl.complete ? ' <span class="verify-stale">' + icon('flag') + ' Implemented, but ' + (cl.total - cl.met) + ' not met</span>' : '') + '</div>'
         : '';
@@ -11757,20 +11766,25 @@ function showModal(opts) {
          one — otherwise 27001's and 42001's identical numbering reads
          as the same list twice. */
       var groupRow = '';
+      /* With more than one management system, each folds; the first
+         starts open. */
+      var fwOpen = !multiFw || (_clauseFwOpen[c.fw] !== undefined ? _clauseFwOpen[c.fw] : c.fw === clauses[0].fw);
       if (multiFw && c.fw !== lastFw) {
-        groupRow = '<tr class="soa-group-row"><td colspan="6"><b>' + esc(fwName(c.fw)) + '</b> <span class="src">' + (c.fw === 'iso42001' ? 'AI management system' : c.fw === 'iso27701' ? 'Privacy information management system (2025 edition)' : 'Information security management system') + '</span></td></tr>';
+        var inFw = clauses.filter(function (x) { return x.fw === c.fw; });
+        var implFw = inFw.filter(function (x) { return x.st === 'Implemented'; }).length;
+        groupRow = '<tr class="soa-group-row"><td colspan="6"><button class="soa-fam-toggle" data-action="App.toggleClauseFw" data-id="' + esc(c.fw) + '" aria-expanded="' + fwOpen + '"><span><b>' + esc(fwName(c.fw)) + '</b> <span class="src">' + (c.fw === 'iso42001' ? 'AI management system' : c.fw === 'iso27701' ? 'Privacy information management system (2025 edition)' : 'Information security management system') + '</span></span><b>' + implFw + ' of ' + inFw.length + ' implemented <i class="check-area-chevron" style="' + (fwOpen ? 'transform:rotate(180deg)' : '') + '">' + icon('chevron') + '</i></b></button></td></tr>';
         lastFw = c.fw;
       }
-      var hint = hints[(c.fw || 'iso27001') + '|' + c.id] || '';
-      if (c.id === '10.2' && hint) hint += ' ' + (capaOpen ? capaOpen + ' nonconformit' + (capaOpen > 1 ? 'ies' : 'y') + ' with the corrective-action loop still open.' : 'No nonconformity has an open corrective-action loop.');
+      if (!fwOpen) return groupRow;
+      /* One line per clause: the hint, verification detail, evidence
+         and folder are in the clause's panel (openClauseRequirements). */
       var verifiedCell = c.st !== 'Implemented' ? '<span class="src">—</span>'
-        : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyClause" data-id="' + key + '">Re-verify</button>'
-        : '<button class="btn sm" data-action="App.verifyClause" data-id="' + key + '">Verify now</button>';
+        : c.verified ? '<span class="' + (rv.due ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (rv.due ? ' ' + icon('flag') : '') + '</span>'
+        : '<button class="lnk src" data-action="App.verifyClause" data-id="' + key + '">Verify</button>';
       var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-        ? '<button class="btn ghost sm" data-action="App.openClauseEvidenceDoc" data-id="' + key + '">Evidence ' + icon('external') + '</button><br><button class="lnk src" style="margin-top:4px" data-action="App.setClauseEvidence" data-id="' + key + '">Edit</button>'
-        : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + key + '">Link evidence</button>';
-      evidenceCell += evidenceFolderLine(evidenceFolderFor('clause', c.fw, c.id), 'App.addClauseEvidenceFiles', key, isEvidenceFolderUrl(c.evidenceUrl));
-      return groupRow + '<tr><td class="id-t">' + esc(c.id) + '</td><td style="color:var(--paper)">' + esc(c.t) + (hint ? '<div class="src">' + esc(hint) + '</div>' : '') + reqLine + '</td>' +
+        ? '<button class="lnk" data-action="App.openClauseEvidenceDoc" data-id="' + key + '">' + icon('check') + ' View</button>'
+        : '<button class="lnk src" data-action="App.setClauseEvidence" data-id="' + key + '">Link</button>';
+      return groupRow + '<tr class="clause-row"><td class="id-t"><button class="lnk" data-action="App.openClauseRequirements" data-id="' + key + '">' + esc(c.id) + '</button></td><td style="color:var(--paper)"><button class="lnk" data-action="App.openClauseRequirements" data-id="' + key + '">' + esc(c.t) + '</button>' + reqLine + '</td>' +
         '<td><select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setClauseStatus" data-id="' + key + '" aria-label="' + esc(clauseLabel(c)) + ' status">' +
         ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
         '<td><button class="lnk" data-action="App.setClauseOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
@@ -14922,6 +14936,41 @@ function showModal(opts) {
       renderRisks(); renderNavCounts();
       if (document.getElementById('drawer') && document.getElementById('drawer').classList.contains('open')) App.openRisk(id);
     },
+    settingsSection: function (id) {
+      _settingsSec = id || 'health'; _settingsQ = '';
+      ['dashPosition', 'dashOperations'].forEach(function (id) {
+      var d = document.getElementById(id);
+      if (d) d.addEventListener('toggle', function () { if (d.open && typeof renderDash === 'function' && S) renderDash(); });
+    });
+    var box = document.getElementById('settingsSearch'); if (box) box.value = '';
+      applySettingsSection(); renderSettingsPinned();
+      if (id && App.go && !document.getElementById('v-settings').classList.contains('on')) App.go('settings');
+    },
+    toggleClauseFw: function (fw) {
+      var first = (visibleClauses()[0] || {}).fw;
+      var cur = _clauseFwOpen[fw] !== undefined ? _clauseFwOpen[fw] : fw === first;
+      _clauseFwOpen[fw] = !cur;
+      renderClauses();
+    },
+    toggleSoaFamily: function (k) {
+      var st = window._soaFamOpen || (window._soaFamOpen = {});
+      st[k] = !st[k];
+      renderSoa();
+    },
+    setAllSoaFamilies: function (v) {
+      var st = window._soaFamOpen || (window._soaFamOpen = {});
+      var ent = entitledFrameworks();
+      var fw = (window._soaFw && ent.indexOf(window._soaFw) > -1) ? window._soaFw : (ent[0] || 'iso27001');
+      var fams = controlFamilies(fw) || [];
+      fams.forEach(function (f) { st[fw + '|' + f[1]] = v === '1'; });
+      st[fw + '|Other controls'] = v === '1';
+      renderSoa();
+    },
+    toggleNavMode: function () {
+      try { localStorage.setItem(NAV_MODE_KEY, navMode() === 'simple' ? 'full' : 'simple'); } catch (e) { }
+      applyNavMode();
+      toast(navMode() === 'full' ? 'Full menu: every view is shown.' : 'Simple menu: the views most people need.');
+    },
     toggleRiskGrouping: function () { _groupingOpen = !_groupingOpen; renderRiskGrouping(); },
     /* key = one business risk key, or '*' for every group. */
     groupExistingRisks: async function (key) {
@@ -15332,7 +15381,8 @@ function showModal(opts) {
             ? '<button class="btn ghost sm" data-action="App.viewEvidence" data-id="' + esc(key) + '">View evidence</button>'
             : '<button class="btn ghost sm" data-action="App.openEvidenceDoc" data-id="' + esc(key) + '">Open ' + icon('external') + '</button>')
           : '—') +
-          (READONLY ? '' : ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlEvidence" data-id="' + esc(key) + '">' + (c.evidenceUrl ? 'Edit' : 'Link evidence') + '</button>') + '</b></div></div>' +
+          (READONLY ? '' : ' <button class="btn ghost sm" style="margin-left:4px" data-action="App.setControlEvidence" data-id="' + esc(key) + '">' + (c.evidenceUrl ? 'Edit' : 'Link evidence') + '</button>') + '</b></div>' +
+          (c.app ? '<div class="d-kv"><span>Evidence folder</span><b style="font-weight:400">' + evidenceFolderLine(evidenceFolderFor('control', c.fw, c.id), 'App.addControlEvidenceFiles', key, isEvidenceFolderUrl(c.evidenceUrl)) + '</b></div>' : '') + '</div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         linkedRisksHtml(c) +
         assuranceExceptionsHtml(c) +
@@ -17078,6 +17128,7 @@ function showModal(opts) {
     runSetupHealthCheck: function () { return runSetupHealth({ force: true }); },
     openSetupHealth: function () {
       App.go('settings');
+      App.settingsSection('health');
       var el = document.getElementById('setupHealthRow');
       if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
@@ -17319,6 +17370,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Evidence linked to the clause</span><b>' + (c.evidenceUrl ? 'Yes' : '<span class="verify-stale">' + icon('flag') + ' None</span>') + '</b></div>' +
         '<div class="d-kv"><span>Can be marked Implemented</span><b>' + (gate.ok ? 'Yes' : 'Not yet \u2014 ' + esc(gate.reasons.join('; '))) + '</b></div>' +
         '<p class="src" style="margin-top:8px">Written in plain English for Checkpoint, not quoted from the standard. Check each against your copy of the standard.</p></div>' +
+        clauseRecordHtml(c, key) +
         rows;
       openDrawerUi(clauseLabel(c) + ' requirements');
     },
@@ -23759,7 +23811,21 @@ function showModal(opts) {
   function saveNavGroupState(state) {
     try { localStorage.setItem(navGroupStorageKey(), JSON.stringify(state)); } catch (e) { /* private browsing etc. — the choice just won't survive to a future session */ }
   }
+  /* Simple or Full menu, per browser (a viewing preference, not shared
+     state). Simple is the default: the specialist views in "More" and
+     marked nav-full are hidden, and stay reachable from the command
+     palette and links. */
+  var NAV_MODE_KEY = 'checkpoint-nav-mode';
+  function navMode() { try { return localStorage.getItem(NAV_MODE_KEY) === 'full' ? 'full' : 'simple'; } catch (e) { return 'simple'; } }
+  function applyNavMode() {
+    var simple = navMode() === 'simple';
+    document.body.classList.toggle('nav-simple', simple);
+    var btn = document.getElementById('navModeBtn');
+    if (btn) { btn.textContent = simple ? 'Show full menu' : 'Show simple menu'; btn.setAttribute('aria-pressed', String(!simple)); }
+  }
+
   function applyNavGroupState() {
+    applyNavMode();
     var state = loadNavGroupState();
     document.querySelectorAll('details.nav-group[data-group]').forEach(function (details) {
       var groupId = details.dataset.group;
@@ -24443,6 +24509,11 @@ function showModal(opts) {
      choice, so navigating around never overwrites a deliberate
      collapse with the fact that a view was merely visited. */
   applyNavGroupState();
+  (function () {
+    var box = document.getElementById('settingsSearch');
+    if (box) box.addEventListener('input', function () { _settingsQ = box.value; applySettingsSection(); });
+    applySettingsSection();
+  })();
   document.querySelectorAll('details.nav-group[data-group] > summary').forEach(function (summary) {
     summary.addEventListener('click', function () {
       var details = summary.parentElement;

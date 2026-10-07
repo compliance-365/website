@@ -1666,3 +1666,37 @@ select.inline-edit{max-width:112px}
 .grp-row td{background:rgba(var(--paper-rgb),.04);padding-top:12px;font-size:var(--fs-2)}
 .vtier{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
 .vtier label{display:flex;gap:8px;align-items:center}
+
+/* Simple menu: specialist views hidden (applyNavMode()). */
+body.nav-simple .nav-full{display:none!important}
+.nav-mode{display:block;width:100%;background:none;border:none;text-align:left;padding:8px 22px;font:inherit;font-size:var(--fs-1);color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent}
+.nav-mode:hover,.nav-mode:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
+
+/* SoA: one line per control. */
+.soa-title{color:var(--paper);max-width:420px}
+.soa-title .soa-just{max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#soaRows td{padding-top:7px;padding-bottom:7px}
+#soaRows .fw-chips span{font-size:10px;padding:1px 5px}
+
+/* Settings in sections. */
+.settings-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+.settings-bar .filters{margin-bottom:0}
+#settingsSearch{min-width:220px;margin-left:auto}
+.set-sec[hidden]{display:none}
+
+/* Dashboard: secondary sections folded. */
+.dash-more{margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
+.dash-more > summary{cursor:pointer;list-style:none}
+.dash-more > summary::-webkit-details-marker{display:none}
+.dash-more > summary h2{display:inline;margin:0}
+.dash-more > summary h2::after{content:' \25BE';color:var(--paper-faint);font-size:.7em}
+.dash-more[open] > summary h2::after{content:' \25B4'}
+.dash-more > summary p{color:var(--paper-dim);font-size:var(--fs-2);margin:4px 0 0}
+.dash-more[open] > summary{margin-bottom:14px}
+
+.soa-maps{flex-wrap:nowrap;white-space:nowrap}
+#soaRows .soa-row td:nth-child(6){white-space:nowrap}
+.soa-fam-toggle{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;font:inherit;color:inherit;cursor:pointer;padding:0;text-align:left}
+.soa-fam-toggle b{display:inline-flex;align-items:center;gap:6px}
+.soa-fam-flag{font-style:normal;color:var(--warn)}
+.soa-tools td{padding:6px 10px !important}

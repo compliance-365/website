@@ -363,7 +363,7 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     const preview = await page.$eval('#tplPreview', (el) => el.innerText);
     assert.ok(!/\{\{register:/.test(preview), 'the objectives token is resolved, never shown');
 
-    await page.evaluate(() => window.App.go('settings'));
+    await page.evaluate(() => { window.App.go('settings'); window.App.settingsSection('notifications'); });
     await page.waitForFunction(() => /Owner reminders/.test(document.body.innerText), null, { timeout: 5000 });
 
     await page.evaluate(() => window.App.go('soa'));
@@ -918,6 +918,9 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     const errors = collectConsoleErrors(page);
     await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
     await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
+    // Threat intel is in the Full menu.
+    await page.click('#navModeBtn');
+    await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
     await page.click('.nav-item[data-v="threatintel"]');
     await page.waitForSelector('#tiListWrap .card b', { timeout: 10000 });
 
@@ -952,6 +955,9 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     const page = await context.newPage();
     const errors = collectConsoleErrors(page);
     await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
+    // Threat intel is in the Full menu.
+    await page.click('#navModeBtn');
     await page.$$eval('details.nav-group', (els) => els.forEach((el) => { el.open = true; }));
     await page.click('.nav-item[data-v="threatintel"]');
     await page.waitForSelector('#tiListWrap .card', { timeout: 10000 });

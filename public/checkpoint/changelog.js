@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.124.0',
+    date: '2026-10-07',
+    entries: [
+      'A simpler menu. The sidebar is now grouped by what people do: My tasks and Dashboard, Risks & actions, Suppliers & assets, Controls, Documents, Audits & reviews, and Settings. The specialist views (Board view, cross-framework mapping, financial risk analysis, threat intelligence, the audit log, reports, the Trust Center, questionnaires, the auditor pack and the AI assistant) sit under More, shown with the Full menu. Show full menu, at the foot of the sidebar, switches between the two and is remembered on this device; every view is still reachable from search.',
+      'The Statement of Applicability is one line per control: code, title, applicable, status, frameworks it also satisfies, owner, assurance, verified and evidence. Why a control is included, who verified it, its evidence and evidence folder, and every framework it maps to are in the control\u2019s panel, opened from its code or title. Each theme folds, showing its progress and anything that needs attention, with Expand all and Collapse all; any filter opens every theme. An exclusion without a justification is still flagged on its row.',
+      'Management system clauses are one line per clause, with the requirement count on the row. The clause\u2019s panel now also holds its owner, verification, evidence and evidence folder. With more than one management system, each folds.',
+      'Settings is in sections (Setup health, Organisation, Automation, Notifications, Thresholds, Features and Advanced) with a search across all of them. A setup problem is pinned above the sections wherever you are.',
+      'The Dashboard leads with your path to certification, the next actions and the readiness tiles. Position (fingerprint, journey, residual risk, posture trend) and Operations (automation, drift, assurance pulse, governance, activity) are folded underneath, one click away.'
+    ]
+  },
+  {
     version: '1.123.0',
     date: '2026-10-06',
     entries: [
