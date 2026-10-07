@@ -963,6 +963,7 @@
       <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="controls">Export CSV — every framework</button></div>
       <p class="src" id="soaEvidenceFolders" style="margin:-6px 0 14px;font-size:12px"></p>
       <div id="soaEvidenceCheck"></div>
+      <div id="soaExclusions"></div>
       <div class="filters" id="soaFwTabs" role="group" aria-label="Framework"></div>
       <div class="filters" id="soaCatFilters" style="margin-top:6px" role="group" aria-label="Filter by category"></div>
       <div id="soaE8Suggestions"></div>
@@ -988,7 +989,7 @@
            in the same glance as the rows that are ticked. Rendered by
            renderSoaBulkBar(); hidden whenever nothing is selected. -->
       <div class="bulk-bar" id="soaBulkBar" role="region" aria-label="Bulk actions" hidden></div>
-      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Applicable</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Control</th><th scope="col">Title</th><th scope="col">Scope</th><th scope="col">Status</th><th scope="col">Also satisfies</th><th scope="col">Owner</th><th scope="col">Assurance</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
       <details class="card reg-charts" id="soaCharts">
         <summary><h3>Status by theme</h3><span class="src">Implementation mix across this framework's themes.</span></summary>
         <div id="soaThemeChart" style="max-width:820px"></div>

@@ -846,7 +846,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -944,6 +944,130 @@ function showModal(opts) {
   /* Only when the open drawer is this control's own (openControlGuidance
      stamps data-control-drawer on its heading): an edit made from the
      SoA row must never swap some other open drawer for this one. */
+  /* The SoA's scope switch: a labelled pill, still a switch for
+     assistive technology. Excluding asks for the justification. */
+  function scopePill(c, key) {
+    return '<button class="scope-pill ' + (c.app ? 'in' : 'out') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' in scope') + '" title="' + (c.app ? 'In scope. Click to exclude it, with a justification.' : 'Excluded. Click to bring it back into scope.') + '" data-action="App.toggleApp" data-id="' + esc(key) + '">' + (c.app ? 'In scope' : 'Excluded') + '</button>';
+  }
+  var SOA_STATUSES = ['Not started', 'In progress', 'Implemented', 'Not applicable'];
+  /* Excluding is one step: the justification is asked for in the same
+     dialog, suggested from the scope answers where a rule fits, and the
+     dialog says when the control usually still applies or something
+     relies on it. Returns true once saved. */
+  async function excludeControls(list) {
+    list = (list || []).filter(function (c) { return c && c.app; });
+    if (!list.length) return false;
+    var prof = (S && S.settings) || {};
+    var sugg = list.map(function (c) { return c.just || window.CheckpointLib.suggestedJustification(c, prof); });
+    var same = sugg.every(function (x) { return x === sugg[0]; }) ? sugg[0] : '';
+    var asIf = list.map(function (c) { return Object.assign({}, c, { app: false, just: 'x' }); });
+    var cautions = window.CheckpointLib.exclusionConflicts({ controls: asIf, risks: S.risks, actions: S.actions, profile: prof }).filter(function (x) { return x.kind !== 'unjustified'; });
+    var one = list.length === 1 ? list[0] : null;
+    var v = await showModal({
+      title: one ? 'Exclude ' + one.id + ' from scope?' : 'Exclude ' + list.length + ' controls from scope?',
+      message: (one ? one.id + ' ' + one.t : list.map(function (c) { return c.id + ' ' + c.t; }).join('\n')) +
+        '\n\nAn auditor reads every exclusion in the Statement of Applicability and expects a reason (Clause 6.1.3 d).' +
+        (cautions.length ? '\n\nBefore you exclude:\n' + cautions.map(function (x) { return '\u2022 ' + x.text; }).join('\n') : ''),
+      fields: [{ id: 'just', label: 'Why ' + (one ? 'it is' : 'they are') + ' not applicable', type: 'textarea', value: same, placeholder: 'e.g. No premises: everyone works remotely and information is held in cloud services.' }],
+      confirmText: 'Exclude', cancelText: 'Keep in scope',
+      validate: function (x) { return String(x.just || '').trim().length < 10 ? 'Give the reason an auditor will read.' : null; }
+    });
+    if (!v) return false;
+    var just = v.just.trim();
+    busy(true);
+    try {
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i], key = c.fw + '|' + c.id, prevSt = c.st, prevJust = c.just;
+        c.app = false; c.st = 'Not applicable'; c.just = just;
+        try { await Store.updateControl(c); } catch (e) { warn(e); }
+        audit('Applicability toggled', 'Control', key, 'Applicable (' + prevSt + ')', 'Not applicable');
+        if (prevJust !== just) audit('Exclusion justification changed', 'Control', key, prevJust || '(none)', just);
+      }
+    } finally { busy(false); }
+    toast(list.length === 1 ? '<b>' + esc(list[0].id) + '</b> excluded' : list.length + ' controls excluded');
+    return true;
+  }
+  /* ===== SoA exclusions card =====
+     Suggested exclusions from the scope answers, exclusions that
+     contradict the rest of the system, and documents still written for
+     a control since excluded. ISO 27001 only: the rules are Annex A's. */
+  function exclusionDismissed() {
+    try { var v = JSON.parse((S.settings && S.settings.exclusionSuggestDismissed) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+  function exclusionSuggestionsNow() {
+    return window.CheckpointLib.suggestedExclusions(S.settings || {}, S.controls || [], exclusionDismissed());
+  }
+  /* Documents generated or approved before a control they describe was
+     excluded: they still state the practice. */
+  function policyExclusionGaps() {
+    var ex = docProfile().__excluded;
+    if (!Object.keys(ex).length) return [];
+    var lastEx = {};
+    (S.auditLog || []).forEach(function (e) {
+      if (e.targetType !== 'Control' || e.action !== 'Applicability toggled' || e.after !== 'Not applicable') return;
+      var id = String(e.targetId).split('|').pop(), d = String(e.entryDateTime || '').slice(0, 10);
+      if (!lastEx[id] || d > lastEx[id]) lastEx[id] = d;
+    });
+    return (window._docs || []).map(function (d) {
+      var t = d.tplId && (window.POLICY_TEMPLATES || []).find(function (x) { return x.id === d.tplId; });
+      if (!t) return null;
+      var ids = [];
+      (t.policyStatements || []).forEach(function (st) {
+        if (st && st.whenApplicable && st.whenApplicable.every(function (id) { return ex[id]; })) st.whenApplicable.forEach(function (id) { if (ids.indexOf(id) === -1) ids.push(id); });
+      });
+      if (!ids.length) return null;
+      var when = ids.reduce(function (m, id) { return lastEx[id] && lastEx[id] > m ? lastEx[id] : m; }, '');
+      var dd = String(d.approvalDate || '').slice(0, 10);
+      if (dd && when && dd >= when) return null;
+      return { doc: Object.assign({}, d, { status: docStatusOf(d) }), ids: ids };
+    }).filter(Boolean);
+  }
+  function renderExclusionCard() {
+    var el = document.getElementById('soaExclusions');
+    if (!el) return;
+    if ((window._soaFw || 'iso27001') !== 'iso27001') { el.innerHTML = ''; return; }
+    var prof = S.settings || {};
+    var excluded = (S.controls || []).filter(function (c) { return c.fw === 'iso27001' && !c.app; });
+    var groups = exclusionSuggestionsNow();
+    var conflicts = window.CheckpointLib.exclusionConflicts({ controls: (S.controls || []).filter(function (c) { return c.fw === 'iso27001'; }), risks: S.risks, actions: S.actions, profile: prof });
+    var docs = policyExclusionGaps();
+    var askPremises = !prof.orgPremises && !READONLY;
+    if (!excluded.length && !groups.length && !askPremises) { el.innerHTML = ''; return; }
+    var todo = groups.length + conflicts.length + docs.length;
+    var h = '<details class="card reg-charts excl-card"' + (todo || askPremises ? ' open' : '') + '><summary><b>Exclusions</b> <span class="src">' +
+      excluded.length + ' control' + (excluded.length === 1 ? '' : 's') + ' excluded' + (todo ? ' · ' + todo + ' to look at' : excluded.length ? ' · consistent' : '') + '</span></summary>';
+    if (askPremises) {
+      h += '<div class="excl-q"><span>Does the organisation have premises of its own? The answer decides which physical controls can be excluded.</span>' +
+        '<button class="btn ghost sm" data-action="App.setPremises" data-id="none">No premises</button>' +
+        '<button class="btn ghost sm" data-action="App.setPremises" data-id="office">Office, no secure area</button>' +
+        '<button class="btn ghost sm" data-action="App.setPremises" data-id="onsite">Yes, with a server or comms room</button></div>';
+    }
+    groups.forEach(function (g) {
+      h += '<div class="proposed-card excl-sugg"><h4>Suggested: exclude ' + g.controls.map(function (c) { return esc(c.id); }).join(', ') + '</h4>' +
+        '<div class="src">' + esc(g.why) + '</div>' +
+        '<div style="font-size:12.5px;margin:6px 0">' + g.controls.map(function (c) { return esc(c.id + ' ' + c.t); }).join(' · ') + '</div>' +
+        '<div class="src">Justification: ' + esc(g.justification) + '</div>' +
+        (READONLY ? '' : '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn sm" data-action="App.applyExclusionSuggestion" data-id="' + esc(g.key) + '">Review and exclude ' + g.controls.length + '</button>' +
+          '<button class="btn quiet sm" data-action="App.dismissExclusionSuggestion" data-id="' + esc(g.key) + '">Not for us</button></div>') + '</div>';
+    });
+    if (conflicts.length) {
+      h += '<h4 style="margin:12px 0 4px">Check before an audit</h4><ul class="ev-check-list">' + conflicts.map(function (x) {
+        return '<li><span class="chip ' + (x.severity === 'Minor' ? 'st-Overdue' : 'st-Notstarted') + '">' + esc(x.severity) + '</span> ' + esc(x.text) +
+          ' <button class="lnk src" data-action="App.openControlGuidance" data-id="' + esc(x.key) + '">Open</button></li>';
+      }).join('') + '</ul>';
+    }
+    if (docs.length) {
+      h += '<h4 style="margin:12px 0 4px">Documents written before the exclusion</h4><ul class="ev-check-list">' + docs.map(function (g) {
+        var approved = g.doc.status === 'Approved';
+        return '<li>' + esc(g.doc.name) + ' still states practices for ' + esc(g.ids.join(', ')) + '. ' + (READONLY ? '' : approved
+          ? '<button class="lnk src" data-action="App.approveTemplate" data-id="' + esc((g.doc.category || 'Policies & Procedures') + '|' + g.doc.name) + '">Re-approve to update it</button>'
+          : '<button class="lnk src" data-action="App.regenerateForPractice" data-id="' + esc(g.doc.name) + '">Regenerate</button>') + '</li>';
+      }).join('') + '</ul>';
+    }
+    if (excluded.length && !todo) h += '<p class="src" style="margin:8px 0 0">' + icon('check') + ' Every exclusion has a justification, nothing relies on an excluded control, and the documents match.</p>';
+    el.innerHTML = h + '</details>';
+  }
+
   function refreshControlDrawer(key) {
     var drawer = document.getElementById('drawer');
     if (!drawer || !drawer.classList.contains('open')) return;
@@ -3898,10 +4022,19 @@ function showModal(opts) {
     return { calendar: (S && S.calendar) || [], settings: (S && S.settings) || {} };
   }
 
+  /* The scope answers plus the ISO 27001 controls excluded in the
+     SoA, for statements that apply only while a control is in scope
+     (`whenApplicable`). */
+  function docProfile() {
+    var ex = {};
+    ((S && S.controls) || []).forEach(function (c) { if (c && c.fw === 'iso27001' && !c.app) ex[c.id] = true; });
+    return Object.assign({}, (S && S.settings) || {}, { __excluded: ex });
+  }
   function resolveOrgTokens(str) {
     if (typeof str !== 'string' || str.indexOf('{{') === -1) return str;
     str = window.CheckpointLib.resolveCadenceTokens(str, cadenceState());
     if (str.indexOf('{{register:objectives}}') !== -1) str = str.split('{{register:objectives}}').join(window.CheckpointLib.objectivesStatement(S.objectives || []));
+    if (str.indexOf('{{register:exclusions}}') !== -1) str = str.split('{{register:exclusions}}').join(window.CheckpointLib.exclusionsStatement(S.controls || [], 'iso27001'));
     if (str.indexOf('{{') === -1) return str;
     /* Answers are free text and often end in a full stop; the template
        text around a token often supplies its own punctuation. Where
@@ -3939,7 +4072,7 @@ function showModal(opts) {
       /* Statements that only apply to some organisations (`when`) are
          left out where the scope & context answers say they do not. */
       out.policyStatements = out.policyStatements.filter(function (s) {
-        return window.CheckpointLib.statementApplies(s, S && S.settings);
+        return window.CheckpointLib.statementApplies(s, docProfile());
       }).map(function (s) {
         if (typeof s === 'string') return resolveOrgTokens(s);
         return Object.assign({}, s, { rule: resolveOrgTokens(s.rule), because: resolveOrgTokens(s.because) });
@@ -4711,7 +4844,7 @@ function showModal(opts) {
   async function confirmPractices(t, docName) {
     if (!t || (window.CLAUSE_DOCUMENT_MAP || {})[t.id]) return true;
     var raw = mergedPolicyContent(t, docName);
-    var stmts = (raw.policyStatements || []).filter(function (st) { return window.CheckpointLib.statementApplies(st, S.settings); });
+    var stmts = (raw.policyStatements || []).filter(function (st) { return window.CheckpointLib.statementApplies(st, docProfile()); });
     if (!stmts.length) return true;
     var fields = stmts.map(function (st, i) {
       var text = resolveOrgTokens(typeof st === 'string' ? st : st.rule);
@@ -8710,8 +8843,8 @@ function showModal(opts) {
     var mapsCell = maps.length ? '<div class="fw-chips soa-maps">' + maps.slice(0, 2).map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + (maps.length > 2 ? '<span title="' + esc(maps.slice(2).join(', ')) + '">+' + (maps.length - 2) + '</span>' : '') + '</div>' : '';
     var selCell = bulkCheckbox('soa-sel', 'App.toggleSoaSel', key, c.id, _soaSel.has(key));
     return '<tr class="soa-row' + (_soaSel.has(key) ? ' soa-row-sel' : '') + '" data-id="' + key + '"><td class="id-t">' + selCell + '<button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td class="soa-title"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + esc(c.t) + '</button>' + ismLine + justificationLine + '</td>' +
-      '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
-      '<td>' + (c.app ? '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + key + '" aria-label="' + esc(c.id) + ' implementation status">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
+      '<td>' + scopePill(c, key) + '</td>' +
+      '<td>' + (c.app ? '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + key + '" aria-label="' + esc(c.id) + ' implementation status">' + SOA_STATUSES.map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td>' + mapsCell + '</td>' +
       '<td><button class="lnk" data-action="App.setControlOwner" data-id="' + key + '">' + (c.own ? esc(c.own) : '<span class="src">Add owner</span>') + '</button></td>' +
       '<td>' + assuranceCell(assuranceForControl(c)) + '</td>' +
@@ -9959,6 +10092,7 @@ function showModal(opts) {
   }
 
   function renderSoa() {
+    renderExclusionCard();
     renderEvidenceChecks();
     var entitled = entitledFrameworks();
     if (!entitled.length) {
@@ -10500,7 +10634,7 @@ function showModal(opts) {
     return {
       scopeStatement: orgProfileValue('orgScopeStatement'),
       docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, status: docStatusOf(d) }; }),
-      audits: S.audits || [], reviews: S.reviews || [], actions: S.actions || [], risks: S.risks || [], assets: S.assets || [],
+      audits: S.audits || [], reviews: S.reviews || [], actions: S.actions || [], risks: S.risks || [], assets: S.assets || [], profile: S.settings || {},
       controls: (S.controls || []).filter(function (c) { return c.fw === fw; }),
       reviewOverdue: (S.risks || []).filter(function (r) { return riskReviewStatus(r).due; }).map(function (r) { return r.id; }),
       aboveAppetite: risksAboveAppetite().map(function (r) { return r.id; })
@@ -15754,10 +15888,9 @@ function showModal(opts) {
            closing the drawer and finding the row. Each action calls
            refreshControlDrawer() so the drawer shows the saved value.
            A read-only session sees plain values instead. */
-        '<div class="d-kv"><span>Applicable</span><b>' + (READONLY ? (c.app ? 'Yes' : 'No')
-          : '<button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + esc(key) + '"></button>') + '</b></div>' +
+        '<div class="d-kv"><span>Scope</span><b>' + (READONLY ? (c.app ? 'In scope' : 'Excluded') : scopePill(c, key)) + '</b></div>' +
         '<div class="d-kv"><span>Status</span><b>' + (!c.app ? 'N/A' : READONLY ? esc(c.st)
-          : '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + esc(key) + '" aria-label="' + esc(c.id) + ' implementation status">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>') + '</b></div>' +
+          : '<select class="mini st-' + c.st.replace(/ /g, '') + '" data-change-action="App.setSt" data-id="' + esc(key) + '" aria-label="' + esc(c.id) + ' implementation status">' + SOA_STATUSES.map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>') + '</b></div>' +
         (c.app ? '<div class="d-kv"><span>Why included</span><b style="font-weight:400;text-align:right">' + esc(soaInclusionReasons(c).join(' · ')) + '</b></div>' : '') +
         /* Only shown while excluded — same condition renderSoaRow()'s
            justificationLine already uses, and the same field: an SoA
@@ -17227,18 +17360,45 @@ function showModal(opts) {
     toggleApp: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
-      var wasApp = c.app;
-      c.app = !c.app;
-      if (!c.app) { c.st = 'Not applicable'; } else if (c.st === 'Not applicable') { c.st = 'Not started'; }
-      try { await Store.updateControl(c); } catch (e) { warn(e); }
-      audit('Applicability toggled', 'Control', key, wasApp ? 'Applicable' : 'Not applicable', c.app ? 'Applicable' : 'Not applicable');
+      if (c.app) {
+        await excludeControls([c]);
+      } else {
+        /* Back in scope: the exclusion's reason no longer applies; the
+           audit log keeps it. */
+        var prevJust = c.just;
+        c.app = true; c.just = '';
+        if (c.st === 'Not applicable') c.st = 'Not started';
+        try { await Store.updateControl(c); } catch (e) { warn(e); }
+        audit('Applicability toggled', 'Control', key, 'Not applicable' + (prevJust ? ' (' + prevJust + ')' : ''), 'Applicable');
+      }
       renderSoa(); renderDash();
       refreshControlDrawer(key);
     },
 
+    /* ---------- Exclusions from the scope answers ---------- */
+    setPremises: async function (v) {
+      var prev = (S.settings && S.settings.orgPremises) || '';
+      try { await Store.setSetting('orgPremises', v); } catch (e) { warn(e); return; }
+      audit('Scope answer changed', 'Setting', 'orgPremises', prev || '(none)', v);
+      renderSoa();
+    },
+    applyExclusionSuggestion: async function (key) {
+      var g = exclusionSuggestionsNow().find(function (x) { return x.key === key; });
+      if (!g) return;
+      await excludeControls(g.controls);
+      renderSoa(); renderDash();
+    },
+    dismissExclusionSuggestion: async function (key) {
+      var list = exclusionDismissed();
+      if (list.indexOf(key) === -1) list.push(key);
+      try { await Store.setSetting('exclusionSuggestDismissed', JSON.stringify(list)); } catch (e) { warn(e); return; }
+      audit('Exclusion suggestion set aside', 'Setting', key, '', 'Kept in scope');
+      renderSoa();
+    },
     setSt: async function (key, v) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
+      if (v === 'Not applicable') { await excludeControls([c]); renderSoa(); renderDash(); refreshControlDrawer(key); return; }
       if (v === 'Implemented' && !c.evidenceUrl) {
         var proceed = await showModal({
           title: 'No evidence linked',
@@ -17474,12 +17634,19 @@ function showModal(opts) {
       var app = yesNo === 'yes';
       var controls = soaSelControls().filter(function (c) { return !!c.app !== app; });
       if (!controls.length) { renderSoa(); return; }
+      /* Excluding asks once for the reason every selected control shares. */
+      if (!app) {
+        if (await excludeControls(controls)) _soaSel.clear();
+        renderSoa(); renderDash();
+        return;
+      }
       busy(true);
       try {
         for (var i = 0; i < controls.length; i++) {
           var c = controls[i];
           var prev = c.app ? 'Applicable' : 'Not applicable';
-          c.app = app;
+          c.app = app; c.just = '';
+          if (c.st === 'Not applicable') c.st = 'Not started';
           try { await Store.updateControl(c); } catch (e) { warn(e); }
           audit('Control applicability changed', 'Control', c.fw + '|' + c.id, prev, app ? 'Applicable' : 'Not applicable');
         }

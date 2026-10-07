@@ -198,11 +198,14 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     assert.equal(await page.$eval('#drawer select[data-change-action="App.setSt"]', (s) => s.value), 'In progress');
     assert.ok(await page.$('#drawer button[data-action="App.setControlEvidence"]'), 'evidence can be linked from the drawer');
 
-    // Exclude it: the drawer re-renders with the toggle off and asks for a justification.
+    // Exclude it: one dialog asks for the justification, then the drawer re-renders excluded.
     await page.click(drawerToggle);
-    await page.waitForTimeout(200);
+    await page.waitForSelector('#modalBox textarea');
+    await page.fill('#modalBox textarea', 'Not relevant to this organisation in the demo.');
+    await page.locator('#modalBox .m-btns .btn:not(.ghost)').click();
+    await page.waitForTimeout(300);
     assert.equal(await page.$eval(drawerToggle, (b) => b.getAttribute('aria-checked')), 'false');
-    assert.ok(await page.$('#drawer button[data-action="App.setControlJustification"]'), 'an excluded control offers a justification');
+    assert.ok(await page.$('#drawer button[data-action="App.setControlJustification"]'), 'an excluded control can edit its justification');
     assert.equal(await page.$('#drawer select[data-change-action="App.setSt"]'), null, 'no status select while excluded');
     const row = await page.$eval('#soaRows tr[data-id="' + key + '"] button[data-action="App.toggleApp"]', (b) => b.getAttribute('aria-checked'));
     assert.equal(row, 'false', 'the SoA row behind the drawer shows the same value');

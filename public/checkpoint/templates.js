@@ -1404,24 +1404,29 @@ window.POLICY_TEMPLATES = [
     policyStatements: [
       {
         when: { orgWorkModel: ['office', 'hybrid'] },
+        whenApplicable: ['A.7.1', 'A.7.2', 'A.7.3', 'A.7.6'],
         rule: 'Areas holding sensitive information or equipment are secured, with access restricted to those who need it.',
         because: 'Physical access usually defeats logical controls entirely, given time alone with a device.'
       },
       {
         when: { orgWorkModel: ['office', 'hybrid'] },
+        whenApplicable: ['A.7.2'],
         rule: 'Visitors to secured areas are identified, recorded and accompanied.',
         because: 'An unaccompanied visitor is indistinguishable from an intruder, and the record is what makes an incident reconstructable.'
       },
       {
         when: { orgWorkModel: ['office', 'hybrid'] },
+        whenApplicable: ['A.7.2', 'A.7.3'],
         rule: 'Personnel challenge or report unrecognised individuals in secured areas, and do not allow others to follow them through access-controlled doors.',
         because: 'Tailgating relies on social pressure, so the control only exists if challenging is expected and supported.'
       },
       {
+        whenApplicable: ['A.7.7'],
         rule: 'A clear desk and clear screen standard applies to sensitive information, including in home and shared workspaces.',
         because: 'Home and shared workspaces have the same exposure and none of the physical controls of an office.'
       },
       {
+        whenApplicable: ['A.7.5', 'A.7.8', 'A.7.11'],
         rule: 'Equipment is protected against environmental risk appropriate to its criticality, including power, temperature and water.',
         because: 'Environmental failure causes at least as much unplanned downtime as attack, and is more predictable.'
       },
@@ -2007,6 +2012,10 @@ window.POLICY_TEMPLATES = [
       {
         rule: 'Excluded from the scope: {{exclusions}}. Any exclusion is stated explicitly with a justification, and no exclusion leaves a real information risk unmanaged.',
         because: 'An unstated exclusion is indistinguishable from an oversight, and an unjustified one is a finding.'
+      },
+      {
+        rule: 'Annex A controls determined not applicable in the Statement of Applicability (Clause 6.1.3 d): {{register:exclusions}}',
+        because: 'The Statement of Applicability is where exclusions are justified; stating them here keeps the scope and the SoA telling the same story.'
       },
       {
         rule: 'The organisation establishes, implements, maintains and continually improves the ISMS within this scope, including the processes needed and their interactions (Clause 4.4).',
@@ -4035,6 +4044,13 @@ window.ORG_CONTEXT_QUESTIONS = [
   { id: 'workModel', key: 'orgWorkModel', label: 'Where do people work?', options: [
     { value: 'office', label: 'Mainly in our own offices' }, { value: 'hybrid', label: 'A mix of office and home or remote' },
     { value: 'remote', label: 'Fully remote' }] },
+  /* Drives the suggested Annex A exclusions (CheckpointLib.
+     suggestedExclusions): no premises supports excluding the physical
+     perimeter, entry, office, monitoring, secure area, utilities and
+     cabling controls. */
+  { id: 'premises', key: 'orgPremises', label: 'Does the organisation have premises of its own?', options: [
+    { value: 'none', label: 'No: no office, server room or other site' }, { value: 'office', label: 'An office, but no server room or other secure area' },
+    { value: 'onsite', label: 'Yes, including a server room, comms room or other secure area' }] },
   { id: 'itModel', key: 'orgItModel', label: 'Who runs the organisation’s IT?', options: [
     { value: 'inhouse', label: 'Our own IT staff' }, { value: 'msp', label: 'A managed service provider (MSP)' },
     { value: 'mixed', label: 'A mix of our own staff and an MSP' }] },
