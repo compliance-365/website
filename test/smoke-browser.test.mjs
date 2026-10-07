@@ -358,6 +358,7 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await page.waitForFunction(() => /Protects: /.test(document.getElementById('objRows').innerText), null, { timeout: 5000 });
 
     await page.evaluate(() => window.App.go('documents'));
+    await page.evaluate(() => window.App.openDocTool('docGenerate'));
     await page.selectOption('#tplSelect', 'infosec-policy');
     await page.waitForTimeout(300);
     const preview = await page.$eval('#tplPreview', (el) => el.innerText);
@@ -827,6 +828,7 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
       'the Information Security Policy must STAY in ISO 27001 — appearing in CPS 234 adds a listing, it does not move one');
 
     // Selecting the duplicated entry still resolves to one template.
+    await page.evaluate(() => window.App.openDocTool('docGenerate'));
     await page.selectOption('#tplSelect', 'infosec-policy');
     await page.waitForTimeout(200);
     const preview = await page.$eval('#tplPreview', (el) => el.innerText);

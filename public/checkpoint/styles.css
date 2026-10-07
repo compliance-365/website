@@ -1700,3 +1700,15 @@ body.nav-simple .nav-full{display:none!important}
 .soa-fam-toggle b{display:inline-flex;align-items:center;gap:6px}
 .soa-fam-flag{font-style:normal;color:var(--warn)}
 .soa-tools td{padding:6px 10px !important}
+
+/* Evidence check and mock audit. */
+.ev-check-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ev-check-head > span{display:flex;flex-direction:column;gap:3px;flex:1;min-width:240px}
+.ev-check-list{margin-top:8px}
+.ev-check-list > summary{cursor:pointer}
+.mock-score{display:flex;gap:16px;align-items:center;margin:14px 0}
+.mock-score > b{font-size:var(--fs-hero,44px);font-weight:800;line-height:1}
+.mock-score > span{display:flex;flex-direction:column;gap:4px;color:var(--paper)}
+
+.doc-tools{margin-top:18px}
+.doc-tools > .reg-charts{margin-top:12px}

@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.125.0',
+    date: '2026-10-07',
+    entries: [
+      'Request approval. A draft document can be sent to the person who should approve it, chosen from Microsoft 365. For the information security policy that is top management (ISO 27001 Clause 5.2), and Checkpoint remembers who that is. The request appears in their My tasks and they are emailed a link; they approve it themselves, and their name, the date and the version are recorded on the document.',
+      'Evidence check. On the Statement of Applicability and the management system clauses, Check evidence opens every SharePoint evidence link and reports any that no longer work, any not updated in over a year, and implemented controls or clauses with no evidence at all, each with a Fix button. It also runs automatically before you book a certification audit if it has not run in the last fortnight.',
+      'Mock audit, on the Certification page. Checkpoint samples your records the way a certification auditor does (ten controls, three risks, three actions, plus the scope, the information security policy, the latest internal audit, management review and any open major nonconformity) and grades what it finds as major, minor or observation, with a readiness score and a fix for each finding. Run again re-tests the same sample after you fix things; Draw a new sample picks another. No AI add-on needed.',
+      'Documents leads with the document control register. Generate a document, Generate full set and Upload are buttons above it, opening their panels below the register, and the policy-versus-practice check sits under the register too.'
+    ]
+  },
+  {
     version: '1.124.0',
     date: '2026-10-07',
     entries: [

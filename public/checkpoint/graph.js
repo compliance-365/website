@@ -1992,6 +1992,20 @@ window.Graph = (function () {
   /* Third-party enterprise applications, for vendor discovery: name and
      publisher of every non-Microsoft application service principal.
      Read only. */
+  /* Whether an evidence link still resolves, and when the file last
+     changed. { ok: false } only for a definite not-found; anything
+     else the check could not decide returns null. */
+  async function probeEvidence(url) {
+    try {
+      var j = await g('/shares/' + encodeSharingUrl(url) + '/driveItem?$select=id,lastModifiedDateTime', { scopes: CONFIG.scopesProvision });
+      return { ok: true, modified: j.lastModifiedDateTime || '' };
+    } catch (e) {
+      var st = (e && (e.status || e.statusCode)) || 0;
+      if (st === 404 || /itemNotFound|could not be found|404/i.test(String(e && e.message))) return { ok: false };
+      return null;
+    }
+  }
+
   async function discoverVendorApps() {
     var sps;
     try {
@@ -2037,7 +2051,7 @@ window.Graph = (function () {
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
-    listTenantUsers: listTenantUsers, discoverVendorApps: discoverVendorApps, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
+    listTenantUsers: listTenantUsers, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop
