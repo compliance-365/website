@@ -5632,6 +5632,14 @@
       else if (a.status === 'Done' && !a.evidenceUrl) add('Observation', 'Action', a.id, a.id + ' is completed with no evidence link.', { action: 'App.openAction', id: a.id, label: 'Open' });
       else if (a.status !== 'Done' && a.status !== 'Cancelled' && a.due && a.due < today) add('Observation', 'Action', a.id, a.id + ' is overdue (due ' + a.due + ').', { action: 'App.openAction', id: a.id, label: 'Open' });
     });
+    /* Disposals (A.7.14): two assets retired in the last year, each
+       needing its record complete. */
+    var recentRetired = retiredAssets(d.assets || [], today, 365).rows.filter(function (x) { return x.recent; }).map(function (x) { return x.asset; });
+    var sampleD = seededPick(recentRetired, 2, seed + 'd');
+    sampleD.forEach(function (a) {
+      var g = retirementGaps(a);
+      if (g.length) add('Minor', 'Asset', a.id, a.id + ' (' + a.name + ') was retired with an incomplete disposal record: ' + g.join(', ') + ' (A.7.14).', { action: 'App.retireAsset', id: a.id, label: 'Complete record' });
+    });
     var n = { Major: 0, Minor: 0, Observation: 0 };
     F.forEach(function (f) { n[f.severity]++; });
     var score = Math.max(0, 100 - 25 * n.Major - 8 * n.Minor - 2 * n.Observation);
@@ -5640,7 +5648,7 @@
     F.sort(function (a, b) { return rank[a.severity] - rank[b.severity]; });
     return {
       findings: F, counts: n, score: score, verdict: verdict,
-      sample: { controls: sampleC.map(function (c) { return c.id; }), risks: sampleR.map(function (r) { return r.id; }), actions: sampleA.map(function (a) { return a.id; }), audit: audit ? audit.id || audit.completed : '', review: review ? review.date : '' }
+      sample: { controls: sampleC.map(function (c) { return c.id; }), risks: sampleR.map(function (r) { return r.id; }), actions: sampleA.map(function (a) { return a.id; }), assets: sampleD.map(function (a) { return a.id; }), audit: audit ? audit.id || audit.completed : '', review: review ? review.date : '' }
     };
   }
 
@@ -5708,6 +5716,8 @@
       live = (rows || []).filter(function (a) { return a && a.status !== 'Retired' && a.status !== 'Missing'; });
       add('noOwner', live.filter(noOwner), '1 asset without an owner', 'assets without an owner');
       add('noClass', live.filter(function (a) { return !a.classification; }), '1 asset not classified', 'assets not classified');
+      add('notFound', live.filter(function (a) { return a.status === 'Not found in last sync'; }), '1 asset not found in the last sync', 'assets not found in the last sync');
+      add('retiredGaps', (rows || []).filter(function (a) { return a && a.status === 'Retired' && retirementGaps(a).length; }), '1 retired asset with an incomplete disposal record', 'retired assets with incomplete disposal records');
     } else if (kind === 'legal') {
       live = (rows || []).filter(function (l) { return l && l.applies !== 'No'; });
       add('noOwner', live.filter(noOwner), '1 requirement without an owner', 'requirements without an owner');
@@ -6903,10 +6913,128 @@
     return {
       total: live.length, information: info.length, noOwner: noOwner.length, unclassified: unclassified.length,
       missing: missing.length, unreviewed: stale.length, byType: byType,
+      retired: (assets || []).filter(function (a) { return a && a.status === 'Retired'; }).length,
       /* Ready for an auditor: at least one INFORMATION asset (a device
          list alone is not an A.5.9 inventory), and every live asset owned. */
       ready: info.length > 0 && noOwner.length === 0
     };
+  }
+
+  /* ============================================================
+     Asset retirement and disposal (ISO 27001 A.5.11, A.7.10, A.7.14)
+     ------------------------------------------------------------
+     Retiring an asset is a record, not a status flip: an auditor
+     samples recent disposals and asks when, why, how the data was
+     dealt with, and who signed it off. a.retirement holds
+     { date, reason, method, evidenceUrl, by, note }. */
+  var ASSET_RETIRE_REASONS = ['Disposed of', 'Returned by a leaver', 'Sold or given away', 'Replaced', 'No longer used', 'Returned to the supplier'];
+  var ASSET_DISPOSAL_METHODS = ['Wiped and reissued', 'Wiped (certificate or report)', 'Destroyed (certificate)', 'Returned to the supplier', 'Data deleted from the service', 'No data held'];
+  /* Methods whose claim rests on proof someone else holds. */
+  var DISPOSAL_NEEDS_EVIDENCE = { 'Wiped (certificate or report)': 1, 'Destroyed (certificate)': 1, 'Data deleted from the service': 1 };
+  function retirementGaps(a) {
+    var r = (a && a.retirement) || {};
+    var gaps = [];
+    if (!r.date) gaps.push('no retirement date');
+    if (!r.reason) gaps.push('no reason');
+    if (!r.method && (a && a.type) !== 'Other') gaps.push('no disposal method');
+    if (r.method && DISPOSAL_NEEDS_EVIDENCE[r.method] && !String(r.evidenceUrl || '').trim()) gaps.push('no wipe or destruction evidence');
+    if (!String(r.by || '').trim()) gaps.push('not signed off');
+    return gaps;
+  }
+  /* Retired assets, newest first, each with its gaps. A record with no
+     date sorts last: it is the one most likely to need attention. */
+  function retiredAssets(assets, today, days) {
+    var since = today ? addDaysIso(today, -(typeof days === 'number' ? days : 365)) : '';
+    var rows = (assets || []).filter(function (a) { return a && a.status === 'Retired'; }).map(function (a) {
+      var d = (a.retirement && a.retirement.date) || '';
+      return { asset: a, date: d, gaps: retirementGaps(a), recent: !!(d && since && d >= since) };
+    });
+    rows.sort(function (x, y) { return x.date === y.date ? String(x.asset.id).localeCompare(String(y.asset.id)) : (x.date < y.date ? 1 : -1); });
+    return {
+      rows: rows, total: rows.length,
+      recent: rows.filter(function (r) { return r.recent; }).length,
+      withGaps: rows.filter(function (r) { return r.gaps.length; }).length
+    };
+  }
+  /* Parses the stored Retirement column; tolerant of blanks and junk. */
+  function parseRetirement(raw) {
+    if (!raw) return null;
+    if (typeof raw === 'object') return raw;
+    try { var o = JSON.parse(raw); return o && typeof o === 'object' ? o : null; } catch (e) { return null; }
+  }
+
+  /* ============================================================
+     Owners who have left (ISO 27001 A.5.11, A.6.5)
+     ------------------------------------------------------------
+     records = [{ kind, id, title, owner }] across every register.
+     active = enabled directory users; disabled = disabled member
+     accounts. An owner matching an active person is fine. One matching
+     only a disabled account has left. One matching nobody is listed
+     separately and softly: it may be a team ("Legal", "IT"), so it is
+     offered, never assumed. Teams by name are skipped outright. */
+  var TEAM_WORDS = /\b(team|group|board|committee|management|department|dept|function|office|services|it|hr|legal|finance|operations|ops|security|leadership|executive|everyone|all staff)\b/i;
+  function departedOwners(records, active, disabled) {
+    var byOwner = {}, order = [];
+    (records || []).forEach(function (r) {
+      var o = String((r && r.owner) || '').trim();
+      if (!o) return;
+      var k = o.toLowerCase();
+      if (!byOwner[k]) { byOwner[k] = { owner: o, items: [] }; order.push(k); }
+      byOwner[k].items.push(r);
+    });
+    /* "R. Morgan", "r.morgan@…" and "Riley Morgan" are one person who
+       left: grouped under the account they match. */
+    var out = [], byUser = {};
+    order.forEach(function (k) {
+      var g = byOwner[k];
+      if (matchOwnerToUser(g.owner, active) || fuzzyOwnerMatch(g.owner, active)) return;
+      var gone = matchOwnerToUser(g.owner, disabled) || fuzzyOwnerMatch(g.owner, disabled);
+      if (gone) {
+        var uk = String(gone.upn || gone.mail || gone.name || gone.displayName).toLowerCase();
+        if (byUser[uk]) { byUser[uk].items = byUser[uk].items.concat(g.items); byUser[uk].aliases.push(g.owner); return; }
+        byUser[uk] = { owner: gone.name || gone.displayName || g.owner, status: 'left', user: gone, items: g.items.slice(), aliases: [g.owner] };
+        out.push(byUser[uk]);
+        return;
+      }
+      if (!(active || []).length || TEAM_WORDS.test(g.owner)) return;
+      out.push({ owner: g.owner, status: 'not found', user: null, items: g.items, aliases: [g.owner] });
+    });
+    out.sort(function (a, b) { return a.status === b.status ? b.items.length - a.items.length : (a.status === 'left' ? -1 : 1); });
+    return out;
+  }
+
+  /* ============================================================
+     Annual register review
+     ------------------------------------------------------------
+     Every record a policy says is "reviewed at least annually" and
+     that has not been: assets, suppliers (on their criticality's own
+     schedule), legal requirements and risks. Oldest first, never
+     reviewed before everything else. */
+  function registerReviewQueue(d, today, days) {
+    var limit = addDaysIso(today, -(typeof days === 'number' ? days : 365));
+    var q = [];
+    var stale = function (x) { return !x.lastReviewed || String(x.lastReviewed).slice(0, 10) < limit; };
+    (d.assets || []).forEach(function (a) { if (a && a.status !== 'Retired' && stale(a)) q.push({ kind: 'asset', id: a.id, title: a.name, owner: a.owner || '', lastReviewed: a.lastReviewed || '' }); });
+    (d.vendors || []).forEach(function (v) { if (v && v.status !== 'Retired' && v.status !== 'Offboarded' && (!v.lastReviewed || vendorNextReview(v, today) <= today)) q.push({ kind: 'vendor', id: v.id, title: v.name, owner: v.owner || '', lastReviewed: v.lastReviewed || '' }); });
+    (d.legal || []).forEach(function (r) { if (r && r.applies !== 'No' && stale(r)) q.push({ kind: 'legal', id: r.id, title: r.title, owner: r.owner || '', lastReviewed: r.lastReviewed || '' }); });
+    (d.risks || []).forEach(function (r) { if (r && r.status !== 'Closed' && stale(r)) q.push({ kind: 'risk', id: r.id, title: r.title, owner: r.owner || '', lastReviewed: r.lastReviewed || '' }); });
+    q.sort(function (a, b) { return a.lastReviewed === b.lastReviewed ? 0 : (a.lastReviewed < b.lastReviewed ? -1 : 1); });
+    var count = {};
+    q.forEach(function (x) { count[x.kind] = (count[x.kind] || 0) + 1; });
+    return { items: q, total: q.length, byKind: count };
+  }
+
+  /* ============================================================
+     A record's own history, from the hash-chained audit log
+     ------------------------------------------------------------
+     ids: every id the record has been logged under (a control is
+     "iso27001|A.5.15" in newer entries and "A.5.15" in older ones). */
+  function recordHistory(log, targetType, ids, limit) {
+    var want = {};
+    (Array.isArray(ids) ? ids : [ids]).forEach(function (i) { if (i != null && i !== '') want[String(i)] = 1; });
+    var rows = (log || []).filter(function (e) { return e && e.targetType === targetType && want[String(e.targetId)]; });
+    rows = rows.slice().sort(function (a, b) { return String(a.entryDateTime || '') < String(b.entryDateTime || '') ? 1 : -1; });
+    return typeof limit === 'number' ? rows.slice(0, limit) : rows;
   }
 
   /* ============================================================
@@ -9570,7 +9698,10 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
-    resolvableFindings: resolvableFindings, evidenceTargets: evidenceTargets, evidenceCheckIssues: evidenceCheckIssues, isSharePointUrl: isSharePointUrl, seededPick: seededPick, mockAudit: mockAudit, riskTreatmentProgress: riskTreatmentProgress, riskNeedsReassessment: riskNeedsReassessment, registerTidy: registerTidy, vendorHandlesPersonalData: vendorHandlesPersonalData, vendorCriticalityFromTier: vendorCriticalityFromTier, VENDOR_REVIEW_MONTHS: VENDOR_REVIEW_MONTHS, vendorNextReview: vendorNextReview, normaliseVendorName: normaliseVendorName, vendorCandidates: vendorCandidates, matchOwners: matchOwners, fuzzyOwnerMatch: fuzzyOwnerMatch, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,
+    resolvableFindings: resolvableFindings,
+    ASSET_RETIRE_REASONS: ASSET_RETIRE_REASONS, ASSET_DISPOSAL_METHODS: ASSET_DISPOSAL_METHODS,
+    retirementGaps: retirementGaps, retiredAssets: retiredAssets, parseRetirement: parseRetirement,
+    departedOwners: departedOwners, registerReviewQueue: registerReviewQueue, recordHistory: recordHistory, evidenceTargets: evidenceTargets, evidenceCheckIssues: evidenceCheckIssues, isSharePointUrl: isSharePointUrl, seededPick: seededPick, mockAudit: mockAudit, riskTreatmentProgress: riskTreatmentProgress, riskNeedsReassessment: riskNeedsReassessment, registerTidy: registerTidy, vendorHandlesPersonalData: vendorHandlesPersonalData, vendorCriticalityFromTier: vendorCriticalityFromTier, VENDOR_REVIEW_MONTHS: VENDOR_REVIEW_MONTHS, vendorNextReview: vendorNextReview, normaliseVendorName: normaliseVendorName, vendorCandidates: vendorCandidates, matchOwners: matchOwners, fuzzyOwnerMatch: fuzzyOwnerMatch, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,
     isRetryableGraphStatus: isRetryableGraphStatus, graphRetryDelayMs: graphRetryDelayMs,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

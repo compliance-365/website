@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.126.0',
+    date: '2026-10-07',
+    entries: [
+      'Retiring an asset now records its disposal (ISO 27001 A.7.14 and A.5.11): the date, the reason, what happened to the data, a link to the wipe report or destruction certificate, and who signed it off. Retired assets have their own filter in the asset register, each with its record, and can be restored. A disposal record with something missing is flagged, and the mock audit samples recent disposals the way an auditor does. Asset disposal records export as a CSV with the other registers.',
+      'Assets not found in the last sync are now a short review: confirm each is still in use, or retire it (one at a time or all together).',
+      'Each asset opens in a side panel with its details, its disposal record once retired, and its history.',
+      'Owners who have left. On the asset and risk registers, this finds owners whose Microsoft 365 account is disabled, across risks, actions, suppliers, assets, requirements, controls, clauses, objectives and activities, and hands everything they owned to someone else in one step. Variants of one name ("R. Morgan", an email address, the full name) are grouped as one person. Owners not in the directory at all are listed separately, since they may be a team. Every change is logged against the record.',
+      'Review register. The asset, supplier, legal and risk registers step through every record not reviewed in the last 12 months, oldest first: Keep (records today as the review date), Change, Retire or Close, or Skip. Suppliers follow their own review schedule.',
+      'History. Risks, actions, controls, clauses, suppliers, AI systems, incidents, assets and legal requirements now show who changed what and when, from the tamper-evident audit log, in their side panel.'
+    ]
+  },
+  {
     version: '1.125.0',
     date: '2026-10-07',
     entries: [

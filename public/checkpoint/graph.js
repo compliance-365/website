@@ -1809,6 +1809,16 @@ window.Graph = (function () {
       .sort(function (a, b) { return a.name.localeCompare(b.name); });
   }
 
+  /* Disabled member accounts: the people who have left, for handing
+     over what they owned (A.5.11, A.6.5). Read-only. */
+  async function listDisabledUsers() {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var users = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,mail,jobTitle&$top=999', opts);
+    return users
+      .filter(function (u) { return u.accountEnabled === false && u.userType !== 'Guest' && u.userPrincipalName && u.userPrincipalName.indexOf('#EXT#') === -1; })
+      .map(function (u) { return { id: u.id, name: u.displayName || u.userPrincipalName, upn: u.userPrincipalName, mail: u.mail || u.userPrincipalName, jobTitle: u.jobTitle || '' }; });
+  }
+
   async function listTenantGroups() {
     var opts = { scopes: CONFIG.scopesReadOnly };
     var groups = await gAll('/groups?$select=id,displayName,mailNickname&$top=999', opts);
@@ -2051,7 +2061,7 @@ window.Graph = (function () {
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
-    listTenantUsers: listTenantUsers, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
+    listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop

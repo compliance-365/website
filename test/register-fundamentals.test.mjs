@@ -56,7 +56,7 @@ describe('needs tidying', () => {
       { id: 'V2', owner: 'x', nextReviewDue: '2027-01-01', dataCategories: ['Customer PII'], dpa: true }
     ], { today: TODAY });
     assert.deepEqual(v.map((i) => [i.key, i.ids]), [['certExpired', ['V1']], ['noDpa', ['V1']]]);
-    assert.deepEqual(Lib.registerTidy('assets', [{ id: 'AS1', owner: '', classification: '' }, { id: 'AS2', owner: 'y', classification: 'Internal', status: 'Retired' }], {}).map((i) => i.key), ['noOwner', 'noClass']);
+    assert.deepEqual(Lib.registerTidy('assets', [{ id: 'AS1', owner: '', classification: '' }, { id: 'AS2', owner: 'y', classification: 'Internal', status: 'Retired' }], {}).map((i) => i.key), ['noOwner', 'noClass', 'retiredGaps']);
     assert.deepEqual(Lib.registerTidy('legal', [{ id: 'L1', applies: 'Yes', owner: '', controls: [] }, { id: 'L2', applies: 'No' }], {}).map((i) => i.key), ['noOwner', 'noControls']);
     assert.deepEqual(Lib.registerTidy('legal', [], {}), []);
   });
