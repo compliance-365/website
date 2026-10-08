@@ -846,7 +846,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -3099,6 +3099,23 @@ function showModal(opts) {
       };
     },
 
+    /* The month for top management, in plain English. */
+    chairsummary: function () {
+      var nx = secReviewNext(), s = secReviewSetup() || {};
+      var rec = (nx && nx.rec) || { pack: secReviewPack() };
+      var sum = chairSummaryFor(rec);
+      var list = function (items, empty) { return items.length ? '<ul class="rpt-plain">' + items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul>' : '<p class="rpt-plain">' + esc(empty) + '</p>'; };
+      return {
+        title: 'The month in brief',
+        frameworkAgnostic: true,
+        dashboard: { intro: 'For ' + (s.chair || 'top management') + '. What needs a decision, what is going well and the direction of travel, without the jargon.' },
+        sections: [
+          { heading: 'Needs your decision', pageBreak: false, html: list(sum.decide, 'Nothing needs your decision this month.') },
+          { heading: 'Going well', pageBreak: false, html: list(sum.well, 'Nothing to highlight this month.') },
+          { heading: 'Direction of travel', pageBreak: false, html: list(sum.trend, 'Not enough history yet.') }
+        ]
+      };
+    },
     /* What a certification auditor will ask, clause by clause and for
        the controls most often sampled, answered from this tenant's own
        records, with what is still missing. For rehearsal before Stage 1
@@ -10260,6 +10277,30 @@ function showModal(opts) {
   /* On load: prepare and send when due (the scheduled function does the
      same when nobody opens Checkpoint), and file the agenda once sent. */
   var _secReviewAutoTried = false;
+  /* The chair's plain-English month, from the meeting's pack. */
+  function chairSummaryFor(rec) {
+    var s = secReviewSetup() || {};
+    var chair = String(s.chair || '').toLowerCase();
+    var pending = approvalRequests().filter(function (r) { return chair && String(r.approver || '').toLowerCase() === chair; }).map(function (r) { return r.name; });
+    var held = secReviews().filter(function (r) { return r.status === 'Held'; });
+    var health = null;
+    try { health = window.CheckpointLib.ismsHealthScore({ gaps: clauseGapList(), overdueActions: (S.actions || []).filter(function (a) { return overdueDays(a) > 0; }).length, openActions: (S.actions || []).filter(function (a) { return ['Done', 'Closed', 'Cancelled'].indexOf(a.status) === -1; }).length, missedReviews: window.CheckpointLib.securityReviewsMissed(secReviews(), s, new Date().toISOString().slice(0, 10)) }); } catch (e) { health = null; }
+    return window.CheckpointLib.chairSummary(rec.pack || secReviewPack(), { approvals: pending, gaps: clauseGapList(), health: health, trend: window.CheckpointLib.securityReviewTrend(held).slice(-6) });
+  }
+  async function sendChairSummaryNow(rec, quiet) {
+    var s = secReviewSetup() || {};
+    if (Store.kind !== 'sharepoint' || !rec || !s.chair) return false;
+    await loadDirectory();
+    var u = directoryUser(s.chair);
+    var to = u ? (u.mail || u.upn) : '';
+    if (!to) { if (!quiet) toast('The chair is not in the directory, so the summary was not sent.'); return false; }
+    try { await Graph.sendMail(to, clientDisplayLabel() + ': the month in brief', window.CheckpointLib.chairSummaryHtml(chairSummaryFor(rec), { org: clientDisplayLabel(), chair: s.chair, date: fmtDateY(new Date().toISOString().slice(0, 10)), appUrl: location.origin + location.pathname })); }
+    catch (e) { warn(e); if (!quiet) toastError('The summary could not be sent.'); return false; }
+    await updateSecReview(rec.id, function (r) { r.chairSummarySent = new Date().toISOString().slice(0, 10); });
+    audit('Chair summary sent', 'SecurityReview', rec.id, '', 'To ' + s.chair);
+    if (!quiet) toast('Summary sent to ' + esc(s.chair));
+    return true;
+  }
   async function autoSecurityReview() {
     if (_secReviewAutoTried || READONLY || !Store || !Store.kind) return;
     var nx = secReviewNext();
@@ -10267,6 +10308,7 @@ function showModal(opts) {
     _secReviewAutoTried = true;
     var rec = nx.rec;
     if (nx.prepare) rec = await prepareSecurityReview(true);
+    if (rec && Store.kind === 'sharepoint' && !rec.chairSummarySent && rec.status !== 'Held') await sendChairSummaryNow(rec, true);
     if (rec && nx.send && Store.kind === 'sharepoint' && rec.status === 'Prepared') await sendSecurityReviewNow(rec, true);
     else if (rec && rec.status === 'Sent' && !rec.agendaFiled) await fileSecReviewEvidence(rec, 'agenda');
     if (Store.kind === 'sharepoint') await sendSecReviewFollowUps();
@@ -10343,7 +10385,7 @@ function showModal(opts) {
         return '<tr><td class="src">' + esc(r.id) + '</td><td>' + fmtDate(r.date) + '</td><td class="src">' + esc(secReviewLabel(r.n)) + '</td><td class="src">' + (r.outcome ? '<span class="sr-outcome-cell">' + esc(r.outcome) + '</span> · ' : '') + (r.actions || []).length + ' decision' + ((r.actions || []).length === 1 ? '' : 's') + (r.reviewId ? ' · ' + esc(r.reviewId) : '') + '</td>' +
           '<td style="text-align:right"><button class="btn quiet sm" data-action="App.openSecurityReview" data-id="' + esc(r.id) + '">Open</button></td></tr>';
       }).join('') + '</tbody></table>' +
-        '<div class="sr-btns sr-records"><button class="btn quiet sm" data-action="App.secTopMgmtDoc">Top management record</button><button class="btn quiet sm" data-action="App.secYearDoc">Year of reviews</button>' +
+        '<div class="sr-btns sr-records"><button class="btn quiet sm" data-action="App.report" data-id="chairsummary">The month in brief</button>' + (!READONLY && Store.kind === 'sharepoint' && rec ? '<button class="btn quiet sm" data-action="App.sendChairSummary" data-id="' + esc(rec.id) + '">' + (rec.chairSummarySent ? 'Send it to the chair again' : 'Send it to the chair') + '</button>' : '') + '<button class="btn quiet sm" data-action="App.secTopMgmtDoc">Top management record</button><button class="btn quiet sm" data-action="App.secYearDoc">Year of reviews</button>' +
         (!READONLY && Store.kind === 'sharepoint' ? '<button class="btn quiet sm" data-action="App.fileSecYear">File the year as Clause 9.3 evidence</button>' : '') + '</div>' : '') + '</div>';
   }
   /* The agenda in the panel: editable until the meeting is held, notes
@@ -10424,6 +10466,18 @@ function showModal(opts) {
     try { await Store.addAction(act); } catch (e) { warn(e); return null; }
     audit('Action raised', 'Action', act.id, '', 'From security review ' + rec.id + ' (' + itemTitle + '): ' + act.title);
     return act;
+  }
+
+  /* A supplier's certificate renewal: asked for, sent back, accepted. */
+  function vendorRenewalHtml(v) {
+    var st = window.CheckpointLib.vendorRenewalState(v.notes, new Date().toISOString().slice(0, 10));
+    if (!st.requested && !st.submitted) return '';
+    var sub = st.submission;
+    return '<div class="d-sec"><h4>Certificate renewal</h4>' +
+      (st.requested ? '<div class="d-kv"><span>Asked for</span><b>' + fmtDate(st.requested) + (v.contactEmail ? ' · ' + esc(v.contactEmail) : '') + '</b></div>' : '') +
+      (sub ? '<div class="d-kv"><span>Sent by the supplier</span><b>' + esc(sub.certifications || 'Certificate') + ', valid until ' + fmtDateY(sub.validUntil) + (sub.reportUrl && isSafeUrl(sub.reportUrl) ? ' · <a class="lnk" href="' + esc(sub.reportUrl) + '" target="_blank" rel="noopener">open</a>' : '') + (sub.note ? '<div class="src">' + esc(sub.note) + '</div>' : '') + '</b></div>' +
+        (READONLY ? '' : '<button class="btn sm" data-action="App.acceptVendorRenewal" data-id="' + esc(v.id) + '">Check and accept</button>') :
+        st.accepted ? '<div class="d-kv"><span>Accepted</span><b>' + fmtDate(st.accepted) + '</b></div>' : '<p class="src">Waiting for the supplier. Checkpoint asks again after 30 days.</p>') + '</div>';
   }
 
   /* ================= My tasks =================
@@ -11194,13 +11248,13 @@ function showModal(opts) {
     var m = _mockAudit;
     var tone = function (x) { return x.Major ? 'var(--fail)' : x.Minor ? 'var(--warn)' : 'var(--pass)'; };
     var head = '<div class="ev-check-head"><span><h3 style="margin:0">Mock audit</h3><span class="src">Checkpoint samples your records the way a certification auditor does and grades what it finds. Run it before Stage 1, Stage 2 and each surveillance audit.</span></span>' +
-      '<span style="display:flex;gap:8px">' + (m ? '<button class="btn ghost sm" data-action="App.runMockAudit" data-id="new">Draw a new sample</button>' : '') + '<button class="btn sm" data-action="App.runMockAudit">' + (m ? 'Run again' : 'Run the mock audit') + '</button></span></div>';
+      '<span style="display:flex;gap:8px;flex-wrap:wrap">' + (m ? '<button class="btn ghost sm" data-action="App.runMockAudit" data-id="' + (m.kind === 'stage2' ? 'stage2new' : 'new') + '">Draw a new sample</button>' : '') + '<button class="btn sm" data-action="App.runMockAudit">' + (m && m.kind !== 'stage2' ? 'Run again' : 'Run the mock audit') + '</button><button class="btn ghost sm" data-action="App.runMockAudit" data-id="stage2">' + (m && m.kind === 'stage2' ? 'Run the Stage 2 dry run again' : 'Stage 2 dry run') + '</button></span></div>';
     if (!m) {
       el.innerHTML = '<div class="card" style="margin-bottom:16px">' + head + (last ? '<p class="src" style="margin:8px 0 0">Last run ' + esc(fmtDate(last.at)) + ': score ' + last.score + ', ' + last.counts.Major + ' major, ' + last.counts.Minor + ' minor, ' + last.counts.Observation + ' observations.</p>' : '') + '</div>';
       return;
     }
     el.innerHTML = '<div class="card" style="margin-bottom:16px">' + head +
-      '<div class="mock-score"><b style="color:' + tone(m.counts) + '">' + m.score + '</b><span>' + esc(m.verdict) + '<span class="src">' + m.counts.Major + ' major · ' + m.counts.Minor + ' minor · ' + m.counts.Observation + ' observation' + (m.counts.Observation === 1 ? '' : 's') + '. Sampled controls ' + esc(m.sample.controls.join(', ') || 'none') + '; risks ' + esc(m.sample.risks.join(', ') || 'none') + '; actions ' + esc(m.sample.actions.join(', ') || 'none') + ((m.sample.assets || []).length ? '; disposals ' + esc(m.sample.assets.join(', ')) : '') + '.</span></span></div>' +
+      '<div class="mock-score"><b style="color:' + tone(m.counts) + '">' + m.score + '</b><span>' + esc(m.verdict) + '<span class="src">' + m.counts.Major + ' major · ' + m.counts.Minor + ' minor · ' + m.counts.Observation + ' observation' + (m.counts.Observation === 1 ? '' : 's') + '. ' + (m.kind === 'stage2' ? 'Stage 2 sample: ' + esc([['leavers', 'leavers'], ['starters', 'new starters'], ['incidents', 'incidents'], ['documents', 'documents'], ['activities', 'activities'], ['risks', 'treated risks'], ['corrective', 'corrective actions']].map(function (k) { var x = m.sample[k[0]] || []; return x.length + ' ' + k[1]; }).join(', ')) + '.</span></span></div>' : 'Sampled controls ' + esc(m.sample.controls.join(', ') || 'none') + '; risks ' + esc(m.sample.risks.join(', ') || 'none') + '; actions ' + esc(m.sample.actions.join(', ') || 'none') + ((m.sample.assets || []).length ? '; disposals ' + esc(m.sample.assets.join(', ')) : '') + '.</span></span></div>') +
       (m.findings.length ? '<div class="prop-list">' + m.findings.map(function (f) {
         return '<div class="prop-finding"><span><span class="chip ' + (f.severity === 'Major' ? 'sev-Critical' : f.severity === 'Minor' ? 'sev-High' : 'sev-Low') + '">' + esc(f.severity) + '</span> <b>' + esc(f.area) + (f.ref ? ' ' + esc(f.ref) : '') + '</b> ' + esc(f.text) + '</span>' +
           (f.fix && !READONLY ? '<button class="btn quiet sm" data-action="' + esc(f.fix.action) + '"' + (f.fix.id ? ' data-id="' + esc(f.fix.id) + '"' : '') + '>' + esc(f.fix.label) + '</button>' : '') + '</div>';
@@ -14879,6 +14933,16 @@ function showModal(opts) {
       });
     } catch (e) { warn(e); }
     out.certs = certs;
+    try {
+      var ck = evidenceCheckState();
+      out.health = L.ismsHealthScore({
+        gaps: clauseGapList(),
+        staleEvidence: ck ? ck.issues.filter(function (x) { return x.kind === 'control' && x.issue === 'stale'; }).length : 0,
+        overdueActions: (S.actions || []).filter(function (a) { return overdueDays(a) > 0; }).length,
+        openActions: (S.actions || []).filter(function (a) { return ['Done', 'Closed', 'Cancelled'].indexOf(a.status) === -1; }).length,
+        missedReviews: L.securityReviewsMissed(secReviews(), secReviewSetup(), today)
+      });
+    } catch (e) { warn(e); }
     out.objectives = (S.objectives || []).map(function (o) { return { status: o.status }; });
     try {
       out.ownersOverdue = L.ownerWorkItems(ownerDigestData(), today).filter(function (o) { return o.items.some(function (i) { return i.overdue; }); }).length;
@@ -15982,6 +16046,17 @@ function showModal(opts) {
       renderEvidenceChecks();
     },
     runMockAudit: function (mode) {
+      if (mode === 'stage2' || mode === 'stage2new') {
+        if (mode === 'stage2new' || !_mockSeed) _mockSeed = new Date().toISOString() + Math.random();
+        _mockAudit = window.CheckpointLib.stage2DryRun({
+          auditLog: S.auditLog || [], training: S.training || [], attestations: S.attestations || [], incidents: S.incidents || [],
+          docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, status: docStatusOf(d), approvedBy: d.approvedBy || '', nextReview: d.nextReview || '' }; }),
+          calendar: S.calendar || [], risks: S.risks || [], actions: S.actions || [], lastResults: S.lastResults || {}
+        }, new Date().toISOString().slice(0, 10), _mockSeed);
+        audit('Stage 2 dry run', 'Setting', 'mockAuditLast', '', 'Score ' + _mockAudit.score + '; ' + _mockAudit.counts.Minor + ' minor, ' + _mockAudit.counts.Observation + ' observation(s)');
+        renderMockAudit();
+        return;
+      }
       if (mode === 'new' || !_mockSeed) _mockSeed = new Date().toISOString() + Math.random();
       _mockAudit = window.CheckpointLib.mockAudit(mockAuditInput(), new Date().toISOString().slice(0, 10), _mockSeed);
       var last = { at: new Date().toISOString().slice(0, 10), score: _mockAudit.score, counts: _mockAudit.counts };
@@ -17493,6 +17568,25 @@ function showModal(opts) {
       renderVendors(); renderNavCounts(); renderCalendar();
     },
 
+    /* The supplier's renewed certificate, accepted into the record. */
+    acceptVendorRenewal: async function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      var today = new Date().toISOString().slice(0, 10);
+      var st = v && window.CheckpointLib.vendorRenewalState(v.notes, today);
+      if (!st || !st.pending) return;
+      var sub = st.submission;
+      var ok = await showModal({ title: 'Accept the renewed certificate from ' + v.name + '?', message: (sub.certifications || 'Certificate or report') + ', valid until ' + fmtDateY(sub.validUntil) + '.' + (sub.reportUrl ? '\nLink: ' + sub.reportUrl : '') + (sub.note ? '\nNote: ' + sub.note : '') + '\n\nCheck the certificate itself before accepting: the expiry date on the record changes to ' + fmtDateY(sub.validUntil) + '.', confirmText: 'Accept', cancelText: 'Not yet' });
+      if (!ok) return;
+      var before = v.certExpiryDate || '';
+      v.certExpiryDate = sub.validUntil;
+      if (sub.certifications) v.certifications = sub.certifications;
+      v.notes = (v.notes ? v.notes + '\n' : '') + '[renewal-accepted ' + today + '] by ' + currentActor().name;
+      busy(true);
+      try { await Store.updateVendor(v); audit('Supplier certificate renewed', 'Vendor', v.id, before, sub.validUntil + (sub.reportUrl ? ' (' + sub.reportUrl + ')' : '') + ', supplied by the supplier, accepted by ' + currentActor().name); }
+      catch (e) { warn(e); }
+      busy(false);
+      renderVendors(); App.openVendor(id);
+    },
     openVendor: function (id) {
       var v = (S.vendors || []).find(function (x) { return x.id === id; });
       if (!v) return;
@@ -17527,7 +17621,8 @@ function showModal(opts) {
         '<div class="d-kv"><span>Data processing agreement</span><b>' + (v.dpa ? 'In place' : window.CheckpointLib.vendorHandlesPersonalData(v) ? '<span style="color:var(--warn)">' + icon('flag') + ' Needed: handles personal information</span>' : 'Not needed') + '</b></div>' +
         ((v.apps || []).length ? '<div class="d-kv"><span>Microsoft 365 apps</span><b>' + esc(v.apps.join(', ')) + '</b></div>' : '') +
         (v.tier ? '<div class="d-kv"><span>Tiering</span><b style="font-weight:400">' + [v.tier.prod ? 'production access' : '', v.tier.personal ? 'personal information' : '', v.tier.confidential ? 'confidential information' : '', v.tier.hard ? 'hard to replace' : ''].filter(Boolean).join(', ') + '</b></div>' : '') +
-        (v.notes ? '<div class="d-kv"><span>Notes</span><b>' + esc(v.notes) + '</b></div>' : '') + '</div>' +
+        (v.notes ? '<div class="d-kv"><span>Notes</span><b>' + esc(window.CheckpointLib.vendorNotesText(v.notes)) + '</b></div>' : '') + '</div>' +
+        vendorRenewalHtml(v) +
         '<div class="d-sec"><h4>Security questionnaire</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(v.questionnaireStatus || 'Not sent') + '</b></div>' +
         (v.questionnaireSentDate ? '<div class="d-kv"><span>Sent</span><b>' + fmtDate(v.questionnaireSentDate) + '</b></div>' : '') +
@@ -20387,6 +20482,52 @@ function showModal(opts) {
       renderCertification(); renderActions(); renderNavCounts(); renderDash();
     },
 
+    /* The next 12 months of internal audits, riskiest areas first, each
+       naming the controls to focus on; booked in Internal audits and on
+       the compliance calendar. */
+    planRiskAudits: async function () {
+      var today = new Date().toISOString().slice(0, 10);
+      var plan = window.CheckpointLib.riskWeightedAuditPlan({
+        start: today,
+        controls: (S.controls || []).filter(function (c) { return c.fw === 'iso27001'; }),
+        risks: (S.risks || []).map(function (r) { var q = residual(r); return { id: r.id, controls: r.controls || [], score: q.L * q.I, status: r.status }; }),
+        findings: (S.actions || []).filter(function (a) { return a.control && (/^Non-conformity|^Observation/.test(a.type || '') || /audit/i.test(a.src || '')); }).map(function (a) { return { id: a.id, control: a.control }; })
+      });
+      var horizon = window.CheckpointLib.addMonthsIso(today, 12);
+      var planned = (S.audits || []).filter(function (a) { return a.status === 'Planned' && a.planned && a.planned >= today && a.planned <= horizon; });
+      var covered = function (p) {
+        var want = window.CheckpointLib.parseAuditScope(p.scope);
+        return planned.some(function (a) { var got = window.CheckpointLib.parseAuditScope(a.scope); return want.clauses.some(function (c) { return got.clauses.indexOf(c) !== -1; }) || want.themes.some(function (t) { return got.themes.indexOf(t) !== -1; }); });
+      };
+      var todo = plan.filter(function (p) { return !covered(p); });
+      if (!todo.length) { toast('The next 12 months are already planned.'); return; }
+      var v = await showModal({
+        title: 'Plan the next 12 months of internal audits',
+        message: 'Riskiest areas first, so findings surface while there is time to fix them. Each audit names the controls to focus on:\n\n' +
+          todo.map(function (p) { return '\u2022 ' + fmtDateY(p.planned) + ': ' + p.scope.replace(/: focus on .*$/, '') + (p.focus.length ? '\n    focus: ' + p.focus.map(function (f) { return f.id + ' (' + f.why + ')'; }).join('; ') : ''); }).join('\n') +
+          (todo.length < plan.length ? '\n\nAlready planned, so left as is: ' + (plan.length - todo.length) + '.' : ''),
+        fields: [{ id: 'auditor', label: 'Internal auditor (must not audit their own work)', value: '' }],
+        confirmText: 'Schedule ' + todo.length
+      });
+      if (!v) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < todo.length; i++) {
+        var maxA = (S.audits || []).reduce(function (m, a) { var k = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+        var a = { id: 'AUD-' + String(maxA + 1).padStart(3, '0'), fw: 'iso27001', scope: todo[i].scope, auditor: v.auditor || 'Unassigned',
+          planned: todo[i].planned, completed: '', status: 'Planned', summary: '', findingRefs: [] };
+        try {
+          await Store.addAudit(a); n++;
+          audit('Internal audit scheduled', 'Audit', a.id, '', a.scope + ' \u2014 planned ' + a.planned + ' (risk-weighted plan)');
+          var maxC = (S.calendar || []).reduce(function (m, c) { var k = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+          await Store.addCalendarItem({ id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: 'Internal audit ' + a.id + ': ' + a.scope.replace(/: focus on .*$/, ''), category: 'Internal audit', freq: 'Once',
+            nextDue: a.planned, lastCompleted: '', owner: (secReviewSetup() || {}).owner || v.auditor || '', notes: 'Scheduled from the risk-weighted audit plan (' + a.id + ')', status: 'Active' });
+        } catch (e) { warn(e); }
+      }
+      busy(false);
+      toast(n + ' internal audit' + (n === 1 ? '' : 's') + ' scheduled and added to the calendar.');
+      renderAudits(); renderCalendar(); renderNavCounts();
+    },
     planInternalAudits: async function (fw) {
       var cert = certRecords()[fw];
       if (!cert || !cert.issued) return;
@@ -21847,6 +21988,14 @@ function showModal(opts) {
       App.openSecurityReview(id);
     },
     secTopMgmtDoc: function () { App.report('topmgmt'); },
+    sendChairSummary: async function (id) {
+      var rec = secReviewById(id);
+      if (!rec) return;
+      busy(true);
+      await sendChairSummaryNow(rec, false);
+      busy(false);
+      renderSecurityReviewCard();
+    },
     secYearDoc: function () { App.report('secyear'); },
     fileSecYear: async function () {
       var c = findClauseByCode('iso27001', '9.3');

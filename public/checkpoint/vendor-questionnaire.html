@@ -21,7 +21,7 @@
   h2:first-of-type{margin-top:18px}
   .meta{color:var(--paper-dim);font-size:13px;margin:0 0 18px}
   label{display:block;font-size:13px;color:var(--paper-dim);margin:14px 0 5px}
-  textarea,input[type=text],select{
+  textarea,input[type=text],input[type=date],input[type=url],select{
     width:100%;background:var(--surface-raised);border:1px solid var(--border);border-radius:6px;
     color:var(--paper);padding:9px 10px;font-size:14px;font-family:inherit
   }
@@ -56,6 +56,7 @@
   var params = new URLSearchParams(location.search);
   var token = params.get('token') || '';
   var apiHost = params.get('api') || '';
+  var mode = params.get('mode') === 'renewal' ? 'renewal' : '';
   var app = document.getElementById('app');
 
   /* Same client-side safety net as evidence.html — the real boundary is
@@ -72,6 +73,34 @@
   if (!VALID_HOST.test(apiHost)) { renderError('This link points somewhere unexpected and has been blocked.'); return; }
 
   var apiBase = 'https://' + apiHost + '/api/vendor-questionnaire';
+  var q = '?token=' + encodeURIComponent(token) + (mode ? '&mode=' + mode : '');
+
+  /* Renewal mode: the renewed certificate's date and where it is. */
+  function renderRenewal(v) {
+    app.innerHTML =
+      '<h1>' + esc(v.name || 'Certificate renewal') + '</h1>' +
+      '<p class="meta">' + (v.certifications ? esc(v.certifications) : 'Security certificate or assurance report') + (v.certExpiry ? ', on record until ' + esc(v.certExpiry) : '') + '</p>' +
+      '<label for="rCert">Certificate or report</label><input type="text" id="rCert" maxlength="200" value="' + esc(v.certifications || '') + '">' +
+      '<label for="rDate">Valid until</label><input type="date" id="rDate">' +
+      '<label for="rUrl">Link to the certificate or report (optional)</label><input type="url" id="rUrl" maxlength="500" placeholder="https://">' +
+      '<label for="rNote">Anything else we should know (optional)</label><input type="text" id="rNote" maxlength="300">' +
+      '<button id="fSubmit" type="button">Send</button><div id="fMsg"></div>' +
+      '<p class="note">Your reply is checked by the organisation before their records change. This link is personal to your organisation and does not need an account.</p>';
+    document.getElementById('fSubmit').addEventListener('click', function () {
+      var btn = this, msgEl = document.getElementById('fMsg');
+      btn.disabled = true;
+      msgEl.innerHTML = '<p class="skel">Sending…</p>';
+      fetch(apiBase + q, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'renewal', renewal: {
+        certifications: document.getElementById('rCert').value, validUntil: document.getElementById('rDate').value,
+        reportUrl: document.getElementById('rUrl').value, note: document.getElementById('rNote').value } }) })
+        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (r) {
+          if (r.ok && r.body && r.body.ok) app.innerHTML = '<div class="success">&#10003; Thank you. The renewed certificate has been sent for review.</div>';
+          else { btn.disabled = false; msgEl.innerHTML = '<p class="error">' + esc((r.body && r.body.error) || 'Something went wrong. Try again.') + '</p>'; }
+        })
+        .catch(function () { btn.disabled = false; msgEl.innerHTML = '<p class="error">Could not reach Checkpoint right now. Check your connection and try again.</p>'; });
+    });
+  }
 
   function yesNoSelect(id) {
     return '<select id="q_' + id + '" data-qid="' + id + '">' +
@@ -150,10 +179,10 @@
     });
   }
 
-  fetch(apiBase + '?token=' + encodeURIComponent(token))
+  fetch(apiBase + q)
     .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
     .then(function (r) {
-      if (r.ok && r.body && r.body.ok) { renderForm(r.body); }
+      if (r.ok && r.body && r.body.ok) { if (r.body.mode === 'renewal') renderRenewal(r.body); else renderForm(r.body); }
       else { renderError((r.body && r.body.error) || 'This link isn’t valid.'); }
     })
     .catch(function () { renderError('Could not reach Checkpoint right now — check your connection and try again.'); });

@@ -1239,7 +1239,7 @@
 
     <section class="view" id="v-audits">
       <div class="vhead"><div class="rule"></div><h1>Internal audits</h1><p>ISO 27001 clause 9.2 requires the organisation to run its own internal audit programme, independent of any external certification audit. Schedule audits per framework, record the outcome, and raise findings straight from an audit — each becomes a non-conformity or observation in the Actions register, linked back to the audit, with nonconformities flowing into the corrective-action (Clause 10.2) loop.</p></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddAudit">+ Schedule audit</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="audits">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddAudit">+ Schedule audit</button><button class="btn ghost sm" data-action="App.planRiskAudits">Plan the next 12 months</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="audits">Export CSV</button></div>
       <div class="card" id="addAuditPanel" style="margin-bottom:16px;display:none">
         <h3>Schedule an internal audit</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">

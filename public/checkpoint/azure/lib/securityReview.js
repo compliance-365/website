@@ -344,6 +344,48 @@
     out.missedTwice = a0.absent.filter(function (x) { return a1.absent.indexOf(x) !== -1; });
     return out;
   }
+  function securityReviewTrend(reviews) {
+    return (reviews || []).filter(function (r) { return r && r.pack && r.date; }).slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).map(function (r) {
+      var p = r.pack;
+      return { n: r.n, date: r.date, score: p.posture ? p.posture.score : null, overdue: p.actions ? p.actions.overdue : null, aboveAppetite: p.risks ? p.risks.aboveAppetite : null, incidents: p.incidents ? p.incidents.count : null };
+    });
+  }
+  function chairSummary(p, extra) {
+    var x = extra || {}, well = [], decide = [], trend = [];
+    if (!p) return { well: well, decide: decide, trend: trend };
+    var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
+    if (!p.actions.overdue) well.push('No security actions are overdue.');
+    if (p.actions.closedSince) well.push(plural(p.actions.closedSince, 'action') + ' finished since the last meeting.');
+    if (!p.incidents.count) well.push('No security incidents since ' + srDate(p.since) + '.');
+    if (p.posture.score != null && p.posture.prev != null && p.posture.score > p.posture.prev) well.push('The Microsoft 365 security score rose from ' + p.posture.prev + ' to ' + p.posture.score + ' out of 100.');
+    if (!p.risks.aboveAppetite && p.risks.aboveAppetite != null) well.push('No risk is above the level you have agreed to accept.');
+    (p.actions.stuck || []).forEach(function (a) { decide.push(a.title + (a.owner ? ' (' + a.owner + ')' : '') + ' has been overdue since ' + srDate(a.due) + ': give it more time, give it to someone else, or accept the risk.'); });
+    if (p.risks.aboveAppetite) decide.push(plural(p.risks.aboveAppetite, 'risk is', 'risks are') + ' above the level you have agreed to accept: decide whether to reduce or accept ' + (p.risks.aboveAppetite === 1 ? 'it' : 'them') + '.');
+    (x.approvals || []).forEach(function (n) { decide.push(String(n).replace(/\.html$/i, '') + ' is waiting for your approval.'); });
+    var serious = (p.incidents.since || []).filter(function (n) { return /high|critical/i.test(n.severity || '') && !/closed/i.test(n.status || ''); });
+    serious.forEach(function (n) { decide.push('A serious incident is still open: ' + n.title + '.'); });
+    (x.gaps || []).filter(function (g) { return g.severity === 'fail'; }).slice(0, 3).forEach(function (g) { decide.push(g.title + ': ' + g.issue.charAt(0).toLowerCase() + g.issue.slice(1) + '.'); });
+    if (p.posture.score != null) trend.push('Microsoft 365 security score ' + p.posture.score + ' out of 100' + (p.posture.prev != null && p.posture.prev !== p.posture.score ? (p.posture.score > p.posture.prev ? ', up ' : ', down ') + Math.abs(p.posture.score - p.posture.prev) + ' since last month' : ', unchanged') + '.');
+    var t = (x.trend || []).filter(function (r) { return r && r.overdue != null; });
+    if (t.length >= 2) trend.push('Overdue actions ' + (t[t.length - 1].overdue < t[0].overdue ? 'down' : t[t.length - 1].overdue > t[0].overdue ? 'up' : 'steady') + ' from ' + t[0].overdue + ' to ' + t[t.length - 1].overdue + ' over ' + t.length + ' months.');
+    else trend.push(plural(p.actions.overdue, 'action') + ' overdue now, of ' + p.actions.open + ' open.');
+    if (p.certification && !p.certification.certified && p.certification.readiness != null) trend.push('Ready for certification: ' + p.certification.readiness + '%.');
+    if (x.health && typeof x.health.score === 'number') trend.push('Overall health of the security programme: ' + x.health.score + ' out of 100.');
+    return { well: well, decide: decide, trend: trend };
+  }
+  function chairSummaryHtml(sum, meta) {
+    var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    var m = meta || {};
+    var list = function (title, items, empty) { return '<h3 style="font-size:15px;margin:20px 0 6px">' + e(title) + '</h3>' + (items.length ? '<ul style="margin:0 0 0 18px;padding:0;font-size:14px;line-height:1.6">' + items.map(function (i) { return '<li>' + e(i) + '</li>'; }).join('') + '</ul>' : '<p style="font-size:14px;color:#555;margin:0">' + e(empty) + '</p>'); };
+    return '<div style="font-family:Arial,sans-serif;color:#222;max-width:640px">' +
+      '<h2 style="margin-bottom:4px">' + e(m.org || 'Security') + ': the month in brief</h2>' +
+      '<p style="color:#666;font-size:13px;margin-top:0">For ' + e(m.chair || 'top management') + (m.date ? ', ' + e(m.date) : '') + '</p>' +
+      list('Needs your decision', sum.decide, 'Nothing needs your decision this month.') +
+      list('Going well', sum.well, 'Nothing to highlight this month.') +
+      list('Direction of travel', sum.trend, 'Not enough history yet.') +
+      (/^https:\/\//i.test(m.appUrl || '') ? '<p style="margin-top:18px;font-size:14px"><a href="' + e(m.appUrl) + '">Open Checkpoint</a> for the detail.</p>' : '') +
+      '<p style="color:#999;font-size:11px;margin-top:24px">Prepared by Checkpoint from the live records.</p></div>';
+  }
   function wallTimeToUtc(dateIso, hhmm, tz) {
     var base = Date.parse(String(dateIso).slice(0, 10) + 'T' + (hhmm || '10:00') + ':00Z');
     if (isNaN(base)) return '';
@@ -362,6 +404,6 @@
   }
 
 module.exports = {
-  srDate, addDaysIso, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, wallTimeToUtc,
+  srDate, addDaysIso, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };
