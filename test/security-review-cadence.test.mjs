@@ -188,6 +188,10 @@ describe('in the browser', { skip: skipReason || false }, () => {
     let drawer = await page.locator('#drawer').innerText();
     assert.match(drawer, /AOB: penetration test scope/);
     assert.ok(!/Security posture/.test(drawer.split("Agenda")[1] || ""));
+    // Twice: the demo has an action stuck since the last meeting, so
+    // "Needs a decision" sits between Actions and Risks.
+    await page.click('#drawer button[data-action="App.srMoveItem"][data-id="SR-003|risks|up"]');
+    await page.waitForTimeout(200);
     await page.click('#drawer button[data-action="App.srMoveItem"][data-id="SR-003|risks|up"]');
     await page.waitForTimeout(200);
     const order = await page.$$eval('#drawer .sr-item b', (els) => els.map((e) => e.textContent));

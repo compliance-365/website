@@ -1764,3 +1764,12 @@ tr.asset-retired td { opacity: .85; }
 .sr-green .sr-dot { background: var(--pass); }
 .sr-rag-word { font-size: 11.5px; color: var(--paper-faint); white-space: nowrap; }
 .sr-quiet { margin-top: 10px; }
+/* Security review: outcome line, decisions and escalations while minuting */
+.sr-outcome { margin: 8px 0 12px; padding: 8px 12px; border-left: 3px solid var(--gold); background: var(--surface-hover); color: var(--paper); }
+.sr-outcome-in { display: block; margin: 6px 0 10px; }
+.sr-outcome-cell { font-weight: 600; color: var(--paper-dim); }
+.sr-dec-row { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
+.sr-dec-row .sr-note { flex: 1; margin-top: 0; }
+.sr-esc { margin: 6px 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12.5px; }
+.sr-esc-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.sr-esc-done { margin-top: 4px; font-size: 13px; }
