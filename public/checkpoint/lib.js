@@ -2103,6 +2103,10 @@
      unanswered question keeps the statement, so nothing is dropped on a
      guess; the approver still confirms it applies. */
   function statementApplies(stmt, profile) {
+    /* whenApplicable: drop the statement once every control it puts
+       into practice has been excluded in the Statement of Applicability
+       (profile.__excluded, a map of excluded control ids). */
+    if (stmt && stmt.whenApplicable && profile && profile.__excluded && stmt.whenApplicable.every(function (id) { return profile.__excluded[id]; })) return false;
     if (!stmt || typeof stmt !== 'object' || !stmt.when) return true;
     var p = profile || {};
     return Object.keys(stmt.when).every(function (k) {
@@ -5632,6 +5636,11 @@
       else if (a.status === 'Done' && !a.evidenceUrl) add('Observation', 'Action', a.id, a.id + ' is completed with no evidence link.', { action: 'App.openAction', id: a.id, label: 'Open' });
       else if (a.status !== 'Done' && a.status !== 'Cancelled' && a.due && a.due < today) add('Observation', 'Action', a.id, a.id + ' is overdue (due ' + a.due + ').', { action: 'App.openAction', id: a.id, label: 'Open' });
     });
+    /* Exclusions (6.1.3 d): an auditor reads every one, so these are
+       not sampled. Unjustified, or relied on by a risk, is minor. */
+    exclusionConflicts({ controls: d.controls, risks: d.risks, actions: d.actions, profile: d.profile }).forEach(function (x) {
+      if (x.kind === 'unjustified' || x.kind === 'risk') add('Minor', 'Exclusion', x.id, x.text, { action: 'App.openControlGuidance', id: x.key, label: 'Open' });
+    });
     /* Disposals (A.7.14): two assets retired in the last year, each
        needing its record complete. */
     var recentRetired = retiredAssets(d.assets || [], today, 365).rows.filter(function (x) { return x.recent; }).map(function (x) { return x.asset; });
@@ -5650,6 +5659,112 @@
       findings: F, counts: n, score: score, verdict: verdict,
       sample: { controls: sampleC.map(function (c) { return c.id; }), risks: sampleR.map(function (r) { return r.id; }), actions: sampleA.map(function (a) { return a.id; }), assets: sampleD.map(function (a) { return a.id; }), audit: audit ? audit.id || audit.completed : '', review: review ? review.date : '' }
     };
+  }
+
+
+  /* ============================================================
+     Annex A exclusions (ISO 27001 Clause 6.1.3 d)
+     ------------------------------------------------------------
+     Exclusions the scope answers support, each with a justification
+     an auditor can accept, and the controls that stay applicable
+     however remote the organisation is. Proposals only: nothing is
+     excluded until a practitioner confirms it. */
+  var NO_PREMISES_JUST = 'The organisation has no premises of its own: everyone works remotely and information is held in cloud services. Physical security of the providers’ facilities is assured through supplier controls (A.5.19 to A.5.23).';
+  var EXCLUSION_RULES = [
+    { key: 'no-premises', fw: 'iso27001',
+      when: function (p) { return p.orgPremises === 'none' || (!p.orgPremises && p.orgWorkModel === 'remote'); },
+      why: function (p) { return p.orgPremises === 'none' ? 'You told us the organisation has no premises of its own.' : 'You told us people work fully remotely. Confirm there is no office before excluding these.'; },
+      controls: ['A.7.1', 'A.7.2', 'A.7.3', 'A.7.4', 'A.7.6', 'A.7.11', 'A.7.12'],
+      justification: NO_PREMISES_JUST },
+    { key: 'no-secure-areas', fw: 'iso27001',
+      when: function (p) { return p.orgPremises === 'office'; },
+      why: function () { return 'You told us the organisation has an office but no server room or other secure area.'; },
+      controls: ['A.7.6'],
+      justification: 'The organisation’s office has no secure areas such as a server room or data centre; information processing equipment is held by cloud providers, assured through supplier controls (A.5.19 to A.5.23).' },
+    { key: 'no-development', fw: 'iso27001',
+      when: function (p) { return p.orgDevelops === 'no'; },
+      why: function () { return 'You told us the organisation does not develop its own software.'; },
+      controls: ['A.8.25', 'A.8.28', 'A.8.31'],
+      justification: 'The organisation does not develop software; it uses commercial and SaaS products. Security requirements for acquired applications are covered by A.8.26 and the supplier controls.' },
+    { key: 'no-outsourced-development', fw: 'iso27001',
+      when: function (p) { return p.orgDevelops === 'no' || p.orgDevelops === 'yes'; },
+      why: function (p) { return p.orgDevelops === 'yes' ? 'You told us development is done by your own developers, not outsourced.' : 'You told us the organisation does not develop software.'; },
+      controls: ['A.8.30'],
+      justification: 'The organisation does not outsource software development.' }
+  ];
+  /* Controls that still apply to people working from home or on the
+     move. Excluding one of these in a remote or hybrid organisation is
+     the exclusion an auditor challenges. */
+  var REMOTE_APPLICABLE = {
+    'A.6.7': 'remote working is how this organisation works',
+    'A.7.5': 'home offices still face fire, flood and power loss',
+    'A.7.7': 'clear desk and screen applies at home and in shared spaces',
+    'A.7.8': 'equipment at home still has to be sited and protected',
+    'A.7.9': 'laptops and phones are assets used off-premises',
+    'A.7.10': 'USB drives, printouts and other media still exist',
+    'A.7.13': 'laptops still need maintaining',
+    'A.7.14': 'laptops are still disposed of or re-issued'
+  };
+  function remoteApplicableReason(id, profile) {
+    var p = profile || {};
+    if (p.orgWorkModel !== 'remote' && p.orgWorkModel !== 'hybrid' && p.orgPremises !== 'none') return '';
+    return REMOTE_APPLICABLE[id] || '';
+  }
+  /* Groups whose controls are still in scope. controls: the tenant's
+     control rows; dismissed: rule keys set aside. */
+  function suggestedExclusions(profile, controls, dismissed) {
+    var p = profile || {}, gone = {};
+    (dismissed || []).forEach(function (k) { gone[k] = 1; });
+    var byKey = {};
+    (controls || []).forEach(function (c) { if (c) byKey[c.fw + '|' + c.id] = c; });
+    return EXCLUSION_RULES.filter(function (r) { return !gone[r.key] && r.when(p); }).map(function (r) {
+      var open = r.controls.map(function (id) { return byKey[r.fw + '|' + id]; }).filter(function (c) { return c && c.app; });
+      return { key: r.key, why: r.why(p), justification: r.justification, controls: open };
+    }).filter(function (g) { return g.controls.length; });
+  }
+  /* The justification a rule would give this control, if any. */
+  function suggestedJustification(c, profile) {
+    var p = profile || {};
+    var r = EXCLUSION_RULES.find(function (x) { return x.fw === (c && c.fw) && x.controls.indexOf(c.id) !== -1 && x.when(p); });
+    return r ? r.justification : '';
+  }
+  /* Exclusions that contradict the rest of the system. d = { controls,
+     risks, actions, profile }. One entry per problem, worst first. */
+  function exclusionConflicts(d) {
+    var out = [];
+    var risks = (d.risks || []).filter(function (r) { return r && r.status !== 'Closed'; });
+    var acts = (d.actions || []).filter(function (a) { return a && ['Done', 'Closed', 'Cancelled'].indexOf(a.status) === -1; });
+    (d.controls || []).forEach(function (c) {
+      if (!c || c.app) return;
+      var key = c.fw + '|' + c.id;
+      var add = function (kind, sev, text) { out.push({ key: key, id: c.id, fw: c.fw, kind: kind, severity: sev, text: text }); };
+      if (!String(c.just || '').trim()) add('unjustified', 'Minor', c.id + ' is excluded with no justification (Clause 6.1.3 d).');
+      if (c.fw === 'iso27001') {
+        var rs = risks.filter(function (r) { return (r.controls || []).indexOf(c.id) !== -1; });
+        if (rs.length) add('risk', 'Minor', c.id + ' is excluded, but ' + rs.map(function (r) { return r.id; }).join(', ') + ' relies on it to treat ' + (rs.length === 1 ? 'a risk' : 'risks') + '.');
+        var as = acts.filter(function (a) { return a.control === c.id; });
+        if (as.length) add('action', 'Observation', c.id + ' is excluded, but ' + as.map(function (a) { return a.id; }).join(', ') + ' (open) ' + (as.length === 1 ? 'is' : 'are') + ' implementing it.');
+        var remote = remoteApplicableReason(c.id, d.profile);
+        if (remote) add('remote', 'Observation', c.id + ' is excluded, but it usually applies to remote and home working: ' + remote + '.');
+      }
+      if (c.evidenceUrl) add('evidence', 'Observation', c.id + ' is excluded but has evidence linked, which suggests it is operating. Include it, or remove the link.');
+    });
+    var rank = { Minor: 0, Observation: 1 };
+    out.sort(function (a, b) { return rank[a.severity] - rank[b.severity]; });
+    return out;
+  }
+  /* The exclusions as one sentence for the scope document: controls
+     sharing a justification are listed together. */
+  function exclusionsStatement(controls, fw) {
+    var ex = (controls || []).filter(function (c) { return c && !c.app && (!fw || c.fw === fw); });
+    if (!ex.length) return 'none — every Annex A control is applicable.';
+    var groups = [], byJust = {};
+    ex.forEach(function (c) {
+      var j = String(c.just || '').trim() || pendingMarker('exclusion justification in the Statement of Applicability');
+      if (!byJust[j]) { byJust[j] = { just: j, ids: [] }; groups.push(byJust[j]); }
+      byJust[j].ids.push(c.id);
+    });
+    return groups.map(function (g) { return g.ids.join(', ') + ': ' + g.just.replace(/\.\s*$/, ''); }).join('; ') + '.';
   }
 
   /* ============================================================
@@ -9699,6 +9814,8 @@
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,
+    EXCLUSION_RULES: EXCLUSION_RULES, REMOTE_APPLICABLE: REMOTE_APPLICABLE, remoteApplicableReason: remoteApplicableReason,
+    suggestedExclusions: suggestedExclusions, suggestedJustification: suggestedJustification, exclusionConflicts: exclusionConflicts, exclusionsStatement: exclusionsStatement,
     ASSET_RETIRE_REASONS: ASSET_RETIRE_REASONS, ASSET_DISPOSAL_METHODS: ASSET_DISPOSAL_METHODS,
     retirementGaps: retirementGaps, retiredAssets: retiredAssets, parseRetirement: parseRetirement,
     departedOwners: departedOwners, registerReviewQueue: registerReviewQueue, recordHistory: recordHistory, evidenceTargets: evidenceTargets, evidenceCheckIssues: evidenceCheckIssues, isSharePointUrl: isSharePointUrl, seededPick: seededPick, mockAudit: mockAudit, riskTreatmentProgress: riskTreatmentProgress, riskNeedsReassessment: riskNeedsReassessment, registerTidy: registerTidy, vendorHandlesPersonalData: vendorHandlesPersonalData, vendorCriticalityFromTier: vendorCriticalityFromTier, VENDOR_REVIEW_MONTHS: VENDOR_REVIEW_MONTHS, vendorNextReview: vendorNextReview, normaliseVendorName: normaliseVendorName, vendorCandidates: vendorCandidates, matchOwners: matchOwners, fuzzyOwnerMatch: fuzzyOwnerMatch, BUSINESS_RISKS: BUSINESS_RISKS, BUSINESS_RISK_OF: BUSINESS_RISK_OF, businessRiskKeyFor: businessRiskKeyFor, businessRiskDef: businessRiskDef, isBusinessRisk: isBusinessRisk, riskFindings: riskFindings, groupProposals: groupProposals, groupExistingRisks: groupExistingRisks, registerSizeAfterGrouping: registerSizeAfterGrouping, checkHeadline: checkHeadline, scanFixFirst: scanFixFirst,

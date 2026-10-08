@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.127.0',
+    date: '2026-10-07',
+    entries: [
+      'Excluding a control from the Statement of Applicability is now one clear step. The Scope column says In scope or Excluded, and the Status list includes Not applicable. Either way, one dialog asks for the justification an auditor will read (Clause 6.1.3 d), suggests one where your scope answers support it, and warns if the control usually still applies or a risk relies on it. Bulk exclusion asks once for the reason the selected controls share, and now sets their status to N/A. Bringing a control back into scope clears its old justification; the audit log keeps it.',
+      'Exclusions suggested from your scope. A new scope question asks whether the organisation has premises of its own. With no premises (or fully remote and unanswered), Checkpoint proposes excluding A.7.1, A.7.2, A.7.3, A.7.4, A.7.6, A.7.11 and A.7.12 with a ready-written justification; with an office but no secure area, A.7.6; with no software development, A.8.25, A.8.28, A.8.31 and A.8.30. Clear desk, off-premises assets, storage media, maintenance and secure disposal are never proposed: they apply to home working.',
+      'Exclusion check on the Statement of Applicability: exclusions with no justification, excluded controls an open risk relies on or an open action is implementing, excluded controls with evidence linked, and remote-working controls excluded in a remote or hybrid organisation. The mock audit raises unjustified and relied-on exclusions as minor findings.',
+      'Documents follow the exclusions. The ISMS scope lists the Annex A controls excluded and why, and the Physical & Environmental Security Policy drops the secured-area, visitor and tailgating statements once those controls are excluded. Documents written before an exclusion are listed with a Regenerate or Re-approve button.'
+    ]
+  },
+  {
     version: '1.126.0',
     date: '2026-10-07',
     entries: [
