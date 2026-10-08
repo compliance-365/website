@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.134.0',
+    date: '2026-10-08',
+    entries: [
+      'ISMS health: one score out of 100 for how well the security programme is running. It counts recurring requirements that have lapsed, out-of-date evidence, overdue actions and missed security reviews, and names the biggest drag. Each client sends it to the partner console, which shows it in its own column, can sort by it, and flags any client below 60.',
+      'Plan the next 12 months of internal audits: the management-system clauses first, then each part of Annex A in order of how much risk and past trouble sits in it, so the riskiest areas are audited soonest. Each audit names the controls to focus on and why, and is booked in Internal audits and on the compliance calendar. Audits already planned are left as they are.',
+      'Suppliers renew their own certificates. When a supplier\u2019s certificate or assurance report is due to expire within 30 days, the scheduled function emails their contact a link that needs no account, where they give the new expiry date and a link to the certificate. Their reply waits on the supplier record for you to check and accept; nothing changes until you do. They are asked at most once every 30 days.',
+      'Stage 2 dry run: next to the mock audit, a run that samples what a Stage 2 auditor samples. That means leavers, new starters, incidents, document changes, recurring activities, treated risks and corrective actions, and it checks each has its record.',
+      'The month in brief: a one-page summary for the chair in plain English, with no clause numbers. It covers what needs their decision, what is going well and the direction of travel. It is emailed to the chair once each month\u2019s meeting is prepared (from the app or the scheduled function), and you can open it or send it again from the review card.'
+    ]
+  },
+  {
     version: '1.133.0',
     date: '2026-10-08',
     entries: [

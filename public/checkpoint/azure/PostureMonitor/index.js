@@ -23,6 +23,7 @@ const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = requir
 const { mintEvidenceToken } = require('../lib/evidenceToken');
 const { mintVendorToken } = require('../lib/vendorToken');
 const { ownerWorkItems, matchOwnerToUser, ownerDigestHtml, notifyPref } = require('../lib/ownerDigest');
+const { vendorRenewalState } = require('../lib/vendorRenewal');
 /* A person who asked for the weekly digest only gets no instant email:
    the same work reaches them in the digest. */
 function weeklyOnly(settings, owner, email) {
@@ -1846,10 +1847,41 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   }
   if (questionnaireLinksSent) context.log('Checkpoint governance sweep: sent ' + questionnaireLinksSent + ' vendor questionnaire link(s).');
 
+  /* ---- Supplier certificate renewals ----
+     A supplier whose certificate or assurance report expires within
+     VENDOR_WARN_DAYS (or expired in the last 30 days) is asked for the
+     renewed one through its own no-sign-in link, at most once every 30
+     days and not while a reply waits to be accepted. The request is
+     recorded as a marker line in the vendor's Notes. */
+  let renewalsRequested = 0;
+  for (const v of vendorRows) {
+    if (!v.CertExpiryDate || !v.ContactEmail || !optional.Vendors) continue;
+    const days = daysBetween(today, v.CertExpiryDate);
+    if (days > VENDOR_WARN_DAYS || days < -30) continue;
+    if (!vendorRenewalState(v.Notes, today).canRequest) continue;
+    const base = buildVendorLink(v._itemId);
+    if (!base) continue;
+    const name = v.Title || v.RefId || '(unnamed vendor)';
+    const body = '<p>Hello,</p>' +
+      '<p>Our records show that the ' + esc(v.Certifications || 'security certificate or assurance report') + ' we hold for <b>' + esc(name) + '</b> ' + (days < 0 ? 'expired on ' : 'expires on ') + esc(v.CertExpiryDate) + '.</p>' +
+      '<p>Please tell us when the renewed one is valid until and share a link to it.</p>' +
+      '<p><a href="' + esc(base + '&mode=renewal') + '">Send the renewed certificate →</a></p>' +
+      '<p style="color:#666;font-size:12px">This link is personal to your organisation and does not need an account. It expires after a while; reply to this email if it stops working.</p>';
+    if (await notifyOwner(g, context, v.ContactEmail, 'Certificate renewal — ' + name, body)) {
+      try {
+        await g(`/sites/${siteId}/lists/${optional.Vendors}/items/${encodeURIComponent(v._itemId)}/fields`, {
+          method: 'PATCH', body: { Notes: (v.Notes ? v.Notes + '\n' : '') + '[renewal-requested ' + today + ']' }
+        });
+        renewalsRequested++;
+      } catch (e) { context.log.error('Checkpoint governance sweep: asked ' + v.ContactEmail + ' for a renewed certificate but could not record it: ' + (e && e.message ? e.message : e)); }
+    }
+  }
+  if (renewalsRequested) context.log('Checkpoint governance sweep: asked ' + renewalsRequested + ' supplier(s) for a renewed certificate.');
+
   /* Same shape as the full return below — a caller reading
      ownersChased must not get undefined just because a quiet night
      took the early exit. */
-  if (!findings.length) return { written: 0, digest: digestData, ownersChased: 0, questionnaireLinksSent };
+  if (!findings.length) return { written: 0, digest: digestData, ownersChased: 0, questionnaireLinksSent, renewalsRequested };
 
   const alreadyOpen = await openAlertKeys(g, siteId, lists.Alerts);
   const fresh = findings.filter(f => !alreadyOpen.has(f.checkId));
@@ -1886,7 +1918,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   }
   if (chased) context.log('Checkpoint governance sweep: chased ' + chased + ' action owner(s) directly.');
 
-  return { written: fresh.length, digest: digestData, ownersChased: chased, questionnaireLinksSent };
+  return { written: fresh.length, digest: digestData, ownersChased: chased, questionnaireLinksSent, renewalsRequested };
 }
 
 /* Emails one named action owner. Separate from notify() because that
@@ -2204,6 +2236,25 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
       preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued, lastHeld: held ? held.date : '', absences: SR.securityReviewAbsences(reviews, setup) }, extra || {})) };
     reviews.push(rec);
     done.push('prepared ' + rec.id);
+  }
+  /* The chair's plain-English month, once per meeting, when its pack
+     is ready. */
+  if (rec && rec.status !== 'Held' && !rec.chairSummarySent && from && setup.chair) {
+    let users = [];
+    try { users = await gAll('/users?$select=displayName,mail,userPrincipalName&$top=999'); } catch (e) { users = []; }
+    const u = matchOwnerToUser(setup.chair, users);
+    const chairTo = u && (u.mail || u.userPrincipalName);
+    if (chairTo) {
+      let approvals = [];
+      try { approvals = JSON.parse(settings.approvalRequests || '[]'); } catch (e) { approvals = []; }
+      const chairLc = String(setup.chair).toLowerCase();
+      const sum = SR.chairSummary(rec.pack, { approvals: (Array.isArray(approvals) ? approvals : []).filter(r => String(r.approver || '').toLowerCase() === chairLc).map(r => r.name),
+        trend: SR.securityReviewTrend(reviews.filter(r => r.status === 'Held')).slice(-6) });
+      if (await notifyOwner(g, context, chairTo, label + ': the month in brief', SR.chairSummaryHtml(sum, { org: label, chair: setup.chair, date: SR.srDate(today), appUrl: 'https://www.compliance365.com.au/checkpoint/' }))) {
+        rec.chairSummarySent = today;
+        done.push('chair summary ' + rec.id);
+      }
+    }
   }
   const to = String(setup.emails || '').split(/[,;\s]+/).filter(x => /@/.test(x));
   if (due.send && rec && rec.status === 'Prepared' && from && to.length) {

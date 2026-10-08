@@ -1360,6 +1360,14 @@ function showModal(opts) {
     return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true" style="vertical-align:middle;margin-left:6px"><polyline points="' + xy + '" fill="none" stroke="var(--gold)" stroke-width="1.5"/></svg>';
   }
   var _deliveryFilter = 'all', _deliverySort = 'attention';
+  /* The client's ISMS health (lib ismsHealthScore), from its last sync. */
+  function ismsScore(r) { var h = r.d && r.d.health; return h && typeof h.score === 'number' ? h.score : 101; }
+  function ismsHealthCell(r) {
+    var h = r.d && r.d.health;
+    if (!h || typeof h.score !== 'number') return '<span style="color:var(--paper-faint)">—</span>';
+    var col = h.band === 'good' ? 'var(--pass)' : h.band === 'watch' ? 'var(--warn)' : 'var(--fail)';
+    return '<b style="color:' + col + '">' + h.score + '</b>' + ((h.factors || [])[0] ? '<div class="src">' + esc(h.factors[0].label) + '</div>' : '');
+  }
   function renderDeliveryBoard() {
     var el = document.getElementById('deliveryBoardWrap');
     if (!el) return;
@@ -1370,6 +1378,7 @@ function showModal(opts) {
     shown.sort(function (a, b) {
       if (_deliverySort === 'progress') return pathPct(b) - pathPct(a);
       if (_deliverySort === 'name') return a.c.name.localeCompare(b.c.name);
+      if (_deliverySort === 'health') return ismsScore(a) - ismsScore(b);
       return a.rank - b.rank || pathPct(a) - pathPct(b);
     });
     var count = function (pred) { return rows.filter(pred).length; };
@@ -1384,9 +1393,9 @@ function showModal(opts) {
       '</div>' +
       '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">' +
       '<label class="src">Show <select class="mini" id="deliveryFilter" data-change-action="OwnerApp.setDeliveryFilter">' + opt('all', 'All clients', _deliveryFilter) + opt('attention', 'Needs attention', _deliveryFilter) + opt('upsell', 'ISO 42001 opportunities', _deliveryFilter) + '</select></label>' +
-      '<label class="src">Sort by <select class="mini" id="deliverySort" data-change-action="OwnerApp.setDeliverySort">' + opt('attention', 'Most urgent first', _deliverySort) + opt('progress', 'Most progress first', _deliverySort) + opt('name', 'Name', _deliverySort) + '</select></label>' +
+      '<label class="src">Sort by <select class="mini" id="deliverySort" data-change-action="OwnerApp.setDeliverySort">' + opt('attention', 'Most urgent first', _deliverySort) + opt('progress', 'Most progress first', _deliverySort) + opt('health', 'Lowest ISMS health first', _deliverySort) + opt('name', 'Name', _deliverySort) + '</select></label>' +
       '</div>' +
-      (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
+      (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">ISMS health</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
         shown.map(function (r) {
           var d = r.d, plan = d.plan, b = d.bookings || {};
           var moved = (r.c.progressHistory || []).length ? r.c.progressHistory[r.c.progressHistory.length - 1].d : '';
@@ -1398,6 +1407,7 @@ function showModal(opts) {
             '<td style="white-space:nowrap">' + pct(r.head && r.head.annexA) + sparkline(r.c.progressHistory, 'annexA') + '</td>' +
             '<td style="font-size:12.5px">' + (plan ? 'Week ' + esc(String(plan.week)) + (plan.behind ? ', <span style="color:var(--warn)">' + esc(String(plan.behind)) + ' behind</span>' : ', on plan') + (plan.readyBy && r.stage !== 'Certified' ? '<div class="src">ready ' + esc(fmtDate(plan.readyBy)) + '</div>' : '') : '—') + '</td>' +
             '<td style="font-size:12.5px">' + ([b.stage1 ? 'S1 ' + esc(fmtDate(b.stage1)) : '', b.stage2 ? 'S2 ' + esc(fmtDate(b.stage2)) : ''].filter(Boolean).join('<br>') || '—') + '</td>' +
+            '<td style="font-size:12.5px">' + ismsHealthCell(r) + '</td>' +
             '<td>' + flagList(r.flags) + '</td>' +
             '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerStatusNote" data-id="' + esc(r.c._sp) + '">Status note</button></td>' +
             '</tr>';

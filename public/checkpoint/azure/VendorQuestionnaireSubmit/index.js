@@ -30,6 +30,7 @@
 const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = require('../lib/graph');
 const { verifyVendorToken } = require('../lib/vendorToken');
 const { VENDOR_QUESTIONNAIRE } = require('../lib/vendorQuestions');
+const { validateVendorRenewal, vendorRenewalNote } = require('../lib/vendorRenewal');
 
 const MAX_TEXT_LENGTH = 500;
 const YESNO_VALUES = ['Yes', 'No', 'Unknown'];
@@ -116,6 +117,33 @@ module.exports = async function (context, req) {
     return;
   }
   const f = item.fields || {};
+
+  /* Renewal mode (&mode=renewal): the supplier says when its renewed
+     certificate is valid until and where it is. Recorded as a pending
+     line in the vendor's Notes for the practitioner to accept; the
+     certificate expiry itself is never changed from here. */
+  const mode = (req.query && req.query.mode) || (req.body && req.body.mode) || '';
+  if (mode === 'renewal') {
+    if (req.method === 'GET') {
+      context.res = json(200, { ok: true, mode: 'renewal', name: f.Title || '', service: f.Service || '', certifications: f.Certifications || '', certExpiry: f.CertExpiryDate || '' });
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const r = validateVendorRenewal(req.body, today);
+    if (!r.ok) { context.res = json(400, { ok: false, error: r.error }); return; }
+    try {
+      await g(`/sites/${siteId}/lists/${lists.Vendors}/items/${encodeURIComponent(verified.vendorItemId)}/fields`, {
+        method: 'PATCH', body: { Notes: (f.Notes ? f.Notes + '\n' : '') + vendorRenewalNote(r.renewal, today) }
+      });
+    } catch (e) {
+      context.log.error('Checkpoint vendor renewal link: write failed: ' + (e && e.message ? e.message : e));
+      context.res = json(502, { ok: false, error: 'Could not record this right now — try again shortly.' });
+      return;
+    }
+    context.log(`Checkpoint vendor renewal link: renewal recorded for ${f.Title || verified.vendorItemId}, awaiting acceptance.`);
+    context.res = json(200, { ok: true });
+    return;
+  }
 
   if (req.method === 'GET') {
     context.res = json(200, {
