@@ -371,6 +371,10 @@
     else trend.push(plural(p.actions.overdue, 'action') + ' overdue now, of ' + p.actions.open + ' open.');
     if (p.certification && !p.certification.certified && p.certification.readiness != null) trend.push('Ready for certification: ' + p.certification.readiness + '%.');
     if (x.health && typeof x.health.score === 'number') trend.push('Overall health of the security programme: ' + x.health.score + ' out of 100.');
+    if (x.changes && x.changes.total) {
+      var areas = x.changes.groups.slice().sort(function (a, b) { return b.count - a.count; }).slice(0, 3).map(function (g) { return g.label.toLowerCase(); });
+      trend.push(plural(x.changes.total, 'change') + ' to the security programme this month, mostly ' + areas.join(', ') + '.');
+    }
     return { well: well, decide: decide, trend: trend };
   }
   function chairSummaryHtml(sum, meta) {

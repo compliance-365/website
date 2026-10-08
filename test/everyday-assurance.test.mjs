@@ -89,8 +89,8 @@ describe('what an auditor would find first', () => {
   test('the interval set for the management review is the one checked', () => {
     assert.equal(L.clauseCadenceGaps({ ...base, mrMonths: 3 })[0].issue, 'Overdue: last held 1 Apr 2026, due every 3 months');
   });
-  test('it sits on the dashboard', () => {
-    assert.match(app, /function renderDash\(\) \{\n    renderCertDashCard\(\);\n    renderClauseGaps\(\);/);
+  test('it feeds the dashboard\u2019s Do next list', () => {
+    assert.match(app, /gaps: clauseGapList\(\),\n      approvals: myApprovalRequests\(\)/);
   });
 });
 
@@ -172,10 +172,10 @@ describe('in the browser', { skip: skipReason || false }, () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
-    await page.waitForSelector('#clauseGapsCard .cg-row');
-    const gaps = await page.locator('#clauseGapsCard').innerText();
-    assert.match(gaps, /What an auditor would find first/i);
-    await page.locator('#clauseGapsCard .cg-row button').first().click();
+    await page.waitForSelector('#nextActionsList .dn-row');
+    const gaps = await page.locator('#nextActionsCard').innerText();
+    assert.match(gaps, /Do next[\s\S]*Requirement/i);
+    await page.locator('#nextActionsList .dn-row button').first().click();
     await page.waitForTimeout(200);
     assert.ok(!(await page.locator('#v-dash').evaluate((e) => e.classList.contains('on'))), 'the fix button opens the page that fixes it');
     // My tasks: the email preference (weekly needs the digest on).

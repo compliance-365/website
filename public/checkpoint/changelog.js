@@ -12,6 +12,32 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.136.0',
+    date: '2026-10-08',
+    entries: [
+      'Weekly backup: the scheduled monitor saves a dated zip of every register, the settings and an index of the evidence into your own SharePoint (Documents › Checkpoint backups), and keeps the newest 13. Secrets such as webhook URLs and API keys are left out. Back up now (Settings › Data) saves one straight away and downloads a copy. The README in each zip says how to restore.',
+      'ISMS change log: what changed in the management system since the last management review, in plain words. It covers scope, policies, risks, suppliers, people, assets, incidents, audits and objectives, and leaves housekeeping out. Open it from Management review or Reports. It also fills the "changes" input when the review inputs are drafted (Clause 9.3.2 b), and the month in brief tells the chair how much changed.',
+      'Import CSV for vendors and assets as well as risks and actions. If the file\u2019s headings don\u2019t match, you pick which column is which, with a best guess filled in. Before anything is written you see a preview, and rows that are already in the register (or repeated in the file) are held back as possible duplicates unless you tick to include them.',
+      'Policy acknowledgement nudges: when a policy is approved, Checkpoint offers to send it to everyone with a one-line "what changed" in the email. Policy attestation lists approved policies whose current version has not been sent, each one click from going out, and so does Do next on the dashboard. The scheduled monitor then emails anyone outstanding once a week, listing every policy they still owe, until everyone has acknowledged. A switch turns the weekly reminders off.',
+      'Accessibility and phone use: wide tables that scroll sideways can now be reached and scrolled with the keyboard, and screen readers announce what each one is. On touch screens, links, row checkboxes and section toggles are at least 24 pixels. Every main view was checked at phone width for sideways scrolling and for controls without a name.'
+    ]
+  },
+  {
+    version: '1.135.0',
+    date: '2026-10-08',
+    entries: [
+      'Dashboard: four numbers across the top. Readiness for the main certification, ISMS health, days to the next audit and what is waiting on you. Each opens its detail.',
+      'Do next: one ranked list of at most five things replaces the separate lists. It covers lapsed requirements, approvals waiting for you, risks above appetite, the actions holding the posture back and the next step on the path. The rest are one click away. The risk appetite banner and the "What an auditor would find first" card are now part of it.',
+      'Your path to certification is now one line: progress, the week of the plan, how far behind it is and the next step. The stepper, the dated plan and all the steps open on request.',
+      'The readiness strip shows only the frameworks being worked towards (the main one, any with progress, and any set as a target). The others wait behind "Show all frameworks".',
+      'The chair sees the month in brief at the top of the dashboard, and people with restricted access see their own tasks.',
+      'Operations: the assurance pulse now says what it shows. It reports how many weeks had compliance work, flags a quiet spell and notes when no management review or internal audit happened in the period.',
+      'Cross-framework mapping now counts frameworks rather than mapped controls (it showed +18 for 14 frameworks). It names the control, its status and which frameworks it also counts for.',
+      'Governance offers the next step where a record is missing, for example planning the next 12 months of internal audits. The activity feed is grouped by day and shows the latest eight, with the rest in the audit log.',
+      'New Integrations page under Settings, covering Microsoft 365, the scheduled Azure monitor, AWS and GitHub. Each shows whether it is reporting, when it last reported and how many checks it covers, with step-by-step setup. For AWS that means the read-only IAM policy to copy and the Lambda settings, with your tenant and SharePoint values filled in. The monitor\u2019s setup guide has moved here from the dashboard.'
+    ]
+  },
+  {
     version: '1.134.0',
     date: '2026-10-08',
     entries: [

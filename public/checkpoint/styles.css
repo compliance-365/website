@@ -1282,7 +1282,7 @@ select.mini.st-Open{color:var(--fail);border-color:rgba(201,122,122,.5);backgrou
 select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-color:rgba(240, 169, 127,.5);background:rgba(240, 169, 127,.1)}
 select.mini.st-Implemented{color:var(--pass);border-color:rgba(143,191,154,.5);background:rgba(143,191,154,.1)}
 select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);background:var(--surface-raised)}
-.toggle{width:34px;height:19px;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
+.toggle{width:34px;height:19px;flex-shrink:0;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
 /* The switch is 34x19 — under the 24px minimum WCAG 2.2 AA asks of a
    pointer target (2.5.8), and there are 93 of them in the ISO SoA
    alone, one per control row, plus the framework, Settings and Trust
@@ -1394,6 +1394,10 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .modal-box.open{display:block}
 .modal-box h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-4);margin-bottom:10px;color:var(--paper)}
 .modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px;white-space:pre-line}
+.modal-box .m-table{max-height:240px;overflow:auto;margin:0 0 14px;border:1px solid var(--line);border-radius:6px}
+.modal-box .m-table table{width:100%;border-collapse:collapse;font-size:var(--fs-1)}
+.modal-box .m-table caption{text-align:left;padding:6px 8px;color:var(--paper-dim)}
+.modal-box .m-table th,.modal-box .m-table td{padding:5px 8px;border-top:1px solid var(--line);text-align:left;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:6px}
 .modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
@@ -1781,3 +1785,67 @@ tr.asset-retired td { opacity: .85; }
 .cg-txt { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .cg-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
 .cg-fail .cg-dot { background: var(--fail); }
+/* Dashboard: headline, Do next, compact path, role card */
+.dash-headline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.dh-tile { text-align: left; background: var(--surface, rgba(var(--paper-rgb),.03)); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; color: var(--paper); cursor: pointer; display: flex; flex-direction: column; gap: 3px; font: inherit; }
+.dh-tile:hover { background: var(--surface-hover); }
+.dh-tile b { font-size: 28px; line-height: 1.1; font-weight: 700; }
+.dh-tile b small { font-size: 13px; color: var(--paper-dim); font-weight: 500; margin-left: 2px; }
+.dh-tile > span:not(.src) { font-size: 13px; font-weight: 600; }
+.dh-tile .src { font-size: 11.5px; }
+@media (max-width: 900px) { .dash-headline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dn-row { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+.dn-row:first-child { border-top: 0; }
+.dn-dot { width: 8px; height: 8px; border-radius: 50%; }
+.dn-txt { display: flex; flex-direction: column; gap: 1px; font-size: 13px; min-width: 0; }
+.dn-txt b { color: var(--paper); font-weight: 600; }
+.dn-txt .src { font-size: 11.5px; }
+.dn-more summary { cursor: pointer; margin-top: 6px; }
+.dfy-list { margin: 4px 0 0 18px; padding: 0; font-size: 13px; line-height: 1.6; }
+.gs-compact { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.gs-compact-main { flex: 1; min-width: 260px; }
+.gs-compact-main h3 { margin: 0 0 8px; }
+.gs-bar { height: 8px; border-radius: 6px; background: var(--line); overflow: hidden; margin-bottom: 6px; }
+.gs-bar i { display: block; height: 100%; background: var(--gold); }
+.gs-next { font-size: 13.5px; margin-top: 6px; color: var(--paper); }
+.gs-detail { margin-top: 10px; }
+.gs-detail > summary { cursor: pointer; margin-bottom: 10px; }
+.kpi-more { margin: -4px 0 14px; display: inline-block; }
+/* Operations */
+.ap-lines { margin: 10px 0 0 16px; padding: 0; font-size: 12.5px; color: var(--paper-dim); line-height: 1.6; }
+.ap-lines .ap-warn { color: var(--warn); }
+.cx-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.cx-row:first-child { border-top: 0; }
+.cx-n { color: var(--gold-light); white-space: nowrap; }
+.gov-fix { margin-left: 8px; }
+.feed .feed-day { list-style: none; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--paper-faint); margin: 10px 0 2px; border: 0; }
+.feed .feed-more { list-style: none; border: 0; }
+/* Integrations */
+.integ-card { margin-bottom: 14px; }
+.integ-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.integ-head h3 { margin: 0 0 4px; }
+.integ-head p { margin: 0; max-width: 720px; }
+.integ-st { white-space: nowrap; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); }
+.integ-on { color: var(--pass); border-color: var(--pass); }
+.integ-stale { color: var(--warn); border-color: var(--warn); }
+.integ-off { color: var(--paper-dim); }
+.integ-meta { margin: 8px 0 0; font-size: 12px; }
+.integ-setup { margin-top: 10px; }
+.integ-setup > summary { cursor: pointer; color: var(--gold-light); font-size: 12.5px; }
+.integ-steps { font-size: 13px; line-height: 1.6; padding-left: 18px; }
+.integ-steps li { margin: 8px 0; }
+.integ-code { white-space: pre-wrap; font-size: 11px; background: var(--surface-hover); border-radius: 6px; padding: 8px; margin: 6px 0; max-height: 260px; overflow: auto; }
+.integ-env { border-collapse: collapse; margin: 6px 0; font-size: 12px; }
+.integ-env td { padding: 4px 10px 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+
+/* Touch screens: text links and row checkboxes reach the 24px minimum
+   target (WCAG 2.2 2.5.8) without changing the desktop layout. */
+@media (pointer:coarse){
+  .lnk{padding-top:5px;padding-bottom:5px;min-width:24px}
+  .soa-fam-toggle{min-height:32px}
+  .scope-pill{min-height:26px}
+  table input[type=checkbox],.m-check input[type=checkbox]{width:24px;height:24px}
+}
+/* A table wider than the screen scrolls inside its card; the card is
+   given a name and keyboard focus (see markScrollRegions in app.js). */
+[data-scroll-region]:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
