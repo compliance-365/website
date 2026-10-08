@@ -3693,27 +3693,53 @@
      validate}) and a `label`. Returns every row classified, so the
      caller can show a human exactly what would happen before anything
      is written. */
-  function planCsvImport(text, spec) {
+  /* opts (all optional):
+       mapping  — { columnKey: headerIndex } chosen by the person when the
+                  file's headings do not match; overrides the aliases for
+                  that column. -1 means "not in this file".
+       existing — names/titles already in the register, for duplicates.
+     spec.dupKey names the column compared for duplicates. A duplicate is
+     held back (out.duplicates), not skipped as invalid: it is a
+     judgement, and the person can choose to import it anyway. */
+  function importDupKey(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function planCsvImport(text, spec, opts) {
+    opts = opts || {};
     var rows = parseCsv(text).filter(function (r) { return r.some(function (c) { return String(c).trim() !== ''; }); });
-    var out = { label: spec.label, columns: [], unknownColumns: [], ready: [], skipped: [], totalRows: 0 };
+    var out = { label: spec.label, columns: [], unknownColumns: [], ready: [], skipped: [], duplicates: [], totalRows: 0, headers: [], missingRequired: [] };
     if (!rows.length) { out.error = 'The file is empty.'; return out; }
 
+    out.headers = rows[0].map(function (h) { return String(h == null ? '' : h).trim(); });
     var headerRow = rows[0].map(normaliseHeader);
     var byIndex = {};
+    var mapping = opts.mapping || {};
+    var mappedIdx = {};
+    Object.keys(mapping).forEach(function (k) {
+      var i = parseInt(mapping[k], 10);
+      var col = spec.columns.find(function (c) { return c.key === k; });
+      if (col && i >= 0 && i < headerRow.length) { byIndex[i] = col; mappedIdx[i] = true; }
+    });
     headerRow.forEach(function (h, i) {
+      if (mappedIdx[i]) return;
       var col = spec.columns.find(function (c) {
+        if (Object.prototype.hasOwnProperty.call(mapping, c.key)) return false;
         return normaliseHeader(c.key) === h || (c.aliases || []).some(function (a) { return normaliseHeader(a) === h; });
       });
-      if (col) { byIndex[i] = col; out.columns.push(col.key); }
+      if (col) byIndex[i] = col;
       else if (h) out.unknownColumns.push(rows[0][i]);
+    });
+    Object.keys(byIndex).sort(function (a, b) { return a - b; }).forEach(function (i) {
+      if (out.columns.indexOf(byIndex[i].key) === -1) out.columns.push(byIndex[i].key);
     });
 
     var missingRequired = spec.columns.filter(function (c) { return c.required && out.columns.indexOf(c.key) === -1; });
     if (missingRequired.length) {
+      out.missingRequired = missingRequired.map(function (c) { return c.key; });
       out.error = 'The file is missing required column' + (missingRequired.length === 1 ? '' : 's') + ': ' +
         missingRequired.map(function (c) { return c.key; }).join(', ') + '.';
       return out;
     }
+    var seen = {};
+    (opts.existing || []).forEach(function (v) { var k = importDupKey(v); if (k) seen[k] = 'existing'; });
 
     out.totalRows = rows.length - 1;
     for (var r = 1; r < rows.length; r++) {
@@ -3732,9 +3758,35 @@
       });
       /* Row number is the line a human sees in Excel: header is row 1. */
       var lineNo = r + 1;
-      if (problems.length) out.skipped.push({ line: lineNo, reason: problems.join('; '), raw: rec });
-      else out.ready.push({ line: lineNo, rec: rec });
+      if (problems.length) { out.skipped.push({ line: lineNo, reason: problems.join('; '), raw: rec }); continue; }
+      var dk = spec.dupKey ? importDupKey(rec[spec.dupKey]) : '';
+      if (dk && seen[dk]) {
+        out.duplicates.push({ line: lineNo, rec: rec, reason: seen[dk] === 'existing' ? 'already in the register' : 'repeats line ' + seen[dk] + ' of this file' });
+        continue;
+      }
+      if (dk) seen[dk] = lineNo;
+      out.ready.push({ line: lineNo, rec: rec });
     }
+    return out;
+  }
+
+  /* Best guess for each column the file did not name exactly: the file
+     heading that contains the column's name or one of its aliases.
+     Used to pre-select the mapping dropdowns, never applied silently. */
+  function guessImportMapping(headers, spec) {
+    var used = {}, out = {};
+    spec.columns.forEach(function (c) {
+      var names = [c.key].concat(c.aliases || []).map(normaliseHeader).filter(Boolean);
+      var hit = -1;
+      (headers || []).forEach(function (h, i) {
+        if (hit !== -1 || used[i]) return;
+        var nh = normaliseHeader(h);
+        if (!nh) return;
+        if (names.some(function (n) { return nh === n || nh.indexOf(n) !== -1 || (nh.length > 2 && n.indexOf(nh) !== -1); })) hit = i;
+      });
+      if (hit !== -1) used[hit] = true;
+      out[c.key] = hit;
+    });
     return out;
   }
 
@@ -6639,6 +6691,10 @@
     else trend.push(plural(p.actions.overdue, 'action') + ' overdue now, of ' + p.actions.open + ' open.');
     if (p.certification && !p.certification.certified && p.certification.readiness != null) trend.push('Ready for certification: ' + p.certification.readiness + '%.');
     if (x.health && typeof x.health.score === 'number') trend.push('Overall health of the security programme: ' + x.health.score + ' out of 100.');
+    if (x.changes && x.changes.total) {
+      var areas = x.changes.groups.slice().sort(function (a, b) { return b.count - a.count; }).slice(0, 3).map(function (g) { return g.label.toLowerCase(); });
+      trend.push(plural(x.changes.total, 'change') + ' to the security programme this month, mostly ' + areas.join(', ') + '.');
+    }
     return { well: well, decide: decide, trend: trend };
   }
   function chairSummaryHtml(sum, meta) {
@@ -6654,6 +6710,168 @@
       (/^https:\/\//i.test(m.appUrl || '') ? '<p style="margin-top:18px;font-size:14px"><a href="' + e(m.appUrl) + '">Open Checkpoint</a> for the detail.</p>' : '') +
       '<p style="color:#999;font-size:11px;margin-top:24px">Prepared by Checkpoint from the live records.</p></div>';
   }
+  /* ---- Weekly backup (A.8.13, A.5.33, Clause 7.5.3) ----
+     A dated copy of every register, the settings and an index of the
+     evidence, written into the client's own SharePoint so a deleted
+     list, a bad import or an offboarding never loses the record. The
+     scheduled monitor writes one a week; "Back up now" writes one on
+     demand. The same builder is copied into azure/lib/backup.js. */
+  var BACKUP_ROOT = 'Checkpoint backups';
+  var BACKUP_SECRET_RE = /secret|token|password|api.?key|webhook|credential/i;
+  function backupStrip(v) {
+    if (Array.isArray(v)) return v.map(backupStrip);
+    if (v && typeof v === 'object') {
+      var o = {};
+      Object.keys(v).forEach(function (k) { if (k.charAt(0) !== '_' && k.charAt(0) !== '@') o[k] = backupStrip(v[k]); });
+      return o;
+    }
+    return v;
+  }
+  function backupSafeSettings(settings) {
+    var out = {}, s = settings || {};
+    Object.keys(s).forEach(function (k) { if (!BACKUP_SECRET_RE.test(k)) out[k] = s[k]; });
+    return out;
+  }
+  function backupFileName(today, kind) {
+    return 'checkpoint-backup-' + String(today).slice(0, 10) + (kind === 'manual' ? '-manual' : '') + '.zip';
+  }
+  /* d = { created, appVersion, client, source: 'scheduled'|'manual',
+     registers: { name: [records] }, settings, evidence: [{ framework,
+     ref, title, status, url, verified }], csvs: [{ name, content }] } */
+  function buildBackupFiles(d) {
+    d = d || {};
+    var regs = d.registers || {}, counts = {};
+    Object.keys(regs).forEach(function (k) { counts[k] = (regs[k] || []).length; });
+    var json = {
+      format: 'checkpoint-backup', formatVersion: 1, created: d.created || '', source: d.source || 'manual',
+      appVersion: d.appVersion || '', client: d.client || '', counts: counts,
+      registers: backupStrip(regs), settings: backupSafeSettings(d.settings)
+    };
+    var ev = (d.evidence || []).filter(function (e) { return e && e.ref; });
+    var withUrl = ev.filter(function (e) { return e.url; }).length;
+    var readme = [
+      'Checkpoint backup — ' + (d.client || 'your organisation'),
+      'Created ' + (d.created || '') + (d.source === 'scheduled' ? ' by the weekly scheduled backup' : ' by "Back up now"') + (d.appVersion ? ', Checkpoint ' + d.appVersion : '') + '.',
+      '',
+      'What is in it:',
+      '  checkpoint-backup.json  every register record and the settings, in full (secrets such as webhook URLs and API keys are left out).',
+      '  evidence-index.csv      each control and clause with its evidence link (' + withUrl + ' of ' + ev.length + ' have one). The files themselves stay in SharePoint.',
+      (d.csvs || []).length ? '  *.csv                   each register as a spreadsheet, the same as Export all.' : '',
+      '',
+      'Restoring:',
+      '  Risks, actions, vendors and assets can be re-imported with Import CSV on each register.',
+      '  For a full restore of every register from checkpoint-backup.json, contact Compliance365 support.',
+      '',
+      'Record counts: ' + Object.keys(counts).map(function (k) { return k + ' ' + counts[k]; }).join(', ')
+    ].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\r\n');
+    var files = [
+      { name: 'README.txt', content: readme },
+      { name: 'checkpoint-backup.json', content: JSON.stringify(json, null, 1) },
+      { name: 'evidence-index.csv', content: toCsv([['Framework', 'Control or clause', 'Title', 'Status', 'Evidence link', 'Last verified']].concat(ev.map(function (e) { return [e.framework || '', e.ref, e.title || '', e.status || '', e.url || '', e.verified || '']; }))) }
+    ];
+    return files.concat(d.csvs || []);
+  }
+  /* Which backup files to delete: the dated backups beyond the newest
+     `keep` (13 = a quarter of weekly copies). keep 0 keeps everything.
+     Files that are not Checkpoint backups are never touched. */
+  function backupsToPrune(names, keep) {
+    var k = keep == null ? 13 : Number(keep);
+    if (!(k > 0)) return [];
+    var dated = (names || []).filter(function (n) { return /^checkpoint-backup-\d{4}-\d{2}-\d{2}(-manual)?\.zip$/.test(n); })
+      .sort(function (a, b) { return b.localeCompare(a); });
+    return dated.slice(k);
+  }
+  function backupDue(settings, today) {
+    var s = settings || {};
+    if (s.backupEnabled === 'false') return false;
+    var last = String(s.backupLastRun || '').slice(0, 10);
+    if (!last) return true;
+    return (Date.parse(String(today).slice(0, 10)) - Date.parse(last)) / 86400000 >= 7;
+  }
+
+  /* ---- ISMS change log (Clause 9.3.2 b, 6.3) ----
+     What changed in the management system over a period, in the words
+     top management reads: scope, policies, risks, suppliers, people,
+     incidents, audits. Built from the audit log alone, so it is only
+     ever what was actually recorded. Housekeeping (exports, reminders,
+     reports, settings noise) is left out on purpose. */
+  var ISMS_CHANGE_AREAS = [
+    { key: 'scope', label: 'Scope and context', re: /^(Scope answer changed|Organisation profile updated|Applicability toggled|Control applicability changed|Exclusion justification changed)$/ },
+    { key: 'policies', label: 'Policies and documents', re: /^(Policy document approved|Own document uploaded|Document approval request completed)$/, docs: true },
+    { key: 'risks', label: 'Risks and opportunities', re: /^(Risk added manually|Business risk approved from findings|Risk closed|Risk closed — resolution approved|Residual risk accepted|Risk reopened|Opportunity added|Risk deleted)$/ },
+    { key: 'suppliers', label: 'Suppliers', re: /^(Vendor added|Supplier certificate renewed|Vendor reviewed)$/ },
+    { key: 'people', label: 'People and ownership', re: /^(Leaver hand-over|Ownership handed over|Control owner changed|Clause owner changed)$/ },
+    { key: 'assets', label: 'Assets and AI systems', re: /^(Asset added|Asset retired|Asset register synced|AI system added)$/ },
+    { key: 'incidents', label: 'Incidents', re: /^(Incident logged|Incident closed)$/ },
+    { key: 'assurance', label: 'Audits, reviews and certification', re: /^(Internal audit completed|Audit finding raised|Certification body finding raised|Certification audit recorded|Certificate recorded|Management review recorded|Security review held)$/ },
+    { key: 'objectives', label: 'Objectives', re: /^(Objective added|Objective status measured)$/ }
+  ];
+  function ismsChangeLog(auditLog, since, until) {
+    var from = String(since || '').slice(0, 10), to = String(until || '9999-12-31').slice(0, 10);
+    var groups = ISMS_CHANGE_AREAS.map(function (a) { return { key: a.key, label: a.label, count: 0, items: [] }; });
+    var total = 0;
+    (auditLog || []).forEach(function (e) {
+      if (!e) return;
+      var day = String(e.entryDateTime || '').slice(0, 10);
+      if (!day || day < from || day > to) return;
+      var act = String(e.action || '');
+      var area = -1;
+      ISMS_CHANGE_AREAS.forEach(function (a, i) { if (area === -1 && a.re.test(act)) area = i; });
+      /* A document marked Superseded or Approved by hand is a policy change too. */
+      if (area === -1 && act === 'Document details changed' && /\| (Approved|Superseded) \|/.test(' ' + (e.after || '') + ' ')) area = 1;
+      if (area === -1) return;
+      var g = groups[area];
+      g.count++; total++;
+      var after = String(e.after || '').replace(/\s+/g, ' ').trim();
+      if (after.length > 90) after = after.slice(0, 87) + '…';
+      g.items.push({ date: day, action: act, target: String(e.targetId || ''), text: act + ': ' + String(e.targetId || '').replace(/\.html$/i, '') + (after && after !== e.targetId ? ' (' + after + ')' : '') });
+    });
+    groups.forEach(function (g) { g.items.sort(function (a, b) { return b.date.localeCompare(a.date); }); });
+    return { since: from, until: to === '9999-12-31' ? '' : to, total: total, groups: groups.filter(function (g) { return g.count; }) };
+  }
+  /* One line per area, for the management review "changes" input and
+     the chair's summary. */
+  function ismsChangeLines(log, perArea) {
+    return ((log && log.groups) || []).map(function (g) {
+      var names = [];
+      g.items.forEach(function (it) { var n = it.target.replace(/\.html$/i, ''); if (n && names.indexOf(n) === -1) names.push(n); });
+      var k = perArea || 3;
+      return g.label + ': ' + g.count + ' change' + (g.count === 1 ? '' : 's') + (names.length ? ' (' + names.slice(0, k).join(', ') + (names.length > k ? ' and ' + (names.length - k) + ' more' : '') + ')' : '');
+    });
+  }
+
+  /* ---- Policy acknowledgement nudges (A.5.1, A.6.3, Clause 7.3/7.4) ----
+     An approved policy whose current version has never been sent for
+     acknowledgement. reason = 'new' (never sent) or 'changed' (an older
+     version was sent; staff acknowledged something that is no longer
+     the policy). docs = approved controlled policies only. */
+  function policiesNeedingAcknowledgement(docs, attestations) {
+    var rows = attestations || [];
+    return (docs || []).filter(function (d) { return d && d.name; }).map(function (d) {
+      var mine = rows.filter(function (r) { return r.docName === d.name; });
+      var current = mine.filter(function (r) { return String(r.docVersion || '') === String(d.version || ''); });
+      if (current.length) return null;
+      var older = mine.map(function (r) { return String(r.docVersion || ''); }).filter(Boolean).sort().pop() || '';
+      return { id: d.id, name: d.name, version: d.version || '', url: d.url || '', reason: mine.length ? 'changed' : 'new', previousVersion: older, approvalDate: d.approvalDate || '' };
+    }).filter(Boolean).sort(function (a, b) { return String(b.approvalDate).localeCompare(String(a.approvalDate)); });
+  }
+  /* Who to chase this week: per campaign, the people still outstanding
+     after `afterDays` (7) since assignment, when the campaign was not
+     already chased in the last `everyDays` (7). lastChased = { campaignId: 'YYYY-MM-DD' }.
+     A campaign that reached 100% drops out on its own. */
+  function attestationsToChase(rows, today, lastChased, afterDays, everyDays) {
+    var after = afterDays == null ? 7 : afterDays, every = everyDays == null ? 7 : everyDays;
+    var chased = lastChased || {};
+    return attestationCampaigns(rows || []).filter(function (c) {
+      if (!c.outstanding || !c.launched) return false;
+      if (c.launched > addDaysIso(today, -after)) return false;
+      var last = chased[c.id];
+      return !last || last <= addDaysIso(today, -every);
+    }).map(function (c) {
+      return { campaign: c.id, docName: c.docName, docVersion: c.docVersion, docUrl: c.docUrl, pct: c.pct, outstanding: c.outstandingRows.map(function (r) { return { id: r.id, upn: r.upn, userName: r.userName }; }) };
+    });
+  }
+
   /* The dashboard's one "Do next" list: at most five things, ranked
      across every source that used to have its own list (the next path
      step, lapsed clause obligations, approvals waiting for you, risks
@@ -6668,6 +6886,8 @@
     (d.gaps || []).forEach(function (g) { add(g.severity === 'fail' ? 90 : 52, 'Requirement', (g.clause ? 'Clause ' + g.clause + ' ' : '') + g.title, g.issue, 'App.go', g.view, g.fix); });
     var above = d.aboveAppetite || [];
     if (above.length) add(80, 'Risk', above.length + ' risk' + (above.length === 1 ? ' is' : 's are') + ' above your risk appetite', above.slice(0, 3).join(', ') + (above.length > 3 ? ' and ' + (above.length - 3) + ' more' : '') + ': treat or accept ' + (above.length === 1 ? 'it' : 'them'), 'App.go', 'risks', 'Review the risks');
+    var ack = d.ackWaiting || [];
+    if (ack.length) add(66, 'Policy', ack.length + ' approved polic' + (ack.length === 1 ? 'y has' : 'ies have') + ' not been sent to staff', ack.slice(0, 2).map(function (n) { return String(n).replace(/\.html$/i, ''); }).join(', ') + (ack.length > 2 ? ' and ' + (ack.length - 2) + ' more' : '') + ': staff must acknowledge the current version', 'App.go', 'attestations', 'Send for acknowledgement');
     if (d.nextStep) add(70, 'Next step', d.nextStep.label, d.nextStep.why, d.nextStep.action, d.nextStep.id, d.nextStep.button || 'Start');
     (d.actions || []).forEach(function (r) { add(r.tier >= 2 ? 76 : r.tier === 1 ? 62 : 48, 'Action', r.title, r.reason, 'App.openAction', r.id, 'Open'); });
     var seen = {};
@@ -10817,6 +11037,10 @@
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,
     SECURITY_REVIEW_AGENDA: SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY: SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF: SECURITY_REVIEW_KICKOFF,
+    importDupKey: importDupKey, guessImportMapping: guessImportMapping,
+    ISMS_CHANGE_AREAS: ISMS_CHANGE_AREAS, ismsChangeLog: ismsChangeLog, ismsChangeLines: ismsChangeLines,
+    policiesNeedingAcknowledgement: policiesNeedingAcknowledgement, attestationsToChase: attestationsToChase,
+    BACKUP_ROOT: BACKUP_ROOT, backupStrip: backupStrip, backupSafeSettings: backupSafeSettings, backupFileName: backupFileName, buildBackupFiles: buildBackupFiles, backupsToPrune: backupsToPrune, backupDue: backupDue,
     srDate: srDate, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,

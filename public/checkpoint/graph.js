@@ -1610,6 +1610,25 @@ window.Graph = (function () {
     return j;
   }
 
+  /* Any size: a Graph upload session, sent in 3.75 MB chunks (a
+     multiple of 320 KiB, as Graph requires). Used for backups, which can
+     outgrow the 4 MB single PUT. The upload URL is pre-authorised, so
+     the chunks carry no bearer token. */
+  async function uploadFileToPath(driveId, segments, filename, blob) {
+    var path = segments.concat([filename]).map(encodeURIComponent).join('/');
+    var session = await g('/drives/' + driveId + '/root:/' + path + ':/createUploadSession', {
+      method: 'POST', body: { item: { '@microsoft.graph.conflictBehavior': 'replace' } }, scopes: CONFIG.scopesProvision
+    });
+    var CHUNK = 320 * 1024 * 12, size = blob.size, last = null;
+    for (var start = 0; start < size; start += CHUNK) {
+      var end = Math.min(start + CHUNK, size);
+      var res = await fetch(session.uploadUrl, { method: 'PUT', headers: { 'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + size }, body: blob.slice(start, end) });
+      last = await res.json().catch(function () { return {}; });
+      if (!res.ok && res.status !== 202) throw new Error((last.error && last.error.message) || ('Upload failed: ' + res.status));
+    }
+    return last || {};
+  }
+
   /* ============================================================
      Evidence folders (Documents/Evidence/<framework>/<control>) —
      see lib.js's planEvidenceFolders(). A tenant can have several
@@ -1763,6 +1782,8 @@ window.Graph = (function () {
          by the evidence-folder sync, and its framework sub-folders would
          otherwise list here as if they were files. */
       if (f.name === window.CheckpointLib.EVIDENCE_ROOT) continue;
+      /* Checkpoint backups/ holds dated zips, not controlled documents. */
+      if (f.name === window.CheckpointLib.BACKUP_ROOT) continue;
       var base = '/drives/' + driveId + '/items/' + f.id + '/children?' + select;
       var files;
       try {
@@ -2058,7 +2079,7 @@ window.Graph = (function () {
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
-    uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, listDriveFiles: listDriveFiles,
+    uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, uploadFileToPath: uploadFileToPath, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,

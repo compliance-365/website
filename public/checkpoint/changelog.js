@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.136.0',
+    date: '2026-10-08',
+    entries: [
+      'Weekly backup: the scheduled monitor saves a dated zip of every register, the settings and an index of the evidence into your own SharePoint (Documents › Checkpoint backups), and keeps the newest 13. Secrets such as webhook URLs and API keys are left out. Back up now (Settings › Data) saves one straight away and downloads a copy. The README in each zip says how to restore.',
+      'ISMS change log: what changed in the management system since the last management review, in plain words. It covers scope, policies, risks, suppliers, people, assets, incidents, audits and objectives, and leaves housekeeping out. Open it from Management review or Reports. It also fills the "changes" input when the review inputs are drafted (Clause 9.3.2 b), and the month in brief tells the chair how much changed.',
+      'Import CSV for vendors and assets as well as risks and actions. If the file\u2019s headings don\u2019t match, you pick which column is which, with a best guess filled in. Before anything is written you see a preview, and rows that are already in the register (or repeated in the file) are held back as possible duplicates unless you tick to include them.',
+      'Policy acknowledgement nudges: when a policy is approved, Checkpoint offers to send it to everyone with a one-line "what changed" in the email. Policy attestation lists approved policies whose current version has not been sent, each one click from going out, and so does Do next on the dashboard. The scheduled monitor then emails anyone outstanding once a week, listing every policy they still owe, until everyone has acknowledged. A switch turns the weekly reminders off.',
+      'Accessibility and phone use: wide tables that scroll sideways can now be reached and scrolled with the keyboard, and screen readers announce what each one is. On touch screens, links, row checkboxes and section toggles are at least 24 pixels. Every main view was checked at phone width for sideways scrolling and for controls without a name.'
+    ]
+  },
+  {
     version: '1.135.0',
     date: '2026-10-08',
     entries: [

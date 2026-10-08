@@ -32,6 +32,8 @@ function weeklyOnly(settings, owner, email) {
   return notifyPref(prefs, owner, email, (settings.ownerDigestEnabled || '') === 'true') === 'weekly';
 }
 const SR = require('../lib/securityReview');
+const BK = require('../lib/backup');
+const ACK = require('../lib/acknowledgements');
 
 /* Where the owner-driven evidence page lives — Compliance365's own
    public site (GitHub Pages, per RELEASE.md), the same domain the
@@ -1315,6 +1317,7 @@ async function readDocumentRegister(g, gAll, siteId, documentsListId) {
   const out = [];
   for (const f of folders) {
     if (!f.folder) continue;
+    if (f.name === BK.BACKUP_ROOT) continue; /* backups are not controlled documents */
     let files;
     try {
       files = await gAll(`/drives/${driveId}/items/${f.id}/children?$select=id,name,webUrl,listItem&$expand=listItem($expand=fields)&$top=200`);
@@ -2170,6 +2173,106 @@ async function sendOwnerReminders(g, gAll, context, siteId, lists, optional, set
   return sent;
 }
 
+/* Weekly backup — every Checkpoint list's items, the settings (secrets
+   left out) and an evidence index, zipped into the client's own
+   Documents library under "Checkpoint backups", once every 7 days
+   (settings.backupEnabled 'false' turns it off). Older dated backups
+   beyond settings.backupKeep (default 13) are deleted. backupLastRun is
+   stamped only after the upload succeeds, so a failed week retries
+   tomorrow. Returns the file name, or '' when nothing was due. */
+async function runWeeklyBackup(g, gAll, context, siteId, lists, optional, settings, today) {
+  if (!BK.backupDue(settings, today)) return '';
+  if (!optional.Documents) { context.log('Checkpoint backup skipped: the Documents library was not found.'); return ''; }
+  const prefix = process.env.LIST_PREFIX || 'Checkpoint';
+  const all = await g(`/sites/${siteId}/lists?$select=id,displayName,list&$top=200`);
+  const registers = {};
+  for (const l of (all.value || [])) {
+    if (!l.displayName || l.displayName.indexOf(prefix + ' ') !== 0) continue;
+    if (l.list && l.list.template === 'documentLibrary') continue;
+    const key = l.displayName.slice(prefix.length + 1);
+    /* Settings goes in once, through backupSafeSettings: the raw list
+       holds webhook URLs and other secrets. */
+    if (key === 'Settings') continue;
+    try { registers[key] = (await gAll(`/sites/${siteId}/lists/${l.id}/items?$expand=fields&$top=999`)).map(i => i.fields || {}); }
+    catch (e) { context.log.error('Checkpoint backup: could not read ' + l.displayName + ': ' + e.message); registers[key] = []; }
+  }
+  const evidence = [];
+  ['Controls', 'Clauses'].forEach(k => (registers[k] || []).forEach(f => {
+    if (k === 'Controls' && f.Applicable === false) return;
+    evidence.push({ framework: f.Framework || 'iso27001', ref: f.Code || '', title: f.Title || '', status: f.Status || '', url: f.EvidenceUrl || '', verified: f.LastVerified || '' });
+  }));
+  let docs = [];
+  try { docs = await readDocumentRegister(g, gAll, siteId, optional.Documents); } catch (e) { docs = []; }
+  registers.DocumentRegister = docs;
+  const files = BK.buildBackupFiles({ created: today, source: 'scheduled', client: settings.clientDisplayName || '', registers, settings, evidence });
+  const bytes = Buffer.from(BK.buildZip(files));
+  const name = BK.backupFileName(today, 'scheduled');
+  const drive = await g(`/sites/${siteId}/lists/${optional.Documents}?$expand=drive`);
+  const driveId = drive.drive && drive.drive.id;
+  if (!driveId) return '';
+  const path = encodeURIComponent(BK.BACKUP_ROOT) + '/' + encodeURIComponent(name);
+  const session = await g(`/drives/${driveId}/root:/${path}:/createUploadSession`, { method: 'POST', body: { item: { '@microsoft.graph.conflictBehavior': 'replace' } } });
+  const CHUNK = 320 * 1024 * 12;
+  for (let start = 0; start < bytes.length; start += CHUNK) {
+    const end = Math.min(start + CHUNK, bytes.length);
+    const res = await fetch(session.uploadUrl, { method: 'PUT', headers: { 'Content-Length': String(end - start), 'Content-Range': `bytes ${start}-${end - 1}/${bytes.length}` }, body: bytes.subarray(start, end) });
+    if (!res.ok && res.status !== 202) throw new Error('Backup upload failed: ' + res.status + ' ' + await res.text());
+  }
+  await setSetting(g, siteId, lists.Settings, 'backupLastRun', today);
+  await setSetting(g, siteId, lists.Settings, 'backupLastFile', name);
+  try {
+    const kids = await gAll(`/drives/${driveId}/root:/${encodeURIComponent(BK.BACKUP_ROOT)}:/children?$select=id,name&$top=200`);
+    const prune = BK.backupsToPrune(kids.map(k => k.name), settings.backupKeep);
+    for (const n of prune) {
+      const item = kids.find(k => k.name === n);
+      if (item) await g(`/drives/${driveId}/items/${item.id}`, { method: 'DELETE' });
+    }
+  } catch (e) { context.log.error('Checkpoint backup written, but old backups could not be tidied: ' + e.message); }
+  return name;
+}
+
+/* Policy acknowledgement chase — anyone who has not acknowledged a
+   policy a week after it was sent gets one email a week listing every
+   policy they still owe, until the campaign reaches 100%. Needs
+   NOTIFY_FROM. settings.attestChaseEnabled 'false' turns it off;
+   settings.attestChaseLog records the date each campaign was last
+   chased so the browser can show it. People no longer enabled in the
+   directory are skipped. Returns the number of people emailed. */
+async function chaseAcknowledgements(g, gAll, context, siteId, lists, optional, settings, today) {
+  if (settings.attestChaseEnabled === 'false' || !optional.Attestations) return 0;
+  const from = process.env.NOTIFY_FROM;
+  if (!from) return 0;
+  const rows = (await gAll(`/sites/${siteId}/lists/${optional.Attestations}/items?$expand=fields&$top=999`)).map(i => {
+    const f = i.fields || {};
+    return { id: f.RefId || '', campaign: f.Campaign || '', docName: f.DocName || '', docVersion: f.DocVersion || '', docUrl: f.DocUrl || '', upn: f.UserUpn || '', userName: f.UserName || '', assigned: f.AssignedDate || '', acknowledged: f.AcknowledgedDate || '', status: f.Status || 'Assigned' };
+  });
+  const log = parseJsonSetting(settings.attestChaseLog, {});
+  const chase = ACK.attestationsToChase(rows, today, log, 7, 7);
+  if (!chase.length) return 0;
+  let enabled = null;
+  try {
+    const users = await gAll('/users?$select=userPrincipalName,accountEnabled&$top=999');
+    enabled = {};
+    users.forEach(u => { if (u.accountEnabled !== false && u.userPrincipalName) enabled[u.userPrincipalName.toLowerCase()] = true; });
+  } catch (e) { enabled = null; }
+  const label = settings.clientDisplayName || 'your organisation';
+  let sent = 0;
+  for (const person of ACK.ackChaseByPerson(chase)) {
+    if (enabled && !enabled[String(person.upn).toLowerCase()]) continue;
+    try {
+      await g(`/users/${encodeURIComponent(from)}/sendMail`, { method: 'POST', body: { message: {
+        subject: 'Reminder: please acknowledge ' + (person.policies.length === 1 ? person.policies[0].name : person.policies.length + ' policies'),
+        body: { contentType: 'HTML', content: ACK.ackChaseHtml(person, label, 'https://www.compliance365.com.au/checkpoint/') },
+        toRecipients: [{ emailAddress: { address: person.upn } }] }, saveToSentItems: false } });
+      sent++;
+    } catch (e) { context.log.error('Checkpoint acknowledgement reminder to ' + person.upn + ' failed: ' + (e && e.message ? e.message : e)); }
+  }
+  chase.forEach(c => { log[c.campaign] = today; });
+  try { await setSetting(g, siteId, lists.Settings, 'attestChaseLog', JSON.stringify(log)); }
+  catch (e) { context.log.error('Checkpoint acknowledgement reminders sent but attestChaseLog could not be recorded: ' + e.message); }
+  return sent;
+}
+
 /* Monthly security review — the unattended half of the review card on
    Checkpoint's Management review page. Reads securityReviewSetup and
    securityReviews from Settings, decides with the same
@@ -2458,6 +2561,20 @@ module.exports = async function (context, myTimer) {
     if (ownersReminded) context.log(`Checkpoint owner reminders sent to ${ownersReminded} owner(s).`);
 
     try {
+      const chased = await chaseAcknowledgements(g, gAll, context, siteId, lists, optional, settings, today);
+      if (chased) context.log(`Checkpoint acknowledgement reminders sent to ${chased} people.`);
+    } catch (e) {
+      context.log.error('Checkpoint acknowledgement chase failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));
+    }
+
+    try {
+      const backup = await runWeeklyBackup(g, gAll, context, siteId, lists, optional, settings, today);
+      if (backup) context.log('Checkpoint weekly backup written: ' + backup + '.');
+    } catch (e) {
+      context.log.error('Checkpoint weekly backup failed (posture scan was still recorded; it retries tomorrow): ' + (e && e.message ? e.message : e));
+    }
+
+    try {
       const failingTop = Object.keys(results || {}).filter(k => results[k] === 'fail').map(k => CHECK_LABELS[k] || k).slice(0, 3);
       const sr = await runSecurityReview(g, gAll, context, siteId, lists, optional, settings, today, score, { failingTop });
       if (sr.length) context.log('Checkpoint security review: ' + sr.join(', ') + '.');
@@ -2487,5 +2604,5 @@ module.exports.__test = {
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,
   SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL, isDowngrade, gCapped, PRIV_ROLE_ACTIVITY_EXCLUDE,
-  buildVendorLink, VENDOR_QUESTIONNAIRE_PAGE_URL
+  buildVendorLink, VENDOR_QUESTIONNAIRE_PAGE_URL, runWeeklyBackup, chaseAcknowledgements
 };

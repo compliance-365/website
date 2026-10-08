@@ -2053,6 +2053,7 @@ window.DemoStore = (function () {
     setSetting: async function (key, value) { S.settings[key] = value; persist(); },
     listDocuments: async function () { return (S.documents || []).slice(); },
     uploadDocument: async function () { throw new Error("Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents."); },
+    uploadBackup: async function () { throw new Error("Demo mode has no SharePoint to back up to — the backup was downloaded instead."); },
     syncEvidenceFolders: async function () { return null; },
     addEvidenceFiles: async function () { throw new Error("Demo mode has no real tenant to store files in — sign in to a real tenant to add evidence."); },
     /* Editing the register itself DOES work in demo mode — unlike
@@ -3762,6 +3763,12 @@ window.SpStore = (function () {
        never loses the upload: the returned object carries `metaError`
        instead, and the caller decides how loudly to say "saved, but
        its details didn't stick". */
+    /* A backup zip into Documents/Checkpoint backups/. */
+    uploadBackup: async function (filename, blob) {
+      if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
+      var item = await Graph.uploadFileToPath(docDriveId, [window.CheckpointLib.BACKUP_ROOT], filename, blob);
+      return { name: item.name || filename, url: item.webUrl || '' };
+    },
     uploadDocument: async function (file, category, meta, extraFields) {
       if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
       var item = await Graph.uploadSmallFile(docDriveId, category || 'Other', file.name, file);

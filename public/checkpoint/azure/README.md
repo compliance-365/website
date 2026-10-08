@@ -448,6 +448,37 @@ only when something changed, and never fails the run. Meeting times are
 the client's local time: the browser stores its time zone with the setup,
 so the invite is right across daylight saving.
 
+### Weekly backup
+
+Once every seven days this Function writes
+`checkpoint-backup-YYYY-MM-DD.zip` into a `Checkpoint backups` folder in
+the site's Documents library. The zip holds every `Checkpoint …` list's
+items and the Settings (keys that look like secrets, such as webhook URLs
+and API keys, are left out) as `checkpoint-backup.json`, an
+`evidence-index.csv` of each control and clause with its evidence link,
+and a README saying how to restore. The evidence files themselves are
+already in SharePoint and are not copied. It keeps the newest 13 dated
+backups (`backupKeep` in Settings; `0` keeps everything) and deletes
+older ones from that folder only. `backupEnabled` = `false` turns it off.
+It needs no new permission: `Sites.Selected` write access on the one site
+covers its document library. `backupLastRun` is stamped only after the
+upload succeeds, so a failed week retries the next night. The folder is
+skipped by the document register, so backups never show as documents.
+"Back up now" in Checkpoint (Settings → Data) writes the same zip on
+demand, plus each register as a spreadsheet.
+
+### Policy acknowledgement chase
+
+When a policy has been sent for acknowledgement and people have not
+acknowledged it after a week, this Function emails each of them once a
+week, one email listing every policy they still owe, until the campaign
+reaches 100%. People no longer enabled in the directory are skipped. It
+reads the Attestations list, uses `User.Read.All` (already granted) and
+needs `NOTIFY_FROM`. The date each campaign was last chased goes into
+`attestChaseLog` in Settings, which the Policy attestation page shows.
+`attestChaseEnabled` = `false` turns it off. It uses the same campaign
+logic as the browser (`lib/acknowledgements.js`, checked by a test).
+
 ### Optional: email notification
 
 Off by default. To have new findings emailed as they're raised — both
