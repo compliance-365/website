@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.130.0',
+    date: '2026-10-08',
+    entries: [
+      'A leaner monthly security review. The meeting now runs to 30 minutes and covers what matters: actions, risks, incidents and security posture, then decisions. An item with nothing new is not discussed: it becomes one line under "Nothing to report" (for example "No incidents since 8 Sep 2026"). Certification progress appears only until you are certified. Facts are cut to the top three (oldest overdue actions, top failing checks). Clause references are no longer on the agenda; one footer line on the agenda and minutes says which clauses the meeting evidences. You can set the meeting length (30, 45 or 60 minutes) in the review settings. Quarterly meetings run to 45 minutes and management review meetings to 60.',
+      'At a glance: the agenda email, the review panel and the agenda document now start with a one-line red, amber or green status for actions, risks, incidents, posture and certification, so attendees can read it in a minute before the meeting.',
+      'Follow-ups between meetings: a week after a meeting, each owner of a decision that is still Open gets one short email listing their actions and due dates. It is sent once per meeting, by the scheduled function or when the app is opened, and recorded in the audit log.'
+    ]
+  },
+  {
     version: '1.129.0',
     date: '2026-10-08',
     entries: [

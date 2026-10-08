@@ -57,20 +57,21 @@ describe('pack and agenda', () => {
     assert.deepEqual(pack.people.certsExpiring, ['Azure']);
     assert.equal(pack.certification.docsAwaiting, 1);
   });
-  test('the agenda is timed, led by named people, and answered from the pack', () => {
+  test('the agenda is 30 minutes on what matters, led by named people, answered from the pack', () => {
     const a = Lib.securityReviewAgenda(setup, 2, pack);
-    assert.equal(a.minutes, 60);
-    assert.deepEqual(a.items.map((i) => i.start), ['0:00', '0:05', '0:15', '0:25', '0:35', '0:45', '0:50', '0:55']);
+    assert.equal(a.minutes, 30);
+    assert.deepEqual(a.items.map((i) => i.title), ['Actions', 'Risks', 'Incidents', 'Security posture', 'Certification progress', 'People and suppliers', 'Decisions and any other business']);
     assert.equal(a.items[0].lead, 'Cem');
-    assert.match(a.items[0].facts.join(' '), /1 of 2 actions from last meeting done[\s\S]*Overdue: ACT-1 Enforce MFA \(Cem\)/);
-    assert.match(a.items[1].facts[0], /Posture score 48\/100 \(\+7 since 8 Sep 2026\)/);
-    assert.match(a.items[2].facts.join(' '), /1 incident logged[\s\S]*INC-1 Lost laptop \(Medium\)/);
+    assert.match(a.items[0].facts.join(' | '), /Decisions from last meeting: 1 of 2 done \| 1 action overdue \| ACT-1 Enforce MFA \(Cem\)/);
+    assert.match(a.items[2].facts.join(' '), /1 incident since 8 Sep 2026, 1 still open[\s\S]*INC-1 Lost laptop \(Medium\)/);
+    assert.match(a.items[3].facts[0], /Posture score 48\/100 \(\+7 since 8 Sep 2026\)/);
+    assert.ok(a.items.every((i) => !('clause' in i) || typeof i.clause === 'string'), 'clauses kept as data only');
   });
-  test('kick-off is 90 minutes, quarterly 75, the management review meeting adds Clause 9.3', () => {
-    assert.equal(Lib.securityReviewAgenda(setup, 1, pack).minutes, 90);
-    assert.equal(Lib.securityReviewAgenda(setup, 3, pack).minutes, 75);
+  test('kick-off about 50 minutes, quarterly 45, the management review meeting 60 with its sign-off', () => {
+    assert.ok(Math.abs(Lib.securityReviewAgenda(setup, 1, pack).minutes - 50) <= 3);
+    assert.equal(Lib.securityReviewAgenda(setup, 3, pack).minutes, 45);
     const y = Lib.securityReviewAgenda(setup, 12, pack);
-    assert.equal(y.minutes, 90);
+    assert.equal(y.minutes, 60);
     assert.ok(y.items.some((i) => i.key === 'mr'));
     assert.equal(y.items.at(-1).key, 'decisions');
   });
@@ -152,6 +153,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.click('#secReviewCard button[data-action="App.openSecurityReview"]');
     await page.waitForSelector('#drawer .sr-item');
     assert.match(await page.locator('#drawer').innerText(), /Access review results/, 'meeting 3 carries the quarterly items');
+    assert.match(await page.locator('#drawer').innerText(), /At a glance[\s\S]*Actions[\s\S]*(Watch|Needs attention|On track)/i);
     await page.click('#drawer button[data-action="App.prepareSecurityReview"]');
     await page.waitForSelector('#drawer button[data-action="App.sendSecurityReview"]');
     await page.click('#drawer button[data-action="App.sendSecurityReview"]');
@@ -161,11 +163,11 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
     await page.waitForSelector('#drawer #srDec-actions');
     await page.fill('#drawer #srNote-posture', 'Score up after MFA rollout.');
-    await page.fill('#drawer #srDec-risks', 'Enforce MFA for contractors - Sam Okafor - 2026-11-30');
+    await page.fill('#drawer #srDec-actions', 'Enforce MFA for contractors - Sam Okafor - 2026-11-30');
     await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForTimeout(500);
     const drawer = await page.locator('#drawer').innerText();
-    assert.match(drawer, /Security posture[\s\S]*Score up after MFA rollout[\s\S]*Risks[\s\S]*Enforce MFA for contractors[\s\S]*Sam Okafor/i);
+    assert.match(drawer, /Actions[\s\S]*Enforce MFA for contractors[\s\S]*Sam Okafor[\s\S]*Security posture[\s\S]*Score up after MFA rollout/i);
     assert.ok(await page.evaluate(() => window.App && document.body.innerText !== ''));
     assert.match(await page.locator('#secReviewCard').innerText(), /Meeting 4/, 'the next meeting comes up');
     await page.evaluate(() => window.App.closeDrawer());

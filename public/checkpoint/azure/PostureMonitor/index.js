@@ -2141,7 +2141,7 @@ async function sendOwnerReminders(g, gAll, context, siteId, lists, optional, set
      not recorded.
    Writes securityReviews back only when something changed. Never throws. */
 function parseJsonSetting(v, d) { try { const o = JSON.parse(v || ''); return o == null ? d : o; } catch (e) { return d; } }
-async function buildScheduledReviewPack(g, gAll, context, siteId, optional, today, since, score, prevScore) {
+async function buildScheduledReviewPack(g, gAll, context, siteId, optional, today, since, score, prevScore, extra) {
   const read = async (id) => {
     if (!id) return [];
     try { return (await gAll(`/sites/${siteId}/lists/${id}/items?$expand=fields&$top=999`)).map(i => i.fields || {}); }
@@ -2164,17 +2164,17 @@ async function buildScheduledReviewPack(g, gAll, context, siteId, optional, toda
   const short = a => ({ id: a.id, title: a.title, owner: a.owner, due: a.due, status: a.status });
   return {
     today, since,
-    posture: { score: typeof score === 'number' ? score : null, prev: typeof prevScore === 'number' ? prevScore : null, failing: null },
+    posture: { score: typeof score === 'number' ? score : null, prev: typeof prevScore === 'number' ? prevScore : null, failing: null, failingTop: ((extra && extra.failingTop) || []).slice(0, 3) },
     actions: { open: open.length, overdue: overdue.length, closedSince: 0, overdueList: overdue.slice(0, 8).map(short), prior: [] },
     incidents: { since: inc.slice(0, 8).map(n => ({ id: n.id, title: n.title, severity: n.severity, status: n.status })), count: inc.length, open: incidents.filter(n => n.status !== 'Closed').length },
     risks: { open: risks.length, aboveAppetite: null, aboveList: [], added: 0, changed: 0 },
-    certification: { readiness: controls.length ? Math.round(controls.filter(c => c.Status === 'Implemented').length / controls.length * 100) : null, docsAwaiting: docs.filter(d => d.status && d.status !== 'Approved').length, nextAudit: '' },
+    certification: { readiness: controls.length ? Math.round(controls.filter(c => c.Status === 'Implemented').length / controls.length * 100) : null, docsAwaiting: docs.filter(d => d.status && d.status !== 'Approved').length, nextAudit: '', certified: !!(extra && extra.certified) },
     people: { handovers: 0, retired: 0, vendorsAdded: 0, certsExpiring: vendors.filter(v => v.CertExpiryDate && v.CertExpiryDate >= today && v.CertExpiryDate <= soon).map(v => v.Title).slice(0, 6) },
     quarterly: { accessReview: access, suppliersDue: vendors.filter(v => v.NextReviewDue && v.NextReviewDue <= month).length, objectives: { open: objectives.length, atRisk: objectives.filter(o => /risk|behind|off/i.test(o.Status || '')).length }, attestPct: null },
     scheduled: true
   };
 }
-async function runSecurityReview(g, gAll, context, siteId, lists, optional, settings, today, score) {
+async function runSecurityReview(g, gAll, context, siteId, lists, optional, settings, today, score, extra) {
   const setup = parseJsonSetting(settings.securityReviewSetup, null);
   if (!setup || typeof setup !== 'object') return [];
   let reviews = parseJsonSetting(settings.securityReviews, []);
@@ -2189,7 +2189,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     const held = reviews.filter(r => r.status === 'Held').sort((a, b) => b.date.localeCompare(a.date))[0];
     const prevScore = held && held.pack && held.pack.posture ? held.pack.posture.score : null;
     rec = { id: 'SR-' + String(due.n).padStart(3, '0'), n: due.n, kind: SR.securityReviewKind(due.n, setup.mrEvery), date: due.date, time: setup.time || '10:00', status: 'Prepared',
-      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore) };
+      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued }, extra || {})) };
     reviews.push(rec);
     done.push('prepared ' + rec.id);
   }
@@ -2204,7 +2204,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     try {
       await g(`/users/${encodeURIComponent(from)}/sendMail`, { method: 'POST', body: { message: {
         subject: label + ' security review ' + rec.n + ' \u2014 ' + SR.srDate(rec.date),
-        body: { contentType: 'HTML', content: SR.securityReviewEmailHtml(agenda, { org: label, date: SR.srDate(rec.date), time: rec.time, teamsLink: setup.teamsLink, appUrl: 'https://www.compliance365.com.au/checkpoint/' }) },
+        body: { contentType: 'HTML', content: SR.securityReviewEmailHtml(agenda, { org: label, date: SR.srDate(rec.date), time: rec.time, teamsLink: setup.teamsLink, appUrl: 'https://www.compliance365.com.au/checkpoint/' }, SR.securityReviewStatus(rec.pack)) },
         toRecipients: to.map(address => ({ emailAddress: { address } })),
         attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] }, saveToSentItems: false } });
       rec.status = 'Sent'; rec.sentAt = today; rec.sentTo = to.join(', ');
@@ -2219,6 +2219,25 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
       '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px"><p>Hi ' + e(setup.owner || '') + ',</p><p>Security review ' + rec.n + ' was held on ' + e(SR.srDate(rec.date)) + '. Record the minutes and decisions in Checkpoint so each decision becomes an action with an owner, and the minutes are filed as evidence.</p>' +
       '<p><a href="https://www.compliance365.com.au/checkpoint/">Open Checkpoint</a> \u203a Management review \u203a Record minutes.</p></div>');
     if (ok) { rec.minutesReminded = today; done.push('minutes reminder ' + rec.id); }
+  }
+  /* A week after a meeting: a nudge to owners of its decisions still Open. */
+  if (from && optional.Actions) {
+    let regActions = [];
+    try { regActions = (await gAll(`/sites/${siteId}/lists/${optional.Actions}/items?$expand=fields&$top=999`)).map(i => i.fields || {}).map(f => ({ id: f.RefId || '', title: f.Title || '', owner: f.Owner || '', ownerEmail: f.OwnerEmail || '', due: f.DueDate || '', status: f.Status || 'Open' })); }
+    catch (e) { context.log.error('Checkpoint security review: could not read actions for follow-ups: ' + e.message); }
+    const fu = regActions.length ? SR.securityReviewFollowUps(reviews, regActions, today) : null;
+    if (fu) {
+      let users = [];
+      if (fu.owners.some(o => !o.email)) { try { users = await gAll('/users?$select=displayName,mail,userPrincipalName&$top=999'); } catch (e) { users = []; } }
+      let nudged = 0;
+      for (const o of fu.owners) {
+        const u = o.email ? null : matchOwnerToUser(o.owner, users);
+        const to = o.email || (u && (u.mail || u.userPrincipalName));
+        if (to && await notifyOwner(g, context, to, 'Your actions from the security review on ' + SR.srDate(fu.review.date), SR.securityReviewFollowUpHtml(o, fu.review, { org: label, appUrl: 'https://www.compliance365.com.au/checkpoint/' }))) nudged++;
+      }
+      const held = reviews.find(r => r.id === fu.review.id);
+      if (held) { held.followUpSent = today; done.push('follow-ups ' + held.id + ' (' + nudged + ')'); }
+    }
   }
   if (done.length) {
     try { await setSetting(g, siteId, lists.Settings, 'securityReviews', JSON.stringify(reviews)); }
@@ -2373,7 +2392,8 @@ module.exports = async function (context, myTimer) {
     if (ownersReminded) context.log(`Checkpoint owner reminders sent to ${ownersReminded} owner(s).`);
 
     try {
-      const sr = await runSecurityReview(g, gAll, context, siteId, lists, optional, settings, today, score);
+      const failingTop = Object.keys(results || {}).filter(k => results[k] === 'fail').map(k => CHECK_LABELS[k] || k).slice(0, 3);
+      const sr = await runSecurityReview(g, gAll, context, siteId, lists, optional, settings, today, score, { failingTop });
       if (sr.length) context.log('Checkpoint security review: ' + sr.join(', ') + '.');
     } catch (e) {
       context.log.error('Checkpoint security review step failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));
