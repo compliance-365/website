@@ -5887,9 +5887,14 @@ function showModal(opts) {
           (s.done ? '' : pathStepButton(s, false)) +
           '</div>';
       }).join('') + '</details>';
-    el.innerHTML = '<h3>Your path to certification</h3>' +
-      '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 14px">' + doneCount + ' of ' + steps.length + ' steps done. Each step ticks itself off as the work is recorded in Checkpoint.</p>' +
-      stepperHtml + nextHtml + listHtml;
+    /* One line: progress, where the plan stands and the next step. The
+       stepper, the dated plan and every step open on demand. */
+    var pct = Math.round(doneCount / steps.length * 100);
+    el.innerHTML = '<div class="gs-compact"><div class="gs-compact-main"><h3>Your path to certification</h3>' +
+      '<div class="gs-bar"><i style="width:' + pct + '%"></i></div>' +
+      '<span class="src">Week ' + plan.week + ' of your plan · ' + doneCount + ' of ' + steps.length + ' steps done · ' + esc(next.phase) + (plan.behind.length ? ' · <span style="color:var(--fail)">' + plan.behind.length + ' behind plan</span>' : ' · on plan') + ' · Stage 1 ready by ' + fmtDate(plan.steps[plan.steps.length - 1].target) + '</span>' +
+      '<div class="gs-next"><b>Next:</b> ' + esc(next.label) + '</div></div>' + pathStepButton(next, true) + '</div>' +
+      '<details class="gs-detail"' + (window._gsOpen ? ' open' : '') + ' data-toggle-key="_gsOpen"><summary class="src">The plan and all ' + steps.length + ' steps</summary>' + stepperHtml + nextHtml + listHtml + '</details>';
   }
 
   /* Residual-risk 5×5 heat-map — extracted from renderDash() so the same
@@ -6029,6 +6034,66 @@ function showModal(opts) {
       '<div style="margin-top:10px"><a class="btn sm" href="' + deployUrl + '" target="_blank" rel="noopener">Deploy to Azure →</a></div>';
   }
 
+  /* ===== Integrations =====
+     Every evidence source, whether it is reporting, and how to set up
+     the ones that are not. Status is read from the scan history itself:
+     a collector is "reporting" once its results are in a scan. */
+  function lastResultDate(prefix) {
+    var d = '';
+    (S.scans || []).forEach(function (sc) {
+      var keys = [];
+      try { keys = Object.keys((JSON.parse(sc.detail || '{}').results) || {}); } catch (e) { keys = []; }
+      if (keys.some(function (k) { return prefix ? k.indexOf(prefix) === 0 : !/^(aws|gh)-/.test(k); }) && sc.date > d) d = sc.date;
+    });
+    return d;
+  }
+  var AWS_IAM_POLICY = JSON.stringify({ Version: '2012-10-17', Statement: [{ Effect: 'Allow', Action: ['iam:GetAccountSummary', 'iam:ListUsers', 'iam:ListMFADevices', 'iam:ListAccessKeys', 'iam:GetLoginProfile', 'cloudtrail:DescribeTrails', 'cloudtrail:GetTrailStatus', 'config:DescribeConfigurationRecorderStatus', 'guardduty:ListDetectors', 'guardduty:GetDetector', 's3:GetAccountPublicAccessBlock', 'ec2:GetEbsEncryptionByDefault', 'ec2:DescribeSecurityGroups', 'rds:DescribeDBInstances', 'sts:GetCallerIdentity'], Resource: '*' }] }, null, 2);
+  function renderIntegrations() {
+    var el = document.getElementById('integrationsBody');
+    if (!el) return;
+    var today = new Date().toISOString().slice(0, 10);
+    var acc = Graph.getAccount && Graph.getAccount();
+    var tenantId = (acc && acc.tenantId) || '';
+    var host = (Store.getSiteHostname && Store.getSiteHostname()) || '';
+    var path = typeof CONFIG !== 'undefined' && CONFIG.site && CONFIG.site !== 'root' ? CONFIG.site : '';
+    var checks = function (prefix) { return (window.CHECK_DEFS || []).filter(function (c) { return prefix ? String(c.id).indexOf(prefix) === 0 : !/^(aws|gh)-/.test(c.id); }).length; };
+    var status = function (date, staleDays) {
+      if (!date) return { cls: 'off', text: 'Not set up' };
+      var age = window.CheckpointLib.daysBetweenDateStr(date, today);
+      return age > staleDays ? { cls: 'stale', text: 'Last reported ' + fmtDate(date) + ' (' + age + ' days ago)' } : { cls: 'on', text: 'Reporting · last ' + fmtDate(date) };
+    };
+    var code = function (id, text) { return '<pre id="' + id + '" class="integ-code">' + esc(text) + '</pre><button class="btn ghost sm" data-action="App.copyEl" data-id="' + id + '">Copy</button>'; };
+    var envTable = function (rows) { return '<table class="integ-env"><tbody>' + rows.map(function (r) { return '<tr><td><code>' + esc(r[0]) + '</code></td><td>' + (r[1] ? '<code>' + esc(r[1]) + '</code>' : '<span class="src">' + esc(r[2] || '') + '</span>') + '</td></tr>'; }).join('') + '</tbody></table>'; };
+    var card = function (o) {
+      return '<div class="card integ-card"><div class="integ-head"><div><h3>' + esc(o.name) + '</h3><p class="src">' + esc(o.what) + '</p></div><span class="integ-st integ-' + o.st.cls + '">' + esc(o.st.text) + '</span></div>' +
+        '<div class="integ-meta src">' + esc(o.meta) + '</div>' + (o.body ? '<details class="integ-setup"' + (o.st.cls === 'on' ? '' : ' open') + '><summary>' + (o.st.cls === 'on' ? 'How it is set up' : 'How to set it up') + '</summary>' + o.body + '</details>' : '') + '</div>';
+    };
+    var autoScans = (S.scans || []).filter(function (x) { return x.source === 'automated'; });
+    var lastAuto = autoScans.length ? autoScans[autoScans.length - 1].date : '';
+    var ms = lastResultDate('');
+    var aws = lastResultDate('aws-'), gh = lastResultDate('gh-');
+    var demo = Store.kind !== 'sharepoint';
+    el.innerHTML =
+      card({ name: 'Microsoft 365', what: 'Entra ID, Intune, Defender, Purview, Exchange and SharePoint, read through Microsoft Graph when a posture scan runs.', st: ms ? status(ms, 45) : { cls: 'off', text: 'No scan yet' }, meta: checks('') + ' checks · runs when someone clicks Run posture scan, or on a schedule with the monitor below', body: '' }) +
+      card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the security review and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: '<p class="src">The step-by-step guide is below this list.</p>' }) +
+      card({ name: 'AWS', what: 'An AWS Lambda in your own AWS account that checks root and user MFA, access key age, CloudTrail, Config, GuardDuty, S3 public access, EBS and RDS encryption and open admin ports.', st: status(aws, 7), meta: checks('aws-') + ' checks · read-only IAM policy · results merge into the day\u2019s posture scan',
+        body: '<ol class="integ-steps">' +
+          '<li><b>App registration.</b> In Entra admin centre, register an app (or reuse the scheduled monitor\u2019s), add the Microsoft Graph application permission <code>Sites.Selected</code>, grant admin consent, create a client secret, and give the app write access to this Checkpoint site only (the same grant request as the monitor\u2019s step 3).</li>' +
+          '<li><b>IAM policy for the Lambda.</b> Read-only; drop any action you do not want to grant and that check reports as not measured instead.' + code('integAwsPolicy', AWS_IAM_POLICY) + '</li>' +
+          '<li><b>Lambda.</b> Node.js 20, handler <code>index.handler</code>, timeout 60 seconds, the code from <code>public/checkpoint/aws/collector/</code>, triggered daily by EventBridge Scheduler (e.g. <code>cron(0 17 * * ? *)</code>). Environment variables:' +
+            envTable([['TENANT_ID', tenantId, 'Your Entra tenant ID'], ['CLIENT_ID', '', 'The app registration\u2019s client ID'], ['CLIENT_SECRET', '', 'Keep it in AWS Secrets Manager'], ['SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['SP_SITE_PATH', path, 'Leave out for the root site'], ['MAX_KEY_AGE_DAYS', '', 'Optional, default 90']]) + '</li>' +
+          '<li><b>Check it.</b> Run the function once. It returns <code>{ "merged": true, "checks": 10 }</code>, and this card turns to Reporting after the next refresh.</li></ol>' +
+          (demo ? '<p class="src">In a real tenant the tenant ID and SharePoint values above are filled in for you.</p>' : '') }) +
+      card({ name: 'GitHub', what: 'A scheduled GitHub Actions workflow in your own organisation: branch reviews, required checks, secret scanning, Dependabot, code scanning and organisation 2FA.', st: status(gh, 7), meta: checks('gh-') + ' checks · read-only GitHub App · results merge into the day\u2019s posture scan',
+        body: '<ol class="integ-steps">' +
+          '<li><b>GitHub App.</b> Create a private GitHub App with read-only access to administration, code scanning alerts, Dependabot alerts, secret scanning alerts and members; install it on the organisation.</li>' +
+          '<li><b>Workflow.</b> Add <code>public/checkpoint/github/checkpoint-github-collector.yml</code> and its <code>collector/</code> folder to a repository in the organisation.</li>' +
+          '<li><b>Settings for the workflow.</b>' + envTable([['vars.CHECKPOINT_GH_APP_ID', '', 'The GitHub App\u2019s ID'], ['secrets.CHECKPOINT_GH_APP_PRIVATE_KEY', '', 'The GitHub App\u2019s private key'], ['vars.CHECKPOINT_TENANT_ID', tenantId, 'Your Entra tenant ID'], ['vars.CHECKPOINT_CLIENT_ID', '', 'The app registration\u2019s client ID'], ['secrets.CHECKPOINT_CLIENT_SECRET', '', 'Its client secret'], ['vars.CHECKPOINT_SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['vars.CHECKPOINT_SP_SITE_PATH', path, 'Leave out for the root site']]) + '</li>' +
+          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' });
+    var setupCard = document.getElementById('integMonitorSetup');
+    if (setupCard) { setupCard.style.display = lastAuto ? 'none' : ''; if (!lastAuto) renderMonitorSetupPanel(); }
+  }
+
   /* Pure — no DOM, just S.settings — so the Dashboard banner below can
      call it without duplicating the digestEnabled/digestFrequency/
      digestLastSent arithmetic inline. Same logic as PostureMonitor's
@@ -6060,7 +6125,9 @@ function showModal(opts) {
     var el = document.getElementById('clauseGapsCard');
     if (!el) return;
     var gaps = clauseGapList();
-    if (!gaps.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    /* On the dashboard the gaps are part of "Do next"; this card is kept
+       for the auditor's view of the same list (App.showClauseGaps). */
+    if (!gaps.length || !window._showClauseGaps) { el.style.display = 'none'; el.innerHTML = ''; return; }
     el.style.display = '';
     el.innerHTML = '<div class="cg-head"><h3>What an auditor would find first</h3><span class="src">' + gaps.length + ' recurring requirement' + (gaps.length === 1 ? '' : 's') + ' not met on time</span></div>' +
       gaps.map(function (g) {
@@ -6068,7 +6135,74 @@ function showModal(opts) {
           '<button class="btn ghost sm" data-action="App.go" data-id="' + esc(g.view) + '">' + esc(g.fix) + '</button></div>';
       }).join('');
   }
+  /* "Do next": one ranked list across every source the dashboard used
+     to list separately. */
+  function dashDoNextList(nextActions) {
+    var steps = gettingStartedSteps();
+    var next = steps.find(function (x) { return !x.done; });
+    var pa = next ? (PATH_STEP_ACTIONS[next.id] || {}) : {};
+    var all = window.CheckpointLib.dashDoNext({
+      nextStep: next ? { label: next.label, why: next.why, action: pa.action || 'App.go', id: pa.action ? (pa.id || '') : pa.view, button: pa.cta } : null,
+      gaps: clauseGapList(),
+      approvals: myApprovalRequests().map(function (r) { return { name: r.name, key: r.key }; }),
+      aboveAppetite: featureOn('featAppetite') ? risksAboveAppetite().map(function (r) { return r.id; }) : [],
+      actions: (nextActions || []).map(function (r) { return { title: r.action.title, reason: r.reason, id: r.action.id, tier: r.tier }; })
+    }, 20);
+    return { all: all, top: all.slice(0, 5) };
+  }
+  /* Four numbers that say where things stand. */
+  function renderDashHeadline() {
+    var el = document.getElementById('dashHeadline');
+    if (!el) return;
+    var today = new Date().toISOString().slice(0, 10);
+    var L = window.CheckpointLib;
+    var fw = entitledFrameworks().indexOf('iso27001') !== -1 ? 'iso27001' : entitledFrameworks()[0];
+    var ready = fw ? L.readinessPct(frameworkAppRows(fw)) : null;
+    var health = null;
+    try { health = L.ismsHealthScore({ gaps: clauseGapList(), overdueActions: (S.actions || []).filter(function (a) { return overdueDays(a) > 0; }).length, openActions: (S.actions || []).filter(function (a) { return ['Done', 'Closed', 'Cancelled'].indexOf(a.status) === -1; }).length, missedReviews: L.securityReviewsMissed(secReviews(), secReviewSetup(), today) }); } catch (e) { health = null; }
+    var audits = [];
+    (S.calendar || []).forEach(function (c) { if (L.calendarItemLive(c) && c.nextDue && c.nextDue >= today && /cert:|certification audit|stage [12]/i.test((c.notes || '') + ' ' + (c.title || ''))) audits.push({ date: c.nextDue, label: c.title }); });
+    (S.audits || []).forEach(function (a) { if (a.status === 'Planned' && a.planned && a.planned >= today) audits.push({ date: a.planned, label: 'Internal audit' }); });
+    audits.sort(function (a, b) { return a.date.localeCompare(b.date); });
+    var na = audits[0];
+    var mine = myTasks().items.length;
+    var tile = function (value, label, sub, tone, action, id) {
+      return '<button class="dh-tile" data-action="' + action + '"' + (id ? ' data-id="' + id + '"' : '') + '><b' + (tone ? ' style="color:' + tone + '"' : '') + '>' + value + '</b><span>' + esc(label) + '</span><span class="src">' + esc(sub) + '</span></button>';
+    };
+    el.innerHTML =
+      tile(ready == null ? '—' : ready + '<small>%</small>', 'Ready for ' + (fw ? fwName(fw) : 'certification'), 'Applicable controls implemented', '', 'App.goSoaFw', fw || '') +
+      tile(health ? health.score + '<small>/100</small>' : '—', 'ISMS health', health && health.factors[0] ? health.factors[0].label : 'Nothing has lapsed', health ? (health.band === 'good' ? 'var(--pass)' : health.band === 'watch' ? 'var(--warn)' : 'var(--fail)') : '', 'App.go', 'clauses') +
+      tile(na ? L.daysBetweenDateStr(today, na.date) + '<small> days</small>' : '—', 'Next audit', na ? na.label + ', ' + fmtDate(na.date) : 'None booked', '', 'App.go', 'audits') +
+      tile(String(mine), 'Waiting on you', mine ? 'In My tasks' : 'Nothing assigned to you', mine ? 'var(--warn)' : '', 'App.go', 'mytasks');
+  }
+  /* What each role opens the dashboard for: the chair gets the month in
+     brief; someone with restricted access gets their own tasks. */
+  function renderDashForYou() {
+    var el = document.getElementById('dashForYou');
+    if (!el) return;
+    var s = secReviewSetup() || {};
+    var me = [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+    var isChair = (s.chair && me.indexOf(String(s.chair).toLowerCase()) !== -1) || (S.settings && S.settings.topManagementApprover && me.indexOf(String(S.settings.topManagementApprover).toLowerCase()) !== -1);
+    if (isChair) {
+      var nx = secReviewNext();
+      var sum = chairSummaryFor((nx && nx.rec) || { pack: secReviewPack() });
+      el.style.display = '';
+      el.innerHTML = '<div class="cg-head"><h3>The month in brief</h3><button class="btn ghost sm" data-action="App.report" data-id="chairsummary">Open the one-pager</button></div>' +
+        (sum.decide.length ? '<p class="src" style="margin:4px 0">Needs your decision</p><ul class="dfy-list">' + sum.decide.slice(0, 4).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p class="src">Nothing needs your decision this month.</p>') +
+        (sum.trend.length ? '<p class="src" style="margin:8px 0 0">' + esc(sum.trend.slice(0, 2).join(' ')) + '</p>' : '');
+      return;
+    }
+    if (RESTRICTED_ACCESS) {
+      var t = myTasks();
+      el.style.display = '';
+      el.innerHTML = '<div class="cg-head"><h3>Your tasks</h3><button class="btn sm" data-action="App.go" data-id="mytasks">Open My tasks</button></div><p class="src" style="margin:4px 0 0">' + (t.items.length ? t.items.length + ' task' + (t.items.length === 1 ? '' : 's') + ' assigned to you' : 'Nothing assigned to you right now.') + '</p>';
+      return;
+    }
+    el.style.display = 'none'; el.innerHTML = '';
+  }
   function renderDash() {
+    renderDashHeadline();
+    renderDashForYou();
     renderCertDashCard();
     renderClauseGaps();
     renderValueCard();
@@ -6130,7 +6264,20 @@ function showModal(opts) {
     /* one readiness tile per purchased framework, each with its own trend
        vs the per-framework readiness snapshotted at the last scan */
     var clauseCtx = clauseContext();
-    var fwTiles = entitledFrameworks().map(function (fw) {
+    var allFw = entitledFrameworks();
+    var fwStats = {};
+    allFw.forEach(function (fw) {
+      var app0 = frameworkAppRows(fw);
+      var st0 = { pct: window.CheckpointLib.readinessPct(app0) };
+      if (MS_CLAUSE_FWS.indexOf(fw) !== -1) st0.clausePct = window.CheckpointLib.clauseReadiness(visibleClauses().filter(function (c) { return (c.fw || 'iso27001') === fw; }).map(function (c) { var cl = clauseChecklistFor(c, clauseCtx); return { met: cl.met, total: cl.total }; })).pct;
+      fwStats[fw] = st0;
+    });
+    var targets = String((S.settings && S.settings.targetFrameworks) || '').split(',').filter(Boolean);
+    var pursued = window.CheckpointLib.pursuedFrameworks(allFw, fwStats, targets);
+    var shownFw = window._dashAllFw ? allFw : pursued;
+    var moreEl = document.getElementById('kpiRowMore');
+    if (moreEl) moreEl.innerHTML = allFw.length > pursued.length ? '<button class="lnk src kpi-more" data-action="App.toggleDashFrameworks">' + (window._dashAllFw ? 'Show only the frameworks you are working towards' : 'Show all ' + allFw.length + ' frameworks (' + (allFw.length - pursued.length) + ' not started)') + '</button>' : '';
+    var fwTiles = shownFw.map(function (fw) {
       var applicable = frameworkAppRows(fw);
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = window.CheckpointLib.readinessPct(applicable);
@@ -6278,15 +6425,15 @@ function showModal(opts) {
     if (nextActionsCardEl && nextActionsListEl) {
       var checkResultsById = allCheckResultsById(), checkLabelsById = allCheckLabelsById();
       var nextActions = window.CheckpointLib.nextBestActions(S.actions, window.CHECK_CONTROLS, checkResultsById, checkLabelsById, 3);
-      if (nextActions.length) {
-        nextActionsListEl.innerHTML = nextActions.map(function (r) {
-          var a = r.action;
-          var tierColor = r.tier >= 2 ? 'var(--fail)' : r.tier === 1 ? 'var(--warn)' : 'var(--paper-dim)';
-          return '<div class="d-kv" style="align-items:flex-start;padding:9px 0">' +
-            '<span><b style="color:var(--paper)">' + esc(a.title) + '</b><br><span style="color:var(--paper-dim);font-size:11.5px">' + esc(r.reason) + '</span></span>' +
-            '<b style="color:' + tierColor + ';white-space:nowrap;font-size:11.5px">' + esc(a.pr || 'Medium') + '</b>' +
-            '</div>';
-        }).join('') + '<p style="margin:8px 0 0"><a href="#" data-action="App.goActionsFilter" data-id="Open" style="color:var(--gold-light);font-size:12.5px;text-decoration:underline">Open the Actions register →</a></p>';
+      var doNext = dashDoNextList(nextActions);
+      if (doNext.all.length) {
+        var row = function (x) {
+          var col = x.weight >= 85 ? 'var(--fail)' : x.weight >= 70 ? 'var(--warn)' : 'var(--paper-dim)';
+          return '<div class="dn-row"><span class="dn-dot" style="background:' + col + '"></span><div class="dn-txt"><span class="src">' + esc(x.kind) + '</span><b>' + esc(x.title) + '</b>' + (x.why ? '<span class="src">' + esc(x.why) + '</span>' : '') + '</div>' +
+            (x.action ? '<button class="btn ghost sm" data-action="' + esc(x.action) + '"' + (x.id ? ' data-id="' + esc(x.id) + '"' : '') + '>' + esc(x.button || 'Open') + '</button>' : '') + '</div>';
+        };
+        nextActionsListEl.innerHTML = doNext.top.map(row).join('') +
+          (doNext.all.length > doNext.top.length ? '<details class="dn-more"><summary class="src">' + (doNext.all.length - doNext.top.length) + ' more</summary>' + doNext.all.slice(doNext.top.length).map(row).join('') + '</details>' : '');
         nextActionsCardEl.style.display = '';
       } else {
         nextActionsCardEl.style.display = 'none';
@@ -6294,7 +6441,7 @@ function showModal(opts) {
       /* With nothing to rank, the hero score tile takes the whole row
          rather than sitting beside an empty half — see .dash-hero.solo. */
       var heroGridEl = document.getElementById('dashHero');
-      if (heroGridEl) heroGridEl.classList.toggle('solo', !nextActions.length);
+      if (heroGridEl) heroGridEl.classList.toggle('solo', !doNext.all.length);
     }
 
     /* risk appetite breach banner — shares risksAboveAppetite() with the
@@ -6308,7 +6455,8 @@ function showModal(opts) {
       bannerEl.innerHTML = (appetiteFeatOn && breaches.length)
         ? '<b>' + breaches.length + ' risk' + (breaches.length > 1 ? 's' : '') + ' exceed' + (breaches.length > 1 ? '' : 's') + ' your risk appetite (' + appetite + ')</b> — ' + breaches.slice(0, 3).map(function (r) { return r.id; }).join(', ') + (breaches.length > 3 ? ' and ' + (breaches.length - 3) + ' more' : '') + '. <a href="#" data-action="App.go" data-id="risks" style="color:inherit;text-decoration:underline">Review the risk register →</a>'
         : '';
-      bannerEl.style.display = (appetiteFeatOn && breaches.length) ? 'block' : 'none';
+      /* Folded into "Do next" on the dashboard. */
+      bannerEl.style.display = 'none';
     }
 
     /* posture scan due — a nudge on load, not a real schedule, unless the
@@ -6352,7 +6500,7 @@ function showModal(opts) {
        interactively from this browser, plus any pass -> fail drift it
        has flagged since the previous scan */
     var monitorEl = document.getElementById('monitorStatus');
-    var monitorSetupEl = document.getElementById('monitorSetupPanel');
+    var monitorSetupEl = document.getElementById('monitorSetupHint');
     if (monitorEl) {
       var autoScans = S.scans.filter(function (s) { return s.source === 'automated'; });
       var lastAuto = autoScans[autoScans.length - 1];
@@ -6366,7 +6514,10 @@ function showModal(opts) {
         if (monitorSetupEl) monitorSetupEl.style.display = 'none';
       } else {
         monitorEl.style.display = 'none';
-        if (monitorSetupEl) { monitorSetupEl.style.display = ''; renderMonitorSetupPanel(); }
+        if (monitorSetupEl) {
+          monitorSetupEl.style.display = '';
+          monitorSetupEl.innerHTML = '<p class="src" style="margin:2px 0 8px">The scheduled monitor is not set up, so drift is only checked when someone runs a posture scan.</p><button class="btn ghost sm" data-action="App.go" data-id="integrations">Set it up in Integrations</button>';
+        }
       }
     }
     var driftEl = document.getElementById('driftPanel');
@@ -6406,12 +6557,14 @@ function showModal(opts) {
       var upcomingCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
       var calOverdue = upcomingCal && upcomingCal.nextDue && upcomingCal.nextDue < today2;
       var overdueVendorList = (S.vendors || []).filter(vendorOverdue);
+      /* A missing record says what to do about it. */
+      var fix = function (label, action, id) { return READONLY ? '' : ' <button class="btn ghost sm gov-fix" data-action="' + action + '"' + (id ? ' data-id="' + id + '"' : '') + '>' + esc(label) + '</button>'; };
       govEl.innerHTML =
-        '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : 'None recorded') + '</b></div>' +
-        '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
-        '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
+        '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : '<span style="color:var(--warn)">None recorded</span>' + (nextAudit ? '' : fix('Plan 12 months', 'App.planRiskAudits'))) + '</b></div>' +
+        '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope.replace(/: focus on .*$/, '')) : 'None scheduled' + (lastAudit ? fix('Plan 12 months', 'App.planRiskAudits') : '')) + '</b></div>' +
+        '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : '<span style="color:var(--warn)">None recorded</span>' + fix('Open reviews', 'App.go', 'reviews')) + '</b></div>' +
         '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
-        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') : '') : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') + ' overdue' + fix('Open', 'App.editCalItem', esc(upcomingCal.id)) : '') : 'None scheduled' + fix('Open the calendar', 'App.go', 'calendar')) + '</b></div>' +
         '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>' +
         incidentKv() + policyReviewKv() + attestationKv();
     }
@@ -6655,6 +6808,11 @@ function showModal(opts) {
     var todayIso = new Date().toISOString().slice(0, 10);
     var grid = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, todayIso);
     svgWrap.innerHTML = window.ReportEngine.charts.activityGrid(grid, { interactive: true, palette: 'app' });
+    var sumEl = document.getElementById('apSummary');
+    if (sumEl) {
+      var ps = window.CheckpointLib.pulseSummary(grid);
+      sumEl.innerHTML = '<ul class="ap-lines">' + ps.text.map(function (t, i) { return '<li' + (i > 0 && /Nothing recorded|^No /.test(t) ? ' class="ap-warn"' : '') + '>' + esc(t) + '</li>'; }).join('') + '</ul>';
+    }
     initSvgTooltip(svgWrap);
     setupAssurancePulseInteractions(svgWrap);
   }
@@ -6692,9 +6850,15 @@ function showModal(opts) {
         return d >= filter.start && d <= filter.end;
       });
     }
-    feedEl.innerHTML = items.slice(0, 10).map(function (a) {
-      return '<li><time>' + fmtDate(a.t) + '</time>' + a.msg + '</li>';
-    }).join('') || ('<li style="color:var(--paper-faint)">' + (filter ? 'No activity that week.' : 'No activity yet.') + '</li>');
+    /* Grouped by day, newest first; eight entries, then a link to the
+       full audit log rather than an ever-growing list. */
+    var shown = items.slice(0, 8), lastDay = '';
+    feedEl.innerHTML = shown.map(function (a) {
+      var day = String(a.t || '').slice(0, 10), head = '';
+      if (day !== lastDay) { head = '<li class="feed-day">' + fmtDate(a.t) + '</li>'; lastDay = day; }
+      return head + '<li>' + a.msg + '</li>';
+    }).join('') + (items.length > shown.length ? '<li class="feed-more"><button class="lnk src" data-action="App.go" data-id="auditlog">' + (items.length - shown.length) + ' more in the audit log</button></li>' : '') ||
+      ('<li style="color:var(--paper-faint)">' + (filter ? 'No activity that week.' : 'No activity yet.') + '</li>');
     if (chipEl) {
       if (filter) {
         chipEl.style.display = '';
@@ -6945,7 +7109,12 @@ function showModal(opts) {
       .filter(function (r) { return r.leverageCount > 0 && r.app && r.st !== 'Implemented'; })
       .slice(0, 4);
     listEl.innerHTML = rows.length
-      ? rows.map(function (r) { return '<div class="d-kv"><span>' + esc(fwName(r.fw)) + ' ' + esc(r.id) + '</span><b>+' + r.leverageCount + ' framework' + (r.leverageCount === 1 ? '' : 's') + '</b></div>'; }).join('')
+      ? rows.map(function (r) {
+          /* Count frameworks, not mapped controls: one control can map to
+             several controls in the same framework. */
+          var fws = (r.mappedTo || []).reduce(function (acc, m) { if (m.fw !== r.fw && acc.indexOf(m.fw) === -1) acc.push(m.fw); return acc; }, []);
+          return '<div class="cx-row"><div><b>' + esc(r.id) + '</b> ' + esc(r.t || '') + '<div class="src">' + esc(r.st || 'Not started') + ' · also counts for ' + esc(fws.slice(0, 3).map(fwName).join(', ') + (fws.length > 3 ? ' and ' + (fws.length - 3) + ' more' : '')) + '</div></div><b class="cx-n">+' + fws.length + '</b></div>';
+        }).join('')
       : '<p style="color:var(--paper-faint);font-size:12.5px;margin:0">' + (entitled.length > 1 ? 'Every control with cross-framework value is already implemented.' : 'Enable a second framework to see which controls satisfy more than one.') + '</p>';
   }
 
@@ -14880,6 +15049,7 @@ function showModal(opts) {
     /* The Settings view's content is built by renderFrameworksAdmin()
        alongside the Frameworks view's — one function, two destinations. */
     settings: renderFrameworksAdmin,
+    integrations: renderIntegrations,
     selftest: renderSelfTest,
     aitools: renderAiTools,
   };
@@ -22271,6 +22441,7 @@ function showModal(opts) {
     },
 
     setMyTasksAs: function (v) { window._myTasksAs = v || ''; renderMyTasks(); },
+    toggleDashFrameworks: function () { window._dashAllFw = !window._dashAllFw; renderDash(); },
     setMyNotifyPref: async function (v) {
       var key = String(myUpn() || myDisplayName() || '').toLowerCase();
       if (!key) return;

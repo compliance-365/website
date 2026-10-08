@@ -393,6 +393,7 @@
         <button class="nav-item" id="navCopilot" data-action="App.openCopilot" style="display:none">Compliance Copilot</button>
       </details>
       <div class="nav-group" data-group="admin">
+        <button class="nav-item" data-v="integrations">Integrations</button>
         <button class="nav-item" data-v="settings">Settings</button>
         <button class="nav-mode" id="navModeBtn" data-action="App.toggleNavMode" aria-pressed="false">Show full menu</button>
       </div>
@@ -433,6 +434,8 @@
     <!-- DASHBOARD -->
     <section class="view on" id="v-dash">
       <div class="vhead"><div class="rule"></div><h1>Dashboard</h1><p>Live assurance position for this tenant. Every figure below is computed from the registers — nothing is typed into a slide the night before an audit.</p></div>
+      <div class="dash-headline" id="dashHeadline"></div>
+      <div class="card" id="dashForYou" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="certDashCard" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="gettingStartedCard" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="clauseGapsCard" style="display:none;margin-bottom:16px"></div>
@@ -444,8 +447,8 @@
       <div class="grid dash-hero" id="dashHero">
         <div class="hero-slot" id="heroScore"></div>
         <div class="card" id="nextActionsCard" style="display:none">
-          <h3>Next 3 actions</h3>
-          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 8px">Ranked by what's actually holding your posture back right now, not by due date alone.</p>
+          <h3>Do next</h3>
+          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 8px">One list, ranked across the path, lapsed requirements, risks, approvals and actions.</p>
           <div id="nextActionsList"></div>
         </div>
       </div>
@@ -461,6 +464,7 @@
            across one row. The label now sits once, on the strip. -->
       <div class="strip-label" id="kpiRowLabel">Audit readiness</div>
       <div class="grid kpis kpis-compact" id="kpiRow"></div>
+      <div id="kpiRowMore"></div>
       <div class="strip-label">Risk &amp; obligations</div>
       <div class="grid kpis kpis-compact" id="kpiRowOps"></div>
       <p class="grid-note" id="coverageNote"></p>
@@ -507,7 +511,7 @@
            its own copy points the reader at "the in-tenant monitor below". -->
       <section class="automation-centre" id="automationCentre" aria-labelledby="automationCentreTitle"></section>
       <div class="card" id="valueCard" style="display:none;margin-top:16px"></div>
-      <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="monitorSetupPanel" style="display:none"></div><div id="driftPanel" style="margin-top:6px"></div></div>
+      <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="monitorSetupHint" style="display:none"></div><div id="driftPanel" style="margin-top:6px"></div></div>
       <!-- Assurance pulse stays above the Activity feed on purpose: its
            own copy tells the reader to click a week to filter "the
            Activity feed below". -->
@@ -516,6 +520,7 @@
           <h3>Assurance pulse</h3>
           <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">26 weeks of compliance activity — scans, evidence, attestations, reviews and audits. Click a week to filter the Activity feed below.</p>
           <div class="ap-body" id="apSvgWrap"></div>
+          <div class="ap-summary" id="apSummary"></div>
         </div>
         <div class="card cx-thumb-card" id="cxThumbCard" style="display:none">
           <a href="#" class="cx-thumb-link" data-action="App.go" data-id="constellation" aria-label="Open the full cross-framework mapping view">
@@ -533,6 +538,13 @@
         </div>
       </div>
       </details>
+    </section>
+
+    <!-- INTEGRATIONS -->
+    <section class="view" id="v-integrations">
+      <div class="vhead"><div class="rule"></div><h1>Integrations</h1><p>Where Checkpoint gets its evidence from, whether each source is reporting, and how to set up the ones that are not. Every collector runs in the client's own tenant or account and writes only to the client's own SharePoint; Compliance365 holds no credentials for any of them.</p></div>
+      <div id="integrationsBody"></div>
+      <div class="card integ-card" id="integMonitorSetup" style="display:none"><h3>Set up the scheduled monitor</h3><div id="monitorSetupPanel"></div></div>
     </section>
 
     <!-- BOARD VIEW -->

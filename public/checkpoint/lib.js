@@ -6654,6 +6654,58 @@
       (/^https:\/\//i.test(m.appUrl || '') ? '<p style="margin-top:18px;font-size:14px"><a href="' + e(m.appUrl) + '">Open Checkpoint</a> for the detail.</p>' : '') +
       '<p style="color:#999;font-size:11px;margin-top:24px">Prepared by Checkpoint from the live records.</p></div>';
   }
+  /* The dashboard's one "Do next" list: at most five things, ranked
+     across every source that used to have its own list (the next path
+     step, lapsed clause obligations, approvals waiting for you, risks
+     above appetite and the actions holding the posture back). d = {
+     nextStep:{label,why,action,id,label2}, gaps, approvals:[{name,key}],
+     aboveAppetite:[ids], actions:[{title,reason,id,tier}] } */
+  function dashDoNext(d, max) {
+    d = d || {};
+    var out = [];
+    var add = function (weight, kind, title, why, action, id, button) { out.push({ weight: weight, kind: kind, title: title, why: why || '', action: action, id: id || '', button: button }); };
+    (d.approvals || []).forEach(function (r) { add(88, 'Approval', 'Approve ' + String(r.name || '').replace(/\.html$/i, ''), 'Waiting for your approval', 'App.approveRequested', r.key, 'Review and approve'); });
+    (d.gaps || []).forEach(function (g) { add(g.severity === 'fail' ? 90 : 52, 'Requirement', (g.clause ? 'Clause ' + g.clause + ' ' : '') + g.title, g.issue, 'App.go', g.view, g.fix); });
+    var above = d.aboveAppetite || [];
+    if (above.length) add(80, 'Risk', above.length + ' risk' + (above.length === 1 ? ' is' : 's are') + ' above your risk appetite', above.slice(0, 3).join(', ') + (above.length > 3 ? ' and ' + (above.length - 3) + ' more' : '') + ': treat or accept ' + (above.length === 1 ? 'it' : 'them'), 'App.go', 'risks', 'Review the risks');
+    if (d.nextStep) add(70, 'Next step', d.nextStep.label, d.nextStep.why, d.nextStep.action, d.nextStep.id, d.nextStep.button || 'Start');
+    (d.actions || []).forEach(function (r) { add(r.tier >= 2 ? 76 : r.tier === 1 ? 62 : 48, 'Action', r.title, r.reason, 'App.openAction', r.id, 'Open'); });
+    var seen = {};
+    return out.filter(function (x) { var k = x.kind + '|' + x.title; if (seen[k]) return false; seen[k] = true; return true; })
+      .sort(function (a, b) { return b.weight - a.weight; }).slice(0, max || 5);
+  }
+  /* Frameworks the client is actually working towards, for the
+     readiness strip: the primary one, any with progress, and any marked
+     as a target. The rest wait behind "Show all frameworks". stats =
+     { fw: { pct, clausePct } } */
+  function pursuedFrameworks(fws, stats, targets) {
+    var t = targets || [], st = stats || {};
+    var list = (fws || []).filter(function (fw) {
+      var x = st[fw] || {};
+      return fw === 'iso27001' || t.indexOf(fw) !== -1 || (x.pct || 0) > 0 || (x.clausePct || 0) > 0;
+    });
+    return list.length ? list : (fws || []).slice(0, 1);
+  }
+  /* What the assurance pulse says in words: how many of the weeks saw
+     compliance work, whether it has gone quiet, and the longest gap. */
+  function pulseSummary(grid) {
+    var weeks = grid || [], active = 0, quietNow = 0, longest = 0, run = 0, totals = {};
+    weeks.forEach(function (w) {
+      if (w.total > 0) { active++; run = 0; } else { run++; if (run > longest) longest = run; }
+      Object.keys(w.counts || {}).forEach(function (k) { totals[k] = (totals[k] || 0) + w.counts[k]; });
+    });
+    for (var i = weeks.length - 1; i >= 0 && !weeks[i].total; i--) quietNow++;
+    var top = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; })[0];
+    var label = { scan: 'posture scans', evidence: 'evidence added', attestation: 'controls verified', review: 'management reviews', audit: 'internal audits' };
+    var lines = [];
+    lines.push('Compliance work happened in ' + active + ' of the last ' + weeks.length + ' weeks.');
+    if (quietNow >= 2) lines.push('Nothing recorded for the last ' + quietNow + ' weeks: an auditor looks for steady activity, not bursts.');
+    else if (longest >= 4) lines.push('The longest quiet spell was ' + longest + ' weeks.');
+    if (top && totals[top]) lines.push('Most of it: ' + label[top] + ' (' + totals[top] + ').');
+    var missing = ['review', 'audit'].filter(function (k) { return !totals[k]; });
+    if (missing.length) lines.push('No ' + missing.map(function (k) { return label[k]; }).join(' or ') + ' in this period.');
+    return { activeWeeks: active, weeks: weeks.length, quietNow: quietNow, longestQuiet: longest, totals: totals, text: lines };
+  }
   /* Month by month, from the packs of meetings held. */
   function securityReviewTrend(reviews) {
     return (reviews || []).filter(function (r) { return r && r.pack && r.date; }).slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).map(function (r) {
@@ -10765,7 +10817,7 @@
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,
     SECURITY_REVIEW_AGENDA: SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY: SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF: SECURITY_REVIEW_KICKOFF,
-    srDate: srDate, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
+    srDate: srDate, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,
