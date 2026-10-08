@@ -15,7 +15,8 @@
            calendar:[{id,title,owner,nextDue,status}],
            docs:[{name,owner,nextReview,status}],
            objectives:[{id,title,owner,status}],
-           evidence:[{control,title,owner,email,requested}] }
+           evidence:[{control,title,owner,email,requested}],
+           approvals:[{name,approver,approverEmail,requested}] }
      Returns [{ owner, email, items:[{ kind, ref, title, due, overdue }] }],
      owners with something overdue first. Nothing due → not listed. */
   function ownerWorkItems(d, today, horizonDays) {
@@ -53,6 +54,10 @@
       if (!e) return;
       add(e.owner, e.email, { kind: 'Evidence requested', ref: e.control || '', title: e.title || '', due: e.requested || '', overdue: false });
     });
+    (d.approvals || []).forEach(function (r) {
+      if (!r) return;
+      add(r.approver, r.approverEmail, { kind: 'Approval requested', ref: '', title: r.name || '', due: r.requested || '', overdue: false });
+    });
     return order.map(function (k) {
       var o = by[k];
       o.items.sort(function (a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999')); });
@@ -65,6 +70,17 @@
   /* Matches an owner as written in a register (a name, an email or a
      UPN) to a directory user. Exact matches only, case-insensitive:
      a near-miss sends someone else's list to the wrong person. */
+  /* How a person wants to hear about new work: 'immediate' (an email
+     as it happens) or 'weekly' (only in the weekly digest). prefs =
+     { 'name or email, lower case': 'weekly' }. Weekly only counts while
+     the weekly digest is switched on, or nothing would reach them. */
+  function notifyPref(prefs, owner, email, digestOn) {
+    if (!digestOn) return 'immediate';
+    var p = prefs || {};
+    var keys = [owner, email].filter(Boolean).map(function (k) { return String(k).trim().toLowerCase(); });
+    for (var i = 0; i < keys.length; i++) if (p[keys[i]] === 'weekly') return 'weekly';
+    return 'immediate';
+  }
   function matchOwnerToUser(owner, users) {
     var o = String(owner || '').trim().toLowerCase();
     if (!o) return null;
@@ -82,11 +98,11 @@
       '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
       entry.items.map(function (i) {
         return '<tr><td style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap;color:#666">' + e(i.kind) + '</td><td style="padding:6px;border-bottom:1px solid #eee">' + (i.ref ? '<b>' + e(i.ref) + '</b> ' : '') + e(i.title) + '</td>' +
-          '<td style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap;' + (i.overdue ? 'color:#b00020;font-weight:bold' : '') + '">' + (i.due ? (i.overdue ? 'Overdue: ' : (i.kind === 'Evidence requested' ? 'Requested ' : 'Due ')) + e(i.due) : '') + '</td></tr>';
+          '<td style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap;' + (i.overdue ? 'color:#b00020;font-weight:bold' : '') + '">' + (i.due ? (i.overdue ? 'Overdue: ' : (i.kind === 'Evidence requested' || i.kind === 'Approval requested' ? 'Requested ' : 'Due ')) + e(i.due) : '') + '</td></tr>';
       }).join('') + '</table>' +
       (appUrl ? '<p style="margin-top:16px"><a href="' + e(appUrl) + '">Open Checkpoint</a> to complete them and attach evidence.</p>' : '') +
       '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365. You receive this because you are named as an owner.</p></div>';
   }
 
 
-module.exports = { ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, ownerDigestHtml: ownerDigestHtml };
+module.exports = { ownerWorkItems: ownerWorkItems, notifyPref: notifyPref, matchOwnerToUser: matchOwnerToUser, ownerDigestHtml: ownerDigestHtml };

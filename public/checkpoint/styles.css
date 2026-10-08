@@ -1774,3 +1774,10 @@ tr.asset-retired td { opacity: .85; }
 .sr-esc-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .sr-esc-done { margin-top: 4px; font-size: 13px; }
 .sr-records { margin-top: 10px; justify-content: flex-start; }
+/* Clause gap alerts on the dashboard */
+.cg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.cg-head h3 { margin: 0; }
+.cg-row { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.cg-txt { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.cg-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
+.cg-fail .cg-dot { background: var(--fail); }
