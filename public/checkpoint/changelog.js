@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.132.0',
+    date: '2026-10-08',
+    entries: [
+      'Attendance and quorum for the security review. The minutes record who was absent among the chair, the ISMS owner and the facilitator set in the review settings (a surname is enough). Saving the minutes of a meeting held without the chair or the ISMS owner asks first, then records it as such. The next agenda then asks the meeting to confirm those decisions, and names anyone who missed two meetings in a row. Attendance appears in the minutes email and in the management review inputs.',
+      'A risk accepted in the meeting lands on the risk register. When the chair accepts the risk on an action that was overdue at two meetings in a row, the acceptance is recorded on the linked risk (or a risk you pick): who accepted it, the date, the basis and the residual score, exactly as the risk panel records it. A follow-up action to look at the acceptance again is raised for the date you set (six months by default).',
+      'Top management record: one document covering the last 12 months. It lists each security review with whether the chair was there and its outcome, the decisions on overdue actions, the residual risks accepted, and the management reviews held. It shows top management taking part (Clauses 5.1 and 9.3), and it is included in the Stage 1 pack.',
+      'The year of security reviews in one document: outcomes and attendance, the top management summary, then each meeting\u2019s minutes on its own page. Open it from the review card, print it to PDF for the auditor, or file it as Clause 9.3 evidence in one click.'
+    ]
+  },
+  {
     version: '1.131.0',
     date: '2026-10-08',
     entries: [

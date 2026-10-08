@@ -846,7 +846,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -3089,6 +3089,67 @@ function showModal(opts) {
       };
     },
 
+    /* What top management did over the last 12 months (Clauses 5.1 and
+       9.3): meetings chaired, outcomes, decisions on overdue actions,
+       residual risks accepted, management reviews. */
+    topmgmt: function () {
+      var since = window.CheckpointLib.addDaysIso(new Date().toISOString().slice(0, 10), -365);
+      var s = secReviewSetup() || {};
+      var t = window.CheckpointLib.topManagementRecord({ since: since, setup: s, reviews: secReviews(), risks: S.risks || [], managementReviews: S.reviews || [] });
+      return {
+        title: 'Top management record',
+        frameworkAgnostic: true,
+        dashboard: { intro: 'From ' + fmtDateY(since) + ' to today' + (s.chair ? '. Top management: ' + s.chair + ' (chair of the security review)' : '') + '. ' + t.summary },
+        sections: [
+          { heading: 'Security reviews', pageBreak: false, html: t.meetings.length ? '<table class="rpt-table"><thead><tr><th>Meeting</th><th>Date</th><th>Chair present</th><th>Outcome</th><th>Decisions</th></tr></thead><tbody>' +
+            t.meetings.map(function (m) { return '<tr><td class="rpt-idc">' + esc(m.id) + '</td><td>' + fmtDateY(m.date) + '</td><td>' + (m.chairPresent == null ? 'No chair set' : m.chairPresent ? 'Yes' : '<b>No</b>') + (m.quorum ? '' : '<div class="rpt-just">Held without ' + esc(m.absent.join(', ')) + '</div>') + '</td><td>' + esc(m.outcome || '—') + '</td><td>' + m.decisions + ' action' + (m.decisions === 1 ? '' : 's') + (m.reviewId ? '<div class="rpt-just">Management review ' + esc(m.reviewId) + '</div>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No security reviews held in this period.</p>' },
+          { heading: 'Decisions on overdue actions', pageBreak: false, html: t.meetings.some(function (m) { return m.escalations.length; }) ? '<table class="rpt-table"><thead><tr><th>Meeting</th><th>Decision</th></tr></thead><tbody>' +
+            t.meetings.filter(function (m) { return m.escalations.length; }).map(function (m) { return m.escalations.map(function (x) { return '<tr><td class="rpt-idc">' + esc(m.id) + ' · ' + fmtDateY(m.date) + '</td><td>' + esc(x) + '</td></tr>'; }).join(''); }).join('') + '</tbody></table>' : '<p>No actions were overdue at two meetings running.</p>' },
+          { heading: 'Residual risks accepted', pageBreak: false, html: t.accepted.length ? '<table class="rpt-table"><thead><tr><th>Risk</th><th>Accepted by</th><th>Date</th><th>Score</th><th>Basis</th></tr></thead><tbody>' +
+            t.accepted.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '<div class="rpt-just">' + esc(r.title) + '</div></td><td>' + esc(r.by) + '</td><td>' + (r.date ? fmtDateY(r.date) : '') + '</td><td>' + (r.score == null ? '' : r.score) + '</td><td>' + esc(r.note) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No residual risks accepted in this period.</p>' },
+          { heading: 'Management reviews (Clause 9.3)', pageBreak: false, html: t.managementReviews.length ? '<table class="rpt-table"><thead><tr><th>Review</th><th>Date</th><th>Attendees</th></tr></thead><tbody>' +
+            t.managementReviews.map(function (m) { return '<tr><td class="rpt-idc">' + esc(m.id) + '</td><td>' + fmtDateY(m.date) + '</td><td>' + esc(m.attendees) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No management review recorded in this period.</p>' }
+        ]
+      };
+    },
+    /* Every security review of the last 12 months in one document, for
+       the auditor: the summary, then each meeting's minutes. */
+    secyear: function () {
+      var today = new Date().toISOString().slice(0, 10), since = window.CheckpointLib.addDaysIso(today, -365);
+      var s = secReviewSetup() || {};
+      var held = secReviews().filter(function (r) { return r.status === 'Held' && r.date >= since; }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+      if (!held.length) { toast('No security reviews held in the last 12 months.'); return null; }
+      var ys = window.CheckpointLib.securityReviewYearSummary(held, since);
+      var t = window.CheckpointLib.topManagementRecord({ since: since, setup: s, reviews: held, risks: S.risks || [], managementReviews: S.reviews || [] });
+      var quorate = t.meetings.filter(function (m) { return m.quorum; }).length;
+      var meetingSection = function (r) {
+        var a = secReviewAgenda(r), notes = r.itemNotes || {}, by = r.decisionItem || {};
+        var acts = (r.actions || []).map(function (id) { return (S.actions || []).find(function (x) { return x.id === id; }); }).filter(Boolean);
+        var at = window.CheckpointLib.securityReviewAttendance(r.present, s);
+        return { heading: r.id + ' · ' + a.label + ' · ' + fmtDateY(r.date), pageBreak: true, html:
+          (r.outcome ? '<p class="rpt-plain"><b>Outcome:</b> ' + esc(r.outcome) + '</p>' : '') +
+          '<p class="rpt-plain">Present: ' + esc(r.present || 'not recorded') + (at.absent.length ? '. Absent: ' + esc(at.absent.join(', ')) : '') + (at.quorum ? '' : '. <b>Held without the chair or the ISMS owner.</b>') + (r.reviewId ? ' Recorded as management review ' + esc(r.reviewId) + '.' : '') + '</p>' +
+          '<table class="rpt-table"><thead><tr><th>Item</th><th>Figures reviewed</th><th>Discussion</th><th>Decisions</th></tr></thead><tbody>' +
+          a.items.map(function (i) {
+            var mine = acts.filter(function (x) { return by[x.id] === i.key; });
+            var esc8 = i.key === 'escalations' ? window.CheckpointLib.securityReviewEscalationLines(r) : [];
+            return '<tr><td><b>' + esc(i.title) + '</b></td><td>' + i.facts.map(esc).join('<br>') + '</td><td style="white-space:pre-wrap">' + esc(notes[i.key] || '') + '</td><td>' + esc8.map(esc).concat(mine.map(function (x) { return esc(x.id + ' ' + x.title + ' (' + (x.owner || 'unassigned') + (x.due ? ', ' + fmtDateY(x.due) : '') + ', ' + actionStatusLabel(x.status) + ')'); })).join('<br>') + '</td></tr>';
+          }).join('') + '</tbody></table>' +
+          ((a.quiet || []).length ? '<p class="rpt-plain"><b>Nothing to report:</b> ' + a.quiet.map(esc).join('; ') + '.</p>' : '') };
+      };
+      return {
+        title: 'Security reviews: the year',
+        frameworkAgnostic: true,
+        dashboard: { intro: ys.text + ' ' + quorate + ' of ' + held.length + ' held with the chair and the ISMS owner present.' + (ys.performance ? ' Across the year: ' + ys.performance + '.' : '') + ' This document evidences ISO/IEC 27001 Clauses 9.1 and 9.3.' },
+        sections: [
+          { heading: 'Outcomes', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Meeting</th><th>Date</th><th>Outcome</th><th>Attendance</th><th>Decisions</th></tr></thead><tbody>' +
+            t.meetings.map(function (m) { return '<tr><td class="rpt-idc">' + esc(m.id) + '</td><td>' + fmtDateY(m.date) + '</td><td>' + esc(m.outcome || '—') + '</td><td>' + (m.absent.length ? 'Absent: ' + esc(m.absent.join(', ')) : 'All present') + '</td><td>' + m.decisions + '</td></tr>'; }).join('') + '</tbody></table>' },
+          { heading: 'Top management', pageBreak: false, html: '<p class="rpt-plain">' + esc(t.summary) + '</p>' +
+            (t.accepted.length ? '<table class="rpt-table"><thead><tr><th>Risk accepted</th><th>By</th><th>Date</th><th>Basis</th></tr></thead><tbody>' + t.accepted.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.by) + '</td><td>' + (r.date ? fmtDateY(r.date) : '') + '</td><td>' + esc(r.note) + '</td></tr>'; }).join('') + '</tbody></table>' : '') }
+        ].concat(held.map(meetingSection))
+      };
+    },
+
     /* Objectives with Checkpoint's measurement (Clauses 6.2 and 9.1). */
     objectives: function () {
       var rows = (S.objectives || []).map(function (o) {
@@ -3145,6 +3206,7 @@ function showModal(opts) {
       add('objectives', 'Objectives');
       if (lastAudit) { window._workpackAudit = lastAudit.id; add('workpack', 'Internal audit ' + lastAudit.id); }
       if (lastReview) { window._minutesReview = lastReview.id; add('minutes', 'Management review ' + lastReview.id); }
+      if (secReviews().some(function (r) { return r.status === 'Held'; })) add('topmgmt', 'Top management record');
       window._workpackAudit = savedAudit; window._minutesReview = savedReview;
       var missing = [];
       if (!lastAudit) missing.push('no completed internal audit');
@@ -9989,6 +10051,7 @@ function showModal(opts) {
     var next = (S.calendar || []).filter(function (c) { return /certification audit/i.test(c.title || '') && c.nextDue && c.nextDue >= today; }).sort(function (a, b) { return a.nextDue.localeCompare(b.nextDue); })[0];
     return window.CheckpointLib.buildSecurityReviewPack({
       today: today, since: prev ? prev.date : window.CheckpointLib.addDaysIso(today, -31), lastHeld: prev ? prev.date : '',
+      absences: window.CheckpointLib.securityReviewAbsences(secReviews(), secReviewSetup()),
       scans: S.scans || [], actions: S.actions || [], prevActionIds: prev ? prev.actions || [] : [],
       incidents: S.incidents || [], risks: S.risks || [], aboveAppetite: risksAboveAppetite().map(function (r) { return r.id; }),
       auditLog: S.auditLog || [], vendors: S.vendors || [],
@@ -10176,7 +10239,9 @@ function showModal(opts) {
       (held.length ? '<table class="sr-hist"><tbody>' + held.slice(0, 6).map(function (r) {
         return '<tr><td class="src">' + esc(r.id) + '</td><td>' + fmtDate(r.date) + '</td><td class="src">' + esc(secReviewLabel(r.n)) + '</td><td class="src">' + (r.outcome ? '<span class="sr-outcome-cell">' + esc(r.outcome) + '</span> · ' : '') + (r.actions || []).length + ' decision' + ((r.actions || []).length === 1 ? '' : 's') + (r.reviewId ? ' · ' + esc(r.reviewId) : '') + '</td>' +
           '<td style="text-align:right"><button class="btn quiet sm" data-action="App.openSecurityReview" data-id="' + esc(r.id) + '">Open</button></td></tr>';
-      }).join('') + '</tbody></table>' : '') + '</div>';
+      }).join('') + '</tbody></table>' +
+        '<div class="sr-btns sr-records"><button class="btn quiet sm" data-action="App.secTopMgmtDoc">Top management record</button><button class="btn quiet sm" data-action="App.secYearDoc">Year of reviews</button>' +
+        (!READONLY && Store.kind === 'sharepoint' ? '<button class="btn quiet sm" data-action="App.fileSecYear">File the year as Clause 9.3 evidence</button>' : '') + '</div>' : '') + '</div>';
   }
   /* The agenda in the panel: editable until the meeting is held, notes
      and decisions per item while minuting, the record once held. */
@@ -21327,7 +21392,7 @@ function showModal(opts) {
           openActs.length + ' action(s) currently open, ' + od + ' overdue.' + (ys ? ' ' + ys.text : ''),
         performance: 'Posture score ' + (last ? last.score + '/100' : 'no scan run') + '. ' + (readiness ? readiness + '. ' : '') +
           openNCs.length + ' open nonconformit' + (openNCs.length === 1 ? 'y' : 'ies') + ' of ' + ncs.length + ' raised' + (capaOutstanding ? ' (' + capaOutstanding + ' with corrective action still outstanding)' : '') + '. ' +
-          (lastAuditRec ? 'Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + lastAuditRec.scope + ').' : 'No internal audit on record.') + (ys && ys.performance ? ' Across the monthly security reviews: ' + ys.performance + '.' : '') + (ys && ys.outcomeText ? ' Meeting outcomes: ' + ys.outcomeText + '.' : ''),
+          (lastAuditRec ? 'Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + lastAuditRec.scope + ').' : 'No internal audit on record.') + (ys && ys.performance ? ' Across the monthly security reviews: ' + ys.performance + '.' : '') + (ys && ys.outcomeText ? ' Meeting outcomes: ' + ys.outcomeText + '.' : '') + (ys && ys.held ? ' ' + (function () { var tm = window.CheckpointLib.topManagementRecord({ since: since, setup: secReviewSetup() || {}, reviews: secReviews(), risks: [], managementReviews: [] }); return tm.meetings.filter(function (m) { return m.quorum; }).length + ' of ' + tm.meetings.length + ' security reviews held with the chair and the ISMS owner present.'; })() : ''),
         riskStatus: openRisks.length + ' risk(s) under management, ' + crit + ' at High/Critical residual. ' +
           accepted + ' residual risk(s) with documented owner acceptance.' + (ys && ys.risk ? ' Across the monthly security reviews: ' + ys.risk + '.' : '')
       };
@@ -21554,7 +21619,9 @@ function showModal(opts) {
       var heldOn = (window._srDraft && window._srDraft.srHeldOn) || rec.date;
       var fields = choice === 'extend' ? [{ id: 'due', label: 'New due date', type: 'date', value: window.CheckpointLib.addDaysIso(heldOn, 30) }] :
         choice === 'reassign' ? [{ id: 'owner', label: 'New owner', value: '', list: 'peopleList' }, { id: 'due', label: 'New due date', type: 'date', value: window.CheckpointLib.addDaysIso(heldOn, 30) }] :
-        [{ id: 'reason', label: 'Why the risk is accepted', type: 'textarea', value: '' }];
+        [{ id: 'reason', label: 'Why the risk is accepted', type: 'textarea', value: '' },
+          { id: 'risk', label: 'Record the acceptance against the risk', type: 'select', value: a.risk || '', options: riskLinkOptions(a.risk || '') },
+          { id: 'reviewBy', label: 'Look at it again by', type: 'date', value: window.CheckpointLib.addMonthsIso(heldOn, 6) }];
       var v = await showModal({
         title: { extend: 'Extend ', reassign: 'Reassign ', accept: 'Accept the risk: ' }[choice] + aid,
         message: a.title + (a.owner ? ' (' + a.owner + ')' : '') + ', due ' + fmtDate(a.due) + '.' + (choice === 'accept' ? '\n\nThe action is closed and the acceptance recorded against it, by ' + by + '.' : ''),
@@ -21570,11 +21637,41 @@ function showModal(opts) {
       else { a.status = 'Closed'; d.reason = v.reason.trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Risk accepted by ' + by + ' at security review ' + id + ' on ' + heldOn + ': ' + d.reason).slice(0, 2000); }
       busy(true);
       try { await Store.updateAction(a); } catch (e) { warn(e); busy(false); return; }
+      /* Accepting the risk on a stuck action is a residual risk
+         acceptance: recorded on the risk, as the risk drawer would. */
+      var rk = choice === 'accept' && v.risk ? risk(v.risk) : null;
+      if (rk) {
+        var rq = residual(rk);
+        var prevAcc = rk.acceptedBy ? rk.acceptedBy + ' ' + (rk.acceptedDate || '') : '';
+        rk.acceptedBy = by; rk.acceptedDate = heldOn; rk.acceptedScore = rq.L * rq.I;
+        rk.acceptanceNote = ('Accepted at security review ' + id + ' when ' + aid + ' (' + a.title + ') was closed: ' + d.reason + (v.reviewBy ? ' Look at it again by ' + fmtDate(v.reviewBy) + '.' : '')).slice(0, 2000);
+        if (rk.treat !== 'Tolerate') rk.treat = 'Tolerate';
+        if (!a.risk) a.risk = rk.id;
+        d.risk = rk.id; d.reviewBy = v.reviewBy || '';
+        try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at security review ' + id + ' (' + aid + ')'); } catch (e) { warn(e); }
+        if (v.reviewBy) {
+          var maxAct2 = S.actions.reduce(function (m, x) { var q2 = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q2); }, 0);
+          var rev = { id: 'ACT-' + String(maxAct2 + 1).padStart(3, '0'), title: 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', type: 'Action', risk: rk.id, control: '', pr: 'Medium',
+            owner: rk.owner || by, ownerEmail: '', due: v.reviewBy, status: 'Open', evidenceUrl: '', src: 'Security review ' + id + ': risk acceptance' };
+          try { await Store.addAction(rev); d.reviewAction = rev.id; audit('Action raised', 'Action', rev.id, '', 'Review of the risk acceptance of ' + rk.id + ' by ' + fmtDate(v.reviewBy)); } catch (e) { warn(e); }
+        }
+      }
       await updateSecReview(id, function (r) { r.escalations = r.escalations || {}; r.escalations[aid] = d; });
       audit({ extend: 'Action extended', reassign: 'Action reassigned', accept: 'Action closed' }[choice], 'Action', aid, JSON.stringify(before), window.CheckpointLib.securityReviewEscalationLines({ escalations: srOne(aid, d) })[0] + ' (security review ' + id + ')');
       busy(false);
-      renderActions(); renderNavCounts();
+      renderActions(); renderNavCounts(); if (rk) renderRisks();
       App.openSecurityReview(id);
+    },
+    secTopMgmtDoc: function () { App.report('topmgmt'); },
+    secYearDoc: function () { App.report('secyear'); },
+    fileSecYear: async function () {
+      var c = findClauseByCode('iso27001', '9.3');
+      if (!c) { toast('Clause 9.3 is not in this tenant\u2019s clauses.'); return; }
+      busy(true);
+      var ok = false;
+      try { ok = await fileReportAsEvidence('secyear', c); } catch (e) { warn(e); }
+      busy(false);
+      toast(ok ? 'The year of security reviews is filed as Clause 9.3 evidence' : 'Could not file the year of security reviews');
     },
     saveSecurityReviewMinutes: async function (id) {
       var rec = secReviewById(id);
@@ -21585,6 +21682,12 @@ function showModal(opts) {
       var present = ((document.getElementById('srPresent') || {}).value || '').trim();
       var outcome = ((document.getElementById('srOutcome') || {}).value || '').trim().slice(0, 200);
       if (!present) { toast('Record who was present.'); return; }
+      var attendance = window.CheckpointLib.securityReviewAttendance(present, s);
+      if (!attendance.quorum) {
+        srStashDraft(id);
+        var goOn = await showModal({ title: 'Held without the chair or the ISMS owner?', message: 'Not in the attendance: ' + attendance.absent.join(', ') + '.\n\nThe minutes and decisions are still recorded, marked as held without them, and confirming the decisions goes on the next agenda.', confirmText: 'Record anyway', cancelText: 'Go back' });
+        if (!goOn) { App.openSecurityReview(id); return; }
+      }
       var notes = {}, decisions = [];
       a.items.forEach(function (i) {
         var n = document.getElementById('srNote-' + i.key), d = document.getElementById('srDec-' + i.key);
@@ -21614,10 +21717,11 @@ function showModal(opts) {
         if (!r.pack) r.pack = secReviewPack();
         r.status = 'Held'; r.date = heldOn; r.present = present; r.itemNotes = notes; r.heldAt = new Date().toISOString().slice(0, 10);
         if (outcome) r.outcome = outcome;
+        r.attendance = { absent: attendance.absent, quorum: attendance.quorum };
         r.actions = raised.slice(); r.decisionItem = Object.assign(r.decisionItem || {}, byItem);
         if (reviewId) r.reviewId = reviewId;
       });
-      audit('Security review held', 'SecurityReview', id, '', heldOn + ' — ' + present + (outcome ? '; outcome: ' + outcome : '') + (raised.length ? '; actions ' + raised.join(', ') : '') + (reviewId ? '; management review ' + reviewId : ''));
+      audit('Security review held', 'SecurityReview', id, '', heldOn + ' — ' + present + (attendance.quorum ? '' : '; held without ' + attendance.absent.join(', ')) + (outcome ? '; outcome: ' + outcome : '') + (raised.length ? '; actions ' + raised.join(', ') : '') + (reviewId ? '; management review ' + reviewId : ''));
       window._srMinutes = null; window._srDraft = null;
       busy(false);
       toast('<b>' + esc(id) + '</b> minutes saved' + (raised.length ? ', ' + raised.length + ' action' + (raised.length === 1 ? '' : 's') + ' raised' : '') + (reviewId ? ', recorded as ' + reviewId : ''));

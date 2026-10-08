@@ -167,6 +167,9 @@
       if (bits.length) f.push(bits.join(', '));
       if (p.people.certsExpiring.length) f.push('Supplier certificates expiring soon: ' + p.people.certsExpiring.slice(0, 3).join(', '));
     } else if (key === 'decisions') {
+      var att = p.attendance || {};
+      if (att.lastQuorum === false) f.push('The last meeting was held without the chair or the ISMS owner: confirm its decisions');
+      (att.missedTwice || []).forEach(function (x) { f.push('Attendance: ' + x + ' missed the last two meetings'); });
       f.push('Each decision gets an owner and a due date. Any other business: new products or AI features, customer or contract changes, team changes');
     } else if (key === 'access') {
       f.push(p.quarterly.accessReview ? 'Last access review completed ' + srDate(p.quarterly.accessReview) : 'No access review recorded yet');
@@ -310,6 +313,37 @@
     if (/^https:\/\//i.test(m.appUrl || '')) { lines.push(''); lines.push('Detail behind each figure: ' + m.appUrl); }
     return lines.join('\n');
   }
+  function srNamePresent(name, present) {
+    var p = String(present || '').toLowerCase(), n = String(name || '').toLowerCase().trim();
+    if (!n) return true;
+    if (p.indexOf(n) !== -1) return true;
+    var parts = n.split(/\s+/).filter(function (x) { return x.length >= 3; });
+    var last = parts[parts.length - 1];
+    return !!last && parts.length > 1 && new RegExp('(^|[^a-z])' + last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z]|$)').test(p);
+  }
+  function securityReviewAttendance(present, setup) {
+    var s = setup || {}, seen = {}, expected = [];
+    [['chair', 'Chair'], ['owner', 'ISMS owner'], ['facilitator', 'Facilitator']].forEach(function (r) {
+      var name = String(s[r[0]] || '').trim();
+      if (!name || seen[name.toLowerCase()]) return;
+      seen[name.toLowerCase()] = true;
+      expected.push({ role: r[1], key: r[0], name: name, present: srNamePresent(name, present) });
+    });
+    var missing = function (k) { return expected.some(function (e) { return e.key === k && !e.present; }); };
+    return { expected: expected, absent: expected.filter(function (e) { return !e.present; }).map(function (e) { return e.name + ' (' + e.role.toLowerCase() + ')'; }),
+      quorum: !missing('chair') && !missing('owner') };
+  }
+  function securityReviewAbsences(reviews, setup) {
+    var held = (reviews || []).filter(function (r) { return r && r.status === 'Held'; }).sort(function (a, b) { return b.date.localeCompare(a.date); });
+    var out = { missedTwice: [], lastQuorum: true };
+    if (!held.length) return out;
+    var a0 = securityReviewAttendance(held[0].present, setup);
+    out.lastQuorum = a0.quorum;
+    if (held.length < 2) return out;
+    var a1 = securityReviewAttendance(held[1].present, setup);
+    out.missedTwice = a0.absent.filter(function (x) { return a1.absent.indexOf(x) !== -1; });
+    return out;
+  }
   function wallTimeToUtc(dateIso, hhmm, tz) {
     var base = Date.parse(String(dateIso).slice(0, 10) + 'T' + (hhmm || '10:00') + ':00Z');
     if (isNaN(base)) return '';
@@ -328,6 +362,6 @@
   }
 
 module.exports = {
-  srDate, addDaysIso, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, wallTimeToUtc,
+  srDate, addDaysIso, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };

@@ -5909,6 +5909,7 @@
     var obj = (d.objectives || []).filter(function (o) { return o && o.status !== 'Achieved' && o.status !== 'Closed'; });
     return {
       today: today, since: since,
+      attendance: { missedTwice: ((d.absences || {}).missedTwice || []).slice(0, 4), lastQuorum: (d.absences || {}).lastQuorum !== false },
       posture: { score: last ? last.score : null, prev: prev && prev !== last ? prev.score : null, failing: typeof d.failing === 'number' ? d.failing : null, failingTop: (d.failingTop || []).slice(0, 3) },
       actions: { open: openA.length, overdue: overdueA.length, closedSince: countLog(/^Action (completed|closed)|^Corrective action/i, 'Action'),
         overdueList: overdueA.slice(0, 8).map(short),
@@ -5966,6 +5967,9 @@
       if (bits.length) f.push(bits.join(', '));
       if (p.people.certsExpiring.length) f.push('Supplier certificates expiring soon: ' + p.people.certsExpiring.slice(0, 3).join(', '));
     } else if (key === 'decisions') {
+      var att = p.attendance || {};
+      if (att.lastQuorum === false) f.push('The last meeting was held without the chair or the ISMS owner: confirm its decisions');
+      (att.missedTwice || []).forEach(function (x) { f.push('Attendance: ' + x + ' missed the last two meetings'); });
       f.push('Each decision gets an owner and a due date. Any other business: new products or AI features, customer or contract changes, team changes');
     } else if (key === 'access') {
       f.push(p.quarterly.accessReview ? 'Last access review completed ' + srDate(p.quarterly.accessReview) : 'No access review recorded yet');
@@ -6196,6 +6200,7 @@
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px">' +
       '<h2 style="margin-bottom:4px">Minutes: ' + e(m.org || 'Security') + ' security review ' + agenda.n + '</h2>' +
       '<p style="color:#666;font-size:13px;margin-top:0">' + e(m.date) + ' \u00b7 ' + e(agenda.label) + ' \u00b7 Present: ' + e(r.present || 'not recorded') + '</p>' +
+      ((r.attendance && r.attendance.absent && r.attendance.absent.length) ? '<p style="color:#666;font-size:13px;margin-top:0">Absent: ' + e(r.attendance.absent.join(', ')) + (r.attendance.quorum === false ? ' \u00b7 <b style="color:#c0392b">held without the chair or the ISMS owner</b>' : '') + '</p>' : '') +
       (r.outcome ? '<p style="font-size:15px;margin:12px 0;padding:10px 12px;background:#f4f6f8;border-left:3px solid #2e86c1"><b>Outcome:</b> ' + e(r.outcome) + '</p>' : '') +
       agenda.items.map(function (i) {
         var mine = acts.filter(function (a) { return by[a.id] === i.key; });
@@ -6215,8 +6220,68 @@
     var x = (rec && rec.escalations) || {};
     return Object.keys(x).map(function (id) {
       var d = x[id] || {};
-      return id + ' ' + (d.title || '') + ': ' + (d.choice === 'extend' ? 'extended to ' + srDate(d.due) : d.choice === 'reassign' ? 'reassigned to ' + (d.owner || '') + (d.due ? ', due ' + srDate(d.due) : '') : 'risk accepted' + (d.reason ? ' (' + d.reason + ')' : '')) + (d.by ? ', by ' + d.by : '');
+      return id + ' ' + (d.title || '') + ': ' + (d.choice === 'extend' ? 'extended to ' + srDate(d.due) : d.choice === 'reassign' ? 'reassigned to ' + (d.owner || '') + (d.due ? ', due ' + srDate(d.due) : '') : 'risk accepted' + (d.risk ? ' on ' + d.risk : '') + (d.reason ? ' (' + d.reason + ')' : '') + (d.reviewBy ? ', look again by ' + srDate(d.reviewBy) : '')) + (d.by ? ', by ' + d.by : '');
     });
+  }
+  /* Who was expected (the roles set in the review settings) and who was
+     there. A name counts as present when the attendance text names it,
+     or its surname. Quorum = the chair and the ISMS owner both there. */
+  function srNamePresent(name, present) {
+    var p = String(present || '').toLowerCase(), n = String(name || '').toLowerCase().trim();
+    if (!n) return true;
+    if (p.indexOf(n) !== -1) return true;
+    var parts = n.split(/\s+/).filter(function (x) { return x.length >= 3; });
+    var last = parts[parts.length - 1];
+    return !!last && parts.length > 1 && new RegExp('(^|[^a-z])' + last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z]|$)').test(p);
+  }
+  function securityReviewAttendance(present, setup) {
+    var s = setup || {}, seen = {}, expected = [];
+    [['chair', 'Chair'], ['owner', 'ISMS owner'], ['facilitator', 'Facilitator']].forEach(function (r) {
+      var name = String(s[r[0]] || '').trim();
+      if (!name || seen[name.toLowerCase()]) return;
+      seen[name.toLowerCase()] = true;
+      expected.push({ role: r[1], key: r[0], name: name, present: srNamePresent(name, present) });
+    });
+    var missing = function (k) { return expected.some(function (e) { return e.key === k && !e.present; }); };
+    return { expected: expected, absent: expected.filter(function (e) { return !e.present; }).map(function (e) { return e.name + ' (' + e.role.toLowerCase() + ')'; }),
+      quorum: !missing('chair') && !missing('owner') };
+  }
+  /* People expected at both of the last two meetings held and at
+     neither: raised at the next meeting. */
+  function securityReviewAbsences(reviews, setup) {
+    var held = (reviews || []).filter(function (r) { return r && r.status === 'Held'; }).sort(function (a, b) { return b.date.localeCompare(a.date); });
+    var out = { missedTwice: [], lastQuorum: true };
+    if (!held.length) return out;
+    var a0 = securityReviewAttendance(held[0].present, setup);
+    out.lastQuorum = a0.quorum;
+    if (held.length < 2) return out;
+    var a1 = securityReviewAttendance(held[1].present, setup);
+    out.missedTwice = a0.absent.filter(function (x) { return a1.absent.indexOf(x) !== -1; });
+    return out;
+  }
+  /* What top management did over a period, for Clause 5.1 and 9.3:
+     meetings chaired, outcomes, decisions on stuck actions, residual
+     risks accepted and management reviews held. */
+  function topManagementRecord(d) {
+    var since = d.since || '', setup = d.setup || {};
+    var held = (d.reviews || []).filter(function (r) { return r && r.status === 'Held' && (!since || r.date >= since); }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+    var meetings = held.map(function (r) {
+      var at = securityReviewAttendance(r.present, setup);
+      var chair = at.expected.find(function (e) { return e.key === 'chair'; });
+      return { id: r.id, n: r.n, date: r.date, kind: r.kind || '', outcome: r.outcome || '', chairPresent: chair ? chair.present : null, quorum: at.quorum,
+        absent: at.absent, decisions: (r.actions || []).length, escalations: securityReviewEscalationLines(r), reviewId: r.reviewId || '' };
+    });
+    var accepted = (d.risks || []).filter(function (r) { return r && r.acceptedBy && (!since || String(r.acceptedDate || '') >= since); })
+      .map(function (r) { return { id: r.id, title: r.title || '', by: r.acceptedBy, date: r.acceptedDate || '', note: r.acceptanceNote || '', score: r.acceptedScore == null ? null : r.acceptedScore }; })
+      .sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+    var mrs = (d.managementReviews || []).filter(function (m) { return m && (!since || String(m.date || '') >= since); }).map(function (m) { return { id: m.id, date: m.date, attendees: m.attendees || '' }; })
+      .sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+    var chaired = meetings.filter(function (m) { return m.chairPresent; }).length;
+    var decisions = meetings.reduce(function (n, m) { return n + m.escalations.length; }, 0);
+    return { since: since, meetings: meetings, accepted: accepted, managementReviews: mrs,
+      summary: meetings.length ? meetings.length + ' security review' + (meetings.length === 1 ? '' : 's') + ' held' + (setup.chair ? ', ' + chaired + ' chaired by ' + setup.chair : '') +
+        '; ' + decisions + ' decision' + (decisions === 1 ? '' : 's') + ' on overdue actions; ' + accepted.length + ' residual risk' + (accepted.length === 1 ? '' : 's') + ' accepted; ' +
+        mrs.length + ' management review' + (mrs.length === 1 ? '' : 's') + '.' : 'No security reviews held in this period.' };
   }
   /* Month by month, from the packs of meetings held. */
   function securityReviewTrend(reviews) {
@@ -10291,7 +10356,7 @@
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,
     SECURITY_REVIEW_AGENDA: SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY: SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF: SECURITY_REVIEW_KICKOFF,
-    srDate: srDate, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
+    srDate: srDate, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,
