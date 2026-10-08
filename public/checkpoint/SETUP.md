@@ -729,6 +729,44 @@ every campaign permanently short of 100%.
   `azure/lib/acknowledgements.js`), and records the date in
   `attestChaseLog`; `attestChaseEnabled` = `false` turns it off.
 
+- **Path to certification, worked back from Stage 1**: `onboardingSchedule(steps,
+  start, today, target)` scales the standard 90-day step offsets so the plan
+  ends on `stage1TargetDate` (Settings, set from the path card), or on a
+  Stage 1 booked on the calendar. `certificationMilestones()` groups the
+  steps into five milestones (`CERT_MILESTONES`) with due dates, days late
+  and warnings, and flags the target at risk. The snapshot carries
+  `plan.target`, `plan.atRisk` and `plan.milestonesLate`;
+  `clientAttentionFlags()` raises a red `target` flag in the console.
+
+- **Certification gate checklist**: `certificationBookingReadiness()` also
+  returns `checks` (stage, label, ok, detail, fix, blocking). Its
+  `stage1`/`stage2` missing lists are unchanged. Non-blocking checks
+  (evidence links, clause evidence fit, about three months of records)
+  are advice. The certification page renders the checklist with fix
+  buttons; the booking dialog shows it as a table.
+
+- **Finish this clause**: `clauseFinishSteps()` orders what is left on a
+  clause: Checkpoint's fixes, then confirmations only the organisation
+  can record, then owner, evidence (or replacing evidence that does not
+  fit) and finally `App.markClauseImplemented`, which still goes through
+  the Implemented gate.
+
+- **Evidence that fits the requirement**: `CLAUSE_EVIDENCE_EXPECT` states, for
+  each ISO 27001 clause, whether it needs an approved document or a dated
+  record (no older than a year) and what it is usually called.
+  `clauseEvidenceFit()` judges the clause's link against the document
+  register entry or the clause's evidence folder: fail for a policy where
+  a record is needed, a draft, an old record or an empty folder; warn for
+  an unexpected name or a document past review; unknown for a link
+  outside SharePoint, which is never a failure.
+
+- **Top management interview (Clause 5)**: `TOP_MGMT_QUESTIONS` holds eight
+  questions, each with what a good answer covers and a records check.
+  `topManagementInterview()` flags a question when the records have a gap
+  the answer must address, or it is unanswered. Answers are saved in
+  `topMgmtInterview`, can be filed as Clause 5.1 evidence (report
+  `tminterview`) and go into the Stage 1 pack.
+
 - **Segregation of duties (A.5.3)**: ISO 27001 A.5.3 asks that
   conflicting duties be separated so no one person can both perform and
   authorise the same act. The two places that matters in Checkpoint are

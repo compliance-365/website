@@ -865,7 +865,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -3122,10 +3122,8 @@ function showModal(opts) {
        and equivalents) from the ISMS's own records, including the
        ISO/IEC 27006-1 complexity factors that set the audit time. */
     certapp: function (activeFw, fwLabel) {
-      var steps = gettingStartedSteps();
-      var start = (S.settings && S.settings.onboardedDate) || ((S.scans || [])[0] || {}).date || new Date().toISOString().slice(0, 10);
-      var plan = window.CheckpointLib.onboardingSchedule(steps, String(start).slice(0, 10), new Date().toISOString().slice(0, 10));
-      var ready = plan.steps.length ? plan.steps[plan.steps.length - 1].target : '';
+      var plan = certPlan().plan;
+      var ready = plan.target || (plan.steps.length ? plan.steps[plan.steps.length - 1].target : '');
       var r = window.CheckpointLib.certApplicationAnswers({
         profile: S.settings || {}, vendors: S.vendors || [], legal: S.legal || [], audits: S.audits || [], reviews: S.reviews || [],
         onboardedDate: S.settings && S.settings.onboardedDate, readyDate: ready, today: new Date().toISOString().slice(0, 10), consultant: 'Compliance365'
@@ -3274,6 +3272,20 @@ function showModal(opts) {
         ]
       };
     },
+    /* The top management readiness interview, as recorded, beside what
+       the records say. Filed as evidence for Clause 5.1. */
+    tminterview: function () {
+      var rec = tmInterviewRecord();
+      if (!rec) { toast('Record the top management interview first (Management review page).'); return null; }
+      var iv = window.CheckpointLib.topManagementInterview(tmInterviewData(), rec.answers);
+      return {
+        title: 'Top management interview',
+        frameworkAgnostic: true,
+        dashboard: { intro: 'Readiness interview with ' + (rec.person || 'top management') + ' on ' + fmtDateY(rec.date) + ', with the questions a certification auditor asks top management (ISO/IEC 27001 Clauses 4 to 10). ' + iv.answered + ' of ' + iv.total + ' answered; ' + iv.flagged + ' to look at again before the audit, where the records have a gap the answer needs to address.' },
+        sections: [{ heading: 'Questions, answers and what the records say', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th style="width:8%">Clause</th><th style="width:28%">Question</th><th>Answer</th><th style="width:30%">The records say</th></tr></thead><tbody>' +
+          iv.rows.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.clause) + '</td><td>' + esc(r.q) + '<div class="rpt-just">' + esc(r.listen) + '</div></td><td style="white-space:pre-wrap">' + (r.answer ? esc(r.answer) : '<span class="rpt-just">Not answered</span>') + '</td><td>' + (r.recordsOk ? '' : '<b>Check: </b>') + esc(r.records) + '</td></tr>'; }).join('') + '</tbody></table>' }]
+      };
+    },
     /* What changed in the management system since a date (default: the
        last management review, else 90 days), grouped the way top
        management thinks about it. Clause 9.3.2 b) and 6.3. */
@@ -3413,6 +3425,7 @@ function showModal(opts) {
       if (lastAudit) { window._workpackAudit = lastAudit.id; add('workpack', 'Internal audit ' + lastAudit.id); }
       if (lastReview) { window._minutesReview = lastReview.id; add('minutes', 'Management review ' + lastReview.id); }
       if (secReviews().some(function (r) { return r.status === 'Held'; })) add('topmgmt', 'Top management record');
+      if (tmInterviewRecord()) add('tminterview', 'Top management interview');
       if (activeFw === 'iso27001') add('auditqs', 'Auditor questions');
       window._workpackAudit = savedAudit; window._minutesReview = savedReview;
       var missing = [];
@@ -5832,6 +5845,7 @@ function showModal(opts) {
       if (!cert || !cert.issued) {
         return '<div class="card" style="margin-bottom:16px"><h3>' + esc(fwName(fw)) + '</h3>' +
           '<p style="color:var(--paper-dim);font-size:12.5px">Not certified yet. Once the certification body issues the certificate, record it here and Checkpoint schedules the rest of the three-year cycle.</p>' +
+          (fw === 'iso27001' || fw === 'iso42001' ? certGateHtml(fw) : '') +
           '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.certApplication" data-id="' + fw + '">Application form answers</button><button class="btn ghost sm" data-action="App.bookCertificationAudit" data-id="' + fw + '">Book Stage 1 / Stage 2</button><button class="btn ghost sm" data-action="App.go" data-id="auditor">Auditor access</button><button class="btn ghost sm" data-action="App.recordCertificate" data-id="' + fw + '">Record certificate</button></div>' +
           '<p class="src" style="margin-top:8px">Application form answers fills in what the certification body\u2019s application asks (scope, people, suppliers, legal requirements and the complexity factors that set the audit time) from your ISMS.</p></div>';
       }
@@ -5984,6 +5998,23 @@ function showModal(opts) {
     });
   }
 
+  /* The Stage 1 date the plan works back from: the one the client set,
+     else a Stage 1 already booked on the calendar. */
+  function stage1Target() {
+    var set = (S.settings && S.settings.stage1TargetDate) || '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(set)) return set;
+    var booked = '';
+    (S.calendar || []).forEach(function (c) { if (/cert:iso27001:stage1/.test(c.notes || '') && c.nextDue && window.CheckpointLib.calendarItemLive(c)) booked = String(c.nextDue).slice(0, 10); });
+    return booked;
+  }
+  function certPlan(steps) {
+    var today = new Date().toISOString().slice(0, 10);
+    steps = steps || gettingStartedSteps();
+    var start = (S.settings && S.settings.onboardedDate) || ((S.scans || [])[0] || {}).date || today;
+    var plan = window.CheckpointLib.onboardingSchedule(steps, String(start).slice(0, 10), today, stage1Target());
+    return { steps: steps, plan: plan, ms: window.CheckpointLib.certificationMilestones(plan, today) };
+  }
+
   /* "Your path to certification" — the Dashboard's guided path. Same
      principle as the checklist it replaced: every step's done-state is
      derived from real register data (certificationPathSteps() in
@@ -6011,10 +6042,19 @@ function showModal(opts) {
     /* The dated plan: which week of the engagement this is, what is due
        this week and what has slipped. Starts from the setup date, or the
        first scan for a tenant set up before that was recorded. */
-    var startDate = (S.settings && S.settings.onboardedDate) || ((S.scans || [])[0] || {}).date || new Date().toISOString().slice(0, 10);
-    var plan = window.CheckpointLib.onboardingSchedule(steps, String(startDate).slice(0, 10), new Date().toISOString().slice(0, 10));
+    var cp = certPlan(steps), plan = cp.plan, ms = cp.ms;
+    var readyBy = plan.target || plan.steps[plan.steps.length - 1].target;
+    var lateMs = ms.milestones.filter(function (m) { return m.lateDays > 0; });
+    var msHtml = '<div class="gs-ms"><div class="gs-ms-head"><b>' + (plan.target ? 'Working back from Stage 1 on ' + fmtDate(plan.target) : 'No Stage 1 target date yet: the plan assumes about 90 days') + '</b>' +
+      (READONLY ? '' : '<button class="btn ghost sm" data-action="App.setStage1Target">' + (plan.target ? 'Change the date' : 'Set a target date') + '</button>') + '</div>' +
+      ms.warnings.map(function (w) { return '<p class="src gs-ms-warn">' + esc(w) + '</p>'; }).join('') +
+      '<ol class="gs-ms-list">' + ms.milestones.map(function (m) {
+        var st = m.done ? 'done' : m.lateDays ? 'late' : 'open';
+        return '<li class="gs-ms-' + st + '"><span class="gs-ms-dot" aria-hidden="true">' + (m.done ? icon('check') : '') + '</span><div><b>' + esc(m.label) + '</b> <span class="src">' + (m.done ? 'done' : m.lateDays ? '<span style="color:var(--fail)">' + m.lateDays + ' day' + (m.lateDays === 1 ? '' : 's') + ' late</span> (due ' + fmtDate(m.due) + ')' : 'by ' + fmtDate(m.due)) + '</span>' +
+          '<div class="src">' + esc(m.done ? m.what : 'Still to do: ' + m.open.join(', ')) + '</div></div></li>';
+      }).join('') + '</ol></div>';
     var planRow = function (st) { return '<div class="gs-row"><span class="gs-check"></span><div class="gs-text"><b>' + esc(st.label) + '</b><span>' + (st.late ? '<span style="color:var(--fail)">Was due ' + fmtDate(st.target) + '</span>' : 'Due ' + fmtDate(st.target)) + '</span></div>' + pathStepButton(st, false) + '</div>'; };
-    var planHtml = '<div style="margin:0 0 12px"><p class="src" style="margin:0 0 6px"><b>Week ' + plan.week + ' of your plan</b> (' + fmtDate(plan.weekStart) + ' to ' + fmtDate(plan.weekEnd) + '). Ready for Stage 1 by ' + fmtDate(plan.steps[plan.steps.length - 1].target) + ' on this plan.</p>' +
+    var planHtml = msHtml + '<div style="margin:0 0 12px"><p class="src" style="margin:0 0 6px"><b>Week ' + plan.week + ' of your plan</b> (' + fmtDate(plan.weekStart) + ' to ' + fmtDate(plan.weekEnd) + '). ' + (plan.target ? 'Stage 1 target ' : 'Ready for Stage 1 by ') + fmtDate(readyBy) + ' on this plan.</p>' +
       (plan.behind.length ? '<div class="src" style="color:var(--fail);margin:6px 0 2px">Behind plan (' + plan.behind.length + ')</div>' + plan.behind.filter(function (x) { return x.id !== next.id; }).slice(0, 4).map(planRow).join('') : '') +
       (plan.thisWeek.length ? '<div class="src" style="margin:6px 0 2px">Due this week</div>' + plan.thisWeek.filter(function (x) { return x.id !== next.id; }).map(planRow).join('') : '') + '</div>';
     var nextHtml = planHtml + '<div class="gs-row" style="border:1px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:12px">' +
@@ -6034,7 +6074,7 @@ function showModal(opts) {
     var pct = Math.round(doneCount / steps.length * 100);
     el.innerHTML = '<div class="gs-compact"><div class="gs-compact-main"><h3>Your path to certification</h3>' +
       '<div class="gs-bar"><i style="width:' + pct + '%"></i></div>' +
-      '<span class="src">Week ' + plan.week + ' of your plan · ' + doneCount + ' of ' + steps.length + ' steps done · ' + esc(next.phase) + (plan.behind.length ? ' · <span style="color:var(--fail)">' + plan.behind.length + ' behind plan</span>' : ' · on plan') + ' · Stage 1 ready by ' + fmtDate(plan.steps[plan.steps.length - 1].target) + '</span>' +
+      '<span class="src">Week ' + plan.week + ' of your plan · ' + doneCount + ' of ' + steps.length + ' steps done · ' + esc(next.phase) + (lateMs.length ? ' · <span style="color:var(--fail)">' + lateMs.length + ' milestone' + (lateMs.length === 1 ? '' : 's') + ' late</span>' : plan.behind.length ? ' · <span style="color:var(--fail)">' + plan.behind.length + ' behind plan</span>' : ' · on plan') + (plan.target ? ' · Stage 1 target ' + fmtDate(plan.target) : ' · Stage 1 ready by ' + fmtDate(readyBy)) + '</span>' +
       '<div class="gs-next"><b>Next:</b> ' + esc(next.label) + '</div></div>' + pathStepButton(next, true) + '</div>' +
       '<details class="gs-detail"' + (window._gsOpen ? ' open' : '') + ' data-toggle-key="_gsOpen"><summary class="src">The plan and all ' + steps.length + ' steps</summary>' + stepperHtml + nextHtml + listHtml + '</details>';
   }
@@ -6174,6 +6214,27 @@ function showModal(opts) {
       '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--gold-light);margin-bottom:8px">Sites.Selected grant request (step 3)</summary>' + grantHtml + '</details>' +
       '<div style="margin-top:10px">' + stepsHtml + '</div>' +
       '<div style="margin-top:10px"><a class="btn sm" href="' + deployUrl + '" target="_blank" rel="noopener">Deploy to Azure →</a></div>';
+  }
+
+  /* ===== Top management readiness interview (Clause 5) ===== */
+  function tmInterviewData() {
+    var today = new Date().toISOString().slice(0, 10);
+    var lastReview = (S.reviews || []).map(function (r) { return String(r.date || '').slice(0, 10); }).filter(Boolean).sort().pop() || '';
+    var pol = (window._docs || S.documents || []).find(function (d) { return d.tplId === 'infosec-policy' && docStatusOf(d) === 'Approved'; });
+    return {
+      today: today, policyApproved: !!pol, objectives: S.objectives || [],
+      appetite: (S.settings && S.settings.riskAppetite) || 'Medium',
+      aboveAppetite: risksAboveAppetite().filter(function (r) { return !r.acceptedBy; }).length,
+      ismsOwner: (secReviewSetup() || {}).owner || '',
+      lastReview: lastReview,
+      incidents: (S.incidents || []).filter(function (n) { return String(n.detected || '').slice(0, 10) >= window.CheckpointLib.addDaysIso(today, -365); }).length,
+      correctiveWithCause: (S.actions || []).filter(function (a) { return a.rootCause; }).length,
+      changes: window.CheckpointLib.ismsChangeLog(S.auditLog || [], lastReview || window.CheckpointLib.addDaysIso(today, -365)).total,
+      resourcesStated: (S.objectives || []).some(function (o) { return String(o.resources || '').trim(); })
+    };
+  }
+  function tmInterviewRecord() {
+    try { var o = JSON.parse((S.settings && S.settings.topMgmtInterview) || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; }
   }
 
   /* ===== Backups ===== */
@@ -10451,8 +10512,28 @@ function showModal(opts) {
       scopeStatement: orgProfileValue(fw === 'iso42001' ? 'orgAimsScopeStatement' : 'orgScopeStatement'),
       md: fw === 'iso27001' ? mandatoryDocsStatus() : [], risks: S.risks, soa: ctx.soaByFw[fw] || {},
       audits: (S.audits || []).filter(function (a) { return (a.fw || 'iso27001') === (fw === 'iso27701' ? 'iso27001' : fw); }),
-      reviews: S.reviews, actions: S.actions, onboardedDate: S.settings && S.settings.onboardedDate, today: new Date().toISOString().slice(0, 10)
+      reviews: S.reviews, actions: S.actions, onboardedDate: S.settings && S.settings.onboardedDate, today: new Date().toISOString().slice(0, 10),
+      evidenceIssues: evidenceCheckState() ? (evidenceCheckState().issues || []).length : undefined,
+      clauseEvidenceWrong: fw === 'iso27001' ? clauseEvidenceProblems().map(function (c) { return c.id; }) : undefined
     });
+  }
+  /* The gate as a checklist: every check for Stage 1 and Stage 2, passed
+     or not, with the button that fixes it. */
+  function certGateHtml(fw) {
+    var r = bookingReadinessFor(fw);
+    var row = function (c) {
+      var st = c.ok ? 'ok' : c.blocking ? 'no' : 'warn';
+      return '<li class="gate-' + st + '"><span class="gate-ic" aria-hidden="true">' + (c.ok ? icon('check') : c.blocking ? '✕' : '!') + '</span>' +
+        '<div class="gate-t"><span>' + esc(c.label) + '<span class="sr-only">: ' + (c.ok ? 'done' : c.blocking ? 'not done' : 'advice') + '</span></span>' + (c.detail ? '<span class="src">' + esc(c.detail) + '</span>' : '') + '</div>' +
+        (!c.ok && c.fix && !READONLY ? '<button class="btn ghost sm" data-action="' + esc(c.fix.action) + '"' + (c.fix.id ? ' data-id="' + esc(c.fix.id) + '"' : '') + '>' + esc(c.fix.label) + '</button>' : '') + '</li>';
+    };
+    var stage = function (n, ok) {
+      var list = r.checks.filter(function (c) { return c.stage === n; });
+      return '<div class="gate-stage"><h4>Stage ' + n + ' ' + (ok ? '<span class="gate-pill ok">Can be booked</span>' : '<span class="gate-pill no">Not yet</span>') + '</h4><ul class="gate-list">' + list.map(row).join('') + '</ul></div>';
+    };
+    var left = r.checks.filter(function (c) { return !c.ok && c.blocking; }).length;
+    var intro = left ? left + ' check' + (left === 1 ? '' : 's') + ' left before both stages can be booked. Booking unlocks for each stage as soon as its checks pass.' : 'Every check passes: book Stage 1 and Stage 2 with the certification body.';
+    return '<div class="gate"><p class="src" style="margin:0 0 8px">' + esc(intro) + '</p>' + stage(1, r.stage1.ok) + stage(2, r.stage2.ok) + '</div>';
   }
 
   /* ===== Monthly security review =====
@@ -13092,6 +13173,37 @@ function showModal(opts) {
   function clauseGateFor(c, ctx) {
     return window.CheckpointLib.clauseImplementGate(clauseChecklistFor(c, ctx), c);
   }
+  /* "Finish this clause": what is left, in order, one button each. The
+     first step is the one to do now. */
+  /* Is the clause's linked evidence the right kind, and current? Only
+     ISO 27001 clauses have an expectation set. */
+  function clauseEvidenceFitFor(c) {
+    if ((c.fw || 'iso27001') !== 'iso27001') return { level: c.evidenceUrl ? 'ok' : 'none', issues: [], expects: '' };
+    var url = c.evidenceUrl || '';
+    var d = url ? (window._docs || []).find(function (x) { return x.url === url; }) : null;
+    var f = evidenceFolderFor('clause', c.fw || 'iso27001', c.id);
+    var ev = { url: url,
+      doc: d ? { name: d.name, status: docStatusOf(d), category: d.category, nextReview: d.nextReview, modified: d.modified } : null,
+      folder: !d && f && f.url === url ? { names: f.names || [], latest: f.latest || '', count: f.count || 0 } : null };
+    return window.CheckpointLib.clauseEvidenceFit(c.id, ev, new Date().toISOString().slice(0, 10));
+  }
+  function clauseEvidenceProblems() {
+    return visibleClauses().filter(function (c) { return c.evidenceUrl && clauseEvidenceFitFor(c).level === 'fail'; });
+  }
+  /* After a step done from the clause's side panel, show what is left. */
+  function refreshClauseDrawer(key) {
+    var d = document.getElementById('drawer');
+    if (d && d.classList.contains('open') && document.getElementById('clauseFinish')) App.openClauseRequirements(key);
+  }
+  function clauseFinishHtml(c, key, cl, fixCtx, ro) {
+    var f = window.CheckpointLib.clauseFinishSteps(cl, c, key, Object.assign({}, fixCtx, { evidenceFit: clauseEvidenceFitFor(c) }));
+    if (f.done) return '<div class="d-sec cf" id="clauseFinish"><h4>' + icon('check') + ' This clause is finished</h4><p class="src">Every requirement is met, the owner is named, the evidence is linked and it is Implemented. Checkpoint keeps it current and flags it when the evidence goes out of date.</p></div>';
+    return '<div class="d-sec cf" id="clauseFinish"><h4>Finish this clause: ' + f.left + ' step' + (f.left === 1 ? '' : 's') + ' left</h4><ol class="cf-steps">' +
+      f.steps.map(function (st, i) {
+        return '<li class="' + (i === 0 ? 'cf-now' : '') + '"><div class="cf-t"><b>' + esc(st.label) + '</b><span class="src">' + esc(st.why.length > 220 ? st.why.slice(0, 217) + '…' : st.why) + '</span></div>' +
+          (ro ? '' : '<button class="btn ' + (i === 0 ? '' : 'ghost ') + 'sm" data-action="' + esc(st.action) + '"' + (st.arg ? ' data-id="' + esc(st.arg) + '"' : '') + '>' + (i === 0 ? 'Do this now' : 'Do it') + '</button>') + '</li>';
+      }).join('') + '</ol></div>';
+  }
   function renderClausesDashboard() {
     var el = document.getElementById('clauseKpiRow');
     if (!el) return;
@@ -13207,7 +13319,8 @@ function showModal(opts) {
       var reqLine = cl.total
         ? '<div><button class="lnk src" data-action="App.openClauseRequirements" data-id="' + key + '">' +
           (cl.complete ? icon('check') + ' ' : '') + 'Requirements: ' + cl.met + ' of ' + cl.total + ' met</button>' +
-          (c.st === 'Implemented' && !cl.complete ? ' <span class="verify-stale">' + icon('flag') + ' Implemented, but ' + (cl.total - cl.met) + ' not met</span>' : '') + '</div>'
+          (c.st === 'Implemented' && !cl.complete ? ' <span class="verify-stale">' + icon('flag') + ' Implemented, but ' + (cl.total - cl.met) + ' not met</span>' : '') +
+          (c.evidenceUrl && clauseEvidenceFitFor(c).level === 'fail' ? ' <span class="verify-stale">' + icon('flag') + ' Evidence is not what an auditor will accept</span>' : '') + '</div>'
         : '';
       /* A heading row per management system once there is more than
          one — otherwise 27001's and 42001's identical numbering reads
@@ -14408,7 +14521,7 @@ function showModal(opts) {
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aitools: 'AI tools',
     settings: 'Settings'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -15354,10 +15467,9 @@ function showModal(opts) {
   function progressDelivery(today) {
     var L = window.CheckpointLib, out = {};
     try {
-      var steps = gettingStartedSteps();
-      var start = (S.settings && S.settings.onboardedDate) || ((S.scans || [])[0] || {}).date || today;
-      var plan = L.onboardingSchedule(steps, String(start).slice(0, 10), today);
-      out.plan = { week: plan.week, behind: plan.behind.length, readyBy: plan.steps.length ? plan.steps[plan.steps.length - 1].target : '' };
+      var cp = certPlan(), plan = cp.plan;
+      out.plan = { week: plan.week, behind: plan.behind.length, readyBy: plan.steps.length ? plan.steps[plan.steps.length - 1].target : '',
+        target: plan.target, atRisk: !!(plan.target && cp.ms.atRisk), milestonesLate: cp.ms.milestones.filter(function (m) { return m.lateDays > 0; }).map(function (m) { return m.label; }) };
     } catch (e) { warn(e); }
     var bookings = {};
     (S.calendar || []).forEach(function (c) {
@@ -18982,6 +19094,17 @@ function showModal(opts) {
       renderClauses(); renderDash(); renderNavCounts();
     },
 
+    /* The last step of Finish this clause. setClauseStatus applies the
+       Implemented gate and explains anything still missing. */
+    markClauseImplemented: async function (key) {
+      await App.setClauseStatus(key, 'Implemented');
+      refreshClauseDrawer(key);
+    },
+    finishClause: function (key) {
+      App.openClauseRequirements(key);
+      var el = document.getElementById('clauseFinish');
+      if (el) { el.scrollIntoView({ block: 'start' }); var b = el.querySelector('button'); if (b) b.focus(); }
+    },
     /* The clause's requirements, one by one, with what an auditor
        expects to see for each and how each is met — by Checkpoint's own
        records, or by someone recording where the evidence is. */
@@ -19016,8 +19139,16 @@ function showModal(opts) {
         '<div class="d-sec"><h4>What this clause requires</h4>' +
         '<div class="d-kv"><span>Requirements met</span><b>' + cl.met + ' of ' + cl.total + '</b></div>' +
         '<div class="d-kv"><span>Evidence linked to the clause</span><b>' + (c.evidenceUrl ? 'Yes' : '<span class="verify-stale">' + icon('flag') + ' None</span>') + '</b></div>' +
+        (function () {
+          var fit = clauseEvidenceFitFor(c);
+          if (!fit.expects) return '';
+          var lab = { ok: 'Yes', warn: 'Check it', fail: 'No', none: 'Nothing linked', unknown: 'Cannot check' }[fit.level];
+          return '<div class="d-kv"><span>Right evidence, and current</span><b>' + (fit.level === 'fail' || fit.level === 'none' ? '<span class="verify-stale">' + icon('flag') + ' ' + lab + '</span>' : esc(lab)) + '</b></div>' +
+            '<p class="src" style="margin:2px 0 6px">An auditor expects ' + esc(fit.expects) + '.' + (fit.issues.length && fit.level !== 'none' ? ' ' + esc(fit.issues.join(' ')) : '') + '</p>';
+        })() +
         '<div class="d-kv"><span>Can be marked Implemented</span><b>' + (gate.ok ? 'Yes' : 'Not yet \u2014 ' + esc(gate.reasons.join('; '))) + '</b></div>' +
         '<p class="src" style="margin-top:8px">Written in plain English for Checkpoint, not quoted from the standard. Check each against your copy of the standard.</p></div>' +
+        clauseFinishHtml(c, key, cl, fixCtx, ro) +
         clauseRecordHtml(c, key) +
         rows + recordHistoryHtml('Clause', [clauseLabel(c)], 6);
       openDrawerUi(clauseLabel(c) + ' requirements');
@@ -19120,6 +19251,7 @@ function showModal(opts) {
       audit('Evidence link changed', 'Clause', clauseLabel(c), prevUrl || '(none)', url || '(none)');
       renderClauses(); renderNavCounts();
       if (bumped) { renderDash(); toast('<b>' + esc(clauseLabel(c)) + '</b> moved to In progress.'); }
+      refreshClauseDrawer(key);
     },
 
     setClauseOwner: async function (key) {
@@ -19137,6 +19269,7 @@ function showModal(opts) {
       try { await Store.updateClause(c); } catch (e) { warn(e); }
       audit('Clause owner changed', 'Clause', clauseLabel(c), prevOwn || '(none)', c.own || '(none)');
       renderClauses();
+      refreshClauseDrawer(key);
     },
 
     openClauseEvidenceDoc: async function (key) {
@@ -20025,6 +20158,61 @@ function showModal(opts) {
       audit('Setting changed', 'Setting', 'attestChaseEnabled', on ? 'false' : 'true', S.settings.attestChaseEnabled);
       toast(on ? 'Weekly acknowledgement reminders on.' : 'Weekly acknowledgement reminders off — use Send reminder on each campaign instead.');
       renderAckChaseToggle();
+    },
+    /* Rehearse the auditor's questions with top management. The
+       records check is shown first so the answers can address any gap;
+       saving offers to file the record as Clause 5.1 evidence. */
+    topMgmtInterview: async function () {
+      var rec = tmInterviewRecord() || {};
+      var iv = window.CheckpointLib.topManagementInterview(tmInterviewData(), rec.answers || {});
+      var setup = secReviewSetup() || {};
+      var v = await showModal({
+        title: 'Top management interview',
+        message: 'The questions a certification auditor asks top management. Ask them in the person\u2019s own words and note what they say. Where the records have a gap, the answer has to address it, or the auditor will find the contradiction.',
+        table: { caption: 'What the records say', header: ['Clause', 'Check'], rows: iv.rows.map(function (r) { return [r.clause, (r.recordsOk ? '' : '\u26a0 ') + r.records]; }) },
+        fields: [{ id: 'person', label: 'Who was interviewed', value: rec.person || setup.chair || '', list: 'peopleList' }].concat(iv.rows.map(function (r) {
+          return { id: r.id, label: r.clause + ' \u2014 ' + r.q, type: 'textarea', value: r.answer, placeholder: 'A good answer covers: ' + r.listen };
+        })),
+        confirmText: 'Save',
+        validate: function (x) { return !x.person ? 'Say who was interviewed.' : null; }
+      });
+      if (!v) return;
+      var answers = {};
+      window.CheckpointLib.TOP_MGMT_QUESTIONS.forEach(function (q) { answers[q.id] = v[q.id] || ''; });
+      var out = { date: new Date().toISOString().slice(0, 10), person: v.person, answers: answers };
+      S.settings.topMgmtInterview = JSON.stringify(out);
+      try { await Store.setSetting('topMgmtInterview', S.settings.topMgmtInterview); } catch (e) { warn(e); }
+      var done = window.CheckpointLib.topManagementInterview(tmInterviewData(), answers);
+      audit('Top management interview recorded', 'Review', 'Clause 5', '', v.person + ': ' + done.answered + ' of ' + done.total + ' answered, ' + done.flagged + ' to look at again');
+      var file = await showModal({
+        title: 'Interview saved',
+        message: done.answered + ' of ' + done.total + ' answered. ' + (done.flagged ? done.flagged + ' to look at again before the audit: where the records have a gap, close it or make sure the answer explains it.' : 'Nothing contradicts the records.') + '\n\nFile it as evidence for Clause 5.1 (leadership and commitment)?',
+        confirmText: 'File as evidence', cancelText: 'Not now'
+      });
+      if (file) {
+        var c = (S.clauses || []).find(function (x) { return (x.fw || 'iso27001') === 'iso27001' && x.id === '5.1'; });
+        var ok = false;
+        try { ok = c ? await fileReportAsEvidence('tminterview', c) : false; } catch (e) { warn(e); }
+        toast(ok ? 'Filed as Clause 5.1 evidence' : 'Saved. Open it from Reports to file it by hand.');
+      } else toast('Interview saved');
+    },
+    /* The Stage 1 date the plan works back from. Blank clears it. */
+    setStage1Target: async function () {
+      var cur = (S.settings && S.settings.stage1TargetDate) || stage1Target();
+      var v = await showModal({
+        title: 'When do you want Stage 1?',
+        message: 'Checkpoint spreads the steps between the start of the engagement and this date, so every milestone has a due date that leads to it. A Stage 1 booked on the compliance calendar is used when no date is set here. Leave it blank to go back to the standard 90-day plan.',
+        fields: [{ id: 'date', label: 'Target Stage 1 date', type: 'date', value: cur }],
+        confirmText: 'Save',
+        validate: function (x) { return x.date && x.date < new Date().toISOString().slice(0, 10) ? 'Choose a date in the future.' : null; }
+      });
+      if (!v) return;
+      var before = (S.settings && S.settings.stage1TargetDate) || '';
+      S.settings.stage1TargetDate = v.date || '';
+      try { await Store.setSetting('stage1TargetDate', S.settings.stage1TargetDate); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'stage1TargetDate', before || '(none)', v.date || '(none)');
+      toast(v.date ? 'Plan now works back from Stage 1 on ' + fmtDate(v.date) : 'Back to the standard 90-day plan');
+      renderGettingStarted(); scheduleProgressSnapshot();
     },
     /* "Send to everyone" on the waiting-policies card. */
     sendPolicyForAck: async function (docId) {
@@ -21068,6 +21256,7 @@ function showModal(opts) {
       var list = function (xs) { return xs.map(function (x) { return '• ' + x; }).join('\n'); };
       var v = await showModal({
         title: 'Book the ' + fwName(fw) + ' certification audit',
+        table: { caption: 'Certification gate', header: ['Stage', 'Check', 'Status'], rows: r.checks.map(function (c) { return [c.stage, c.label + (c.detail && !c.ok ? ': ' + c.detail : ''), c.ok ? 'Done' : c.blocking ? 'Not done' : 'Advice']; }) },
         message: (r.stage1.ok ? 'Stage 1 can be booked now.' : 'Stage 1 needs, first:\n' + list(r.stage1.missing)) + '\n\n' +
           (r.stage2.ok ? 'Stage 2 can be booked now.' : 'Stage 2 cannot be booked until these are done:\n' + list(r.stage2.missing.filter(function (x) { return r.stage1.missing.indexOf(x) === -1; }))) +
           (r.advice.length ? '\n\n' + r.advice.join('\n') : '') +

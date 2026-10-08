@@ -1849,3 +1849,36 @@ tr.asset-retired td { opacity: .85; }
 /* A table wider than the screen scrolls inside its card; the card is
    given a name and keyboard focus (see markScrollRegions in app.js). */
 [data-scroll-region]:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* Certification milestones, worked back from the Stage 1 target. */
+.gs-ms{margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+.gs-ms-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}
+.gs-ms-warn{color:var(--warn);margin:4px 0}
+.gs-ms-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.gs-ms-list li{display:flex;gap:10px;align-items:flex-start}
+.gs-ms-dot{flex:0 0 18px;height:18px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;margin-top:2px}
+.gs-ms-done .gs-ms-dot{border-color:var(--pass);color:var(--pass)}
+.gs-ms-late .gs-ms-dot{border-color:var(--fail)}
+.gs-ms-dot svg{width:11px;height:11px}
+
+/* Certification gate checklist. */
+.gate{margin:4px 0 14px}
+.gate-stage h4{margin:10px 0 6px;font-size:var(--fs-2);display:flex;gap:8px;align-items:center}
+.gate-pill{font-size:11px;padding:1px 8px;border-radius:99px;font-weight:600;border:1px solid}
+.gate-pill.ok{color:var(--pass);border-color:var(--pass)}
+.gate-pill.no{color:var(--fail);border-color:var(--fail)}
+.gate-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.gate-list li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.gate-ic{flex:0 0 20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.gate-ok .gate-ic{color:var(--pass);border:2px solid var(--pass)}
+.gate-no .gate-ic{color:var(--fail);border:2px solid var(--fail)}
+.gate-warn .gate-ic{color:var(--warn);border:2px solid var(--warn)}
+.gate-ic svg{width:11px;height:11px}
+.gate-t{flex:1;min-width:180px;display:flex;flex-direction:column}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* Finish this clause. */
+.cf-steps{margin:6px 0 0;padding-left:20px;display:grid;gap:8px}
+.cf-steps li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.cf-steps li.cf-now{padding:8px 10px;border:1px solid var(--gold);border-radius:8px;margin-left:-10px}
+.cf-t{flex:1;min-width:180px;display:flex;flex-direction:column;font-size:12.5px}

@@ -6789,6 +6789,45 @@
     return (Date.parse(String(today).slice(0, 10)) - Date.parse(last)) / 86400000 >= 7;
   }
 
+  /* ---- Top management readiness interview (Clause 5) ----
+     The questions a certification auditor asks top management, each
+     with what a good answer covers and a check against the records, so
+     an answer that the records would contradict is caught before the
+     auditor catches it. d = { policyApproved, objectives:[{ title,
+     status }], appetite, aboveAppetite (count of risks above appetite
+     without acceptance), ismsOwner, lastReview (date), incidents (count
+     in 12 months), correctiveWithCause (count), changes (count since
+     last review), resourcesStated (bool), today }. */
+  var TOP_MGMT_QUESTIONS = [
+    { id: 'policy', clause: '5.2', q: 'What is the information security policy trying to achieve for the business?', listen: 'Why security matters to the business, in their own words; that they approved the policy and it is communicated.',
+      fact: function (d) { return d.policyApproved ? { ok: true, text: 'The information security policy is approved.' } : { ok: false, text: 'The information security policy is not approved yet: approve it before the interview.' }; } },
+    { id: 'objectives', clause: '6.2', q: 'What are this year’s security objectives, and how are they going?', listen: 'Two or three objectives by name, roughly where each stands, and what happens when one slips.',
+      fact: function (d) { var o = (d.objectives || []).filter(function (x) { return x && x.status !== 'Achieved'; }); var risk = o.filter(function (x) { return /risk|behind|off/i.test(x.status || ''); }); return !o.length ? { ok: false, text: 'No open objectives in the register.' } : { ok: !risk.length, text: o.length + ' open objective' + (o.length === 1 ? '' : 's') + ': ' + o.slice(0, 3).map(function (x) { return x.title; }).join('; ') + (risk.length ? '. ' + risk.length + ' at risk: the answer should say what is being done about it.' : '.') }; } },
+    { id: 'risk', clause: '6.1', q: 'What are the biggest information security risks, and how much risk are you willing to accept?', listen: 'The top two or three risks in business terms, and the appetite stated the same way the register states it.',
+      fact: function (d) { return d.aboveAppetite ? { ok: false, text: d.aboveAppetite + ' risk' + (d.aboveAppetite === 1 ? ' is' : 's are') + ' above the ' + (d.appetite || 'set') + ' appetite without a recorded acceptance. Saying "we accept nothing above ' + (d.appetite || 'it') + '" would contradict the register.' } : { ok: true, text: 'Risk appetite is ' + (d.appetite || 'not set') + ' and every risk above it is accepted or treated.' }; } },
+    { id: 'roles', clause: '5.3', q: 'Who runs information security day to day, and who do they report to?', listen: 'A named person, their authority to act, and that they report to top management.',
+      fact: function (d) { return d.ismsOwner ? { ok: true, text: 'The ISMS owner on record is ' + d.ismsOwner + '.' } : { ok: false, text: 'No ISMS owner is recorded: set up the monthly security review with an owner.' }; } },
+    { id: 'resources', clause: '7.1', q: 'What resources have you given information security this year?', listen: 'People’s time, budget or tools, and how they decide when more is needed.',
+      fact: function (d) { return d.resourcesStated ? { ok: true, text: 'The objectives plan states the resources for each objective.' } : { ok: false, text: 'No resources are stated against the objectives: the answer will have nothing to point at.' }; } },
+    { id: 'review', clause: '9.3', q: 'When did you last review the ISMS, and what did you decide?', listen: 'The date of the last management review and one or two decisions it made.',
+      fact: function (d) { if (!d.lastReview) return { ok: false, text: 'No management review is recorded.' }; var age = daysBetweenDateStr(String(d.lastReview).slice(0, 10), d.today); return { ok: age <= 365, text: 'Last management review ' + String(d.lastReview).slice(0, 10) + (age > 365 ? ': over a year ago.' : '.') }; } },
+    { id: 'improve', clause: '10', q: 'Tell me about a security problem and what changed because of it.', listen: 'A real incident, audit finding or near miss, its cause, and the change it led to.',
+      fact: function (d) { return d.correctiveWithCause || d.incidents ? { ok: true, text: (d.incidents || 0) + ' incident(s) in the last 12 months; ' + (d.correctiveWithCause || 0) + ' corrective action(s) with a root cause recorded.' } : { ok: false, text: 'No incidents or corrective actions with a root cause recorded: pick an example from an audit finding or a posture scan fix.' }; } },
+    { id: 'change', clause: '4.1', q: 'What has changed in the business this year that affects security?', listen: 'New systems, suppliers, people or customers, and how the ISMS was adjusted.',
+      fact: function (d) { return { ok: true, text: (d.changes || 0) + ' change(s) to the management system recorded since the last review (see the ISMS change log).' }; } }
+  ];
+  /* Each question with its records check and the recorded answer.
+     flagged = the records have a gap the answer has to address, or no
+     answer yet. */
+  function topManagementInterview(d, answers) {
+    d = d || {}; answers = answers || {};
+    var rows = TOP_MGMT_QUESTIONS.map(function (q) {
+      var f = q.fact(d), a = String(answers[q.id] || '').trim();
+      return { id: q.id, clause: q.clause, q: q.q, listen: q.listen, records: f.text, recordsOk: f.ok, answer: a, flagged: !a || !f.ok };
+    });
+    return { rows: rows, answered: rows.filter(function (r) { return r.answer; }).length, flagged: rows.filter(function (r) { return r.flagged; }).length, total: rows.length };
+  }
+
   /* ---- ISMS change log (Clause 9.3.2 b, 6.3) ----
      What changed in the management system over a period, in the words
      top management reads: scope, policies, risks, suppliers, people,
@@ -9256,6 +9295,101 @@
     var order = { checkpoint: 0, meeting: 1, you: 2 };
     return out.sort(function (a, b) { return order[a.by] - order[b.by]; });
   }
+  /* What evidence each ISO 27001 clause expects, so a linked file can be
+     checked for being the right kind and current, not just present.
+     kind 'document' = an approved controlled document; 'record' = a
+     dated record of the activity (minutes, report, register snapshot),
+     no older than maxAge days. words = what its name usually contains. */
+  var CLAUSE_EVIDENCE_EXPECT = {
+    '4.1': { kind: 'document', what: 'the context of the organisation (internal and external issues)', words: /context|issue|scope/i },
+    '4.2': { kind: 'document', what: 'the interested parties and their requirements', words: /interested|parties|stakeholder|legal|context|scope/i },
+    '4.3': { kind: 'document', what: 'the ISMS scope', words: /scope/i },
+    '4.4': { kind: 'document', what: 'the ISMS description or manual', words: /isms|manual|management system|policy/i },
+    '5.1': { kind: 'record', maxAge: 365, what: 'a record of top management directing the ISMS (review minutes, approvals)', words: /review|minutes|meeting|leadership|management|approv/i },
+    '5.2': { kind: 'document', what: 'the approved information security policy', words: /polic/i },
+    '5.3': { kind: 'document', what: 'roles, responsibilities and authorities', words: /role|responsib|raci|organi/i },
+    '6.1.2': { kind: 'record', maxAge: 365, what: 'the risk assessment, as carried out', words: /risk/i },
+    '6.1.3': { kind: 'record', maxAge: 365, what: 'the risk treatment plan and Statement of Applicability', words: /risk|treatment|applicability|soa/i },
+    '6.2': { kind: 'document', what: 'the information security objectives and plans', words: /objective/i },
+    '6.3': { kind: 'record', maxAge: 365, what: 'a record of planned changes to the ISMS', words: /change/i },
+    '7.2': { kind: 'record', maxAge: 365, what: 'records of competence and training', words: /train|competen|skill|qualif/i },
+    '7.3': { kind: 'record', maxAge: 365, what: 'records of awareness (training, policy acknowledgement)', words: /aware|train|acknowledg|attest/i },
+    '7.5': { kind: 'document', what: 'the document control procedure', words: /document|control|record/i },
+    '8.1': { kind: 'record', maxAge: 365, what: 'records that processes are carried out as planned', words: /operat|record|log|activit|review/i },
+    '8.2': { kind: 'record', maxAge: 365, what: 'the results of the latest risk assessment', words: /risk/i },
+    '8.3': { kind: 'record', maxAge: 365, what: 'the results of risk treatment', words: /risk|treatment/i },
+    '9.1': { kind: 'record', maxAge: 365, what: 'monitoring and measurement results', words: /monitor|measure|scan|posture|metric|kpi|objective|dashboard/i },
+    '9.2': { kind: 'record', maxAge: 365, what: 'the internal audit programme and report', words: /audit/i },
+    '9.3': { kind: 'record', maxAge: 365, what: 'the management review minutes', words: /review|minutes/i },
+    '10.1': { kind: 'record', maxAge: 365, what: 'records of continual improvement', words: /improv|opportunit|action/i },
+    '10.2': { kind: 'record', maxAge: 365, what: 'nonconformities and corrective actions', words: /nonconform|corrective|action|capa|finding/i }
+  };
+  /* ev = { url, doc: { name, status, category, nextReview, modified } |
+     null (the register document the link points at), folder: { names,
+     latest, count } | null (the clause's evidence folder, when the link
+     is it) }. Returns { level: 'ok'|'warn'|'fail'|'none'|'unknown',
+     issues:[], expects }. 'unknown' = a link Checkpoint cannot open
+     (outside SharePoint); never treated as a failure. */
+  function clauseEvidenceFit(code, ev, today) {
+    var x = CLAUSE_EVIDENCE_EXPECT[code];
+    ev = ev || {};
+    if (!x) return { level: ev.url ? 'ok' : 'none', issues: [], expects: '' };
+    var out = { level: 'ok', issues: [], expects: x.what };
+    var fail = function (t) { out.issues.push(t); out.level = 'fail'; };
+    var warnIt = function (t) { out.issues.push(t); if (out.level === 'ok') out.level = 'warn'; };
+    if (!ev.url) { out.level = 'none'; out.issues.push('No evidence linked: this clause needs ' + x.what + '.'); return out; }
+    var names = [], latest = '';
+    if (ev.doc) {
+      names = [ev.doc.name || ''];
+      latest = String(ev.doc.modified || '').slice(0, 10);
+      var isPolicy = /polic|procedure/i.test(ev.doc.category || '') && !/minutes|report|record|snapshot|register/i.test(ev.doc.name || '');
+      if (x.kind === 'record' && isPolicy) fail('The linked file is a policy or procedure (' + String(ev.doc.name).replace(/\.(html|docx?|pdf)$/i, '') + '). This clause needs ' + x.what + ': a record that it was done, not the document saying it will be.');
+      if (x.kind === 'document' && ev.doc.status && ev.doc.status !== 'Approved') fail('The linked document is ' + String(ev.doc.status).toLowerCase() + ', not approved.');
+      if (x.kind === 'document' && ev.doc.nextReview && String(ev.doc.nextReview).slice(0, 10) < today) warnIt('The linked document was due for review on ' + String(ev.doc.nextReview).slice(0, 10) + '.');
+    } else if (ev.folder) {
+      names = ev.folder.names || [];
+      latest = String(ev.folder.latest || '').slice(0, 10);
+      if (!ev.folder.count) { fail('The evidence folder is empty: add ' + x.what + '.'); return out; }
+    } else {
+      out.level = 'unknown';
+      out.issues.push('Checkpoint cannot open this link to check it. Make sure it shows ' + x.what + '.');
+      return out;
+    }
+    if (x.kind === 'record' && x.maxAge && latest && daysBetweenDateStr(latest, today) > x.maxAge) fail('The newest evidence is from ' + latest + ', over ' + Math.round(x.maxAge / 30) + ' months old. An auditor expects ' + x.what + ' from the last 12 months.');
+    if (names.length && !names.some(function (n) { return x.words.test(n); })) warnIt('Nothing linked is named like ' + x.what + '. Check it is the right file.');
+    return out;
+  }
+
+  /* "Finish this clause": everything left on one clause, in the order
+     to do it. Checkpoint's own steps first (documents, records), then
+     what only the organisation can record, then the owner, the evidence
+     link and finally marking it Implemented. Each step names the
+     requirements it meets. clause = { id, own, evidenceUrl, st }, key =
+     the app's clause key (fw|code). Returns { steps:[{ key, label, why,
+     action, arg, by }], left, done }. */
+  function clauseFinishSteps(checklist, clause, key, ctx) {
+    var cl = checklist || { items: [] }, c = clause || {};
+    var steps = [], byKey = {};
+    (cl.items || []).forEach(function (i) {
+      if (i.status === 'met') return;
+      var fixes = clauseRequirementFixes(i, ctx);
+      if (!fixes.length) fixes = [{ by: 'you', key: 'confirm:' + i.id, label: 'Record where the evidence is', action: 'App.confirmClauseRequirement', arg: key + '#' + i.id }];
+      fixes.forEach(function (f) {
+        if (!byKey[f.key]) { byKey[f.key] = { key: f.key, label: f.label, action: f.action, arg: f.arg || '', by: f.by, reqs: [] }; steps.push(byKey[f.key]); }
+        if (byKey[f.key].reqs.indexOf(i.text) === -1) byKey[f.key].reqs.push(i.text);
+      });
+    });
+    var order = { checkpoint: 0, meeting: 1, you: 2 };
+    steps.sort(function (a, b) { return order[a.by] - order[b.by]; });
+    steps.forEach(function (st) { st.why = 'Meets: ' + st.reqs.join('; '); });
+    if (!String(c.own || '').trim()) steps.push({ key: 'owner', by: 'you', label: 'Name the owner of this clause', why: 'An auditor asks who is responsible for each requirement (Clause 5.3).', action: 'App.setClauseOwner', arg: key });
+    var fit = ctx && ctx.evidenceFit;
+    if (!c.evidenceUrl) steps.push({ key: 'evidence', by: 'you', label: 'Link the evidence to the clause', why: fit && fit.expects ? 'It needs ' + fit.expects + '.' : 'The record the auditor opens first: the approved document, minutes or register snapshot.', action: 'App.setClauseEvidence', arg: key });
+    else if (fit && fit.level === 'fail') steps.push({ key: 'evidence', by: 'you', label: 'Replace the evidence: it is not what an auditor will accept', why: fit.issues.join(' '), action: 'App.setClauseEvidence', arg: key });
+    if (c.st !== 'Implemented') steps.push({ key: 'implement', by: 'you', label: 'Mark the clause Implemented', why: steps.length ? 'Once the steps above are done.' : 'Every requirement is met and the evidence is linked.', action: 'App.markClauseImplemented', arg: key, final: true });
+    return { steps: steps, left: steps.length, done: !steps.length };
+  }
+
   /* Every outstanding fix across a set of checklists, each with the
      requirements it would meet: [{ fix, reqs:[{ clause, text }] }].
      Documents collapse into two steps, generate the missing set and
@@ -9741,19 +9875,27 @@
   function certificationBookingReadiness(d) {
     d = d || {};
     var today = d.today;
-    var s1 = [], s2 = [], advice = [];
-    if (!String(d.scopeStatement || '').trim()) s1.push('the ISMS scope statement (scope & context questionnaire)');
+    var s1 = [], s2 = [], advice = [], checks = [];
+    /* Every check, passed or not, with where to fix it: the gate
+       checklist. blocking:false = advice the body will raise, not a bar. */
+    var check = function (stage, label, ok, detail, fix, blocking) { checks.push({ stage: stage, label: label, ok: !!ok, detail: detail || '', fix: fix || null, blocking: blocking !== false }); };
+    var scopeOk = !!String(d.scopeStatement || '').trim();
+    if (!scopeOk) s1.push('the ISMS scope statement (scope & context questionnaire)');
+    check(1, 'ISMS scope statement written', scopeOk, scopeOk ? '' : 'Answer the scope & context questionnaire', { action: 'App.orgProfileWizard', label: 'Answer it' });
     var docRows = (d.md || []).filter(function (m) { return /^\d/.test(m.ref) && m.status !== 'done'; });
     if (docRows.length) s1.push(docRows.length + ' Stage 1 checklist item(s): ' + docRows.map(function (m) { return m.ref + ' ' + m.item; }).join('; '));
+    if ((d.md || []).length) check(1, 'Mandatory documented information in place', !docRows.length, docRows.length ? docRows.length + ' missing: ' + docRows.slice(0, 3).map(function (m) { return m.ref + ' ' + m.item; }).join('; ') + (docRows.length > 3 ? ' and more' : '') : '', { action: 'App.go', id: 'documents', label: 'Open documents' });
     var open = (d.risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    var untreated = open.filter(function (r) { return !(r.treat && r.owner); }).length;
     if (!open.length) s1.push('a risk assessment (no risks in the register)');
-    else {
-      var untreated = open.filter(function (r) { return !(r.treat && r.owner); }).length;
-      if (untreated) s1.push(untreated + ' risk(s) without a treatment or owner');
-    }
+    else if (untreated) s1.push(untreated + ' risk(s) without a treatment or owner');
+    check(1, 'Risks assessed, each with a treatment and an owner', open.length && !untreated, !open.length ? 'No risks in the register' : untreated ? untreated + ' without a treatment or owner' : open.length + ' risks', { action: 'App.go', id: 'risks', label: 'Open risks' });
     var soa = d.soa || {};
     if (!soa.applicable) s1.push('the Statement of Applicability');
     else if (soa.unjustified) s1.push(soa.unjustified + ' Statement of Applicability exclusion(s) without a justification');
+    check(1, 'Statement of Applicability complete, exclusions justified', soa.applicable && !soa.unjustified, !soa.applicable ? 'Not started' : soa.unjustified ? soa.unjustified + ' exclusion(s) without a justification' : '', { action: 'App.go', id: 'soa', label: 'Open the SoA' });
+    if (Array.isArray(d.clauseEvidenceWrong)) check(1, 'Clause evidence is the right kind and current', !d.clauseEvidenceWrong.length, d.clauseEvidenceWrong.length ? 'Clause' + (d.clauseEvidenceWrong.length === 1 ? ' ' : 's ') + d.clauseEvidenceWrong.join(', ') + ': a policy where a record is needed, a draft, or a record over a year old' : '', { action: 'App.go', id: 'clauses', label: 'Open clauses' }, false);
+    if (typeof d.evidenceIssues === 'number') check(1, 'Evidence links checked and working', !d.evidenceIssues, d.evidenceIssues ? d.evidenceIssues + ' broken, missing or out-of-date link(s)' : '', { action: 'App.go', id: 'soa', label: 'See the issues' }, false);
 
     var within = function (dt) { return dt && today && daysBetweenDateStr(String(dt).slice(0, 10), today) <= 365; };
     var full = (d.audits || []).filter(function (a) {
@@ -9761,15 +9903,20 @@
       return parseAuditScope(a.scope).clauses.length === 7;
     }).sort(function (a, b) { return String(b.completed).localeCompare(String(a.completed)); })[0];
     if (!full) s2.push('a completed internal audit of Clauses 4-10');
+    check(2, 'Internal audit of Clauses 4 to 10 completed', !!full, full ? 'Completed ' + full.completed : 'Not in the last 12 months', { action: 'App.go', id: 'audits', label: 'Plan or run it' });
     var review = (d.reviews || []).filter(function (r) { return r && r.decisions && within(r.date) && (!full || r.date >= full.completed); })[0];
     if (!review) s2.push(full ? 'a management review held after the internal audit of ' + full.completed : 'a management review after the internal audit');
+    check(2, 'Management review held after the internal audit', !!review, review ? 'Held ' + review.date : full ? 'None since the audit of ' + full.completed : 'Needs the internal audit first', { action: 'App.go', id: 'reviews', label: 'Open management review' });
     var majors = (d.actions || []).filter(function (a) { return a && a.type === 'Non-conformity (Major)' && a.status !== 'Done' && a.status !== 'Cancelled'; });
     if (majors.length) s2.push('closing ' + majors.length + ' open major nonconformit' + (majors.length === 1 ? 'y' : 'ies') + ' (' + majors.map(function (a) { return a.id; }).join(', ') + ')');
+    check(2, 'No major nonconformity open', !majors.length, majors.length ? majors.map(function (a) { return a.id; }).join(', ') : '', { action: 'App.go', id: 'actions', label: 'Open actions' });
     if (soa.notStarted) s2.push(soa.notStarted + ' applicable control(s) still not started');
+    check(2, 'Every applicable control at least in progress', !soa.notStarted, soa.notStarted ? soa.notStarted + ' not started' : '', { action: 'App.go', id: 'soa', label: 'Open the SoA' });
     var age = d.onboardedDate && today ? daysBetweenDateStr(String(d.onboardedDate).slice(0, 10), today) : null;
     if (age !== null && age < 90) advice.push('The ISMS has been running for ' + Math.max(0, Math.round(age / 30)) + ' month(s). Certification bodies expect records of it operating, typically about three months, before Stage 2.');
+    if (age !== null) check(2, 'About three months of records of the ISMS operating', age >= 90, age >= 90 ? 'Running since ' + String(d.onboardedDate).slice(0, 10) : 'Running for ' + Math.max(0, Math.round(age / 30)) + ' month(s)', null, false);
     var stage2Missing = s1.concat(s2);
-    return { stage1: { ok: !s1.length, missing: s1 }, stage2: { ok: !stage2Missing.length, missing: stage2Missing }, advice: advice };
+    return { stage1: { ok: !s1.length, missing: s1 }, stage2: { ok: !stage2Missing.length, missing: stage2Missing }, advice: advice, checks: checks };
   }
 
   /* Auditor access windows: the state of each, and whether the signed-in
@@ -10320,6 +10467,7 @@
     }
     if (d && d.health && typeof d.health.score === 'number' && d.health.score < 60) out.push({ level: d.health.score < 40 ? 'red' : 'amber', key: 'health', text: 'ISMS health ' + d.health.score + '/100' + (d.health.factors && d.health.factors[0] ? ': ' + d.health.factors[0].label : '') });
     if (d && d.plan && d.plan.behind) out.push({ level: d.plan.behind > 3 ? 'red' : 'amber', key: 'behind', text: d.plan.behind + ' step(s) behind plan (week ' + d.plan.week + ')' });
+    if (stage !== 'Certified' && d && d.plan && d.plan.target && d.plan.atRisk) out.push({ level: 'red', key: 'target', text: 'Stage 1 target ' + d.plan.target + ' at risk' + (d.plan.milestonesLate && d.plan.milestonesLate.length ? ': ' + d.plan.milestonesLate.join(', ') + ' late' : '') });
     if (stage !== 'Certified' && d && d.bookings && d.bookings.stage2 && !d.stage2Ready && -days(d.bookings.stage2) >= 0) {
       var to = -days(d.bookings.stage2);
       out.push({ level: to <= 30 ? 'red' : 'amber', key: 'stage2', text: 'Stage 2 booked for ' + d.bookings.stage2 + ' but not yet ready' });
@@ -10528,21 +10676,62 @@
   /* steps from certificationPathSteps(); start = the engagement start
      (ISO date). Returns { week, weekStart, weekEnd, steps:[step + { target, late }],
      thisWeek:[], behind:[] }: behind = not done and past its target. */
-  function onboardingSchedule(steps, start, today) {
+  /* target (optional) = the Stage 1 date the client is aiming for. The
+     standard 90-day plan is stretched or compressed to end on it, so
+     every step's date is worked back from the date that matters. */
+  function onboardingSchedule(steps, start, today, target) {
     var addD = function (iso, n) { var d = new Date(String(iso).slice(0, 10) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     var begin = start || today;
     var elapsed = Math.max(0, daysBetweenDateStr(begin, today));
     var week = Math.floor(elapsed / 7) + 1;
     var weekStart = addD(begin, (week - 1) * 7), weekEnd = addD(begin, week * 7 - 1);
+    var span = /^\d{4}-\d{2}-\d{2}/.test(String(target || '')) ? daysBetweenDateStr(begin, String(target).slice(0, 10)) : 0;
+    var scale = span > 0 ? span / 90 : 1;
     var out = (steps || []).map(function (st) {
-      var target = addD(begin, ONBOARDING_DAYS[st.id] != null ? ONBOARDING_DAYS[st.id] : 90);
+      var target = addD(begin, Math.round((ONBOARDING_DAYS[st.id] != null ? ONBOARDING_DAYS[st.id] : 90) * scale));
       return Object.assign({}, st, { target: target, late: !st.done && target < today });
     }).sort(function (a, b) { return a.target.localeCompare(b.target); });
     return {
-      week: week, weekStart: weekStart, weekEnd: weekEnd, steps: out,
+      week: week, weekStart: weekStart, weekEnd: weekEnd, steps: out, target: span > 0 ? String(target).slice(0, 10) : '',
       thisWeek: out.filter(function (x) { return !x.done && !x.late && x.target <= weekEnd; }),
       behind: out.filter(function (x) { return x.late; })
     };
+  }
+
+  /* The handful of milestones a certification body and a sponsor care
+     about, each made of path steps. Due = its last step's date on the
+     plan. */
+  var CERT_MILESTONES = [
+    { key: 'documented', label: 'The ISMS documented', what: 'Scope, policies approved, risks assessed and treated, Statement of Applicability', steps: ['scope', 'scan', 'docs', 'approve', 'assets', 'legal', 'risks', 'soa'] },
+    { key: 'operating', label: 'The ISMS operating', what: 'Recurring activities, training, suppliers and objectives running with records', steps: ['rhythm', 'training', 'suppliers', 'objectives', 'ai'] },
+    { key: 'audit', label: 'Internal audit completed', what: 'Clauses 4 to 10 and Annex A audited, findings raised', steps: ['audit'] },
+    { key: 'review', label: 'Management review held', what: 'Top management has reviewed the results and recorded decisions', steps: ['review'] },
+    { key: 'stage1', label: 'Ready for Stage 1', what: 'Clause gaps closed, mandatory documents in place, audit booked', steps: ['clauses', 'mandatory', 'book'] }
+  ];
+  /* plan = onboardingSchedule(). Returns { target, daysToTarget,
+     milestones:[{ key, label, what, due, done, lateDays, open:[step labels] }],
+     atRisk, warnings }. atRisk = a milestone is late, or the target is
+     near with work left that the remaining time cannot hold. */
+  function certificationMilestones(plan, today) {
+    var steps = (plan && plan.steps) || [];
+    var target = plan && plan.target ? plan.target : '';
+    var ms = CERT_MILESTONES.map(function (m) {
+      var mine = steps.filter(function (s) { return m.steps.indexOf(s.id) !== -1; });
+      if (!mine.length) return null;
+      var due = mine.map(function (s) { return s.target; }).sort().pop();
+      var open = mine.filter(function (s) { return !s.done; });
+      return { key: m.key, label: m.label, what: m.what, due: due, done: !open.length, lateDays: open.length && due < today ? daysBetweenDateStr(due, today) : 0, open: open.map(function (s) { return s.label; }) };
+    }).filter(Boolean);
+    var warnings = [];
+    var daysToTarget = target ? daysBetweenDateStr(today, target) : null;
+    var late = ms.filter(function (m) { return m.lateDays > 0; });
+    var openSteps = steps.filter(function (s) { return !s.done; }).length;
+    if (target && daysToTarget < 0 && openSteps) warnings.push('The Stage 1 target of ' + target + ' has passed with ' + openSteps + ' step(s) still open: set a new date.');
+    else if (target && daysToTarget !== null && openSteps && daysToTarget < openSteps * 3) warnings.push(openSteps + ' step(s) left and ' + daysToTarget + ' day(s) to the target: at this rate it will slip.');
+    var audit = ms.find(function (m) { return m.key === 'audit'; });
+    if (target && audit && !audit.done && daysToTarget !== null && daysToTarget >= 0 && daysToTarget < 30) warnings.push('The internal audit is not done and Stage 1 is under a month away. Most bodies accept Stage 1 before the internal audit, but Stage 2 will not go ahead without it and the management review.');
+    if (target && plan.steps.length && daysBetweenDateStr(plan.steps[0].target, target) < 60) warnings.push('Less than two months from start to Stage 1 is tight. Certification bodies expect records of the ISMS operating, typically about three months, before Stage 2.');
+    return { target: target, daysToTarget: daysToTarget, milestones: ms, atRisk: late.length > 0 || warnings.some(function (w) { return /slip|passed/.test(w); }), warnings: warnings };
   }
 
   function certificationPathSteps(s) {
@@ -11041,6 +11230,9 @@
     ISMS_CHANGE_AREAS: ISMS_CHANGE_AREAS, ismsChangeLog: ismsChangeLog, ismsChangeLines: ismsChangeLines,
     policiesNeedingAcknowledgement: policiesNeedingAcknowledgement, attestationsToChase: attestationsToChase,
     BACKUP_ROOT: BACKUP_ROOT, backupStrip: backupStrip, backupSafeSettings: backupSafeSettings, backupFileName: backupFileName, buildBackupFiles: buildBackupFiles, backupsToPrune: backupsToPrune, backupDue: backupDue,
+    CERT_MILESTONES: CERT_MILESTONES, certificationMilestones: certificationMilestones,
+    clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
+    TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     srDate: srDate, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
