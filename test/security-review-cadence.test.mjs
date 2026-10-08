@@ -52,12 +52,12 @@ describe('editable agenda', () => {
     assert.ok(Lib.securityReviewAgenda(s, 3, null).items.some((i) => i.title === 'Contractor access' && i.lead === 'Ekin'));
   });
   test('a meeting’s own items, removals and order; decisions always close', () => {
-    const rec = { extra: [{ key: 'x1', title: 'AOB: pen test scope', min: 10, by: 'Cem' }], skip: ['changes'], order: ['risks', 'x1', 'actions'] };
+    const rec = { extra: [{ key: 'x1', title: 'AOB: pen test scope', min: 10, by: 'Cem' }], skip: ['posture'], order: ['risks', 'x1', 'actions'] };
     const a = Lib.securityReviewAgenda(setup, 2, null, rec);
     assert.deepEqual(a.items.slice(0, 3).map((i) => i.key), ['risks', 'x1', 'actions']);
-    assert.ok(!a.items.some((i) => i.key === 'changes'));
+    assert.ok(!a.items.some((i) => i.key === 'posture'));
     assert.equal(a.items.at(-1).key, 'decisions');
-    assert.equal(a.minutes, 60 - 5 + 10);
+    assert.equal(a.items[1].min, 10, 'an item added for the meeting keeps its own time');
     assert.equal(a.items[1].added, 'Cem');
   });
 });
@@ -113,7 +113,8 @@ describe('the scheduled function', () => {
     const mail = f.calls.find((c) => /sendMail/.test(c.path));
     const msg = mail.opts.body.message;
     assert.deepEqual(msg.toRecipients.map((r) => r.emailAddress.address), ['ekin@mg.example', 'cem@mg.example']);
-    assert.match(msg.body.content, /Kick-off[\s\S]*1 action open, 1 overdue[\s\S]*Posture score 62\/100[\s\S]*INC-1 Lost laptop[\s\S]*on 9 Oct 2026/);
+    assert.match(msg.body.content, /Kick-off[\s\S]*At a glance[\s\S]*Actions[\s\S]*1 overdue, oldest ACT-1 \(Cem\)[\s\S]*1 action overdue[\s\S]*INC-1 Lost laptop[\s\S]*Posture score 62\/100[\s\S]*on 9 Oct 2026/);
+    assert.ok(!/9\.3\.2|A\.5\.24/.test(msg.body.content), 'no clause references in the email');
     assert.match(Buffer.from(msg.attachments[0].contentBytes, 'base64').toString(), /DTSTART:20261012T230000Z/);
     const saved = f.calls.find((c) => c.opts && c.opts.method === 'PATCH');
     const recs = JSON.parse(saved.opts.body.SettingValue);
@@ -169,7 +170,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.evaluate(() => window.App.go('reviews'));
     await page.click('#secReviewCard button[data-action="App.setupSecurityReview"]');
     await page.waitForSelector('#modalBox select');
-    await page.locator('#modalBox select').nth(2).selectOption('3');
+    await page.locator('#modalBox select').nth(3).selectOption('3');
     await page.locator('#modalBox textarea').fill('AI model providers and data use | 5 | owner');
     await page.locator('#modalBox .m-btns .btn:not(.ghost)').click();
     await page.waitForTimeout(300);
@@ -182,15 +183,15 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.fill('#modalBox input', 'AOB: penetration test scope');
     await page.locator('#modalBox .m-btns .btn:not(.ghost)').click();
     await page.waitForTimeout(300);
-    await page.click('#drawer button[data-action="App.srSkipItem"][data-id="SR-003|changes"]');
+    await page.click('#drawer button[data-action="App.srSkipItem"][data-id="SR-003|posture"]');
     await page.waitForTimeout(200);
     let drawer = await page.locator('#drawer').innerText();
     assert.match(drawer, /AOB: penetration test scope/);
-    assert.ok(!/Changes coming/.test(drawer));
+    assert.ok(!/Security posture/.test(drawer.split("Agenda")[1] || ""));
     await page.click('#drawer button[data-action="App.srMoveItem"][data-id="SR-003|risks|up"]');
     await page.waitForTimeout(200);
     const order = await page.$$eval('#drawer .sr-item b', (els) => els.map((e) => e.textContent));
-    assert.ok(order.indexOf('Risks') < order.indexOf('Incidents and near misses'));
+    assert.ok(order.indexOf('Risks') < order.indexOf('Actions'));
     const popup = context.waitForEvent('page');
     await page.click('#drawer button[data-action="App.secReviewDoc"]');
     const doc = await popup;
@@ -206,7 +207,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForTimeout(600);
     drawer = await page.locator('#drawer').innerText();
     assert.match(drawer, /recorded as management review MR-002/i);
-    assert.match(drawer, /Management review \(Clause 9\.3\)[\s\S]*Budget approved[\s\S]*Commission external penetration test/);
+    assert.match(drawer, /Management review sign-off[\s\S]*Budget approved[\s\S]*Commission external penetration test/);
     await page.evaluate(() => window.App.closeDrawer());
     assert.match(await page.locator('#reviewRows').innerText(), /MR-002/);
     assert.deepEqual(errors, []);
