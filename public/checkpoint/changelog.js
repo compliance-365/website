@@ -12,6 +12,27 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.133.0',
+    date: '2026-10-08',
+    entries: [
+      'Fewer emails for those who want them. In My tasks, each person can choose to hear about new tasks as they happen or only in the weekly email. On weekly, approval requests, evidence requests, follow-ups after the security review and overdue-action chases are not emailed one by one; they arrive together in the weekly email. Approval requests are now part of the weekly email for everyone. The choice applies only while the weekly email is switched on, so nothing goes missing.',
+      'What an auditor would find first: a dashboard card listing the recurring requirements that have lapsed, each with the button that fixes it. It covers the internal audit (at the interval you set), the management review, risks not reviewed for a year, awareness training, posture scans and security reviews, the information security policy\u2019s approval and review, overdue nonconformities, and implemented clauses past their verification date.',
+      'Evidence now expires with the activity that produces it. A control whose evidence comes from a recurring activity (for example the quarterly access review or the six-monthly backup restore test) stays current for that interval plus a quarter. The SoA shows "current until" against each evidence folder, the evidence check flags anything out of date, the mock audit raises it as a finding, and the control\u2019s owner is asked for new evidence in My tasks and the weekly email until it is added.',
+      'Auditor questions and your answers: a new report with the questions a certification auditor usually asks for every clause from 4.1 to 10.2 and for 16 of the most sampled Annex A controls. Each question is answered from your own records, with what is still missing and whether it is ready. It is in Reports, in the auditor\u2019s guide and in the Stage 1 pack, so the people who will be interviewed can rehearse.',
+      'Set up the security review in four steps: who (chair, ISMS owner, facilitator), when, who is invited, then the kick-off agenda prepared and, on SharePoint, sent with its calendar invite. Every new client starts the same way. All the settings remain one click away.'
+    ]
+  },
+  {
+    version: '1.132.0',
+    date: '2026-10-08',
+    entries: [
+      'Attendance and quorum for the security review. The minutes record who was absent among the chair, the ISMS owner and the facilitator set in the review settings (a surname is enough). Saving the minutes of a meeting held without the chair or the ISMS owner asks first, then records it as such. The next agenda then asks the meeting to confirm those decisions, and names anyone who missed two meetings in a row. Attendance appears in the minutes email and in the management review inputs.',
+      'A risk accepted in the meeting lands on the risk register. When the chair accepts the risk on an action that was overdue at two meetings in a row, the acceptance is recorded on the linked risk (or a risk you pick): who accepted it, the date, the basis and the residual score, exactly as the risk panel records it. A follow-up action to look at the acceptance again is raised for the date you set (six months by default).',
+      'Top management record: one document covering the last 12 months. It lists each security review with whether the chair was there and its outcome, the decisions on overdue actions, the residual risks accepted, and the management reviews held. It shows top management taking part (Clauses 5.1 and 9.3), and it is included in the Stage 1 pack.',
+      'The year of security reviews in one document: outcomes and attendance, the top management summary, then each meeting\u2019s minutes on its own page. Open it from the review card, print it to PDF for the auditor, or file it as Clause 9.3 evidence in one click.'
+    ]
+  },
+  {
     version: '1.131.0',
     date: '2026-10-08',
     entries: [

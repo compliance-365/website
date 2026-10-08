@@ -22,7 +22,14 @@
 const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = require('../lib/graph');
 const { mintEvidenceToken } = require('../lib/evidenceToken');
 const { mintVendorToken } = require('../lib/vendorToken');
-const { ownerWorkItems, matchOwnerToUser, ownerDigestHtml } = require('../lib/ownerDigest');
+const { ownerWorkItems, matchOwnerToUser, ownerDigestHtml, notifyPref } = require('../lib/ownerDigest');
+/* A person who asked for the weekly digest only gets no instant email:
+   the same work reaches them in the digest. */
+function weeklyOnly(settings, owner, email) {
+  let prefs = {};
+  try { prefs = JSON.parse(settings.notifyPrefs || '{}') || {}; } catch (e) { prefs = {}; }
+  return notifyPref(prefs, owner, email, (settings.ownerDigestEnabled || '') === 'true') === 'weekly';
+}
 const SR = require('../lib/securityReview');
 
 /* Where the owner-driven evidence page lives — Compliance365's own
@@ -1862,7 +1869,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
      list readable. Best-effort per recipient: one bad address must not
      stop the rest, and none of it can roll back an alert already
      written to SharePoint. */
-  const chasesToSend = ownerChases.filter(c => fresh.some(f => f.checkId === c.checkId));
+  const chasesToSend = ownerChases.filter(c => fresh.some(f => f.checkId === c.checkId) && !weeklyOnly(settings, c.owner, c.to));
   let chased = 0;
   for (const c of chasesToSend) {
     const link = buildEvidenceLink(c.itemId);
@@ -2100,10 +2107,13 @@ async function sendOwnerReminders(g, gAll, context, siteId, lists, optional, set
   const evidence = Object.keys(requests).map(k => {
     const [fw, code] = k.split('|');
     const c = controls.find(x => (x.Framework || 'iso27001') === fw && x.Code === code);
-    if (!c || (c.EvidenceUrl && c.Status === 'Implemented')) return null;
-    return { control: code, title: c.Title || '', owner: requests[k].owner, email: requests[k].email || '', requested: requests[k].date || '' };
+    if (!c || (c.EvidenceUrl && c.Status === 'Implemented' && requests[k].reason !== 'out of date')) return null;
+    return { control: code, title: (requests[k].reason === 'out of date' ? 'Out of date: ' : '') + (c.Title || ''), owner: requests[k].owner, email: requests[k].email || '', requested: requests[k].date || '' };
   }).filter(Boolean);
-  const list = ownerWorkItems({ actions, calendar, objectives, docs, evidence }, today);
+  let approvals = [];
+  try { approvals = JSON.parse(settings.approvalRequests || '[]'); } catch (e) { approvals = []; }
+  if (!Array.isArray(approvals)) approvals = [];
+  const list = ownerWorkItems({ actions, calendar, objectives, docs, evidence, approvals }, today);
   if (!list.length) return 0;
   let users = [];
   try { users = await gAll('/users?$select=displayName,mail,userPrincipalName&$top=999'); } catch (e) { context.log.error('Checkpoint owner reminders: could not read the directory: ' + e.message); }
@@ -2164,6 +2174,7 @@ async function buildScheduledReviewPack(g, gAll, context, siteId, optional, toda
   const short = a => ({ id: a.id, title: a.title, owner: a.owner, due: a.due, status: a.status });
   return {
     today, since,
+    attendance: { missedTwice: (((extra && extra.absences) || {}).missedTwice || []).slice(0, 4), lastQuorum: ((extra && extra.absences) || {}).lastQuorum !== false },
     posture: { score: typeof score === 'number' ? score : null, prev: typeof prevScore === 'number' ? prevScore : null, failing: null, failingTop: ((extra && extra.failingTop) || []).slice(0, 3) },
     actions: { open: open.length, overdue: overdue.length, closedSince: 0, overdueList: overdue.slice(0, 8).map(short), prior: [],
       stuck: extra && extra.lastHeld ? overdue.filter(a => a.due < extra.lastHeld).slice(0, 6).map(short) : [] },
@@ -2190,7 +2201,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     const held = reviews.filter(r => r.status === 'Held').sort((a, b) => b.date.localeCompare(a.date))[0];
     const prevScore = held && held.pack && held.pack.posture ? held.pack.posture.score : null;
     rec = { id: 'SR-' + String(due.n).padStart(3, '0'), n: due.n, kind: SR.securityReviewKind(due.n, setup.mrEvery), date: due.date, time: setup.time || '10:00', status: 'Prepared',
-      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued, lastHeld: held ? held.date : '' }, extra || {})) };
+      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued, lastHeld: held ? held.date : '', absences: SR.securityReviewAbsences(reviews, setup) }, extra || {})) };
     reviews.push(rec);
     done.push('prepared ' + rec.id);
   }
@@ -2237,7 +2248,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
       for (const o of fu.owners) {
         const u = o.email ? null : matchOwnerToUser(o.owner, users);
         const to = o.email || (u && (u.mail || u.userPrincipalName));
-        if (to && await notifyOwner(g, context, to, 'Your actions from the security review on ' + SR.srDate(fu.review.date), SR.securityReviewFollowUpHtml(o, fu.review, { org: label, appUrl: 'https://www.compliance365.com.au/checkpoint/' }))) nudged++;
+        if (to && !weeklyOnly(settings, o.owner, to) && await notifyOwner(g, context, to, 'Your actions from the security review on ' + SR.srDate(fu.review.date), SR.securityReviewFollowUpHtml(o, fu.review, { org: label, appUrl: 'https://www.compliance365.com.au/checkpoint/' }))) nudged++;
       }
       const held = reviews.find(r => r.id === fu.review.id);
       if (held) { held.followUpSent = today; done.push('follow-ups ' + held.id + ' (' + nudged + ')'); }
