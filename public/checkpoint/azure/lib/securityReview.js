@@ -9,6 +9,7 @@
   var SECURITY_REVIEW_LENGTH = { kickoff: 50, monthly: 30, quarterly: 45, mr: 60 };
   var SECURITY_REVIEW_AGENDA = [
     { key: 'actions', title: 'Actions', min: 5, lead: 'owner', clause: '9.3.2 a, 10.1' },
+    { key: 'escalations', title: 'Needs a decision', min: 5, lead: 'chair', clause: '9.3.3, 10.1', optional: true },
     { key: 'risks', title: 'Risks', min: 8, lead: 'chair', clause: '6.1.2, 6.1.3, 8.2, 8.3' },
     { key: 'incidents', title: 'Incidents', min: 7, lead: 'owner', clause: 'A.5.24 to A.5.27' },
     { key: 'posture', title: 'Security posture', min: 5, lead: 'owner', clause: '9.1' },
@@ -47,6 +48,7 @@
     return 'monthly';
   }
   function securityReviewQuiet(key, p) {
+    if (key === 'escalations' && !(p && p.actions && (p.actions.stuck || []).length)) return 'skip';
     if (!p) return '';
     if (key === 'incidents' && !p.incidents.count && !p.incidents.open) return 'No incidents since ' + srDate(p.since);
     if (key === 'risks' && !p.risks.added && !p.risks.changed && !p.risks.aboveAppetite) return 'No new or changed risks, none above appetite';
@@ -137,8 +139,12 @@
     if (key === 'actions') {
       var prior = p.actions.prior || [];
       if (prior.length) f.push('Decisions from last meeting: ' + prior.filter(function (a) { return DONE_ACTION(a) || a.status === 'Closed'; }).length + ' of ' + prior.length + ' done');
-      f.push(p.actions.overdue ? plural(p.actions.overdue, 'action') + ' overdue' + (p.actions.overdue > 3 ? ', the three oldest:' : '') : 'Nothing overdue; ' + plural(p.actions.open, 'action') + ' open');
-      p.actions.overdueList.slice(0, 3).forEach(function (a) { f.push(a.id + ' ' + a.title + (a.owner ? ' (' + a.owner + ')' : '')); });
+      var stuckIds = (p.actions.stuck || []).map(function (a) { return a.id; });
+      var rest = p.actions.overdueList.filter(function (a) { return stuckIds.indexOf(a.id) === -1; });
+      f.push(p.actions.overdue ? plural(p.actions.overdue, 'action') + ' overdue' + (stuckIds.length ? ' (' + stuckIds.length + ' for a decision below)' : '') + (rest.length > 3 ? ', the three oldest:' : rest.length && stuckIds.length ? ', the others:' : '') : 'Nothing overdue; ' + plural(p.actions.open, 'action') + ' open');
+      rest.slice(0, 3).forEach(function (a) { f.push(a.id + ' ' + a.title + (a.owner ? ' (' + a.owner + ')' : '')); });
+    } else if (key === 'escalations') {
+      (p.actions.stuck || []).forEach(function (a) { f.push(a.id + ' ' + a.title + (a.owner ? ' (' + a.owner + ')' : '') + ', overdue since ' + srDate(a.due) + ': extend, reassign or accept the risk'); });
     } else if (key === 'posture') {
       f.push(p.posture.score == null ? 'No posture scan yet: run one before the meeting' : 'Posture score ' + p.posture.score + '/100' + (p.posture.prev != null ? ' (' + (p.posture.score >= p.posture.prev ? '+' : '') + (p.posture.score - p.posture.prev) + ' since ' + srDate(p.since) + ')' : ''));
       (p.posture.failingTop || []).forEach(function (c) { f.push('Failing: ' + c); });
@@ -209,12 +215,16 @@
     if (scale > 1.5) scale = 1.5;
     var mins = items.map(function (it) { return it.added ? it.min : Math.max(3, Math.round(it.min * scale)); });
     var diff = Math.round(Math.min(target, natural * scale + 0.5)) - mins.reduce(function (m, x) { return m + x; }, 0);
-    if (diff && Math.abs(diff) <= 3) mins[mins.length - 1] = Math.max(3, mins[mins.length - 1] + diff);
+    if (diff && Math.abs(diff) <= 3) {
+      var big = mins.length - 1;
+      mins.forEach(function (m, i) { if (!items[i].added && (items[big].added || m > mins[big])) big = i; });
+      mins[big] = Math.max(3, mins[big] + diff);
+    }
     var who = { chair: s.chair || 'Chair', owner: s.owner || 'ISMS owner', facilitator: s.facilitator || s.owner || 'ISMS owner' };
     var t = 0;
     var mmss = function (m) { return Math.floor(m / 60) + ':' + ('0' + (m % 60)).slice(-2); };
     var out = items.map(function (it, idx) {
-      var row = { key: it.key, title: it.title, start: mmss(t), end: mmss(t + mins[idx]), min: mins[idx], lead: who[it.lead] || it.lead, clause: it.clause || '', facts: securityReviewFacts(it.key, pack), custom: !!it.custom, added: it.added || '' };
+      var row = { key: it.key, title: it.key === 'escalations' ? 'Needs a decision from ' + (s.chair || 'the chair') : it.title, start: mmss(t), end: mmss(t + mins[idx]), min: mins[idx], lead: who[it.lead] || it.lead, clause: it.clause || '', facts: securityReviewFacts(it.key, pack), custom: !!it.custom, added: it.added || '' };
       t += mins[idx];
       return row;
     });
@@ -264,10 +274,41 @@
   function securityReviewIcs(meta) {
     var m = meta || {};
     var stamp = function (iso) { return String(iso).replace(/[-:]/g, '').replace(/\.\d+/, '').slice(0, 15) + 'Z'; };
-    var esc = function (s) { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); };
+    var esc = function (s) { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); };
+    var octets = function (ch) { var c = ch.codePointAt(0); return c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4; };
+    var fold = function (line) {
+      var out = [], cur = '', n = 0, max = 75;
+      Array.from(line).forEach(function (ch) {
+        var w = octets(ch);
+        if (n + w > max) { out.push(cur); cur = ' '; n = 1; max = 75; }
+        cur += ch; n += w;
+      });
+      out.push(cur);
+      return out.join('\r\n');
+    };
     return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Compliance365//Checkpoint//EN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
       'UID:' + esc(m.uid || 'checkpoint-security-review'), 'DTSTAMP:' + stamp(m.stampUtc || m.startUtc), 'DTSTART:' + stamp(m.startUtc), 'DTEND:' + stamp(m.endUtc),
-      'SUMMARY:' + esc(m.summary), 'DESCRIPTION:' + esc(m.description), m.location ? 'LOCATION:' + esc(m.location) : '', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).join('\r\n');
+      'SUMMARY:' + esc(m.summary), 'DESCRIPTION:' + esc(m.description), m.html ? 'X-ALT-DESC;FMTTYPE=text/html:' + esc(m.html) : '', m.location ? 'LOCATION:' + esc(m.location) : '', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).map(fold).join('\r\n');
+  }
+  function securityReviewInviteText(agenda, status, meta) {
+    var m = meta || {};
+    var word = { red: 'Needs attention', amber: 'Watch', green: 'On track' };
+    var mark = { red: '\u25cf', amber: '\u25d0', green: '\u25cb' };
+    var lines = [];
+    if ((status || []).length) {
+      lines.push('AT A GLANCE');
+      status.forEach(function (x) { lines.push(mark[x.rag] + ' ' + x.label + ': ' + x.headline + ' (' + word[x.rag] + ')'); });
+      lines.push('');
+    }
+    lines.push('AGENDA (' + agenda.minutes + ' minutes)');
+    agenda.items.forEach(function (i) {
+      lines.push(i.start + '  ' + i.title + ' (' + i.lead + ')');
+      i.facts.forEach(function (f) { lines.push('      - ' + f); });
+    });
+    if ((agenda.quiet || []).length) { lines.push(''); lines.push('Nothing to report: ' + agenda.quiet.join('; ') + '.'); }
+    if (/^https:\/\//i.test(m.teamsLink || '')) { lines.push(''); lines.push('Join on Teams: ' + m.teamsLink); }
+    if (/^https:\/\//i.test(m.appUrl || '')) { lines.push(''); lines.push('Detail behind each figure: ' + m.appUrl); }
+    return lines.join('\n');
   }
   function wallTimeToUtc(dateIso, hhmm, tz) {
     var base = Date.parse(String(dateIso).slice(0, 10) + 'T' + (hhmm || '10:00') + ':00Z');
@@ -287,6 +328,6 @@
   }
 
 module.exports = {
-  srDate, addDaysIso, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, wallTimeToUtc,
+  srDate, addDaysIso, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };

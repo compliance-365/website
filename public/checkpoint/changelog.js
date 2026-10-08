@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.131.0',
+    date: '2026-10-08',
+    entries: [
+      'Meeting outcome in one line. When you record the minutes of a security review, add one sentence on how it went, for example "On track; MFA rollout slipped two weeks". It opens the minutes email and the minutes document, shows against the meeting in the review history, and the year of outcomes is carried into the management review inputs.',
+      'A decision becomes an action in one click. While minuting, "+ Decision" under any agenda item raises the action straight away, with an owner picked from the directory and a due date, and shows it under the item. Notes typed so far are kept. You can still type several decisions at once, one per line.',
+      'The pre-read is in the calendar invite. The invite now carries the at-a-glance traffic lights and the agenda with its figures, as plain and formatted text, so Outlook and Teams show them without opening the email. This applies to invites sent by the app and by the scheduled function.',
+      'Stuck actions go to the chair. An action that was already overdue at the last meeting and is still overdue comes up as "Needs a decision from <chair>". The chair can extend it to a new date, reassign it, or accept the risk and close it with a reason. The decision is recorded on the action, in the minutes and in the audit log, so overdue actions no longer roll on from month to month.',
+      'The meeting length now always adds up to the length set (a quarterly meeting showed 46 minutes instead of 45).'
+    ]
+  },
+  {
     version: '1.130.0',
     date: '2026-10-08',
     entries: [

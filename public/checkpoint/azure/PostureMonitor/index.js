@@ -2165,7 +2165,8 @@ async function buildScheduledReviewPack(g, gAll, context, siteId, optional, toda
   return {
     today, since,
     posture: { score: typeof score === 'number' ? score : null, prev: typeof prevScore === 'number' ? prevScore : null, failing: null, failingTop: ((extra && extra.failingTop) || []).slice(0, 3) },
-    actions: { open: open.length, overdue: overdue.length, closedSince: 0, overdueList: overdue.slice(0, 8).map(short), prior: [] },
+    actions: { open: open.length, overdue: overdue.length, closedSince: 0, overdueList: overdue.slice(0, 8).map(short), prior: [],
+      stuck: extra && extra.lastHeld ? overdue.filter(a => a.due < extra.lastHeld).slice(0, 6).map(short) : [] },
     incidents: { since: inc.slice(0, 8).map(n => ({ id: n.id, title: n.title, severity: n.severity, status: n.status })), count: inc.length, open: incidents.filter(n => n.status !== 'Closed').length },
     risks: { open: risks.length, aboveAppetite: null, aboveList: [], added: 0, changed: 0 },
     certification: { readiness: controls.length ? Math.round(controls.filter(c => c.Status === 'Implemented').length / controls.length * 100) : null, docsAwaiting: docs.filter(d => d.status && d.status !== 'Approved').length, nextAudit: '', certified: !!(extra && extra.certified) },
@@ -2189,7 +2190,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     const held = reviews.filter(r => r.status === 'Held').sort((a, b) => b.date.localeCompare(a.date))[0];
     const prevScore = held && held.pack && held.pack.posture ? held.pack.posture.score : null;
     rec = { id: 'SR-' + String(due.n).padStart(3, '0'), n: due.n, kind: SR.securityReviewKind(due.n, setup.mrEvery), date: due.date, time: setup.time || '10:00', status: 'Prepared',
-      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued }, extra || {})) };
+      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued, lastHeld: held ? held.date : '' }, extra || {})) };
     reviews.push(rec);
     done.push('prepared ' + rec.id);
   }
@@ -2197,14 +2198,17 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
   if (due.send && rec && rec.status === 'Prepared' && from && to.length) {
     const agenda = SR.securityReviewAgenda(setup, rec.n, rec.pack, rec);
     agenda.asOf = rec.preparedAt;
+    const meta = { org: label, date: SR.srDate(rec.date), time: rec.time, teamsLink: setup.teamsLink, appUrl: 'https://www.compliance365.com.au/checkpoint/' };
+    const status = SR.securityReviewStatus(rec.pack);
+    const html = SR.securityReviewEmailHtml(agenda, meta, status);
     const startUtc = SR.wallTimeToUtc(rec.date, rec.time || setup.time, setup.timeZone);
     const ics = SR.securityReviewIcs({ uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc, endUtc: new Date(Date.parse(startUtc) + agenda.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
-      summary: label + ' security review ' + rec.n + ' (' + agenda.label + ')', description: agenda.items.map(i => i.start + '  ' + i.title + ' (' + i.lead + ')').join('\n'),
+      summary: label + ' security review ' + rec.n + ' (' + agenda.label + ')', description: SR.securityReviewInviteText(agenda, status, meta), html,
       location: /^https:\/\//i.test(setup.teamsLink || '') ? setup.teamsLink : 'Microsoft Teams' });
     try {
       await g(`/users/${encodeURIComponent(from)}/sendMail`, { method: 'POST', body: { message: {
         subject: label + ' security review ' + rec.n + ' \u2014 ' + SR.srDate(rec.date),
-        body: { contentType: 'HTML', content: SR.securityReviewEmailHtml(agenda, { org: label, date: SR.srDate(rec.date), time: rec.time, teamsLink: setup.teamsLink, appUrl: 'https://www.compliance365.com.au/checkpoint/' }, SR.securityReviewStatus(rec.pack)) },
+        body: { contentType: 'HTML', content: html },
         toRecipients: to.map(address => ({ emailAddress: { address } })),
         attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] }, saveToSentItems: false } });
       rec.status = 'Sent'; rec.sentAt = today; rec.sentTo = to.join(', ');
