@@ -18,7 +18,9 @@ const setup = { chair: 'Ekin', owner: 'Cem', facilitator: 'Matt', week: 2, weekd
 
 describe('schedule', () => {
   test('meeting kinds over a year', () => {
-    assert.deepEqual([1, 2, 3, 4, 6, 9, 12, 13, 24].map(Lib.securityReviewKind), ['kickoff', 'monthly', 'quarterly', 'monthly', 'quarterly', 'quarterly', 'annual', 'monthly', 'annual']);
+    assert.deepEqual([1, 2, 3, 4, 6, 9, 12, 13, 24].map((n) => Lib.securityReviewKind(n)), ['kickoff', 'monthly', 'quarterly', 'monthly', 'quarterly', 'quarterly', 'mr', 'monthly', 'mr']);
+    assert.deepEqual([2, 3, 6, 9, 12].map((n) => Lib.securityReviewKind(n, 3)), ['monthly', 'mr', 'mr', 'mr', 'mr'], 'quarterly management reviews');
+    assert.deepEqual([3, 6, 9, 12].map((n) => Lib.securityReviewKind(n, 6)), ['quarterly', 'mr', 'quarterly', 'mr']);
   });
   test('the nth weekday of the month, the last one, and the next date', () => {
     assert.equal(Lib.securityReviewDayIn(2026, 9, setup), '2026-10-13');
@@ -64,7 +66,7 @@ describe('pack and agenda', () => {
     assert.match(a.items[1].facts[0], /Posture score 48\/100 \(\+7 since 8 Sep 2026\)/);
     assert.match(a.items[2].facts.join(' '), /1 incident logged[\s\S]*INC-1 Lost laptop \(Medium\)/);
   });
-  test('kick-off is 90 minutes, quarterly 75, annual adds the management review', () => {
+  test('kick-off is 90 minutes, quarterly 75, the management review meeting adds Clause 9.3', () => {
     assert.equal(Lib.securityReviewAgenda(setup, 1, pack).minutes, 90);
     assert.equal(Lib.securityReviewAgenda(setup, 3, pack).minutes, 75);
     const y = Lib.securityReviewAgenda(setup, 12, pack);
@@ -157,12 +159,13 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForTimeout(300);
     assert.match(await page.locator('#secReviewCard').innerText(), /Agenda sent/);
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
-    await page.waitForSelector('#modalBox textarea');
-    await page.locator('#modalBox textarea').nth(1).fill('Enforce MFA for contractors - Sam Okafor - 2026-11-30');
-    await page.locator('#modalBox .m-btns .btn:not(.ghost)').click();
+    await page.waitForSelector('#drawer #srDec-actions');
+    await page.fill('#drawer #srNote-posture', 'Score up after MFA rollout.');
+    await page.fill('#drawer #srDec-risks', 'Enforce MFA for contractors - Sam Okafor - 2026-11-30');
+    await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForTimeout(500);
     const drawer = await page.locator('#drawer').innerText();
-    assert.match(drawer, /Decisions[\s\S]*Enforce MFA for contractors[\s\S]*Sam Okafor/i);
+    assert.match(drawer, /Security posture[\s\S]*Score up after MFA rollout[\s\S]*Risks[\s\S]*Enforce MFA for contractors[\s\S]*Sam Okafor/i);
     assert.ok(await page.evaluate(() => window.App && document.body.innerText !== ''));
     assert.match(await page.locator('#secReviewCard').innerText(), /Meeting 4/, 'the next meeting comes up');
     await page.evaluate(() => window.App.closeDrawer());

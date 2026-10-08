@@ -846,7 +846,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -3038,6 +3038,43 @@ function showModal(opts) {
           { heading: 'Actions agreed', pageBreak: false, html: acts.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
             acts.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.owner || '') + '</td><td>' + (a.due ? fmtDateY(a.due) : '') + '</td><td>' + esc(actionStatusLabel(a.status)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No actions raised.</p>' },
           { heading: 'Approval', pageBreak: false, html: '<table class="rpt-table"><tbody><tr><td style="width:35%"><b>Approved by (top management)</b></td><td style="height:48px"></td></tr><tr><td><b>Date</b></td><td></td></tr></tbody></table>' }
+        ]
+      };
+    },
+
+    /* Monthly security review: the agenda with its figures, and the
+       minutes against each item (Clause 9.1; 9.3 when the meeting is
+       held as the management review). window._secReview = the record. */
+    secagenda: function () {
+      var r = secReviewById(window._secReview);
+      if (!r) { toast('Prepare the agenda first.'); return null; }
+      var a = secReviewAgenda(r), s = secReviewSetup() || {};
+      return {
+        title: 'Security review ' + r.n + ' agenda',
+        frameworkAgnostic: true,
+        dashboard: { intro: fmtDateY(r.date) + ' at ' + (r.time || s.time || '10:00') + ', ' + a.minutes + ' minutes. ' + a.label + '. Chair: ' + (s.chair || 'not set') + '; ISMS owner: ' + (s.owner || 'not set') + (s.facilitator ? '; facilitator: ' + s.facilitator : '') + '. Figures as at ' + fmtDateY(r.preparedAt || r.date) + '.' },
+        sections: [{ heading: 'Agenda', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Time</th><th>Item</th><th>Lead</th><th>To review</th><th>Clause</th></tr></thead><tbody>' +
+          a.items.map(function (i) { return '<tr><td class="rpt-idc">' + esc(i.start) + '</td><td><b>' + esc(i.title) + '</b></td><td>' + esc(i.lead) + '</td><td>' + (i.facts.length ? i.facts.map(esc).join('<br>') : '') + '</td><td class="rpt-idc">' + esc(i.clause) + '</td></tr>'; }).join('') + '</tbody></table>' }]
+      };
+    },
+    secminutes: function () {
+      var r = secReviewById(window._secReview);
+      if (!r || r.status !== 'Held') { toast('Record the minutes first.'); return null; }
+      var a = secReviewAgenda(r), notes = r.itemNotes || {}, by = r.decisionItem || {};
+      var acts = (r.actions || []).map(function (id) { return (S.actions || []).find(function (x) { return x.id === id; }); }).filter(Boolean);
+      return {
+        title: 'Security review ' + r.n + ' minutes',
+        frameworkAgnostic: true,
+        dashboard: { intro: 'Held ' + fmtDateY(r.date) + '. ' + a.label + '. Present: ' + (r.present || 'not recorded') + '.' + (r.reviewId ? ' Recorded as management review ' + r.reviewId + ' (Clause 9.3).' : '') },
+        sections: [
+          { heading: 'Minutes', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Item</th><th>Figures reviewed</th><th>Discussion</th><th>Decisions</th></tr></thead><tbody>' +
+            a.items.map(function (i) {
+              var mine = acts.filter(function (x) { return by[x.id] === i.key; });
+              return '<tr><td><b>' + esc(i.title) + '</b><div class="rpt-just">' + esc(i.lead) + '</div></td><td>' + i.facts.map(esc).join('<br>') + '</td><td style="white-space:pre-wrap">' + esc(notes[i.key] || '') + '</td><td>' + mine.map(function (x) { return esc(x.id + ' ' + x.title + ' (' + (x.owner || 'unassigned') + (x.due ? ', ' + fmtDateY(x.due) : '') + ')'); }).join('<br>') + '</td></tr>';
+            }).join('') + '</tbody></table>' },
+          { heading: 'Actions agreed', pageBreak: false, html: acts.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
+            acts.map(function (x) { return '<tr><td class="rpt-idc">' + esc(x.id) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.owner || '') + '</td><td>' + (x.due ? fmtDateY(x.due) : '') + '</td><td>' + esc(actionStatusLabel(x.status)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No actions agreed.</p>' },
+          { heading: 'Approval', pageBreak: false, html: '<table class="rpt-table"><tbody><tr><td style="width:35%"><b>Approved by (chair)</b></td><td style="height:48px"></td></tr><tr><td><b>Date</b></td><td></td></tr></tbody></table>' }
         ]
       };
     },
@@ -9908,12 +9945,16 @@ function showModal(opts) {
   }
 
   /* ===== Monthly security review =====
-     Settings: securityReviewSetup (JSON, see lib) and securityReviews
+     Settings: securityReviewSetup (JSON: chair, owner, ownerEmail,
+     facilitator, emails, week, weekday, time, timeZone, teamsLink,
+     autoSend, mrEvery, customItems, startDate) and securityReviews
      (JSON array of { id, n, kind, date, time, status Prepared | Sent |
-     Held, pack, preparedAt, sentAt, sentTo, present, notes, actions }).
-     The agenda is prepared from live figures two working days before
-     each meeting, by whoever opens Checkpoint first, and sent when the
-     setup says so. */
+     Held, pack, preparedAt, sentAt, sentTo, extra, skip, order, present,
+     itemNotes, decisionItem, actions, reviewId, minutesSentAt,
+     agendaFiled, minutesFiled }). The agenda is prepared from live
+     figures two working days before each meeting, by the scheduled
+     function or whoever opens Checkpoint first, and sent when the setup
+     says so. */
   function secReviewSetup() {
     try { var o = JSON.parse((S.settings && S.settings.securityReviewSetup) || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; }
   }
@@ -9922,17 +9963,10 @@ function showModal(opts) {
   }
   async function saveSecReviews(list) { var v = JSON.stringify(list); S.settings.securityReviews = v; await Store.setSetting('securityReviews', v); }
   async function saveSecReviewSetup(o) { var v = JSON.stringify(o); S.settings.securityReviewSetup = v; await Store.setSetting('securityReviewSetup', v); }
-  /* The meeting being prepared: an open record, else the next date. */
   function secReviewNext() {
-    var setup = secReviewSetup();
-    if (!setup) return null;
-    var list = secReviews(), today = new Date().toISOString().slice(0, 10);
-    var open = list.filter(function (r) { return r.status !== 'Held'; }).sort(function (a, b) { return a.date.localeCompare(b.date); })[0];
-    if (open) return { n: open.n, date: open.date, rec: open };
-    var n = list.reduce(function (m, r) { return Math.max(m, r.n || 0); }, 0) + 1;
-    var from = setup.startDate && setup.startDate > today ? setup.startDate : today;
-    return { n: n, date: window.CheckpointLib.nextSecurityReviewDate(setup, from), rec: null };
+    return window.CheckpointLib.securityReviewDue(secReviewSetup(), secReviews(), new Date().toISOString().slice(0, 10));
   }
+  function secReviewById(id) { return secReviews().find(function (r) { return r.id === id; }) || null; }
   function secReviewLastHeld() {
     return secReviews().filter(function (r) { return r.status === 'Held'; }).sort(function (a, b) { return b.date.localeCompare(a.date); })[0] || null;
   }
@@ -9956,10 +9990,11 @@ function showModal(opts) {
     });
   }
   function secReviewAgenda(rec) {
-    var a = window.CheckpointLib.securityReviewAgenda(secReviewSetup(), rec.n, rec.pack);
+    var a = window.CheckpointLib.securityReviewAgenda(secReviewSetup(), rec.n, rec.pack, rec);
     a.asOf = rec.preparedAt || '';
     return a;
   }
+  function secReviewLabel(n) { return window.CheckpointLib.SECURITY_REVIEW_KIND_LABEL[window.CheckpointLib.securityReviewKind(n, (secReviewSetup() || {}).mrEvery)]; }
   /* Creates (or refreshes) the record for the next meeting. */
   async function prepareSecurityReview(quiet) {
     var nx = secReviewNext();
@@ -9967,7 +10002,7 @@ function showModal(opts) {
     var list = secReviews(), today = new Date().toISOString().slice(0, 10), setup = secReviewSetup();
     var rec = nx.rec ? list.find(function (r) { return r.id === nx.rec.id; }) : null;
     if (!rec) {
-      rec = { id: 'SR-' + String(nx.n).padStart(3, '0'), n: nx.n, kind: window.CheckpointLib.securityReviewKind(nx.n), date: nx.date, time: setup.time || '10:00', status: 'Prepared' };
+      rec = { id: 'SR-' + String(nx.n).padStart(3, '0'), n: nx.n, kind: window.CheckpointLib.securityReviewKind(nx.n, setup.mrEvery), date: nx.date, time: setup.time || '10:00', status: 'Prepared' };
       list.push(rec);
     }
     rec.pack = secReviewPack();
@@ -9977,63 +10012,95 @@ function showModal(opts) {
     if (!quiet) toast('<b>' + esc(rec.id) + '</b> agenda and pack prepared');
     return rec;
   }
-  function secReviewEmail(rec) {
+  async function updateSecReview(id, fn) {
+    var list = secReviews(), r = list.find(function (x) { return x.id === id; });
+    if (!r) return null;
+    fn(r);
+    try { await saveSecReviews(list); } catch (e) { warn(e); return null; }
+    return r;
+  }
+  function secReviewMeta(rec) {
     var s = secReviewSetup() || {};
-    return window.CheckpointLib.securityReviewEmailHtml(secReviewAgenda(rec), { org: clientDisplayLabel(), date: fmtDate(rec.date), time: rec.time, teamsLink: s.teamsLink, appUrl: location.origin + location.pathname });
+    return { org: clientDisplayLabel(), date: fmtDate(rec.date), time: rec.time, teamsLink: s.teamsLink, appUrl: location.origin + location.pathname };
   }
   function secReviewIcs(rec) {
     var s = secReviewSetup() || {}, a = secReviewAgenda(rec);
-    var start = new Date(rec.date + 'T' + (rec.time || '10:00') + ':00');
-    var end = new Date(start.getTime() + a.minutes * 60000);
+    var startUtc = window.CheckpointLib.wallTimeToUtc(rec.date, rec.time || s.time, s.timeZone);
     return window.CheckpointLib.securityReviewIcs({
-      uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc: start.toISOString(), endUtc: end.toISOString(), stampUtc: new Date().toISOString(),
+      uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc: startUtc, endUtc: new Date(Date.parse(startUtc) + a.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
       summary: clientDisplayLabel() + ' security review ' + rec.n + ' (' + a.label + ')',
       description: a.items.map(function (i) { return i.start + '  ' + i.title + ' (' + i.lead + ')'; }).join('\n') + (s.teamsLink ? '\n\nJoin on Teams: ' + s.teamsLink : ''),
       location: /^https:\/\//i.test(s.teamsLink || '') ? s.teamsLink : 'Microsoft Teams'
     });
   }
+  function secReviewRecipients() {
+    return String((secReviewSetup() || {}).emails || '').split(/[,;\s]+/).filter(function (x) { return /@/.test(x); });
+  }
+  /* Files the agenda (Clause 9.1) or the minutes (9.1, or 9.3 for a
+     management review meeting) into the clause's evidence folder. */
+  async function fileSecReviewEvidence(rec, what) {
+    if (Store.kind !== 'sharepoint' || !rec) return false;
+    var c = findClauseByCode('iso27001', what === 'minutes' && rec.kind === 'mr' ? '9.3' : '9.1');
+    if (!c) return false;
+    var ok = false;
+    try { ok = await fileReportAsEvidence(what === 'minutes' ? 'secminutes' : 'secagenda', c, { _secReview: rec.id }); } catch (e) { warn(e); }
+    if (ok) await updateSecReview(rec.id, function (r) { r[what === 'minutes' ? 'minutesFiled' : 'agendaFiled'] = new Date().toISOString().slice(0, 10); });
+    return ok;
+  }
   async function sendSecurityReviewNow(rec, quiet) {
-    var s = secReviewSetup() || {};
-    var to = String(s.emails || '').split(/[,;\s]+/).filter(function (x) { return /@/.test(x); });
+    var to = secReviewRecipients();
     if (!to.length) { if (!quiet) toast('Add the attendees’ email addresses in the security review settings first.'); return false; }
     if (Store.kind !== 'sharepoint') {
       if (!quiet) toast('Demo: the agenda would be emailed to ' + esc(to.join(', ')) + ' with a calendar invite.');
     } else {
       var ics = secReviewIcs(rec);
       try {
-        await Graph.sendMail(to.join(','), clientDisplayLabel() + ' security review ' + rec.n + ' — ' + fmtDate(rec.date), secReviewEmail(rec),
+        await Graph.sendMail(to.join(','), clientDisplayLabel() + ' security review ' + rec.n + ' — ' + fmtDate(rec.date),
+          window.CheckpointLib.securityReviewEmailHtml(secReviewAgenda(rec), secReviewMeta(rec)),
           [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: btoa(unescape(encodeURIComponent(ics))) }]);
       } catch (e) { warn(e); if (!quiet) toast('Could not send: ' + esc(e.message || e), 'error'); return false; }
     }
-    var list = secReviews(), r = list.find(function (x) { return x.id === rec.id; });
-    if (r) { r.status = r.status === 'Held' ? 'Held' : 'Sent'; r.sentAt = new Date().toISOString().slice(0, 10); r.sentTo = to.join(', '); }
-    try { await saveSecReviews(list); } catch (e) { warn(e); }
+    var r = await updateSecReview(rec.id, function (x) { x.status = x.status === 'Held' ? 'Held' : 'Sent'; x.sentAt = new Date().toISOString().slice(0, 10); x.sentTo = to.join(', '); });
     audit('Security review pack sent', 'SecurityReview', rec.id, '', to.join(', ') + (quiet ? ' (automatically)' : ''));
     if (!quiet && Store.kind === 'sharepoint') toast('Agenda sent to ' + to.length + ' attendee' + (to.length === 1 ? '' : 's'));
+    if (r && !r.agendaFiled) await fileSecReviewEvidence(r, 'agenda');
     return true;
   }
-  /* Two working days before the meeting: prepare, and send if set to. */
+  async function sendSecurityReviewMinutesNow(rec, quiet) {
+    var to = secReviewRecipients();
+    if (!to.length) return false;
+    var acts = (rec.actions || []).map(function (id) { return (S.actions || []).find(function (a) { return a.id === id; }); }).filter(Boolean);
+    if (Store.kind === 'sharepoint') {
+      try { await Graph.sendMail(to.join(','), 'Minutes: ' + clientDisplayLabel() + ' security review ' + rec.n, window.CheckpointLib.securityReviewMinutesHtml(secReviewAgenda(rec), rec, acts, secReviewMeta(rec))); }
+      catch (e) { warn(e); if (!quiet) toast('Could not send the minutes: ' + esc(e.message || e), 'error'); return false; }
+    } else if (!quiet) toast('Demo: the minutes would be emailed to ' + esc(to.join(', ')) + '.');
+    await updateSecReview(rec.id, function (x) { x.minutesSentAt = new Date().toISOString().slice(0, 10); });
+    audit('Security review minutes sent', 'SecurityReview', rec.id, '', to.join(', '));
+    return true;
+  }
+  /* On load: prepare and send when due (the scheduled function does the
+     same when nobody opens Checkpoint), and file the agenda once sent. */
   var _secReviewAutoTried = false;
   async function autoSecurityReview() {
     if (_secReviewAutoTried || READONLY || !Store || !Store.kind) return;
-    var s = secReviewSetup(), nx = secReviewNext();
-    if (!s || !nx || !nx.date) return;
+    var nx = secReviewNext();
+    if (!nx) return;
     _secReviewAutoTried = true;
-    var today = new Date().toISOString().slice(0, 10);
-    if (today < window.CheckpointLib.workingDaysBefore(nx.date, 2) || today > nx.date) return;
-    var rec = nx.rec || await prepareSecurityReview(true);
-    if (rec && rec.status === 'Prepared' && s.autoSend === 'true' && Store.kind === 'sharepoint') await sendSecurityReviewNow(rec, true);
+    var rec = nx.rec;
+    if (nx.prepare) rec = await prepareSecurityReview(true);
+    if (rec && nx.send && Store.kind === 'sharepoint' && rec.status === 'Prepared') await sendSecurityReviewNow(rec, true);
+    else if (rec && rec.status === 'Sent' && !rec.agendaFiled) await fileSecReviewEvidence(rec, 'agenda');
     renderSecurityReviewCard();
   }
-  /* For My tasks: the ISMS owner sends the pack; the meeting's minutes. */
+  /* For My tasks: the ISMS owner sends the pack, then records the minutes. */
   function secReviewTasksFor(me) {
     var s = secReviewSetup(), nx = secReviewNext(), out = [];
-    if (!s || !nx || !nx.date) return out;
+    if (!s || !nx) return out;
     var mine = [s.owner, s.ownerEmail].filter(Boolean).some(function (x) { return me.indexOf(String(x).toLowerCase()) !== -1; });
     if (!mine) return out;
-    var today = new Date().toISOString().slice(0, 10), sendBy = window.CheckpointLib.workingDaysBefore(nx.date, 2);
+    var today = new Date().toISOString().slice(0, 10);
     var status = nx.rec ? nx.rec.status : '';
-    if (status !== 'Sent' && today >= window.CheckpointLib.addDaysIso(nx.date, -7) && today <= nx.date) out.push({ kind: 'Security review', ref: nx.rec ? nx.rec.id : 'next', title: 'Send the agenda and pack for security review ' + nx.n, due: sendBy, overdue: today > sendBy });
+    if (status !== 'Sent' && today >= window.CheckpointLib.addDaysIso(nx.date, -7) && today <= nx.date) out.push({ kind: 'Security review', ref: nx.rec ? nx.rec.id : 'next', title: 'Send the agenda and pack for security review ' + nx.n, due: nx.prepareOn, overdue: today > nx.prepareOn });
     if (nx.rec && today > nx.date) out.push({ kind: 'Security review', ref: nx.rec.id, title: 'Record the minutes of security review ' + nx.n, due: nx.date, overdue: true });
     return out;
   }
@@ -10052,20 +10119,20 @@ function showModal(opts) {
     if (!el) return;
     var s = secReviewSetup();
     if (!s) {
-      el.innerHTML = '<div class="card sr-card"><h3>Monthly security review</h3><p class="src" style="margin:4px 0 10px">A monthly meeting where leadership reviews the ISMS (Clauses 5.1 and 9.1). Checkpoint prepares the agenda and a pack of live figures two working days before, emails it with a calendar invite, records the minutes and decisions, and rolls the year into the Clause 9.3 management review.</p>' +
+      el.innerHTML = '<div class="card sr-card"><h3>Monthly security review</h3><p class="src" style="margin:4px 0 10px">A monthly meeting where leadership reviews the ISMS (Clauses 5.1 and 9.1). Checkpoint prepares the agenda and a pack of live figures two working days before, emails it with a calendar invite, records the minutes and decisions against each item, files the agenda and minutes as evidence, and holds the Clause 9.3 management review every 3, 6 or 12 months.</p>' +
         (READONLY ? '' : '<button class="btn sm" data-action="App.setupSecurityReview">Set up the monthly security review</button>') + '</div>';
       return;
     }
     var nx = secReviewNext(), list = secReviews(), today = new Date().toISOString().slice(0, 10);
-    var rec = nx && nx.rec, kind = nx ? window.CheckpointLib.securityReviewKind(nx.n) : 'monthly';
-    var mins = nx ? window.CheckpointLib.securityReviewAgenda(s, nx.n, null).minutes : 60;
-    var sendBy = nx && nx.date ? window.CheckpointLib.workingDaysBefore(nx.date, 2) : '';
-    var state = !rec ? (sendBy > today ? 'Agenda will be prepared on ' : 'Agenda due to be prepared since ') + fmtDate(sendBy) : rec.status === 'Sent' ? 'Agenda sent ' + fmtDate(rec.sentAt) : 'Agenda prepared ' + fmtDate(rec.preparedAt) + ', not yet sent';
+    var rec = nx && nx.rec;
+    var mins = nx ? window.CheckpointLib.securityReviewAgenda(s, nx.n, null, rec).minutes : 60;
+    var state = !rec ? (nx.prepareOn > today ? 'Agenda will be prepared on ' : 'Agenda due to be prepared since ') + fmtDate(nx.prepareOn) : rec.status === 'Sent' ? 'Agenda sent ' + fmtDate(rec.sentAt) : 'Agenda prepared ' + fmtDate(rec.preparedAt) + ', not yet sent';
     var trend = window.CheckpointLib.securityReviewTrend(list.filter(function (r) { return r.status === 'Held'; }).concat(rec && rec.pack ? [rec] : []));
     var held = list.filter(function (r) { return r.status === 'Held'; }).sort(function (a, b) { return b.date.localeCompare(a.date); });
+    var mrEvery = Number(s.mrEvery) || 12;
     el.innerHTML = '<div class="card sr-card"><div class="sr-head"><div><h3>Monthly security review</h3>' +
-      (nx && nx.date ? '<div class="sr-next"><b>Meeting ' + nx.n + '</b> · ' + esc(window.CheckpointLib.securityReviewAgenda(s, nx.n, null).label) + ' · ' + fmtDate(nx.date) + ' at ' + esc(s.time || '10:00') + ' · ' + mins + ' min · chair ' + esc(s.chair || '—') + '</div>' : '') +
-      '<div class="src">' + state + (s.autoSend === 'true' ? ' · sent automatically' : '') + '</div></div>' +
+      (nx ? '<div class="sr-next"><b>Meeting ' + nx.n + '</b> · ' + esc(secReviewLabel(nx.n)) + ' · ' + fmtDate(nx.date) + ' at ' + esc((rec && rec.time) || s.time || '10:00') + ' · ' + mins + ' min · chair ' + esc(s.chair || '—') + '</div>' : '') +
+      '<div class="src">' + state + (s.autoSend === 'true' ? ' · sent automatically' : '') + ' · management review every ' + (mrEvery === 12 ? '12 months' : mrEvery + ' months') + '</div></div>' +
       '<div class="sr-btns">' +
         '<button class="btn sm" data-action="App.openSecurityReview" data-id="' + esc(rec ? rec.id : 'next') + '">' + (rec ? 'Open agenda' : 'Preview agenda') + '</button>' +
         (READONLY ? '' : (rec && rec.status !== 'Sent' ? '<button class="btn ghost sm" data-action="App.sendSecurityReview" data-id="' + esc(rec.id) + '">Send to attendees</button>' : '') +
@@ -10074,9 +10141,32 @@ function showModal(opts) {
       '</div></div>' +
       (trend.length >= 2 ? '<div class="sr-trend">' + srSpark(trend, 'score', 'Posture score', true) + srSpark(trend, 'overdue', 'Overdue actions', false) + srSpark(trend, 'aboveAppetite', 'Risks above appetite', false) + srSpark(trend, 'incidents', 'Incidents a month', false) + '</div>' : '') +
       (held.length ? '<table class="sr-hist"><tbody>' + held.slice(0, 6).map(function (r) {
-        return '<tr><td class="src">' + esc(r.id) + '</td><td>' + fmtDate(r.date) + '</td><td class="src">' + esc(window.CheckpointLib.securityReviewAgenda(s, r.n, null).label) + '</td><td class="src">' + (r.actions || []).length + ' decision' + ((r.actions || []).length === 1 ? '' : 's') + '</td>' +
+        return '<tr><td class="src">' + esc(r.id) + '</td><td>' + fmtDate(r.date) + '</td><td class="src">' + esc(secReviewLabel(r.n)) + '</td><td class="src">' + (r.actions || []).length + ' decision' + ((r.actions || []).length === 1 ? '' : 's') + (r.reviewId ? ' · ' + esc(r.reviewId) : '') + '</td>' +
           '<td style="text-align:right"><button class="btn quiet sm" data-action="App.openSecurityReview" data-id="' + esc(r.id) + '">Open</button></td></tr>';
       }).join('') + '</tbody></table>' : '') + '</div>';
+  }
+  /* The agenda in the panel: editable until the meeting is held, notes
+     and decisions per item while minuting, the record once held. */
+  function srAgendaItemsHtml(rec, a, mode) {
+    var editable = !READONLY && rec && rec.status !== 'Held' && mode !== 'minutes';
+    var notes = (rec && rec.itemNotes) || {};
+    var acts = ((rec && rec.actions) || []).map(function (id) { return (S.actions || []).find(function (x) { return x.id === id; }); }).filter(Boolean);
+    var byItem = (rec && rec.decisionItem) || {};
+    return a.items.map(function (i, idx) {
+      var k = esc(rec ? rec.id + '|' + i.key : i.key);
+      var tools = editable && i.key !== 'decisions' ? '<span class="sr-tools">' +
+        (idx > 0 ? '<button class="btn quiet sm" data-action="App.srMoveItem" data-id="' + k + '|up" aria-label="Move ' + esc(i.title) + ' up">↑</button>' : '') +
+        (idx < a.items.length - 2 ? '<button class="btn quiet sm" data-action="App.srMoveItem" data-id="' + k + '|down" aria-label="Move ' + esc(i.title) + ' down">↓</button>' : '') +
+        '<button class="btn quiet sm" data-action="App.srSkipItem" data-id="' + k + '" aria-label="Remove ' + esc(i.title) + ' from this meeting">✕</button></span>' : '';
+      var mine = acts.filter(function (x) { return byItem[x.id] === i.key; });
+      return '<div class="sr-item"><span class="sr-time">' + esc(i.start) + '</span><div style="flex:1"><b>' + esc(i.title) + '</b> <span class="src">' + esc(i.lead) + (i.clause ? ' · ' + esc(i.clause) : '') + (i.added ? ' · added for this meeting' : '') + '</span>' + tools +
+        (i.facts.length ? '<ul class="sr-facts">' + i.facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
+        (mode === 'minutes' ? '<textarea class="mini sr-note" id="srNote-' + esc(i.key) + '" rows="2" placeholder="Notes" aria-label="Notes for ' + esc(i.title) + '">' + esc(notes[i.key] || '') + '</textarea>' +
+          '<textarea class="mini sr-note" id="srDec-' + esc(i.key) + '" rows="1" placeholder="Decisions, one per line: what - owner - due date" aria-label="Decisions for ' + esc(i.title) + '"></textarea>' : '') +
+        (mode !== 'minutes' && notes[i.key] ? '<p class="sr-minute">' + esc(notes[i.key]) + '</p>' : '') +
+        (mode !== 'minutes' && mine.length ? mine.map(function (x) { return '<div class="sr-decision">' + icon('check') + ' <button class="lnk" data-action="App.openAction" data-id="' + esc(x.id) + '">' + esc(x.id) + '</button> ' + esc(x.title) + ' <span class="src">' + esc(x.owner || '') + (x.due ? ' · ' + fmtDate(x.due) : '') + '</span></div>'; }).join('') : '') +
+        '</div></div>';
+    }).join('');
   }
 
   /* ================= My tasks =================
@@ -21157,9 +21247,10 @@ function showModal(opts) {
     /* ---------- Monthly security review ---------- */
     setupSecurityReview: async function () {
       var s = secReviewSetup() || {};
+      var mrDefault = String(s.mrEvery || ([3, 6].indexOf(parseInt(S.settings && S.settings.managementReviewMonths, 10)) !== -1 ? parseInt(S.settings.managementReviewMonths, 10) : 12));
       var v = await showModal({
         title: 'Monthly security review',
-        message: 'Checkpoint prepares the agenda and pack two working days before each meeting and records the minutes. Every third meeting adds the quarterly items; the twelfth is held as the Clause 9.3 management review.',
+        message: 'Checkpoint prepares the agenda and pack two working days before each meeting and records the minutes against each item. Every third meeting adds the quarterly items; the management review (Clause 9.3) is held as the meeting every 3, 6 or 12 months.',
         fields: [
           { id: 'chair', label: 'Chair (top management)', value: s.chair || '', list: 'peopleList' },
           { id: 'owner', label: 'ISMS owner, who prepares and sends the pack', value: s.owner || '', list: 'peopleList' },
@@ -21168,6 +21259,8 @@ function showModal(opts) {
           { id: 'week', label: 'Week of the month', type: 'select', value: String(s.week || '2'), options: [{ value: '1', label: 'First' }, { value: '2', label: 'Second' }, { value: '3', label: 'Third' }, { value: '4', label: 'Fourth' }, { value: 'last', label: 'Last' }] },
           { id: 'weekday', label: 'Day', type: 'select', value: String(s.weekday || '2'), options: [{ value: '1', label: 'Monday' }, { value: '2', label: 'Tuesday' }, { value: '3', label: 'Wednesday' }, { value: '4', label: 'Thursday' }, { value: '5', label: 'Friday' }] },
           { id: 'time', label: 'Start time (your local time)', type: 'time', value: s.time || '10:00' },
+          { id: 'mrEvery', label: 'Hold the management review (Clause 9.3)', type: 'select', value: mrDefault, options: [{ value: '3', label: 'Quarterly: every third meeting' }, { value: '6', label: 'Every six months' }, { value: '12', label: 'Yearly' }] },
+          { id: 'customItems', label: 'Extra standing items, one per line: title | minutes | lead | quarterly (optional)', type: 'textarea', value: window.CheckpointLib.securityReviewItemsText(s.customItems || []), placeholder: 'AI model providers and data use | 5 | owner\nContractor access (Nigeria, Canada) | 5 | owner | quarterly' },
           { id: 'teamsLink', label: 'Teams meeting link (optional: the recurring meeting’s join link)', value: s.teamsLink || '', placeholder: 'https://teams.microsoft.com/...' },
           { id: 'autoSend', label: 'Send the agenda automatically', type: 'select', value: s.autoSend || 'true', options: [{ value: 'true', label: 'Yes, two working days before' }, { value: 'false', label: 'No, the ISMS owner sends it' }] }
         ],
@@ -21181,11 +21274,18 @@ function showModal(opts) {
       });
       if (!v) return;
       var u = directoryUser(v.owner.trim());
+      var tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { tz = ''; }
       var next = { chair: v.chair.trim(), owner: v.owner.trim(), ownerEmail: u ? (u.mail || u.upn || '') : (s.ownerEmail || ''), facilitator: v.facilitator.trim(), emails: v.emails.trim(),
-        week: v.week === 'last' ? 'last' : Number(v.week), weekday: Number(v.weekday), time: v.time || '10:00', teamsLink: v.teamsLink.trim(), autoSend: v.autoSend, startDate: s.startDate || new Date().toISOString().slice(0, 10) };
+        week: v.week === 'last' ? 'last' : Number(v.week), weekday: Number(v.weekday), time: v.time || '10:00', timeZone: tz || s.timeZone || '', teamsLink: v.teamsLink.trim(), autoSend: v.autoSend,
+        mrEvery: Number(v.mrEvery) || 12, customItems: window.CheckpointLib.parseSecurityReviewItems(v.customItems), startDate: s.startDate || new Date().toISOString().slice(0, 10) };
       try { await saveSecReviewSetup(next); } catch (e) { warn(e); return; }
-      audit(s.chair ? 'Security review settings changed' : 'Security review set up', 'Setting', 'securityReviewSetup', s.chair ? JSON.stringify({ week: s.week, weekday: s.weekday, time: s.time }) : '', JSON.stringify({ chair: next.chair, owner: next.owner, week: next.week, weekday: next.weekday, time: next.time }));
-      toast('Monthly security review saved');
+      audit(s.chair ? 'Security review settings changed' : 'Security review set up', 'Setting', 'securityReviewSetup', s.chair ? JSON.stringify({ week: s.week, weekday: s.weekday, time: s.time, mrEvery: s.mrEvery }) : '', JSON.stringify({ chair: next.chair, owner: next.owner, week: next.week, weekday: next.weekday, time: next.time, mrEvery: next.mrEvery, items: next.customItems.length }));
+      /* The Management Review Procedure states this interval: do what you document. */
+      var was = (S.settings && S.settings.managementReviewMonths) || '12';
+      if (String(next.mrEvery) !== String(was)) {
+        try { await Store.setSetting('managementReviewMonths', String(next.mrEvery)); S.settings.managementReviewMonths = String(next.mrEvery); audit('Setting changed', 'Setting', 'managementReviewMonths', was, String(next.mrEvery)); } catch (e) { warn(e); }
+        toast('Management review now every ' + next.mrEvery + ' months. Regenerate the Management Review Procedure so it says so.');
+      } else toast('Monthly security review saved');
       renderSecurityReviewCard();
     },
     prepareSecurityReview: async function () {
@@ -21198,39 +21298,42 @@ function showModal(opts) {
     openSecurityReview: function (id) {
       var s = secReviewSetup();
       if (!s) return;
-      var rec = id === 'next' ? null : secReviews().find(function (r) { return r.id === id; });
+      var rec = id === 'next' ? null : secReviewById(id);
       var nx = secReviewNext();
       var view = rec || (nx ? { id: 'next', n: nx.n, date: nx.date, time: s.time, status: 'Preview', pack: secReviewPack(), preparedAt: new Date().toISOString().slice(0, 10) } : null);
       if (!view) return;
+      var minuting = rec && window._srMinutes === rec.id && rec.status !== 'Held' && !READONLY;
       var a = secReviewAgenda(view);
       var held = view.status === 'Held';
-      var actions = (view.actions || []).map(function (aid) { return (S.actions || []).find(function (x) { return x.id === aid; }); }).filter(Boolean);
+      var acts = (view.actions || []).map(function (aid) { return (S.actions || []).find(function (x) { return x.id === aid; }); }).filter(Boolean);
+      var btn = function (action, label, ghost) { return '<button class="btn ' + (ghost ? 'ghost ' : '') + 'sm" data-action="' + action + '" data-id="' + esc(rec ? rec.id : '') + '">' + label + '</button>'; };
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + (rec ? esc(rec.id) + ' · ' : '') + esc(a.label) + ' · ' + a.minutes + ' minutes · ' + (rec ? esc(rec.status) : 'Preview from live figures') + '</div>' +
         '<h2>Security review ' + a.n + ' — ' + fmtDate(view.date) + ' at ' + esc(view.time || s.time || '10:00') + '</h2>' +
-        (READONLY ? '' : '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px">' +
-          (!rec ? '<button class="btn sm" data-action="App.prepareSecurityReview">Prepare and save</button>' : !held ? '<button class="btn ghost sm" data-action="App.prepareSecurityReview">Refresh figures</button>' : '') +
-          (rec && !held ? '<button class="btn sm" data-action="App.sendSecurityReview" data-id="' + esc(rec.id) + '">' + (rec.status === 'Sent' ? 'Send again' : 'Send to attendees') + '</button>' : '') +
-          (rec ? '<button class="btn ghost sm" data-action="App.downloadSecurityReviewIcs" data-id="' + esc(rec.id) + '">Calendar invite</button>' : '') +
-          (rec && !held ? '<button class="btn ghost sm" data-action="App.recordSecurityReview" data-id="' + esc(rec.id) + '">Record minutes</button>' : '') + '</div>') +
-        (rec && rec.sentAt ? '<p class="src">Sent ' + fmtDate(rec.sentAt) + ' to ' + esc(rec.sentTo || '') + '</p>' : '') +
-        '<div class="d-sec"><h4>Agenda</h4>' + a.items.map(function (i) {
-          return '<div class="sr-item"><span class="sr-time">' + esc(i.start) + '</span><div><b>' + esc(i.title) + '</b> <span class="src">' + esc(i.lead) + ' · ' + esc(i.clause) + '</span>' +
-            (i.facts.length ? '<ul class="sr-facts">' + i.facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') + '</div></div>';
-        }).join('') + '</div>' +
-        (held ? '<div class="d-sec"><h4>Minutes</h4>' +
-          '<div class="d-kv"><span>Present</span><b style="font-weight:400">' + esc(view.present || '—') + '</b></div>' +
-          (view.notes ? '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.7;white-space:pre-wrap">' + esc(view.notes) + '</p>' : '') +
-          '<h4 style="margin-top:12px">Decisions</h4>' + (actions.length ? actions.map(function (x) { return '<div class="d-kv"><span><button class="lnk" data-action="App.openAction" data-id="' + esc(x.id) + '">' + esc(x.id) + '</button> ' + esc(x.title) + '</span><b>' + esc(x.owner || '') + (x.due ? ' · ' + fmtDate(x.due) : '') + '</b></div>'; }).join('') : '<p class="src">None recorded.</p>') + '</div>' : '') +
-        (rec ? recordHistoryHtml('SecurityReview', [rec.id], 6) : '');
+        (minuting ? '<div class="sr-minutes-head"><label class="src">Held on <input class="mini" type="date" id="srHeldOn" value="' + esc(view.date) + '"></label><label class="src" style="flex:1">Present <input class="mini" id="srPresent" style="width:100%" value="' + esc(view.present || [s.chair, s.owner, s.facilitator].filter(Boolean).join(', ')) + '" list="peopleList"></label></div>' +
+            '<p class="src">Notes and decisions against each item. Each decision becomes an action with its owner and due date' + (a.kind === 'mr' ? '; this meeting is also recorded as the Clause 9.3 management review' : '') + '.</p>' :
+          READONLY ? '' : '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px">' +
+          (!rec ? '<button class="btn sm" data-action="App.prepareSecurityReview">Prepare and save</button>' : !held ? btn('App.prepareSecurityReview', 'Refresh figures', true) : '') +
+          (rec && !held ? btn('App.sendSecurityReview', rec.status === 'Sent' ? 'Send again' : 'Send to attendees') : '') +
+          (rec && !held ? btn('App.srAddItem', '+ Add item', true) : '') +
+          (rec && !held && (rec.skip || []).length ? btn('App.srRestoreItems', 'Restore ' + rec.skip.length + ' removed', true) : '') +
+          (rec ? btn('App.secReviewDoc', 'Agenda document', true) : '') +
+          (rec ? btn('App.downloadSecurityReviewIcs', 'Calendar invite', true) : '') +
+          (rec && !held ? btn('App.recordSecurityReview', 'Record minutes', true) : '') +
+          (held ? btn('App.secReviewMinutesDoc', 'Minutes document', true) + btn('App.sendSecurityReviewMinutes', rec.minutesSentAt ? 'Send minutes again' : 'Send minutes', true) : '') + '</div>') +
+        (rec && rec.sentAt ? '<p class="src">Agenda sent ' + fmtDate(rec.sentAt) + ' to ' + esc(rec.sentTo || '') + (rec.agendaFiled ? ' · filed as Clause 9.1 evidence' : '') + '</p>' : '') +
+        (held ? '<p class="src">Held ' + fmtDate(view.date) + ' · present: ' + esc(view.present || '—') + (view.minutesSentAt ? ' · minutes sent ' + fmtDate(view.minutesSentAt) : '') + (view.reviewId ? ' · recorded as management review <button class="lnk" data-action="App.openReview" data-id="' + esc(view.reviewId) + '">' + esc(view.reviewId) + '</button>' : '') + '</p>' : '') +
+        '<div class="d-sec"><h4>' + (minuting ? 'Minutes' : held ? 'Agenda and minutes' : 'Agenda') + '</h4>' + srAgendaItemsHtml(rec || null, a, minuting ? 'minutes' : held ? 'held' : 'agenda') + '</div>' +
+        (minuting ? '<div class="d-actions" style="display:flex;gap:8px;margin:14px 0"><button class="btn sm" data-action="App.saveSecurityReviewMinutes" data-id="' + esc(rec.id) + '">Save minutes</button><button class="btn ghost sm" data-action="App.cancelSecurityReviewMinutes" data-id="' + esc(rec.id) + '">Cancel</button></div>' : '') +
+        (held && view.notes ? '<div class="d-sec"><h4>General notes</h4><p class="sr-minute">' + esc(view.notes) + '</p></div>' : '') +
+        (rec && !minuting ? recordHistoryHtml('SecurityReview', [rec.id], 6) : '');
       openDrawerUi('Security review ' + a.n);
     },
     sendSecurityReview: async function (id) {
-      var rec = secReviews().find(function (r) { return r.id === id; });
+      var rec = secReviewById(id);
       if (!rec) return;
-      var s = secReviewSetup() || {};
-      var to = String(s.emails || '').split(/[,;\s]+/).filter(function (x) { return /@/.test(x); });
+      var to = secReviewRecipients();
       if (!to.length) { toast('Add the attendees’ email addresses in Settings first.'); App.setupSecurityReview(); return; }
       var ok = await showModal({ title: 'Send security review ' + rec.n + '?', message: 'The agenda with this month’s figures, and a calendar invite, go to:\n' + to.join('\n') + '\n\nFigures as prepared on ' + fmtDate(rec.preparedAt) + '. Refresh them first if anything has changed since.', confirmText: 'Send', cancelText: 'Cancel' });
       if (!ok) return;
@@ -21240,8 +21343,18 @@ function showModal(opts) {
       renderSecurityReviewCard();
       if (document.getElementById('drawer').classList.contains('open')) App.openSecurityReview(id);
     },
+    sendSecurityReviewMinutes: async function (id) {
+      var rec = secReviewById(id);
+      if (!rec || rec.status !== 'Held') return;
+      if (!secReviewRecipients().length) { toast('Add the attendees’ email addresses in Settings first.'); return; }
+      busy(true);
+      var ok = await sendSecurityReviewMinutesNow(rec, false);
+      busy(false);
+      if (ok && Store.kind === 'sharepoint') toast('Minutes sent');
+      App.openSecurityReview(id);
+    },
     downloadSecurityReviewIcs: function (id) {
-      var rec = secReviews().find(function (r) { return r.id === id; });
+      var rec = secReviewById(id);
       if (!rec) return;
       var blob = new Blob([secReviewIcs(rec)], { type: 'text/calendar' });
       var a = document.createElement('a');
@@ -21249,42 +21362,115 @@ function showModal(opts) {
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
     },
-    recordSecurityReview: async function (id) {
-      var list = secReviews(), rec = list.find(function (r) { return r.id === id; });
+    secReviewDoc: function (id) { window._secReview = id; App.report('secagenda'); },
+    secReviewMinutesDoc: function (id) { window._secReview = id; App.report('secminutes'); },
+    /* Editing one meeting's agenda: move, remove, restore, add. */
+    srMoveItem: async function (key) {
+      var p = String(key).split('|'), id = p[0], item = p[1], dir = p[2];
+      var rec = secReviewById(id);
       if (!rec) return;
-      var s = secReviewSetup() || {};
+      var keys = secReviewAgenda(rec).items.map(function (i) { return i.key; }).filter(function (k) { return k !== 'decisions'; });
+      var i = keys.indexOf(item), j = dir === 'up' ? i - 1 : i + 1;
+      if (i === -1 || j < 0 || j >= keys.length) return;
+      var t = keys[i]; keys[i] = keys[j]; keys[j] = t;
+      await updateSecReview(id, function (r) { r.order = keys; });
+      App.openSecurityReview(id); renderSecurityReviewCard();
+    },
+    srSkipItem: async function (key) {
+      var p = String(key).split('|'), id = p[0], item = p[1];
+      var r = await updateSecReview(id, function (x) {
+        if ((x.extra || []).some(function (e) { return e.key === item; })) x.extra = x.extra.filter(function (e) { return e.key !== item; });
+        else { x.skip = x.skip || []; if (x.skip.indexOf(item) === -1) x.skip.push(item); }
+      });
+      if (r) audit('Security review agenda changed', 'SecurityReview', id, item, 'removed for this meeting');
+      App.openSecurityReview(id); renderSecurityReviewCard();
+    },
+    srRestoreItems: async function (id) {
+      await updateSecReview(id, function (x) { x.skip = []; });
+      App.openSecurityReview(id); renderSecurityReviewCard();
+    },
+    srAddItem: async function (id) {
+      var rec = secReviewById(id);
+      if (!rec) return;
       var v = await showModal({
-        title: 'Minutes of security review ' + rec.n,
-        message: 'Decisions become actions in the actions register, one per line: what, then the owner, then the due date. For example: Enforce MFA for contractors - Cem - 2026-11-30',
+        title: 'Add to security review ' + rec.n,
+        message: 'For this meeting only: any other business, a topic someone has asked for, or a decision needed. Standing items for every meeting are added in Settings.',
         fields: [
-          { id: 'date', label: 'Held on', type: 'date', value: rec.date },
-          { id: 'present', label: 'Present', value: rec.present || [s.chair, s.owner, s.facilitator].filter(Boolean).join(', ') },
-          { id: 'notes', label: 'Discussion notes', type: 'textarea', value: rec.notes || '' },
-          { id: 'decisions', label: 'Decisions and actions', type: 'textarea', value: '' }
+          { id: 'title', label: 'Item', value: '' },
+          { id: 'min', label: 'Minutes', type: 'number', value: '5' },
+          { id: 'lead', label: 'Who leads it', value: currentActor().name, list: 'peopleList' }
         ],
-        confirmText: 'Save minutes',
-        validate: function (x) { return x.present.trim() ? null : 'Record who was present.'; }
+        confirmText: 'Add',
+        validate: function (x) { return x.title.trim() ? null : 'Name the item.'; }
       });
       if (!v) return;
+      var r = await updateSecReview(id, function (x) {
+        x.extra = x.extra || [];
+        x.extra.push({ key: 'x' + Date.now().toString(36), title: v.title.trim().slice(0, 120), min: Math.max(1, Math.min(60, parseInt(v.min, 10) || 5)), lead: v.lead.trim() || currentActor().name, by: currentActor().name });
+      });
+      if (r) audit('Security review agenda changed', 'SecurityReview', id, '', 'Added: ' + v.title.trim());
+      App.openSecurityReview(id); renderSecurityReviewCard();
+    },
+    /* Minutes are taken in the panel, against each agenda item. */
+    recordSecurityReview: function (id) {
+      var rec = secReviewById(id);
+      if (!rec || rec.status === 'Held') { if (rec) App.openSecurityReview(id); return; }
+      window._srMinutes = id;
+      App.openSecurityReview(id);
+    },
+    cancelSecurityReviewMinutes: function (id) { window._srMinutes = null; App.openSecurityReview(id); },
+    saveSecurityReviewMinutes: async function (id) {
+      var rec = secReviewById(id);
+      if (!rec) return;
+      var s = secReviewSetup() || {};
+      var a = secReviewAgenda(rec);
+      var heldOn = (document.getElementById('srHeldOn') || {}).value || rec.date;
+      var present = ((document.getElementById('srPresent') || {}).value || '').trim();
+      if (!present) { toast('Record who was present.'); return; }
+      var notes = {}, decisions = [];
+      a.items.forEach(function (i) {
+        var n = document.getElementById('srNote-' + i.key), d = document.getElementById('srDec-' + i.key);
+        if (n && n.value.trim()) notes[i.key] = n.value.trim();
+        if (d && d.value.trim()) window.CheckpointLib.parseReviewActionLines(d.value, heldOn).forEach(function (x) { decisions.push(Object.assign({ item: i }, x)); });
+      });
       busy(true);
-      var lines = window.CheckpointLib.parseReviewActionLines(v.decisions, v.date || rec.date);
-      var raised = [];
-      for (var i = 0; i < lines.length; i++) {
-        var maxAct = S.actions.reduce(function (m, x) { var k = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
-        var u = directoryUser(lines[i].owner);
-        var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: lines[i].title, type: 'Action', risk: '', control: '', pr: 'Medium',
-          owner: u ? u.name : (lines[i].owner || s.owner || 'Unassigned'), ownerEmail: u ? (u.mail || u.upn || '') : '', due: lines[i].due, status: 'Open', evidenceUrl: '', src: 'Security review ' + rec.id };
-        try { await Store.addAction(act); raised.push(act.id); audit('Action raised', 'Action', act.id, '', 'From security review ' + rec.id + ': ' + act.title); } catch (e) { warn(e); }
+      var raised = [], byItem = {};
+      for (var k = 0; k < decisions.length; k++) {
+        var dd = decisions[k];
+        var maxAct = S.actions.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
+        var u = directoryUser(dd.owner);
+        var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: dd.title, type: 'Action', risk: '', control: '', pr: 'Medium',
+          owner: u ? u.name : (dd.owner || s.owner || 'Unassigned'), ownerEmail: u ? (u.mail || u.upn || '') : '', due: dd.due, status: 'Open', evidenceUrl: '', src: 'Security review ' + rec.id + ': ' + dd.item.title };
+        try { await Store.addAction(act); raised.push(act.id); byItem[act.id] = dd.item.key; audit('Action raised', 'Action', act.id, '', 'From security review ' + rec.id + ' (' + dd.item.title + '): ' + act.title); } catch (e) { warn(e); }
       }
-      if (!rec.pack) rec.pack = secReviewPack();
-      rec.status = 'Held'; rec.date = v.date || rec.date; rec.present = v.present.trim(); rec.notes = v.notes.trim();
-      rec.actions = (rec.actions || []).concat(raised); rec.heldAt = new Date().toISOString().slice(0, 10);
-      try { await saveSecReviews(list); } catch (e) { warn(e); }
-      audit('Security review held', 'SecurityReview', rec.id, '', rec.date + ' — ' + rec.present + (raised.length ? '; actions ' + raised.join(', ') : ''));
+      /* A management review meeting is also recorded as the Clause 9.3
+         review, with the 9.3.2 inputs pre-filled as they stood. */
+      var reviewId = '';
+      if (a.kind === 'mr') {
+        var maxR = (S.reviews || []).reduce(function (m, r) { var q = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
+        var auto = App.autoReviewInputs();
+        var mr = { id: 'MR-' + String(maxR + 1).padStart(3, '0'), date: heldOn, attendees: present, inputs: window.CheckpointLib.serializeReviewInputs(auto),
+          decisions: [notes.mr, notes.decisions].filter(Boolean).join('\n') + (raised.length ? (notes.mr || notes.decisions ? '\n' : '') + 'Actions: ' + raised.join(', ') : ''),
+          nextDue: window.CheckpointLib.addMonthsIso(heldOn, Number(s.mrEvery) || 12) };
+        try { await Store.addReview(mr); reviewId = mr.id; audit('Management review recorded', 'Review', mr.id, '', fmtDate(mr.date) + ' — ' + mr.attendees + ' (security review ' + rec.id + ')'); } catch (e) { warn(e); }
+      }
+      var saved = await updateSecReview(id, function (r) {
+        if (!r.pack) r.pack = secReviewPack();
+        r.status = 'Held'; r.date = heldOn; r.present = present; r.itemNotes = notes; r.heldAt = new Date().toISOString().slice(0, 10);
+        r.actions = (r.actions || []).concat(raised); r.decisionItem = Object.assign(r.decisionItem || {}, byItem);
+        if (reviewId) r.reviewId = reviewId;
+      });
+      audit('Security review held', 'SecurityReview', id, '', heldOn + ' — ' + present + (raised.length ? '; actions ' + raised.join(', ') : '') + (reviewId ? '; management review ' + reviewId : ''));
+      window._srMinutes = null;
       busy(false);
-      toast('<b>' + esc(rec.id) + '</b> minutes saved' + (raised.length ? ', ' + raised.length + ' action' + (raised.length === 1 ? '' : 's') + ' raised' : ''));
-      renderSecurityReviewCard(); renderActions(); renderNavCounts();
-      App.openSecurityReview(rec.id);
+      toast('<b>' + esc(id) + '</b> minutes saved' + (raised.length ? ', ' + raised.length + ' action' + (raised.length === 1 ? '' : 's') + ' raised' : '') + (reviewId ? ', recorded as ' + reviewId : ''));
+      renderSecurityReviewCard(); renderActions(); renderReviews(); renderNavCounts(); renderDash();
+      App.openSecurityReview(id);
+      if (saved && Store.kind === 'sharepoint') {
+        await fileSecReviewEvidence(saved, 'minutes');
+        if (secReviewRecipients().length && await showModal({ title: 'Send the minutes?', message: 'Email the minutes, with each decision’s owner and due date, to:\n' + secReviewRecipients().join('\n'), confirmText: 'Send', cancelText: 'Not now' })) await sendSecurityReviewMinutesNow(secReviewById(id), false);
+        App.openSecurityReview(id);
+      }
     },
     recordReview: async function () {
       var attendees = document.getElementById('naReviewAttendees').value.trim();

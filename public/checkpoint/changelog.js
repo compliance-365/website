@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.129.0',
+    date: '2026-10-08',
+    entries: [
+      'Quarterly management reviews. In the monthly security review settings, choose to hold the Clause 9.3 management review every 3, 6 or 12 months. That meeting carries the management review on its agenda, and recording its minutes also records the management review, with the 9.3.2 inputs pre-filled as they stood and the next one due at the chosen interval. The management review interval in your settings follows, so the Management Review Procedure says the same thing once regenerated.',
+      'Editable agenda. Add your own standing items in the settings (for example AI model providers, or contractor access each quarter). For a single meeting, add an item such as any other business, remove one, or move items up and down; the timings follow.',
+      'Minutes against each item. Record minutes opens the agenda with a notes box and a decisions box under every item; each decision becomes an action linked to its item. The minutes can be emailed to the attendees, with every action, its owner and due date.',
+      'Agenda and minutes documents. Each meeting has an agenda document and, once held, a minutes document with an approval block. In a connected tenant the agenda is filed as Clause 9.1 evidence when it is sent, and the minutes when they are recorded (Clause 9.3 for a management review meeting).',
+      'It runs without anyone logging in. When the Azure monitor is deployed it prepares the agenda two working days before, sends it with the calendar invite when set to, and reminds the ISMS owner the day after if the minutes are not recorded. Meeting times follow your time zone, daylight saving included.'
+    ]
+  },
+  {
     version: '1.128.0',
     date: '2026-10-08',
     entries: [

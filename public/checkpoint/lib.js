@@ -5802,14 +5802,50 @@
     { key: 'baseline', title: 'Baseline: where we start', min: 10, lead: 'owner', clause: '9.1' },
     { key: 'path', title: 'Path to certification', min: 5, lead: 'facilitator', clause: '9.2, 9.3' }
   ];
-  function securityReviewKind(n) {
+  /* mrEvery: how often (in meetings, so months) the meeting is held as
+     the Clause 9.3 management review: 3, 6 or 12. */
+  function securityReviewKind(n, mrEvery) {
     n = Number(n) || 1;
+    var every = [3, 6, 12].indexOf(Number(mrEvery)) !== -1 ? Number(mrEvery) : 12;
     if (n === 1) return 'kickoff';
-    if (n % 12 === 0) return 'annual';
+    if (n % every === 0) return 'mr';
     if (n % 3 === 0) return 'quarterly';
     return 'monthly';
   }
-  var SECURITY_REVIEW_KIND_LABEL = { kickoff: 'Kick-off', monthly: 'Monthly', quarterly: 'Quarterly', annual: 'Annual (management review)' };
+  var SECURITY_REVIEW_KIND_LABEL = { kickoff: 'Kick-off', monthly: 'Monthly', quarterly: 'Quarterly', mr: 'Management review (Clause 9.3)' };
+  /* Extra standing items, one per line: "title | minutes | lead | quarterly". */
+  function parseSecurityReviewItems(text) {
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (line, i) {
+      var p = line.split('|').map(function (x) { return x.trim(); });
+      if (!p[0]) return;
+      var min = Math.max(1, Math.min(60, parseInt(p[1], 10) || 5));
+      out.push({ key: 'c' + (i + 1) + '-' + p[0].toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24), title: p[0].slice(0, 120), min: min, lead: p[2] || 'owner', clause: '', every: /quarter/i.test(p[3] || '') ? 'quarterly' : 'monthly', custom: true });
+    });
+    return out;
+  }
+  function securityReviewItemsText(items) {
+    return (items || []).map(function (i) { return [i.title, i.min, i.lead || 'owner'].concat(i.every === 'quarterly' ? ['quarterly'] : []).join(' | '); }).join('\n');
+  }
+  /* A wall-clock time in an IANA time zone, as a UTC instant (ISO). The
+     meeting slot is set in the client's local time; the scheduled
+     function runs in UTC and must send the same invite. */
+  function wallTimeToUtc(dateIso, hhmm, tz) {
+    var base = Date.parse(String(dateIso).slice(0, 10) + 'T' + (hhmm || '10:00') + ':00Z');
+    if (isNaN(base)) return '';
+    if (!tz) return new Date(base).toISOString();
+    var offsetAt = function (ms) {
+      try {
+        var parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(ms));
+        var v = {};
+        parts.forEach(function (x) { v[x.type] = x.value; });
+        return Date.UTC(+v.year, +v.month - 1, +v.day, +v.hour % 24, +v.minute, +v.second) - ms;
+      } catch (e) { return 0; }
+    };
+    var guess = base - offsetAt(base);
+    guess = base - offsetAt(guess);
+    return new Date(guess).toISOString();
+  }
   /* The meeting day in a month: the nth weekday (week 1-4) or the last. */
   function securityReviewDayIn(year, month, setup) {
     var wd = Number(setup && setup.weekday) || 2, week = (setup && setup.week) || 2;
@@ -5899,7 +5935,7 @@
       f.push(plural(p.incidents.count, 'incident') + ' logged since ' + srDate(p.since) + ', ' + p.incidents.open + ' open');
       p.incidents.since.slice(0, 4).forEach(function (n) { f.push(n.id + ' ' + n.title + (n.severity ? ' (' + n.severity + ')' : '')); });
     } else if (key === 'risks') {
-      f.push(plural(p.risks.open, 'open risk') + ', ' + p.risks.aboveAppetite + ' above appetite');
+      f.push(plural(p.risks.open, 'open risk') + (p.risks.aboveAppetite == null ? '' : ', ' + p.risks.aboveAppetite + ' above appetite'));
       f.push(p.risks.added + ' added and ' + p.risks.changed + ' updated since ' + srDate(p.since));
       if (p.risks.aboveList.length) f.push('Above appetite: ' + p.risks.aboveList.join(', '));
     } else if (key === 'certification') {
@@ -5924,28 +5960,59 @@
     } else if (key === 'baseline') {
       f.push('Record today\u2019s posture, risks, open actions and documents as the starting point');
     } else if (key === 'mr') {
-      f.push('All seven Clause 9.3.2 inputs, pre-filled in Checkpoint; decisions recorded as 9.3.3 outputs');
+      f.push('All seven Clause 9.3.2 inputs, pre-filled in Checkpoint; decisions on improvements, changes to the ISMS and resources recorded as 9.3.3 outputs');
     }
     return f;
   }
-  /* The timed agenda for meeting n. */
-  function securityReviewAgenda(setup, n, pack) {
-    var kind = securityReviewKind(n), s = setup || {};
+  /* The timed agenda for meeting n. rec (optional) = the meeting's own
+     changes: extra (items added for this meeting, e.g. any other
+     business), skip (keys dropped) and order (keys, in order). */
+  function securityReviewAgenda(setup, n, pack, rec) {
+    var s = setup || {}, r = rec || {};
+    var kind = securityReviewKind(n, s.mrEvery);
+    var custom = (s.customItems || []).filter(function (i) { return i && i.title && (i.every !== 'quarterly' || kind === 'quarterly' || kind === 'mr'); });
     var items = [];
     if (kind === 'kickoff') items = items.concat(SECURITY_REVIEW_KICKOFF);
-    items = items.concat(SECURITY_REVIEW_AGENDA.slice(0, -1));
-    if (kind === 'quarterly' || kind === 'annual') items = items.concat(SECURITY_REVIEW_QUARTERLY);
-    if (kind === 'annual') items.push({ key: 'mr', title: 'Management review (Clause 9.3)', min: 15, lead: 'chair', clause: '9.3' });
+    items = items.concat(SECURITY_REVIEW_AGENDA.slice(0, -1), custom);
+    if (kind === 'quarterly' || kind === 'mr') items = items.concat(SECURITY_REVIEW_QUARTERLY);
+    if (kind === 'mr') items.push({ key: 'mr', title: 'Management review (Clause 9.3)', min: 15, lead: 'chair', clause: '9.3' });
+    items = items.concat((r.extra || []).map(function (x) { return { key: x.key, title: x.title, min: x.min || 5, lead: x.lead || 'owner', clause: '', added: x.by || true }; }));
+    var skip = r.skip || [];
+    items = items.filter(function (i) { return skip.indexOf(i.key) === -1; });
+    if (r.order && r.order.length) {
+      var pos = function (k) { var i = r.order.indexOf(k); return i === -1 ? 999 : i; };
+      items = items.map(function (it, i) { return { it: it, i: i }; }).sort(function (a, b) { return (pos(a.it.key) - pos(b.it.key)) || (a.i - b.i); }).map(function (x) { return x.it; });
+    }
     items.push(SECURITY_REVIEW_AGENDA[SECURITY_REVIEW_AGENDA.length - 1]);
     var who = { chair: s.chair || 'Chair', owner: s.owner || 'ISMS owner', facilitator: s.facilitator || s.owner || 'ISMS owner' };
     var t = 0;
     var mmss = function (m) { return Math.floor(m / 60) + ':' + ('0' + (m % 60)).slice(-2); };
     var out = items.map(function (it) {
-      var row = { key: it.key, title: it.title, start: mmss(t), end: mmss(t + it.min), min: it.min, lead: who[it.lead], clause: it.clause, facts: securityReviewFacts(it.key, pack) };
+      var row = { key: it.key, title: it.title, start: mmss(t), end: mmss(t + it.min), min: it.min, lead: who[it.lead] || it.lead, clause: it.clause || '', facts: securityReviewFacts(it.key, pack), custom: !!it.custom, added: it.added || '' };
       t += it.min;
       return row;
     });
     return { n: Number(n) || 1, kind: kind, label: SECURITY_REVIEW_KIND_LABEL[kind], minutes: t, items: out };
+  }
+  /* The meeting the schedule is on, and what is due for it today:
+     prepare (two working days before), send, and a reminder to record
+     the minutes the day after. Shared by the browser and the scheduled
+     function so both decide the same way. */
+  function securityReviewDue(setup, reviews, today) {
+    if (!setup) return null;
+    var list = reviews || [];
+    var open = list.filter(function (r) { return r.status !== 'Held'; }).sort(function (a, b) { return a.date.localeCompare(b.date); })[0];
+    var n = open ? open.n : list.reduce(function (m, r) { return Math.max(m, r.n || 0); }, 0) + 1;
+    var from = setup.startDate && setup.startDate > today ? setup.startDate : today;
+    var date = open ? open.date : nextSecurityReviewDate(setup, from);
+    if (!date) return null;
+    var prepareOn = workingDaysBefore(date, 2);
+    return {
+      n: n, date: date, rec: open || null, prepareOn: prepareOn,
+      prepare: !open && today >= prepareOn && today <= date,
+      send: today >= prepareOn && today <= date && setup.autoSend === 'true' && (!open || open.status === 'Prepared'),
+      remindMinutes: !!open && today > date && !open.minutesReminded
+    };
   }
   /* The agenda and pack as an email. meta = { org, date, time, teamsLink, appUrl }. */
   function securityReviewEmailHtml(agenda, meta) {
@@ -5963,7 +6030,7 @@
           '<td style="padding:8px 6px;border-bottom:1px solid #eee;color:#999;font-size:11px;white-space:nowrap;vertical-align:top">' + e(i.clause) + '</td></tr>';
       }).join('') + '</table>' +
       (/^https:\/\//i.test(m.appUrl || '') ? '<p style="margin-top:16px"><a href="' + e(m.appUrl) + '">Open Checkpoint</a> for the detail behind each figure.</p>' : '') +
-      '<p style="color:#999;font-size:11px;margin-top:24px">Prepared by Checkpoint from live ISMS data on ' + e(agenda.asOf || '') + '.</p></div>';
+      '<p style="color:#999;font-size:11px;margin-top:24px">Prepared by Checkpoint from live ISMS data' + (agenda.asOf ? ' on ' + e(srDate(agenda.asOf)) : '') + '.</p></div>';
   }
   /* A calendar invite. startUtc / endUtc = ISO instants. */
   function securityReviewIcs(meta) {
@@ -5973,6 +6040,25 @@
     return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Compliance365//Checkpoint//EN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
       'UID:' + esc(m.uid || 'checkpoint-security-review'), 'DTSTAMP:' + stamp(m.stampUtc || m.startUtc), 'DTSTART:' + stamp(m.startUtc), 'DTEND:' + stamp(m.endUtc),
       'SUMMARY:' + esc(m.summary), 'DESCRIPTION:' + esc(m.description), m.location ? 'LOCATION:' + esc(m.location) : '', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).join('\r\n');
+  }
+  /* The minutes as an email: notes and decisions against each item. */
+  function securityReviewMinutesHtml(agenda, rec, actions, meta) {
+    var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    var m = meta || {}, r = rec || {}, notes = r.itemNotes || {}, by = r.decisionItem || {};
+    var acts = actions || [];
+    return '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px">' +
+      '<h2 style="margin-bottom:4px">Minutes: ' + e(m.org || 'Security') + ' security review ' + agenda.n + '</h2>' +
+      '<p style="color:#666;font-size:13px;margin-top:0">' + e(m.date) + ' \u00b7 ' + e(agenda.label) + ' \u00b7 Present: ' + e(r.present || 'not recorded') + '</p>' +
+      agenda.items.map(function (i) {
+        var mine = acts.filter(function (a) { return by[a.id] === i.key; });
+        if (!notes[i.key] && !mine.length) return '';
+        return '<h3 style="font-size:14px;margin:16px 0 4px">' + e(i.title) + '</h3>' +
+          (notes[i.key] ? '<p style="font-size:13px;margin:0;white-space:pre-wrap">' + e(notes[i.key]) + '</p>' : '') +
+          (mine.length ? '<ul style="font-size:13px;margin:6px 0 0 16px;padding:0">' + mine.map(function (a) { return '<li><b>' + e(a.id) + '</b> ' + e(a.title) + ' \u2014 ' + e(a.owner || 'unassigned') + (a.due ? ', due ' + e(a.due) : '') + '</li>'; }).join('') + '</ul>' : '');
+      }).join('') +
+      (acts.length ? '<h3 style="font-size:14px;margin:20px 0 4px">All actions agreed</h3><table style="width:100%;border-collapse:collapse;font-size:13px">' + acts.map(function (a) { return '<tr><td style="padding:6px;border-bottom:1px solid #eee"><b>' + e(a.id) + '</b></td><td style="padding:6px;border-bottom:1px solid #eee">' + e(a.title) + '</td><td style="padding:6px;border-bottom:1px solid #eee">' + e(a.owner || '') + '</td><td style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap">' + e(a.due || '') + '</td></tr>'; }).join('') + '</table>' : '<p style="font-size:13px">No actions agreed.</p>') +
+      (/^https:\/\//i.test(m.appUrl || '') ? '<p style="margin-top:16px"><a href="' + e(m.appUrl) + '">Open Checkpoint</a> to update your actions.</p>' : '') +
+      '<p style="color:#999;font-size:11px;margin-top:24px">Recorded in Checkpoint.</p></div>';
   }
   /* Month by month, from the packs of meetings held. */
   function securityReviewTrend(reviews) {
@@ -10045,7 +10131,8 @@
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,
     SECURITY_REVIEW_AGENDA: SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY: SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF: SECURITY_REVIEW_KICKOFF,
-    addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
+    srDate: srDate, addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
+    wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,
     securityReviewEmailHtml: securityReviewEmailHtml, securityReviewIcs: securityReviewIcs, securityReviewTrend: securityReviewTrend, securityReviewYearSummary: securityReviewYearSummary,
     EXCLUSION_RULES: EXCLUSION_RULES, REMOTE_APPLICABLE: REMOTE_APPLICABLE, remoteApplicableReason: remoteApplicableReason,
