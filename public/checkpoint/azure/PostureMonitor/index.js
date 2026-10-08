@@ -23,6 +23,7 @@ const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = requir
 const { mintEvidenceToken } = require('../lib/evidenceToken');
 const { mintVendorToken } = require('../lib/vendorToken');
 const { ownerWorkItems, matchOwnerToUser, ownerDigestHtml } = require('../lib/ownerDigest');
+const SR = require('../lib/securityReview');
 
 /* Where the owner-driven evidence page lives — Compliance365's own
    public site (GitHub Pages, per RELEASE.md), the same domain the
@@ -2127,6 +2128,105 @@ async function sendOwnerReminders(g, gAll, context, siteId, lists, optional, set
   return sent;
 }
 
+/* Monthly security review — the unattended half of the review card on
+   Checkpoint's Management review page. Reads securityReviewSetup and
+   securityReviews from Settings, decides with the same
+   securityReviewDue() the browser uses (lib/securityReview.js, kept
+   identical and tested), and:
+   - prepares the meeting two working days before, from the registers
+     this function can read (risks above appetite need the browser's
+     scoring, so the scheduled pack leaves that figure out);
+   - sends the agenda with a calendar invite when autoSend is on;
+   - reminds the ISMS owner the day after the meeting if the minutes are
+     not recorded.
+   Writes securityReviews back only when something changed. Never throws. */
+function parseJsonSetting(v, d) { try { const o = JSON.parse(v || ''); return o == null ? d : o; } catch (e) { return d; } }
+async function buildScheduledReviewPack(g, gAll, context, siteId, optional, today, since, score, prevScore) {
+  const read = async (id) => {
+    if (!id) return [];
+    try { return (await gAll(`/sites/${siteId}/lists/${id}/items?$expand=fields&$top=999`)).map(i => i.fields || {}); }
+    catch (e) { context.log.error('Checkpoint security review: could not read a register: ' + e.message); return []; }
+  };
+  const actions = (await read(optional.Actions)).map(f => ({ id: f.RefId || '', title: f.Title || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open' }));
+  const open = actions.filter(a => !SR.DONE_ACTION(a) && a.status !== 'Closed');
+  const overdue = open.filter(a => a.due && a.due < today).sort((a, b) => a.due.localeCompare(b.due));
+  const incidents = (await read(optional.Incidents)).map(f => ({ id: f.RefId || '', title: f.Title || '', severity: f.Severity || '', status: f.Status || 'Open', detected: String(f.DetectedDate || '').slice(0, 10) }));
+  const inc = incidents.filter(n => n.detected >= since);
+  const risks = (await read(optional.Risks)).filter(f => (f.Status || 'Open') !== 'Closed');
+  const vendors = await read(optional.Vendors);
+  const soon = SR.addDaysIso(today, 60), month = SR.addDaysIso(today, 30);
+  const calendar = await read(optional.Calendar);
+  const access = calendar.filter(c => /\[rhythm:access-review\]/.test(c.Notes || '') || c.Category === 'Access control review').map(c => String(c.LastCompleted || '')).sort().pop() || '';
+  const objectives = (await read(optional.Objectives)).filter(o => o.Status !== 'Achieved' && o.Status !== 'Closed');
+  const controls = (await read(optional.Controls)).filter(c => (c.Framework || 'iso27001') === 'iso27001' && c.Applicable);
+  let docs = [];
+  if (optional.Documents) { try { docs = await readDocumentRegister(g, gAll, siteId, optional.Documents); } catch (e) { docs = []; } }
+  const short = a => ({ id: a.id, title: a.title, owner: a.owner, due: a.due, status: a.status });
+  return {
+    today, since,
+    posture: { score: typeof score === 'number' ? score : null, prev: typeof prevScore === 'number' ? prevScore : null, failing: null },
+    actions: { open: open.length, overdue: overdue.length, closedSince: 0, overdueList: overdue.slice(0, 8).map(short), prior: [] },
+    incidents: { since: inc.slice(0, 8).map(n => ({ id: n.id, title: n.title, severity: n.severity, status: n.status })), count: inc.length, open: incidents.filter(n => n.status !== 'Closed').length },
+    risks: { open: risks.length, aboveAppetite: null, aboveList: [], added: 0, changed: 0 },
+    certification: { readiness: controls.length ? Math.round(controls.filter(c => c.Status === 'Implemented').length / controls.length * 100) : null, docsAwaiting: docs.filter(d => d.status && d.status !== 'Approved').length, nextAudit: '' },
+    people: { handovers: 0, retired: 0, vendorsAdded: 0, certsExpiring: vendors.filter(v => v.CertExpiryDate && v.CertExpiryDate >= today && v.CertExpiryDate <= soon).map(v => v.Title).slice(0, 6) },
+    quarterly: { accessReview: access, suppliersDue: vendors.filter(v => v.NextReviewDue && v.NextReviewDue <= month).length, objectives: { open: objectives.length, atRisk: objectives.filter(o => /risk|behind|off/i.test(o.Status || '')).length }, attestPct: null },
+    scheduled: true
+  };
+}
+async function runSecurityReview(g, gAll, context, siteId, lists, optional, settings, today, score) {
+  const setup = parseJsonSetting(settings.securityReviewSetup, null);
+  if (!setup || typeof setup !== 'object') return [];
+  let reviews = parseJsonSetting(settings.securityReviews, []);
+  if (!Array.isArray(reviews)) reviews = [];
+  const due = SR.securityReviewDue(setup, reviews, today);
+  if (!due) return [];
+  const from = process.env.NOTIFY_FROM;
+  const label = settings.clientDisplayName || 'Checkpoint';
+  const done = [];
+  let rec = due.rec ? reviews.find(r => r.id === due.rec.id) : null;
+  if (due.prepare) {
+    const held = reviews.filter(r => r.status === 'Held').sort((a, b) => b.date.localeCompare(a.date))[0];
+    const prevScore = held && held.pack && held.pack.posture ? held.pack.posture.score : null;
+    rec = { id: 'SR-' + String(due.n).padStart(3, '0'), n: due.n, kind: SR.securityReviewKind(due.n, setup.mrEvery), date: due.date, time: setup.time || '10:00', status: 'Prepared',
+      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore) };
+    reviews.push(rec);
+    done.push('prepared ' + rec.id);
+  }
+  const to = String(setup.emails || '').split(/[,;\s]+/).filter(x => /@/.test(x));
+  if (due.send && rec && rec.status === 'Prepared' && from && to.length) {
+    const agenda = SR.securityReviewAgenda(setup, rec.n, rec.pack, rec);
+    agenda.asOf = rec.preparedAt;
+    const startUtc = SR.wallTimeToUtc(rec.date, rec.time || setup.time, setup.timeZone);
+    const ics = SR.securityReviewIcs({ uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc, endUtc: new Date(Date.parse(startUtc) + agenda.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
+      summary: label + ' security review ' + rec.n + ' (' + agenda.label + ')', description: agenda.items.map(i => i.start + '  ' + i.title + ' (' + i.lead + ')').join('\n'),
+      location: /^https:\/\//i.test(setup.teamsLink || '') ? setup.teamsLink : 'Microsoft Teams' });
+    try {
+      await g(`/users/${encodeURIComponent(from)}/sendMail`, { method: 'POST', body: { message: {
+        subject: label + ' security review ' + rec.n + ' \u2014 ' + SR.srDate(rec.date),
+        body: { contentType: 'HTML', content: SR.securityReviewEmailHtml(agenda, { org: label, date: SR.srDate(rec.date), time: rec.time, teamsLink: setup.teamsLink, appUrl: 'https://www.compliance365.com.au/checkpoint/' }) },
+        toRecipients: to.map(address => ({ emailAddress: { address } })),
+        attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] }, saveToSentItems: false } });
+      rec.status = 'Sent'; rec.sentAt = today; rec.sentTo = to.join(', ');
+      done.push('sent ' + rec.id);
+    } catch (e) { context.log.error('Checkpoint security review: could not send the agenda: ' + (e && e.message ? e.message : e)); }
+  } else if (due.send && !from) {
+    context.log('Checkpoint security review is set to send automatically but NOTIFY_FROM is not set. See azure/README.md.');
+  }
+  if (due.remindMinutes && rec && setup.ownerEmail) {
+    const e = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ok = await notifyOwner(g, context, setup.ownerEmail, 'Record the minutes: ' + label + ' security review ' + rec.n,
+      '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px"><p>Hi ' + e(setup.owner || '') + ',</p><p>Security review ' + rec.n + ' was held on ' + e(SR.srDate(rec.date)) + '. Record the minutes and decisions in Checkpoint so each decision becomes an action with an owner, and the minutes are filed as evidence.</p>' +
+      '<p><a href="https://www.compliance365.com.au/checkpoint/">Open Checkpoint</a> \u203a Management review \u203a Record minutes.</p></div>');
+    if (ok) { rec.minutesReminded = today; done.push('minutes reminder ' + rec.id); }
+  }
+  if (done.length) {
+    try { await setSetting(g, siteId, lists.Settings, 'securityReviews', JSON.stringify(reviews)); }
+    catch (e) { context.log.error('Checkpoint security review: could not record ' + done.join(', ') + ': ' + e.message); }
+  }
+  return done;
+}
+
 module.exports = async function (context, myTimer) {
   const today = new Date().toISOString().slice(0, 10);
   try {
@@ -2145,7 +2245,7 @@ module.exports = async function (context, myTimer) {
        resolve is logged, never thrown: these lists are optional, and a
        posture scan must still run and be recorded for a tenant whose
        list collection was momentarily unreadable. */
-    let optional = { Documents: null, Attestations: null, Training: null, Vendors: null, Calendar: null, Audits: null, Actions: null, Controls: null, Incidents: null };
+    let optional = { Documents: null, Attestations: null, Training: null, Vendors: null, Calendar: null, Audits: null, Actions: null, Controls: null, Incidents: null, Objectives: null, Risks: null };
     try {
       optional = await resolveOptionalLists(g, siteId);
     } catch (e) {
@@ -2272,6 +2372,13 @@ module.exports = async function (context, myTimer) {
     }
     if (ownersReminded) context.log(`Checkpoint owner reminders sent to ${ownersReminded} owner(s).`);
 
+    try {
+      const sr = await runSecurityReview(g, gAll, context, siteId, lists, optional, settings, today, score);
+      if (sr.length) context.log('Checkpoint security review: ' + sr.join(', ') + '.');
+    } catch (e) {
+      context.log.error('Checkpoint security review step failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));
+    }
+
     await recordTeamsStatus(g, context, siteId, lists, settings);
     context.log(`Checkpoint posture monitor: scored ${score}, ${alertsWritten} drift alert(s) and ${governanceAlerts} governance alert(s) written${digestSent ? ', digest sent' : ''}.`);
   } catch (e) {
@@ -2287,7 +2394,7 @@ module.exports = async function (context, myTimer) {
    covered by test/posture-monitor.test.mjs without standing up a
    Function host or a tenant. */
 module.exports.__test = {
-  ownerRemindersDue, sendOwnerReminders,
+  ownerRemindersDue, sendOwnerReminders, runSecurityReview, buildScheduledReviewPack,
   digestDue, buildDigestHtml, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep,
   configureTeams, buildTeamsCard, buildDigestTeamsCard, notifyTeams, sendDigest, announceTeamsConnection, recordTeamsStatus, teamsUrlFingerprint,
   runPostureChecks, runRegisterChecks, readDocumentRegister,

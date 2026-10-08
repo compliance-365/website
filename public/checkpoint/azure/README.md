@@ -431,6 +431,23 @@ like the digest, and stamps `ownerDigestLastSent` only after at least one
 send. The browser app sends the same reminders on load when no monitor is
 deployed; whichever runs first stamps the date, so nobody is emailed twice.
 
+### Monthly security review
+
+If the tenant has set up the monthly security review (Management review
+page), this Function keeps it running when nobody opens Checkpoint. Two
+working days before each meeting it prepares the agenda from the Actions,
+Incidents, Risks, Vendors, Calendar, Objectives and Controls lists and
+the document register (risks above appetite need the browser's scoring,
+so that one figure is left out of a scheduled pack), and, when the setup
+says to send automatically, emails it to the attendees with a calendar
+invite from `NOTIFY_FROM`. The day after the meeting, if the minutes are
+not recorded, it reminds the ISMS owner once. It decides with the same
+code as the browser (`lib/securityReview.js`, a verbatim copy of
+`lib.js` checked by a test), writes `securityReviews` back to Settings
+only when something changed, and never fails the run. Meeting times are
+the client's local time: the browser stores its time zone with the setup,
+so the invite is right across daylight saving.
+
 ### Optional: email notification
 
 Off by default. To have new findings emailed as they're raised — both
