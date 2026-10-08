@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.128.0',
+    date: '2026-10-08',
+    entries: [
+      'Monthly security review, on the Management review page. Set the chair, the ISMS owner, the attendees and a regular slot (for example the second Tuesday at 10:00). Two working days before each meeting Checkpoint prepares a timed agenda, each item answered from live figures: actions from last meeting and what is overdue, the posture score and its change, incidents, risks above appetite, certification readiness, leavers and supplier changes. The kick-off adds terms of reference, roles, scope and a baseline; every third meeting adds access reviews, supplier reviews, objectives and policy acknowledgement; the twelfth adds the Clause 9.3 management review.',
+      'The agenda is emailed to the attendees with a calendar invite and the Teams link, automatically if you choose, or from the ISMS owner\u2019s My tasks. Minutes record who was present, the discussion and the decisions; each decision becomes an action with an owner and a due date.',
+      'Trends: the monthly review card charts posture score, overdue actions, risks above appetite and incidents meeting by meeting.',
+      'The management review\u2019s pre-filled inputs now include what the monthly security reviews held since the last one decided, and how posture, overdue actions, incidents and risks moved across them.'
+    ]
+  },
+  {
     version: '1.127.0',
     date: '2026-10-07',
     entries: [
