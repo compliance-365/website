@@ -1519,6 +1519,14 @@ window.DemoStore = (function () {
   var KEY = 'checkpoint-demo-v8'; /* bumped: v7's CPS 234 slice had no third-party control, so a returning visitor would keep a register the Supplier Security Policy cannot link evidence to — the picker lists it under CPS 234, but CPS234.16 would not exist to link. (v7 fixed seeded scans carrying no `detail`; v5 had every premium framework switched off.) */
   var S = null;
 
+  /* A security review pack in the shape lib.js buildSecurityReviewPack() returns. */
+  function demoSecurityPack(today, since, score, prev, overdue, above, incidents) {
+    return { today: today, since: since, posture: { score: score, prev: prev, failing: null },
+      actions: { open: overdue + 5, overdue: overdue, closedSince: 2, overdueList: [], prior: [] },
+      incidents: { since: [], count: incidents, open: 0 }, risks: { open: 5, aboveAppetite: above, aboveList: [], added: 1, changed: 2 },
+      certification: { readiness: 30, docsAwaiting: 4, nextAudit: '' }, people: { handovers: 0, retired: 0, vendorsAdded: 0, certsExpiring: [] },
+      quarterly: { accessReview: '', suppliersDue: 0, objectives: { open: 3, atRisk: 1 }, attestPct: null } };
+  }
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
 
   /* Every seeded scan carries the same `detail` JSON a real scan
@@ -1742,7 +1750,15 @@ window.DemoStore = (function () {
          than a framework, so switching it on would light up assistant
          features instead of demonstrating a control register. */
       entitlements: { iso27001: true, soc2: true, essential8: true, is18: true, iso42001: true, iso27701: true, dispirap: true, nistcsf: true, rffr: true, cps234: true, privacyact: true, ai: false },
-      settings: Object.assign({}, window.DEFAULT_SETTINGS),
+      /* A monthly security review already running: two meetings held,
+         so the card shows its trend and the next agenda. */
+      settings: Object.assign({}, window.DEFAULT_SETTINGS, {
+        securityReviewSetup: JSON.stringify({ chair: 'Mei Chen', owner: 'Sam Okafor', ownerEmail: 's.okafor@meridianhealth.example', facilitator: 'Compliance365', emails: 'm.chen@meridianhealth.example, s.okafor@meridianhealth.example, k.patel@meridianhealth.example', week: 2, weekday: 2, time: '10:00', teamsLink: '', autoSend: 'false', startDate: daysFrom(-70) }),
+        securityReviews: JSON.stringify([
+          { id: 'SR-001', n: 1, kind: 'kickoff', date: daysFrom(-63), time: '10:00', status: 'Held', preparedAt: daysFrom(-66), present: 'Mei Chen, Sam Okafor, Kim Patel', notes: 'Agreed terms of reference and roles. Baseline recorded.', actions: ['ACT-003'], pack: demoSecurityPack(daysFrom(-63), daysFrom(-94), 41, null, 6, 4, 2) },
+          { id: 'SR-002', n: 2, kind: 'monthly', date: daysFrom(-35), time: '10:00', status: 'Held', preparedAt: daysFrom(-38), present: 'Mei Chen, Sam Okafor', notes: 'Phishing incident reviewed; MFA gaps prioritised.', actions: [], pack: demoSecurityPack(daysFrom(-35), daysFrom(-63), 48, 41, 4, 3, 1) }
+        ])
+      }),
       proposed: [],
       /* One list per framework whose SoA statuses runScan() can suggest.
          All of them are seeded, not just the first three that shipped:
