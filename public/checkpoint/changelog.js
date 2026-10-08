@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.137.0',
+    date: '2026-10-08',
+    entries: [
+      'Set a target Stage 1 date and the path to certification works back from it. Five milestones each have a due date: the ISMS documented, the ISMS operating, internal audit, management review and ready for Stage 1. Each shows what is still to do and how many days it is late. The plan warns when the target has passed, when the work left will not fit, or when the timeline is too short for the records a certification body expects. The partner console shows the target and flags a client whose date is at risk. A Stage 1 already booked on the calendar is used when no target is set.',
+      'The certification page shows the gate as a checklist: every check for Stage 1 and Stage 2, passed or not, each with the button that fixes it. Booking unlocks for each stage as soon as its checks pass. Advice the certification body will raise but that does not block booking, such as broken evidence links or under three months of records, is shown separately. The booking dialog shows the same list.',
+      'Finish this clause: each clause\u2019s side panel lists what is left, in order, one button each. Checkpoint\u2019s own steps come first, then what only you can record, then naming the owner, linking the evidence and marking it Implemented. The panel updates as each step is done.',
+      'Evidence is checked for being the right kind and current, not just linked. Each ISO 27001 clause states what an auditor expects. A policy linked where a record is needed (for example as management review minutes), a draft, a record over a year old or an empty evidence folder is flagged on the clause, in its side panel, as a step to fix and on the certification gate.',
+      'Top management interview (Management review page): the eight questions a certification auditor asks top management, each shown beside what the records say, so an answer the register would contradict is caught first. For example, it flags "we accept nothing above medium" when risks above appetite have no recorded acceptance. Answers are saved, can be filed as Clause 5.1 evidence, and are included in the Stage 1 pack.'
+    ]
+  },
+  {
     version: '1.136.0',
     date: '2026-10-08',
     entries: [

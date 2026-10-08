@@ -1405,7 +1405,7 @@ function showModal(opts) {
             '<td style="white-space:nowrap">' + (r.head ? pct(r.head.path) + sparkline(r.c.progressHistory, 'path') : pct(null)) + '</td>' +
             '<td>' + pct(r.head && r.head.clauses) + '</td>' +
             '<td style="white-space:nowrap">' + pct(r.head && r.head.annexA) + sparkline(r.c.progressHistory, 'annexA') + '</td>' +
-            '<td style="font-size:12.5px">' + (plan ? 'Week ' + esc(String(plan.week)) + (plan.behind ? ', <span style="color:var(--warn)">' + esc(String(plan.behind)) + ' behind</span>' : ', on plan') + (plan.readyBy && r.stage !== 'Certified' ? '<div class="src">ready ' + esc(fmtDate(plan.readyBy)) + '</div>' : '') : '—') + '</td>' +
+            '<td style="font-size:12.5px">' + (plan ? 'Week ' + esc(String(plan.week)) + (plan.behind ? ', <span style="color:var(--warn)">' + esc(String(plan.behind)) + ' behind</span>' : ', on plan') + (plan.target && r.stage !== 'Certified' ? '<div class="src">' + (plan.atRisk ? '<span style="color:var(--fail)">Stage 1 target ' + esc(fmtDate(plan.target)) + ' at risk</span>' : 'Stage 1 target ' + esc(fmtDate(plan.target))) + '</div>' : plan.readyBy && r.stage !== 'Certified' ? '<div class="src">ready ' + esc(fmtDate(plan.readyBy)) + '</div>' : '') : '—') + '</td>' +
             '<td style="font-size:12.5px">' + ([b.stage1 ? 'S1 ' + esc(fmtDate(b.stage1)) : '', b.stage2 ? 'S2 ' + esc(fmtDate(b.stage2)) : ''].filter(Boolean).join('<br>') || '—') + '</td>' +
             '<td style="font-size:12.5px">' + ismsHealthCell(r) + '</td>' +
             '<td>' + flagList(r.flags) + '</td>' +
@@ -1480,7 +1480,7 @@ function showModal(opts) {
     });
     var d = p.delivery;
     if (d) {
-      if (d.plan) html += kv('Plan', esc('Week ' + d.plan.week + (d.plan.behind ? ', ' + d.plan.behind + ' step(s) behind' : ', on plan') + (d.plan.readyBy ? ', ready for Stage 1 by ' + fmtDate(d.plan.readyBy) : '')));
+      if (d.plan) html += kv('Plan', esc('Week ' + d.plan.week + (d.plan.behind ? ', ' + d.plan.behind + ' step(s) behind' : ', on plan') + (d.plan.target ? ', Stage 1 target ' + fmtDate(d.plan.target) + (d.plan.atRisk ? ' (at risk' + (d.plan.milestonesLate && d.plan.milestonesLate.length ? ': ' + d.plan.milestonesLate.join(', ') + ' late' : '') + ')' : '') : d.plan.readyBy ? ', ready for Stage 1 by ' + fmtDate(d.plan.readyBy) : '')));
       if (d.bookings && (d.bookings.stage1 || d.bookings.stage2)) html += kv('Audits booked', esc([d.bookings.stage1 ? 'Stage 1 ' + fmtDate(d.bookings.stage1) : '', d.bookings.stage2 ? 'Stage 2 ' + fmtDate(d.bookings.stage2) : ''].filter(Boolean).join(', ')));
       Object.keys(d.certs || {}).forEach(function (fw) {
         var ce = d.certs[fw];
