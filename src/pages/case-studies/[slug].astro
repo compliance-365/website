@@ -28,7 +28,7 @@ function abs(u) {
  * - ctaLabel, ctaUrl
  */
 export async function getStaticPaths() {
-  const entries = await Astro.glob('../../../content/case-studies/*.md');
+  const entries = Object.values(import.meta.glob('../../../content/case-studies/*.md', { eager: true }));
   return entries.map((entry) => {
     const slug = entry.file.split('/').pop().replace(/\.md$/, '');
     return { params: { slug }, props: { entry } };

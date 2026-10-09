@@ -7,7 +7,7 @@ import CinematicBackground from '../../components/CinematicBackground.astro';
 const base = import.meta.env.BASE_URL || '/';
 
 // Load all posts newest first
-const posts = (await Astro.glob('../../content/blog/*.md'))
+const posts = (Object.values(import.meta.glob('../../content/blog/*.md', { eager: true })))
   .sort((a, b) =>
     new Date(b.frontmatter.date || 0).getTime() -
     new Date(a.frontmatter.date || 0).getTime()
