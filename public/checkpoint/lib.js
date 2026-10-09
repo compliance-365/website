@@ -6789,6 +6789,186 @@
     return (Date.parse(String(today).slice(0, 10)) - Date.parse(last)) / 86400000 >= 7;
   }
 
+  /* ---- Who does what (Clause 5.3) ----
+     Everyone named as responsible for something in the ISMS, built from
+     the owners already recorded across the registers plus the meeting
+     roles. d = { areas: { key: [{ owner, open, overdue }] }, roles: [{
+     name, role }], known: [names, lower case] | null (the directory,
+     to flag owners who are no longer in it) }. Area keys are labelled
+     by WHO_AREAS. Returns { people:[{ name, roles, areas:{ key: n },
+     total, overdue, unknown }], unowned:{ key: n } }. */
+  var WHO_AREAS = { risks: ['risk', 'risks'], actions: ['open action', 'open actions'], controls: ['control', 'controls'], clauses: ['clause', 'clauses'], documents: ['document', 'documents'], vendors: ['supplier', 'suppliers'], assets: ['asset', 'assets'], objectives: ['objective', 'objectives'], calendar: ['recurring activity', 'recurring activities'], legal: ['legal requirement', 'legal requirements'], aiSystems: ['AI system', 'AI systems'] };
+  function whoDoesWhat(d) {
+    d = d || {};
+    var byKey = {}, people = [], unowned = {};
+    var blank = function (o) { var t = String(o || '').trim(); return !t || /^(unassigned|tbc|tbd|-|—|none)$/i.test(t); };
+    var person = function (name) {
+      var k = String(name).trim().toLowerCase();
+      if (!byKey[k]) { byKey[k] = { name: String(name).trim(), roles: [], areas: {}, total: 0, overdue: 0, unknown: false }; people.push(byKey[k]); }
+      return byKey[k];
+    };
+    (d.roles || []).forEach(function (r) { if (r && !blank(r.name)) { var p = person(r.name); if (p.roles.indexOf(r.role) === -1) p.roles.push(r.role); } });
+    Object.keys(d.areas || {}).forEach(function (area) {
+      (d.areas[area] || []).forEach(function (x) {
+        if (!x || x.open === false) return;
+        if (blank(x.owner)) { unowned[area] = (unowned[area] || 0) + 1; return; }
+        var p = person(x.owner);
+        p.areas[area] = (p.areas[area] || 0) + 1;
+        p.total++;
+        if (x.overdue) p.overdue++;
+      });
+    });
+    /* Only someone who holds records can have left with them; a meeting
+       role naming a firm (the facilitating partner) is not flagged. */
+    if (Array.isArray(d.known) && d.known.length) people.forEach(function (p) { p.unknown = p.total > 0 && d.known.indexOf(p.name.toLowerCase()) === -1; });
+    people.sort(function (a, b) { return b.roles.length - a.roles.length || b.total - a.total || a.name.localeCompare(b.name); });
+    return { people: people, unowned: unowned };
+  }
+  function whoAreaText(areas) {
+    return Object.keys(WHO_AREAS).filter(function (k) { return areas[k]; }).map(function (k) { return areas[k] + ' ' + WHO_AREAS[k][areas[k] === 1 ? 0 : 1]; }).join(', ');
+  }
+
+  /* ---- What is this page? ----
+     One plain-English line per page: what it is, and what the person
+     looking at it is expected to do there, by role (top, staff, viewer;
+     anyone else gets `you`). `terms` names the jargon on the page,
+     explained from GLOSSARY. */
+  var GLOSSARY = {
+    'ISMS': 'Information security management system: the policies, people and routines an organisation uses to manage information security. ISO 27001 certifies it.',
+    'ISO 27001': 'The international standard for managing information security. Certification means an independent auditor has checked the ISMS works.',
+    'Statement of Applicability': 'The list of the 93 security controls in ISO 27001 Annex A, saying which apply to you, why, and how each is met. The auditor reads it first.',
+    'Annex A': 'The 93 security controls listed at the back of ISO 27001, from access control to backups. You choose which apply.',
+    'Control': 'A safeguard that reduces a risk, such as multi-factor sign-in, backups or a supplier review.',
+    'Clause': 'One of the requirements in the main body of ISO 27001 (Clauses 4 to 10): how the management system itself is run.',
+    'Evidence': 'A record that shows something is done: a report, screenshot, approved document or minutes. Auditors ask to see it.',
+    'Risk appetite': 'How much risk the business is willing to accept. Risks above it must be reduced, or accepted by top management.',
+    'Residual risk': 'The risk that is left after the controls are in place.',
+    'Inherent risk': 'The risk before any controls are applied.',
+    'Risk treatment': 'What is being done about a risk: reduce it, avoid it, share it (for example insurance) or accept it.',
+    'Nonconformity': 'Something that does not meet a requirement, found by an audit or a review. Major ones stop certification until fixed.',
+    'Corrective action': 'The fix for a nonconformity, including why it happened, so it does not happen again.',
+    'Internal audit': 'Your own check that the ISMS works, done before the certification auditor does theirs.',
+    'Management review': 'A meeting where top management reviews how the ISMS is going and records decisions. Required at least once a year.',
+    'Stage 1': 'The certification body’s first visit: they check the ISMS is documented and ready.',
+    'Stage 2': 'The certification audit itself: they check the ISMS is working, by sampling records and talking to people.',
+    'Posture scan': 'Checkpoint’s automatic check of your Microsoft 365 security settings.',
+    'Attestation': 'A person’s confirmation that they have read and accepted a policy.',
+    'Objective': 'A measurable security goal for the year, with an owner and a due date.'
+  };
+  var PAGE_GUIDE = {
+    dash: { what: 'The overview: how ready you are for certification, what needs attention and what to do next.', you: 'Start with Do next.', top: 'Read Next for you and the month in brief. Everything else is for the ISMS owner.', staff: 'Next for you shows anything waiting on you.', terms: ['ISMS', 'ISO 27001'] },
+    mytasks: { what: 'Everything assigned to you by name, each with the one button that does it.', you: 'Work down the list. Checkpoint emails you when something new arrives.', terms: [] },
+    scan: { what: 'The automatic check of your Microsoft 365 security settings, with what passes, what fails and how to fix it.', you: 'Fix what fails, starting at the top. Each failure becomes a risk or an action.', top: 'Nothing for you to do here: the score is reported to you each month.', terms: ['Posture scan', 'Control'] },
+    risks: { what: 'The risks to the organisation’s information, how serious each is and what is being done about it.', you: 'Keep each risk owned and treated; review them when something changes.', top: 'Risks above the appetite need your decision: reduce them, or accept them in writing.', terms: ['Risk appetite', 'Inherent risk', 'Residual risk', 'Risk treatment'] },
+    actions: { what: 'Every fix and improvement someone has agreed to do, with an owner and a due date.', you: 'Update an action when it is done, with the evidence.', top: 'Overdue actions come to the monthly review for a decision.', terms: ['Nonconformity', 'Corrective action'] },
+    vendors: { what: 'The suppliers that hold or can reach your information, and how they have been checked.', you: 'Review critical and high suppliers each year and keep their certificates current.', terms: [] },
+    assets: { what: 'The information and systems the organisation needs to protect, each with an owner.', you: 'Add the information itself (customer data, HR records); devices and apps sync from Microsoft 365.', terms: [] },
+    soa: { what: 'The 93 ISO 27001 security controls: which apply, why, and how each is met.', you: 'For each applicable control, record how it is met and attach the evidence.', top: 'Nothing for you to do here; the auditor reads it first.', terms: ['Statement of Applicability', 'Annex A', 'Control', 'Evidence'] },
+    clauses: { what: 'The requirements for running the management system itself (ISO 27001 Clauses 4 to 10).', you: 'Open a clause and use Finish this clause to close what is left.', top: 'Several of these are yours (leadership, policy, review); Checkpoint brings them to you.', terms: ['Clause', 'Evidence'] },
+    documents: { what: 'The organisation’s policies and procedures, with their version, owner, approval and review date.', you: 'Generate, edit and approve documents; review each by its date.', top: 'Policies waiting for your approval appear in Next for you.', terms: [] },
+    attestations: { what: 'Who has read and accepted each policy.', you: 'Send each new policy version to staff; Checkpoint chases anyone outstanding.', staff: 'Acknowledge any policy listed under My attestations.', terms: ['Attestation'] },
+    training: { what: 'Security awareness training and who has completed it.', you: 'Assign the courses each year; Checkpoint chases anyone outstanding.', staff: 'Complete any course assigned to you; each takes about 20 minutes.', terms: [] },
+    certification: { what: 'The certification audits: what each stage needs, the bookings and, once certified, the three-year cycle.', you: 'Work through the gate checklist, then book Stage 1 and Stage 2.', top: 'The dates and whether you are ready are shown here.', terms: ['Stage 1', 'Stage 2'] },
+    audits: { what: 'Your internal audits: the plan, the checklists and the findings.', you: 'Run each planned audit and record its findings.', terms: ['Internal audit', 'Nonconformity'] },
+    incidents: { what: 'Security incidents: what happened, how it was handled and what was learned.', you: 'Log every incident, however small, and record the lessons.', staff: 'Tell the ISMS owner straight away about anything suspicious.', terms: [] },
+    reviews: { what: 'The monthly security review and the management reviews, with their agendas, minutes and decisions.', you: 'Checkpoint prepares each meeting; record the minutes afterwards.', top: 'You chair these. Read the agenda before the meeting; decisions become actions automatically.', terms: ['Management review'] },
+    objectives: { what: 'This year’s measurable security goals, who owns each and how they are going.', you: 'Keep each objective measured and updated.', top: 'You agree these each year; progress comes to the monthly review.', terms: ['Objective'] },
+    legal: { what: 'The laws, regulations and contracts that set security requirements for you.', you: 'Confirm which apply, give each an owner and link the controls that meet them.', terms: [] },
+    calendar: { what: 'Every recurring security activity and when it is next due.', you: 'Complete each when due and attach the record.', terms: [] },
+    reports: { what: 'Reports and packs to share with top management, auditors and customers.', you: 'Generate what you need; most can be filed as evidence in one click.', terms: [] },
+    settings: { what: 'How Checkpoint is set up for this organisation.', you: 'Fix anything the setup health check flags; most settings are set once.', terms: [] },
+    integrations: { what: 'Where Checkpoint gets its evidence from, and whether each source is reporting.', you: 'Set up the sources you use; each card has the steps.', terms: [] },
+    whodoes: { what: 'Who is responsible for what in the management system.', you: 'Check every area has an owner; reassign anything held by someone who has left.', top: 'Everyone’s part at a glance.', terms: ['ISMS'] }
+  };
+  function pageGuide(view, role) {
+    var g = PAGE_GUIDE[view];
+    if (!g) return null;
+    return { what: g.what, you: (role && g[role]) || g.you, terms: (g.terms || []).filter(function (t) { return GLOSSARY[t]; }).map(function (t) { return { term: t, def: GLOSSARY[t] }; }) };
+  }
+
+  /* ---- First-time welcome ----
+     Three short screens the first time someone signs in: what Checkpoint
+     is, what is expected of them, and where their things are. Worded for
+     who they are: top management, the person running the ISMS, someone
+     with view-only access, or anyone else (their own tasks only). */
+  function welcomeScreens(role, ctx) {
+    ctx = ctx || {};
+    var org = ctx.org || 'your organisation';
+    var helper = ctx.partner || 'Compliance365';
+    var what = {
+      title: 'Welcome to Checkpoint',
+      lines: [
+        'Checkpoint runs ' + org + '’s information security management system: the policies, risks, security controls, evidence and meetings a certification auditor checks for ISO 27001.',
+        'Everything is kept in ' + org + '’s own Microsoft 365. ' + helper + ' helps run it with you.',
+        'You do not need to know the standard. Checkpoint tells you what is needed, when, and why.'
+      ]
+    };
+    var expected = {
+      top: { title: 'What is expected of you', lines: [
+        'ISO 27001 asks top management for four things, and Checkpoint brings each to you when it is needed:',
+        '1. Approve the policies, so they carry the organisation’s authority.',
+        '2. Agree the security objectives and how much risk the business is willing to accept.',
+        '3. Chair a short monthly security review and make the decisions only you can make.',
+        '4. Make sure the people and budget are there.',
+        'Usually about an hour a month. The rest is run by ' + (ctx.owner || 'the ISMS owner') + ' and ' + helper + '.'] },
+      practitioner: { title: 'What is expected of you', lines: [
+        'You keep the management system running: risks, controls, evidence, documents and actions.',
+        'Checkpoint does most of the routine work itself, such as the security scan, reminders and meeting packs. Do next on the dashboard always shows the most useful thing to do.',
+        'Each page starts with a line saying what it is for.'] },
+      viewer: { title: 'What is expected of you', lines: [
+        'You have view-only access: you can read everything, but not change it.',
+        'If you have been asked to check something, everything is linked from the dashboard and the menu.'] },
+      staff: { title: 'What is expected of you', lines: [
+        'Only a few things, and only when they come up:',
+        '• Read and acknowledge the policies that apply to you.',
+        '• Complete short security training once a year.',
+        '• Anything assigned to you by name, such as an action or a piece of evidence.',
+        'Usually a few minutes at a time.'] }
+    }[role] || null;
+    var where = { title: 'Where your things are', lines: [
+      '• Next for you, at the top of the dashboard, shows the one thing to do now, why it matters and how long it takes.',
+      '• My tasks lists everything assigned to you, each with the one button that does it.',
+      '• Checkpoint emails you when something new needs you, so you do not need to check in.',
+      '• How this works, at the bottom of the menu, brings these screens back.'] };
+    return [what, expected, where].filter(Boolean);
+  }
+
+  /* ---- The next thing for you ----
+     One item for the person signed in, with why it matters in plain
+     words and roughly how long it takes, so someone who is not a
+     compliance specialist knows what to do when they open Checkpoint.
+     items = My tasks items ({ kind, ref, title, due, overdue }), already
+     sorted most urgent first. opts.fallback = the practitioner's top
+     "Do next" item ({ title, why, action, id, button }) when nothing is
+     assigned to them by name; opts.upcoming = [{ label, date }] for the
+     "nothing to do" state. */
+  var NEXT_KIND_GUIDE = {
+    'Approve document': { why: 'Top management approves each policy so it carries the organisation’s authority. Read it, and approve it if it says what you want.', mins: 10 },
+    'Acknowledge policy': { why: 'Everyone confirms they have read the policies that apply to them. An auditor checks a sample of people.', mins: 5 },
+    'Training': { why: 'Short security awareness training everyone completes once a year, ending in a few questions.', mins: 20 },
+    'Security review': { why: 'The monthly meeting where leadership looks at how security is going and makes the decisions only it can make.', mins: 30 },
+    'Action': { why: 'Something you agreed to fix, from a risk, an audit or a meeting. Update it when it is done.', mins: 15 },
+    'Activity': { why: 'A regular check that shows a security control is working, such as reviewing who has access. Do it and attach the record.', mins: 15 },
+    'Evidence requested': { why: 'An auditor will ask to see proof that this control works. Upload the screenshot, report or document that shows it.', mins: 10 },
+    'Document review': { why: 'Documents are reviewed on a schedule so they stay accurate. Read it, change anything out of date and confirm.', mins: 15 },
+    'Objective': { why: 'Say how the security objective you own is going, so leadership can see progress.', mins: 5 }
+  };
+  function nextForYou(items, opts) {
+    opts = opts || {};
+    var list = items || [];
+    if (list.length) {
+      var i = list[0];
+      var key = Object.keys(NEXT_KIND_GUIDE).find(function (k) { return k === i.kind || (k === 'Objective' && /^Objective/.test(i.kind || '')); });
+      var g = NEXT_KIND_GUIDE[key] || { why: '', mins: 10 };
+      var recordMinutes = i.kind === 'Security review' && /^Record/.test(i.title || '');
+      return { kind: i.kind, item: i, title: (i.kind === 'Approve document' ? 'Approve ' : i.kind === 'Acknowledge policy' ? 'Read and acknowledge ' : i.kind === 'Evidence requested' ? 'Upload evidence for ' : '') + String(i.title || '').replace(/\.html$/i, ''),
+        why: recordMinutes ? 'Record what the meeting decided, so the decisions become actions with owners and dates.' : g.why, minutes: recordMinutes ? 15 : g.mins, overdue: !!i.overdue, due: i.due || '', more: list.length - 1 };
+    }
+    if (opts.fallback) return Object.assign({ kind: 'Do next', minutes: null, more: 0 }, opts.fallback);
+    var up = (opts.upcoming || []).filter(function (u) { return u && u.date; }).sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); })[0] || null;
+    return { none: true, next: up };
+  }
+
   /* ---- Top management readiness interview (Clause 5) ----
      The questions a certification auditor asks top management, each
      with what a good answer covers and a check against the records, so
@@ -11233,6 +11413,7 @@
     CERT_MILESTONES: CERT_MILESTONES, certificationMilestones: certificationMilestones,
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
+    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText,
     srDate: srDate, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,

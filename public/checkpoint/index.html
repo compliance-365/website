@@ -341,6 +341,7 @@
       <div class="nav-group">
         <button class="nav-item" data-v="mytasks">My tasks <span class="n" id="nMyTasks"></span></button>
         <button class="nav-item on" data-v="dash" aria-current="page">Dashboard</button>
+        <button class="nav-item" data-v="whodoes">Who does what</button>
       </div>
       <details class="nav-group" data-group="risk" open>
         <summary class="nav-label">Risks &amp; actions</summary>
@@ -398,6 +399,7 @@
         <button class="nav-mode" id="navModeBtn" data-action="App.toggleNavMode" aria-pressed="false">Show full menu</button>
       </div>
     </nav>
+    <button class="nav-help" data-action="App.showWelcome">How this works</button>
     <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant.</div>
     <button class="version-tag" id="versionTag" data-action="App.openChangelog">Checkpoint</button>
   </aside>
@@ -435,6 +437,7 @@
     <section class="view on" id="v-dash">
       <div class="vhead"><div class="rule"></div><h1>Dashboard</h1><p>Live assurance position for this tenant. Every figure below is computed from the registers — nothing is typed into a slide the night before an audit.</p></div>
       <div class="dash-headline" id="dashHeadline"></div>
+      <div class="card" id="nextForYou" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="dashForYou" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="certDashCard" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="gettingStartedCard" style="display:none;margin-bottom:16px"></div>
@@ -1020,8 +1023,14 @@
     </section>
 
     <!-- MY TASKS -->
+    <section class="view" id="v-whodoes">
+      <div class="vhead"><div class="rule"></div><h1>Who does what</h1><p>Everyone with a part in the information security management system: their role, and what they are responsible for, from the owners recorded on each register.</p></div>
+      <div id="whoDoesBody"></div>
+    </section>
+
     <section class="view" id="v-mytasks">
       <div class="vhead"><div class="rule"></div><h1>My tasks</h1><p>Everything assigned to you in the information security management system, with the one button that does each. Nothing else to learn.</p></div>
+      <div class="card" id="myNextForYou" style="margin-bottom:16px"></div>
       <div id="myTasksBody"></div>
     </section>
 

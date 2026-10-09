@@ -865,7 +865,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -3270,6 +3270,18 @@ function showModal(opts) {
           { heading: 'Clauses 4 to 10', pageBreak: false, html: table(bank.clauses) },
           { heading: 'Annex A controls most often sampled', pageBreak: true, html: table(bank.controls) }
         ]
+      };
+    },
+    /* Roles, responsibilities and authorities (Clause 5.3), from the
+       owners recorded across the registers. */
+    whodoes: function () {
+      var w = whoDoesData(), L = window.CheckpointLib;
+      return {
+        title: 'Roles and responsibilities',
+        frameworkAgnostic: true,
+        dashboard: { intro: 'Who is responsible for what in the information security management system, from the owners recorded on each register and the roles in the monthly security review. Evidence for ISO/IEC 27001 Clause 5.3.' + (Object.keys(w.unowned).length ? ' Without an owner: ' + L.whoAreaText(w.unowned) + '.' : ' Everything has an owner.') },
+        sections: [{ heading: 'People', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Person</th><th>Role</th><th>Responsible for</th></tr></thead><tbody>' +
+          w.people.map(function (p) { return '<tr><td class="rpt-idc">' + esc(p.name) + '</td><td>' + esc(p.roles.join('; ') || 'Owner') + '</td><td>' + esc(L.whoAreaText(p.areas) || '—') + '</td></tr>'; }).join('') + '</tbody></table>' }]
       };
     },
     /* The top management readiness interview, as recorded, beside what
@@ -6403,6 +6415,139 @@ function showModal(opts) {
       tile(na ? L.daysBetweenDateStr(today, na.date) + '<small> days</small>' : '—', 'Next audit', na ? na.label + ', ' + fmtDate(na.date) : 'None booked', '', 'App.go', 'audits') +
       tile(String(mine), 'Waiting on you', mine ? 'In My tasks' : 'Nothing assigned to you', mine ? 'var(--warn)' : '', 'App.go', 'mytasks');
   }
+  /* The next thing for the person signed in: one item, why it matters,
+     about how long it takes, and the button. Shown on the dashboard to
+     anyone with something assigned to them, or nothing to do (top
+     management, restricted access); a practitioner with nothing assigned
+     by name already has Do next. Always shown on My tasks. */
+  function nextForYouData() {
+    var t = myTasks();
+    var today = new Date().toISOString().slice(0, 10);
+    var me = [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+    var up = [];
+    var nx = secReviewNext();
+    if (nx && nx.date) up.push({ label: 'the monthly security review', date: nx.date });
+    (S.calendar || []).forEach(function (c) {
+      if (c.nextDue && c.nextDue >= today && c.owner && me.indexOf(String(c.owner).toLowerCase()) !== -1 && window.CheckpointLib.calendarItemLive(c)) up.push({ label: c.title, date: String(c.nextDue).slice(0, 10) });
+    });
+    return window.CheckpointLib.nextForYou(t.items, { upcoming: up });
+  }
+  function nextForYouHtml(n, where) {
+    if (n.none) {
+      return '<div class="nfy nfy-none"><div class="nfy-t"><span class="nfy-k">Next for you</span><b>' + icon('check') + ' Nothing is waiting on you.</b>' +
+        '<span class="src">' + (n.next ? 'The next thing is ' + esc(n.next.label) + ' on ' + fmtDate(n.next.date) + '. Checkpoint will remind you.' : 'Checkpoint will email you when something needs you.') + '</span></div></div>';
+    }
+    var i = n.item || {};
+    return '<div class="nfy' + (n.overdue ? ' nfy-late' : '') + '"><div class="nfy-t"><span class="nfy-k">Next for you' + (n.minutes ? ' · about ' + n.minutes + ' minutes' : '') + (n.overdue ? ' · <span style="color:var(--fail)">overdue</span>' : n.due ? ' · due ' + fmtDate(n.due) : '') + '</span>' +
+      '<b>' + esc(n.title) + '</b><span class="src">' + esc(n.why) + '</span>' +
+      (n.more && where === 'dash' ? '<button class="lnk src" data-action="App.go" data-id="mytasks">and ' + n.more + ' more in My tasks</button>' : '') + '</div>' +
+      '<div class="nfy-b">' + myTaskButton(i) + '</div></div>';
+  }
+  function renderNextForYou() {
+    var n = nextForYouData();
+    var dash = document.getElementById('nextForYou');
+    if (dash) {
+      var show = !n.none || RESTRICTED_ACCESS || isTopManagement();
+      dash.style.display = show ? '' : 'none';
+      dash.innerHTML = show ? nextForYouHtml(n, 'dash') : '';
+    }
+    var mt = document.getElementById('myNextForYou');
+    if (mt) mt.innerHTML = nextForYouHtml(n, 'mytasks');
+  }
+  /* ===== Who does what (Clause 5.3) ===== */
+  function whoDoesData() {
+    var today = new Date().toISOString().slice(0, 10);
+    var openA = function (a) { return ['Done', 'Closed', 'Cancelled', 'Completed'].indexOf(a.status) === -1; };
+    var s = secReviewSetup() || {};
+    var roles = [];
+    if (s.chair) roles.push({ name: s.chair, role: 'Top management (chairs the security review)' });
+    if (S.settings && S.settings.topManagementApprover && S.settings.topManagementApprover !== s.chair) roles.push({ name: S.settings.topManagementApprover, role: 'Top management (approves documents)' });
+    if (s.owner) roles.push({ name: s.owner, role: 'ISMS owner' });
+    if (s.facilitator) roles.push({ name: s.facilitator, role: 'Runs the security review' });
+    var ent = entitledFrameworks();
+    return window.CheckpointLib.whoDoesWhat({
+      roles: roles,
+      known: _dirUsers && _dirUsers.length ? _dirUsers.map(function (u) { return String(u.name || u.displayName || '').toLowerCase(); }).concat(_dirUsers.map(function (u) { return String(u.mail || u.upn || '').toLowerCase(); })) : null,
+      areas: {
+        risks: (S.risks || []).filter(function (r) { return r.status !== 'Closed'; }).map(function (r) { return { owner: r.owner }; }),
+        actions: (S.actions || []).filter(openA).map(function (a) { return { owner: a.owner, overdue: !!(a.due && a.due < today) }; }),
+        controls: (S.controls || []).filter(function (c) { return c.app && ent.indexOf(c.fw) !== -1; }).map(function (c) { return { owner: c.own }; }),
+        clauses: visibleClauses().map(function (c) { return { owner: c.own }; }),
+        documents: (window._docs || []).filter(function (d) { return docStatusOf(d) !== 'Superseded'; }).map(function (d) { return { owner: d.owner }; }),
+        vendors: (S.vendors || []).map(function (v) { return { owner: v.owner }; }),
+        assets: (S.assets || []).filter(function (a) { return a.status !== 'Retired'; }).map(function (a) { return { owner: a.owner }; }),
+        objectives: (S.objectives || []).filter(function (o) { return o.status !== 'Achieved'; }).map(function (o) { return { owner: o.owner }; }),
+        calendar: (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c); }).map(function (c) { return { owner: c.owner, overdue: !!(c.nextDue && c.nextDue < today) }; }),
+        legal: (S.legal || []).filter(function (l) { return l.applies !== 'No'; }).map(function (l) { return { owner: l.owner }; }),
+        aiSystems: (S.aiSystems || []).map(function (a) { return { owner: a.owner }; })
+      }
+    });
+  }
+  function renderWhoDoes() {
+    var el = document.getElementById('whoDoesBody');
+    if (!el) return;
+    if (!_dirUsers && !_dirLoading) loadDirectory().then(renderWhoDoes);
+    var w = whoDoesData(), L = window.CheckpointLib;
+    var un = Object.keys(w.unowned);
+    el.innerHTML =
+      (un.length ? '<div class="card" style="margin-bottom:16px"><b>Without an owner</b><p class="src" style="margin:4px 0 0">' + esc(L.whoAreaText(w.unowned)) + '. An auditor asks who is responsible for each; give every one an owner on its register.</p></div>' : '') +
+      '<div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col">Responsible for</th><th scope="col">Overdue</th></tr></thead><tbody>' +
+      (w.people.length ? w.people.map(function (p) {
+        return '<tr><td style="color:var(--paper)">' + esc(p.name) + (p.unknown ? '<div class="src" style="color:var(--warn)">Not found in the directory: have they left?</div>' : '') + '</td>' +
+          '<td>' + (p.roles.length ? esc(p.roles.join('; ')) : '<span class="src">Owner</span>') + '</td>' +
+          '<td>' + (p.total ? esc(L.whoAreaText(p.areas)) : '<span class="src">Nothing assigned by name</span>') + '</td>' +
+          '<td>' + (p.overdue ? '<span class="verify-stale">' + p.overdue + '</span>' : '<span class="src">0</span>') + '</td></tr>';
+      }).join('') : '<tr><td colspan="4" class="src">No owners recorded yet. Owners are set on each register, and the meeting roles in the monthly security review setup.</td></tr>') +
+      '</tbody></table></div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">' +
+      '<button class="btn ghost sm" data-action="App.report" data-id="whodoes">Open as a document</button>' +
+      (READONLY ? '' : '<button class="btn ghost sm" data-action="App.fileWhoDoes">File as Clause 5.3 evidence</button><button class="btn ghost sm" data-action="App.openLeavers">Someone has left</button>') + '</div>';
+  }
+
+  /* "What is this page?": one plain line under each page's heading,
+     what it is and what this person does there, plus the words on the
+     page explained. */
+  function renderPageGuide(v) {
+    var sec = document.getElementById('v-' + v);
+    var head = sec && sec.querySelector('.vhead');
+    if (!head) return;
+    var g = window.CheckpointLib.pageGuide(v, myGuideRole());
+    var el = head.querySelector('.page-guide');
+    if (!g) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.className = 'page-guide'; head.appendChild(el); }
+    el.innerHTML = '<p><b>What this page is:</b> ' + esc(g.what) + ' <b>What you do here:</b> ' + esc(g.you) + '</p>' +
+      (g.terms.length ? '<details class="pg-terms"><summary>Words used on this page</summary><dl>' + g.terms.map(function (t) { return '<dt>' + esc(t.term) + '</dt><dd>' + esc(t.def) + '</dd>'; }).join('') + '</dl></details>' : '');
+  }
+  /* Which welcome and which page help someone gets: top management,
+     view-only, own-tasks-only, or the person running the ISMS. */
+  function myGuideRole() {
+    if (isTopManagement()) return 'top';
+    if (RESTRICTED_ACCESS) return 'staff';
+    if (VIEWER_READONLY) return 'viewer';
+    return 'practitioner';
+  }
+  var WELCOME_KEY = 'cpWelcomeSeen';
+  var _welcomeTried = false;
+  function welcomeSeenKey() { return WELCOME_KEY + ':' + String(myUpn() || 'me').toLowerCase(); }
+  /* Once per person per browser, after the first full render. Not in the
+     demo (unless ?welcome=1) and not for an auditor, who lands on their
+     own guide. */
+  function maybeWelcome() {
+    if (_welcomeTried) return;
+    _welcomeTried = true;
+    var demoAsk = Store.kind === 'demo' && new URLSearchParams(location.search).get('welcome') === '1';
+    if (Store.kind !== 'sharepoint' && !demoAsk) return;
+    if (auditorState().me) return;
+    var seen = false;
+    try { seen = !!localStorage.getItem(welcomeSeenKey()); } catch (e) { seen = false; }
+    if (seen && !demoAsk) return;
+    setTimeout(function () { App.showWelcome(); }, 400);
+  }
+  function isTopManagement() {
+    var s = secReviewSetup() || {};
+    var me = [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+    return !!((s.chair && me.indexOf(String(s.chair).toLowerCase()) !== -1) || (S.settings && S.settings.topManagementApprover && me.indexOf(String(S.settings.topManagementApprover).toLowerCase()) !== -1));
+  }
   /* What each role opens the dashboard for: the chair gets the month in
      brief; someone with restricted access gets their own tasks. */
   function renderDashForYou() {
@@ -6430,6 +6575,7 @@ function showModal(opts) {
   }
   function renderDash() {
     renderDashHeadline();
+    renderNextForYou();
     renderDashForYou();
     renderCertDashCard();
     renderClauseGaps();
@@ -10971,6 +11117,7 @@ function showModal(opts) {
               '<div style="flex:0 0 auto">' + myTaskButton(i) + '</div></div>';
           }).join('')
         : '<p style="margin:14px 0">' + icon('check') + ' Nothing assigned to you right now.</p>') + '</div>';
+    renderNextForYou();
   }
 
   /* ================= Auditor access =================
@@ -14521,7 +14668,7 @@ function showModal(opts) {
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aitools: 'AI tools',
     settings: 'Settings'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -15437,6 +15584,7 @@ function showModal(opts) {
        alongside the Frameworks view's — one function, two destinations. */
     settings: renderFrameworksAdmin,
     integrations: renderIntegrations,
+    whodoes: renderWhoDoes,
     selftest: renderSelfTest,
     aitools: renderAiTools,
   };
@@ -15588,7 +15736,7 @@ function showModal(opts) {
     }
     App.go('auditor');
   }
-  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderPageGuide(((document.querySelector('.view.on') || {}).id || '').replace(/^v-/, '')); maybeWelcome(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -15708,6 +15856,7 @@ function showModal(opts) {
       window.scrollTo(0, 0);
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       renderView(v);
+      renderPageGuide(v);
       scheduleScrollRegions();
     },
 
@@ -20195,6 +20344,24 @@ function showModal(opts) {
         try { ok = c ? await fileReportAsEvidence('tminterview', c) : false; } catch (e) { warn(e); }
         toast(ok ? 'Filed as Clause 5.1 evidence' : 'Saved. Open it from Reports to file it by hand.');
       } else toast('Interview saved');
+    },
+    fileWhoDoes: async function () {
+      var c = (S.clauses || []).find(function (x) { return (x.fw || 'iso27001') === 'iso27001' && x.id === '5.3'; });
+      if (!c) { toast('Clause 5.3 is not loaded for this tenant.'); return; }
+      var ok = false;
+      try { ok = await fileReportAsEvidence('whodoes', c); } catch (e) { warn(e); }
+      toast(ok ? 'Filed as Clause 5.3 evidence' : 'Could not file it; open it as a document and save it by hand.');
+    },
+    /* The first-time welcome, also opened from "How this works". */
+    showWelcome: async function () {
+      var screens = window.CheckpointLib.welcomeScreens(myGuideRole(), { org: clientDisplayLabel('your organisation'), owner: (secReviewSetup() || {}).owner || '', partner: 'Compliance365' });
+      for (var i = 0; i < screens.length; i++) {
+        var last = i === screens.length - 1;
+        var ok = await showModal({ title: screens[i].title + ' (' + (i + 1) + ' of ' + screens.length + ')', message: screens[i].lines.join('\n\n'), confirmText: last ? (myTasks().items.length ? 'Show me my tasks' : 'Got it') : 'Next', cancelText: last ? 'Close' : 'Skip' });
+        if (!ok) break;
+        if (last && myTasks().items.length) App.go('mytasks');
+      }
+      try { localStorage.setItem(welcomeSeenKey(), new Date().toISOString().slice(0, 10)); } catch (e) { /* remembered for this visit only */ }
     },
     /* The Stage 1 date the plan works back from. Blank clears it. */
     setStage1Target: async function () {
@@ -24957,15 +25124,15 @@ function showModal(opts) {
        Viewer, instead of the Dashboard practitioners land on by
        default. Only overrides the view on first boot; a Viewer can
        still navigate anywhere else read-only registers/reports remain
-       visible. A restricted session lands on Policy attestation instead
-       — Training is the only other view it can even reach, and between
-       the two, an unacknowledged policy is the more commonly urgent
-       one. Checked first: RESTRICTED_ACCESS and READONLY-via-Viewer
+       visible. A restricted session lands on My tasks instead: it
+       opens with "Next for you" (the one thing to do, why and how long)
+       and lists every policy and course they owe, so nobody arrives on a
+       register page wondering what to do. Checked first: RESTRICTED_ACCESS and READONLY-via-Viewer
        never coincide (see the RESTRICTED_ACCESS comment near the top of
        this file), but READONLY can also come from an expired
        activation, which says nothing about which view a restricted
        session should land on. */
-    if (RESTRICTED_ACCESS) App.go('attestations');
+    if (RESTRICTED_ACCESS) App.go('mytasks');
     else if (READONLY) App.go('board');
     SELFTEST_MODE = Store.kind === 'demo' && /[?&]selftest=1\b/.test(location.search);
     if (SELFTEST_MODE) App.go('selftest');

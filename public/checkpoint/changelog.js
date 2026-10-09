@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.138.0',
+    date: '2026-10-09',
+    entries: [
+      'Next for you: a card at the top of the dashboard and of My tasks showing the one thing waiting on the person signed in. It says what it is, why it matters in plain words, roughly how long it takes, and has the button that does it. When nothing is waiting it says so, and names the next thing coming up, such as the monthly security review. People with restricted access now land on My tasks, which opens with this card, instead of the Policy attestation page.',
+      'A short welcome the first time someone signs in: three screens covering what Checkpoint is, what is expected of them and where their things are. It is worded for top management, the person running the ISMS, view-only users or everyone else. For top management that means the four things ISO 27001 asks of them and roughly how much time a month. How this works, at the bottom of the menu, brings it back.',
+      'Every main page now opens with a plain-English line: what the page is, and what you do there. The wording changes for top management and for people who only have their own tasks. The words used on the page (Statement of Applicability, residual risk, nonconformity and so on) are explained underneath.',
+      'Who does what: a new page listing everyone with a part in the ISMS. It shows each person\u2019s role (top management, ISMS owner, who runs the security review) and what they are responsible for, taken from the owners recorded on every register. It also flags anything without an owner, and owners who are no longer in the directory. It can be filed as Clause 5.3 evidence in one click.'
+    ]
+  },
+  {
     version: '1.137.0',
     date: '2026-10-08',
     entries: [
