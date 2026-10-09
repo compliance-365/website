@@ -77,12 +77,16 @@ endpoint in this repo — nothing else in the app depends on this feed.
    fetch(window.CHECKPOINT_CONFIG.threatIntelUrl).then(r => r.json()).then(console.log);
    ```
    Expect `{updatedAt: "...", items: [...]}` with each item carrying
-   `cveId`, `vendor`, `product`, `tags`, and a working `url` to its NVD
-   detail page.
+   `cveId`, `vendor`, `product`, `tags`, `dueDate`, `requiredAction`
+   (CISA's own wording; redeploy the function to pick this field up —
+   older deployments simply omit it and the app shows nothing in its
+   place) and a working `url` to its NVD detail page.
 2. Open the Checkpoint app's **Threat intel** view (Risk & posture) and
-   confirm the list renders. Tick a tech-stack checkbox matching one of
-   the fetched items' vendors and confirm it re-sorts to the top with a
-   "Relevant to you" badge.
+   confirm the summary tiles and list render. Tick a tech-stack checkbox
+   matching one of the fetched items' vendors and confirm it moves up
+   with a "Relevant to you" badge. **Assess** one advisory as "Affects
+   us" and confirm a remediation action (control A.8.8) appears in the
+   Actions register.
 3. To see the graceful-degrade path, temporarily point `threatIntelUrl`
    at an unreachable URL and confirm the view falls back to its
    "couldn't load the live feed" message rather than breaking.

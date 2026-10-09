@@ -144,6 +144,7 @@ export function shapeKevResponse(raw, opts) {
       description: String(v.shortDescription || ''),
       dateAdded: v.dateAdded,
       dueDate: v.dueDate || '',
+      requiredAction: String(v.requiredAction || '').slice(0, 400),
       knownRansomwareUse: String(v.knownRansomwareCampaignUse || '').toLowerCase() === 'known',
       tags: tagEntry(v.vendorProject, v.product),
       url: v.cveID ? 'https://nvd.nist.gov/vuln/detail/' + v.cveID : ''

@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.142.0',
+    date: '2026-10-09',
+    entries: [
+      'Threat intel redesigned as a triage workflow. Summary tiles at the top show how many actively exploited vulnerabilities there are, how many match your technology, how many have known ransomware use, how many are awaiting assessment and how many affect you. Each tile filters the list.',
+      'Each advisory has a priority: Critical for known ransomware use, High when it matches your technology, otherwise Monitor. It shows the full date added, CISA\u2019s fix-by date (in red when it has passed for something relevant that is not assessed), CISA\u2019s required action, and a link to the full CVE.',
+      'Assess each advisory: it affects us, it is already patched or mitigated, or we do not run it, with a note on what you checked. Who decided and when is recorded. "Affects us" raises a remediation action against A.8.8, due by CISA\u2019s fix-by date when that is still ahead.',
+      'File as A.5.7 evidence: one click files the advisories and your assessments against control A.5.7 (threat intelligence). The technology picker is now a compact bar you can expand.'
+    ]
+  },
+  {
     version: '1.141.0',
     date: '2026-10-09',
     entries: [

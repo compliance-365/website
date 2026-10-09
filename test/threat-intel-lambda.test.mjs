@@ -115,6 +115,13 @@ describe('shapeKevResponse()', () => {
     assert.equal(out[0].knownRansomwareUse, false);
   });
 
+  test("carries CISA's required action, trimmed", () => {
+    const out = shapeKevResponse({ vulnerabilities: [kevEntry({ requiredAction: 'Apply updates per vendor instructions.' })] }, { now: '2024-06-10' });
+    assert.equal(out[0].requiredAction, 'Apply updates per vendor instructions.');
+    const none = shapeKevResponse({ vulnerabilities: [kevEntry()] }, { now: '2024-06-10' });
+    assert.equal(typeof none[0].requiredAction, 'string');
+  });
+
   test('flags known ransomware use', () => {
     const out = shapeKevResponse({ vulnerabilities: [kevEntry({ knownRansomwareCampaignUse: 'Known' })] }, { now: '2024-06-10' });
     assert.equal(out[0].knownRansomwareUse, true);
