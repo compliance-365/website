@@ -913,7 +913,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -4970,6 +4970,7 @@ function showModal(opts) {
       '</tbody></table>';
     var approvalHtml = '<div class="dc-h">Approval</div><table class="rec"><thead><tr><th>Role</th><th>Name</th><th>Date</th><th>Signature</th></tr></thead><tbody>' +
       '<tr><td>Document owner</td><td>' + esc(opts.owner || '—') + '</td><td></td><td class="sig"></td></tr>' +
+      (opts.reviewedBy ? '<tr><td>Reviewed by</td><td>' + esc(opts.reviewedBy) + '</td><td>' + esc(opts.reviewDateText || '') + '</td><td class="sig">' + (opts.reviewSignature ? '<span class="esig">' + esc(opts.reviewSignature) + '</span>' : '') + '</td></tr>' : '') +
       '<tr><td>Approved by</td><td>' + (opts.approved ? esc(opts.approvedBy || '—') : 'Pending') + '</td><td>' + (opts.approved ? esc(approvedOn) : '') + '</td><td class="sig">' + (opts.approved && opts.approvalSignature ? '<span class="esig">' + esc(opts.approvalSignature) + '</span>' : '') + '</td></tr>' +
       '</tbody></table>';
     var frontHtml = '<div class="dc-h dc-first">Document control</div><table class="dctl"><tbody>' + dctlRows.map(function (r) {
@@ -5306,6 +5307,14 @@ function showModal(opts) {
      given and what the signature cell says. `pending` is an approval
      being saved now ({ version, approvedBy, date }), not yet in the
      audit log. */
+  /* A review is recorded by the signed-in reviewer, so it is an
+     electronic record unless someone else entered it. */
+  function reviewSignatureText(r) {
+    var on = r.date ? ' on ' + longDocDate(r.date) : '';
+    return r.recordedBy && window.CheckpointLib.samePersonName(r.recordedBy, r.reviewer)
+      ? 'Reviewed electronically in Checkpoint by ' + r.recordedBy + on
+      : 'Review recorded in Checkpoint' + (r.recordedBy ? ' by ' + r.recordedBy : '') + on;
+  }
   function docControlFor(docName, doc, pending) {
     var L = window.CheckpointLib;
     var log = S.auditLog || [];
@@ -5322,11 +5331,18 @@ function showModal(opts) {
       if (!rec && doc && doc.approvedBy) rec = { approvedBy: doc.approvedBy, recordedBy: '', date: doc.approvalDate || '' };
     }
     var date = (pending && pending.date) || (doc && doc.approvalDate) || (rec && rec.date) || '';
+    /* The second-person review this approval rests on: the standing one
+       while approving now, the one the last approval was given on after. */
+    var rv = L.docSignoffReviewState(log, docName);
+    var review = pending ? (rv.current && rv.current.outcome === 'Reviewed' ? rv.current : null) : approved ? rv.atApproval : null;
     return {
       history: history.map(function (r) { return Object.assign({}, r, { dateText: longDocDate(r.date) }); }),
       approvalDate: approved ? date : '',
       approvalDateText: approved && date ? longDocDate(date) : '',
-      approvalSignature: approved && rec ? L.approvalSignatureText(rec, rec.date ? longDocDate(rec.date) : '') : ''
+      approvalSignature: approved && rec ? L.approvalSignatureText(rec, rec.date ? longDocDate(rec.date) : '') : '',
+      reviewedBy: review ? review.reviewer : '',
+      reviewDateText: review && review.date ? longDocDate(review.date) : '',
+      reviewSignature: review ? reviewSignatureText(review) : ''
     };
   }
   async function saveApprovedTemplate(name, category, t, params, existing, vals, sodFinding, quiet) {
@@ -11702,6 +11718,8 @@ function showModal(opts) {
       if (me.indexOf(o.owner.toLowerCase()) !== -1 || (o.email && me.indexOf(o.email.toLowerCase()) !== -1)) items = items.concat(o.items);
     });
     myApprovalRequests().forEach(function (r) { items.push({ kind: 'Approve document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
+    myReviewRequests().forEach(function (r) { items.push({ kind: 'Check document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
+    myRiskAcceptRequests().forEach(function (r) { items.push({ kind: 'Accept risk', ref: r.risk, title: r.risk + ' ' + (r.title || ''), due: r.requested || '', overdue: false }); });
     items = items.concat(secReviewTasksFor(me));
     (S.reviews || []).forEach(function (r) {
       var rec = window.CheckpointLib.parseReviewRecord(r.record);
@@ -11713,7 +11731,8 @@ function showModal(opts) {
     }
     items.sort(function (a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999')); });
     var owners = lists.map(function (o) { return o.owner; });
-    approvalRequests().forEach(function (r) { if (r.approver && owners.indexOf(r.approver) === -1) owners.push(r.approver); });
+    docRequests().forEach(function (r) { if (r.approver && owners.indexOf(r.approver) === -1) owners.push(r.approver); });
+    riskAcceptRequests().forEach(function (r) { if (r.acceptor && owners.indexOf(r.acceptor) === -1) owners.push(r.acceptor); });
     return { items: items, owners: owners };
   }
   function myTaskButton(i) {
@@ -11726,6 +11745,8 @@ function showModal(opts) {
     if (i.kind === 'Acknowledge policy') return b('App.acknowledgeAttestation', i.ref, 'Read and acknowledge');
     if (i.kind === 'Training') return b('App.go', 'training', 'Start');
     if (i.kind === 'Approve document') return b('App.approveRequested', i.ref, 'Review and approve');
+    if (i.kind === 'Check document') return b('App.reviewRequested', i.ref, 'Check it');
+    if (i.kind === 'Accept risk') return b('App.acceptRequestedRisk', i.ref, 'Decide');
     if (i.kind === 'Sign off minutes') return b('App.openReview', i.ref, 'Read and sign off');
     if (i.kind === 'Decision') return buildItemButton({ id: i.ref }, true);
     if (i.kind === 'Security review') return b(/^Record/.test(i.title) ? 'App.recordSecurityReview' : 'App.openSecurityReview', i.ref, /^Record/.test(i.title) ? 'Record minutes' : 'Open agenda');
@@ -12537,8 +12558,57 @@ function showModal(opts) {
      information security policy, top management: Clause 5.2). Kept in
      Settings (approvalRequests, JSON); shown in that person's My tasks,
      where Approve opens the same approval dialog, signed in as them. */
-  function approvalRequests() {
+  /* Every open request, approvals and reviews (kind: 'review'). Saved
+     whole, so a change to one kind keeps the other. */
+  function docRequests() {
     try { var a = JSON.parse((S.settings && S.settings.approvalRequests) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  function approvalRequests() { return docRequests().filter(function (r) { return r.kind !== 'review'; }); }
+  function reviewRequests() { return docRequests().filter(function (r) { return r.kind === 'review'; }); }
+  function reviewRequestFor(key) { return reviewRequests().find(function (r) { return r.key === key; }) || null; }
+  async function replaceDocRequest(key, kind, req) {
+    await saveApprovalRequests(docRequests().filter(function (r) { return !(r.key === key && (r.kind === 'review') === (kind === 'review')); }).concat(req ? [req] : []));
+  }
+  function myRequestNames() {
+    return Store.kind === 'demo' && window._myTasksAs ? [String(window._myTasksAs).toLowerCase()] : [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+  }
+  function myReviewRequests() {
+    var me = myRequestNames();
+    return reviewRequests().filter(function (r) {
+      return me.indexOf(String(r.approver || '').toLowerCase()) !== -1 || (r.approverEmail && me.indexOf(String(r.approverEmail).toLowerCase()) !== -1);
+    });
+  }
+  /* The approval matrix: which documents need a second person's review
+     before approval (Settings → Approvals). */
+  function docReviewLevel() {
+    var v = (S.settings && S.settings.docReviewLevel) || '';
+    return window.CheckpointLib.DOC_REVIEW_LEVELS.indexOf(v) > -1 ? v : '';
+  }
+  function docReviewNeeded(name, t) {
+    return window.CheckpointLib.docNeedsReview(docReviewLevel(), { name: name, title: t && t.title, docKind: t && t.docKind });
+  }
+  function templateForDoc(d) {
+    var id = d && d.tplId;
+    if (!id) {
+      var gen = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === (d && d.name) && e.action === 'Policy template generated'; });
+      try { id = gen && JSON.parse(gen.after).tplId; } catch (e) { id = ''; }
+    }
+    return id ? (window.POLICY_TEMPLATES || []).find(function (x) { return x.id === id; }) || null : null;
+  }
+  function riskAcceptSecond() { return S.settings && S.settings.riskAcceptSecond === 'true'; }
+  function riskAcceptRequests() {
+    try { var a = JSON.parse((S.settings && S.settings.riskAcceptRequests) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  async function saveRiskAcceptRequests(list) {
+    S.settings.riskAcceptRequests = JSON.stringify(list);
+    await Store.setSetting('riskAcceptRequests', S.settings.riskAcceptRequests);
+  }
+  function riskAcceptRequestFor(id) { return riskAcceptRequests().find(function (r) { return r.risk === id; }) || null; }
+  function myRiskAcceptRequests() {
+    var me = myRequestNames();
+    return riskAcceptRequests().filter(function (r) {
+      return me.indexOf(String(r.acceptor || '').toLowerCase()) !== -1 || (r.acceptorEmail && me.indexOf(String(r.acceptorEmail).toLowerCase()) !== -1);
+    });
   }
   async function saveApprovalRequests(list) {
     S.settings.approvalRequests = JSON.stringify(list);
@@ -12548,7 +12618,7 @@ function showModal(opts) {
   /* Requests addressed to the signed-in person (or, in the demo, the
      person being viewed as). */
   function myApprovalRequests() {
-    var me = Store.kind === 'demo' && window._myTasksAs ? [String(window._myTasksAs).toLowerCase()] : [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+    var me = myRequestNames();
     return approvalRequests().filter(function (r) {
       return me.indexOf(String(r.approver || '').toLowerCase()) !== -1 || (r.approverEmail && me.indexOf(String(r.approverEmail).toLowerCase()) !== -1);
     });
@@ -12888,8 +12958,19 @@ function showModal(opts) {
           actions.push(isOwnDoc(d)
             ? '<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Approve</button>'
             : '<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
-          if (!isOwnDoc(d) && !READONLY) {
-            var reqd = approvalRequestFor(d.category + '|' + d.name);
+          var docKey = d.category + '|' + d.name;
+          var rvNeeded = !isOwnDoc(d) && docReviewNeeded(d.name, templateForDoc(d));
+          var rvNow = rvNeeded ? window.CheckpointLib.docSignoffReviewState(S.auditLog, d.name).current : null;
+          if (rvNeeded && !(rvNow && rvNow.outcome === 'Reviewed')) {
+            var rvReq = reviewRequestFor(docKey);
+            if (rvReq) actions.push('<span class="src" title="Requested ' + esc(rvReq.requested) + '">Review: ' + esc(rvReq.approver) + '</span>');
+            else {
+              if (rvNow) actions.push('<span class="verify-stale" title="' + esc(rvNow.comment) + '">Changes requested</span>');
+              if (!READONLY) actions.push('<button class="btn ghost sm" data-action="App.requestReview" data-id="' + esc(docKey) + '">' + (rvNow ? 'Ask again' : 'Ask for review') + '</button>');
+            }
+          } else if (!isOwnDoc(d) && !READONLY) {
+            if (rvNow) actions.push('<span class="src" title="Reviewed by ' + esc(rvNow.reviewer) + ' on ' + esc(rvNow.date) + '">Reviewed</span>');
+            var reqd = approvalRequestFor(docKey);
             actions.push(reqd
               ? '<span class="src" title="Requested ' + esc(reqd.requested) + '">Awaiting ' + esc(reqd.approver) + '</span>'
               : '<button class="btn ghost sm" data-action="App.requestApproval" data-id="' + esc(d.category + '|' + d.name) + '">Request approval</button>');
@@ -16194,6 +16275,21 @@ function showModal(opts) {
         '<button class="btn ghost sm" data-action="App.toggleSod">' + (sodOn ? 'Enforced' : 'Off') + '</button>';
     }
 
+    var matrixEl = document.getElementById('approvalMatrixRow');
+    if (matrixEl) {
+      var lvl = docReviewLevel();
+      var lvlLabels = { '': 'No review step', isp: 'Information security policy', policies: 'All policies', all: 'All generated documents' };
+      matrixEl.innerHTML = '<div><b>Approvals: review before approval</b><p>Which drafts a second person checks before they go for approval. The reviewer cannot have prepared the document or approve it, and their name and the date go on the document. Leave it at no review step if only one or two people use Checkpoint.</p></div>' +
+        '<select class="mini" data-change-action="App.setDocReviewLevel" aria-label="Documents that need a review before approval">' +
+        window.CheckpointLib.DOC_REVIEW_LEVELS.map(function (k) { return '<option value="' + k + '"' + (lvl === k ? ' selected' : '') + '>' + lvlLabels[k] + '</option>'; }).join('') +
+        '</select>';
+    }
+    var riskSecondEl = document.getElementById('riskAcceptSecondRow');
+    if (riskSecondEl) {
+      riskSecondEl.innerHTML = '<div><b>Approvals: risk acceptance by the person accountable</b><p>When on, accepting a residual risk sends it to the person accepting it, who records the decision signed in as themselves. Someone else must have asked for it. When off, a practitioner can record an acceptance on someone\u2019s behalf.</p></div>' +
+        '<button class="btn ghost sm" data-action="App.toggleRiskAcceptSecond">' + (riskAcceptSecond() ? 'On' : 'Off') + '</button>';
+    }
+
     var appetiteEl = document.getElementById('riskAppetiteRow');
     if (appetiteEl) {
       var current = (S.settings && S.settings.riskAppetite) || 'Medium';
@@ -17725,6 +17821,15 @@ function showModal(opts) {
     },
     requestApproval: async function (key) {
       var name = key.split('|').slice(1).join('|');
+      var reqDoc = (window._docs || []).find(function (x) { return x.name === name; });
+      if (docReviewNeeded(name, templateForDoc(reqDoc || { name: name }))) {
+        var why = window.CheckpointLib.reviewGateReason({ needed: true, review: window.CheckpointLib.docSignoffReviewState(S.auditLog, name).current });
+        if (why) {
+          var ask = await showModal({ title: 'Review needed first', message: why + '\n\nAsk for the review now? Approval can be requested once it is done.', confirmText: 'Ask for a review', cancelText: 'Cancel' });
+          if (ask) await App.requestReview(key);
+          return;
+        }
+      }
       var users = await loadDirectory();
       var suggested = (S.settings && S.settings.topManagementApprover) || '';
       var isPolicy = /information security policy/i.test(name);
@@ -17745,7 +17850,7 @@ function showModal(opts) {
       var req = { key: key, name: name, approver: u ? u.name : v.owner, approverEmail: u ? (u.mail || u.upn || '') : '', requestedBy: myDisplayName() || 'Practitioner', requested: new Date().toISOString().slice(0, 10), note: v.note || '' };
       busy(true);
       try {
-        await saveApprovalRequests(approvalRequests().filter(function (r) { return r.key !== key; }).concat([req]));
+        await replaceDocRequest(key, 'approval', req);
         if (v.top === 'yes') { S.settings.topManagementApprover = req.approver; await Store.setSetting('topManagementApprover', req.approver); }
         audit('Document approval requested', 'Document', name, '', 'From ' + req.approver + (req.approverEmail ? ' (' + req.approverEmail + ')' : ''));
         var digestOnly = weeklyOnly(req.approver, req.approverEmail);
@@ -17772,10 +17877,108 @@ function showModal(opts) {
       var name = key.split('|').slice(1).join('|');
       var doc = (window._docs || []).find(function (x) { return x.name === name; });
       if (req && doc && docStatusOf(doc) === 'Approved') {
-        await saveApprovalRequests(approvalRequests().filter(function (r) { return r.key !== key; }));
+        await replaceDocRequest(key, 'approval', null);
         audit('Document approval request completed', 'Document', name, 'Requested ' + req.requested, 'Approved by ' + (doc.approvedBy || req.approver));
         renderMyTasks(); renderNavCounts();
       }
+    },
+    /* Second-person review (the approval matrix). The request goes to
+       the reviewer's My tasks (and email, in a tenant), like an
+       approval request. */
+    requestReview: async function (key) {
+      var name = key.split('|').slice(1).join('|');
+      var users = await loadDirectory();
+      var preparer = (originatorOf('Document', name) || {}).name || '';
+      var v = await showModal({
+        title: 'Ask for a review of “' + name + '”',
+        message: 'A second person checks the draft before it goes for approval. They record that it is ready or what should change, and their name and the date go on the document.' +
+          (preparer ? '\n\nPrepared by ' + preparer + ', so choose someone else.' : ''),
+        fields: [
+          { id: 'owner', label: 'Reviewer', value: (S.settings && S.settings.lastDocReviewer) || '', placeholder: 'e.g. the ISMS owner' },
+          { id: 'note', label: 'Note to the reviewer (optional)', type: 'textarea', placeholder: 'e.g. Please check the access review frequency.' }
+        ],
+        confirmText: 'Send request',
+        validate: function (x) {
+          if (!x.owner) return 'Choose who should review it.';
+          return window.CheckpointLib.reviewerConflictReason(x.owner, preparer) || null;
+        }
+      });
+      if (!v) return;
+      var u = users && users.length ? window.CheckpointLib.matchOwnerToUser(v.owner, users) : null;
+      var req = { kind: 'review', key: key, name: name, approver: u ? u.name : v.owner, approverEmail: u ? (u.mail || u.upn || '') : '', requestedBy: myDisplayName() || 'Practitioner', requested: new Date().toISOString().slice(0, 10), note: v.note || '' };
+      busy(true);
+      try {
+        await replaceDocRequest(key, 'review', req);
+        S.settings.lastDocReviewer = req.approver; await Store.setSetting('lastDocReviewer', req.approver);
+        audit('Document review requested', 'Document', name, '', 'From ' + req.approver + (req.approverEmail ? ' (' + req.approverEmail + ')' : ''));
+        var digestOnly = weeklyOnly(req.approver, req.approverEmail);
+        if (Store.kind === 'sharepoint' && req.approverEmail && !digestOnly) {
+          try {
+            await Graph.sendMail(req.approverEmail, 'Please check: ' + name + ' — ' + clientDisplayLabel(),
+              '<p>Hi ' + esc(req.approver.split(' ')[0]) + ',</p><p>' + esc(req.requestedBy) + ' has asked you to check <b>' + esc(name) + '</b> in Checkpoint before it goes for approval.' + (req.note ? '</p><p>' + esc(req.note) : '') + '</p><p>Open <a href="' + esc(location.origin + location.pathname) + '">Checkpoint</a> and go to <b>My tasks</b>.</p>');
+          } catch (e) { warn(e); toast('Request saved, but the email could not be sent. It is waiting in their My tasks.'); }
+        }
+      } catch (e) { warn(e); busy(false); toastError('Could not save the request.'); return; }
+      busy(false);
+      toast('Review requested from <b>' + esc(req.approver) + '</b>');
+      renderDocuments(); renderNavCounts();
+    },
+    reviewRequested: async function (key) {
+      var req = reviewRequestFor(key);
+      window._reviewBy = Store.kind === 'demo' && req ? req.approver : '';
+      try { await App.recordDocReview(key); } finally { window._reviewBy = ''; }
+    },
+    /* The review itself, recorded as the signed-in person (in the demo,
+       the person asked). Someone who prepared the draft cannot review it. */
+    recordDocReview: async function (key) {
+      var name = key.split('|').slice(1).join('|');
+      var me = window._reviewBy || currentActor().name;
+      var preparer = (originatorOf('Document', name) || {}).name || '';
+      var conflict = window.CheckpointLib.reviewerConflictReason(me, preparer);
+      if (conflict) { await showModal({ title: 'Someone else must review this', message: conflict, confirmText: 'Close', cancelText: 'Cancel' }); return; }
+      var req = reviewRequestFor(key);
+      var v = await showModal({
+        title: 'Check “' + name + '”',
+        message: 'Open the document from the register and read it. Is it accurate and ready for approval?' + (req && req.note ? '\n\nNote from ' + req.requestedBy + ': ' + req.note : ''),
+        fields: [
+          { id: 'outcome', label: 'Your review', type: 'select', value: 'Reviewed', options: ['Reviewed', 'Changes requested'] },
+          { id: 'comment', label: 'Comments', type: 'textarea', placeholder: 'What should change, or anything the approver should know.' }
+        ],
+        confirmText: 'Record review',
+        validate: function (x) { return x.outcome === 'Changes requested' && !x.comment ? 'Say what should change.' : null; }
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        audit('Document reviewed', 'Document', name, req ? 'Requested ' + req.requested : '', window.CheckpointLib.docReviewAfter(v.outcome, me, v.comment));
+        await replaceDocRequest(key, 'review', null);
+      } catch (e) { warn(e); busy(false); toastError('Could not record the review.'); return; }
+      busy(false);
+      renderDocuments(); renderMyTasks(); renderNavCounts();
+      if (v.outcome === 'Reviewed') {
+        toast('Review recorded. <b>' + esc(name) + '</b> is ready for approval.');
+        if (!READONLY && !approvalRequestFor(key)) {
+          var next = await showModal({ title: 'Send it for approval?', message: 'The review is recorded. Ask the approver now? They must be someone other than you.', confirmText: 'Request approval', cancelText: 'Later' });
+          if (next) await App.requestApproval(key);
+        }
+      } else toast('Changes requested on <b>' + esc(name) + '</b>. ' + esc(req ? req.requestedBy : 'The preparer') + ' sees it on the register.');
+    },
+    setDocReviewLevel: async function (level) {
+      var prev = docReviewLevel();
+      var next = window.CheckpointLib.DOC_REVIEW_LEVELS.indexOf(level) > -1 ? level : '';
+      S.settings.docReviewLevel = next;
+      try { await Store.setSetting('docReviewLevel', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'docReviewLevel', prev || 'none', next || 'none');
+      toast(next ? 'Documents now need a second person’s review before approval.' : 'Documents no longer need a review before approval.');
+      renderFrameworksAdmin(); renderDocuments();
+    },
+    toggleRiskAcceptSecond: async function () {
+      var next = riskAcceptSecond() ? 'false' : 'true';
+      S.settings.riskAcceptSecond = next;
+      try { await Store.setSetting('riskAcceptSecond', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'riskAcceptSecond', next === 'true' ? 'false' : 'true', next);
+      toast(next === 'true' ? 'Risk acceptances are now sent to the person accepting them.' : 'Risk acceptances can be recorded directly again.');
+      renderFrameworksAdmin();
     },
     toggleNavMode: function () {
       try { localStorage.setItem(NAV_MODE_KEY, navMode() === 'simple' ? 'full' : 'simple'); } catch (e) { }
@@ -18790,22 +18993,29 @@ function showModal(opts) {
     acceptRisk: async function (id) {
       var r = risk(id);
       if (!r) return;
+      /* Approvals setting: the person accountable records it themselves. */
+      var areq = window._riskAcceptReq || null;
+      if (riskAcceptSecond() && !areq) {
+        var askedOfMe = myRiskAcceptRequests().some(function (x) { return x.risk === id; });
+        return askedOfMe ? App.acceptRequestedRisk(id) : App.requestRiskAcceptance(id);
+      }
       var q = residual(r);
       var sodFinding = segregationFinding('Risk', r.id);
       if (!(await segregationGate(sodFinding, 'this risk acceptance'))) return;
       var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var v = await showModal({
         title: 'Accept residual risk — ' + r.id,
-        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Recording formal acceptance of the residual risk by its owner.',
-        fields: [
-          { id: 'by', label: 'Accepted by (risk owner / authority)', value: r.acceptedBy || r.owner || who },
+        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Recording formal acceptance of the residual risk by its owner.' +
+          (areq ? '\n\nAsked for by ' + areq.requestedBy + (areq.note ? ': ' + areq.note : '') + '. It is recorded in your name, ' + areq.acceptAs + '.' : ''),
+        fields: (areq ? [] : [{ id: 'by', label: 'Accepted by (risk owner / authority)', value: r.acceptedBy || r.owner || who }]).concat([
           { id: 'date', label: 'Acceptance date', type: 'date', value: r.acceptedDate || new Date().toISOString().slice(0, 10) },
           { id: 'note', label: 'Basis for acceptance', type: 'textarea', value: r.acceptanceNote, placeholder: 'e.g. Residual risk within appetite; compensating controls in place; reviewed at MR-004.' }
-        ],
+        ]),
         confirmText: 'Record acceptance',
-        validate: function (v) { return v.by ? null : 'Enter who is accepting the risk.'; }
+        validate: function (v) { return areq || v.by ? null : 'Enter who is accepting the risk.'; }
       });
       if (!v) return;
+      if (areq) v.by = areq.acceptAs;
       busy(true);
       try {
         r.acceptedBy = v.by; r.acceptedDate = v.date || new Date().toISOString().slice(0, 10); r.acceptanceNote = v.note;
@@ -18819,12 +19029,67 @@ function showModal(opts) {
         r.acceptedScore = acceptedQ.L * acceptedQ.I;
         if (r.treat !== 'Tolerate') r.treat = 'Tolerate';
         await Store.updateRisk(r);
-        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate + segregationNote(sodFinding));
+        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate + (areq ? '; asked for by ' + areq.requestedBy + ', recorded by the person accepting' : '') + segregationNote(sodFinding));
+        if (areq) await saveRiskAcceptRequests(riskAcceptRequests().filter(function (x) { return x.risk !== r.id; }));
         toast('Residual risk acceptance recorded for <b>' + r.id + '</b>');
       } catch (e) { warn(e); }
       busy(false);
       closeDrawerUi();
       renderAll();
+    },
+
+    /* Approvals setting on: the acceptance goes to the person
+       accountable for the risk, through their My tasks (and email). */
+    requestRiskAcceptance: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var pending = riskAcceptRequestFor(id);
+      var users = await loadDirectory();
+      var q = residual(r);
+      var v = await showModal({
+        title: 'Ask for acceptance of ' + r.id,
+        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Your approval settings ask the person accountable for this risk to accept it themselves, signed in. It appears in their My tasks' + (Store.kind === 'sharepoint' ? ' and they are emailed a link' : '') + '.' +
+          (pending ? '\n\nAlready asked of ' + pending.acceptor + ' on ' + pending.requested + '. Sending again replaces that request.' : ''),
+        fields: [
+          { id: 'owner', label: 'Person accepting it', value: (pending && pending.acceptor) || r.owner || (S.settings && S.settings.topManagementApprover) || '', placeholder: 'e.g. the risk owner or the CEO' },
+          { id: 'note', label: 'Why it can be accepted (for them to check)', type: 'textarea', value: r.acceptanceNote || '', placeholder: 'e.g. Within appetite after MFA rollout; compensating controls in place.' }
+        ],
+        confirmText: 'Send request',
+        validate: function (x) {
+          if (!x.owner) return 'Choose who should accept it.';
+          var me = currentActor().name;
+          return window.CheckpointLib.samePersonName(x.owner, me) && Store.kind !== 'demo' ? 'You are asking yourself. Choose the person accountable for the risk, or turn this setting off in Settings → Approvals.' : null;
+        }
+      });
+      if (!v) return;
+      var u = users && users.length ? window.CheckpointLib.matchOwnerToUser(v.owner, users) : null;
+      var req = { risk: r.id, title: r.title || '', acceptor: u ? u.name : v.owner, acceptorEmail: u ? (u.mail || u.upn || '') : '', requestedBy: myDisplayName() || currentActor().name, requested: new Date().toISOString().slice(0, 10), note: v.note || '' };
+      busy(true);
+      try {
+        await saveRiskAcceptRequests(riskAcceptRequests().filter(function (x) { return x.risk !== r.id; }).concat([req]));
+        audit('Risk acceptance requested', 'Risk', r.id, '', 'From ' + req.acceptor + (req.acceptorEmail ? ' (' + req.acceptorEmail + ')' : ''));
+        if (Store.kind === 'sharepoint' && req.acceptorEmail && !weeklyOnly(req.acceptor, req.acceptorEmail)) {
+          try {
+            await Graph.sendMail(req.acceptorEmail, 'Please decide: accept risk ' + r.id + ' — ' + clientDisplayLabel(),
+              '<p>Hi ' + esc(req.acceptor.split(' ')[0]) + ',</p><p>' + esc(req.requestedBy) + ' has asked you to decide whether to accept risk <b>' + esc(r.id + ' ' + (r.title || '')) + '</b> in Checkpoint.' + (req.note ? '</p><p>' + esc(req.note) : '') + '</p><p>Open <a href="' + esc(location.origin + location.pathname) + '">Checkpoint</a> and go to <b>My tasks</b>.</p>');
+          } catch (e) { warn(e); toast('Request saved, but the email could not be sent. It is waiting in their My tasks.'); }
+        }
+      } catch (e) { warn(e); busy(false); toastError('Could not save the request.'); return; }
+      busy(false);
+      toast('Acceptance of <b>' + esc(r.id) + '</b> requested from <b>' + esc(req.acceptor) + '</b>');
+      renderAll();
+    },
+    acceptRequestedRisk: async function (id) {
+      var req = riskAcceptRequestFor(id);
+      if (!req) { toast('That request has already been dealt with.'); return; }
+      var me = Store.kind === 'demo' ? req.acceptor : currentActor().name;
+      if (window.CheckpointLib.samePersonName(me, req.requestedBy) && Store.kind !== 'demo') {
+        await showModal({ title: 'Someone else must accept this', message: 'You asked for this acceptance, so the person accountable for the risk records it.', confirmText: 'Close', cancelText: 'Cancel' });
+        return;
+      }
+      window._riskAcceptReq = Object.assign({}, req, { acceptAs: me });
+      try { await App.acceptRisk(id); } finally { window._riskAcceptReq = null; }
+      renderMyTasks(); renderNavCounts();
     },
 
     /* Add a treatment action straight onto an existing risk — the
@@ -21977,7 +22242,7 @@ function showModal(opts) {
         try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
         if (!params && d.tplId && !isOwnDoc(d)) params = { tplId: d.tplId, owner: d.owner || '', reviewDate: d.nextReview || '' };
         var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
-        return (d.status === 'Draft' && t) ? { doc: d, params: params, t: t, sod: segregationFinding('Document', d.name) } : null;
+        return (d.status === 'Draft' && t) ? { doc: d, params: params, t: t, sod: segregationFinding('Document', d.name), needsReview: docReviewNeeded(d.name, t), review: window.CheckpointLib.docSignoffReviewState(S.auditLog, d.name).current } : null;
       }).filter(Boolean);
       if (!drafts.length) { toast('No generated drafts are waiting for approval.'); return; }
       var selfRaised = drafts.filter(function (x) { return x.sod; });
@@ -22005,11 +22270,12 @@ function showModal(opts) {
         }
       });
       if (!vals) return;
-      var approved = [], skipped = [], failed = [], incomplete = [], clauseNotes = [];
+      var approved = [], skipped = [], failed = [], incomplete = [], clauseNotes = [], unreviewed = [];
       busy(true);
       for (var i = 0; i < drafts.length; i++) {
         var x = drafts[i];
         if (x.sod && sodEnforced()) { skipped.push(x.t.title); continue; }
+        if (window.CheckpointLib.reviewGateReason({ needed: x.needsReview, review: x.review, approver: vals.approvedBy })) { unreviewed.push(x.t.title); continue; }
         try {
           var res = await saveApprovedTemplate(x.doc.name, x.doc.category || 'Policies & Procedures', x.t, x.params, x.doc, vals, x.sod, true);
           approved.push(x.t.title);
@@ -22023,12 +22289,14 @@ function showModal(opts) {
       renderDocuments(); renderClauses(); renderDash(); renderNavCounts();
       log('Draft set approved by <b>' + esc(vals.approvedBy) + '</b> as v' + esc(vals.version) + ' — ' + approved.length + ' approved' +
         (skipped.length ? ', ' + skipped.length + ' skipped for segregation of duties (' + esc(skipped.join(', ')) + ')' : '') +
+        (unreviewed.length ? ', ' + unreviewed.length + ' waiting for review (' + esc(unreviewed.join(', ')) + ')' : '') +
         (failed.length ? ', ' + failed.length + ' failed (' + esc(failed.join(', ')) + ')' : '') + '.');
       var msg = approved.length + ' document' + (approved.length === 1 ? '' : 's') + ' approved' +
         (skipped.length ? '; ' + skipped.length + ' need another approver' : '') +
+        (unreviewed.length ? '; ' + unreviewed.length + ' need a second person\u2019s review first, by someone other than the approver (' + esc(unreviewed.join(', ')) + ')' : '') +
         (incomplete.length ? '; ' + incomplete.length + ' still have items to be completed (' + esc(incomplete.join(', ')) + ') — answer them in Settings → Scope & context' : '') +
         (failed.length ? '; ' + failed.length + ' could not be saved — approve those individually' : '') + '.';
-      (failed.length || incomplete.length ? toastError : toast)(msg);
+      (failed.length || incomplete.length || unreviewed.length ? toastError : toast)(msg);
     },
 
     generateTemplate: async function () {
@@ -22160,6 +22428,16 @@ function showModal(opts) {
       var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
       /* A.5.3 — checked before the approval dialog opens, so a refused
          approval doesn't waste the practitioner's time filling one in. */
+      /* The approval matrix: a second person's review first, and the
+         reviewer cannot also be the approver. */
+      var needsReview = docReviewNeeded(name, t);
+      var standingReview = needsReview ? window.CheckpointLib.docSignoffReviewState(S.auditLog, name).current : null;
+      var reviewWhy = window.CheckpointLib.reviewGateReason({ needed: needsReview, review: standingReview });
+      if (reviewWhy) {
+        var askReview = await showModal({ title: 'Review needed first', message: reviewWhy + '\n\nYour approval settings (Settings \u2192 Approvals) ask for a second person to check this document before it is approved.', confirmText: READONLY ? 'Close' : 'Ask for a review', cancelText: 'Cancel' });
+        if (askReview && !READONLY) await App.requestReview(key);
+        return;
+      }
       var sodFinding = segregationFinding('Document', name);
       if (!(await segregationGate(sodFinding, 'this document'))) return;
       if (!params.aiAssisted && !(await confirmPractices(t, name))) return;
@@ -22180,6 +22458,8 @@ function showModal(opts) {
         cancelText: 'Cancel',
         validate: function (v) {
           if (!v.approvedBy) return 'Record who approved this document.';
+          var sameAsReviewer = window.CheckpointLib.reviewGateReason({ needed: needsReview, review: standingReview, approver: v.approvedBy });
+          if (sameAsReviewer) return sameAsReviewer;
           if (!v.version) return 'Record the version being approved.';
           if (!v.nextReview) return 'Set the next review date — an approved policy with no review cadence fails Clause 7.5.2 c).';
           return null;

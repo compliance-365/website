@@ -873,6 +873,14 @@ window.DEFAULT_SETTINGS = {
      RECORDED either way (see segregationNote() in app.js) — the
      setting only decides whether it is also refused. */
   sodEnforced: 'false',
+  /* The approval matrix (Settings → Approvals). docReviewLevel: which
+     generated documents need a second person's review before approval:
+     '' none, 'isp' the information security policy, 'policies', 'all'.
+     riskAcceptSecond: a residual-risk acceptance is sent to the person
+     accepting it, who records it signed in as themselves. Off by
+     default: a small client with one practitioner would be stuck. */
+  docReviewLevel: '',
+  riskAcceptSecond: 'false',
   scanCadenceDays: '30',
   /* Light "paper" theme — 'true'|'false'. Read once at boot (bootUi()
      in app.js, before the first render) to set the data-theme

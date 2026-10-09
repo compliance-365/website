@@ -4453,6 +4453,11 @@
           edit = { n: 1, by: e.actor ? [e.actor] : [], row: { version: 'Draft', date: date, description: 'Content revised', by: e.actor || '' } };
           rows.push(edit.row);
         }
+      } else if (e.action === 'Document reviewed') {
+        var rv = parseDocReview(e);
+        if (!rv) return;
+        edit = null;
+        rows.push({ version: 'Draft', date: date, description: rv.outcome === 'Reviewed' ? 'Reviewed' : 'Changes requested', by: rv.reviewer });
       } else if (e.action === 'Policy document approved') {
         var a = parseDocApproval(e);
         if (!a) return;
@@ -4499,6 +4504,66 @@
     if (rec.recordedBy) return 'Approval recorded in Checkpoint by ' + rec.recordedBy + on;
     return 'Approval recorded in Checkpoint' + on;
   }
+  /* ===== Review before approval (the approval matrix) =====
+     A review is a named, dated check by a second person between the
+     draft and its approval. It is recorded on the audit log as
+     'Document reviewed' with after = '<outcome> by <reviewer>[ · <comment>]'.
+     A later edit, regeneration or approval ends it: what was reviewed
+     is no longer what is on the page. */
+  var DOC_REVIEW_LEVELS = ['', 'isp', 'policies', 'all'];
+  function parseDocReview(e) {
+    var m = /^(Reviewed|Changes requested) by (.+?)(?: \u00b7 ([\s\S]*))?$/.exec(String(e.after || ''));
+    return m ? { outcome: m[1], reviewer: m[2].trim(), comment: (m[3] || '').trim() } : null;
+  }
+  function docReviewAfter(outcome, reviewer, comment) {
+    return outcome + ' by ' + String(reviewer || '').replace(/ \u00b7 /g, ' - ') + (comment ? ' \u00b7 ' + String(comment).replace(/\s+/g, ' ').trim() : '');
+  }
+  /* { current, atApproval }: the review that stands now (null after an
+     edit, regeneration or approval), and the review the latest
+     approval was given on (null when it was approved without one).
+     Each is { outcome, reviewer, comment, recordedBy, date }. */
+  function docSignoffReviewState(auditLog, docName) {
+    var entries = (auditLog || []).filter(function (e) { return e && e.targetType === 'Document' && e.targetId === docName; })
+      .slice().sort(function (a, b) { return String(a.entryDateTime || '').localeCompare(String(b.entryDateTime || '')); });
+    var current = null, atApproval = null;
+    entries.forEach(function (e) {
+      if (e.action === 'Document reviewed') {
+        var r = parseDocReview(e);
+        if (r) current = Object.assign(r, { recordedBy: e.actor || '', date: docLocalDate(e.entryDateTime) });
+      } else if (e.action === 'Policy template generated' || DOC_EDIT_ACTIONS[e.action]) {
+        current = null;
+      } else if (e.action === 'Policy document approved') {
+        atApproval = current && current.outcome === 'Reviewed' ? current : null;
+        current = null;
+      }
+    });
+    return { current: current, atApproval: atApproval };
+  }
+  /* Whether the approval matrix asks for a review of this document.
+     level: '' (none), 'isp' (the information security policy),
+     'policies' (every policy), 'all' (every generated document). */
+  function docNeedsReview(level, doc) {
+    var name = String((doc && (doc.title || doc.name)) || '');
+    var kind = String((doc && doc.docKind) || 'Policy');
+    if (level === 'all') return true;
+    if (level === 'policies') return /policy/i.test(kind) || /policy/i.test(name);
+    if (level === 'isp') return /information security policy/i.test(name);
+    return false;
+  }
+  /* Why approval cannot go ahead yet, or '' when it can. */
+  function reviewGateReason(opts) {
+    if (!opts || !opts.needed) return '';
+    var r = opts.review;
+    if (!r) return 'This document needs a review by a second person before it is approved.';
+    if (r.outcome !== 'Reviewed') return r.reviewer + ' asked for changes' + (r.comment ? ': ' + r.comment : '') + '. Make them, then ask for the review again.';
+    if (opts.approver && samePersonName(r.reviewer, opts.approver)) return r.reviewer + ' reviewed this document, so someone else must approve it.';
+    return '';
+  }
+  /* Why this person cannot review the document, or ''. */
+  function reviewerConflictReason(reviewer, preparer) {
+    if (reviewer && preparer && samePersonName(reviewer, preparer)) return reviewer + ' prepared this document, so someone else must review it.';
+    return '';
+  }
   function buildEnterpriseDocxFront(t, opts, accent, tableBorder) {
     var ver = opts.version || (opts.approved ? '1.0' : '0.1');
     /* The date approval was given, not the export date. */
@@ -4534,7 +4599,7 @@
     out.push(docxTable([['Version', 'Date', 'Description', 'By']].concat(hist),
       [1500, 2300, 3600, 2000], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
     out.push(label('Approval'));
-    out.push(docxTable([['Role', 'Name', 'Date', 'Signature'], ['Document owner', opts.owner || '—', '', ''], ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending', opts.approved ? approvedOn : '', opts.approved ? (opts.approvalSignature || '') : '']],
+    out.push(docxTable([['Role', 'Name', 'Date', 'Signature'], ['Document owner', opts.owner || '—', '', '']].concat(opts.reviewedBy ? [['Reviewed by', opts.reviewedBy, opts.reviewDateText || '', opts.reviewSignature || '']] : []).concat([['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending', opts.approved ? approvedOn : '', opts.approved ? (opts.approvalSignature || '') : '']]),
       [2200, 2600, 2000, 2600], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
     return out.join('');
   }
@@ -7789,6 +7854,8 @@
   var NEXT_KIND_GUIDE = {
     'Sign off minutes': { why: 'You chaired the management review. Read the minutes and approve them: the certification auditor checks that top management signed them off.', mins: 10 },
     'Approve document': { why: 'Top management approves each policy so it carries the organisation’s authority. Read it, and approve it if it says what you want.', mins: 10 },
+    'Check document': { why: 'A second person checks each draft before it goes for approval, so no one approves work nobody else has read. Read it and say whether it is ready or what should change.', mins: 15 },
+    'Accept risk': { why: 'You are asked to accept a risk that stays after treatment. Accepting it is your decision as the person accountable for it; Checkpoint records your name and the date.', mins: 10 },
     'Acknowledge policy': { why: 'Everyone confirms they have read the policies that apply to them. An auditor checks a sample of people.', mins: 5 },
     'Training': { why: 'Short security awareness training everyone completes once a year, ending in a few questions.', mins: 20 },
     'Security review': { why: 'The monthly meeting where leadership looks at how security is going and makes the decisions only it can make.', mins: 30 },
@@ -7807,7 +7874,7 @@
       var key = Object.keys(NEXT_KIND_GUIDE).find(function (k) { return k === i.kind || (k === 'Objective' && /^Objective/.test(i.kind || '')); });
       var g = NEXT_KIND_GUIDE[key] || { why: '', mins: 10 };
       var recordMinutes = i.kind === 'Security review' && /^Record/.test(i.title || '');
-      return { kind: i.kind, item: i, title: (i.kind === 'Approve document' ? 'Approve ' : i.kind === 'Acknowledge policy' ? 'Read and acknowledge ' : i.kind === 'Evidence requested' ? 'Upload evidence for ' : '') + String(i.title || '').replace(/\.html$/i, ''),
+      return { kind: i.kind, item: i, title: (i.kind === 'Approve document' ? 'Approve ' : i.kind === 'Check document' ? 'Check ' : i.kind === 'Accept risk' ? 'Decide on ' : i.kind === 'Acknowledge policy' ? 'Read and acknowledge ' : i.kind === 'Evidence requested' ? 'Upload evidence for ' : '') + String(i.title || '').replace(/\.html$/i, ''),
         why: recordMinutes ? 'Record what the meeting decided, so the decisions become actions with owners and dates.' : g.why, minutes: recordMinutes ? 15 : g.mins, overdue: !!i.overdue, due: i.due || '', more: list.length - 1 };
     }
     if (opts.fallback) return Object.assign({ kind: 'Do next', minutes: null, more: 0 }, opts.fallback);
@@ -12417,6 +12484,7 @@
     buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,
     documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
+    DOC_REVIEW_LEVELS: DOC_REVIEW_LEVELS, parseDocReview: parseDocReview, docReviewAfter: docReviewAfter, docSignoffReviewState: docSignoffReviewState, docNeedsReview: docNeedsReview, reviewGateReason: reviewGateReason, reviewerConflictReason: reviewerConflictReason,
     incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
     SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
