@@ -2,6 +2,7 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { getPosts, formatPostDate } from '../lib/blog';
 
 const base = import.meta.env.BASE_URL || '/';
 
@@ -31,9 +32,7 @@ const REDIRECTS: [string, string][] = [
 const STRIP_TRAILING = ['.html', '.htm', '/index.html'];
 
 // Load a few recent posts (fallback suggestions)
-const posts = (Object.values(import.meta.glob('../content/blog/*.md', { eager: true })))
-  .sort((a,b) => new Date(b.frontmatter.date || 0).getTime() - new Date(a.frontmatter.date || 0).getTime())
-  .slice(0, 4);
+const posts = (await getPosts()).slice(0, 4);
 
 const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
 ---
@@ -139,16 +138,12 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
           <div style="margin-top:18px">
             <h3 style="margin:14px 0 8px;font-size:1.1rem">Latest insights</h3>
             <ul style="padding-left:18px;margin:0">
-              {posts.map(p => {
-                const filename = p.file.split('/').pop() || '';
-                const slug = filename.replace(/\.md$/i, '');
-                return (
-                  <li style="margin:6px 0">
-                    <a href={base + 'blog/' + slug}>{p.frontmatter.title}</a>
-                    <span class="small muted"> — {p.frontmatter.date ? new Date(p.frontmatter.date).toLocaleDateString() : ''}</span>
-                  </li>
-                );
-              })}
+              {posts.map(p => (
+                <li style="margin:6px 0">
+                  <a href={base + 'blog/' + p.id + '/'}>{p.data.title}</a>
+                  <span class="small muted"> — {formatPostDate(p.data.date)}</span>
+                </li>
+              ))}
             </ul>
           </div>
         )}

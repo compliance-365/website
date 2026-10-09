@@ -3,23 +3,14 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
+import { getPosts, formatPostDate, coverUrl } from '../../lib/blog';
 
 const base = import.meta.env.BASE_URL || '/';
 
 // Load all posts newest first
-const posts = (Object.values(import.meta.glob('../../content/blog/*.md', { eager: true })))
-  .sort((a, b) =>
-    new Date(b.frontmatter.date || 0).getTime() -
-    new Date(a.frontmatter.date || 0).getTime()
-  );
+const posts = await getPosts();
 
 // Helpers
-function coverUrl(img?: string) {
-  if (!img) return null;
-  if (/^https?:\/\//i.test(img)) return img;
-  return `${base}${String(img).replace(/^\//, '')}`;
-}
-
 const slugify = (s: string) =>
   s.toLowerCase().trim()
     .replace(/&/g, 'and')
@@ -74,29 +65,24 @@ function toCuratedSlug(raw: string): string {
 
 // Build post data with curated tag slugs
 const postsWithMeta = posts.map(post => {
-  const filename = post.file.split('/').pop() || '';
-  const postSlug = filename.replace(/\.md$/i, '');
+  const postSlug = post.id;
   /* astro.config sets trailingSlash: 'always', so the slash is not optional —
      without it every card here points at a URL the site does not serve. */
   const href = `${base}blog/${postSlug}/`;
-  const img = coverUrl(post.frontmatter.image);
-  const rawTags: string[] = post.frontmatter.tags || [];
+  const img = coverUrl(post.data.image);
+  const rawTags: string[] = post.data.tags;
   const curatedSlugs = [...new Set(rawTags.map(toCuratedSlug).filter(Boolean))];
   const displayTags = rawTags.slice(0, 3); // show up to 3 raw tags on card
-  const date = post.frontmatter.date
-    ? new Date(post.frontmatter.date).toLocaleDateString('en-AU', {
-        day: '2-digit', month: 'long', year: 'numeric'
-      })
-    : '';
+  const date = formatPostDate(post.data.date);
   return {
     href, img, postSlug, date,
-    title: post.frontmatter.title || '',
-    description: post.frontmatter.description || '',
+    title: post.data.title,
+    description: post.data.description,
     displayTags,
     curatedSlugs,
     dataTags: curatedSlugs.join(' '),
-    dataTitle: (post.frontmatter.title || '').toLowerCase(),
-    dataDesc: (post.frontmatter.description || '').toLowerCase(),
+    dataTitle: post.data.title.toLowerCase(),
+    dataDesc: post.data.description.toLowerCase(),
     dataRawTags: rawTags.join(' ').toLowerCase(),
   };
 });

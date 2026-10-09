@@ -34,3 +34,18 @@ test('titles and subtitles passed as props use a plain &', () => {
 test('Astro.glob is gone (removed in Astro 6)', () => {
   for (const f of files) assert.ok(!/Astro\.glob\(/.test(readFileSync(f, 'utf8')), f);
 });
+
+const srcFiles = [];
+(function walk(d) { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else if (/\.(astro|ts)$/.test(p)) srcFiles.push(p); } })(root);
+
+test('blog posts are read through the typed collection, not raw globs', () => {
+  for (const f of srcFiles) {
+    assert.ok(!/import\.meta\.glob\([^)]*content\/blog/.test(readFileSync(f, 'utf8')), f.replace(root, 'src/') + ' should use getPosts() from src/lib/blog.ts');
+  }
+});
+
+test('dates shown to readers name a locale (an Australian site must not show 10/9/2025 for 9 October)', () => {
+  for (const f of srcFiles) {
+    assert.ok(!/toLocaleDateString\(\s*\)/.test(readFileSync(f, 'utf8')), f.replace(root, 'src/') + ' formats a date in the build machine’s locale');
+  }
+});
