@@ -865,7 +865,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -6083,11 +6083,15 @@ function showModal(opts) {
       }).join('') + '</details>';
     /* One line: progress, where the plan stands and the next step. The
        stepper, the dated plan and every step open on demand. */
-    var pct = Math.round(doneCount / steps.length * 100);
+    var gb = buildState(steps), gst = gb.stages[gb.current];
+    var gNext = gst && gst.items.find(function (i) { return !i.done; });
+    var pct = gb.pct;
     el.innerHTML = '<div class="gs-compact"><div class="gs-compact-main"><h3>Your path to certification</h3>' +
+      '<div class="gs-stage"><b>Stage ' + gst.n + ' of ' + gb.stages.length + ': ' + esc(gst.title) + '</b></div>' +
       '<div class="gs-bar"><i style="width:' + pct + '%"></i></div>' +
-      '<span class="src">Week ' + plan.week + ' of your plan · ' + doneCount + ' of ' + steps.length + ' steps done · ' + esc(next.phase) + (lateMs.length ? ' · <span style="color:var(--fail)">' + lateMs.length + ' milestone' + (lateMs.length === 1 ? '' : 's') + ' late</span>' : plan.behind.length ? ' · <span style="color:var(--fail)">' + plan.behind.length + ' behind plan</span>' : ' · on plan') + (plan.target ? ' · Stage 1 target ' + fmtDate(plan.target) : ' · Stage 1 ready by ' + fmtDate(readyBy)) + '</span>' +
-      '<div class="gs-next"><b>Next:</b> ' + esc(next.label) + '</div></div>' + pathStepButton(next, true) + '</div>' +
+      '<span class="src">Week ' + plan.week + ' of your plan · ' + gb.pct + '% built · ' + gb.stages.filter(function (x) { return x.done; }).length + ' of ' + gb.stages.length + ' stages done' + (lateMs.length ? ' · <span style="color:var(--fail)">' + lateMs.length + ' milestone' + (lateMs.length === 1 ? '' : 's') + ' late</span>' : plan.behind.length ? ' · <span style="color:var(--fail)">' + plan.behind.length + ' behind plan</span>' : ' · on plan') + (plan.target ? ' · Stage 1 target ' + fmtDate(plan.target) : ' · Stage 1 ready by ' + fmtDate(readyBy)) + '</span>' +
+      '<div class="gs-next"><b>Next:</b> ' + esc(gNext ? gNext.label : next.label) + '</div></div>' +
+      '<div class="gs-actions"><button class="btn sm" data-action="App.openBuild">Continue</button>' + (gNext ? buildItemButton(gNext, false) : pathStepButton(next, false)) + '</div></div>' +
       '<details class="gs-detail"' + (window._gsOpen ? ' open' : '') + ' data-toggle-key="_gsOpen"><summary class="src">The plan and all ' + steps.length + ' steps</summary>' + stepperHtml + nextHtml + listHtml + '</details>';
   }
 
@@ -6430,7 +6434,19 @@ function showModal(opts) {
     (S.calendar || []).forEach(function (c) {
       if (c.nextDue && c.nextDue >= today && c.owner && me.indexOf(String(c.owner).toLowerCase()) !== -1 && window.CheckpointLib.calendarItemLive(c)) up.push({ label: c.title, date: String(c.nextDue).slice(0, 10) });
     });
-    return window.CheckpointLib.nextForYou(t.items, { upcoming: up });
+    var items = t.items.slice();
+    /* Top management's own decisions in the current stage of the build
+       (agree the risk appetite, accept risks above it, name the roles),
+       after anything already assigned to them. */
+    if (isTopManagement()) {
+      try {
+        var b = buildState(), st = b.stages[b.current];
+        if (st && !b.complete) st.items.forEach(function (it) {
+          if (!it.done && it.top && BUILD_ITEM_ACTIONS[it.id]) items.push({ kind: 'Decision', ref: it.id, title: it.label, due: '', overdue: false });
+        });
+      } catch (e) { /* the build needs registers loaded; skip until they are */ }
+    }
+    return window.CheckpointLib.nextForYou(items, { upcoming: up });
   }
   function nextForYouHtml(n, where) {
     if (n.none) {
@@ -6454,6 +6470,82 @@ function showModal(opts) {
     var mt = document.getElementById('myNextForYou');
     if (mt) mt.innerHTML = nextForYouHtml(n, 'mytasks');
   }
+  /* ===== Guided build =====
+     The path in the order the ISMS is built (CheckpointLib.guidedBuild).
+     The checks the path steps did not cover are worked out here. */
+  var BUILD_ITEM_ACTIONS = {
+    roles: { action: 'App.securityReviewWalkthrough', cta: 'Name them' },
+    appetite: { action: 'App.agreeRiskAppetite', cta: 'Agree it' },
+    riskmethod: { action: 'App.fixGenerateDocument', id: 'risk-management-framework', cta: 'Generate and approve it' },
+    treated: { view: 'risks', cta: 'Open the risk register' },
+    accepted: { view: 'risks', cta: 'Review the risks' },
+    ack: { view: 'attestations', cta: 'Send the policies' }
+  };
+  function buildExtras() {
+    var s = secReviewSetup() || {}, st = S.settings || {};
+    var open = (S.risks || []).filter(function (r) { return r.status !== 'Closed'; });
+    var untreated = open.filter(function (r) { return !(r.treat && r.owner && r.owner !== 'Unassigned'); }).length;
+    var above = risksAboveAppetite().filter(function (r) { return !r.acceptedBy; }).length;
+    var docs = window._docs || S.documents || [];
+    var method = docs.find(function (d) { return d.tplId === 'risk-management-framework'; });
+    var agreed = null;
+    try { agreed = JSON.parse(st.riskAppetiteAgreed || 'null'); } catch (e) { agreed = null; }
+    var waiting = policiesAwaitingAcknowledgement();
+    return {
+      roles: { label: 'Name the ISMS owner and the top management sponsor', why: 'Who runs the system day to day, and who in top management chairs its monthly review (Clause 5.3).', done: !!(s.owner && s.chair), detail: !s.owner && !s.chair ? 'Neither named yet' : !s.chair ? 'No top management sponsor named' : !s.owner ? 'No ISMS owner named' : '' },
+      appetite: { label: 'Agree how much risk the business will accept', why: 'Risks above this level must be reduced or accepted in writing by top management.', done: !!(agreed && agreed.date), detail: agreed && agreed.date ? '' : 'Currently ' + (st.riskAppetite || 'Medium') + ' by default, not yet agreed' },
+      riskmethod: { label: 'Approve the risk management framework', why: 'The written method: how risks are scored (likelihood times impact), how often they are reviewed and who can accept them.', done: !!(method && docStatusOf(method) === 'Approved'), detail: method ? 'In ' + docStatusOf(method) : 'Not generated yet' },
+      treated: { label: 'Give every risk a treatment and an owner', why: 'Reduce, avoid, share or accept, and the person responsible for it.', done: open.length > 0 && !untreated, detail: !open.length ? 'No risks yet: do the risk assessment first' : untreated ? untreated + ' without a treatment or owner' : '' },
+      accepted: { label: 'Top management accepts, or has reduced, the risks above appetite', why: 'A risk above the agreed level stays only if top management accepts it in writing.', done: open.length > 0 && !above, detail: above ? above + ' above appetite without acceptance' : '' },
+      ack: { label: 'Send the approved policies to staff to acknowledge', why: 'Everyone confirms they have read the policies that apply to them (Clause 7.3).', done: !!((S.attestations || []).length && !waiting.length), detail: waiting.length ? waiting.length + ' approved polic' + (waiting.length === 1 ? 'y' : 'ies') + ' not sent yet' : !(S.attestations || []).length ? 'Nothing sent yet' : '' }
+    };
+  }
+  function buildState(steps) {
+    return window.CheckpointLib.guidedBuild(steps || gettingStartedSteps(), buildExtras());
+  }
+  function buildItemButton(it, primary) {
+    var a = BUILD_ITEM_ACTIONS[it.id] || PATH_STEP_ACTIONS[it.id] || {};
+    var cls = 'btn ' + (primary ? '' : 'ghost ') + 'sm';
+    if (!a.cta) return '';
+    return a.action
+      ? '<button class="' + cls + '" data-action="' + a.action + '"' + (a.id ? ' data-id="' + esc(a.id) + '"' : '') + '>' + esc(a.cta) + '</button>'
+      : '<button class="' + cls + '" data-action="App.go" data-id="' + a.view + '">' + esc(a.cta) + '</button>';
+  }
+  function renderBuild() {
+    var el = document.getElementById('buildBody');
+    if (!el) return;
+    var b = buildState();
+    var idx = window._buildStage != null ? Math.min(window._buildStage, b.stages.length - 1) : b.current;
+    var st = b.stages[idx];
+    var clauses = visibleClauses().filter(function (c) { return (c.fw || 'iso27001') === 'iso27001'; });
+    var nextItem = st.items.find(function (i) { return !i.done; });
+    var ro = !!READONLY;
+    el.innerHTML = '<div class="gb">' +
+      '<ol class="gb-stages">' + b.stages.map(function (x, i) {
+        return '<li><button class="gb-stage' + (i === idx ? ' on' : '') + (x.done ? ' done' : '') + (i === b.current && !b.complete ? ' cur' : '') + '" data-action="App.openBuild" data-id="' + i + '"' + (i === idx ? ' aria-current="step"' : '') + '>' +
+          '<span class="gb-n" aria-hidden="true">' + (x.done ? icon('check') : x.n) + '</span><span>' + esc(x.title) + '<span class="sr-only">' + (x.done ? ', done' : i === b.current ? ', current stage' : '') + '</span></span></button></li>';
+      }).join('') + '</ol>' +
+      '<div class="gb-panel card">' +
+        '<p class="gb-kicker">Stage ' + st.n + ' of ' + b.stages.length + (st.done ? ' · done' : '') + ' · ' + b.pct + '% of the build complete</p>' +
+        '<h2>' + esc(st.title) + '</h2><p class="gb-plain">' + esc(st.plain) + '</p>' +
+        '<ul class="gb-items">' + st.items.map(function (it) {
+          return '<li class="' + (it.done ? 'done' : it === nextItem ? 'now' : '') + '"><span class="gb-tick" aria-hidden="true">' + (it.done ? icon('check') : '') + '</span>' +
+            '<div class="gb-t"><b>' + esc(it.label) + '</b>' + (it.top ? ' <span class="gb-top">Top management decides</span>' : '') +
+            '<span class="src">' + esc(it.why) + (it.detail ? ' ' + esc(it.detail) + '.' : '') + '</span></div>' +
+            (it.done || ro ? '' : buildItemButton(it, it === nextItem)) + '</li>';
+        }).join('') + '</ul>' +
+        '<div class="gb-clauses"><span class="src">This stage completes ISO 27001 clause' + (st.clauses.length === 1 ? '' : 's') + ':</span> ' +
+          st.clauses.map(function (code) {
+            var c = clauses.find(function (x) { return x.id === code; });
+            if (!c) return '<span class="chip">' + esc(code) + '</span>';
+            var key = (c.fw || 'iso27001') + '|' + c.id;
+            return '<button class="gb-clause' + (c.st === 'Implemented' ? ' ok' : '') + '" data-action="App.finishClause" data-id="' + esc(key) + '" title="' + esc(c.t || '') + '">' + (c.st === 'Implemented' ? icon('check') + ' ' : '') + esc(code) + '<span class="sr-only"> ' + esc(c.st || '') + '</span></button>';
+          }).join('') + '</div>' +
+        '<div class="gb-nav">' + (idx > 0 ? '<button class="btn ghost sm" data-action="App.openBuild" data-id="' + (idx - 1) + '">Back: ' + esc(b.stages[idx - 1].title) + '</button>' : '<span></span>') +
+          (idx < b.stages.length - 1 ? '<button class="btn ' + (st.done ? '' : 'ghost ') + 'sm" data-action="App.openBuild" data-id="' + (idx + 1) + '">Next: ' + esc(b.stages[idx + 1].title) + '</button>' : '') + '</div>' +
+      '</div></div>';
+  }
+
   /* ===== Who does what (Clause 5.3) ===== */
   function whoDoesData() {
     var today = new Date().toISOString().slice(0, 10);
@@ -11079,6 +11171,7 @@ function showModal(opts) {
     if (i.kind === 'Acknowledge policy') return b('App.acknowledgeAttestation', i.ref, 'Read and acknowledge');
     if (i.kind === 'Training') return b('App.go', 'training', 'Start');
     if (i.kind === 'Approve document') return b('App.approveRequested', i.ref, 'Review and approve');
+    if (i.kind === 'Decision') return buildItemButton({ id: i.ref }, true);
     if (i.kind === 'Security review') return b(/^Record/.test(i.title) ? 'App.recordSecurityReview' : 'App.openSecurityReview', i.ref, /^Record/.test(i.title) ? 'Record minutes' : 'Open agenda');
     return '';
   }
@@ -15585,6 +15678,7 @@ function showModal(opts) {
     settings: renderFrameworksAdmin,
     integrations: renderIntegrations,
     whodoes: renderWhoDoes,
+    build: renderBuild,
     selftest: renderSelfTest,
     aitools: renderAiTools,
   };
@@ -20344,6 +20438,37 @@ function showModal(opts) {
         try { ok = c ? await fileReportAsEvidence('tminterview', c) : false; } catch (e) { warn(e); }
         toast(ok ? 'Filed as Clause 5.1 evidence' : 'Saved. Open it from Reports to file it by hand.');
       } else toast('Interview saved');
+    },
+    /* Opens the guided build at a stage (index), or at the current one. */
+    openBuild: function (i) {
+      window._buildStage = i === undefined || i === null || i === '' ? null : parseInt(i, 10);
+      App.go('build');
+      var p = document.querySelector('.gb-panel h2');
+      if (p) { p.setAttribute('tabindex', '-1'); p.focus(); }
+    },
+    /* Stage 3: top management agrees the risk appetite, in plain words,
+       and the decision is recorded with who agreed it and when. */
+    agreeRiskAppetite: async function () {
+      var s = secReviewSetup() || {};
+      var cur = (S.settings && S.settings.riskAppetite) || 'Medium';
+      var v = await showModal({
+        title: 'How much risk will the business accept?',
+        message: 'Every risk is scored for how likely it is and how bad it would be. Anything above the level you choose must be reduced, or accepted in writing by top management.\n\nLow: only minor risks are tolerated. Suits organisations holding sensitive or regulated data.\nMedium: moderate risks are tolerated where reducing them would cost more than the harm. Suits most organisations.\nHigh: significant risks are tolerated to move fast. Rarely the right choice when seeking certification.',
+        fields: [
+          { id: 'level', label: 'Risk appetite', type: 'select', value: cur, options: [{ value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' }] },
+          { id: 'by', label: 'Agreed by (top management)', value: s.chair || (S.settings && S.settings.topManagementApprover) || '', list: 'peopleList' }
+        ],
+        confirmText: 'Record the decision',
+        validate: function (x) { return !x.by ? 'Record who in top management agreed it.' : null; }
+      });
+      if (!v) return;
+      var prev = (S.settings && S.settings.riskAppetite) || '';
+      S.settings.riskAppetite = v.level;
+      S.settings.riskAppetiteAgreed = JSON.stringify({ level: v.level, by: v.by, date: new Date().toISOString().slice(0, 10) });
+      try { await Store.setSetting('riskAppetite', v.level); await Store.setSetting('riskAppetiteAgreed', S.settings.riskAppetiteAgreed); } catch (e) { warn(e); }
+      audit('Risk appetite agreed', 'Setting', 'riskAppetite', prev || '(default)', v.level + ', agreed by ' + v.by);
+      toast('Risk appetite agreed: <b>' + esc(v.level) + '</b>');
+      renderDash(); renderFrameworksAdmin(); if (document.getElementById('v-build') && document.getElementById('v-build').classList.contains('on')) renderBuild();
     },
     fileWhoDoes: async function () {
       var c = (S.clauses || []).find(function (x) { return (x.fw || 'iso27001') === 'iso27001' && x.id === '5.3'; });

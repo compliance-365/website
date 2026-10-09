@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.139.0',
+    date: '2026-10-09',
+    entries: [
+      'Guided build: the path to certification as ten stages in the order an ISMS is actually built. Scope and context, leadership, the risk framework, risk assessment, then risk treatment and Annex A together (the Statement of Applicability comes from the risk treatment, not after it), objectives, people and documents, running it, checking it, and improving and certifying.',
+      'Each stage says in plain words what it is for and lists what is left, each item with the button that does it. Top management\u2019s decisions are marked, and the stage shows which ISO 27001 clauses it completes. Each clause opens Finish this clause.',
+      'The dashboard path card now reads "Stage 4 of 10: Risk assessment", with Continue. Top management sees their decisions for the current stage in Next for you.',
+      'New steps the old path did not have: name the ISMS owner and the top management sponsor; agree the risk appetite as a recorded top management decision, with who agreed it and when; approve the risk management framework; give every risk a treatment and an owner; have top management accept or reduce the risks above appetite; and send the approved policies to staff.'
+    ]
+  },
+  {
     version: '1.138.0',
     date: '2026-10-09',
     entries: [

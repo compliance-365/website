@@ -6789,6 +6789,73 @@
     return (Date.parse(String(today).slice(0, 10)) - Date.parse(last)) / 86400000 >= 7;
   }
 
+  /* ---- Guided build ----
+     The certification path in the order an ISMS is actually built: the
+     clauses in sequence, but with Annex A chosen during risk treatment
+     (Clause 6.1.3), where the Statement of Applicability comes from,
+     and the checking clauses (9, 10) last, once there is something to
+     check. Each stage names the clauses it completes, says in plain
+     words what it is for, and marks the decisions that belong to top
+     management. Items are the existing path steps plus a few checks
+     the path did not have (`extra`). */
+  var BUILD_STAGES = [
+    { key: 'context', title: 'Scope and context', clauses: ['4.1', '4.2', '4.3', '4.4'],
+      plain: 'What the organisation does, who cares about its information and what they expect, and where the management system starts and stops. Everything after this builds on it.',
+      items: ['scope', 'legal'] },
+    { key: 'leadership', title: 'Leadership', clauses: ['5.1', '5.2', '5.3'],
+      plain: 'Top management sets the direction: approves the information security policy, names who runs the system, and commits to supporting it.',
+      items: ['roles', 'docs', 'approve'] },
+    { key: 'riskframe', title: 'Risk framework', clauses: ['6.1.1', '6.1.2'],
+      plain: 'Agree how risks are judged before judging any: how likely and how bad, and how much risk the business is willing to accept. This is a top management decision.',
+      items: ['appetite', 'riskmethod'] },
+    { key: 'assess', title: 'Risk assessment', clauses: ['6.1.2', '8.2'],
+      plain: 'Find what needs protecting and what could go wrong: the information and systems, the Microsoft 365 security check, and the risks that come out of both.',
+      items: ['assets', 'scan', 'risks'] },
+    { key: 'treat', title: 'Risk treatment and Annex A', clauses: ['6.1.3', '8.3'],
+      plain: 'Decide what to do about each risk, then choose the Annex A security controls that do it. That choice is the Statement of Applicability, the document a certification auditor reads first. Risks the business decides to live with are accepted by top management.',
+      items: ['treated', 'accepted', 'soa'] },
+    { key: 'objectives', title: 'Objectives', clauses: ['6.2'],
+      plain: 'A few measurable goals for the year, each with an owner and a date, agreed by top management.',
+      items: ['objectives'] },
+    { key: 'support', title: 'People and documents', clauses: ['7.1', '7.2', '7.3', '7.4', '7.5'],
+      plain: 'Make sure people know their part: training, every policy read and acknowledged, and the documents kept under control.',
+      items: ['training', 'ack'] },
+    { key: 'operate', title: 'Run it', clauses: ['8.1'],
+      plain: 'Switch on the routine: the recurring checks that prove controls work, supplier reviews, and evidence collected as it happens. Clauses 9 and 10 need a few weeks of this.',
+      items: ['rhythm', 'suppliers', 'ai'] },
+    { key: 'check', title: 'Check it works', clauses: ['9.1', '9.2', '9.3'],
+      plain: 'An internal audit checks the system works, and top management reviews the results and decides what to change.',
+      items: ['audit', 'review'] },
+    { key: 'certify', title: 'Improve and certify', clauses: ['10.1', '10.2'],
+      plain: 'Close what the audit and review found, finish the remaining clauses and the documents a Stage 1 auditor asks for, then book the certification audit.',
+      items: ['clauses', 'mandatory', 'book'] }
+  ];
+  /* Items only top management can do. */
+  var BUILD_TOP_ITEMS = { approve: true, roles: true, appetite: true, accepted: true, objectives: true, review: true };
+  /* steps = certificationPathSteps(); extra = { id: { label, why, done,
+     detail } } for the checks the path does not have. Items for which
+     neither exists (an ISO 42001 step for a 27001-only client) are left
+     out, and a stage with no items left is dropped. Returns { stages:[{
+     key, n, title, clauses, plain, items:[{ id, label, why, detail,
+     done, top }], done, doneCount }], current (index), pct }. */
+  function guidedBuild(steps, extra) {
+    var byId = {};
+    (steps || []).forEach(function (st) { byId[st.id] = st; });
+    var x = extra || {};
+    var stages = BUILD_STAGES.map(function (st) {
+      var items = st.items.map(function (id) {
+        var it = x[id] || byId[id];
+        if (!it) return null;
+        return { id: id, label: it.label, why: it.why || '', detail: it.done ? '' : (it.detail || ''), done: !!it.done, top: !!BUILD_TOP_ITEMS[id] };
+      }).filter(Boolean);
+      return { key: st.key, title: st.title, clauses: st.clauses, plain: st.plain, items: items, done: items.length > 0 && items.every(function (i) { return i.done; }), doneCount: items.filter(function (i) { return i.done; }).length };
+    }).filter(function (st) { return st.items.length; });
+    stages.forEach(function (st, i) { st.n = i + 1; });
+    var cur = stages.findIndex(function (st) { return !st.done; });
+    var all = stages.reduce(function (n, st) { return n + st.items.length; }, 0), done = stages.reduce(function (n, st) { return n + st.doneCount; }, 0);
+    return { stages: stages, current: cur === -1 ? stages.length - 1 : cur, complete: cur === -1, pct: all ? Math.round(done / all * 100) : 0 };
+  }
+
   /* ---- Who does what (Clause 5.3) ----
      Everyone named as responsible for something in the ISMS, built from
      the owners already recorded across the registers plus the meeting
@@ -6878,6 +6945,7 @@
     reports: { what: 'Reports and packs to share with top management, auditors and customers.', you: 'Generate what you need; most can be filed as evidence in one click.', terms: [] },
     settings: { what: 'How Checkpoint is set up for this organisation.', you: 'Fix anything the setup health check flags; most settings are set once.', terms: [] },
     integrations: { what: 'Where Checkpoint gets its evidence from, and whether each source is reporting.', you: 'Set up the sources you use; each card has the steps.', terms: [] },
+    build: { what: 'The management system built one stage at a time, in the order it is actually done, with the clauses each stage completes.', you: 'Work through the current stage; each item has the button that does it.', top: 'Items marked Top management decides are yours; the rest are done for you.', terms: ['ISMS', 'Clause', 'Annex A', 'Risk appetite'] },
     whodoes: { what: 'Who is responsible for what in the management system.', you: 'Check every area has an owner; reassign anything held by someone who has left.', top: 'Everyone’s part at a glance.', terms: ['ISMS'] }
   };
   function pageGuide(view, role) {
@@ -6951,7 +7019,8 @@
     'Activity': { why: 'A regular check that shows a security control is working, such as reviewing who has access. Do it and attach the record.', mins: 15 },
     'Evidence requested': { why: 'An auditor will ask to see proof that this control works. Upload the screenshot, report or document that shows it.', mins: 10 },
     'Document review': { why: 'Documents are reviewed on a schedule so they stay accurate. Read it, change anything out of date and confirm.', mins: 15 },
-    'Objective': { why: 'Say how the security objective you own is going, so leadership can see progress.', mins: 5 }
+    'Objective': { why: 'Say how the security objective you own is going, so leadership can see progress.', mins: 5 },
+    'Decision': { why: 'A decision only top management can make, needed for the current stage of building the management system.', mins: 10 }
   };
   function nextForYou(items, opts) {
     opts = opts || {};
@@ -11413,7 +11482,7 @@
     CERT_MILESTONES: CERT_MILESTONES, certificationMilestones: certificationMilestones,
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
-    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText,
+    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
     srDate: srDate, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,

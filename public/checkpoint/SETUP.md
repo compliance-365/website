@@ -784,6 +784,20 @@ every campaign permanently short of 100%.
   report (Clause 5.3) from the owners on every register plus the
   security review roles.
 
+- **Guided build**: `guidedBuild(steps, extra)` arranges the path steps into
+  `BUILD_STAGES`: ten stages in implementation order, each with the
+  clauses it completes. Annex A (the `soa` step) sits in stage 5, risk
+  treatment, because the Statement of Applicability is chosen from it;
+  internal audit and management review come in stage 9. The app supplies
+  checks the path steps did not cover (`buildExtras()`: roles, risk
+  appetite agreed, risk management framework approved, risks treated,
+  risks above appetite accepted, policies sent). `BUILD_TOP_ITEMS`
+  marks top management's decisions; for top management, those in the
+  current stage feed Next for you. `App.agreeRiskAppetite` records the
+  appetite with who agreed it and when (`riskAppetiteAgreed`). The view
+  is `v-build`; the dashboard path card shows the current stage and
+  Continue.
+
 - **Segregation of duties (A.5.3)**: ISO 27001 A.5.3 asks that
   conflicting duties be separated so no one person can both perform and
   authorise the same act. The two places that matters in Checkpoint are
