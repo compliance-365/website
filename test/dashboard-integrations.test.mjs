@@ -100,7 +100,20 @@ describe('in the browser', { skip: skipReason || false }, () => {
     assert.match(integ, /Microsoft 365[\s\S]*Scheduled monitor[\s\S]*AWS[\s\S]*Not set up[\s\S]*GitHub/i);
     assert.match(integ, /cloudtrail:DescribeTrails/);
     assert.match(integ, /SP_HOSTNAME/);
+    // The scheduled monitor's setup guide is inside its own card, not a separate card further down.
+    // The demo has an automated scan, so its card says it is reporting.
+    const azureCard = page.locator('#integrationsBody .integ-card').filter({ hasText: 'Scheduled monitor (Azure)' });
+    await azureCard.locator('summary').click();
+    assert.match(await azureCard.innerText(), /Reporting: an automated scan was recorded/);
+    assert.doesNotMatch(await azureCard.innerText(), /guide is below this list/);
+    assert.equal(await page.locator('#integMonitorSetup').count(), 0);
     assert.deepEqual(errors, []);
     await page.close();
   });
+});
+
+test('when the monitor is not reporting, How to set it up holds the step-by-step guide', async () => {
+  const src = await (await import('node:fs/promises')).readFile(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+  assert.match(src, /body: lastAuto \? '<p class="src">Reporting: an automated scan was recorded on ' \+ fmtDate\(lastAuto\) \+ '\. Deployment steps are in azure\/README\.md\.<\/p>' : '<div id="monitorSetupPanel"><\/div>'/);
+  assert.match(src, /if \(!lastAuto\) renderMonitorSetupPanel\(\);/);
 });

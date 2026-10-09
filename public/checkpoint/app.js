@@ -6318,7 +6318,7 @@ function showModal(opts) {
     var demo = Store.kind !== 'sharepoint';
     el.innerHTML =
       card({ name: 'Microsoft 365', what: 'Entra ID, Intune, Defender, Purview, Exchange and SharePoint, read through Microsoft Graph when a posture scan runs.', st: ms ? status(ms, 45) : { cls: 'off', text: 'No scan yet' }, meta: checks('') + ' checks · runs when someone clicks Run posture scan, or on a schedule with the monitor below', body: '' }) +
-      card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the security review and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: '<p class="src">The step-by-step guide is below this list.</p>' }) +
+      card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the security review and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: lastAuto ? '<p class="src">Reporting: an automated scan was recorded on ' + fmtDate(lastAuto) + '. Deployment steps are in azure/README.md.</p>' : '<div id="monitorSetupPanel"></div>' }) +
       card({ name: 'AWS', what: 'An AWS Lambda in your own AWS account that checks root and user MFA, access key age, CloudTrail, Config, GuardDuty, S3 public access, EBS and RDS encryption and open admin ports.', st: status(aws, 7), meta: checks('aws-') + ' checks · read-only IAM policy · results merge into the day\u2019s posture scan',
         body: '<ol class="integ-steps">' +
           '<li><b>App registration.</b> In Entra admin centre, register an app (or reuse the scheduled monitor\u2019s), add the Microsoft Graph application permission <code>Sites.Selected</code>, grant admin consent, create a client secret, and give the app write access to this Checkpoint site only (the same grant request as the monitor\u2019s step 3).</li>' +
@@ -6333,8 +6333,9 @@ function showModal(opts) {
           '<li><b>Workflow.</b> Add <code>public/checkpoint/github/checkpoint-github-collector.yml</code> and its <code>collector/</code> folder to a repository in the organisation.</li>' +
           '<li><b>Settings for the workflow.</b>' + envTable([['vars.CHECKPOINT_GH_APP_ID', '', 'The GitHub App\u2019s ID'], ['secrets.CHECKPOINT_GH_APP_PRIVATE_KEY', '', 'The GitHub App\u2019s private key'], ['vars.CHECKPOINT_TENANT_ID', tenantId, 'Your Entra tenant ID'], ['vars.CHECKPOINT_CLIENT_ID', '', 'The app registration\u2019s client ID'], ['secrets.CHECKPOINT_CLIENT_SECRET', '', 'Its client secret'], ['vars.CHECKPOINT_SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['vars.CHECKPOINT_SP_SITE_PATH', path, 'Leave out for the root site']]) + '</li>' +
           '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' });
-    var setupCard = document.getElementById('integMonitorSetup');
-    if (setupCard) { setupCard.style.display = lastAuto ? 'none' : ''; if (!lastAuto) renderMonitorSetupPanel(); }
+    /* The step-by-step guide lives inside the Azure card's "How to set
+       it up", not in a separate card at the bottom of the page. */
+    if (!lastAuto) renderMonitorSetupPanel();
   }
 
   /* Pure — no DOM, just S.settings — so the Dashboard banner below can

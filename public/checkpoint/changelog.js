@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.140.2',
+    date: '2026-10-09',
+    entries: [
+      'Integrations: "How to set it up" on the Scheduled monitor (Azure) card now opens the step-by-step setup guide in the card itself. Before, it only said the guide was further down the page, below the AWS and GitHub cards.'
+    ]
+  },
+  {
     version: '1.140.1',
     date: '2026-10-09',
     entries: [
