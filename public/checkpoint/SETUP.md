@@ -56,11 +56,21 @@ all four reports.
 
 ### API permissions (all *Delegated*, Microsoft Graph)
 
-Register all of these in Entra up front — but Checkpoint only *asks the
-user's browser to consent* to them in three stages, not all at sign-in
-(incremental consent, least-privilege by default):
+Register all of these in Entra up front and grant admin consent once.
+Checkpoint signs in with Microsoft Graph's `.default` scope
+(`graphTokenScopes()` in lib.js): it asks for *whatever the admin has
+approved*, in one go, rather than listing permissions one by one. Once
+admin consent is granted nobody sees a permissions screen at sign-in.
+Listing them one by one made Entra re-check consent at every sign-in,
+and for an app it flags as risky ("Risky application detected" in the
+client's audit log) it showed the full consent screen every time even
+though admin consent was already in place. A permission the admin has
+not approved shows in Setup health; the features that need it fail
+with a clear message rather than prompting.
 
-**Stage 1 — requested at sign-in:**
+The tables below group the permissions by what uses them.
+
+**Used by the posture checks:**
 
 | Permission | Why | Admin consent |
 |---|---|---|
@@ -83,25 +93,25 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `RecordsManagement.Read.All` | Read Purview retention labels (retention/disposal check; requires Purview records management). Delegated-only — no application-permission equivalent exists | Yes |
 | `AuditLog.Read.All` | Read the Entra sign-in log, directory audit log, per-account sign-in activity and the authentication methods registration report. Backs the checks that read what the tenant **did** rather than how it is **configured**: `legacy-auth-observed` (did any legacy sign-in actually succeed, whatever the Conditional Access policy claims) and `priv-role-changes` (every privileged role change in the review window, with who made it). Read-only, and Checkpoint never writes to or purges an audit log — the logs are the evidence. Graph gates both logs behind this one scope, so consenting enables both checks or neither. Sign-in logs additionally need Entra ID P1 and a reports-reading role (Reports Reader, Security Reader, Security Administrator or Global Reader); directory audit logs are available on every tier but still need one of those roles. Without them, these checks degrade to Manual rather than failing. The same scope also backs `dormant-accounts` (enabled accounts with no recent sign-in — the offboarding that was never *started*, where the `leaver` check covers the one left half-finished; needs Entra ID P1 for `signInActivity`) and `mfa-registration` (who is actually MFA-**capable**, as against what Conditional Access *requires*; no premium tier needed). Neither adds a consent decision — both spend a permission already granted | Yes |
 
-**Stage 2 — requested the first time registers are loaded/created**
-(`Store.load()`, i.e. the first time anyone opens Checkpoint in this
-tenant, or the first time after a fresh sign-in each session):
+**Used by the registers** (`Store.load()`, the SharePoint lists):
 
 | Permission | Why | Admin consent |
 |---|---|---|
 | `Sites.Manage.All` | Create + read/write the Checkpoint SharePoint lists | Yes |
 
-**Stage 3 — requested the first time "Email status update" (Board
-view) is clicked:**
+**Used for email sent from Checkpoint** ("Email status update",
+questionnaires, reminders):
 
 | Permission | Why | Admin consent |
 |---|---|---|
 | `Mail.Send` | Sends the status email as the signed-in user, never a service account | Yes |
 
-Each stage is a separate consent prompt the first time it's needed —
-after that, it's silent (MSAL caches the grant per account, same as any
-other scope). A client who never uses the email button never sees that
-prompt at all.
+All three groups are covered by the one admin consent. The consent
+screen shows the publisher as **Compliance365** with Microsoft's
+verified badge (publisher verification, Partner Center global account,
+on the app registration's Branding & properties page); keep it
+verified, because Entra blocks or re-prompts consent for unverified
+multitenant apps.
 
 > If you already registered the app with an earlier permission set,
 > add whatever's missing above in Entra and click **Grant admin consent**
@@ -195,8 +205,7 @@ yet) goes through a 7-step full-screen wizard instead of the old
    plain language. Pre-sign-in.
 2. **Consent explainer** — every scope in `CONFIG.scopesReadOnly`,
    listed with a plain-English reason, shown *before* `Graph.signIn()`
-   is ever called — the incremental-consent model made visible rather
-   than just documented. "Continue to sign-in" is what actually
+   is ever called, so the admin knows what they are approving. "Continue to sign-in" is what actually
    triggers the Entra redirect.
 3. **Tenant capability check** — a handful of read-only Graph calls
    (Conditional Access, Global Admin membership, Secure Score, Intune,
@@ -565,12 +574,10 @@ every campaign permanently short of 100%.
   except from that same optional add-on, which uses its own separate,
   narrowly-scoped application permissions (§9) — never the interactive
   session's delegated token.
-- **Incremental consent**: sign-in only ever requests the read-only
-  posture-check scopes. `Sites.Manage.All` (SharePoint lists, in the
-  client's tenant) is requested separately the first time registers
-  are loaded, and `Mail.Send` (the Board view's "Email status update"
-  button, sent as the signed-in user) only the first time that button
-  is used — see §2.
+- **One admin consent**: sign-in requests Graph's `.default`, i.e.
+  exactly the delegated permissions the client's admin approved — no
+  more. Write access (`Sites.Manage.All`, `Mail.Send`) is still only
+  ever used by the features that need it — see §2.
 - Registers inherit the client's own SharePoint security, retention,
   versioning and audit history.
 - Sign-out clears MSAL tokens from browser storage.
@@ -1630,9 +1637,8 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   8 questions for a non-AI vendor, up to 11 for one that uses AI; the
   AI section is gated behind a single "does this use AI?" question so
   most vendors never see it). "Send questionnaire" reuses
-  `Graph.sendMail` (the same delegated `Mail.Send` scope, requested
-  incrementally on first use, as the Board view's "Email status
-  update") to email these questions itemised, plus the recorded data
+  `Graph.sendMail` (the same delegated `Mail.Send` scope as the Board
+  view's "Email status update") to email these questions itemised, plus the recorded data
   categories for the vendor to confirm or correct. "Record answers"
   lets a practitioner transcribe a vendor's reply (however it arrived)
   into structured fields — `QuestionnaireStatus` now genuinely reaches
@@ -2817,9 +2823,10 @@ Checkpoint reports on incidents and never modifies them: assigning,
 classifying and resolving are the SOC's job in Defender, and a
 compliance tool that could quietly close incidents would be a bad idea.
 
-Existing tenants hit Entra's incremental-consent prompt once, on the
-next sign-in, for this one scope — the same shape as any other added
-delegated scope, never a breaking change to what is already granted.
+Existing tenants need the admin to grant consent again once for this
+scope (Entra › Enterprise apps › Compliance365 Checkpoint › Permissions
+› Grant admin consent). Until then Setup health lists it as not
+granted and the checks that need it show Manual; nothing else breaks.
 
 **It scores the age of unresolved high-severity incidents, never the
 count.** A tenant with plenty of incidents is not less compliant than

@@ -316,10 +316,10 @@ Exercises management review and the audit trail.
 
 These must all fail *correctly* — a clean rejection with a clear message, never a silent success, a crash, or a vague error.
 
-**9.0 — Incremental consent for the newer scopes**
-- Setup: an account that signed in to Checkpoint **before** the Defender XDR / Priva / retention scopes were added.
-- Click: sign in again.
-- Expect: Entra prompts **once** for the additional permissions (`SecurityIncident.Read.All`, `SecurityAlert.Read.All`, `SubjectRightsRequest.Read.All`, `RecordsManagement.Read.All`), and everything previously granted keeps working. This must be an incremental prompt, never a re-consent to the whole set and never a hard failure.
+**9.0 — No permissions screen once admin consent is granted**
+- Setup: a tenant whose admin has granted consent for every permission in SETUP.md §2.
+- Click: sign out, close the tab, open Checkpoint and sign in again (as an admin and as an ordinary user).
+- Expect: the account picker only; no permissions screen, and no new "Consent to application" entry in the tenant's Entra audit log. Then remove one permission's consent in Entra and sign in again: still no prompt, and Setup health lists that permission as not granted.
 - [ ] Pass  [ ] Fail
 
 **9.0b — Unlicensed capability degrades, never fails**
