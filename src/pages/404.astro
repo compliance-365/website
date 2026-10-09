@@ -114,15 +114,15 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
 
         <div class="grid-2" style="gap:10px;margin:8px 0 16px">
           <a class="pill" href="/">Home →</a>
-          <a class="pill" href={base + 'services'}>Services →</a>
-          <a class="pill" href={base + 'blog'}>Insights (Blog) →</a>
-          <a class="pill" href={base + 'checklist'}>Readiness Checklists →</a>
-          <a class="pill" href={base + 'book'}>Book a roadmap call →</a>
-          <a class="pill" href={base + 'contact'}>Contact →</a>
+          <a class="pill" href={base + 'services/'}>Services →</a>
+          <a class="pill" href={base + 'blog/'}>Insights (Blog) →</a>
+          <a class="pill" href={base + 'checklist/'}>Readiness Checklists →</a>
+          <a class="pill" href={base + 'book/'}>Book a roadmap call →</a>
+          <a class="pill" href={base + 'contact/'}>Contact →</a>
         </div>
 
         <!-- Search -->
-        <form action={base + 'search'} method="get" role="search" style="display:flex;gap:10px;align-items:center;max-width:560px">
+        <form action={base + 'search/'} method="get" role="search" style="display:flex;gap:10px;align-items:center;max-width:560px">
           <input
             type="search"
             name="q"
@@ -149,7 +149,7 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
         )}
 
         <p class="small muted" style="margin:12px 0 0">
-          If you think this is a mistake, <a href={base + 'contact'}>tell us</a> the link you used.
+          If you think this is a mistake, <a href={base + 'contact/'}>tell us</a> the link you used.
         </p>
       </div>
 

@@ -49,3 +49,13 @@ test('dates shown to readers name a locale (an Australian site must not show 10/
     assert.ok(!/toLocaleDateString\(\s*\)/.test(readFileSync(f, 'utf8')), f.replace(root, 'src/') + ' formats a date in the build machine’s locale');
   }
 });
+
+test('internal page links end in a slash (trailingSlash: always), so none costs a redirect', () => {
+  const re = /(?:href=\{base \+ '|href:\s*`\$\{base\}|action=\{base \+ ')([a-z][a-z0-9/-]*?)(['`])/g;
+  for (const f of srcFiles) {
+    for (const m of readFileSync(f, 'utf8').matchAll(re)) {
+      if (/\.[a-z0-9]+$/i.test(m[1]) || m[1].includes('${')) continue;
+      assert.ok(m[1].endsWith('/'), f.replace(root, 'src/') + ' links to ' + m[1] + ' without the trailing slash');
+    }
+  }
+});
