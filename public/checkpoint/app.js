@@ -11396,6 +11396,17 @@ function showModal(opts) {
     var d = window._srDraft;
     return d && rec && d.id === rec.id ? d : { notes: (rec && rec.itemNotes) || {}, dec: {} };
   }
+  /* The chair accepts a risk at the meeting: recorded on the risk as the
+     risk panel would, with a look-again action when a date is given. */
+  async function srAcceptRisk(rec, rk, by, heldOn, why, auditSuffix, reviewBy) {
+    var q = residual(rk), prevAcc = rk.acceptedBy ? rk.acceptedBy + ' ' + (rk.acceptedDate || '') : '';
+    rk.acceptedBy = by; rk.acceptedDate = heldOn; rk.acceptedScore = q.L * q.I;
+    rk.acceptanceNote = ('Accepted at leadership security meeting ' + rec.id + ': ' + why + (reviewBy ? ' Look at it again by ' + fmtDate(reviewBy) + '.' : '')).slice(0, 2000);
+    if (rk.treat !== 'Tolerate') rk.treat = 'Tolerate';
+    try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at leadership security meeting ' + rec.id + (auditSuffix || '')); } catch (e) { warn(e); return { ok: false }; }
+    var again = reviewBy ? await srRaiseAction(rec, 'risks', 'risk acceptance', 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', rk.owner || by, reviewBy, rk.id) : null;
+    return { ok: true, reviewAction: again ? again.id : '' };
+  }
   /* One action from one decision, against the agenda item it came from. */
   async function srRaiseAction(rec, itemKey, itemTitle, title, owner, due, riskId) {
     var s = secReviewSetup() || {};
@@ -23608,19 +23619,10 @@ function showModal(opts) {
          acceptance: recorded on the risk, as the risk drawer would. */
       var rk = choice === 'accept' && v.risk ? risk(v.risk) : null;
       if (rk) {
-        var rq = residual(rk);
-        var prevAcc = rk.acceptedBy ? rk.acceptedBy + ' ' + (rk.acceptedDate || '') : '';
-        rk.acceptedBy = by; rk.acceptedDate = heldOn; rk.acceptedScore = rq.L * rq.I;
-        rk.acceptanceNote = ('Accepted at leadership security meeting ' + id + ' when ' + aid + ' (' + a.title + ') was closed: ' + d.reason + (v.reviewBy ? ' Look at it again by ' + fmtDate(v.reviewBy) + '.' : '')).slice(0, 2000);
-        if (rk.treat !== 'Tolerate') rk.treat = 'Tolerate';
         if (!a.risk) a.risk = rk.id;
         d.risk = rk.id; d.reviewBy = v.reviewBy || '';
-        try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at leadership security meeting ' + id + ' (' + aid + ')'); } catch (e) { warn(e); }
-        if (v.reviewBy) {
-          var rev = { id: nextRegId(S.actions, 'ACT-'), title: 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', type: 'Action', risk: rk.id, control: '', pr: 'Medium',
-            owner: rk.owner || by, ownerEmail: '', due: v.reviewBy, status: 'Open', evidenceUrl: '', src: 'Leadership security meeting ' + id + ': risk acceptance' };
-          try { await Store.addAction(rev); d.reviewAction = rev.id; audit('Action raised', 'Action', rev.id, '', 'Review of the risk acceptance of ' + rk.id + ' by ' + fmtDate(v.reviewBy)); } catch (e) { warn(e); }
-        }
+        var acc = await srAcceptRisk(rec, rk, by, heldOn, 'when ' + aid + ' (' + a.title + ') was closed: ' + d.reason, ' (' + aid + ')', v.reviewBy);
+        if (acc.reviewAction) d.reviewAction = acc.reviewAction;
       }
       await updateSecReview(id, function (r) { r.escalations = r.escalations || {}; r.escalations[aid] = d; });
       audit({ close: 'Action closed', extend: 'Action extended', reassign: 'Action reassigned', accept: 'Action closed' }[choice], 'Action', aid, JSON.stringify(before), window.CheckpointLib.securityReviewEscalationLines({ escalations: srOne(aid, d) })[0] + ' (security review ' + id + ')');
@@ -23652,16 +23654,10 @@ function showModal(opts) {
       busy(true);
       var d = { choice: choice, by: by, on: heldOn };
       if (choice === 'accept') {
-        var q = residual(rk), prevAcc = rk.acceptedBy ? rk.acceptedBy + ' ' + (rk.acceptedDate || '') : '';
         d.reason = v.reason.trim().slice(0, 300); d.reviewBy = v.reviewBy || '';
-        rk.acceptedBy = by; rk.acceptedDate = heldOn; rk.acceptedScore = q.L * q.I;
-        rk.acceptanceNote = ('Accepted at leadership security meeting ' + id + ': ' + d.reason + (d.reviewBy ? ' Look at it again by ' + fmtDate(d.reviewBy) + '.' : '')).slice(0, 2000);
-        if (rk.treat !== 'Tolerate') rk.treat = 'Tolerate';
-        try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at leadership security meeting ' + id); } catch (e) { warn(e); busy(false); return; }
-        if (d.reviewBy) {
-          var again = await srRaiseAction(rec, 'risks', 'Risks', 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', rk.owner || by, d.reviewBy, rk.id);
-          if (again) d.actionId = again.id;
-        }
+        var acc = await srAcceptRisk(rec, rk, by, heldOn, d.reason, '', d.reviewBy);
+        if (!acc.ok) { busy(false); return; }
+        if (acc.reviewAction) d.actionId = acc.reviewAction;
       } else {
         var act = await srRaiseAction(rec, 'risks', 'Risks', v.title.trim().slice(0, 200), v.owner.trim(), v.due, rk.id);
         if (!act) { busy(false); return; }
