@@ -109,7 +109,8 @@ describe('one word for suppliers', () => {
     assert.equal(L.buildSecurityReviewPack({ today, since: '2026-09-01', auditLog: log }).people.vendorsAdded, 2);
   });
   test('the scheduled function still decides the same way', () => {
-    for (const k of ['securityReviewFacts', 'securityReviewQuiet', 'securityReviewStatus']) assert.equal(String(Az[k]), String(L[k]), k);
+    for (const k of ['securityReviewFacts', 'securityReviewQuiet', 'securityReviewStatus', 'supplierQuestionnaireGaps', 'supplierGapStatus']) assert.equal(String(Az[k]), String(L[k]), k);
+    assert.deepEqual(Az.SUPPLIER_GAP_RULES, L.SUPPLIER_GAP_RULES);
   });
 });
 
@@ -205,5 +206,23 @@ describe('action statuses', () => {
     const store = readFileSync(new URL('../public/checkpoint/store.js', import.meta.url), 'utf8');
     assert.match(store, /status: f\.Status === 'Closed' \? 'Cancelled' : \(f\.Status \|\| 'Open'\)/);
     assert.match(store, /if \(a\.status === 'Closed'\) a\.status = 'Cancelled';/);
+  });
+});
+
+describe('the scheduled monitor prepares the same pack', () => {
+  test('incident risks, incidents with none, and untreated supplier gaps', async () => {
+    const PM = require('../public/checkpoint/azure/PostureMonitor/index.js').__test;
+    const lists = {
+      A: [{ RefId: 'ACT-1', Title: 'x', Status: 'Open', Source: 'Supplier questionnaire VEN-002' }],
+      I: [{ RefId: 'INC-1', Title: 'Phish', Severity: 'High', Status: 'Open', DetectedDate: '2026-10-01', RiskRefs: 'R-003' }, { RefId: 'INC-2', Title: 'Laptop', Status: 'Open', DetectedDate: '2026-10-02' }],
+      V: [{ RefId: 'VEN-001', Title: 'Lumen', QuestionnaireAnswers: JSON.stringify({ certification: 'No' }) }, { RefId: 'VEN-002', Title: 'Aria', QuestionnaireAnswers: JSON.stringify({ mfa: 'No' }) }]
+    };
+    const gAll = async (url) => { const m = /lists\/(\w+)\/items/.exec(url); return (lists[m[1]] || []).map((f) => ({ fields: f })); };
+    const log = Object.assign(() => {}, { error: () => {} });
+    const p = await PM.buildScheduledReviewPack(async () => ({}), gAll, { log }, 'SITE', { Actions: 'A', Incidents: 'I', Vendors: 'V' }, today, '2026-09-01', 70, 70, {});
+    assert.deepEqual(p.incidents.since.map((n) => n.risks), [['R-003'], []]);
+    assert.equal(p.incidents.unlinked, 1);
+    assert.deepEqual(p.people.supplierGaps, [{ id: 'VEN-001', name: 'Lumen', count: 1 }], 'Aria is being treated');
+    assert.match(L.securityReviewFacts('incidents', p).join('\n'), /INC-1 Phish \(High\): risk R-003/);
   });
 });

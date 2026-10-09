@@ -502,7 +502,34 @@
     return new Date(guess).toISOString();
   }
 
+  /* Supplier questionnaire gaps: copied verbatim from lib.js like the rest. */
+  var SUPPLIER_GAP_RULES = [
+    { id: 'certification', gap: 'no current independent security certification', control: 'A.5.19' },
+    { id: 'encryption', gap: 'our data is not encrypted at rest and in transit', control: 'A.8.24' },
+    { id: 'mfa', gap: 'MFA is not enforced for their staff with access to our data', control: 'A.8.5' },
+    { id: 'incidentResponse', gap: 'no commitment to tell us about an incident affecting our data', control: 'A.5.20' }
+  ];
+
+  function supplierQuestionnaireGaps(answers) {
+    var a = answers || {};
+    return SUPPLIER_GAP_RULES.filter(function (r) { return a[r.id] === 'No' || a[r.id] === 'Unknown'; })
+      .map(function (r) { return { id: r.id, text: (a[r.id] === 'Unknown' ? 'not confirmed: ' : '') + r.gap, control: r.control, unconfirmed: a[r.id] === 'Unknown' }; });
+  }
+
+  function supplierGapStatus(vendors, actions) {
+    var acts = actions || [];
+    return (vendors || []).map(function (v) {
+      var gaps = supplierQuestionnaireGaps(v && v.questionnaireAnswers);
+      if (!gaps.length) return null;
+      var src = 'Supplier questionnaire ' + v.id;
+      var treat = acts.filter(function (x) { return x.src === src && x.status !== 'Done' && x.status !== 'Cancelled' && x.status !== 'Closed'; })[0] || null;
+      var done = !treat && acts.some(function (x) { return x.src === src; });
+      return { id: v.id, name: v.name, criticality: v.criticality || '', gaps: gaps, actionId: treat ? treat.id : '', treated: !!treat || done };
+    }).filter(Boolean);
+  }
+
 module.exports = {
+  SUPPLIER_GAP_RULES, supplierQuestionnaireGaps, supplierGapStatus,
   srDate, addDaysIso, securityReviewCovered, securityReviewLastCovered, securityReviewPeriodic, securityReviewCoverage, SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };

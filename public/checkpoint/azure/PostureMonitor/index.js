@@ -2292,10 +2292,10 @@ async function buildScheduledReviewPack(g, gAll, context, siteId, optional, toda
     try { return (await gAll(`/sites/${siteId}/lists/${id}/items?$expand=fields&$top=999`)).map(i => i.fields || {}); }
     catch (e) { context.log.error('Checkpoint security review: could not read a register: ' + e.message); return []; }
   };
-  const actions = (await read(optional.Actions)).map(f => ({ id: f.RefId || '', title: f.Title || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open' }));
+  const actions = (await read(optional.Actions)).map(f => ({ id: f.RefId || '', title: f.Title || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status === 'Closed' ? 'Cancelled' : (f.Status || 'Open'), src: f.Source || '' }));
   const open = actions.filter(a => !SR.DONE_ACTION(a) && a.status !== 'Closed');
   const overdue = open.filter(a => a.due && a.due < today).sort((a, b) => a.due.localeCompare(b.due));
-  const incidents = (await read(optional.Incidents)).map(f => ({ id: f.RefId || '', title: f.Title || '', severity: f.Severity || '', status: f.Status || 'Open', detected: String(f.DetectedDate || '').slice(0, 10) }));
+  const incidents = (await read(optional.Incidents)).map(f => ({ id: f.RefId || '', title: f.Title || '', severity: f.Severity || '', status: f.Status || 'Open', detected: String(f.DetectedDate || '').slice(0, 10), risks: String(f.RiskRefs || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 4) }));
   const inc = incidents.filter(n => n.detected >= since);
   const risks = (await read(optional.Risks)).filter(f => (f.Status || 'Open') !== 'Closed');
   const vendors = await read(optional.Vendors);
@@ -2313,10 +2313,12 @@ async function buildScheduledReviewPack(g, gAll, context, siteId, optional, toda
     posture: { score: typeof score === 'number' ? score : null, prev: typeof prevScore === 'number' ? prevScore : null, failing: null, failingTop: ((extra && extra.failingTop) || []).slice(0, 3) },
     actions: { open: open.length, overdue: overdue.length, closedSince: 0, overdueList: overdue.slice(0, 8).map(short), prior: [],
       stuck: extra && extra.lastHeld ? overdue.filter(a => a.due < extra.lastHeld).slice(0, 6).map(short) : [] },
-    incidents: { since: inc.slice(0, 8).map(n => ({ id: n.id, title: n.title, severity: n.severity, status: n.status })), count: inc.length, open: incidents.filter(n => n.status !== 'Closed').length },
+    incidents: { since: inc.slice(0, 8).map(n => ({ id: n.id, title: n.title, severity: n.severity, status: n.status, risks: n.risks })), count: inc.length, unlinked: inc.filter(n => !n.risks.length).length, open: incidents.filter(n => n.status !== 'Closed').length },
     risks: { open: risks.length, aboveAppetite: null, aboveList: [], added: 0, changed: 0 },
     certification: { readiness: controls.length ? Math.round(controls.filter(c => c.Status === 'Implemented').length / controls.length * 100) : null, docsAwaiting: docs.filter(d => d.status && d.status !== 'Approved').length, nextAudit: '', certified: !!(extra && extra.certified) },
-    people: { handovers: 0, retired: 0, vendorsAdded: 0, certsExpiring: vendors.filter(v => v.CertExpiryDate && v.CertExpiryDate >= today && v.CertExpiryDate <= soon).map(v => v.Title).slice(0, 6) },
+    people: { handovers: 0, retired: 0, vendorsAdded: 0, certsExpiring: vendors.filter(v => v.CertExpiryDate && v.CertExpiryDate >= today && v.CertExpiryDate <= soon).map(v => v.Title).slice(0, 6),
+      supplierGaps: SR.supplierGapStatus(vendors.map(v => { let answers = {}; try { answers = JSON.parse(v.QuestionnaireAnswers || '{}'); } catch (e) { answers = {}; } return { id: v.RefId || '', name: v.Title || '', criticality: v.Criticality || '', questionnaireAnswers: answers }; }), actions)
+        .filter(x => !x.treated).slice(0, 6).map(x => ({ id: x.id, name: x.name, count: x.gaps.length })) },
     quarterly: { accessReview: access, suppliersDue: vendors.filter(v => v.NextReviewDue && v.NextReviewDue <= month).length, objectives: { open: objectives.length, atRisk: objectives.filter(o => /risk|behind|off/i.test(o.Status || '')).length }, attestPct: null },
     scheduled: true
   };
