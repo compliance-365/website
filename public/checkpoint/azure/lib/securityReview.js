@@ -28,6 +28,26 @@
     { key: 'baseline', title: 'Where we start', min: 5, lead: 'owner', clause: '9.1' },
     { key: 'path', title: 'Path to certification', min: 5, lead: 'facilitator', clause: '9.2, 9.3' }
   ];
+  /* Topics leadership looks at once a year, or sooner when the register
+     behind them changes: they join whichever meeting they fall due at,
+     with their own time, instead of filling every month. */
+  var SECURITY_REVIEW_PERIODIC = [
+    { key: 'context', title: 'Interested parties and legal requirements', min: 8, lead: 'owner', clause: '4.2, 9.3.2 c and e, A.5.31' },
+    { key: 'issues', title: 'Internal and external issues, and scope', min: 6, lead: 'chair', clause: '4.1, 4.3, 9.3.2 b' },
+    { key: 'audits', title: 'Audit results', min: 6, lead: 'owner', clause: '9.2, 9.3.2 d' },
+    { key: 'resources', title: 'Resources', min: 5, lead: 'chair', clause: '7.1, 9.3.3' }
+  ];
+  /* Clause 9.3.2 a to g, and the agenda items that cover each. "all"
+     means every listed item must have been covered in the cycle. */
+  var SECURITY_REVIEW_COVERAGE = [
+    { letter: 'a', label: 'Actions from previous reviews', keys: ['actions'] },
+    { letter: 'b', label: 'Internal and external issues', keys: ['issues', 'scope'] },
+    { letter: 'c', label: 'Interested parties\u2019 needs', keys: ['context'] },
+    { letter: 'd', label: 'Performance: incidents, monitoring, audits, objectives', keys: ['incidents', 'posture', 'audits', 'objectives'], all: true },
+    { letter: 'e', label: 'Feedback from interested parties', keys: ['context'] },
+    { letter: 'f', label: 'Risks and risk treatment', keys: ['risks'] },
+    { letter: 'g', label: 'Opportunities for improvement', keys: ['decisions'] }
+  ];
   var SECURITY_REVIEW_KIND_LABEL = { kickoff: 'Kick-off', monthly: 'Monthly', quarterly: 'Quarterly', mr: 'Management review (Clause 9.3)' };
   function srDate(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
@@ -52,12 +72,68 @@
     if (!p) return '';
     if (key === 'incidents' && !p.incidents.count && !p.incidents.open) return 'No incidents since ' + srDate(p.since);
     if (key === 'risks' && !p.risks.added && !p.risks.changed && !p.risks.aboveAppetite) return 'No new or changed risks, none above appetite';
-    if (key === 'actions' && !p.actions.overdue && !(p.actions.prior || []).length) return 'No actions overdue';
+    if (key === 'actions' && !p.actions.overdue && !(p.actions.prior || []).length && !(p.actions.dueSoon || []).length) return 'No actions overdue or due soon';
     if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length) return 'Posture score unchanged at ' + p.posture.score + '/100';
     if (key === 'certification' && p.certification.certified) return 'skip';
     if (key === 'certification' && !p.certification.nextAudit && !p.certification.docsAwaiting && (p.certification.readiness == null || p.certification.readiness >= 100)) return 'skip';
     if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length) return 'No leavers, retired assets or supplier changes';
     return '';
+  }
+  /* The agenda keys a held meeting covered. Meetings recorded before
+     1.144.0 hold no list: their standing items are assumed, and a
+     management review meeting then covered every input. */
+  function securityReviewCovered(rec, mrEvery) {
+    if (rec && Array.isArray(rec.covered)) return rec.covered;
+    var kind = securityReviewKind(rec && rec.n, mrEvery);
+    var k = ['actions', 'risks', 'incidents', 'posture', 'decisions'];
+    if (kind === 'kickoff') k.push('scope');
+    if (kind === 'quarterly' || kind === 'mr') k.push('objectives');
+    if (kind === 'mr') k = k.concat(['context', 'issues', 'audits', 'resources', 'mr']);
+    return k;
+  }
+  /* The last date each agenda key was covered: held meetings, plus
+     management reviews recorded on their own (which cover everything). */
+  function securityReviewLastCovered(meetings, reviews, mrEvery) {
+    var last = {};
+    var mark = function (k, date, ref) { if (date && (!last[k] || date > last[k].date)) last[k] = { date: date, ref: ref }; };
+    (meetings || []).filter(function (r) { return r && r.status === 'Held' && r.date; }).forEach(function (r) {
+      securityReviewCovered(r, mrEvery).forEach(function (k) { mark(k, String(r.date).slice(0, 10), r.id); });
+    });
+    var every = ['actions', 'risks', 'incidents', 'posture', 'decisions', 'scope', 'objectives', 'context', 'issues', 'audits', 'resources', 'mr'];
+    (reviews || []).filter(function (r) { return r && r.date; }).forEach(function (r) {
+      every.forEach(function (k) { mark(k, String(r.date).slice(0, 10), r.id); });
+    });
+    return last;
+  }
+  /* Which yearly topics are due at the next meeting: not covered for
+     about a year (350 days, so the yearly meeting catches them and the
+     one before it does not), or their register changed since they were.
+     changes = { key: { date, what } }; facts = { key: [lines] }. A topic
+     never covered waits for the management review meeting (never). */
+  function securityReviewPeriodic(meetings, reviews, today, mrEvery, changes, facts) {
+    var last = securityReviewLastCovered(meetings, reviews, mrEvery), ch = changes || {}, fx = facts || {};
+    var cutoff = addDaysIso(today, -350), out = [];
+    SECURITY_REVIEW_PERIODIC.forEach(function (i) {
+      var l = last[i.key] || (i.key === 'issues' ? last.scope : null), c = ch[i.key];
+      var reason = '';
+      if (c && c.date && (!l || c.date > l.date)) reason = (c.what || 'The register changed') + ' on ' + srDate(c.date) + (l ? ', last reviewed ' + srDate(l.date) : '');
+      else if (!l) reason = 'Not reviewed by leadership yet';
+      else if (l.date <= cutoff) reason = 'Last reviewed ' + srDate(l.date) + ': due once a year';
+      if (reason) out.push({ key: i.key, reason: reason, never: !l && !(c && c.date), facts: (fx[i.key] || []).slice(0, 4) });
+    });
+    return out;
+  }
+  /* Clause 9.3.2 a to g over the last 12 months, and the conclusion. */
+  function securityReviewCoverage(meetings, reviews, today, mrEvery) {
+    var last = securityReviewLastCovered(meetings, reviews, mrEvery), from = addDaysIso(today, -365);
+    var ok = function (k) { return last[k] && last[k].date > from; };
+    var rows = SECURITY_REVIEW_COVERAGE.map(function (c) {
+      var hit = c.keys.filter(ok), missing = c.all ? c.keys.filter(function (k) { return !ok(k); }) : hit.length ? [] : c.keys.slice(0, 1);
+      var dates = hit.map(function (k) { return last[k].date; }).sort();
+      return { letter: c.letter, label: c.label, ok: !missing.length, last: c.all ? (missing.length ? '' : dates[0]) : dates[dates.length - 1] || '', missing: missing };
+    });
+    var concl = ok('mr') ? last.mr : null;
+    return { rows: rows, conclusion: concl ? { ok: true, last: concl.date, ref: concl.ref } : { ok: false, last: last.mr ? last.mr.date : '' }, complete: rows.every(function (r) { return r.ok; }) && !!concl, since: from };
   }
   function securityReviewStatus(p) {
     if (!p) return [];
@@ -136,6 +212,8 @@
     var f = [];
     var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
     if (!p) return f;
+    var per = (p.periodic || []).filter(function (x) { return x && x.key === key; })[0];
+    if (per) { f.push(per.reason); (per.facts || []).forEach(function (x) { f.push(x); }); return f; }
     if (key === 'actions') {
       var prior = p.actions.prior || [];
       if (prior.length) f.push('Decisions from last meeting: ' + prior.filter(function (a) { return DONE_ACTION(a) || a.status === 'Closed'; }).length + ' of ' + prior.length + ' done');
@@ -143,6 +221,8 @@
       var rest = p.actions.overdueList.filter(function (a) { return stuckIds.indexOf(a.id) === -1; });
       f.push(p.actions.overdue ? plural(p.actions.overdue, 'action') + ' overdue' + (stuckIds.length ? ' (' + stuckIds.length + ' for a decision below)' : '') + (rest.length > 3 ? ', the three oldest:' : rest.length && stuckIds.length ? ', the others:' : '') : 'Nothing overdue; ' + plural(p.actions.open, 'action') + ' open');
       rest.slice(0, 3).forEach(function (a) { f.push(a.id + ' ' + a.title + (a.owner ? ' (' + a.owner + ')' : '')); });
+      var soonA = p.actions.dueSoon || [];
+      if (soonA.length) f.push(plural(soonA.length, 'action') + ' due in the next two weeks: ' + soonA.slice(0, 3).map(function (a) { return a.id + (a.owner ? ' (' + a.owner + ')' : ''); }).join(', ') + (soonA.length > 3 ? ' and more' : ''));
     } else if (key === 'escalations') {
       (p.actions.stuck || []).forEach(function (a) { f.push(a.id + ' ' + a.title + (a.owner ? ' (' + a.owner + ')' : '') + ', overdue since ' + srDate(a.due) + ': extend, reassign or accept the risk'); });
     } else if (key === 'posture') {
@@ -180,7 +260,7 @@
     } else if (key === 'baseline') {
       f.push('Today\u2019s posture, risks, open actions and documents, recorded as the starting point');
     } else if (key === 'mr') {
-      f.push('The Clause 9.3 inputs are pre-filled in Checkpoint; read them beforehand and agree any changes to the ISMS, its resources and its objectives');
+      f.push('The chair concludes whether the ISMS is still suitable, adequate and effective, and records any changes needed to it and its resources. This meeting is the Clause 9.3 management review');
     }
     return f;
   }
@@ -193,16 +273,18 @@
     if (kind === 'kickoff') items = items.concat(SECURITY_REVIEW_KICKOFF);
     items = items.concat(core, custom);
     if (kind === 'quarterly' || kind === 'mr') items = items.concat(SECURITY_REVIEW_QUARTERLY);
-    if (kind === 'mr') items.push({ key: 'mr', title: 'Management review sign-off', min: 15, lead: 'chair', clause: '9.3' });
+    var due = kind === 'kickoff' ? [] : ((pack && pack.periodic) || []).filter(function (x) { return x && (!x.never || kind === 'mr'); }).map(function (x) { return x.key; });
+    items = items.concat(SECURITY_REVIEW_PERIODIC.filter(function (i) { return due.indexOf(i.key) !== -1; }).map(function (i) { return { key: i.key, title: i.title, min: i.min, lead: i.lead, clause: i.clause, periodic: true }; }));
+    if (kind === 'mr') items.push({ key: 'mr', title: 'Is the ISMS suitable, adequate and effective?', min: 15, lead: 'chair', clause: '9.3' });
     items = items.concat((r.extra || []).map(function (x) { return { key: x.key, title: x.title, min: x.min || 5, lead: x.lead || 'owner', clause: '', added: x.by || true }; }));
     var skip = r.skip || [];
-    var quiet = [];
+    var quiet = [], quietKeys = [];
     items = items.filter(function (i) {
       if (skip.indexOf(i.key) !== -1) return false;
       if (kind === 'kickoff' && i.key === 'certification') return false;
       var q = securityReviewQuiet(i.key, pack);
       if (q === 'skip') return false;
-      if (q && kind !== 'kickoff') { quiet.push(q); return false; }
+      if (q && kind !== 'kickoff') { quiet.push(q); quietKeys.push(i.key); return false; }
       return true;
     });
     if (r.order && r.order.length) {
@@ -213,14 +295,16 @@
     /* Fit the time: the kind's length, scaled by the monthly setting. */
     var target = Math.round((SECURITY_REVIEW_LENGTH[kind] || 30) * ([30, 45, 60].indexOf(Number(s.length)) !== -1 ? Number(s.length) : 30) / 30);
     var natural = items.reduce(function (m, it) { return m + it.min; }, 0);
-    var fixed = items.filter(function (it) { return it.added; }).reduce(function (m, it) { return m + it.min; }, 0);
+    var own = function (it) { return it.added || it.periodic; };
+    var fixed = items.filter(own).reduce(function (m, it) { return m + it.min; }, 0);
+    target += fixed - items.filter(function (it) { return it.added; }).reduce(function (m, it) { return m + it.min; }, 0);
     var scale = natural > fixed && target > fixed ? (target - fixed) / (natural - fixed) : 1;
     if (scale > 1.5) scale = 1.5;
-    var mins = items.map(function (it) { return it.added ? it.min : Math.max(3, Math.round(it.min * scale)); });
+    var mins = items.map(function (it) { return own(it) ? it.min : Math.max(3, Math.round(it.min * scale)); });
     var diff = Math.round(Math.min(target, natural * scale + 0.5)) - mins.reduce(function (m, x) { return m + x; }, 0);
     if (diff && Math.abs(diff) <= 3) {
       var big = mins.length - 1;
-      mins.forEach(function (m, i) { if (!items[i].added && (items[big].added || m > mins[big])) big = i; });
+      mins.forEach(function (m, i) { if (!own(items[i]) && (own(items[big]) || m > mins[big])) big = i; });
       mins[big] = Math.max(3, mins[big] + diff);
     }
     var who = { chair: s.chair || 'Chair', owner: s.owner || 'ISMS owner', facilitator: s.facilitator || s.owner || 'ISMS owner' };
@@ -231,7 +315,7 @@
       t += mins[idx];
       return row;
     });
-    return { n: Number(n) || 1, kind: kind, label: SECURITY_REVIEW_KIND_LABEL[kind], minutes: t, items: out, quiet: quiet,
+    return { n: Number(n) || 1, kind: kind, label: SECURITY_REVIEW_KIND_LABEL[kind], minutes: t, items: out, quiet: quiet, quietKeys: quietKeys,
       evidences: kind === 'mr' ? 'ISO/IEC 27001 Clauses 9.1 and 9.3 (management review)' : 'ISO/IEC 27001 Clause 9.1 (monitoring, measurement, analysis and evaluation)' };
   }
   function securityReviewDue(setup, reviews, today) {
@@ -408,6 +492,6 @@
   }
 
 module.exports = {
-  srDate, addDaysIso, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
+  srDate, addDaysIso, securityReviewCovered, securityReviewLastCovered, securityReviewPeriodic, securityReviewCoverage, SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };

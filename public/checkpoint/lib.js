@@ -6179,6 +6179,26 @@
     { key: 'baseline', title: 'Where we start', min: 5, lead: 'owner', clause: '9.1' },
     { key: 'path', title: 'Path to certification', min: 5, lead: 'facilitator', clause: '9.2, 9.3' }
   ];
+  /* Topics leadership looks at once a year, or sooner when the register
+     behind them changes: they join whichever meeting they fall due at,
+     with their own time, instead of filling every month. */
+  var SECURITY_REVIEW_PERIODIC = [
+    { key: 'context', title: 'Interested parties and legal requirements', min: 8, lead: 'owner', clause: '4.2, 9.3.2 c and e, A.5.31' },
+    { key: 'issues', title: 'Internal and external issues, and scope', min: 6, lead: 'chair', clause: '4.1, 4.3, 9.3.2 b' },
+    { key: 'audits', title: 'Audit results', min: 6, lead: 'owner', clause: '9.2, 9.3.2 d' },
+    { key: 'resources', title: 'Resources', min: 5, lead: 'chair', clause: '7.1, 9.3.3' }
+  ];
+  /* Clause 9.3.2 a to g, and the agenda items that cover each. "all"
+     means every listed item must have been covered in the cycle. */
+  var SECURITY_REVIEW_COVERAGE = [
+    { letter: 'a', label: 'Actions from previous reviews', keys: ['actions'] },
+    { letter: 'b', label: 'Internal and external issues', keys: ['issues', 'scope'] },
+    { letter: 'c', label: 'Interested parties\u2019 needs', keys: ['context'] },
+    { letter: 'd', label: 'Performance: incidents, monitoring, audits, objectives', keys: ['incidents', 'posture', 'audits', 'objectives'], all: true },
+    { letter: 'e', label: 'Feedback from interested parties', keys: ['context'] },
+    { letter: 'f', label: 'Risks and risk treatment', keys: ['risks'] },
+    { letter: 'g', label: 'Opportunities for improvement', keys: ['decisions'] }
+  ];
   /* Base length by meeting kind, in minutes, for a 30-minute monthly
      setting; a longer setting scales every meeting with it. */
   var SECURITY_REVIEW_LENGTH = { kickoff: 50, monthly: 30, quarterly: 45, mr: 60 };
@@ -6280,12 +6300,13 @@
     var vend = d.vendors || [];
     var obj = (d.objectives || []).filter(function (o) { return o && o.status !== 'Achieved' && o.status !== 'Closed'; });
     return {
-      today: today, since: since,
+      today: today, since: since, periodic: (d.periodic || []).slice(0, 4),
       attendance: { missedTwice: ((d.absences || {}).missedTwice || []).slice(0, 4), lastQuorum: (d.absences || {}).lastQuorum !== false },
       posture: { score: last ? last.score : null, prev: prev && prev !== last ? prev.score : null, failing: typeof d.failing === 'number' ? d.failing : null, failingTop: (d.failingTop || []).slice(0, 3) },
       actions: { open: openA.length, overdue: overdueA.length, closedSince: countLog(/^Action (completed|closed)|^Corrective action/i, 'Action'),
         overdueList: overdueA.slice(0, 8).map(short),
         stuck: d.lastHeld ? overdueA.filter(function (a) { return a.due < d.lastHeld; }).slice(0, 6).map(short) : [],
+        dueSoon: openA.filter(function (a) { return a.due && a.due >= today && a.due <= addDaysIso(today, 14); }).sort(function (a, b) { return a.due.localeCompare(b.due); }).slice(0, 6).map(short),
         prior: (d.prevActionIds || []).map(function (id) { return acts.find(function (a) { return a.id === id; }); }).filter(Boolean).map(short) },
       incidents: { since: inc.slice(0, 8).map(function (n) { return { id: n.id, title: n.title, severity: n.severity || '', status: n.status || '' }; }), count: inc.length,
         open: (d.incidents || []).filter(function (n) { return n.status && n.status !== 'Closed'; }).length },
@@ -6308,6 +6329,8 @@
     var f = [];
     var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
     if (!p) return f;
+    var per = (p.periodic || []).filter(function (x) { return x && x.key === key; })[0];
+    if (per) { f.push(per.reason); (per.facts || []).forEach(function (x) { f.push(x); }); return f; }
     if (key === 'actions') {
       var prior = p.actions.prior || [];
       if (prior.length) f.push('Decisions from last meeting: ' + prior.filter(function (a) { return DONE_ACTION(a) || a.status === 'Closed'; }).length + ' of ' + prior.length + ' done');
@@ -6315,6 +6338,8 @@
       var rest = p.actions.overdueList.filter(function (a) { return stuckIds.indexOf(a.id) === -1; });
       f.push(p.actions.overdue ? plural(p.actions.overdue, 'action') + ' overdue' + (stuckIds.length ? ' (' + stuckIds.length + ' for a decision below)' : '') + (rest.length > 3 ? ', the three oldest:' : rest.length && stuckIds.length ? ', the others:' : '') : 'Nothing overdue; ' + plural(p.actions.open, 'action') + ' open');
       rest.slice(0, 3).forEach(function (a) { f.push(a.id + ' ' + a.title + (a.owner ? ' (' + a.owner + ')' : '')); });
+      var soonA = p.actions.dueSoon || [];
+      if (soonA.length) f.push(plural(soonA.length, 'action') + ' due in the next two weeks: ' + soonA.slice(0, 3).map(function (a) { return a.id + (a.owner ? ' (' + a.owner + ')' : ''); }).join(', ') + (soonA.length > 3 ? ' and more' : ''));
     } else if (key === 'escalations') {
       (p.actions.stuck || []).forEach(function (a) { f.push(a.id + ' ' + a.title + (a.owner ? ' (' + a.owner + ')' : '') + ', overdue since ' + srDate(a.due) + ': extend, reassign or accept the risk'); });
     } else if (key === 'posture') {
@@ -6352,7 +6377,7 @@
     } else if (key === 'baseline') {
       f.push('Today\u2019s posture, risks, open actions and documents, recorded as the starting point');
     } else if (key === 'mr') {
-      f.push('The Clause 9.3 inputs are pre-filled in Checkpoint; read them beforehand and agree any changes to the ISMS, its resources and its objectives');
+      f.push('The chair concludes whether the ISMS is still suitable, adequate and effective, and records any changes needed to it and its resources. This meeting is the Clause 9.3 management review');
     }
     return f;
   }
@@ -6362,7 +6387,7 @@
     if (!p) return '';
     if (key === 'incidents' && !p.incidents.count && !p.incidents.open) return 'No incidents since ' + srDate(p.since);
     if (key === 'risks' && !p.risks.added && !p.risks.changed && !p.risks.aboveAppetite) return 'No new or changed risks, none above appetite';
-    if (key === 'actions' && !p.actions.overdue && !(p.actions.prior || []).length) return 'No actions overdue';
+    if (key === 'actions' && !p.actions.overdue && !(p.actions.prior || []).length && !(p.actions.dueSoon || []).length) return 'No actions overdue or due soon';
     if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length) return 'Posture score unchanged at ' + p.posture.score + '/100';
     if (key === 'certification' && p.certification.certified) return 'skip';
     if (key === 'certification' && !p.certification.nextAudit && !p.certification.docsAwaiting && (p.certification.readiness == null || p.certification.readiness >= 100)) return 'skip';
@@ -6383,16 +6408,18 @@
     if (kind === 'kickoff') items = items.concat(SECURITY_REVIEW_KICKOFF);
     items = items.concat(core, custom);
     if (kind === 'quarterly' || kind === 'mr') items = items.concat(SECURITY_REVIEW_QUARTERLY);
-    if (kind === 'mr') items.push({ key: 'mr', title: 'Management review sign-off', min: 15, lead: 'chair', clause: '9.3' });
+    var due = kind === 'kickoff' ? [] : ((pack && pack.periodic) || []).filter(function (x) { return x && (!x.never || kind === 'mr'); }).map(function (x) { return x.key; });
+    items = items.concat(SECURITY_REVIEW_PERIODIC.filter(function (i) { return due.indexOf(i.key) !== -1; }).map(function (i) { return { key: i.key, title: i.title, min: i.min, lead: i.lead, clause: i.clause, periodic: true }; }));
+    if (kind === 'mr') items.push({ key: 'mr', title: 'Is the ISMS suitable, adequate and effective?', min: 15, lead: 'chair', clause: '9.3' });
     items = items.concat((r.extra || []).map(function (x) { return { key: x.key, title: x.title, min: x.min || 5, lead: x.lead || 'owner', clause: '', added: x.by || true }; }));
     var skip = r.skip || [];
-    var quiet = [];
+    var quiet = [], quietKeys = [];
     items = items.filter(function (i) {
       if (skip.indexOf(i.key) !== -1) return false;
       if (kind === 'kickoff' && i.key === 'certification') return false;
       var q = securityReviewQuiet(i.key, pack);
       if (q === 'skip') return false;
-      if (q && kind !== 'kickoff') { quiet.push(q); return false; }
+      if (q && kind !== 'kickoff') { quiet.push(q); quietKeys.push(i.key); return false; }
       return true;
     });
     if (r.order && r.order.length) {
@@ -6403,14 +6430,16 @@
     /* Fit the time: the kind's length, scaled by the monthly setting. */
     var target = Math.round((SECURITY_REVIEW_LENGTH[kind] || 30) * ([30, 45, 60].indexOf(Number(s.length)) !== -1 ? Number(s.length) : 30) / 30);
     var natural = items.reduce(function (m, it) { return m + it.min; }, 0);
-    var fixed = items.filter(function (it) { return it.added; }).reduce(function (m, it) { return m + it.min; }, 0);
+    var own = function (it) { return it.added || it.periodic; };
+    var fixed = items.filter(own).reduce(function (m, it) { return m + it.min; }, 0);
+    target += fixed - items.filter(function (it) { return it.added; }).reduce(function (m, it) { return m + it.min; }, 0);
     var scale = natural > fixed && target > fixed ? (target - fixed) / (natural - fixed) : 1;
     if (scale > 1.5) scale = 1.5;
-    var mins = items.map(function (it) { return it.added ? it.min : Math.max(3, Math.round(it.min * scale)); });
+    var mins = items.map(function (it) { return own(it) ? it.min : Math.max(3, Math.round(it.min * scale)); });
     var diff = Math.round(Math.min(target, natural * scale + 0.5)) - mins.reduce(function (m, x) { return m + x; }, 0);
     if (diff && Math.abs(diff) <= 3) {
       var big = mins.length - 1;
-      mins.forEach(function (m, i) { if (!items[i].added && (items[big].added || m > mins[big])) big = i; });
+      mins.forEach(function (m, i) { if (!own(items[i]) && (own(items[big]) || m > mins[big])) big = i; });
       mins[big] = Math.max(3, mins[big] + diff);
     }
     var who = { chair: s.chair || 'Chair', owner: s.owner || 'ISMS owner', facilitator: s.facilitator || s.owner || 'ISMS owner' };
@@ -6421,8 +6450,64 @@
       t += mins[idx];
       return row;
     });
-    return { n: Number(n) || 1, kind: kind, label: SECURITY_REVIEW_KIND_LABEL[kind], minutes: t, items: out, quiet: quiet,
+    return { n: Number(n) || 1, kind: kind, label: SECURITY_REVIEW_KIND_LABEL[kind], minutes: t, items: out, quiet: quiet, quietKeys: quietKeys,
       evidences: kind === 'mr' ? 'ISO/IEC 27001 Clauses 9.1 and 9.3 (management review)' : 'ISO/IEC 27001 Clause 9.1 (monitoring, measurement, analysis and evaluation)' };
+  }
+  /* The agenda keys a held meeting covered. Meetings recorded before
+     1.144.0 hold no list: their standing items are assumed, and a
+     management review meeting then covered every input. */
+  function securityReviewCovered(rec, mrEvery) {
+    if (rec && Array.isArray(rec.covered)) return rec.covered;
+    var kind = securityReviewKind(rec && rec.n, mrEvery);
+    var k = ['actions', 'risks', 'incidents', 'posture', 'decisions'];
+    if (kind === 'kickoff') k.push('scope');
+    if (kind === 'quarterly' || kind === 'mr') k.push('objectives');
+    if (kind === 'mr') k = k.concat(['context', 'issues', 'audits', 'resources', 'mr']);
+    return k;
+  }
+  /* The last date each agenda key was covered: held meetings, plus
+     management reviews recorded on their own (which cover everything). */
+  function securityReviewLastCovered(meetings, reviews, mrEvery) {
+    var last = {};
+    var mark = function (k, date, ref) { if (date && (!last[k] || date > last[k].date)) last[k] = { date: date, ref: ref }; };
+    (meetings || []).filter(function (r) { return r && r.status === 'Held' && r.date; }).forEach(function (r) {
+      securityReviewCovered(r, mrEvery).forEach(function (k) { mark(k, String(r.date).slice(0, 10), r.id); });
+    });
+    var every = ['actions', 'risks', 'incidents', 'posture', 'decisions', 'scope', 'objectives', 'context', 'issues', 'audits', 'resources', 'mr'];
+    (reviews || []).filter(function (r) { return r && r.date; }).forEach(function (r) {
+      every.forEach(function (k) { mark(k, String(r.date).slice(0, 10), r.id); });
+    });
+    return last;
+  }
+  /* Which yearly topics are due at the next meeting: not covered for
+     about a year (350 days, so the yearly meeting catches them and the
+     one before it does not), or their register changed since they were.
+     changes = { key: { date, what } }; facts = { key: [lines] }. A topic
+     never covered waits for the management review meeting (never). */
+  function securityReviewPeriodic(meetings, reviews, today, mrEvery, changes, facts) {
+    var last = securityReviewLastCovered(meetings, reviews, mrEvery), ch = changes || {}, fx = facts || {};
+    var cutoff = addDaysIso(today, -350), out = [];
+    SECURITY_REVIEW_PERIODIC.forEach(function (i) {
+      var l = last[i.key] || (i.key === 'issues' ? last.scope : null), c = ch[i.key];
+      var reason = '';
+      if (c && c.date && (!l || c.date > l.date)) reason = (c.what || 'The register changed') + ' on ' + srDate(c.date) + (l ? ', last reviewed ' + srDate(l.date) : '');
+      else if (!l) reason = 'Not reviewed by leadership yet';
+      else if (l.date <= cutoff) reason = 'Last reviewed ' + srDate(l.date) + ': due once a year';
+      if (reason) out.push({ key: i.key, reason: reason, never: !l && !(c && c.date), facts: (fx[i.key] || []).slice(0, 4) });
+    });
+    return out;
+  }
+  /* Clause 9.3.2 a to g over the last 12 months, and the conclusion. */
+  function securityReviewCoverage(meetings, reviews, today, mrEvery) {
+    var last = securityReviewLastCovered(meetings, reviews, mrEvery), from = addDaysIso(today, -365);
+    var ok = function (k) { return last[k] && last[k].date > from; };
+    var rows = SECURITY_REVIEW_COVERAGE.map(function (c) {
+      var hit = c.keys.filter(ok), missing = c.all ? c.keys.filter(function (k) { return !ok(k); }) : hit.length ? [] : c.keys.slice(0, 1);
+      var dates = hit.map(function (k) { return last[k].date; }).sort();
+      return { letter: c.letter, label: c.label, ok: !missing.length, last: c.all ? (missing.length ? '' : dates[0]) : dates[dates.length - 1] || '', missing: missing };
+    });
+    var concl = ok('mr') ? last.mr : null;
+    return { rows: rows, conclusion: concl ? { ok: true, last: concl.date, ref: concl.ref } : { ok: false, last: last.mr ? last.mr.date : '' }, complete: rows.every(function (r) { return r.ok; }) && !!concl, since: from };
   }
   /* A traffic light per area, for the one-page pre-read. */
   function securityReviewStatus(p) {
@@ -6592,7 +6677,7 @@
     var x = (rec && rec.escalations) || {};
     return Object.keys(x).map(function (id) {
       var d = x[id] || {};
-      return id + ' ' + (d.title || '') + ': ' + (d.choice === 'extend' ? 'extended to ' + srDate(d.due) : d.choice === 'reassign' ? 'reassigned to ' + (d.owner || '') + (d.due ? ', due ' + srDate(d.due) : '') : 'risk accepted' + (d.risk ? ' on ' + d.risk : '') + (d.reason ? ' (' + d.reason + ')' : '') + (d.reviewBy ? ', look again by ' + srDate(d.reviewBy) : '')) + (d.by ? ', by ' + d.by : '');
+      return id + ' ' + (d.title || '') + ': ' + (d.choice === 'close' ? 'closed' + (d.reason ? ' (' + d.reason + ')' : '') : d.choice === 'extend' ? 'extended to ' + srDate(d.due) : d.choice === 'reassign' ? 'reassigned to ' + (d.owner || '') + (d.due ? ', due ' + srDate(d.due) : '') : 'risk accepted' + (d.risk ? ' on ' + d.risk : '') + (d.reason ? ' (' + d.reason + ')' : '') + (d.reviewBy ? ', look again by ' + srDate(d.reviewBy) : '')) + (d.by ? ', by ' + d.by : '');
     });
   }
   /* Who was expected (the roles set in the review settings) and who was
@@ -7160,7 +7245,7 @@
     certification: { what: 'The certification audits: what each stage needs, the bookings and, once certified, the three-year cycle.', you: 'Work through the gate checklist, then book Stage 1 and Stage 2.', top: 'The dates and whether you are ready are shown here.', terms: ['Stage 1', 'Stage 2'] },
     audits: { what: 'Your internal audits: the plan, the checklists and the findings.', you: 'Run each planned audit and record its findings.', terms: ['Internal audit', 'Nonconformity'] },
     incidents: { what: 'Security incidents: what happened, how it was handled and what was learned.', you: 'Log every incident, however small, and record the lessons.', staff: 'Tell the ISMS owner straight away about anything suspicious.', terms: [] },
-    reviews: { what: 'The management reviews top management holds on the ISMS, and the monthly security review, with their minutes and decisions.', you: 'Run a management review steps you through the meeting: attendees, each input, the conclusion and decisions, and sign-off. Save a draft at any point.', top: 'You chair these. Read the agenda before the meeting; decisions become actions automatically.', terms: ['Management review'] },
+    reviews: { what: 'The leadership security meeting, and the management reviews it records: what was decided, the Clause 9.3 coverage over the year, and the conclusion on the ISMS.', you: 'Set up the meeting once. Each month take the minutes in the agenda: close, extend or reassign actions and accept or treat risks as you go. Yearly topics join the agenda when due; at the management review meeting the chair records the conclusion.', top: 'You chair these. Read the agenda before the meeting; decisions become actions automatically.', terms: ['Management review'] },
     objectives: { what: 'This year’s measurable security goals, who owns each and how they are going.', you: 'Keep each objective measured and updated.', top: 'You agree these each year; progress comes to the monthly review.', terms: ['Objective'] },
     legal: { what: 'The laws, regulations and contracts that set security requirements for you.', you: 'Confirm which apply, give each an owner and link the controls that meet them.', terms: [] },
     calendar: { what: 'Every recurring security activity and when it is next due.', you: 'Complete each when due and attach the record.', terms: [] },
@@ -7198,7 +7283,7 @@
         'ISO 27001 asks top management for four things, and Checkpoint brings each to you when it is needed:',
         '1. Approve the policies, so they carry the organisation’s authority.',
         '2. Agree the security objectives and how much risk the business is willing to accept.',
-        '3. Chair a short monthly security review and make the decisions only you can make.',
+        '3. Chair the short monthly leadership security meeting and make the decisions only you can make.',
         '4. Make sure the people and budget are there.',
         'Usually about an hour a month. The rest is run by ' + (ctx.owner || 'the ISMS owner') + ' and ' + helper + '.'] },
       practitioner: { title: 'What is expected of you', lines: [
@@ -7278,7 +7363,7 @@
     { id: 'risk', clause: '6.1', q: 'What are the biggest information security risks, and how much risk are you willing to accept?', listen: 'The top two or three risks in business terms, and the appetite stated the same way the register states it.',
       fact: function (d) { return d.aboveAppetite ? { ok: false, text: d.aboveAppetite + ' risk' + (d.aboveAppetite === 1 ? ' is' : 's are') + ' above the ' + (d.appetite || 'set') + ' appetite without a recorded acceptance. Saying "we accept nothing above ' + (d.appetite || 'it') + '" would contradict the register.' } : { ok: true, text: 'Risk appetite is ' + (d.appetite || 'not set') + ' and every risk above it is accepted or treated.' }; } },
     { id: 'roles', clause: '5.3', q: 'Who runs information security day to day, and who do they report to?', listen: 'A named person, their authority to act, and that they report to top management.',
-      fact: function (d) { return d.ismsOwner ? { ok: true, text: 'The ISMS owner on record is ' + d.ismsOwner + '.' } : { ok: false, text: 'No ISMS owner is recorded: set up the monthly security review with an owner.' }; } },
+      fact: function (d) { return d.ismsOwner ? { ok: true, text: 'The ISMS owner on record is ' + d.ismsOwner + '.' } : { ok: false, text: 'No ISMS owner is recorded: set up the leadership security meeting with an owner.' }; } },
     { id: 'resources', clause: '7.1', q: 'What resources have you given information security this year?', listen: 'People’s time, budget or tools, and how they decide when more is needed.',
       fact: function (d) { return d.resourcesStated ? { ok: true, text: 'The objectives plan states the resources for each objective.' } : { ok: false, text: 'No resources are stated against the objectives: the answer will have nothing to point at.' }; } },
     { id: 'review', clause: '9.3', q: 'When did you last review the ISMS, and what did you decide?', listen: 'The date of the last management review and one or two decisions it made.',
@@ -7458,7 +7543,7 @@
       outcomeText: outcomes.map(function (o) { return srDate(o.date) + ': ' + o.outcome; }).join('; '),
       performance: [move('score', 'posture score'), move('overdue', 'overdue actions'), move('incidents', 'incidents a month')].filter(Boolean).join('; '),
       risk: move('aboveAppetite', 'risks above appetite'),
-      text: held.length + ' monthly security review' + (held.length === 1 ? '' : 's') + ' held since ' + srDate(held[0].date) + ', with ' + decisions + ' decision' + (decisions === 1 ? '' : 's') + ' recorded as actions.'
+      text: held.length + ' leadership security meeting' + (held.length === 1 ? '' : 's') + ' held since ' + srDate(held[0].date) + ', with ' + decisions + ' decision' + (decisions === 1 ? '' : 's') + ' recorded as actions.'
     };
   }
 
@@ -11840,7 +11925,9 @@
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
-    srDate: srDate, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
+    srDate: srDate,
+    securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
+    SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,

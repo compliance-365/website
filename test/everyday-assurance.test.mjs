@@ -202,7 +202,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     assert.match(await page.locator('#modalBox').innerText(), /The kick-off is on/);
     await page.locator('#modalBox .m-btns .btn:not(.ghost)').click();
     await page.waitForSelector('#drawer .sr-item');
-    assert.match(await page.locator('#drawer').innerText(), /Security review \d/);
+    assert.match(await page.locator('#drawer').innerText(), /Leadership meeting \d/);
     assert.deepEqual(errors, []);
     await context.close();
   });

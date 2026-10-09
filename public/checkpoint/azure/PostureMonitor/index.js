@@ -2308,7 +2308,7 @@ async function buildScheduledReviewPack(g, gAll, context, siteId, optional, toda
   if (optional.Documents) { try { docs = await readDocumentRegister(g, gAll, siteId, optional.Documents); } catch (e) { docs = []; } }
   const short = a => ({ id: a.id, title: a.title, owner: a.owner, due: a.due, status: a.status });
   return {
-    today, since,
+    today, since, periodic: ((extra && extra.periodic) || []).slice(0, 4),
     attendance: { missedTwice: (((extra && extra.absences) || {}).missedTwice || []).slice(0, 4), lastQuorum: ((extra && extra.absences) || {}).lastQuorum !== false },
     posture: { score: typeof score === 'number' ? score : null, prev: typeof prevScore === 'number' ? prevScore : null, failing: null, failingTop: ((extra && extra.failingTop) || []).slice(0, 3) },
     actions: { open: open.length, overdue: overdue.length, closedSince: 0, overdueList: overdue.slice(0, 8).map(short), prior: [],
@@ -2336,7 +2336,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     const held = reviews.filter(r => r.status === 'Held').sort((a, b) => b.date.localeCompare(a.date))[0];
     const prevScore = held && held.pack && held.pack.posture ? held.pack.posture.score : null;
     rec = { id: 'SR-' + String(due.n).padStart(3, '0'), n: due.n, kind: SR.securityReviewKind(due.n, setup.mrEvery), date: due.date, time: setup.time || '10:00', status: 'Prepared',
-      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued, lastHeld: held ? held.date : '', absences: SR.securityReviewAbsences(reviews, setup) }, extra || {})) };
+      preparedAt: today, preparedBy: 'scheduled', pack: await buildScheduledReviewPack(g, gAll, context, siteId, optional, today, held ? held.date : SR.addDaysIso(today, -31), score, prevScore, Object.assign({ certified: !!(parseJsonSetting(settings.certRecords, {}).iso27001 || {}).issued, lastHeld: held ? held.date : '', absences: SR.securityReviewAbsences(reviews, setup), periodic: SR.securityReviewPeriodic(reviews, [], today, setup.mrEvery) }, extra || {})) };
     reviews.push(rec);
     done.push('prepared ' + rec.id);
   }

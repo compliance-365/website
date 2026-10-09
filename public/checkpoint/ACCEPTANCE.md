@@ -295,8 +295,17 @@ Exercises internal audit scheduling, report generation, and export.
 
 Exercises management review and the audit trail.
 
-**8.1 — Run a management review**
-- Click: sidebar → **"Management review"** → **"Run a management review"**. Step 1: pick the chair (top management) and attendees. Step 2: mark each input Noted or Action needed, with a note. Close the panel half-way, reopen it ("Continue the review in progress"), and confirm nothing was lost. Step 3: answer suitable / adequate / effective (a "Partly" or "No" needs a reason), fill improvements, changes and resources, and check the input marked Action needed became an action row. Step 4: confirm "Ready to save", then save.
+**8.0 — Leadership security meeting**
+- Click: sidebar → **"Management review"**. The **Leadership security meeting** card is first, with the **Clause 9.3 coverage, last 12 months** panel (inputs a to g and the conclusion). Open the next meeting's agenda, prepare it, then **Record minutes**.
+- In the minutes: under Actions, **Close** one overdue action with a note, **Extend** another; under Risks, **Accept** one risk above appetite with a reason, and **Treat** another (raise an action); under Incidents, turn a lesson learned into an action. Save the minutes.
+- Expect: the closed action shows **Closed** in the Actions register; the accepted risk shows the chair's acceptance and date, with a "look again" action; the treatment action is linked to its risk; the minutes document lists each decision against its item; the coverage panel dates move to the meeting date.
+- Set the management review interval to 3 months in the meeting **Settings**, open the meeting that is now the management review, and try to save its minutes without answering suitable / adequate / effective: it refuses. Answer them ("Partly" needs a reason) and save.
+- Expect: a new row in **Management review records** with the conclusion and "Awaiting sign-off" (or signed off when the chair saved it); the next management review booked on the compliance calendar; on a live tenant the minutes are filed under Clause 9.3 as well as 9.1.
+- Yearly topics: change the interested parties answers (Scope & context) or add a legal requirement, then preview the next agenda: **Interested parties and legal requirements** is on it with its own time, and the reason says the register changed. It is not on the agenda otherwise until a year after it was last covered.
+- [ ] Pass  [ ] Fail
+
+**8.1 — Record a management review held outside the meeting**
+- Click: sidebar → **"Management review"** → **"Record a review held outside the meeting"** (shown as **"Run a management review"** when the leadership meeting is not set up). Step 1: pick the chair (top management) and attendees. Step 2: mark each input Noted or Action needed, with a note. Close the panel half-way, reopen it ("Continue the review in progress"), and confirm nothing was lost. Step 3: answer suitable / adequate / effective (a "Partly" or "No" needs a reason), fill improvements, changes and resources, and check the input marked Action needed became an action row. Step 4: confirm "Ready to save", then save.
 - Expect: a new review row with chair, conclusion, actions raised and "Awaiting sign-off"; the actions in the Actions register; a Management review item on the compliance calendar at the next due date; the minutes filed under Clause 9.3 (live tenant). Signed in as the chair, the review is in My tasks as "Sign off minutes", and signing off shows the name and date on the minutes.
 - [ ] Pass  [ ] Fail
 

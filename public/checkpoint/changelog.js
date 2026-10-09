@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.144.0',
+    date: '2026-10-09',
+    entries: [
+      'One leadership security meeting. The monthly security review and the management review are now the same series of meetings, organised by business topic rather than by clause. Every meeting covers actions, risks, incidents and performance. The meeting you set as the management review (yearly by default, or every 3 or 6 months) also records the conclusion on the ISMS. The meeting now leads the Management review page.',
+      'Decide in the meeting. While taking the minutes, each overdue or due-soon action has Close, Extend and Reassign buttons. Each risk above appetite has Accept (recorded on the risk with who and when, and a reminder to look at it again) and Treat (raises an action against the risk). Each incident has a button that turns a lesson learned into an action. Every decision is in the minutes.',
+      'Yearly topics only when due. Interested parties and legal requirements, internal and external issues and scope, audit results, and resources join whichever meeting they fall due at: a year after leadership last covered them, or sooner when the register behind them changes. They come with their own time and their own figures, so monthly meetings stay short.',
+      'Clause 9.3 coverage panel. It shows, for each 9.3.2 input (a to g), when a meeting last covered it in the past 12 months, and when the conclusion on the ISMS was last recorded. This is what an auditor asks for, without one long annual meeting.',
+      'At the management review meeting, the chair answers whether the ISMS is still suitable, adequate and effective ("Partly" or "No" needs a reason), and records changes and resources. Saving creates the management review record with what was discussed against each input, the chair can sign off there or later from My tasks, the next review is booked on the calendar, and the minutes are filed as Clause 9.3 evidence as well as 9.1.',
+      'A review held outside the meeting can still be recorded in four steps. Meetings and reviews recorded before this release still count towards the coverage.'
+    ]
+  },
+  {
     version: '1.143.0',
     date: '2026-10-09',
     entries: [

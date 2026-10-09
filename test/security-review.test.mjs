@@ -105,7 +105,7 @@ describe('trend and the annual review', () => {
     const y = Lib.securityReviewYearSummary(reviews, '2026-01-01');
     assert.equal(y.held, 2);
     assert.equal(y.decisions, 3);
-    assert.match(y.text, /2 monthly security reviews held since 11 Aug 2026, with 3 decisions/);
+    assert.match(y.text, /2 leadership security meetings held since 11 Aug 2026, with 3 decisions/);
     assert.equal(y.performance, 'posture score 41 to 48; overdue actions 6 to 4; incidents a month 2 to 1');
     assert.equal(y.risk, 'risks above appetite 4 to 3');
     assert.equal(Lib.securityReviewYearSummary([], '2026-01-01'), null);
@@ -114,7 +114,7 @@ describe('trend and the annual review', () => {
     assert.match(app, /var ys = window\.CheckpointLib\.securityReviewYearSummary\(secReviews\(\), since\);/);
     assert.match(app, /items = items\.concat\(secReviewTasksFor\(me\)\);/);
     assert.match(app, /autoSecurityReview\(\)\.catch\(warn\);/);
-    assert.match(html, /<div id="secReviewCard"><\/div>/);
+    assert.match(html, /<div id="secReviewCard"[^>]*><\/div>/);
   });
 });
 
@@ -173,7 +173,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.evaluate(() => window.App.closeDrawer());
     await page.click('[data-action="App.toggleAddReview"]');
     await page.waitForTimeout(300);
-    assert.match(await page.inputValue('#naMR_priorActions'), /monthly security review held since [\s\S]*1 decision recorded/);
+    assert.match(await page.inputValue('#naMR_priorActions'), /leadership security meeting held since [\s\S]*1 decision recorded/);
     assert.deepEqual(errors, []);
     await page.close();
   });
