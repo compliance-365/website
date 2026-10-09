@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.147.0',
+    date: '2026-10-10',
+    entries: [
+      'The approval table is signed from Checkpoint\u2019s own record. When the approver approves in Checkpoint (for example from My tasks), the signature cell reads \u201cApproved electronically in Checkpoint by \u2026 on \u2026\u201d. When someone records another person\u2019s approval, it says who recorded it, so the document never claims more than happened.',
+      'Document history is real. The history table lists each draft, revision and approval of the document, with dates and names, from Checkpoint\u2019s audit log. Several edits between two approvals show as one row.',
+      'Fixed: an approved policy printed or exported later showed that day as its approval and effective date. It now shows the date approval was given, in every layout and in Word.',
+      'Standard, Formal and Minimal policies and the Auditor Pack now print with a running header and footer in the page margin, including Page X of Y, like the Enterprise layout and reports.'
+    ]
+  },
+  {
     version: '1.146.0',
     date: '2026-10-10',
     entries: [

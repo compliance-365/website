@@ -84,9 +84,11 @@
 <style>
   #c365-chat {
     position: fixed;
-    /* Lifts with the cookie banner — see --fab-lift in brand.css. */
-    bottom: calc(88px + var(--fab-lift, 0px));
-    left: 20px;
+    /* Lifts with the cookie banner — see --fab-lift in brand.css.
+       Same baseline and inset as the contact button in the opposite
+       corner (.fab-teams / .fab-msg), so the two read as a pair. */
+    bottom: calc(16px + var(--fab-lift, 0px));
+    left: 16px;
     z-index: 10000;
     transition: bottom .2s ease;
     font-family: Nunito, system-ui, -apple-system, sans-serif;
@@ -367,7 +369,7 @@
   @media (max-width: 480px) {
     /* Must keep the --fab-lift term: this is the width where the cookie
        banner is tallest and the overlap it causes is worst. */
-    #c365-chat { left: 12px; bottom: calc(80px + var(--fab-lift, 0px)); }
+    #c365-chat { left: 12px; bottom: calc(16px + var(--fab-lift, 0px)); }
     #c365-panel { width: calc(100vw - 24px); left: 0; }
   }
 </style>

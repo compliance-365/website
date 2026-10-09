@@ -78,7 +78,14 @@ describe('in the browser', { skip: skipReason || false }, () => {
       await doc.setContent(await build(layout, true));
       const hidden = await doc.evaluate(() => ['.cover', '.toc', '.front-x'].every((s) => getComputedStyle(document.querySelector(s)).display === 'none') && getComputedStyle(document.querySelector('.mast')).display !== 'none');
       assert.ok(hidden, layout + ' renders as before');
+      // Since 1.147.0 the other layouts number their printed pages too.
+      const lh = await build(layout, true);
+      assert.match(lh, /@bottom-right\{content:"Page " counter\(page\) " of " counter\(pages\)/, layout + ' prints Page X of Y');
+      assert.match(lh, /@top-right\{content:"Information Security Policy"/);
+      assert.match(lh, /\.pr-run\{display:none!important\}/, layout + ' hides the fixed running marks in print');
     }
+    // Enterprise has its own margin boxes; the shared ones are not added on top.
+    assert.equal((html.match(/@bottom-right\{/g) || []).length, 1);
     await page.close(); await doc.close();
   });
 });

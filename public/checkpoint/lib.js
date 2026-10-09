@@ -4185,8 +4185,96 @@
   var DOCX_PAGE_BREAK = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
   /* Enterprise front matter: a cover page, then a document control page
      (metadata, history, approval). The contents list follows it. */
+  /* ── Document control from the audit log ───────────────────────────
+     A controlled document's history and approval come from what
+     Checkpoint recorded when they happened, not from whoever exports
+     it today: every generation, edit and approval of a document is
+     already an audit entry (actor = the signed-in account). */
+  var DOC_EDIT_ACTIONS = { 'Policy content edited': 1, 'Policy document regenerated': 1, 'Policy content reverted': 1 };
+  /* The local calendar date of an ISO timestamp, as YYYY-MM-DD. */
+  function docLocalDate(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return String(iso || '').slice(0, 10);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function parseDocApproval(e) {
+    var m = /^Approved v(\S+) by (.+?)(?: · next review|$)/.exec(String(e.after || ''));
+    return m ? { version: m[1], approvedBy: m[2].trim() } : null;
+  }
+  /* Rows for the document history table, oldest first: { version,
+     date (YYYY-MM-DD), description, by }. Consecutive edits between
+     two approvals collapse into one row. `pending` is a row for an act
+     not yet in the log (the approval being saved right now). At most
+     `max` rows (default 10), keeping the most recent. */
+  function documentHistory(auditLog, docName, pending, max) {
+    var entries = (auditLog || []).filter(function (e) { return e && e.targetType === 'Document' && e.targetId === docName; })
+      .slice().sort(function (a, b) { return String(a.entryDateTime || '').localeCompare(String(b.entryDateTime || '')); });
+    var rows = [], lastApproved = '', edit = null;
+    entries.forEach(function (e) {
+      var date = docLocalDate(e.entryDateTime);
+      if (e.action === 'Policy template generated') {
+        edit = null;
+        rows.push({ version: '0.1', date: date, description: 'Draft generated', by: e.actor || '' });
+      } else if (DOC_EDIT_ACTIONS[e.action]) {
+        if (edit) {
+          edit.n++; edit.row.date = date;
+          if (e.actor && edit.by.indexOf(e.actor) === -1) { edit.by.push(e.actor); edit.row.by = edit.by.join(', '); }
+          edit.row.description = 'Content revised (' + edit.n + ' changes)';
+        } else {
+          edit = { n: 1, by: e.actor ? [e.actor] : [], row: { version: 'Draft', date: date, description: 'Content revised', by: e.actor || '' } };
+          rows.push(edit.row);
+        }
+      } else if (e.action === 'Policy document approved') {
+        var a = parseDocApproval(e);
+        if (!a) return;
+        edit = null;
+        rows.push({ version: a.version, date: date, description: lastApproved ? 'Reviewed and re-approved' : 'Approved for use', by: a.approvedBy });
+        lastApproved = a.version;
+      }
+    });
+    if (pending) rows.push({ version: pending.version || '', date: pending.date || '', description: pending.description || (lastApproved ? 'Reviewed and re-approved' : 'Approved for use'), by: pending.by || '' });
+    var cap = max || 10;
+    return rows.length > cap ? rows.slice(rows.length - cap) : rows;
+  }
+  /* The most recent approval of a document in the audit log:
+     { version, approvedBy, recordedBy, date } or null. */
+  function documentApprovalRecord(auditLog, docName) {
+    var hit = null;
+    (auditLog || []).forEach(function (e) {
+      if (!e || e.targetType !== 'Document' || e.targetId !== docName || e.action !== 'Policy document approved') return;
+      if (hit && String(hit.entryDateTime || '') >= String(e.entryDateTime || '')) return;
+      hit = e;
+    });
+    var a = hit && parseDocApproval(hit);
+    return a ? { version: a.version, approvedBy: a.approvedBy, recordedBy: hit.actor || '', date: docLocalDate(hit.entryDateTime) } : null;
+  }
+  /* Whether two ways of writing a person's name are the same person:
+     "Ekin Yilmaz" and "E. Yilmaz (CEO)" are; "Ekin Yilmaz" and "Cem
+     Caglar" are not. Same surname and same first initial. */
+  function samePersonName(a, b) {
+    var parts = function (s) { return String(s || '').replace(/\([^)]*\)/g, ' ').toLowerCase().replace(/[^a-zÀ-ɏ' -]/g, ' ').split(/\s+/).filter(Boolean); };
+    var x = parts(a), y = parts(b);
+    if (!x.length || !y.length) return false;
+    if (x.join(' ') === y.join(' ')) return true;
+    return x.length > 1 && y.length > 1 && x[x.length - 1] === y[y.length - 1] && x[0][0] === y[0][0];
+  }
+  /* What the signature cell of an approved document says. Only what
+     Checkpoint can stand behind: an approval made by the signed-in
+     approver is an electronic approval; one entered by somebody else
+     is a recorded approval, naming who recorded it. dateText is the
+     display date. */
+  function approvalSignatureText(rec, dateText) {
+    if (!rec || !rec.approvedBy) return '';
+    var on = dateText ? ' on ' + dateText : '';
+    if (rec.recordedBy && samePersonName(rec.recordedBy, rec.approvedBy)) return 'Approved electronically in Checkpoint by ' + rec.recordedBy + on;
+    if (rec.recordedBy) return 'Approval recorded in Checkpoint by ' + rec.recordedBy + on;
+    return 'Approval recorded in Checkpoint' + on;
+  }
   function buildEnterpriseDocxFront(t, opts, accent, tableBorder) {
     var ver = opts.version || (opts.approved ? '1.0' : '0.1');
+    /* The date approval was given, not the export date. */
+    var approvedOn = opts.approvalDateText || opts.generatedDate || '';
     var out = [];
     if (opts.banner) out.push(docxP(opts.banner, { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
     if (!opts.approved) out.push(docxP('DRAFT — REVIEW AND APPROVE. NOT YET CONFIRMED BY A PRACTITIONER AS READY FOR USE.', { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
@@ -4197,7 +4285,7 @@
     out.push(docxP(t.title, { style: 'Title', after: 240 }));
     out.push(docxP('', { borderBottom: { sz: 18, color: accent }, after: 480 }));
     out.push(docxTable([
-      ['Version', ver + (opts.approved ? '' : ' (draft)'), opts.approved ? 'Effective' : 'Generated', opts.generatedDate || ''],
+      ['Version', ver + (opts.approved ? '' : ' (draft)'), opts.approved ? 'Effective' : 'Generated', opts.approved ? approvedOn : (opts.generatedDate || '')],
       ['Owner', opts.owner || '—', 'Next review', opts.reviewDate || '—'],
       ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending approval', 'Applies to', opts.clientLabel || '']
     ], [1700, 3000, 1700, 3000], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
@@ -4208,14 +4296,17 @@
     out.push(label('Document control'));
     out.push(docxTable([
       ['Organisation', opts.clientLabel || ''], ['Document owner', opts.owner || ''], ['Version', ver], ['Status', opts.approved ? 'Approved' : 'Draft'],
-      ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Not yet approved'], [opts.approved ? 'Approval date' : 'Generated', opts.generatedDate || ''],
+      ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Not yet approved'], [opts.approved ? 'Approval date' : 'Generated', opts.approved ? approvedOn : (opts.generatedDate || '')],
       ['Next review due', opts.reviewDate || '—'], ['Classification', opts.classification || 'Internal']
     ], [2600, 6800], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
     out.push(label('Document history'));
-    out.push(docxTable([['Version', 'Date', 'Description', 'By'], [ver, opts.generatedDate || '', opts.approved ? 'Approved for use' : 'Draft generated for review', (opts.approved ? opts.approvedBy : opts.owner) || '—']],
+    var hist = (opts.history && opts.history.length)
+      ? opts.history.map(function (r) { return [r.version || '', r.dateText || r.date || '', r.description || '', r.by || '\u2014']; })
+      : [[ver, opts.approved ? approvedOn : (opts.generatedDate || ''), opts.approved ? 'Approved for use' : 'Draft generated for review', (opts.approved ? opts.approvedBy : opts.owner) || '\u2014']];
+    out.push(docxTable([['Version', 'Date', 'Description', 'By']].concat(hist),
       [1500, 2300, 3600, 2000], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
     out.push(label('Approval'));
-    out.push(docxTable([['Role', 'Name', 'Date', 'Signature'], ['Document owner', opts.owner || '—', opts.generatedDate || '', ''], ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending', opts.approved ? (opts.generatedDate || '') : '', '']],
+    out.push(docxTable([['Role', 'Name', 'Date', 'Signature'], ['Document owner', opts.owner || '—', '', ''], ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending', opts.approved ? approvedOn : '', opts.approved ? (opts.approvalSignature || '') : '']],
       [2200, 2600, 2000, 2600], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
     return out.join('');
   }
@@ -4323,6 +4414,7 @@
      rendered as a bold red strip at the very top (the "uncontrolled
      copy" warning callers already attach to every export). */
   function buildPolicyDocxBody(t, opts) {
+    var approvedOn = opts.approvalDateText || opts.generatedDate || '';
     var layout = opts.layout || 'standard';
     var ent = layout === 'enterprise';
     var accent = ent && !/^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? '1F3A5F' : docxAccentHex(opts.brandColor);
@@ -4363,7 +4455,7 @@
       ['Version', opts.version || (opts.approved ? '1.0' : '0.1')],
       ['Status', opts.approved ? 'Approved' : 'Draft'],
       ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Not yet approved'],
-      [opts.approved ? 'Approval date' : 'Generated', opts.generatedDate || ''],
+      [opts.approved ? 'Approval date' : 'Generated', opts.approved ? approvedOn : (opts.generatedDate || '')],
       ['Next review due', opts.reviewDate || '—'],
       ['Classification', opts.classification || 'Internal']
     ];
@@ -4387,7 +4479,7 @@
       parts.push(docxCalloutParagraphs(t.leadershipCommitment.split('\n\n'), accent, layout));
       if (opts.approved && opts.approvedBy) {
         parts.push(docxP(opts.approvedBy, { before: 80 }, { bold: true }));
-        parts.push(docxP(opts.generatedDate || '', { after: 160 }, { color: '6B675E', sz: 16 }));
+        parts.push(docxP(approvedOn, { after: 160 }, { color: '6B675E', sz: 16 }));
       }
     }
 
@@ -4463,7 +4555,7 @@
         DOCX_PAGE_BREAK;
       return parts.join('').replace(CONTENTS, contents);
     }
-    parts.push(docxP('Compliance365 — Checkpoint · ' + (opts.approved ? 'Approved' : 'Draft') + ' · ' + (opts.generatedDate || ''),
+    parts.push(docxP('Compliance365 — Checkpoint · ' + (opts.approved ? 'Approved · ' + approvedOn : 'Draft · ' + (opts.generatedDate || '')),
       { style: 'Meta', before: 320, borderTop: layout === 'minimal' ? null : { sz: 6, color: '999489' } }));
     return parts.join('');
   }
@@ -12088,6 +12180,7 @@
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
     srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
+    documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
     incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
     SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,

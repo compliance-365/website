@@ -1314,9 +1314,11 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   justify-content: center;
   font-size: 26px;
   cursor: pointer;
-  background: linear-gradient(135deg, #BE4A1E, #7c3aed);
+  /* Brand ink with the accent ring, matching .fab-teams on desktop. */
+  background: #0B0B0C;
   color: #fff;
-  box-shadow: 0 12px 30px rgba(15,23,42,.35);
+  border: 1.5px solid #BE4A1E;
+  box-shadow: 0 10px 30px rgba(15,23,42,.35);
 }
 
 .fab-main-icon {
@@ -1419,16 +1421,23 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   position: fixed;
   right: 16px;
   bottom: calc(16px + var(--fab-lift, 0px));
-  transition: bottom .2s ease;
   z-index: 65;
   width: 52px;
   height: 52px;
   border-radius: 999px;
-  background: #444791;
+  /* Brand ink with the accent ring rather than Teams purple, so it sits
+     with the site; the Teams logo inside still says what it opens. */
+  background: #0B0B0C;
+  border: 1.5px solid #BE4A1E;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 10px 30px rgba(15,23,42,0.35);
+  transition: bottom .2s ease, transform .15s ease;
+}
+.fab-teams:hover,
+.fab-teams:focus-visible {
+  transform: translateY(-2px);
 }
 
 @media (max-width: 899px) {
