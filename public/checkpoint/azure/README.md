@@ -167,9 +167,9 @@ without touching anything else this app can do.
 
 ## 4. Deploy the infrastructure
 
-The Checkpoint browser app's Dashboard has a guided version of steps
-1–4 (Continuous monitoring card, once no automated scan has been
-recorded yet) that fills in `tenantId`, `spHostname`, `spSitePath` and
+The Checkpoint browser app has a guided version of steps 1–4
+(Integrations → Scheduled monitor (Azure) → How to set it up, shown
+until an automated scan has been recorded) that fills in `tenantId`, `spHostname`, `spSitePath` and
 `listPrefix` from this tenant's own live data, builds the exact step 3
 Sites.Selected request below with the resolved site ID substituted in,
 and tracks which of the six steps is done. This section is the
