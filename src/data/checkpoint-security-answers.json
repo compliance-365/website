@@ -142,10 +142,6 @@
           "a": "Checkpoint has no server or database holding client data. The only Compliance365 endpoints are the small functions in the table above, which receive no client register data."
         },
         {
-          "q": "Penetration testing",
-          "a": "Ask us for the current status and summary."
-        },
-        {
           "q": "How do we report a vulnerability?",
           "a": "Follow the vulnerability disclosure policy on the Security & architecture page. We do not pursue good-faith researchers who follow it."
         }
