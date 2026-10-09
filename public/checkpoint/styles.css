@@ -1903,3 +1903,35 @@ tr.asset-retired td { opacity: .85; }
 .pg-terms dt{color:var(--paper);font-weight:600}
 .pg-terms dd{margin:0}
 @media (max-width:600px){.pg-terms dl{grid-template-columns:1fr}.pg-terms dd{margin-bottom:6px}}
+
+/* Guided build: ten stages in the order the ISMS is built. */
+.gb{display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start}
+.gb-stages{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.gb-stage{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:8px 10px;color:var(--paper-dim);font:inherit;font-size:var(--fs-2);cursor:pointer}
+.gb-stage:hover,.gb-stage:focus-visible{border-color:var(--line);color:var(--paper)}
+.gb-stage.on{border-color:var(--gold);color:var(--paper)}
+.gb-n{flex:0 0 22px;height:22px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.gb-stage.done .gb-n{border-color:var(--pass);color:var(--pass)}
+.gb-stage.cur .gb-n{border-color:var(--gold);color:var(--gold)}
+.gb-n svg{width:11px;height:11px}
+.gb-panel h2{margin:4px 0 8px}
+.gb-kicker{margin:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.gb-plain{color:var(--paper-dim);line-height:1.6;margin:0 0 14px;max-width:720px}
+.gb-items{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.gb-items li{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.gb-items li.now{border-color:var(--gold)}
+.gb-items li.done{opacity:.75}
+.gb-tick{flex:0 0 20px;height:20px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;color:var(--pass)}
+.gb-items li.done .gb-tick{border-color:var(--pass)}
+.gb-tick svg{width:11px;height:11px}
+.gb-t{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px;font-size:var(--fs-2)}
+.gb-t b{color:var(--paper)}
+.gb-top{font-size:11px;font-weight:600;color:var(--gold);border:1px solid var(--gold);border-radius:99px;padding:0 7px;margin-left:4px}
+.gb-clauses{margin:16px 0 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.gb-clause{background:none;border:1px solid var(--line);border-radius:99px;color:var(--paper-dim);font:inherit;font-size:12px;padding:3px 10px;cursor:pointer;display:inline-flex;gap:4px;align-items:center;min-height:26px}
+.gb-clause.ok{border-color:var(--pass);color:var(--pass)}
+.gb-clause svg{width:11px;height:11px}
+.gb-nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:18px}
+.gs-stage{margin:2px 0 6px;font-size:var(--fs-2);color:var(--paper)}
+.gs-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media (max-width:800px){.gb{grid-template-columns:1fr}.gb-stages{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
