@@ -8091,9 +8091,8 @@ function showModal(opts) {
   async function approveProposedTemplate(tpl) {
     var t = TPL[tpl];
     if (!t) return null;
-    var maxR = S.risks.reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
     var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-    var rid = 'R-' + String(maxR + 1).padStart(3, '0');
+    var rid = nextRegId(S.risks, 'R-');
     var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
     var actIds = t.actions.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
     try {
@@ -8162,8 +8161,7 @@ function showModal(opts) {
         await Store.updateRisk(r);
         audit('Findings added to business risk', 'Risk', rid, before, g.tpls.length + ' finding(s): ' + g.tpls.join(', ') + '; inherent ' + r.L + '×' + r.I);
       } else {
-        var maxR = S.risks.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-        rid = 'R-' + String(maxR + 1).padStart(3, '0');
+        rid = nextRegId(S.risks, 'R-');
         r = { id: rid, title: g.biz.title, cat: g.biz.cat, cia: g.cia.slice(), src: src, L: g.L, I: g.I, controls: g.controls.slice(), owner: owner, status: 'Open', treat: 'Treat',
           actions: actIds, tpl: g.key, findings: g.tpls.slice(), threat: g.biz.threat, consequence: g.biz.consequence, vulnerability: vuln + ' (' + today + ')' };
         await Store.addRisk(r);
@@ -8532,8 +8530,7 @@ function showModal(opts) {
       target.vulnerability = (target.vulnerability ? target.vulnerability + '; ' : '') + g.risks.map(function (r) { return r.title; }).join('; ');
       await Store.updateRisk(target);
     } else {
-      var maxR = S.risks.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      rid = 'R-' + String(maxR + 1).padStart(3, '0');
+      rid = nextRegId(S.risks, 'R-');
       target = { id: rid, title: g.biz.title, cat: g.biz.cat, cia: g.cia.slice(), src: 'Grouped', L: g.L, I: g.I, controls: g.controls.slice(),
         owner: g.owner || ((Graph.getAccount() && Graph.getAccount().name) || 'Practitioner'), status: 'Open', treat: 'Treat',
         actions: g.actions.slice(), tpl: g.key, findings: g.findings.slice(), threat: g.biz.threat, consequence: g.biz.consequence,
@@ -10617,8 +10614,7 @@ function showModal(opts) {
       validate: function (v) { return v.title ? null : 'Describe the finding.'; }
     });
     if (!v) return null;
-    var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-    var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(auditFindingDays()), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+    var act = { id: nextRegId(S.actions, 'ACT-'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(auditFindingDays()), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
     busy(true);
     try {
       await Store.addAction(act);
@@ -11374,8 +11370,7 @@ function showModal(opts) {
     if (found) return found;
     var def = L.businessRiskDef(key);
     if (!def) return null;
-    var maxR = S.risks.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
-    var r = { id: 'R-' + String(maxR + 1).padStart(3, '0'), title: def.title, cat: def.cat, cia: (def.cia || []).slice(), src: src, L: 3, I: 3, controls: (def.controls || []).slice(),
+    var r = { id: nextRegId(S.risks, 'R-'), title: def.title, cat: def.cat, cia: (def.cia || []).slice(), src: src, L: 3, I: 3, controls: (def.controls || []).slice(),
       owner: owner || currentActor().name, status: 'Open', treat: 'Treat', actions: [], tpl: key, threat: def.threat || '', consequence: def.consequence || '' };
     try { await Store.addRisk(r); audit('Risk added', 'Risk', r.id, '', r.title + ' (from ' + src + ')'); } catch (e) { warn(e); return null; }
     return r;
@@ -11404,9 +11399,8 @@ function showModal(opts) {
   /* One action from one decision, against the agenda item it came from. */
   async function srRaiseAction(rec, itemKey, itemTitle, title, owner, due, riskId) {
     var s = secReviewSetup() || {};
-    var maxAct = S.actions.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
     var u = directoryUser(owner);
-    var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: title, type: 'Action', risk: riskId || '', control: '', pr: 'Medium',
+    var act = { id: nextRegId(S.actions, 'ACT-'), title: title, type: 'Action', risk: riskId || '', control: '', pr: 'Medium',
       owner: u ? u.name : (owner || s.owner || 'Unassigned'), ownerEmail: u ? (u.mail || u.upn || '') : '', due: due, status: 'Open', evidenceUrl: '', src: 'Leadership security meeting ' + rec.id + ': ' + itemTitle };
     try { await Store.addAction(act); } catch (e) { warn(e); return null; }
     audit('Action raised', 'Action', act.id, '', 'From leadership security meeting ' + rec.id + ' (' + itemTitle + '): ' + act.title);
@@ -18118,9 +18112,8 @@ function showModal(opts) {
     addManualRisk: async function () {
       var title = document.getElementById('nrTitle').value.trim();
       if (!title) { toast('Enter a risk statement first'); return; }
-      var maxR = S.risks.reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
       var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var rid = 'R-' + String(maxR + 1).padStart(3, '0');
+      var rid = nextRegId(S.risks, 'R-');
       var owner = document.getElementById('nrOwner').value.trim() || 'Unassigned';
       var actionLines = (document.getElementById('nrActions').value || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
       var actIds = actionLines.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
@@ -18531,8 +18524,7 @@ function showModal(opts) {
         validate: function (v) { return v.title ? null : 'Describe the action.'; }
       });
       if (!v) return;
-      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var a = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: 'Action', risk: r.id, control: '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || dueForPriority(v.pr), status: 'Open', evidenceUrl: '', src: 'Risk treatment' };
+      var a = { id: nextRegId(S.actions, 'ACT-'), title: v.title, type: 'Action', risk: r.id, control: '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || dueForPriority(v.pr), status: 'Open', evidenceUrl: '', src: 'Risk treatment' };
       busy(true);
       try {
         await Store.addAction(a);
@@ -18632,11 +18624,10 @@ function showModal(opts) {
     addManualAction: async function () {
       var title = document.getElementById('naTitle').value.trim();
       if (!title) { toast('Enter a title or finding description first'); return; }
-      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
       var linkedRisk = document.getElementById('naRisk').value;
       var priority = document.getElementById('naPriority').value;
       var a = {
-        id: 'ACT-' + String(maxA + 1).padStart(3, '0'),
+        id: nextRegId(S.actions, 'ACT-'),
         title: title,
         type: document.getElementById('naType').value,
         risk: '',
@@ -19087,9 +19078,8 @@ function showModal(opts) {
       if (!vals) return;
       busy(true);
       tp = /^new:/.test(vals.risk) ? await ensureBusinessRisk('biz-third-party', vals.owner.trim(), 'Supplier questionnaire') : risk(vals.risk);
-      var maxA = S.actions.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
       var u = directoryUser(vals.owner.trim());
-      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: vals.title.trim().slice(0, 250), type: 'Action', risk: tp ? tp.id : '', control: st.gaps[0].control, pr: v.criticality === 'Critical' || v.criticality === 'High' ? 'High' : 'Medium',
+      var act = { id: nextRegId(S.actions, 'ACT-'), title: vals.title.trim().slice(0, 250), type: 'Action', risk: tp ? tp.id : '', control: st.gaps[0].control, pr: v.criticality === 'Critical' || v.criticality === 'High' ? 'High' : 'Medium',
         owner: u ? u.name : vals.owner.trim(), ownerEmail: u ? (u.mail || u.upn || '') : '', due: vals.due, status: 'Open', evidenceUrl: '', src: 'Supplier questionnaire ' + v.id };
       try {
         await Store.addAction(act);
@@ -19130,8 +19120,7 @@ function showModal(opts) {
       n.riskRefs = (n.riskRefs || []).concat([r.id]);
       try { await Store.updateIncident(n); audit('Incident linked to risk', 'Incident', id, '', r.id + ' ' + r.title); } catch (e) { warn(e); busy(false); return; }
       if (vals.reassess === 'yes') {
-        var maxA = S.actions.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
-        var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: 'Reassess ' + r.id + ' after incident ' + id + ': is the likelihood still right?', type: 'Action', risk: r.id, control: '', pr: 'Medium',
+        var act = { id: nextRegId(S.actions, 'ACT-'), title: 'Reassess ' + r.id + ' after incident ' + id + ': is the likelihood still right?', type: 'Action', risk: r.id, control: '', pr: 'Medium',
           owner: r.owner || currentActor().name, ownerEmail: '', due: L.addDaysIso(new Date().toISOString().slice(0, 10), 14), status: 'Open', evidenceUrl: '', src: 'Incident ' + id };
         try { await Store.addAction(act); audit('Action raised', 'Action', act.id, '', 'Reassess ' + r.id + ' after incident ' + id); } catch (e) { warn(e); }
         if (recId && act) await updateSecReview(recId, function (x) { x.actions = (x.actions || []).concat([act.id]); x.decisionItem = x.decisionItem || {}; x.decisionItem[act.id] = 'incidents'; });
@@ -21122,9 +21111,8 @@ function showModal(opts) {
       busy(true);
       try {
         if (v.status === 'affected' && !rec.actionId) {
-          var maxA = (S.actions || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
           var due = it.dueDate && it.dueDate > today ? it.dueDate : daysFrom(14);
-          var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: 'Remediate ' + cveId + ' (' + it.vendor + ' ' + it.product + ')' + (it.requiredAction ? ': ' + it.requiredAction : ''), risk: '', control: 'A.8.8', pr: it.knownRansomwareUse ? 'Critical' : 'High', owner: myDisplayName() || 'Unassigned', due: due, status: 'Open', src: 'Threat intel' };
+          var act = { id: nextRegId(S.actions, 'ACT-'), title: 'Remediate ' + cveId + ' (' + it.vendor + ' ' + it.product + ')' + (it.requiredAction ? ': ' + it.requiredAction : ''), risk: '', control: 'A.8.8', pr: it.knownRansomwareUse ? 'Critical' : 'High', owner: myDisplayName() || 'Unassigned', due: due, status: 'Open', src: 'Threat intel' };
           await Store.addAction(act);
           rec.actionId = act.id;
           audit('Action created', 'Action', act.id, '', 'From threat intel ' + cveId);
@@ -22081,8 +22069,7 @@ function showModal(opts) {
         validate: function (x) { return x.title ? null : 'Enter the finding.'; }
       });
       if (!v) return;
-      var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '',
+      var act = { id: nextRegId(S.actions, 'ACT-'), title: v.title, type: v.type, risk: '', control: v.control || '',
         pr: v.type.indexOf('Major') !== -1 ? 'Critical' : 'High', owner: v.owner || 'Unassigned', due: v.due, status: 'Open', evidenceUrl: '', src: certFindingSource(fw) };
       busy(true);
       try {
@@ -23630,8 +23617,7 @@ function showModal(opts) {
         d.risk = rk.id; d.reviewBy = v.reviewBy || '';
         try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at leadership security meeting ' + id + ' (' + aid + ')'); } catch (e) { warn(e); }
         if (v.reviewBy) {
-          var maxAct2 = S.actions.reduce(function (m, x) { var q2 = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q2); }, 0);
-          var rev = { id: 'ACT-' + String(maxAct2 + 1).padStart(3, '0'), title: 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', type: 'Action', risk: rk.id, control: '', pr: 'Medium',
+          var rev = { id: nextRegId(S.actions, 'ACT-'), title: 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', type: 'Action', risk: rk.id, control: '', pr: 'Medium',
             owner: rk.owner || by, ownerEmail: '', due: v.reviewBy, status: 'Open', evidenceUrl: '', src: 'Leadership security meeting ' + id + ': risk acceptance' };
           try { await Store.addAction(rev); d.reviewAction = rev.id; audit('Action raised', 'Action', rev.id, '', 'Review of the risk acceptance of ' + rk.id + ' by ' + fmtDate(v.reviewBy)); } catch (e) { warn(e); }
         }
@@ -23807,9 +23793,8 @@ function showModal(opts) {
       var raised = [];
       var acts = d.actions.filter(function (a) { return String(a.title || '').trim(); });
       for (var i = 0; i < acts.length; i++) {
-        var maxAct = S.actions.reduce(function (m, x) { var k = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
         var u = directoryUser(acts[i].owner);
-        var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: String(acts[i].title).trim(), type: 'Action', risk: '', control: '', pr: 'Medium',
+        var act = { id: nextRegId(S.actions, 'ACT-'), title: String(acts[i].title).trim(), type: 'Action', risk: '', control: '', pr: 'Medium',
           owner: u ? u.name : (String(acts[i].owner || '').trim() || 'Unassigned'), ownerEmail: u ? (u.mail || u.upn || '') : '', due: acts[i].due, status: 'Open', evidenceUrl: '', src: 'Management review ' + id };
         try { await Store.addAction(act); raised.push(act.id); audit('Action raised', 'Action', act.id, '', 'From management review ' + id + ': ' + act.title); } catch (e) { warn(e); }
       }
