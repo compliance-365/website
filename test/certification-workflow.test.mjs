@@ -119,8 +119,9 @@ describe('management review outputs', () => {
     assert.equal(L.parseReviewActionLines('Hire 2 analysts; HR', today)[0].title, 'Hire 2 analysts');
   });
   test('the form, the minutes and the evidence filing are wired', () => {
-    assert.ok(html.includes('id="naReviewActions"'));
-    assert.ok(app.includes("'Actions: ' + raised.join(', ')"));
+    assert.ok(html.includes('id="mrWizard"'));
+    assert.ok(app.includes("data-action=\"App.mrAddAction\""));
+    assert.equal(L.mrDecisionsText({}, ['ACT-007', 'ACT-008']), 'Actions: ACT-007, ACT-008');
     ['minutes:', 'objectives:', 'training:', 'capa:', 'stage1:'].forEach((k) => assert.ok(app.includes('\n    ' + k + ' function'), k));
   });
 });

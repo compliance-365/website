@@ -267,10 +267,11 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await page.waitForFunction(() => /pre-certification internal audit/.test(document.getElementById('v-audits').innerText), null, { timeout: 5000 });
 
     await page.evaluate(() => window.App.startManagementReview());
-    await page.waitForSelector('#addReviewPanel #naMR_issues', { timeout: 5000 });
+    await page.waitForSelector('#addReviewPanel #naMR_issues', { state: 'attached', timeout: 5000 });
     for (const k of ['priorActions', 'issues', 'interestedParties', 'performance', 'feedback', 'riskStatus', 'improvement']) {
       assert.ok((await page.$eval('#naMR_' + k, (el) => el.value)).length > 10, k + ' is drafted');
     }
+    await page.evaluate(() => window.App.mrStep(3));
     assert.ok(await page.locator('#naReviewResources').isVisible());
 
     await page.evaluate(() => { window.App.go('clauses'); window.App.openClauseRequirements('iso27001|9.3'); });
@@ -318,12 +319,24 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     await modal.getByRole('button', { name: 'Complete', exact: true }).click({ timeout: 5000 });
 
     await page.evaluate(() => window.App.startManagementReview());
-    await page.waitForSelector('#naReviewActions', { timeout: 5000 });
-    await page.fill('#naReviewAttendees', 'Managing Director, ISMS Manager');
-    await page.fill('#naReviewDecisions', 'Continue the certification plan.');
-    await page.fill('#naReviewResources', 'Current resources are sufficient.');
-    await page.fill('#naReviewActions', 'Run a phishing simulation; IT Manager; 2026-12-01');
-    await page.evaluate(() => window.App.recordReview());
+    await page.waitForSelector('#naReviewChair', { timeout: 5000 });
+    await page.evaluate(() => {
+      const A = window.App;
+      A.mrField('chair', 'Managing Director');
+      A.mrField('attendees', 'Managing Director, ISMS Manager');
+      ['priorActions', 'issues', 'interestedParties', 'performance', 'feedback', 'riskStatus', 'improvement'].forEach((k) => A.mrVerdict(k + '|noted'));
+      ['suitable', 'adequate', 'effective'].forEach((k) => A.mrField('conclusion.' + k + '.answer', 'yes'));
+      A.mrField('improvements', 'Continue the certification plan.');
+      A.mrField('resources', 'Current resources are sufficient.');
+      A.mrStep(3);
+      A.mrAddAction();
+      A.mrField('actions.0.title', 'Run a phishing simulation');
+      A.mrField('actions.0.owner', 'IT Manager');
+      A.mrField('actions.0.due', '2026-12-01');
+      A.mrStep(4);
+    });
+    assert.match(await page.locator('#addReviewPanel').innerText(), /Ready to save/);
+    await page.evaluate(() => window.App.mrSave());
     await page.evaluate(() => window.App.go('actions'));
     await page.waitForFunction(() => /Run a phishing simulation/.test(document.getElementById('v-actions').innerText), null, { timeout: 5000 });
 

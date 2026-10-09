@@ -866,7 +866,7 @@ function showModal(opts) {
        policy they have just been sent. Launching and chasing campaigns
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
     'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
     'addManualObjective', 'editObjective',
     /* Approving writes to the Answer library; AI drafting is gated for
@@ -3176,20 +3176,25 @@ function showModal(opts) {
       var parsed = window.CheckpointLib.parseReviewInputs(r.inputs);
       var refs = (String(r.decisions || '').match(/\bACT-\d+\b/g) || []).filter(function (x, i, a) { return a.indexOf(x) === i; });
       var acts = refs.map(function (id) { return (S.actions || []).find(function (a) { return a.id === id; }); }).filter(Boolean);
+      var L = window.CheckpointLib, rec = L.parseReviewRecord(r.record), notes = rec.inputNotes || {};
+      (rec.actionIds || []).forEach(function (id) { if (refs.indexOf(id) < 0) { refs.push(id); var a0 = (S.actions || []).find(function (a) { return a.id === id; }); if (a0) acts.push(a0); } });
       var inputsHtml = parsed.legacy ? '<p>' + esc(parsed.legacy) + '</p>' :
-        '<table class="rpt-table"><thead><tr><th>Clause</th><th>Input</th><th>Considered</th></tr></thead><tbody>' +
-        window.CheckpointLib.MR_INPUT_SECTIONS.map(function (x) { return '<tr><td class="rpt-idc">' + esc(x.clause) + '</td><td>' + esc(x.label) + '</td><td>' + (parsed[x.key] ? esc(parsed[x.key]) : '<i>Not recorded</i>') + '</td></tr>'; }).join('') + '</tbody></table>';
+        '<table class="rpt-table"><thead><tr><th>Clause</th><th>Input</th><th>What the records showed</th>' + (rec.v ? '<th>Discussed and concluded</th>' : '') + '</tr></thead><tbody>' +
+        L.MR_INPUT_SECTIONS.map(function (x) { var n = notes[x.key] || {}; return '<tr><td class="rpt-idc">' + esc(x.clause) + '</td><td>' + esc(x.label) + '</td><td>' + (parsed[x.key] ? esc(parsed[x.key]) : '<i>Not recorded</i>') + '</td>' + (rec.v ? '<td>' + (n.verdict ? '<b>' + (n.verdict === 'action' ? 'Action needed' : 'Noted, no change') + '.</b> ' : '') + esc(n.note || '') + '</td>' : '') + '</tr>'; }).join('') + '</tbody></table>';
+      var conclHtml = rec.v ? '<table class="rpt-table"><tbody>' + L.MR_CONCLUSIONS.map(function (x) { var c = (rec.conclusion || {})[x.key] || {}; return '<tr><td style="width:22%"><b>' + esc(x.label) + '</b><div class="rpt-just">' + esc(x.q) + '</div></td><td style="width:12%">' + esc(L.MR_ANSWERS[c.answer] || '—') + '</td><td>' + esc(c.comment || '') + '</td></tr>'; }).join('') + '</tbody></table><p class="rpt-plain"><b>Conclusion:</b> ' + esc(L.mrConclusionLabel(rec).text) + '.</p>' : '';
+      var outHtml = rec.v ? '<table class="rpt-table"><tbody><tr><td style="width:28%"><b>Opportunities for improvement</b></td><td>' + esc(rec.improvements || 'None') + '</td></tr><tr><td><b>Changes to the ISMS</b></td><td>' + esc(rec.changes || 'None') + '</td></tr><tr><td><b>Resources (5.1, 7.1)</b></td><td>' + esc(rec.resources || 'Not recorded') + '</td></tr></tbody></table>' : '<p style="white-space:pre-wrap">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p>';
       return {
         title: 'Management review minutes — ' + r.id,
         frameworkAgnostic: true,
-        dashboard: { intro: 'Held ' + fmtDateY(r.date) + '. Attendees: ' + (r.attendees || 'not recorded') + '. Next review due ' + (r.nextDue ? fmtDateY(r.nextDue) : 'not set') + '.' },
+        dashboard: { intro: 'Held ' + fmtDateY(r.date) + '.' + (rec.chair ? ' Chair: ' + rec.chair + '.' : '') + ' Attendees: ' + (r.attendees || 'not recorded') + '. Next review due ' + (r.nextDue ? fmtDateY(r.nextDue) : 'not set') + '.' },
         sections: [
-          { heading: 'Inputs considered (Clause 9.3.2)', html: inputsHtml, pageBreak: false },
-          { heading: 'Decisions, changes and resources (Clause 9.3.3)', html: '<p style="white-space:pre-wrap">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p>', pageBreak: false },
+          { heading: 'Inputs considered (Clause 9.3.2)', html: inputsHtml, pageBreak: false }
+        ].concat(conclHtml ? [{ heading: 'Is the ISMS suitable, adequate and effective? (Clause 9.3)', html: conclHtml, pageBreak: false }] : []).concat([
+          { heading: 'Decisions, changes and resources (Clause 9.3.3)', html: outHtml, pageBreak: false },
           { heading: 'Actions agreed', pageBreak: false, html: acts.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
             acts.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.owner || '') + '</td><td>' + (a.due ? fmtDateY(a.due) : '') + '</td><td>' + esc(actionStatusLabel(a.status)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No actions raised.</p>' },
-          { heading: 'Approval', pageBreak: false, html: '<table class="rpt-table"><tbody><tr><td style="width:35%"><b>Approved by (top management)</b></td><td style="height:48px"></td></tr><tr><td><b>Date</b></td><td></td></tr></tbody></table>' }
-        ]
+          { heading: 'Approval', pageBreak: false, html: '<table class="rpt-table"><tbody><tr><td style="width:35%"><b>Approved by (top management)</b></td><td style="height:48px">' + esc(rec.signedOffBy || '') + '</td></tr><tr><td><b>Date</b></td><td>' + (rec.signedOffDate ? esc(fmtDateY(rec.signedOffDate)) : '') + '</td></tr></tbody></table>' }
+        ])
       };
     },
 
@@ -11178,6 +11183,10 @@ function showModal(opts) {
     });
     myApprovalRequests().forEach(function (r) { items.push({ kind: 'Approve document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
     items = items.concat(secReviewTasksFor(me));
+    (S.reviews || []).forEach(function (r) {
+      var rec = window.CheckpointLib.parseReviewRecord(r.record);
+      if (rec.v && !rec.signedOffBy && rec.chair && me.indexOf(String(rec.chair).toLowerCase()) !== -1) items.push({ kind: 'Sign off minutes', ref: r.id, title: 'Management review ' + r.id + ' (' + fmtDate(r.date) + ')', due: r.date || '', overdue: false });
+    });
     if (!(Store.kind === 'demo' && window._myTasksAs)) {
       myOutstandingAttestations().forEach(function (a) { items.push({ kind: 'Acknowledge policy', ref: a.id, title: a.docName, due: a.due || '', overdue: false }); });
       myOutstandingTraining().forEach(function (t) { items.push({ kind: 'Training', ref: t.id, title: t.courseTitle || t.courseId, due: t.due || '', overdue: !!(t.due && t.due < new Date().toISOString().slice(0, 10)) }); });
@@ -11197,6 +11206,7 @@ function showModal(opts) {
     if (i.kind === 'Acknowledge policy') return b('App.acknowledgeAttestation', i.ref, 'Read and acknowledge');
     if (i.kind === 'Training') return b('App.go', 'training', 'Start');
     if (i.kind === 'Approve document') return b('App.approveRequested', i.ref, 'Review and approve');
+    if (i.kind === 'Sign off minutes') return b('App.openReview', i.ref, 'Read and sign off');
     if (i.kind === 'Decision') return buildItemButton({ id: i.ref }, true);
     if (i.kind === 'Security review') return b(/^Record/.test(i.title) ? 'App.recordSecurityReview' : 'App.openSecurityReview', i.ref, /^Record/.test(i.title) ? 'Record minutes' : 'Open agenda');
     return '';
@@ -13338,7 +13348,9 @@ function showModal(opts) {
     var reviews = S.reviews || [];
     var today = new Date().toISOString().slice(0, 10);
     var last = reviews.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
-    var nextDue = reviews.map(function (r) { return r.nextDue; }).filter(Boolean).sort()[0];
+    /* The latest review sets when the next one is due; an older review's
+       date is superseded once a later one is held. */
+    var nextDue = (last && last.nextDue) || '';
     var overdue = nextDue && nextDue < today ? 1 : 0;
     el.innerHTML =
       kpiTile({ value: reviews.length, label: 'Reviews recorded',
@@ -14057,15 +14069,33 @@ function showModal(opts) {
   /* Render a review's Clause 9.3.2 inputs (structured JSON, or a legacy
      free-text blob for reviews recorded before the structured form) —
      shared by the drawer and the Management Review Pack report. */
-  function reviewInputsHtml(str) {
+  function reviewInputsHtml(str, notes) {
     var parsed = window.CheckpointLib.parseReviewInputs(str);
+    notes = notes || {};
     if (parsed.legacy) return '<p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(parsed.legacy) + '</p>';
-    var sections = window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key]; });
+    var sections = window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key] || notes[s.key]; });
     if (!sections.length) return '<p style="font-size:12px;color:var(--paper-faint)">No structured inputs recorded.</p>';
     return sections.map(function (s) {
-      return '<div style="margin-bottom:10px"><div class="src"><b style="color:var(--paper-dim)">' + esc(s.clause) + '</b> — ' + esc(s.label) + '</div><p style="font-size:12px;color:var(--paper-dim);line-height:1.6;margin:2px 0 0">' + esc(parsed[s.key]) + '</p></div>';
+      var n = notes[s.key] || {};
+      return '<div style="margin-bottom:10px"><div class="src"><b style="color:var(--paper-dim)">' + esc(s.clause) + '</b> — ' + esc(s.label) +
+        (n.verdict ? ' <span class="chip ' + (n.verdict === 'action' ? 'sev-High' : 'st-Implemented') + '">' + (n.verdict === 'action' ? 'Action needed' : 'Noted') + '</span>' : '') + '</div>' +
+        (parsed[s.key] ? '<p style="font-size:12px;color:var(--paper-dim);line-height:1.6;margin:2px 0 0">' + esc(parsed[s.key]) + '</p>' : '') +
+        (n.note ? '<p style="font-size:12px;line-height:1.6;margin:4px 0 0"><b>Discussed:</b> ' + esc(n.note) + '</p>' : '') + '</div>';
     }).join('');
   }
+  /* Chair, conclusion, outputs and sign-off of a review recorded with
+     the structured record; nothing for older reviews. */
+  function reviewRecordHtml(r) {
+    var L = window.CheckpointLib, rec = L.parseReviewRecord(r.record);
+    if (!rec.v) return '';
+    var cl = L.mrConclusionLabel(rec);
+    return '<div class="d-sec"><h4>Chair</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(rec.chair || 'Not recorded') + '</p></div>' +
+      '<div class="d-sec"><h4>Is the ISMS suitable, adequate and effective? (Clause 9.3)</h4>' +
+        L.MR_CONCLUSIONS.map(function (x) { var c = (rec.conclusion || {})[x.key] || {}; return '<div class="d-kv"><span>' + esc(x.label) + '</span><b>' + esc(L.MR_ANSWERS[c.answer] || '—') + (c.comment ? '<span class="src"> · ' + esc(c.comment) + '</span>' : '') + '</b></div>'; }).join('') +
+        '<p class="src" style="margin-top:6px">' + esc(cl.text) + '</p></div>' +
+      '<div class="d-sec"><h4>Sign-off</h4><p style="font-size:12px;color:var(--paper-dim)">' + (rec.signedOffBy ? 'Signed off by ' + esc(rec.signedOffBy) + ' on ' + esc(fmtDateY(rec.signedOffDate)) : 'Awaiting sign-off by the chair') + '</p></div>';
+  }
+
   function reviewInputsToText(str) {
     var parsed = window.CheckpointLib.parseReviewInputs(str);
     if (parsed.legacy) return parsed.legacy;
@@ -14073,19 +14103,148 @@ function showModal(opts) {
       .map(function (s) { return s.clause + ': ' + parsed[s.key]; }).join(' | ');
   }
 
+  /* ===== Run a management review =====
+     Four steps (meeting, inputs, outputs, sign-off) over one draft,
+     window._mr, kept in Settings (mrDraft) so a meeting can be paused
+     and picked up again by anyone. All four steps are in the DOM; only
+     the current one shows. */
+  var MR_STEPS = ['Meeting', 'Inputs', 'Outputs', 'Finish'];
+  var _mrSaveTimer = null;
+  function mrDraftLoad() {
+    try { var o = JSON.parse((S.settings && S.settings.mrDraft) || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; }
+  }
+  function mrNewDraft() {
+    var setup = secReviewSetup() || {};
+    var last = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+    return {
+      step: 1, started: new Date().toISOString().slice(0, 10),
+      date: new Date().toISOString().slice(0, 10),
+      nextDue: daysFrom(Math.round((parseInt(S.settings && S.settings.managementReviewMonths, 10) || 12) * 365 / 12)),
+      chair: setup.chair || '', attendees: last ? last.attendees || '' : [setup.chair, setup.owner].filter(Boolean).join(', '),
+      facts: App.autoReviewInputs(), inputNotes: {}, conclusion: {},
+      improvements: '', changes: '', resources: '', actions: [], suggested: {}, signOff: false
+    };
+  }
+  function mrSaveDraftSoon() {
+    clearTimeout(_mrSaveTimer);
+    _mrSaveTimer = setTimeout(mrSaveDraftNow, 1200);
+  }
+  async function mrSaveDraftNow() {
+    clearTimeout(_mrSaveTimer);
+    if (!window._mr) return;
+    window._mr.savedAt = new Date().toISOString();
+    var v = JSON.stringify(window._mr);
+    S.settings.mrDraft = v;
+    try { await Store.setSetting('mrDraft', v); } catch (e) { warn(e); }
+    var el = document.getElementById('mrSaved');
+    if (el) el.textContent = 'Draft saved ' + new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+  }
+  function mrIsChair(d) {
+    var me = String(myDisplayName() || '').toLowerCase().trim();
+    return !!me && String(d.chair || '').toLowerCase().trim() === me;
+  }
+  function renderMrWizard() {
+    var el = document.getElementById('mrWizard');
+    var d = window._mr;
+    if (!el || !d) return;
+    var L = window.CheckpointLib;
+    var missing = L.mrReadiness(d);
+    var stepDone = [
+      !!(String(d.chair).trim() && String(d.attendees).trim()),
+      L.MR_INPUT_SECTIONS.every(function (x) { return d.inputNotes[x.key] && d.inputNotes[x.key].verdict; }),
+      L.MR_CONCLUSIONS.every(function (x) { return d.conclusion[x.key] && d.conclusion[x.key].answer; }),
+      false
+    ];
+    var ta = function (id, path, val, rows, ph) { return '<textarea class="mini" id="' + id + '" rows="' + (rows || 2) + '" data-change-action="App.mrField" data-id="' + path + '" placeholder="' + esc(ph || '') + '" style="width:100%;resize:vertical">' + esc(val || '') + '</textarea>'; };
+    var show = function (n) { return d.step === n ? '' : ' style="display:none"'; };
+    var tabs = '<div class="mr-steps" role="tablist">' + MR_STEPS.map(function (t, i) {
+      return '<button class="mr-step' + (d.step === i + 1 ? ' on' : '') + (stepDone[i] ? ' done' : '') + '" role="tab" aria-selected="' + (d.step === i + 1) + '" data-action="App.mrStep" data-id="' + (i + 1) + '"><span>' + (stepDone[i] ? '✓' : i + 1) + '</span>' + esc(t) + '</button>';
+    }).join('') + '<div class="mr-save"><span class="src" id="mrSaved">' + (d.savedAt ? 'Draft saved' : 'Not saved yet') + '</span><button class="btn ghost sm" data-action="App.mrSaveDraft">Save draft</button><button class="btn ghost sm" data-action="App.mrDiscard">Discard</button></div></div>';
+
+    var s1 = '<div class="mr-pane" data-step="1"' + show(1) + '>' +
+      '<p class="src">Set up the meeting. ISO 27001 Clause 9.3 needs top management to review the ISMS, so the chair should be your CEO, managing director or another member of top management.</p>' +
+      '<div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">' +
+        '<label class="mr-lbl">Date held<input class="mini" id="naReviewDate" type="date" value="' + esc(d.date) + '" data-change-action="App.mrField" data-id="date"></label>' +
+        '<label class="mr-lbl">Next review due<input class="mini" id="naReviewNextDue" type="date" value="' + esc(d.nextDue) + '" data-change-action="App.mrField" data-id="nextDue"></label>' +
+        '<label class="mr-lbl">Chair (top management)<input class="mini" id="naReviewChair" list="peopleList" value="' + esc(d.chair) + '" placeholder="Start typing a name" data-change-action="App.mrField" data-id="chair"></label>' +
+        '<label class="mr-lbl">Attendees<input class="mini" id="naReviewAttendees" list="peopleList" value="' + esc(d.attendees) + '" placeholder="Names, separated by commas" data-change-action="App.mrField" data-id="attendees"></label>' +
+      '</div>' +
+      '<div class="mr-nav"><button class="btn ghost sm" data-action="App.report" data-id="mgmt">Open the review pack</button><span></span><button class="btn sm" data-action="App.mrStep" data-id="2">Next: inputs</button></div></div>';
+
+    var prior = L.mrPriorActions(S.actions || [], (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0]);
+    var s2 = '<div class="mr-pane" data-step="2"' + show(2) + '>' +
+      '<p class="src">Go through each input in turn. The facts come from your records; correct them if needed. Mark each one, and note what was discussed and concluded.</p>' +
+      L.MR_INPUT_SECTIONS.map(function (x) {
+        var n = d.inputNotes[x.key] || {};
+        var pill = function (v, label) { return '<button class="f-pill' + (n.verdict === v ? ' on' : '') + '" aria-pressed="' + (n.verdict === v) + '" data-action="App.mrVerdict" data-id="' + x.key + '|' + v + '">' + label + '</button>'; };
+        var priorHtml = x.key === 'priorActions' && prior.length ? '<ul class="mr-prior">' + prior.map(function (a) { return '<li><button class="lnk" data-action="App.openAction" data-id="' + esc(a.id) + '">' + esc(a.id) + '</button> ' + esc(a.title) + ' <span class="chip">' + esc(actionStatusLabel(a.status)) + '</span>' + (overdue(a) ? ' <span class="chip sev-High">Overdue</span>' : '') + '</li>'; }).join('') + '</ul>' : '';
+        return '<div class="card mr-input' + (n.verdict ? ' mr-decided' : '') + '"><div class="mr-ih"><div><b>' + esc(x.clause) + '</b> ' + esc(x.label) + '</div><div class="filters">' + pill('noted', 'Noted, no change') + pill('action', 'Action needed') + '</div></div>' +
+          priorHtml +
+          '<div class="mr-lbl">What the records show</div>' + ta('naMR_' + x.key, 'facts.' + x.key, d.facts[x.key], 2) +
+          '<div class="mr-lbl">Discussed and concluded</div>' + ta('naMRn_' + x.key, 'inputNotes.' + x.key + '.note', n.note, 2, n.verdict === 'action' ? 'What needs doing, and why' : 'e.g. Reviewed; no change needed') + '</div>';
+      }).join('') +
+      '<div class="mr-nav"><button class="btn ghost sm" data-action="App.mrStep" data-id="1">Back</button><span></span><button class="btn sm" data-action="App.mrStep" data-id="3">Next: outputs</button></div></div>';
+
+    var s3 = '<div class="mr-pane" data-step="3"' + show(3) + '>' +
+      '<h4 class="mr-h">Is the ISMS still suitable, adequate and effective? <span class="src">(Clause 9.3)</span></h4>' +
+      L.MR_CONCLUSIONS.map(function (x) {
+        var c = d.conclusion[x.key] || {};
+        return '<div class="mr-concl"><div><b>' + esc(x.label) + '</b><div class="src">' + esc(x.q) + '</div></div>' +
+          '<select class="mini" id="naMRc_' + x.key + '" data-change-action="App.mrField" data-id="conclusion.' + x.key + '.answer"><option value="">Choose</option>' + Object.keys(L.MR_ANSWERS).map(function (k) { return '<option value="' + k + '"' + (c.answer === k ? ' selected' : '') + '>' + L.MR_ANSWERS[k] + '</option>'; }).join('') + '</select>' +
+          '<input class="mini" id="naMRcc_' + x.key + '" value="' + esc(c.comment || '') + '" placeholder="' + (c.answer && c.answer !== 'yes' ? 'Why, and what will change (required)' : 'Comment (optional)') + '" data-change-action="App.mrField" data-id="conclusion.' + x.key + '.comment"></div>';
+      }).join('') +
+      '<h4 class="mr-h">Decisions <span class="src">(Clause 9.3.3)</span></h4>' +
+      '<div class="mr-lbl">Opportunities for improvement agreed</div>' + ta('naReviewDecisions', 'improvements', d.improvements, 2, 'e.g. Roll out phishing-resistant MFA to the finance team') +
+      '<div class="mr-lbl">Changes to the ISMS</div>' + ta('naReviewChanges', 'changes', d.changes, 2, 'e.g. Add the new Perth office to scope; none') +
+      '<div class="mr-lbl">Resources (Clauses 5.1 and 7.1)</div>' + ta('naReviewResources', 'resources', d.resources, 2, 'e.g. Current resources are sufficient; ISMS owner has one day a week') +
+      '<h4 class="mr-h">Actions agreed</h4>' +
+      '<div class="mr-actions">' + (d.actions.length ? d.actions.map(function (a, i) {
+        return '<div class="mr-act"><input class="mini" id="naMRa_' + i + '" value="' + esc(a.title || '') + '" placeholder="What will be done" data-change-action="App.mrField" data-id="actions.' + i + '.title">' +
+          '<input class="mini" list="peopleList" value="' + esc(a.owner || '') + '" placeholder="Owner" data-change-action="App.mrField" data-id="actions.' + i + '.owner">' +
+          '<input class="mini" type="date" value="' + esc(a.due || '') + '" data-change-action="App.mrField" data-id="actions.' + i + '.due">' +
+          '<button class="btn ghost sm" aria-label="Remove action" data-action="App.mrRemoveAction" data-id="' + i + '">Remove</button></div>';
+      }).join('') : '<p class="src">No actions yet.</p>') + '</div>' +
+      '<button class="btn ghost sm" data-action="App.mrAddAction">+ Add action</button>' +
+      '<div class="mr-nav"><button class="btn ghost sm" data-action="App.mrStep" data-id="2">Back</button><span></span><button class="btn sm" data-action="App.mrStep" data-id="4">Next: finish</button></div></div>';
+
+    var cl = L.mrConclusionLabel(d);
+    var isChair = mrIsChair(d);
+    var s4 = '<div class="mr-pane" data-step="4"' + show(4) + '>' +
+      (missing.length ? '<div class="card mr-missing"><b>Still to do before saving</b><ul>' + missing.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul></div>' : '<div class="card mr-ready"><b>Ready to save.</b> Everything ISO 27001 Clause 9.3 asks for is recorded.</div>') +
+      '<div class="mr-summary"><div><span class="src">Held</span><b>' + esc(fmtDateY(d.date)) + '</b></div><div><span class="src">Chair</span><b>' + esc(d.chair || '—') + '</b></div><div><span class="src">Conclusion</span><b class="mr-cl-' + cl.state + '">' + esc(cl.text) + '</b></div><div><span class="src">Actions</span><b>' + d.actions.filter(function (a) { return String(a.title || '').trim(); }).length + '</b></div><div><span class="src">Next review</span><b>' + esc(d.nextDue ? fmtDateY(d.nextDue) : '—') + '</b></div></div>' +
+      '<div class="card mr-sign"><b>Sign-off</b><p class="src">' + (isChair ? 'You are the chair. Approving here records your name and today’s date on the minutes.' : 'The chair (' + esc(d.chair || 'not named yet') + ') signs off the minutes. If they are not signed in now, save the review and they can sign off from it later; it appears in their My tasks.') + '</p>' +
+        (isChair ? '<button class="f-pill' + (d.signOff ? ' on' : '') + '" aria-pressed="' + !!d.signOff + '" data-action="App.mrToggleSignOff">' + (d.signOff ? '✓ I approve these minutes' : 'I approve these minutes') + '</button>' : '') + '</div>' +
+      '<p class="src">Saving creates the actions in the Actions register, files the minutes as Clause 9.3 evidence, and books the next review on the compliance calendar.</p>' +
+      '<div class="mr-nav"><button class="btn ghost sm" data-action="App.mrStep" data-id="3">Back</button><span></span><button class="btn" data-action="App.mrSave"' + (missing.length ? ' disabled' : '') + '>Save review and file minutes</button></div></div>';
+
+    el.innerHTML = tabs + s1 + s2 + s3 + s4;
+  }
+
   function renderReviews() {
     var wrap = document.getElementById('reviewRows');
     if (!wrap) return;
     renderReviewsDashboard();
     renderSecurityReviewCard();
+    var dr = mrDraftLoad(), panel = document.getElementById('addReviewPanel'), startBtn = document.querySelector('#v-reviews [data-action="App.toggleAddReview"]');
+    if (startBtn) startBtn.textContent = dr ? 'Continue the review in progress' : 'Run a management review';
+    if (panel && panel.style.display !== 'none' && window._mr) renderMrWizard();
     var reviews = S.reviews || [];
     if (!reviews.length) {
-      wrap.innerHTML = emptyState({ kind: 'doc', asRow: true, colspan: 5, text: 'No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.', cta: { label: '+ Record review', action: 'App.toggleAddReview' } });
+      wrap.innerHTML = emptyState({ kind: 'doc', asRow: true, colspan: 7, text: 'No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.', cta: { label: '+ Record review', action: 'App.toggleAddReview' } });
       return;
     }
-    wrap.innerHTML = reviews.slice().reverse().map(function (r) {
-      return '<tr><td class="id-t">' + r.id + '</td><td>' + fmtDate(r.date) + '</td><td style="color:var(--paper)">' + esc(r.attendees) + '</td><td>' + (r.nextDue ? fmtDate(r.nextDue) : '—') + '</td>' +
-        '<td><button class="btn ghost sm" data-action="App.openReview" data-id="' + r.id + '">View</button></td></tr>';
+    var L = window.CheckpointLib;
+    wrap.innerHTML = reviews.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); }).map(function (r) {
+      var rec = L.parseReviewRecord(r.record);
+      var cl = L.mrConclusionLabel(rec);
+      var ids = (rec.actionIds || []).concat(String(r.decisions || '').match(/\bACT-\d+\b/g) || []).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      var open = ids.filter(function (id) { var a = (S.actions || []).find(function (x) { return x.id === id; }); return a && a.status !== 'Done' && a.status !== 'Cancelled'; }).length;
+      return '<tr data-action="App.openReview" data-id="' + r.id + '" style="cursor:pointer"><td class="id-t">' + r.id + '</td><td>' + fmtDateY(r.date) + '</td>' +
+        '<td style="color:var(--paper)">' + esc(rec.chair || '—') + '<div class="src">' + esc(r.attendees || '') + '</div></td>' +
+        '<td>' + (cl.state === 'none' ? '<span class="src">Not recorded</span>' : '<span class="chip ' + (cl.state === 'ok' ? 'st-Implemented' : 'sev-High') + '">' + esc(cl.state === 'ok' ? 'Suitable, adequate, effective' : 'Concerns') + '</span>') + '</td>' +
+        '<td>' + (ids.length ? ids.length + ' raised' + (open ? '<div class="src">' + open + ' still open</div>' : '<div class="src">all closed</div>') : '<span class="src">None</span>') + '</td>' +
+        '<td>' + (rec.signedOffBy ? '<span class="chip st-Implemented">Signed off</span><div class="src">' + esc(rec.signedOffBy) + '</div>' : rec.v ? '<span class="chip st-Intreatment">Awaiting sign-off</span>' : '<span class="src">—</span>') + '</td>' +
+        '<td>' + (r.nextDue ? fmtDateY(r.nextDue) : '—') + '</td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -22687,28 +22846,65 @@ function showModal(opts) {
       var panel = document.getElementById('addReviewPanel');
       var showing = panel.style.display !== 'none';
       panel.style.display = showing ? 'none' : 'block';
-      if (!showing) {
-        document.getElementById('naReviewDate').value = new Date().toISOString().slice(0, 10);
-        document.getElementById('naReviewNextDue').value = daysFrom(Math.round((parseInt(S.settings && S.settings.managementReviewMonths, 10) || 12) * 365 / 12));
-        document.getElementById('naReviewAttendees').value = '';
-        document.getElementById('naReviewDecisions').value = '';
-        var resEl = document.getElementById('naReviewResources');
-        if (resEl) resEl.value = '';
-        var actsEl = document.getElementById('naReviewActions');
-        if (actsEl) actsEl.value = '';
-        var auto = App.autoReviewInputs();
-        var autoKeys = {};
-        Object.keys(auto).forEach(function (k) { if (auto[k]) autoKeys[k] = 1; });
-        document.getElementById('naReviewInputSections').innerHTML = window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
-          var isAuto = !!autoKeys[s.key];
-          return '<div style="margin-top:14px">' +
-            '<label for="naMR_' + s.key + '" style="display:block;font-size:11px;letter-spacing:.06em;color:var(--paper-faint)"><b style="color:var(--paper-dim)">' + s.clause + '</b> — ' + esc(s.label) + (isAuto ? ' <span style="color:var(--gold-light)">(pre-filled — edit as needed)</span>' : '') + '</label>' +
-            '<textarea class="mini" id="naMR_' + s.key + '" rows="' + (isAuto ? 3 : 2) + '" style="width:100%;margin-top:6px;resize:vertical">' + esc(auto[s.key] || '') + '</textarea>' +
-            '</div>';
-        }).join('');
-      }
+      if (showing) { mrSaveDraftNow(); renderReviews(); return; }
+      window._mr = mrDraftLoad() || mrNewDraft();
+      if (!_dirUsers && !_dirLoading) loadDirectory();
+      renderMrWizard();
     },
-
+    mrStep: function (n) {
+      if (!window._mr) return;
+      window._mr.step = Math.max(1, Math.min(4, Number(n) || 1));
+      if (window._mr.step === 3) {
+        /* Each input marked "action needed" gets one suggested action
+           row, once; edit or remove it. */
+        window.CheckpointLib.MR_INPUT_SECTIONS.forEach(function (x) {
+          var n2 = window._mr.inputNotes[x.key];
+          if (n2 && n2.verdict === 'action' && !window._mr.suggested[x.key]) {
+            window._mr.suggested[x.key] = 1;
+            window._mr.actions.push({ title: (n2.note || ('Follow up: ' + x.label)).slice(0, 200), owner: '', due: daysFrom(30) });
+          }
+        });
+      }
+      renderMrWizard();
+      mrSaveDraftNow();
+      var p = document.getElementById('addReviewPanel');
+      if (p && p.scrollIntoView) p.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    },
+    /* path: 'date', 'facts.issues', 'inputNotes.issues.note',
+       'conclusion.suitable.answer', 'actions.0.owner' */
+    mrField: function (path, value) {
+      var d = window._mr;
+      if (!d) return;
+      var parts = String(path).split('.');
+      var obj = d;
+      for (var i = 0; i < parts.length - 1; i++) {
+        var k = parts[i];
+        if (obj[k] == null || typeof obj[k] !== 'object') obj[k] = {};
+        obj = obj[k];
+      }
+      obj[parts[parts.length - 1]] = value;
+      if (/^conclusion\./.test(path) || parts[0] === 'chair' || parts[0] === 'attendees') renderMrWizard();
+      mrSaveDraftSoon();
+    },
+    mrVerdict: function (id) {
+      var d = window._mr, p = String(id).split('|');
+      if (!d) return;
+      d.inputNotes[p[0]] = Object.assign({}, d.inputNotes[p[0]] || {}, { verdict: p[1] });
+      renderMrWizard();
+      mrSaveDraftSoon();
+    },
+    mrAddAction: function () { if (!window._mr) return; window._mr.actions.push({ title: '', owner: '', due: daysFrom(30) }); renderMrWizard(); var el = document.getElementById('naMRa_' + (window._mr.actions.length - 1)); if (el) el.focus(); },
+    mrRemoveAction: function (i) { if (!window._mr) return; window._mr.actions.splice(Number(i), 1); renderMrWizard(); mrSaveDraftSoon(); },
+    mrToggleSignOff: function () { if (!window._mr) return; window._mr.signOff = !window._mr.signOff; renderMrWizard(); mrSaveDraftSoon(); },
+    mrSaveDraft: async function () { await mrSaveDraftNow(); toast('Draft saved. Anyone with access can pick it up from Record review.'); },
+    mrDiscard: async function () {
+      var ok = await showModal({ title: 'Discard this draft?', message: 'Everything entered for this review is removed. Nothing has been saved to the register yet.', confirmText: 'Discard', cancelText: 'Keep it' });
+      if (!ok) return;
+      window._mr = null;
+      S.settings.mrDraft = '';
+      try { await Store.setSetting('mrDraft', ''); } catch (e) { warn(e); }
+      document.getElementById('addReviewPanel').style.display = 'none';
+    },
     /* Every Clause 9.3.2 input, drafted from live data: prior-review
        actions (a), changes in issues (b) and interested parties (c)
        since the last review, performance (d), feedback (e), risk
@@ -23173,50 +23369,71 @@ function showModal(opts) {
         App.openSecurityReview(id);
       }
     },
-    recordReview: async function () {
-      var attendees = document.getElementById('naReviewAttendees').value.trim();
-      if (!attendees) { toast('Enter attendees first'); return; }
-      var inputsObj = {};
-      window.CheckpointLib.MR_INPUT_SECTIONS.forEach(function (s) {
-        var el = document.getElementById('naMR_' + s.key);
-        if (el) inputsObj[s.key] = el.value.trim();
-      });
+    mrSave: async function () {
+      var d = window._mr, L = window.CheckpointLib;
+      if (!d) return;
+      var missing = L.mrReadiness(d);
+      if (missing.length) { toast('Still to do: ' + esc(missing[0])); App.mrStep(4); return; }
+      var today = new Date().toISOString().slice(0, 10);
       var maxR = (S.reviews || []).reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
-      var r = {
-        id: 'MR-' + String(maxR + 1).padStart(3, '0'),
-        date: document.getElementById('naReviewDate').value || new Date().toISOString().slice(0, 10),
-        attendees: attendees,
-        inputs: window.CheckpointLib.serializeReviewInputs(inputsObj),
-        decisions: (function () {
-          var dec = document.getElementById('naReviewDecisions').value.trim();
-          var resEl = document.getElementById('naReviewResources');
-          var res = resEl ? resEl.value.trim() : '';
-          return res ? (dec ? dec + '\n' : '') + 'Resources: ' + res : dec;
-        })(),
-        nextDue: document.getElementById('naReviewNextDue').value || ''
-      };
-      var actEl = document.getElementById('naReviewActions');
-      var agreed = window.CheckpointLib.parseReviewActionLines(actEl ? actEl.value : '', new Date().toISOString().slice(0, 10));
+      var id = 'MR-' + String(maxR + 1).padStart(3, '0');
       busy(true);
-      if (agreed.length) {
-        var raised = [];
-        for (var ai = 0; ai < agreed.length; ai++) {
-          var maxAct = S.actions.reduce(function (m, x) { var k = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
-          var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: agreed[ai].title, type: 'Action', risk: '', control: '', pr: 'Medium',
-            owner: agreed[ai].owner || 'Unassigned', due: agreed[ai].due, status: 'Open', evidenceUrl: '', src: 'Management review ' + r.id };
-          try { await Store.addAction(act); raised.push(act.id); audit('Action raised', 'Action', act.id, '', 'From management review ' + r.id + ': ' + act.title); } catch (e) { warn(e); }
-        }
-        if (raised.length) r.decisions = (r.decisions ? r.decisions + '\n' : '') + 'Actions: ' + raised.join(', ');
+      var raised = [];
+      var acts = d.actions.filter(function (a) { return String(a.title || '').trim(); });
+      for (var i = 0; i < acts.length; i++) {
+        var maxAct = S.actions.reduce(function (m, x) { var k = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+        var u = directoryUser(acts[i].owner);
+        var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: String(acts[i].title).trim(), type: 'Action', risk: '', control: '', pr: 'Medium',
+          owner: u ? u.name : (String(acts[i].owner || '').trim() || 'Unassigned'), ownerEmail: u ? (u.mail || u.upn || '') : '', due: acts[i].due, status: 'Open', evidenceUrl: '', src: 'Management review ' + id };
+        try { await Store.addAction(act); raised.push(act.id); audit('Action raised', 'Action', act.id, '', 'From management review ' + id + ': ' + act.title); } catch (e) { warn(e); }
       }
+      var me = myDisplayName() || '';
+      var rec = {
+        v: 2, chair: String(d.chair).trim(), inputNotes: d.inputNotes, conclusion: d.conclusion,
+        improvements: String(d.improvements || '').trim(), changes: String(d.changes || '').trim(), resources: String(d.resources || '').trim(),
+        actionIds: raised, signedOffBy: d.signOff && mrIsChair(d) ? me : '', signedOffDate: d.signOff && mrIsChair(d) ? today : ''
+      };
+      var r = { id: id, date: d.date || today, attendees: String(d.attendees).trim(), inputs: L.serializeReviewInputs(d.facts || {}), decisions: L.mrDecisionsText(rec, raised), nextDue: d.nextDue || '', record: JSON.stringify(rec) };
       try {
         await Store.addReview(r);
+        audit('Management review recorded', 'Review', r.id, '', fmtDate(r.date) + ', chair ' + rec.chair + '. ' + L.mrConclusionLabel(rec).text + (rec.signedOffBy ? '. Signed off by ' + rec.signedOffBy : ''));
         log('<b>' + r.id + '</b> management review recorded (' + fmtDate(r.date) + ').');
-        toast('<b>' + r.id + '</b> saved');
-        audit('Management review recorded', 'Review', r.id, '', fmtDate(r.date) + ' — ' + r.attendees);
+      } catch (e) { warn(e); busy(false); toast('Could not save the review. The draft is kept.', 'error'); return; }
+      /* The next review on the compliance calendar. */
+      try {
+        if (r.nextDue) {
+          var cal = (S.calendar || []).find(function (c) { return c.category === 'Management review' && L.calendarItemLive(c); });
+          if (cal) { cal.lastCompleted = r.date; cal.nextDue = r.nextDue; await Store.updateCalendarItem(cal); }
+          else {
+            var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+            await Store.addCalendarItem({ id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: 'Management review', category: 'Management review', freq: (parseInt(S.settings && S.settings.managementReviewMonths, 10) || 12) <= 3 ? 'Quarterly' : (parseInt(S.settings && S.settings.managementReviewMonths, 10) || 12) <= 6 ? 'Biannual' : 'Annual', nextDue: r.nextDue, lastCompleted: r.date, owner: rec.chair, notes: 'Booked from ' + r.id, status: 'Active' });
+          }
+        }
       } catch (e) { warn(e); }
+      window._mr = null;
+      S.settings.mrDraft = '';
+      try { await Store.setSetting('mrDraft', ''); } catch (e) { warn(e); }
       busy(false);
-      App.toggleAddReview();
+      document.getElementById('addReviewPanel').style.display = 'none';
+      if (Store.kind !== 'demo') { try { await App.fileReviewMinutes(r.id); } catch (e) { warn(e); } }
+      toast('<b>' + r.id + '</b> saved' + (raised.length ? ', ' + raised.length + ' action' + (raised.length === 1 ? '' : 's') + ' raised' : '') + (Store.kind !== 'demo' ? ', minutes filed as Clause 9.3 evidence' : ''));
       renderReviews(); renderNavCounts(); renderDash();
+      App.openReview(r.id);
+    },
+    recordReview: function () { return App.mrSave(); },
+    /* The chair approves the minutes of a saved review. */
+    signOffReview: async function (id) {
+      var r = (S.reviews || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      var rec = window.CheckpointLib.parseReviewRecord(r.record);
+      var me = myDisplayName() || '';
+      var chair = rec.chair || '';
+      var ok = await showModal({ title: 'Sign off the minutes of ' + r.id + '?', message: 'Records ' + me + ' and today\u2019s date as approving these minutes.' + (chair && chair.toLowerCase() !== me.toLowerCase() ? ' The chair recorded for this review is ' + chair + '.' : ''), confirmText: 'Sign off', cancelText: 'Cancel' });
+      if (!ok) return;
+      rec.signedOffBy = me; rec.signedOffDate = new Date().toISOString().slice(0, 10);
+      r.record = JSON.stringify(rec);
+      try { await Store.updateReview(r); audit('Management review signed off', 'Review', r.id, '', 'Signed off by ' + me); toast('Minutes signed off'); } catch (e) { warn(e); }
+      renderReviews(); App.openReview(id);
     },
 
     openReview: function (id) {
@@ -23225,12 +23442,14 @@ function showModal(opts) {
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
+        reviewRecordHtml(r) +
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
-        '<div class="d-sec"><h4>Inputs at time of review (Clause 9.3.2)</h4>' + reviewInputsHtml(r.inputs) + '</div>' +
+        '<div class="d-sec"><h4>Inputs at time of review (Clause 9.3.2)</h4>' + reviewInputsHtml(r.inputs, window.CheckpointLib.parseReviewRecord(r.record).inputNotes) + '</div>' +
         '<div class="d-sec"><h4>Decisions & actions agreed</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p></div>' +
         '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px"><button class="btn sm" data-action="App.reviewMinutes" data-id="' + esc(r.id) + '">Minutes</button>' +
-        (READONLY ? '' : '<button class="btn ghost sm" data-action="App.fileReviewMinutes" data-id="' + esc(r.id) + '">Save minutes as Clause 9.3 evidence</button>') + '</div>';
+        (READONLY ? '' : '<button class="btn ghost sm" data-action="App.fileReviewMinutes" data-id="' + esc(r.id) + '">Save minutes as Clause 9.3 evidence</button>') +
+        (READONLY || window.CheckpointLib.parseReviewRecord(r.record).signedOffBy ? '' : '<button class="btn ghost sm" data-action="App.signOffReview" data-id="' + esc(r.id) + '">Sign off the minutes</button>') + '</div>';
       openDrawerUi('Review ' + r.id);
     },
 
@@ -23596,7 +23815,7 @@ function showModal(opts) {
       var panel = document.getElementById('addReviewPanel');
       if (panel && panel.style.display === 'none') App.toggleAddReview();
       if (panel) panel.scrollIntoView({ block: 'start' });
-      toast('Every input is drafted from your records. Hold the meeting, then record attendees, decisions and resources.');
+      toast('Every input is drafted from your records. Step through the meeting, and save a draft at any point.');
     },
 
     /* After certification, the three-year programme; before it, the

@@ -2117,6 +2117,7 @@ window.DemoStore = (function () {
     updateIncident: async function () { persist(); },
     updateAudit: async function () { persist(); },
     addReview: async function (r) { S.reviews.push(r); persist(); },
+    updateReview: async function () { persist(); },
     addObjective: async function (o) { S.objectives.push(o); persist(); },
     addAnswer: async function (a) { S.answers = S.answers || []; S.answers.push(a); persist(); },
     addAsset: async function (a) { S.assets = S.assets || []; S.assets.push(a); persist(); },
@@ -2446,7 +2447,11 @@ window.SpStore = (function () {
     Reviews: [
       { name: 'RefId', text: {} }, { name: 'ReviewDate', text: {} }, { name: 'Attendees', text: {} },
       { name: 'Inputs', text: { allowMultipleLines: true } }, { name: 'Decisions', text: { allowMultipleLines: true } },
-      { name: 'NextDue', text: {} }
+      { name: 'NextDue', text: {} },
+      /* The structured record (JSON, see CheckpointLib.parseReviewRecord):
+         chair, each input's discussion, the suitability / adequacy /
+         effectiveness conclusion, outputs, actions raised and sign-off. */
+      { name: 'Record', text: { allowMultipleLines: true } }
     ],
     /* Information security objectives, ISO 27001 Clause 6.2 — measurable,
        owned, dated targets ("reduce phishing click rate to under 3% by
@@ -3428,7 +3433,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); }),
         reviews: revItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '' };
+          return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '', record: f.Record || '' };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         assets: assetItems.map(function (i) {
           var f = i.fields;
@@ -3929,9 +3934,12 @@ window.SpStore = (function () {
     addReview: async function (r) {
       r._sp = await addItem('Reviews', {
         Title: r.id, RefId: r.id, ReviewDate: r.date, Attendees: r.attendees,
-        Inputs: r.inputs, Decisions: r.decisions, NextDue: r.nextDue || ''
+        Inputs: r.inputs, Decisions: r.decisions, NextDue: r.nextDue || '', Record: r.record || ''
       });
       S.reviews.push(r);
+    },
+    updateReview: async function (r) {
+      await patchItem('Reviews', r._sp, { Record: r.record || '', Decisions: r.decisions || '' });
     },
     addAsset: async function (a) {
       a._sp = await addItem('Assets', assetFields(a, true));
