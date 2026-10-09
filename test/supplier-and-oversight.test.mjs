@@ -23,7 +23,7 @@ describe('ISMS health score', () => {
     const h = L.ismsHealthScore({ gaps: [{ severity: 'fail' }, { severity: 'warn' }], staleEvidence: 3, overdueActions: 2, openActions: 8, missedReviews: 1 });
     assert.equal(h.score, 59);
     assert.equal(h.band, 'watch');
-    assert.deepEqual(h.factors.map((f) => f.label), ['2 lapsed requirements', '1 security review missed', '2 overdue actions', '3 controls with out-of-date evidence']);
+    assert.deepEqual(h.factors.map((f) => f.label), ['2 lapsed requirements', '1 leadership security meeting missed', '2 overdue actions', '3 controls with out-of-date evidence']);
     assert.equal(L.ismsHealthScore({}).score, 100);
     assert.equal(L.ismsHealthScore({ gaps: Array(9).fill({ severity: 'fail' }) }).score, 60, 'one factor alone cannot sink it');
   });

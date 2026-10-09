@@ -1526,7 +1526,7 @@ window.Graph = (function () {
        'pass' — silence is not evidence. --- */
     set('backup',   'manual', 'Backup restore testing is scored from the Checkpoint calendar');
     set('bcp',      'manual', 'Continuity plan and failover testing are scored from the Checkpoint document register and calendar');
-    set('supplier', 'manual', 'Supplier assessment currency is scored from the Checkpoint vendor register');
+    set('supplier', 'manual', 'Supplier assessment currency is scored from the Checkpoint supplier register');
     set('policy',   'manual', 'Policy publication and review cadence are scored from the Checkpoint document register');
     set('training', 'manual', 'Security awareness training completion is scored from the Checkpoint training register');
     set('audit-review',     'manual', 'Independent review currency is scored from the Checkpoint audit programme');

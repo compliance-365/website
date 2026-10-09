@@ -800,7 +800,7 @@ function showModal(opts) {
     { key: 'trustCenterShowPosture', dflt: false, label: 'Overall posture rating', desc: 'Strong, Developing or Improving, from the latest scan. Never the numeric score.' },
     { key: 'trustCenterShowActivity', dflt: true, label: 'Programme activity', desc: 'When the last internal audit, management review, penetration test and staff training took place (last 15 months only), and daily automated checks if the scheduled monitor runs.' },
     { key: 'trustCenterShowDocuments', dflt: true, label: 'Documents', desc: 'The documents listed below, each either public (with a link) or available on request by email.' },
-    { key: 'trustCenterShowSubProcessors', dflt: false, label: 'Sub-processors', desc: 'Only the vendors switched on below, with what they do and the information they handle.' },
+    { key: 'trustCenterShowSubProcessors', dflt: false, label: 'Sub-processors', desc: 'Only the suppliers switched on below, with what they do and the information they handle.' },
     { key: 'trustCenterShowFaq', dflt: false, label: 'FAQ from your answer library', desc: 'Up to eight approved questionnaire answers whose evidence verdict is Yes, most-used first.' }
   ];
   function tcOn(key) {
@@ -887,7 +887,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -1312,7 +1312,7 @@ function showModal(opts) {
       }
     },
     {
-      key: 'vendors', label: 'Vendors', filename: 'vendors.csv',
+      key: 'vendors', label: 'Suppliers', filename: 'suppliers.csv',
       header: ['ID', 'Name', 'Service', 'Data categories', 'Criticality', 'Review status', 'Next review due', 'Certifications', 'Cert/report expiry', 'Owner', 'Questionnaire status'],
       rows: function () {
         return (S.vendors || []).map(function (v) {
@@ -1670,13 +1670,13 @@ function showModal(opts) {
       }
     },
     {
-      key: 'vendors', label: 'Vendors', dupKey: 'Vendor',
+      key: 'vendors', label: 'Suppliers', dupKey: 'Vendor',
       existing: function () { return (S.vendors || []).map(function (v) { return v.name; }); },
       columns: [
         { key: 'Vendor', aliases: ['Name', 'Supplier', 'Vendor name', 'Supplier name', 'Company'], required: true },
         { key: 'Service', aliases: ['Service provided', 'Product', 'Description'] },
         { key: 'Criticality', aliases: ['Tier', 'Rating'], validate: oneOf('Criticality', ['Critical', 'High', 'Medium', 'Low']) },
-        { key: 'Owner', aliases: ['Vendor owner', 'Relationship owner'] },
+        { key: 'Owner', aliases: ['Supplier owner', 'Vendor owner', 'Relationship owner'] },
         { key: 'Contact email', aliases: ['Email', 'Contact'], validate: function (v) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? null : 'Contact email is not a valid email address'; } },
         { key: 'Data accessed', aliases: ['Data', 'Data shared'] },
         { key: 'Certifications', aliases: ['Certification', 'Certs'] },
@@ -3208,7 +3208,7 @@ function showModal(opts) {
       var st = window.CheckpointLib.securityReviewStatus(r.pack);
       var rag = { red: 'Needs attention', amber: 'Watch', green: 'On track' };
       return {
-        title: 'Security review ' + r.n + ' agenda',
+        title: 'Leadership security meeting ' + r.n + ' agenda',
         frameworkAgnostic: true,
         dashboard: { intro: fmtDateY(r.date) + ' at ' + (r.time || s.time || '10:00') + ', ' + a.minutes + ' minutes. ' + a.label + '. Chair: ' + (s.chair || 'not set') + '; ISMS owner: ' + (s.owner || 'not set') + (s.facilitator ? '; facilitator: ' + s.facilitator : '') + '. Figures as at ' + fmtDateY(r.preparedAt || r.date) + '.' },
         sections: [
@@ -3226,7 +3226,7 @@ function showModal(opts) {
       var a = secReviewAgenda(r), notes = r.itemNotes || {}, by = r.decisionItem || {};
       var acts = (r.actions || []).map(function (id) { return (S.actions || []).find(function (x) { return x.id === id; }); }).filter(Boolean);
       return {
-        title: 'Security review ' + r.n + ' minutes',
+        title: 'Leadership security meeting ' + r.n + ' minutes',
         frameworkAgnostic: true,
         dashboard: { intro: (r.outcome ? 'Outcome: ' + r.outcome + '. ' : '') + 'Held ' + fmtDateY(r.date) + '. ' + a.label + '. Present: ' + (r.present || 'not recorded') + '.' + (r.reviewId ? ' Recorded as management review ' + r.reviewId + ' (Clause 9.3).' : '') },
         sections: [
@@ -3376,7 +3376,7 @@ function showModal(opts) {
       var today = new Date().toISOString().slice(0, 10), since = window.CheckpointLib.addDaysIso(today, -365);
       var s = secReviewSetup() || {};
       var held = secReviews().filter(function (r) { return r.status === 'Held' && r.date >= since; }).sort(function (a, b) { return a.date.localeCompare(b.date); });
-      if (!held.length) { toast('No security reviews held in the last 12 months.'); return null; }
+      if (!held.length) { toast('No leadership security meetings held in the last 12 months.'); return null; }
       var ys = window.CheckpointLib.securityReviewYearSummary(held, since);
       var t = window.CheckpointLib.topManagementRecord({ since: since, setup: s, reviews: held, risks: S.risks || [], managementReviews: S.reviews || [] });
       var quorate = t.meetings.filter(function (m) { return m.quorum; }).length;
@@ -6346,7 +6346,7 @@ function showModal(opts) {
     var demo = Store.kind !== 'sharepoint';
     el.innerHTML =
       card({ name: 'Microsoft 365', what: 'Entra ID, Intune, Defender, Purview, Exchange and SharePoint, read through Microsoft Graph when a posture scan runs.', st: ms ? status(ms, 45) : { cls: 'off', text: 'No scan yet' }, meta: checks('') + ' checks · runs when someone clicks Run posture scan, or on a schedule with the monitor below', body: '' }) +
-      card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the security review and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: lastAuto ? '<p class="src">Reporting: an automated scan was recorded on ' + fmtDate(lastAuto) + '. Deployment steps are in azure/README.md.</p>' : '<div id="monitorSetupPanel"></div>' }) +
+      card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the leadership security meeting and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: lastAuto ? '<p class="src">Reporting: an automated scan was recorded on ' + fmtDate(lastAuto) + '. Deployment steps are in azure/README.md.</p>' : '<div id="monitorSetupPanel"></div>' }) +
       card({ name: 'AWS', what: 'An AWS Lambda in your own AWS account that checks root and user MFA, access key age, CloudTrail, Config, GuardDuty, S3 public access, EBS and RDS encryption and open admin ports.', st: status(aws, 7), meta: checks('aws-') + ' checks · read-only IAM policy · results merge into the day\u2019s posture scan',
         body: '<ol class="integ-steps">' +
           '<li><b>App registration.</b> In Entra admin centre, register an app (or reuse the scheduled monitor\u2019s), add the Microsoft Graph application permission <code>Sites.Selected</code>, grant admin consent, create a client secret, and give the app write access to this Checkpoint site only (the same grant request as the monitor\u2019s step 3).</li>' +
@@ -7060,7 +7060,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : '<span style="color:var(--warn)">None recorded</span>' + fix('Open reviews', 'App.go', 'reviews')) + '</b></div>' +
         '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') + ' overdue' + fix('Open', 'App.editCalItem', esc(upcomingCal.id)) : '') : 'None scheduled' + fix('Open the calendar', 'App.go', 'calendar')) + '</b></div>' +
-        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>' +
+        '<div class="d-kv"><span>Supplier reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>' +
         incidentKv() + policyReviewKv() + attestationKv();
     }
 
@@ -8764,7 +8764,9 @@ function showModal(opts) {
     var findings = window.CheckpointLib.riskFindings(r);
     if (window.CheckpointLib.isBusinessRisk(r) && findings.length) parts.push('<div class="d-kv"><span>Findings</span><b style="font-weight:400">' + findings.map(function (f) { return esc(findingLabel(f)); }).join('<br>') + '</b></div>');
     var vendors = (S.vendors || []).filter(function (v) { return (v.riskRefs || []).indexOf(r.id) !== -1; });
-    if (vendors.length) parts.push('<div class="d-kv"><span>Vendors</span><b>' + vendors.map(function (v) { return '<button class="lnk" data-action="App.openVendor" data-id="' + esc(v.id) + '">' + esc(v.name) + '</button>'; }).join(', ') + '</b></div>');
+    if (vendors.length) parts.push('<div class="d-kv"><span>Suppliers</span><b>' + vendors.map(function (v) { return '<button class="lnk" data-action="App.openVendor" data-id="' + esc(v.id) + '">' + esc(v.name) + '</button>'; }).join(', ') + '</b></div>');
+    var happened = (S.incidents || []).filter(function (n) { return (n.riskRefs || []).indexOf(r.id) !== -1; });
+    if (happened.length) parts.push('<div class="d-kv"><span>Incidents (it happened)</span><b>' + happened.map(function (n) { return '<button class="lnk" data-action="App.openIncident" data-id="' + esc(n.id) + '">' + esc(n.id) + '</button> <span class="src">' + fmtDate(n.detected) + '</span>'; }).join(', ') + '</b></div>');
     var assets = (r.assetRefs || []).map(function (id) { return (S.assets || []).find(function (a) { return a.id === id; }); }).filter(Boolean);
     if (assets.length) parts.push('<div class="d-kv"><span>Assets</span><b>' + assets.map(function (a) { return esc(a.name); }).join(', ') + '</b></div>');
     var p = window.CheckpointLib.riskTreatmentProgress(r, S.actions, new Date().toISOString().slice(0, 10));
@@ -9190,9 +9192,9 @@ function showModal(opts) {
     }
     var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
     var newCal = {
-      id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: 'Vendor review — ' + v.name,
+      id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: 'Supplier review — ' + v.name,
       category: 'Supplier security review', freq: 'Annual', nextDue: v.nextReviewDue,
-      lastCompleted: v.lastReviewed || '', owner: v.owner, notes: 'Auto-linked to vendor ' + v.id, status: 'Active'
+      lastCompleted: v.lastReviewed || '', owner: v.owner, notes: 'Auto-linked to supplier ' + v.id, status: 'Active'
     };
     try {
       await Store.addCalendarItem(newCal);
@@ -9261,7 +9263,7 @@ function showModal(opts) {
       ? '<p style="margin-top:16px">Our records indicate your systems access the following categories of our data — please confirm or correct this in your reply:</p><ul>' + v.dataCategories.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>'
       : '';
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
-      '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
+      '<h2 style="margin-bottom:4px">Supplier security questionnaire — ' + esc(clientLabel) + '</h2>' +
       '<p>Hello,</p>' +
       '<p>As part of our ongoing supplier security review programme, please answer the following short set of questions for <b>' + esc(v.name) + '</b> (' + esc(v.service) + '). A plain-text reply covering each point is all we need — no form to fill in.</p>' +
       secHtml + aiHtml + dataCatHtml +
@@ -9348,23 +9350,23 @@ function showModal(opts) {
         /* The Total tile is the denominator every meter beside it is
            drawn against, so it gets none of its own — a bar that is
            always full says nothing. */
-        kpiTile({ value: vendors.length, label: 'Total vendors' }) +
+        kpiTile({ value: vendors.length, label: 'Total suppliers' }) +
         kpiTile({ key: 'Overdue', value: od.length, label: 'Overdue reviews', tone: 'fail',
           meter: { value: od.length, max: vendors.length },
           action: 'App.filterVendorStatus', focus: window._vendorStatusF,
-          title: 'Show only these vendors in the table below' }) +
+          title: 'Show only these suppliers in the table below' }) +
         kpiTile({ key: 'Critical', value: critHigh, label: 'Critical / High criticality',
           meter: { value: critHigh, max: vendors.length },
           action: 'App.filterVendorCrit', focus: window._vendorCritF,
-          title: 'Show only these vendors in the table below' }) +
+          title: 'Show only these suppliers in the table below' }) +
         /* Was inert while looking exactly like the two filters beside it,
            and its own sub-line says an auditor checks it first — so it
            now filters, via a new Unclassified status pill. */
         kpiTile({ key: 'Unclassified', value: unclassified, label: 'Data access not classified',
-          tone: 'warn', sub: unclassified ? 'an auditor checks this first' : 'every vendor classified',
+          tone: 'warn', sub: unclassified ? 'an auditor checks this first' : 'every supplier classified',
           meter: { value: unclassified, max: vendors.length },
           action: 'App.filterVendorStatus', focus: window._vendorStatusF,
-          title: 'Show only these vendors in the table below' });
+          title: 'Show only these suppliers in the table below' });
       runCountUps(kpiEl);
     }
     var chartEl = document.getElementById('vendorReviewChart');
@@ -9459,7 +9461,7 @@ function showModal(opts) {
         '<td>' + (!READONLY && (!v.questionnaireStatus || v.questionnaireStatus === 'Not sent')
           ? '<button class="btn ghost sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>'
           : '<span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span>') + '</td></tr>';
-    }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No vendors match this filter. Add one above.', cta: { label: '+ Add vendor', action: 'App.toggleAddVendor' } });
+    }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No suppliers match this filter. Add one above.', cta: { label: '+ Add supplier', action: 'App.toggleAddVendor' } });
     renderVendorBulkBar();
     revealRows(wrap);
   }
@@ -10885,6 +10887,27 @@ function showModal(opts) {
     };
     return L.securityReviewPeriodic(secReviews(), S.reviews || [], today, (secReviewSetup() || {}).mrEvery, changes, facts);
   }
+  /* Threat intel for the pack: the advisories as last loaded (the
+     Threat intel page, or loaded when the pack is prepared), and the
+     assessments recorded either way. */
+  function secReviewThreat() {
+    var L = window.CheckpointLib, today = new Date().toISOString().slice(0, 10);
+    var ranked = window._tiItems || (Store.kind === 'demo' ? L.rankThreatIntelItems(THREAT_INTEL_DEMO_ITEMS, { industryId: orgProfileValue('orgIndustry'), stackTags: currentStackTags() }) : null);
+    var t = threatTriage();
+    if (!ranked && !Object.keys(t).length) return null;
+    return L.threatIntelPackSummary(ranked ? L.threatIntelTriage(ranked, t, today) : null, t, S.actions || []);
+  }
+  async function loadThreatItemsForPack() {
+    if (window._tiItems || Store.kind === 'demo' || !CONFIG.threatIntelUrl) return;
+    try {
+      var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+      var timer = ctl ? setTimeout(function () { ctl.abort(); }, 6000) : null;
+      var res = await fetch(CONFIG.threatIntelUrl, ctl ? { signal: ctl.signal } : {});
+      if (timer) clearTimeout(timer);
+      var data = await res.json();
+      window._tiItems = window.CheckpointLib.rankThreatIntelItems((data && data.items) || [], { industryId: orgProfileValue('orgIndustry'), stackTags: currentStackTags() });
+    } catch (e) { /* the assessments recorded still count */ }
+  }
   function secReviewPack() {
     var today = new Date().toISOString().slice(0, 10);
     var prev = secReviewLastHeld();
@@ -10905,7 +10928,8 @@ function showModal(opts) {
       failing: S.lastResults ? Object.keys(S.lastResults).filter(function (k) { return S.lastResults[k] === 'fail'; }).length : null,
       failingTop: S.lastResults ? (window.CHECK_DEFS || []).filter(function (c) { return S.lastResults[c.id] === 'fail'; }).slice(0, 3).map(function (c) { return c.label; }) : [],
       certified: !!(certRecords().iso27001 && certRecords().iso27001.issued),
-      periodic: secReviewPeriodic()
+      periodic: secReviewPeriodic(),
+      threat: secReviewThreat()
     });
   }
   function secReviewAgenda(rec) {
@@ -10924,6 +10948,7 @@ function showModal(opts) {
       rec = { id: 'SR-' + String(nx.n).padStart(3, '0'), n: nx.n, kind: window.CheckpointLib.securityReviewKind(nx.n, setup.mrEvery), date: nx.date, time: setup.time || '10:00', status: 'Prepared' };
       list.push(rec);
     }
+    await loadThreatItemsForPack();
     rec.pack = secReviewPack();
     rec.preparedAt = today;
     try { await saveSecReviews(list); } catch (e) { warn(e); return null; }
@@ -10947,7 +10972,7 @@ function showModal(opts) {
     var startUtc = window.CheckpointLib.wallTimeToUtc(rec.date, rec.time || s.time, s.timeZone);
     return window.CheckpointLib.securityReviewIcs({
       uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc: startUtc, endUtc: new Date(Date.parse(startUtc) + a.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
-      summary: clientDisplayLabel() + ' security review ' + rec.n + ' (' + a.label + ')',
+      summary: clientDisplayLabel() + ' leadership security meeting ' + rec.n + ' (' + a.label + ')',
       description: window.CheckpointLib.securityReviewInviteText(a, window.CheckpointLib.securityReviewStatus(rec.pack), secReviewMeta(rec)),
       html: window.CheckpointLib.securityReviewEmailHtml(a, secReviewMeta(rec), window.CheckpointLib.securityReviewStatus(rec.pack)),
       location: /^https:\/\//i.test(s.teamsLink || '') ? s.teamsLink : 'Microsoft Teams'
@@ -10969,13 +10994,13 @@ function showModal(opts) {
   }
   async function sendSecurityReviewNow(rec, quiet) {
     var to = secReviewRecipients();
-    if (!to.length) { if (!quiet) toast('Add the attendees’ email addresses in the security review settings first.'); return false; }
+    if (!to.length) { if (!quiet) toast('Add the attendees’ email addresses in the leadership meeting settings first.'); return false; }
     if (Store.kind !== 'sharepoint') {
       if (!quiet) toast('Demo: the agenda would be emailed to ' + esc(to.join(', ')) + ' with a calendar invite.');
     } else {
       var ics = secReviewIcs(rec);
       try {
-        await Graph.sendMail(to.join(','), clientDisplayLabel() + ' security review ' + rec.n + ' — ' + fmtDate(rec.date),
+        await Graph.sendMail(to.join(','), clientDisplayLabel() + ' leadership security meeting ' + rec.n + ' — ' + fmtDate(rec.date),
           window.CheckpointLib.securityReviewEmailHtml(secReviewAgenda(rec), secReviewMeta(rec), window.CheckpointLib.securityReviewStatus(rec.pack)),
           [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: btoa(unescape(encodeURIComponent(ics))) }]);
       } catch (e) { warn(e); if (!quiet) toast('Could not send: ' + esc(e.message || e), 'error'); return false; }
@@ -10991,7 +11016,7 @@ function showModal(opts) {
     if (!to.length) return false;
     var acts = (rec.actions || []).map(function (id) { return (S.actions || []).find(function (a) { return a.id === id; }); }).filter(Boolean);
     if (Store.kind === 'sharepoint') {
-      try { await Graph.sendMail(to.join(','), 'Minutes: ' + clientDisplayLabel() + ' security review ' + rec.n, window.CheckpointLib.securityReviewMinutesHtml(secReviewAgenda(rec), rec, acts, secReviewMeta(rec))); }
+      try { await Graph.sendMail(to.join(','), 'Minutes: ' + clientDisplayLabel() + ' leadership security meeting ' + rec.n, window.CheckpointLib.securityReviewMinutesHtml(secReviewAgenda(rec), rec, acts, secReviewMeta(rec))); }
       catch (e) { warn(e); if (!quiet) toast('Could not send the minutes: ' + esc(e.message || e), 'error'); return false; }
     } else if (!quiet) toast('Demo: the minutes would be emailed to ' + esc(to.join(', ')) + '.');
     await updateSecReview(rec.id, function (x) { x.minutesSentAt = new Date().toISOString().slice(0, 10); });
@@ -11053,7 +11078,7 @@ function showModal(opts) {
       var o = fu.owners[i], u = o.email ? null : window.CheckpointLib.matchOwnerToUser(o.owner, users);
       var to = o.email || (u && (u.mail || u.upn));
       if (!to || weeklyOnly(o.owner, to)) continue;
-      try { await Graph.sendMail(to, 'Your actions from the security review on ' + fmtDate(fu.review.date), window.CheckpointLib.securityReviewFollowUpHtml(o, fu.review, meta)); sent++; } catch (e) { warn(e); }
+      try { await Graph.sendMail(to, 'Your actions from the leadership security meeting on ' + fmtDate(fu.review.date), window.CheckpointLib.securityReviewFollowUpHtml(o, fu.review, meta)); sent++; } catch (e) { warn(e); }
     }
     await updateSecReview(fu.review.id, function (r) { r.followUpSent = new Date().toISOString().slice(0, 10); });
     audit('Security review follow-ups sent', 'SecurityReview', fu.review.id, '', sent + ' owner(s)');
@@ -11067,8 +11092,8 @@ function showModal(opts) {
     if (!mine) return out;
     var today = new Date().toISOString().slice(0, 10);
     var status = nx.rec ? nx.rec.status : '';
-    if (status !== 'Sent' && today >= window.CheckpointLib.addDaysIso(nx.date, -7) && today <= nx.date) out.push({ kind: 'Security review', ref: nx.rec ? nx.rec.id : 'next', title: 'Send the agenda and pack for security review ' + nx.n, due: nx.prepareOn, overdue: today > nx.prepareOn });
-    if (nx.rec && today > nx.date) out.push({ kind: 'Security review', ref: nx.rec.id, title: 'Record the minutes of security review ' + nx.n, due: nx.date, overdue: true });
+    if (status !== 'Sent' && today >= window.CheckpointLib.addDaysIso(nx.date, -7) && today <= nx.date) out.push({ kind: 'Security review', ref: nx.rec ? nx.rec.id : 'next', title: 'Send the agenda and pack for leadership security meeting ' + nx.n, due: nx.prepareOn, overdue: today > nx.prepareOn });
+    if (nx.rec && today > nx.date) out.push({ kind: 'Security review', ref: nx.rec.id, title: 'Record the minutes of leadership security meeting ' + nx.n, due: nx.date, overdue: true });
     return out;
   }
   function srSpark(points, key, label, goodUp) {
@@ -11157,11 +11182,12 @@ function showModal(opts) {
         '<button class="btn quiet sm" data-action="App.srSkipItem" data-id="' + k + '" aria-label="Remove ' + esc(i.title) + ' from this meeting">✕</button></span>' : '';
       var mine = acts.filter(function (x) { return byItem[x.id] === i.key; });
       return '<div class="sr-item"><span class="sr-time">' + esc(i.start) + '</span><div style="flex:1"><b>' + esc(i.title) + '</b> <span class="src">' + esc(i.lead) + ' · ' + i.min + ' min' + (i.added ? ' · added for this meeting' : '') + '</span>' + tools +
-        (i.facts.length && !(i.key === 'escalations' && rec) ? '<ul class="sr-facts">' + i.facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
+        (srFactsShown(i, rec, mode).length && !(i.key === 'escalations' && rec) ? '<ul class="sr-facts">' + srFactsShown(i, rec, mode).map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
         (i.key === 'escalations' && rec ? srEscalationRows(rec, mode, decided) : '') +
         (i.key === 'actions' && rec ? srActionRows(rec, mode, decided) : '') +
         (i.key === 'risks' && rec ? srRiskRows(rec, mode) : '') +
         (i.key === 'incidents' && rec && mode === 'minutes' ? srIncidentRows(rec) : '') +
+        (i.key === 'people' && rec && mode === 'minutes' ? srSupplierRows(rec) : '') +
         (i.key === 'mr' && rec ? srConclusionHtml(rec, mode) : '') +
         (mode === 'minutes' ? '<textarea class="mini sr-note" id="srNote-' + esc(i.key) + '" rows="2" placeholder="Notes" aria-label="Notes for ' + esc(i.title) + '">' + esc(notes[i.key] || '') + '</textarea>' +
           '<div class="sr-dec-row"><button class="btn ghost sm" data-action="App.srAddDecision" data-id="' + k + '">+ Decision</button>' +
@@ -11187,6 +11213,16 @@ function showModal(opts) {
     }).join('');
   }
   function srOne(k, v) { var o = {}; o[k] = v; return o; }
+  /* While minuting, the actions and incidents listed as rows with their
+     buttons are not listed again above them. */
+  function srFactsShown(i, rec, mode) {
+    if (mode !== 'minutes' || !rec) return i.facts;
+    return i.facts.filter(function (f) {
+      if (i.key === 'actions') return !/^ACT-\d+ /.test(f) && !/due in the next two weeks:/.test(f);
+      if (i.key === 'incidents') return !/^INC-/.test(f);
+      return true;
+    });
+  }
   /* Overdue and due-soon actions, each closed, extended or reassigned
      there and then. Those overdue at two meetings running sit under
      "Needs a decision" instead. */
@@ -11244,8 +11280,21 @@ function showModal(opts) {
     var list = (rec.pack && rec.pack.incidents && rec.pack.incidents.since) || [];
     if (!list.length) return '';
     return '<div class="sr-rows">' + list.slice(0, 6).map(function (n) {
+      var live = (S.incidents || []).find(function (x) { return x.id === n.id; }) || n;
+      var rr = live.riskRefs || [];
       return '<div class="sr-esc">' + esc(n.id) + ' ' + esc(n.title) + (n.severity ? ' <span class="src">' + esc(n.severity) + '</span>' : '') +
-        ' <button class="btn ghost sm" data-action="App.srAddDecision" data-id="' + esc(rec.id + '|incidents|' + n.id) + '">Lesson learned: raise an action</button></div>';
+        (rr.length ? ' <span class="src">· risk ' + rr.map(function (id) { return '<button class="lnk" data-action="App.openRisk" data-id="' + esc(id) + '">' + esc(id) + '</button>'; }).join(', ') + '</span>' : '') +
+        '<div class="sr-esc-btns"><button class="btn ghost sm" data-action="App.srAddDecision" data-id="' + esc(rec.id + '|incidents|' + n.id) + '">Lesson learned: raise an action</button>' +
+        (rr.length ? '' : '<button class="btn ghost sm" data-action="App.linkIncidentRisk" data-id="' + esc(n.id + '|' + rec.id) + '">Link to a risk</button>') + '</div></div>';
+    }).join('') + '</div>';
+  }
+  /* Suppliers whose questionnaire left gaps that nobody is treating. */
+  function srSupplierRows(rec) {
+    var list = window.CheckpointLib.supplierGapStatus(S.vendors || [], S.actions || []).filter(function (g) { return !g.treated; });
+    if (!list.length) return '';
+    return '<div class="sr-rows">' + list.slice(0, 6).map(function (g) {
+      return '<div class="sr-esc"><button class="lnk" data-action="App.openVendor" data-id="' + esc(g.id) + '">' + esc(g.name) + '</button> <span class="src">' + g.gaps.length + ' questionnaire gap' + (g.gaps.length === 1 ? '' : 's') + (g.criticality ? ' · ' + esc(g.criticality) : '') + '</span>' +
+        '<div class="sr-esc-btns"><button class="btn ghost sm" data-action="App.treatSupplierGaps" data-id="' + esc(g.id + '|' + rec.id) + '">Treat the gaps</button></div></div>';
     }).join('') + '</div>';
   }
   /* The management review meeting: the chair's conclusion on the ISMS
@@ -11306,6 +11355,40 @@ function showModal(opts) {
       }
     } catch (e) { warn(e); }
   }
+  /* An incident is evidence that a risk happened: which risk, and a way
+     to link it (the business risk is suggested, never one new risk per
+     incident). */
+  function incidentRisksHtml(n) {
+    var linked = (n.riskRefs || []).map(function (id) { return risk(id) || { id: id, title: '(not in the register)' }; });
+    var sug = window.CheckpointLib.incidentRiskSuggestion(n, S.risks || []);
+    return '<div class="d-sec"><h4>Risk</h4>' + (linked.length ? linked.map(function (r) {
+      return '<div class="d-kv"><span><button class="lnk" data-action="App.openRisk" data-id="' + esc(r.id) + '">' + esc(r.id) + '</button> ' + esc(r.title) + '</span></div>';
+    }).join('') : '<p class="src">Not linked to a risk yet. ' + (sug.existing ? 'Suggested: ' + esc(sug.existing.id) + ' ' + esc(sug.existing.title) + '.' : sug.def ? 'Suggested: add the business risk \u201c' + esc(sug.def.title) + '\u201d.' : '') + '</p>') +
+      (READONLY ? '' : '<button class="btn ghost sm" data-action="App.linkIncidentRisk" data-id="' + esc(n.id) + '">' + (linked.length ? 'Link another risk' : 'Link to a risk') + '</button>') + '</div>';
+  }
+  /* The business risk from the catalogue: the one in the register, or
+     added once (rated 3 x 3 until it is assessed). */
+  async function ensureBusinessRisk(key, owner, src) {
+    var L = window.CheckpointLib;
+    var found = (S.risks || []).find(function (r) { return r.status !== 'Closed' && r.tpl === key; });
+    if (found) return found;
+    var def = L.businessRiskDef(key);
+    if (!def) return null;
+    var maxR = S.risks.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
+    var r = { id: 'R-' + String(maxR + 1).padStart(3, '0'), title: def.title, cat: def.cat, cia: (def.cia || []).slice(), src: src, L: 3, I: 3, controls: (def.controls || []).slice(),
+      owner: owner || currentActor().name, status: 'Open', treat: 'Treat', actions: [], tpl: key, threat: def.threat || '', consequence: def.consequence || '' };
+    try { await Store.addRisk(r); audit('Risk added', 'Risk', r.id, '', r.title + ' (from ' + src + ')'); } catch (e) { warn(e); return null; }
+    return r;
+  }
+  /* A supplier's questionnaire gaps, and the action treating them. */
+  function supplierGapsHtml(v) {
+    var st = window.CheckpointLib.supplierGapStatus([v], S.actions || [])[0];
+    if (!st) return '';
+    return '<div class="d-sec"><h4>Questionnaire gaps</h4><ul class="sr-facts">' + st.gaps.map(function (g) { return '<li>' + esc(g.text.charAt(0).toUpperCase() + g.text.slice(1)) + ' <span class="src">' + esc(g.control) + '</span></li>'; }).join('') + '</ul>' +
+      (st.actionId ? '<p class="src">Being treated: <button class="lnk" data-action="App.openAction" data-id="' + esc(st.actionId) + '">' + esc(st.actionId) + '</button></p>' :
+        st.treated ? '<p class="src">The treatment action is closed. Record the supplier\u2019s new answers when they change.</p>' :
+        READONLY ? '' : '<button class="btn sm" data-action="App.treatSupplierGaps" data-id="' + esc(v.id) + '">Treat the gaps</button>') + '</div>';
+  }
   function srReadConclusion() {
     var c = {};
     window.CheckpointLib.MR_CONCLUSIONS.forEach(function (x) {
@@ -11324,9 +11407,9 @@ function showModal(opts) {
     var maxAct = S.actions.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
     var u = directoryUser(owner);
     var act = { id: 'ACT-' + String(maxAct + 1).padStart(3, '0'), title: title, type: 'Action', risk: riskId || '', control: '', pr: 'Medium',
-      owner: u ? u.name : (owner || s.owner || 'Unassigned'), ownerEmail: u ? (u.mail || u.upn || '') : '', due: due, status: 'Open', evidenceUrl: '', src: 'Security review ' + rec.id + ': ' + itemTitle };
+      owner: u ? u.name : (owner || s.owner || 'Unassigned'), ownerEmail: u ? (u.mail || u.upn || '') : '', due: due, status: 'Open', evidenceUrl: '', src: 'Leadership security meeting ' + rec.id + ': ' + itemTitle };
     try { await Store.addAction(act); } catch (e) { warn(e); return null; }
-    audit('Action raised', 'Action', act.id, '', 'From security review ' + rec.id + ' (' + itemTitle + '): ' + act.title);
+    audit('Action raised', 'Action', act.id, '', 'From leadership security meeting ' + rec.id + ' (' + itemTitle + '): ' + act.title);
     return act;
   }
 
@@ -11812,7 +11895,7 @@ function showModal(opts) {
       var vendors = S.vendors || [];
       vRows.innerHTML = vendors.length ? vendors.map(function (v) {
         return '<div class="d-kv"><span>' + esc(v.name) + ' <span class="src">— ' + esc(v.service) + '</span></span><button class="toggle' + (v.publicListed ? ' on' : '') + '" role="switch" aria-checked="' + (v.publicListed ? 'true' : 'false') + '" aria-label="' + esc(v.name + ' publicly listed') + '" data-action="App.toggleVendorPublicListed" data-id="' + v.id + '"></button></div>';
-      }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No vendors in the register yet.</p>';
+      }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No suppliers in the register yet.</p>';
     }
   }
 
@@ -11849,6 +11932,8 @@ function showModal(opts) {
         monitoring: !!(auto && window.CheckpointLib.daysBetweenDateStr(auto.date, today) <= 7),
         internalAudit: latest((S.audits || []).filter(function (a) { return a.status === 'Completed'; }), function (a) { return a.completed; }),
         managementReview: latest(S.reviews || [], function (r) { return r.date; }),
+        leadershipMeetings: secReviews().filter(function (r) { return r.status === 'Held' && r.date; }).map(function (r) { return String(r.date).slice(0, 10); }),
+        supplierReview: latest(S.vendors || [], function (v) { return v.lastReviewed || v.questionnaireReceivedDate; }),
         pentest: latest((S.calendar || []).filter(function (c) { return /penetration|pen ?test/i.test((c.title || '') + ' ' + (c.category || '')); }), function (c) { return c.lastCompleted; }),
         training: latest(S.training || [], function (t) { return t.completed; })
       },
@@ -14956,12 +15041,12 @@ function showModal(opts) {
     var kpiEl = document.getElementById('tiKpiRow');
     if (!ranked.length) {
       if (kpiEl) kpiEl.innerHTML = '';
-      el.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">No current advisories for the vendors this feed tracks.</div>';
+      el.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">No current advisories for the products this feed tracks.</div>';
       return;
     }
     var view = L.threatIntelTriage(ranked, threatTriage(), today), c = view.counts;
     if (kpiEl) kpiEl.innerHTML =
-      kpiTile({ value: c.total, label: 'Advisories', sub: 'actively exploited, vendors this feed tracks' }) +
+      kpiTile({ value: c.total, label: 'Advisories', sub: 'actively exploited, products this feed tracks' }) +
       kpiTile({ value: c.relevant, label: 'Relevant to you', sub: 'match your stack or industry', action: 'App.filterThreat', key: 'relevant', focus: _tiFilter, tone: c.relevant ? 'warn' : null }) +
       kpiTile({ value: c.ransomware, label: 'Known ransomware use', sub: 'treat as critical', action: 'App.filterThreat', key: 'ransomware', focus: _tiFilter, tone: 'fail' }) +
       kpiTile({ value: c.awaiting, label: 'Awaiting assessment', sub: c.pastDue ? c.pastDue + ' relevant and past CISA’s fix-by date' : 'decide: affects us, not applicable or patched', action: 'App.filterThreat', key: 'awaiting', focus: _tiFilter, tone: c.pastDue ? 'fail' : null }) +
@@ -15205,7 +15290,7 @@ function showModal(opts) {
 
   var VIEW_LABELS = {
     dash: 'Dashboard', board: 'Board view', scan: 'Posture scan', risks: 'Risk register',
-    actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
+    actions: 'Actions register', vendors: 'Supplier risk', aisystems: 'AI systems',
     frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
     documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', incidents: 'Incidents', auditlog: 'Audit log', reports: 'Audit reports',
@@ -17116,7 +17201,7 @@ function showModal(opts) {
       var sel = document.getElementById('vCriticality');
       if (sel) sel.value = crit;
       var t = readVendorTier();
-      if (t.personal && document.getElementById('vDpa') && !document.getElementById('vDpa').checked) toast('This vendor handles personal information: record whether a data processing agreement is in place.');
+      if (t.personal && document.getElementById('vDpa') && !document.getElementById('vDpa').checked) toast('This supplier handles personal information: record whether a data processing agreement is in place.');
     },
     discoverVendors: async function () {
       busy(true);
@@ -17131,7 +17216,7 @@ function showModal(opts) {
       var c = vendorCandidatesNow().find(function (x) { return x.key === key; });
       if (!c) return;
       if (document.getElementById('addVendorPanel').style.display === 'none') App.toggleAddVendor();
-      else { window._editingVendorId = null; document.getElementById('vendorPanelTitle').textContent = 'New vendor'; }
+      else { window._editingVendorId = null; document.getElementById('vendorPanelTitle').textContent = 'New supplier'; }
       document.getElementById('vName').value = c.name;
       document.getElementById('vService').value = c.apps.join(', ');
       window._vendorNewApps = c.apps.slice();
@@ -17144,7 +17229,7 @@ function showModal(opts) {
       var list = vendorDismissed().concat([c.name]);
       S.settings.dismissedVendorApps = list.join('|');
       try { await Store.setSetting('dismissedVendorApps', S.settings.dismissedVendorApps); } catch (e) { warn(e); }
-      audit('Vendor candidate set aside', 'Vendor', c.name, '', 'Not a supplier: ' + c.apps.join(', '));
+      audit('Supplier candidate set aside', 'Vendor', c.name, '', 'Not a supplier: ' + c.apps.join(', '));
       renderVendorDiscover();
     },
     tidyFilter: function (id) {
@@ -17571,7 +17656,7 @@ function showModal(opts) {
       var vals = await showModal({
         title: 'Add progress update — ' + a.id,
         fields: [
-          { id: 'note', label: 'What happened', type: 'textarea', value: '', placeholder: 'e.g. Vendor confirmed remediation date of 14 March; following up if it slips.' },
+          { id: 'note', label: 'What happened', type: 'textarea', value: '', placeholder: 'e.g. Supplier confirmed remediation date of 14 March; following up if it slips.' },
           { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_SELECT },
           { id: 'url', label: 'Evidence link for this update (optional)', value: '', placeholder: 'https://…' }
         ],
@@ -18719,7 +18804,7 @@ function showModal(opts) {
         window._editingVendorId = null;
         window._vendorCatSel = [];
         App.renderVendorCategoryPicker();
-        document.getElementById('vendorPanelTitle').textContent = 'New vendor';
+        document.getElementById('vendorPanelTitle').textContent = 'New supplier';
         ['vName', 'vService', 'vDataAccessed', 'vOwner', 'vCertifications', 'vCertExpiryDate', 'vContactEmail', 'vControls', 'vRiskRefs', 'vNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('vCriticality').value = 'Medium';
         document.getElementById('vReviewStatus').value = 'Not started';
@@ -18756,7 +18841,7 @@ function showModal(opts) {
 
     saveVendor: async function () {
       var name = document.getElementById('vName').value.trim();
-      if (!name) { toast('Enter a vendor name first'); return; }
+      if (!name) { toast('Enter a supplier name first'); return; }
       var controls = document.getElementById('vControls').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
       var riskRefs = document.getElementById('vRiskRefs').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
       var nextReviewDue = document.getElementById('vNextReviewDue').value;
@@ -18783,7 +18868,7 @@ function showModal(opts) {
           applyVendorFundamentals(v);
           await Store.updateVendor(v);
           await syncVendorCalendar(v);
-          audit('Vendor updated', 'Vendor', v.id, prevStatus + ' / due ' + (prevDue || 'unset'), v.reviewStatus + ' / due ' + (v.nextReviewDue || 'unset'));
+          audit('Supplier updated', 'Vendor', v.id, prevStatus + ' / due ' + (prevDue || 'unset'), v.reviewStatus + ' / due ' + (v.nextReviewDue || 'unset'));
           log('<b>' + v.id + '</b> updated: ' + esc(v.name) + '.');
           toast('<b>' + v.id + '</b> updated');
         } else {
@@ -18809,8 +18894,8 @@ function showModal(opts) {
           applyVendorFundamentals(nv);
           await Store.addVendor(nv);
           await syncVendorCalendar(nv);
-          audit('Vendor added', 'Vendor', nv.id, '', nv.name + ' (' + nv.criticality + ')');
-          log('<b>' + nv.id + '</b> added to the vendor register: ' + esc(nv.name) + '.');
+          audit('Supplier added', 'Vendor', nv.id, '', nv.name + ' (' + nv.criticality + ')');
+          log('<b>' + nv.id + '</b> added to the supplier register: ' + esc(nv.name) + '.');
           toast('<b>' + nv.id + '</b> added');
         }
       } catch (e) { warn(e); }
@@ -18863,7 +18948,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Certification/report expiry</span><b style="' + (v.certExpiryDate && v.certExpiryDate < new Date().toISOString().slice(0, 10) ? 'color:var(--fail)' : '') + '">' + (v.certExpiryDate ? fmtDate(v.certExpiryDate) + (v.certExpiryDate < new Date().toISOString().slice(0, 10) ? ' ' + icon('flag') + ' expired' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Data categories</span><b>' + ((v.dataCategories && v.dataCategories.length)
           ? '<span class="fw-chips">' + v.dataCategories.map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('') + '</span>'
-          : '<span style="color:var(--warn)">Not classified — edit this vendor to record what data they access</span>') + '</b></div>' +
+          : '<span style="color:var(--warn)">Not classified — edit this supplier to record what data they access</span>') + '</b></div>' +
         ((v.dataCategories && v.dataCategories.length && window.CheckpointLib.suggestVendorCriticality(v.dataCategories) !== v.criticality)
           ? '<div class="d-kv"><span>Suggested criticality</span><b style="color:var(--gold-light)">' + esc(window.CheckpointLib.suggestVendorCriticality(v.dataCategories)) + ' (currently ' + esc(v.criticality) + ')</b></div>'
           : '') +
@@ -18893,8 +18978,8 @@ function showModal(opts) {
         '<button class="btn ghost sm" data-action="App.recordVendorQuestionnaire" data-id="' + v.id + '">Record answers</button>' +
         '<button class="btn sm" data-action="App.markVendorReviewed" data-id="' + v.id + '">Mark reviewed</button>' +
         '<button class="btn ghost sm" data-action="App.editVendor" data-id="' + v.id + '">Edit</button>' +
-        '</div>' + recordHistoryHtml('Vendor', [v.id], 6);
-      openDrawerUi('Vendor ' + v.name);
+        '</div>' + supplierGapsHtml(v) + recordHistoryHtml('Vendor', [v.id], 6);
+      openDrawerUi('Supplier ' + v.name);
     },
 
     sendVendorQuestionnaire: async function (id) {
@@ -18918,8 +19003,8 @@ function showModal(opts) {
         v.questionnaireSentDate = new Date().toISOString().slice(0, 10);
         v.contactEmail = v.contactEmail || to;
         await Store.updateVendor(v);
-        audit('Vendor questionnaire sent', 'Vendor', v.id, prevStatus || 'Not sent', 'Sent to ' + to);
-        log('Security questionnaire sent to <b>' + esc(to) + '</b> for vendor <b>' + esc(v.name) + '</b>.');
+        audit('Supplier questionnaire sent', 'Vendor', v.id, prevStatus || 'Not sent', 'Sent to ' + to);
+        log('Security questionnaire sent to <b>' + esc(to) + '</b> for supplier <b>' + esc(v.name) + '</b>.');
         toast('Questionnaire sent to <b>' + esc(to) + '</b>');
       } catch (e) { warn(e); }
       busy(false);
@@ -18950,7 +19035,7 @@ function showModal(opts) {
       });
       var vals = await showModal({
         title: 'Record questionnaire answers — ' + v.name,
-        message: 'Transcribe the vendor’s reply. Leave anything unanswered as —.',
+        message: 'Transcribe the supplier’s reply. Leave anything unanswered as —.',
         fields: fields,
         confirmText: 'Save', cancelText: 'Cancel'
       });
@@ -18962,13 +19047,99 @@ function showModal(opts) {
       busy(true);
       try {
         await Store.updateVendor(v);
-        audit('Vendor questionnaire answers recorded', 'Vendor', v.id, prevStatus || 'Not sent', 'Received');
+        audit('Supplier questionnaire answers recorded', 'Vendor', v.id, prevStatus || 'Not sent', 'Received');
         log('Questionnaire answers recorded for <b>' + esc(v.name) + '</b>.');
         toast('Answers saved');
       } catch (e) { warn(e); }
       busy(false);
       renderVendors();
       if (document.getElementById('drawer').classList.contains('open')) App.openVendor(id);
+      var st = window.CheckpointLib.supplierGapStatus([v], S.actions || [])[0];
+      if (st && !st.actionId && !READONLY) await App.treatSupplierGaps(id);
+    },
+    /* Questionnaire gaps become one treatment action against the
+       third-party business risk, and the supplier is linked to it. */
+    treatSupplierGaps: async function (key) {
+      var p = String(key).split('|'), id = p[0], recId = p[1] || '';
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      var L = window.CheckpointLib;
+      var st = v && L.supplierGapStatus([v], S.actions || [])[0];
+      if (!st || st.actionId) { if (v) App.openVendor(id); return; }
+      var openRisks = (S.risks || []).filter(function (r) { return r.status !== 'Closed' && r.type !== 'Opportunity'; });
+      var tp = openRisks.find(function (r) { return r.tpl === 'biz-third-party'; }) ||
+        openRisks.find(function (r) { return (v.riskRefs || []).indexOf(r.id) !== -1; }) ||
+        openRisks.find(function (r) { return /supplier|third.?part/i.test(r.cat || ''); }) || null;
+      var riskOptions = (tp ? [] : [{ value: 'new:biz-third-party', label: 'Add the business risk: ' + L.businessRiskDef('biz-third-party').title }])
+        .concat(openRisks.map(function (r) { return { value: r.id, label: r.id + ' ' + r.title }; }));
+      var today = new Date().toISOString().slice(0, 10);
+      var vals = await showModal({
+        title: 'Treat ' + st.gaps.length + ' questionnaire gap' + (st.gaps.length === 1 ? '' : 's') + ': ' + v.name,
+        message: st.gaps.map(function (g) { return '\u2022 ' + g.text.charAt(0).toUpperCase() + g.text.slice(1); }).join('\n') + '\n\nOne action, against the supplier risk below. The supplier is linked to that risk.',
+        fields: [
+          { id: 'risk', label: 'Supplier risk', type: 'select', value: tp ? tp.id : 'new:biz-third-party', options: riskOptions },
+          { id: 'title', label: 'What will be done', value: 'Close the security gaps at ' + v.name + ': ' + st.gaps.map(function (g) { return g.text; }).join('; ') },
+          { id: 'owner', label: 'Owner', value: v.owner || '', list: 'peopleList' },
+          { id: 'due', label: 'Due', type: 'date', value: L.addDaysIso(today, v.criticality === 'Critical' || v.criticality === 'High' ? 30 : 90) }
+        ],
+        confirmText: 'Raise action', cancelText: 'Not now',
+        validate: function (x) { return !x.title.trim() ? 'Say what will be done.' : !x.owner.trim() ? 'Name an owner.' : !x.due ? 'Set a due date.' : null; }
+      });
+      if (!vals) return;
+      busy(true);
+      tp = /^new:/.test(vals.risk) ? await ensureBusinessRisk('biz-third-party', vals.owner.trim(), 'Supplier questionnaire') : risk(vals.risk);
+      var maxA = S.actions.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
+      var u = directoryUser(vals.owner.trim());
+      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: vals.title.trim().slice(0, 250), type: 'Action', risk: tp ? tp.id : '', control: st.gaps[0].control, pr: v.criticality === 'Critical' || v.criticality === 'High' ? 'High' : 'Medium',
+        owner: u ? u.name : vals.owner.trim(), ownerEmail: u ? (u.mail || u.upn || '') : '', due: vals.due, status: 'Open', evidenceUrl: '', src: 'Supplier questionnaire ' + v.id };
+      try {
+        await Store.addAction(act);
+        audit('Action raised', 'Action', act.id, '', 'Questionnaire gaps at supplier ' + v.id + ' (' + v.name + ')');
+        if (tp && (v.riskRefs || []).indexOf(tp.id) === -1) { v.riskRefs = (v.riskRefs || []).concat([tp.id]); await Store.updateVendor(v); }
+        if (tp && (tp.actions || []).indexOf(act.id) === -1) { tp.actions = (tp.actions || []).concat([act.id]); await Store.updateRisk(tp); }
+      } catch (e) { warn(e); busy(false); return; }
+      if (recId) await updateSecReview(recId, function (r) { r.actions = (r.actions || []).concat([act.id]); r.decisionItem = r.decisionItem || {}; r.decisionItem[act.id] = 'people'; });
+      busy(false);
+      toast('<b>' + esc(act.id) + '</b> raised for ' + esc(act.owner) + (tp ? ' against ' + esc(tp.id) : ''));
+      renderVendors(); renderActions(); renderRisks(); renderNavCounts();
+      if (recId) App.openSecurityReview(recId); else App.openVendor(id);
+    },
+    /* An incident linked to the risk it is evidence of; optionally a
+       reassessment action, because the risk has now happened. */
+    linkIncidentRisk: async function (key) {
+      var p = String(key).split('|'), id = p[0], recId = p[1] || '';
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var L = window.CheckpointLib, sug = L.incidentRiskSuggestion(n, S.risks || []);
+      var open = (S.risks || []).filter(function (r) { return r.status !== 'Closed' && r.type !== 'Opportunity' && (n.riskRefs || []).indexOf(r.id) === -1; });
+      var options = open.map(function (r) { return { value: r.id, label: r.id + ' ' + r.title }; });
+      if (!sug.existing && sug.def) options.unshift({ value: 'new:' + sug.key, label: 'Add the business risk: ' + sug.def.title });
+      if (!options.length) { toast('No open risk to link to.'); return; }
+      var vals = await showModal({
+        title: 'Link ' + id + ' to a risk',
+        message: n.title + '\n\nAn incident is evidence that a risk happened. Link it to the business risk it belongs to rather than adding a new risk for each incident.',
+        fields: [
+          { id: 'risk', label: 'Risk', type: 'select', value: sug.existing ? sug.existing.id : options[0].value, options: options },
+          { id: 'reassess', label: 'Ask the risk owner to reassess the likelihood', type: 'select', value: 'yes', options: [{ value: 'yes', label: 'Yes, raise a reassessment action' }, { value: 'no', label: 'No, the rating still holds' }] }
+        ],
+        confirmText: 'Link'
+      });
+      if (!vals) { if (recId) App.openSecurityReview(recId); return; }
+      busy(true);
+      var r = /^new:/.test(vals.risk) ? await ensureBusinessRisk(vals.risk.slice(4), '', 'Incident ' + id) : risk(vals.risk);
+      if (!r) { busy(false); return; }
+      n.riskRefs = (n.riskRefs || []).concat([r.id]);
+      try { await Store.updateIncident(n); audit('Incident linked to risk', 'Incident', id, '', r.id + ' ' + r.title); } catch (e) { warn(e); busy(false); return; }
+      if (vals.reassess === 'yes') {
+        var maxA = S.actions.reduce(function (m, x) { var q = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q); }, 0);
+        var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: 'Reassess ' + r.id + ' after incident ' + id + ': is the likelihood still right?', type: 'Action', risk: r.id, control: '', pr: 'Medium',
+          owner: r.owner || currentActor().name, ownerEmail: '', due: L.addDaysIso(new Date().toISOString().slice(0, 10), 14), status: 'Open', evidenceUrl: '', src: 'Incident ' + id };
+        try { await Store.addAction(act); audit('Action raised', 'Action', act.id, '', 'Reassess ' + r.id + ' after incident ' + id); } catch (e) { warn(e); }
+        if (recId && act) await updateSecReview(recId, function (x) { x.actions = (x.actions || []).concat([act.id]); x.decisionItem = x.decisionItem || {}; x.decisionItem[act.id] = 'incidents'; });
+      }
+      busy(false);
+      toast(id + ' linked to <b>' + esc(r.id) + '</b>');
+      renderRisks(); renderActions(); renderNavCounts();
+      if (recId) App.openSecurityReview(recId); else App.openIncident(id);
     },
 
     /* Flags a vendor for the OPT-IN automated path instead of sending
@@ -18991,7 +19162,7 @@ function showModal(opts) {
       if (!v) return;
       var toVals = await showModal({
         title: 'Request self-service link',
-        message: 'Only takes effect if the scheduled monitor (SETUP.md § Continuous monitoring) is deployed for this tenant with email configured — see azure/README.md. If it is, the vendor gets an emailed link to answer the same questions themselves, no sign-in needed, and the answers land here automatically.',
+        message: 'Only takes effect if the scheduled monitor (SETUP.md § Continuous monitoring) is deployed for this tenant with email configured — see azure/README.md. If it is, the supplier gets an emailed link to answer the same questions themselves, no sign-in needed, and the answers land here automatically.',
         fields: [{ id: 'to', label: 'Send to (email address)', type: 'email', value: v.contactEmail || '', placeholder: 'security@vendor.example' }],
         confirmText: 'Request', cancelText: 'Cancel',
         validate: function (vv) { return isValidEmail(vv.to) ? null : 'Enter a valid email address.'; }
@@ -19003,7 +19174,7 @@ function showModal(opts) {
       busy(true);
       try {
         await Store.updateVendor(v);
-        audit('Vendor questionnaire link requested', 'Vendor', v.id, prevStatus || 'Not sent', 'Link requested');
+        audit('Supplier questionnaire link requested', 'Vendor', v.id, prevStatus || 'Not sent', 'Link requested');
         log('Self-service questionnaire link requested for <b>' + esc(v.name) + '</b> — sends on the scheduled monitor\'s next run, if deployed.');
         toast('Link requested');
       } catch (e) { warn(e); }
@@ -19029,7 +19200,7 @@ function showModal(opts) {
       try {
         await Store.updateVendor(v);
         await syncVendorCalendar(v);
-        audit('Vendor reviewed', 'Vendor', v.id, prevStatus + ' / due ' + (prevDue || 'unset'), 'Reviewed / due ' + v.nextReviewDue);
+        audit('Supplier reviewed', 'Vendor', v.id, prevStatus + ' / due ' + (prevDue || 'unset'), 'Reviewed / due ' + v.nextReviewDue);
       } catch (e) { warn(e); }
       busy(false);
       log('<b>' + v.id + '</b> marked reviewed — next review ' + fmtDate(v.nextReviewDue) + '.');
@@ -19174,7 +19345,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Impact assessment</span><b><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></b></div>' +
         '<div class="d-kv"><span>Last reviewed</span><b>' + (a.lastReviewed ? fmtDate(a.lastReviewed) : 'Never') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + '</b></div>' +
-        '<div class="d-kv"><span>Vendor</span><b>' + esc(a.vendor || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Supplier</span><b>' + esc(a.vendor || '—') + '</b></div>' +
         '<div class="d-kv"><span>Model type</span><b>' + esc(a.modelType || '—') + '</b></div>' +
         '<div class="d-kv"><span>Data sources</span><b>' + esc(a.dataSources || '—') + '</b></div>' +
         '<div class="d-kv"><span>Human oversight</span><b>' + esc(a.humanOversight || 'Not documented') + '</b></div></div>' +
@@ -19416,14 +19587,14 @@ function showModal(opts) {
       var rows = selectedVendors().filter(function (x) { return x.criticality !== v; });
       await applyBulkVendorEdit(rows, function (x) {
         var prev = x.criticality; x.criticality = v;
-        return { field: 'Vendor criticality changed', from: prev, to: v };
-      }, rows.length + ' vendor' + (rows.length === 1 ? '' : 's') + ' set to ' + v);
+        return { field: 'Supplier criticality changed', from: prev, to: v };
+      }, rows.length + ' supplier' + (rows.length === 1 ? '' : 's') + ' set to ' + v);
     },
     bulkVendorOwner: async function () {
       var sel = selectedVendors();
       if (!sel.length) return;
       var vals = await showModal({
-        title: 'Set owner on ' + sel.length + ' vendor' + (sel.length === 1 ? '' : 's'),
+        title: 'Set owner on ' + sel.length + ' supplier' + (sel.length === 1 ? '' : 's'),
         fields: [{ id: 'owner', label: 'Owner', value: '' }],
         confirmText: 'Set owner'
       });
@@ -19433,8 +19604,8 @@ function showModal(opts) {
       var rows = sel.filter(function (x) { return x.owner !== owner; });
       await applyBulkVendorEdit(rows, function (x) {
         var prev = x.owner; x.owner = owner;
-        return { field: 'Vendor owner changed', from: prev || 'unassigned', to: owner };
-      }, rows.length + ' vendor' + (rows.length === 1 ? '' : 's') + ' assigned to ' + owner);
+        return { field: 'Supplier owner changed', from: prev || 'unassigned', to: owner };
+      }, rows.length + ' supplier' + (rows.length === 1 ? '' : 's') + ' assigned to ' + owner);
     },
     /* One review date for the batch, asked once — the single-row
        markVendorReviewed() asks for the next due date per vendor, which
@@ -19443,8 +19614,8 @@ function showModal(opts) {
       var sel = selectedVendors();
       if (!sel.length) return;
       var vals = await showModal({
-        title: 'Mark ' + sel.length + ' vendor' + (sel.length === 1 ? '' : 's') + ' reviewed',
-        message: 'Records today as the review date for every selected vendor, and sets the same next-review date on each.',
+        title: 'Mark ' + sel.length + ' supplier' + (sel.length === 1 ? '' : 's') + ' reviewed',
+        message: 'Records today as the review date for every selected supplier, and sets the same next-review date on each.',
         fields: [{ id: 'nextDue', label: 'Next review due', type: 'date', value: daysFrom(365) }],
         confirmText: 'Mark reviewed'
       });
@@ -19454,8 +19625,8 @@ function showModal(opts) {
       await applyBulkVendorEdit(sel, function (x) {
         var prev = x.reviewStatus + ' / due ' + (x.nextReviewDue || 'unset');
         x.lastReviewed = today; x.nextReviewDue = due; x.reviewStatus = 'Reviewed';
-        return { field: 'Vendor reviewed', from: prev, to: 'Reviewed / due ' + due };
-      }, sel.length + ' vendor' + (sel.length === 1 ? '' : 's') + ' marked reviewed', true);
+        return { field: 'Supplier reviewed', from: prev, to: 'Reviewed / due ' + due };
+      }, sel.length + ' supplier' + (sel.length === 1 ? '' : 's') + ' marked reviewed', true);
     },
 
     toggleSoaSel: function (key) {
@@ -20124,7 +20295,7 @@ function showModal(opts) {
       var prev = v.publicListed;
       v.publicListed = !v.publicListed;
       try { await Store.updateVendor(v); } catch (e) { warn(e); }
-      audit('Vendor public-listing changed', 'Vendor', id, prev ? 'Listed' : 'Not listed', v.publicListed ? 'Listed' : 'Not listed');
+      audit('Supplier public-listing changed', 'Vendor', id, prev ? 'Listed' : 'Not listed', v.publicListed ? 'Listed' : 'Not listed');
       renderTrustCenter();
     },
 
@@ -22286,7 +22457,7 @@ function showModal(opts) {
         try { var r = await Graph.discoverAssets(); discovered = r.items; errors = r.errors; } catch (e) { warn(e); }
       }
       (S.vendors || []).forEach(function (v) {
-        discovered.push({ source: 'Vendor', sourceId: v.id, name: v.name, type: 'Cloud service', owner: v.owner || '', location: 'Vendor register (' + v.id + ')', criticality: v.criticality || '' });
+        discovered.push({ source: 'Vendor', sourceId: v.id, name: v.name, type: 'Cloud service', owner: v.owner || '', location: 'Supplier register (' + v.id + ')', criticality: v.criticality || '' });
       });
       var today = new Date().toISOString().slice(0, 10);
       var plan = window.CheckpointLib.mergeDiscoveredAssets(S.assets || [], discovered, today);
@@ -22303,7 +22474,7 @@ function showModal(opts) {
       busy(false);
       var failed = Object.keys(errors);
       audit('Asset register synced', 'Asset', '', '', added + ' added, ' + updated + ' updated, ' + plan.missing + ' not found' + (failed.length ? '; not readable: ' + failed.join(', ') : ''));
-      toast('<b>' + added + '</b> added · ' + updated + ' updated' + (plan.missing ? ' · ' + plan.missing + ' not found' : '') + (failed.length ? ' · could not read ' + esc(failed.join(', ')) : '') + (Store.kind === 'demo' ? ' (demo: vendor register only)' : ''));
+      toast('<b>' + added + '</b> added · ' + updated + ' updated' + (plan.missing ? ' · ' + plan.missing + ' not found' : '') + (failed.length ? ' · could not read ' + esc(failed.join(', ')) : '') + (Store.kind === 'demo' ? ' (demo: supplier register only)' : ''));
       if (btn) { btn.disabled = false; btn.textContent = 'Sync from Microsoft 365'; }
       renderAssets(); renderNavCounts();
     },
@@ -22908,7 +23079,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Detected</span><b>' + fmtDate(n.detected) + '</b></div>' +
         '<div class="d-kv"><span>Occurred</span><b>' + fmtDate(n.occurred) + '</b></div>' +
         '<div class="d-kv"><span>Reported by</span><b>' + esc(n.reportedBy) + '</b></div>' +
-        '<div class="d-kv"><span>Discovered via</span><b>' + esc(n.discoveredVia) + '</b></div>' +
+        '<div class="d-kv"><span>Discovered via</span><b>' + esc(n.discoveredVia === 'Vendor notification' ? 'Supplier notification' : n.discoveredVia) + '</b></div>' +
         (n.closedDate ? '<div class="d-kv"><span>Closed</span><b>' + fmtDate(n.closedDate) + '</b></div>' : '') + '</div>' +
         (n.description ? '<div class="d-sec"><h4>What happened</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.description) + '</p></div>' : '') +
         (n.affectedSystems ? '<div class="d-sec"><h4>Affected systems / data</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.affectedSystems) + '</p></div>' : '') +
@@ -22919,6 +23090,7 @@ function showModal(opts) {
           var act = S.actions.find(function (x) { return x.id === ref; });
           return '<div class="d-kv"><span>' + ref + (act ? ' — ' + esc(act.title) : '') + '</span></div>';
         }).join('') + '</div>' : '') +
+        incidentRisksHtml(n) +
         (n.isPrivacyBreach ? '<div class="d-sec"><h4>Privacy-breach assessment</h4>' +
           '<div class="d-kv"><span>Status</span><b>' + incidentAssessmentChip(n) + '</b></div>' +
           (n.assessmentDueDate ? '<div class="d-kv"><span>Assessment due</span><b>' + fmtDate(n.assessmentDueDate) + '</b></div>' : '') +
@@ -23300,7 +23472,7 @@ function showModal(opts) {
       if (!rec) return;
       var to = secReviewRecipients();
       if (!to.length) { toast('Add the attendees’ email addresses in Settings first.'); App.setupSecurityReview(); return; }
-      var ok = await showModal({ title: 'Send security review ' + rec.n + '?', message: 'The agenda with this month’s figures, and a calendar invite, go to:\n' + to.join('\n') + '\n\nFigures as prepared on ' + fmtDate(rec.preparedAt) + '. Refresh them first if anything has changed since.', confirmText: 'Send', cancelText: 'Cancel' });
+      var ok = await showModal({ title: 'Send leadership security meeting ' + rec.n + '?', message: 'The agenda with this month’s figures, and a calendar invite, go to:\n' + to.join('\n') + '\n\nFigures as prepared on ' + fmtDate(rec.preparedAt) + '. Refresh them first if anything has changed since.', confirmText: 'Send', cancelText: 'Cancel' });
       if (!ok) return;
       busy(true);
       await sendSecurityReviewNow(rec, false);
@@ -23358,7 +23530,7 @@ function showModal(opts) {
       var rec = secReviewById(id);
       if (!rec) return;
       var v = await showModal({
-        title: 'Add to security review ' + rec.n,
+        title: 'Add to leadership security meeting ' + rec.n,
         message: 'For this meeting only: any other business, a topic someone has asked for, or a decision needed. Standing items for every meeting are added in Settings.',
         fields: [
           { id: 'title', label: 'Item', value: '' },
@@ -23438,10 +23610,10 @@ function showModal(opts) {
       if (!v) { App.openSecurityReview(id); return; }
       var before = { owner: a.owner, due: a.due, status: a.status };
       var d = { choice: choice, title: a.title, by: by, on: heldOn };
-      if (choice === 'close') { a.status = 'Closed'; d.reason = String(v.reason || '').trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Closed at security review ' + id + ' on ' + heldOn + (d.reason ? ': ' + d.reason : '')).slice(0, 2000); }
+      if (choice === 'close') { a.status = 'Closed'; d.reason = String(v.reason || '').trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Closed at leadership security meeting ' + id + ' on ' + heldOn + (d.reason ? ': ' + d.reason : '')).slice(0, 2000); }
       else if (choice === 'extend') { a.due = v.due; d.due = v.due; }
       else if (choice === 'reassign') { var u = directoryUser(v.owner.trim()); a.owner = u ? u.name : v.owner.trim(); a.ownerEmail = u ? (u.mail || u.upn || '') : ''; if (v.due) a.due = v.due; d.owner = a.owner; d.due = v.due || ''; }
-      else { a.status = 'Closed'; d.reason = v.reason.trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Risk accepted by ' + by + ' at security review ' + id + ' on ' + heldOn + ': ' + d.reason).slice(0, 2000); }
+      else { a.status = 'Closed'; d.reason = v.reason.trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Risk accepted by ' + by + ' at leadership security meeting ' + id + ' on ' + heldOn + ': ' + d.reason).slice(0, 2000); }
       busy(true);
       try { await Store.updateAction(a); } catch (e) { warn(e); busy(false); return; }
       /* Accepting the risk on a stuck action is a residual risk
@@ -23451,15 +23623,15 @@ function showModal(opts) {
         var rq = residual(rk);
         var prevAcc = rk.acceptedBy ? rk.acceptedBy + ' ' + (rk.acceptedDate || '') : '';
         rk.acceptedBy = by; rk.acceptedDate = heldOn; rk.acceptedScore = rq.L * rq.I;
-        rk.acceptanceNote = ('Accepted at security review ' + id + ' when ' + aid + ' (' + a.title + ') was closed: ' + d.reason + (v.reviewBy ? ' Look at it again by ' + fmtDate(v.reviewBy) + '.' : '')).slice(0, 2000);
+        rk.acceptanceNote = ('Accepted at leadership security meeting ' + id + ' when ' + aid + ' (' + a.title + ') was closed: ' + d.reason + (v.reviewBy ? ' Look at it again by ' + fmtDate(v.reviewBy) + '.' : '')).slice(0, 2000);
         if (rk.treat !== 'Tolerate') rk.treat = 'Tolerate';
         if (!a.risk) a.risk = rk.id;
         d.risk = rk.id; d.reviewBy = v.reviewBy || '';
-        try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at security review ' + id + ' (' + aid + ')'); } catch (e) { warn(e); }
+        try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at leadership security meeting ' + id + ' (' + aid + ')'); } catch (e) { warn(e); }
         if (v.reviewBy) {
           var maxAct2 = S.actions.reduce(function (m, x) { var q2 = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, q2); }, 0);
           var rev = { id: 'ACT-' + String(maxAct2 + 1).padStart(3, '0'), title: 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', type: 'Action', risk: rk.id, control: '', pr: 'Medium',
-            owner: rk.owner || by, ownerEmail: '', due: v.reviewBy, status: 'Open', evidenceUrl: '', src: 'Security review ' + id + ': risk acceptance' };
+            owner: rk.owner || by, ownerEmail: '', due: v.reviewBy, status: 'Open', evidenceUrl: '', src: 'Leadership security meeting ' + id + ': risk acceptance' };
           try { await Store.addAction(rev); d.reviewAction = rev.id; audit('Action raised', 'Action', rev.id, '', 'Review of the risk acceptance of ' + rk.id + ' by ' + fmtDate(v.reviewBy)); } catch (e) { warn(e); }
         }
       }
@@ -23496,9 +23668,9 @@ function showModal(opts) {
         var q = residual(rk), prevAcc = rk.acceptedBy ? rk.acceptedBy + ' ' + (rk.acceptedDate || '') : '';
         d.reason = v.reason.trim().slice(0, 300); d.reviewBy = v.reviewBy || '';
         rk.acceptedBy = by; rk.acceptedDate = heldOn; rk.acceptedScore = q.L * q.I;
-        rk.acceptanceNote = ('Accepted at security review ' + id + ': ' + d.reason + (d.reviewBy ? ' Look at it again by ' + fmtDate(d.reviewBy) + '.' : '')).slice(0, 2000);
+        rk.acceptanceNote = ('Accepted at leadership security meeting ' + id + ': ' + d.reason + (d.reviewBy ? ' Look at it again by ' + fmtDate(d.reviewBy) + '.' : '')).slice(0, 2000);
         if (rk.treat !== 'Tolerate') rk.treat = 'Tolerate';
-        try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at security review ' + id); } catch (e) { warn(e); busy(false); return; }
+        try { await Store.updateRisk(rk); audit('Residual risk accepted', 'Risk', rk.id, prevAcc, 'Accepted by ' + by + ' on ' + heldOn + ' at leadership security meeting ' + id); } catch (e) { warn(e); busy(false); return; }
         if (d.reviewBy) {
           var again = await srRaiseAction(rec, 'risks', 'Risks', 'Look again at the accepted risk ' + rk.id + ': is acceptance still right?', rk.owner || by, d.reviewBy, rk.id);
           if (again) d.actionId = again.id;
@@ -23506,6 +23678,7 @@ function showModal(opts) {
       } else {
         var act = await srRaiseAction(rec, 'risks', 'Risks', v.title.trim().slice(0, 200), v.owner.trim(), v.due, rk.id);
         if (!act) { busy(false); return; }
+        if ((rk.actions || []).indexOf(act.id) === -1) { rk.actions = (rk.actions || []).concat([act.id]); try { await Store.updateRisk(rk); } catch (e) { warn(e); } }
         d.actionId = act.id; d.title = act.title; d.owner = act.owner; d.due = act.due;
       }
       await updateSecReview(id, function (r) {
@@ -23533,7 +23706,7 @@ function showModal(opts) {
       var ok = false;
       try { ok = await fileReportAsEvidence('secyear', c); } catch (e) { warn(e); }
       busy(false);
-      toast(ok ? 'The year of security reviews is filed as Clause 9.3 evidence' : 'Could not file the year of security reviews');
+      toast(ok ? 'The year of leadership security meetings is filed as Clause 9.3 evidence' : 'Could not file the year of leadership security meetings');
     },
     saveSecurityReviewMinutes: async function (id) {
       var rec = secReviewById(id);

@@ -119,7 +119,7 @@ window.GUIDANCE = {
     checks: []
   },
   'A.5.6': {
-    how: "Join at least one relevant threat-intelligence or peer community — the ACSC partner program, an information-sharing group for your sector, a vendor security bulletin list — and keep a record of membership. Even minimal participation satisfies this control; the point is a channel exists for early warning.",
+    how: "Join at least one relevant threat-intelligence or peer community — the ACSC partner program, an information-sharing group for your sector, a supplier security bulletin list — and keep a record of membership. Even minimal participation satisfies this control; the point is a channel exists for early warning.",
     evidence: "Membership confirmation, a subscription record, or attendance evidence for a relevant briefing.",
     link: "https://www.cyber.gov.au",
     checks: []
@@ -201,8 +201,8 @@ window.GUIDANCE = {
     checks: ["pim", "access-review", "leaver", "priv-role-changes", "dormant-accounts"]
   },
   'A.5.19': {
-    how: "Keep a vendor risk register recording what data each supplier can access and their own security posture — Checkpoint's Vendor register is built for exactly this — and require a security review before onboarding any supplier that touches your data. Set a minimum security bar in the supplier contract itself, not just in your own process.",
-    evidence: "The vendor risk register with data-access classification recorded, and a pre-onboarding security review for a sample supplier.",
+    how: "Keep a supplier risk register recording what data each supplier can access and their own security posture — Checkpoint's Supplier register is built for exactly this — and require a security review before onboarding any supplier that touches your data. Set a minimum security bar in the supplier contract itself, not just in your own process.",
+    evidence: "The supplier risk register with data-access classification recorded, and a pre-onboarding security review for a sample supplier.",
     link: "https://purview.microsoft.com",
     checks: ["supplier"]
   },
@@ -219,13 +219,13 @@ window.GUIDANCE = {
     checks: ["riskyapps"]
   },
   'A.5.22': {
-    how: "Set a review cadence for existing supplier relationships — annual is typical for critical suppliers — checking their certifications are still current and their access is still appropriate. Checkpoint's Vendor register tracks next-review dates and flags overdue ones on the Dashboard.",
-    evidence: "Vendor review records showing the review actually happened on schedule, visible in the vendor register's review-status field.",
+    how: "Set a review cadence for existing supplier relationships — annual is typical for critical suppliers — checking their certifications are still current and their access is still appropriate. Checkpoint's Supplier register tracks next-review dates and flags overdue ones on the Dashboard.",
+    evidence: "Supplier review records showing the review actually happened on schedule, visible in the supplier register's review-status field.",
     link: "https://purview.microsoft.com",
     checks: ["supplier"]
   },
   'A.5.23': {
-    how: "Govern which cloud services staff can use with Conditional Access app restrictions and, if licensed, Defender for Cloud Apps' app governance and shadow-IT discovery. Require new cloud services to go through the same supplier-review process as any other vendor before adoption. Checkpoint scores the technical half directly: an enabled Conditional Access policy applying Defender for Cloud Apps session control passes; its absence is a review rather than a fail, since plenty of tenants govern cloud service adoption through the supplier-review process instead — a real gap here looks identical to that from outside.",
+    how: "Govern which cloud services staff can use with Conditional Access app restrictions and, if licensed, Defender for Cloud Apps' app governance and shadow-IT discovery. Require new cloud services to go through the same supplier-review process as any other supplier before adoption. Checkpoint scores the technical half directly: an enabled Conditional Access policy applying Defender for Cloud Apps session control passes; its absence is a review rather than a fail, since plenty of tenants govern cloud service adoption through the supplier-review process instead — a real gap here looks identical to that from outside.",
     evidence: "The Conditional Access app-restriction policy and, where used, a Defender for Cloud Apps discovery report.",
     link: "https://security.microsoft.com",
     checks: ["ca-cas"]

@@ -101,7 +101,7 @@ describe('follow-ups a week later', () => {
     assert.deepEqual(done, ['follow-ups SR-002 (1)']);
     const mail = calls.find((c) => /sendMail/.test(c.path));
     assert.equal(mail.opts.body.message.toRecipients[0].emailAddress.address, 'cem@mg.example');
-    assert.match(mail.opts.body.message.subject, /Your actions from the security review on 13 Oct 2026/);
+    assert.match(mail.opts.body.message.subject, /Your actions from the leadership security meeting on 13 Oct 2026/);
     const saved = JSON.parse(calls.find((c) => c.opts && c.opts.method === 'PATCH').opts.body.SettingValue);
     assert.equal(saved[0].followUpSent, '2026-10-20');
   });

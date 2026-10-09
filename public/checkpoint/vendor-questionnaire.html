@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Vendor security questionnaire — Checkpoint</title>
+<title>Supplier security questionnaire — Checkpoint</title>
 <style>
   :root{
     --ink:#0B0B0C; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.4);
@@ -125,7 +125,7 @@
       '<div class="ai-follow" id="aiFollow">' + followUps.map(questionField).join('') + '</div>';
 
     app.innerHTML =
-      '<h1>' + esc(vendor.name || 'Vendor security questionnaire') + '</h1>' +
+      '<h1>' + esc(vendor.name || 'Supplier security questionnaire') + '</h1>' +
       '<p class="meta">' + (vendor.service ? esc(vendor.service) : 'A short set of security, privacy and AI questions') + '</p>' +
       secHtml + aiHtml +
       '<button id="fSubmit" type="button">Submit answers</button>' +

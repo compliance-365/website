@@ -312,7 +312,7 @@ function bcpCheckResult(calendar, docs, today) {
 
 function supplierCheckResult(vendors, today) {
   const list = (vendors || []).filter(v => v);
-  if (!list.length) return { result: 'manual', note: 'No suppliers recorded in Checkpoint\'s vendor register — add them, or keep supplier assurance evidence in whatever system you use.' };
+  if (!list.length) return { result: 'manual', note: 'No suppliers recorded in Checkpoint\'s supplier register — add them, or keep supplier assurance evidence in whatever system you use.' };
   const overdue = list.filter(v => v.nextReviewDue && v.nextReviewDue < today);
   const keyOverdue = overdue.filter(v => v.criticality === 'Critical' || v.criticality === 'High');
   const neverReviewed = list.filter(v => !v.lastReviewed);
@@ -437,7 +437,7 @@ async function runRegisterChecks(g, gAll, context, siteId, optional, settings, r
         const f = i.fields || {};
         return { criticality: f.Criticality || 'Medium', lastReviewed: f.LastReviewed || '', nextReviewDue: f.NextReviewDue || '' };
       });
-    } catch (e) { context.log.error('Checkpoint posture monitor: could not read the vendor register: ' + (e && e.message ? e.message : e)); }
+    } catch (e) { context.log.error('Checkpoint posture monitor: could not read the supplier register: ' + (e && e.message ? e.message : e)); }
   }
 
   let audits = [];
@@ -1762,20 +1762,20 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
          token, same as the review/expiry alerts below only ever needed
          the field values. */
       rows = (items.value || []).map(i => Object.assign({ _itemId: i.id }, i.fields));
-    } catch (e) { context.log.error('Checkpoint governance sweep: could not read the vendor register: ' + e.message); }
+    } catch (e) { context.log.error('Checkpoint governance sweep: could not read the supplier register: ' + e.message); }
     vendorRows = rows;
 
     rows.forEach(v => {
-      const name = v.Service || v.RefId || '(unnamed vendor)';
+      const name = v.Service || v.RefId || '(unnamed supplier)';
 
       if (v.NextReviewDue) {
         const days = daysBetween(today, v.NextReviewDue);
         if (days < 0) {
           findings.push({
             checkId: 'vendor-review-overdue:' + (v.RefId || name),
-            label: 'Vendor review overdue: ' + name,
+            label: 'Supplier review overdue: ' + name,
             prev: 'review due ' + v.NextReviewDue, next: Math.abs(days) + ' days overdue',
-            note: (v.Criticality ? v.Criticality + '-criticality vendor. ' : '') +
+            note: (v.Criticality ? v.Criticality + '-criticality supplier. ' : '') +
               (v.Owner ? 'Owner: ' + v.Owner + '. ' : 'No owner recorded. ') +
               'Reassessment was due ' + v.NextReviewDue + '.',
             date: today
@@ -1783,7 +1783,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
         } else if (days <= VENDOR_WARN_DAYS) {
           findings.push({
             checkId: 'vendor-review-due:' + (v.RefId || name),
-            label: 'Vendor review due in ' + days + ' days: ' + name,
+            label: 'Supplier review due in ' + days + ' days: ' + name,
             prev: 'current', next: 'due ' + v.NextReviewDue,
             note: (v.Owner ? 'Owner: ' + v.Owner + '. ' : '') + 'Reassess before ' + v.NextReviewDue + ' to keep the register clean.',
             date: today
@@ -1796,17 +1796,17 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
         if (days < 0) {
           findings.push({
             checkId: 'vendor-cert-expired:' + (v.RefId || name),
-            label: 'Vendor certification/report expired: ' + name,
+            label: 'Supplier certification/report expired: ' + name,
             prev: 'expired ' + v.CertExpiryDate, next: Math.abs(days) + ' days ago',
-            note: (v.Certifications ? v.Certifications + ' recorded for this vendor. ' : '') +
+            note: (v.Certifications ? v.Certifications + ' recorded for this supplier. ' : '') +
               (v.Owner ? 'Owner: ' + v.Owner + '. ' : 'No owner recorded. ') +
-              'Whatever evidence this tenant relies on for this vendor (a SOC 2 report, an ISO certificate) is now stale.',
+              'Whatever evidence this tenant relies on for this supplier (a SOC 2 report, an ISO certificate) is now stale.',
             date: today
           });
         } else if (days <= VENDOR_WARN_DAYS) {
           findings.push({
             checkId: 'vendor-cert-due:' + (v.RefId || name),
-            label: 'Vendor certification/report expires in ' + days + ' days: ' + name,
+            label: 'Supplier certification/report expires in ' + days + ' days: ' + name,
             prev: 'current', next: 'expires ' + v.CertExpiryDate,
             note: (v.Certifications ? v.Certifications + '. ' : '') + (v.Owner ? 'Owner: ' + v.Owner + '. ' : '') + 'Request the renewed evidence before ' + v.CertExpiryDate + '.',
             date: today
@@ -1834,7 +1834,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   for (const v of linkRequested) {
     const link = buildVendorLink(v._itemId);
     if (!link) continue;
-    const name = v.Title || v.RefId || '(unnamed vendor)';
+    const name = v.Title || v.RefId || '(unnamed supplier)';
     const body = '<p>Hello,</p>' +
       '<p>As part of our ongoing supplier security review programme, please answer a short set of security, privacy and AI questions for <b>' + esc(name) + '</b>' + (v.Service ? ' (' + esc(v.Service) + ')' : '') + '.</p>' +
       '<p><a href="' + esc(link) + '">Answer the questionnaire →</a></p>' +
@@ -1845,10 +1845,10 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
           method: 'PATCH', body: { QuestionnaireStatus: 'Sent', QuestionnaireSentDate: today }
         });
         questionnaireLinksSent++;
-      } catch (e) { context.log.error('Checkpoint governance sweep: sent a questionnaire link to ' + v.ContactEmail + ' but could not update the vendor record: ' + (e && e.message ? e.message : e)); }
+      } catch (e) { context.log.error('Checkpoint governance sweep: sent a questionnaire link to ' + v.ContactEmail + ' but could not update the supplier record: ' + (e && e.message ? e.message : e)); }
     }
   }
-  if (questionnaireLinksSent) context.log('Checkpoint governance sweep: sent ' + questionnaireLinksSent + ' vendor questionnaire link(s).');
+  if (questionnaireLinksSent) context.log('Checkpoint governance sweep: sent ' + questionnaireLinksSent + ' supplier questionnaire link(s).');
 
   /* ---- Supplier certificate renewals ----
      A supplier whose certificate or assurance report expires within
@@ -1864,7 +1864,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
     if (!vendorRenewalState(v.Notes, today).canRequest) continue;
     const base = buildVendorLink(v._itemId);
     if (!base) continue;
-    const name = v.Title || v.RefId || '(unnamed vendor)';
+    const name = v.Title || v.RefId || '(unnamed supplier)';
     const body = '<p>Hello,</p>' +
       '<p>Our records show that the ' + esc(v.Certifications || 'security certificate or assurance report') + ' we hold for <b>' + esc(name) + '</b> ' + (days < 0 ? 'expired on ' : 'expires on ') + esc(v.CertExpiryDate) + '.</p>' +
       '<p>Please tell us when the renewed one is valid until and share a link to it.</p>' +
@@ -2368,11 +2368,11 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     const html = SR.securityReviewEmailHtml(agenda, meta, status);
     const startUtc = SR.wallTimeToUtc(rec.date, rec.time || setup.time, setup.timeZone);
     const ics = SR.securityReviewIcs({ uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc, endUtc: new Date(Date.parse(startUtc) + agenda.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
-      summary: label + ' security review ' + rec.n + ' (' + agenda.label + ')', description: SR.securityReviewInviteText(agenda, status, meta), html,
+      summary: label + ' leadership security meeting ' + rec.n + ' (' + agenda.label + ')', description: SR.securityReviewInviteText(agenda, status, meta), html,
       location: /^https:\/\//i.test(setup.teamsLink || '') ? setup.teamsLink : 'Microsoft Teams' });
     try {
       await g(`/users/${encodeURIComponent(from)}/sendMail`, { method: 'POST', body: { message: {
-        subject: label + ' security review ' + rec.n + ' \u2014 ' + SR.srDate(rec.date),
+        subject: label + ' leadership security meeting ' + rec.n + ' \u2014 ' + SR.srDate(rec.date),
         body: { contentType: 'HTML', content: html },
         toRecipients: to.map(address => ({ emailAddress: { address } })),
         attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] }, saveToSentItems: false } });
@@ -2384,7 +2384,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
   }
   if (due.remindMinutes && rec && setup.ownerEmail) {
     const e = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const ok = await notifyOwner(g, context, setup.ownerEmail, 'Record the minutes: ' + label + ' security review ' + rec.n,
+    const ok = await notifyOwner(g, context, setup.ownerEmail, 'Record the minutes: ' + label + ' leadership security meeting ' + rec.n,
       '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px"><p>Hi ' + e(setup.owner || '') + ',</p><p>Security review ' + rec.n + ' was held on ' + e(SR.srDate(rec.date)) + '. Record the minutes and decisions in Checkpoint so each decision becomes an action with an owner, and the minutes are filed as evidence.</p>' +
       '<p><a href="https://www.compliance365.com.au/checkpoint/">Open Checkpoint</a> \u203a Management review \u203a Record minutes.</p></div>');
     if (ok) { rec.minutesReminded = today; done.push('minutes reminder ' + rec.id); }
@@ -2402,7 +2402,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
       for (const o of fu.owners) {
         const u = o.email ? null : matchOwnerToUser(o.owner, users);
         const to = o.email || (u && (u.mail || u.userPrincipalName));
-        if (to && !weeklyOnly(settings, o.owner, to) && await notifyOwner(g, context, to, 'Your actions from the security review on ' + SR.srDate(fu.review.date), SR.securityReviewFollowUpHtml(o, fu.review, { org: label, appUrl: 'https://www.compliance365.com.au/checkpoint/' }))) nudged++;
+        if (to && !weeklyOnly(settings, o.owner, to) && await notifyOwner(g, context, to, 'Your actions from the leadership security meeting on ' + SR.srDate(fu.review.date), SR.securityReviewFollowUpHtml(o, fu.review, { org: label, appUrl: 'https://www.compliance365.com.au/checkpoint/' }))) nudged++;
       }
       const held = reviews.find(r => r.id === fu.review.id);
       if (held) { held.followUpSent = today; done.push('follow-ups ' + held.id + ' (' + nudged + ')'); }

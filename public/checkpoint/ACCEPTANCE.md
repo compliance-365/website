@@ -17,7 +17,7 @@ A scripted, click-by-click manual test plan for a fresh tenant, run before handi
 | 3. Plan | Risk register + Actions register (approving scan findings) |
 | 4. Implement | Statement of Applicability + Frameworks |
 | 5. Evidence | Documents + Shared evidence + evidence linking |
-| 6. Operate | Dashboard + Compliance calendar + Vendor risk + AI systems |
+| 6. Operate | Dashboard + Compliance calendar + Supplier risk + AI systems |
 | 7. Audit | Internal audits + Audit reports + Auditor pack |
 | 8. Review/Recertify | Management review + Audit log |
 
@@ -231,7 +231,7 @@ Exercises linking evidence to a control and the shared-evidence cross-framework 
 
 ## 6. Operate
 
-Exercises day-to-day use: Dashboard, calendar, vendor risk, AI systems.
+Exercises day-to-day use: Dashboard, calendar, supplier risk, AI systems.
 
 **6.1 — Dashboard reflects live state**
 - Click: sidebar → **"Dashboard"**.
@@ -243,9 +243,9 @@ Exercises day-to-day use: Dashboard, calendar, vendor risk, AI systems.
 - Expect: new recurring activity appears in the calendar list with its next-due date.
 - [ ] Pass  [ ] Fail
 
-**6.3 — Vendor risk**
-- Click: sidebar → **"Vendor risk"** → add a vendor with at least one data category selected.
-- Expect: a suggested criticality appears based on the data categories chosen; vendor is saved and listed.
+**6.3 — Supplier risk**
+- Click: sidebar → **"Supplier risk"** → add a supplier with at least one data category selected.
+- Expect: a suggested criticality appears based on the data categories chosen; supplier is saved and listed.
 - [ ] Pass  [ ] Fail  [ ] N/A — not entitled/enabled for this pilot
 
 **6.4 — AI systems** (only if ISO 42001 is entitled)
@@ -302,6 +302,13 @@ Exercises management review and the audit trail.
 - Set the management review interval to 3 months in the meeting **Settings**, open the meeting that is now the management review, and try to save its minutes without answering suitable / adequate / effective: it refuses. Answer them ("Partly" needs a reason) and save.
 - Expect: a new row in **Management review records** with the conclusion and "Awaiting sign-off" (or signed off when the chair saved it); the next management review booked on the compliance calendar; on a live tenant the minutes are filed under Clause 9.3 as well as 9.1.
 - Yearly topics: change the interested parties answers (Scope & context) or add a legal requirement, then preview the next agenda: **Interested parties and legal requirements** is on it with its own time, and the reason says the register changed. It is not on the agenda otherwise until a year after it was last covered.
+- [ ] Pass  [ ] Fail
+
+**8.0b — Everything feeds the meeting**
+- Incidents: open an incident with no risk. Its panel suggests a business risk, preferring one already in the register. Click **Link to a risk**, keep the suggestion and the reassessment action, and link. Expect: the risk's panel lists the incident under "Incidents (it happened)", and a "Reassess …" action is raised for the risk owner.
+- Suppliers: record questionnaire answers with **No** for certification and **Unknown** for MFA. Expect: you're offered **Treat the gaps** straight away; one action is raised against the supplier risk, the supplier is linked to that risk, and the supplier's panel shows "Being treated".
+- Threat intel: assess an advisory as **Affects us**, then prepare the next leadership meeting. Expect: Security posture lists it with the remediation action, and the at-a-glance figures include Threat intel.
+- Wording: no screen says "vendor". Import a CSV with a **Vendor** column into the supplier register: it still imports.
 - [ ] Pass  [ ] Fail
 
 **8.1 — Record a management review held outside the meeting**

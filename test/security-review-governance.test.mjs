@@ -54,7 +54,7 @@ describe('the top management record', () => {
     assert.deepEqual(t.meetings.map((m) => [m.id, m.chairPresent, m.quorum]), [['SR-002', true, true], ['SR-003', false, false]]);
     assert.deepEqual(t.meetings[1].escalations, ['A9 Old kit: risk accepted on R-4 (replaced in Q1), look again by 8 Mar 2027, by Alex Morgan']);
     assert.deepEqual(t.accepted.map((r) => r.id), ['R-4']);
-    assert.equal(t.summary, '2 security reviews held, 1 chaired by Alex Morgan; 1 decision on overdue actions; 1 residual risk accepted; 1 management review.');
+    assert.equal(t.summary, '2 leadership security meetings held, 1 chaired by Alex Morgan; 1 decision on overdue actions; 1 residual risk accepted; 1 management review.');
   });
 });
 

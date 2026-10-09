@@ -101,7 +101,7 @@
       (d.csvs || []).length ? '  *.csv                   each register as a spreadsheet, the same as Export all.' : '',
       '',
       'Restoring:',
-      '  Risks, actions, vendors and assets can be re-imported with Import CSV on each register.',
+      '  Risks, actions, suppliers and assets can be re-imported with Import CSV on each register.',
       '  For a full restore of every register from checkpoint-backup.json, contact Compliance365 support.',
       '',
       'Record counts: ' + Object.keys(counts).map(function (k) { return k + ' ' + counts[k]; }).join(', ')
