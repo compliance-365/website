@@ -854,8 +854,9 @@
 
     <!-- THREAT INTEL -->
     <section class="view" id="v-threatintel">
-      <div class="vhead"><div class="rule"></div><h1>Threat intel</h1><p>A filtered slice of CISA's Known Exploited Vulnerabilities catalog — vendors an ordinary Microsoft 365-centric IT estate is actually likely to run, re-sorted below by this organisation's declared industry and tech stack. A starting point for "should we care about this," not a vulnerability scanner or a substitute for patch management.</p></div>
-      <div class="card" style="margin-bottom:16px" id="tiStackPanel"></div>
+      <div class="vhead"><div class="rule"></div><h1>Threat intel</h1><p>Vulnerabilities attackers are exploiting right now (CISA's Known Exploited Vulnerabilities catalog), for the vendors a Microsoft 365-centred business typically runs. The ones that match your technology come first. Assess each one: does it affect you, is it already patched, or do you not run it? "Affects us" raises a remediation action. The record is your evidence for ISO 27001 A.5.7 (threat intelligence) and A.8.8 (technical vulnerabilities). It complements patch management; it does not replace a vulnerability scanner.</p></div>
+      <div class="grid kpis reg-strip" id="tiKpiRow" style="margin-bottom:14px"></div>
+      <div class="card" style="margin-bottom:14px" id="tiStackPanel"></div>
       <div id="tiListWrap"></div>
     </section>
 

@@ -887,7 +887,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -3296,6 +3296,7 @@ function showModal(opts) {
     },
     /* Roles, responsibilities and authorities (Clause 5.3), from the
        owners recorded across the registers. */
+    threatintel: function () { return threatIntelReportParts(); },
     whodoes: function () {
       var w = whoDoesData(), L = window.CheckpointLib;
       return {
@@ -14601,52 +14602,81 @@ function showModal(opts) {
      renderThreatIntelItems() below never needs to know which one it's
      looking at. */
   var THREAT_INTEL_DEMO_ITEMS = [
-    { cveId: 'CVE-2024-3400', vendor: 'Palo Alto Networks', product: 'PAN-OS GlobalProtect', name: 'PAN-OS Command Injection', description: 'A command injection vulnerability allows an unauthenticated attacker to execute arbitrary code with root privileges.', dateAdded: '2024-04-12', dueDate: '2024-04-19', knownRansomwareUse: false, tags: ['network-edge'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-3400' },
+    { requiredAction: 'Apply mitigations per vendor instructions or discontinue use of the product if mitigations are unavailable.', cveId: 'CVE-2024-3400', vendor: 'Palo Alto Networks', product: 'PAN-OS GlobalProtect', name: 'PAN-OS Command Injection', description: 'A command injection vulnerability allows an unauthenticated attacker to execute arbitrary code with root privileges.', dateAdded: '2024-04-12', dueDate: '2024-04-19', knownRansomwareUse: false, tags: ['network-edge'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2024-3400' },
     { cveId: 'CVE-2023-4966', vendor: 'Citrix', product: 'NetScaler ADC and Gateway', name: 'NetScaler Sensitive Information Disclosure ("Citrix Bleed")', description: 'A buffer-overflow vulnerability leading to sensitive information disclosure, exploited to hijack authenticated sessions.', dateAdded: '2023-11-21', dueDate: '2023-12-12', knownRansomwareUse: true, tags: ['network-edge'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2023-4966' },
     { cveId: 'CVE-2023-27997', vendor: 'Fortinet', product: 'FortiOS and FortiProxy SSL-VPN', name: 'FortiOS Heap-Based Buffer Overflow', description: 'A heap-based buffer overflow in the SSL-VPN component allows a remote, unauthenticated attacker to execute arbitrary code.', dateAdded: '2023-06-12', dueDate: '2023-07-03', knownRansomwareUse: false, tags: ['network-edge'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2023-27997' },
-    { cveId: 'CVE-2021-34473', vendor: 'Microsoft', product: 'Exchange Server', name: 'Exchange Server Remote Code Execution ("ProxyShell")', description: 'A pre-authentication remote code execution vulnerability chain in on-premises Exchange Server.', dateAdded: '2021-11-03', dueDate: '2021-11-17', knownRansomwareUse: true, tags: ['microsoft'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2021-34473' }
+    { requiredAction: 'Apply updates per vendor instructions.', cveId: 'CVE-2021-34473', vendor: 'Microsoft', product: 'Exchange Server', name: 'Exchange Server Remote Code Execution ("ProxyShell")', description: 'A pre-authentication remote code execution vulnerability chain in on-premises Exchange Server.', dateAdded: '2021-11-03', dueDate: '2021-11-17', knownRansomwareUse: true, tags: ['microsoft'], url: 'https://nvd.nist.gov/vuln/detail/CVE-2021-34473' }
   ];
 
+  function threatTriage() {
+    try { var o = JSON.parse((S.settings && S.settings.threatIntelTriage) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+  }
+  var _tiFilter = 'all';
   function renderThreatIntelItems(el, rawItems, industryId, stackTags, updatedAt, isSample) {
-    var ranked = window.CheckpointLib.rankThreatIntelItems(rawItems, { industryId: industryId, stackTags: stackTags });
+    var L = window.CheckpointLib, today = new Date().toISOString().slice(0, 10);
+    var ranked = L.rankThreatIntelItems(rawItems, { industryId: industryId, stackTags: stackTags });
+    window._tiItems = ranked; window._tiMeta = { updatedAt: updatedAt || '', isSample: !!isSample };
+    var kpiEl = document.getElementById('tiKpiRow');
     if (!ranked.length) {
-      el.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">No current advisories in the tracked vendor list.</div>';
+      if (kpiEl) kpiEl.innerHTML = '';
+      el.innerHTML = '<div class="card" style="color:var(--paper-faint);font-size:12.5px">No current advisories for the vendors this feed tracks.</div>';
       return;
     }
-    /* Says in words what the re-sort actually did — without this, a
-       tick that matches nothing renders an identical list and reads as
-       a broken checkbox. See threatIntelMatchSummary()'s comment. */
-    var summary = window.CheckpointLib.threatIntelMatchSummary(ranked, {
-      hasStack: !!(stackTags && stackTags.length),
-      hasIndustry: !!industryId
-    });
-    var summaryHtml = (summary && summary.message)
-      ? '<div class="card" style="margin-bottom:10px;font-size:12.5px;color:var(--paper-dim)">' + esc(summary.message) + '</div>'
-      : '';
-    var noteHtml = isSample
-      ? '<div class="chip st-Intreatment" style="margin-bottom:10px">Sample data — demo mode. A live tenant shows the actual current feed.</div>'
-      : '<p style="font-size:11.5px;color:var(--paper-faint);margin:0 0 10px">' + (updatedAt ? 'Feed updated ' + esc(String(updatedAt).slice(0, 10)) + ' · ' : '') + 'Source: CISA Known Exploited Vulnerabilities catalog</p>';
-    el.innerHTML = noteHtml + summaryHtml + ranked.map(function (item) {
-      var badges = (item.matchedStack || item.matchedIndustry ? '<span class="chip st-Implemented" style="margin-right:6px">Relevant to you</span>' : '') +
-        (item.knownRansomwareUse ? '<span class="chip sev-Critical" style="margin-right:6px">Known ransomware use</span>' : '');
-      return '<div class="card" style="margin-bottom:10px">' +
-        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>' + esc(item.vendor) + ' — ' + esc(item.product) + '</b>' +
-        '<span style="font-size:11.5px;color:var(--paper-faint)">Added ' + esc(fmtDate(item.dateAdded)) + '</span></div>' +
-        '<div style="margin:6px 0">' + badges + '</div>' +
-        '<p style="font-size:12.5px;margin:4px 0;color:var(--paper-dim)">' + esc(item.name) + (item.description ? ' — ' + esc(item.description) : '') + '</p>' +
-        /* isSafeUrl, like every other rendered link in this file. Not
-           because this one is known to be hostile — the feed Lambda
-           builds it from a hardcoded https://nvd.nist.gov/ prefix, so
-           it cannot carry a javascript: scheme today — but because
-           this is the only <a href> in the app the guard did not cover,
-           and the whole value of a rule like "every link we render is
-           protocol-checked" is that it holds without the reader having
-           to trace each link back to its source to find out whether it
-           is the exception. The feed endpoint is configurable
-           (CONFIG.threatIntelUrl) and its contents are not ours. */
-        (item.url && isSafeUrl(item.url) ? '<a href="' + esc(item.url) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--gold-light)">' + esc(item.cveId) + ' →</a>' : '<span style="font-size:12px;color:var(--paper-faint)">' + esc(item.cveId) + '</span>') +
-        '</div>';
+    var view = L.threatIntelTriage(ranked, threatTriage(), today), c = view.counts;
+    if (kpiEl) kpiEl.innerHTML =
+      kpiTile({ value: c.total, label: 'Advisories', sub: 'actively exploited, vendors this feed tracks' }) +
+      kpiTile({ value: c.relevant, label: 'Relevant to you', sub: 'match your stack or industry', action: 'App.filterThreat', key: 'relevant', focus: _tiFilter, tone: c.relevant ? 'warn' : null }) +
+      kpiTile({ value: c.ransomware, label: 'Known ransomware use', sub: 'treat as critical', action: 'App.filterThreat', key: 'ransomware', focus: _tiFilter, tone: 'fail' }) +
+      kpiTile({ value: c.awaiting, label: 'Awaiting assessment', sub: c.pastDue ? c.pastDue + ' relevant and past CISA’s fix-by date' : 'decide: affects us, not applicable or patched', action: 'App.filterThreat', key: 'awaiting', focus: _tiFilter, tone: c.pastDue ? 'fail' : null }) +
+      kpiTile({ value: c.affected, label: 'Affecting us', sub: 'each with a remediation action', action: 'App.filterThreat', key: 'affected', focus: _tiFilter, tone: c.affected ? 'warn' : null });
+    var summary = L.threatIntelMatchSummary(ranked, { hasStack: !!(stackTags && stackTags.length), hasIndustry: !!industryId });
+    var filters = [['all', 'All'], ['relevant', 'Relevant to you'], ['ransomware', 'Ransomware'], ['awaiting', 'Awaiting assessment'], ['assessed', 'Assessed']];
+    var shown = L.threatIntelFilter(view.items, _tiFilter);
+    var head = '<div class="ti-toolbar"><div class="filters" role="group" aria-label="Filter advisories">' + filters.map(function (f) {
+        return '<button class="f-pill' + (_tiFilter === f[0] ? ' on' : '') + '" aria-pressed="' + (_tiFilter === f[0] ? 'true' : 'false') + '" data-action="App.filterThreat" data-id="' + f[0] + '">' + esc(f[1]) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="ti-src">' + (isSample ? '<span class="chip st-Intreatment">Sample data, demo mode</span>' : 'Source: CISA Known Exploited Vulnerabilities' + (updatedAt ? ' · updated ' + esc(fmtDateY(String(updatedAt).slice(0, 10))) : '')) +
+      (READONLY ? '' : ' <button class="btn ghost sm" data-action="App.fileThreatIntel">File as A.5.7 evidence</button>') + '</div></div>' +
+      (summary && summary.message ? '<p class="src" style="margin:0 0 10px">' + esc(summary.message) + '</p>' : '');
+    var rows = shown.map(function (it) {
+      var a = it.assessment;
+      var status = a
+        ? '<span class="chip ti-st-' + a.status + '">' + esc(a.label) + '</span>' + (a.actionId ? ' <button class="lnk" data-action="App.openAction" data-id="' + esc(a.actionId) + '">' + esc(a.actionId) + '</button>' : '') +
+          '<div class="src">' + esc(a.by || '') + (a.date ? ' · ' + esc(fmtDateY(a.date)) : '') + '</div>'
+        : '<span class="chip ti-st-awaiting">Awaiting assessment</span>';
+      var btn = READONLY ? '' : '<button class="btn ' + (a ? 'ghost ' : '') + 'sm" data-action="App.assessThreat" data-id="' + esc(it.cveId) + '">' + (a ? 'Change' : 'Assess') + '</button>';
+      var cve = it.url && isSafeUrl(it.url) ? '<a href="' + esc(it.url) + '" target="_blank" rel="noopener" style="color:var(--gold-light)">' + esc(it.cveId) + ' \u2197</a>' : esc(it.cveId);
+      return '<div class="card ti-row ti-' + it.priority + (a ? ' ti-done' : '') + '">' +
+        '<div class="ti-pri"><span class="chip ' + (it.priority === 'Critical' ? 'sev-Critical' : it.priority === 'High' ? 'sev-High' : '') + '">' + esc(it.priority) + '</span></div>' +
+        '<div class="ti-main"><b>' + esc(it.vendor) + ' — ' + esc(it.product) + '</b>' +
+          (it.relevant ? ' <span class="chip st-Implemented">Relevant to you</span>' : '') + (it.knownRansomwareUse ? ' <span class="chip sev-Critical">Known ransomware use</span>' : '') +
+          '<p>' + esc(it.name) + (it.description ? ': ' + esc(it.description) : '') + '</p>' +
+          (it.requiredAction ? '<p class="ti-req"><b>Required action:</b> ' + esc(it.requiredAction) + '</p>' : '') +
+          (a && a.note ? '<p class="ti-req"><b>Assessment:</b> ' + esc(a.note) + '</p>' : '') +
+          '<div class="ti-meta">' + cve + ' · Added ' + esc(fmtDateY(it.dateAdded)) + (it.dueDate ? ' · <span' + (it.pastDue ? ' style="color:var(--fail)"' : '') + '>CISA fix-by ' + esc(fmtDateY(it.dueDate)) + '</span>' : '') + '</div></div>' +
+        '<div class="ti-side">' + status + btn + '</div></div>';
     }).join('');
+    el.innerHTML = head + (rows || '<div class="card" style="color:var(--paper-faint);font-size:12.5px">Nothing matches this filter.</div>');
+    runCountUps(kpiEl);
+  }
+  /* The A.5.7 record: what the feed showed, and what was decided about
+     each advisory. */
+  function threatIntelReportParts() {
+    var items = window._tiItems || [];
+    if (!items.length) { toast('No advisories loaded yet.'); return null; }
+    var today = new Date().toISOString().slice(0, 10);
+    var view = window.CheckpointLib.threatIntelTriage(items, threatTriage(), today), c = view.counts;
+    var meta = window._tiMeta || {};
+    return {
+      title: 'Threat intelligence assessment',
+      frameworkAgnostic: true,
+      dashboard: { intro: 'Threat intelligence collected and analysed for this organisation (ISO/IEC 27001 A.5.7), with each actively exploited vulnerability assessed for whether it affects us (A.8.8). Source: CISA Known Exploited Vulnerabilities catalog' + (meta.updatedAt ? ', updated ' + fmtDateY(String(meta.updatedAt).slice(0, 10)) : '') + (meta.isSample ? ' (sample data, demo mode)' : '') + '. ' + c.total + ' advisories, ' + c.relevant + ' relevant to our technology, ' + c.assessed + ' assessed, ' + c.affected + ' affecting us.' },
+      sections: [{ heading: 'Advisories and assessments', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Advisory</th><th>Priority</th><th>Assessment</th><th>Decided by</th><th>Action</th></tr></thead><tbody>' +
+        view.items.map(function (i) {
+          var a = i.assessment;
+          return '<tr><td class="rpt-idc">' + esc(i.cveId) + '<div class="rpt-just">' + esc(i.vendor + ' — ' + i.product) + '</div></td><td>' + esc(i.priority) + (i.knownRansomwareUse ? ' (ransomware)' : '') + '</td><td>' + (a ? esc(a.label) + (a.note ? '<div class="rpt-just">' + esc(a.note) + '</div>' : '') : 'Not yet assessed') + '</td><td>' + (a ? esc(a.by) + '<div class="rpt-just">' + esc(fmtDateY(a.date)) + '</div>' : '—') + '</td><td>' + esc((a && a.actionId) || '—') + '</td></tr>';
+        }).join('') + '</tbody></table>' }]
+    };
   }
 
   /* Checkpoint's own posture checks only ever read a tenant's Microsoft
@@ -14657,6 +14687,11 @@ function showModal(opts) {
      entirely local to the browser/tenant Settings row — see
      lambda/threat-intel.js's own header comment on why the feed itself
      never receives either. */
+  function currentStackTags() {
+    var ids = orgProfileValue('orgTechStack').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    return (window.TECH_STACK_OPTIONS || []).filter(function (o) { return ids.indexOf(o.id) !== -1; })
+      .reduce(function (acc, o) { return acc.concat(o.tags); }, []);
+  }
   function renderThreatIntel() {
     var stackEl = document.getElementById('tiStackPanel');
     var listEl = document.getElementById('tiListWrap');
@@ -14664,17 +14699,17 @@ function showModal(opts) {
 
     var industryId = orgProfileValue('orgIndustry');
     var stackIds = orgProfileValue('orgTechStack').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-    var stackTags = (window.TECH_STACK_OPTIONS || []).filter(function (o) { return stackIds.indexOf(o.id) !== -1; })
-      .reduce(function (acc, o) { return acc.concat(o.tags); }, []);
+    var stackTags = currentStackTags();
 
-    stackEl.innerHTML = '<h3>Your technology stack</h3>' +
-      '<p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">Tick what this organisation actually runs — the list below re-sorts around it. Nothing here is sent anywhere; it only changes the sort order in this browser.</p>' +
+    var chosen = (window.TECH_STACK_OPTIONS || []).filter(function (o) { return stackIds.indexOf(o.id) !== -1; });
+    var wasOpen = !!(stackEl.querySelector && stackEl.querySelector('details[open]'));
+    stackEl.innerHTML = '<details class="ti-stack"' + (wasOpen || !chosen.length ? ' open' : '') + '><summary><b>Your technology</b> <span class="src">' +
+        (chosen.length ? esc(chosen.map(function (o) { return o.label; }).join(' · ')) : 'Not set yet: tick what you run so the advisories that matter come first') + '</span></summary>' +
+      '<p class="src" style="margin:8px 0">Advisories for what you run are marked Relevant and listed first. This stays in your tenant; the feed never receives it.</p><div class="ti-stack-grid">' +
       (window.TECH_STACK_OPTIONS || []).map(function (o) {
         var checked = stackIds.indexOf(o.id) !== -1;
-        return '<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0">' +
-          '<input type="checkbox" data-change-action="App.toggleThreatIntelStack" data-id="' + esc(o.id) + '"' + (checked ? ' checked' : '') + ' style="margin-top:3px">' +
-          '<span style="font-size:12.5px">' + esc(o.label) + '</span></label>';
-      }).join('');
+        return '<label class="ti-opt"><input type="checkbox" data-change-action="App.toggleThreatIntelStack" data-id="' + esc(o.id) + '"' + (checked ? ' checked' : '') + '><span>' + esc(o.label) + '</span></label>';
+      }).join('') + '</div></details>';
 
     if (Store.kind === 'demo') {
       renderThreatIntelItems(listEl, THREAT_INTEL_DEMO_ITEMS, industryId, stackTags, null, true);
@@ -14840,7 +14875,7 @@ function showModal(opts) {
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aitools: 'AI tools',
     settings: 'Settings'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities', threatintel: 'Threat intelligence assessment' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -20551,6 +20586,66 @@ function showModal(opts) {
       audit('Risk appetite agreed', 'Setting', 'riskAppetite', prev || '(default)', v.level + ', agreed by ' + v.by);
       toast('Risk appetite agreed: <b>' + esc(v.level) + '</b>');
       renderDash(); renderFrameworksAdmin(); if (document.getElementById('v-build') && document.getElementById('v-build').classList.contains('on')) renderBuild();
+    },
+    filterThreat: function (key) {
+      _tiFilter = (key === _tiFilter && key !== 'all') ? 'all' : (key || 'all');
+      var el = document.getElementById('tiListWrap');
+      if (el && window._tiItems) renderThreatIntelItems(el, window._tiItems, orgProfileValue('orgIndustry'), currentStackTags(), (window._tiMeta || {}).updatedAt, (window._tiMeta || {}).isSample);
+    },
+    /* Records the decision on one advisory. "Affects us" raises a
+       remediation action against A.8.8, due by CISA's fix-by date when
+       that is still ahead, else in 14 days. */
+    assessThreat: async function (cveId) {
+      var it = (window._tiItems || []).find(function (x) { return x.cveId === cveId; });
+      if (!it) return;
+      var prev = threatTriage()[cveId] || null;
+      var v = await showModal({
+        title: 'Assess ' + cveId,
+        message: it.vendor + ' \u2014 ' + it.product + ': ' + it.name + (it.requiredAction ? '\n\nCISA required action: ' + it.requiredAction : ''),
+        fields: [
+          { id: 'status', label: 'Does this affect us?', type: 'select', value: (prev && prev.status) || 'affected', options: [{ value: 'affected', label: 'Yes: we run this and need to act' }, { value: 'patched', label: 'We run it, and it is already patched or mitigated' }, { value: 'na', label: 'No: we do not run this' }] },
+          { id: 'note', label: 'Note (what you checked)', value: (prev && prev.note) || '', placeholder: 'e.g. No FortiGate devices in the estate; confirmed with IT' }
+        ],
+        confirmText: 'Save assessment'
+      });
+      if (!v) return;
+      var today = new Date().toISOString().slice(0, 10);
+      var rec = { status: v.status, note: String(v.note || '').trim().slice(0, 400), by: myDisplayName() || 'Unknown', date: today, actionId: (prev && prev.actionId) || '' };
+      busy(true);
+      try {
+        if (v.status === 'affected' && !rec.actionId) {
+          var maxA = (S.actions || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+          var due = it.dueDate && it.dueDate > today ? it.dueDate : daysFrom(14);
+          var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: 'Remediate ' + cveId + ' (' + it.vendor + ' ' + it.product + ')' + (it.requiredAction ? ': ' + it.requiredAction : ''), risk: '', control: 'A.8.8', pr: it.knownRansomwareUse ? 'Critical' : 'High', owner: myDisplayName() || 'Unassigned', due: due, status: 'Open', src: 'Threat intel' };
+          await Store.addAction(act);
+          rec.actionId = act.id;
+          audit('Action created', 'Action', act.id, '', 'From threat intel ' + cveId);
+        }
+        var all = threatTriage();
+        all[cveId] = rec;
+        var keys = Object.keys(all);
+        if (keys.length > 300) keys.sort(function (x, y) { return String(all[x].date).localeCompare(String(all[y].date)); }).slice(0, keys.length - 300).forEach(function (k) { delete all[k]; });
+        var json = JSON.stringify(all);
+        S.settings.threatIntelTriage = json;
+        await Store.setSetting('threatIntelTriage', json);
+        audit('Threat advisory assessed', 'Threat intel', cveId, prev ? window.CheckpointLib.THREAT_TRIAGE_LABELS[prev.status] || '' : 'Not assessed', window.CheckpointLib.THREAT_TRIAGE_LABELS[v.status] + (rec.note ? ': ' + rec.note : ''));
+        toast(cveId + ': ' + esc(window.CheckpointLib.THREAT_TRIAGE_LABELS[v.status]) + (rec.actionId && v.status === 'affected' ? ', action <b>' + esc(rec.actionId) + '</b>' : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      App.filterThreat(_tiFilter === 'all' ? 'all' : _tiFilter);
+      renderNavCounts();
+    },
+    fileThreatIntel: async function () {
+      var ctrl = (S.controls || []).find(function (x) { return (x.fw || 'iso27001') === 'iso27001' && x.id === 'A.5.7'; });
+      var built = buildReportFor('threatintel');
+      if (!built) return;
+      if (Store.kind === 'demo' || !ctrl) { toast(Store.kind === 'demo' ? 'Filing evidence is not available in demo mode. The report opens instead.' : 'Control A.5.7 is not in this tenant\u2019s Statement of Applicability.'); App.report('threatintel'); return; }
+      var today = new Date().toISOString().slice(0, 10);
+      try {
+        await addEvidenceFilesFor('control', ctrl, [new File([built.html], 'Threat intelligence assessment ' + today + '.html', { type: 'text/html' })]);
+        audit('Report filed as evidence', 'Control', 'iso27001|A.5.7', '', 'Threat intelligence assessment');
+        toast('Filed as A.5.7 evidence');
+      } catch (e) { warn(e); toast('Could not file it; open it from Reports and save it by hand.'); }
     },
     fileWhoDoes: async function () {
       var c = (S.clauses || []).find(function (x) { return (x.fw || 'iso27001') === 'iso27001' && x.id === '5.3'; });

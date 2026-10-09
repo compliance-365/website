@@ -8195,6 +8195,60 @@
      that matters — an explicit sentence when the answer is none.
      Returns null when the tenant has declared neither, since "0 of 40
      match" is noise for someone who has not told us anything yet. */
+  /* Threat intelligence as an ISO 27001 A.5.7 / A.8.8 workflow: each
+     advisory (already ranked by rankThreatIntelItems) joined to its
+     recorded assessment. triage = { cveId: { status: 'affected'|'na'|
+     'patched', note, by, date, actionId } }. Priority is Critical for
+     known ransomware use, High for an advisory matching the declared
+     stack or industry, otherwise Monitor. An advisory counts as past
+     CISA's fix-by date only when it is relevant to this organisation
+     and still not assessed. */
+  var THREAT_TRIAGE_LABELS = { affected: 'Affects us', na: 'Not applicable', patched: 'Already patched' };
+  function threatIntelTriage(ranked, triage, today) {
+    var t = triage || {};
+    var items = (Array.isArray(ranked) ? ranked : []).map(function (it) {
+      var rec = t[it.cveId] && THREAT_TRIAGE_LABELS[t[it.cveId].status] ? t[it.cveId] : null;
+      var relevant = !!(it.matchedStack || it.matchedIndustry);
+      var priority = it.knownRansomwareUse ? 'Critical' : relevant ? 'High' : 'Monitor';
+      var pastDue = !rec && relevant && !!it.dueDate && !!today && String(it.dueDate) < today;
+      var out = {};
+      for (var k in it) if (Object.prototype.hasOwnProperty.call(it, k)) out[k] = it[k];
+      out.relevant = relevant; out.priority = priority; out.pastDue = pastDue;
+      out.assessment = rec ? { status: rec.status, label: THREAT_TRIAGE_LABELS[rec.status], note: rec.note || '', by: rec.by || '', date: rec.date || '', actionId: rec.actionId || '' } : null;
+      return out;
+    });
+    var rank = { Critical: 0, High: 1, Monitor: 2 };
+    items.sort(function (a, b) {
+      if (!!a.assessment !== !!b.assessment) return a.assessment ? 1 : -1;
+      if (rank[a.priority] !== rank[b.priority]) return rank[a.priority] - rank[b.priority];
+      if (a.relevant !== b.relevant) return a.relevant ? -1 : 1;
+      return String(b.dateAdded || '').localeCompare(String(a.dateAdded || ''));
+    });
+    var count = function (f) { return items.filter(f).length; };
+    return {
+      items: items,
+      counts: {
+        total: items.length,
+        relevant: count(function (i) { return i.relevant; }),
+        ransomware: count(function (i) { return i.knownRansomwareUse; }),
+        awaiting: count(function (i) { return !i.assessment; }),
+        affected: count(function (i) { return i.assessment && i.assessment.status === 'affected'; }),
+        assessed: count(function (i) { return !!i.assessment; }),
+        pastDue: count(function (i) { return i.pastDue; })
+      }
+    };
+  }
+  function threatIntelFilter(items, key) {
+    var f = {
+      relevant: function (i) { return i.relevant; },
+      ransomware: function (i) { return i.knownRansomwareUse; },
+      awaiting: function (i) { return !i.assessment; },
+      affected: function (i) { return i.assessment && i.assessment.status === 'affected'; },
+      assessed: function (i) { return !!i.assessment; }
+    }[key];
+    return f ? items.filter(f) : items.slice();
+  }
+
   function threatIntelMatchSummary(ranked, opts) {
     opts = opts || {};
     var list = Array.isArray(ranked) ? ranked : [];
@@ -11723,7 +11777,7 @@
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
-    srDate: srDate, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
+    srDate: srDate, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,

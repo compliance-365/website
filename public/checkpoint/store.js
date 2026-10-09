@@ -1760,6 +1760,7 @@ window.DemoStore = (function () {
       /* A monthly security review already running: two meetings held,
          so the card shows its trend and the next agenda. */
       settings: Object.assign({}, window.DEFAULT_SETTINGS, {
+        threatIntelTriage: JSON.stringify({ 'CVE-2023-27997': { status: 'na', note: 'No Fortinet devices in the estate; edge firewall is Palo Alto. Confirmed with K. Patel.', by: 'Sam Okafor', date: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10) } }),
         trustCenterContactEmail: 'security@meridianhealth.example',
         trustCenterTagline: 'We protect patient and clinic data with an ISO 27001 information security programme, run and checked every day.',
         trustCenterDataLocation: 'Australia (Microsoft Azure Australia East)',
