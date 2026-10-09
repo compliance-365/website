@@ -913,7 +913,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'addAuditRequest', 'answerAuditRequest', 'closeAuditRequest', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -11741,6 +11741,10 @@ function showModal(opts) {
     });
     myApprovalRequests().forEach(function (r) { items.push({ kind: 'Approve document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
     myReviewRequests().forEach(function (r) { items.push({ kind: 'Check document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
+    var todayAr = new Date().toISOString().slice(0, 10);
+    window.CheckpointLib.auditRequestView(S.auditRequests || [], todayAr).rows.forEach(function (r) {
+      if ((r.state === 'open' || r.state === 'overdue') && r.owner && me.indexOf(String(r.owner).toLowerCase()) !== -1) items.push({ kind: 'Audit request', ref: r.id, title: r.title, due: r.due || '', overdue: r.state === 'overdue' });
+    });
     myRiskAcceptRequests().forEach(function (r) { items.push({ kind: 'Accept risk', ref: r.risk, title: r.risk + ' ' + (r.title || ''), due: r.requested || '', overdue: false }); });
     items = items.concat(secReviewTasksFor(me));
     (S.reviews || []).forEach(function (r) {
@@ -11769,6 +11773,7 @@ function showModal(opts) {
     if (i.kind === 'Approve document') return b('App.approveRequested', i.ref, 'Review and approve');
     if (i.kind === 'Check document') return b('App.reviewRequested', i.ref, 'Check it');
     if (i.kind === 'Accept risk') return b('App.acceptRequestedRisk', i.ref, 'Decide');
+    if (i.kind === 'Audit request') return b('App.answerAuditRequest', i.ref, 'Answer');
     if (i.kind === 'Sign off minutes') return b('App.openReview', i.ref, 'Read and sign off');
     if (i.kind === 'Decision') return buildItemButton({ id: i.ref }, true);
     if (i.kind === 'Security review') return b(/^Record/.test(i.title) ? 'App.recordSecurityReview' : 'App.openSecurityReview', i.ref, /^Record/.test(i.title) ? 'Record minutes' : 'Open agenda');
@@ -11871,7 +11876,25 @@ function showModal(opts) {
         }).join('') : '<p class="src">No auditor has access.</p>') +
         '<button class="btn sm" style="margin-top:10px" data-action="App.grantAuditorAccess">Give an auditor access</button></div>';
     }
-    el.innerHTML = notice + guide + admin;
+    el.innerHTML = notice + guide + (me && me.state === 'expired' ? '' : auditRequestsHtml()) + admin;
+  }
+
+  /* The auditor's requests during an audit: logged and answered by a
+     practitioner, read by the auditor here. */
+  function auditRequestsHtml() {
+    var v = window.CheckpointLib.auditRequestView(S.auditRequests || [], new Date().toISOString().slice(0, 10));
+    var chip = { overdue: '<span class="chip st-Open">Overdue</span>', open: '<span class="chip st-Inprogress">Open</span>', answered: '<span class="chip st-Implemented">Answered</span>', closed: '<span class="chip st-Notstarted">Closed</span>' };
+    var rows = v.rows.map(function (r) {
+      return '<div style="padding:10px 0;border-top:1px solid var(--line);font-size:13px">' +
+        '<div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start"><div><span class="id-t">' + esc(r.id) + '</span> <b>' + esc(r.title) + '</b> ' + chip[r.state] +
+        '<div class="src">' + (r.requestedBy ? esc(r.requestedBy) + ' · ' : '') + 'asked ' + fmtDate(r.requested) + (r.due ? ' · due ' + fmtDate(r.due) : '') + (r.owner ? ' · ' + esc(r.owner) : '') + '</div>' +
+        (r.request && r.request !== r.title ? '<div style="color:var(--paper-dim);margin-top:4px">' + esc(r.request) + '</div>' : '') +
+        (r.response ? '<div style="margin-top:6px"><b>Answer' + (r.answered ? ' (' + fmtDate(r.answered) + ')' : '') + ':</b> ' + esc(r.response) + (r.evidenceUrl && isSafeUrl(r.evidenceUrl) ? ' <a class="lnk" href="' + esc(r.evidenceUrl) + '" target="_blank" rel="noopener">Evidence</a>' : '') + '</div>' : '') +
+        '</div>' + (READONLY || r.state === 'closed' ? '' : '<span style="white-space:nowrap"><button class="btn ghost sm" data-action="App.answerAuditRequest" data-id="' + esc(r.id) + '">' + (r.state === 'answered' ? 'Update' : 'Answer') + '</button>' + (r.state === 'answered' ? ' <button class="btn ghost sm" data-action="App.closeAuditRequest" data-id="' + esc(r.id) + '">Close</button>' : '') + '</span>') + '</div></div>';
+    }).join('');
+    return '<div class="card" id="auditRequests" style="padding:14px 16px;margin-bottom:16px"><h3 style="margin:0 0 6px">Requests from the auditor</h3>' +
+      '<p class="src" style="margin:0 0 6px">' + (v.rows.length ? v.waiting + ' waiting' + (v.counts.overdue ? ', ' + v.counts.overdue + ' overdue' : '') + ' · ' + v.counts.answered + ' answered · ' + v.counts.closed + ' closed' : 'Nothing requested yet. Log each request the auditor makes, so they can see its answer here and nothing is lost in email.') + '</p>' +
+      rows + (READONLY ? '' : '<button class="btn sm" style="margin-top:10px" data-action="App.addAuditRequest">+ Log a request</button>') + '</div>';
   }
 
   function auditWorkpackFor(a) {
@@ -17903,6 +17926,61 @@ function showModal(opts) {
         audit('Document approval request completed', 'Document', name, 'Requested ' + req.requested, 'Approved by ' + (doc.approvedBy || req.approver));
         renderMyTasks(); renderNavCounts();
       }
+    },
+    addAuditRequest: async function () {
+      var v = await showModal({
+        title: 'Log a request from the auditor',
+        fields: [
+          { id: 'title', label: 'Request (short)', placeholder: 'e.g. Access review records for Q2 and Q3' },
+          { id: 'request', label: 'Full wording (optional)', type: 'textarea' },
+          { id: 'requestedBy', label: 'Asked by', value: (auditorState().list.filter(function (a) { return a.state === 'active'; })[0] || {}).name || '' },
+          { id: 'owner', label: 'Who will answer it', value: (S.settings && S.settings.ismsOwner) || '' },
+          { id: 'due', label: 'Due', type: 'date', value: window.CheckpointLib.addDaysToDateStr(new Date().toISOString().slice(0, 10), 2) }
+        ],
+        confirmText: 'Log request',
+        validate: function (x) { return x.title ? null : 'Say what was asked for.'; }
+      });
+      if (!v) return;
+      var n = (S.auditRequests || []).reduce(function (m, r) { var k = parseInt(String(r.id).replace(/\D/g, ''), 10); return k > m ? k : m; }, 0) + 1;
+      var r = { id: 'AR-' + String(n).padStart(3, '0'), title: v.title, request: v.request || '', requestedBy: v.requestedBy || '', requested: new Date().toISOString().slice(0, 10), due: v.due || '', owner: v.owner || '', status: 'Open', response: '', evidenceUrl: '', answered: '' };
+      try { await Store.addAuditRequest(r); } catch (e) { warn(e); toastError('Could not save the request.'); return; }
+      audit('Audit request logged', 'AuditRequest', r.id, '', r.title + (r.owner ? ' (to ' + r.owner + ')' : ''));
+      toast('<b>' + esc(r.id) + '</b> logged');
+      renderAuditorGuide(); renderNavCounts();
+    },
+    answerAuditRequest: async function (id) {
+      var r = (S.auditRequests || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      var v = await showModal({
+        title: 'Answer ' + r.id + ': ' + r.title,
+        message: r.request && r.request !== r.title ? r.request : '',
+        fields: [
+          { id: 'response', label: 'Answer', type: 'textarea', value: r.response || '', placeholder: 'What you are providing, and where it is' },
+          { id: 'evidenceUrl', label: 'Evidence link (SharePoint)', value: r.evidenceUrl || '' }
+        ],
+        confirmText: 'Save answer',
+        validate: function (x) {
+          if (!x.response) return 'Write the answer.';
+          if (x.evidenceUrl && !isSafeUrl(x.evidenceUrl)) return 'Use an https:// link.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var before = r.status;
+      r.response = v.response; r.evidenceUrl = v.evidenceUrl || ''; r.status = 'Answered'; r.answered = new Date().toISOString().slice(0, 10);
+      try { await Store.updateAuditRequest(r); } catch (e) { warn(e); toastError('Could not save the answer.'); return; }
+      audit('Audit request answered', 'AuditRequest', r.id, before, 'Answered' + (r.evidenceUrl ? ' with evidence' : ''));
+      toast('<b>' + esc(r.id) + '</b> answered. The auditor sees it in the Auditor guide.');
+      renderAuditorGuide(); renderMyTasks(); renderNavCounts();
+    },
+    closeAuditRequest: async function (id) {
+      var r = (S.auditRequests || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      var before = r.status;
+      r.status = 'Closed';
+      try { await Store.updateAuditRequest(r); } catch (e) { warn(e); toastError('Could not close the request.'); return; }
+      audit('Audit request closed', 'AuditRequest', r.id, before, 'Closed');
+      renderAuditorGuide();
     },
     /* Second-person review (the approval matrix). The request goes to
        the reviewer's My tasks (and email, in a tenant), like an

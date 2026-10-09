@@ -4504,6 +4504,21 @@
     if (rec.recordedBy) return 'Approval recorded in Checkpoint by ' + rec.recordedBy + on;
     return 'Approval recorded in Checkpoint' + on;
   }
+  /* ===== Requests from the auditor (the "provided by client" list) =====
+     state per request: 'answered' | 'closed' | 'overdue' | 'open';
+     counts for the summary line. Newest open first, then answered,
+     then closed. */
+  function auditRequestView(list, today) {
+    var rank = { overdue: 0, open: 1, answered: 2, closed: 3 };
+    var rows = (list || []).map(function (r) {
+      var st = r.status === 'Closed' ? 'closed' : r.status === 'Answered' ? 'answered' : (r.due && today && r.due < today ? 'overdue' : 'open');
+      return Object.assign({}, r, { state: st });
+    }).sort(function (a, b) { return rank[a.state] - rank[b.state] || String(b.requested || '').localeCompare(String(a.requested || '')); });
+    var c = { open: 0, overdue: 0, answered: 0, closed: 0 };
+    rows.forEach(function (r) { c[r.state]++; });
+    return { rows: rows, counts: c, waiting: c.open + c.overdue };
+  }
+
   /* ===== Notifiable Data Breaches: draft notices =====
      The statement to the Australian Information Commissioner must set
      out (Privacy Act s 26WK(3)): the entity's identity and contact
@@ -7908,6 +7923,7 @@
   var NEXT_KIND_GUIDE = {
     'Sign off minutes': { why: 'You chaired the management review. Read the minutes and approve them: the certification auditor checks that top management signed them off.', mins: 10 },
     'Approve document': { why: 'Top management approves each policy so it carries the organisation’s authority. Read it, and approve it if it says what you want.', mins: 10 },
+    'Audit request': { why: 'The certification auditor asked for this. Answer it with the record that shows it, so the audit keeps moving.', mins: 15 },
     'Check document': { why: 'A second person checks each draft before it goes for approval, so no one approves work nobody else has read. Read it and say whether it is ready or what should change.', mins: 15 },
     'Accept risk': { why: 'You are asked to accept a risk that stays after treatment. Accepting it is your decision as the person accountable for it; Checkpoint records your name and the date.', mins: 10 },
     'Acknowledge policy': { why: 'Everyone confirms they have read the policies that apply to them. An auditor checks a sample of people.', mins: 5 },
@@ -12538,7 +12554,7 @@
     buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,
     documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
-    ndbNoticeDrafts: ndbNoticeDrafts, DOC_REVIEW_LEVELS: DOC_REVIEW_LEVELS, parseDocReview: parseDocReview, docReviewAfter: docReviewAfter, docSignoffReviewState: docSignoffReviewState, docNeedsReview: docNeedsReview, reviewGateReason: reviewGateReason, reviewerConflictReason: reviewerConflictReason,
+    ndbNoticeDrafts: ndbNoticeDrafts, auditRequestView: auditRequestView, DOC_REVIEW_LEVELS: DOC_REVIEW_LEVELS, parseDocReview: parseDocReview, docReviewAfter: docReviewAfter, docSignoffReviewState: docSignoffReviewState, docNeedsReview: docNeedsReview, reviewGateReason: reviewGateReason, reviewerConflictReason: reviewerConflictReason,
     incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
     SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
