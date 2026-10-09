@@ -242,6 +242,16 @@ Exercises linking evidence to a control and the shared-evidence cross-framework 
 - Expect: the acceptance dialog has no free-text "Accepted by": it is recorded in the owner's name. The audit log entry reads "Accepted by … ; asked for by …". The request leaves My tasks.
 - [ ] Pass  [ ] Fail
 
+**5.3e — Requests from the auditor**
+- Click: Auditor guide → **+ Log a request** → enter a request, the person answering and a due date → **Log request**. Then **Answer** → write the answer and paste a SharePoint evidence link → **Save answer**.
+- Expect: the request shows as Open, and then as Answered with the answer and an Evidence link. Until it's answered, the person answering sees it in My tasks. Signed in as a Checkpoint Viewer (the auditor), the same list shows with no buttons. The audit log has a logged entry and an answered entry.
+- [ ] Pass  [ ] Fail
+
+**5.3f — Draft breach notices**
+- Click: Incidents → a possible privacy-breach incident → **Draft breach notices** → add a contact → **Draft notices**.
+- Expect: a printable page marked DRAFT, with a statement to the OAIC in four parts (who we are, what happened, the information involved, what affected individuals should do) and a notice to individuals. Nothing is emailed. The audit log has a **Breach notices drafted** entry.
+- [ ] Pass  [ ] Fail
+
 **5.4 — Upload a document**
 - Click: sidebar → **"Documents"** → choose a small test file, pick a category → **"Upload"**.
 - Expect: file appears in the table below with correct name/category/modified date; visible in the tenant's real SharePoint document library too (spot-check in a separate tab).
