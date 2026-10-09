@@ -788,16 +788,18 @@ describe('buildPolicyDocx()', () => {
     assert.equal(stack.length, 0, label + ': unclosed tag(s) ' + stack.join(', '));
   }
 
-  ['standard', 'formal', 'minimal'].forEach(function (layout) {
+  ['enterprise', 'standard', 'formal', 'minimal'].forEach(function (layout) {
     var layoutOpts = Object.assign({}, opts, { layout: layout });
 
     test('[' + layout + '] produces a valid zip with the expected OOXML parts', () => {
       var bytes = buildPolicyDocx(t, layoutOpts);
       var parts = docxParts(bytes);
-      assert.deepEqual(Object.keys(parts).sort(), [
+      var expected = [
         '[Content_Types].xml', '_rels/.rels', 'docProps/app.xml', 'docProps/core.xml',
         'word/_rels/document.xml.rels', 'word/document.xml', 'word/styles.xml'
-      ]);
+      ];
+      if (layout === 'enterprise') expected.push('word/footer1.xml');
+      assert.deepEqual(Object.keys(parts).sort(), expected.sort());
       Object.keys(parts).forEach(function (name) { assertWellFormedXml(parts[name], name); });
     });
 
@@ -856,6 +858,73 @@ describe('buildPolicyDocx()', () => {
       assert.match(doc, /Rule one\./);
       assert.match(doc, /Rule two as a plain string\./);
       assert.match(doc, /Because one\./);
+    });
+  });
+
+  describe('layout: enterprise', () => {
+    var entOpts = Object.assign({}, opts, { layout: 'enterprise' });
+    var parts = docxParts(buildPolicyDocx(t, entOpts));
+    var doc = parts['word/document.xml'];
+
+    test('opens with a cover page, then document control, version history and approval, each before the policy body', () => {
+      var breaks = doc.split('<w:br w:type="page"/>').length - 1;
+      assert.ok(breaks >= 2, 'cover and contents each end with a page break');
+      var at = function (s) { var i = doc.indexOf(s); assert.ok(i !== -1, 'missing ' + s); return i; };
+      assert.ok(at('Information Security Policy') < at('DOCUMENT CONTROL'));
+      assert.ok(at('DOCUMENT CONTROL') < at('DOCUMENT HISTORY'));
+      assert.ok(at('DOCUMENT HISTORY') < at('APPROVAL<'));
+      assert.ok(at('APPROVAL<') < at('>CONTENTS<'));
+      assert.ok(at('>CONTENTS<') < at('Rule one.'));
+      assert.match(doc, /Signature/);
+    });
+
+    test('headings, contents and clauses are numbered consistently', () => {
+      var headings = (doc.match(/<w:pStyle w:val="Heading2"\/>[\s\S]*?<\/w:p>/g) || []).map(function (h) {
+        return (h.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(function (x) { return x.replace(/<[^>]+>/g, ''); }).join('');
+      }).filter(function (h) { return /^\d+\./.test(h); });
+      assert.ok(headings.length >= 5, 'numbered section headings present');
+      headings.forEach(function (h, i) { assert.match(h, new RegExp('^' + (i + 1) + '\\.'), 'section ' + (i + 1) + ' numbered in order: ' + h); });
+      assert.doesNotMatch(doc, /\u0000/, 'contents placeholder replaced');
+      var paraTexts = doc.split('</w:p>').map(function (p) { return (p.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(function (x) { return x.replace(/<[^>]+>/g, ''); }).join(''); });
+      headings.forEach(function (h) { assert.equal(paraTexts.filter(function (x) { return x === h; }).length, 2, 'contents lists ' + h + ' once, and the heading appears once'); });
+      var stmtSec = headings.filter(function (h) { return /^\d+\.\s+Policy$/.test(h); })[0];
+      assert.ok(stmtSec, 'policy statements heading');
+      var n = stmtSec.match(/^(\d+)\./)[1];
+      assert.match(doc, new RegExp('>' + n + '\\.1<|>' + n + '\\.1\\s'), 'first clause numbered ' + n + '.1');
+      assert.match(doc, new RegExp('>' + n + '\\.2<|>' + n + '\\.2\\s'), 'second clause numbered ' + n + '.2');
+    });
+
+    test('a real Word footer carries classification, organisation, version and Page X of Y fields', () => {
+      var footer = parts['word/footer1.xml'];
+      assert.match(footer, /<w:ftr /);
+      assert.match(footer, /INTERNAL/);
+      assert.match(footer, /Version 1\.0/);
+      assert.match(footer, /Acme &amp; Co/);
+      assert.match(footer, /instrText[^>]*> ?PAGE ?</);
+      assert.match(footer, /instrText[^>]*> ?NUMPAGES ?</);
+      assert.match(doc, /<w:footerReference w:type="default" r:id="rId2"\/>/);
+      assert.match(doc, /xmlns:r="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships"/);
+      assert.match(parts['word/_rels/document.xml.rels'], /Id="rId2"[^>]*Target="footer1\.xml"|Target="footer1\.xml"[^>]*Id="rId2"/);
+      assert.match(parts['[Content_Types].xml'], /PartName="\/word\/footer1\.xml"[^>]*footer\+xml/);
+    });
+
+    test('sectPr children keep schema order: footerReference before pgSz and pgMar', () => {
+      var sect = doc.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/)[0];
+      var f = sect.indexOf('<w:footerReference'), sz = sect.indexOf('<w:pgSz'), mar = sect.indexOf('<w:pgMar');
+      assert.ok(f !== -1 && f < sz && sz < mar, sect);
+    });
+
+    test('uses Arial throughout, matching the HTML layout', () => {
+      assert.match(parts['word/styles.xml'], /Arial/);
+      assert.doesNotMatch(parts['word/styles.xml'], /Bricolage Grotesque/);
+    });
+
+    test('other layouts carry no footer part or reference (unchanged)', () => {
+      ['standard', 'formal', 'minimal'].forEach(function (layout) {
+        var p = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: layout })));
+        assert.equal(p['word/footer1.xml'], undefined);
+        assert.doesNotMatch(p['word/document.xml'], /footerReference/);
+      });
     });
   });
 

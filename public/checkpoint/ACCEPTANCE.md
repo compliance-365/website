@@ -227,6 +227,12 @@ Exercises linking evidence to a control and the shared-evidence cross-framework 
 - Expect: file appears in the table below with correct name/category/modified date; visible in the tenant's real SharePoint document library too (spot-check in a separate tab).
 - [ ] Pass  [ ] Fail
 
+**5.5 — Policy documents use the Enterprise layout**
+- Click: **Documents** → **Generate** any policy → open it, then **Print / Save as PDF** and **Download Word**.
+- Expect: a cover page (classification, organisation, title, version, owner, review date), then document control, version history and approval (with a signature column), then a numbered contents page. Sections are numbered and policy clauses read 5.1, 5.2 and so on. The PDF shows the classification and title at the top of each page and Page X of Y at the bottom, except on the cover. The Word file has the same structure and a footer with Page X of Y.
+- Expect: Settings → **Policy document layout** offers Enterprise (default), Standard, Formal and Minimal; switching to Standard and regenerating gives the previous look with no cover page.
+- [ ] Pass  [ ] Fail
+
 ---
 
 ## 6. Operate

@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.146.0',
+    date: '2026-10-10',
+    entries: [
+      'Policy documents have a new Enterprise layout, now the default. Each document opens with a cover page, then document control, version history and an approval table with a signature column, then a numbered contents page. Sections and policy clauses are numbered (5.1, 5.2 and so on), so people can cite a clause. Printed and PDF copies carry the classification, title, organisation, version and Page X of Y on every page.',
+      'The Word export matches it: the same cover, tables, numbered contents and clauses, and a real Word footer with Page X of Y that stays correct as you edit.',
+      'Enterprise uses your brand colour when one is set in Settings, otherwise a dark navy. The Standard, Formal and Minimal layouts are unchanged and still available under Settings, Policy document layout. Documents already generated keep their look until you generate them again.'
+    ]
+  },
+  {
     version: '1.145.0',
     date: '2026-10-09',
     entries: [

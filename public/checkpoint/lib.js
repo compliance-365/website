@@ -4181,7 +4181,56 @@
       : docxRun(textOrRuns, r);
     return '<w:p>' + pPrXml + runsXml + '</w:p>';
   }
-  function docxHeading(text) { return docxP(text, { style: 'Heading2', before: 280, after: 100 }); }
+  function docxHeadingBase(text) { return docxP(text, { style: 'Heading2', before: 280, after: 100 }); }
+  var DOCX_PAGE_BREAK = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+  /* Enterprise front matter: a cover page, then a document control page
+     (metadata, history, approval). The contents list follows it. */
+  function buildEnterpriseDocxFront(t, opts, accent, tableBorder) {
+    var ver = opts.version || (opts.approved ? '1.0' : '0.1');
+    var out = [];
+    if (opts.banner) out.push(docxP(opts.banner, { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
+    if (!opts.approved) out.push(docxP('DRAFT — REVIEW AND APPROVE. NOT YET CONFIRMED BY A PRACTITIONER AS READY FOR USE.', { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
+    out.push(docxP([{ text: String(opts.classification || 'Internal').toUpperCase(), bold: true, color: accent }, { text: '      ' + (opts.approved ? 'CONTROLLED DOCUMENT' : 'DRAFT FOR REVIEW'), color: '4A5568' }],
+      { borderTop: { sz: 36, color: accent }, before: 0, after: 1200 }, null));
+    out.push(docxP(opts.clientLabel || 'This organisation', { style: 'ClientName', after: 900 }));
+    out.push(docxP((t.docKind || 'Policy').toUpperCase(), { after: 80 }, { bold: true, color: accent, sz: 20 }));
+    out.push(docxP(t.title, { style: 'Title', after: 240 }));
+    out.push(docxP('', { borderBottom: { sz: 18, color: accent }, after: 480 }));
+    out.push(docxTable([
+      ['Version', ver + (opts.approved ? '' : ' (draft)'), opts.approved ? 'Effective' : 'Generated', opts.generatedDate || ''],
+      ['Owner', opts.owner || '—', 'Next review', opts.reviewDate || '—'],
+      ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending approval', 'Applies to', opts.clientLabel || '']
+    ], [1700, 3000, 1700, 3000], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
+    out.push(docxP('This document is controlled in ' + (opts.clientLabel || 'the organisation') + '\u2019s document register. A printed or downloaded copy is uncontrolled: check the register for the current version before relying on it.',
+      { before: 600, after: 0 }, { color: '4A5568', sz: 16 }));
+    out.push(DOCX_PAGE_BREAK);
+    var label = function (text) { return docxP(text.toUpperCase(), { before: 240, after: 100 }, { bold: true, color: accent, sz: 18 }); };
+    out.push(label('Document control'));
+    out.push(docxTable([
+      ['Organisation', opts.clientLabel || ''], ['Document owner', opts.owner || ''], ['Version', ver], ['Status', opts.approved ? 'Approved' : 'Draft'],
+      ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Not yet approved'], [opts.approved ? 'Approval date' : 'Generated', opts.generatedDate || ''],
+      ['Next review due', opts.reviewDate || '—'], ['Classification', opts.classification || 'Internal']
+    ], [2600, 6800], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
+    out.push(label('Document history'));
+    out.push(docxTable([['Version', 'Date', 'Description', 'By'], [ver, opts.generatedDate || '', opts.approved ? 'Approved for use' : 'Draft generated for review', (opts.approved ? opts.approvedBy : opts.owner) || '—']],
+      [1500, 2300, 3600, 2000], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
+    out.push(label('Approval'));
+    out.push(docxTable([['Role', 'Name', 'Date', 'Signature'], ['Document owner', opts.owner || '—', opts.generatedDate || '', ''], ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending', opts.approved ? (opts.generatedDate || '') : '', '']],
+      [2200, 2600, 2000, 2600], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
+    return out.join('');
+  }
+  /* The footer an enterprise document carries on every page. */
+  function buildEnterpriseDocxFooter(t, opts) {
+    var ver = opts.version || (opts.approved ? '1.0' : '0.1');
+    var fld = function (code) { return '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ' + code + ' </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'; };
+    var small = '<w:rPr><w:color w:val="4A5568"/><w:sz w:val="15"/></w:rPr>';
+    var run = function (text) { return '<w:r>' + small + '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r>'; };
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="D9DEE7"/></w:pBdr><w:tabs><w:tab w:val="center" w:pos="4513"/><w:tab w:val="right" w:pos="9026"/></w:tabs></w:pPr>' +
+      run(String(opts.classification || 'Internal').toUpperCase() + (opts.approved ? '' : ' · DRAFT') + ' · ' + (opts.clientLabel || '')) + '<w:r><w:tab/></w:r>' +
+      run('Page ') + fld('PAGE') + run(' of ') + fld('NUMPAGES') + '<w:r><w:tab/></w:r>' + run(t.title + ' · Version ' + ver) +
+      '</w:p></w:ftr>';
+  }
   /* Bullet character varies by layout the same way the HTML template's
      three stylesheets do — a plain dash reads as "restrained", the
      round bullet as the app's own default look. Purely a glyph choice;
@@ -4202,7 +4251,10 @@
      "the whole sentence is coloured". */
   function docxStatement(n, rule, because, accent, layout) {
     var xml;
-    if (layout === 'formal') {
+    if (layout === 'enterprise') {
+      xml = docxP([{ text: n + '   ', bold: true, color: accent }, { text: rule, bold: true, color: '14213D' }],
+        { before: 140, after: because ? 20 : 120 });
+    } else if (layout === 'formal') {
       xml = docxP([{ text: n + '.  ', bold: true, color: accent }, { text: rule, bold: true, color: '1A1A1A' }],
         { before: 160, after: because ? 20 : 120 });
     } else if (layout === 'minimal') {
@@ -4211,7 +4263,7 @@
     } else {
       xml = docxP(n + '.  ' + rule, { before: 160, after: because ? 20 : 120 }, { bold: true, color: accent });
     }
-    if (because) xml += docxP(because, { after: 120, indent: 240 }, { italic: true, color: '6B675E' });
+    if (because) xml += docxP(because, { after: 120, indent: layout === 'enterprise' ? 480 : 240 }, layout === 'enterprise' ? { color: '4A5568' } : { italic: true, color: '6B675E' });
     return xml;
   }
   /* Plain bordered table, direct per-cell formatting rather than a
@@ -4242,6 +4294,7 @@
   function docxTableBorderColor(layout) {
     if (layout === 'formal') return '1A1A1A';
     if (layout === 'minimal') return 'EEEEEE';
+    if (layout === 'enterprise') return 'D9DEE7';
     return 'D9D5CB';
   }
   /* Shared by "What this means for you" and the leadership-commitment
@@ -4254,6 +4307,7 @@
     return paragraphs.map(function (p) {
       if (layout === 'formal') return docxP(p, { borderLeft: { sz: 12, color: '1A1A1A' }, indent: 200, before: 40, after: 40 }, { italic: true });
       if (layout === 'minimal') return docxP(p, { before: 40, after: 40 });
+      if (layout === 'enterprise') return docxP(p, { borderLeft: { sz: 18, color: accent }, shade: 'F4F6F9', indent: 200, before: 40, after: 40 });
       return docxP(p, { shade: tint, before: 40, after: 40 });
     }).join('');
   }
@@ -4269,10 +4323,25 @@
      rendered as a bold red strip at the very top (the "uncontrolled
      copy" warning callers already attach to every export). */
   function buildPolicyDocxBody(t, opts) {
-    var accent = docxAccentHex(opts.brandColor);
     var layout = opts.layout || 'standard';
+    var ent = layout === 'enterprise';
+    var accent = ent && !/^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? '1F3A5F' : docxAccentHex(opts.brandColor);
     var tableBorder = docxTableBorderColor(layout);
     var parts = [];
+    /* Enterprise numbers its sections (and the clauses under Policy as
+       6.1, 6.2 ...) and lists them on a contents page, filled in once
+       every heading is known. Other layouts keep plain headings. */
+    var sec = 0, headings = [];
+    var docxHeading = function (text) {
+      if (!ent) return docxHeadingBase(text);
+      sec += 1; headings.push(text);
+      return docxP([{ text: sec + '.   ', bold: true, color: accent }, { text: text }], { style: 'Heading2', before: 300, after: 100, borderBottom: { sz: 12, color: accent } });
+    };
+    var CONTENTS = '\u0000CONTENTS\u0000';
+    if (ent) {
+      parts.push(buildEnterpriseDocxFront(t, opts, accent, tableBorder));
+      parts.push(CONTENTS);
+    } else {
     if (opts.banner) {
       parts.push(docxP(opts.banner, { shade: 'B91C1C', jc: 'center', after: 240 }, { bold: true, color: 'FFFFFF', sz: 18 }));
     }
@@ -4300,6 +4369,7 @@
     ];
     parts.push(docxTable(dctlRows, [2600, 6800], { borderColor: tableBorder, headerShade: layout === 'formal' ? 'F7F5F2' : null }));
     parts.push(docxP('', { after: 160 }));
+    }
 
     /* A leadership-authored foreword, distinct from the staff-facing
        "What this means for you" below it — placed right after the
@@ -4348,7 +4418,7 @@
     (t.policyStatements || []).forEach(function (s, i) {
       var rule = typeof s === 'string' ? s : s.rule;
       var because = typeof s === 'string' ? '' : (s.because || '');
-      parts.push(docxStatement(i + 1, rule, because, accent, layout));
+      parts.push(docxStatement(ent ? sec + '.' + (i + 1) : i + 1, rule, because, accent, layout));
     });
 
     /* Reference tables (a risk framework's scales and matrix), the same
@@ -4387,6 +4457,12 @@
       parts.push(docxP(t.controls.join('; '), { after: 120 }));
     }
 
+    if (ent) {
+      var contents = docxP('CONTENTS', { before: 240, after: 120 }, { bold: true, color: accent, sz: 18 }) +
+        headings.map(function (h, i) { return docxP([{ text: (i + 1) + '.   ', bold: true, color: accent }, { text: h }], { before: 40, after: 40, borderBottom: { sz: 2, color: 'D9DEE7' } }); }).join('') +
+        DOCX_PAGE_BREAK;
+      return parts.join('').replace(CONTENTS, contents);
+    }
     parts.push(docxP('Compliance365 — Checkpoint · ' + (opts.approved ? 'Approved' : 'Draft') + ' · ' + (opts.generatedDate || ''),
       { style: 'Meta', before: 320, borderTop: layout === 'minimal' ? null : { sz: 6, color: '999489' } }));
     return parts.join('');
@@ -4401,11 +4477,12 @@
   var DOCX_LAYOUT_STYLES = {
     standard: { bodyFont: 'Manrope', headingFont: 'Bricolage Grotesque', titleSz: '48', clientSz: '32', metaSz: '16', headingSz: '27', headingColorMode: 'accent', headingCaps: false, headingBold: false },
     formal: { bodyFont: 'Times New Roman', headingFont: 'Times New Roman', titleSz: '44', clientSz: '30', metaSz: '17', headingSz: '24', headingColorMode: 'ink', headingCaps: false, headingBold: true },
-    minimal: { bodyFont: 'Calibri', headingFont: 'Calibri', titleSz: '52', clientSz: '20', metaSz: '15', headingSz: '18', headingColorMode: 'ink', headingCaps: true, headingBold: true }
+    minimal: { bodyFont: 'Calibri', headingFont: 'Calibri', titleSz: '52', clientSz: '20', metaSz: '15', headingSz: '18', headingColorMode: 'ink', headingCaps: true, headingBold: true },
+    enterprise: { bodyFont: 'Arial', headingFont: 'Arial', titleSz: '60', clientSz: '28', metaSz: '16', headingSz: '26', headingColorMode: 'navy', headingCaps: false, headingBold: true }
   };
   function buildDocxStylesXml(accent, layout) {
     var cfg = DOCX_LAYOUT_STYLES[layout] || DOCX_LAYOUT_STYLES.standard;
-    var headingColor = cfg.headingColorMode === 'accent' ? accent : '0B0B0C';
+    var headingColor = cfg.headingColorMode === 'accent' ? accent : cfg.headingColorMode === 'navy' ? '14213D' : '0B0B0C';
     /* rPr child order again — rFonts, b, caps, color, sz, same sequence
        docxRun()/docxP() already follow, just built by hand here since
        these are named styles, not per-run formatting. */
@@ -4455,19 +4532,21 @@
 
   function buildPolicyDocx(t, opts) {
     opts = opts || {};
+    var ent = opts.layout === 'enterprise';
     var bodyXml = buildPolicyDocxBody(t, opts) +
-      '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
+      '<w:sectPr>' + (ent ? '<w:footerReference w:type="default" r:id="rId2"/>' : '') + '<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
     var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + bodyXml + '</w:body></w:document>';
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"' + (ent ? ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' : '') + '><w:body>' + bodyXml + '</w:body></w:document>';
     return buildZip([
-      { name: '[Content_Types].xml', content: DOCX_CONTENT_TYPES_XML },
+      { name: '[Content_Types].xml', content: ent ? DOCX_CONTENT_TYPES_XML.replace('</Types>', '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>') : DOCX_CONTENT_TYPES_XML },
       { name: '_rels/.rels', content: DOCX_RELS_XML },
       { name: 'word/document.xml', content: documentXml },
-      { name: 'word/_rels/document.xml.rels', content: DOCX_DOCUMENT_RELS_XML },
+      { name: 'word/_rels/document.xml.rels', content: ent ? DOCX_DOCUMENT_RELS_XML.replace('</Relationships>', '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>') : DOCX_DOCUMENT_RELS_XML }
+    ].concat(ent ? [{ name: 'word/footer1.xml', content: buildEnterpriseDocxFooter(t, opts) }] : []).concat([
       { name: 'word/styles.xml', content: buildDocxStylesXml(docxAccentHex(opts.brandColor), opts.layout || 'standard') },
       { name: 'docProps/core.xml', content: buildDocxCoreXml(t, opts) },
       { name: 'docProps/app.xml', content: DOCX_APP_XML }
-    ]);
+    ]));
   }
 
   /* ==========================================================

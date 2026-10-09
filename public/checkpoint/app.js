@@ -4570,6 +4570,91 @@ function showModal(opts) {
      another @font-face — Georgia/Times New Roman and Calibri/Segoe UI
      are both what those two looks are actually supposed to be, not a
      substitute for a missing custom font. */
+  function longDocDate(d) {
+    if (!d) return '';
+    var x = new Date(String(d).slice(0, 10) + 'T00:00');
+    return isNaN(x) ? String(d) : x.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  /* 'enterprise': the default. White page, corporate sans, a cover, a
+     document control page (metadata, history, approval), a numbered
+     contents list, numbered sections and clauses (3.1, 3.2 ...) that an
+     auditor can cite, and running footers with "Page X of Y" in print.
+     The accent is the client's brand colour, or a navy that reads as
+     neutral corporate rather than as Checkpoint's own brand. */
+  function enterpriseLayoutCss(accent, opts) {
+    var ink = '#14213D', soft = '#4A5568', line = '#D9DEE7', tint = '#F4F6F9';
+    return 'body{font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;background:#FFFFFF;color:' + ink + ';padding:56px 64px;max-width:860px;margin:0 auto;font-size:12.5px;line-height:1.65;counter-reset:sec}' +
+      '.mast,h1,.gr{display:none}' +
+      /* Cover */
+      '.cover{display:block;border:1px solid ' + line + ';border-top:6px solid ' + accent + ';padding:28px 34px 26px;margin:0 0 34px}' +
+      '.cv-band{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:' + soft + ';font-weight:600;margin-bottom:56px}' +
+      '.cv-band span:first-child{color:' + accent + '}' +
+      '.cv-mark{margin-bottom:46px}.cv-mark .clname{font-size:18px;font-weight:600;letter-spacing:.01em;color:' + ink + '}' +
+      '.cv-kind{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:' + accent + ';font-weight:700;margin-bottom:10px}' +
+      '.cv-title{font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-.01em;color:' + ink + ';max-width:22ch}' +
+      '.cv-rule{width:56px;height:3px;background:' + accent + ';margin:22px 0 30px}' +
+      '.cv-facts{width:100%;border-collapse:collapse;font-size:12px}' +
+      '.cv-facts th{text-align:left;width:18%;padding:8px 10px 8px 0;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:' + soft + ';font-weight:600;vertical-align:top;border-top:1px solid ' + line + '}' +
+      '.cv-facts td{width:32%;padding:8px 16px 8px 0;color:' + ink + ';border-top:1px solid ' + line + ';font-weight:500}' +
+      '.cv-note{margin:34px 0 0;font-size:10.5px;color:' + soft + ';max-width:80ch}' +
+      /* Document control page */
+      '.dc-h{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:' + accent + ';font-weight:700;margin:26px 0 8px}' +
+      '.dc-first{margin-top:0}.front-x{display:block}' +
+      '.dctl,.rec{width:100%;border-collapse:collapse;margin:0 0 6px;font-size:12px}' +
+      '.dctl th{text-align:left;width:190px;padding:7px 12px;background:' + tint + ';font-weight:600;color:' + ink + ';border:1px solid ' + line + ';vertical-align:top}' +
+      '.dctl td{padding:7px 12px;border:1px solid ' + line + '}' +
+      '.rec th{text-align:left;padding:7px 12px;background:' + tint + ';font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:' + soft + ';border:1px solid ' + line + '}' +
+      '.rec td{padding:8px 12px;border:1px solid ' + line + ';vertical-align:top}.rec td.sig{width:28%;height:26px}' +
+      /* Contents */
+      '.toc{display:block;margin:6px 0 30px}.toc ol{list-style:none;margin:0;padding:0;columns:2;column-gap:36px}' +
+      '.toc li{break-inside:avoid;border-bottom:1px dotted ' + line + '}.toc a{display:flex;gap:10px;padding:6px 0;color:' + ink + ';text-decoration:none}' +
+      '.toc-n{flex:none;width:22px;color:' + accent + ';font-weight:700}' +
+      /* Sections and clauses */
+      'h2{font-size:15px;font-weight:700;color:' + ink + ';margin:32px 0 10px;padding-bottom:7px;border-bottom:2px solid ' + accent + ';display:flex;gap:10px;align-items:baseline;counter-increment:sec}' +
+      'h2::before{content:counter(sec) ".";color:' + accent + ';min-width:22px}' +
+      '.sec-ico{display:none}' +
+      '.intro{color:' + ink + ';max-width:80ch;margin:0 0 8px}' +
+      '.callout{background:' + tint + ';border-left:3px solid ' + accent + ';padding:14px 18px;margin-top:8px}' +
+      '.callout .intro{margin:0 0 8px}.callout .intro:last-child{margin-bottom:0}' +
+      '.stmt-list{margin-top:10px;counter-reset:st}' +
+      '.stmt{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid ' + line + ';counter-increment:st}' +
+      '.stmt:last-child{border-bottom:none}' +
+      '.stmt-n{flex:none;width:34px;font-size:0;color:' + accent + '}.stmt-n::before{content:counter(sec) "." counter(st);font-size:12px;font-weight:700}' +
+      '.stmt-body{flex:1;min-width:0}.stmt-rule{margin:0;font-weight:600}' +
+      '.because{color:' + soft + ';margin:3px 0 0;max-width:78ch}' +
+      'ul.prac{list-style:none;margin:8px 0 0;padding:0}' +
+      'ul.prac li{display:flex;gap:10px;margin-bottom:7px;max-width:80ch}' +
+      '.prac-ck,.prac-dot{display:none}ul.prac li::before{content:"";flex:none;width:6px;height:6px;margin-top:7px;background:' + accent + '}' +
+      '.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}' +
+      '.chip-ctrl{display:inline-block;padding:3px 9px;border:1px solid ' + line + ';background:' + tint + ';font-size:11px;font-weight:600;color:' + ink + '}' +
+      '.roles{width:100%;border-collapse:collapse;margin:10px 0 0;font-size:12px}' +
+      '.roles th{text-align:left;width:200px;padding:8px 12px;background:' + tint + ';border:1px solid ' + line + ';vertical-align:top;font-weight:600}' +
+      '.roles td{padding:8px 12px;border:1px solid ' + line + '}' +
+      '.mtx{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:11.5px}.mtx th{text-align:left;padding:7px 9px;background:' + tint + ';font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border:1px solid ' + line + '}.mtx td{padding:7px 9px;border:1px solid ' + line + ';vertical-align:top}.mtx-note{font-size:11px;color:' + soft + '}' +
+      '.pf{margin-top:44px;padding-top:12px;border-top:1px solid ' + line + ';font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:' + soft + ';display:flex;justify-content:space-between}' +
+      '.wm{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:130px;font-weight:700;color:rgba(185,28,28,.10);letter-spacing:.06em;pointer-events:none;white-space:nowrap}' +
+      '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-56px -64px 24px}';
+  }
+  /* Print: the cover and the document control page each take a page,
+     and every page carries "Page X of Y" (Chrome supports @page margin
+     boxes and counter(pages)). */
+  function enterprisePrintCss(opts) {
+    /* CSS strings: escape backslashes and quotes, drop newlines. */
+    var q = function (v) { return '"' + String(v || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ').slice(0, 120) + '"'; };
+    var box = 'font-family:"Segoe UI",Arial,sans-serif;font-size:7.5pt;letter-spacing:.06em;color:' + (opts.draft ? '#b91c1c' : '#4A5568');
+    var cls = String(opts.classification || 'Internal').toUpperCase() + (opts.draft ? ' \u00b7 DRAFT \u2014 NOT APPROVED' : '');
+    return '@page{' +
+        '@top-left{content:' + q(cls) + ';' + box + ';font-weight:600}' +
+        '@top-right{content:' + q(opts.title) + ';' + box + '}' +
+        '@bottom-left{content:' + q(opts.org) + ';' + box + '}' +
+        '@bottom-center{content:"Page " counter(page) " of " counter(pages);' + box + '}' +
+        '@bottom-right{content:' + q(opts.version ? 'Version ' + opts.version : '') + ';' + box + '}' +
+      '}' +
+      '@page:first{@top-left{content:none}@top-right{content:none}}' +
+      '@media print{.pr-run{display:none!important}.cover{border-left:none;border-right:none;border-bottom:none;min-height:228mm;margin:0;padding:10mm 4mm 0;break-after:page;page-break-after:always}' +
+      '.toc{break-after:page;page-break-after:always}.front-x{break-inside:avoid}h2{margin-top:16px}' +
+      '.rec tr,.dctl tr,.roles tr{break-inside:avoid}}';
+  }
   function layoutCss(layout, accent, accentRgb) {
     if (layout === 'formal') {
       return 'body{font-family:Georgia,\'Times New Roman\',Times,serif;background:#FFFFFF;color:#1A1A1A;padding:56px 64px;max-width:880px;margin:0 auto;font-size:13.5px;line-height:1.7}' +
@@ -4821,12 +4906,38 @@ function showModal(opts) {
       /* fmtDocDate, not fmtDate: a review date is routinely a year or
          more out, and "25 July" on the face of a controlled document is
          ambiguous between this year and next. */
-      ['Next review due', opts.reviewDate ? esc(fmtDocDate(opts.reviewDate)) : '—'],
+      ['Next review due', opts.reviewDate ? esc(longDocDate(opts.reviewDate)) : '—'],
       ['Classification', esc(opts.classification || 'Internal')]
     ];
-    var body = '<table class="dctl"><tbody>' + dctlRows.map(function (r) {
+    /* Front matter a controlled document carries in a corporate policy
+       set: a cover, the document history, the approval record and a
+       contents list. Emitted for every layout but shown by 'enterprise'
+       only, so the other three render exactly as they always have. */
+    var verText = opts.version || (opts.approved ? '1.0' : '0.1');
+    var coverHtml = '<section class="cover" aria-label="Cover">' +
+      '<div class="cv-band"><span>' + esc(opts.classification || 'Internal') + '</span><span>' + (opts.approved ? 'Controlled document' : 'Draft for review') + '</span></div>' +
+      '<div class="cv-mark">' + clientMark + '</div>' +
+      '<div class="cv-kind">' + esc(t.docKind || 'Policy') + '</div>' +
+      '<div class="cv-title" role="heading" aria-level="1">' + esc(t.title) + '</div>' +
+      '<div class="cv-rule"></div>' +
+      '<table class="cv-facts"><tbody>' +
+        '<tr><th>Version</th><td>' + esc(verText) + (opts.approved ? '' : ' (draft)') + '</td><th>' + (opts.approved ? 'Effective' : 'Generated') + '</th><td>' + esc(opts.generatedDate) + '</td></tr>' +
+        '<tr><th>Owner</th><td>' + esc(opts.owner || '—') + '</td><th>Next review</th><td>' + (opts.reviewDate ? esc(longDocDate(opts.reviewDate)) : '—') + '</td></tr>' +
+        '<tr><th>Approved by</th><td>' + (opts.approved ? esc(opts.approvedBy || '—') : 'Pending approval') + '</td><th>Applies to</th><td>' + esc(opts.clientLabel) + '</td></tr>' +
+      '</tbody></table>' +
+      '<p class="cv-note">This document is controlled in ' + esc(opts.clientLabel) + '\u2019s document register. A printed or downloaded copy is uncontrolled: check the register for the current version before relying on it.</p>' +
+      '</section>';
+    var historyHtml = '<div class="dc-h">Document history</div><table class="rec"><thead><tr><th>Version</th><th>Date</th><th>Description</th><th>By</th></tr></thead><tbody>' +
+      '<tr><td>' + esc(verText) + '</td><td>' + esc(opts.generatedDate) + '</td><td>' + (opts.approved ? 'Approved for use' : 'Draft generated for review') + '</td><td>' + esc((opts.approved ? opts.approvedBy : opts.owner) || '—') + '</td></tr>' +
+      '</tbody></table>';
+    var approvalHtml = '<div class="dc-h">Approval</div><table class="rec"><thead><tr><th>Role</th><th>Name</th><th>Date</th><th>Signature</th></tr></thead><tbody>' +
+      '<tr><td>Document owner</td><td>' + esc(opts.owner || '—') + '</td><td>' + esc(opts.generatedDate) + '</td><td class="sig"></td></tr>' +
+      '<tr><td>Approved by</td><td>' + (opts.approved ? esc(opts.approvedBy || '—') : 'Pending') + '</td><td>' + (opts.approved ? esc(opts.generatedDate) : '') + '</td><td class="sig"></td></tr>' +
+      '</tbody></table>';
+    var frontHtml = '<div class="dc-h dc-first">Document control</div><table class="dctl"><tbody>' + dctlRows.map(function (r) {
       return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
-    }).join('') + '</tbody></table>' +
+    }).join('') + '</tbody></table>' + '<div class="front-x">' + historyHtml + approvalHtml + '</div>';
+    var body =
       leadershipHtml +
       aiNoteHtml +
       /* Order is the whole design: the reader-facing sections come
@@ -4841,7 +4952,16 @@ function showModal(opts) {
       govHtml +
       sectionHeading('review', 'Review') + '<p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? sectionHeading('satisfies', 'Helps satisfy') + '<div class="chips">' + t.controls.map(function (c) { return '<span class="chip-ctrl">' + esc(c) + '</span>'; }).join('') + '</div>' : '');
-    var layout = opts.layout || 'standard';
+    /* Section anchors and the contents list, in document order. */
+    var tocItems = [];
+    body = body.replace(/<h2>/g, function () { tocItems.push(tocItems.length + 1); return '<h2 id="s' + tocItems.length + '">'; });
+    var tocLabels = [];
+    body.replace(/<h2 id="s(\d+)">([\s\S]*?)<\/h2>/g, function (m, n, inner) { tocLabels.push({ n: n, label: inner.replace(/<[^>]+>/g, '') }); return m; });
+    var tocHtml = '<nav class="toc" aria-label="Contents"><div class="dc-h">Contents</div><ol>' +
+      tocLabels.map(function (x) { return '<li><a href="#s' + x.n + '"><span class="toc-n">' + x.n + '</span><span class="toc-l">' + x.label + '</span></a></li>'; }).join('') + '</ol></nav>';
+    body = frontHtml + tocHtml + body;
+    var layout = opts.layout || 'enterprise';
+    var entAccent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor : '#1F3A5F';
     return '<!DOCTYPE html><html><head><style>' +
       /* Only 'standard' needs the custom webfonts — 'formal'/'minimal'
          are deliberately built on system font stacks (see layoutCss()'s
@@ -4851,8 +4971,10 @@ function showModal(opts) {
         ? "@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;src:url('" + fontBase + "fonts/bricolage.woff2') format('woff2-variations')}" +
           "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}"
         : '') +
-      layoutCss(layout, accent, accentRgb) +
+      '.cover,.toc,.dc-h,.front-x{display:none}' +
+      (layout === 'enterprise' ? enterpriseLayoutCss(entAccent, opts) : layoutCss(layout, accent, accentRgb)) +
       standalonePrintCss({ classification: opts.classification, draft: !opts.approved }) +
+      (layout === 'enterprise' ? enterprisePrintCss({ classification: opts.classification, draft: !opts.approved, title: t.title, org: opts.clientLabel, version: opts.version || (opts.approved ? '1.0' : '0.1') }) : '') +
       'mark.tbc{background:#FFF1B8;color:#7A4B00;padding:0 3px;border-radius:3px;font-weight:600}' +
       '</style></head><body>' +
       standaloneRunningMarks({
@@ -4862,7 +4984,7 @@ function showModal(opts) {
       /* An unanswered required answer (resolveOrgTokens()) is highlighted
          so it cannot be missed in the draft. The marker text is already
          escaped here, so this only wraps it. */
-      watermarkHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' +
+      watermarkHtml + coverHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' +
       body.replace(/\[To be completed: [^\]<]*\]/g, function (m) { return '<mark class="tbc">' + m + '</mark>'; }) +
       '<div class="pf"><span>Compliance365 — Checkpoint</span><span>' + (opts.approved ? 'Approved · ' : 'Draft · ') + esc(opts.generatedDate) + '</span></div>' +
       '</body></html>';
@@ -4927,7 +5049,7 @@ function showModal(opts) {
     var c = (S.settings && S.settings.clientBrandColor) || '';
     return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
   }
-  var POLICY_TEMPLATE_LAYOUTS = ['standard', 'formal', 'minimal'];
+  var POLICY_TEMPLATE_LAYOUTS = ['enterprise', 'standard', 'formal', 'minimal'];
   /* The validated document layout choice — same guard shape as
      clientBrandColor() above, since a hand-edited Settings row is just
      as untrusted here: an unrecognised value falls back to 'standard'
@@ -4936,7 +5058,7 @@ function showModal(opts) {
      styles at all. */
   function policyTemplateLayout() {
     var v = (S.settings && S.settings.policyTemplateLayout) || '';
-    return POLICY_TEMPLATE_LAYOUTS.indexOf(v) !== -1 ? v : 'standard';
+    return POLICY_TEMPLATE_LAYOUTS.indexOf(v) !== -1 ? v : 'enterprise';
   }
   /* Paints the top bar's client identity: display-name override (raw
      tenant label preserved in data-tenant/title so it's never lost),
@@ -15899,13 +16021,13 @@ function showModal(opts) {
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
         '<select id="policyTemplateLayoutInput" class="mini" aria-label="Policy document layout" style="min-width:160px">' +
         POLICY_TEMPLATE_LAYOUTS.map(function (v) {
-          var label = v === 'standard' ? 'Standard' : v === 'formal' ? 'Formal' : 'Minimal';
+          var label = v === 'enterprise' ? 'Enterprise (default)' : v === 'standard' ? 'Standard' : v === 'formal' ? 'Formal' : 'Minimal';
           return '<option value="' + v + '"' + (policyTemplateLayout() === v ? ' selected' : '') + '>' + label + '</option>';
         }).join('') +
         '</select>' +
         '<button class="btn ghost sm" data-action="App.setPolicyTemplateLayout">Save</button>' +
         '</div>' +
-        '<p class="src" style="margin-top:6px">The visual style every newly generated policy document, PDF and Word export uses — Standard (this app’s own brand), Formal (white, serif, no icons — for regulated or traditional industries), or Minimal (white, restrained, no colour fills beyond the accent rule). Already-generated documents keep the look they were generated with; changing this only affects what’s generated from here on, until re-generated.</p></div>' +
+        '<p class="src" style="margin-top:6px">The visual style every newly generated policy document, PDF and Word export uses — Enterprise (a cover page, document control, version history, approval sign-off, numbered contents and clauses, and Page X of Y footers; in your brand colour when one is set), Standard (this app’s own brand), Formal (white, serif, no icons — for regulated or traditional industries), or Minimal (white, restrained, no colour fills beyond the accent rule). Already-generated documents keep the look they were generated with; changing this only affects what’s generated from here on, until re-generated.</p></div>' +
 
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Classification marking</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
