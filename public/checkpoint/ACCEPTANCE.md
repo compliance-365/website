@@ -231,6 +231,8 @@ Exercises linking evidence to a control and the shared-evidence cross-framework 
 - Click: **Documents** → **Generate** any policy → open it, then **Print / Save as PDF** and **Download Word**.
 - Expect: a cover page (classification, organisation, title, version, owner, review date), then document control, version history and approval (with a signature column), then a numbered contents page. Sections are numbered and policy clauses read 5.1, 5.2 and so on. The PDF shows the classification and title at the top of each page and Page X of Y at the bottom, except on the cover. The Word file has the same structure and a footer with Page X of Y.
 - Expect: Settings → **Policy document layout** offers Enterprise (default), Standard, Formal and Minimal; switching to Standard and regenerating gives the previous look with no cover page.
+- Click: **Request approval** on a policy, sign in as the approver, approve it from **My tasks**, then print it.
+- Expect: the approval table's signature cell reads **Approved electronically in Checkpoint by** the approver **on** the approval date, and **Document history** lists the draft, any revisions and the approval. Approving on someone else's behalf instead reads **Approval recorded in Checkpoint by** you. Printing the same policy on a later day still shows the original approval date.
 - [ ] Pass  [ ] Fail
 
 ---

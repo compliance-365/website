@@ -672,15 +672,38 @@ function showModal(opts) {
           unapproved policy printed as "DRAFT" on page one and as an
           apparently final document on every page after it.
 
-     The running header/footer technique -- position:fixed offset into
-     the @page margin band -- is the one report.js already proves works
-     in Chrome and Edge, which implement no @page margin boxes. Reused
-     deliberately rather than invented again. */
+     The running header/footer were first done with position:fixed
+     offset into the @page margin band. Since 1.147.0 they are @page
+     margin boxes, which current Chrome and Edge print, the same as
+     report.js: they stay in the margin on every page and can number
+     pages, which a fixed element cannot. */
+  /* A value as a CSS string literal for print margin boxes: newlines
+     dropped, truncated, then backslashes, quotes and '<' escaped (so a
+     client name can never close the <style> element). */
+  function cssStrLit(v, max) {
+    return '"' + String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').slice(0, max || 120).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/</g, '\\3c ') + '"';
+  }
+  /* With opts.title, the running header and footer print as @page
+     margin boxes (Chrome/Edge 131+), so they sit in the margin of every
+     physical page and the footer numbers it ("Page X of Y"). The
+     position:fixed .pr-run marks remain for older browsers' print and
+     are hidden where margin boxes are used. opts.title/meta are plain
+     text, not HTML. */
   function standalonePrintCss(opts) {
     opts = opts || {};
-    var cls = opts.classification ? esc(opts.classification) : '';
-    var draft = opts.draft ? ' &middot; DRAFT — NOT APPROVED' : '';
-    return '@page{size:A4;margin:26mm 16mm 22mm 16mm}' +
+    var boxes = '';
+    if (opts.title) {
+      /* Margin boxes do not inherit the page's font. */
+      var box = 'font-family:' + (opts.font || 'Manrope,"Segoe UI",Arial,sans-serif') + ';font-size:7.5pt;letter-spacing:.06em;text-transform:uppercase;color:' + (opts.draft ? '#b91c1c' : '#6b675e');
+      var cls = [String(opts.classification || '').toUpperCase(), opts.draft ? 'DRAFT \u2014 NOT APPROVED' : ''].filter(Boolean).join(' \u00b7 ');
+      boxes = '@page{' +
+          '@top-left{content:' + cssStrLit(cls) + ';' + box + ';font-weight:600}' +
+          '@top-right{content:' + cssStrLit(opts.title) + ';' + box + '}' +
+          '@bottom-left{content:' + cssStrLit(opts.meta || '') + ';' + box + '}' +
+          '@bottom-right{content:"Page " counter(page) " of " counter(pages);' + box + '}' +
+        '}';
+    }
+    return '@page{size:A4;margin:26mm 16mm 22mm 16mm}' + boxes +
       '.pr-run{display:none}' +
       '@media print{' +
         'body{background:#fff;padding:0;max-width:none;font-size:11.5pt}' +
@@ -700,17 +723,18 @@ function showModal(opts) {
            the running header carries DRAFT on every page instead. */
         '.wm{opacity:.5}' +
         '.db{position:static;margin:0 0 14px}' +
+        (opts.title ? '.pr-run{display:none!important}' : '') +
       '}' +
       /* Markup for the running header/footer is emitted by
          standaloneRunningMarks() below and hidden on screen. */
       '';
   }
 
-  /* The repeating header/footer pair. `title` identifies the document,
-     `meta` carries version/date. Page numbers are deliberately absent:
-     Chrome exposes no counter to HTML content, and a footer that says
-     "Page 1" on all eight pages is worse than one that does not
-     pretend to number them. */
+  /* The repeating header/footer pair as position:fixed markup: the
+     fallback where @page margin boxes are not used (see
+     standalonePrintCss). `title` identifies the document, `meta`
+     carries version/date. No page number: a fixed element cannot
+     count pages. */
   function standaloneRunningMarks(opts) {
     opts = opts || {};
     var cls = opts.classification ? esc(opts.classification) : '';
@@ -722,6 +746,8 @@ function showModal(opts) {
       '<div class="pr-run pr-run-bot"><span>' + metaLeft + '</span><span>' + (cls || right) + '</span></div>';
   }
 
+  /* opts.title arrives HTML-escaped (it also fills <title>). */
+  function unescHtml(v) { return String(v || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&'); }
   function buildStandaloneHtml(opts) {
     var accent = /^#[0-9a-fA-F]{6}$/.test(opts.accent || '') ? opts.accent : '#BE4A1E';
     var classificationBand = opts.classification
@@ -739,7 +765,7 @@ function showModal(opts) {
       'h2{font-size:19px;margin:32px 0 12px;font-weight:700;border-bottom:2px solid #0B0B0C;padding-bottom:8px}' +
       'p{color:#4b473e}a{color:' + accent + '}' +
       (opts.extraCss || '') +
-      standalonePrintCss({ classification: opts.classification, draft: false }) +
+      standalonePrintCss({ classification: opts.classification, draft: false, title: unescHtml(opts.title), meta: opts.footerLine || '' }) +
       '</style></head><body>' +
       standaloneRunningMarks({ classification: opts.classification, title: opts.title, meta: opts.footerLine || '' }) +
       classificationBand + logoBand + opts.bodyHtml + brandFoot + '</body></html>';
@@ -4604,7 +4630,7 @@ function showModal(opts) {
       '.dctl th{text-align:left;width:190px;padding:7px 12px;background:' + tint + ';font-weight:600;color:' + ink + ';border:1px solid ' + line + ';vertical-align:top}' +
       '.dctl td{padding:7px 12px;border:1px solid ' + line + '}' +
       '.rec th{text-align:left;padding:7px 12px;background:' + tint + ';font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:' + soft + ';border:1px solid ' + line + '}' +
-      '.rec td{padding:8px 12px;border:1px solid ' + line + ';vertical-align:top}.rec td.sig{width:28%;height:26px}' +
+      '.rec td{padding:8px 12px;border:1px solid ' + line + ';vertical-align:top}.rec td.sig{width:28%;height:26px}.rec .esig{display:block;font-size:.85em;line-height:1.35;color:' + ink + ';font-style:italic}' +
       /* Contents */
       '.toc{display:block;margin:6px 0 30px}.toc ol{list-style:none;margin:0;padding:0;columns:2;column-gap:36px}' +
       '.toc li{break-inside:avoid;border-bottom:1px dotted ' + line + '}.toc a{display:flex;gap:10px;padding:6px 0;color:' + ink + ';text-decoration:none}' +
@@ -4641,7 +4667,7 @@ function showModal(opts) {
   function enterprisePrintCss(opts) {
     /* CSS strings: drop newlines, truncate, then escape backslashes,
        quotes and '<' (so a client name can never close the <style>). */
-    var q = function (v) { return '"' + String(v || '').replace(/[\r\n]+/g, ' ').slice(0, 120).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/</g, '\\3c ') + '"'; };
+    var q = function (v) { return cssStrLit(v || ''); };
     var box = 'font-family:"Segoe UI",Arial,sans-serif;font-size:7.5pt;letter-spacing:.06em;color:' + (opts.draft ? '#b91c1c' : '#4A5568');
     var cls = String(opts.classification || 'Internal').toUpperCase() + (opts.draft ? ' \u00b7 DRAFT \u2014 NOT APPROVED' : '');
     return '@page{' +
@@ -4768,6 +4794,9 @@ function showModal(opts) {
   }
 
   function buildTemplateHtml(t, opts) {
+    /* The date the approval was given (from the register), not the
+       date this copy happens to be rendered or exported. */
+    var approvedOn = opts.approvalDateText || (opts.approvalDate ? longDocDate(opts.approvalDate) : opts.generatedDate);
     var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
     /* The document leads with the CLIENT's own branding — it's their
        policy, not Compliance365's. When a client logo is set it sits in
@@ -4886,7 +4915,7 @@ function showModal(opts) {
       ? sectionHeading('policy', 'A message from leadership') +
         '<div class="callout">' + t.leadershipCommitment.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('') +
         (opts.approved && opts.approvedBy
-          ? '<p class="intro" style="margin:10px 0 0;font-weight:600">' + esc(opts.approvedBy) + '<br><span style="font-weight:400;color:#6b675e;font-size:11px">' + esc(opts.generatedDate) + '</span></p>'
+          ? '<p class="intro" style="margin:10px 0 0;font-weight:600">' + esc(opts.approvedBy) + '<br><span style="font-weight:400;color:#6b675e;font-size:11px">' + esc(approvedOn) + '</span></p>'
           : '') +
         '</div>'
       : '';
@@ -4903,7 +4932,7 @@ function showModal(opts) {
       ['Version', esc(opts.version || (opts.approved ? '1.0' : '0.1'))],
       ['Status', opts.approved ? 'Approved' : 'Draft'],
       ['Approved by', opts.approved ? esc(opts.approvedBy || '—') : 'Not yet approved'],
-      [opts.approved ? 'Approval date' : 'Generated', esc(opts.generatedDate)],
+      [opts.approved ? 'Approval date' : 'Generated', esc(opts.approved ? approvedOn : opts.generatedDate)],
       /* fmtDocDate, not fmtDate: a review date is routinely a year or
          more out, and "25 July" on the face of a controlled document is
          ambiguous between this year and next. */
@@ -4922,18 +4951,26 @@ function showModal(opts) {
       '<div class="cv-title" role="heading" aria-level="1">' + esc(t.title) + '</div>' +
       '<div class="cv-rule"></div>' +
       '<table class="cv-facts"><tbody>' +
-        '<tr><th>Version</th><td>' + esc(verText) + (opts.approved ? '' : ' (draft)') + '</td><th>' + (opts.approved ? 'Effective' : 'Generated') + '</th><td>' + esc(opts.generatedDate) + '</td></tr>' +
+        '<tr><th>Version</th><td>' + esc(verText) + (opts.approved ? '' : ' (draft)') + '</td><th>' + (opts.approved ? 'Effective' : 'Generated') + '</th><td>' + esc(opts.approved ? approvedOn : opts.generatedDate) + '</td></tr>' +
         '<tr><th>Owner</th><td>' + esc(opts.owner || '—') + '</td><th>Next review</th><td>' + (opts.reviewDate ? esc(longDocDate(opts.reviewDate)) : '—') + '</td></tr>' +
         '<tr><th>Approved by</th><td>' + (opts.approved ? esc(opts.approvedBy || '—') : 'Pending approval') + '</td><th>Applies to</th><td>' + esc(opts.clientLabel) + '</td></tr>' +
       '</tbody></table>' +
       '<p class="cv-note">This document is controlled in ' + esc(opts.clientLabel) + '\u2019s document register. A printed or downloaded copy is uncontrolled: check the register for the current version before relying on it.</p>' +
       '</section>';
+    /* History and approval come from Checkpoint's own record of this
+       document (opts.history / opts.approvalSignature, built from the
+       audit log by docControlFor()); without one, a single row for the
+       version shown. */
+    var historyRows = (opts.history && opts.history.length) ? opts.history
+      : [{ version: verText, date: '', dateText: opts.approved ? approvedOn : opts.generatedDate, description: opts.approved ? 'Approved for use' : 'Draft generated for review', by: (opts.approved ? opts.approvedBy : opts.owner) || '—' }];
     var historyHtml = '<div class="dc-h">Document history</div><table class="rec"><thead><tr><th>Version</th><th>Date</th><th>Description</th><th>By</th></tr></thead><tbody>' +
-      '<tr><td>' + esc(verText) + '</td><td>' + esc(opts.generatedDate) + '</td><td>' + (opts.approved ? 'Approved for use' : 'Draft generated for review') + '</td><td>' + esc((opts.approved ? opts.approvedBy : opts.owner) || '—') + '</td></tr>' +
+      historyRows.map(function (r) {
+        return '<tr><td>' + esc(r.version) + '</td><td>' + esc(r.dateText || longDocDate(r.date)) + '</td><td>' + esc(r.description) + '</td><td>' + esc(r.by || '—') + '</td></tr>';
+      }).join('') +
       '</tbody></table>';
     var approvalHtml = '<div class="dc-h">Approval</div><table class="rec"><thead><tr><th>Role</th><th>Name</th><th>Date</th><th>Signature</th></tr></thead><tbody>' +
-      '<tr><td>Document owner</td><td>' + esc(opts.owner || '—') + '</td><td>' + esc(opts.generatedDate) + '</td><td class="sig"></td></tr>' +
-      '<tr><td>Approved by</td><td>' + (opts.approved ? esc(opts.approvedBy || '—') : 'Pending') + '</td><td>' + (opts.approved ? esc(opts.generatedDate) : '') + '</td><td class="sig"></td></tr>' +
+      '<tr><td>Document owner</td><td>' + esc(opts.owner || '—') + '</td><td></td><td class="sig"></td></tr>' +
+      '<tr><td>Approved by</td><td>' + (opts.approved ? esc(opts.approvedBy || '—') : 'Pending') + '</td><td>' + (opts.approved ? esc(approvedOn) : '') + '</td><td class="sig">' + (opts.approved && opts.approvalSignature ? '<span class="esig">' + esc(opts.approvalSignature) + '</span>' : '') + '</td></tr>' +
       '</tbody></table>';
     var frontHtml = '<div class="dc-h dc-first">Document control</div><table class="dctl"><tbody>' + dctlRows.map(function (r) {
       return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
@@ -4974,7 +5011,11 @@ function showModal(opts) {
         : '') +
       '.cover,.toc,.dc-h,.front-x{display:none}' +
       (layout === 'enterprise' ? enterpriseLayoutCss(entAccent, opts) : layoutCss(layout, accent, accentRgb)) +
-      standalonePrintCss({ classification: opts.classification, draft: !opts.approved }) +
+      standalonePrintCss(layout === 'enterprise' ? { classification: opts.classification, draft: !opts.approved } : {
+        classification: opts.classification, draft: !opts.approved, title: t.title,
+        font: layout === 'formal' ? 'Georgia,"Times New Roman",Times,serif' : layout === 'minimal' ? 'Calibri,"Segoe UI",Arial,sans-serif' : null,
+        meta: [opts.clientLabel, opts.version ? 'Version ' + opts.version : ''].filter(Boolean).join(' \u00b7 ')
+      }) +
       (layout === 'enterprise' ? enterprisePrintCss({ classification: opts.classification, draft: !opts.approved, title: t.title, org: opts.clientLabel, version: opts.version || (opts.approved ? '1.0' : '0.1') }) : '') +
       'mark.tbc{background:#FFF1B8;color:#7A4B00;padding:0 3px;border-radius:3px;font-weight:600}' +
       '</style></head><body>' +
@@ -4987,7 +5028,7 @@ function showModal(opts) {
          escaped here, so this only wraps it. */
       watermarkHtml + coverHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' +
       body.replace(/\[To be completed: [^\]<]*\]/g, function (m) { return '<mark class="tbc">' + m + '</mark>'; }) +
-      '<div class="pf"><span>Compliance365 — Checkpoint</span><span>' + (opts.approved ? 'Approved · ' : 'Draft · ') + esc(opts.generatedDate) + '</span></div>' +
+      '<div class="pf"><span>Compliance365 — Checkpoint</span><span>' + (opts.approved ? 'Approved · ' + esc(approvedOn) : 'Draft · ' + esc(opts.generatedDate)) + '</span></div>' +
       '</body></html>';
   }
 
@@ -5260,6 +5301,34 @@ function showModal(opts) {
      nextReview }) and passed the segregation-of-duties gate. Throws if
      the approved copy cannot be saved. Returns { approvedDoc,
      clauseNote }. */
+  /* Document control fields from Checkpoint's own record of a
+     document: its history and, once approved, the date approval was
+     given and what the signature cell says. `pending` is an approval
+     being saved now ({ version, approvedBy, date }), not yet in the
+     audit log. */
+  function docControlFor(docName, doc, pending) {
+    var L = window.CheckpointLib;
+    var log = S.auditLog || [];
+    var acc = (typeof Graph !== 'undefined' && Graph.getAccount && Graph.getAccount()) || null;
+    var history = L.documentHistory(log, docName, pending ? { version: pending.version, date: pending.date, by: pending.approvedBy } : null);
+    var approved = !!pending || (!!doc && docStatusOf(doc) === 'Approved');
+    var rec = null;
+    if (pending) rec = { approvedBy: pending.approvedBy, recordedBy: (acc && acc.name) || (Store.kind === 'demo' ? 'Demo user' : ''), date: pending.date };
+    else if (approved) {
+      rec = L.documentApprovalRecord(log, docName);
+      /* The register is the authority on which version is approved; an
+         audit entry for an earlier version does not sign this one. */
+      if (rec && doc && doc.version && rec.version !== String(doc.version)) rec = null;
+      if (!rec && doc && doc.approvedBy) rec = { approvedBy: doc.approvedBy, recordedBy: '', date: doc.approvalDate || '' };
+    }
+    var date = (pending && pending.date) || (doc && doc.approvalDate) || (rec && rec.date) || '';
+    return {
+      history: history.map(function (r) { return Object.assign({}, r, { dateText: longDocDate(r.date) }); }),
+      approvalDate: approved ? date : '',
+      approvalDateText: approved && date ? longDocDate(date) : '',
+      approvalSignature: approved && rec ? L.approvalSignatureText(rec, rec.date ? longDocDate(rec.date) : '') : ''
+    };
+  }
   async function saveApprovedTemplate(name, category, t, params, existing, vals, sodFinding, quiet) {
     var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
     /* Recovers the SAME AI-tailored purpose/scope/statements this
@@ -5284,7 +5353,7 @@ function showModal(opts) {
        and the register would disagree the moment anyone shifted the
        cadence, which is exactly the kind of mismatch an auditor
        pulls on. */
-    var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal', layout: policyTemplateLayout() });
+    var html = buildTemplateHtml(effective, Object.assign({ clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal', layout: policyTemplateLayout() }, docControlFor(name, existing, { version: vals.version, approvedBy: vals.approvedBy, date: new Date().toISOString().slice(0, 10) })));
     var approvedDoc;
     try {
       var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], name, { type: 'text/html;charset=utf-8' });
@@ -12585,14 +12654,14 @@ function showModal(opts) {
     if (!t || !doc) { toastError('Could not locate the document to regenerate.'); return; }
     var status = docStatusOf(doc);
     var c = effectivePolicyContent(t, docName);
-    var html = buildTemplateHtml(c, {
+    var html = buildTemplateHtml(c, Object.assign({
       clientLabel: clientDisplayLabel('This organisation'), owner: doc.owner || '',
       reviewDate: doc.nextReview || '', approved: status === 'Approved',
       generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
       logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
       version: doc.version || '', approvedBy: doc.approvedBy || '', classification: doc.classification || 'Internal',
       layout: policyTemplateLayout()
-    });
+    }, docControlFor(docName, doc)));
     try {
       var file = new File([new Blob([html], { type: 'text/html;charset=utf-8' })], docName, { type: 'text/html;charset=utf-8' });
       await Store.uploadDocument(file, doc.category || 'Policies & Procedures', { cadences: docCadenceSnapshot(t, docName) });
@@ -20727,7 +20796,7 @@ function showModal(opts) {
       if (!ok) return;
       var c = effectivePolicyContent(t, docName);
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      var bytes = window.CheckpointLib.buildPolicyDocx(c, {
+      var bytes = window.CheckpointLib.buildPolicyDocx(c, Object.assign({
         clientLabel: clientDisplayLabel('This organisation'), owner: (doc && doc.owner) || '',
         reviewDate: (doc && doc.nextReview) ? fmtDocDate(doc.nextReview) : '', approved: docStatusOf(doc || {}) === 'Approved',
         generatedDate: generatedDate,
@@ -20736,7 +20805,7 @@ function showModal(opts) {
         classification: (doc && doc.classification) || 'Internal',
         banner: 'Uncontrolled copy — exported for offline editing. Changes made here are not tracked and will not survive regeneration.',
         layout: policyTemplateLayout()
-      });
+      }, docControlFor(docName, doc)));
       downloadBlob(docName.replace(/\.html?$/i, '') + '.docx', new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
       audit('Policy exported to Word', 'Document', docName, '(none)', 'Uncontrolled copy');
       toast('Exported as an uncontrolled Word copy.');
@@ -20765,14 +20834,14 @@ function showModal(opts) {
       });
       if (!ok) return;
       var c = effectivePolicyContent(t, docName);
-      var html = buildTemplateHtml(c, {
+      var html = buildTemplateHtml(c, Object.assign({
         clientLabel: clientDisplayLabel('This organisation'), owner: (doc && doc.owner) || '',
         reviewDate: (doc && doc.nextReview) || '', approved: docStatusOf(doc || {}) === 'Approved',
         generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
         logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
         version: (doc && doc.version) || '', approvedBy: (doc && doc.approvedBy) || '',
         classification: (doc && doc.classification) || 'Internal', layout: policyTemplateLayout()
-      }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — printed ' + esc(new Date().toLocaleDateString('en-AU')) + '. This snapshot is not tracked and will not reflect later revisions.</div>');
+      }, docControlFor(docName, doc))).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — printed ' + esc(new Date().toLocaleDateString('en-AU')) + '. This snapshot is not tracked and will not reflect later revisions.</div>');
       if (!printPreview(t.title, html)) return;
       audit('Policy printed / exported to PDF', 'Document', docName, '(none)', 'Uncontrolled copy');
       toast('Opened print preview — use Print / Save as PDF in the new tab.');
@@ -26028,23 +26097,23 @@ function showModal(opts) {
         try {
           var c = effectivePolicyContent(t, d.name);
           if (vals.format === 'html') {
-            var html = buildTemplateHtml(c, {
+            var html = buildTemplateHtml(c, Object.assign({
               clientLabel: clientDisplayLabel('This organisation'), owner: d.owner || '',
               reviewDate: d.nextReview || '', approved: docStatusOf(d) === 'Approved',
               generatedDate: generatedDate,
               logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
               version: d.version || '', approvedBy: d.approvedBy || '',
               classification: d.classification || 'Internal', layout: policyTemplateLayout()
-            }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">' + esc(banner) + '</div>');
+            }, docControlFor(d.name, d))).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">' + esc(banner) + '</div>');
             files.push({ name: baseName + ext, content: html });
           } else {
-            var bytes = window.CheckpointLib.buildPolicyDocx(c, {
+            var bytes = window.CheckpointLib.buildPolicyDocx(c, Object.assign({
               clientLabel: clientDisplayLabel('This organisation'), owner: d.owner || '',
               reviewDate: d.nextReview ? fmtDocDate(d.nextReview) : '', approved: docStatusOf(d) === 'Approved',
               generatedDate: generatedDate, brandColor: clientBrandColor() || '',
               version: d.version || '', approvedBy: d.approvedBy || '',
               classification: d.classification || 'Internal', banner: banner, layout: policyTemplateLayout()
-            });
+            }, docControlFor(d.name, d)));
             /* bytes, not content — a .docx is itself binary zip data;
                buildZip() below would corrupt it if run through the
                string/TextEncoder path meant for the HTML branch. */
