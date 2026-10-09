@@ -41,12 +41,15 @@ window.Graph = (function () {
      runs if the browser hasn't started unloading yet, so don't rely on it;
      the actual "now sign the user in" continuation happens in init()
      above, on the page load Entra redirects back to. */
-  /* Sign-in only ever asks for the read-only scopes — incremental
-     consent (see token()/g() below) requests Sites.Manage.All and
-     Mail.Send later, the first time something actually needs them. */
+  /* Sign-in asks for Graph's '.default' (graphTokenScopes() in lib.js):
+     whatever the organisation's admin has approved, in one go. Once an
+     admin has granted consent nobody sees a permissions screen again;
+     before that, an admin sees one screen covering everything. */
   async function signIn() {
-    await msalApp.loginRedirect({ scopes: CONFIG.scopesReadOnly, prompt: 'select_account' });
+    await msalApp.loginRedirect({ scopes: scopesFor(CONFIG.scopesReadOnly), prompt: 'select_account' });
   }
+
+  function scopesFor(scopes) { return window.CheckpointLib.graphTokenScopes(scopes); }
 
   function signOut() {
     var acc = account; account = null;
@@ -55,15 +58,16 @@ window.Graph = (function () {
 
   function getAccount() { return account; }
 
-  /* scopes defaults to the read-only set already granted at sign-in.
-     Callers that need SharePoint (scopesProvision) or mail (scopesMail)
-     pass those explicitly — the first time either is requested for an
-     account that hasn't consented to it yet, acquireTokenSilent throws
-     and the redirect fallback below triggers Entra's incremental-consent
-     prompt for just that scope. Once granted, it's silent from then on,
-     same as any other MSAL-cached scope. */
+  /* scopes defaults to the read-only set. Any Graph scopes (read-only,
+     scopesProvision, scopesMail) are all served by one Graph '.default'
+     token carrying every permission the admin approved, so there is no
+     per-feature consent prompt. A permission the admin has not approved
+     makes the Graph call fail (403) and shows in Setup health. Other
+     resources (scopesAi, scopesSigning) keep their own token. If the
+     silent call fails (session expired, MFA needed) the redirect below
+     signs the user in again. */
   async function token(scopes) {
-    scopes = scopes || CONFIG.scopesReadOnly;
+    scopes = scopesFor(scopes || CONFIG.scopesReadOnly);
     try {
       return (await msalApp.acquireTokenSilent({ scopes: scopes, account: account })).accessToken;
     } catch (e) {
@@ -80,7 +84,7 @@ window.Graph = (function () {
   async function grantedScopes() {
     if (!msalApp || !account) return null;
     try {
-      var r = await msalApp.acquireTokenSilent({ scopes: CONFIG.scopesReadOnly, account: account });
+      var r = await msalApp.acquireTokenSilent({ scopes: scopesFor(CONFIG.scopesReadOnly), account: account });
       return window.CheckpointLib.scopesFromAccessToken(r.accessToken);
     } catch (e) { return null; }
   }

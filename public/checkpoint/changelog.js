@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.140.0',
+    date: '2026-10-09',
+    entries: [
+      'No more permissions screen at sign-in. Checkpoint now asks Microsoft for whatever your administrator has already approved, in one go, instead of listing each permission. Once your administrator has granted consent, nobody sees the Microsoft permissions screen again, including when Checkpoint adds a new check. Before, Microsoft could show the full screen at every sign-in even though consent had been granted.',
+      'Anything your administrator has not approved is listed in Settings \u203a Setup health, with the button to approve it, rather than a permissions screen part-way through your work.',
+      'The Microsoft consent screen now shows Compliance365 as a verified publisher.'
+    ]
+  },
+  {
     version: '1.139.0',
     date: '2026-10-09',
     entries: [
