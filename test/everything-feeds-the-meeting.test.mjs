@@ -198,3 +198,12 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.close();
   });
 });
+
+describe('action statuses', () => {
+  test('actions are only ever stored as Done or Cancelled when finished; an old "Closed" reads as Cancelled', () => {
+    assert.ok(!/\b(a|act)\.status = 'Closed'/.test(app), 'no action is written with a status the register does not offer');
+    const store = readFileSync(new URL('../public/checkpoint/store.js', import.meta.url), 'utf8');
+    assert.match(store, /status: f\.Status === 'Closed' \? 'Cancelled' : \(f\.Status \|\| 'Open'\)/);
+    assert.match(store, /if \(a\.status === 'Closed'\) a\.status = 'Cancelled';/);
+  });
+});

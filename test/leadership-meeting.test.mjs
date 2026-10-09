@@ -176,7 +176,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await doc.close();
     await page.evaluate(() => window.App.closeDrawer());
     await page.evaluate((id) => window.App.openAction(id), aid);
-    assert.match(await page.locator('#drawer').innerText(), /Status\s*Closed/i);
+    assert.match(await page.locator('#drawer').innerText(), /Status\s*Completed/i);
     await page.evaluate(() => window.App.closeDrawer());
     await page.evaluate((id) => window.App.openRisk(id), rid);
     assert.match(await page.locator('#drawer').innerText(), /Cost of treatment outweighs the exposure/);

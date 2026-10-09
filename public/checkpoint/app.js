@@ -23610,10 +23610,11 @@ function showModal(opts) {
       if (!v) { App.openSecurityReview(id); return; }
       var before = { owner: a.owner, due: a.due, status: a.status };
       var d = { choice: choice, title: a.title, by: by, on: heldOn };
-      if (choice === 'close') { a.status = 'Closed'; d.reason = String(v.reason || '').trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Closed at leadership security meeting ' + id + ' on ' + heldOn + (d.reason ? ': ' + d.reason : '')).slice(0, 2000); }
+      /* Stored values are Done (shown Completed) and Cancelled (shown Closed). */
+      if (choice === 'close') { a.status = 'Done'; d.reason = String(v.reason || '').trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Closed at leadership security meeting ' + id + ' on ' + heldOn + (d.reason ? ': ' + d.reason : '')).slice(0, 2000); }
       else if (choice === 'extend') { a.due = v.due; d.due = v.due; }
       else if (choice === 'reassign') { var u = directoryUser(v.owner.trim()); a.owner = u ? u.name : v.owner.trim(); a.ownerEmail = u ? (u.mail || u.upn || '') : ''; if (v.due) a.due = v.due; d.owner = a.owner; d.due = v.due || ''; }
-      else { a.status = 'Closed'; d.reason = v.reason.trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Risk accepted by ' + by + ' at leadership security meeting ' + id + ' on ' + heldOn + ': ' + d.reason).slice(0, 2000); }
+      else { a.status = 'Cancelled'; d.reason = v.reason.trim().slice(0, 300); a.evidence = ((a.evidence ? a.evidence + '\n' : '') + 'Risk accepted by ' + by + ' at leadership security meeting ' + id + ' on ' + heldOn + ': ' + d.reason).slice(0, 2000); }
       busy(true);
       try { await Store.updateAction(a); } catch (e) { warn(e); busy(false); return; }
       /* Accepting the risk on a stuck action is a residual risk

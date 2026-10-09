@@ -2018,6 +2018,7 @@ window.DemoStore = (function () {
          is left exactly as the user left it. */
       var fresh = seed();
       Object.keys(fresh).forEach(function (k) { if (S[k] === undefined) S[k] = fresh[k]; });
+      (S.actions || []).forEach(function (a) { if (a.status === 'Closed') a.status = 'Cancelled'; });
       populateDemoDefinitionalRegistries();
       return S;
     },
@@ -3358,7 +3359,7 @@ window.SpStore = (function () {
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', correction: f.Correction || '', rootCause: f.RootCause || '', effectivenessReview: f.EffectivenessReview || '', effectivenessDate: f.EffectivenessDate || '', effectivenessBy: f.EffectivenessBy || '', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', ownerEmail: f.OwnerEmail || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status === 'Closed' ? 'Cancelled' : (f.Status || 'Open'), evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', correction: f.Correction || '', rootCause: f.RootCause || '', effectivenessReview: f.EffectivenessReview || '', effectivenessDate: f.EffectivenessDate || '', effectivenessBy: f.EffectivenessBy || '', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', ownerEmail: f.OwnerEmail || '' };
         }),
         /* Sorted oldest-first here, same as every other dated register
            this store loads (Calendar, Reviews) — callers building a

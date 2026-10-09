@@ -22,7 +22,8 @@ window.CHECKPOINT_CHANGELOG = [
       'The meeting is called the leadership security meeting everywhere, including the agenda, minutes and follow-up emails, and the calendar invite.',
       'Trust Center: with at least two meetings held in the last three months it shows that leadership reviews security monthly, and it shows the date of your latest supplier security review.',
       'Taking minutes is shorter: the actions and incidents shown with their buttons are no longer listed a second time above them.',
-      'Fixed: an action raised with Treat in the meeting now counts towards the risk\u2019s treatment progress and residual rating.'
+      'Fixed: an action raised with Treat in the meeting now counts towards the risk\u2019s treatment progress and residual rating.',
+      'Fixed: an action closed in the meeting, or closed by accepting the risk, was saved with a status the Actions register does not use, so it kept counting as open and overdue. It is now Completed or Closed, and any saved before read as Closed.'
     ]
   },
   {
