@@ -194,16 +194,34 @@ describe('buildReport() — print CSS (paged media)', () => {
     assert.match(html, /@page\{size:A4;margin:/);
   });
 
-  test('header/footer become position:fixed only under @media print', () => {
+  test('in print the header and footer become @page margin boxes with Page N of M', () => {
     const html = buildReport(baseSpec());
-    const printBlockMatch = html.match(/@media print\{([\s\S]*?)\}\s*<\/style>/);
-    assert.ok(printBlockMatch, 'expected an @media print block in the stylesheet');
-    assert.match(printBlockMatch[1], /\.rpt-header\{position:fixed/);
-    assert.match(printBlockMatch[1], /\.rpt-footer\{position:fixed/);
-    // The footer no longer uses a CSS page counter: it resolved once at the
-    // fixed footer's DOM position and printed the same (off-by-one) number on
-    // every page, so it was replaced with the document's title + version.
+    const printBlockMatch = html.match(/@media print\{([\s\S]*?)\}\s*@page\{@top-left/);
+    assert.ok(printBlockMatch, 'expected an @media print block followed by the page margin boxes');
+    // A fixed header printed mid-page over the content on overflow pages.
+    assert.match(printBlockMatch[1], /\.rpt-header\{display:none\}/);
+    assert.match(html, /@top-left\{content:"Acme Pty Ltd — Statement of Applicability — ISO 27001"/);
+    assert.match(html, /@top-right\{content:"Commercial in Confidence"/);
+    assert.match(html, /@page:first\{@top-left\{content:none\}@top-right\{content:none\}\}/, 'no running header on the cover');
+    assert.match(printBlockMatch[1], /\.rpt-footer\{display:none\}/);
+    // A counter on a fixed element resolves once and repeats the same number
+    // on every page; margin boxes number each physical page.
     assert.doesNotMatch(printBlockMatch[1], /counter\(page\)/);
+    assert.match(html, /@bottom-right\{content:"Page " counter\(page\) " of " counter\(pages\)/);
+    assert.match(html, /@bottom-left\{content:"Statement of Applicability — ISO 27001 · v3"/);
+    assert.match(html, /@bottom-center\{content:"Generated 9 July 2026"/, "classification is already in the header");
+  });
+
+  test('footer text from settings replaces the generated date in the printed footer', () => {
+    const html = buildReport(baseSpec({ footerText: 'Prepared by Compliance365 for Acme' }));
+    assert.match(html, /@bottom-center\{content:"Prepared by Compliance365 for Acme"/);
+  });
+
+  test('values in the printed footer cannot break out of the CSS string or the style element', () => {
+    const html = buildReport(baseSpec({ footerText: 'a"b\\c</style><script>x</script>' }));
+    const style = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+    assert.doesNotMatch(style, /<script/);
+    assert.match(style, /@bottom-center\{content:"a\\"b\\\\c\\3c \/style>\\3c script>x\\3c \/script>"/);
   });
 
   test('page-break-before:always on .rpt-page, avoided on the first page', () => {

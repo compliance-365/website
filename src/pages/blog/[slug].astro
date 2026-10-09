@@ -4,28 +4,20 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
 
-// Load all markdown posts from src/content/blog
+import { getPosts, formatPostDate, coverUrl } from '../../lib/blog';
+import { render } from 'astro:content';
+
 export async function getStaticPaths() {
-  const posts = Object.values(import.meta.glob('../../content/blog/*.md', { eager: true })); // -> src/content/blog
-  return posts.map((post) => {
-    const filename = post.file.split('/').pop() || '';
-    const slug = filename.replace(/\.md$/i, '');
-    return { params: { slug }, props: { post } };
-  });
+  return (await getPosts()).map((post) => ({ params: { slug: post.id }, props: { post } }));
 }
 
 const { post } = Astro.props;
+const { Content } = await render(post);
 const base = import.meta.env.BASE_URL || '/';
+const resolveImage = (src?: string) => coverUrl(src, base);
 
-function resolveImage(src) {
-  if (!src) return null;
-  if (/^https?:\/\//i.test(src)) return src;
-  const rel = String(src).replace(/^\/+/, '');
-  return `${base}${rel}`;
-}
-
-const cover = resolveImage(post.frontmatter?.image);
-const title = post.frontmatter?.title ?? 'Blog';
+const cover = resolveImage(post.data.image);
+const title = post.data.title;
 
 // SERP title is decoupled from the on-page headline: editorial headlines are
 // written to be read, and several run past the ~60 characters Google renders.
@@ -33,13 +25,13 @@ const title = post.frontmatter?.title ?? 'Blog';
 // suffix is only appended when it still fits, rather than pushing the keyword
 // out of the visible part of the result.
 const BRAND_SUFFIX = ' | Compliance365';
-const seoTitleBase = post.frontmatter?.seoTitle ?? title;
+const seoTitleBase = post.data.seoTitle ?? title;
 const documentTitle = (seoTitleBase.length + BRAND_SUFFIX.length) <= 60
   ? seoTitleBase + BRAND_SUFFIX
   : seoTitleBase;
-const description = post.frontmatter?.description ?? '';
-const dateStr = post.frontmatter?.date ? new Date(post.frontmatter.date).toLocaleDateString() : '';
-const author = post.frontmatter?.author ?? 'Compliance365';
+const description = post.data.description;
+const dateStr = formatPostDate(post.data.date);
+const author = post.data.author;
 const slug = Astro.params.slug;
 const canonical = `https://www.compliance365.com.au/blog/${slug}/`;
 // UTM-tagged variant for the LinkedIn share button only — canonical itself
@@ -48,31 +40,29 @@ const canonical = `https://www.compliance365.com.au/blog/${slug}/`;
 // shared post lands in GA4 as (direct)/(none) with no way to tell that
 // traffic apart from someone typing the URL from memory.
 const linkedinShareUrl = `${canonical}?utm_source=linkedin&utm_medium=social&utm_campaign=blog_share`;
-const dateIso = post.frontmatter?.date ? new Date(post.frontmatter.date).toISOString() : undefined;
-const dateModifiedIso = post.frontmatter?.lastModified
-  ? new Date(post.frontmatter.lastModified).toISOString()
-  : dateIso;
-const currentTags = (post.frontmatter?.tags ?? []).map((t: string) => t.toLowerCase());
+const dateIso = post.data.date.toISOString();
+const dateModifiedIso = (post.data.lastModified ?? post.data.date).toISOString();
+const currentTags = post.data.tags.map((t: string) => t.toLowerCase());
 
 // ── Related posts ─────────────────────────────────────────────────────
-const allPosts = Object.values(import.meta.glob('../../content/blog/*.md', { eager: true }));
+const allPosts = await getPosts();
 const related = allPosts
-  .filter(p => p.file.split('/').pop()?.replace(/\.md$/, '') !== slug)
+  .filter(p => p.id !== slug)
   .map(p => {
-    const ptags = (p.frontmatter?.tags ?? []).map((t: string) => t.toLowerCase());
+    const ptags = p.data.tags.map((t: string) => t.toLowerCase());
     const score = ptags.filter((t: string) => currentTags.includes(t)).length;
-    return { p, score, date: new Date(p.frontmatter?.date ?? 0) };
+    return { p, score, date: p.data.date };
   })
   .filter(x => x.score > 0)
   .sort((a, b) => b.score - a.score || b.date.getTime() - a.date.getTime())
   .slice(0, 3)
   .map(x => ({
-    slug: x.p.file.split('/').pop()?.replace(/\.md$/, '') ?? '',
-    title: x.p.frontmatter?.title ?? '',
-    description: x.p.frontmatter?.description ?? '',
-    img: resolveImage(x.p.frontmatter?.image),
-    tags: (x.p.frontmatter?.tags ?? []) as string[],
-    date: x.p.frontmatter?.date ? new Date(x.p.frontmatter.date).toLocaleDateString() : '',
+    slug: x.p.id,
+    title: x.p.data.title,
+    description: x.p.data.description,
+    img: resolveImage(x.p.data.image),
+    tags: x.p.data.tags,
+    date: formatPostDate(x.p.data.date),
   }));
 
 // ── Best matching service ─────────────────────────────────────────────
@@ -123,7 +113,7 @@ const breadcrumbs = [
   publishedTime={dateIso}
   modifiedTime={dateModifiedIso}
   articleSection="Compliance Insights"
-  articleTags={post.frontmatter?.tags ?? []}
+  articleTags={post.data.tags}
 >
   <Header />
 
@@ -152,7 +142,7 @@ const breadcrumbs = [
       </div>
 
       <div class="prose">
-        <post.Content />
+        <Content />
       </div>
 
       <!-- Share on LinkedIn -->

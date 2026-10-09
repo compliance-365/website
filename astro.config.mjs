@@ -38,6 +38,10 @@ export default defineConfig({
   outDir: 'dist',
   output: 'static',
   build: { format: 'directory' },
+  // Fetch the next page when a visitor hovers or focuses a link, so
+  // navigation feels instant. Same-origin only; nothing runs until the
+  // visitor actually navigates.
+  prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
   redirects: {
     // Old site legacy URLs
     '/thirdpartyrisk.html':            '/services/iso27001/',

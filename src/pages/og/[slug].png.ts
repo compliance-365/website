@@ -3,6 +3,7 @@ import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { getPosts } from '../../lib/blog';
 
 const BOLD_FONT = readFileSync(resolve('src/fonts/LiberationSans-Bold.ttf'));
 const REG_FONT  = readFileSync(resolve('src/fonts/LiberationSans-Regular.ttf'));
@@ -22,22 +23,15 @@ const SERVICE_PAGES = [
   { slug: 'og-about',    eyebrow: 'ABOUT · COMPLIANCE365',           title: 'Australian Compliance Specialists', description: 'Senior-led. Fixed-price. Evidence-backed. Based in Brisbane, serving organisations nationally.' },
 ];
 
-const blogFiles = import.meta.glob('/src/content/blog/*.md', { eager: true }) as Record<string, { frontmatter: { title?: string; description?: string; tags?: string[] } }>;
-const BLOG_PAGES = Object.entries(blogFiles).map(([path, mod]) => {
-  const filename = path.split('/').pop()!.replace(/\.md$/, '');
-  const tags = (mod.frontmatter?.tags ?? []).slice(0, 2).join(' · ').toUpperCase();
-  return {
-    slug: `og-blog-${filename}`,
-    eyebrow: tags || 'INSIGHTS · COMPLIANCE365',
-    title: mod.frontmatter?.title ?? 'Compliance365 Blog',
-    description: mod.frontmatter?.description ?? 'Practical compliance insights for Australian organisations.',
-  };
-});
-
-const ALL_PAGES = [...SERVICE_PAGES, ...BLOG_PAGES];
-
-export const getStaticPaths: GetStaticPaths = () =>
-  ALL_PAGES.map(({ slug, ...props }) => ({ params: { slug }, props }));
+export const getStaticPaths: GetStaticPaths = async () => {
+  const BLOG_PAGES = (await getPosts()).map((post) => ({
+    slug: `og-blog-${post.id}`,
+    eyebrow: post.data.tags.slice(0, 2).join(' · ').toUpperCase() || 'INSIGHTS · COMPLIANCE365',
+    title: post.data.title,
+    description: post.data.description,
+  }));
+  return [...SERVICE_PAGES, ...BLOG_PAGES].map(({ slug, ...props }) => ({ params: { slug }, props }));
+};
 
 function clamp(text: string, max: number) {
   return text.length > max ? text.slice(0, max - 1) + '…' : text;
