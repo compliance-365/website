@@ -4,7 +4,8 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ScopingWidget from '../components/ScopingWidget.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
-import { readFileSync } from 'node:fs';
+import landcomSvg from '../../public/assets/clients/landcom.svg?raw';
+import megaportSvg from '../../public/assets/clients/megaport.svg?raw';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -14,8 +15,8 @@ const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com
 // load each file in its own document context and currentColor would
 // resolve to black regardless of the page's colour scheme.
 const clientLogos = [
-  { name: 'Landcom', svg: readFileSync(new URL('../../public/assets/clients/landcom.svg', import.meta.url), 'utf8') },
-  { name: 'Megaport', svg: readFileSync(new URL('../../public/assets/clients/megaport.svg', import.meta.url), 'utf8') },
+  { name: 'Landcom', svg: landcomSvg },
+  { name: 'Megaport', svg: megaportSvg },
 ];
 
 // Framework rotator — real destinations, no href="#". Used both by the
@@ -108,7 +109,7 @@ const faqLd = {
 };
 ---
 <Base
-  title="ISO 27001, SOC 2 &amp; Essential Eight Australia | Compliance365"
+  title="ISO 27001, SOC 2 & Essential Eight Australia | Compliance365"
   description="Australian consultancy delivering ISO 27001, SOC 2, Essential Eight and ISO 42001 inside your existing Microsoft 365. Fixed-price, audit-ready in 8–14 weeks."
 >
 

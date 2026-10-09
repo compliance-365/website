@@ -6,7 +6,7 @@ import DigestSignup from '../../components/DigestSignup.astro';
 
 // Load all markdown posts from src/content/blog
 export async function getStaticPaths() {
-  const posts = await Astro.glob('../../content/blog/*.md'); // -> src/content/blog
+  const posts = Object.values(import.meta.glob('../../content/blog/*.md', { eager: true })); // -> src/content/blog
   return posts.map((post) => {
     const filename = post.file.split('/').pop() || '';
     const slug = filename.replace(/\.md$/i, '');
@@ -55,7 +55,7 @@ const dateModifiedIso = post.frontmatter?.lastModified
 const currentTags = (post.frontmatter?.tags ?? []).map((t: string) => t.toLowerCase());
 
 // ── Related posts ─────────────────────────────────────────────────────
-const allPosts = await Astro.glob('../../content/blog/*.md');
+const allPosts = Object.values(import.meta.glob('../../content/blog/*.md', { eager: true }));
 const related = allPosts
   .filter(p => p.file.split('/').pop()?.replace(/\.md$/, '') !== slug)
   .map(p => {

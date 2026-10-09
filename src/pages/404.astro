@@ -31,7 +31,7 @@ const REDIRECTS: [string, string][] = [
 const STRIP_TRAILING = ['.html', '.htm', '/index.html'];
 
 // Load a few recent posts (fallback suggestions)
-const posts = (await Astro.glob('../content/blog/*.md'))
+const posts = (Object.values(import.meta.glob('../content/blog/*.md', { eager: true })))
   .sort((a,b) => new Date(b.frontmatter.date || 0).getTime() - new Date(a.frontmatter.date || 0).getTime())
   .slice(0, 4);
 
@@ -43,14 +43,15 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
 
   <main id="main-content" tabindex="-1">
 
-  <!-- Smart client-side redirects for legacy paths + best-guess -->
-  <script is:inline>
+  <!-- Smart client-side redirects for legacy paths + best-guess.
+       define:vars passes the lists in: braces inside an is:inline
+       script are not template expressions, and were shipped literally. -->
+  <script is:inline define:vars={{ endings: STRIP_TRAILING, map: REDIRECTS }}>
     (function(){
       try {
         var current = location.pathname;
 
         // strip common suffixes (/index.html, .html, etc.)
-        var endings = {JSON.stringify(STRIP_TRAILING)};
         for (var i=0; i<endings.length; i++){
           if (current.endsWith(endings[i])) {
             current = current.slice(0, -endings[i].length) || '/';
@@ -62,8 +63,6 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
         if (current.length > 1 && current.endsWith('/')) {
           current = current.slice(0, -1);
         }
-
-        var map = {JSON.stringify(REDIRECTS)};
 
         // 1) Exact match (with or without trailing slash)
         for (var j=0; j<map.length; j++){
