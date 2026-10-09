@@ -1510,22 +1510,38 @@
 
     <!-- TRUST CENTER -->
     <section class="view" id="v-trustcenter">
-      <div class="vhead"><div class="rule"></div><h1>Trust Center</h1><p>A public, read-only page — certifications held, high-level posture, Statement of Applicability summary and (optionally) your sub-processor list. Generated as a single self-contained HTML file into this tenant's own Documents library. <b>Publishing it is a normal SharePoint sharing action you take yourself</b> — Checkpoint generates the file and never makes anything public on its own.</p></div>
-      <div class="card" style="max-width:720px;margin-bottom:16px">
+      <div class="vhead"><div class="rule"></div><h1>Trust Center</h1><p>A public page for your customers and prospects: the standards you hold or are working towards, your security practices, programme activity, documents they can request, and (if you choose) your sub-processors. Every statement is taken from your own records; nothing is claimed that they do not evidence. Checkpoint generates the page as one self-contained file. <b>Publishing it is your decision</b>: host it on your website or share it from SharePoint.</p></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn" data-action="App.previewTrustCenter">Preview</button>
+        <button class="btn ghost" data-action="App.generateTrustCenter">Generate and save to Documents</button>
+      </div>
+      <div class="card" style="max-width:760px;margin-bottom:16px">
+        <h3>Page details</h3>
+        <div class="d-kv" style="padding-top:10px"><span>Company name</span></div>
+        <input class="mini" id="tcCompanyName" placeholder="Defaults to this tenant's display name" style="width:100%;margin-bottom:10px">
+        <div class="d-kv"><span>Opening line (optional)</span></div>
+        <input class="mini" id="tcTagline" maxlength="300" placeholder="e.g. We protect our customers' mine-site data with an ISO 27001 information security programme." style="width:100%;margin-bottom:10px">
+        <div class="d-kv"><span>Security contact email (powers the Request buttons)</span></div>
+        <input class="mini" id="tcContactEmail" placeholder="e.g. security@yourcompany.com" style="width:100%;margin-bottom:10px">
+        <div class="d-kv"><span>Where customer data is stored (optional)</span></div>
+        <input class="mini" id="tcDataLocation" maxlength="120" placeholder="e.g. Australia (Microsoft Azure Australia East)" style="width:100%">
+        <div style="margin-top:14px"><button class="btn ghost sm" data-action="App.saveTrustCenterSettings">Save details</button></div>
+      </div>
+      <div class="card" style="max-width:760px;margin-bottom:16px">
         <h3>What's shown</h3>
         <div class="grid" id="tcTogglesRows" style="margin-top:10px"></div>
-        <div class="d-kv" style="padding-top:14px"><span>Company name shown on the page</span></div>
-        <input class="mini" id="tcCompanyName" placeholder="Defaults to this tenant's display name" style="width:100%;margin-bottom:10px">
-        <div class="d-kv"><span>Contact email shown on the page (optional)</span></div>
-        <input class="mini" id="tcContactEmail" placeholder="e.g. security@yourcompany.com" style="width:100%">
-        <div style="margin-top:14px"><button class="btn ghost sm" data-action="App.saveTrustCenterSettings">Save settings</button></div>
       </div>
-      <div class="card" style="max-width:720px;margin-bottom:16px">
+      <div class="card" style="max-width:760px;margin-bottom:16px">
+        <h3>Documents</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin-top:6px">Readers request "on request" documents by email to your security contact, so you decide who receives them (and under what agreement).</p>
+        <div id="tcDocRows" style="margin-top:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn ghost sm" data-action="App.addTrustDoc">Add a document</button><button class="btn ghost sm" data-action="App.addApprovedPoliciesToTrust">List approved policies</button></div>
+      </div>
+      <div class="card" style="max-width:760px;margin-bottom:16px">
         <h3>Sub-processors listed publicly</h3>
-        <p style="font-size:12.5px;color:var(--paper-dim);margin-top:6px">Only appears on the page if "Sub-processor list" above is switched on. Choose which vendors from the Vendor risk register are named.</p>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin-top:6px">Only used when "Sub-processors" is switched on above. Choose which vendors from the Vendor risk register are named.</p>
         <div id="tcVendorRows" style="margin-top:10px"></div>
       </div>
-      <button class="btn" data-action="App.generateTrustCenter">Generate Trust Center page</button>
       <div id="tcResult" style="margin-top:16px"></div>
     </section>
 

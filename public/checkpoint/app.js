@@ -789,12 +789,34 @@ function showModal(opts) {
     cryptography: 'Cryptography', gateways: 'Gateways', 'data-transfers': 'Data transfers', other: 'Other'
   };
 
+  /* What the generated Trust Center shows. dflt is the value for a
+     tenant that has never set it (settings seeded before the toggle
+     existed). Sub-processors and the FAQ are off unless switched on:
+     they name third parties and reuse questionnaire wording. */
   var TRUST_CENTER_TOGGLES = [
-    { key: 'trustCenterShowCerts', label: 'Certifications held', desc: 'List every framework currently entitled (ISO 27001, SOC 2, etc.) by name.' },
-    { key: 'trustCenterShowSoaPct', label: 'SoA implementation %', desc: 'Show the % of applicable controls implemented per framework, alongside the certification list above.' },
-    { key: 'trustCenterShowPosture', label: 'High-level posture summary', desc: 'A qualitative rating (Strong/Developing/Needs improvement) and whether continuous monitoring is enabled — never the raw numeric score.' },
-    { key: 'trustCenterShowSubProcessors', label: 'Sub-processor list', desc: 'List only the vendors individually opted in below. Off by default — the most sensitive item on this page.' }
+    { key: 'trustCenterShowCerts', dflt: true, label: 'Certifications', desc: 'Each standard you hold or are working towards. Shown as Certified only when a current certificate is recorded on the Certification page.' },
+    { key: 'trustCenterShowSoaPct', dflt: true, label: 'Implementation progress', desc: 'For standards not yet certified, the % of applicable controls implemented.' },
+    { key: 'trustCenterShowProgramme', dflt: true, label: 'Security practices', desc: 'Plain-English statements grouped by area. A practice appears only when your records evidence it (implemented controls and passing checks); gaps are never published.' },
+    { key: 'trustCenterShowPosture', dflt: false, label: 'Overall posture rating', desc: 'Strong, Developing or Improving, from the latest scan. Never the numeric score.' },
+    { key: 'trustCenterShowActivity', dflt: true, label: 'Programme activity', desc: 'When the last internal audit, management review, penetration test and staff training took place (last 15 months only), and daily automated checks if the scheduled monitor runs.' },
+    { key: 'trustCenterShowDocuments', dflt: true, label: 'Documents', desc: 'The documents listed below, each either public (with a link) or available on request by email.' },
+    { key: 'trustCenterShowSubProcessors', dflt: false, label: 'Sub-processors', desc: 'Only the vendors switched on below, with what they do and the information they handle.' },
+    { key: 'trustCenterShowFaq', dflt: false, label: 'FAQ from your answer library', desc: 'Up to eight approved questionnaire answers whose evidence verdict is Yes, most-used first.' }
   ];
+  function tcOn(key) {
+    var t = TRUST_CENTER_TOGGLES.find(function (x) { return x.key === key; });
+    var v = S.settings && S.settings[key];
+    return v === 'true' || (v !== 'false' && !!(t && t.dflt));
+  }
+  async function saveTrustDocs(docs) {
+    var v = JSON.stringify(docs.slice(0, 40));
+    S.settings.trustCenterDocuments = v;
+    try { await Store.setSetting('trustCenterDocuments', v); } catch (e) { warn(e); }
+    renderTrustCenter();
+  }
+  function tcDocs() {
+    try { var a = JSON.parse((S.settings && S.settings.trustCenterDocuments) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
 
   /* Every App.xxx action name that writes tenant data (adds/edits a
      register row, toggles/sets a control or setting, verifies, uploads,
@@ -831,7 +853,7 @@ function showModal(opts) {
     'bulkActStatus', 'bulkActPriority', 'bulkActOwner',
     'bulkVendorCriticality', 'bulkVendorOwner', 'bulkVendorReviewed',
     'bulkDocStatus', 'bulkDocOwner',
-    'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
+    'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter', 'addTrustDoc', 'removeTrustDoc', 'addApprovedPoliciesToTrust',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'generateDocumentSet', 'approveDraftSet', 'saveTeamsWebhook', 'clearTeamsWebhook', 'toggleTeamsSetting',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
@@ -9428,7 +9450,9 @@ function showModal(opts) {
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ' + icon('flag') : '') + '</td>' +
         '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
-        '<td><span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span></td></tr>';
+        '<td>' + (!READONLY && (!v.questionnaireStatus || v.questionnaireStatus === 'Not sent')
+          ? '<button class="btn ghost sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>'
+          : '<span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span>') + '</td></tr>';
     }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No vendors match this filter. Add one above.', cta: { label: '+ Add vendor', action: 'App.toggleAddVendor' } });
     renderVendorBulkBar();
     revealRows(wrap);
@@ -11581,11 +11605,22 @@ function showModal(opts) {
     var togEl = document.getElementById('tcTogglesRows');
     if (!togEl) return;
     togEl.innerHTML = TRUST_CENTER_TOGGLES.map(function (t) {
-      var on = S.settings[t.key] === 'true';
+      var on = tcOn(t.key);
       return '<div class="card fw-admin-row"><div><b>' + esc(t.label) + '</b><p>' + esc(t.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(t.label) + '" data-action="App.toggleTrustCenterSetting" data-id="' + t.key + '"></button></div>';
     }).join('');
-    document.getElementById('tcCompanyName').value = (S.settings && S.settings.trustCenterCompanyName) || '';
-    document.getElementById('tcContactEmail').value = (S.settings && S.settings.trustCenterContactEmail) || '';
+    var setVal = function (id, key) { var el = document.getElementById(id); if (el) el.value = (S.settings && S.settings[key]) || ''; };
+    setVal('tcCompanyName', 'trustCenterCompanyName');
+    setVal('tcContactEmail', 'trustCenterContactEmail');
+    setVal('tcTagline', 'trustCenterTagline');
+    setVal('tcDataLocation', 'trustCenterDataLocation');
+
+    var dRows = document.getElementById('tcDocRows');
+    if (dRows) {
+      var docs = tcDocs();
+      dRows.innerHTML = docs.length ? docs.map(function (d, i) {
+        return '<div class="d-kv"><span>' + esc(d.name) + ' <span class="src">— ' + (d.access === 'public' && d.url ? 'public' : 'on request') + '</span></span><button class="btn ghost sm" data-action="App.removeTrustDoc" data-id="' + i + '">Remove</button></div>';
+      }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No documents listed yet. Add your certificate, policies, or a penetration test summary; mark sensitive ones "on request".</p>';
+    }
 
     var vRows = document.getElementById('tcVendorRows');
     if (vRows) {
@@ -11594,6 +11629,49 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(v.name) + ' <span class="src">— ' + esc(v.service) + '</span></span><button class="toggle' + (v.publicListed ? ' on' : '') + '" role="switch" aria-checked="' + (v.publicListed ? 'true' : 'false') + '" aria-label="' + esc(v.name + ' publicly listed') + '" data-action="App.toggleVendorPublicListed" data-id="' + v.id + '"></button></div>';
       }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No vendors in the register yet.</p>';
     }
+  }
+
+  /* Everything trustCenterModel() needs, read from S. */
+  function trustCenterInput() {
+    var today = new Date().toISOString().slice(0, 10);
+    var allFw = entitledFrameworks();
+    var fwStats = {};
+    allFw.forEach(function (fw) { fwStats[fw] = { pct: window.CheckpointLib.readinessPct(frameworkAppRows(fw)) }; });
+    var targets = String((S.settings && S.settings.targetFrameworks) || '').split(',').filter(Boolean);
+    var pursued = window.CheckpointLib.pursuedFrameworks(allFw, fwStats, targets);
+    var certs = certRecords();
+    var latest = function (rows, pick) { return rows.map(pick).filter(function (d) { return /^\d{4}-\d{2}-\d{2}/.test(d || '') && d.slice(0, 10) <= today; }).map(function (d) { return d.slice(0, 10); }).sort().pop() || ''; };
+    var scans = S.scans || [];
+    var last = scans[scans.length - 1];
+    var auto = scans.filter(function (x) { return x.source === 'automated'; }).pop();
+    return {
+      today: today,
+      company: (S.settings && S.settings.trustCenterCompanyName) || clientDisplayLabel(),
+      tagline: (S.settings && S.settings.trustCenterTagline) || '',
+      contactEmail: (S.settings && S.settings.trustCenterContactEmail) || '',
+      dataLocation: (S.settings && S.settings.trustCenterDataLocation) || '',
+      logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
+      accent: clientBrandColor(),
+      show: { certs: tcOn('trustCenterShowCerts'), pct: tcOn('trustCenterShowSoaPct'), programme: tcOn('trustCenterShowProgramme'), posture: tcOn('trustCenterShowPosture'), activity: tcOn('trustCenterShowActivity'), documents: tcOn('trustCenterShowDocuments'), subprocessors: tcOn('trustCenterShowSubProcessors'), faq: tcOn('trustCenterShowFaq') },
+      frameworks: allFw.map(function (fw) { return { fw: fw, name: fwName(fw), pct: fwStats[fw].pct, pursued: pursued.indexOf(fw) >= 0 || !!(certs[fw] && certs[fw].issued) }; }),
+      certs: certs,
+      stage1Target: (S.settings && S.settings.stage1TargetDate) || '',
+      ctx: qrContext(),
+      documents: tcDocs(),
+      vendors: S.vendors || [],
+      answers: S.answers || [],
+      activity: {
+        monitoring: !!(auto && window.CheckpointLib.daysBetweenDateStr(auto.date, today) <= 7),
+        internalAudit: latest((S.audits || []).filter(function (a) { return a.status === 'Completed'; }), function (a) { return a.completed; }),
+        managementReview: latest(S.reviews || [], function (r) { return r.date; }),
+        pentest: latest((S.calendar || []).filter(function (c) { return /penetration|pen ?test/i.test((c.title || '') + ' ' + (c.category || '')); }), function (c) { return c.lastCompleted; }),
+        training: latest(S.training || [], function (t) { return t.completed; })
+      },
+      posture: last ? { score: last.score, automated: !!(auto && window.CheckpointLib.daysBetweenDateStr(auto.date, today) <= 7) } : null
+    };
+  }
+  function trustCenterPage() {
+    return window.CheckpointLib.trustCenterHtml(window.CheckpointLib.trustCenterModel(trustCenterInput()));
   }
 
   function renderAuditorPack() {
@@ -19582,24 +19660,90 @@ function showModal(opts) {
     },
 
     toggleTrustCenterSetting: async function (key) {
-      var next = S.settings[key] === 'true' ? 'false' : 'true';
+      var next = tcOn(key) ? 'false' : 'true';
       S.settings[key] = next;
       try { await Store.setSetting(key, next); } catch (e) { warn(e); }
       renderTrustCenter();
     },
 
     saveTrustCenterSettings: async function () {
-      var name = document.getElementById('tcCompanyName').value.trim();
-      var email = document.getElementById('tcContactEmail').value.trim();
-      S.settings.trustCenterCompanyName = name;
-      S.settings.trustCenterContactEmail = email;
+      var vals = {
+        trustCenterCompanyName: document.getElementById('tcCompanyName').value.trim(),
+        trustCenterContactEmail: document.getElementById('tcContactEmail').value.trim(),
+        trustCenterTagline: document.getElementById('tcTagline').value.trim().slice(0, 300),
+        trustCenterDataLocation: document.getElementById('tcDataLocation').value.trim().slice(0, 120)
+      };
+      if (vals.trustCenterContactEmail && !isValidEmail(vals.trustCenterContactEmail)) { toast('Enter a valid contact email, or leave it blank.', 'error'); return; }
       busy(true);
-      try {
-        await Store.setSetting('trustCenterCompanyName', name);
-        await Store.setSetting('trustCenterContactEmail', email);
-      } catch (e) { warn(e); }
+      try { for (var k in vals) { S.settings[k] = vals[k]; await Store.setSetting(k, vals[k]); } } catch (e) { warn(e); }
       busy(false);
       toast('Trust Center settings saved');
+    },
+
+    addTrustDoc: async function () {
+      var v = await showModal({
+        title: 'Add a document',
+        message: 'Public documents need an https link anyone can open. Anything sensitive (full policies, a SOC 2 report, a penetration test) should be "on request": readers email your security contact for it.',
+        fields: [
+          { id: 'name', label: 'Document name', value: '', placeholder: 'e.g. ISO/IEC 27001 certificate' },
+          { id: 'access', label: 'Access', type: 'select', value: 'request', options: [{ value: 'request', label: 'Available on request' }, { value: 'public', label: 'Public (link below)' }] },
+          { id: 'url', label: 'Link (public documents only)', value: '', placeholder: 'https://' }
+        ],
+        confirmText: 'Add',
+        validate: function (x) {
+          if (!String(x.name || '').trim()) return 'Give the document a name.';
+          if (x.access === 'public' && !/^https:\/\/\S+$/i.test(String(x.url || '').trim())) return 'A public document needs a link starting with https://.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var docs = tcDocs().concat([{ name: v.name.trim(), access: v.access, url: v.access === 'public' ? v.url.trim() : '' }]);
+      await saveTrustDocs(docs);
+    },
+    removeTrustDoc: async function (i) {
+      var docs = tcDocs();
+      var d = docs[Number(i)];
+      if (!d) return;
+      docs.splice(Number(i), 1);
+      await saveTrustDocs(docs);
+      toast('Removed ' + esc(d.name));
+    },
+    /* Lists each approved policy as "available on request". */
+    addApprovedPoliciesToTrust: async function () {
+      var have = {};
+      tcDocs().forEach(function (d) { have[String(d.name).toLowerCase()] = 1; });
+      var add = (window._docs || []).filter(function (d) { return docStatusOf(d) === 'Approved' && /polic/i.test((d.category || '') + ' ' + (d.name || '')); })
+        .map(function (d) { return String(d.name || '').replace(/\.(html?|docx?|pdf)$/i, ''); })
+        .filter(function (n) { return n && !have[n.toLowerCase()]; })
+        .map(function (n) { return { name: n, access: 'request', url: '' }; });
+      if (!add.length) { toast('No approved policies to add. Approve policies on the Documents page first.'); return; }
+      await saveTrustDocs(tcDocs().concat(add));
+      toast(add.length + ' approved polic' + (add.length === 1 ? 'y' : 'ies') + ' listed as available on request');
+    },
+
+    previewTrustCenter: function () {
+      var el = document.getElementById('tcResult');
+      if (!el) return;
+      el.innerHTML = '<div class="card"><h3>Preview</h3><p class="src" style="margin:4px 0 10px">Exactly what readers will see. Nothing is published until you generate the page and share it.</p><iframe id="tcPreview" title="Trust Center preview" sandbox="" style="width:100%;height:720px;border:1px solid var(--line);border-radius:8px;background:#fff"></iframe></div>';
+      document.getElementById('tcPreview').srcdoc = trustCenterPage();
+    },
+
+    generateTrustCenter: async function () {
+      if (Store.kind === 'demo') { toast('Saving files isn\'t available in demo mode. Use Preview to see the page.'); App.previewTrustCenter(); return; }
+      busy(true);
+      try {
+        var html = trustCenterPage();
+        var filename = 'trust-center-' + new Date().toISOString().slice(0, 10) + '.html';
+        var file = new File([html], filename, { type: 'text/html;charset=utf-8' });
+        var uploaded = await Store.uploadDocument(file, 'Trust Center');
+        audit('Trust Center page generated', 'Document', filename, '', 'Sections: ' + TRUST_CENTER_TOGGLES.filter(function (t) { return tcOn(t.key); }).map(function (t) { return t.label; }).join(', '));
+        log('Trust Center page generated: <b>' + esc(filename) + '</b>.');
+        toast('Trust Center page generated');
+        App.previewTrustCenter();
+        var el = document.getElementById('tcResult');
+        if (el) el.insertAdjacentHTML('afterbegin', '<div class="card" style="margin-bottom:12px"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents \u2192 Trust Center as <b>' + esc(filename) + '</b>.' + (uploaded && uploaded.webUrl && isSafeUrl(uploaded.webUrl) ? ' <a class="lnk" href="' + esc(uploaded.webUrl) + '" target="_blank" rel="noopener">Open it</a>.' : '') + ' To publish it, host the file on your website (for example trust.yourcompany.com) or share it from SharePoint with "Anyone with the link".</p></div>');
+      } catch (e) { warn(e); }
+      busy(false);
     },
 
     toggleVendorPublicListed: async function (id) {
@@ -19612,69 +19756,6 @@ function showModal(opts) {
       renderTrustCenter();
     },
 
-    generateTrustCenter: async function () {
-      if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
-      busy(true);
-      try {
-        var clientLabel = clientDisplayLabel();
-        var companyName = S.settings.trustCenterCompanyName || clientLabel;
-        var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-        var entitled = entitledFrameworks();
-
-        var certsHtml = '';
-        if (S.settings.trustCenterShowCerts === 'true') {
-          certsHtml = '<h2>Certifications &amp; frameworks</h2><div class="tc-grid">' + entitled.map(function (fw) {
-            var rows = frameworkAppRows(fw);
-            var pct = window.CheckpointLib.readinessPct(rows);
-            return '<div class="tc-card"><b>' + esc(fwName(fw)) + '</b>' + (S.settings.trustCenterShowSoaPct === 'true' ? '<span>' + pct + '% of applicable controls implemented</span>' : '') + '</div>';
-          }).join('') + '</div>';
-        }
-
-        var postureHtml = '';
-        if (S.settings.trustCenterShowPosture === 'true') {
-          var last = S.scans[S.scans.length - 1];
-          var postureBand = !last ? 'Not yet assessed' : last.score >= 80 ? 'Strong' : last.score >= 50 ? 'Developing' : 'Needs improvement';
-          var autoScans = S.scans.filter(function (s) { return s.source === 'automated'; });
-          postureHtml = '<h2>Security posture</h2><p class="tc-p"><b>' + esc(postureBand) + '.</b> ' + (autoScans.length ? 'Posture is continuously monitored with automated daily checks.' : 'Posture is assessed via periodic internal review.') + '</p>';
-        }
-
-        var subsHtml = '';
-        if (S.settings.trustCenterShowSubProcessors === 'true') {
-          var pub = (S.vendors || []).filter(function (v) { return v.publicListed; });
-          subsHtml = '<h2>Sub-processors</h2>' + (pub.length
-            ? '<table class="tc-table"><thead><tr><th>Name</th><th>Service</th></tr></thead><tbody>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</tbody></table>'
-            : '<p class="tc-p">No sub-processors currently published.</p>');
-        }
-
-        var contactHtml = S.settings.trustCenterContactEmail ? '<h2>Contact</h2><p class="tc-p">Security questions: <a href="mailto:' + esc(S.settings.trustCenterContactEmail) + '">' + esc(S.settings.trustCenterContactEmail) + '</a></p>' : '';
-
-        var html = buildStandaloneHtml({
-          title: esc(companyName) + ' — Trust Center',
-          /* Public page — client logo + accent yes, classification
-             marking deliberately NOT (it's built to be shared). */
-          logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
-          accent: clientBrandColor(),
-          bodyHtml: '<div class="tc-mast"><h1>' + esc(companyName) + '</h1><p>Trust Center · generated ' + today + '</p></div>' +
-            certsHtml + postureHtml + subsHtml + contactHtml +
-            '<div class="tc-foot">This page reflects information as of its generation date (' + today + ') and must be regenerated to stay current. Prepared with Compliance365 Checkpoint.</div>',
-          extraCss: STANDALONE_CSS
-        });
-
-        var filename = 'trust-center-' + new Date().toISOString().slice(0, 10) + '.html';
-        var file = new File([html], filename, { type: 'text/html;charset=utf-8' });
-        var uploaded = await Store.uploadDocument(file, 'Trust Center');
-        audit('Trust Center page generated', 'Document', filename, '',
-          'certs:' + S.settings.trustCenterShowCerts + ' soaPct:' + S.settings.trustCenterShowSoaPct + ' posture:' + S.settings.trustCenterShowPosture + ' subProcessors:' + S.settings.trustCenterShowSubProcessors);
-        log('Trust Center page generated: <b>' + esc(filename) + '</b>.');
-        toast('Trust Center page generated');
-        document.getElementById('tcResult').innerHTML =
-          '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Trust Center as <b>' + esc(filename) + '</b>.</p>' +
-          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ' + icon('external') + '</a></p>' +
-          '<h4 style="margin-top:14px;font-size:13px">Next step — make it public</h4>' +
-          '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b> → <b>People with the link can view</b> → <b>Anyone</b> (or whichever sharing policy this tenant allows), then paste that link on your website. Checkpoint never sets sharing permissions itself — this is a deliberate SharePoint action you take.</p></div>';
-      } catch (e) { warn(e); }
-      busy(false);
-    },
 
     generateAuditorPack: async function () {
       if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }

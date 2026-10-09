@@ -1798,14 +1798,21 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   `PR.IP`, `PR.PT`, `RS.RP`, bare `GV`) that don't exist in this app's
   CSF 2.0 `nistcsf` registry — retitled to the correct 2.0 equivalents.
 - **Trust Center**: generates a single, fully self-contained, public
-  read-only HTML page — certifications/frameworks held, SoA
-  implementation %, a qualitative posture rating (never the raw numeric
-  score), and an opt-in sub-processor list — into a new "Trust Center"
-  Documents category. Every section is a practitioner-controlled toggle
-  (Frameworks view-style switches, off by default for the sub-processor
-  list specifically, since that's the most sensitive item), and
-  sub-processors are opted in individually per vendor from the Vendor
-  risk register. **Checkpoint never makes anything public itself** — the
+  read-only HTML page (`trustCenterModel()`/`trustCenterHtml()` in
+  lib.js) into a "Trust Center" Documents category, with a sandboxed
+  in-app Preview (works in demo mode). Sections: certifications
+  (Certified only when a current certificate is recorded on the
+  Certification page; otherwise "in progress" with the Stage 1 target
+  and, optionally, implementation %), security practices grouped by
+  area (each a `QUESTION_TOPICS` statement shown only when that topic's
+  evidence verdict is Yes; gaps are never published), programme
+  activity (internal audit, management review, penetration test and
+  training within 15 months; daily checks if the scheduled monitor
+  runs), documents (public with an https link, or on request by email
+  to the security contact), sub-processors, privacy and data location,
+  and an FAQ from approved answers. Every section is a toggle;
+  sub-processors and the FAQ are off by default, and sub-processors are
+  opted in individually per vendor from the Vendor risk register. **Checkpoint never makes anything public itself** — the
   generated file depends on nothing outside itself (system fonts only,
   no reference to this app's own CSS/JS, since it's opened completely
   outside Checkpoint) and is saved to this tenant's own Documents

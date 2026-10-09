@@ -953,9 +953,16 @@ window.DEFAULT_SETTINGS = {
   trustCenterShowCerts: 'true',
   trustCenterShowSoaPct: 'true',
   trustCenterShowSubProcessors: 'false',
-  trustCenterShowPosture: 'true',
+  trustCenterShowPosture: 'false',
   trustCenterCompanyName: '',
   trustCenterContactEmail: '',
+  trustCenterShowProgramme: 'true',
+  trustCenterShowActivity: 'true',
+  trustCenterShowDocuments: 'true',
+  trustCenterShowFaq: 'false',
+  trustCenterTagline: '',
+  trustCenterDataLocation: '',
+  trustCenterDocuments: '[]',
   /* Email digest — opt-in, off by default. digestRecipients is a
      comma-separated list, same format App.emailStatusUpdate already
      collects ad hoc; digestFrequency is 'Weekly' or 'Monthly', used to
@@ -1753,6 +1760,11 @@ window.DemoStore = (function () {
       /* A monthly security review already running: two meetings held,
          so the card shows its trend and the next agenda. */
       settings: Object.assign({}, window.DEFAULT_SETTINGS, {
+        trustCenterContactEmail: 'security@meridianhealth.example',
+        trustCenterTagline: 'We protect patient and clinic data with an ISO 27001 information security programme, run and checked every day.',
+        trustCenterDataLocation: 'Australia (Microsoft Azure Australia East)',
+        trustCenterShowSubProcessors: 'true',
+        trustCenterDocuments: JSON.stringify([{ name: 'Information Security Policy (summary)', access: 'request', url: '' }, { name: 'Penetration test summary 2026', access: 'request', url: '' }, { name: 'Data processing agreement template', access: 'request', url: '' }]),
         securityReviewSetup: JSON.stringify({ chair: 'Mei Chen', owner: 'Sam Okafor', ownerEmail: 's.okafor@meridianhealth.example', facilitator: 'Compliance365', emails: 'm.chen@meridianhealth.example, s.okafor@meridianhealth.example, k.patel@meridianhealth.example', week: 2, weekday: 2, time: '10:00', teamsLink: '', autoSend: 'false', startDate: daysFrom(-70) }),
         securityReviews: JSON.stringify([
           { id: 'SR-001', n: 1, kind: 'kickoff', date: daysFrom(-63), time: '10:00', status: 'Held', preparedAt: daysFrom(-66), present: 'Mei Chen, Sam Okafor, Kim Patel', notes: 'Agreed terms of reference and roles. Baseline recorded.', actions: ['ACT-003'], pack: demoSecurityPack(daysFrom(-63), daysFrom(-94), 41, null, 6, 4, 2) },

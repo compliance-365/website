@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.141.0',
+    date: '2026-10-09',
+    entries: [
+      'A new Trust Center page for your customers and prospects, designed to look like the trust centres of larger software companies: a branded header with your logo and colours, Request security documents and Contact buttons, and sections for compliance, security practices, programme activity, documents, sub-processors, privacy and an FAQ. It works on phones, prints cleanly and follows the reader\u2019s light or dark setting.',
+      'Nothing on it is claimed that your records do not support. A standard shows as Certified only when a current certificate is recorded; otherwise it shows as in progress, with your Stage 1 target. Each security practice is shown only when your controls and posture checks evidence it, the same test a questionnaire answer gets, and gaps are never published.',
+      'List the documents customers can see: public ones with a link, sensitive ones (policies, penetration test summary, SOC 2 report) available on request by email to your security contact. One click lists every approved policy.',
+      'Preview shows exactly what readers will see, including in demo mode, before you generate the page and decide where to publish it.',
+      'Vendor risk: a vendor that has not been sent a security questionnaire now has a Send questionnaire button in the register itself. Before, the button was only inside the vendor\u2019s side panel.'
+    ]
+  },
+  {
     version: '1.140.2',
     date: '2026-10-09',
     entries: [

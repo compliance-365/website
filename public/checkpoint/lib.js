@@ -1760,7 +1760,9 @@
      Verdicts: 'Yes' | 'Partial' | 'No' | 'Not evidenced'. */
   function assessQuestion(question, ctx) {
     ctx = ctx || {};
-    var topics = matchQuestionTopics(question);
+    /* ctx.topicKeys: assess named topics directly (the Trust Center),
+       rather than the topics matched in a question's wording. */
+    var topics = ctx.topicKeys ? QUESTION_TOPICS.filter(function (t) { return ctx.topicKeys.indexOf(t.key) >= 0; }) : matchQuestionTopics(question);
     var controlsById = {};
     (ctx.controls || []).forEach(function (c) { controlsById[c.id] = c; });
     var results = ctx.results || {};
@@ -1844,6 +1846,226 @@
       controls: controls, checks: checks, evidence: evidence, cautions: cautions,
       failing: fail.map(function (k) { return k.label; })
     };
+  }
+
+  /* ===== Trust Center =====
+     A public page built only from the client's own records. Every
+     security statement is a QUESTION_TOPICS "yes" line, shown only when
+     that topic's verdict is Yes (the same evidence test a questionnaire
+     answer gets); a certification is shown as Certified only when a
+     certificate is recorded and unexpired. Nothing is invented and no
+     gap is published: a practice without evidence is simply left out. */
+  var TRUST_AREAS = [
+    { key: 'identity', label: 'Identity & access', topics: ['mfa', 'access', 'accessreview', 'offboarding', 'password'] },
+    { key: 'data', label: 'Data protection', topics: ['encryptrest', 'encrypttransit', 'encryption', 'classification', 'dlp', 'retention', 'sharing'] },
+    { key: 'endpoint', label: 'Devices & endpoints', topics: ['devices', 'malware', 'vuln'] },
+    { key: 'infra', label: 'Infrastructure & monitoring', topics: ['network', 'hosting', 'logging', 'physical'] },
+    { key: 'resilience', label: 'Resilience & incident response', topics: ['backup', 'bcp', 'incident'] },
+    { key: 'dev', label: 'Secure development', topics: ['sdlc', 'change', 'secrets', 'dependencies', 'pentest'] },
+    { key: 'people', label: 'People', topics: ['training', 'phishing', 'screening', 'nda'] },
+    { key: 'governance', label: 'Governance & risk', topics: ['policy', 'risk', 'audit', 'vendor', 'privacy', 'ai'] }
+  ];
+  var TRUST_CERT_NAMES = { iso27001: 'ISO/IEC 27001', iso27701: 'ISO/IEC 27701', iso42001: 'ISO/IEC 42001' };
+
+  /* in = {
+       today, company, tagline, contactEmail, logoUrl, accent, dataLocation,
+       show: { certs, pct, programme, documents, subprocessors, faq, activity, posture },
+       frameworks: [{ fw, name, pct, pursued }],
+       certs: { fw: { body, number, scope, issued, expires } },
+       stage1Target: 'YYYY-MM-DD' | '',
+       ctx: assessQuestion context (controls, results, ...),
+       documents: [{ name, access: 'public'|'request', url }],
+       vendors: [{ name, service, dataCategories, publicListed }],
+       answers: [{ question, answer, verdict, approvedDate, timesUsed }],
+       activity: { internalAudit, managementReview, pentest, training, monitoring: bool },
+       posture: { score, automated } } */
+  function trustCenterModel(input) {
+    var i = input || {}, show = i.show || {}, today = i.today || '';
+    var out = {
+      company: String(i.company || '').trim() || 'Our organisation',
+      tagline: String(i.tagline || '').trim(),
+      contactEmail: /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(String(i.contactEmail || '').trim()) ? String(i.contactEmail).trim() : '',
+      logoUrl: /^data:image\//.test(i.logoUrl || '') ? i.logoUrl : '',
+      accent: /^#[0-9a-fA-F]{6}$/.test(i.accent || '') ? i.accent : '#BE4A1E',
+      generated: today, dataLocation: String(i.dataLocation || '').trim(),
+      frameworks: [], areas: [], documents: [], subprocessors: [], faq: [], activity: [], posture: null
+    };
+    if (show.certs !== false) {
+      (i.frameworks || []).forEach(function (f) {
+        var c = (i.certs || {})[f.fw];
+        var expires = c && (c.expires || (c.issued ? addMonthsIso(c.issued, 36) : ''));
+        if (c && c.issued && (!expires || expires >= today)) {
+          out.frameworks.push({ fw: f.fw, name: TRUST_CERT_NAMES[f.fw] || f.name, status: 'certified', label: 'Certified', body: c.body || '', number: c.number || '', scope: c.scope || '', issued: c.issued, expires: expires || '' });
+        } else if (f.pursued) {
+          var target = TRUST_CERT_NAMES[f.fw] && i.stage1Target && i.stage1Target >= today ? i.stage1Target : '';
+          out.frameworks.push({ fw: f.fw, name: TRUST_CERT_NAMES[f.fw] || f.name, status: 'progress', label: TRUST_CERT_NAMES[f.fw] ? 'Certification in progress' : 'Programme in progress', target: target, pct: show.pct ? Math.max(0, Math.min(100, Math.round(Number(f.pct) || 0))) : null });
+        }
+      });
+    }
+    if (show.programme !== false) {
+      var byKey = {};
+      QUESTION_TOPICS.forEach(function (t) { byKey[t.key] = t; });
+      TRUST_AREAS.forEach(function (a) {
+        var items = [];
+        a.topics.forEach(function (k) {
+          var t = byKey[k];
+          if (!t) return;
+          var r = assessQuestion(t.label, Object.assign({}, i.ctx || {}, { topicKeys: [k], library: [] }));
+          if (r.verdict === 'Yes') items.push({ topic: t.label, statement: t.yes, checked: r.checks.filter(function (x) { return x.result === 'pass'; }).length > 0 });
+        });
+        if (items.length) out.areas.push({ key: a.key, label: a.label, items: items });
+      });
+    }
+    if (show.documents !== false) {
+      var seen = {};
+      (i.documents || []).forEach(function (d) {
+        var name = String(d && d.name || '').trim();
+        if (!name || seen[name.toLowerCase()]) return;
+        seen[name.toLowerCase()] = 1;
+        var url = /^https:\/\/[^\s"<>]+$/i.test(String(d.url || '').trim()) ? String(d.url).trim() : '';
+        var access = d.access === 'public' && url ? 'public' : 'request';
+        out.documents.push({ name: name, access: access, url: access === 'public' ? url : '' });
+      });
+    }
+    if (show.subprocessors) {
+      out.subprocessors = (i.vendors || []).filter(function (v) { return v && v.publicListed; }).map(function (v) {
+        return { name: v.name || '', service: v.service || '', data: (v.dataCategories || []).filter(function (c) { return c && !/^public/i.test(c); }).join(', ') };
+      });
+    }
+    if (show.faq) {
+      out.faq = (i.answers || []).filter(function (a) { return a && a.verdict === 'Yes' && a.approvedDate && String(a.question || '').trim() && String(a.answer || '').trim(); })
+        .sort(function (a, b) { return (Number(b.timesUsed) || 0) - (Number(a.timesUsed) || 0) || String(b.approvedDate).localeCompare(String(a.approvedDate)); })
+        .slice(0, 8).map(function (a) { return { q: String(a.question).trim(), a: String(a.answer).trim() }; });
+    }
+    if (show.activity !== false) {
+      var act = i.activity || {};
+      var within = function (d, months) { return d && d <= today && d >= addMonthsIso(today, -months); };
+      if (act.monitoring) out.activity.push({ label: 'Security configuration checked automatically', when: 'Daily' });
+      if (within(act.internalAudit, 15)) out.activity.push({ label: 'Internal audit of the security programme', date: act.internalAudit });
+      if (within(act.managementReview, 15)) out.activity.push({ label: 'Management review by leadership', date: act.managementReview });
+      if (within(act.pentest, 15)) out.activity.push({ label: 'Independent penetration test', date: act.pentest });
+      if (within(act.training, 15)) out.activity.push({ label: 'Staff security awareness training', date: act.training });
+    }
+    if (show.posture && i.posture && i.posture.score != null) {
+      var s = Number(i.posture.score);
+      out.posture = { band: s >= 80 ? 'Strong' : s >= 50 ? 'Developing' : 'Improving', automated: !!i.posture.automated };
+    }
+    return out;
+  }
+
+  function trustEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function trustDate(d, withDay) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || ''));
+    if (!m) return '';
+    var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return (withDay ? Number(m[3]) + ' ' : '') + months[Number(m[2]) - 1] + ' ' + m[1];
+  }
+
+  /* The page itself: one self-contained HTML file, no scripts, no
+     external requests, readable on a phone, prints cleanly, follows the
+     reader's light/dark preference. */
+  function trustCenterHtml(m) {
+    var e = trustEsc, acc = m.accent;
+    var mail = function (subject) { return m.contactEmail ? 'mailto:' + encodeURIComponent(m.contactEmail).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(subject) : ''; };
+    var reqAll = mail(m.company + ': security documentation request');
+    var nav = [];
+    if (m.frameworks.length) nav.push(['compliance', 'Compliance']);
+    if (m.areas.length) nav.push(['security', 'Security']);
+    if (m.activity.length) nav.push(['activity', 'Activity']);
+    if (m.documents.length) nav.push(['documents', 'Documents']);
+    if (m.subprocessors.length) nav.push(['subprocessors', 'Sub-processors']);
+    if (m.dataLocation) nav.push(['privacy', 'Privacy']);
+    if (m.faq.length) nav.push(['faq', 'FAQ']);
+    var head = '<header class="hero"><div class="wrap">' +
+      '<div class="brand">' + (m.logoUrl ? '<img src="' + e(m.logoUrl) + '" alt="' + e(m.company) + ' logo">' : '<span class="mono" aria-hidden="true">' + e(m.company.charAt(0).toUpperCase()) + '</span>') + '<span class="bname">' + e(m.company) + '</span><span class="tag">Trust Center</span></div>' +
+      '<h1>Security, privacy and compliance at ' + e(m.company) + '</h1>' +
+      '<p class="lede">' + e(m.tagline || 'How we protect the information our customers trust us with: the standards we work to, the practices we follow and the documents available to you.') + '</p>' +
+      '<div class="cta">' + (reqAll ? '<a class="btn" href="' + e(reqAll) + '">Request security documents</a><a class="btn ghost" href="' + e(mail(m.company + ': security question')) + '">Contact our security team</a>' : '') + '</div>' +
+      '<p class="upd">Last updated ' + e(trustDate(m.generated, true)) + '</p>' +
+      '</div>' + (nav.length > 1 ? '<nav class="subnav" aria-label="Sections"><div class="wrap">' + nav.map(function (n) { return '<a href="#' + n[0] + '">' + e(n[1]) + '</a>'; }).join('') + '</div></nav>' : '') + '</header>';
+
+    var sec = [];
+    if (m.frameworks.length) {
+      sec.push('<section id="compliance"><h2>Compliance</h2><p class="sub">The standards our information security programme is built to.</p><div class="grid">' + m.frameworks.map(function (f) {
+        var lines = [];
+        if (f.status === 'certified') {
+          if (f.body) lines.push('Certified by ' + e(f.body));
+          if (f.number) lines.push('Certificate ' + e(f.number));
+          if (f.expires) lines.push('Valid until ' + e(trustDate(f.expires, true)));
+          if (f.scope) lines.push('Scope: ' + e(f.scope));
+        } else {
+          if (f.target) lines.push('Certification audit planned for ' + e(trustDate(f.target)));
+          if (f.pct != null) lines.push(e(f.pct) + '% of applicable controls implemented');
+        }
+        return '<div class="card badge ' + (f.status === 'certified' ? 'ok' : 'prog') + '"><div class="bh"><span class="seal" aria-hidden="true">' + (f.status === 'certified' ? '&#10003;' : '&#9711;') + '</span><div><b>' + e(f.name) + '</b><span class="pill">' + e(f.label) + '</span></div></div>' + (lines.length ? '<ul class="meta">' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>' : '') + '</div>';
+      }).join('') + '</div></section>');
+    }
+    if (m.areas.length || m.posture) {
+      sec.push('<section id="security"><h2>Security practices</h2><p class="sub">Each practice below is confirmed by our own records and, where marked, by an automated check of our systems.</p>' +
+        (m.posture ? '<div class="note"><b>Overall security posture: ' + e(m.posture.band) + '.</b> ' + (m.posture.automated ? 'Our configuration is checked automatically every day.' : 'Our configuration is reviewed regularly.') + '</div>' : '') +
+        '<div class="grid areas">' + m.areas.map(function (a) {
+          return '<div class="card"><h3>' + e(a.label) + '</h3><ul class="ticks">' + a.items.map(function (it) { return '<li><span class="tk" aria-hidden="true">&#10003;</span><span><b>' + e(it.topic) + '.</b> ' + e(it.statement) + (it.checked ? ' <span class="chk">Verified automatically</span>' : '') + '</span></li>'; }).join('') + '</ul></div>';
+        }).join('') + '</div></section>');
+    }
+    if (m.activity.length) {
+      sec.push('<section id="activity"><h2>Programme activity</h2><p class="sub">Our security programme is run, reviewed and tested on a regular cycle.</p><div class="card"><ul class="timeline">' + m.activity.map(function (a) {
+        return '<li><span class="when">' + e(a.when || trustDate(a.date)) + '</span><span>' + e(a.label) + '</span></li>';
+      }).join('') + '</ul></div></section>');
+    }
+    if (m.documents.length) {
+      sec.push('<section id="documents"><h2>Documents</h2><p class="sub">Some documents are available on request, under a confidentiality agreement where needed.</p><div class="card"><ul class="docs">' + m.documents.map(function (d) {
+        var link = d.access === 'public' ? '<a class="btn sm ghost" href="' + e(d.url) + '">View</a>' : (m.contactEmail ? '<a class="btn sm ghost" href="' + e(mail(m.company + ': request for ' + d.name)) + '">Request</a>' : '<span class="muted">On request</span>');
+        return '<li><span class="dicon" aria-hidden="true">&#128196;</span><span class="dname">' + e(d.name) + '<span class="muted">' + (d.access === 'public' ? 'Public' : 'Available on request') + '</span></span>' + link + '</li>';
+      }).join('') + '</ul></div></section>');
+    }
+    if (m.subprocessors.length) {
+      sec.push('<section id="subprocessors"><h2>Sub-processors</h2><p class="sub">Third parties that process information on our behalf.</p><div class="card tbl"><table><thead><tr><th>Provider</th><th>Purpose</th><th>Information handled</th></tr></thead><tbody>' + m.subprocessors.map(function (s) {
+        return '<tr><td><b>' + e(s.name) + '</b></td><td>' + e(s.service) + '</td><td>' + e(s.data || '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div></section>');
+    }
+    if (m.dataLocation) {
+      sec.push('<section id="privacy"><h2>Privacy &amp; data location</h2><div class="card"><p>Customer information is stored in <b>' + e(m.dataLocation) + '</b>.' + (m.contactEmail ? ' For privacy questions or requests about your personal information, contact <a href="' + e(mail(m.company + ': privacy request')) + '">' + e(m.contactEmail) + '</a>.' : '') + '</p></div></section>');
+    }
+    if (m.faq.length) {
+      sec.push('<section id="faq"><h2>Frequently asked questions</h2><div class="faq">' + m.faq.map(function (f) { return '<details class="card"><summary>' + e(f.q) + '</summary><p>' + e(f.a) + '</p></details>'; }).join('') + '</div></section>');
+    }
+    if (!sec.length) sec.push('<section><div class="card"><p>Details of our security programme are available on request' + (m.contactEmail ? ' from <a href="' + e(mail(m.company + ': security question')) + '">' + e(m.contactEmail) + '</a>' : '') + '.</p></div></section>');
+
+    var css = ':root{--acc:' + acc + ';--bg:#f7f8fa;--card:#fff;--ink:#0f172a;--dim:#475569;--faint:#94a3b8;--line:#e2e8f0;--ok:#047857;--okbg:#ecfdf5;--pr:#92400e;--prbg:#fffbeb}' +
+      '@media (prefers-color-scheme:dark){:root{--bg:#0b0f17;--card:#121826;--ink:#e2e8f0;--dim:#a3aec2;--faint:#64748b;--line:#1f2937;--ok:#34d399;--okbg:#06281f;--pr:#fbbf24;--prbg:#2a1e05}}' +
+      '*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}' +
+      '.wrap{max-width:1040px;margin:0 auto;padding:0 24px}a{color:var(--acc)}' +
+      '.hero{background:linear-gradient(135deg,#0b1220 0%,#111a2e 60%,' + acc + ' 160%);color:#fff;padding:36px 0 0}' +
+      '.brand{display:flex;align-items:center;gap:12px;margin-bottom:40px}.brand img{max-height:40px;max-width:170px;object-fit:contain;background:#fff;border-radius:6px;padding:4px 8px}' +
+      '.mono{width:36px;height:36px;border-radius:8px;background:var(--acc);display:grid;place-items:center;font-weight:700}.bname{font-weight:650;font-size:16px}' +
+      '.tag{font-size:11px;letter-spacing:.12em;text-transform:uppercase;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:3px 10px;color:rgba(255,255,255,.85)}' +
+      '.hero h1{font-size:clamp(26px,4vw,40px);line-height:1.15;margin:0 0 14px;max-width:24ch;letter-spacing:-.01em}.lede{color:rgba(255,255,255,.82);font-size:17px;max-width:62ch;margin:0 0 26px}' +
+      '.cta{display:flex;flex-wrap:wrap;gap:10px}.upd{color:rgba(255,255,255,.6);font-size:13px;margin:22px 0 0;padding-bottom:28px}' +
+      '.btn{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 18px;border-radius:8px}.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff}' +
+      '.card .btn.ghost{border-color:var(--line);color:var(--ink)}.btn.sm{padding:6px 12px;font-size:13px}' +
+      '.subnav{border-top:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18)}.subnav .wrap{display:flex;gap:4px;overflow-x:auto}.subnav a{color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;padding:13px 12px;white-space:nowrap}.subnav a:hover{color:#fff}' +
+      'main{padding:12px 0 40px}section{padding-top:36px;scroll-margin-top:8px}h2{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}.sub{color:var(--dim);margin:0 0 18px}' +
+      '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}' +
+      '.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;box-shadow:0 1px 2px rgba(15,23,42,.04)}' +
+      '.card h3{font-size:16px;margin:0 0 12px}.bh{display:flex;gap:14px;align-items:flex-start}.bh b{display:block;font-size:17px}' +
+      '.seal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:18px;font-weight:700}.ok .seal{background:var(--okbg);color:var(--ok)}.prog .seal{background:var(--prbg);color:var(--pr)}' +
+      '.pill{display:inline-block;margin-top:4px;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px}.ok .pill{background:var(--okbg);color:var(--ok)}.prog .pill{background:var(--prbg);color:var(--pr)}' +
+      '.meta{list-style:none;margin:14px 0 0;padding:12px 0 0;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}.meta li{padding:2px 0}' +
+      '.note{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:10px;padding:14px 18px;margin-bottom:16px}' +
+      '.ticks{list-style:none;margin:0;padding:0}.ticks li{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px;color:var(--dim)}.ticks li:first-child{border-top:0}.ticks b{color:var(--ink)}' +
+      '.tk{flex:none;color:var(--ok);font-weight:700}.chk{display:inline-block;font-size:11px;font-weight:600;color:var(--ok);background:var(--okbg);border-radius:999px;padding:0 8px;margin-left:4px}' +
+      '.timeline{list-style:none;margin:0;padding:0}.timeline li{display:flex;gap:18px;padding:9px 0;border-top:1px solid var(--line)}.timeline li:first-child{border-top:0}.when{flex:none;width:130px;color:var(--dim);font-size:13.5px}' +
+      '.docs{list-style:none;margin:0;padding:0}.docs li{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.docs li:first-child{border-top:0}.dname{flex:1;display:flex;flex-direction:column;font-weight:600}.muted{color:var(--faint);font-size:12.5px;font-weight:400}' +
+      '.tbl{padding:0;overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:12px 20px;border-bottom:1px solid var(--line)}td{padding:12px 20px;border-bottom:1px solid var(--line);color:var(--dim);vertical-align:top}tr:last-child td{border-bottom:0}td b{color:var(--ink)}' +
+      '.faq{display:grid;gap:10px}.faq summary{cursor:pointer;font-weight:600}.faq p{color:var(--dim);margin:10px 0 0}' +
+      'footer{border-top:1px solid var(--line);color:var(--faint);font-size:12.5px;padding:22px 0 40px}' +
+      '@media (max-width:600px){.wrap{padding:0 16px}.brand{margin-bottom:28px}.timeline li{flex-direction:column;gap:2px}.when{width:auto}th,td{padding:10px 14px}}' +
+      '@media print{.hero{background:none;color:#000}.hero .lede,.upd{color:#333}.cta,.subnav{display:none}.card{box-shadow:none;break-inside:avoid}body{background:#fff}}';
+
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + e(m.company) + ' Trust Center</title>' +
+      '<meta name="description" content="' + e('Security, privacy and compliance at ' + m.company) + '"><style>' + css + '</style></head><body>' +
+      head + '<main class="wrap">' + sec.join('') + '</main>' +
+      '<footer><div class="wrap">This page reflects ' + e(m.company) + '’s records as of ' + e(trustDate(m.generated, true)) + '. Certifications are shown only where a current certificate is held. ' + (m.contactEmail ? 'Questions: <a href="' + e(mail(m.company + ': security question')) + '">' + e(m.contactEmail) + '</a>.' : '') + '</div></footer></body></html>';
   }
 
 
@@ -11501,7 +11723,7 @@
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
-    srDate: srDate, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
+    srDate: srDate, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,
