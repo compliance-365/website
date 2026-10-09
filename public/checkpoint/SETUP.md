@@ -2175,6 +2175,12 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   deliberately absent: Chrome exposes no page counter to HTML content,
   and a footer reading "Page 1" on all eight pages is worse than one
   that does not pretend to number them.
+
+  *Update (1.146.0):* current Chrome and Edge (131+) do print `@page`
+  margin boxes. The Enterprise layout (now the default) and every
+  report use them for the running header and footer, which gives a
+  true "Page X of Y" on every physical page. Standard, Formal and
+  Minimal keep the `position:fixed` marks described above.
 - **AWS posture collector** (optional, `public/checkpoint/aws/`): a
   Lambda a client deploys into their **own** AWS account that runs ten
   AWS posture checks and writes them into their **own** SharePoint —
@@ -2478,34 +2484,34 @@ unavailable in demo mode) never blocks the logo from being saved and
 used, since the Settings write already succeeded by that point.
 
 **Paged-media print CSS**: `@page { size: A4; margin: ... }` reserves
-blank margin space on every printed page; the running header (client
-logo + name + report title, classification) and footer (document title
-+ version, footer text or classification, generated date) use
-`position: fixed` with a negative offset into that
-margin band, rather than CSS Paged Media's `@page` margin boxes —
-neither Chrome nor Edge implements those at all, while a `position:
-fixed` element genuinely does repeat on every physical page when
-printed in both (they share the same rendering engine). The footer's
-left slot carries the document identity (title + version) rather than
-a page number: a CSS counter on a fixed element resolves once at its
-DOM position, so it printed the same (wrong) number on every page —
-an accurate identity beats an inaccurate count until reports move to
-a real pagination engine (headless Chromium, below). On screen, the
-identical markup renders once, inline, at the top/bottom of a normal
-scrollable document — the same popup preview also serves as Checkpoint's
-on-screen "view mode", no separate code path. Every "page" (cover,
-document control, TOC, dashboard, each major content section,
-methodology, sign-off) gets `page-break-before: always` and increments
-the same CSS counter the footer reads — an honest approximation
-counting the report's own deliberate page divisions, not necessarily
-the exact physical page a long table happens to overflow onto if it
-runs longer than one printed page; `tr`/stat-card blocks get
-`break-inside: avoid` so a table row is never split across a page
+margin space on every printed page, and the running header (client
+name + report title, classification) and footer (document title +
+version, footer text or the generated date, "Page N of M") print as
+CSS Paged Media `@page` margin boxes (`@top-left`, `@bottom-right` and
+so on), which Chrome and Edge 131+ render. They therefore number every
+physical page, including the pages a long table overflows onto.
+`@page:first` suppresses the header on the cover, which carries the
+classification and title itself. Until 1.146.0 these were
+`position: fixed` elements offset into the margin band; on overflow
+pages Chrome placed the fixed header mid-page over the content, and a
+counter on a fixed element cannot number pages, so the footer had
+none. Text from the spec reaches the margin boxes through `cssStr()`,
+which truncates, then escapes backslashes, quotes and `<` so a value
+cannot leave the CSS string or close the `<style>` element. On
+screen, the `.rpt-header`/`.rpt-footer` markup renders once, inline,
+at the top/bottom of a normal scrollable document (hidden in print),
+and the client's logo stays on the cover; the same popup preview also
+serves as Checkpoint's on-screen "view mode", no separate code path.
+Every "page" (cover, document control, TOC, dashboard, each major
+content section, methodology, sign-off) gets `page-break-before:
+always`; `tr`/stat-card blocks get `break-inside: avoid` so a table
+row is never split across a page
 break. Verified against real print/PDF rendering in headless Chromium
 (Playwright) for all five report types: cover/document-control/TOC/
 dashboard/methodology/sign-off all present, TOC anchors all resolve,
-`position: fixed` and the page counter both take effect under
-`@media print`, and `page.pdf()` produces a genuine multi-page PDF —
+and `page.pdf({ preferCSSPageSize: true })` produces a genuine
+multi-page PDF whose margin boxes read "Page 1 of 9" … "Page 9 of 9"
+on a report with a long overflowing table —
 Chrome and Edge share the same Blink/print engine, so this exercises
 what both actually render.
 
