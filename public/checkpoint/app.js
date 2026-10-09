@@ -913,7 +913,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -6536,6 +6536,7 @@ function showModal(opts) {
     var ms = lastResultDate('');
     var aws = lastResultDate('aws-'), gh = lastResultDate('gh-');
     var demo = Store.kind !== 'sharepoint';
+    var ticketsLast = (S.ticketLinks || []).reduce(function (m, l) { var d = String(l.updated || '').slice(0, 10); return d > m ? d : m; }, '');
     el.innerHTML =
       card({ name: 'Microsoft 365', what: 'Entra ID, Intune, Defender, Purview, Exchange and SharePoint, read through Microsoft Graph when a posture scan runs.', st: ms ? status(ms, 45) : { cls: 'off', text: 'No scan yet' }, meta: checks('') + ' checks · runs when someone clicks Run posture scan, or on a schedule with the monitor below', body: '' }) +
       card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the leadership security meeting and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: lastAuto ? '<p class="src">Reporting: an automated scan was recorded on ' + fmtDate(lastAuto) + '. Deployment steps are in azure/README.md.</p>' : '<div id="monitorSetupPanel"></div>' }) +
@@ -6552,7 +6553,15 @@ function showModal(opts) {
           '<li><b>GitHub App.</b> Create a private GitHub App with read-only access to administration, code scanning alerts, Dependabot alerts, secret scanning alerts and members; install it on the organisation.</li>' +
           '<li><b>Workflow.</b> Add <code>public/checkpoint/github/checkpoint-github-collector.yml</code> and its <code>collector/</code> folder to a repository in the organisation.</li>' +
           '<li><b>Settings for the workflow.</b>' + envTable([['vars.CHECKPOINT_GH_APP_ID', '', 'The GitHub App\u2019s ID'], ['secrets.CHECKPOINT_GH_APP_PRIVATE_KEY', '', 'The GitHub App\u2019s private key'], ['vars.CHECKPOINT_TENANT_ID', tenantId, 'Your Entra tenant ID'], ['vars.CHECKPOINT_CLIENT_ID', '', 'The app registration\u2019s client ID'], ['secrets.CHECKPOINT_CLIENT_SECRET', '', 'Its client secret'], ['vars.CHECKPOINT_SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['vars.CHECKPOINT_SP_SITE_PATH', path, 'Leave out for the root site']]) + '</li>' +
-          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' });
+          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' }) +
+      card({ name: 'Planner, Jira and ServiceNow', what: 'Actions worked as tickets: a Power Automate flow in your own tenant creates the ticket and records its status in the Ticket Links list; Checkpoint shows it on the action and offers to complete the action when the ticket is done.',
+        st: ticketsLast ? status(ticketsLast, 30) : { cls: 'off', text: 'Not set up' },
+        meta: (S.ticketLinks || []).length + ' linked ticket' + ((S.ticketLinks || []).length === 1 ? '' : 's') + ' · nothing changes an action without your confirmation, and every change is in the audit log',
+        body: '<ol class="integ-steps">' +
+          '<li><b>Pick the flow.</b> <a href="POWER-AUTOMATE.md" target="_blank" rel="noopener">POWER-AUTOMATE.md, flows 5 and 6</a>, for Planner, Jira or ServiceNow. Planner uses a standard connector; check your plan for the Jira or ServiceNow connector (ServiceNow is premium).</li>' +
+          '<li><b>Create.</b> When an action is created in <code>' + esc((typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint') + ' Actions</code>, the flow opens the ticket and adds a row to <code>' + esc((typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint') + ' TicketLinks</code> (Title = ticket ID, ActionRef, System, TicketUrl, TicketStatus, UpdatedAt).</li>' +
+          '<li><b>Keep it current.</b> When the ticket changes, the flow updates that row’s TicketStatus and UpdatedAt. It never edits the Actions list.</li>' +
+          '<li><b>Without a flow.</b> Open an action and choose <b>Link ticket</b> to paste a ticket’s link by hand.</li></ol>' });
     /* The step-by-step guide lives inside the Azure card's "How to set
        it up", not in a separate card at the bottom of the page. */
     if (!lastAuto) renderMonitorSetupPanel();
@@ -9172,6 +9181,8 @@ function showModal(opts) {
       if (f === 'Overdue') return overdue(a); return a.status !== 'Done' && a.status !== 'Cancelled';
     });
     actList = sortActionsForGroup(actList);
+    var tickets = window.CheckpointLib.latestTicketLinks(S.ticketLinks || []);
+    renderTicketSync();
     var rowStrs = actList.map(function (a) {
       var od = overdue(a);
       var days = overdueDays(a);
@@ -9184,6 +9195,7 @@ function showModal(opts) {
         bulkCheckbox('act-sel', 'App.toggleActSel', a.id, a.id, _actSel.has(a.id)) +
         '<button class="lnk" data-action="App.openAction" data-id="' + a.id + '">' + a.id + '</button>' +
         (updCount ? '<div class="src">' + updCount + ' update' + (updCount > 1 ? 's' : '') + '</div>' : '') +
+        (tickets[a.id] ? '<div class="tk-row">' + ticketChipHtml(tickets[a.id]) + '</div>' : '') +
         '</td><td class="act-title" style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
         '<td class="id-t">' + (a.risk ? esc(a.risk) : '—') + '<div class="src">' + esc(a.control || '') + '</div></td>' +
@@ -9335,6 +9347,60 @@ function showModal(opts) {
      warned) — callers decide what to do next (toast text, whether to
      also touch a linked risk) rather than this doing it uniformly,
      since completing an action's toast differs from a plain note's. */
+  /* ── Ticket links (Planner, Jira, ServiceNow) ──────────────────────
+     Rows in the Ticket Links list, written by the client's own Power
+     Automate flow (POWER-AUTOMATE.md, flows 5 to 7) or linked by hand.
+     Checkpoint never lets the ticket change an action by itself: it
+     shows the ticket and offers to close the action when the ticket is
+     finished, through recordActionUpdate() and the audit log. */
+  function actionDoneDates() {
+    var d = {};
+    (S.actionUpdates || []).forEach(function (u) { if (u.status === 'Done' && u.action) d[u.action] = u.date; });
+    return d;
+  }
+  function ticketSyncState() {
+    return window.CheckpointLib.ticketSyncProposals(S.actions || [], S.ticketLinks || [], actionDoneDates());
+  }
+  function ticketFor(actionId) {
+    return window.CheckpointLib.latestTicketLinks(S.ticketLinks || [])[actionId] || null;
+  }
+  function ticketChipHtml(l) {
+    if (!l) return '';
+    var cat = window.CheckpointLib.ticketStatusCategory(l.status);
+    var label = esc(l.system || 'Ticket') + ' ' + esc(l.key || '');
+    return (l.url && isSafeUrl(l.url) ? '<a class="tk-chip tk-' + cat + '" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + label + '</a>' : '<span class="tk-chip tk-' + cat + '">' + label + '</span>') +
+      (l.status ? ' <span class="src">' + esc(l.status) + '</span>' : '');
+  }
+  /* Proposals Checkpoint can apply from a ticket alone: not
+     nonconformities, which need a corrective action record. */
+  function ticketAutoProposals(st) {
+    return st.close.filter(function (p) { return !window.CheckpointLib.capaStatus(p.action).isNc; });
+  }
+  function renderTicketSync() {
+    var el = document.getElementById('actTickets');
+    if (!el) return;
+    var st = ticketSyncState();
+    if (READONLY || (!st.close.length && !st.reopened.length)) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="card tk-sync">' +
+      (st.close.length
+        ? '<h3>' + st.close.length + ' linked ticket' + (st.close.length === 1 ? ' is' : 's are') + ' finished</h3><ul class="tk-list">' +
+          st.close.map(function (p) {
+            /* A nonconformity also needs its root cause and an
+               effectiveness review before it closes; a ticket can't
+               supply those, so it opens the corrective action instead. */
+            var nc = window.CheckpointLib.capaStatus(p.action).isNc;
+            return '<li><b>' + esc(p.action.id) + '</b> ' + esc(p.action.title) + ' — ' + ticketChipHtml(p.link) +
+              (nc ? ' <button class="btn ghost sm" data-action="App.recordCapa" data-id="' + esc(p.action.id) + '">Record corrective action</button>'
+                : ' <button class="btn ghost sm" data-action="App.applyTicketSync" data-id="' + esc(p.action.id) + '">' + (p.to === 'Done' ? 'Complete' : 'Close') + '</button>') + '</li>';
+          }).join('') + '</ul>' +
+          (ticketAutoProposals(st).length > 1 ? '<button class="btn sm" data-action="App.applyTicketSync" data-id="*">Update all ' + ticketAutoProposals(st).length + '</button>' : '')
+        : '') +
+      (st.reopened.length
+        ? '<p class="src" style="margin-top:10px">Reopened since the action was completed: ' + st.reopened.map(function (p) { return '<b>' + esc(p.action.id) + '</b> (' + ticketChipHtml(p.link) + ')'; }).join(', ') + '. Reopen the action if the work is not finished.</p>'
+        : '') +
+      '</div>';
+  }
+
   async function recordActionUpdate(a, opts) {
     var note = (opts && opts.note || '').trim();
     var evidenceUrl = (opts && opts.evidenceUrl || '').trim();
@@ -17442,6 +17508,65 @@ function showModal(opts) {
     groupActions: function (g) { _actGroup = g || 'none'; renderActions(); },
     /* id = 'ACT-001|owner' etc. A status change is logged like any other
        progress update; Completed asks for the evidence. */
+    /* Completes (or closes) actions whose linked ticket is finished.
+       id = one action ID, or '*' for every proposal. */
+    applyTicketSync: async function (id) {
+      var props = ticketAutoProposals(ticketSyncState()).filter(function (p) { return id === '*' || p.action.id === id; });
+      if (!props.length) return;
+      if (props.length > 1) {
+        var ok = await showModal({
+          title: 'Update ' + props.length + ' actions from their tickets',
+          message: props.map(function (p) { return '• ' + p.action.id + ' → ' + actionStatusLabel(p.to) + ' (' + p.link.system + ' ' + p.link.key + ': ' + p.link.status + ')'; }).join('\n') +
+            '\n\nEach is recorded in the action’s progress log and the audit log, with the ticket as the reference.',
+          confirmText: 'Update ' + props.length
+        });
+        if (!ok) return;
+      }
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < props.length; i++) {
+        var p = props[i], a = p.action, l = p.link;
+        var ref = (l.system || 'Ticket') + ' ' + (l.key || '');
+        var upd = await recordActionUpdate(a, {
+          status: p.to,
+          note: (p.to === 'Done' ? 'Completed' : 'Closed') + ': ' + ref + ' is ' + (l.status || 'finished') + '.',
+          evidenceUrl: p.to === 'Done' && !a.evidenceUrl && l.url && isSafeUrl(l.url) ? l.url : ''
+        });
+        if (!upd) continue;
+        n++;
+        var r = risk(a.risk);
+        if (r) { recomputeRiskStatus(r); try { await Store.updateRisk(r); } catch (e) { warn(e); } }
+      }
+      busy(false);
+      toast('<b>' + n + '</b> action' + (n === 1 ? '' : 's') + ' updated from linked tickets');
+      renderAll();
+    },
+    /* Links a ticket to an action by hand (a paste of its URL), for
+       teams that do not run the flows. */
+    linkTicket: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var cur = ticketFor(id);
+      var v = await showModal({
+        title: (cur ? 'Update the ticket for ' : 'Link a ticket to ') + a.id,
+        message: 'Paste the ticket’s link from Planner, Jira or ServiceNow. Checkpoint shows it on the action and offers to complete the action when the ticket is done. To keep the status current automatically, set up the flow in POWER-AUTOMATE.md.',
+        fields: [
+          { id: 'url', label: 'Ticket link', value: cur ? cur.url : '', placeholder: 'https://yourcompany.atlassian.net/browse/SEC-12' },
+          { id: 'key', label: 'Ticket ID (optional)', value: cur ? cur.key : '', placeholder: 'e.g. SEC-12' },
+          { id: 'status', label: 'Current status (optional)', value: cur ? cur.status : '', placeholder: 'e.g. In progress' }
+        ],
+        confirmText: 'Save',
+        validate: function (x) { return x.url && isSafeUrl(x.url) ? null : 'Paste the ticket’s https:// link.'; }
+      });
+      if (!v) return;
+      var key = (v.key || '').trim() || (String(v.url).match(/\b([A-Z][A-Z0-9]+-\d+|(?:INC|CHG|RITM|TASK|PRB)\d+)\b/) || [])[1] || String(v.url).replace(/[?#].*$/, '').split('/').filter(Boolean).pop() || '';
+      var link = { id: 'TL-' + Date.now(), action: a.id, system: window.CheckpointLib.ticketSystemFromUrl(v.url), key: key, url: v.url.trim(), status: (v.status || '').trim(), updated: new Date().toISOString() };
+      try { await Store.addTicketLink(link); } catch (e) { warn(e); toastError('Could not save the ticket link.'); return; }
+      audit('Ticket linked', 'Action', a.id, cur ? cur.system + ' ' + cur.key : '', link.system + ' ' + link.key + (link.status ? ' (' + link.status + ')' : ''));
+      toast('Linked <b>' + esc(link.system + ' ' + link.key) + '</b> to ' + esc(a.id));
+      App.openAction(a.id);
+      renderActions();
+    },
     setActionField: async function (id, value) {
       var parts = String(id).split('|'), a = S.actions.find(function (x) { return x.id === parts[0]; });
       if (!a) return;
@@ -17899,6 +18024,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + (a.ownerEmail ? ' <span style="color:var(--paper-faint);font-weight:400">&lt;' + esc(a.ownerEmail) + '&gt;</span>' : '') + '</b></div>' +
         '<div class="d-kv"><span>Due</span><b style="' + (overdue(a) ? 'color:var(--fail)' : '') + '">' + fmtDate(a.due) + (overdue(a) ? ' ' + icon('flag') + ' ' + overdueDays(a) + 'd overdue' : '') + '</b></div>' +
         (a.control ? '<div class="d-kv"><span>Control</span><b>' + esc(a.control) + '</b></div>' : '') +
+        '<div class="d-kv"><span>Ticket</span><b>' + (ticketFor(a.id) ? ticketChipHtml(ticketFor(a.id)) : '\u2014') + '</b></div>' +
         '<div class="d-kv"><span>Current evidence link</span><b>' + (a.evidenceUrl && isSafeUrl(a.evidenceUrl) ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener">Open ' + icon('external') + '</a>' : '—') + '</b></div>' +
         (capa.isNc ? '<div class="src" style="margin-top:4px">' + esc(capa.nextStep) + '</div>' : '') +
         (READONLY ? '' :
@@ -17907,6 +18033,7 @@ function showModal(opts) {
           (a.status !== 'Done' ? '<button class="btn ghost sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '') +
           (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button>' : '') +
           '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button>' +
+          '<button class="btn ghost sm" data-action="App.linkTicket" data-id="' + a.id + '">' + (ticketFor(a.id) ? 'Update ticket' : 'Link ticket') + '</button>' +
           '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
           '</div>') +
         '<div class="d-sec"><h4>Progress log' + (updates.length ? ' (' + updates.length + ')' : '') + '</h4>' +

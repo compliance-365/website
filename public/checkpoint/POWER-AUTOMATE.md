@@ -5,7 +5,7 @@ Checkpoint keeps every register as a SharePoint list in your own Microsoft
 those lists, so you can wire Checkpoint into the rest of your working
 day without new permissions, add-ons or a Checkpoint backend.
 
-This guide gives four ready-to-build flows. Each takes about ten minutes.
+This guide gives six ready-to-build flows. Each takes about ten minutes.
 
 ---
 
@@ -29,7 +29,10 @@ example). A flow that edits a Checkpoint list
 directly bypasses all of that, and an auditor will see register changes
 with no matching audit entry. Every flow below only **reads** Checkpoint
 and writes somewhere else: Teams, Outlook or Planner. Make changes to the
-registers in Checkpoint itself.
+registers in Checkpoint itself. The one exception is `Checkpoint
+TicketLinks` (Flows 5 and 6): it is not a register, it exists for flows to
+write ticket status into, and Checkpoint changes an action from it only
+when you confirm.
 
 **Run flows as a service account if you can.** A flow runs with its
 owner's permissions. If that person leaves, the flow stops. A shared
@@ -133,9 +136,76 @@ gets scheduled.
    Add a checklist item: *Mark done in Checkpoint*, so closing the Planner
    task prompts the owner to close the action where it counts.
 
-Don't sync Planner back into Checkpoint. Closing an action in Checkpoint
-records who closed it and the evidence, and a nonconformity also needs its
-root cause and effectiveness review recorded. A flow can't do that.
+Don't have the flow edit Checkpoint's Actions list. Closing an action in
+Checkpoint records who closed it and the evidence, and a nonconformity
+also needs its root cause and effectiveness review recorded. A flow can't
+do that. To see Planner's progress in Checkpoint, use Flows 5 and 6
+instead: they record the task's status in a separate list, and Checkpoint
+offers to complete the action itself.
+
+---
+
+## Flow 5 — Work actions as tickets (Planner, Jira or ServiceNow)
+
+For teams whose work lives in a ticketing tool. The flow opens a ticket
+for each new action and records the link in the `Checkpoint TicketLinks`
+list. Checkpoint shows the ticket on the action, and Flow 6 keeps its
+status current.
+
+`Checkpoint TicketLinks` is created by Checkpoint the next time it opens.
+It is the one Checkpoint list a flow writes to, because it is not a
+register: Checkpoint only reads it, and changes an action only when you
+confirm, through its own audit log.
+
+1. **Automated cloud flow.** Trigger: *SharePoint — When an item is
+   created*. List: `Checkpoint Actions`.
+2. **Create the ticket** with the connector for your tool:
+   - **Planner** (standard connector): *Create a task*, as in Flow 4.
+   - **Jira**: *Create a new issue (V3)* in your security project.
+     Summary: `RefId` + ` — ` + `Title`; description: `Control`,
+     `Priority`, `DueDate` and a link to Checkpoint.
+   - **ServiceNow** (premium connector): *Create Record* in the table you
+     use (for example `sn_grc_task` or `incident`), with the same fields.
+3. **SharePoint — Create item.** List: `Checkpoint TicketLinks`.
+   - Title: the ticket's key (Planner: the task title; Jira: the issue
+     key, such as `SEC-12`; ServiceNow: the record number)
+   - ActionRef: `RefId` from the trigger
+   - System: `Planner`, `Jira` or `ServiceNow`
+   - TicketUrl: the ticket's link (Planner: build it from the task ID;
+     Jira: `https://<your-site>.atlassian.net/browse/` + the key;
+     ServiceNow: the record's link)
+   - TicketStatus: the ticket's starting status (for example `To Do`)
+   - UpdatedAt: `utcNow()`
+4. Add a test action in Checkpoint. The action shows the ticket within a
+   minute or two of the flow running (reload Checkpoint to see it).
+
+## Flow 6 — Keep ticket status current
+
+A scheduled flow, so it works the same way for every tool and needs no
+webhook from it.
+
+1. **Scheduled cloud flow.** Recurrence: every hour (or every 15 minutes
+   if your plan allows).
+2. **SharePoint — Get items.** List: `Checkpoint TicketLinks`.
+3. **Apply to each** item:
+   - **Get the ticket**: Planner *Get task details* (use
+     `percentComplete`: 100 means done), Jira *Get issue by key* (use the
+     status name), or ServiceNow *Get Record* (use `state`).
+   - **Condition:** the status differs from `TicketStatus`.
+   - **If yes, SharePoint — Update item:** `TicketStatus` = the new
+     status, `UpdatedAt` = `utcNow()`.
+
+Checkpoint reads these statuses. When a ticket is done (Done, Resolved,
+Closed, Complete or 100%), the Actions register lists it under **Linked
+tickets finished**, and one click completes the action, with the ticket
+as the reference in its progress log and the audit log. A cancelled
+ticket (Won't do, Cancelled, Closed Incomplete) offers to close the
+action instead. A nonconformity is never closed from a ticket: Checkpoint
+opens its corrective action record, because the root cause and the
+effectiveness review still need recording.
+
+**Without a flow:** open an action in Checkpoint and choose **Link
+ticket** to paste a ticket's link and status by hand.
 
 ---
 

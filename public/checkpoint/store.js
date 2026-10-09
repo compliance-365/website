@@ -1682,6 +1682,13 @@ window.DemoStore = (function () {
       /* Illustrative progress history for the two demo actions already
          sitting at 'In progress', so a prospect exploring the demo sees
          the feature actually working, not an empty state. */
+      /* Linked tickets, so the demo shows an action whose ticket is
+         finished (ACT-003, Jira) and one still being worked (ACT-004,
+         Planner). */
+      ticketLinks: [
+        { id: 'TL-1', action: 'ACT-003', system: 'Jira', key: 'SEC-41', url: 'https://meridianhealth.atlassian.net/browse/SEC-41', status: 'Done', updated: daysFrom(-1) },
+        { id: 'TL-2', action: 'ACT-004', system: 'Planner', key: 'Phishing programme', url: 'https://tasks.office.com/meridianhealth.example/Home/Task/demo', status: '50%', updated: daysFrom(-3) }
+      ],
       actionUpdates: [
         { id: 'UPD-0001', action: 'ACT-001', date: daysFrom(-18), note: 'Drafted the updated security schedule and sent to Legal for review before it goes to suppliers.', evidenceUrl: '', status: 'In progress', author: 'K. Patel' },
         { id: 'UPD-0002', action: 'ACT-001', date: daysFrom(-4), note: 'Legal review complete, minor wording changes only. Sent to the first 4 of 10 suppliers this week; remainder scheduled next week.', evidenceUrl: '', status: 'In progress', author: 'K. Patel' },
@@ -2036,6 +2043,7 @@ window.DemoStore = (function () {
     /* Append-only — no update/delete counterpart, same immutability the
        audit log already relies on. */
     addActionUpdate: async function (u) { S.actionUpdates.push(u); persist(); },
+    addTicketLink: async function (l) { (S.ticketLinks = S.ticketLinks || []).push(l); persist(); },
     updateControl: async function () { persist(); },
     updateClause: async function () { persist(); },
     addScan: async function (sc) { S.scans.push(sc); persist(); },
@@ -2521,6 +2529,16 @@ window.SpStore = (function () {
        the previous scan scored 'fail' on this one; anything less sharp
        (e.g. pass -> review) stays visible on the normal scan checklist
        without paging anyone. */
+    /* Tickets in Planner, Jira or ServiceNow that work an action
+       (POWER-AUTOMATE.md, flows 5 to 7). Written by the client's own
+       Power Automate flow, never by Checkpoint's registers: Checkpoint
+       reads these and offers to close an action whose ticket is done,
+       through its own audited path. Title holds the ticket key. */
+    TicketLinks: [
+      { name: 'ActionRef', text: {} }, { name: 'System', text: {} },
+      { name: 'TicketUrl', text: {} }, { name: 'TicketStatus', text: {} },
+      { name: 'UpdatedAt', text: {} }
+    ],
     Alerts: [
       { name: 'CheckId', text: {} }, { name: 'CheckLabel', text: {} },
       { name: 'PreviousStatus', text: {} }, { name: 'NewStatus', text: {} },
@@ -3349,6 +3367,7 @@ window.SpStore = (function () {
       var draftItems = await items('PolicyDrafts');
       var incItems = await items('Incidents');
       var dispItems = await items('CheckDispositions');
+      var ticketItems = await items('TicketLinks');
 
       S = {
         mode: 'live',
@@ -3366,6 +3385,10 @@ window.SpStore = (function () {
            newest-first timeline (the action drawer) reverse it there,
            so the canonical order in S stays consistent no matter which
            view reads it. */
+        ticketLinks: ticketItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: 'TL-' + i.id, action: f.ActionRef || '', system: f.System || '', key: f.Title || '', url: f.TicketUrl || '', status: f.TicketStatus || '', updated: f.UpdatedAt || (i.lastModifiedDateTime || '') };
+        }),
         actionUpdates: actUpdItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, action: f.ActionRef || '', date: f.UpdateDate || '', note: f.Note || '', evidenceUrl: f.EvidenceUrl || '', status: f.Status || '', author: f.Author || '' };
@@ -3639,6 +3662,10 @@ window.SpStore = (function () {
     },
     /* Append-only — no update/delete counterpart, same immutability the
        audit log already relies on for its own credibility. */
+    addTicketLink: async function (l) {
+      l._sp = await addItem('TicketLinks', { Title: l.key || '', ActionRef: l.action, System: l.system || '', TicketUrl: l.url || '', TicketStatus: l.status || '', UpdatedAt: l.updated || '' });
+      (S.ticketLinks = S.ticketLinks || []).push(l);
+    },
     addActionUpdate: async function (u) {
       u._sp = await addItem('ActionUpdates', {
         Title: u.id, RefId: u.id, ActionRef: u.action, UpdateDate: u.date,

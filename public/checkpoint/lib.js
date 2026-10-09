@@ -4185,6 +4185,63 @@
   var DOCX_PAGE_BREAK = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
   /* Enterprise front matter: a cover page, then a document control page
      (metadata, history, approval). The contents list follows it. */
+  /* ── Ticket links: actions worked in Planner, Jira or ServiceNow ─────
+     A Power Automate flow (POWER-AUTOMATE.md, flows 5 to 7) records each
+     action's ticket in the "Ticket Links" list: which action, which
+     system, the key, a link and the ticket's current status. The flow
+     never edits Checkpoint's registers; Checkpoint reads the links and
+     offers to close an action whose ticket is finished, through its own
+     audited path. */
+  function ticketSystemFromUrl(url) {
+    var u = String(url || '').toLowerCase();
+    if (/atlassian\.net|jira/.test(u)) return 'Jira';
+    if (/service-?now\.com/.test(u)) return 'ServiceNow';
+    if (/planner|tasks\.office\.com/.test(u)) return 'Planner';
+    if (/dev\.azure\.com|visualstudio\.com/.test(u)) return 'Azure DevOps';
+    return 'Other';
+  }
+  /* 'done', 'cancelled' or 'open' for a ticket's status as the system
+     reports it ("Done", "Resolved", "Closed Complete", "100%", "Won't
+     do"...). */
+  function ticketStatusCategory(status) {
+    var s = String(status == null ? '' : status).trim().toLowerCase();
+    if (!s) return 'open';
+    if (/won'?t (do|fix)|cancel+ed|rejected|declined|duplicate|closed incomplete|closed skipped|abandoned/.test(s)) return 'cancelled';
+    if (/^100\s*%?$|\b(done|resolved|completed?|closed|finished)\b/.test(s)) return 'done';
+    return 'open';
+  }
+  /* The newest link per action: { actionId: link }. */
+  function latestTicketLinks(links) {
+    var out = {};
+    (links || []).forEach(function (l) {
+      if (!l || !l.action) return;
+      var cur = out[l.action];
+      if (!cur || String(l.updated || '') >= String(cur.updated || '')) out[l.action] = l;
+    });
+    return out;
+  }
+  /* What the tickets say that Checkpoint does not yet reflect:
+     close: an open action whose ticket is done or cancelled ({ action,
+       link, to: 'Done' | 'Cancelled' });
+     reopened: a completed action whose ticket was reopened after the
+       action was completed. doneDates: { actionId: 'YYYY-MM-DD' }, the
+       date each action was completed (from its progress log). */
+  function ticketSyncProposals(actions, links, doneDates) {
+    var latest = latestTicketLinks(links), close = [], reopened = [];
+    (actions || []).forEach(function (a) {
+      var l = latest[a.id];
+      if (!l) return;
+      var cat = ticketStatusCategory(l.status);
+      var finished = a.status === 'Done' || a.status === 'Cancelled';
+      if (!finished && cat === 'done') close.push({ action: a, link: l, to: 'Done' });
+      else if (!finished && cat === 'cancelled') close.push({ action: a, link: l, to: 'Cancelled' });
+      else if (a.status === 'Done' && cat === 'open') {
+        var doneOn = doneDates && doneDates[a.id];
+        if (doneOn && l.updated && String(l.updated).slice(0, 10) > doneOn) reopened.push({ action: a, link: l });
+      }
+    });
+    return { close: close, reopened: reopened };
+  }
   /* ── Document control from the audit log ───────────────────────────
      A controlled document's history and approval come from what
      Checkpoint recorded when they happened, not from whoever exports
@@ -12180,6 +12237,7 @@
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
     srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
+    ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,
     documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
     incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
