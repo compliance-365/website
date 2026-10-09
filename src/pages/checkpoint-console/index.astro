@@ -440,6 +440,20 @@ const tourPhases = [
   </div>
 </section>
 
+<!-- FOR LARGER ORGANISATIONS -->
+<section class="section ckpt-ent" aria-labelledby="ckpt-ent-h">
+  <div class="container">
+    <h2 id="ckpt-ent-h">For larger organisations</h2>
+    <p class="muted" style="max-width:640px;">What procurement, audit and engineering teams ask for, built in.</p>
+    <div class="ckpt-ent-grid">
+      <a class="ckpt-ent-card" href={`${base}checkpoint-console/features/approvals/`}><b>Review and approval</b><span>A second person checks each draft and a third approves it, with both names on the signed document.</span></a>
+      <a class="ckpt-ent-card" href={`${base}checkpoint-console/features/ticket-sync/`}><b>Ticket sync</b><span>Work actions in Planner, Jira or ServiceNow. A finished ticket closes the action, with the ticket as evidence.</span></a>
+      <a class="ckpt-ent-card" href={`${base}checkpoint-console/features/excel-word-exports/`}><b>Excel and Word exports</b><span>Registers to Excel; the SoA, risk and asset registers to Word as controlled documents.</span></a>
+      <a class="ckpt-ent-card" href={`${base}security/questionnaire/`}><b>Security questionnaire answers</b><span>Ready answers for your vendor assessment, and every connection out of your tenant.</span></a>
+    </div>
+  </div>
+</section>
+
 <!-- CTA -->
 <section class="section">
   <div class="container center">
@@ -494,6 +508,11 @@ const tourPhases = [
   .gold-rule-26 { width: 26px; height: 1px; background: #BE4A1E; margin-bottom: 18px; }
 
   /* ── Demo interstitial ── */
+  .ckpt-ent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .ckpt-ent-card { display: flex; flex-direction: column; gap: .5rem; padding: 1.25rem; border: 1px solid #DDD8CF; border-radius: 12px; text-decoration: none; color: inherit; background: #fff; }
+  .ckpt-ent-card:hover { border-color: #BE4A1E; }
+  .ckpt-ent-card b { font-size: 1.05rem; }
+  .ckpt-ent-card span { line-height: 1.6; color: #4A4740; }
   .ckpt-demo-card {
     display: grid;
     grid-template-columns: minmax(0,1.15fr) minmax(0,0.85fr);

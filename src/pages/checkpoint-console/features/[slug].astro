@@ -1,0 +1,87 @@
+---
+import Base from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
+import { features, type Feature } from '../../../data/checkpoint-features';
+
+export function getStaticPaths() {
+  return features.map((f) => ({ params: { slug: f.slug }, props: { f } }));
+}
+const { f } = Astro.props as { f: Feature };
+const base = import.meta.env.BASE_URL || '/';
+const demoUrl = `${base}checkpoint/?demo=1&view=${f.demoView}`;
+const others = features.filter((x) => x.slug !== f.slug);
+const faq = {
+  '@type': 'FAQPage',
+  mainEntity: f.faq.map((it) => ({ '@type': 'Question', name: it.q, acceptedAnswer: { '@type': 'Answer', text: it.a } })),
+};
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Checkpoint', url: 'https://www.compliance365.com.au/checkpoint-console/' },
+  { name: f.name, url: `https://www.compliance365.com.au/checkpoint-console/features/${f.slug}/` },
+];
+---
+<Base title={f.title} description={f.description} schema={[faq]} breadcrumbs={breadcrumbs}>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="section ft-hero">
+  <div class="container">
+    <p class="ft-eyebrow"><a href={base + 'checkpoint-console/'}>Checkpoint</a> · Feature</p>
+    <h1>{f.name}</h1>
+    <p class="ft-lead">{f.lead}</p>
+    <div class="ft-actions">
+      <a class="btn btn-primary" href={demoUrl} target="_blank" rel="noopener">{f.demoLabel}</a>
+      <a class="btn" href={base + 'checkpoint-console/how-it-works/'}>How Checkpoint works</a>
+    </div>
+    <p class="ft-note">The demo is the real console with sample data. No sign-up.</p>
+  </div>
+</section>
+
+<section class="section ft-body">
+  <div class="container">
+    {f.sections.map((s) => (
+      <div class="ft-sec">
+        <h2>{s.h}</h2>
+        {s.p && s.p.map((para) => (<p>{para}</p>))}
+        {s.list && (<ul>{s.list.map((li) => (<li>{li}</li>))}</ul>)}
+      </div>
+    ))}
+    <div class="ft-sec">
+      <h2>Questions</h2>
+      <dl class="ft-qa">
+        {f.faq.map((it) => (<div><dt>{it.q}</dt><dd>{it.a}</dd></div>))}
+      </dl>
+    </div>
+    <div class="ft-sec ft-more">
+      <h2>More for larger organisations</h2>
+      <ul>
+        {others.map((o) => (<li><a href={`${base}checkpoint-console/features/${o.slug}/`}>{o.name}</a></li>))}
+        <li><a href={base + 'security/questionnaire/'}>Security questionnaire answers</a></li>
+        <li><a href={base + 'accessibility/'}>Accessibility statement</a></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+</Base>
+
+<style>
+  .ft-hero { padding-top: 3rem; padding-bottom: 1rem; }
+  .ft-eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink, #A63A12); margin: 0 0 .8rem; }
+  .ft-eyebrow a { color: inherit; }
+  .ft-lead { max-width: 68ch; font-size: 1.1rem; line-height: 1.7; }
+  .ft-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0 .6rem; }
+  .ft-note { font-size: .88rem; color: #6B6860; }
+  .ft-body { padding-top: 0; }
+  .ft-sec { max-width: 72ch; margin-top: 2.25rem; }
+  .ft-sec h2 { font-size: 1.45rem; border-bottom: 2px solid #DDD8CF; padding-bottom: .5rem; }
+  .ft-sec p, .ft-sec li { line-height: 1.7; }
+  .ft-sec ul { padding-left: 1.2rem; }
+  .ft-sec li { margin: .45rem 0; }
+  .ft-qa > div { padding: .9rem 0; border-bottom: 1px solid #EEE9E0; }
+  .ft-qa dt { font-weight: 700; }
+  .ft-qa dd { margin: .3rem 0 0; line-height: 1.65; }
+</style>
