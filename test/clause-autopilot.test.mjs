@@ -118,8 +118,8 @@ describe('pre-certification internal audit', () => {
 describe('management review', () => {
   test('the form drafts every Clause 9.3.2 input and records resources', () => {
     ['issues:', 'interestedParties:', 'feedback:', 'improvement:', 'priorActions:', 'performance:', 'riskStatus:'].forEach((k) => assert.ok(app.includes('        ' + k), k));
-    assert.ok(html.includes('id="naReviewResources"'));
-    assert.ok(app.includes("'Resources: ' + res"));
+    assert.ok(app.includes("ta('naReviewResources', 'resources'"));
+    assert.match(L.mrDecisionsText({ resources: 'current resources are sufficient' }), /^Resources: current resources are sufficient$/);
     assert.ok(L.clauseRecordStatus('mrResources', { fw: 'iso27001', today: '2026-10-05', reviews: [{ date: '2026-09-01', decisions: 'Resources: current resources are sufficient', inputs: '{}' }] }).st === 'done');
   });
 });

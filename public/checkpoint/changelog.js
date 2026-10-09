@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.143.0',
+    date: '2026-10-09',
+    entries: [
+      'Run a management review: the meeting in four steps. 1, who chairs and who attends, picked from your Microsoft 365 directory. 2, each Clause 9.3.2 input, already drafted from your records: mark it Noted or Action needed and note what was discussed. The actions from the previous review are listed with their current status. 3, the conclusion ISO 27001 Clause 9.3 exists for (is the ISMS still suitable, adequate and effective, with a reason for anything less than yes), then improvements, changes to the ISMS, resources, and the actions agreed, each with an owner and due date. 4, a check of anything still missing, and sign-off.',
+      'Save a draft at any point (it also saves as you type) and pick it up later, on any device. Inputs marked Action needed become suggested actions in step 3.',
+      'Saving raises the actions in the Actions register, files the minutes as Clause 9.3 evidence, and books the next review on the compliance calendar. The chair signs off the minutes, either in the meeting or afterwards from My tasks, and their name and date appear on the minutes.',
+      'The reviews list now shows each review\u2019s chair, conclusion, actions raised and how many are still open, and whether the minutes are signed off. The minutes include what was discussed for each input and the suitability, adequacy and effectiveness conclusion. The management review now comes first on the page, above the monthly security review.',
+      'Fixed: "next review due" on the summary tiles used the oldest review\u2019s date instead of the latest.'
+    ]
+  },
+  {
     version: '1.142.0',
     date: '2026-10-09',
     entries: [

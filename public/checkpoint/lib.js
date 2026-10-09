@@ -7160,7 +7160,7 @@
     certification: { what: 'The certification audits: what each stage needs, the bookings and, once certified, the three-year cycle.', you: 'Work through the gate checklist, then book Stage 1 and Stage 2.', top: 'The dates and whether you are ready are shown here.', terms: ['Stage 1', 'Stage 2'] },
     audits: { what: 'Your internal audits: the plan, the checklists and the findings.', you: 'Run each planned audit and record its findings.', terms: ['Internal audit', 'Nonconformity'] },
     incidents: { what: 'Security incidents: what happened, how it was handled and what was learned.', you: 'Log every incident, however small, and record the lessons.', staff: 'Tell the ISMS owner straight away about anything suspicious.', terms: [] },
-    reviews: { what: 'The monthly security review and the management reviews, with their agendas, minutes and decisions.', you: 'Checkpoint prepares each meeting; record the minutes afterwards.', top: 'You chair these. Read the agenda before the meeting; decisions become actions automatically.', terms: ['Management review'] },
+    reviews: { what: 'The management reviews top management holds on the ISMS, and the monthly security review, with their minutes and decisions.', you: 'Run a management review steps you through the meeting: attendees, each input, the conclusion and decisions, and sign-off. Save a draft at any point.', top: 'You chair these. Read the agenda before the meeting; decisions become actions automatically.', terms: ['Management review'] },
     objectives: { what: 'This year’s measurable security goals, who owns each and how they are going.', you: 'Keep each objective measured and updated.', top: 'You agree these each year; progress comes to the monthly review.', terms: ['Objective'] },
     legal: { what: 'The laws, regulations and contracts that set security requirements for you.', you: 'Confirm which apply, give each an owner and link the controls that meet them.', terms: [] },
     calendar: { what: 'Every recurring security activity and when it is next due.', you: 'Complete each when due and attach the record.', terms: [] },
@@ -7233,6 +7233,7 @@
      assigned to them by name; opts.upcoming = [{ label, date }] for the
      "nothing to do" state. */
   var NEXT_KIND_GUIDE = {
+    'Sign off minutes': { why: 'You chaired the management review. Read the minutes and approve them: the certification auditor checks that top management signed them off.', mins: 10 },
     'Approve document': { why: 'Top management approves each policy so it carries the organisation’s authority. Read it, and approve it if it says what you want.', mins: 10 },
     'Acknowledge policy': { why: 'Everyone confirms they have read the policies that apply to them. An auditor checks a sample of people.', mins: 5 },
     'Training': { why: 'Short security awareness training everyone completes once a year, ending in a few questions.', mins: 20 },
@@ -7702,6 +7703,68 @@
      the review to consider. Drives both the structured capture form and
      the Management Review Pack report, so the two can never list a
      different set. */
+  /* The management review record beyond its inputs (Reviews.Record,
+     JSON). Clause 9.3 exists for top management to confirm the ISMS is
+     still suitable, adequate and effective; 9.3.3 asks for decisions on
+     improvement and on changes to the ISMS. */
+  var MR_CONCLUSIONS = [
+    { key: 'suitable', label: 'Suitable', q: 'Is the ISMS still right for the business, its scope and its risks?' },
+    { key: 'adequate', label: 'Adequate', q: 'Does it have what it needs: people, time, budget, tools and controls?' },
+    { key: 'effective', label: 'Effective', q: 'Is it achieving its objectives and reducing risk?' }
+  ];
+  var MR_ANSWERS = { yes: 'Yes', partly: 'Partly', no: 'No' };
+  function parseReviewRecord(str) {
+    if (str && typeof str === 'object') return str;
+    try { var o = JSON.parse(str || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+  }
+  /* What still stands between a draft and a complete record. */
+  function mrReadiness(d) {
+    d = d || {};
+    var missing = [];
+    if (!String(d.chair || '').trim()) missing.push('Name the chair (top management)');
+    if (!String(d.attendees || '').trim()) missing.push('List who attended');
+    var notes = d.inputNotes || {};
+    var undecided = MR_INPUT_SECTIONS.filter(function (x) { return !(notes[x.key] && notes[x.key].verdict); });
+    if (undecided.length) missing.push('Mark each input as noted or action needed (' + undecided.map(function (x) { return x.clause.replace('9.3.2 ', ''); }).join(', ') + ' left)');
+    var c = d.conclusion || {};
+    var unanswered = MR_CONCLUSIONS.filter(function (x) { return !(c[x.key] && MR_ANSWERS[c[x.key].answer]); });
+    if (unanswered.length) missing.push('Answer whether the ISMS is ' + unanswered.map(function (x) { return x.label.toLowerCase(); }).join(', '));
+    var weak = MR_CONCLUSIONS.filter(function (x) { return c[x.key] && (c[x.key].answer === 'no' || c[x.key].answer === 'partly') && !String(c[x.key].comment || '').trim(); });
+    if (weak.length) missing.push('Say why the ISMS is not fully ' + weak.map(function (x) { return x.label.toLowerCase(); }).join(' or '));
+    var needAction = MR_INPUT_SECTIONS.filter(function (x) { return notes[x.key] && notes[x.key].verdict === 'action'; });
+    var actions = (d.actions || []).filter(function (a) { return a && String(a.title || '').trim(); });
+    if (needAction.length && !actions.length) missing.push('Add the actions agreed for the inputs marked "action needed"');
+    if (actions.some(function (a) { return !a.due; })) missing.push('Give every action a due date');
+    return missing;
+  }
+  function mrConclusionLabel(rec) {
+    var c = (rec && rec.conclusion) || {};
+    var ans = MR_CONCLUSIONS.map(function (x) { return c[x.key] && c[x.key].answer; });
+    if (ans.some(function (a) { return !MR_ANSWERS[a]; })) return { state: 'none', text: 'No conclusion recorded' };
+    if (ans.every(function (a) { return a === 'yes'; })) return { state: 'ok', text: 'Suitable, adequate and effective' };
+    return { state: 'concerns', text: MR_CONCLUSIONS.filter(function (x, i) { return ans[i] !== 'yes'; }).map(function (x, i) { return x.label + ': ' + MR_ANSWERS[c[x.key].answer].toLowerCase(); }).join('; ') };
+  }
+  /* The plain-text Decisions field, kept for reports and older readers. */
+  function mrDecisionsText(rec, actionIds) {
+    var r = rec || {}, lines = [];
+    var cl = mrConclusionLabel(r);
+    if (cl.state !== 'none') lines.push('Conclusion: ' + cl.text + '.');
+    MR_CONCLUSIONS.forEach(function (x) { var v = (r.conclusion || {})[x.key]; if (v && v.comment) lines.push(x.label + ': ' + v.comment); });
+    if (r.improvements) lines.push('Improvement: ' + r.improvements);
+    if (r.changes) lines.push('Changes to the ISMS: ' + r.changes);
+    if (r.resources) lines.push('Resources: ' + r.resources);
+    if (actionIds && actionIds.length) lines.push('Actions: ' + actionIds.join(', '));
+    return lines.join('\n');
+  }
+  /* The actions raised at the previous review, for input a). */
+  function mrPriorActions(actions, prev) {
+    if (!prev) return [];
+    var rec = parseReviewRecord(prev.record);
+    var ids = (rec.actionIds || []).concat(String(prev.decisions || '').match(/\bACT-\d+\b/g) || []);
+    var src = 'Management review ' + prev.id;
+    return (actions || []).filter(function (a) { return ids.indexOf(a.id) >= 0 || a.src === src; });
+  }
+
   var MR_INPUT_SECTIONS = [
     { key: 'priorActions', clause: '9.3.2 a', label: 'Status of actions from previous management reviews' },
     { key: 'issues', clause: '9.3.2 b', label: 'Changes in external and internal issues relevant to the ISMS' },
@@ -11777,7 +11840,7 @@
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
-    srDate: srDate, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
+    srDate: srDate, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,

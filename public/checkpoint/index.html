@@ -1332,28 +1332,15 @@
 
     <!-- MANAGEMENT REVIEW -->
     <section class="view" id="v-reviews">
-      <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 clause 9.3 requires top management to review the ISMS at planned intervals. Recording a review here captures its inputs structured against the seven clause 9.3.2 sub-clauses (a–g) — the measurable ones (performance, risk status, prior actions) pre-filled from live data, the rest prompted for — alongside attendees and the decisions agreed. A minuted record an auditor can inspect.</p></div>
-      <div id="secReviewCard"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddReview">+ Record review</button><button class="btn ghost sm" data-action="App.report" data-id="changelog">What changed since the last review</button><button class="btn ghost sm" data-action="App.topMgmtInterview">Top management interview</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="reviews">Export CSV</button></div>
+      <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 Clause 9.3: top management reviews the ISMS at planned intervals and decides whether it is still suitable, adequate and effective. Run a management review walks you through the meeting in four steps: who is there, each input (already drafted from your records), the conclusion and decisions, and sign-off. Save a draft at any point. Saving files the minutes as Clause 9.3 evidence, raises the agreed actions and books the next review.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddReview">Run a management review</button><button class="btn ghost sm" data-action="App.report" data-id="changelog">What changed since the last review</button><button class="btn ghost sm" data-action="App.topMgmtInterview">Top management interview</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="reviews">Export CSV</button></div>
       <div class="card" id="addReviewPanel" style="margin-bottom:16px;display:none">
-        <h3>Record a management review</h3>
-        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
-          <input class="mini" id="naReviewDate" aria-label="Review date" type="date">
-          <input class="mini" id="naReviewNextDue" type="date" placeholder="Next review due">
-          <input class="mini" id="naReviewAttendees" placeholder="Attendees" style="grid-column:1/-1">
-        </div>
-        <p class="src" style="margin:16px 0 4px">Review inputs — ISO 27001 Clause 9.3.2. The measurable ones are pre-filled from live data; fill in the rest.</p>
-        <div id="naReviewInputSections"></div>
-        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Decisions & actions agreed (outputs — Clause 9.3.3)</b><textarea class="mini" id="naReviewDecisions" rows="3" style="width:100%;margin-top:8px;resize:vertical" placeholder="Decisions on continual improvement and any changes to the ISMS, and who owns them"></textarea></div>
-        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Actions agreed</b><textarea class="mini" id="naReviewActions" rows="3" style="width:100%;margin-top:8px;resize:vertical" placeholder="One per line: what; owner; due date. Each becomes an action in the Actions register, e.g. Run a phishing simulation; IT Manager; 2026-12-01"></textarea></div>
-        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Resources (Clauses 5.1 and 7.1)</b><textarea class="mini" id="naReviewResources" rows="2" style="width:100%;margin-top:8px;resize:vertical" placeholder="What top management decided about people, time, budget and tools for the management system, e.g. current resources are sufficient; ISMS Manager has one day a week"></textarea></div>
-        <div style="margin-top:14px;display:flex;gap:10px">
-          <button class="btn sm" data-action="App.recordReview">Save review</button>
-          <button class="btn ghost sm" data-action="App.toggleAddReview">Cancel</button>
-        </div>
+        <h3>Management review</h3>
+        <div id="mrWizard"></div>
       </div>
       <div class="grid kpis" id="reviewKpiRow" style="margin:0 0 16px"></div>
-      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Date</th><th scope="col">Attendees</th><th scope="col">Next due</th><th scope="col"></th></tr></thead><tbody id="reviewRows"></tbody></table></div>
+      <div class="card" style="padding:0 10px;margin-bottom:20px"><table><thead><tr><th scope="col">ID</th><th scope="col">Held</th><th scope="col">Chair</th><th scope="col">Conclusion</th><th scope="col">Actions</th><th scope="col">Minutes</th><th scope="col">Next due</th></tr></thead><tbody id="reviewRows"></tbody></table></div>
+      <div id="secReviewCard"></div>
     </section>
 
     <!-- OBJECTIVES -->

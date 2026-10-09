@@ -295,9 +295,9 @@ Exercises internal audit scheduling, report generation, and export.
 
 Exercises management review and the audit trail.
 
-**8.1 — Record a management review**
-- Click: sidebar → **"Management review"** → **"+ Record review"** → fill attendees/inputs/decisions → save.
-- Expect: a new review row appears, snapshotting current posture/risk/action state at that moment.
+**8.1 — Run a management review**
+- Click: sidebar → **"Management review"** → **"Run a management review"**. Step 1: pick the chair (top management) and attendees. Step 2: mark each input Noted or Action needed, with a note. Close the panel half-way, reopen it ("Continue the review in progress"), and confirm nothing was lost. Step 3: answer suitable / adequate / effective (a "Partly" or "No" needs a reason), fill improvements, changes and resources, and check the input marked Action needed became an action row. Step 4: confirm "Ready to save", then save.
+- Expect: a new review row with chair, conclusion, actions raised and "Awaiting sign-off"; the actions in the Actions register; a Management review item on the compliance calendar at the next due date; the minutes filed under Clause 9.3 (live tenant). Signed in as the chair, the review is in My tasks as "Sign off minutes", and signing off shows the name and date on the minutes.
 - [ ] Pass  [ ] Fail
 
 **8.2 — Audit log completeness**
