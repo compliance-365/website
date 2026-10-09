@@ -4185,6 +4185,177 @@
   var DOCX_PAGE_BREAK = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
   /* Enterprise front matter: a cover page, then a document control page
      (metadata, history, approval). The contents list follows it. */
+  /* ── Register documents (.docx) ────────────────────────────────────
+     A register (Statement of Applicability, risk register, asset
+     register) as a controlled Word document in the enterprise style:
+     landscape A4, a title block with document control, then the
+     register as a table whose header row repeats on every page, and a
+     footer with the classification and Page X of Y.
+     opts: { title, subtitle, clientLabel, classification, date,
+     preparedBy, intro, brandColor, summary: [[label, value], ..] }
+     columns: [{ h: 'Header', w: relative width }]; rows: [[..], ..]. */
+  function docxDataTable(columns, rows, width, borderColor) {
+    var total = columns.reduce(function (n, c) { return n + (c.w || 1); }, 0);
+    var widths = columns.map(function (c) { return Math.floor(width * (c.w || 1) / total); });
+    var borders = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (edge) {
+      return '<w:' + edge + ' w:val="single" w:sz="4" w:space="0" w:color="' + borderColor + '"/>';
+    }).join('') + '</w:tblBorders>';
+    var cell = function (text, w, head) {
+      return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (head ? '<w:shd w:val="clear" w:color="auto" w:fill="E8ECF2"/>' : '') + '</w:tcPr>' +
+        String(text == null ? '' : text).split('\n').map(function (line) {
+          return '<w:p><w:pPr><w:spacing w:before="20" w:after="20"/></w:pPr>' + docxRun(line, head ? { bold: true, sz: 16 } : { sz: 16 }) + '</w:p>';
+        }).join('') + '</w:tc>';
+    };
+    var head = '<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>' + columns.map(function (c, i) { return cell(c.h, widths[i], true); }).join('') + '</w:tr>';
+    var body = rows.map(function (r) {
+      return '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + columns.map(function (_, i) { return cell(r[i], widths[i], false); }).join('') + '</w:tr>';
+    }).join('');
+    return '<w:tbl><w:tblPr><w:tblW w:w="' + width + '" w:type="dxa"/>' + borders + '<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' +
+      widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>' + head + body + '</w:tbl>';
+  }
+  function buildRegisterDocx(opts, columns, rows) {
+    opts = opts || {};
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor.slice(1).toUpperCase() : '1F3A5F';
+    var border = 'D9DEE7';
+    var W = 14838; /* landscape A4 (16838) less 1000-twip margins */
+    var cls = String(opts.classification || 'Internal').toUpperCase();
+    var parts = [];
+    parts.push(docxP([{ text: cls, bold: true, color: accent }, { text: '      CONTROLLED DOCUMENT', color: '4A5568' }], { borderTop: { sz: 36, color: accent }, before: 0, after: 360 }, null));
+    parts.push(docxP(opts.clientLabel || 'This organisation', { style: 'ClientName', after: 120 }));
+    parts.push(docxP(opts.title || 'Register', { style: 'Title', after: 80 }));
+    if (opts.subtitle) parts.push(docxP(opts.subtitle, { after: 240 }, { color: '4A5568' }));
+    var ctl = [['Organisation', opts.clientLabel || ''], ['Prepared by', opts.preparedBy || '—'], ['As at', opts.date || ''], ['Classification', opts.classification || 'Internal'], ['Entries', String(rows.length)]]
+      .concat(opts.summary || []);
+    parts.push(docxTable(ctl, [2600, 6000], { borderColor: border, headerShade: 'F4F6F9' }));
+    if (opts.intro) parts.push(docxP(opts.intro, { before: 240, after: 240 }, { color: '4A5568', sz: 18 }));
+    parts.push(docxDataTable(columns, rows, W, border));
+    parts.push(docxP('This register is maintained in Checkpoint. A printed or downloaded copy is uncontrolled: check Checkpoint for the current entries before relying on it.', { before: 240, after: 0 }, { color: '4A5568', sz: 16 }));
+    var body = parts.join('') +
+      '<w:sectPr><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' +
+      '<w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr>';
+    var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' + body + '</w:body></w:document>';
+    var footer = buildDocxFooterXml(cls + ' · ' + (opts.clientLabel || ''), (opts.title || 'Register') + ' · as at ' + (opts.date || ''), W);
+    return buildZip([
+      { name: '[Content_Types].xml', content: DOCX_CONTENT_TYPES_XML.replace('</Types>', '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>') },
+      { name: '_rels/.rels', content: DOCX_RELS_XML },
+      { name: 'word/document.xml', content: documentXml },
+      { name: 'word/_rels/document.xml.rels', content: DOCX_DOCUMENT_RELS_XML.replace('</Relationships>', '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>') },
+      { name: 'word/footer1.xml', content: footer },
+      { name: 'word/styles.xml', content: buildDocxStylesXml(accent, 'enterprise') },
+      { name: 'docProps/core.xml', content: buildDocxCoreXml({ title: opts.title || 'Register' }, { owner: opts.preparedBy || '', version: '' }) },
+      { name: 'docProps/app.xml', content: DOCX_APP_XML }
+    ]);
+  }
+
+  /* ── Excel workbooks (.xlsx) ───────────────────────────────────────
+     A dependency-free SpreadsheetML writer for register exports: one
+     sheet per register, a bold shaded header row that stays in view
+     (frozen) with filters on, sensible column widths and wrapped text.
+     Every text cell is an inline string, so a value that starts with
+     "=" is shown as text and never runs as a formula. Packaged with
+     buildZip() like the Word exports. */
+  function xlsxEsc(s) {
+    return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function xlsxColName(i) {
+    var n = i + 1, out = '';
+    while (n > 0) { var m = (n - 1) % 26; out = String.fromCharCode(65 + m) + out; n = Math.floor((n - 1) / 26); }
+    return out;
+  }
+  /* Excel sheet names: at most 31 characters, none of []:*?/\ , unique. */
+  function xlsxSheetName(name, used) {
+    var base = String(name || 'Sheet').replace(/[\[\]:*?\/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Sheet';
+    var n = base, i = 2;
+    while (used[n.toLowerCase()]) { var suf = ' (' + i++ + ')'; n = base.slice(0, 31 - suf.length) + suf; }
+    used[n.toLowerCase()] = true;
+    return n;
+  }
+  function xlsxCell(ref, v, style) {
+    if (typeof v === 'number' && isFinite(v)) return '<c r="' + ref + '" s="' + style + '"><v>' + v + '</v></c>';
+    var t = String(v == null ? '' : v);
+    if (t.length > 32000) t = t.slice(0, 32000) + '…';
+    return '<c r="' + ref + '" s="' + style + '" t="inlineStr"><is><t xml:space="preserve">' + xlsxEsc(t) + '</t></is></c>';
+  }
+  function xlsxColWidths(header, rows) {
+    return header.map(function (h, ci) {
+      var lens = rows.slice(0, 500).map(function (r) { return String(r[ci] == null ? '' : r[ci]).length; }).sort(function (a, b) { return a - b; });
+      var typical = lens.length ? lens[Math.floor(lens.length * 0.9)] : 0;
+      return Math.max(8, Math.min(60, Math.max(String(h).length + 2, typical + 2)));
+    });
+  }
+  /* sheets: [{ name, header: [..], rows: [[..], ..] }] -> Uint8Array */
+  function buildXlsx(sheets, opts) {
+    opts = opts || {};
+    var used = {};
+    var list = (sheets || []).map(function (sh) { return { name: xlsxSheetName(sh.name, used), header: sh.header || [], rows: sh.rows || [] }; });
+    if (!list.length) list = [{ name: 'Sheet1', header: [], rows: [] }];
+    var files = [];
+    var defined = [];
+    list.forEach(function (sh, si) {
+      var ncol = Math.max(1, sh.header.length);
+      var lastCol = xlsxColName(ncol - 1), lastRow = sh.rows.length + 1;
+      var widths = xlsxColWidths(sh.header, sh.rows);
+      var rowsXml = '<row r="1">' + sh.header.map(function (h, ci) { return xlsxCell(xlsxColName(ci) + '1', h, 1); }).join('') + '</row>' +
+        sh.rows.map(function (r, ri) {
+          var rn = ri + 2;
+          return '<row r="' + rn + '">' + sh.header.map(function (_, ci) { return xlsxCell(xlsxColName(ci) + rn, r[ci], 2); }).join('') + '</row>';
+        }).join('');
+      var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+        '<dimension ref="A1:' + lastCol + lastRow + '"/>' +
+        '<sheetViews><sheetView workbookViewId="0"' + (si === 0 ? ' tabSelected="1"' : '') + '><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>' +
+        '<sheetFormatPr defaultRowHeight="15"/>' +
+        (widths.length ? '<cols>' + widths.map(function (w, ci) { return '<col min="' + (ci + 1) + '" max="' + (ci + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>' : '') +
+        '<sheetData>' + rowsXml + '</sheetData>' +
+        (sh.header.length ? '<autoFilter ref="A1:' + lastCol + lastRow + '"/>' : '') +
+        '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>' +
+        '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>' +
+        '</worksheet>';
+      files.push({ name: 'xl/worksheets/sheet' + (si + 1) + '.xml', content: xml });
+      if (sh.header.length) defined.push('<definedName name="_xlnm._FilterDatabase" localSheetId="' + si + '" hidden="1">\'' + xlsxEsc(sh.name.replace(/'/g, "''")) + '\'!$A$1:$' + lastCol + '$' + lastRow + '</definedName>');
+    });
+    var workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<bookViews><workbookView/></bookViews><sheets>' +
+      list.map(function (sh, si) { return '<sheet name="' + xlsxEsc(sh.name) + '" sheetId="' + (si + 1) + '" r:id="rId' + (si + 1) + '"/>'; }).join('') +
+      '</sheets>' + (defined.length ? '<definedNames>' + defined.join('') + '</definedNames>' : '') + '</workbook>';
+    var wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      list.map(function (_, si) { return '<Relationship Id="rId' + (si + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (si + 1) + '.xml"/>'; }).join('') +
+      '<Relationship Id="rId' + (list.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="2"><font><sz val="10"/><name val="Arial"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FF14213D"/><name val="Arial"/><family val="2"/></font></fonts>' +
+      '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8ECF2"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+      '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FFB8C0CC"/></bottom><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+    var types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      list.map(function (_, si) { return '<Override PartName="/xl/worksheets/sheet' + (si + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>';
+    var rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>';
+    var core = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">' +
+      '<dc:title>' + xlsxEsc(opts.title || list[0].name) + '</dc:title><dc:creator>Compliance365 — Checkpoint</dc:creator></cp:coreProperties>';
+    return buildZip([
+      { name: '[Content_Types].xml', content: types },
+      { name: '_rels/.rels', content: rootRels },
+      { name: 'xl/workbook.xml', content: workbook },
+      { name: 'xl/_rels/workbook.xml.rels', content: wbRels },
+      { name: 'xl/styles.xml', content: styles }
+    ].concat(files).concat([{ name: 'docProps/core.xml', content: core }]));
+  }
+
   /* ── Ticket links: actions worked in Planner, Jira or ServiceNow ─────
      A Power Automate flow (POWER-AUTOMATE.md, flows 5 to 7) records each
      action's ticket in the "Ticket Links" list: which action, which
@@ -4370,13 +4541,19 @@
   /* The footer an enterprise document carries on every page. */
   function buildEnterpriseDocxFooter(t, opts) {
     var ver = opts.version || (opts.approved ? '1.0' : '0.1');
+    return buildDocxFooterXml(String(opts.classification || 'Internal').toUpperCase() + (opts.approved ? '' : ' · DRAFT') + ' · ' + (opts.clientLabel || ''), t.title + ' · Version ' + ver, 9026);
+  }
+  /* Footer part: left text, "Page X of Y" in the centre, right text.
+     width is the text width in twips (portrait A4 with 2.54cm margins is
+     9026; the centre tab sits at half of it). */
+  function buildDocxFooterXml(left, right, width) {
     var fld = function (code) { return '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ' + code + ' </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'; };
     var small = '<w:rPr><w:color w:val="4A5568"/><w:sz w:val="15"/></w:rPr>';
     var run = function (text) { return '<w:r>' + small + '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r>'; };
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="D9DEE7"/></w:pBdr><w:tabs><w:tab w:val="center" w:pos="4513"/><w:tab w:val="right" w:pos="9026"/></w:tabs></w:pPr>' +
-      run(String(opts.classification || 'Internal').toUpperCase() + (opts.approved ? '' : ' · DRAFT') + ' · ' + (opts.clientLabel || '')) + '<w:r><w:tab/></w:r>' +
-      run('Page ') + fld('PAGE') + run(' of ') + fld('NUMPAGES') + '<w:r><w:tab/></w:r>' + run(t.title + ' · Version ' + ver) +
+      '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="D9DEE7"/></w:pBdr><w:tabs><w:tab w:val="center" w:pos="' + Math.round(width / 2) + '"/><w:tab w:val="right" w:pos="' + width + '"/></w:tabs></w:pPr>' +
+      run(left) + '<w:r><w:tab/></w:r>' +
+      run('Page ') + fld('PAGE') + run(' of ') + fld('NUMPAGES') + '<w:r><w:tab/></w:r>' + run(right) +
       '</w:p></w:ftr>';
   }
   /* Bullet character varies by layout the same way the HTML template's
@@ -12237,6 +12414,7 @@
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
     srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
+    buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,
     documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
     incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,

@@ -26137,6 +26137,74 @@ function showModal(opts) {
       renderAll();
     },
 
+    /* The same register as an Excel workbook: a frozen, filterable
+       header and readable column widths. Read-only, like every export. */
+    exportXlsx: async function (key) {
+      var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
+      if (!reg) return;
+      await refreshDocsForExport(key);
+      var bytes = window.CheckpointLib.buildXlsx([{ name: reg.label, header: reg.header, rows: reg.rows() }], { title: reg.label + ' — ' + clientDisplayLabel('') });
+      var name = reg.filename.replace(/\.csv$/i, '.xlsx');
+      downloadBlob(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      audit('Register exported (Excel)', 'Export', reg.key, '(none)', name);
+      toast('<b>' + esc(name) + '</b> downloaded');
+    },
+    /* Every register in one workbook, one sheet each. */
+    exportAllXlsx: async function () {
+      busy(true);
+      try {
+        await refreshDocsForExport('documents');
+        var sheets = EXPORT_REGISTERS.map(function (r) { return { name: r.label, header: r.header, rows: r.rows() }; });
+        var bytes = window.CheckpointLib.buildXlsx(sheets, { title: 'Checkpoint registers — ' + clientDisplayLabel('') });
+        var name = 'checkpoint-registers-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+        downloadBlob(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+        audit('Register exported (Excel)', 'Export', 'all', '(none)', name + ' (' + sheets.length + ' sheets)');
+        toast('<b>' + esc(name) + '</b> downloaded: ' + sheets.length + ' registers');
+      } finally { busy(false); }
+    },
+    /* The Statement of Applicability, risk register or asset register
+       as a controlled Word document (landscape, document control,
+       repeating header row, Page X of Y). The SoA is for the framework
+       open in the SoA view. */
+    exportRegisterWord: async function (key) {
+      var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
+      if (!reg) return;
+      var rows = reg.rows(), cols, title, subtitle = '', intro = '', summary = [];
+      var count = function (list, f) { return list.filter(f).length; };
+      if (key === 'controls') {
+        var fw = window._soaFw && S.entitlements && S.entitlements[window._soaFw] ? window._soaFw : Object.keys(S.entitlements || {}).filter(function (k) { return S.entitlements[k]; })[0];
+        var label = fwName(fw);
+        rows = rows.filter(function (r) { return r[0] === label; });
+        title = 'Statement of Applicability';
+        subtitle = label;
+        intro = 'Every control in ' + label + ', whether it applies to the organisation, its implementation status, and the justification for including or excluding it.';
+        summary = [['Applicable', count(rows, function (r) { return r[3] === 'Yes'; }) + ' of ' + rows.length], ['Implemented', String(count(rows, function (r) { return r[4] === 'Implemented'; }))]];
+        cols = [{ h: 'Control', w: 1 }, { h: 'Title', w: 3 }, { h: 'Applies', w: 0.8 }, { h: 'Status', w: 1.2 }, { h: 'Justification', w: 4 }, { h: 'Owner', w: 1.4 }, { h: 'Evidence', w: 0.9 }, { h: 'Last verified', w: 1.1 }];
+        rows = rows.map(function (r) { return [r[1], r[2], r[3], r[4], r[3] === 'Yes' ? r[11] : r[10], r[6], r[9] ? 'Linked' : '—', r[7] ? fmtDateY(r[7]) : '—']; });
+      } else if (key === 'risks') {
+        title = 'Risk register';
+        intro = 'Every risk with its owner, inherent and residual rating, and status. Scores are likelihood × impact on a 5 × 5 scale.';
+        summary = [['Above appetite', String(count(rows, function (r) { return /High|Critical/.test(r[8] || ''); }))]];
+        cols = [{ h: 'ID', w: 0.8 }, { h: 'Risk', w: 4 }, { h: 'Category', w: 1.3 }, { h: 'Owner', w: 1.4 }, { h: 'Inherent', w: 1 }, { h: 'Residual', w: 1 }, { h: 'Basis for residual', w: 2.4 }, { h: 'Status', w: 1.1 }, { h: 'Last reviewed', w: 1.1 }];
+        rows = rows.map(function (r) { return [r[0], r[1], r[2], r[12], r[5] + (r[6] ? ' · ' + r[6] : ''), r[7] + (r[8] ? ' · ' + r[8] : ''), r[9], r[13], r[10] ? fmtDateY(r[10]) : '—']; });
+      } else if (key === 'assets') {
+        title = 'Asset register';
+        intro = 'Information assets with their owner, classification and criticality, and where each is held.';
+        cols = [{ h: 'ID', w: 0.8 }, { h: 'Asset', w: 3 }, { h: 'Type', w: 1.2 }, { h: 'Owner', w: 1.4 }, { h: 'Classification', w: 1.2 }, { h: 'Criticality', w: 1 }, { h: 'Where held', w: 2 }, { h: 'Status', w: 1 }, { h: 'Last reviewed', w: 1.1 }];
+        rows = rows.map(function (r) { return [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[8], r[10] ? fmtDateY(r[10]) : '—']; });
+      } else return;
+      var acc = Graph.getAccount && Graph.getAccount();
+      var bytes = window.CheckpointLib.buildRegisterDocx({
+        title: title, subtitle: subtitle, intro: intro, summary: summary,
+        clientLabel: clientDisplayLabel('This organisation'), classification: 'Internal',
+        date: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
+        preparedBy: (acc && acc.name) || '', brandColor: clientBrandColor() || ''
+      }, cols, rows);
+      var name = (title + (subtitle ? ' - ' + subtitle : '')).replace(/[\/\\:*?"<>|]/g, '-') + '.docx';
+      downloadBlob(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+      audit('Register exported (Word)', 'Export', key, '(none)', name);
+      toast('<b>' + esc(name) + '</b> downloaded');
+    },
     exportCsv: async function (key) {
       var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
       if (!reg) return;
