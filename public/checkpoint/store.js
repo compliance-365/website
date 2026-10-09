@@ -3005,7 +3005,7 @@ window.SpStore = (function () {
        provisioned before either existed has a Vendors list missing
        them, same "Field not recognized" failure class as the others in
        this map. */
-    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate', 'Tier', 'ContractInPlace', 'DpaInPlace', 'Apps'],
+    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate', 'Tier', 'ContractInPlace', 'DpaInPlace', 'Apps', 'PublicListed', 'DataCategories', 'CalRef'],
     /* Requirements added with the clause requirement checklists. */
     Clauses: ['Requirements'],
     /* Results added with in-app internal audits: each workpack line's
@@ -3016,40 +3016,48 @@ window.SpStore = (function () {
     /* Retirement: the disposal record (A.7.14). */
     Assets: ['Retirement']
   };
+  /* Every column in every list's DEFS, not just COLUMN_RECONCILE's
+     subset. The subset kept missing columns (PublicListed on Vendors was
+     the latest live "Field 'PublicListed' is not recognized", which also
+     stopped the Vendors register loading), so the self-heal now checks
+     the full schema of every list this session found, with one batched
+     read, and adds whatever is missing. COLUMN_RECONCILE stays as the
+     record of columns known to have been added later. */
+  function columnsToReconcile() {
+    var out = {};
+    Object.keys(DEFS).forEach(function (k) {
+      var names = DEFS[k].map(function (d) { return d.name; });
+      (COLUMN_RECONCILE[k] || []).forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
+      out[k] = names;
+    });
+    return out;
+  }
   async function reconcileColumns(onStatus) {
-    for (var k in COLUMN_RECONCILE) {
-      if (!lists[k]) continue;
-      var want = COLUMN_RECONCILE[k];
-      var cols;
-      try { cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/columns?$select=name', provisionOpts); }
-      catch (e) { continue; /* can't read columns — leave it; a later write to a missing field surfaces the real error */ }
+    var want = columnsToReconcile();
+    var keys = Object.keys(want).filter(function (k) { return lists[k]; });
+    if (!keys.length) return;
+    var res;
+    try {
+      res = await Graph.batch(keys.map(function (k) { return { url: '/sites/' + siteId + '/lists/' + lists[k] + '/columns?$select=name&$top=500' }; }), provisionOpts);
+    } catch (e) { return; /* can't read columns — leave it; a later write to a missing field surfaces the real error */ }
+    for (var x = 0; x < keys.length; x++) {
+      var k = keys[x], r = res && res[x];
+      if (!r || r.status !== 200 || !r.body) continue; /* unreadable schema: not evidence of a missing column */
       var have = {};
-      cols.forEach(function (c) { have[c.name] = true; });
-      var missing = want.filter(function (n) { return !have[n]; });
-      if (!missing.length) continue;
-      /* Deliberately NOT gated on assertActivationAuthorizesProvisioning()
-         — that check exists for actual list CREATION (a not-yet-confirmed-
-         real tenant getting a brand-new list), and widening a column
-         doesn't carry that risk: `lists[k]` is only ever populated a few
-         lines above by ensureLists() finding this EXACT list already
-         exists in the tenant, in THIS SAME session. Gating here directly
-         contradicted this function's own header comment ("Deliberately
-         does NOT gate reading/self-healing lists that already exist") —
-         a tenant whose activation happened not to be re-verified yet at
-         the moment reconcileColumns() ran would throw here, abort the
-         whole loop (every other list's missing columns too, not just
-         this one), and never self-heal AT ALL, on any future load either,
-         if that tenant's activation-verification path was ever
-         consistently slow/failing — reproducing the exact "Field
-         '<name>' is not recognized" error indefinitely despite the
-         column now being listed in COLUMN_RECONCILE. */
+      (r.body.value || []).forEach(function (c) { have[c.name] = true; });
+      var missing = want[k].filter(function (n) { return !have[n]; });
+      /* Deliberately NOT gated on assertActivationAuthorizesProvisioning():
+         that check is for creating lists. lists[k] is only set by
+         ensureLists() finding this exact list already in the tenant, and
+         adding a column to an existing list carries no such risk. Gating
+         here once stopped the self-heal for every list. */
       for (var i = 0; i < missing.length; i++) {
         var def = DEFS[k].find(function (d) { return d.name === missing[i]; });
         if (!def) continue;
         if (onStatus) onStatus('Adding “' + missing[i] + '” to ' + listName(k) + '…');
         try {
           await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision });
-        } catch (e) { /* best-effort — a genuine failure surfaces when a write to that field later fails */ }
+        } catch (e) { /* best-effort — Setup health reports anything still missing */ }
       }
     }
   }

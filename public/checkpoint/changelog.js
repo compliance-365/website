@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.140.1',
+    date: '2026-10-09',
+    entries: [
+      'Fixed: on a tenant set up with an earlier version, saving a vendor could fail with "Field \u2018PublicListed\u2019 is not recognized". Checkpoint now checks every register against the current layout each time it loads and adds any field an older setup is missing, for every register rather than a fixed list.'
+    ]
+  },
+  {
     version: '1.140.0',
     date: '2026-10-09',
     entries: [
