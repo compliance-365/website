@@ -222,6 +222,16 @@ Exercises linking evidence to a control and the shared-evidence cross-framework 
 - Expect: shows every framework/control this same evidence also satisfies (via the SoA's "Also satisfies" cross-mapping), not just the one you started from.
 - [ ] Pass  [ ] Fail
 
+**5.3a — Registers to Excel and Word**
+- Click: Statement of Applicability → **Word — this framework**; Risk register → **Word**; Asset register → **Word**; Risk register → **Excel**; Settings → **Export all (Excel)**.
+- Expect: each file downloads and opens. The Word documents are landscape, with document control at the top, the table header repeated on each page and "Page X of Y" in the footer. The Excel files have a bold header row that stays in view and filters. Audit log shows a **Register exported** entry for each.
+- [ ] Pass  [ ] Fail
+
+**5.3b — An action worked as a ticket**
+- Click: Actions → open an action → **Link ticket** → paste a Jira, ServiceNow or Planner link with status *Done* → **Save**.
+- Expect: the action shows the ticket, and **Linked tickets finished** lists it with **Complete**. Completing it adds a progress-log entry naming the ticket, sets the ticket link as evidence and writes an audit entry. A nonconformity in the same state shows **Record corrective action** instead.
+- [ ] Pass  [ ] Fail
+
 **5.4 — Upload a document**
 - Click: sidebar → **"Documents"** → choose a small test file, pick a category → **"Upload"**.
 - Expect: file appears in the table below with correct name/category/modified date; visible in the tenant's real SharePoint document library too (spot-check in a separate tab).

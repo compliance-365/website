@@ -1,0 +1,59 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Accessibility statement', url: 'https://www.compliance365.com.au/accessibility/' },
+];
+---
+<Base
+  title="Accessibility Statement | Compliance365"
+  description="How this website and Checkpoint are built to WCAG 2.2 AA: what is in place, the known limitations, and how to report an accessibility barrier."
+  breadcrumbs={breadcrumbs}
+>
+<Header />
+<main id="main-content" tabindex="-1">
+<section class="section">
+  <div class="container acc">
+    <h1>Accessibility statement</h1>
+    <p class="muted">Applies to www.compliance365.com.au and Checkpoint, our compliance console at <a href={base + 'checkpoint/'}>/checkpoint/</a>. Last reviewed 10 October 2026.</p>
+
+    <h2>Our standard</h2>
+    <p>We design and build to the Web Content Accessibility Guidelines (WCAG) 2.2, level AA. Our conformance is <strong>self-assessed</strong>: we test as we build, but an independent accessibility audit has not yet been done, so we describe the site and Checkpoint as partially conformant until one has.</p>
+
+    <h2>What is in place</h2>
+    <ul>
+      <li><strong>Keyboard.</strong> Controls are real buttons, links and form fields, so the site and Checkpoint can be used without a mouse. A skip link to the main content is the first thing on every page, and focus is visible.</li>
+      <li><strong>Contrast.</strong> Text colours are set as design tokens chosen to meet WCAG AA contrast against their backgrounds, in both Checkpoint's light and dark themes. We check rendered pages for contrast, not just the colour values.</li>
+      <li><strong>Structure.</strong> Pages use real headings, landmarks and lists. Tables have header cells, and icon-only controls have text labels for screen readers.</li>
+      <li><strong>Motion.</strong> Animation is reduced or switched off when your device asks for reduced motion, and the home page animation can be paused.</li>
+      <li><strong>Touch and zoom.</strong> On touch screens, controls meet WCAG 2.2's minimum target size (24 pixels; the website's main controls are 44), and pages reflow when zoomed or viewed on small screens.</li>
+      <li><strong>Documents.</strong> Policies and reports Checkpoint generates use real headings and tables, in the browser, in print and in Word, so they work with screen readers and can be navigated by heading.</li>
+    </ul>
+
+    <h2>Known limitations</h2>
+    <ul>
+      <li>Some charts in Checkpoint and its reports show information visually. The same figures are given in text or tables next to them, but a chart on its own is not a full alternative.</li>
+      <li>A PDF made with your browser's "Save as PDF" is tagged by the browser, not by us, so how well it works with a screen reader depends on the browser. The Word versions are fully structured.</li>
+      <li>Third-party content we link to or embed (for example Microsoft's sign-in pages and the booking calendar) is outside our control.</li>
+    </ul>
+
+    <h2>Report a barrier</h2>
+    <p>If something on this site or in Checkpoint is hard to use with your assistive technology, email <a href="mailto:info@compliance365.com.au?subject=Accessibility">info@compliance365.com.au</a> with the page and what happened. We will reply within five business days and, where we can, provide the information another way in the meantime.</p>
+    <p>For procurement, Checkpoint's <a href={base + 'security/questionnaire/'}>security questionnaire answers</a> include this statement.</p>
+  </div>
+</section>
+</main>
+<Footer />
+</Base>
+
+<style>
+  .acc { max-width: 780px; }
+  .acc h2 { margin-top: 2.2rem; }
+  .acc ul { padding-left: 1.2rem; }
+  .acc li { margin: .7rem 0; line-height: 1.65; }
+  .acc p { line-height: 1.7; }
+</style>

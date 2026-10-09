@@ -1,0 +1,216 @@
+{
+  "asAt": "2026-10-10",
+  "outbound": [
+    {
+      "what": "Error reports",
+      "when": "When something fails in the app (at most 20 per session)",
+      "sends": "The error text and stack trace, the app version, the browser, the page path and your tenant ID. The error text can name the record involved. Nothing from your registers, scans or documents.",
+      "to": "Compliance365, Amazon Web Services, Sydney (ap-southeast-2)",
+      "control": "Fixed in the app"
+    },
+    {
+      "what": "Setup health",
+      "when": "When Checkpoint's setup status changes, at most every 12 hours",
+      "sends": "Status flags only: which setup checks pass, a one-line description of any problem (for example a missing list or permission), the app version and the last scan date.",
+      "to": "Compliance365, Amazon Web Services, Sydney (ap-southeast-2)",
+      "control": "Settings → Setup health: untick \"Share this setup status with Compliance365\""
+    },
+    {
+      "what": "Activation",
+      "when": "Only when a licence is bought or activated",
+      "sends": "The payment or Microsoft Marketplace transaction reference. It returns a signed licence file, which your browser checks and saves.",
+      "to": "Compliance365, Amazon Web Services, Sydney (ap-southeast-2)",
+      "control": "Only on activation"
+    },
+    {
+      "what": "Threat intelligence feed",
+      "when": "When the Threat intel view or the leadership meeting pack loads",
+      "sends": "Nothing about you: it requests a public, filtered list of known exploited vulnerabilities and sorts it in your browser.",
+      "to": "Compliance365, Amazon Web Services, Sydney (ap-southeast-2)",
+      "control": "Fixed in the app"
+    },
+    {
+      "what": "The app itself",
+      "when": "When Checkpoint opens",
+      "sends": "A normal download of the app's own files (HTML, JavaScript, CSS). They contain no client data.",
+      "to": "www.compliance365.com.au (GitHub Pages)",
+      "control": "n/a"
+    }
+  ],
+  "groups": [
+    {
+      "name": "Data location and ownership",
+      "items": [
+        {
+          "q": "Where is our data stored?",
+          "a": "In your own Microsoft 365 tenant. Registers are SharePoint lists on the site you choose when setting Checkpoint up, and documents and evidence are in a SharePoint library on the same site. Compliance365 operates no database for Checkpoint."
+        },
+        {
+          "q": "Where is our data located geographically?",
+          "a": "Wherever your Microsoft 365 tenant stores SharePoint data, as set by your tenant's data location. Checkpoint does not copy it anywhere else."
+        },
+        {
+          "q": "Where is the application hosted?",
+          "a": "Checkpoint is a static web app: its HTML, JavaScript and CSS files are served from www.compliance365.com.au (GitHub Pages) and run in your browser. The files contain no client data."
+        },
+        {
+          "q": "Does Compliance365 have access to our data through Checkpoint?",
+          "a": "No. Checkpoint runs in your browser as the signed-in user and reads and writes your tenant directly through Microsoft Graph. Compliance365 has no account in your tenant and no copy of your data. If you also engage us as consultants, our access is whatever you grant our staff in your tenant, under your own controls."
+        },
+        {
+          "q": "What data leaves our tenant?",
+          "a": "Only what the table above lists: error reports, setup health flags (which you can turn off), activation transaction references and a request for a public threat feed. Nothing from your registers, scans or documents."
+        },
+        {
+          "q": "Who owns the data?",
+          "a": "You do. It is stored in your tenant from the first day, in SharePoint lists you can open, export or delete without Checkpoint."
+        }
+      ]
+    },
+    {
+      "name": "Identity and access",
+      "items": [
+        {
+          "q": "How do users sign in?",
+          "a": "With their Microsoft Entra ID account, through Microsoft's own sign-in library (MSAL). Checkpoint never sees, requests or stores a password. Your Conditional Access policies and MFA apply as they do to any Microsoft 365 sign-in."
+        },
+        {
+          "q": "What permissions does Checkpoint request?",
+          "a": "Delegated Microsoft Graph permissions only, requested in stages as features are first used, so Checkpoint acts as the signed-in user with that user's own access. The full list, and when each is requested, is on the Security & architecture page. The optional scheduled monitor, which you deploy in your own Azure subscription, uses its own app registration with application permissions because it runs unattended."
+        },
+        {
+          "q": "What roles are there?",
+          "a": "Practitioners, who maintain the ISMS; read-only Viewers; and staff who see only policy acknowledgement and training. An external auditor can be given read-only access that expires on a date you set."
+        },
+        {
+          "q": "Is segregation of duties enforced?",
+          "a": "Checkpoint checks whether the signed-in person is approving their own work (for example a document or a risk acceptance) and records the finding in the audit log either way. With segregation of duties switched on in Settings, such an approval is refused and someone else has to authorise it."
+        },
+        {
+          "q": "How are sign-in tokens stored?",
+          "a": "In the browser's session storage, which is cleared when the tab is closed. They are never sent to Compliance365."
+        }
+      ]
+    },
+    {
+      "name": "Encryption",
+      "items": [
+        {
+          "q": "Is data encrypted in transit?",
+          "a": "Yes. The app, Microsoft Entra ID, Microsoft Graph and every endpoint in the table above are reached over HTTPS (TLS)."
+        },
+        {
+          "q": "Is data encrypted at rest?",
+          "a": "Your data is at rest only in your Microsoft 365 tenant, where Microsoft encrypts SharePoint content at rest. Checkpoint keeps no copy elsewhere. In the browser it stores only your licence file and preferences (such as which SharePoint site to use), never register data."
+        }
+      ]
+    },
+    {
+      "name": "Logging and audit",
+      "items": [
+        {
+          "q": "Is there an audit trail?",
+          "a": "Yes. Every material change (a control status, a risk decision, an approval, an AI request, an export) is appended to an audit log list in your own tenant, recording who, what and when. Each entry is chained by hash to the one before, so a deleted or altered entry can be detected."
+        },
+        {
+          "q": "Can we export our data and audit log?",
+          "a": "Yes, at any time: every register as CSV or Excel, all registers in one workbook or zip, the Statement of Applicability, risk register and asset register as Word documents, and the audit log as CSV or Excel."
+        },
+        {
+          "q": "Are exports recorded?",
+          "a": "Yes. Each export is written to the audit log with who exported what and when."
+        }
+      ]
+    },
+    {
+      "name": "Application security",
+      "items": [
+        {
+          "q": "What protects the app against injected or tampered code?",
+          "a": "A strict Content-Security-Policy that allows scripts only from Checkpoint's own origin (no third-party scripts, no inline script), and Subresource Integrity checks on the app's script files."
+        },
+        {
+          "q": "What third-party code does the app run?",
+          "a": "Microsoft's sign-in library (MSAL), served from Checkpoint's own origin. There is no analytics, advertising or tracking code in Checkpoint."
+        },
+        {
+          "q": "How are changes tested?",
+          "a": "Every change runs an automated test suite (about 2,400 tests, including browser tests of the app) and an automated security review before it is merged."
+        },
+        {
+          "q": "Is there a backend that could be breached?",
+          "a": "Checkpoint has no server or database holding client data. The only Compliance365 endpoints are the small functions in the table above, which receive no client register data."
+        },
+        {
+          "q": "Penetration testing",
+          "a": "Ask us for the current status and summary."
+        },
+        {
+          "q": "How do we report a vulnerability?",
+          "a": "Follow the vulnerability disclosure policy on the Security & architecture page. We do not pursue good-faith researchers who follow it."
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "items": [
+        {
+          "q": "Does Checkpoint use AI?",
+          "a": "Only if you turn it on. It drafts text (policy wording, evidence descriptions, questionnaire answers) from your own registers, using your own Azure OpenAI resource in your own tenant, reached with your Entra sign-in. No API key is used, and no Compliance365-hosted AI endpoint is involved."
+        },
+        {
+          "q": "Can the AI change our records?",
+          "a": "No. It has no tool or function calling: it returns text marked as an AI-assisted draft, and a person decides whether to use it. AI requests are recorded in the audit log."
+        }
+      ]
+    },
+    {
+      "name": "Integrations",
+      "items": [
+        {
+          "q": "What can the optional integrations change?",
+          "a": "The scheduled monitor (Azure), the AWS and GitHub collectors write their own results, such as scan results and alerts, into your SharePoint lists. Ticket flows for Planner, Jira or ServiceNow write only the Ticket Links list. A register entry such as an action is never completed or changed by an integration without a person confirming it in Checkpoint."
+        },
+        {
+          "q": "Where do the integrations run?",
+          "a": "In your own environments: the monitor in your Azure subscription, the AWS collector in your AWS account, the GitHub collector in your GitHub organisation, and Power Automate flows in your tenant."
+        }
+      ]
+    },
+    {
+      "name": "Continuity and exit",
+      "items": [
+        {
+          "q": "What happens if Checkpoint is unavailable?",
+          "a": "Your registers stay in SharePoint and remain readable and exportable there. Nothing you hold depends on a Compliance365 service being up."
+        },
+        {
+          "q": "Are there backups?",
+          "a": "With the scheduled monitor, a dated backup of every register, the settings and an index of your evidence is saved weekly into your own SharePoint, keeping the newest 13. You can also back up on demand."
+        },
+        {
+          "q": "What happens when we stop using Checkpoint?",
+          "a": "Your data stays where it has always been. To remove it, delete the Checkpoint lists and library from your SharePoint site and remove the app's enterprise application in Entra ID. On request we delete the error and setup health reports associated with your tenant ID."
+        }
+      ]
+    },
+    {
+      "name": "Third parties",
+      "items": [
+        {
+          "q": "Which third parties process data for Checkpoint?",
+          "a": "GitHub (hosting the app's files, no client data), Amazon Web Services in Sydney (the functions in the table above) and, for self-serve purchases only, Paddle (payment). Microsoft is not our subprocessor for your data: Checkpoint uses your own Microsoft 365 tenant under your agreement with Microsoft."
+        }
+      ]
+    },
+    {
+      "name": "Accessibility",
+      "items": [
+        {
+          "q": "Does Checkpoint meet an accessibility standard?",
+          "a": "We design to WCAG 2.2 level AA. Our accessibility statement sets out what is in place, the known limitations and how to report a barrier."
+        }
+      ]
+    }
+  ]
+}

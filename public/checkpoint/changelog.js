@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.148.0',
+    date: '2026-10-10',
+    entries: [
+      'Actions can be worked as tickets in Planner, Jira or ServiceNow. A Power Automate flow in your tenant opens the ticket and keeps its status in a new Ticket Links list (POWER-AUTOMATE.md, flows 5 and 6). Each action shows its ticket, and when a ticket is done Checkpoint offers to complete the action, recording it in the progress log and audit log with the ticket as the reference. Nonconformities are never closed from a ticket: they open their corrective action record. You can also link a ticket by hand from the action.',
+      'Excel exports: every main register downloads as an Excel workbook with a frozen, filterable header, and Settings has one workbook with every register on its own sheet.',
+      'Word exports of the Statement of Applicability, risk register and asset register, as controlled documents: landscape, document control, the header row repeated on every page, and Page X of Y.',
+      'Every export is recorded in the audit log.'
+    ]
+  },
+  {
     version: '1.147.0',
     date: '2026-10-10',
     entries: [
