@@ -232,6 +232,16 @@ Exercises linking evidence to a control and the shared-evidence cross-framework 
 - Expect: the action shows the ticket, and **Linked tickets finished** lists it with **Complete**. Completing it adds a progress-log entry naming the ticket, sets the ticket link as evidence and writes an audit entry. A nonconformity in the same state shows **Record corrective action** instead.
 - [ ] Pass  [ ] Fail
 
+**5.3c — A policy reviewed by a second person before approval**
+- Click: Settings → Approvals → **All policies**. Documents → a draft policy → **Ask for review** → choose a colleague → **Send request**. Signed in as that colleague: My tasks → **Check it** → **Reviewed** → **Record review**.
+- Expect: before the review, **Approve** says a review is needed first. The preparer cannot record the review. After it, the register shows **Reviewed** and offers **Request approval**; the reviewer cannot be entered as the approver. The approved document's history and sign-off table show the reviewer and the approver. An edit made after the review means it must be reviewed again.
+- [ ] Pass  [ ] Fail
+
+**5.3d — A risk accepted by the person accountable**
+- Click: Settings → Approvals → risk acceptance **On**. Risk register → a risk → **Accept residual** → choose the risk owner → **Send request**. Signed in as the owner: My tasks → **Decide** → **Record acceptance**.
+- Expect: the acceptance dialog has no free-text "Accepted by": it is recorded in the owner's name. The audit log entry reads "Accepted by … ; asked for by …". The request leaves My tasks.
+- [ ] Pass  [ ] Fail
+
 **5.4 — Upload a document**
 - Click: sidebar → **"Documents"** → choose a small test file, pick a category → **"Upload"**.
 - Expect: file appears in the table below with correct name/category/modified date; visible in the tenant's real SharePoint document library too (spot-check in a separate tab).

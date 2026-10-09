@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.149.0',
+    date: '2026-10-10',
+    entries: [
+      'Review before approval. In Settings \u2192 Approvals, choose which drafts a second person checks before they are approved: none, the information security policy, every policy or every generated document. The reviewer is asked through My tasks (and by email in your tenant) and records Reviewed or Changes requested with comments. The person who prepared a draft cannot review it, and the reviewer cannot approve it. Any edit after the review ends it. The review shows in the document history and on the sign-off table of the printed and Word copies.',
+      'Risk acceptance by the person accountable. With the second Approvals setting on, accepting a residual risk sends a request to the person accepting it, who records the decision signed in as themselves. The audit log shows who asked and who accepted.',
+      'Both settings are off by default, so a small team keeps a single approval step.',
+      'Faster start-up: the What\u2019s new list now loads only when you open it, taking about 70KB off every start.',
+      'The demo can open on a particular screen, so the website\u2019s feature pages show the feature they describe.'
+    ]
+  },
+  {
     version: '1.148.0',
     date: '2026-10-10',
     entries: [
