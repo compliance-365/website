@@ -767,6 +767,23 @@ every campaign permanently short of 100%.
   `topMgmtInterview`, can be filed as Clause 5.1 evidence (report
   `tminterview`) and go into the Stage 1 pack.
 
+- **Guidance for people who are not compliance specialists**:
+  `nextForYou()` picks the most urgent of the signed-in person's My
+  tasks items and adds why it matters and roughly how long it takes
+  (`NEXT_KIND_GUIDE`). With nothing waiting, it names the next dated
+  thing (the security review, a recurring activity they own). It is
+  shown on My tasks always, and on the dashboard when the person has
+  something waiting, is top management or has restricted access.
+  Restricted sessions land on My tasks. `welcomeScreens(role)` is the
+  three-screen first-sign-in welcome (role: top, practitioner, viewer,
+  staff from `myGuideRole()`), remembered per person per browser in
+  localStorage and reopened from "How this works". `pageGuide(view,
+  role)` adds the "What this page is / What you do here" line and the
+  page's terms from `GLOSSARY` under each view's heading.
+  `whoDoesWhat()` builds the Who does what page and the `whodoes`
+  report (Clause 5.3) from the owners on every register plus the
+  security review roles.
+
 - **Segregation of duties (A.5.3)**: ISO 27001 A.5.3 asks that
   conflicting duties be separated so no one person can both perform and
   authorise the same act. The two places that matters in Checkpoint are
