@@ -108,6 +108,19 @@ if (!skipReason) {
 after(async () => { if (browser) await browser.close(); if (server) server.close(); });
 
 describe('in the browser', { skip: skipReason || false }, () => {
+  test('a vendor not yet sent a questionnaire has the Send button in the register itself', async () => {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
+    await page.evaluate(() => window.App.go('vendors'));
+    await page.waitForSelector('#vendorRows tr');
+    const lumen = page.locator('#vendorRows tr', { hasText: 'Lumen Legal Advisory' });
+    assert.equal(await lumen.locator('[data-action="App.sendVendorQuestionnaire"]').count(), 1);
+    assert.equal(await page.locator('#vendorRows tr', { hasText: 'Northwind Cloud Hosting' }).locator('[data-action="App.sendVendorQuestionnaire"]').count(), 0, 'already sent: shows the status');
+    await lumen.locator('[data-action="App.sendVendorQuestionnaire"]').click();
+    await page.waitForTimeout(200);
+    assert.match(await page.locator('body').innerText(), /demo mode/i, 'the button reaches the send action (demo explains it cannot email)');
+    await page.close();
+  });
   test('settings, documents and a preview of the page', async () => {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const errors = [];

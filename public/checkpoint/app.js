@@ -9450,7 +9450,9 @@ function showModal(opts) {
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ' + icon('flag') : '') + '</td>' +
         '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
-        '<td><span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span></td></tr>';
+        '<td>' + (!READONLY && (!v.questionnaireStatus || v.questionnaireStatus === 'Not sent')
+          ? '<button class="btn ghost sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>'
+          : '<span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span>') + '</td></tr>';
     }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No vendors match this filter. Add one above.', cta: { label: '+ Add vendor', action: 'App.toggleAddVendor' } });
     renderVendorBulkBar();
     revealRows(wrap);
