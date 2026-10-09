@@ -26746,6 +26746,13 @@ function showModal(opts) {
     else if (READONLY) App.go('board');
     SELFTEST_MODE = Store.kind === 'demo' && /[?&]selftest=1\b/.test(location.search);
     if (SELFTEST_MODE) App.go('selftest');
+    /* Demo deep link (?demo=1&view=documents): the website's feature
+       pages open the demo on the screen they describe. Only a view that
+       has a menu item, so the link cannot reach anything hidden. */
+    else if (Store.kind === 'demo' && !RESTRICTED_ACCESS && !READONLY) {
+      var startView = String(new URLSearchParams(location.search).get('view') || '').replace(/[^a-z0-9-]/gi, '');
+      if (startView && document.querySelector('.nav-item[data-v="' + startView + '"]') && document.getElementById('v-' + startView)) App.go(startView);
+    }
     applyReadOnlyUi();
     startReadOnlyObserver();
     applyRestrictedUi();
