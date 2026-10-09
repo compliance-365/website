@@ -14,7 +14,7 @@ describe('a quiet month', () => {
   test('items with nothing new are one line, not time', () => {
     const a = Lib.securityReviewAgenda(setup, 2, quietPack);
     assert.deepEqual(a.items.map((i) => i.key), ['decisions']);
-    assert.deepEqual(a.quiet, ['No actions overdue', 'No new or changed risks, none above appetite', 'No incidents since 8 Sep 2026', 'Posture score unchanged at 70/100', 'No leavers, retired assets or supplier changes']);
+    assert.deepEqual(a.quiet, ['No actions overdue or due soon', 'No new or changed risks, none above appetite', 'No incidents since 8 Sep 2026', 'Posture score unchanged at 70/100', 'No leavers, retired assets or supplier changes']);
     assert.ok(a.minutes <= 10, 'a quiet month is a short meeting');
   });
   test('certification progress drops out once certified, and before then only when there is something', () => {

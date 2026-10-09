@@ -1971,3 +1971,19 @@ tr.asset-retired td { opacity: .85; }
 .mr-cl-ok{color:var(--pass)}.mr-cl-concerns{color:var(--warn)}
 .mr-sign{margin:12px 0}
 @media (max-width:760px){.mr-concl,.mr-act{grid-template-columns:1fr}.mr-save{margin-left:0}}
+
+/* Leadership security meeting: Clause 9.3 coverage and inline decisions */
+.sr-cov { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.sr-cov-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 8px; font-size: 13px; }
+.sr-cov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.sr-cov-cell { display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12.5px; }
+.sr-cov-cell .src { grid-column: 2; }
+.sr-cov-cell.ok { border-left: 3px solid var(--pass); }
+.sr-cov-cell.gap { border-left: 3px solid var(--warn); }
+.sr-cov-l { font-weight: 700; text-transform: uppercase; color: var(--gold-light); }
+.sr-rows { margin-top: 6px; }
+.sr-concl { display: grid; gap: 8px; margin: 8px 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
+.sr-concl-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.sr-concl-row label { grid-column: 1 / -1; }
+.mr-records-h { margin: 8px 0 8px; }
+@media (max-width: 600px) { .sr-concl-row { grid-template-columns: 1fr; } }

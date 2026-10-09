@@ -207,13 +207,25 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForSelector('#drawer #srNote-mr');
     await page.fill('#drawer #srNote-mr', 'ISMS remains suitable. Budget approved for the penetration test.');
     await page.fill('#drawer #srDec-mr', 'Commission external penetration test - Sam Okafor - 2027-01-31');
+    // The management review meeting needs the chair's conclusion first.
+    await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => window.CheckpointLib && document.querySelectorAll('#drawer #srMRc_suitable').length), 1, 'not saved without a conclusion');
+    await page.selectOption('#drawer #srMRc_suitable', 'yes');
+    await page.selectOption('#drawer #srMRc_adequate', 'partly');
+    await page.selectOption('#drawer #srMRc_effective', 'yes');
+    await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('#drawer #srMRc_suitable').count(), 1, 'partly needs a reason');
+    await page.fill('#drawer #srMRcc_adequate', 'Penetration testing was not funded until today');
     await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForTimeout(600);
     drawer = await page.locator('#drawer').innerText();
+    assert.match(drawer, /Conclusion:\s*Adequate: partly[\s\S]*Penetration testing was not funded/);
     assert.match(drawer, /recorded as management review MR-002/i);
-    assert.match(drawer, /Management review sign-off[\s\S]*Budget approved[\s\S]*Commission external penetration test/);
+    assert.match(drawer, /Is the ISMS suitable, adequate and effective\?[\s\S]*Budget approved[\s\S]*Commission external penetration test/);
     await page.evaluate(() => window.App.closeDrawer());
-    assert.match(await page.locator('#reviewRows').innerText(), /MR-002/);
+    assert.match(await page.locator('#reviewRows').innerText(), /MR-002[\s\S]*Concerns[\s\S]*Awaiting sign-off/i);
     assert.deepEqual(errors, []);
     await context.close();
   });

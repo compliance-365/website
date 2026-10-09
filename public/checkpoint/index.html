@@ -1332,15 +1332,16 @@
 
     <!-- MANAGEMENT REVIEW -->
     <section class="view" id="v-reviews">
-      <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 Clause 9.3: top management reviews the ISMS at planned intervals and decides whether it is still suitable, adequate and effective. Run a management review walks you through the meeting in four steps: who is there, each input (already drafted from your records), the conclusion and decisions, and sign-off. Save a draft at any point. Saving files the minutes as Clause 9.3 evidence, raises the agreed actions and books the next review.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 Clause 9.3: top management reviews the ISMS at planned intervals and decides whether it is still suitable, adequate and effective. The leadership security meeting does this as part of its normal rhythm: actions, risks, incidents and performance every month, yearly topics when they are due, and the conclusion and sign-off at the meeting set as the management review. The coverage panel shows the auditor every Clause 9.3.2 input over the year. A review held outside the meeting can still be recorded in four steps.</p></div>
+      <div id="secReviewCard" style="margin-bottom:16px"></div>
       <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddReview">Run a management review</button><button class="btn ghost sm" data-action="App.report" data-id="changelog">What changed since the last review</button><button class="btn ghost sm" data-action="App.topMgmtInterview">Top management interview</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="reviews">Export CSV</button></div>
       <div class="card" id="addReviewPanel" style="margin-bottom:16px;display:none">
         <h3>Management review</h3>
         <div id="mrWizard"></div>
       </div>
       <div class="grid kpis" id="reviewKpiRow" style="margin:0 0 16px"></div>
+      <h3 class="mr-records-h">Management review records</h3>
       <div class="card" style="padding:0 10px;margin-bottom:20px"><table><thead><tr><th scope="col">ID</th><th scope="col">Held</th><th scope="col">Chair</th><th scope="col">Conclusion</th><th scope="col">Actions</th><th scope="col">Minutes</th><th scope="col">Next due</th></tr></thead><tbody id="reviewRows"></tbody></table></div>
-      <div id="secReviewCard"></div>
     </section>
 
     <!-- OBJECTIVES -->

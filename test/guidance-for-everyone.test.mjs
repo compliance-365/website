@@ -41,7 +41,7 @@ describe('first-time welcome', () => {
     const top = L.welcomeScreens('top', { org: 'MineGuard', owner: 'Cem' });
     assert.deepEqual(top.map((s) => s.title), ['Welcome to Checkpoint', 'What is expected of you', 'Where your things are']);
     assert.match(top[0].lines.join(' '), /MineGuard’s information security management system/);
-    assert.match(top[1].lines.join(' '), /Approve the policies[\s\S]*risk the business is willing to accept[\s\S]*monthly security review[\s\S]*about an hour a month[\s\S]*Cem/);
+    assert.match(top[1].lines.join(' '), /Approve the policies[\s\S]*risk the business is willing to accept[\s\S]*monthly leadership security meeting[\s\S]*about an hour a month[\s\S]*Cem/);
     assert.match(L.welcomeScreens('staff')[1].lines.join(' '), /acknowledge the policies[\s\S]*training/);
     assert.match(L.welcomeScreens('viewer')[1].lines.join(' '), /view-only/);
     assert.match(L.welcomeScreens('practitioner')[1].lines.join(' '), /Do next/);
@@ -136,7 +136,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.evaluate(() => window.App.go('whodoes'));
     await page.waitForTimeout(400);
     const who = await page.locator('#whoDoesBody').innerText();
-    assert.match(who, /Top management \(chairs the security review\)/);
+    assert.match(who, /Top management \(chairs the leadership security meeting\)/);
     assert.match(who, /ISMS owner/);
     assert.deepEqual(errors, []);
     await page.close();
