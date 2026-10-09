@@ -10,8 +10,8 @@
  * already says about mirroring app.js's posture-check logic: different
  * runtimes, no shared module, change one and change the other. If you
  * edit a question's wording or add/remove one, edit
- * public/checkpoint/lib.js's VENDOR_QUESTIONNAIRE too — test/lib.test.mjs
- * checks that file's shape but has no way to know this copy drifted.
+ * public/checkpoint/lib.js's VENDOR_QUESTIONNAIRE too:
+ * test/supplier-questionnaire-parity.test.mjs fails if the two differ.
  *
  * Deliberately just the question labels/ids/types a vendor needs to see
  * and answer — no `dependsOn` UI hints here; the static form

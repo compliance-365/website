@@ -73,10 +73,10 @@
     if (key === 'incidents' && !p.incidents.count && !p.incidents.open) return 'No incidents since ' + srDate(p.since);
     if (key === 'risks' && !p.risks.added && !p.risks.changed && !p.risks.aboveAppetite) return 'No new or changed risks, none above appetite';
     if (key === 'actions' && !p.actions.overdue && !(p.actions.prior || []).length && !(p.actions.dueSoon || []).length) return 'No actions overdue or due soon';
-    if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length) return 'Posture score unchanged at ' + p.posture.score + '/100';
+    if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length && !(p.threat && (p.threat.remediationOpen || p.threat.awaiting))) return 'Posture score unchanged at ' + p.posture.score + '/100';
     if (key === 'certification' && p.certification.certified) return 'skip';
     if (key === 'certification' && !p.certification.nextAudit && !p.certification.docsAwaiting && (p.certification.readiness == null || p.certification.readiness >= 100)) return 'skip';
-    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length) return 'No leavers, retired assets or supplier changes';
+    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length && !(p.people.supplierGaps || []).length) return 'No leavers, retired assets or supplier changes';
     return '';
   }
   /* The agenda keys a held meeting covered. Meetings recorded before
@@ -154,6 +154,11 @@
       add('posture', 'Security posture', delta <= -5 ? 'red' : delta < 0 || p.posture.score < 60 ? 'amber' : 'green',
         p.posture.score + '/100' + (p.posture.prev != null ? (delta >= 0 ? ', up ' + delta : ', down ' + (-delta)) : ''));
     }
+    var th = p.threat;
+    if (th && (th.affected || th.awaiting)) {
+      add('threat', 'Threat intel', th.pastDue || th.ransomwareOpen ? 'red' : th.remediationOpen || th.awaiting ? 'amber' : 'green',
+        th.awaiting ? th.awaiting + ' relevant to assess' + (th.pastDue ? ', ' + th.pastDue + ' past fix-by date' : '') : th.remediationOpen ? th.remediationOpen + ' remediation' + (th.remediationOpen === 1 ? '' : 's') + ' open' : 'Affected advisories remediated');
+    }
     if (!p.certification.certified && (p.certification.nextAudit || p.certification.docsAwaiting || p.certification.readiness != null)) {
       add('certification', 'Certification', p.certification.docsAwaiting || (p.certification.readiness != null && p.certification.readiness < 80) ? 'amber' : 'green',
         (p.certification.readiness != null ? p.certification.readiness + '% ready' : '') + (p.certification.docsAwaiting ? (p.certification.readiness != null ? ', ' : '') + p.certification.docsAwaiting + ' document' + (p.certification.docsAwaiting === 1 ? '' : 's') + ' to approve' : '') || 'On track');
@@ -177,7 +182,7 @@
     var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
     var m = meta || {};
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px"><p>Hi ' + e(o.owner) + ',</p>' +
-      '<p>At the security review on ' + e(srDate(review.date)) + ' you took on ' + (o.items.length === 1 ? 'this action' : 'these actions') + '. ' + (o.items.length === 1 ? 'It is' : 'They are') + ' still marked Open:</p><ul>' +
+      '<p>At the leadership security meeting on ' + e(srDate(review.date)) + ' you took on ' + (o.items.length === 1 ? 'this action' : 'these actions') + '. ' + (o.items.length === 1 ? 'It is' : 'They are') + ' still marked Open:</p><ul>' +
       o.items.map(function (i) { return '<li><b>' + e(i.id) + '</b> ' + e(i.title) + (i.due ? ' (due ' + e(srDate(i.due)) + ')' : '') + '</li>'; }).join('') + '</ul>' +
       '<p>Update ' + (o.items.length === 1 ? 'it' : 'them') + ' before the next meeting, even if only to say what is in the way.' + (/^https:\/\//i.test(m.appUrl || '') ? ' <a href="' + e(m.appUrl) + '">Open Checkpoint</a>.' : '') + '</p>' +
       '<p style="color:#999;font-size:11px;margin-top:24px">Sent by Checkpoint for ' + e(m.org || 'your organisation') + '.</p></div>';
@@ -228,9 +233,13 @@
     } else if (key === 'posture') {
       f.push(p.posture.score == null ? 'No posture scan yet: run one before the meeting' : 'Posture score ' + p.posture.score + '/100' + (p.posture.prev != null ? ' (' + (p.posture.score >= p.posture.prev ? '+' : '') + (p.posture.score - p.posture.prev) + ' since ' + srDate(p.since) + ')' : ''));
       (p.posture.failingTop || []).forEach(function (c) { f.push('Failing: ' + c); });
+      var th = p.threat;
+      if (th && th.affected) f.push('Threat intel: ' + plural(th.affected, 'exploited vulnerability', 'exploited vulnerabilities') + ' affect' + (th.affected === 1 ? 's' : '') + ' us' + (th.remediationOpen ? ', ' + th.remediationOpen + ' remediation action' + (th.remediationOpen === 1 ? '' : 's') + ' open' : ', all remediated'));
+      if (th && th.awaiting) f.push('Threat intel: ' + plural(th.awaiting, 'advisory', 'advisories') + ' relevant to us not yet assessed' + (th.pastDue ? ', ' + th.pastDue + ' past CISA\u2019s fix-by date' : ''));
     } else if (key === 'incidents') {
       f.push(plural(p.incidents.count, 'incident') + ' since ' + srDate(p.since) + (p.incidents.open ? ', ' + p.incidents.open + ' still open' : ''));
-      p.incidents.since.slice(0, 3).forEach(function (n) { f.push(n.id + ' ' + n.title + (n.severity ? ' (' + n.severity + ')' : '')); });
+      p.incidents.since.slice(0, 3).forEach(function (n) { f.push(n.id + ' ' + n.title + (n.severity ? ' (' + n.severity + ')' : '') + ((n.risks || []).length ? ': risk ' + n.risks.join(', ') : '')); });
+      if (p.incidents.unlinked) f.push(plural(p.incidents.unlinked, 'incident') + ' not linked to a risk: is the risk in the register, and is its likelihood still right?');
     } else if (key === 'risks') {
       if (p.risks.aboveAppetite != null && p.risks.aboveAppetite) f.push(plural(p.risks.aboveAppetite, 'risk') + ' above appetite' + (p.risks.aboveList.length ? ': ' + p.risks.aboveList.slice(0, 3).join(', ') + (p.risks.aboveList.length > 3 ? ' and more' : '') : ''));
       if (p.risks.added || p.risks.changed) f.push(p.risks.added + ' added and ' + p.risks.changed + ' updated since ' + srDate(p.since));
@@ -246,6 +255,8 @@
       if (p.people.vendorsAdded) bits.push(plural(p.people.vendorsAdded, 'supplier') + ' added');
       if (bits.length) f.push(bits.join(', '));
       if (p.people.certsExpiring.length) f.push('Supplier certificates expiring soon: ' + p.people.certsExpiring.slice(0, 3).join(', '));
+      var sg = p.people.supplierGaps || [];
+      if (sg.length) f.push('Questionnaire gaps not yet treated: ' + sg.slice(0, 3).map(function (g) { return g.name + ' (' + g.count + ')'; }).join(', ') + (sg.length > 3 ? ' and more' : ''));
     } else if (key === 'decisions') {
       var att = p.attendance || {};
       if (att.lastQuorum === false) f.push('The last meeting was held without the chair or the ISMS owner: confirm its decisions');
@@ -341,7 +352,7 @@
     var dot = { red: '#c0392b', amber: '#d68910', green: '#1e8449' };
     var word = { red: 'Needs attention', amber: 'Watch', green: 'On track' };
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px">' +
-      '<h2 style="margin-bottom:4px">' + e(m.org || 'Security') + ' security review ' + agenda.n + (agenda.kind === 'monthly' ? '' : ': ' + e(agenda.label)) + '</h2>' +
+      '<h2 style="margin-bottom:4px">' + e(m.org || 'Security') + ' leadership security meeting ' + agenda.n + (agenda.kind === 'monthly' ? '' : ': ' + e(agenda.label)) + '</h2>' +
       '<p style="color:#666;font-size:13px;margin-top:0">' + e(m.date) + (m.time ? ' at ' + e(m.time) : '') + ', ' + agenda.minutes + ' minutes' + (safeLink ? ' \u00b7 <a href="' + e(safeLink) + '">Join on Teams</a>' : '') + '</p>' +
       ((status || []).length ? '<h3 style="font-size:14px;margin:18px 0 6px">At a glance</h3><table style="width:100%;border-collapse:collapse;font-size:13px">' + status.map(function (x) {
         return '<tr><td style="padding:6px;border-bottom:1px solid #eee;width:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:5px;background:' + (dot[x.rag] || '#999') + '"></span></td>' +
@@ -491,7 +502,34 @@
     return new Date(guess).toISOString();
   }
 
+  /* Supplier questionnaire gaps: copied verbatim from lib.js like the rest. */
+  var SUPPLIER_GAP_RULES = [
+    { id: 'certification', gap: 'no current independent security certification', control: 'A.5.19' },
+    { id: 'encryption', gap: 'our data is not encrypted at rest and in transit', control: 'A.8.24' },
+    { id: 'mfa', gap: 'MFA is not enforced for their staff with access to our data', control: 'A.8.5' },
+    { id: 'incidentResponse', gap: 'no commitment to tell us about an incident affecting our data', control: 'A.5.20' }
+  ];
+
+  function supplierQuestionnaireGaps(answers) {
+    var a = answers || {};
+    return SUPPLIER_GAP_RULES.filter(function (r) { return a[r.id] === 'No' || a[r.id] === 'Unknown'; })
+      .map(function (r) { return { id: r.id, text: (a[r.id] === 'Unknown' ? 'not confirmed: ' : '') + r.gap, control: r.control, unconfirmed: a[r.id] === 'Unknown' }; });
+  }
+
+  function supplierGapStatus(vendors, actions) {
+    var acts = actions || [];
+    return (vendors || []).map(function (v) {
+      var gaps = supplierQuestionnaireGaps(v && v.questionnaireAnswers);
+      if (!gaps.length) return null;
+      var src = 'Supplier questionnaire ' + v.id;
+      var treat = acts.filter(function (x) { return x.src === src && x.status !== 'Done' && x.status !== 'Cancelled' && x.status !== 'Closed'; })[0] || null;
+      var done = !treat && acts.some(function (x) { return x.src === src; });
+      return { id: v.id, name: v.name, criticality: v.criticality || '', gaps: gaps, actionId: treat ? treat.id : '', treated: !!treat || done };
+    }).filter(Boolean);
+  }
+
 module.exports = {
+  SUPPLIER_GAP_RULES, supplierQuestionnaireGaps, supplierGapStatus,
   srDate, addDaysIso, securityReviewCovered, securityReviewLastCovered, securityReviewPeriodic, securityReviewCoverage, SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };

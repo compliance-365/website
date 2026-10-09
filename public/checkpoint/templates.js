@@ -1823,7 +1823,7 @@ window.POLICY_TEMPLATES = [
     scope: 'Applies to threat information from all sources the organisation uses — including Checkpoint’s Threat intel view (CISA’s Known Exploited Vulnerabilities catalogue, filtered to the organisation’s technology and industry), Microsoft Defender and Entra alerts, government advisories and supplier notifications — and to everyone responsible for acting on it.',
     whyItMatters: 'Most successful attacks use weaknesses that were already public: a vulnerability with a patch available, a phishing technique already circulating, a supplier breach already announced. Threat intelligence is simply making sure the organisation hears about those in time to act.\n\nFor most people this is invisible. Where it touches your work is when you are asked to patch something urgently, to watch for a particular kind of email, or to report something unusual — those requests usually come from exactly this process, and the urgency is real.',
     inPractice: [
-      'A vendor your team relies on announces an actively exploited vulnerability. It appears in Checkpoint’s Threat intel view; the IT owner assesses whether the organisation runs the affected product and, if so, patches it within the timeframe the Vulnerability & Patch Management Policy sets for exploited vulnerabilities.',
+      'A supplier your team relies on announces an actively exploited vulnerability. It appears in Checkpoint’s Threat intel view; the IT owner assesses whether the organisation runs the affected product and, if so, patches it within the timeframe the Vulnerability & Patch Management Policy sets for exploited vulnerabilities.',
       'You receive a warning about a phishing campaign targeting your industry. Treat similar emails with extra care and report any you receive — reports from staff are one of the best sources of intelligence the organisation has.',
       'A supplier notifies the organisation of a breach. That notification is threat intelligence too: it goes to the ISMS manager so the organisation can assess its own exposure, not just file the email.'
     ],
@@ -1853,7 +1853,7 @@ window.POLICY_TEMPLATES = [
         because: 'People are often the target, and a warned person is much harder to deceive.'
       },
       {
-        rule: 'The organisation maintains contact with relevant special interest groups and security forums, such as the ACSC Partnership Program, an industry or peer information-sharing group, and its key vendors’ security bulletins, and records which it belongs to.',
+        rule: 'The organisation maintains contact with relevant special interest groups and security forums, such as the ACSC Partnership Program, an industry or peer information-sharing group, and its key suppliers’ security bulletins, and records which it belongs to.',
         because: 'Early warning usually arrives through these channels first, and contact established before an incident is far more useful than contact sought during one.'
       }
     ],
@@ -2006,7 +2006,7 @@ window.POLICY_TEMPLATES = [
         because: 'Since ISO/IEC 27001:2022 Amendment 1 (2024), the organisation must determine whether climate change is a relevant issue and consider whether interested parties have climate-related requirements.'
       },
       {
-        rule: 'The interfaces and dependencies between activities performed by the organisation and those performed by other organisations (Clause 4.3 c) are: {{interfaces}} The boundary of the ISMS is drawn at these points: the organisation is responsible for its side of each, and oversees the other through the Supplier Security Policy and the vendor register.',
+        rule: 'The interfaces and dependencies between activities performed by the organisation and those performed by other organisations (Clause 4.3 c) are: {{interfaces}} The boundary of the ISMS is drawn at these points: the organisation is responsible for its side of each, and oversees the other through the Supplier Security Policy and the supplier register.',
         because: 'Accountability for outsourced processing stays with the organisation, so these interfaces are where the ISMS boundary is tested.'
       },
       {
@@ -2493,7 +2493,7 @@ window.POLICY_TEMPLATES = [
         because: 'Clause 8.1 requires planned changes to be controlled and unintended ones to be reviewed.'
       },
       {
-        rule: 'Externally provided processes, products or services relevant to the ISMS, including cloud platforms, AI services and outsourced work, are determined and controlled through the Supplier Security Policy and the vendor register: requirements are set in agreements, and suppliers are assessed before use and reviewed while in use.',
+        rule: 'Externally provided processes, products or services relevant to the ISMS, including cloud platforms, AI services and outsourced work, are determined and controlled through the Supplier Security Policy and the supplier register: requirements are set in agreements, and suppliers are assessed before use and reviewed while in use.',
         because: 'Clause 8.1 requires externally provided processes to be controlled; outsourcing a process does not outsource accountability for it.'
       },
       {
@@ -2924,7 +2924,7 @@ window.POLICY_TEMPLATES = [
       },
       {
         rule: 'Accountability for the AI management system sits with a named executive sponsor; roles and responsibilities for AI governance, development and oversight are defined and assigned.',
-        because: 'Accountability for an AI outcome cannot be delegated to the system or its vendor, so it has to rest with a named person.'
+        because: 'Accountability for an AI outcome cannot be delegated to the system or its supplier, so it has to rest with a named person.'
       },
       {
         rule: 'Every AI system is assessed for its potential impact on individuals, groups and society before deployment, proportionate to its risk — see the AI System Impact Assessment Process.',
@@ -3058,7 +3058,7 @@ window.POLICY_TEMPLATES = [
       },
       {
         rule: 'Every AI risk has a named owner accountable for the treatment decision and for the residual risk that remains.',
-        because: 'Accountability for an AI outcome cannot sit with the system, the vendor or the model.'
+        because: 'Accountability for an AI outcome cannot sit with the system, the supplier or the model.'
       },
       {
         rule: 'Risks above the threshold are treated by modifying the system or its controls, avoiding a use case, sharing the risk, or — only with documented management sign-off — accepting it; the AI System Impact Assessment feeds directly into this.',

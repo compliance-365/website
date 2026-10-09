@@ -1632,7 +1632,7 @@
     { key: 'dependencies', label: 'Third-party code & dependencies', re: /open[- ]source|dependenc|software composition|\bsca\b|third[- ]party (libraries|components|packages|code)/i,
       controls: ['A.8.28'], checks: ['gh-dependabot'],
       yes: 'Third-party and open-source dependencies are monitored for known vulnerabilities and kept up to date.' },
-    { key: 'vendor', label: 'Supplier & vendor management', re: /vendors?|suppliers?|third[- ]part(y|ies)(?! (libraries|components|packages|code))|sub[- ]?processors?|outsourc|supply chain/i,
+    { key: 'vendor', label: 'Supplier management', re: /vendors?|suppliers?|third[- ]part(y|ies)(?! (libraries|components|packages|code))|sub[- ]?processors?|outsourc|supply chain/i,
       controls: ['A.5.19', 'A.5.20', 'A.5.21', 'A.5.22'], checks: ['supplier'],
       yes: 'Suppliers are assessed for security before engagement and reviewed periodically, with security obligations set in contracts.' },
     { key: 'training', label: 'Security awareness training', re: /training|awareness|educat/i,
@@ -1942,7 +1942,10 @@
       var within = function (d, months) { return d && d <= today && d >= addMonthsIso(today, -months); };
       if (act.monitoring) out.activity.push({ label: 'Security configuration checked automatically', when: 'Daily' });
       if (within(act.internalAudit, 15)) out.activity.push({ label: 'Internal audit of the security programme', date: act.internalAudit });
+      var lm = (act.leadershipMeetings || []).filter(function (d) { return d && d <= today && d >= addDaysIso(today, -100); });
+      if (lm.length >= 2) out.activity.push({ label: 'Security reviewed by leadership', when: 'Monthly' });
       if (within(act.managementReview, 15)) out.activity.push({ label: 'Management review by leadership', date: act.managementReview });
+      if (within(act.supplierReview, 15)) out.activity.push({ label: 'Supplier security reviews', date: act.supplierReview });
       if (within(act.pentest, 15)) out.activity.push({ label: 'Independent penetration test', date: act.pentest });
       if (within(act.training, 15)) out.activity.push({ label: 'Staff security awareness training', date: act.training });
     }
@@ -2448,7 +2451,7 @@
   function supplierCheckResult(vendors, today) {
     var list = (vendors || []).filter(function (v) { return v; });
     if (!list.length) {
-      return { result: 'manual', note: 'No suppliers recorded in Checkpoint\'s vendor register — add them, or keep supplier assurance evidence in whatever system you use.' };
+      return { result: 'manual', note: 'No suppliers recorded in Checkpoint\'s supplier register — add them, or keep supplier assurance evidence in whatever system you use.' };
     }
     var overdue = list.filter(function (v) { return v.nextReviewDue && v.nextReviewDue < today; });
     var keyOverdue = overdue.filter(function (v) { return v.criticality === 'Critical' || v.criticality === 'High'; });
@@ -5719,6 +5722,54 @@
   function isBusinessRisk(r) { return !!(r && r.tpl && businessRiskDef(r.tpl)); }
   /* The finding templates a risk record covers: a business risk's
      findings list, else its own template. */
+  /* The business risk an incident is evidence of: by category, then by
+     what the title says. Linking to the business risk already in the
+     register, rather than adding one risk per incident, keeps the
+     register to the risks the business actually runs. */
+  function incidentRiskKey(n) {
+    var c = String((n && n.category) || ''), t = String((n && (n.title + ' ' + (n.description || ''))) || '').toLowerCase();
+    if (/third/i.test(c) || /supplier|vendor|third.party/.test(t)) return 'biz-third-party';
+    if (/privacy/i.test(c)) return 'biz-privacy';
+    if (/physical/i.test(c) || /laptop|phone|device|lost|stolen/.test(t)) return 'biz-device';
+    if (/phish|credential|mailbox|account|password|mfa/.test(t)) return 'biz-account-takeover';
+    if (/shar|wrong (recipient|person)|emailed|leak|exposed|public link/.test(t)) return 'biz-data-exposure';
+    if (/backup|restore|outage|unavailable|lost data/.test(t)) return 'biz-recovery';
+    return 'biz-attack-undetected';
+  }
+  function incidentRiskSuggestion(n, risks) {
+    var key = incidentRiskKey(n), def = businessRiskDef(key);
+    var open = (risks || []).filter(function (r) { return r && r.status !== 'Closed' && r.type !== 'Opportunity'; });
+    var cat = def ? String(def.cat).toLowerCase().slice(0, 5) : '';
+    var existing = open.filter(function (r) { return r.tpl === key; })[0] ||
+      (cat ? open.filter(function (r) { return String(r.cat || '').toLowerCase().slice(0, 5) === cat; })[0] : null) || null;
+    return { key: key, def: def, existing: existing };
+  }
+  /* A supplier's questionnaire answers that leave a gap: an explicit No,
+     or Unknown, on the security questions that protect our data. */
+  var SUPPLIER_GAP_RULES = [
+    { id: 'certification', gap: 'no current independent security certification', control: 'A.5.19' },
+    { id: 'encryption', gap: 'our data is not encrypted at rest and in transit', control: 'A.8.24' },
+    { id: 'mfa', gap: 'MFA is not enforced for their staff with access to our data', control: 'A.8.5' },
+    { id: 'incidentResponse', gap: 'no commitment to tell us about an incident affecting our data', control: 'A.5.20' }
+  ];
+  function supplierQuestionnaireGaps(answers) {
+    var a = answers || {};
+    return SUPPLIER_GAP_RULES.filter(function (r) { return a[r.id] === 'No' || a[r.id] === 'Unknown'; })
+      .map(function (r) { return { id: r.id, text: (a[r.id] === 'Unknown' ? 'not confirmed: ' : '') + r.gap, control: r.control, unconfirmed: a[r.id] === 'Unknown' }; });
+  }
+  /* Suppliers with questionnaire gaps and whether an open action treats
+     them (an action whose source names the supplier's questionnaire). */
+  function supplierGapStatus(vendors, actions) {
+    var acts = actions || [];
+    return (vendors || []).map(function (v) {
+      var gaps = supplierQuestionnaireGaps(v && v.questionnaireAnswers);
+      if (!gaps.length) return null;
+      var src = 'Supplier questionnaire ' + v.id;
+      var treat = acts.filter(function (x) { return x.src === src && x.status !== 'Done' && x.status !== 'Cancelled' && x.status !== 'Closed'; })[0] || null;
+      var done = !treat && acts.some(function (x) { return x.src === src; });
+      return { id: v.id, name: v.name, criticality: v.criticality || '', gaps: gaps, actionId: treat ? treat.id : '', treated: !!treat || done };
+    }).filter(Boolean);
+  }
   function riskFindings(r) {
     if (!r) return [];
     if (r.findings && r.findings.length) return r.findings.slice();
@@ -6300,7 +6351,7 @@
     var vend = d.vendors || [];
     var obj = (d.objectives || []).filter(function (o) { return o && o.status !== 'Achieved' && o.status !== 'Closed'; });
     return {
-      today: today, since: since, periodic: (d.periodic || []).slice(0, 4),
+      today: today, since: since, periodic: (d.periodic || []).slice(0, 4), threat: d.threat || null,
       attendance: { missedTwice: ((d.absences || {}).missedTwice || []).slice(0, 4), lastQuorum: (d.absences || {}).lastQuorum !== false },
       posture: { score: last ? last.score : null, prev: prev && prev !== last ? prev.score : null, failing: typeof d.failing === 'number' ? d.failing : null, failingTop: (d.failingTop || []).slice(0, 3) },
       actions: { open: openA.length, overdue: overdueA.length, closedSince: countLog(/^Action (completed|closed)|^Corrective action/i, 'Action'),
@@ -6308,13 +6359,15 @@
         stuck: d.lastHeld ? overdueA.filter(function (a) { return a.due < d.lastHeld; }).slice(0, 6).map(short) : [],
         dueSoon: openA.filter(function (a) { return a.due && a.due >= today && a.due <= addDaysIso(today, 14); }).sort(function (a, b) { return a.due.localeCompare(b.due); }).slice(0, 6).map(short),
         prior: (d.prevActionIds || []).map(function (id) { return acts.find(function (a) { return a.id === id; }); }).filter(Boolean).map(short) },
-      incidents: { since: inc.slice(0, 8).map(function (n) { return { id: n.id, title: n.title, severity: n.severity || '', status: n.status || '' }; }), count: inc.length,
+      incidents: { since: inc.slice(0, 8).map(function (n) { return { id: n.id, title: n.title, severity: n.severity || '', status: n.status || '', risks: (n.riskRefs || []).slice(0, 4) }; }), count: inc.length,
+        unlinked: inc.filter(function (n) { return !(n.riskRefs || []).length; }).length,
         open: (d.incidents || []).filter(function (n) { return n.status && n.status !== 'Closed'; }).length },
       risks: { open: openRisks.length, aboveAppetite: (d.aboveAppetite || []).length, aboveList: (d.aboveAppetite || []).slice(0, 6),
         added: countLog(/added|approved|raised|created/i, 'Risk'), changed: countLog(/scor|residual|reviewed|treatment|accepted/i, 'Risk') },
       certification: { readiness: typeof d.readiness === 'number' ? d.readiness : null, docsAwaiting: (d.docs || []).filter(function (x) { return x.status && x.status !== 'Approved'; }).length, nextAudit: d.nextAudit || '', certified: !!d.certified },
-      people: { handovers: countLog(/^Leaver hand-over/), retired: countLog(/^Asset retired/), vendorsAdded: countLog(/^Vendor added/),
-        certsExpiring: vend.filter(function (v) { return v.certExpiryDate && v.certExpiryDate >= today && v.certExpiryDate <= soon; }).map(function (v) { return v.name; }).slice(0, 6) },
+      people: { handovers: countLog(/^Leaver hand-over/), retired: countLog(/^Asset retired/), vendorsAdded: countLog(/^(Vendor|Supplier) added/),
+        certsExpiring: vend.filter(function (v) { return v.certExpiryDate && v.certExpiryDate >= today && v.certExpiryDate <= soon; }).map(function (v) { return v.name; }).slice(0, 6),
+        supplierGaps: supplierGapStatus(vend, acts).filter(function (g) { return !g.treated; }).slice(0, 6).map(function (g) { return { id: g.id, name: g.name, count: g.gaps.length }; }) },
       quarterly: { accessReview: access, suppliersDue: vend.filter(function (v) { return vendorNextReview(v, today) <= addDaysIso(today, 30); }).length,
         objectives: { open: obj.length, atRisk: obj.filter(function (o) { return /risk|behind|off/i.test(o.status || ''); }).length },
         attestPct: typeof d.attestPct === 'number' ? d.attestPct : null }
@@ -6345,9 +6398,13 @@
     } else if (key === 'posture') {
       f.push(p.posture.score == null ? 'No posture scan yet: run one before the meeting' : 'Posture score ' + p.posture.score + '/100' + (p.posture.prev != null ? ' (' + (p.posture.score >= p.posture.prev ? '+' : '') + (p.posture.score - p.posture.prev) + ' since ' + srDate(p.since) + ')' : ''));
       (p.posture.failingTop || []).forEach(function (c) { f.push('Failing: ' + c); });
+      var th = p.threat;
+      if (th && th.affected) f.push('Threat intel: ' + plural(th.affected, 'exploited vulnerability', 'exploited vulnerabilities') + ' affect' + (th.affected === 1 ? 's' : '') + ' us' + (th.remediationOpen ? ', ' + th.remediationOpen + ' remediation action' + (th.remediationOpen === 1 ? '' : 's') + ' open' : ', all remediated'));
+      if (th && th.awaiting) f.push('Threat intel: ' + plural(th.awaiting, 'advisory', 'advisories') + ' relevant to us not yet assessed' + (th.pastDue ? ', ' + th.pastDue + ' past CISA\u2019s fix-by date' : ''));
     } else if (key === 'incidents') {
       f.push(plural(p.incidents.count, 'incident') + ' since ' + srDate(p.since) + (p.incidents.open ? ', ' + p.incidents.open + ' still open' : ''));
-      p.incidents.since.slice(0, 3).forEach(function (n) { f.push(n.id + ' ' + n.title + (n.severity ? ' (' + n.severity + ')' : '')); });
+      p.incidents.since.slice(0, 3).forEach(function (n) { f.push(n.id + ' ' + n.title + (n.severity ? ' (' + n.severity + ')' : '') + ((n.risks || []).length ? ': risk ' + n.risks.join(', ') : '')); });
+      if (p.incidents.unlinked) f.push(plural(p.incidents.unlinked, 'incident') + ' not linked to a risk: is the risk in the register, and is its likelihood still right?');
     } else if (key === 'risks') {
       if (p.risks.aboveAppetite != null && p.risks.aboveAppetite) f.push(plural(p.risks.aboveAppetite, 'risk') + ' above appetite' + (p.risks.aboveList.length ? ': ' + p.risks.aboveList.slice(0, 3).join(', ') + (p.risks.aboveList.length > 3 ? ' and more' : '') : ''));
       if (p.risks.added || p.risks.changed) f.push(p.risks.added + ' added and ' + p.risks.changed + ' updated since ' + srDate(p.since));
@@ -6363,6 +6420,8 @@
       if (p.people.vendorsAdded) bits.push(plural(p.people.vendorsAdded, 'supplier') + ' added');
       if (bits.length) f.push(bits.join(', '));
       if (p.people.certsExpiring.length) f.push('Supplier certificates expiring soon: ' + p.people.certsExpiring.slice(0, 3).join(', '));
+      var sg = p.people.supplierGaps || [];
+      if (sg.length) f.push('Questionnaire gaps not yet treated: ' + sg.slice(0, 3).map(function (g) { return g.name + ' (' + g.count + ')'; }).join(', ') + (sg.length > 3 ? ' and more' : ''));
     } else if (key === 'decisions') {
       var att = p.attendance || {};
       if (att.lastQuorum === false) f.push('The last meeting was held without the chair or the ISMS owner: confirm its decisions');
@@ -6388,10 +6447,10 @@
     if (key === 'incidents' && !p.incidents.count && !p.incidents.open) return 'No incidents since ' + srDate(p.since);
     if (key === 'risks' && !p.risks.added && !p.risks.changed && !p.risks.aboveAppetite) return 'No new or changed risks, none above appetite';
     if (key === 'actions' && !p.actions.overdue && !(p.actions.prior || []).length && !(p.actions.dueSoon || []).length) return 'No actions overdue or due soon';
-    if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length) return 'Posture score unchanged at ' + p.posture.score + '/100';
+    if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length && !(p.threat && (p.threat.remediationOpen || p.threat.awaiting))) return 'Posture score unchanged at ' + p.posture.score + '/100';
     if (key === 'certification' && p.certification.certified) return 'skip';
     if (key === 'certification' && !p.certification.nextAudit && !p.certification.docsAwaiting && (p.certification.readiness == null || p.certification.readiness >= 100)) return 'skip';
-    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length) return 'No leavers, retired assets or supplier changes';
+    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length && !(p.people.supplierGaps || []).length) return 'No leavers, retired assets or supplier changes';
     return '';
   }
   /* The timed agenda for meeting n. rec (optional) = the meeting's own
@@ -6529,6 +6588,11 @@
       add('posture', 'Security posture', delta <= -5 ? 'red' : delta < 0 || p.posture.score < 60 ? 'amber' : 'green',
         p.posture.score + '/100' + (p.posture.prev != null ? (delta >= 0 ? ', up ' + delta : ', down ' + (-delta)) : ''));
     }
+    var th = p.threat;
+    if (th && (th.affected || th.awaiting)) {
+      add('threat', 'Threat intel', th.pastDue || th.ransomwareOpen ? 'red' : th.remediationOpen || th.awaiting ? 'amber' : 'green',
+        th.awaiting ? th.awaiting + ' relevant to assess' + (th.pastDue ? ', ' + th.pastDue + ' past fix-by date' : '') : th.remediationOpen ? th.remediationOpen + ' remediation' + (th.remediationOpen === 1 ? '' : 's') + ' open' : 'Affected advisories remediated');
+    }
     if (!p.certification.certified && (p.certification.nextAudit || p.certification.docsAwaiting || p.certification.readiness != null)) {
       add('certification', 'Certification', p.certification.docsAwaiting || (p.certification.readiness != null && p.certification.readiness < 80) ? 'amber' : 'green',
         (p.certification.readiness != null ? p.certification.readiness + '% ready' : '') + (p.certification.docsAwaiting ? (p.certification.readiness != null ? ', ' : '') + p.certification.docsAwaiting + ' document' + (p.certification.docsAwaiting === 1 ? '' : 's') + ' to approve' : '') || 'On track');
@@ -6554,7 +6618,7 @@
     var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
     var m = meta || {};
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px"><p>Hi ' + e(o.owner) + ',</p>' +
-      '<p>At the security review on ' + e(srDate(review.date)) + ' you took on ' + (o.items.length === 1 ? 'this action' : 'these actions') + '. ' + (o.items.length === 1 ? 'It is' : 'They are') + ' still marked Open:</p><ul>' +
+      '<p>At the leadership security meeting on ' + e(srDate(review.date)) + ' you took on ' + (o.items.length === 1 ? 'this action' : 'these actions') + '. ' + (o.items.length === 1 ? 'It is' : 'They are') + ' still marked Open:</p><ul>' +
       o.items.map(function (i) { return '<li><b>' + e(i.id) + '</b> ' + e(i.title) + (i.due ? ' (due ' + e(srDate(i.due)) + ')' : '') + '</li>'; }).join('') + '</ul>' +
       '<p>Update ' + (o.items.length === 1 ? 'it' : 'them') + ' before the next meeting, even if only to say what is in the way.' + (/^https:\/\//i.test(m.appUrl || '') ? ' <a href="' + e(m.appUrl) + '">Open Checkpoint</a>.' : '') + '</p>' +
       '<p style="color:#999;font-size:11px;margin-top:24px">Sent by Checkpoint for ' + e(m.org || 'your organisation') + '.</p></div>';
@@ -6587,7 +6651,7 @@
     var dot = { red: '#c0392b', amber: '#d68910', green: '#1e8449' };
     var word = { red: 'Needs attention', amber: 'Watch', green: 'On track' };
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px">' +
-      '<h2 style="margin-bottom:4px">' + e(m.org || 'Security') + ' security review ' + agenda.n + (agenda.kind === 'monthly' ? '' : ': ' + e(agenda.label)) + '</h2>' +
+      '<h2 style="margin-bottom:4px">' + e(m.org || 'Security') + ' leadership security meeting ' + agenda.n + (agenda.kind === 'monthly' ? '' : ': ' + e(agenda.label)) + '</h2>' +
       '<p style="color:#666;font-size:13px;margin-top:0">' + e(m.date) + (m.time ? ' at ' + e(m.time) : '') + ', ' + agenda.minutes + ' minutes' + (safeLink ? ' \u00b7 <a href="' + e(safeLink) + '">Join on Teams</a>' : '') + '</p>' +
       ((status || []).length ? '<h3 style="font-size:14px;margin:18px 0 6px">At a glance</h3><table style="width:100%;border-collapse:collapse;font-size:13px">' + status.map(function (x) {
         return '<tr><td style="padding:6px;border-bottom:1px solid #eee;width:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:5px;background:' + (dot[x.rag] || '#999') + '"></span></td>' +
@@ -6655,7 +6719,7 @@
     var m = meta || {}, r = rec || {}, notes = r.itemNotes || {}, by = r.decisionItem || {};
     var acts = actions || [];
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px">' +
-      '<h2 style="margin-bottom:4px">Minutes: ' + e(m.org || 'Security') + ' security review ' + agenda.n + '</h2>' +
+      '<h2 style="margin-bottom:4px">Minutes: ' + e(m.org || 'Security') + ' leadership security meeting ' + agenda.n + '</h2>' +
       '<p style="color:#666;font-size:13px;margin-top:0">' + e(m.date) + ' \u00b7 ' + e(agenda.label) + ' \u00b7 Present: ' + e(r.present || 'not recorded') + '</p>' +
       ((r.attendance && r.attendance.absent && r.attendance.absent.length) ? '<p style="color:#666;font-size:13px;margin-top:0">Absent: ' + e(r.attendance.absent.join(', ')) + (r.attendance.quorum === false ? ' \u00b7 <b style="color:#c0392b">held without the chair or the ISMS owner</b>' : '') + '</p>' : '') +
       (r.outcome ? '<p style="font-size:15px;margin:12px 0;padding:10px 12px;background:#f4f6f8;border-left:3px solid #2e86c1"><b>Outcome:</b> ' + e(r.outcome) + '</p>' : '') +
@@ -6736,9 +6800,9 @@
     var chaired = meetings.filter(function (m) { return m.chairPresent; }).length;
     var decisions = meetings.reduce(function (n, m) { return n + m.escalations.length; }, 0);
     return { since: since, meetings: meetings, accepted: accepted, managementReviews: mrs,
-      summary: meetings.length ? meetings.length + ' security review' + (meetings.length === 1 ? '' : 's') + ' held' + (setup.chair ? ', ' + chaired + ' chaired by ' + setup.chair : '') +
+      summary: meetings.length ? meetings.length + ' leadership security meeting' + (meetings.length === 1 ? '' : 's') + ' held' + (setup.chair ? ', ' + chaired + ' chaired by ' + setup.chair : '') +
         '; ' + decisions + ' decision' + (decisions === 1 ? '' : 's') + ' on overdue actions; ' + accepted.length + ' residual risk' + (accepted.length === 1 ? '' : 's') + ' accepted; ' +
-        mrs.length + ' management review' + (mrs.length === 1 ? '' : 's') + '.' : 'No security reviews held in this period.' };
+        mrs.length + ' management review' + (mrs.length === 1 ? '' : 's') + '.' : 'No leadership security meetings held in this period.' };
   }
   /* Clauses whose recurring obligation has lapsed: what an auditor
      finds first. d = { today, audits, managementReviews, auditMonths,
@@ -6773,7 +6837,7 @@
     else if (ls < ago(45)) add('9.1', 'Monitoring', 'No posture scan since ' + srDate(ls), 'scan', 'Run a posture scan', 'warn');
     if (d.securityReviewOn) {
       var lsr = last((d.securityReviews || []).filter(function (r) { return r && r.status === 'Held'; }), 'date');
-      if (lsr && lsr < ago(45)) add('9.1', 'Monitoring', 'No security review held since ' + srDate(lsr), 'reviews', 'Hold this month\u2019s security review', 'warn');
+      if (lsr && lsr < ago(45)) add('9.1', 'Monitoring', 'No leadership security meeting held since ' + srDate(lsr), 'reviews', 'Hold this month\u2019s leadership security meeting', 'warn');
     }
     var pol = (d.docs || []).filter(function (x) { return x && /information security policy/i.test(x.name || '') && !/topic|specific/i.test(x.name || ''); });
     var approved = pol.filter(function (x) { return x.status === 'Approved'; });
@@ -6873,7 +6937,7 @@
     var od = Number(d.overdueActions) || 0, open = Math.max(Number(d.openActions) || 0, od);
     add(od + ' overdue action' + (od === 1 ? '' : 's'), open ? Math.min(25, 25 * od / open + Math.min(5, od)) : 0);
     var mr = Number(d.missedReviews) || 0;
-    add(mr + ' security review' + (mr === 1 ? '' : 's') + ' missed', Math.min(20, mr * 10));
+    add(mr + ' leadership security meeting' + (mr === 1 ? '' : 's') + ' missed', Math.min(20, mr * 10));
     var score = Math.max(0, 100 - factors.reduce(function (n, f) { return n + f.points; }, 0));
     return { score: score, band: score >= 75 ? 'good' : score >= 50 ? 'watch' : 'poor', factors: factors.sort(function (a, b) { return b.points - a.points; }) };
   }
@@ -7066,7 +7130,7 @@
       (d.csvs || []).length ? '  *.csv                   each register as a spreadsheet, the same as Export all.' : '',
       '',
       'Restoring:',
-      '  Risks, actions, vendors and assets can be re-imported with Import CSV on each register.',
+      '  Risks, actions, suppliers and assets can be re-imported with Import CSV on each register.',
       '  For a full restore of every register from checkpoint-backup.json, contact Compliance365 support.',
       '',
       'Record counts: ' + Object.keys(counts).map(function (k) { return k + ' ' + counts[k]; }).join(', ')
@@ -7395,7 +7459,7 @@
     { key: 'scope', label: 'Scope and context', re: /^(Scope answer changed|Organisation profile updated|Applicability toggled|Control applicability changed|Exclusion justification changed)$/ },
     { key: 'policies', label: 'Policies and documents', re: /^(Policy document approved|Own document uploaded|Document approval request completed)$/, docs: true },
     { key: 'risks', label: 'Risks and opportunities', re: /^(Risk added manually|Business risk approved from findings|Risk closed|Risk closed — resolution approved|Residual risk accepted|Risk reopened|Opportunity added|Risk deleted)$/ },
-    { key: 'suppliers', label: 'Suppliers', re: /^(Vendor added|Supplier certificate renewed|Vendor reviewed)$/ },
+    { key: 'suppliers', label: 'Suppliers', re: /^((Vendor|Supplier) added|Supplier certificate renewed|(Vendor|Supplier) reviewed)$/ },
     { key: 'people', label: 'People and ownership', re: /^(Leaver hand-over|Ownership handed over|Control owner changed|Clause owner changed)$/ },
     { key: 'assets', label: 'Assets and AI systems', re: /^(Asset added|Asset retired|Asset register synced|AI system added)$/ },
     { key: 'incidents', label: 'Incidents', re: /^(Incident logged|Incident closed)$/ },
@@ -7602,10 +7666,10 @@
       add('unknownOwner', live.filter(unknownOwner), '1 owner to link to Microsoft 365', 'owners to link to Microsoft 365');
     } else if (kind === 'vendors') {
       live = (rows || []).filter(Boolean);
-      add('noOwner', live.filter(noOwner), '1 vendor without an owner', 'vendors without an owner');
-      add('noReview', live.filter(function (v) { return !v.nextReviewDue; }), '1 vendor without a review date', 'vendors without a review date');
-      add('certExpired', live.filter(function (v) { return v.certExpiryDate && v.certExpiryDate < today; }), '1 vendor whose certification has expired', 'vendors whose certification has expired');
-      add('noDpa', live.filter(function (v) { return vendorHandlesPersonalData(v) && !v.dpa; }), '1 vendor with personal information and no data processing agreement', 'vendors with personal information and no data processing agreement');
+      add('noOwner', live.filter(noOwner), '1 supplier without an owner', 'suppliers without an owner');
+      add('noReview', live.filter(function (v) { return !v.nextReviewDue; }), '1 supplier without a review date', 'suppliers without a review date');
+      add('certExpired', live.filter(function (v) { return v.certExpiryDate && v.certExpiryDate < today; }), '1 supplier whose certification has expired', 'suppliers whose certification has expired');
+      add('noDpa', live.filter(function (v) { return vendorHandlesPersonalData(v) && !v.dpa; }), '1 supplier with personal information and no data processing agreement', 'suppliers with personal information and no data processing agreement');
       add('unknownOwner', live.filter(unknownOwner), '1 owner to link to Microsoft 365', 'owners to link to Microsoft 365');
     } else if (kind === 'assets') {
       live = (rows || []).filter(function (a) { return a && a.status !== 'Retired' && a.status !== 'Missing'; });
@@ -8384,6 +8448,24 @@
         assessed: count(function (i) { return !!i.assessment; }),
         pastDue: count(function (i) { return i.pastDue; })
       }
+    };
+  }
+  /* Threat intel for the leadership meeting's pack. view = the
+     threatIntelTriage() result, or null when the feed is not loaded (the
+     assessments recorded still count). actions = the Actions register. */
+  function threatIntelPackSummary(view, triage, actions) {
+    var t = triage || {}, acts = actions || [];
+    var open = function (id) { var a = acts.filter(function (x) { return x.id === id; })[0]; return !!a && a.status !== 'Done' && a.status !== 'Cancelled' && a.status !== 'Closed'; };
+    var affectedIds = Object.keys(t).filter(function (k) { return t[k] && t[k].status === 'affected'; });
+    var items = view && view.items ? view.items : [];
+    var awaiting = items.filter(function (i) { return i.relevant && !i.assessment; });
+    var remediationOpen = affectedIds.filter(function (k) { return t[k].actionId && open(t[k].actionId); });
+    return {
+      affected: affectedIds.length, remediationOpen: remediationOpen.length,
+      awaiting: view ? awaiting.length : 0, pastDue: awaiting.filter(function (i) { return i.pastDue; }).length,
+      ransomwareOpen: items.filter(function (i) { return i.knownRansomwareUse && i.relevant && (!i.assessment || (i.assessment.status === 'affected' && i.assessment.actionId && open(i.assessment.actionId))); }).length,
+      top: awaiting.slice(0, 3).map(function (i) { return { cveId: i.cveId, product: (i.vendor ? i.vendor + ' ' : '') + (i.product || ''), pastDue: !!i.pastDue }; }),
+      loaded: !!view
     };
   }
   function threatIntelFilter(items, key) {
@@ -9510,8 +9592,8 @@
         evidence: 'The change planning procedure and change records.',
         auto: { doc: 'isms-change-planning' }, auto42: { doc: 'isms-change-planning' } },
       { id: 'external', text: 'Control externally provided processes, products and services that are relevant to the management system.',
-        evidence: 'The supplier security policy and the vendor register with assessments.',
-        evidence42: 'Third-party AI systems recorded with their vendor in the AI system register, governed through the supplier security policy.',
+        evidence: 'The supplier security policy and the supplier register with assessments.',
+        evidence42: 'Third-party AI systems recorded with their supplier in the AI system register, governed through the supplier security policy.',
         auto: { md: 'A.5.19' }, auto42: { md: 'A.5.19', record: 'aiRegister' } }
     ],
     '8.2': [
@@ -11807,7 +11889,8 @@
     var d = data || {}, from = String(since || '');
     var inPeriod = function (date) { return !from || String(date || '').slice(0, 10) >= from; };
     var log = (d.auditLog || []).filter(function (e) { return e && inPeriod(e.entryDateTime); });
-    var count = function (action) { return log.filter(function (e) { return e.action === action; }).length; };
+    /* Supplier entries were called Vendor before 1.145.0: both count. */
+    var count = function (action) { var old = action.replace(/^Supplier /, 'Vendor '); return log.filter(function (e) { return e.action === action || e.action === old; }).length; };
     var leadingNumber = function (e) { var m = /^(\d+)/.exec(String(e.after || '')); return m ? parseInt(m[1], 10) : 0; };
 
     var scans = (d.scans || []).filter(function (x) { return x && inPeriod(x.date); });
@@ -11837,7 +11920,7 @@
       { key: 'status', label: 'Control and clause updates made automatically', count: automatedStatus, hours: automatedStatus * VALUE_HOURS.statusUpdate, basis: '15 minutes each to find the evidence and update the register' },
       { key: 'findings', label: 'Scan findings turned into risks and actions', count: findings, hours: findings * VALUE_HOURS.finding, basis: '30 minutes each to investigate and write up' },
       { key: 'questionnaires', label: 'Security questionnaire answers drafted', count: qAnswers, hours: qAnswers * VALUE_HOURS.questionnaireAnswer, basis: '6 minutes per answer' },
-      { key: 'vendors', label: 'Supplier questionnaires sent and recorded', count: count('Vendor questionnaire sent') + count('Vendor questionnaire answers recorded'), hours: (count('Vendor questionnaire sent') + count('Vendor questionnaire answers recorded')) * VALUE_HOURS.vendorQuestionnaire, basis: '1 hour each' },
+      { key: 'vendors', label: 'Supplier questionnaires sent and recorded', count: count('Supplier questionnaire sent') + count('Supplier questionnaire answers recorded'), hours: (count('Supplier questionnaire sent') + count('Supplier questionnaire answers recorded')) * VALUE_HOURS.vendorQuestionnaire, basis: '1 hour each' },
       { key: 'reports', label: 'Reports and audit packs generated', count: reports.length, hours: reportHours, basis: '2 hours per report; 3 for a pre-audit pack, 4 for an internal audit workpack' }
     ].filter(function (i) { return i.count > 0; });
     items.forEach(function (i) { i.hours = Math.round(i.hours * 10) / 10; });
@@ -11925,7 +12008,8 @@
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
-    srDate: srDate,
+    srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
+    incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
     SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,

@@ -129,7 +129,7 @@ describe('the scheduled function', () => {
     assert.deepEqual(done, ['minutes reminder SR-001']);
     const mail = f.calls.find((c) => /sendMail/.test(c.path));
     assert.equal(mail.opts.body.message.toRecipients[0].emailAddress.address, 'cem@mg.example');
-    assert.match(mail.opts.body.message.subject, /Record the minutes: MineGuard security review 1/);
+    assert.match(mail.opts.body.message.subject, /Record the minutes: MineGuard leadership security meeting 1/);
   });
   test('does nothing on other days or without a setup', async () => {
     const f = fakes(data);
@@ -201,7 +201,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     const doc = await popup;
     await doc.waitForLoadState();
     await doc.waitForTimeout(300);
-    assert.ok((await doc.content()).includes('Security review 3 agenda'));
+    assert.ok((await doc.content()).includes('Leadership security meeting 3 agenda'));
     await doc.close();
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
     await page.waitForSelector('#drawer #srNote-mr');

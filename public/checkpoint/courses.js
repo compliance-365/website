@@ -440,8 +440,8 @@ window.TRAINING_COURSES = [
         options: [
           'Whether the model is technically sophisticated enough for the task',
           'Whether a person could be harmed if the system is wrong, and whether they would know or could contest it',
-          'Whether the AI vendor is larger than our current suppliers',
-          'Whether the system runs in our own tenant rather than the vendor\'s'
+          'Whether the AI supplier is larger than our current suppliers',
+          'Whether the system runs in our own tenant rather than the supplier\'s'
         ],
         answer: 1,
         why: 'Security asks whether the organisation could be harmed. AI governance adds harm to individuals and to society, which is why risk is proportionate to consequence rather than to sophistication — a simple rule that decides who gets a service can matter more to a person than an advanced summarisation model.'

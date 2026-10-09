@@ -12,6 +12,21 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.145.0',
+    date: '2026-10-09',
+    entries: [
+      'Everything feeds the leadership meeting. Threat intel is now under Security posture: how many exploited vulnerabilities affect you, how many remediation actions are open, and which relevant advisories have not been assessed or are past CISA\u2019s fix-by date. It also gets a traffic light in the at-a-glance figures.',
+      'Incidents link to the risk they are evidence of. An incident\u2019s panel suggests the business risk it belongs to (for example a lost laptop goes to the device risk), preferring the risk already in your register, so you never get one new risk per incident. Linking can also ask the risk owner to reassess the likelihood. The risk\u2019s panel lists the incidents where it happened, and the meeting names each incident\u2019s risk and asks about any that have none.',
+      'Supplier questionnaire gaps are treated. An answer of No or Unknown on certification, encryption, MFA or incident notification is listed as a gap on the supplier. One click raises one action against your supplier risk, links the supplier to that risk, and counts towards that risk\u2019s treatment. Recording answers with gaps offers this straight away, and the meeting lists suppliers whose gaps nobody is treating yet.',
+      'One word: supplier. Every screen, email, document and guide now says supplier rather than vendor, matching ISO 27001. Your registers, imports and history are unchanged: CSV files with a Vendor column still import, and history recorded before the change still counts.',
+      'The meeting is called the leadership security meeting everywhere, including the agenda, minutes and follow-up emails, and the calendar invite.',
+      'Trust Center: with at least two meetings held in the last three months it shows that leadership reviews security monthly, and it shows the date of your latest supplier security review.',
+      'Taking minutes is shorter: the actions and incidents shown with their buttons are no longer listed a second time above them.',
+      'Fixed: an action raised with Treat in the meeting now counts towards the risk\u2019s treatment progress and residual rating.',
+      'Fixed: an action closed in the meeting, or closed by accepting the risk, was saved with a status the Actions register does not use, so it kept counting as open and overdue. It is now Completed or Closed, and any saved before read as Closed.'
+    ]
+  },
+  {
     version: '1.144.0',
     date: '2026-10-09',
     entries: [
