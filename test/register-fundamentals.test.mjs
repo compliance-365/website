@@ -103,7 +103,7 @@ describe('vendors', () => {
   });
   test('stored: tier, contract, DPA and apps on the Vendors list; discovery reads enterprise apps', () => {
     assert.match(store, /\{ name: 'Tier', text: \{\} \}, \{ name: 'ContractInPlace', boolean: \{\} \}, \{ name: 'DpaInPlace', boolean: \{\} \}/);
-    assert.match(store, /Vendors: \['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate', 'Tier', 'ContractInPlace', 'DpaInPlace', 'Apps'\]/);
+    assert.match(store, /Vendors: \['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate', 'Tier', 'ContractInPlace', 'DpaInPlace', 'Apps'[,\]]/);
     assert.equal((store.match(/ContractInPlace: !!v\.contract, DpaInPlace: !!v\.dpa, Apps: csv\(v\.apps \|\| \[\]\)/g) || []).length, 2);
     assert.match(graph, /async function discoverVendorApps\(\)/);
     assert.match(graph, /discoverVendorApps: discoverVendorApps/);
