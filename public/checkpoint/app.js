@@ -4639,8 +4639,9 @@ function showModal(opts) {
      and every page carries "Page X of Y" (Chrome supports @page margin
      boxes and counter(pages)). */
   function enterprisePrintCss(opts) {
-    /* CSS strings: escape backslashes and quotes, drop newlines. */
-    var q = function (v) { return '"' + String(v || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ').slice(0, 120) + '"'; };
+    /* CSS strings: drop newlines, truncate, then escape backslashes,
+       quotes and '<' (so a client name can never close the <style>). */
+    var q = function (v) { return '"' + String(v || '').replace(/[\r\n]+/g, ' ').slice(0, 120).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/</g, '\\3c ') + '"'; };
     var box = 'font-family:"Segoe UI",Arial,sans-serif;font-size:7.5pt;letter-spacing:.06em;color:' + (opts.draft ? '#b91c1c' : '#4A5568');
     var cls = String(opts.classification || 'Internal').toUpperCase() + (opts.draft ? ' \u00b7 DRAFT \u2014 NOT APPROVED' : '');
     return '@page{' +

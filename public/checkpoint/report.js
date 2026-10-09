@@ -45,20 +45,14 @@
        signOff: { preparedBy: string, clientApprover: string }
      }
 
-   Paged-media design: printed header/footer repeat per physical page
-   using position:fixed with a negative offset into the @page margin
-   band (the one cross-browser-reliable way to do this in Chrome/Edge,
-   which do not implement CSS Paged Media's @page margin boxes at
-   all) — @media print only; on screen the same markup renders once,
-   inline, at the top/bottom of the scrollable document. The printed
-   "Page N" comes from a CSS counter incremented once per .rpt-page —
-   this counts logical report pages we've deliberately paginated
-   (cover, document control, TOC, dashboard, each major content
-   section, methodology, sign-off), not necessarily the exact physical
-   page a long table overflows onto — an honest, documented limit of
-   doing this in plain browser CSS rather than a real pagination
-   engine (see SETUP.md's note on headless-Chromium rendering for the
-   pixel-perfect alternative). */
+   Paged-media design: the printed header and footer are CSS Paged
+   Media @page margin boxes (Chrome/Edge 131+ print these), so they
+   sit in the page margin on every physical page, including the pages
+   a long table overflows onto, and the footer carries a true "Page N
+   of M". (A position:fixed header was used before; Chrome placed it
+   mid-page on overflow pages, over the content.) On screen the
+   .rpt-header/.rpt-footer markup renders once, inline, at the top and
+   bottom of the document; the client's logo stays on the cover. */
 (function () {
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
@@ -1196,9 +1190,30 @@
       '@media print{' +
         'body{background:#fff}' +
         '.rpt-doc{padding:0 24px}' +
-        '.rpt-header{position:fixed;top:-22mm;left:16mm;right:16mm;width:auto}' +
-        '.rpt-footer{position:fixed;bottom:-18mm;left:16mm;right:16mm;width:auto}' +
+        '.rpt-header{display:none}' +
+        '.rpt-footer{display:none}' +
       '}';
+  }
+
+  /* Printed footer as CSS Paged Media margin boxes, so every physical
+     page carries its own "Page N of M" (Chrome/Edge print these). A
+     string from the spec ends up inside a CSS string in a <style>
+     block: escape backslashes and quotes, and '<' so no value can
+     close the style element. */
+  function cssStr(v) {
+    return '"' + String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').slice(0, 140).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/</g, '\\3c ') + '"';
+  }
+  function pageMarginCss(spec) {
+    var box = 'font-family:Manrope,sans-serif;font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#8b877d;border-top:1px solid rgba(11,11,12,.15);padding-top:3mm;vertical-align:top';
+    return '@page{' +
+        '@top-left{content:' + cssStr(((spec.client && spec.client.name) || '') + ' \u2014 ' + spec.reportTitle) + ';' + box.replace('border-top', 'border-bottom').replace('padding-top', 'padding-bottom').replace('vertical-align:top', 'vertical-align:bottom') + '}' +
+        '@top-right{content:' + cssStr(spec.classification) + ';' + box.replace('border-top', 'border-bottom').replace('padding-top', 'padding-bottom').replace('vertical-align:top', 'vertical-align:bottom') + '}' +
+        '@bottom-left{content:' + cssStr(spec.reportTitle + ' \u00b7 v' + spec.version) + ';' + box + '}' +
+        '@bottom-center{content:' + cssStr(spec.footerText || ('Generated ' + spec.date)) + ';' + box + '}' +
+        '@bottom-right{content:"Page " counter(page) " of " counter(pages);' + box + '}' +
+      '}' +
+      /* The cover carries the classification and title itself. */
+      '@page:first{@top-left{content:none}@top-right{content:none}}';
   }
 
   function buildReport(spec) {
@@ -1214,12 +1229,9 @@
       ? '<img class="rpt-header-logo" src="' + esc(spec.client.logoUrl) + '" alt="">'
       : '';
     var header = '<div class="rpt-header"><span class="rpt-header-client">' + headerLogo + esc(spec.client.name) + ' — ' + esc(spec.reportTitle) + '</span><span>' + esc(spec.classification) + '</span></div>';
-    /* The footer's left slot carries the document identity (title +
-       version), not a page number — the old "Page N" CSS counter
-       resolved once at the fixed footer's DOM position, printing the
-       same (off-by-one) total on every page. Browser print engines
-       add no reliable per-physical-page counter to fixed elements, so
-       an accurate identity beats an inaccurate number. */
+    /* On-screen footer. In print it is hidden and replaced by the
+       @page margin boxes from pageMarginCss(), which number each
+       physical page; a counter on a fixed element cannot. */
     var footerMid = spec.footerText ? esc(spec.footerText) : esc(spec.classification);
     var footer = '<div class="rpt-footer"><span>' + esc(spec.reportTitle) + ' · v' + esc(spec.version) + '</span><span>' + footerMid + '</span><span>Generated ' + esc(spec.date) + '</span></div>';
     var body = coverPage(spec) + docControlPage(spec) + tocPage(entries) +
@@ -1227,7 +1239,7 @@
       contentSections(spec, entries, contentEntryStart) +
       methodologyPage(spec, 'sec-methodology') +
       signOffPage(spec, 'sec-signoff');
-    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css(fontBase, accent) + '</style></head><body>' +
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css(fontBase, accent) + pageMarginCss(spec) + '</style></head><body>' +
       header + '<div class="rpt-doc">' + body + '</div>' + footer +
       '</body></html>';
   }

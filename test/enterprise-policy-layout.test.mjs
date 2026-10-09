@@ -46,6 +46,13 @@ describe('in the browser', { skip: skipReason || false }, () => {
     const html = await build('enterprise', true);
     assert.match(html, /@bottom-center\{content:"Page " counter\(page\) " of " counter\(pages\)/);
     assert.match(html, /@bottom-left\{content:"Acme \\"Group\\""/, 'strings in CSS are escaped');
+    const hostile = await page.evaluate(() => {
+      const t = window.POLICY_TEMPLATES.find((x) => x.id === 'infosec-policy');
+      return window.__bt(window.__epc(t, t.title + '.html'), { clientLabel: 'Evil</style><script>alert(1)</script>', owner: 'Cem', reviewDate: '2027-10-09', approved: true, generatedDate: '9 October 2026', version: '1.0', approvedBy: 'Ekin', classification: 'Internal', layout: 'enterprise' });
+    });
+    const styles = hostile.match(/<style[^>]*>[\s\S]*?<\/style>/g).join('');
+    assert.doesNotMatch(styles, /<script/, 'a client name cannot close the style element');
+    assert.match(styles, /Evil\\3c \/style>/);
     const doc = await browser.newPage();
     await doc.setContent(html);
     const r = await doc.evaluate(() => {
