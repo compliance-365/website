@@ -1706,10 +1706,16 @@
 <script src="guidance.js"></script>
 <script src="templates.js"></script>
 <script src="courses.js"></script>
-<script src="changelog.js"></script>
 <script src="ai.js"></script>
 <script src="report.js"></script>
 <script src="selftest.js"></script>
 <script src="app.js"></script>
+<!-- Loaded on demand, not at start-up: the "What's new" list is ~200KB
+     read only when someone opens it. Inside a <template> the tag is
+     inert, but the build still content-hashes it and gives it an SRI
+     integrity attribute (scripts/hash-checkpoint-assets.mjs rewrites
+     it like any other tag); loadDeferredScript() in app.js copies both
+     onto the real <script> it adds. -->
+<template id="deferredScripts"><script src="changelog.js"></script></template>
 </body>
 </html>

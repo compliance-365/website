@@ -5830,6 +5830,28 @@ function showModal(opts) {
 
 
 
+  /* A script kept out of start-up (index.html's #deferredScripts
+     template), loaded the first time it is needed, with the same
+     content-hashed name and SRI integrity the build gave its tag. */
+  var _deferredLoads = {};
+  function loadDeferredScript(name) {
+    if (_deferredLoads[name]) return _deferredLoads[name];
+    _deferredLoads[name] = new Promise(function (resolve, reject) {
+      var tpl = document.getElementById('deferredScripts');
+      var tag = tpl && Array.prototype.find.call(tpl.content.querySelectorAll('script'), function (x) {
+        return (x.getAttribute('src') || '').replace(/\.[0-9a-f]{10}\.js$/, '.js').replace(/\?.*$/, '') === name;
+      });
+      if (!tag) { reject(new Error(name + ' is not in #deferredScripts')); return; }
+      var el = document.createElement('script');
+      el.src = tag.getAttribute('src');
+      if (tag.getAttribute('integrity')) { el.integrity = tag.getAttribute('integrity'); el.crossOrigin = 'anonymous'; }
+      el.onload = function () { resolve(); };
+      el.onerror = function () { delete _deferredLoads[name]; reject(new Error('Could not load ' + name)); };
+      document.body.appendChild(el);
+    });
+    return _deferredLoads[name];
+  }
+
   /* ================= render ================= */
   function renderNavCounts() {
     var nMine = document.getElementById('nMyTasks');
@@ -18321,7 +18343,10 @@ function showModal(opts) {
        uses, populated from window.CHECKPOINT_CHANGELOG (changelog.js).
        Purely informational; never mutates anything, so it's reachable
        from the sidebar version tag regardless of read-only status. */
-    openChangelog: function () {
+    openChangelog: async function () {
+      if (!window.CHECKPOINT_CHANGELOG) {
+        try { await loadDeferredScript('changelog.js'); } catch (e) { warn(e); }
+      }
       var list = window.CHECKPOINT_CHANGELOG || [];
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
