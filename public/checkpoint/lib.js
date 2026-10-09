@@ -4504,6 +4504,60 @@
     if (rec.recordedBy) return 'Approval recorded in Checkpoint by ' + rec.recordedBy + on;
     return 'Approval recorded in Checkpoint' + on;
   }
+  /* ===== Notifiable Data Breaches: draft notices =====
+     The statement to the Australian Information Commissioner must set
+     out (Privacy Act s 26WK(3)): the entity's identity and contact
+     details, a description of the eligible data breach, the kinds of
+     information concerned, and the steps individuals should take. The
+     notice to individuals carries the same content. Drafts only: a
+     person reviews them and lodges the statement through the OAIC's
+     own form. o = { org, contact, description, occurred, detected,
+     kinds, steps: [..] }. */
+  function ndbNoticeDrafts(o) {
+    o = o || {};
+    var org = String(o.org || '[Organisation name]').trim();
+    var contact = String(o.contact || '[Contact name, email and phone]').trim();
+    var desc = String(o.description || '[What happened, and when]').trim();
+    var kinds = String(o.kinds || '[The kinds of personal information involved]').trim();
+    var steps = (o.steps || []).map(function (x) { return String(x).trim(); }).filter(Boolean);
+    if (!steps.length) steps = ['[What affected people should do to protect themselves]'];
+    var when = [o.occurred ? 'The breach occurred on or about ' + o.occurred + '.' : '', o.detected ? 'We became aware of it on ' + o.detected + '.' : ''].filter(Boolean).join(' ');
+    var stepsText = steps.map(function (x) { return '- ' + x; }).join('\n');
+    var commissioner = [
+      'Statement about an eligible data breach (Privacy Act 1988, section 26WK)',
+      '',
+      '1. Who we are',
+      org + '. Contact for this breach: ' + contact + '.',
+      '',
+      '2. What happened',
+      desc + (when ? ' ' + when : ''),
+      '',
+      '3. The information involved',
+      kinds,
+      '',
+      '4. What affected individuals should do',
+      stepsText
+    ].join('\n');
+    var individuals = [
+      'Notice of a data breach that may affect you',
+      '',
+      'We are writing to tell you about a data breach at ' + org + ' that involves your personal information.',
+      '',
+      'What happened',
+      desc + (when ? ' ' + when : ''),
+      '',
+      'The information involved',
+      kinds,
+      '',
+      'What we recommend you do',
+      stepsText,
+      '',
+      'Questions',
+      'Contact ' + contact + '. You can also contact the Office of the Australian Information Commissioner at oaic.gov.au.'
+    ].join('\n');
+    return { commissioner: commissioner, individuals: individuals };
+  }
+
   /* ===== Review before approval (the approval matrix) =====
      A review is a named, dated check by a second person between the
      draft and its approval. It is recorded on the audit log as
@@ -12484,7 +12538,7 @@
     buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,
     documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
-    DOC_REVIEW_LEVELS: DOC_REVIEW_LEVELS, parseDocReview: parseDocReview, docReviewAfter: docReviewAfter, docSignoffReviewState: docSignoffReviewState, docNeedsReview: docNeedsReview, reviewGateReason: reviewGateReason, reviewerConflictReason: reviewerConflictReason,
+    ndbNoticeDrafts: ndbNoticeDrafts, DOC_REVIEW_LEVELS: DOC_REVIEW_LEVELS, parseDocReview: parseDocReview, docReviewAfter: docReviewAfter, docSignoffReviewState: docSignoffReviewState, docNeedsReview: docNeedsReview, reviewGateReason: reviewGateReason, reviewerConflictReason: reviewerConflictReason,
     incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
     SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,

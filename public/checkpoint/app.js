@@ -913,7 +913,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -23724,6 +23724,7 @@ function showModal(opts) {
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
           '<button class="btn sm" data-action="App.updateIncidentDetails" data-id="' + n.id + '">Update details</button>' +
           (n.isPrivacyBreach ? '<button class="btn ghost sm" data-action="App.recordIncidentAssessment" data-id="' + n.id + '">Record assessment</button>' : '') +
+          (n.isPrivacyBreach ? '<button class="btn ghost sm" data-action="App.draftNdbNotice" data-id="' + n.id + '">Draft breach notices</button>' : '') +
           (n.status !== 'Closed' ? '<button class="btn ghost sm" data-action="App.closeIncident" data-id="' + n.id + '">Close incident</button>' : '') +
           '</div>') + recordHistoryHtml('Incident', [n.id], 6);
       openDrawerUi('Incident ' + n.id);
@@ -23760,6 +23761,37 @@ function showModal(opts) {
       audit('Incident updated', 'Incident', n.id, prevStatus, v.status);
       renderIncidents(); renderNavCounts(); renderDash();
       App.openIncident(id);
+    },
+
+    /* Notifiable Data Breaches: drafts of the statement to the OAIC and
+       the notice to individuals, from the incident. Nothing is sent: a
+       person checks the drafts and lodges the statement through the
+       OAIC's own form. */
+    draftNdbNotice: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var v = await showModal({
+        title: 'Draft breach notices — ' + n.id,
+        message: 'A breach is notifiable when all three are true: personal information was accessed or disclosed without authorisation, or lost where that is likely; a reasonable person would conclude it is likely to cause serious harm to someone; and action taken has not removed that likelihood. If so, the Privacy Act requires a statement to the OAIC and a notice to the people at risk as soon as practicable.\n\nCheckpoint drafts both from this incident. Nothing is sent.',
+        fields: [
+          { id: 'org', label: 'Organisation', value: clientDisplayLabel('') },
+          { id: 'contact', label: 'Contact for this breach (name, email, phone)', value: (S.settings && S.settings.trustCenterContactEmail) || '' },
+          { id: 'description', label: 'What happened', type: 'textarea', value: n.description || n.title || '' },
+          { id: 'kinds', label: 'Kinds of personal information involved', type: 'textarea', value: n.affectedSystems || '', placeholder: 'e.g. names, email addresses and dates of birth of about 1,200 customers' },
+          { id: 'steps', label: 'What affected people should do (one per line)', type: 'textarea', value: 'Be alert to emails, calls or texts that mention this breach or ask for personal details.\nChange the password for your account with us, and anywhere else you use the same password.\nFor help with identity misuse, contact IDCARE on 1800 595 160 or at idcare.org.' }
+        ],
+        confirmText: 'Draft notices',
+        validate: function (x) { return x.contact ? null : 'Add a contact: the statement must give contact details.'; }
+      });
+      if (!v) return;
+      var d = window.CheckpointLib.ndbNoticeDrafts({ org: v.org, contact: v.contact, description: v.description, kinds: v.kinds, occurred: n.occurred ? fmtDateY(n.occurred) : '', detected: n.detected ? fmtDateY(n.detected) : '', steps: String(v.steps || '').split('\n') });
+      var block = function (h, t) { return '<h2>' + esc(h) + '</h2><pre style="white-space:pre-wrap;font:inherit;line-height:1.6">' + esc(t) + '</pre>'; };
+      var html = '<!doctype html><html><head><meta charset="utf-8"><title>Breach notices — ' + esc(n.id) + '</title><style>body{font-family:Manrope,Arial,sans-serif;color:#0B0B0C;max-width:760px;margin:32px auto;padding:0 24px;font-size:13px}h1{font-size:20px}h2{font-size:15px;margin-top:28px;border-bottom:1px solid #ccc;padding-bottom:4px}.draft{border:2px solid #b91c1c;color:#b91c1c;padding:8px 12px;font-weight:700}</style></head><body>' +
+        '<p class="draft">DRAFT for review. Not sent. Lodge the statement through the OAIC’s online form, and send the notice to affected people as soon as practicable.</p>' +
+        '<h1>Breach notices — ' + esc(n.id) + ' ' + esc(n.title || '') + '</h1>' +
+        block('Statement to the OAIC', d.commissioner) + block('Notice to affected individuals', d.individuals) + '</body></html>';
+      audit('Breach notices drafted', 'Incident', n.id, '', 'Statement to the OAIC and notice to individuals drafted (not sent)');
+      printPreview('Breach notices — ' + n.id, html);
     },
 
     recordIncidentAssessment: async function (id) {
