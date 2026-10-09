@@ -159,7 +159,7 @@ const articleLd = {
         <h3 class="rffr-group-h">RFFR Obligations <span class="muted">· {c.deeds} program-deed controls</span></h3>
         <div class="rffr-controls">
           {rffr.deeds.map((d) => (
-            <div class="rffr-ctrl" data-core="1" data-e8="0" data-auto="0" data-text={(d.id + ' ' + d.text).toLowerCase()}>
+            <div class="rffr-ctrl" data-core="1" data-e8="0" data-auto="0">
               <div class="rffr-ctrl-head">
                 <span class="rffr-id">{d.id}</span>
                 <span class="rffr-badges">
@@ -183,7 +183,6 @@ const articleLd = {
                 data-core={ctrl.rffrCore ? '1' : '0'}
                 data-e8={ctrl.e8 ? '1' : '0'}
                 data-auto={ctrl.microsoft ? '1' : '0'}
-                data-text={(ctrl.id + ' ' + ctrl.text).toLowerCase()}
               >
                 <div class="rffr-ctrl-head">
                   <span class="rffr-id">{ctrl.id}</span>
@@ -237,6 +236,10 @@ const articleLd = {
   (function () {
     const groups = Array.from(document.querySelectorAll('.rffr-group'));
     const ctrls = Array.from(document.querySelectorAll('.rffr-ctrl'));
+    /* Searched text read once from the page itself (ID, text, badges,
+       topic), rather than duplicated into a data attribute on each of
+       ~1,000 controls. */
+    const texts = ctrls.map((el) => el.textContent.toLowerCase());
     const search = document.getElementById('rffrSearch');
     const guidelineSel = document.getElementById('rffrGuideline');
     const chips = Array.from(document.querySelectorAll('.rffr-chip'));
@@ -248,12 +251,12 @@ const articleLd = {
       const q = (search.value || '').trim().toLowerCase();
       const cat = guidelineSel.value;
       let shown = 0;
-      ctrls.forEach((el) => {
+      ctrls.forEach((el, i) => {
         const okFlag = flag === 'all'
           || (flag === 'core' && el.dataset.core === '1')
           || (flag === 'e8' && el.dataset.e8 === '1')
           || (flag === 'auto' && el.dataset.auto === '1');
-        const okText = !q || el.dataset.text.indexOf(q) !== -1;
+        const okText = !q || texts[i].indexOf(q) !== -1;
         const show = okFlag && okText;
         el.style.display = show ? '' : 'none';
         if (show) shown++;
@@ -283,7 +286,10 @@ const articleLd = {
   })();
 </script>
 
-<style>
+<style is:global>
+  /* Global, not scoped: these rffr- classes are unique to this page, and
+     scoping added a data-astro-cid attribute to ~1,000 controls
+     (about 200KB of HTML). */
   .rffr-stats { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
   .rffr-stats > div { background: #fff; border: 1px solid #DDD8CF; border-radius: 12px; padding: 1.1rem 1.6rem; text-align: center; min-width: 150px; flex: 1 1 150px; max-width: 220px; }
   .rffr-stats .n { display: block; font-size: 1.9rem; font-weight: 800; color: #BE4A1E; line-height: 1.1; }
@@ -310,11 +316,11 @@ const articleLd = {
   .rffr-ctrl-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
   .rffr-id { font-weight: 700; font-size: 0.82rem; color: #A63A12; font-family: ui-monospace, monospace; }
   .rffr-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-  .badge { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 10px; }
-  .badge.core { background: rgba(190, 74, 30,0.1); color: #A63A12; }
-  .badge.e8 { background: #dcfce7; color: #166534; }
-  .badge.auto { background: #dbeafe; color: #1e40af; }
-  .badge.cls { background: #f1f5f9; color: #475569; }
+  .rffr-ctrl .badge { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 10px; }
+  .rffr-ctrl .badge.core { background: rgba(190, 74, 30,0.1); color: #A63A12; }
+  .rffr-ctrl .badge.e8 { background: #dcfce7; color: #166534; }
+  .rffr-ctrl .badge.auto { background: #dbeafe; color: #1e40af; }
+  .rffr-ctrl .badge.cls { background: #f1f5f9; color: #475569; }
   .rffr-ctrl-text { font-size: 0.86rem; line-height: 1.5; margin: 0; color: #2E2B26; }
   .rffr-topic { margin: 0.5rem 0 0; font-size: 0.72rem; }
   .rffr-empty { text-align: center; color: #6B6860; padding: 2rem; }

@@ -5,9 +5,9 @@
  * A free, public, no-sign-up EU AI Act risk classifier — the same
  * question set and classification engine (public/checkpoint/lib.js's
  * classifyAiActRisk()/AI_ACT_QUESTIONS) that drives the live AI Systems
- * register inside Checkpoint itself, loaded here as a plain <script src>
- * exactly the way the app does (see public/checkpoint/index.html's own
- * <script src="lib.js">). Deliberately NOT a re-implementation: the
+ * register inside Checkpoint itself, read from lib.js at build time and
+ * inlined (only those pieces, not the whole library). Deliberately NOT a
+ * re-implementation: the
  * questions, clauses and obligation text only exist in one place in this
  * codebase, so the public tool and the in-app one can never drift apart.
  *
@@ -26,6 +26,21 @@ interface Props {
 const {
   ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled',
 } = Astro.props;
+
+/* Only the classifier is needed here, not all of Checkpoint's lib.js
+   (about 840KB). The questions, tables and function are read from
+   lib.js at build time and inlined, so there is still one source and
+   the public tool and the app cannot drift apart. */
+import { createRequire } from 'node:module';
+const L = createRequire(process.cwd() + '/')('./public/checkpoint/lib.js');
+const json = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c');
+const classifierJs =
+  'window.CheckpointLib=(function(){' +
+  'var AI_ACT_QUESTIONS=' + json(L.AI_ACT_QUESTIONS) + ';' +
+  'var AI_ACT_OBLIGATIONS=' + json(L.AI_ACT_OBLIGATIONS) + ';' +
+  'var AI_ACT_TIER_ORDER=' + json(L.AI_ACT_TIER_ORDER) + ';' +
+  'var classifyAiActRisk=' + String(L.classifyAiActRisk) + ';' +
+  'return {AI_ACT_QUESTIONS:AI_ACT_QUESTIONS,classifyAiActRisk:classifyAiActRisk};})();';
 ---
 
 <div class="c365-aiact" aria-label="EU AI Act risk classifier" data-cta={ctaUrl}>
@@ -118,7 +133,7 @@ const {
   .c365-btn--primary:hover { background: #A63A12; }
 </style>
 
-<script is:inline src="/checkpoint/lib.js"></script>
+<script is:inline set:html={classifierJs}></script>
 <script is:inline>
   (function () {
     var GROUPS = [

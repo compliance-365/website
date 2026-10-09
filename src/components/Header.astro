@@ -333,6 +333,8 @@ const latestPosts = (await getPosts())
     text-decoration: none;
     font-weight: 600;
     font-size: 0.9rem;
+    /* "Free Resources" wrapped onto two lines between ~1020 and 1250px. */
+    white-space: nowrap;
     opacity: 1;
     transition: background 0.15s, color 0.15s, opacity 0.15s;
     position: relative;
@@ -595,7 +597,16 @@ const latestPosts = (await getPosts())
     color: #F0A97F;
   }
 
-  @media (max-width: 1020px) {
+  /* Between the compact menu and wide screens, the eight links and the
+     call button only fit with a little less padding. */
+  @media (min-width: 1181px) and (max-width: 1320px) {
+    .nav-link { padding: 7px 8px; font-size: 0.86rem; }
+  }
+
+  /* Compact menu below 1180px: the full menu needs about 1,150px and
+     used to wrap "Free Resources" and push the page sideways between
+     1020 and 1180px. */
+  @media (max-width: 1180px) {
     .nav-toggle { display: inline-flex; }
     .nav {
       position: absolute;

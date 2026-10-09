@@ -147,17 +147,28 @@ const BREADCRUMB_SCHEMA = breadcrumbs.length
       }))
     }
   : null;
-// Merge graph items
+// Merge graph items. The full organisation record (services, hours,
+// service area) is stated once, on the home and About pages; every other
+// page refers to it by @id, so 90 pages don't repeat the same catalogue.
 const pageGraph = Array.isArray(schema) ? schema : (schema ? [schema] : []);
-const fullGraph = [ORG, WEBSITE];
+const pathname = new URL(canonical).pathname;
+const IS_ORG_PAGE = pathname === '/' || pathname === '/about/';
+const ORG_REF = { "@type": "Organization", "@id": ORG["@id"], "name": ORG.name, "url": ORG.url, "logo": ORG.logo };
+const fullGraph = [IS_ORG_PAGE ? ORG : ORG_REF, WEBSITE];
 if (BREADCRUMB_SCHEMA) fullGraph.push(BREADCRUMB_SCHEMA);
 if (pageGraph.length) fullGraph.push(...pageGraph);
 // Add “about” + “mentions” for entity clarity
-fullGraph.push({
+// Each page describes itself; the site-wide topic list belongs to the
+// home page only, rather than every page claiming every framework.
+fullGraph.push(Object.assign({
   "@type": "WebPage",
   "@id": canonical + "#webpage",
   "url": canonical,
   "name": title,
+  "description": description,
+  "inLanguage": "en-AU",
+  "isPartOf": { "@id": "https://www.compliance365.com.au/#website" }
+}, pathname === '/' ? {
   "about": [
     "Cybersecurity compliance", "Privacy management", "AI governance",
     "ISO 27001", "ISO 27701", "ISO 42001", "SOC 2", "Essential Eight"
@@ -165,7 +176,7 @@ fullGraph.push({
   "mentions": [
     "Australian Privacy Act", "NIST CSF", "IRAP", "ISM", "DISP"
   ]
-});
+} : {}));
 const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": fullGraph });
 ---
 <html lang="en-AU">
@@ -638,7 +649,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   }
   /* Only below the nav breakpoint — above it the header CTA is visible
      the whole way down and a second one would just be noise. */
-  @media (max-width: 1020px) {
+  @media (max-width: 1180px) {
     #sticky-cta:not([data-hidden]) { display: flex; }
   }
   @media (prefers-reduced-motion: reduce) {

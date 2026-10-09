@@ -9,14 +9,14 @@ tags: ["ISO 27001", "ISMS", "Security", "Compliance", "Australia"]
 image: "/assets/blog-iso27001.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p><strong>ISO 27001</strong> can feel like a mountain before you start. Most organisations delay because they're waiting to be "ready" — more staff, a bigger budget, a slower quarter. They're never ready, and the certification never happens.</p>
   <p>The organisations that certify fastest don't start by boiling the ocean. They pick high-impact, traceable actions that build evidence and momentum simultaneously. These seven steps do exactly that.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1. Define Your ISMS Scope in Business Terms</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">1. Define Your ISMS Scope in Business Terms</h2>
 
 <p>Scope definition is the first decision your auditor reviews at Stage 1 — and the most consequential. Get it wrong and you either face scope creep throughout the engagement or a finding that your ISMS doesn't actually cover your core operations.</p>
 
@@ -28,13 +28,13 @@ image: "/assets/blog-iso27001.svg"
 
 <p>For Australian organisations supplying to government or regulated industries (healthcare, financial services, defence), scope framing also affects what procurement panels will accept. A scope that covers your production environment and service delivery operations — not just "head office IT" — is what customers actually care about.</p>
 
-<blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Tip:</strong> Your scope statement goes into your Statement of Applicability (SOA). Draft it early, review it with leadership, and treat it as a living document that reflects your actual service boundary — not an aspirational one.
+<blockquote style="background:#F6EEE8;border-left:4px solid #BE4A1E;padding:12px 18px;border-radius:8px">
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#BE4A1E"><use href="#ic-insight"/></svg> <strong>Tip:</strong> Your scope statement goes into your Statement of Applicability (SOA). Draft it early, review it with leadership, and treat it as a living document that reflects your actual service boundary — not an aspirational one.
 </blockquote>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">2. Choose a Risk Methodology and Commit to It</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">2. Choose a Risk Methodology and Commit to It</h2>
 
 <p>ISO 27001 Clause 6.1.2 requires a formal risk assessment process, but it doesn't prescribe a method. The standard requires that you apply the chosen methodology consistently — not that you use the most sophisticated one available.</p>
 
@@ -52,9 +52,9 @@ image: "/assets/blog-iso27001.svg"
   <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> A shared risk language that connects security priorities to business risk appetite — and gives leadership the framework to make informed investment decisions.
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">3. Build a Living Risk Register in SharePoint</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">3. Build a Living Risk Register in SharePoint</h2>
 
 <p>Your risk register is the evidence backbone of your ISMS. Auditors sample it directly — checking that risks are owned, assessed, treated, and reviewed on schedule.</p>
 
@@ -77,36 +77,36 @@ image: "/assets/blog-iso27001.svg"
   <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#f59e0b"><use href="#ic-gear"/></svg> <strong>Pro Tip:</strong> Don't start with 50 risks. Start with your top 10 — the ones leadership would actually be embarrassed about if they materialised. Add more over time. A small, well-maintained register is more credible than a large neglected one.
 </blockquote>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">4. Map What You Already Have to Annex A</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">4. Map What You Already Have to Annex A</h2>
 
 <p>ISO 27001:2022 Annex A contains 93 controls across four themes: Organisational, People, Physical, and Technological. Most mid-market Australian organisations running Microsoft 365 are already operating 60–70% of them — they just haven't documented it.</p>
 
-<div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
+<div style="background:#FAF7F1;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
-    <thead style="background:#f3f4f6">
+    <thead style="background:#F5F0E8">
       <tr>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Annex A Control Area</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Microsoft 365 Evidence Source</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Annex A Control Area</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Microsoft 365 Evidence Source</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Access Control (5.15–5.18)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Entra ID role assignments, MFA sign-in reports, Conditional Access policies, access review results</td></tr>
-      <tr><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Asset Management (5.9–5.14)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Intune device inventory, Defender for Endpoint asset list, information classification labels (Purview)</td></tr>
-      <tr><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Cryptography (8.24)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">BitLocker encryption reports, Purview encryption policy, TLS configuration baseline</td></tr>
-      <tr><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Incident Management (5.26–5.28)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Defender incident queue, Sentinel alerts, SharePoint incident register with closure evidence</td></tr>
-      <tr><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Supplier Relationships (5.19–5.22)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">SharePoint supplier register, DPA/SLA tracking list, third-party SOC 2 / ISO 27001 certificates</td></tr>
+      <tr><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Access Control (5.15–5.18)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Entra ID role assignments, MFA sign-in reports, Conditional Access policies, access review results</td></tr>
+      <tr><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Asset Management (5.9–5.14)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Intune device inventory, Defender for Endpoint asset list, information classification labels (Purview)</td></tr>
+      <tr><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Cryptography (8.24)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">BitLocker encryption reports, Purview encryption policy, TLS configuration baseline</td></tr>
+      <tr><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Incident Management (5.26–5.28)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Defender incident queue, Sentinel alerts, SharePoint incident register with closure evidence</td></tr>
+      <tr><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Supplier Relationships (5.19–5.22)</strong></td><td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">SharePoint supplier register, DPA/SLA tracking list, third-party SOC 2 / ISO 27001 certificates</td></tr>
       <tr><td style="padding:8px 10px"><strong>Business Continuity (5.30)</strong></td><td style="padding:8px 10px">Azure Backup reports, tested recovery results, RTO/RPO definition in BCP document</td></tr>
     </tbody>
   </table>
 </div>
 
-<p style="margin-top:12px;color:#4b5563">The goal of this mapping exercise — your Statement of Applicability — is to document which controls apply, which don't (and why), and the implementation status of each. Controls that are already operating become evidence immediately. Gaps become your remediation roadmap.</p>
+<p style="margin-top:12px;color:#57534B">The goal of this mapping exercise — your Statement of Applicability — is to document which controls apply, which don't (and why), and the implementation status of each. Controls that are already operating become evidence immediately. Gaps become your remediation roadmap.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">5. Automate Evidence Collection from Day One</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">5. Automate Evidence Collection from Day One</h2>
 
 <p>The most common reason ISO 27001 audits stall or produce findings is not missing controls — it's missing evidence that controls operated. Policies exist; proof they were followed doesn't.</p>
 
@@ -121,9 +121,9 @@ image: "/assets/blog-iso27001.svg"
 
 <p>These automations take a few hours to configure. The time they save during an audit — and the findings they prevent — is worth far more.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">6. Document Supplier Security Assessments</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">6. Document Supplier Security Assessments</h2>
 
 <p>ISO 27001:2022 tightened its focus on supplier relationships significantly. Controls 5.19 through 5.22 require documented assessments of your key suppliers' security posture — not just a signed contract.</p>
 
@@ -139,9 +139,9 @@ image: "/assets/blog-iso27001.svg"
 
 <p>Power Automate alerts 60 days before a supplier's certificate expires so you're not scrambling at renewal time.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">7. Run a Practice Internal Audit Before Stage 1</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">7. Run a Practice Internal Audit Before Stage 1</h2>
 
 <p>A Stage 1 audit is a documentation review — your auditor checks that your ISMS framework is in place and that you understand what it covers. Most Stage 1 findings are about missing documents, undefined processes, or scope gaps. All of these are findable and fixable in advance.</p>
 
@@ -154,13 +154,13 @@ image: "/assets/blog-iso27001.svg"
   <li><strong>Management commitment evidence</strong>: Minutes from a management review meeting, a signed information security policy, records of security as a standing agenda item</li>
 </ul>
 
-<blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-compass"/></svg> <strong>Goal:</strong> Treat your practice audit as a rehearsal for how you present evidence — who speaks to which controls, where documents live, and how you demonstrate that your ISMS is operational, not just documented.
+<blockquote style="background:#F6EEE8;border-left:4px solid #BE4A1E;padding:12px 18px;border-radius:8px">
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#BE4A1E"><use href="#ic-compass"/></svg> <strong>Goal:</strong> Treat your practice audit as a rehearsal for how you present evidence — who speaks to which controls, where documents live, and how you demonstrate that your ISMS is operational, not just documented.
 </blockquote>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">The Compounding Effect</h2>
+<h2 style="color:#0B0B0C;font-size:1.6rem;font-weight:800;margin-top:2rem">The Compounding Effect</h2>
 
 <p>Each of these steps creates evidence that auditors look for, while simultaneously improving your actual security posture. They compound:</p>
 
@@ -177,11 +177,11 @@ image: "/assets/blog-iso27001.svg"
   <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>Bottom line:</strong> ISO 27001 certification for most Australian mid-market organisations takes 10–14 weeks from engagement start to Stage 2 audit. The organisations that get there fastest are the ones that start with traceable, automatable actions — not the ones that try to achieve perfection before picking up the phone.
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
-  <a class="pill" href="/services/iso27001/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">ISO 27001 Certification Services</a>
-  <a class="pill" href="/checklist/iso27001/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">Free ISO 27001 Readiness Checklist</a>
-  <a class="pill" href="/resources/inside-statement-of-applicability/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">Inside the Statement of Applicability</a>
-  <a class="pill" href="/book/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">Book a Scoping Call</a>
+  <a class="pill" href="/services/iso27001/" style="text-decoration:none;padding:10px 14px;border:1px solid #BE4A1E;border-radius:999px">ISO 27001 Certification Services</a>
+  <a class="pill" href="/checklist/iso27001/" style="text-decoration:none;padding:10px 14px;border:1px solid #BE4A1E;border-radius:999px">Free ISO 27001 Readiness Checklist</a>
+  <a class="pill" href="/resources/inside-statement-of-applicability/" style="text-decoration:none;padding:10px 14px;border:1px solid #BE4A1E;border-radius:999px">Inside the Statement of Applicability</a>
+  <a class="pill" href="/book/" style="text-decoration:none;padding:10px 14px;border:1px solid #BE4A1E;border-radius:999px">Book a Scoping Call</a>
 </div>

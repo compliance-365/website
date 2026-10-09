@@ -59,3 +59,18 @@ test('internal page links end in a slash (trailingSlash: always), so none costs 
     }
   }
 });
+
+test('no marketing page loads all of Checkpoint’s lib.js (about 840KB) for one function', () => {
+  for (const f of files) {
+    assert.ok(!/<script[^>]*src="\/checkpoint\/lib\.js"/.test(readFileSync(f, 'utf8')), f.replace(root, 'src/') + ' should inline only what it needs at build time');
+  }
+});
+
+test('blog posts use the brand palette, not the generic blue/indigo/slate one', () => {
+  const blogDir = join(root, 'content', 'blog');
+  const OFF_BRAND = /#(1e40af|4f46e5|eef2ff|eff6ff|bfdbfe|e5e7eb|f9fafb|f8fafc|e2e8f0|64748b|0f172a|4b5563|f3f4f6|374151|111827)\b/i;
+  for (const f of readdirSync(blogDir)) {
+    const m = readFileSync(join(blogDir, f), 'utf8').match(OFF_BRAND);
+    assert.ok(!m, 'src/content/blog/' + f + ' uses ' + (m && m[0]));
+  }
+});

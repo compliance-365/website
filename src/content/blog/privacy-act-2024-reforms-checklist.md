@@ -8,12 +8,12 @@ tags: ["Privacy Act", "Data Breach", "Automated Decision-Making", "Australia", "
 image: "/assets/guide-ropa.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>If the last time you looked closely at your privacy obligations was before the Privacy Act reforms, your processes are almost certainly out of date. Mandatory breach notification has tightened, there's a new governance requirement over automated decision-making, and the penalties for getting it wrong have gone up sharply.</p>
   <p>None of this requires ISO 27701 certification to fix. It requires knowing what changed, and checking a handful of specific things this month rather than finding out during a regulator inquiry.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## What actually changed
 
@@ -25,7 +25,7 @@ Three changes matter most for a mid-market Australian business right now:
 
 **Penalties are materially higher.** The regulator's tolerance for "we didn't have a formal process" has dropped. Enforcement activity is trending toward treating undocumented or informal privacy practices as an aggravating factor, not a neutral one.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Who this actually affects
 
@@ -37,7 +37,7 @@ This isn't just for businesses already thinking about ISO 27701 or handling heal
 
 If none of that is currently written down anywhere — no defined breach-response clock, no register of where automated decisions are made — that's the gap, regardless of whether you've ever considered formal privacy certification.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Five things to check this month
 
@@ -49,7 +49,7 @@ If none of that is currently written down anywhere — no defined breach-respons
 
 If more than one of these is a "no," that's worth a proper look before it becomes a live incident rather than a planning exercise.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## How this relates to ISO 27701
 
@@ -57,7 +57,7 @@ ISO 27701 is the broader, certifiable privacy management framework — ROPAs, DP
 
 But you don't need to be pursuing ISO 27701 to have a breach-notification clock or an automated-decision register. Those are baseline Privacy Act compliance now, not framework extras. Our free <a href="/checklist/iso27701/">ISO 27701 privacy readiness checklist</a> covers both of these areas alongside the full PIMS scope — it's a fast way to see exactly where the specific reform-driven gaps sit, whether or not certification is on your radar at all.
 
-<div style="background:#eff6ff;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #1e40af;">
+<div style="background:#FAF2EC;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #A63A12;">
   <p><strong>Worried about the breach-notification or automated-decision changes specifically?</strong> A 30-minute call is enough to tell you whether your current process actually meets the reformed obligations, and what the fastest fix looks like if it doesn't.</p>
   <p style="margin-bottom:0">Take the <a href="/checklist/iso27701/">free privacy readiness checklist</a> first if you want a starting picture, or <a href="/book/">book a call</a> directly if you already know this is a gap.</p>
 </div>
