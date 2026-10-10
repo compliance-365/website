@@ -96,6 +96,7 @@ const base = import.meta.env.BASE_URL || '/';
     localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
     window.gtag('consent', 'update', consent);
     if (analyticsGranted) loadClarity();
+    if (analyticsGranted && typeof window.c365RememberFirstTouch === 'function') window.c365RememberFirstTouch();
   }
 
   // Only ever called once analytics consent is actually granted (from
