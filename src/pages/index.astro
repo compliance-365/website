@@ -4,6 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ScopingWidget from '../components/ScopingWidget.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
+import { MODULES, TRIAL_DAYS, fmtAud } from '../data/pricing.js';
 import landcomSvg from '../../public/assets/clients/landcom.svg?raw';
 import megaportSvg from '../../public/assets/clients/megaport.svg?raw';
 
@@ -154,6 +155,13 @@ const faqLd = {
         <a href={ctaUrl} class="btn-hdk-primary">Scope my certification →</a>
         <a href="#estimate" class="btn-hdk-ghost">Get a 30-second estimate</a>
       </div>
+      <!-- The self-serve path: Checkpoint on its own, for organisations
+           that want to run the programme themselves. Prices from pricing.js. -->
+      <p class="hdk-self hdk-rise" style="--rise:3">
+        <span>Prefer to do it yourself?</span> Run it in <b>Checkpoint</b>, our compliance software, from {fmtAud(Math.min(...MODULES.map((m) => m.prices.micro)))} a year.
+        <a href={`${base}checkpoint/?demo=1`}>Try the live demo</a>
+        <a href={`${base}pricing/`}>See pricing and the {TRIAL_DAYS}-day trial</a>
+      </p>
       <!-- Proof ledger — the one KPI row on this page -->
       <div class="proof-ledger hdk-rise" style="--rise:4">
         <div class="pl-item"><b>100%</b><span>First-time pass</span></div>
@@ -768,6 +776,11 @@ const faqLd = {
     gap: 14px;
     flex-wrap: wrap;
   }
+  .hdk-self { margin: 18px 0 0; font-size: .95rem; line-height: 1.6; color: rgba(250, 247, 241, .78); max-width: 640px; }
+  .hdk-self span { color: rgba(250, 247, 241, .55); margin-right: .25rem; }
+  .hdk-self b { color: #FAF7F1; }
+  .hdk-self a { color: #F0A97F; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; margin-left: .6rem; white-space: nowrap; }
+  .hdk-self a:hover { color: #FAF7F1; }
   /* .btn-hdk-primary / .btn-hdk-ghost now live in BaseLayout.astro (site-wide design system) */
 
   /* Proof ledger — the one KPI row */

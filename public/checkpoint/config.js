@@ -182,6 +182,15 @@ window.CHECKPOINT_CONFIG = {
      unaudited SharePoint-writing logic lives in the Lambda. */
   selfServeActivateUrl: 'https://rha5tsq48h.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-provision',
 
+  /* The website's contact endpoint (the same one /contact/ posts to),
+     used only by the demo's optional "send me pricing" prompt. Empty
+     string = the prompt never shows. */
+  contactUrl: 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us',
+
+  /* Booking page for the free 30-minute setup call every self-serve
+     purchase includes, offered as soon as the purchase is confirmed. */
+  setupCallUrl: 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled',
+
   /* Microsoft Marketplace SaaS fulfillment endpoint (lambda/
      marketplace-fulfillment.js). Empty string = the Marketplace path is
      simply never attempted, exactly as an empty selfServeActivateUrl

@@ -751,22 +751,36 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 })();
 </script>
 
-<!-- ── GA4 conversion tracking — book-a-call intent clicks (site-wide) ── -->
+<!-- ── Conversion tracking (site-wide) ──
+     window.c365Track(name, params) sends one event to GA4 and Clarity when
+     the visitor has accepted analytics cookies (gtag/clarity only exist
+     then), and does nothing otherwise. The click listener names the steps
+     of the buying path, so GA4 can show where people drop out:
+       cta_book_call_click   a booking link or /book/
+       checkpoint_demo_open  any link into the live demo
+       trial_start_click     any link to /start/ (the trial checkout page)
+       estimator_page_click  any link to /cost-estimator/
+     The estimator, /start/ (checkout opened, purchase completed) and the
+     demo send their own events through c365Track. -->
 <script is:inline>
 (function () {
+  window.c365Track = function (name, params) {
+    var p = params || {};
+    p.page_location = window.location.href;
+    try { if (typeof gtag === 'function') gtag('event', name, p); } catch (e) {}
+    try { if (typeof clarity === 'function') clarity('event', name); } catch (e) {}
+  };
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a') : null;
     if (!a || !a.href) return;
-    var isBookingLink = a.href.indexOf('outlook.office365.com') !== -1 || a.href.indexOf('outlook.office.com') !== -1;
-    var isBookPage = /\/book\/?(\?|#|$)/.test(a.href);
-    if (!isBookingLink && !isBookPage) return;
-    if (typeof gtag === 'function') {
-      gtag('event', 'cta_book_call_click', {
-        link_url: a.href,
-        link_text: (a.textContent || '').trim().slice(0, 100),
-        page_location: window.location.href,
-      });
-    }
+    var href = a.href;
+    var name = null;
+    if (href.indexOf('outlook.office365.com') !== -1 || href.indexOf('outlook.office.com') !== -1 || /\/book\/?(\?|#|$)/.test(href)) name = 'cta_book_call_click';
+    else if (/\/checkpoint\/\?(.*&)?demo=1/.test(href) || /\/checkpoint-console\/demo\/?(\?|#|$)/.test(href)) name = 'checkpoint_demo_open';
+    else if (/\/start\/?(\?|#|$)/.test(href)) name = 'trial_start_click';
+    else if (/\/cost-estimator\/?(\?|#|$)/.test(href)) name = 'estimator_page_click';
+    if (!name) return;
+    window.c365Track(name, { link_url: href, link_text: (a.textContent || '').trim().slice(0, 100) });
   }, { passive: true });
 })();
 </script>

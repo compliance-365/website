@@ -30,6 +30,13 @@
       "control": "Fixed in the app"
     },
     {
+      "what": "Demo enquiry",
+      "when": "Only in the public demo, and only if the visitor fills in and sends the optional \"See it with your own Microsoft 365?\" card",
+      "sends": "The name, work email and organisation size the visitor typed, how long they spent in the demo and which screens they opened. Never sent from a real tenant.",
+      "to": "Compliance365, Amazon Web Services, Sydney (ap-southeast-2)",
+      "control": "Only when the visitor presses Send"
+    },
+    {
       "what": "The app itself",
       "when": "When Checkpoint opens",
       "sends": "A normal download of the app's own files (HTML, JavaScript, CSS). They contain no client data.",
