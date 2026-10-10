@@ -6855,6 +6855,71 @@ function showModal(opts) {
       '</div></div>';
   }
 
+  /* ===== Guided mode =====
+     On for every live tenant unless switched off in Settings → Features
+     (guidedClient = 'false'). It works out the current step from the
+     tenant's own records, so a client part-way through picks up where
+     they are. The weekly digest default is set only when a tenant first
+     finishes setup (not on a re-run), so an existing client is never
+     emailed without asking. The demo shows the guided screens with
+     ?guided=1 and otherwise keeps the full menu for browsing. */
+  function isGuidedClient() {
+    if (Store.kind === 'demo') return /[?&]guided=1\b/.test(location.search); /* preview what a new client sees */
+    return Store.kind === 'sharepoint' && !!(S && S.settings) && S.settings.guidedClient !== 'false';
+  }
+  function guidedUi() { return Store.kind === 'demo' || isGuidedClient(); }
+  var FEEDBACK_EMAIL = 'info@compliance365.com.au';
+  var _feedbackView = '';
+
+  /* The Simple menu, trimmed to the screens for the steps reached. */
+  function applyGuidedNav() {
+    var views = null;
+    if (isGuidedClient() && navMode() === 'simple') { try { views = window.CheckpointLib.guidedNavViews(buildState()); } catch (e) { views = null; } }
+    var keep = views ? views.reduce(function (o, v) { o[v] = true; return o; }, {}) : null;
+    document.querySelectorAll('.nav-item[data-v]').forEach(function (el) {
+      el.classList.toggle('nav-later', !!keep && !keep[el.dataset.v] && !el.classList.contains('on'));
+    });
+    document.querySelectorAll('.nav-scroll .nav-group').forEach(function (grp) {
+      /* Hide the group when nothing in it would show: items already
+         hidden by licence, role or the Full-menu-only class count as gone. */
+      var shown = Array.prototype.filter.call(grp.querySelectorAll('.nav-item[data-v]'), function (el) {
+        return el.style.display !== 'none' && !el.classList.contains('nav-full') && !el.classList.contains('nav-later');
+      });
+      grp.classList.toggle('nav-later-group', !!keep && !grp.querySelector('.nav-mode') && shown.length === 0);
+      /* With so few screens, a collapsed group would hide the one this
+         step needs: open it (not remembered as the person's choice). */
+      if (keep && shown.length && grp.tagName === 'DETAILS' && !grp.open) grp.open = true;
+    });
+    var note = document.getElementById('navLaterNote');
+    if (note) note.style.display = keep ? '' : 'none';
+  }
+
+  /* The current step, stored in Settings when it changes, so the weekly
+     email (azure/PostureMonitor) can say what to do next. */
+  function rememberNextStep(h) {
+    if (!isGuidedClient() || READONLY || RESTRICTED_ACCESS) return;
+    var rec = window.CheckpointLib.nextStepRecord(h);
+    var val = rec ? JSON.stringify(rec) : (h && h.complete ? '{"complete":true}' : '');
+    if (!val || (S.settings.buildNextStep || '') === val) return;
+    S.settings.buildNextStep = val;
+    Store.setSetting('buildNextStep', val).catch(warn);
+  }
+
+  /* The same "Your next step" block the scheduled monitor's digest
+     opens with (azure/PostureMonitor buildDigestHtml), for a guided
+     client; empty otherwise. */
+  function digestNextStepHtml() {
+    if (!isGuidedClient()) return '';
+    var h = null;
+    try { h = window.CheckpointLib.startHere(buildState()); } catch (e) { h = null; }
+    if (!h || h.complete || !h.next) return '';
+    return '<div style="border:1px solid #BE4A1E;border-radius:8px;padding:12px 16px;margin:14px 0">' +
+      '<p style="margin:0;color:#A63A12;font-size:12px;letter-spacing:.08em;text-transform:uppercase"><b>Your next step · ' + h.n + ' of ' + h.of + ': ' + esc(h.title) + '</b></p>' +
+      '<p style="margin:6px 0 4px;font-size:16px"><b>' + esc(h.next.label) + '</b></p>' +
+      (h.next.why ? '<p style="margin:0 0 10px;color:#444">' + esc(h.next.why) + '</p>' : '') +
+      '<p style="margin:0"><a href="https://www.compliance365.com.au/checkpoint/" style="background:#BE4A1E;color:#fff;padding:8px 14px;border-radius:6px;text-decoration:none;display:inline-block">Open Checkpoint</a></p></div>';
+  }
+
   /* ===== Start here =====
      Where the person running Checkpoint lands until the build is done:
      which step they are on, the few things to do now (each with the
@@ -6868,6 +6933,7 @@ function showModal(opts) {
     var h = null;
     try { h = L.startHere(buildState()); } catch (e) { warn(e); }
     if (!h) { el.innerHTML = '<div class="card"><p class="src">Loading your registers…</p></div>'; return; }
+    rememberNextStep(h);
     var ro = !!READONLY;
     var guides = L.howTosForStage(h.key).concat(h.complete ? [] : [L.howTo('around')]).filter(Boolean);
     var n = nextForYouData();
@@ -6902,7 +6968,7 @@ function showModal(opts) {
   /* Who lands on Start here: the person running the ISMS in a live
      tenant, until the build is complete. */
   function startHereDue() {
-    if (RESTRICTED_ACCESS || READONLY) return false;
+    if (RESTRICTED_ACCESS || READONLY || !isGuidedClient()) return false;
     try { return !buildState().complete; } catch (e) { return false; }
   }
 
@@ -6912,6 +6978,7 @@ function showModal(opts) {
      or read-only session (they have My tasks or the Board view), and
      not once someone has hidden it in this browser. */
   var NEXT_STEP_HIDE_KEY = 'cpHideNextStep';
+  var _rerunningSetup = false;
   function nextStepHidden() { try { return localStorage.getItem(NEXT_STEP_HIDE_KEY) === '1'; } catch (e) { return false; } }
   function currentView() { return (((document.querySelector('.view.on') || {}).id) || '').replace(/^v-/, ''); }
   function renderNextStepBar(v) {
@@ -6924,9 +6991,10 @@ function showModal(opts) {
     var slot = head.querySelector('.page-guide .pg-foot') || head;
     var bar = head.querySelector('.next-step-bar');
     if (bar && bar.parentNode !== slot) { bar.remove(); bar = null; }
-    var off = RESTRICTED_ACCESS || READONLY || nextStepHidden() || ['start', 'build', 'selftest', 'auditor'].indexOf(v) !== -1 || !S;
+    var off = !guidedUi() || RESTRICTED_ACCESS || READONLY || nextStepHidden() || ['start', 'build', 'selftest', 'auditor'].indexOf(v) !== -1 || !S;
     var h = null;
     if (!off) { try { h = window.CheckpointLib.startHere(buildState()); } catch (e) { h = null; } }
+    if (h) rememberNextStep(h);
     if (off || !h || h.complete || !h.next) { if (bar) bar.remove(); return; }
     if (!bar) { bar = document.createElement('div'); bar.className = 'next-step-bar' + (slot === head ? '' : ' in-guide'); bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Next step'); slot.appendChild(bar); }
     var it = h.next;
@@ -16614,7 +16682,8 @@ function showModal(opts) {
     renderBackupStatus();
     var featWrap = document.getElementById('featureRows');
     if (featWrap) {
-      featWrap.innerHTML = window.FEATURE_DEFS.map(function (f) {
+      var guidedOn = isGuidedClient();
+      featWrap.innerHTML = (Store.kind === 'sharepoint' ? '<div class="card fw-admin-row"><div><b>Guided mode</b><p>Opens on Start here, shows the Next step bar on every screen, trims the menu to the steps reached, and adds the next step to the compliance digest. It picks up from this tenant’s own records, so nothing restarts. Switch it off to go back to the full menu and the dashboard.</p></div><button class="toggle' + (guidedOn ? ' on' : '') + '" role="switch" aria-checked="' + (guidedOn ? 'true' : 'false') + '" aria-label="Guided mode" data-action="App.toggleGuided"></button></div>' : '') + window.FEATURE_DEFS.map(function (f) {
         var on = featureOn(f.key);
         return '<div class="card fw-admin-row"><div><b>' + esc(f.label) + '</b><p>' + esc(f.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(f.label) + '" data-action="App.toggleFeature" data-id="' + f.key + '"></button></div>';
       }).join('');
@@ -16905,7 +16974,7 @@ function showModal(opts) {
     }
     App.go('auditor');
   }
-  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderPageGuide(((document.querySelector('.view.on') || {}).id || '').replace(/^v-/, '')); renderNextStepBar(); maybeWelcome(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderPageGuide(((document.querySelector('.view.on') || {}).id || '').replace(/^v-/, '')); renderNextStepBar(); applyGuidedNav(); maybeWelcome(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -17027,6 +17096,7 @@ function showModal(opts) {
       renderView(v);
       renderPageGuide(v);
       renderNextStepBar(v);
+      applyGuidedNav();
       scheduleScrollRegions();
     },
 
@@ -17051,10 +17121,41 @@ function showModal(opts) {
         '<div class="id-t">Help</div><h2>How do I…?</h2>' +
         '<ul class="howto-list">' + all.map(function (g) {
           return '<li><button class="lnk" data-action="App.showHowTo" data-id="' + esc(g.id) + '"><b>' + esc(g.title) + '</b></button><span class="src">' + esc(g.when) + '</span></li>';
-        }).join('') + '</ul>';
+        }).join('') + '</ul>' +
+        (isGuidedClient() ? '<div class="howto-feedback"><b>Something not clear?</b><p class="src">Tell us what you were trying to do. It goes to Compliance365, with the screen you were on.</p><button class="btn ghost sm" data-action="App.sendFeedback">Tell Compliance365</button></div>' : '');
+      _feedbackView = currentView();
       openDrawerUi('How-to guides');
     },
     howToGo: function (v) { App.closeDrawer(); App.go(v); },
+    /* Opens an email to Compliance365 with what the person was trying
+       to do, the screen and step they were on, and the version. Their
+       own mail app sends it, so nothing leaves without them seeing it. */
+    sendFeedback: async function () {
+      var where = _feedbackView || currentView();
+      App.closeDrawer();
+      var v = await showModal({
+        title: 'Tell Compliance365',
+        message: 'What were you trying to do, and what got in the way? Your email app opens with this filled in, so you can check it before sending.',
+        fields: [{ id: 'msg', label: 'What happened', type: 'textarea', placeholder: 'e.g. I could not find where to upload the screenshot for the backup control.' }],
+        confirmText: 'Open email',
+        validate: function (x) { return String(x.msg || '').trim().length < 5 ? 'Say a few words about what you were doing.' : null; }
+      });
+      if (!v) return;
+      var step = '';
+      try { var h = window.CheckpointLib.startHere(buildState()); if (h && !h.complete) step = 'Step ' + h.n + ' of ' + h.of + ': ' + h.title; } catch (e) { step = ''; }
+      var navItem = document.querySelector('.nav-item[data-v="' + where + '"]');
+      var body = v.msg + '\n\n---\nScreen: ' + ((navItem && navItem.textContent.trim()) || where) + (step ? '\n' + step : '') + '\nOrganisation: ' + (S.client || '') + '\nCheckpoint ' + (window.CHECKPOINT_VERSION || '');
+      location.href = 'mailto:' + FEEDBACK_EMAIL + '?subject=' + encodeURIComponent('Checkpoint feedback: ' + (S.client || '')) + '&body=' + encodeURIComponent(body);
+    },
+    toggleGuided: async function () {
+      if (Store.kind !== 'sharepoint') { toast('Guided mode applies to a live tenant.'); return; }
+      var on = !isGuidedClient();
+      S.settings.guidedClient = on ? 'true' : 'false';
+      try { await Store.setSetting('guidedClient', S.settings.guidedClient); } catch (e) { warn(e); }
+      audit(on ? 'Guided mode on' : 'Guided mode off', 'Settings', 'guidedClient', on ? 'false' : 'true', S.settings.guidedClient);
+      applyGuidedNav(); renderNextStepBar(); renderFrameworksAdmin();
+      toast(on ? 'Guided mode on: Start here, the Next step bar and the shorter menu.' : 'Guided mode off.');
+    },
     hideNextStep: function () {
       try { localStorage.setItem(NEXT_STEP_HIDE_KEY, '1'); } catch (e) { /* private browsing: hidden for this page only */ }
       document.querySelectorAll('.next-step-bar').forEach(function (x) { x.remove(); });
@@ -25430,6 +25531,7 @@ function showModal(opts) {
         var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
           '<h2 style="margin-bottom:4px">Checkpoint compliance digest — ' + esc(clientLabel) + '</h2>' +
           '<p style="color:#666;font-size:12px;margin-top:0">' + todayLabel + '</p>' +
+          digestNextStepHtml() +
           '<h3 style="font-size:14px">Readiness by framework</h3><table style="width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:13px">' +
           (readinessRows.length ? readinessRows.map(function (r) { return '<tr><td style="padding:8px;border:1px solid #ddd"><b>' + esc(fwName(r.fw)) + '</b></td><td style="padding:8px;border:1px solid #ddd">' + r.pct + '%</td></tr>'; }).join('') : '<tr><td style="padding:8px;border:1px solid #ddd">No frameworks enabled</td></tr>') +
           '</table>' +
@@ -26510,6 +26612,7 @@ function showModal(opts) {
         confirmText: 'Re-run setup'
       });
       if (!ok) return;
+      _rerunningSetup = true;
       try { S.settings.onboardedDate = ''; await Store.setSetting('onboardedDate', ''); } catch (e) { warn(e); }
       document.getElementById('appShell').style.display = 'none';
       Wizard.startAt(3);
@@ -28533,6 +28636,7 @@ function showModal(opts) {
     document.body.classList.toggle('nav-simple', simple);
     var btn = document.getElementById('navModeBtn');
     if (btn) { btn.textContent = simple ? 'Show full menu' : 'Show simple menu'; btn.setAttribute('aria-pressed', String(!simple)); }
+    if (S) applyGuidedNav();
   }
 
   function applyNavGroupState() {
@@ -28870,6 +28974,19 @@ function showModal(opts) {
 
       if (msgEl) msgEl.textContent = 'Finishing up…';
       var todayIso = new Date().toISOString().slice(0, 10);
+      /* A tenant finishing setup for the first time gets a weekly digest
+         to the person who set it up. Never on a re-run of setup, so an
+         existing client is not emailed without asking. */
+      if (!_rerunningSetup && !(S.settings && S.settings.guidedClient)) {
+        try {
+          var me = myUpn();
+          if (!S.settings.digestEnabled && me) {
+            await Store.setSetting('digestEnabled', 'true'); S.settings.digestEnabled = 'true';
+            await Store.setSetting('digestFrequency', 'Weekly'); S.settings.digestFrequency = 'Weekly';
+            if (!S.settings.digestRecipients) { await Store.setSetting('digestRecipients', me); S.settings.digestRecipients = me; }
+          }
+        } catch (e) { warn(e); }
+      }
       try { await Store.setSetting('onboardedDate', todayIso); S.settings.onboardedDate = todayIso; } catch (e) { warn(e); }
 
       showWizardStep(9);

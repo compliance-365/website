@@ -7852,6 +7852,44 @@
   function howTosFor(view) { return HOW_TOS.filter(function (h) { return h.views.indexOf(view) !== -1; }); }
   function howTosForStage(key) { return HOW_TOS.filter(function (h) { return h.stages.indexOf(key) !== -1; }); }
 
+  /* ---- Guided menu ----
+     For a guided client (a new tenant; see isGuidedClient in app.js),
+     while the build is under way the Simple menu shows only the screens
+     for the steps reached so far: Start here and My tasks always, then
+     each stage's screens from stage 1 up to the current one. A screen
+     opened by a button is still reachable; Show full menu lists all. */
+  var GUIDED_ALWAYS = ['start', 'mytasks', 'dash', 'build', 'settings'];
+  var GUIDED_STAGE_VIEWS = {
+    context: ['legal', 'frameworks'],
+    leadership: ['documents', 'whodoes'],
+    riskframe: ['documents', 'risks'],
+    assess: ['assets', 'scan', 'risks'],
+    treat: ['risks', 'actions', 'soa'],
+    objectives: ['objectives'],
+    support: ['training', 'attestations', 'documents'],
+    operate: ['calendar', 'vendors', 'aisystems'],
+    check: ['audits', 'reviews'],
+    certify: ['clauses', 'certification', 'auditor', 'reports']
+  };
+  /* b = guidedBuild(). Returns the view ids to show, or null to show the
+     whole Simple menu (build complete, or nothing known yet). */
+  function guidedNavViews(b) {
+    if (!b || !b.stages || !b.stages.length || b.complete) return null;
+    var show = {};
+    GUIDED_ALWAYS.forEach(function (v) { show[v] = true; });
+    for (var i = 0; i <= b.current && i < b.stages.length; i++) {
+      (GUIDED_STAGE_VIEWS[b.stages[i].key] || []).forEach(function (v) { show[v] = true; });
+    }
+    return Object.keys(show);
+  }
+
+  /* The next step as stored for the weekly email: what changed since it
+     was last stored decides whether to write it again. */
+  function nextStepRecord(h) {
+    if (!h || h.complete || !h.next) return null;
+    return { n: h.n, of: h.of, title: h.title, label: h.next.label, why: h.next.why || '' };
+  }
+
   /* ---- Start here ----
      Where the person running the ISMS is: the current stage of the
      guided build (b = guidedBuild()), what is left in it, and what
@@ -12653,7 +12691,7 @@
     CERT_MILESTONES: CERT_MILESTONES, certificationMilestones: certificationMilestones,
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
-    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild, HOW_TOS: HOW_TOS, howTo: howTo, howTosFor: howTosFor, howTosForStage: howTosForStage, startHere: startHere,
+    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild, HOW_TOS: HOW_TOS, howTo: howTo, GUIDED_STAGE_VIEWS: GUIDED_STAGE_VIEWS, GUIDED_ALWAYS: GUIDED_ALWAYS, guidedNavViews: guidedNavViews, nextStepRecord: nextStepRecord, howTosFor: howTosFor, howTosForStage: howTosForStage, startHere: startHere,
     srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
     buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,

@@ -54,7 +54,7 @@ test('the screen, menu item, Help button, Next step bar and landing are wired in
   assert.match(app, /start: renderStart,/);
   assert.match(app, /renderPageGuide\(v\);\s*renderNextStepBar\(v\);/);
   assert.match(app, /else if \(Store\.kind === 'sharepoint' && startHereDue\(\)\) App\.go\('start'\);/);
-  assert.match(app, /if \(RESTRICTED_ACCESS \|\| READONLY\) return false;/);
+  assert.match(app, /if \(RESTRICTED_ACCESS \|\| READONLY \|\| !isGuidedClient\(\)\) return false;/, 'only guided clients land on Start here');
   assert.match(app, /'gsearchWrap', 'btnHowTo'\]/, 'restricted sessions do not get the practitioner guides');
   assert.match(app, /guides\.length \? ' <span class="pg-howto"><b>How to:<\/b> '/);
   assert.match(app, /var slot = head\.querySelector\('\.page-guide \.pg-foot'\) \|\| head;/, 'the bar shares the page help row');
