@@ -1,0 +1,122 @@
+---
+// Comparison pages: /checkpoint-console/compare/<slug>/. Content and the
+// rules for what may be said about another product are in
+// src/data/checkpoint-comparisons.ts.
+import Base from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
+import { comparisons, CHECKED, type Comparison } from '../../../data/checkpoint-comparisons';
+import { frameworkPages } from '../../../data/checkpoint-frameworks';
+
+export function getStaticPaths() {
+  return comparisons.map((c) => ({ params: { slug: c.slug }, props: { c } }));
+}
+const { c } = Astro.props as { c: Comparison };
+const base = import.meta.env.BASE_URL || '/';
+const url = `https://www.compliance365.com.au/checkpoint-console/compare/${c.slug}/`;
+const label = c.slug === 'spreadsheets' ? 'Spreadsheets' : c.name;
+const faq = {
+  '@type': 'FAQPage',
+  mainEntity: c.faq.map((it) => ({ '@type': 'Question', name: it.q, acceptedAnswer: { '@type': 'Answer', text: it.a } })),
+};
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Checkpoint', url: 'https://www.compliance365.com.au/checkpoint-console/' },
+  { name: 'Compare', url: 'https://www.compliance365.com.au/checkpoint-console/compare/' },
+  { name: `Checkpoint vs ${label}`, url },
+];
+const others = comparisons.filter((x) => x.slug !== c.slug);
+---
+<Base title={c.title} description={c.description} schema={[faq]} breadcrumbs={breadcrumbs}>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="section ft-hero">
+  <div class="container">
+    <p class="ft-eyebrow"><a href={base + 'checkpoint-console/'}>Checkpoint</a> · <a href={base + 'checkpoint-console/compare/'}>Compare</a></p>
+    <h1>{c.h1}</h1>
+    <p class="ft-lead">{c.lead}</p>
+    <div class="ft-actions">
+      <a class="btn btn-primary" href={base + 'checkpoint-console/demo/'}>Try the Checkpoint demo</a>
+      <a class="btn" href={base + 'pricing/'}>See Checkpoint pricing</a>
+    </div>
+  </div>
+</section>
+
+<section class="section ft-body">
+  <div class="container">
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <caption>Checkpoint and {label}, side by side</caption>
+        <thead><tr><th scope="col"></th><th scope="col">{label}</th><th scope="col">Checkpoint</th></tr></thead>
+        <tbody>
+          {c.rows.map((r) => (<tr><th scope="row">{r.topic}</th><td>{r.them}</td><td>{r.us}</td></tr>))}
+        </tbody>
+      </table>
+    </div>
+    {c.sources.length > 0 && (
+      <p class="cmp-src">What we say about {c.name} comes from its own published information, checked {CHECKED}: {c.sources.map((s, i) => (<>{i > 0 && '; '}<a href={s.url} rel="nofollow noopener" target="_blank">{s.label}</a></>))}. Products change, so check the current details with {c.name}. Something out of date? <a href={base + 'contact/'}>Tell us</a> and we will correct it.</p>
+    )}
+
+    <div class="cmp-choose">
+      <div class="cmp-card">
+        <h2>{c.slug === 'spreadsheets' ? 'Spreadsheets are enough when' : `${c.name} may suit you better if`}</h2>
+        <ul>{c.chooseThem.map((x) => (<li>{x}</li>))}</ul>
+      </div>
+      <div class="cmp-card cmp-us">
+        <h2>Checkpoint suits you if</h2>
+        <ul>{c.chooseUs.map((x) => (<li>{x}</li>))}</ul>
+      </div>
+    </div>
+
+    <div class="ft-sec">
+      <h2>Questions</h2>
+      <dl class="ft-qa">
+        {c.faq.map((it) => (<div><dt>{it.q}</dt><dd>{it.a}</dd></div>))}
+      </dl>
+    </div>
+    <div class="ft-sec ft-more">
+      <h2>Checkpoint by framework</h2>
+      <ul class="fw-others">
+        {frameworkPages.map((o) => (<li><a href={`${base}checkpoint-console/${o.slug}/`}>{o.name} software</a></li>))}
+      </ul>
+      <h2>Other comparisons</h2>
+      <ul class="fw-others">
+        {others.map((o) => (<li><a href={`${base}checkpoint-console/compare/${o.slug}/`}>Checkpoint vs {o.slug === 'spreadsheets' ? 'spreadsheets' : o.name}</a></li>))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+</Base>
+
+<style>
+  .ft-hero { padding-top: 3rem; padding-bottom: 1rem; }
+  .ft-eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink, #A63A12); margin: 0 0 .8rem; }
+  .ft-eyebrow a { color: inherit; }
+  .ft-lead { max-width: 68ch; font-size: 1.1rem; line-height: 1.7; }
+  .ft-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0 .6rem; }
+  .ft-body { padding-top: 0; }
+  .cmp-wrap { overflow-x: auto; margin-top: 1.5rem; border: 1px solid #DDD8CF; border-radius: 12px; background: #fff; }
+  .cmp { width: 100%; min-width: 640px; border-collapse: collapse; }
+  .cmp caption { text-align: left; padding: 1rem 1.1rem .25rem; font-weight: 700; }
+  .cmp th, .cmp td { text-align: left; vertical-align: top; padding: .9rem 1.1rem; border-top: 1px solid #EEE9E0; line-height: 1.6; font-size: .95rem; }
+  .cmp thead th { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: #6B6860; border-top: 0; }
+  .cmp tbody th { width: 20%; font-weight: 700; }
+  .cmp td:last-child { background: #FAF7F1; }
+  .cmp-src { font-size: .85rem; color: #4A4740; line-height: 1.6; max-width: 90ch; margin-top: .9rem; }
+  .cmp-choose { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2.25rem; }
+  .cmp-card { border: 1px solid #DDD8CF; border-radius: 12px; padding: 1.25rem 1.4rem; background: #fff; }
+  .cmp-us { border-top: 4px solid #BE4A1E; }
+  .cmp-card h2 { font-size: 1.2rem; margin: 0 0 .6rem; }
+  .cmp-card li { line-height: 1.65; margin: .35rem 0; }
+  .ft-sec { max-width: 72ch; margin-top: 2.25rem; }
+  .ft-sec h2 { font-size: 1.45rem; border-bottom: 2px solid #DDD8CF; padding-bottom: .5rem; }
+  .ft-qa > div { padding: .9rem 0; border-bottom: 1px solid #EEE9E0; }
+  .ft-qa dt { font-weight: 700; }
+  .ft-qa dd { margin: .3rem 0 0; line-height: 1.65; }
+  .fw-others { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; list-style: none; padding: 0; }
+  @media (max-width: 760px) { .cmp-choose { grid-template-columns: 1fr; } }
+</style>

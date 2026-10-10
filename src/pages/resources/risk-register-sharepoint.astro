@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import CheckpointCallout from '../../components/CheckpointCallout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -584,7 +585,8 @@ const breadcrumbLd = {
     <DigestSignup source="resource-risk-register-sharepoint" />
   </section>
 
-  </main>
+  <CheckpointCallout slug="iso-27001-software" topic="your risk register as a SharePoint list" />
+</main>
 
   <Footer />
 

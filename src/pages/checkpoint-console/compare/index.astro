@@ -1,0 +1,41 @@
+---
+import Base from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
+import { comparisons } from '../../../data/checkpoint-comparisons';
+
+const base = import.meta.env.BASE_URL || '/';
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Checkpoint', url: 'https://www.compliance365.com.au/checkpoint-console/' },
+  { name: 'Compare', url: 'https://www.compliance365.com.au/checkpoint-console/compare/' },
+];
+---
+<Base
+  title="Compare Compliance Software for Microsoft 365 | Checkpoint"
+  description="How Checkpoint compares with Vanta, Drata, Microsoft Purview Compliance Manager and spreadsheets, for Australian organisations running on Microsoft 365."
+  breadcrumbs={breadcrumbs}
+>
+<Header />
+<main id="main-content" tabindex="-1">
+<section class="section" style="padding-top:3rem;">
+  <div class="container" style="max-width:860px;">
+    <p style="font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--accent-ink,#A63A12);margin:0 0 .8rem;"><a href={base + 'checkpoint-console/'} style="color:inherit;">Checkpoint</a> · Compare</p>
+    <h1>Compare Checkpoint</h1>
+    <p style="font-size:1.1rem;line-height:1.7;">Checkpoint is compliance software that keeps your records in your own Microsoft 365 tenant. These pages set it beside the alternatives people ask us about, using each vendor's own published information, and say plainly when the other option is the better fit.</p>
+    <ul class="cmp-list">
+      {comparisons.map((c) => (
+        <li><a href={`${base}checkpoint-console/compare/${c.slug}/`}><b>{c.h1}</b><span>{c.description}</span></a></li>
+      ))}
+    </ul>
+  </div>
+</section>
+</main>
+<Footer />
+</Base>
+<style>
+  .cmp-list { list-style: none; padding: 0; display: grid; gap: .75rem; margin-top: 1.5rem; }
+  .cmp-list a { display: grid; gap: .25rem; padding: 1.1rem 1.25rem; border: 1px solid #DDD8CF; border-radius: 12px; background: #fff; text-decoration: none; color: inherit; }
+  .cmp-list a:hover { border-color: #BE4A1E; }
+  .cmp-list span { color: #4A4740; font-size: .95rem; line-height: 1.55; }
+</style>

@@ -4,7 +4,7 @@
    ============================================================ */
 window.Graph = (function () {
   var CONFIG = window.CHECKPOINT_CONFIG;
-  var msalApp = null, account = null;
+  var msalApp = null, account = null, lastRedirectError = null;
 
   /* Redirect flow, not popup: tokens/account state live only in
      sessionStorage (cleared when the tab closes, not just on sign-out),
@@ -26,7 +26,13 @@ window.Graph = (function () {
       cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
     });
     await msalApp.initialize();
-    var redirectResult = await msalApp.handleRedirectPromise();
+    /* A silent sign-in (signIn({ silent: true }) below) that found no
+       Microsoft session comes back with an error rather than an account:
+       that is the normal "show the Sign in button" outcome, not a
+       failure, so it is recorded and the gate shows as usual. */
+    var redirectResult = null;
+    try { redirectResult = await msalApp.handleRedirectPromise(); }
+    catch (e) { lastRedirectError = e; }
     if (redirectResult && redirectResult.account) {
       account = redirectResult.account;
     } else {
@@ -48,16 +54,40 @@ window.Graph = (function () {
   /* opts.selectAccount shows Microsoft's account picker (first set-up,
      or "Use a different account"). A returning user goes straight
      through on the account the browser is already signed in with. */
+  /* opts.silent: prompt 'none' — Microsoft returns straight to
+     Checkpoint if this browser already has a Microsoft session, and
+     with an error (handled in init()) if it does not, never showing a
+     page of its own. app.js uses it once per tab for a browser that
+     has signed in before, so opening Checkpoint in a new tab needs no
+     click. The login hint is the account this browser last signed in
+     with, so a browser holding several Microsoft sessions picks the
+     right one. */
   async function signIn(opts) {
+    opts = opts || {};
     var req = { scopes: scopesFor(CONFIG.scopesReadOnly) };
-    if (!opts || opts.selectAccount !== false) req.prompt = 'select_account';
+    var hint = lastLoginHint();
+    if (opts.silent) req.prompt = 'none';
+    else if (opts.selectAccount !== false) req.prompt = 'select_account';
+    if (hint && (opts.silent || opts.selectAccount === false)) req.loginHint = hint;
     await msalApp.loginRedirect(req);
   }
+  function lastLoginHint() { try { return localStorage.getItem('cpLoginHint') || ''; } catch (e) { return ''; } }
+  function rememberLogin() {
+    try { if (account && account.username) localStorage.setItem('cpLoginHint', account.username); } catch (e) { /* private browsing */ }
+  }
+  function redirectError() { return lastRedirectError; }
 
   function scopesFor(scopes) { return window.CheckpointLib.graphTokenScopes(scopes); }
 
+  /* Signing out also forgets the login hint and the remembered licence
+     results, and stops the automatic sign-in until Sign in is clicked. */
   function signOut() {
     var acc = account; account = null;
+    try {
+      localStorage.removeItem('cpLoginHint');
+      localStorage.setItem('cpSignedOut', '1');
+      Object.keys(localStorage).forEach(function (k) { if (k.indexOf(CAP_STORE_PREFIX) === 0) localStorage.removeItem(k); });
+    } catch (e) { /* private browsing */ }
     return msalApp.logoutRedirect({ account: acc });
   }
 
@@ -365,13 +395,59 @@ window.Graph = (function () {
   ];
   /* One run at a time: sign-in starts this early, and a second caller
      while it is still running waits for the same answer. */
-  var capabilitiesInFlight = null;
-  async function detectCapabilities(force) {
-    if (capabilitiesCache && !force) return capabilitiesCache;
-    if (capabilitiesInFlight && !force) return capabilitiesInFlight;
-    capabilitiesInFlight = probeCapabilities();
-    try { return await capabilitiesInFlight; } finally { capabilitiesInFlight = null; }
+  /* Licence results are remembered in this browser for a day, per
+     signed-in account (they depend on the account's roles as well as
+     the tenant's licences), so sign-in does not wait on fourteen Graph
+     probes every time. A remembered answer is used straight away and
+     the probes still run in the background; whatever relies on a
+     licence actually being there (the posture scan, the set-up
+     wizard's licence step) asks for the fresh answer with
+     freshCapabilities(). Only available/not-available results are kept:
+     no tenant data. */
+  var CAP_STORE_PREFIX = 'cpCapabilities:';
+  var CAP_STORE_TTL_MS = 24 * 60 * 60 * 1000;
+  var capabilitiesInFlight = null, capabilitiesFromStore = false;
+  function capStoreKey() { return account && account.homeAccountId ? CAP_STORE_PREFIX + account.homeAccountId : null; }
+  function readStoredCapabilities() {
+    var k = capStoreKey(); if (!k) return null;
+    try {
+      var v = JSON.parse(localStorage.getItem(k) || 'null');
+      if (!v || !v.caps || typeof v.at !== 'number' || Date.now() - v.at > CAP_STORE_TTL_MS || Date.now() < v.at) return null;
+      if (CAPABILITY_PROBES.some(function (p) { return !v.caps[p.key]; })) return null;
+      return v.caps;
+    } catch (e) { return null; }
   }
+  function storeCapabilities(caps) {
+    var k = capStoreKey(); if (!k) return;
+    try { localStorage.setItem(k, JSON.stringify({ at: Date.now(), caps: caps })); } catch (e) { /* storage full or disabled */ }
+  }
+  function probeOnce() {
+    if (!capabilitiesInFlight) {
+      capabilitiesInFlight = probeCapabilities().then(function (out) {
+        capabilitiesFromStore = false; storeCapabilities(out); return out;
+      }).finally(function () { capabilitiesInFlight = null; });
+    }
+    return capabilitiesInFlight;
+  }
+  async function detectCapabilities(force) {
+    if (force) return probeOnce();
+    if (capabilitiesCache) return capabilitiesCache;
+    var stored = readStoredCapabilities();
+    if (stored) {
+      capabilitiesCache = stored; capabilitiesFromStore = true;
+      probeOnce().catch(function () {});
+      return stored;
+    }
+    return probeOnce();
+  }
+  /* The answer from the probes themselves, never the remembered one. */
+  async function freshCapabilities() {
+    if (capabilitiesCache && !capabilitiesFromStore && !capabilitiesInFlight) return capabilitiesCache;
+    return probeOnce();
+  }
+  /* The background check started by a remembered answer, if one is
+     still running, so app.js can swap in the fresh result. */
+  function capabilitiesRefreshing() { return capabilitiesInFlight; }
   async function probeCapabilities() {
     var out = {};
     /* All probes at once, each tried once: a service the tenant is not
@@ -529,7 +605,7 @@ window.Graph = (function () {
        if it were a posture finding. Checks with no dependency here
        (admins, guests, riskyapps — all basic Directory.Read.All reads)
        are unaffected and keep trying/catching exactly as before. */
-    var capabilities = await detectCapabilities();
+    var capabilities = await freshCapabilities();
 
     /* --- Conditional Access driven checks --- */
     var policies = [];
@@ -2106,6 +2182,8 @@ window.Graph = (function () {
 
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
+    rememberLogin: rememberLogin, redirectError: redirectError,
+    freshCapabilities: freshCapabilities, capabilitiesRefreshing: capabilitiesRefreshing,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, uploadFileToPath: uploadFileToPath, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import CheckpointCallout from '../../components/CheckpointCallout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -790,7 +791,8 @@ const breadcrumbSchema = {
     <DigestSignup source="resource-essential-eight-guide" />
   </section>
 
-  </main>
+  <CheckpointCallout slug="essential-eight-software" topic="your Essential Eight assessment, strategy by strategy" />
+</main>
 
   <Footer />
 </Base>

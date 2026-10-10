@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.154.0',
+    date: '2026-10-10',
+    entries: [
+      'Opening Checkpoint in a new tab or window no longer needs a click. If this browser has signed in before and you are still signed in to Microsoft, Checkpoint signs you in on its own; if not, you see the Sign in button as before. Signing out turns this off until you next click Sign in.',
+      'Faster sign-in, fourth pass. Checkpoint remembers in this browser, for a day, which Microsoft 365 features your licences include, so sign-in no longer waits for that check. The check still runs in the background and replaces the remembered answer when it finishes, and a posture scan always uses the fresh answer.'
+    ]
+  },
+  {
     version: '1.153.0',
     date: '2026-10-10',
     entries: [
