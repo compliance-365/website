@@ -5,6 +5,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
+import EssentialsAlert from '../../components/EssentialsAlert.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -197,6 +198,8 @@ const breadcrumbSchema = {
       <p style="margin:0;font-size:14px;color:#A63A12;line-height:1.5;flex:1;">ASD has announced it will retire the Essential Eight within two years and replace it with the new <strong>Essentials series</strong>. Public consultation on <em>Essentials for enterprise IT</em> closed <strong>12 July 2026</strong>; ASD is reviewing submissions and has not yet published the final guidance or a date. Existing E8 work maps across — don't stop your programme. <a href={`${base}resources/asd-essentials-framework/`} style="color:#92400E;font-weight:700;text-decoration:underline;">Read our transition guide →</a></p>
     </div>
   </section>
+
+  <EssentialsAlert source="essentials-alert-e8-guide" />
 
   <!-- TABLE OF CONTENTS -->
   <section class="section" style="padding-top:3rem;padding-bottom:3rem;">

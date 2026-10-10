@@ -4,6 +4,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
+import EssentialsAlert from '../../components/EssentialsAlert.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -96,7 +97,7 @@ const faqSchema = {
       "name": "When will Compliance365 publish updated guidance for the Essentials series?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "We tracked the public consultation closely through its close on 12 July 2026 and are now watching for ASD's final publication (no date has been given). We will publish our mapping of Essential Eight controls to the Essentials series once that guidance is released. Existing clients will receive updated assessment templates and evidence pack documentation as part of their ongoing support arrangements. Sign up for our newsletter or check back here for updates."
+        "text": "We tracked the public consultation closely through its close on 12 July 2026 and are now watching for ASD's final publication (no date has been given). We will publish our mapping of Essential Eight controls to the Essentials series once that guidance is released. Existing clients will receive updated assessment templates and evidence pack documentation as part of their ongoing support arrangements. Use the sign-up near the top of this page to get one email when it is published."
       }
     }
   ]
@@ -176,6 +177,8 @@ const breadcrumbSchema = {
       </div>
     </div>
   </section>
+
+  <EssentialsAlert source="essentials-alert-article-top" />
 
   <!-- TABLE OF CONTENTS -->
   <section class="section" style="padding-top:3rem;padding-bottom:3rem;">
@@ -558,9 +561,7 @@ const breadcrumbSchema = {
   <!-- ── Digest signup ─────────────────────────────────────────────── -->
   <section class="container" style="padding-bottom:0;">
     <DigestSignup
-      heading="Get notified the moment ASD publishes the final Essentials series"
-      subtext="Plus practical updates on ISO 27001, Essential Eight, Privacy Act and AI governance — delivered once a month. No spam, unsubscribe any time."
-      source="essential-eight-article"
+            source="essential-eight-article"
     />
   </section>
 

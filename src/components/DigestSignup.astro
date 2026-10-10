@@ -3,12 +3,24 @@ interface Props {
   heading?: string;
   subtext?: string;
   source?: string;
+  /* What the sign-up is for, sent with it so the notification email says
+     which list to add the person to. */
+  topic?: string;
+  label?: string;
+  button?: string;
+  successTitle?: string;
+  successText?: string;
 }
 
 const {
   heading = 'Get the monthly Australian compliance digest',
   subtext = 'Practical updates on ISO 27001, Essential Eight, Privacy Act and AI governance — delivered once a month. No spam, unsubscribe any time.',
   source = 'blog-digest',
+  topic = 'Monthly digest',
+  label = 'Free monthly digest',
+  button = 'Subscribe free',
+  successTitle = "You're subscribed!",
+  successText = 'Check your inbox — first issue arrives next month.',
 } = Astro.props;
 
 const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
@@ -17,7 +29,7 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
 <div class="digest-wrap">
   <div class="digest-inner">
     <div class="digest-text">
-      <p class="digest-label">Free monthly digest</p>
+      <p class="digest-label">{label}</p>
       <h3 class="digest-heading">{heading}</h3>
       <p class="digest-sub">{subtext}</p>
     </div>
@@ -25,6 +37,7 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
     <div class="digest-form-wrap">
       <form id={formId} class="digest-form" novalidate>
         <input type="hidden" name="source" value={source} />
+        <input type="hidden" name="topic" value={topic} />
 
         <div class="digest-fields">
           <input
@@ -36,7 +49,7 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
             aria-label="Email address"
           />
           <button type="submit" class="btn btn-primary digest-btn">
-            Subscribe free
+            {button}
           </button>
         </div>
         <p class="digest-privacy">
@@ -46,8 +59,8 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
       <div id={`${formId}-success`} class="digest-success" style="display:none;">
         <span class="digest-tick">✓</span>
         <div>
-          <strong>You're subscribed!</strong>
-          <p>Check your inbox — first issue arrives next month.</p>
+          <strong>{successTitle}</strong>
+          <p>{successText}</p>
         </div>
       </div>
       <div id={`${formId}-error`} class="digest-error" style="display:none;">
@@ -57,7 +70,7 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
   </div>
 </div>
 
-<script define:vars={{ formId }}>
+<script define:vars={{ formId, button }}>
 (function () {
   const SUBSCRIBE_URL = 'https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/subscribe';
 
@@ -75,6 +88,8 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
 
     const email = emailInput ? emailInput.value.trim() : '';
     const source = sourceInput ? sourceInput.value : 'blog-digest';
+    const topicInput = form.querySelector('input[name="topic"]');
+    const topic = topicInput ? topicInput.value : 'Monthly digest';
 
     if (!email || !email.includes('@')) {
       emailInput && (emailInput.style.borderColor = '#ef4444');
@@ -88,7 +103,7 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
       const res = await fetch(SUBSCRIBE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, source }),
+        body: JSON.stringify({ email, source, framework: topic }),
       });
 
       if (!res.ok) throw new Error('Non-200');
@@ -106,7 +121,7 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
       } catch (_) {}
     } catch (_) {
       btn.disabled = false;
-      btn.textContent = 'Subscribe free';
+      btn.textContent = button;
       if (errorEl) errorEl.style.display = 'block';
     }
   });

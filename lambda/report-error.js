@@ -53,6 +53,12 @@
  *       "Checkpoint Partner Health", which the owner console also
  *       provisions on load. Redeploying this file is the only step —
  *       no new env vars, route or CORS change.
+ *   7c. Optional email alerts: set OWNER_NOTIFY_EMAIL (the same mailbox
+ *       and the same Mail.Send application permission provision.js's
+ *       signup emails use). Each new error from a signed-in client
+ *       tenant, and each tenant whose setup health turns failing, is
+ *       emailed to that address; see errorAlert() and healthAlert().
+ *       Unset = no emails, no behaviour change.
  *   8. Copy the endpoint URL into public/checkpoint/config.js's
  *      errorReportUrl. Leave it blank and this feature is simply never
  *      attempted — the browser app degrades to no error reporting at
@@ -148,10 +154,109 @@ export function shapeHealth(body) {
   };
 }
 
+/* ============== Email alerts (optional) ============== */
+/* An error report or a health change worth a person's attention right
+   away is emailed to OWNER_NOTIFY_EMAIL. This endpoint is public, so
+   what can trigger an email is narrowed and capped:
+   - only reports from a signed-in client tenant (a GUID tenant id); the
+     public demo's errors still land in the list, without an email;
+   - the same error from the same tenant is emailed once per 6 hours;
+   - at most 10 alert emails an hour per Lambda container.
+   The list in the owner console stays the full record either way. */
+const ALERT_REPEAT_MS = 6 * 3600_000;
+const ALERT_HOURLY_MAX = 10;
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function newAlertState() { return { lastByKey: new Map(), sent: [] }; }
+const alertState = newAlertState();
+
+/* Records the send and returns true when this alert should be emailed now. */
+export function shouldAlert(key, now, state) {
+  state.sent = state.sent.filter((t) => now - t < 3600_000);
+  const last = state.lastByKey.get(key);
+  if (last !== undefined && now - last < ALERT_REPEAT_MS) return false;
+  if (state.sent.length >= ALERT_HOURLY_MAX) return false;
+  state.lastByKey.set(key, now);
+  state.sent.push(now);
+  if (state.lastByKey.size > 1000) state.lastByKey.clear();
+  return true;
+}
+
+const CONSOLE_URL = 'https://www.compliance365.com.au/owner/';
+const firstLines = (s, n) => String(s || '').split('\n').slice(0, n).join('\n');
+
+/* The email for one error report, or null when it should not be emailed. */
+export function errorAlert(report, now, state) {
+  if (!GUID.test(report.tenantId)) return null;
+  if (!shouldAlert('err|' + report.tenantId.toLowerCase() + '|' + report.message.slice(0, 200), now, state)) return null;
+  const who = report.clientName || report.tenantId;
+  let view = '';
+  try { view = JSON.parse(report.context || '{}').view || ''; } catch (e) { /* context is free text */ }
+  return {
+    subject: 'Checkpoint error: ' + who + ': ' + report.message.slice(0, 120),
+    text: [
+      'A client hit an error in Checkpoint.',
+      '',
+      'Client: ' + who,
+      'Tenant id: ' + report.tenantId,
+      'Version: ' + (report.appVersion || 'unknown'),
+      'Screen: ' + (view || 'unknown'),
+      'Source: ' + report.source,
+      'Time (UTC): ' + report.reportedAt,
+      '',
+      'Error: ' + report.message,
+      '',
+      firstLines(report.stack, 8) || '(no stack trace)',
+      '',
+      'The same error from this client is not emailed again for 6 hours. Every report is in the owner console: ' + CONSOLE_URL
+    ].join('\n')
+  };
+}
+
+/* The email when a tenant's setup health turns failing (it was not
+   failing before), or null. */
+export function healthAlert(h, previousStatus, now, state) {
+  if (h.status !== 'failing' || previousStatus === 'failing') return null;
+  if (!shouldAlert('health|' + h.tenantId, now, state)) return null;
+  const who = h.clientName || h.tenantId;
+  return {
+    subject: 'Checkpoint setup failing: ' + who,
+    text: [
+      "A client's Checkpoint setup check has turned failing" + (previousStatus ? ' (was ' + previousStatus + ').' : '.'),
+      '',
+      'Client: ' + who,
+      'Tenant id: ' + h.tenantId,
+      'Version: ' + (h.appVersion || 'unknown'),
+      'Summary: ' + (h.headline || '(none)'),
+      '',
+      ...h.details.map((d) => '- ' + d),
+      '',
+      'Owner console: ' + CONSOLE_URL
+    ].join('\n')
+  };
+}
+
+async function sendAlert(token, mail) {
+  const mailbox = process.env.OWNER_NOTIFY_EMAIL;
+  if (!mailbox || !mail) return;
+  await ownerGraph(token, '/users/' + encodeURIComponent(mailbox) + '/sendMail', {
+    method: 'POST',
+    body: {
+      message: {
+        subject: mail.subject.slice(0, 250),
+        body: { contentType: 'text', content: mail.text },
+        toRecipients: [{ emailAddress: { address: mailbox } }]
+      },
+      saveToSentItems: false
+    }
+  });
+}
+
 /* Same app-only client-credentials pattern as recordOnOwnerRoster() in
    provision.js — writes to OUR OWN roster only, never a customer's
    tenant. */
+let cachedToken = null; // { token, until } — reused while the container is warm
 async function getOwnerGraphToken() {
+  if (cachedToken && Date.now() < cachedToken.until) return cachedToken.token;
   const tenant = process.env.OWNER_TENANT_ID;
   const res = await fetch('https://login.microsoftonline.com/' + tenant + '/oauth2/v2.0/token', {
     method: 'POST',
@@ -165,6 +270,7 @@ async function getOwnerGraphToken() {
   });
   const tok = await res.json();
   if (!res.ok) throw new Error('Owner Graph auth failed: ' + (tok.error_description || tok.error));
+  cachedToken = { token: tok.access_token, until: Date.now() + Math.max(0, (Number(tok.expires_in) || 0) - 300) * 1000 };
   return tok.access_token;
 }
 async function ownerGraph(token, path, opts = {}) {
@@ -194,6 +300,7 @@ async function writeToRoster(report) {
       Url: report.url, ReportedAt: report.reportedAt
     }) }
   });
+  return token;
 }
 
 /* One row per tenant: the latest report replaces the previous one. The
@@ -211,7 +318,7 @@ async function upsertHealth(h) {
     Status: h.status, Headline: h.headline, Flags: JSON.stringify(h.flags), Details: h.details.join('\n'),
     LastScanDate: h.lastScanDate, Frameworks: h.frameworks.join(','), ReportedAt: h.reportedAt
   };
-  let url = base + '?$expand=fields($select=TenantId)&$select=id&$top=500';
+  let url = base + '?$expand=fields($select=TenantId,Status)&$select=id&$top=500';
   let existing = null;
   while (url && !existing) {
     const page = await ownerGraph(token, url.replace('https://graph.microsoft.com/v1.0', ''));
@@ -220,6 +327,7 @@ async function upsertHealth(h) {
   }
   if (existing) await ownerGraph(token, base + '/' + existing.id + '/fields', { method: 'PATCH', body: fields });
   else await ownerGraph(token, base, { method: 'POST', body: { fields } });
+  return { token, previousStatus: existing ? String(existing.fields.Status || '') : '' };
 }
 
 export const handler = async (event) => {
@@ -253,11 +361,16 @@ export const handler = async (event) => {
   if (parsed && parsed.type === 'health') {
     const health = shapeHealth(parsed);
     if (!health) return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'invalid health report' }) };
+    let written;
     try {
-      await upsertHealth(health);
+      written = await upsertHealth(health);
     } catch (e) {
       console.error('report-error: failed to write health report (dropped):', e && e.message ? e.message : e);
       return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'write failed' }) };
+    }
+    if (process.env.OWNER_NOTIFY_EMAIL) {
+      try { await sendAlert(written.token, healthAlert(health, written.previousStatus, Date.now(), alertState)); }
+      catch (e) { console.error('report-error: health alert email failed:', e && e.message ? e.message : e); }
     }
     return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true }) };
   }
@@ -274,11 +387,17 @@ export const handler = async (event) => {
   // something to retry — dropping one report silently beats a retry
   // storm hitting this endpoint every time a tenant's SharePoint is
   // briefly unavailable.
+  let token;
   try {
-    await writeToRoster(report);
+    token = await writeToRoster(report);
   } catch (e) {
     console.error('report-error: failed to write to roster (report dropped):', e && e.message ? e.message : e);
     return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'write failed' }) };
+  }
+  // The report is saved; an email failing must not change the response.
+  if (process.env.OWNER_NOTIFY_EMAIL) {
+    try { await sendAlert(token, errorAlert(report, Date.now(), alertState)); }
+    catch (e) { console.error('report-error: alert email failed:', e && e.message ? e.message : e); }
   }
 
   return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true }) };
