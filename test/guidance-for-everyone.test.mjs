@@ -44,7 +44,7 @@ describe('first-time welcome', () => {
     assert.match(top[1].lines.join(' '), /Approve the policies[\s\S]*risk the business is willing to accept[\s\S]*monthly leadership security meeting[\s\S]*about an hour a month[\s\S]*Cem/);
     assert.match(L.welcomeScreens('staff')[1].lines.join(' '), /acknowledge the policies[\s\S]*training/);
     assert.match(L.welcomeScreens('viewer')[1].lines.join(' '), /view-only/);
-    assert.match(L.welcomeScreens('practitioner')[1].lines.join(' '), /Do next/);
+    assert.match(L.welcomeScreens('practitioner')[1].lines.join(' '), /Start here[\s\S]*Next step bar/);
     assert.match(top[2].lines.join(' '), /Next for you[\s\S]*My tasks[\s\S]*How this works/);
   });
 });

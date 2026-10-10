@@ -30,6 +30,7 @@ const SITEMAP_EXCLUDE = [
   'https://www.compliance365.com.au/pentest.html',
   'https://www.compliance365.com.au/services.html',
   'https://www.compliance365.com.au/about.html',
+  'https://www.compliance365.com.au/resources/readiness-checklist/',
 ];
 
 export default defineConfig({
@@ -91,6 +92,10 @@ export default defineConfig({
     // Old blog slug redirects
     '/blog/iso27001-vs-iso27701':      '/blog/iso-27001-vs-iso-27701-australia/',
     '/blog/iso42001-ai-governance':    '/blog/ai-governance-iso42001-playbook/',
+    // A generic 10-question check with no links to it, superseded by the
+    // per-framework checklists; Search Console listed it as crawled but
+    // not indexed.
+    '/resources/readiness-checklist':  '/checklist/',
   },
   // No code blocks on the site; Shiki's inline styles conflict with the CSP.
   markdown: { syntaxHighlight: false },

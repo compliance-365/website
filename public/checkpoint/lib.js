@@ -7766,6 +7766,110 @@
     return { stages: stages, current: cur === -1 ? stages.length - 1 : cur, complete: cur === -1, pct: all ? Math.round(done / all * 100) : 0 };
   }
 
+  /* ---- How-to guides ----
+     Short, task-based steps for what the person running Checkpoint does,
+     in the words on the screen (button labels match index.html/app.js;
+     test/start-here.test.mjs checks them). `view` is where "Take me
+     there" goes; `views` are the screens that offer the guide; `stages`
+     are the Guided build stages it helps with. */
+  var HOW_TOS = [
+    { id: 'around', title: 'Find your way around', view: 'start', views: ['start', 'dash', 'build'], stages: [],
+      when: 'Your first time in Checkpoint, or when you are not sure what to do next.',
+      steps: [
+        'Open Start here. It shows which step of the build you are on, what to do now and what comes after.',
+        'The Next step bar at the top of every screen shows the one thing to do next, with a button that takes you there.',
+        'My tasks lists everything assigned to you by name, with a button for each.',
+        'The search box at the top (Ctrl or ⌘ K) finds any record, screen or command.',
+        'The menu shows the screens most people need. Show full menu, at the bottom of it, lists every screen.'
+      ] },
+    { id: 'evidence', title: 'Link evidence to a control', view: 'soa', views: ['soa', 'clauses'], stages: ['treat', 'certify'],
+      when: 'A control or requirement is in place and you need to show the auditor the proof.',
+      steps: [
+        'Save the proof (a screenshot, an export, a signed document) in SharePoint or OneDrive.',
+        'Open the Statement of Applicability and select the control to open its side panel.',
+        'Choose Link evidence and paste the link to the file.',
+        'For a management system requirement (Clauses 4 to 10), do the same from Management system clauses.',
+        'Checkpoint checks the link opens and flags evidence that has gone out of date.'
+      ] },
+    { id: 'approve', title: 'Approve a policy or document', view: 'documents', views: ['documents'], stages: ['leadership', 'riskframe', 'support'],
+      when: 'A policy has been drafted and needs to be signed off.',
+      steps: [
+        'Open Documents. Each policy shows its status: draft, in review or approved.',
+        'Open a draft and read it. Change anything that does not match how you actually work.',
+        'If a second person must check it first, choose Ask for review.',
+        'Then choose Request approval to send it to top management, or Approve if you are the approver.',
+        'The approved version is recorded with the approver’s name and date, and goes on the exported document.'
+      ] },
+    { id: 'scan', title: 'Run the Microsoft 365 posture scan', view: 'scan', views: ['scan'], stages: ['assess'],
+      when: 'At the start, and whenever you want fresh evidence of your security settings.',
+      steps: [
+        'Choose Run posture scan at the top right of any screen.',
+        'Checkpoint reads your Microsoft 365 settings. It never changes them.',
+        'Each check shows pass, review, fail or manual. Manual means Microsoft 365 cannot show it, so you confirm it yourself.',
+        'Failed checks become proposed risks with actions. Approve the ones you agree with to add them to the risk register.'
+      ] },
+    { id: 'risk', title: 'Add and treat a risk', view: 'risks', views: ['risks'], stages: ['assess', 'treat'],
+      when: 'You have found something that could go wrong and need to record what you will do about it.',
+      steps: [
+        'Open the Risk register and choose + Add risk.',
+        'Describe the risk and score its likelihood and impact.',
+        'Choose a treatment (reduce, avoid, share or accept) and give it an owner.',
+        'A risk above your agreed risk appetite stays only if top management accepts it in writing.'
+      ] },
+    { id: 'ack', title: 'Send policies to staff to acknowledge', view: 'attestations', views: ['attestations'], stages: ['support'],
+      when: 'Policies are approved and staff need to confirm they have read them.',
+      steps: [
+        'Open Policy attestation and choose + New campaign.',
+        'Choose the approved policies and who should receive them.',
+        'Choose Preview recipients to check the list, then Launch campaign.',
+        'Progress shows on this screen: who has acknowledged and who has not.'
+      ] },
+    { id: 'audit', title: 'Run the internal audit', view: 'audits', views: ['audits'], stages: ['check'],
+      when: 'Before the certification audit, and at least once a year after it.',
+      steps: [
+        'Open Internal audits and choose + Schedule audit, or Plan the next 12 months to spread audits across the year.',
+        'When the audit is due, open its Workpack and record the result of each check.',
+        'Findings become actions with an owner and a due date.',
+        'The completed audit report is ready for the certification auditor.'
+      ] },
+    { id: 'auditor', title: 'Give your auditor access', view: 'auditor', views: ['auditor', 'certification'], stages: ['certify'],
+      when: 'Your certification audit is booked and the auditor needs to see the records.',
+      steps: [
+        'Open the Auditor guide and choose Give an auditor access.',
+        'Enter the auditor’s name, email, certification body and the dates of the audit.',
+        'They sign in as a guest and see Checkpoint read-only, starting on the Auditor guide.',
+        'Checkpoint reminds you to remove their access when the window ends.'
+      ] },
+    { id: 'tasks', title: 'Work through your tasks', view: 'mytasks', views: ['mytasks'], stages: [],
+      when: 'Something has been assigned to you.',
+      steps: [
+        'Open My tasks. The first card is the next thing to do and roughly how long it takes.',
+        'Each task has a button that opens exactly what needs doing.',
+        'A finished task drops off the list. Checkpoint can email you a weekly summary of what is waiting.'
+      ] }
+  ];
+  function howTo(id) { return HOW_TOS.find(function (h) { return h.id === id; }) || null; }
+  function howTosFor(view) { return HOW_TOS.filter(function (h) { return h.views.indexOf(view) !== -1; }); }
+  function howTosForStage(key) { return HOW_TOS.filter(function (h) { return h.stages.indexOf(key) !== -1; }); }
+
+  /* ---- Start here ----
+     Where the person running the ISMS is: the current stage of the
+     guided build (b = guidedBuild()), what is left in it, and what
+     comes next. */
+  function startHere(b) {
+    if (!b || !b.stages || !b.stages.length) return null;
+    var st = b.stages[b.current];
+    var left = st.items.filter(function (i) { return !i.done; });
+    var after = b.stages[b.current + 1] || null;
+    return {
+      complete: !!b.complete, pct: b.pct, n: st.n, of: b.stages.length,
+      key: st.key, title: st.title, plain: st.plain,
+      now: left.slice(0, 3), more: Math.max(0, left.length - 3), done: st.items.length - left.length, total: st.items.length,
+      next: left[0] || null,
+      after: after ? { n: after.n, title: after.title, plain: after.plain } : null
+    };
+  }
+
   /* ---- Who does what (Clause 5.3) ----
      Everyone named as responsible for something in the ISMS, built from
      the owners already recorded across the registers plus the meeting
@@ -7891,8 +7995,8 @@
         'Usually about an hour a month. The rest is run by ' + (ctx.owner || 'the ISMS owner') + ' and ' + helper + '.'] },
       practitioner: { title: 'What is expected of you', lines: [
         'You keep the management system running: risks, controls, evidence, documents and actions.',
-        'Checkpoint does most of the routine work itself, such as the security scan, reminders and meeting packs. Do next on the dashboard always shows the most useful thing to do.',
-        'Each page starts with a line saying what it is for.'] },
+        'Checkpoint does most of the routine work itself, such as the security scan, reminders and meeting packs. Start here shows which step you are on and what to do now, and the Next step bar on every screen takes you to it.',
+        'Each page starts with a line saying what it is for, and Help at the top has step-by-step guides.'] },
       viewer: { title: 'What is expected of you', lines: [
         'You have view-only access: you can read everything, but not change it.',
         'If you have been asked to check something, everything is linked from the dashboard and the menu.'] },
@@ -12549,7 +12653,7 @@
     CERT_MILESTONES: CERT_MILESTONES, certificationMilestones: certificationMilestones,
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
-    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
+    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild, HOW_TOS: HOW_TOS, howTo: howTo, howTosFor: howTosFor, howTosForStage: howTosForStage, startHere: startHere,
     srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
     buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,

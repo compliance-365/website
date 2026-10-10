@@ -6855,6 +6855,95 @@ function showModal(opts) {
       '</div></div>';
   }
 
+  /* ===== Start here =====
+     Where the person running Checkpoint lands until the build is done:
+     which step they are on, the few things to do now (each with the
+     button that does it), what comes after, and the how-to guides for
+     this step. Built on the Guided build (buildState()); the full list
+     of stages stays on that screen. */
+  function renderStart() {
+    var el = document.getElementById('startBody');
+    if (!el) return;
+    var L = window.CheckpointLib;
+    var h = null;
+    try { h = L.startHere(buildState()); } catch (e) { warn(e); }
+    if (!h) { el.innerHTML = '<div class="card"><p class="src">Loading your registers…</p></div>'; return; }
+    var ro = !!READONLY;
+    var guides = L.howTosForStage(h.key).concat(h.complete ? [] : [L.howTo('around')]).filter(Boolean);
+    var n = nextForYouData();
+    var body;
+    if (h.complete) {
+      body = '<div class="sh-card card"><p class="sh-kicker">All ' + h.of + ' steps done</p><h2>' + icon('check') + ' Your management system is built</h2>' +
+        '<p class="sh-plain">From here it is about running it: the monthly leadership meeting, the recurring activities in the compliance calendar, and keeping evidence current. The dashboard shows what needs attention.</p>' +
+        '<div class="sh-actions"><button class="btn sm" data-action="App.go" data-id="dash">Open the dashboard</button><button class="btn ghost sm" data-action="App.go" data-id="calendar">Compliance calendar</button></div></div>';
+    } else {
+      body = '<div class="sh-card card">' +
+        '<p class="sh-kicker">Step ' + h.n + ' of ' + h.of + ' · ' + h.pct + '% of the build done</p>' +
+        '<div class="sh-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + h.pct + '" aria-label="Build progress"><span style="width:' + h.pct + '%"></span></div>' +
+        '<h2>' + esc(h.title) + '</h2><p class="sh-plain">' + esc(h.plain) + '</p>' +
+        '<h3 class="sh-h">Do ' + (h.now.length === 1 ? 'this' : 'these') + ' now</h3>' +
+        '<ol class="sh-now">' + h.now.map(function (it, i) {
+          return '<li><div class="sh-t"><b>' + esc(it.label) + '</b>' + (it.top ? ' <span class="gb-top">Top management decides</span>' : '') +
+            '<span class="src">' + esc(it.why) + (it.detail ? ' ' + esc(it.detail) + '.' : '') + '</span></div>' + (ro ? '' : buildItemButton(it, i === 0)) + '</li>';
+        }).join('') + '</ol>' +
+        (h.more ? '<p class="src">and ' + h.more + ' more in this step. <button class="lnk" data-action="App.go" data-id="build">See them all</button></p>' : '') +
+        (h.after ? '<div class="sh-after"><span class="sh-k">After this</span><b>Step ' + h.after.n + ': ' + esc(h.after.title) + '</b><span class="src">' + esc(h.after.plain) + '</span></div>' : '') +
+        '</div>';
+    }
+    var waiting = n && !n.none ? '<div class="sh-side card"><h3 class="sh-h">Also waiting on you</h3>' + nextForYouHtml(n, 'dash') + '</div>' : '';
+    var help = guides.length ? '<div class="sh-side card"><h3 class="sh-h">Help with this step</h3><ul class="sh-guides">' +
+      guides.map(function (g) { return '<li><button class="lnk" data-action="App.showHowTo" data-id="' + esc(g.id) + '">' + esc(g.title) + '</button></li>'; }).join('') +
+      '</ul><button class="btn ghost sm" data-action="App.howToList">All how-to guides</button></div>' : '';
+    el.innerHTML = '<div class="sh">' + body + '<div class="sh-col">' + waiting + help +
+      (nextStepHidden() ? '<div class="sh-side card"><p class="src" style="margin:0 0 8px">The Next step bar is hidden on other screens.</p><button class="btn ghost sm" data-action="App.showNextStep">Show it again</button></div>' : '') +
+      '<div class="sh-side card"><h3 class="sh-h">The whole build</h3><p class="src" style="margin:0 0 8px">All ' + h.of + ' steps, in the order an ISO 27001 management system is built.</p><button class="btn ghost sm" data-action="App.go" data-id="build">Open the Guided build</button></div>' +
+      '</div></div>';
+  }
+  /* Who lands on Start here: the person running the ISMS in a live
+     tenant, until the build is complete. */
+  function startHereDue() {
+    if (RESTRICTED_ACCESS || READONLY) return false;
+    try { return !buildState().complete; } catch (e) { return false; }
+  }
+
+  /* The Next step bar under each screen's heading: the one thing to do
+     next, with its button, and a way back to Start here. Not on Start
+     here or the Guided build (they are the list), not for a restricted
+     or read-only session (they have My tasks or the Board view), and
+     not once someone has hidden it in this browser. */
+  var NEXT_STEP_HIDE_KEY = 'cpHideNextStep';
+  function nextStepHidden() { try { return localStorage.getItem(NEXT_STEP_HIDE_KEY) === '1'; } catch (e) { return false; } }
+  function currentView() { return (((document.querySelector('.view.on') || {}).id) || '').replace(/^v-/, ''); }
+  function renderNextStepBar(v) {
+    v = v || currentView();
+    var sec = document.getElementById('v-' + v);
+    var head = sec && sec.querySelector('.vhead');
+    document.querySelectorAll('.next-step-bar').forEach(function (x) { if (!head || !head.contains(x)) x.remove(); });
+    if (!head) return;
+    /* Inside the page help box when the screen has one, else under the heading. */
+    var slot = head.querySelector('.page-guide .pg-foot') || head;
+    var bar = head.querySelector('.next-step-bar');
+    if (bar && bar.parentNode !== slot) { bar.remove(); bar = null; }
+    var off = RESTRICTED_ACCESS || READONLY || nextStepHidden() || ['start', 'build', 'selftest', 'auditor'].indexOf(v) !== -1 || !S;
+    var h = null;
+    if (!off) { try { h = window.CheckpointLib.startHere(buildState()); } catch (e) { h = null; } }
+    if (off || !h || h.complete || !h.next) { if (bar) bar.remove(); return; }
+    if (!bar) { bar = document.createElement('div'); bar.className = 'next-step-bar' + (slot === head ? '' : ' in-guide'); bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Next step'); slot.appendChild(bar); }
+    var it = h.next;
+    var a = BUILD_ITEM_ACTIONS[it.id] || PATH_STEP_ACTIONS[it.id] || {};
+    var here = !a.action && a.view === v;
+    bar.innerHTML = '<span class="nsb-k">Next step · ' + h.n + ' of ' + h.of + '</span>' +
+      '<span class="nsb-t">' + esc(it.label) + (here ? ' <span class="src">You are in the right place for this.</span>' : '') + '</span>' +
+      '<span class="nsb-b">' + (here ? '' : buildItemButton(it, true)) +
+      '<button class="lnk" data-action="App.go" data-id="start">Start here</button>' +
+      '<button class="lnk src" data-action="App.hideNextStep" aria-label="Hide the Next step bar">Hide</button></span>';
+  }
+
+  /* ===== How-to guides (CheckpointLib.HOW_TOS) ===== */
+  function howToLinksHtml(list) {
+    return list.map(function (g) { return '<button class="lnk" data-action="App.showHowTo" data-id="' + esc(g.id) + '">' + esc(g.title) + '</button>'; }).join(' · ');
+  }
+
   /* ===== Who does what (Clause 5.3) ===== */
   function whoDoesData() {
     var today = new Date().toISOString().slice(0, 10);
@@ -6916,8 +7005,12 @@ function showModal(opts) {
     var el = head.querySelector('.page-guide');
     if (!g) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.className = 'page-guide'; head.appendChild(el); }
-    el.innerHTML = '<p><b>What this page is:</b> ' + esc(g.what) + ' <b>What you do here:</b> ' + esc(g.you) + '</p>' +
-      (g.terms.length ? '<details class="pg-terms"><summary>Words used on this page</summary><dl>' + g.terms.map(function (t) { return '<dt>' + esc(t.term) + '</dt><dd>' + esc(t.def) + '</dd>'; }).join('') + '</dl></details>' : '');
+    var guides = window.CheckpointLib.howTosFor(v);
+    el.innerHTML = '<p><b>What this page is:</b> ' + esc(g.what) + ' <b>What you do here:</b> ' + esc(g.you) +
+      (guides.length ? ' <span class="pg-howto"><b>How to:</b> ' + howToLinksHtml(guides) + '</span>' : '') + '</p>' +
+      /* The terms toggle and the Next step bar share one row, so the
+         help takes no more height than it did before the bar existed. */
+      '<div class="pg-foot">' + (g.terms.length ? '<details class="pg-terms"><summary>Words used on this page</summary><dl>' + g.terms.map(function (t) { return '<dt>' + esc(t.term) + '</dt><dd>' + esc(t.def) + '</dd>'; }).join('') + '</dl></details>' : '') + '</div>';
   }
   /* Which welcome and which page help someone gets: top management,
      view-only, own-tasks-only, or the person running the ISMS. */
@@ -16660,6 +16753,7 @@ function showModal(opts) {
     integrations: renderIntegrations,
     whodoes: renderWhoDoes,
     build: renderBuild,
+    start: renderStart,
     selftest: renderSelfTest,
     aitools: renderAiTools,
   };
@@ -16811,7 +16905,7 @@ function showModal(opts) {
     }
     App.go('auditor');
   }
-  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderPageGuide(((document.querySelector('.view.on') || {}).id || '').replace(/^v-/, '')); maybeWelcome(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderPageGuide(((document.querySelector('.view.on') || {}).id || '').replace(/^v-/, '')); renderNextStepBar(); maybeWelcome(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -16932,7 +17026,44 @@ function showModal(opts) {
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       renderView(v);
       renderPageGuide(v);
+      renderNextStepBar(v);
       scheduleScrollRegions();
+    },
+
+    /* How-to guides: one in the side panel, or the list of all of them. */
+    showHowTo: function (id) {
+      var g = window.CheckpointLib.howTo(id);
+      if (!g) return;
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer" aria-label="Close">' + icon('close') + '</button>' +
+        '<div class="id-t">How to</div><h2>' + esc(g.title) + '</h2>' +
+        '<p class="src" style="margin:0 0 12px">' + esc(g.when) + '</p>' +
+        '<ol class="howto-steps">' + g.steps.map(function (st) { return '<li>' + esc(st) + '</li>'; }).join('') + '</ol>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
+          (currentView() === g.view ? '' : '<button class="btn sm" data-action="App.howToGo" data-id="' + esc(g.view) + '">Take me there</button>') +
+          '<button class="btn ghost sm" data-action="App.howToList">All how-to guides</button></div>';
+      openDrawerUi('How to: ' + g.title);
+    },
+    howToList: function () {
+      var all = window.CheckpointLib.HOW_TOS;
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer" aria-label="Close">' + icon('close') + '</button>' +
+        '<div class="id-t">Help</div><h2>How do I…?</h2>' +
+        '<ul class="howto-list">' + all.map(function (g) {
+          return '<li><button class="lnk" data-action="App.showHowTo" data-id="' + esc(g.id) + '"><b>' + esc(g.title) + '</b></button><span class="src">' + esc(g.when) + '</span></li>';
+        }).join('') + '</ul>';
+      openDrawerUi('How-to guides');
+    },
+    howToGo: function (v) { App.closeDrawer(); App.go(v); },
+    hideNextStep: function () {
+      try { localStorage.setItem(NEXT_STEP_HIDE_KEY, '1'); } catch (e) { /* private browsing: hidden for this page only */ }
+      document.querySelectorAll('.next-step-bar').forEach(function (x) { x.remove(); });
+      toast('Next step bar hidden. Show it again from Start here.');
+    },
+    showNextStep: function () {
+      try { localStorage.removeItem(NEXT_STEP_HIDE_KEY); } catch (e) { /* private browsing */ }
+      renderNextStepBar();
+      renderStart();
     },
 
     /* ================= Command palette =================
@@ -26912,6 +27043,9 @@ function showModal(opts) {
        session should land on. */
     if (RESTRICTED_ACCESS) App.go('mytasks');
     else if (READONLY) App.go('board');
+    /* Live tenants open on Start here until the build is done, so the
+       person running it always sees where they are and what to do. */
+    else if (Store.kind === 'sharepoint' && startHereDue()) App.go('start');
     SELFTEST_MODE = Store.kind === 'demo' && /[?&]selftest=1\b/.test(location.search);
     if (SELFTEST_MODE) App.go('selftest');
     /* Demo deep link (?demo=1&view=documents): the website's feature
@@ -27175,7 +27309,7 @@ function showModal(opts) {
      than trying to individually filter every command and the search
      index — see the RESTRICTED_ACCESS check at the top of openPalette.
      A no-op for every other session. */
-  var RESTRICTED_HIDE_IDS = ['attestKpiRow', 'attestAdminWrap', 'trainingActionsRow', 'trainingKpiRow', 'trainingAdminWrap', 'btnSettingsTop', 'btnScanTop', 'gsearchWrap'];
+  var RESTRICTED_HIDE_IDS = ['attestKpiRow', 'attestAdminWrap', 'trainingActionsRow', 'trainingKpiRow', 'trainingAdminWrap', 'btnSettingsTop', 'btnScanTop', 'gsearchWrap', 'btnHowTo'];
   function applyRestrictedUi() {
     if (!RESTRICTED_ACCESS) return;
     RESTRICTED_HIDE_IDS.forEach(function (id) {

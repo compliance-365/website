@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.155.0',
+    date: '2026-10-10',
+    entries: [
+      'New: Start here. Checkpoint now opens on a page that shows which of the ten steps you are on, the two or three things to do now (each with the button that does it), and what comes after. It is first in the menu, and Checkpoint opens on it until the management system is built.',
+      'New: a Next step bar at the top of every screen, with the one thing to do next and a button that takes you there. Hide it if you do not want it; Start here can show it again.',
+      'New: how-to guides. Help, at the top of every screen, lists short step-by-step guides for what you do in Checkpoint: linking evidence, approving a policy, running the posture scan, adding a risk, sending policies to staff, the internal audit and giving your auditor access. Each screen links the guides that apply to it, and Start here shows the ones for your current step.'
+    ]
+  },
+  {
     version: '1.154.0',
     date: '2026-10-10',
     entries: [
