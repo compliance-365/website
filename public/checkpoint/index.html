@@ -56,7 +56,8 @@
     <button class="lnk" id="btnGateOtherAccount" style="display:none" data-action="App.signInOtherAccount">Use a different account</button>
     <button class="btn ghost" data-action="App.startDemo">Explore the demo</button>
   </div>
-  <p class="note" id="gateNote">Sign-in uses the Microsoft permissions your organisation's administrator approved for Checkpoint, once, for everyone. <button class="lnk" data-action="App.showSignInPermissions">See exactly what Checkpoint asks for</button></p>
+  <div class="gate-consent" id="gateConsent" hidden role="alert"></div>
+  <p class="note" id="gateNote">Sign-in uses the Microsoft permissions your organisation's administrator approved for Checkpoint, once, for everyone. <button class="lnk" data-action="App.showSignInPermissions">See exactly what Checkpoint asks for</button>. Not an administrator? <button class="lnk" data-action="App.askAdminForConsent">Ask your IT admin to approve it</button></p>
   <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser.</div>
 </div>
 
@@ -99,7 +100,8 @@
         <p style="max-width:56ch;margin:10px auto 0">Exactly what Checkpoint asks Microsoft for at sign-in, and why — every one of these is read-only. Nothing here can change your tenant.</p>
       </div>
       <div class="card" id="wizConsentList" style="margin-bottom:20px"></div>
-      <p class="note" style="max-width:56ch;margin:0 auto">Two more permissions are requested later, only when actually needed: access to create your SharePoint registers, the moment setup provisions them (next in this wizard); and email-send access, only if you ever use the "Email status update" button. Your Microsoft 365 admin approves each the first time it's needed — never all at once.</p>
+      <p class="note" style="max-width:56ch;margin:0 auto">The same approval also covers two permissions that write: Sites.Manage.All, to create and update Checkpoint's own SharePoint lists, and Mail.Send, to send an email as you when you press send. All of them are delegated: Checkpoint acts as the person signed in and can only do what they could already do. A Microsoft 365 administrator approves them once, for everyone.</p>
+      <p class="note" style="max-width:56ch;margin:10px auto 0">Not an administrator? <button class="lnk" data-action="App.askAdminForConsent">Send the approval request to your IT admin</button></p>
       <div class="btns" style="justify-content:center;margin-top:26px">
         <button class="btn ghost" data-action="Wizard.back">Back</button>
         <button class="btn" data-action="Wizard.doSignIn">Continue to sign-in</button>
@@ -137,6 +139,10 @@
         </div>
         <textarea class="mini" id="wizActPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
         <div id="wizActStatus" style="margin-top:12px;font-size:12.5px;min-height:18px"></div>
+        <div class="wiz-setup-call" id="wizSetupCall" hidden>
+          <p><b>Your free 30-minute setup call.</b> It comes with your purchase: we go through the next steps with you, including the Microsoft 365 approval and your SharePoint site, so you start with everything working.</p>
+          <a class="btn sm" id="wizSetupCallLink" target="_blank" rel="noopener">Book a time</a>
+        </div>
       </div>
       <div class="btns" style="justify-content:center">
         <button class="btn ghost" data-action="Wizard.back">Back</button>
@@ -1657,6 +1663,23 @@
 <div class="overlay" id="overlay" data-action="App.closeDrawer"></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Details" tabindex="-1"></aside>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!-- Demo only: an optional, dismissable offer of pricing and a short
+     walkthrough, shown once a visitor has explored for a while
+     (maybeOfferDemoLead() in app.js). -->
+<aside class="demo-lead" id="demoLead" hidden aria-labelledby="demoLeadH">
+  <button class="demo-lead-x" type="button" data-action="App.dismissDemoLead" aria-label="Close">&times;</button>
+  <h2 id="demoLeadH">See it with your own Microsoft 365?</h2>
+  <p id="demoLeadText">Leave your details and Matt from Compliance365 will email you the price for your size and offer a 15-minute walkthrough. No mailing list.</p>
+  <div id="demoLeadForm">
+    <label for="demoLeadName">Your name</label><input id="demoLeadName" autocomplete="name">
+    <label for="demoLeadEmail">Work email</label><input id="demoLeadEmail" type="email" autocomplete="email">
+    <label for="demoLeadSize">Organisation size</label>
+    <select id="demoLeadSize"><option>Under 50 staff</option><option>50–250 staff</option><option>250–500 staff</option><option>500+ staff</option></select>
+    <p class="demo-lead-err" id="demoLeadErr" role="alert"></p>
+    <button class="btn sm" type="button" data-action="App.sendDemoLead" id="demoLeadSend">Send</button>
+  </div>
+</aside>
+
 <div class="modal-overlay" id="modalOverlay"></div>
 <div class="modal-box" id="modalBox" role="dialog" aria-modal="true" tabindex="-1"></div>
 

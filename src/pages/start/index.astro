@@ -26,7 +26,29 @@ const live = isSelfServeLive();
     <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
     <script define:vars={{ token: SELF_SERVE.paddleToken, env: SELF_SERVE.paddleEnv }}>
       if (env === 'sandbox' && window.Paddle?.Environment) window.Paddle.Environment.set('sandbox');
-      window.Paddle?.Initialize({ token });
+      /* Checkout funnel events (c365Track is defined in BaseLayout and
+         only reports with analytics consent). checkout.closed without a
+         completed checkout is the abandonment GA4 can't otherwise see. */
+      var done = false;
+      var track = function (name, p) { if (typeof window.c365Track === 'function') window.c365Track(name, p); };
+      window.Paddle?.Initialize({
+        token,
+        eventCallback: function (ev) {
+          var d = (ev && ev.data) || {};
+          var totals = d.totals || {};
+          if (ev.name === 'checkout.completed') {
+            done = true;
+            track('purchase', {
+              transaction_id: d.transaction_id || '',
+              currency: d.currency_code || 'AUD',
+              value: Number(totals.total || 0),
+              items: (d.items || []).map(function (i) { return { item_id: (i.price_id || ''), item_name: (i.product && i.product.name) || i.price_name || '' }; })
+            });
+          } else if (ev.name === 'checkout.closed' && !done) {
+            track('checkout_closed');
+          }
+        }
+      });
     </script>
   </>
 )}
@@ -74,6 +96,7 @@ const live = isSelfServeLive();
         </div>
       </div>
 
+      <p class="start-setup"><b>Includes a free 30-minute setup call.</b> Once your purchase is confirmed, Checkpoint offers you a time to book. We go through the Microsoft 365 approval and your SharePoint site with you, so the trial starts with everything working.</p>
       <p class="start-trust">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" style="vertical-align:-2px;"><use href="#ic-lock"/></svg>
         Activates in your own Microsoft 365 tenant. Your data never leaves it. Cancel any time during the trial and pay nothing.
@@ -112,6 +135,7 @@ const live = isSelfServeLive();
      visible at once whenever fullyPriced() was true, not just when it
      legitimately fell back. */
   .start-fallback:not([hidden]) { background: #FBF7EF; border: 1px solid #EADFC5; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .9rem; }
+  .start-setup { margin: 1.25rem 0 0; padding: .9rem 1.1rem; background: #FBF7EF; border: 1px solid #EADFC5; border-radius: 10px; font-size: .92rem; line-height: 1.55; color: #4A4740; }
   .start-trust { font-size: .82rem; color: #8A8172; margin: 1.5rem 0 0; line-height: 1.6; }
 
   /* The highest-stakes CTA on the page — sized up from the site's usual
@@ -215,6 +239,7 @@ const live = isSelfServeLive();
       // trial (configured on the price in Paddle), then redirects to
       // activateUrl where the Checkpoint app signs the user in with
       // Microsoft and provisions their tenant (SELF-SERVE-SETUP.md §4).
+      if (typeof window.c365Track === 'function') window.c365Track('checkout_opened', { modules: validMods.join(','), addons: adds.join(','), tier });
       window.Paddle.Checkout.open({
         items,
         settings: { successUrl: new URL(cfg.activateUrl, location.origin).href }

@@ -28,9 +28,9 @@ test('Checkpoint connects only to Microsoft and the endpoints the answers list',
   const cfg = readFileSync(root + 'public/checkpoint/config.js', 'utf8');
   const urls = [...cfg.matchAll(/(\w+(?:Url|url)):\s*'(https:[^']+)'/g)].map((m) => m[1]);
   // Each Compliance365 endpoint in config is described by a row in the table.
-  const described = { errorReportUrl: 'Error reports', selfServeActivateUrl: 'Activation', marketplaceFulfillmentUrl: 'Activation', threatIntelUrl: 'Threat intelligence feed', url: 'owner-only signing (not used by client sessions)' };
+  const described = { errorReportUrl: 'Error reports', selfServeActivateUrl: 'Activation', marketplaceFulfillmentUrl: 'Activation', threatIntelUrl: 'Threat intelligence feed', contactUrl: 'Demo enquiry', setupCallUrl: 'a link the buyer opens (booking page); Checkpoint sends nothing to it', url: 'owner-only signing (not used by client sessions)' };
   for (const u of urls) assert.ok(described[u], 'config endpoint ' + u + ' is not covered by the answers');
-  for (const w of ['Error reports', 'Setup health', 'Activation', 'Threat intelligence feed']) assert.ok(data.outbound.some((o) => o.what === w), w);
+  for (const w of ['Error reports', 'Setup health', 'Activation', 'Threat intelligence feed', 'Demo enquiry']) assert.ok(data.outbound.some((o) => o.what === w), w);
 });
 
 test('the page, the Excel download and the accessibility statement exist and are linked', () => {

@@ -113,7 +113,12 @@ const bookUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.co
       if (r.grcPlatform) notes.push(`A third-party GRC platform would add ${audRange(r.grcPlatform)} over three years in licences; Checkpoint replaces it.`);
       root.querySelector('[data-ce="notes"]').textContent = notes.join(' ');
     };
-    root.addEventListener('change', render);
+    /* Funnel events (see c365Track in BaseLayout): first use of this
+       estimator, and the quote button with what was chosen. */
+    const track = (name, extra) => { if (typeof window.c365Track === 'function') window.c365Track(name, { framework: fw, size: val('size'), approach: val('approach'), ...extra }); };
+    let used = false;
+    root.addEventListener('change', () => { render(); if (!used) { used = true; track('estimator_used'); } });
+    root.querySelector('[data-ce="cta"]').addEventListener('click', () => track('estimator_quote_click', { days: val('approach') === 'days' ? val('days') : undefined }));
     render();
   }
 </script>

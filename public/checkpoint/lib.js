@@ -5737,6 +5737,60 @@
       '&redirect_uri=' + encodeURIComponent(redirectUri);
   }
 
+  /* The email a person who is not a Microsoft 365 administrator sends
+     their IT admin, asking them to approve Checkpoint once for the
+     organisation. Plain text, so it works as a mailto: body and pasted
+     into any email or ticket. opts: { consentUrl, scopes: [{ name, why }],
+     requester, appUrl }. */
+  function adminConsentRequest(opts) {
+    var o = opts || {};
+    var who = String(o.requester || '').trim();
+    var scopes = o.scopes || [];
+    var lines = [
+      'Hi,',
+      '',
+      'I would like to use Checkpoint, a compliance tool from Compliance365, with our Microsoft 365. It needs a one-off approval from a Microsoft 365 administrator (a Global Administrator or Privileged Role Administrator) before anyone here can sign in.',
+      '',
+      'To approve it, open this link, sign in with your admin account and accept:',
+      String(o.consentUrl || ''),
+      '',
+      'What it asks for: delegated Microsoft Graph permissions, so it acts as the person signed in and can only do what they could already do. Most are read-only and are used to check our security settings; it never changes tenant settings, users or devices. Two write: Sites.Manage.All, to create and update its own SharePoint lists, which hold our compliance records in our own tenant (Checkpoint has no database of its own), and Mail.Send, to send an email as the signed-in person when they choose to.',
+    ];
+    if (scopes.length) {
+      lines.push('');
+      lines.push('The read-only permissions, and what each is used for:');
+      scopes.forEach(function (sc) { lines.push('- ' + sc.name + ': ' + sc.why); });
+    }
+    lines.push('');
+    lines.push('The full list is on the approval screen. One approval covers everyone in our organisation.');
+    if (o.appUrl) { lines.push(''); lines.push('Checkpoint: ' + o.appUrl); }
+    lines.push('');
+    lines.push('Thanks' + (who ? ',\n' + who : ''));
+    return { subject: 'Please approve Checkpoint for our Microsoft 365', body: lines.join('\n') };
+  }
+  /* Entra sign-in errors that mean "an administrator has to approve this
+     app first", as opposed to a cancelled or failed sign-in. */
+  function isAdminConsentError(err) {
+    var t = String((err && (err.errorCode + ' ' + err.errorMessage + ' ' + err.message)) || err || '');
+    return /AADSTS65001|AADSTS90094|AADSTS90008|consent_required|admin(istrator)? (approval|consent)|need admin approval/i.test(t);
+  }
+
+  /* Demo lead prompt rules and the message it sends (app.js
+     noteDemoView / App.sendDemoLead). */
+  var DEMO_LEAD_MIN_VIEWS = 4, DEMO_LEAD_MIN_MS = 120000;
+  function demoLeadDue(o) { return !!o && o.views >= DEMO_LEAD_MIN_VIEWS && o.ms >= DEMO_LEAD_MIN_MS; }
+  function demoLeadMessage(o) {
+    var x = o || {};
+    return [
+      'Sent from the Checkpoint demo.',
+      'Organisation size: ' + (x.size || 'not given'),
+      'Time in the demo: about ' + (x.minutes || 0) + ' minute(s)',
+      'Screens opened: ' + ((x.views || []).join(', ') || 'none'),
+      '',
+      'They asked for pricing for their size and a 15-minute walkthrough.'
+    ].join('\n');
+  }
+
   function isValidTenantIdentifier(s) {
     if (!s) return false;
     var v = String(s).trim();
@@ -12669,7 +12723,7 @@
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
     riskReviewStatus: riskReviewStatus,
-    buildAdminConsentUrl: buildAdminConsentUrl, normaliseSitePath: normaliseSitePath, welcomeGuideContent: welcomeGuideContent, sharePointHostFromDomains: sharePointHostFromDomains,
+    buildAdminConsentUrl: buildAdminConsentUrl, adminConsentRequest: adminConsentRequest, isAdminConsentError: isAdminConsentError, demoLeadDue: demoLeadDue, demoLeadMessage: demoLeadMessage, normaliseSitePath: normaliseSitePath, welcomeGuideContent: welcomeGuideContent, sharePointHostFromDomains: sharePointHostFromDomains,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     attestationFocusRows: attestationFocusRows, attestationSummary: attestationSummary,

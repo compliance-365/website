@@ -17081,6 +17081,7 @@ function showModal(opts) {
   /* ================= app actions ================= */
   window.App = {
     go: function (v) {
+      if (Store && Store.kind === 'demo') noteDemoView(v);
       document.querySelectorAll('.view').forEach(function (x) { x.classList.remove('on'); });
       document.getElementById('v-' + v).classList.add('on');
       document.querySelectorAll('.nav-item').forEach(function (n) {
@@ -20716,6 +20717,69 @@ function showModal(opts) {
       App.settingsSection('health');
       var el = document.getElementById('setupHealthRow');
       if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    dismissDemoLead: function () {
+      try { localStorage.setItem('cpDemoLeadDone', 'dismissed'); } catch (e) { /* private browsing: it simply may show again next visit */ }
+      document.getElementById('demoLead').hidden = true;
+    },
+    sendDemoLead: async function () {
+      var name = document.getElementById('demoLeadName').value.trim();
+      var email = document.getElementById('demoLeadEmail').value.trim();
+      var size = document.getElementById('demoLeadSize').value;
+      var err = document.getElementById('demoLeadErr');
+      err.textContent = '';
+      if (name.length < 2) { err.textContent = 'Please add your name.'; return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Please check your email address.'; return; }
+      var btn = document.getElementById('demoLeadSend');
+      btn.disabled = true;
+      try {
+        var res = await fetch(CONFIG.contactUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, email: email, subject: 'Checkpoint demo: pricing and walkthrough', message: window.CheckpointLib.demoLeadMessage({ size: size, views: Object.keys(_demoViews), minutes: Math.round((Date.now() - _demoStartedAt) / 60000) }) })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        try { localStorage.setItem('cpDemoLeadDone', 'sent'); } catch (e) { /* private browsing */ }
+        document.getElementById('demoLeadForm').hidden = true;
+        document.getElementById('demoLeadText').textContent = 'Thanks, ' + name + '. Matt will email ' + email + ' within one business day.';
+        setTimeout(function () { var el = document.getElementById('demoLead'); if (el) el.hidden = true; }, 6000);
+      } catch (e) {
+        warn(e);
+        err.textContent = 'That did not send. Please email info@compliance365.com.au instead.';
+        btn.disabled = false;
+      }
+    },
+    /* For someone who is not a Microsoft 365 administrator: a drafted
+       email to their IT admin with the one-off approval link, what it
+       grants and why. Opens in their email app (and is copied, in case
+       none is set up). Works before sign-in: the link then lets the admin
+       pick their own organisation. */
+    askAdminForConsent: async function () {
+      var acc = (window.Graph && window.Graph.getAccount && window.Graph.getAccount()) || null;
+      var appUrl = location.origin + location.pathname;
+      var consentUrl = window.CheckpointLib.buildAdminConsentUrl(CONFIG.clientId, (acc && acc.tenantId) || '', appUrl);
+      var req = window.CheckpointLib.adminConsentRequest({
+        consentUrl: consentUrl,
+        appUrl: appUrl,
+        /* No per-permission list here: it would push the mailto: link
+           past the ~2,000 characters some email apps accept, and the
+           approval screen lists every permission anyway. */
+        requester: (acc && acc.name) || ''
+      });
+      var v = await showModal({
+        title: 'Ask your IT admin to approve Checkpoint',
+        message: 'A Microsoft 365 administrator approves Checkpoint once for your organisation. Add their email address, check the message, and it opens in your email app. If you are the administrator, open the approval link in the message yourself.',
+        fields: [
+          { id: 'to', label: 'Your IT admin\'s email', type: 'email', placeholder: 'it@yourcompany.com' },
+          { id: 'body', label: 'Message', type: 'textarea', value: req.body }
+        ],
+        confirmText: 'Open in my email app',
+        validate: function (x) { return x.to && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.to) ? 'Check the email address.' : null; }
+      });
+      if (!v) return;
+      try { if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(v.body); } catch (e) { /* copying is a convenience only */ }
+      location.href = 'mailto:' + encodeURIComponent(v.to || '') + '?subject=' + encodeURIComponent(req.subject) + '&body=' + encodeURIComponent(v.body);
+      toast('Your email app should open with the message. It is also copied, if you would rather paste it into a ticket or chat.');
     },
     /* One entry point for every fix button, so each stays available to
        the role that can actually use it (see renderSetupHealth()). */
@@ -26649,6 +26713,7 @@ function showModal(opts) {
     signOut: function () { Graph.signOut(); },
 
     startDemo: async function () {
+      _demoStartedAt = Date.now();
       Store = window.DemoStore;
       S = await Store.load();
       await detectAppCapabilities();
@@ -28463,6 +28528,12 @@ function showModal(opts) {
      verify-and-apply path a manually pasted file goes through. Returns
      true if it left the UI showing something (success or a clear
      error), false if this isn't a Marketplace arrival at all. */
+  /* Just paid (Paddle or Marketplace): offer the free setup call that
+     comes with every self-serve purchase. */
+  function offerSetupCall() {
+    var call = document.getElementById('wizSetupCall'), link = document.getElementById('wizSetupCallLink');
+    if (call && link && CONFIG.setupCallUrl) { link.href = CONFIG.setupCallUrl; call.hidden = false; }
+  }
   async function attemptMarketplaceActivation() {
     if (!CONFIG.marketplaceFulfillmentUrl) return false;
     var mpToken = new URLSearchParams(location.search).get('token');
@@ -28502,6 +28573,7 @@ function showModal(opts) {
       if (textInput) textInput.value = data.activationFile;
       busy(false);
       await runWizardActivationCheck();
+      offerSetupCall();
       return true;
     } catch (e) {
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Could not reach the activation service. Paste your activation file below, or contact us.</span>';
@@ -28566,6 +28638,7 @@ function showModal(opts) {
       if (textInput) textInput.value = data.activationFile;
       busy(false);
       await runWizardActivationCheck();
+      offerSetupCall();
       return true;
     } catch (e) {
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Could not reach the activation service. Paste the activation file below once you receive it by email, or contact us.</span>';
@@ -28691,6 +28764,21 @@ function showModal(opts) {
        triggered the step change, now detached from the visible step,
        and a screen reader never announces that the content changed. */
     if (el) el.focus();
+  }
+
+  /* Demo lead prompt: shown once, after a visitor has spent two minutes
+     and opened four screens in the demo, unless they closed it or sent it
+     before. Never in a real tenant. */
+  var _demoViews = {}, _demoStartedAt = 0;
+  function noteDemoView(v) {
+    if (!_demoStartedAt) _demoStartedAt = Date.now();
+    _demoViews[v] = true;
+    var el = document.getElementById('demoLead');
+    if (!el || !el.hidden || !CONFIG.contactUrl || SELFTEST_MODE) return;
+    var done = null;
+    try { done = localStorage.getItem('cpDemoLeadDone'); } catch (e) { done = null; }
+    if (done) return;
+    if (window.CheckpointLib.demoLeadDue({ views: Object.keys(_demoViews).length, ms: Date.now() - _demoStartedAt })) el.hidden = false;
   }
 
   var WIZARD_PERM_WHY = {
@@ -29431,6 +29519,16 @@ function showModal(opts) {
       document.getElementById('btnGateSignIn').style.display = '';
       var other = document.getElementById('btnGateOtherAccount');
       if (other && signedInBefore()) other.style.display = '';
+      /* Microsoft refused sign-in because an administrator has not
+         approved Checkpoint yet: say so, and offer the email to IT,
+         rather than showing the same Sign in button that just failed. */
+      var re = Graph.redirectError && Graph.redirectError();
+      var gc = document.getElementById('gateConsent');
+      if (gc && re && window.CheckpointLib.isAdminConsentError(re)) {
+        gc.innerHTML = '<p><b>Your organisation needs to approve Checkpoint first.</b> Microsoft only lets a Microsoft 365 administrator approve a new app. It is a one-off approval for everyone.</p>' +
+          '<div class="btns"><button class="btn" data-action="App.askAdminForConsent">Ask your IT admin to approve it</button></div>';
+        gc.hidden = false;
+      }
     }
     document.getElementById('gate').style.display = 'flex';
   })();
