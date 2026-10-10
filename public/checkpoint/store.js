@@ -3136,12 +3136,13 @@ window.SpStore = (function () {
      S.controls directly, same as ensureNistSubcategories() does. */
   async function reconcileControls(onStatus) {
     var have = {};
-    (await items('Controls')).forEach(function (i) {
+    var rows = await items('Controls');
+    rows.forEach(function (i) {
       var f = i.fields;
       have[(f.Framework || 'iso27001') + '|' + f.Code] = true;
     });
     var missing = allControlSeeds().filter(function (c) { return !have[c.fw + '|' + c.code]; });
-    if (!missing.length) return 0;
+    if (!missing.length) { prefetched.Controls = rows; return 0; }
     if (onStatus) onStatus('Adding ' + missing.length + ' new framework control(s)…');
     for (var i = 0; i < missing.length; i++) {
       var c = missing[i];
@@ -3200,12 +3201,13 @@ window.SpStore = (function () {
      clause numbers. */
   async function reconcileClauses(onStatus) {
     var have = {};
-    (await items('Clauses')).forEach(function (i) {
+    var rows = await items('Clauses');
+    rows.forEach(function (i) {
       var f = i.fields;
       have[(f.Framework || 'iso27001') + '|' + f.Code] = true;
     });
     var missing = (window.CLAUSE_DEFS || []).filter(function (c) { return !have[c.fw + '|' + c.code]; });
-    if (!missing.length) return 0;
+    if (!missing.length) { prefetched.Clauses = rows; return 0; }
     if (onStatus) onStatus('Adding ' + missing.length + ' new management system clause(s)…');
     for (var i = 0; i < missing.length; i++) {
       var c = missing[i];
@@ -3246,6 +3248,24 @@ window.SpStore = (function () {
     await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/items/' + itemId + '/fields', {
       method: 'PATCH', body: fields, scopes: CONFIG.scopesProvision
     });
+  }
+  /* Rows the load can reuse: set by a self-heal that read a whole list
+     and changed nothing in it. Taken once, so a later load reads fresh. */
+  var prefetched = {};
+  var LOAD_CONCURRENCY = 6;
+  async function loadItems(keys) {
+    var out = {}, next = 0;
+    async function worker() {
+      while (next < keys.length) {
+        var k = keys[next++];
+        if (prefetched[k]) { out[k] = prefetched[k]; delete prefetched[k]; continue; }
+        out[k] = await items(k);
+      }
+    }
+    var pool = [];
+    for (var i = 0; i < Math.min(LOAD_CONCURRENCY, keys.length); i++) pool.push(worker());
+    await Promise.all(pool);
+    return out;
   }
   async function items(k) {
     return Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/items?$expand=fields&$top=200', provisionOpts);
@@ -3355,6 +3375,8 @@ window.SpStore = (function () {
 
   return {
     kind: 'sharepoint',
+    /* Test-only: the list keys load() reads (test/sharepoint-load-speed). */
+    _defs: DEFS,
     /* Resolved Graph site id ("hostname,guid,guid") and SharePoint
        hostname for the site this tenant's lists live on — populated the
        moment resolveSite() first runs (load(), or either read-only probe
@@ -3372,33 +3394,38 @@ window.SpStore = (function () {
       await ensureLists(onStatus);
       if (onStatus) onStatus('Loading registers…');
 
-      var riskItems = await items('Risks');
-      var actItems = await items('Actions');
-      var actUpdItems = await items('ActionUpdates');
-      var ctlItems = await items('Controls');
-      var clauseItems = await items('Clauses');
-      var scanItems = await items('Scans');
-      var actvItems = await items('Activity');
-      var entItems = await items('Entitlements');
-      var setItems = await items('Settings');
-      var audItems = await items('Audits');
-      var revItems = await items('Reviews');
-      var objItems = await items('Objectives');
-      var ansItems = await items('Answers');
-      var assetItems = await items('Assets');
-      var legalItems = await items('LegalRegister');
-      var calItems = await items('Calendar');
-      var logItems = await items('AuditLog');
-      var alertItems = await items('Alerts');
-      var vendorItems = await items('Vendors');
-      var aiItems = await items('AISystems');
-      var attItems = await items('Attestations');
-      var trnItems = await items('Training');
-      var draftItems = await items('PolicyDrafts');
-      var incItems = await items('Incidents');
-      var dispItems = await items('CheckDispositions');
-      var ticketItems = await items('TicketLinks');
-      var arItems = await items('AuditRequests');
+      /* Every register at once (a few requests at a time), not one
+         after another: the lists in sequence were most of the wait after
+         sign-in. Controls and Clauses were just read by the self-heal
+         above and are reused rather than fetched twice. */
+      var got = await loadItems(['Risks', 'Actions', 'ActionUpdates', 'Controls', 'Clauses', 'Scans', 'Activity', 'Entitlements', 'Settings', 'Audits', 'Reviews', 'Objectives', 'Answers', 'Assets', 'LegalRegister', 'Calendar', 'AuditLog', 'Alerts', 'Vendors', 'AISystems', 'Attestations', 'Training', 'PolicyDrafts', 'Incidents', 'CheckDispositions', 'TicketLinks', 'AuditRequests']);
+      var riskItems = got.Risks;
+      var actItems = got.Actions;
+      var actUpdItems = got.ActionUpdates;
+      var ctlItems = got.Controls;
+      var clauseItems = got.Clauses;
+      var scanItems = got.Scans;
+      var actvItems = got.Activity;
+      var entItems = got.Entitlements;
+      var setItems = got.Settings;
+      var audItems = got.Audits;
+      var revItems = got.Reviews;
+      var objItems = got.Objectives;
+      var ansItems = got.Answers;
+      var assetItems = got.Assets;
+      var legalItems = got.LegalRegister;
+      var calItems = got.Calendar;
+      var logItems = got.AuditLog;
+      var alertItems = got.Alerts;
+      var vendorItems = got.Vendors;
+      var aiItems = got.AISystems;
+      var attItems = got.Attestations;
+      var trnItems = got.Training;
+      var draftItems = got.PolicyDrafts;
+      var incItems = got.Incidents;
+      var dispItems = got.CheckDispositions;
+      var ticketItems = got.TicketLinks;
+      var arItems = got.AuditRequests;
 
       S = {
         mode: 'live',
