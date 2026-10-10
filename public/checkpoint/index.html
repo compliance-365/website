@@ -623,7 +623,7 @@
       <div class="grid kpis reg-strip" id="riskKpiRow"></div>
       <div class="reg-tidy" id="riskTidy"></div>
       <div id="riskGroupingWrap"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button><button class="btn ghost sm" data-action="App.importCsv" data-id="risks">Import CSV</button><button class="btn ghost sm" data-action="App.openRegisterReview" data-id="risk">Review register</button><button class="btn ghost sm" data-action="App.openLeavers">Owners who have left</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="risks">Excel</button><button class="btn ghost sm" data-action="App.exportRegisterWord" data-id="risks">Word</button><button class="btn ghost sm" data-action="App.importCsv" data-id="risks">Import CSV</button><button class="btn ghost sm" data-action="App.openRegisterReview" data-id="risk">Review register</button><button class="btn ghost sm" data-action="App.openLeavers">Owners who have left</button></div>
       <div class="card" id="addRiskPanel" style="margin-bottom:16px;display:none">
         <h3>New risk</h3>
         <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px" id="riskAiDraftRow">
@@ -716,8 +716,9 @@
     <section class="view" id="v-actions">
       <div class="vhead"><div class="rule"></div><h1>Actions register</h1><p>Every action traces to a risk and a control. Completing an action prompts evidence capture and updates the linked risk's residual score — the audit trail builds itself. Also the home for non-conformities and observations raised during internal or external audits.</p></div>
       <div class="grid kpis reg-strip" id="actKpiRow"></div>
+      <div id="actTickets"></div>
       <div class="reg-tidy" id="actTidy"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddAction">+ Add action / finding</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actions">Export CSV</button><button class="btn ghost sm" data-action="App.importCsv" data-id="actions">Import CSV</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actionUpdates">Export progress log CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddAction">+ Add action / finding</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actions">Export CSV</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="actions">Excel</button><button class="btn ghost sm" data-action="App.importCsv" data-id="actions">Import CSV</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actionUpdates">Export progress log CSV</button></div>
       <div class="card" id="addActionPanel" style="margin-bottom:16px;display:none">
         <h3>New action / finding</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -762,7 +763,7 @@
       <div class="grid kpis reg-strip" id="vendorKpiRow"></div>
       <div class="reg-tidy" id="vendorTidy"></div>
       <div id="vendorDiscoverWrap"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddVendor">+ Add supplier</button><button class="btn ghost sm" data-action="App.discoverVendors">Find suppliers in Microsoft 365</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="vendors">Export CSV</button><button class="btn ghost sm" data-action="App.importCsv" data-id="vendors">Import CSV</button><button class="btn ghost sm" data-action="App.openRegisterReview" data-id="vendor">Review register</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddVendor">+ Add supplier</button><button class="btn ghost sm" data-action="App.discoverVendors">Find suppliers in Microsoft 365</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="vendors">Export CSV</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="vendors">Excel</button><button class="btn ghost sm" data-action="App.importCsv" data-id="vendors">Import CSV</button><button class="btn ghost sm" data-action="App.openRegisterReview" data-id="vendor">Review register</button></div>
       <div class="card" id="addVendorPanel" style="margin-bottom:16px;display:none">
         <h3 id="vendorPanelTitle">New supplier</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -933,6 +934,8 @@
       <div class="settings-subhead">Automation &amp; cadence</div>
       <p class="settings-subdesc">How often Checkpoint expects work to happen, and who it tells when it hasn't. The scheduled monitor (SETUP.md § Continuous monitoring) acts on these unattended once deployed.</p>
       <div class="card fw-admin-row" id="sodRow" style="max-width:680px;margin-bottom:16px"></div>
+      <div class="card fw-admin-row" id="approvalMatrixRow" style="max-width:680px;margin-bottom:16px"></div>
+      <div class="card fw-admin-row" id="riskAcceptSecondRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="riskAppetiteRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="scanCadenceRow" style="max-width:680px;margin-bottom:16px"></div>
       </div>
@@ -971,6 +974,10 @@
         <button class="btn sm" data-action="App.exportAllZip">Export all (zip)</button>
       </div>
       <div class="card fw-admin-row" style="max-width:680px">
+        <div><b>Export all registers (Excel)</b><p>One workbook with every register on its own sheet, with a frozen header row and filters. Built in this browser.</p></div>
+        <button class="btn sm" data-action="App.exportAllXlsx">Export all (Excel)</button>
+      </div>
+      <div class="card fw-admin-row" style="max-width:680px">
         <div><b>Backups</b><p>A dated zip of every register, the settings and an index of your evidence, saved into your own SharePoint (Documents › Checkpoint backups). The scheduled monitor writes one every week and keeps the newest 13; Back up now writes one straight away and downloads a copy.</p><p class="src" id="backupStatus"></p></div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><button class="btn sm" data-action="App.backupNow">Back up now</button><span id="backupToggleWrap"></span></div>
       </div>
@@ -981,7 +988,7 @@
     <!-- SOA -->
     <section class="view" id="v-soa">
       <div class="vhead"><div class="rule"></div><h1>Statement of Applicability</h1><p>One control set per purchased framework, cross-mapped to the others so shared evidence is never duplicated. Essential Eight is assessed by maturity level (ML1-ML3) per strategy against your target level, set in Frameworks — every other framework's full published control set ships ready to use.</p></div>
-      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="controls">Export CSV — every framework</button></div>
+      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="controls">Export CSV — every framework</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="controls">Excel — every framework</button><button class="btn ghost sm" data-action="App.exportRegisterWord" data-id="controls">Word — this framework</button></div>
       <p class="src" id="soaEvidenceFolders" style="margin:-6px 0 14px;font-size:12px"></p>
       <div id="soaEvidenceCheck"></div>
       <div id="soaExclusions"></div>
@@ -1072,7 +1079,7 @@
       <div class="grid kpis reg-strip" id="docRegisterSummary"></div>
       <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn sm" data-action="App.openDocTool" data-id="docGenerate">+ Generate a document</button><button class="btn ghost sm" data-action="App.generateDocumentSet">Generate full set</button><button class="btn ghost sm" data-action="App.openDocTool" data-id="docUpload">Upload</button>
-        <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button><button class="btn ghost sm" data-action="App.exportAllPolicies">Export all policies (ZIP)</button>
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="documents">Excel</button><button class="btn ghost sm" data-action="App.exportAllPolicies">Export all policies (ZIP)</button>
       </div>
       <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
       <!-- Filled by renderFocusBar() when a summary tile above is filtering
@@ -1374,6 +1381,7 @@
         <button class="btn sm" data-action="App.syncAssets" id="assetSyncBtn">Sync from Microsoft 365</button>
         <button class="btn ghost sm" data-action="App.toggleAddAsset">+ Add asset</button>
         <button class="btn ghost sm" data-action="App.exportCsv" data-id="assets">Export CSV</button>
+        <button class="btn ghost sm" data-action="App.exportXlsx" data-id="assets">Excel</button><button class="btn ghost sm" data-action="App.exportRegisterWord" data-id="assets">Word</button>
         <button class="btn ghost sm" data-action="App.importCsv" data-id="assets">Import CSV</button>
         <button class="btn ghost sm" data-action="App.openRegisterReview" data-id="asset">Review register</button>
         <button class="btn ghost sm" data-action="App.openLeavers">Owners who have left</button>
@@ -1403,7 +1411,7 @@
       <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn sm" data-action="App.seedLegalBaseline">Add Australian starting set</button>
         <button class="btn ghost sm" data-action="App.addLegalReq">+ Add requirement</button>
-        <button class="btn ghost sm" data-action="App.exportCsv" data-id="legal">Export CSV</button>
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="legal">Export CSV</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="legal">Excel</button>
         <button class="btn ghost sm" data-action="App.openRegisterReview" data-id="legal">Review register</button>
       </div>
       <div class="grid kpis reg-strip" id="legalKpiRow"></div>
@@ -1698,10 +1706,16 @@
 <script src="guidance.js"></script>
 <script src="templates.js"></script>
 <script src="courses.js"></script>
-<script src="changelog.js"></script>
 <script src="ai.js"></script>
 <script src="report.js"></script>
 <script src="selftest.js"></script>
 <script src="app.js"></script>
+<!-- Loaded on demand, not at start-up: the "What's new" list is ~200KB
+     read only when someone opens it. Inside a <template> the tag is
+     inert, but the build still content-hashes it and gives it an SRI
+     integrity attribute (scripts/hash-checkpoint-assets.mjs rewrites
+     it like any other tag); loadDeferredScript() in app.js copies both
+     onto the real <script> it adds. -->
+<template id="deferredScripts"><script src="changelog.js"></script></template>
 </body>
 </html>

@@ -8,12 +8,12 @@ tags: ["NIS2", "ISO 27001", "SaaS", "EU", "Supply Chain", "Australia"]
 image: "/assets/blog-iso27001.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>NIS2 is an EU directive. Your business is in Australia. It's a reasonable assumption that it doesn't apply to you — and it's often wrong.</p>
   <p>NIS2 doesn't just regulate EU entities directly. It pushes security obligations down their supply chains, contractually, to every vendor those entities rely on — including an Australian SaaS product sitting several steps removed from Brussels. If you have EU customers, there's a real chance this is already showing up in your contracts without anyone on your side clocking why.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Why an Australian business would ever need to care about an EU law
 
@@ -25,7 +25,7 @@ The practical effect: if you sell SaaS to a company operating in the EU, and tha
 - Vendor security questionnaires that look meaningfully more detailed than they used to
 - A customer suddenly asking, out of nowhere, "do you have ISO 27001?"
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## The signal to watch for
 
@@ -37,7 +37,7 @@ You don't need to interpret EU law yourself to know if this applies to you. Watc
 
 Any one of these is a reasonable prompt to ask the customer directly: "has your own NIS2 status changed what you need from us?" Most will tell you plainly if you ask — it's usually not a secret on their end, just something that hasn't been explained to you yet.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Why ISO 27001 is the practical answer either way
 
@@ -45,7 +45,7 @@ You don't need to become an expert in EU regulatory scope to respond to this. Th
 
 If you're already fielding more detailed security questionnaires from EU customers than you used to, that's the signal to get ahead of it — not wait for a deal to stall on a certification you don't have yet.
 
-<div style="background:#eff6ff;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #1e40af;">
+<div style="background:#FAF2EC;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #A63A12;">
   <p><strong>Selling into the EU and starting to see more detailed security questions?</strong> Worth a quick conversation before it becomes a blocker on a live deal rather than a proactive move.</p>
   <p style="margin-bottom:0">See our <a href="/services/iso27001/">ISO 27001 services</a>, try the <a href="/checklist/iso27001/">free readiness checklist</a>, or <a href="/book/">book a call</a> to talk through what your EU customers are actually asking for.</p>
 </div>

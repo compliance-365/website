@@ -8,12 +8,12 @@ tags: ["Essential Eight", "ACSC", "Australia", "Maturity Level"]
 image: "/assets/illus-essential-eight.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>The Australian Cyber Security Centre's Essential Eight Maturity Model defines three maturity levels. In practice, most organisations target ML2 — either because it's what government procurement requires, or because ML3 feels abstract and expensive.</p>
   <p>This post explains what materially changes between ML2 and ML3, which organisations genuinely need ML3, and what the real uplift looks like in a Microsoft 365 environment.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## What ML2 actually requires
 
@@ -25,7 +25,7 @@ At Maturity Level 2, the core intent is that security controls are consistently 
 
 For the Microsoft 365 environment, reaching ML2 typically means having Conditional Access policies that enforce MFA universally (with no bypass exceptions), application control via AppLocker or WDAC, Privileged Identity Management activated with time-bound admin access, and automated patching within 14 days of release for internet-facing services.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## What genuinely changes at ML3
 
@@ -51,7 +51,7 @@ ML2 requires that privileged accounts are minimised and don't have internet acce
 
 ML2 requires application control (AppLocker or WDAC) applied to prevent unapproved applications running. ML3 adds a requirement to **validate application control rules** through independent testing — not just deploying policy, but actively confirming that the controls can't be bypassed by commonly used attacker techniques.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Who actually needs ML3
 
@@ -67,7 +67,7 @@ ML3 is required or strongly expected in a small set of situations:
 
 For most mid-market Australian organisations without specific classified information handling obligations, [ML2 is the appropriate and sufficient target](/services/essential-eight/). Pursuing ML3 when ML2 satisfies procurement requirements is an expensive use of security budget that diverts from higher-impact improvements elsewhere.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## The practical ML3 uplift from ML2
 
@@ -83,7 +83,7 @@ For an organisation already at ML2 in a modern Microsoft 365 E5 environment, the
 
 The most significant effort is usually the phishing-resistant MFA rollout and the full-environment application control validation. In a well-managed M365 E5 environment, ML3 uplift typically takes 8–14 additional weeks beyond ML2.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## The most common ML3 gap we see
 

@@ -12,6 +12,29 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.149.0',
+    date: '2026-10-10',
+    entries: [
+      'Review before approval. In Settings \u2192 Approvals, choose which drafts a second person checks before they are approved: none, the information security policy, every policy or every generated document. The reviewer is asked through My tasks (and by email in your tenant) and records Reviewed or Changes requested with comments. The person who prepared a draft cannot review it, and the reviewer cannot approve it. Any edit after the review ends it. The review shows in the document history and on the sign-off table of the printed and Word copies.',
+      'Risk acceptance by the person accountable. With the second Approvals setting on, accepting a residual risk sends a request to the person accepting it, who records the decision signed in as themselves. The audit log shows who asked and who accepted.',
+      'Both settings are off by default, so a small team keeps a single approval step.',
+      'Requests from the auditor. During an audit, log each request the certification auditor makes, with who will answer and when it is due, and answer it with a note and an evidence link. The auditor reads every request and its answer in the Auditor guide, and the person answering sees open ones in My tasks. Checkpoint creates a new Audit Requests list for this.',
+      'Draft breach notices. A privacy-breach incident now drafts the statement to the OAIC and the notice to affected people, with the four things the Privacy Act requires: who you are and how to contact you, what happened, the information involved and what people should do. Checkpoint shows the three-part test for a notifiable breach first, and sends nothing.',
+      'Faster start-up: the What\u2019s new list now loads only when you open it, taking about 70KB off every start.',
+      'The demo can open on a particular screen, so the website\u2019s feature pages show the feature they describe.'
+    ]
+  },
+  {
+    version: '1.148.0',
+    date: '2026-10-10',
+    entries: [
+      'Actions can be worked as tickets in Planner, Jira or ServiceNow. A Power Automate flow in your tenant opens the ticket and keeps its status in a new Ticket Links list (POWER-AUTOMATE.md, flows 5 and 6). Each action shows its ticket, and when a ticket is done Checkpoint offers to complete the action, recording it in the progress log and audit log with the ticket as the reference. Nonconformities are never closed from a ticket: they open their corrective action record. You can also link a ticket by hand from the action.',
+      'Excel exports: every main register downloads as an Excel workbook with a frozen, filterable header, and Settings has one workbook with every register on its own sheet.',
+      'Word exports of the Statement of Applicability, risk register and asset register, as controlled documents: landscape, document control, the header row repeated on every page, and Page X of Y.',
+      'Every export is recorded in the audit log.'
+    ]
+  },
+  {
     version: '1.147.0',
     date: '2026-10-10',
     entries: [

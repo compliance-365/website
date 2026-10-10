@@ -8,14 +8,14 @@ tags: ["Checkpoint","ISO 27001","SOC 2","Essential Eight","AI Governance","Risk"
 image: "/assets/blog-checkpoint-console-launch.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>Most third-party compliance and GRC platforms ask for the same thing before they're useful: a copy of your riskiest data. Your risk register. Your audit findings. Your control gaps. Uploaded into someone else's SaaS, sitting in someone else's database, subject to someone else's breach notification process — and gone from your view the day you stop paying the licence.</p>
   <p>We built <strong>Checkpoint</strong> because that trade-off shouldn't be necessary. It's a compliance console that runs entirely against your own Microsoft 365 tenant — every register is a SharePoint list you already own, and every posture check reads your live Entra, Intune and Defender signals over Microsoft Graph. Nothing is copied anywhere. There is no backend to breach, because there is no backend.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 Why we built it
 </h2>
 
@@ -25,48 +25,48 @@ Why we built it
 
 <p>Checkpoint is our answer: keep the register where the data already lives.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 What's actually inside
 </h2>
 
-<div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
+<div style="background:#FAF7F1;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;margin:6px 0 0;font-size:0.96rem">
-    <thead style="background:#f3f4f6">
+    <thead style="background:#F5F0E8">
       <tr>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Module</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">What it does</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Module</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">What it does</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Posture scan</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">22 automated checks against your live tenant — MFA coverage, Conditional Access, PIM usage, guest accounts, device compliance, risky OAuth grants, Secure Score — with an optional scheduled monitor that flags drift daily.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Posture scan</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">22 automated checks against your live tenant — MFA coverage, Conditional Access, PIM usage, guest accounts, device compliance, risky OAuth grants, Secure Score — with an optional scheduled monitor that flags drift daily.</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Statement of Applicability</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">A living, per-framework control set — applicability, status, ownership, verification date, evidence link — the document your auditor opens first.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Statement of Applicability</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">A living, per-framework control set — applicability, status, ownership, verification date, evidence link — the document your auditor opens first.</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Risk &amp; actions register</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Scan findings propose risks; approving one creates treatment actions; completing actions recalculates residual risk automatically.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Risk &amp; actions register</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Scan findings propose risks; approving one creates treatment actions; completing actions recalculates residual risk automatically.</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Vendor risk register</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Records exactly what data each vendor can access and suggests a criticality tier from it — see below.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Vendor risk register</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Records exactly what data each vendor can access and suggests a criticality tier from it — see below.</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>AI governance</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">An ISO 42001-aligned AI systems register with EU AI Act risk tiers, plus discovery that spots Copilot and other AI apps already consented to in your tenant.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>AI governance</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">An ISO 42001-aligned AI systems register with EU AI Act risk tiers, plus discovery that spots Copilot and other AI apps already consented to in your tenant.</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Governance rhythm</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Internal audit programme, management review records, a compliance calendar and an append-only audit log — clauses 9.2 and 9.3 satisfied continuously, not assembled the week before audit.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Governance rhythm</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Internal audit programme, management review records, a compliance calendar and an append-only audit log — clauses 9.2 and 9.3 satisfied continuously, not assembled the week before audit.</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Reporting</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">SoA export, audit readiness report, board view, and a time-boxed Auditor Pack your certifier can open without needing a licence.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Reporting</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">SoA export, audit readiness report, board view, and a time-boxed Auditor Pack your certifier can open without needing a licence.</td>
       </tr>
     </tbody>
   </table>
@@ -74,9 +74,9 @@ What's actually inside
 
 <p style="margin-top:16px">Nine frameworks are cross-mapped so the same piece of evidence — an MFA enforcement screenshot, a signed policy — satisfies every framework it's relevant to, once: ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP, IS18 (QGEA), RFFR and NIST CSF.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 The part we think matters most: vendor risk that asks the right question
 </h2>
 
@@ -88,9 +88,9 @@ The part we think matters most: vendor risk that asks the right question
   <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#BE4A1E"><use href="#ic-insight"/></svg> The same classification feeds the vendor questionnaire Checkpoint drafts for you — it asks specifically about the data categories you've flagged, storage location and encryption, instead of a generic one-size-fits-all form.
 </blockquote>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 How the "no backend" part actually works
 </h2>
 
@@ -106,17 +106,17 @@ How the "no backend" part actually works
 
 <p>The practical result: if you ever stop using Checkpoint, nothing needs to be exported, migrated or deleted from a third-party system, because there never was one. Your risk register was a SharePoint list before Checkpoint touched it, and it still is.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 Who it's for
 </h2>
 
 <p>Checkpoint is built for organisations already running on Microsoft 365 who are pursuing — or maintaining — ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP, IS18, RFFR or NIST CSF alignment, and for the consultants who run those engagements for them. It doesn't replace an accredited certification body's audit; it replaces the spreadsheet, the disconnected GRC platform, and the week of evidence-gathering panic before a surveillance audit.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 Try it
 </h2>
 

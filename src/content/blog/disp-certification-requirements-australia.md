@@ -8,12 +8,12 @@ tags: ["DISP", "Defence", "ISM", "IRAP", "Australia"]
 image: "/assets/illus-disp-ism-irap.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>The Defence Industry Security Program (DISP) is the Australian Government's framework for assessing whether defence industry organisations have the security maturity to handle defence contracts, particularly those involving classified or sensitive information.</p>
   <p>DISP membership is increasingly expected — and in many cases required — for Australian companies wanting to participate in Defence procurement. This post explains what the assessment actually looks at, what the membership levels mean in practice, and what organisations typically need to do to get there.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## What DISP actually assesses
 
@@ -31,7 +31,7 @@ This is where most of the technical uplift effort concentrates. DISP ICT securit
 **4. Industrial security**
 How you protect classified assets, subcontract obligations, offshore restrictions, and supply chain security. Relevant if you're subcontracting or if you have offshore development or processing.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## The DISP membership levels
 
@@ -46,7 +46,7 @@ Required for organisations that need to access or handle PROTECTED information �
 **NV1 / NV2**
 The highest DISP membership tiers, relevant for organisations whose staff need to access Secret or Top Secret information. These involve formal security clearance requirements for personnel, not just organisational assessment. Most commercial defence contractors operate at Entry Level or Baseline.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## What the assessment process looks like
 
@@ -59,7 +59,7 @@ The DISP assessment is conducted by Defence Security and Vetting (DSVA), part of
 
 Timelines vary but the assessment process typically runs 3–6 months from submission to decision. Having well-organised documentation significantly accelerates this — assessors are doing a large number of assessments and respond well to clear, indexed evidence.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## The most common DISP application failures
 
@@ -73,7 +73,7 @@ After working through a number of DISP engagements, the recurring patterns that 
 
 **Incomplete subcontractor management.** If you work with subcontractors on defence contracts, you need documented arrangements for how you manage their DISP-related obligations. This is frequently overlooked in the initial application.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## DISP and IRAP: how they relate
 
@@ -86,7 +86,7 @@ DISP membership and IRAP assessment are not the same thing, but they're often pu
 
 For most commercial defence suppliers, DISP membership is the primary requirement. IRAP becomes relevant if you're operating or hosting systems that process classified information on behalf of Defence.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Practical preparation timeline
 
@@ -102,7 +102,7 @@ For an organisation starting with no formal security programme:
 
 For organisations already at Essential Eight ML2 with documented governance, the timeline compresses significantly — typically 6–8 weeks to get application-ready.
 
-<div style="background:#eff6ff;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #1e40af;">
+<div style="background:#FAF2EC;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #A63A12;">
   <p><strong>Working toward DISP membership?</strong> We help Australian defence industry organisations through DISP application preparation — security governance setup, ISM/Essential Eight alignment, evidence organisation, and application support. Fixed-price, practical, and scoped to what your DISP level actually requires.</p>
   <p style="margin-bottom:0">A 30-minute call will tell you where your gaps are and what a realistic path to membership looks like.</p>
 </div>

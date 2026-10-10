@@ -913,7 +913,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'setActionField', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'addAuditRequest', 'answerAuditRequest', 'closeAuditRequest', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -4970,6 +4970,7 @@ function showModal(opts) {
       '</tbody></table>';
     var approvalHtml = '<div class="dc-h">Approval</div><table class="rec"><thead><tr><th>Role</th><th>Name</th><th>Date</th><th>Signature</th></tr></thead><tbody>' +
       '<tr><td>Document owner</td><td>' + esc(opts.owner || '—') + '</td><td></td><td class="sig"></td></tr>' +
+      (opts.reviewedBy ? '<tr><td>Reviewed by</td><td>' + esc(opts.reviewedBy) + '</td><td>' + esc(opts.reviewDateText || '') + '</td><td class="sig">' + (opts.reviewSignature ? '<span class="esig">' + esc(opts.reviewSignature) + '</span>' : '') + '</td></tr>' : '') +
       '<tr><td>Approved by</td><td>' + (opts.approved ? esc(opts.approvedBy || '—') : 'Pending') + '</td><td>' + (opts.approved ? esc(approvedOn) : '') + '</td><td class="sig">' + (opts.approved && opts.approvalSignature ? '<span class="esig">' + esc(opts.approvalSignature) + '</span>' : '') + '</td></tr>' +
       '</tbody></table>';
     var frontHtml = '<div class="dc-h dc-first">Document control</div><table class="dctl"><tbody>' + dctlRows.map(function (r) {
@@ -5306,6 +5307,14 @@ function showModal(opts) {
      given and what the signature cell says. `pending` is an approval
      being saved now ({ version, approvedBy, date }), not yet in the
      audit log. */
+  /* A review is recorded by the signed-in reviewer, so it is an
+     electronic record unless someone else entered it. */
+  function reviewSignatureText(r) {
+    var on = r.date ? ' on ' + longDocDate(r.date) : '';
+    return r.recordedBy && window.CheckpointLib.samePersonName(r.recordedBy, r.reviewer)
+      ? 'Reviewed electronically in Checkpoint by ' + r.recordedBy + on
+      : 'Review recorded in Checkpoint' + (r.recordedBy ? ' by ' + r.recordedBy : '') + on;
+  }
   function docControlFor(docName, doc, pending) {
     var L = window.CheckpointLib;
     var log = S.auditLog || [];
@@ -5322,11 +5331,18 @@ function showModal(opts) {
       if (!rec && doc && doc.approvedBy) rec = { approvedBy: doc.approvedBy, recordedBy: '', date: doc.approvalDate || '' };
     }
     var date = (pending && pending.date) || (doc && doc.approvalDate) || (rec && rec.date) || '';
+    /* The second-person review this approval rests on: the standing one
+       while approving now, the one the last approval was given on after. */
+    var rv = L.docSignoffReviewState(log, docName);
+    var review = pending ? (rv.current && rv.current.outcome === 'Reviewed' ? rv.current : null) : approved ? rv.atApproval : null;
     return {
       history: history.map(function (r) { return Object.assign({}, r, { dateText: longDocDate(r.date) }); }),
       approvalDate: approved ? date : '',
       approvalDateText: approved && date ? longDocDate(date) : '',
-      approvalSignature: approved && rec ? L.approvalSignatureText(rec, rec.date ? longDocDate(rec.date) : '') : ''
+      approvalSignature: approved && rec ? L.approvalSignatureText(rec, rec.date ? longDocDate(rec.date) : '') : '',
+      reviewedBy: review ? review.reviewer : '',
+      reviewDateText: review && review.date ? longDocDate(review.date) : '',
+      reviewSignature: review ? reviewSignatureText(review) : ''
     };
   }
   async function saveApprovedTemplate(name, category, t, params, existing, vals, sodFinding, quiet) {
@@ -5813,6 +5829,28 @@ function showModal(opts) {
   }
 
 
+
+  /* A script kept out of start-up (index.html's #deferredScripts
+     template), loaded the first time it is needed, with the same
+     content-hashed name and SRI integrity the build gave its tag. */
+  var _deferredLoads = {};
+  function loadDeferredScript(name) {
+    if (_deferredLoads[name]) return _deferredLoads[name];
+    _deferredLoads[name] = new Promise(function (resolve, reject) {
+      var tpl = document.getElementById('deferredScripts');
+      var tag = tpl && Array.prototype.find.call(tpl.content.querySelectorAll('script'), function (x) {
+        return (x.getAttribute('src') || '').replace(/\.[0-9a-f]{10}\.js$/, '.js').replace(/\?.*$/, '') === name;
+      });
+      if (!tag) { reject(new Error(name + ' is not in #deferredScripts')); return; }
+      var el = document.createElement('script');
+      el.src = tag.getAttribute('src');
+      if (tag.getAttribute('integrity')) { el.integrity = tag.getAttribute('integrity'); el.crossOrigin = 'anonymous'; }
+      el.onload = function () { resolve(); };
+      el.onerror = function () { delete _deferredLoads[name]; reject(new Error('Could not load ' + name)); };
+      document.body.appendChild(el);
+    });
+    return _deferredLoads[name];
+  }
 
   /* ================= render ================= */
   function renderNavCounts() {
@@ -6536,6 +6574,7 @@ function showModal(opts) {
     var ms = lastResultDate('');
     var aws = lastResultDate('aws-'), gh = lastResultDate('gh-');
     var demo = Store.kind !== 'sharepoint';
+    var ticketsLast = (S.ticketLinks || []).reduce(function (m, l) { var d = String(l.updated || '').slice(0, 10); return d > m ? d : m; }, '');
     el.innerHTML =
       card({ name: 'Microsoft 365', what: 'Entra ID, Intune, Defender, Purview, Exchange and SharePoint, read through Microsoft Graph when a posture scan runs.', st: ms ? status(ms, 45) : { cls: 'off', text: 'No scan yet' }, meta: checks('') + ' checks · runs when someone clicks Run posture scan, or on a schedule with the monitor below', body: '' }) +
       card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the leadership security meeting and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: lastAuto ? '<p class="src">Reporting: an automated scan was recorded on ' + fmtDate(lastAuto) + '. Deployment steps are in azure/README.md.</p>' : '<div id="monitorSetupPanel"></div>' }) +
@@ -6552,7 +6591,15 @@ function showModal(opts) {
           '<li><b>GitHub App.</b> Create a private GitHub App with read-only access to administration, code scanning alerts, Dependabot alerts, secret scanning alerts and members; install it on the organisation.</li>' +
           '<li><b>Workflow.</b> Add <code>public/checkpoint/github/checkpoint-github-collector.yml</code> and its <code>collector/</code> folder to a repository in the organisation.</li>' +
           '<li><b>Settings for the workflow.</b>' + envTable([['vars.CHECKPOINT_GH_APP_ID', '', 'The GitHub App\u2019s ID'], ['secrets.CHECKPOINT_GH_APP_PRIVATE_KEY', '', 'The GitHub App\u2019s private key'], ['vars.CHECKPOINT_TENANT_ID', tenantId, 'Your Entra tenant ID'], ['vars.CHECKPOINT_CLIENT_ID', '', 'The app registration\u2019s client ID'], ['secrets.CHECKPOINT_CLIENT_SECRET', '', 'Its client secret'], ['vars.CHECKPOINT_SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['vars.CHECKPOINT_SP_SITE_PATH', path, 'Leave out for the root site']]) + '</li>' +
-          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' });
+          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' }) +
+      card({ name: 'Planner, Jira and ServiceNow', what: 'Actions worked as tickets: a Power Automate flow in your own tenant creates the ticket and records its status in the Ticket Links list; Checkpoint shows it on the action and offers to complete the action when the ticket is done.',
+        st: ticketsLast ? status(ticketsLast, 30) : { cls: 'off', text: 'Not set up' },
+        meta: (S.ticketLinks || []).length + ' linked ticket' + ((S.ticketLinks || []).length === 1 ? '' : 's') + ' · nothing changes an action without your confirmation, and every change is in the audit log',
+        body: '<ol class="integ-steps">' +
+          '<li><b>Pick the flow.</b> <a href="POWER-AUTOMATE.md" target="_blank" rel="noopener">POWER-AUTOMATE.md, flows 5 and 6</a>, for Planner, Jira or ServiceNow. Planner uses a standard connector; check your plan for the Jira or ServiceNow connector (ServiceNow is premium).</li>' +
+          '<li><b>Create.</b> When an action is created in <code>' + esc((typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint') + ' Actions</code>, the flow opens the ticket and adds a row to <code>' + esc((typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint') + ' TicketLinks</code> (Title = ticket ID, ActionRef, System, TicketUrl, TicketStatus, UpdatedAt).</li>' +
+          '<li><b>Keep it current.</b> When the ticket changes, the flow updates that row’s TicketStatus and UpdatedAt. It never edits the Actions list.</li>' +
+          '<li><b>Without a flow.</b> Open an action and choose <b>Link ticket</b> to paste a ticket’s link by hand.</li></ol>' });
     /* The step-by-step guide lives inside the Azure card's "How to set
        it up", not in a separate card at the bottom of the page. */
     if (!lastAuto) renderMonitorSetupPanel();
@@ -9172,6 +9219,8 @@ function showModal(opts) {
       if (f === 'Overdue') return overdue(a); return a.status !== 'Done' && a.status !== 'Cancelled';
     });
     actList = sortActionsForGroup(actList);
+    var tickets = window.CheckpointLib.latestTicketLinks(S.ticketLinks || []);
+    renderTicketSync();
     var rowStrs = actList.map(function (a) {
       var od = overdue(a);
       var days = overdueDays(a);
@@ -9184,6 +9233,7 @@ function showModal(opts) {
         bulkCheckbox('act-sel', 'App.toggleActSel', a.id, a.id, _actSel.has(a.id)) +
         '<button class="lnk" data-action="App.openAction" data-id="' + a.id + '">' + a.id + '</button>' +
         (updCount ? '<div class="src">' + updCount + ' update' + (updCount > 1 ? 's' : '') + '</div>' : '') +
+        (tickets[a.id] ? '<div class="tk-row">' + ticketChipHtml(tickets[a.id]) + '</div>' : '') +
         '</td><td class="act-title" style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
         '<td class="id-t">' + (a.risk ? esc(a.risk) : '—') + '<div class="src">' + esc(a.control || '') + '</div></td>' +
@@ -9335,6 +9385,60 @@ function showModal(opts) {
      warned) — callers decide what to do next (toast text, whether to
      also touch a linked risk) rather than this doing it uniformly,
      since completing an action's toast differs from a plain note's. */
+  /* ── Ticket links (Planner, Jira, ServiceNow) ──────────────────────
+     Rows in the Ticket Links list, written by the client's own Power
+     Automate flow (POWER-AUTOMATE.md, flows 5 to 7) or linked by hand.
+     Checkpoint never lets the ticket change an action by itself: it
+     shows the ticket and offers to close the action when the ticket is
+     finished, through recordActionUpdate() and the audit log. */
+  function actionDoneDates() {
+    var d = {};
+    (S.actionUpdates || []).forEach(function (u) { if (u.status === 'Done' && u.action) d[u.action] = u.date; });
+    return d;
+  }
+  function ticketSyncState() {
+    return window.CheckpointLib.ticketSyncProposals(S.actions || [], S.ticketLinks || [], actionDoneDates());
+  }
+  function ticketFor(actionId) {
+    return window.CheckpointLib.latestTicketLinks(S.ticketLinks || [])[actionId] || null;
+  }
+  function ticketChipHtml(l) {
+    if (!l) return '';
+    var cat = window.CheckpointLib.ticketStatusCategory(l.status);
+    var label = esc(l.system || 'Ticket') + ' ' + esc(l.key || '');
+    return (l.url && isSafeUrl(l.url) ? '<a class="tk-chip tk-' + cat + '" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + label + '</a>' : '<span class="tk-chip tk-' + cat + '">' + label + '</span>') +
+      (l.status ? ' <span class="src">' + esc(l.status) + '</span>' : '');
+  }
+  /* Proposals Checkpoint can apply from a ticket alone: not
+     nonconformities, which need a corrective action record. */
+  function ticketAutoProposals(st) {
+    return st.close.filter(function (p) { return !window.CheckpointLib.capaStatus(p.action).isNc; });
+  }
+  function renderTicketSync() {
+    var el = document.getElementById('actTickets');
+    if (!el) return;
+    var st = ticketSyncState();
+    if (READONLY || (!st.close.length && !st.reopened.length)) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="card tk-sync">' +
+      (st.close.length
+        ? '<h3>' + st.close.length + ' linked ticket' + (st.close.length === 1 ? ' is' : 's are') + ' finished</h3><ul class="tk-list">' +
+          st.close.map(function (p) {
+            /* A nonconformity also needs its root cause and an
+               effectiveness review before it closes; a ticket can't
+               supply those, so it opens the corrective action instead. */
+            var nc = window.CheckpointLib.capaStatus(p.action).isNc;
+            return '<li><b>' + esc(p.action.id) + '</b> ' + esc(p.action.title) + ' — ' + ticketChipHtml(p.link) +
+              (nc ? ' <button class="btn ghost sm" data-action="App.recordCapa" data-id="' + esc(p.action.id) + '">Record corrective action</button>'
+                : ' <button class="btn ghost sm" data-action="App.applyTicketSync" data-id="' + esc(p.action.id) + '">' + (p.to === 'Done' ? 'Complete' : 'Close') + '</button>') + '</li>';
+          }).join('') + '</ul>' +
+          (ticketAutoProposals(st).length > 1 ? '<button class="btn sm" data-action="App.applyTicketSync" data-id="*">Update all ' + ticketAutoProposals(st).length + '</button>' : '')
+        : '') +
+      (st.reopened.length
+        ? '<p class="src" style="margin-top:10px">Reopened since the action was completed: ' + st.reopened.map(function (p) { return '<b>' + esc(p.action.id) + '</b> (' + ticketChipHtml(p.link) + ')'; }).join(', ') + '. Reopen the action if the work is not finished.</p>'
+        : '') +
+      '</div>';
+  }
+
   async function recordActionUpdate(a, opts) {
     var note = (opts && opts.note || '').trim();
     var evidenceUrl = (opts && opts.evidenceUrl || '').trim();
@@ -11636,6 +11740,12 @@ function showModal(opts) {
       if (me.indexOf(o.owner.toLowerCase()) !== -1 || (o.email && me.indexOf(o.email.toLowerCase()) !== -1)) items = items.concat(o.items);
     });
     myApprovalRequests().forEach(function (r) { items.push({ kind: 'Approve document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
+    myReviewRequests().forEach(function (r) { items.push({ kind: 'Check document', ref: r.key, title: r.name, due: r.requested || '', overdue: false }); });
+    var todayAr = new Date().toISOString().slice(0, 10);
+    window.CheckpointLib.auditRequestView(S.auditRequests || [], todayAr).rows.forEach(function (r) {
+      if ((r.state === 'open' || r.state === 'overdue') && r.owner && me.indexOf(String(r.owner).toLowerCase()) !== -1) items.push({ kind: 'Audit request', ref: r.id, title: r.title, due: r.due || '', overdue: r.state === 'overdue' });
+    });
+    myRiskAcceptRequests().forEach(function (r) { items.push({ kind: 'Accept risk', ref: r.risk, title: r.risk + ' ' + (r.title || ''), due: r.requested || '', overdue: false }); });
     items = items.concat(secReviewTasksFor(me));
     (S.reviews || []).forEach(function (r) {
       var rec = window.CheckpointLib.parseReviewRecord(r.record);
@@ -11647,7 +11757,8 @@ function showModal(opts) {
     }
     items.sort(function (a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999')); });
     var owners = lists.map(function (o) { return o.owner; });
-    approvalRequests().forEach(function (r) { if (r.approver && owners.indexOf(r.approver) === -1) owners.push(r.approver); });
+    docRequests().forEach(function (r) { if (r.approver && owners.indexOf(r.approver) === -1) owners.push(r.approver); });
+    riskAcceptRequests().forEach(function (r) { if (r.acceptor && owners.indexOf(r.acceptor) === -1) owners.push(r.acceptor); });
     return { items: items, owners: owners };
   }
   function myTaskButton(i) {
@@ -11660,6 +11771,9 @@ function showModal(opts) {
     if (i.kind === 'Acknowledge policy') return b('App.acknowledgeAttestation', i.ref, 'Read and acknowledge');
     if (i.kind === 'Training') return b('App.go', 'training', 'Start');
     if (i.kind === 'Approve document') return b('App.approveRequested', i.ref, 'Review and approve');
+    if (i.kind === 'Check document') return b('App.reviewRequested', i.ref, 'Check it');
+    if (i.kind === 'Accept risk') return b('App.acceptRequestedRisk', i.ref, 'Decide');
+    if (i.kind === 'Audit request') return b('App.answerAuditRequest', i.ref, 'Answer');
     if (i.kind === 'Sign off minutes') return b('App.openReview', i.ref, 'Read and sign off');
     if (i.kind === 'Decision') return buildItemButton({ id: i.ref }, true);
     if (i.kind === 'Security review') return b(/^Record/.test(i.title) ? 'App.recordSecurityReview' : 'App.openSecurityReview', i.ref, /^Record/.test(i.title) ? 'Record minutes' : 'Open agenda');
@@ -11762,7 +11876,25 @@ function showModal(opts) {
         }).join('') : '<p class="src">No auditor has access.</p>') +
         '<button class="btn sm" style="margin-top:10px" data-action="App.grantAuditorAccess">Give an auditor access</button></div>';
     }
-    el.innerHTML = notice + guide + admin;
+    el.innerHTML = notice + guide + (me && me.state === 'expired' ? '' : auditRequestsHtml()) + admin;
+  }
+
+  /* The auditor's requests during an audit: logged and answered by a
+     practitioner, read by the auditor here. */
+  function auditRequestsHtml() {
+    var v = window.CheckpointLib.auditRequestView(S.auditRequests || [], new Date().toISOString().slice(0, 10));
+    var chip = { overdue: '<span class="chip st-Open">Overdue</span>', open: '<span class="chip st-Inprogress">Open</span>', answered: '<span class="chip st-Implemented">Answered</span>', closed: '<span class="chip st-Notstarted">Closed</span>' };
+    var rows = v.rows.map(function (r) {
+      return '<div style="padding:10px 0;border-top:1px solid var(--line);font-size:13px">' +
+        '<div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start"><div><span class="id-t">' + esc(r.id) + '</span> <b>' + esc(r.title) + '</b> ' + chip[r.state] +
+        '<div class="src">' + (r.requestedBy ? esc(r.requestedBy) + ' · ' : '') + 'asked ' + fmtDate(r.requested) + (r.due ? ' · due ' + fmtDate(r.due) : '') + (r.owner ? ' · ' + esc(r.owner) : '') + '</div>' +
+        (r.request && r.request !== r.title ? '<div style="color:var(--paper-dim);margin-top:4px">' + esc(r.request) + '</div>' : '') +
+        (r.response ? '<div style="margin-top:6px"><b>Answer' + (r.answered ? ' (' + fmtDate(r.answered) + ')' : '') + ':</b> ' + esc(r.response) + (r.evidenceUrl && isSafeUrl(r.evidenceUrl) ? ' <a class="lnk" href="' + esc(r.evidenceUrl) + '" target="_blank" rel="noopener">Evidence</a>' : '') + '</div>' : '') +
+        '</div>' + (READONLY || r.state === 'closed' ? '' : '<span style="white-space:nowrap"><button class="btn ghost sm" data-action="App.answerAuditRequest" data-id="' + esc(r.id) + '">' + (r.state === 'answered' ? 'Update' : 'Answer') + '</button>' + (r.state === 'answered' ? ' <button class="btn ghost sm" data-action="App.closeAuditRequest" data-id="' + esc(r.id) + '">Close</button>' : '') + '</span>') + '</div></div>';
+    }).join('');
+    return '<div class="card" id="auditRequests" style="padding:14px 16px;margin-bottom:16px"><h3 style="margin:0 0 6px">Requests from the auditor</h3>' +
+      '<p class="src" style="margin:0 0 6px">' + (v.rows.length ? v.waiting + ' waiting' + (v.counts.overdue ? ', ' + v.counts.overdue + ' overdue' : '') + ' · ' + v.counts.answered + ' answered · ' + v.counts.closed + ' closed' : 'Nothing requested yet. Log each request the auditor makes, so they can see its answer here and nothing is lost in email.') + '</p>' +
+      rows + (READONLY ? '' : '<button class="btn sm" style="margin-top:10px" data-action="App.addAuditRequest">+ Log a request</button>') + '</div>';
   }
 
   function auditWorkpackFor(a) {
@@ -12471,8 +12603,57 @@ function showModal(opts) {
      information security policy, top management: Clause 5.2). Kept in
      Settings (approvalRequests, JSON); shown in that person's My tasks,
      where Approve opens the same approval dialog, signed in as them. */
-  function approvalRequests() {
+  /* Every open request, approvals and reviews (kind: 'review'). Saved
+     whole, so a change to one kind keeps the other. */
+  function docRequests() {
     try { var a = JSON.parse((S.settings && S.settings.approvalRequests) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  function approvalRequests() { return docRequests().filter(function (r) { return r.kind !== 'review'; }); }
+  function reviewRequests() { return docRequests().filter(function (r) { return r.kind === 'review'; }); }
+  function reviewRequestFor(key) { return reviewRequests().find(function (r) { return r.key === key; }) || null; }
+  async function replaceDocRequest(key, kind, req) {
+    await saveApprovalRequests(docRequests().filter(function (r) { return !(r.key === key && (r.kind === 'review') === (kind === 'review')); }).concat(req ? [req] : []));
+  }
+  function myRequestNames() {
+    return Store.kind === 'demo' && window._myTasksAs ? [String(window._myTasksAs).toLowerCase()] : [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+  }
+  function myReviewRequests() {
+    var me = myRequestNames();
+    return reviewRequests().filter(function (r) {
+      return me.indexOf(String(r.approver || '').toLowerCase()) !== -1 || (r.approverEmail && me.indexOf(String(r.approverEmail).toLowerCase()) !== -1);
+    });
+  }
+  /* The approval matrix: which documents need a second person's review
+     before approval (Settings → Approvals). */
+  function docReviewLevel() {
+    var v = (S.settings && S.settings.docReviewLevel) || '';
+    return window.CheckpointLib.DOC_REVIEW_LEVELS.indexOf(v) > -1 ? v : '';
+  }
+  function docReviewNeeded(name, t) {
+    return window.CheckpointLib.docNeedsReview(docReviewLevel(), { name: name, title: t && t.title, docKind: t && t.docKind });
+  }
+  function templateForDoc(d) {
+    var id = d && d.tplId;
+    if (!id) {
+      var gen = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === (d && d.name) && e.action === 'Policy template generated'; });
+      try { id = gen && JSON.parse(gen.after).tplId; } catch (e) { id = ''; }
+    }
+    return id ? (window.POLICY_TEMPLATES || []).find(function (x) { return x.id === id; }) || null : null;
+  }
+  function riskAcceptSecond() { return S.settings && S.settings.riskAcceptSecond === 'true'; }
+  function riskAcceptRequests() {
+    try { var a = JSON.parse((S.settings && S.settings.riskAcceptRequests) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  async function saveRiskAcceptRequests(list) {
+    S.settings.riskAcceptRequests = JSON.stringify(list);
+    await Store.setSetting('riskAcceptRequests', S.settings.riskAcceptRequests);
+  }
+  function riskAcceptRequestFor(id) { return riskAcceptRequests().find(function (r) { return r.risk === id; }) || null; }
+  function myRiskAcceptRequests() {
+    var me = myRequestNames();
+    return riskAcceptRequests().filter(function (r) {
+      return me.indexOf(String(r.acceptor || '').toLowerCase()) !== -1 || (r.acceptorEmail && me.indexOf(String(r.acceptorEmail).toLowerCase()) !== -1);
+    });
   }
   async function saveApprovalRequests(list) {
     S.settings.approvalRequests = JSON.stringify(list);
@@ -12482,7 +12663,7 @@ function showModal(opts) {
   /* Requests addressed to the signed-in person (or, in the demo, the
      person being viewed as). */
   function myApprovalRequests() {
-    var me = Store.kind === 'demo' && window._myTasksAs ? [String(window._myTasksAs).toLowerCase()] : [myDisplayName(), myUpn()].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+    var me = myRequestNames();
     return approvalRequests().filter(function (r) {
       return me.indexOf(String(r.approver || '').toLowerCase()) !== -1 || (r.approverEmail && me.indexOf(String(r.approverEmail).toLowerCase()) !== -1);
     });
@@ -12822,8 +13003,19 @@ function showModal(opts) {
           actions.push(isOwnDoc(d)
             ? '<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Approve</button>'
             : '<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
-          if (!isOwnDoc(d) && !READONLY) {
-            var reqd = approvalRequestFor(d.category + '|' + d.name);
+          var docKey = d.category + '|' + d.name;
+          var rvNeeded = !isOwnDoc(d) && docReviewNeeded(d.name, templateForDoc(d));
+          var rvNow = rvNeeded ? window.CheckpointLib.docSignoffReviewState(S.auditLog, d.name).current : null;
+          if (rvNeeded && !(rvNow && rvNow.outcome === 'Reviewed')) {
+            var rvReq = reviewRequestFor(docKey);
+            if (rvReq) actions.push('<span class="src" title="Requested ' + esc(rvReq.requested) + '">Review: ' + esc(rvReq.approver) + '</span>');
+            else {
+              if (rvNow) actions.push('<span class="verify-stale" title="' + esc(rvNow.comment) + '">Changes requested</span>');
+              if (!READONLY) actions.push('<button class="btn ghost sm" data-action="App.requestReview" data-id="' + esc(docKey) + '">' + (rvNow ? 'Ask again' : 'Ask for review') + '</button>');
+            }
+          } else if (!isOwnDoc(d) && !READONLY) {
+            if (rvNow) actions.push('<span class="src" title="Reviewed by ' + esc(rvNow.reviewer) + ' on ' + esc(rvNow.date) + '">Reviewed</span>');
+            var reqd = approvalRequestFor(docKey);
             actions.push(reqd
               ? '<span class="src" title="Requested ' + esc(reqd.requested) + '">Awaiting ' + esc(reqd.approver) + '</span>'
               : '<button class="btn ghost sm" data-action="App.requestApproval" data-id="' + esc(d.category + '|' + d.name) + '">Request approval</button>');
@@ -16128,6 +16320,21 @@ function showModal(opts) {
         '<button class="btn ghost sm" data-action="App.toggleSod">' + (sodOn ? 'Enforced' : 'Off') + '</button>';
     }
 
+    var matrixEl = document.getElementById('approvalMatrixRow');
+    if (matrixEl) {
+      var lvl = docReviewLevel();
+      var lvlLabels = { '': 'No review step', isp: 'Information security policy', policies: 'All policies', all: 'All generated documents' };
+      matrixEl.innerHTML = '<div><b>Approvals: review before approval</b><p>Which drafts a second person checks before they go for approval. The reviewer cannot have prepared the document or approve it, and their name and the date go on the document. Leave it at no review step if only one or two people use Checkpoint.</p></div>' +
+        '<select class="mini" data-change-action="App.setDocReviewLevel" aria-label="Documents that need a review before approval">' +
+        window.CheckpointLib.DOC_REVIEW_LEVELS.map(function (k) { return '<option value="' + k + '"' + (lvl === k ? ' selected' : '') + '>' + lvlLabels[k] + '</option>'; }).join('') +
+        '</select>';
+    }
+    var riskSecondEl = document.getElementById('riskAcceptSecondRow');
+    if (riskSecondEl) {
+      riskSecondEl.innerHTML = '<div><b>Approvals: risk acceptance by the person accountable</b><p>When on, accepting a residual risk sends it to the person accepting it, who records the decision signed in as themselves. Someone else must have asked for it. When off, a practitioner can record an acceptance on someone\u2019s behalf.</p></div>' +
+        '<button class="btn ghost sm" data-action="App.toggleRiskAcceptSecond">' + (riskAcceptSecond() ? 'On' : 'Off') + '</button>';
+    }
+
     var appetiteEl = document.getElementById('riskAppetiteRow');
     if (appetiteEl) {
       var current = (S.settings && S.settings.riskAppetite) || 'Medium';
@@ -17442,6 +17649,65 @@ function showModal(opts) {
     groupActions: function (g) { _actGroup = g || 'none'; renderActions(); },
     /* id = 'ACT-001|owner' etc. A status change is logged like any other
        progress update; Completed asks for the evidence. */
+    /* Completes (or closes) actions whose linked ticket is finished.
+       id = one action ID, or '*' for every proposal. */
+    applyTicketSync: async function (id) {
+      var props = ticketAutoProposals(ticketSyncState()).filter(function (p) { return id === '*' || p.action.id === id; });
+      if (!props.length) return;
+      if (props.length > 1) {
+        var ok = await showModal({
+          title: 'Update ' + props.length + ' actions from their tickets',
+          message: props.map(function (p) { return '• ' + p.action.id + ' → ' + actionStatusLabel(p.to) + ' (' + p.link.system + ' ' + p.link.key + ': ' + p.link.status + ')'; }).join('\n') +
+            '\n\nEach is recorded in the action’s progress log and the audit log, with the ticket as the reference.',
+          confirmText: 'Update ' + props.length
+        });
+        if (!ok) return;
+      }
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < props.length; i++) {
+        var p = props[i], a = p.action, l = p.link;
+        var ref = (l.system || 'Ticket') + ' ' + (l.key || '');
+        var upd = await recordActionUpdate(a, {
+          status: p.to,
+          note: (p.to === 'Done' ? 'Completed' : 'Closed') + ': ' + ref + ' is ' + (l.status || 'finished') + '.',
+          evidenceUrl: p.to === 'Done' && !a.evidenceUrl && l.url && isSafeUrl(l.url) ? l.url : ''
+        });
+        if (!upd) continue;
+        n++;
+        var r = risk(a.risk);
+        if (r) { recomputeRiskStatus(r); try { await Store.updateRisk(r); } catch (e) { warn(e); } }
+      }
+      busy(false);
+      toast('<b>' + n + '</b> action' + (n === 1 ? '' : 's') + ' updated from linked tickets');
+      renderAll();
+    },
+    /* Links a ticket to an action by hand (a paste of its URL), for
+       teams that do not run the flows. */
+    linkTicket: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var cur = ticketFor(id);
+      var v = await showModal({
+        title: (cur ? 'Update the ticket for ' : 'Link a ticket to ') + a.id,
+        message: 'Paste the ticket’s link from Planner, Jira or ServiceNow. Checkpoint shows it on the action and offers to complete the action when the ticket is done. To keep the status current automatically, set up the flow in POWER-AUTOMATE.md.',
+        fields: [
+          { id: 'url', label: 'Ticket link', value: cur ? cur.url : '', placeholder: 'https://yourcompany.atlassian.net/browse/SEC-12' },
+          { id: 'key', label: 'Ticket ID (optional)', value: cur ? cur.key : '', placeholder: 'e.g. SEC-12' },
+          { id: 'status', label: 'Current status (optional)', value: cur ? cur.status : '', placeholder: 'e.g. In progress' }
+        ],
+        confirmText: 'Save',
+        validate: function (x) { return x.url && isSafeUrl(x.url) ? null : 'Paste the ticket’s https:// link.'; }
+      });
+      if (!v) return;
+      var key = (v.key || '').trim() || (String(v.url).match(/\b([A-Z][A-Z0-9]+-\d+|(?:INC|CHG|RITM|TASK|PRB)\d+)\b/) || [])[1] || String(v.url).replace(/[?#].*$/, '').split('/').filter(Boolean).pop() || '';
+      var link = { id: 'TL-' + Date.now(), action: a.id, system: window.CheckpointLib.ticketSystemFromUrl(v.url), key: key, url: v.url.trim(), status: (v.status || '').trim(), updated: new Date().toISOString() };
+      try { await Store.addTicketLink(link); } catch (e) { warn(e); toastError('Could not save the ticket link.'); return; }
+      audit('Ticket linked', 'Action', a.id, cur ? cur.system + ' ' + cur.key : '', link.system + ' ' + link.key + (link.status ? ' (' + link.status + ')' : ''));
+      toast('Linked <b>' + esc(link.system + ' ' + link.key) + '</b> to ' + esc(a.id));
+      App.openAction(a.id);
+      renderActions();
+    },
     setActionField: async function (id, value) {
       var parts = String(id).split('|'), a = S.actions.find(function (x) { return x.id === parts[0]; });
       if (!a) return;
@@ -17600,6 +17866,15 @@ function showModal(opts) {
     },
     requestApproval: async function (key) {
       var name = key.split('|').slice(1).join('|');
+      var reqDoc = (window._docs || []).find(function (x) { return x.name === name; });
+      if (docReviewNeeded(name, templateForDoc(reqDoc || { name: name }))) {
+        var why = window.CheckpointLib.reviewGateReason({ needed: true, review: window.CheckpointLib.docSignoffReviewState(S.auditLog, name).current });
+        if (why) {
+          var ask = await showModal({ title: 'Review needed first', message: why + '\n\nAsk for the review now? Approval can be requested once it is done.', confirmText: 'Ask for a review', cancelText: 'Cancel' });
+          if (ask) await App.requestReview(key);
+          return;
+        }
+      }
       var users = await loadDirectory();
       var suggested = (S.settings && S.settings.topManagementApprover) || '';
       var isPolicy = /information security policy/i.test(name);
@@ -17620,7 +17895,7 @@ function showModal(opts) {
       var req = { key: key, name: name, approver: u ? u.name : v.owner, approverEmail: u ? (u.mail || u.upn || '') : '', requestedBy: myDisplayName() || 'Practitioner', requested: new Date().toISOString().slice(0, 10), note: v.note || '' };
       busy(true);
       try {
-        await saveApprovalRequests(approvalRequests().filter(function (r) { return r.key !== key; }).concat([req]));
+        await replaceDocRequest(key, 'approval', req);
         if (v.top === 'yes') { S.settings.topManagementApprover = req.approver; await Store.setSetting('topManagementApprover', req.approver); }
         audit('Document approval requested', 'Document', name, '', 'From ' + req.approver + (req.approverEmail ? ' (' + req.approverEmail + ')' : ''));
         var digestOnly = weeklyOnly(req.approver, req.approverEmail);
@@ -17647,10 +17922,163 @@ function showModal(opts) {
       var name = key.split('|').slice(1).join('|');
       var doc = (window._docs || []).find(function (x) { return x.name === name; });
       if (req && doc && docStatusOf(doc) === 'Approved') {
-        await saveApprovalRequests(approvalRequests().filter(function (r) { return r.key !== key; }));
+        await replaceDocRequest(key, 'approval', null);
         audit('Document approval request completed', 'Document', name, 'Requested ' + req.requested, 'Approved by ' + (doc.approvedBy || req.approver));
         renderMyTasks(); renderNavCounts();
       }
+    },
+    addAuditRequest: async function () {
+      var v = await showModal({
+        title: 'Log a request from the auditor',
+        fields: [
+          { id: 'title', label: 'Request (short)', placeholder: 'e.g. Access review records for Q2 and Q3' },
+          { id: 'request', label: 'Full wording (optional)', type: 'textarea' },
+          { id: 'requestedBy', label: 'Asked by', value: (auditorState().list.filter(function (a) { return a.state === 'active'; })[0] || {}).name || '' },
+          { id: 'owner', label: 'Who will answer it', value: (S.settings && S.settings.ismsOwner) || '' },
+          { id: 'due', label: 'Due', type: 'date', value: window.CheckpointLib.addDaysToDateStr(new Date().toISOString().slice(0, 10), 2) }
+        ],
+        confirmText: 'Log request',
+        validate: function (x) { return x.title ? null : 'Say what was asked for.'; }
+      });
+      if (!v) return;
+      var n = (S.auditRequests || []).reduce(function (m, r) { var k = parseInt(String(r.id).replace(/\D/g, ''), 10); return k > m ? k : m; }, 0) + 1;
+      var r = { id: 'AR-' + String(n).padStart(3, '0'), title: v.title, request: v.request || '', requestedBy: v.requestedBy || '', requested: new Date().toISOString().slice(0, 10), due: v.due || '', owner: v.owner || '', status: 'Open', response: '', evidenceUrl: '', answered: '' };
+      try { await Store.addAuditRequest(r); } catch (e) { warn(e); toastError('Could not save the request.'); return; }
+      audit('Audit request logged', 'AuditRequest', r.id, '', r.title + (r.owner ? ' (to ' + r.owner + ')' : ''));
+      toast('<b>' + esc(r.id) + '</b> logged');
+      renderAuditorGuide(); renderNavCounts();
+    },
+    answerAuditRequest: async function (id) {
+      var r = (S.auditRequests || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      var v = await showModal({
+        title: 'Answer ' + r.id + ': ' + r.title,
+        message: r.request && r.request !== r.title ? r.request : '',
+        fields: [
+          { id: 'response', label: 'Answer', type: 'textarea', value: r.response || '', placeholder: 'What you are providing, and where it is' },
+          { id: 'evidenceUrl', label: 'Evidence link (SharePoint)', value: r.evidenceUrl || '' }
+        ],
+        confirmText: 'Save answer',
+        validate: function (x) {
+          if (!x.response) return 'Write the answer.';
+          if (x.evidenceUrl && !isSafeUrl(x.evidenceUrl)) return 'Use an https:// link.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var before = r.status;
+      r.response = v.response; r.evidenceUrl = v.evidenceUrl || ''; r.status = 'Answered'; r.answered = new Date().toISOString().slice(0, 10);
+      try { await Store.updateAuditRequest(r); } catch (e) { warn(e); toastError('Could not save the answer.'); return; }
+      audit('Audit request answered', 'AuditRequest', r.id, before, 'Answered' + (r.evidenceUrl ? ' with evidence' : ''));
+      toast('<b>' + esc(r.id) + '</b> answered. The auditor sees it in the Auditor guide.');
+      renderAuditorGuide(); renderMyTasks(); renderNavCounts();
+    },
+    closeAuditRequest: async function (id) {
+      var r = (S.auditRequests || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      var before = r.status;
+      r.status = 'Closed';
+      try { await Store.updateAuditRequest(r); } catch (e) { warn(e); toastError('Could not close the request.'); return; }
+      audit('Audit request closed', 'AuditRequest', r.id, before, 'Closed');
+      renderAuditorGuide();
+    },
+    /* Second-person review (the approval matrix). The request goes to
+       the reviewer's My tasks (and email, in a tenant), like an
+       approval request. */
+    requestReview: async function (key) {
+      var name = key.split('|').slice(1).join('|');
+      var users = await loadDirectory();
+      var preparer = (originatorOf('Document', name) || {}).name || '';
+      var v = await showModal({
+        title: 'Ask for a review of “' + name + '”',
+        message: 'A second person checks the draft before it goes for approval. They record that it is ready or what should change, and their name and the date go on the document.' +
+          (preparer ? '\n\nPrepared by ' + preparer + ', so choose someone else.' : ''),
+        fields: [
+          { id: 'owner', label: 'Reviewer', value: (S.settings && S.settings.lastDocReviewer) || '', placeholder: 'e.g. the ISMS owner' },
+          { id: 'note', label: 'Note to the reviewer (optional)', type: 'textarea', placeholder: 'e.g. Please check the access review frequency.' }
+        ],
+        confirmText: 'Send request',
+        validate: function (x) {
+          if (!x.owner) return 'Choose who should review it.';
+          return window.CheckpointLib.reviewerConflictReason(x.owner, preparer) || null;
+        }
+      });
+      if (!v) return;
+      var u = users && users.length ? window.CheckpointLib.matchOwnerToUser(v.owner, users) : null;
+      var req = { kind: 'review', key: key, name: name, approver: u ? u.name : v.owner, approverEmail: u ? (u.mail || u.upn || '') : '', requestedBy: myDisplayName() || 'Practitioner', requested: new Date().toISOString().slice(0, 10), note: v.note || '' };
+      busy(true);
+      try {
+        await replaceDocRequest(key, 'review', req);
+        S.settings.lastDocReviewer = req.approver; await Store.setSetting('lastDocReviewer', req.approver);
+        audit('Document review requested', 'Document', name, '', 'From ' + req.approver + (req.approverEmail ? ' (' + req.approverEmail + ')' : ''));
+        var digestOnly = weeklyOnly(req.approver, req.approverEmail);
+        if (Store.kind === 'sharepoint' && req.approverEmail && !digestOnly) {
+          try {
+            await Graph.sendMail(req.approverEmail, 'Please check: ' + name + ' — ' + clientDisplayLabel(),
+              '<p>Hi ' + esc(req.approver.split(' ')[0]) + ',</p><p>' + esc(req.requestedBy) + ' has asked you to check <b>' + esc(name) + '</b> in Checkpoint before it goes for approval.' + (req.note ? '</p><p>' + esc(req.note) : '') + '</p><p>Open <a href="' + esc(location.origin + location.pathname) + '">Checkpoint</a> and go to <b>My tasks</b>.</p>');
+          } catch (e) { warn(e); toast('Request saved, but the email could not be sent. It is waiting in their My tasks.'); }
+        }
+      } catch (e) { warn(e); busy(false); toastError('Could not save the request.'); return; }
+      busy(false);
+      toast('Review requested from <b>' + esc(req.approver) + '</b>');
+      renderDocuments(); renderNavCounts();
+    },
+    reviewRequested: async function (key) {
+      var req = reviewRequestFor(key);
+      window._reviewBy = Store.kind === 'demo' && req ? req.approver : '';
+      try { await App.recordDocReview(key); } finally { window._reviewBy = ''; }
+    },
+    /* The review itself, recorded as the signed-in person (in the demo,
+       the person asked). Someone who prepared the draft cannot review it. */
+    recordDocReview: async function (key) {
+      var name = key.split('|').slice(1).join('|');
+      var me = window._reviewBy || currentActor().name;
+      var preparer = (originatorOf('Document', name) || {}).name || '';
+      var conflict = window.CheckpointLib.reviewerConflictReason(me, preparer);
+      if (conflict) { await showModal({ title: 'Someone else must review this', message: conflict, confirmText: 'Close', cancelText: 'Cancel' }); return; }
+      var req = reviewRequestFor(key);
+      var v = await showModal({
+        title: 'Check “' + name + '”',
+        message: 'Open the document from the register and read it. Is it accurate and ready for approval?' + (req && req.note ? '\n\nNote from ' + req.requestedBy + ': ' + req.note : ''),
+        fields: [
+          { id: 'outcome', label: 'Your review', type: 'select', value: 'Reviewed', options: ['Reviewed', 'Changes requested'] },
+          { id: 'comment', label: 'Comments', type: 'textarea', placeholder: 'What should change, or anything the approver should know.' }
+        ],
+        confirmText: 'Record review',
+        validate: function (x) { return x.outcome === 'Changes requested' && !x.comment ? 'Say what should change.' : null; }
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        audit('Document reviewed', 'Document', name, req ? 'Requested ' + req.requested : '', window.CheckpointLib.docReviewAfter(v.outcome, me, v.comment));
+        await replaceDocRequest(key, 'review', null);
+      } catch (e) { warn(e); busy(false); toastError('Could not record the review.'); return; }
+      busy(false);
+      renderDocuments(); renderMyTasks(); renderNavCounts();
+      if (v.outcome === 'Reviewed') {
+        toast('Review recorded. <b>' + esc(name) + '</b> is ready for approval.');
+        if (!READONLY && !approvalRequestFor(key)) {
+          var next = await showModal({ title: 'Send it for approval?', message: 'The review is recorded. Ask the approver now? They must be someone other than you.', confirmText: 'Request approval', cancelText: 'Later' });
+          if (next) await App.requestApproval(key);
+        }
+      } else toast('Changes requested on <b>' + esc(name) + '</b>. ' + esc(req ? req.requestedBy : 'The preparer') + ' sees it on the register.');
+    },
+    setDocReviewLevel: async function (level) {
+      var prev = docReviewLevel();
+      var next = window.CheckpointLib.DOC_REVIEW_LEVELS.indexOf(level) > -1 ? level : '';
+      S.settings.docReviewLevel = next;
+      try { await Store.setSetting('docReviewLevel', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'docReviewLevel', prev || 'none', next || 'none');
+      toast(next ? 'Documents now need a second person’s review before approval.' : 'Documents no longer need a review before approval.');
+      renderFrameworksAdmin(); renderDocuments();
+    },
+    toggleRiskAcceptSecond: async function () {
+      var next = riskAcceptSecond() ? 'false' : 'true';
+      S.settings.riskAcceptSecond = next;
+      try { await Store.setSetting('riskAcceptSecond', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'riskAcceptSecond', next === 'true' ? 'false' : 'true', next);
+      toast(next === 'true' ? 'Risk acceptances are now sent to the person accepting them.' : 'Risk acceptances can be recorded directly again.');
+      renderFrameworksAdmin();
     },
     toggleNavMode: function () {
       try { localStorage.setItem(NAV_MODE_KEY, navMode() === 'simple' ? 'full' : 'simple'); } catch (e) { }
@@ -17899,6 +18327,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + (a.ownerEmail ? ' <span style="color:var(--paper-faint);font-weight:400">&lt;' + esc(a.ownerEmail) + '&gt;</span>' : '') + '</b></div>' +
         '<div class="d-kv"><span>Due</span><b style="' + (overdue(a) ? 'color:var(--fail)' : '') + '">' + fmtDate(a.due) + (overdue(a) ? ' ' + icon('flag') + ' ' + overdueDays(a) + 'd overdue' : '') + '</b></div>' +
         (a.control ? '<div class="d-kv"><span>Control</span><b>' + esc(a.control) + '</b></div>' : '') +
+        '<div class="d-kv"><span>Ticket</span><b>' + (ticketFor(a.id) ? ticketChipHtml(ticketFor(a.id)) : '\u2014') + '</b></div>' +
         '<div class="d-kv"><span>Current evidence link</span><b>' + (a.evidenceUrl && isSafeUrl(a.evidenceUrl) ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener">Open ' + icon('external') + '</a>' : '—') + '</b></div>' +
         (capa.isNc ? '<div class="src" style="margin-top:4px">' + esc(capa.nextStep) + '</div>' : '') +
         (READONLY ? '' :
@@ -17907,6 +18336,7 @@ function showModal(opts) {
           (a.status !== 'Done' ? '<button class="btn ghost sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '') +
           (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button>' : '') +
           '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button>' +
+          '<button class="btn ghost sm" data-action="App.linkTicket" data-id="' + a.id + '">' + (ticketFor(a.id) ? 'Update ticket' : 'Link ticket') + '</button>' +
           '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
           '</div>') +
         '<div class="d-sec"><h4>Progress log' + (updates.length ? ' (' + updates.length + ')' : '') + '</h4>' +
@@ -17991,7 +18421,10 @@ function showModal(opts) {
        uses, populated from window.CHECKPOINT_CHANGELOG (changelog.js).
        Purely informational; never mutates anything, so it's reachable
        from the sidebar version tag regardless of read-only status. */
-    openChangelog: function () {
+    openChangelog: async function () {
+      if (!window.CHECKPOINT_CHANGELOG) {
+        try { await loadDeferredScript('changelog.js'); } catch (e) { warn(e); }
+      }
       var list = window.CHECKPOINT_CHANGELOG || [];
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
@@ -18663,22 +19096,29 @@ function showModal(opts) {
     acceptRisk: async function (id) {
       var r = risk(id);
       if (!r) return;
+      /* Approvals setting: the person accountable records it themselves. */
+      var areq = window._riskAcceptReq || null;
+      if (riskAcceptSecond() && !areq) {
+        var askedOfMe = myRiskAcceptRequests().some(function (x) { return x.risk === id; });
+        return askedOfMe ? App.acceptRequestedRisk(id) : App.requestRiskAcceptance(id);
+      }
       var q = residual(r);
       var sodFinding = segregationFinding('Risk', r.id);
       if (!(await segregationGate(sodFinding, 'this risk acceptance'))) return;
       var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var v = await showModal({
         title: 'Accept residual risk — ' + r.id,
-        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Recording formal acceptance of the residual risk by its owner.',
-        fields: [
-          { id: 'by', label: 'Accepted by (risk owner / authority)', value: r.acceptedBy || r.owner || who },
+        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Recording formal acceptance of the residual risk by its owner.' +
+          (areq ? '\n\nAsked for by ' + areq.requestedBy + (areq.note ? ': ' + areq.note : '') + '. It is recorded in your name, ' + areq.acceptAs + '.' : ''),
+        fields: (areq ? [] : [{ id: 'by', label: 'Accepted by (risk owner / authority)', value: r.acceptedBy || r.owner || who }]).concat([
           { id: 'date', label: 'Acceptance date', type: 'date', value: r.acceptedDate || new Date().toISOString().slice(0, 10) },
           { id: 'note', label: 'Basis for acceptance', type: 'textarea', value: r.acceptanceNote, placeholder: 'e.g. Residual risk within appetite; compensating controls in place; reviewed at MR-004.' }
-        ],
+        ]),
         confirmText: 'Record acceptance',
-        validate: function (v) { return v.by ? null : 'Enter who is accepting the risk.'; }
+        validate: function (v) { return areq || v.by ? null : 'Enter who is accepting the risk.'; }
       });
       if (!v) return;
+      if (areq) v.by = areq.acceptAs;
       busy(true);
       try {
         r.acceptedBy = v.by; r.acceptedDate = v.date || new Date().toISOString().slice(0, 10); r.acceptanceNote = v.note;
@@ -18692,12 +19132,67 @@ function showModal(opts) {
         r.acceptedScore = acceptedQ.L * acceptedQ.I;
         if (r.treat !== 'Tolerate') r.treat = 'Tolerate';
         await Store.updateRisk(r);
-        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate + segregationNote(sodFinding));
+        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate + (areq ? '; asked for by ' + areq.requestedBy + ', recorded by the person accepting' : '') + segregationNote(sodFinding));
+        if (areq) await saveRiskAcceptRequests(riskAcceptRequests().filter(function (x) { return x.risk !== r.id; }));
         toast('Residual risk acceptance recorded for <b>' + r.id + '</b>');
       } catch (e) { warn(e); }
       busy(false);
       closeDrawerUi();
       renderAll();
+    },
+
+    /* Approvals setting on: the acceptance goes to the person
+       accountable for the risk, through their My tasks (and email). */
+    requestRiskAcceptance: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var pending = riskAcceptRequestFor(id);
+      var users = await loadDirectory();
+      var q = residual(r);
+      var v = await showModal({
+        title: 'Ask for acceptance of ' + r.id,
+        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Your approval settings ask the person accountable for this risk to accept it themselves, signed in. It appears in their My tasks' + (Store.kind === 'sharepoint' ? ' and they are emailed a link' : '') + '.' +
+          (pending ? '\n\nAlready asked of ' + pending.acceptor + ' on ' + pending.requested + '. Sending again replaces that request.' : ''),
+        fields: [
+          { id: 'owner', label: 'Person accepting it', value: (pending && pending.acceptor) || r.owner || (S.settings && S.settings.topManagementApprover) || '', placeholder: 'e.g. the risk owner or the CEO' },
+          { id: 'note', label: 'Why it can be accepted (for them to check)', type: 'textarea', value: r.acceptanceNote || '', placeholder: 'e.g. Within appetite after MFA rollout; compensating controls in place.' }
+        ],
+        confirmText: 'Send request',
+        validate: function (x) {
+          if (!x.owner) return 'Choose who should accept it.';
+          var me = currentActor().name;
+          return window.CheckpointLib.samePersonName(x.owner, me) && Store.kind !== 'demo' ? 'You are asking yourself. Choose the person accountable for the risk, or turn this setting off in Settings → Approvals.' : null;
+        }
+      });
+      if (!v) return;
+      var u = users && users.length ? window.CheckpointLib.matchOwnerToUser(v.owner, users) : null;
+      var req = { risk: r.id, title: r.title || '', acceptor: u ? u.name : v.owner, acceptorEmail: u ? (u.mail || u.upn || '') : '', requestedBy: myDisplayName() || currentActor().name, requested: new Date().toISOString().slice(0, 10), note: v.note || '' };
+      busy(true);
+      try {
+        await saveRiskAcceptRequests(riskAcceptRequests().filter(function (x) { return x.risk !== r.id; }).concat([req]));
+        audit('Risk acceptance requested', 'Risk', r.id, '', 'From ' + req.acceptor + (req.acceptorEmail ? ' (' + req.acceptorEmail + ')' : ''));
+        if (Store.kind === 'sharepoint' && req.acceptorEmail && !weeklyOnly(req.acceptor, req.acceptorEmail)) {
+          try {
+            await Graph.sendMail(req.acceptorEmail, 'Please decide: accept risk ' + r.id + ' — ' + clientDisplayLabel(),
+              '<p>Hi ' + esc(req.acceptor.split(' ')[0]) + ',</p><p>' + esc(req.requestedBy) + ' has asked you to decide whether to accept risk <b>' + esc(r.id + ' ' + (r.title || '')) + '</b> in Checkpoint.' + (req.note ? '</p><p>' + esc(req.note) : '') + '</p><p>Open <a href="' + esc(location.origin + location.pathname) + '">Checkpoint</a> and go to <b>My tasks</b>.</p>');
+          } catch (e) { warn(e); toast('Request saved, but the email could not be sent. It is waiting in their My tasks.'); }
+        }
+      } catch (e) { warn(e); busy(false); toastError('Could not save the request.'); return; }
+      busy(false);
+      toast('Acceptance of <b>' + esc(r.id) + '</b> requested from <b>' + esc(req.acceptor) + '</b>');
+      renderAll();
+    },
+    acceptRequestedRisk: async function (id) {
+      var req = riskAcceptRequestFor(id);
+      if (!req) { toast('That request has already been dealt with.'); return; }
+      var me = Store.kind === 'demo' ? req.acceptor : currentActor().name;
+      if (window.CheckpointLib.samePersonName(me, req.requestedBy) && Store.kind !== 'demo') {
+        await showModal({ title: 'Someone else must accept this', message: 'You asked for this acceptance, so the person accountable for the risk records it.', confirmText: 'Close', cancelText: 'Cancel' });
+        return;
+      }
+      window._riskAcceptReq = Object.assign({}, req, { acceptAs: me });
+      try { await App.acceptRisk(id); } finally { window._riskAcceptReq = null; }
+      renderMyTasks(); renderNavCounts();
     },
 
     /* Add a treatment action straight onto an existing risk — the
@@ -21850,7 +22345,7 @@ function showModal(opts) {
         try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
         if (!params && d.tplId && !isOwnDoc(d)) params = { tplId: d.tplId, owner: d.owner || '', reviewDate: d.nextReview || '' };
         var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
-        return (d.status === 'Draft' && t) ? { doc: d, params: params, t: t, sod: segregationFinding('Document', d.name) } : null;
+        return (d.status === 'Draft' && t) ? { doc: d, params: params, t: t, sod: segregationFinding('Document', d.name), needsReview: docReviewNeeded(d.name, t), review: window.CheckpointLib.docSignoffReviewState(S.auditLog, d.name).current } : null;
       }).filter(Boolean);
       if (!drafts.length) { toast('No generated drafts are waiting for approval.'); return; }
       var selfRaised = drafts.filter(function (x) { return x.sod; });
@@ -21878,11 +22373,12 @@ function showModal(opts) {
         }
       });
       if (!vals) return;
-      var approved = [], skipped = [], failed = [], incomplete = [], clauseNotes = [];
+      var approved = [], skipped = [], failed = [], incomplete = [], clauseNotes = [], unreviewed = [];
       busy(true);
       for (var i = 0; i < drafts.length; i++) {
         var x = drafts[i];
         if (x.sod && sodEnforced()) { skipped.push(x.t.title); continue; }
+        if (window.CheckpointLib.reviewGateReason({ needed: x.needsReview, review: x.review, approver: vals.approvedBy })) { unreviewed.push(x.t.title); continue; }
         try {
           var res = await saveApprovedTemplate(x.doc.name, x.doc.category || 'Policies & Procedures', x.t, x.params, x.doc, vals, x.sod, true);
           approved.push(x.t.title);
@@ -21896,12 +22392,14 @@ function showModal(opts) {
       renderDocuments(); renderClauses(); renderDash(); renderNavCounts();
       log('Draft set approved by <b>' + esc(vals.approvedBy) + '</b> as v' + esc(vals.version) + ' — ' + approved.length + ' approved' +
         (skipped.length ? ', ' + skipped.length + ' skipped for segregation of duties (' + esc(skipped.join(', ')) + ')' : '') +
+        (unreviewed.length ? ', ' + unreviewed.length + ' waiting for review (' + esc(unreviewed.join(', ')) + ')' : '') +
         (failed.length ? ', ' + failed.length + ' failed (' + esc(failed.join(', ')) + ')' : '') + '.');
       var msg = approved.length + ' document' + (approved.length === 1 ? '' : 's') + ' approved' +
         (skipped.length ? '; ' + skipped.length + ' need another approver' : '') +
+        (unreviewed.length ? '; ' + unreviewed.length + ' need a second person\u2019s review first, by someone other than the approver (' + esc(unreviewed.join(', ')) + ')' : '') +
         (incomplete.length ? '; ' + incomplete.length + ' still have items to be completed (' + esc(incomplete.join(', ')) + ') — answer them in Settings → Scope & context' : '') +
         (failed.length ? '; ' + failed.length + ' could not be saved — approve those individually' : '') + '.';
-      (failed.length || incomplete.length ? toastError : toast)(msg);
+      (failed.length || incomplete.length || unreviewed.length ? toastError : toast)(msg);
     },
 
     generateTemplate: async function () {
@@ -22033,6 +22531,16 @@ function showModal(opts) {
       var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
       /* A.5.3 — checked before the approval dialog opens, so a refused
          approval doesn't waste the practitioner's time filling one in. */
+      /* The approval matrix: a second person's review first, and the
+         reviewer cannot also be the approver. */
+      var needsReview = docReviewNeeded(name, t);
+      var standingReview = needsReview ? window.CheckpointLib.docSignoffReviewState(S.auditLog, name).current : null;
+      var reviewWhy = window.CheckpointLib.reviewGateReason({ needed: needsReview, review: standingReview });
+      if (reviewWhy) {
+        var askReview = await showModal({ title: 'Review needed first', message: reviewWhy + '\n\nYour approval settings (Settings \u2192 Approvals) ask for a second person to check this document before it is approved.', confirmText: READONLY ? 'Close' : 'Ask for a review', cancelText: 'Cancel' });
+        if (askReview && !READONLY) await App.requestReview(key);
+        return;
+      }
       var sodFinding = segregationFinding('Document', name);
       if (!(await segregationGate(sodFinding, 'this document'))) return;
       if (!params.aiAssisted && !(await confirmPractices(t, name))) return;
@@ -22053,6 +22561,8 @@ function showModal(opts) {
         cancelText: 'Cancel',
         validate: function (v) {
           if (!v.approvedBy) return 'Record who approved this document.';
+          var sameAsReviewer = window.CheckpointLib.reviewGateReason({ needed: needsReview, review: standingReview, approver: v.approvedBy });
+          if (sameAsReviewer) return sameAsReviewer;
           if (!v.version) return 'Record the version being approved.';
           if (!v.nextReview) return 'Set the next review date — an approved policy with no review cadence fails Clause 7.5.2 c).';
           return null;
@@ -23292,6 +23802,7 @@ function showModal(opts) {
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
           '<button class="btn sm" data-action="App.updateIncidentDetails" data-id="' + n.id + '">Update details</button>' +
           (n.isPrivacyBreach ? '<button class="btn ghost sm" data-action="App.recordIncidentAssessment" data-id="' + n.id + '">Record assessment</button>' : '') +
+          (n.isPrivacyBreach ? '<button class="btn ghost sm" data-action="App.draftNdbNotice" data-id="' + n.id + '">Draft breach notices</button>' : '') +
           (n.status !== 'Closed' ? '<button class="btn ghost sm" data-action="App.closeIncident" data-id="' + n.id + '">Close incident</button>' : '') +
           '</div>') + recordHistoryHtml('Incident', [n.id], 6);
       openDrawerUi('Incident ' + n.id);
@@ -23328,6 +23839,37 @@ function showModal(opts) {
       audit('Incident updated', 'Incident', n.id, prevStatus, v.status);
       renderIncidents(); renderNavCounts(); renderDash();
       App.openIncident(id);
+    },
+
+    /* Notifiable Data Breaches: drafts of the statement to the OAIC and
+       the notice to individuals, from the incident. Nothing is sent: a
+       person checks the drafts and lodges the statement through the
+       OAIC's own form. */
+    draftNdbNotice: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var v = await showModal({
+        title: 'Draft breach notices — ' + n.id,
+        message: 'A breach is notifiable when all three are true: personal information was accessed or disclosed without authorisation, or lost where that is likely; a reasonable person would conclude it is likely to cause serious harm to someone; and action taken has not removed that likelihood. If so, the Privacy Act requires a statement to the OAIC and a notice to the people at risk as soon as practicable.\n\nCheckpoint drafts both from this incident. Nothing is sent.',
+        fields: [
+          { id: 'org', label: 'Organisation', value: clientDisplayLabel('') },
+          { id: 'contact', label: 'Contact for this breach (name, email, phone)', value: (S.settings && S.settings.trustCenterContactEmail) || '' },
+          { id: 'description', label: 'What happened', type: 'textarea', value: n.description || n.title || '' },
+          { id: 'kinds', label: 'Kinds of personal information involved', type: 'textarea', value: n.affectedSystems || '', placeholder: 'e.g. names, email addresses and dates of birth of about 1,200 customers' },
+          { id: 'steps', label: 'What affected people should do (one per line)', type: 'textarea', value: 'Be alert to emails, calls or texts that mention this breach or ask for personal details.\nChange the password for your account with us, and anywhere else you use the same password.\nFor help with identity misuse, contact IDCARE on 1800 595 160 or at idcare.org.' }
+        ],
+        confirmText: 'Draft notices',
+        validate: function (x) { return x.contact ? null : 'Add a contact: the statement must give contact details.'; }
+      });
+      if (!v) return;
+      var d = window.CheckpointLib.ndbNoticeDrafts({ org: v.org, contact: v.contact, description: v.description, kinds: v.kinds, occurred: n.occurred ? fmtDateY(n.occurred) : '', detected: n.detected ? fmtDateY(n.detected) : '', steps: String(v.steps || '').split('\n') });
+      var block = function (h, t) { return '<h2>' + esc(h) + '</h2><pre style="white-space:pre-wrap;font:inherit;line-height:1.6">' + esc(t) + '</pre>'; };
+      var html = '<!doctype html><html><head><meta charset="utf-8"><title>Breach notices — ' + esc(n.id) + '</title><style>body{font-family:Manrope,Arial,sans-serif;color:#0B0B0C;max-width:760px;margin:32px auto;padding:0 24px;font-size:13px}h1{font-size:20px}h2{font-size:15px;margin-top:28px;border-bottom:1px solid #ccc;padding-bottom:4px}.draft{border:2px solid #b91c1c;color:#b91c1c;padding:8px 12px;font-weight:700}</style></head><body>' +
+        '<p class="draft">DRAFT for review. Not sent. Lodge the statement through the OAIC’s online form, and send the notice to affected people as soon as practicable.</p>' +
+        '<h1>Breach notices — ' + esc(n.id) + ' ' + esc(n.title || '') + '</h1>' +
+        block('Statement to the OAIC', d.commissioner) + block('Notice to affected individuals', d.individuals) + '</body></html>';
+      audit('Breach notices drafted', 'Incident', n.id, '', 'Statement to the OAIC and notice to individuals drafted (not sent)');
+      printPreview('Breach notices — ' + n.id, html);
     },
 
     recordIncidentAssessment: async function (id) {
@@ -26010,6 +26552,74 @@ function showModal(opts) {
       renderAll();
     },
 
+    /* The same register as an Excel workbook: a frozen, filterable
+       header and readable column widths. Read-only, like every export. */
+    exportXlsx: async function (key) {
+      var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
+      if (!reg) return;
+      await refreshDocsForExport(key);
+      var bytes = window.CheckpointLib.buildXlsx([{ name: reg.label, header: reg.header, rows: reg.rows() }], { title: reg.label + ' — ' + clientDisplayLabel('') });
+      var name = reg.filename.replace(/\.csv$/i, '.xlsx');
+      downloadBlob(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      audit('Register exported (Excel)', 'Export', reg.key, '(none)', name);
+      toast('<b>' + esc(name) + '</b> downloaded');
+    },
+    /* Every register in one workbook, one sheet each. */
+    exportAllXlsx: async function () {
+      busy(true);
+      try {
+        await refreshDocsForExport('documents');
+        var sheets = EXPORT_REGISTERS.map(function (r) { return { name: r.label, header: r.header, rows: r.rows() }; });
+        var bytes = window.CheckpointLib.buildXlsx(sheets, { title: 'Checkpoint registers — ' + clientDisplayLabel('') });
+        var name = 'checkpoint-registers-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+        downloadBlob(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+        audit('Register exported (Excel)', 'Export', 'all', '(none)', name + ' (' + sheets.length + ' sheets)');
+        toast('<b>' + esc(name) + '</b> downloaded: ' + sheets.length + ' registers');
+      } finally { busy(false); }
+    },
+    /* The Statement of Applicability, risk register or asset register
+       as a controlled Word document (landscape, document control,
+       repeating header row, Page X of Y). The SoA is for the framework
+       open in the SoA view. */
+    exportRegisterWord: async function (key) {
+      var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
+      if (!reg) return;
+      var rows = reg.rows(), cols, title, subtitle = '', intro = '', summary = [];
+      var count = function (list, f) { return list.filter(f).length; };
+      if (key === 'controls') {
+        var fw = window._soaFw && S.entitlements && S.entitlements[window._soaFw] ? window._soaFw : Object.keys(S.entitlements || {}).filter(function (k) { return S.entitlements[k]; })[0];
+        var label = fwName(fw);
+        rows = rows.filter(function (r) { return r[0] === label; });
+        title = 'Statement of Applicability';
+        subtitle = label;
+        intro = 'Every control in ' + label + ', whether it applies to the organisation, its implementation status, and the justification for including or excluding it.';
+        summary = [['Applicable', count(rows, function (r) { return r[3] === 'Yes'; }) + ' of ' + rows.length], ['Implemented', String(count(rows, function (r) { return r[4] === 'Implemented'; }))]];
+        cols = [{ h: 'Control', w: 1 }, { h: 'Title', w: 3 }, { h: 'Applies', w: 0.8 }, { h: 'Status', w: 1.2 }, { h: 'Justification', w: 4 }, { h: 'Owner', w: 1.4 }, { h: 'Evidence', w: 0.9 }, { h: 'Last verified', w: 1.1 }];
+        rows = rows.map(function (r) { return [r[1], r[2], r[3], r[4], r[3] === 'Yes' ? r[11] : r[10], r[6], r[9] ? 'Linked' : '—', r[7] ? fmtDateY(r[7]) : '—']; });
+      } else if (key === 'risks') {
+        title = 'Risk register';
+        intro = 'Every risk with its owner, inherent and residual rating, and status. Scores are likelihood × impact on a 5 × 5 scale.';
+        summary = [['Above appetite', String(count(rows, function (r) { return /High|Critical/.test(r[8] || ''); }))]];
+        cols = [{ h: 'ID', w: 0.8 }, { h: 'Risk', w: 4 }, { h: 'Category', w: 1.3 }, { h: 'Owner', w: 1.4 }, { h: 'Inherent', w: 1 }, { h: 'Residual', w: 1 }, { h: 'Basis for residual', w: 2.4 }, { h: 'Status', w: 1.1 }, { h: 'Last reviewed', w: 1.1 }];
+        rows = rows.map(function (r) { return [r[0], r[1], r[2], r[12], r[5] + (r[6] ? ' · ' + r[6] : ''), r[7] + (r[8] ? ' · ' + r[8] : ''), r[9], r[13], r[10] ? fmtDateY(r[10]) : '—']; });
+      } else if (key === 'assets') {
+        title = 'Asset register';
+        intro = 'Information assets with their owner, classification and criticality, and where each is held.';
+        cols = [{ h: 'ID', w: 0.8 }, { h: 'Asset', w: 3 }, { h: 'Type', w: 1.2 }, { h: 'Owner', w: 1.4 }, { h: 'Classification', w: 1.2 }, { h: 'Criticality', w: 1 }, { h: 'Where held', w: 2 }, { h: 'Status', w: 1 }, { h: 'Last reviewed', w: 1.1 }];
+        rows = rows.map(function (r) { return [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[8], r[10] ? fmtDateY(r[10]) : '—']; });
+      } else return;
+      var acc = Graph.getAccount && Graph.getAccount();
+      var bytes = window.CheckpointLib.buildRegisterDocx({
+        title: title, subtitle: subtitle, intro: intro, summary: summary,
+        clientLabel: clientDisplayLabel('This organisation'), classification: 'Internal',
+        date: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
+        preparedBy: (acc && acc.name) || '', brandColor: clientBrandColor() || ''
+      }, cols, rows);
+      var name = (title + (subtitle ? ' - ' + subtitle : '')).replace(/[\/\\:*?"<>|]/g, '-') + '.docx';
+      downloadBlob(name, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+      audit('Register exported (Word)', 'Export', key, '(none)', name);
+      toast('<b>' + esc(name) + '</b> downloaded');
+    },
     exportCsv: async function (key) {
       var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
       if (!reg) return;
@@ -26246,6 +26856,13 @@ function showModal(opts) {
     else if (READONLY) App.go('board');
     SELFTEST_MODE = Store.kind === 'demo' && /[?&]selftest=1\b/.test(location.search);
     if (SELFTEST_MODE) App.go('selftest');
+    /* Demo deep link (?demo=1&view=documents): the website's feature
+       pages open the demo on the screen they describe. Only a view that
+       has a menu item, so the link cannot reach anything hidden. */
+    else if (Store.kind === 'demo' && !RESTRICTED_ACCESS && !READONLY) {
+      var startView = String(new URLSearchParams(location.search).get('view') || '').replace(/[^a-z0-9-]/gi, '');
+      if (startView && document.querySelector('.nav-item[data-v="' + startView + '"]') && document.getElementById('v-' + startView)) App.go(startView);
+    }
     applyReadOnlyUi();
     startReadOnlyObserver();
     applyRestrictedUi();

@@ -8,12 +8,12 @@ tags: ["APRA", "CPS 230", "CPS 234", "Essential Eight", "Financial Services", "A
 image: "/assets/illus-essential-eight.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>CPS 230 (Operational Risk Management) came into force on 1 July 2025, sitting alongside the existing CPS 234 (Information Security) standard. For APRA-regulated entities — and increasingly, for the third parties and material service providers that support them — the two standards are converging around the same practical question: can you evidence that your operational and information-security controls are actually working, not just documented?</p>
   <p>Essential Eight has become the de facto technical control backbone many APRA-regulated entities and their suppliers use to answer that question for the ICT and cyber-resilience components of both standards.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Why CPS 230 and CPS 234 are converging in practice
 
@@ -26,7 +26,7 @@ In practice, an APRA-regulated entity (or a material service provider supporting
 
 Essential Eight, mapped and evidenced properly, does a large share of the CPS 234 heavy lifting. The gap most organisations have isn't the technical controls — it's connecting that technical evidence to CPS 230's operational resilience and impact-tolerance requirements.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## Who this applies to
 
@@ -36,7 +36,7 @@ This isn't limited to APRA-regulated entities directly. It increasingly reaches:
 - **Material service providers** — any third party an APRA-regulated entity depends on for a critical operation, who now face contractual flow-down of CPS 230 expectations, in much the same way NIS2 pushes obligations down EU supply chains.
 - **Fintech and SaaS vendors selling into the regulated financial sector**, who are seeing CPS 230/234-aligned questions appear in vendor due diligence that didn't exist a year or two ago.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## What an Essential Eight + CPS 230/234 alignment engagement actually covers
 
@@ -47,9 +47,9 @@ Rather than treating Essential Eight uplift and CPS 230/234 readiness as two sep
 3. **Operational impact-tolerance documentation for CPS 230** — defining what "critical operation" means for your business, what tolerance you've set for disruption, and how the Essential Eight control set supports staying inside it.
 4. **Board-level reporting artefacts** — CPS 230 explicitly expects board and senior-management oversight of operational risk; we build the reporting pack that makes that oversight demonstrable, not just claimed.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<div style="background:#eff6ff;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #1e40af;">
+<div style="background:#FAF2EC;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #A63A12;">
   <p><strong>APRA-regulated, or a material service provider to one?</strong> If your Essential Eight programme and your CPS 230/234 evidence currently live in separate silos, aligning them is usually faster than it sounds — most of the technical work overlaps.</p>
   <p style="margin-bottom:0">See our <a href="/services/essential-eight/">Essential Eight services</a>, or <a href="/book/">book a call</a> to talk through your specific APRA obligations.</p>
 </div>

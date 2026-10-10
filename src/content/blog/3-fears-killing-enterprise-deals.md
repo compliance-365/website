@@ -24,8 +24,8 @@ A decade ago, enterprise procurement security reviews were largely tick-box exer
 
 That era is over. After a string of high-profile supply chain incidents — SolarWinds, Log4j, MOVEit — enterprise security teams have raised their vendor bar materially. They're not just asking *whether* you have policies. They're asking whether controls actually work, whether evidence is auditable, and whether a breach in your environment could cascade into theirs.
 
-<div style="background:#eff6ff;border-left:4px solid #1e40af;border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0;">
-<strong style="display:block;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#1e40af;margin-bottom:8px;">The Australian regulatory reality</strong>
+<div style="background:#FAF2EC;border-left:4px solid #A63A12;border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0;">
+<strong style="display:block;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#A63A12;margin-bottom:8px;">The Australian regulatory reality</strong>
 Australian organisations are now operating under a strengthened Privacy Act, Essential Eight maturity requirements for government contracts, APRA CPS 234 for financial services, and My Health Records Act obligations that extend to vendors. AI-enabled products face governance scrutiny that barely existed two years ago. Security questionnaires that used to arrive post-commercials are now arriving pre-proposal. <strong>Compliance is a gate that determines who gets to pitch.</strong>
 </div>
 
@@ -36,20 +36,20 @@ Australian organisations are now operating under a strengthened Privacy Act, Ess
 Before getting to the fears, it helps to understand what's on the other side of the procurement table. Enterprise security teams aren't trying to achieve perfection — they're trying to answer three questions:
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0;">
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+  <div style="background:#FAF7F1;border:1px solid #DDD8CF;border-radius:8px;padding:16px;">
     <div style="margin-bottom:8px;color:#BE4A1E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-search"/></svg></div>
-    <strong style="display:block;margin-bottom:4px;color:#0f172a;">Does this vendor have a credible security programme?</strong>
-    <p style="margin:0;font-size:0.875rem;color:#64748b;">Not perfect — credible. ISO 27001 or Essential Eight ML2 signals systematic thinking, not just a written policy.</p>
+    <strong style="display:block;margin-bottom:4px;color:#0B0B0C;">Does this vendor have a credible security programme?</strong>
+    <p style="margin:0;font-size:0.875rem;color:#6B6860;">Not perfect — credible. ISO 27001 or Essential Eight ML2 signals systematic thinking, not just a written policy.</p>
   </div>
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+  <div style="background:#FAF7F1;border:1px solid #DDD8CF;border-radius:8px;padding:16px;">
     <div style="margin-bottom:8px;color:#BE4A1E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-clipboard"/></svg></div>
-    <strong style="display:block;margin-bottom:4px;color:#0f172a;">Can we actually verify it?</strong>
-    <p style="margin:0;font-size:0.875rem;color:#64748b;">Self-attestation has almost no value. They want auditable evidence — configuration exports, access logs, penetration test reports.</p>
+    <strong style="display:block;margin-bottom:4px;color:#0B0B0C;">Can we actually verify it?</strong>
+    <p style="margin:0;font-size:0.875rem;color:#6B6860;">Self-attestation has almost no value. They want auditable evidence — configuration exports, access logs, penetration test reports.</p>
   </div>
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+  <div style="background:#FAF7F1;border:1px solid #DDD8CF;border-radius:8px;padding:16px;">
     <div style="margin-bottom:8px;color:#BE4A1E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-shield"/></svg></div>
-    <strong style="display:block;margin-bottom:4px;color:#0f172a;">Can we defend the decision to onboard this vendor?</strong>
-    <p style="margin:0;font-size:0.875rem;color:#64748b;">CISOs are personally accountable for vendor decisions. A clean ISO 27001 cert makes that defensible. A self-assessed questionnaire doesn't.</p>
+    <strong style="display:block;margin-bottom:4px;color:#0B0B0C;">Can we defend the decision to onboard this vendor?</strong>
+    <p style="margin:0;font-size:0.875rem;color:#6B6860;">CISOs are personally accountable for vendor decisions. A clean ISO 27001 cert makes that defensible. A self-assessed questionnaire doesn't.</p>
   </div>
 </div>
 
@@ -77,7 +77,7 @@ The long timeline comes from three compounding problems:
 For most Australian mid-market organisations on Microsoft 365: ISO 27001 certification in 8–14 weeks. Essential Eight ML2 across all eight controls in 10–14 weeks for SMB scope. These are not heroic timelines — they are what happens when you eliminate unnecessary scope and build inside the environment you already operate.
 </div>
 
-<div style="background:#1e40af;color:white;border-radius:8px;padding:20px 24px;margin:28px 0;text-align:center;">
+<div style="background:#A63A12;color:white;border-radius:8px;padding:20px 24px;margin:28px 0;text-align:center;">
 <div style="font-size:2.75rem;font-weight:800;line-height:1;">8–14 weeks</div>
 <div style="font-size:0.875rem;opacity:0.85;margin-top:8px;">Average time to ISO 27001 certification or Essential Eight ML2 — inside your existing Microsoft 365 environment. Every client we've taken to certification has passed first time.</div>
 </div>
@@ -108,7 +108,7 @@ Consultants push new platforms because building inside Microsoft 365 requires de
 Review the scope definition. Validate that proposed controls do not conflict with existing architecture. Sign off the Statement of Applicability. That is typically a handful of hours spread across a few weeks — not months of embedded work.
 </div>
 
-<div style="background:#1e40af;color:white;border-radius:8px;padding:20px 24px;margin:28px 0;text-align:center;">
+<div style="background:#A63A12;color:white;border-radius:8px;padding:20px 24px;margin:28px 0;text-align:center;">
 <div style="font-size:2.75rem;font-weight:800;line-height:1;">0</div>
 <div style="font-size:0.875rem;opacity:0.85;margin-top:8px;">New tools or licences required for most Microsoft 365 E5 organisations — 80–85% of the ML2 control surface is already available natively</div>
 </div>
@@ -148,21 +148,21 @@ A SharePoint site with a defined folder structure. Scheduled evidence exports �
 When you can answer a procurement security questionnaire in hours rather than weeks, you move faster than competitors who cannot. When you send a structured evidence pack with timestamped exports and clear ownership, you look materially more credible than vendors who send a self-assessed questionnaire. When you hold ISO 27001 or Essential Eight ML2 and your competitors are still working on it, the procurement decision is not really a decision.
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:24px 0;">
-  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;text-align:center;">
-    <div style="font-size:1.5rem;font-weight:800;color:#1e40af;margin-bottom:6px;">Faster</div>
-    <p style="margin:0;font-size:0.875rem;color:#374151;">Answer procurement questionnaires in hours. Move faster than competitors who cannot.</p>
+  <div style="background:#FAF2EC;border:1px solid #E8C9B8;border-radius:8px;padding:16px;text-align:center;">
+    <div style="font-size:1.5rem;font-weight:800;color:#A63A12;margin-bottom:6px;">Faster</div>
+    <p style="margin:0;font-size:0.875rem;color:#4A473F;">Answer procurement questionnaires in hours. Move faster than competitors who cannot.</p>
   </div>
-  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;text-align:center;">
-    <div style="font-size:1.5rem;font-weight:800;color:#1e40af;margin-bottom:6px;">More credible</div>
-    <p style="margin:0;font-size:0.875rem;color:#374151;">Structured evidence with timestamped exports looks materially stronger than a self-assessed questionnaire.</p>
+  <div style="background:#FAF2EC;border:1px solid #E8C9B8;border-radius:8px;padding:16px;text-align:center;">
+    <div style="font-size:1.5rem;font-weight:800;color:#A63A12;margin-bottom:6px;">More credible</div>
+    <p style="margin:0;font-size:0.875rem;color:#4A473F;">Structured evidence with timestamped exports looks materially stronger than a self-assessed questionnaire.</p>
   </div>
-  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;text-align:center;">
-    <div style="font-size:1.5rem;font-weight:800;color:#1e40af;margin-bottom:6px;">Decisive</div>
-    <p style="margin:0;font-size:0.875rem;color:#374151;">When you hold ISO 27001 or Essential Eight ML2 and competitors don't, the procurement decision is clear.</p>
+  <div style="background:#FAF2EC;border:1px solid #E8C9B8;border-radius:8px;padding:16px;text-align:center;">
+    <div style="font-size:1.5rem;font-weight:800;color:#A63A12;margin-bottom:6px;">Decisive</div>
+    <p style="margin:0;font-size:0.875rem;color:#4A473F;">When you hold ISO 27001 or Essential Eight ML2 and competitors don't, the procurement decision is clear.</p>
   </div>
-  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;text-align:center;">
-    <div style="font-size:1.5rem;font-weight:800;color:#1e40af;margin-bottom:6px;">Reusable</div>
-    <p style="margin:0;font-size:0.875rem;color:#374151;">Evidence built once answers every procurement question, every renewal, every customer due diligence review.</p>
+  <div style="background:#FAF2EC;border:1px solid #E8C9B8;border-radius:8px;padding:16px;text-align:center;">
+    <div style="font-size:1.5rem;font-weight:800;color:#A63A12;margin-bottom:6px;">Reusable</div>
+    <p style="margin:0;font-size:0.875rem;color:#4A473F;">Evidence built once answers every procurement question, every renewal, every customer due diligence review.</p>
   </div>
 </div>
 
@@ -176,7 +176,7 @@ Most organisations find that 60–70% of what they need for ISO 27001 or Essenti
 
 Use our [free readiness checklist](https://www.compliance365.com.au/checklist/) to get a baseline picture in about 15 minutes. Or [book a free 30-minute call](https://www.compliance365.com.au/book) — we will tell you honestly what you need and what the fastest path looks like for your specific environment.
 
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px 24px;margin:32px 0;">
-<strong style="display:block;margin-bottom:8px;color:#0f172a;">About Compliance365</strong>
-<p style="margin:0;color:#64748b;font-size:0.9rem;">We deliver ISO 27001, Essential Eight, SOC 2, ISO 42001, and ISO 27701 for Australian mid-market organisations — fixed-price, inside your existing Microsoft 365 environment, with audit-ready evidence at every step. <a href="https://www.compliance365.com.au/services" style="color:#1e40af;font-weight:600;">Explore our services →</a></p>
+<div style="background:#FAF7F1;border:1px solid #DDD8CF;border-radius:8px;padding:20px 24px;margin:32px 0;">
+<strong style="display:block;margin-bottom:8px;color:#0B0B0C;">About Compliance365</strong>
+<p style="margin:0;color:#6B6860;font-size:0.9rem;">We deliver ISO 27001, Essential Eight, SOC 2, ISO 42001, and ISO 27701 for Australian mid-market organisations — fixed-price, inside your existing Microsoft 365 environment, with audit-ready evidence at every step. <a href="https://www.compliance365.com.au/services" style="color:#A63A12;font-weight:600;">Explore our services →</a></p>
 </div>

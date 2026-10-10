@@ -1,0 +1,75 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { terms } from '../data/glossary';
+
+const base = import.meta.env.BASE_URL || '/';
+const sorted = terms.slice().sort((a, b) => a.term.localeCompare(b.term));
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const letters = [...new Set(sorted.map((t) => t.term[0].toUpperCase()))];
+const set = {
+  '@type': 'DefinedTermSet',
+  name: 'Compliance365 glossary',
+  url: 'https://www.compliance365.com.au/glossary/',
+  hasDefinedTerm: sorted.map((t) => ({ '@type': 'DefinedTerm', name: t.term, ...(t.abbr ? { termCode: t.abbr } : {}), description: t.def, url: 'https://www.compliance365.com.au/glossary/#' + slug(t.term) })),
+};
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Glossary', url: 'https://www.compliance365.com.au/glossary/' },
+];
+---
+<Base
+  title="Compliance Glossary: ISO 27001, Essential Eight, Privacy | Compliance365"
+  description="Plain-English definitions of ISO 27001, Essential Eight, privacy and Australian compliance terms, from Annex A and the SoA to IRAP, DISP and the NDB scheme."
+  schema={[set]}
+  breadcrumbs={breadcrumbs}
+>
+<Header />
+<main id="main-content" tabindex="-1">
+<section class="section gl-hero">
+  <div class="container">
+    <p class="gl-eyebrow">Resources</p>
+    <h1>Compliance glossary</h1>
+    <p class="gl-lead">{sorted.length} terms you will meet working towards ISO 27001, the Essential Eight and Australian privacy obligations, in plain English. Each links to where we go deeper.</p>
+    <nav class="gl-letters" aria-label="Jump to letter">
+      {letters.map((l) => (<a href={'#letter-' + l}>{l}</a>))}
+    </nav>
+  </div>
+</section>
+<section class="section gl-body">
+  <div class="container">
+    {letters.map((l) => (
+      <div class="gl-letter" id={'letter-' + l}>
+        <h2>{l}</h2>
+        <dl>
+          {sorted.filter((t) => t.term[0].toUpperCase() === l).map((t) => (
+            <div class="gl-term" id={slug(t.term)}>
+              <dt>{t.term}{t.abbr && (<span class="gl-abbr"> ({t.abbr})</span>)}</dt>
+              <dd>{t.def}{t.link && (<> <a href={base + t.link.href}>{t.link.label} →</a></>)}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    ))}
+  </div>
+</section>
+</main>
+<Footer />
+</Base>
+
+<style>
+  .gl-hero { padding-top: 3rem; padding-bottom: 1rem; }
+  .gl-eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink, #A63A12); margin: 0 0 .8rem; }
+  .gl-lead { max-width: 68ch; font-size: 1.05rem; line-height: 1.7; }
+  .gl-letters { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.25rem; }
+  .gl-letters a { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #DDD8CF; border-radius: 8px; text-decoration: none; color: inherit; font-weight: 700; }
+  .gl-letters a:hover { border-color: #BE4A1E; color: #A63A12; }
+  .gl-body { padding-top: 0; }
+  .gl-letter { margin-top: 2rem; scroll-margin-top: 90px; max-width: 78ch; }
+  .gl-letter h2 { font-size: 1.6rem; border-bottom: 2px solid #DDD8CF; padding-bottom: .4rem; }
+  .gl-term { padding: .9rem 0; border-bottom: 1px solid #EEE9E0; scroll-margin-top: 90px; }
+  .gl-term dt { font-weight: 700; }
+  .gl-abbr { font-weight: 400; color: #6B6860; }
+  .gl-term dd { margin: .3rem 0 0; line-height: 1.65; }
+</style>

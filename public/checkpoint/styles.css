@@ -756,6 +756,19 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .verify-stale{color:var(--warn);font-size:var(--fs-1)}
 .evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
 .evidence-link:hover{color:var(--paper);border-color:var(--gold-light)}
+/* Linked tickets (Planner, Jira, ServiceNow) on actions */
+.tk-chip{display:inline-block;font-size:var(--fs-1);font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--paper-dim);text-decoration:none;white-space:nowrap}
+a.tk-chip:hover{color:var(--paper);border-color:var(--gold-light)}
+.tk-done{border-color:rgba(46,160,67,.55);color:var(--pass)}
+.tk-cancelled{opacity:.75}
+.tk-row{margin-top:3px}
+/* In the table's ID column: never wider than the ID itself needs */
+.tk-row .tk-chip{max-width:9em;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.tk-row .src{display:block}
+.tk-sync{margin-bottom:14px;border-left:3px solid var(--pass)}
+.tk-sync h3{margin:0 0 8px}
+.tk-list{margin:0 0 10px;padding-left:18px}
+.tk-list li{margin:6px 0}
 /* 175px, not 230px. Shared by every KPI strip in the app (Statement of
    Applicability, Actions, Vendors, AI systems, Financial risk analysis,
    Documents, Training); the Dashboard additionally quietens its own

@@ -127,3 +127,14 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      # The marketing site's own checks need the built pages: every
+      # internal link and #fragment resolves, and no page goes over its
+      # HTML or JavaScript budget (scripts/check-site.mjs). astro build
+      # only, not the postbuild steps: those rename Checkpoint's assets
+      # for deployment and are covered by their own tests.
+      - name: Build the site
+        run: npx astro build
+
+      - name: Check links and page weight
+        run: node scripts/check-site.mjs dist

@@ -4185,6 +4185,234 @@
   var DOCX_PAGE_BREAK = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
   /* Enterprise front matter: a cover page, then a document control page
      (metadata, history, approval). The contents list follows it. */
+  /* ── Register documents (.docx) ────────────────────────────────────
+     A register (Statement of Applicability, risk register, asset
+     register) as a controlled Word document in the enterprise style:
+     landscape A4, a title block with document control, then the
+     register as a table whose header row repeats on every page, and a
+     footer with the classification and Page X of Y.
+     opts: { title, subtitle, clientLabel, classification, date,
+     preparedBy, intro, brandColor, summary: [[label, value], ..] }
+     columns: [{ h: 'Header', w: relative width }]; rows: [[..], ..]. */
+  function docxDataTable(columns, rows, width, borderColor) {
+    var total = columns.reduce(function (n, c) { return n + (c.w || 1); }, 0);
+    var widths = columns.map(function (c) { return Math.floor(width * (c.w || 1) / total); });
+    var borders = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (edge) {
+      return '<w:' + edge + ' w:val="single" w:sz="4" w:space="0" w:color="' + borderColor + '"/>';
+    }).join('') + '</w:tblBorders>';
+    var cell = function (text, w, head) {
+      return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (head ? '<w:shd w:val="clear" w:color="auto" w:fill="E8ECF2"/>' : '') + '</w:tcPr>' +
+        String(text == null ? '' : text).split('\n').map(function (line) {
+          return '<w:p><w:pPr><w:spacing w:before="20" w:after="20"/></w:pPr>' + docxRun(line, head ? { bold: true, sz: 16 } : { sz: 16 }) + '</w:p>';
+        }).join('') + '</w:tc>';
+    };
+    var head = '<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>' + columns.map(function (c, i) { return cell(c.h, widths[i], true); }).join('') + '</w:tr>';
+    var body = rows.map(function (r) {
+      return '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + columns.map(function (_, i) { return cell(r[i], widths[i], false); }).join('') + '</w:tr>';
+    }).join('');
+    return '<w:tbl><w:tblPr><w:tblW w:w="' + width + '" w:type="dxa"/>' + borders + '<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' +
+      widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>' + head + body + '</w:tbl>';
+  }
+  function buildRegisterDocx(opts, columns, rows) {
+    opts = opts || {};
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor.slice(1).toUpperCase() : '1F3A5F';
+    var border = 'D9DEE7';
+    var W = 14838; /* landscape A4 (16838) less 1000-twip margins */
+    var cls = String(opts.classification || 'Internal').toUpperCase();
+    var parts = [];
+    parts.push(docxP([{ text: cls, bold: true, color: accent }, { text: '      CONTROLLED DOCUMENT', color: '4A5568' }], { borderTop: { sz: 36, color: accent }, before: 0, after: 360 }, null));
+    parts.push(docxP(opts.clientLabel || 'This organisation', { style: 'ClientName', after: 120 }));
+    parts.push(docxP(opts.title || 'Register', { style: 'Title', after: 80 }));
+    if (opts.subtitle) parts.push(docxP(opts.subtitle, { after: 240 }, { color: '4A5568' }));
+    var ctl = [['Organisation', opts.clientLabel || ''], ['Prepared by', opts.preparedBy || '—'], ['As at', opts.date || ''], ['Classification', opts.classification || 'Internal'], ['Entries', String(rows.length)]]
+      .concat(opts.summary || []);
+    parts.push(docxTable(ctl, [2600, 6000], { borderColor: border, headerShade: 'F4F6F9' }));
+    if (opts.intro) parts.push(docxP(opts.intro, { before: 240, after: 240 }, { color: '4A5568', sz: 18 }));
+    parts.push(docxDataTable(columns, rows, W, border));
+    parts.push(docxP('This register is maintained in Checkpoint. A printed or downloaded copy is uncontrolled: check Checkpoint for the current entries before relying on it.', { before: 240, after: 0 }, { color: '4A5568', sz: 16 }));
+    var body = parts.join('') +
+      '<w:sectPr><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' +
+      '<w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr>';
+    var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' + body + '</w:body></w:document>';
+    var footer = buildDocxFooterXml(cls + ' · ' + (opts.clientLabel || ''), (opts.title || 'Register') + ' · as at ' + (opts.date || ''), W);
+    return buildZip([
+      { name: '[Content_Types].xml', content: DOCX_CONTENT_TYPES_XML.replace('</Types>', '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>') },
+      { name: '_rels/.rels', content: DOCX_RELS_XML },
+      { name: 'word/document.xml', content: documentXml },
+      { name: 'word/_rels/document.xml.rels', content: DOCX_DOCUMENT_RELS_XML.replace('</Relationships>', '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>') },
+      { name: 'word/footer1.xml', content: footer },
+      { name: 'word/styles.xml', content: buildDocxStylesXml(accent, 'enterprise') },
+      { name: 'docProps/core.xml', content: buildDocxCoreXml({ title: opts.title || 'Register' }, { owner: opts.preparedBy || '', version: '' }) },
+      { name: 'docProps/app.xml', content: DOCX_APP_XML }
+    ]);
+  }
+
+  /* ── Excel workbooks (.xlsx) ───────────────────────────────────────
+     A dependency-free SpreadsheetML writer for register exports: one
+     sheet per register, a bold shaded header row that stays in view
+     (frozen) with filters on, sensible column widths and wrapped text.
+     Every text cell is an inline string, so a value that starts with
+     "=" is shown as text and never runs as a formula. Packaged with
+     buildZip() like the Word exports. */
+  function xlsxEsc(s) {
+    return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function xlsxColName(i) {
+    var n = i + 1, out = '';
+    while (n > 0) { var m = (n - 1) % 26; out = String.fromCharCode(65 + m) + out; n = Math.floor((n - 1) / 26); }
+    return out;
+  }
+  /* Excel sheet names: at most 31 characters, none of []:*?/\ , unique. */
+  function xlsxSheetName(name, used) {
+    var base = String(name || 'Sheet').replace(/[\[\]:*?\/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Sheet';
+    var n = base, i = 2;
+    while (used[n.toLowerCase()]) { var suf = ' (' + i++ + ')'; n = base.slice(0, 31 - suf.length) + suf; }
+    used[n.toLowerCase()] = true;
+    return n;
+  }
+  function xlsxCell(ref, v, style) {
+    if (typeof v === 'number' && isFinite(v)) return '<c r="' + ref + '" s="' + style + '"><v>' + v + '</v></c>';
+    var t = String(v == null ? '' : v);
+    if (t.length > 32000) t = t.slice(0, 32000) + '…';
+    return '<c r="' + ref + '" s="' + style + '" t="inlineStr"><is><t xml:space="preserve">' + xlsxEsc(t) + '</t></is></c>';
+  }
+  function xlsxColWidths(header, rows) {
+    return header.map(function (h, ci) {
+      var lens = rows.slice(0, 500).map(function (r) { return String(r[ci] == null ? '' : r[ci]).length; }).sort(function (a, b) { return a - b; });
+      var typical = lens.length ? lens[Math.floor(lens.length * 0.9)] : 0;
+      return Math.max(8, Math.min(60, Math.max(String(h).length + 2, typical + 2)));
+    });
+  }
+  /* sheets: [{ name, header: [..], rows: [[..], ..] }] -> Uint8Array */
+  function buildXlsx(sheets, opts) {
+    opts = opts || {};
+    var used = {};
+    var list = (sheets || []).map(function (sh) { return { name: xlsxSheetName(sh.name, used), header: sh.header || [], rows: sh.rows || [] }; });
+    if (!list.length) list = [{ name: 'Sheet1', header: [], rows: [] }];
+    var files = [];
+    var defined = [];
+    list.forEach(function (sh, si) {
+      var ncol = Math.max(1, sh.header.length);
+      var lastCol = xlsxColName(ncol - 1), lastRow = sh.rows.length + 1;
+      var widths = xlsxColWidths(sh.header, sh.rows);
+      var rowsXml = '<row r="1">' + sh.header.map(function (h, ci) { return xlsxCell(xlsxColName(ci) + '1', h, 1); }).join('') + '</row>' +
+        sh.rows.map(function (r, ri) {
+          var rn = ri + 2;
+          return '<row r="' + rn + '">' + sh.header.map(function (_, ci) { return xlsxCell(xlsxColName(ci) + rn, r[ci], 2); }).join('') + '</row>';
+        }).join('');
+      var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+        '<dimension ref="A1:' + lastCol + lastRow + '"/>' +
+        '<sheetViews><sheetView workbookViewId="0"' + (si === 0 ? ' tabSelected="1"' : '') + '><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>' +
+        '<sheetFormatPr defaultRowHeight="15"/>' +
+        (widths.length ? '<cols>' + widths.map(function (w, ci) { return '<col min="' + (ci + 1) + '" max="' + (ci + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>' : '') +
+        '<sheetData>' + rowsXml + '</sheetData>' +
+        (sh.header.length ? '<autoFilter ref="A1:' + lastCol + lastRow + '"/>' : '') +
+        '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>' +
+        '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>' +
+        '</worksheet>';
+      files.push({ name: 'xl/worksheets/sheet' + (si + 1) + '.xml', content: xml });
+      if (sh.header.length) defined.push('<definedName name="_xlnm._FilterDatabase" localSheetId="' + si + '" hidden="1">\'' + xlsxEsc(sh.name.replace(/'/g, "''")) + '\'!$A$1:$' + lastCol + '$' + lastRow + '</definedName>');
+    });
+    var workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<bookViews><workbookView/></bookViews><sheets>' +
+      list.map(function (sh, si) { return '<sheet name="' + xlsxEsc(sh.name) + '" sheetId="' + (si + 1) + '" r:id="rId' + (si + 1) + '"/>'; }).join('') +
+      '</sheets>' + (defined.length ? '<definedNames>' + defined.join('') + '</definedNames>' : '') + '</workbook>';
+    var wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      list.map(function (_, si) { return '<Relationship Id="rId' + (si + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (si + 1) + '.xml"/>'; }).join('') +
+      '<Relationship Id="rId' + (list.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="2"><font><sz val="10"/><name val="Arial"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FF14213D"/><name val="Arial"/><family val="2"/></font></fonts>' +
+      '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8ECF2"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+      '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FFB8C0CC"/></bottom><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+    var types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      list.map(function (_, si) { return '<Override PartName="/xl/worksheets/sheet' + (si + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>';
+    var rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>';
+    var core = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">' +
+      '<dc:title>' + xlsxEsc(opts.title || list[0].name) + '</dc:title><dc:creator>Compliance365 — Checkpoint</dc:creator></cp:coreProperties>';
+    return buildZip([
+      { name: '[Content_Types].xml', content: types },
+      { name: '_rels/.rels', content: rootRels },
+      { name: 'xl/workbook.xml', content: workbook },
+      { name: 'xl/_rels/workbook.xml.rels', content: wbRels },
+      { name: 'xl/styles.xml', content: styles }
+    ].concat(files).concat([{ name: 'docProps/core.xml', content: core }]));
+  }
+
+  /* ── Ticket links: actions worked in Planner, Jira or ServiceNow ─────
+     A Power Automate flow (POWER-AUTOMATE.md, flows 5 to 7) records each
+     action's ticket in the "Ticket Links" list: which action, which
+     system, the key, a link and the ticket's current status. The flow
+     never edits Checkpoint's registers; Checkpoint reads the links and
+     offers to close an action whose ticket is finished, through its own
+     audited path. */
+  function ticketSystemFromUrl(url) {
+    var u = String(url || '').toLowerCase();
+    if (/atlassian\.net|jira/.test(u)) return 'Jira';
+    if (/service-?now\.com/.test(u)) return 'ServiceNow';
+    if (/planner|tasks\.office\.com/.test(u)) return 'Planner';
+    if (/dev\.azure\.com|visualstudio\.com/.test(u)) return 'Azure DevOps';
+    return 'Other';
+  }
+  /* 'done', 'cancelled' or 'open' for a ticket's status as the system
+     reports it ("Done", "Resolved", "Closed Complete", "100%", "Won't
+     do"...). */
+  function ticketStatusCategory(status) {
+    var s = String(status == null ? '' : status).trim().toLowerCase();
+    if (!s) return 'open';
+    if (/won'?t (do|fix)|cancel+ed|rejected|declined|duplicate|closed incomplete|closed skipped|abandoned/.test(s)) return 'cancelled';
+    if (/^100\s*%?$|\b(done|resolved|completed?|closed|finished)\b/.test(s)) return 'done';
+    return 'open';
+  }
+  /* The newest link per action: { actionId: link }. */
+  function latestTicketLinks(links) {
+    var out = {};
+    (links || []).forEach(function (l) {
+      if (!l || !l.action) return;
+      var cur = out[l.action];
+      if (!cur || String(l.updated || '') >= String(cur.updated || '')) out[l.action] = l;
+    });
+    return out;
+  }
+  /* What the tickets say that Checkpoint does not yet reflect:
+     close: an open action whose ticket is done or cancelled ({ action,
+       link, to: 'Done' | 'Cancelled' });
+     reopened: a completed action whose ticket was reopened after the
+       action was completed. doneDates: { actionId: 'YYYY-MM-DD' }, the
+       date each action was completed (from its progress log). */
+  function ticketSyncProposals(actions, links, doneDates) {
+    var latest = latestTicketLinks(links), close = [], reopened = [];
+    (actions || []).forEach(function (a) {
+      var l = latest[a.id];
+      if (!l) return;
+      var cat = ticketStatusCategory(l.status);
+      var finished = a.status === 'Done' || a.status === 'Cancelled';
+      if (!finished && cat === 'done') close.push({ action: a, link: l, to: 'Done' });
+      else if (!finished && cat === 'cancelled') close.push({ action: a, link: l, to: 'Cancelled' });
+      else if (a.status === 'Done' && cat === 'open') {
+        var doneOn = doneDates && doneDates[a.id];
+        if (doneOn && l.updated && String(l.updated).slice(0, 10) > doneOn) reopened.push({ action: a, link: l });
+      }
+    });
+    return { close: close, reopened: reopened };
+  }
   /* ── Document control from the audit log ───────────────────────────
      A controlled document's history and approval come from what
      Checkpoint recorded when they happened, not from whoever exports
@@ -4225,6 +4453,11 @@
           edit = { n: 1, by: e.actor ? [e.actor] : [], row: { version: 'Draft', date: date, description: 'Content revised', by: e.actor || '' } };
           rows.push(edit.row);
         }
+      } else if (e.action === 'Document reviewed') {
+        var rv = parseDocReview(e);
+        if (!rv) return;
+        edit = null;
+        rows.push({ version: 'Draft', date: date, description: rv.outcome === 'Reviewed' ? 'Reviewed' : 'Changes requested', by: rv.reviewer });
       } else if (e.action === 'Policy document approved') {
         var a = parseDocApproval(e);
         if (!a) return;
@@ -4271,6 +4504,135 @@
     if (rec.recordedBy) return 'Approval recorded in Checkpoint by ' + rec.recordedBy + on;
     return 'Approval recorded in Checkpoint' + on;
   }
+  /* ===== Requests from the auditor (the "provided by client" list) =====
+     state per request: 'answered' | 'closed' | 'overdue' | 'open';
+     counts for the summary line. Newest open first, then answered,
+     then closed. */
+  function auditRequestView(list, today) {
+    var rank = { overdue: 0, open: 1, answered: 2, closed: 3 };
+    var rows = (list || []).map(function (r) {
+      var st = r.status === 'Closed' ? 'closed' : r.status === 'Answered' ? 'answered' : (r.due && today && r.due < today ? 'overdue' : 'open');
+      return Object.assign({}, r, { state: st });
+    }).sort(function (a, b) { return rank[a.state] - rank[b.state] || String(b.requested || '').localeCompare(String(a.requested || '')); });
+    var c = { open: 0, overdue: 0, answered: 0, closed: 0 };
+    rows.forEach(function (r) { c[r.state]++; });
+    return { rows: rows, counts: c, waiting: c.open + c.overdue };
+  }
+
+  /* ===== Notifiable Data Breaches: draft notices =====
+     The statement to the Australian Information Commissioner must set
+     out (Privacy Act s 26WK(3)): the entity's identity and contact
+     details, a description of the eligible data breach, the kinds of
+     information concerned, and the steps individuals should take. The
+     notice to individuals carries the same content. Drafts only: a
+     person reviews them and lodges the statement through the OAIC's
+     own form. o = { org, contact, description, occurred, detected,
+     kinds, steps: [..] }. */
+  function ndbNoticeDrafts(o) {
+    o = o || {};
+    var org = String(o.org || '[Organisation name]').trim();
+    var contact = String(o.contact || '[Contact name, email and phone]').trim();
+    var desc = String(o.description || '[What happened, and when]').trim();
+    var kinds = String(o.kinds || '[The kinds of personal information involved]').trim();
+    var steps = (o.steps || []).map(function (x) { return String(x).trim(); }).filter(Boolean);
+    if (!steps.length) steps = ['[What affected people should do to protect themselves]'];
+    var when = [o.occurred ? 'The breach occurred on or about ' + o.occurred + '.' : '', o.detected ? 'We became aware of it on ' + o.detected + '.' : ''].filter(Boolean).join(' ');
+    var stepsText = steps.map(function (x) { return '- ' + x; }).join('\n');
+    var commissioner = [
+      'Statement about an eligible data breach (Privacy Act 1988, section 26WK)',
+      '',
+      '1. Who we are',
+      org + '. Contact for this breach: ' + contact + '.',
+      '',
+      '2. What happened',
+      desc + (when ? ' ' + when : ''),
+      '',
+      '3. The information involved',
+      kinds,
+      '',
+      '4. What affected individuals should do',
+      stepsText
+    ].join('\n');
+    var individuals = [
+      'Notice of a data breach that may affect you',
+      '',
+      'We are writing to tell you about a data breach at ' + org + ' that involves your personal information.',
+      '',
+      'What happened',
+      desc + (when ? ' ' + when : ''),
+      '',
+      'The information involved',
+      kinds,
+      '',
+      'What we recommend you do',
+      stepsText,
+      '',
+      'Questions',
+      'Contact ' + contact + '. You can also contact the Office of the Australian Information Commissioner at oaic.gov.au.'
+    ].join('\n');
+    return { commissioner: commissioner, individuals: individuals };
+  }
+
+  /* ===== Review before approval (the approval matrix) =====
+     A review is a named, dated check by a second person between the
+     draft and its approval. It is recorded on the audit log as
+     'Document reviewed' with after = '<outcome> by <reviewer>[ · <comment>]'.
+     A later edit, regeneration or approval ends it: what was reviewed
+     is no longer what is on the page. */
+  var DOC_REVIEW_LEVELS = ['', 'isp', 'policies', 'all'];
+  function parseDocReview(e) {
+    var m = /^(Reviewed|Changes requested) by (.+?)(?: \u00b7 ([\s\S]*))?$/.exec(String(e.after || ''));
+    return m ? { outcome: m[1], reviewer: m[2].trim(), comment: (m[3] || '').trim() } : null;
+  }
+  function docReviewAfter(outcome, reviewer, comment) {
+    return outcome + ' by ' + String(reviewer || '').replace(/ \u00b7 /g, ' - ') + (comment ? ' \u00b7 ' + String(comment).replace(/\s+/g, ' ').trim() : '');
+  }
+  /* { current, atApproval }: the review that stands now (null after an
+     edit, regeneration or approval), and the review the latest
+     approval was given on (null when it was approved without one).
+     Each is { outcome, reviewer, comment, recordedBy, date }. */
+  function docSignoffReviewState(auditLog, docName) {
+    var entries = (auditLog || []).filter(function (e) { return e && e.targetType === 'Document' && e.targetId === docName; })
+      .slice().sort(function (a, b) { return String(a.entryDateTime || '').localeCompare(String(b.entryDateTime || '')); });
+    var current = null, atApproval = null;
+    entries.forEach(function (e) {
+      if (e.action === 'Document reviewed') {
+        var r = parseDocReview(e);
+        if (r) current = Object.assign(r, { recordedBy: e.actor || '', date: docLocalDate(e.entryDateTime) });
+      } else if (e.action === 'Policy template generated' || DOC_EDIT_ACTIONS[e.action]) {
+        current = null;
+      } else if (e.action === 'Policy document approved') {
+        atApproval = current && current.outcome === 'Reviewed' ? current : null;
+        current = null;
+      }
+    });
+    return { current: current, atApproval: atApproval };
+  }
+  /* Whether the approval matrix asks for a review of this document.
+     level: '' (none), 'isp' (the information security policy),
+     'policies' (every policy), 'all' (every generated document). */
+  function docNeedsReview(level, doc) {
+    var name = String((doc && (doc.title || doc.name)) || '');
+    var kind = String((doc && doc.docKind) || 'Policy');
+    if (level === 'all') return true;
+    if (level === 'policies') return /policy/i.test(kind) || /policy/i.test(name);
+    if (level === 'isp') return /information security policy/i.test(name);
+    return false;
+  }
+  /* Why approval cannot go ahead yet, or '' when it can. */
+  function reviewGateReason(opts) {
+    if (!opts || !opts.needed) return '';
+    var r = opts.review;
+    if (!r) return 'This document needs a review by a second person before it is approved.';
+    if (r.outcome !== 'Reviewed') return r.reviewer + ' asked for changes' + (r.comment ? ': ' + r.comment : '') + '. Make them, then ask for the review again.';
+    if (opts.approver && samePersonName(r.reviewer, opts.approver)) return r.reviewer + ' reviewed this document, so someone else must approve it.';
+    return '';
+  }
+  /* Why this person cannot review the document, or ''. */
+  function reviewerConflictReason(reviewer, preparer) {
+    if (reviewer && preparer && samePersonName(reviewer, preparer)) return reviewer + ' prepared this document, so someone else must review it.';
+    return '';
+  }
   function buildEnterpriseDocxFront(t, opts, accent, tableBorder) {
     var ver = opts.version || (opts.approved ? '1.0' : '0.1');
     /* The date approval was given, not the export date. */
@@ -4306,20 +4668,26 @@
     out.push(docxTable([['Version', 'Date', 'Description', 'By']].concat(hist),
       [1500, 2300, 3600, 2000], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
     out.push(label('Approval'));
-    out.push(docxTable([['Role', 'Name', 'Date', 'Signature'], ['Document owner', opts.owner || '—', '', ''], ['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending', opts.approved ? approvedOn : '', opts.approved ? (opts.approvalSignature || '') : '']],
+    out.push(docxTable([['Role', 'Name', 'Date', 'Signature'], ['Document owner', opts.owner || '—', '', '']].concat(opts.reviewedBy ? [['Reviewed by', opts.reviewedBy, opts.reviewDateText || '', opts.reviewSignature || '']] : []).concat([['Approved by', opts.approved ? (opts.approvedBy || '—') : 'Pending', opts.approved ? approvedOn : '', opts.approved ? (opts.approvalSignature || '') : '']]),
       [2200, 2600, 2000, 2600], { borderColor: tableBorder, headerShade: 'F4F6F9' }));
     return out.join('');
   }
   /* The footer an enterprise document carries on every page. */
   function buildEnterpriseDocxFooter(t, opts) {
     var ver = opts.version || (opts.approved ? '1.0' : '0.1');
+    return buildDocxFooterXml(String(opts.classification || 'Internal').toUpperCase() + (opts.approved ? '' : ' · DRAFT') + ' · ' + (opts.clientLabel || ''), t.title + ' · Version ' + ver, 9026);
+  }
+  /* Footer part: left text, "Page X of Y" in the centre, right text.
+     width is the text width in twips (portrait A4 with 2.54cm margins is
+     9026; the centre tab sits at half of it). */
+  function buildDocxFooterXml(left, right, width) {
     var fld = function (code) { return '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ' + code + ' </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'; };
     var small = '<w:rPr><w:color w:val="4A5568"/><w:sz w:val="15"/></w:rPr>';
     var run = function (text) { return '<w:r>' + small + '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r>'; };
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="D9DEE7"/></w:pBdr><w:tabs><w:tab w:val="center" w:pos="4513"/><w:tab w:val="right" w:pos="9026"/></w:tabs></w:pPr>' +
-      run(String(opts.classification || 'Internal').toUpperCase() + (opts.approved ? '' : ' · DRAFT') + ' · ' + (opts.clientLabel || '')) + '<w:r><w:tab/></w:r>' +
-      run('Page ') + fld('PAGE') + run(' of ') + fld('NUMPAGES') + '<w:r><w:tab/></w:r>' + run(t.title + ' · Version ' + ver) +
+      '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="D9DEE7"/></w:pBdr><w:tabs><w:tab w:val="center" w:pos="' + Math.round(width / 2) + '"/><w:tab w:val="right" w:pos="' + width + '"/></w:tabs></w:pPr>' +
+      run(left) + '<w:r><w:tab/></w:r>' +
+      run('Page ') + fld('PAGE') + run(' of ') + fld('NUMPAGES') + '<w:r><w:tab/></w:r>' + run(right) +
       '</w:p></w:ftr>';
   }
   /* Bullet character varies by layout the same way the HTML template's
@@ -7555,6 +7923,9 @@
   var NEXT_KIND_GUIDE = {
     'Sign off minutes': { why: 'You chaired the management review. Read the minutes and approve them: the certification auditor checks that top management signed them off.', mins: 10 },
     'Approve document': { why: 'Top management approves each policy so it carries the organisation’s authority. Read it, and approve it if it says what you want.', mins: 10 },
+    'Audit request': { why: 'The certification auditor asked for this. Answer it with the record that shows it, so the audit keeps moving.', mins: 15 },
+    'Check document': { why: 'A second person checks each draft before it goes for approval, so no one approves work nobody else has read. Read it and say whether it is ready or what should change.', mins: 15 },
+    'Accept risk': { why: 'You are asked to accept a risk that stays after treatment. Accepting it is your decision as the person accountable for it; Checkpoint records your name and the date.', mins: 10 },
     'Acknowledge policy': { why: 'Everyone confirms they have read the policies that apply to them. An auditor checks a sample of people.', mins: 5 },
     'Training': { why: 'Short security awareness training everyone completes once a year, ending in a few questions.', mins: 20 },
     'Security review': { why: 'The monthly meeting where leadership looks at how security is going and makes the decisions only it can make.', mins: 30 },
@@ -7573,7 +7944,7 @@
       var key = Object.keys(NEXT_KIND_GUIDE).find(function (k) { return k === i.kind || (k === 'Objective' && /^Objective/.test(i.kind || '')); });
       var g = NEXT_KIND_GUIDE[key] || { why: '', mins: 10 };
       var recordMinutes = i.kind === 'Security review' && /^Record/.test(i.title || '');
-      return { kind: i.kind, item: i, title: (i.kind === 'Approve document' ? 'Approve ' : i.kind === 'Acknowledge policy' ? 'Read and acknowledge ' : i.kind === 'Evidence requested' ? 'Upload evidence for ' : '') + String(i.title || '').replace(/\.html$/i, ''),
+      return { kind: i.kind, item: i, title: (i.kind === 'Approve document' ? 'Approve ' : i.kind === 'Check document' ? 'Check ' : i.kind === 'Accept risk' ? 'Decide on ' : i.kind === 'Acknowledge policy' ? 'Read and acknowledge ' : i.kind === 'Evidence requested' ? 'Upload evidence for ' : '') + String(i.title || '').replace(/\.html$/i, ''),
         why: recordMinutes ? 'Record what the meeting decided, so the decisions become actions with owners and dates.' : g.why, minutes: recordMinutes ? 15 : g.mins, overdue: !!i.overdue, due: i.due || '', more: list.length - 1 };
     }
     if (opts.fallback) return Object.assign({ kind: 'Do next', minutes: null, more: 0 }, opts.fallback);
@@ -12180,7 +12551,10 @@
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
     NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild,
     srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
+    buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
+    ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,
     documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
+    ndbNoticeDrafts: ndbNoticeDrafts, auditRequestView: auditRequestView, DOC_REVIEW_LEVELS: DOC_REVIEW_LEVELS, parseDocReview: parseDocReview, docReviewAfter: docReviewAfter, docSignoffReviewState: docSignoffReviewState, docNeedsReview: docNeedsReview, reviewGateReason: reviewGateReason, reviewerConflictReason: reviewerConflictReason,
     incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
     SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
@@ -12202,7 +12576,7 @@
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
     encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
-    classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS,
+    classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS, AI_ACT_OBLIGATIONS: AI_ACT_OBLIGATIONS, AI_ACT_TIER_ORDER: AI_ACT_TIER_ORDER,
     VENDOR_QUESTIONNAIRE: VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS: VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers: vendorAiActAnswers,
     threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
     threatIntelMatchSummary: threatIntelMatchSummary,

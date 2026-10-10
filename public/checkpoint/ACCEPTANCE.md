@@ -222,6 +222,36 @@ Exercises linking evidence to a control and the shared-evidence cross-framework 
 - Expect: shows every framework/control this same evidence also satisfies (via the SoA's "Also satisfies" cross-mapping), not just the one you started from.
 - [ ] Pass  [ ] Fail
 
+**5.3a — Registers to Excel and Word**
+- Click: Statement of Applicability → **Word — this framework**; Risk register → **Word**; Asset register → **Word**; Risk register → **Excel**; Settings → **Export all (Excel)**.
+- Expect: each file downloads and opens. The Word documents are landscape, with document control at the top, the table header repeated on each page and "Page X of Y" in the footer. The Excel files have a bold header row that stays in view and filters. Audit log shows a **Register exported** entry for each.
+- [ ] Pass  [ ] Fail
+
+**5.3b — An action worked as a ticket**
+- Click: Actions → open an action → **Link ticket** → paste a Jira, ServiceNow or Planner link with status *Done* → **Save**.
+- Expect: the action shows the ticket, and **Linked tickets finished** lists it with **Complete**. Completing it adds a progress-log entry naming the ticket, sets the ticket link as evidence and writes an audit entry. A nonconformity in the same state shows **Record corrective action** instead.
+- [ ] Pass  [ ] Fail
+
+**5.3c — A policy reviewed by a second person before approval**
+- Click: Settings → Approvals → **All policies**. Documents → a draft policy → **Ask for review** → choose a colleague → **Send request**. Signed in as that colleague: My tasks → **Check it** → **Reviewed** → **Record review**.
+- Expect: before the review, **Approve** says a review is needed first. The preparer cannot record the review. After it, the register shows **Reviewed** and offers **Request approval**; the reviewer cannot be entered as the approver. The approved document's history and sign-off table show the reviewer and the approver. An edit made after the review means it must be reviewed again.
+- [ ] Pass  [ ] Fail
+
+**5.3d — A risk accepted by the person accountable**
+- Click: Settings → Approvals → risk acceptance **On**. Risk register → a risk → **Accept residual** → choose the risk owner → **Send request**. Signed in as the owner: My tasks → **Decide** → **Record acceptance**.
+- Expect: the acceptance dialog has no free-text "Accepted by": it is recorded in the owner's name. The audit log entry reads "Accepted by … ; asked for by …". The request leaves My tasks.
+- [ ] Pass  [ ] Fail
+
+**5.3e — Requests from the auditor**
+- Click: Auditor guide → **+ Log a request** → enter a request, the person answering and a due date → **Log request**. Then **Answer** → write the answer and paste a SharePoint evidence link → **Save answer**.
+- Expect: the request shows as Open, and then as Answered with the answer and an Evidence link. Until it's answered, the person answering sees it in My tasks. Signed in as a Checkpoint Viewer (the auditor), the same list shows with no buttons. The audit log has a logged entry and an answered entry.
+- [ ] Pass  [ ] Fail
+
+**5.3f — Draft breach notices**
+- Click: Incidents → a possible privacy-breach incident → **Draft breach notices** → add a contact → **Draft notices**.
+- Expect: a printable page marked DRAFT, with a statement to the OAIC in four parts (who we are, what happened, the information involved, what affected individuals should do) and a notice to individuals. Nothing is emailed. The audit log has a **Breach notices drafted** entry.
+- [ ] Pass  [ ] Fail
+
 **5.4 — Upload a document**
 - Click: sidebar → **"Documents"** → choose a small test file, pick a category → **"Upload"**.
 - Expect: file appears in the table below with correct name/category/modified date; visible in the tenant's real SharePoint document library too (spot-check in a separate tab).

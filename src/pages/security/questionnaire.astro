@@ -1,0 +1,105 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import data from '../../data/checkpoint-security-answers.json';
+
+const base = import.meta.env.BASE_URL || '/';
+const asAt = new Date(data.asAt + 'T00:00:00Z').toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const total = data.groups.reduce((n, g) => n + g.items.length, 0);
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const faq = {
+  '@type': 'FAQPage',
+  mainEntity: data.groups.flatMap((g) => g.items.map((it) => ({ '@type': 'Question', name: it.q, acceptedAnswer: { '@type': 'Answer', text: it.a } }))),
+};
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Security & architecture', url: 'https://www.compliance365.com.au/security/' },
+  { name: 'Security questionnaire answers', url: 'https://www.compliance365.com.au/security/questionnaire/' },
+];
+---
+<Base
+  title="Checkpoint Security Questionnaire Answers | Compliance365"
+  description="Ready answers for a Checkpoint vendor assessment: where data lives, every connection out of your tenant, access, encryption, audit, AI and exit. Excel download."
+  schema={[faq]}
+  breadcrumbs={breadcrumbs}
+>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="section sq-hero">
+  <div class="container">
+    <p class="sq-eyebrow"><a href={base + 'security/'}>Security &amp; architecture</a> · Procurement pack</p>
+    <h1>Checkpoint security questionnaire answers</h1>
+    <p class="muted sq-lead">{total} answers a security reviewer usually needs, written from how Checkpoint actually works, plus every connection it makes outside your Microsoft 365 tenant. Copy them into your assessment, or download them as a workbook.</p>
+    <div class="sq-actions">
+      <a class="btn btn-primary" href={base + 'security/checkpoint-security-answers.xlsx'} download>Download as Excel</a>
+      <a class="btn" href={base + 'accessibility/'}>Accessibility statement</a>
+      <a class="btn" href={base + 'security/#permissions'}>Every permission, and when</a>
+    </div>
+    <p class="muted small">As at {asAt}.</p>
+  </div>
+</section>
+
+<section class="section" id="outbound">
+  <div class="container">
+    <h2>Every connection out of your tenant</h2>
+    <p class="muted sq-lead">Checkpoint runs in your browser and reads and writes your tenant through Microsoft Graph, as the signed-in user. Apart from Microsoft, these are the only places it connects to. None of them receives your registers, scan results or documents.</p>
+    <div class="sq-table-wrap">
+      <table class="sq-table">
+        <thead><tr><th scope="col">Connection</th><th scope="col">When</th><th scope="col">What it sends</th><th scope="col">To</th><th scope="col">Control</th></tr></thead>
+        <tbody>
+          {data.outbound.map((o) => (
+            <tr><th scope="row">{o.what}</th><td>{o.when}</td><td>{o.sends}</td><td>{o.to}</td><td>{o.control}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="answers">
+  <div class="container">
+    <h2>Answers</h2>
+    <nav class="sq-toc" aria-label="Answer areas">
+      {data.groups.map((g) => (<a href={'#' + slug(g.name)}>{g.name}</a>))}
+    </nav>
+    {data.groups.map((g) => (
+      <div class="sq-group" id={slug(g.name)}>
+        <h3>{g.name}</h3>
+        <dl class="sq-qa">
+          {g.items.map((it) => (
+            <div class="sq-item"><dt>{it.q}</dt><dd>{it.a}</dd></div>
+          ))}
+        </dl>
+      </div>
+    ))}
+  </div>
+</section>
+
+</main>
+<Footer />
+</Base>
+
+<style>
+  .sq-hero { padding-top: 3rem; }
+  .sq-eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink, #A63A12); margin: 0 0 .8rem; }
+  .sq-eyebrow a { color: inherit; }
+  .sq-lead { max-width: 70ch; font-size: 1.05rem; line-height: 1.7; }
+  .sq-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0 1rem; }
+  .sq-table-wrap { overflow-x: auto; margin-top: 1.25rem; }
+  .sq-table { width: 100%; border-collapse: collapse; font-size: .92rem; min-width: 760px; }
+  .sq-table th, .sq-table td { text-align: left; vertical-align: top; padding: .75rem .9rem; border-bottom: 1px solid #DDD8CF; line-height: 1.55; }
+  .sq-table thead th { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: #6B6860; border-bottom: 2px solid #0B0B0C; }
+  .sq-table tbody th { font-weight: 700; white-space: nowrap; }
+  .sq-toc { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 2rem; }
+  .sq-toc a { font-size: .85rem; padding: .35rem .8rem; border: 1px solid #DDD8CF; border-radius: 999px; text-decoration: none; color: inherit; }
+  .sq-toc a:hover { border-color: #BE4A1E; color: #A63A12; }
+  .sq-group { margin-top: 2.25rem; scroll-margin-top: 90px; }
+  .sq-group h3 { border-bottom: 2px solid #DDD8CF; padding-bottom: .5rem; }
+  .sq-qa { margin: 0; }
+  .sq-item { padding: 1rem 0; border-bottom: 1px solid #EEE9E0; display: grid; grid-template-columns: minmax(200px, 1fr) 2fr; gap: 1.5rem; }
+  .sq-item dt { font-weight: 700; }
+  .sq-item dd { margin: 0; line-height: 1.65; }
+  @media (max-width: 720px) { .sq-item { grid-template-columns: 1fr; gap: .4rem; } }
+</style>

@@ -184,6 +184,13 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint CheckDispositions` (how this tenant covers a posture
      check Checkpoint can't see — an alternative tool, or not applicable;
      see §8's "Checks covered outside Microsoft")
+   - `Checkpoint TicketLinks` (the Planner, Jira or ServiceNow ticket for
+     each action, written by your own Power Automate flow — see
+     POWER-AUTOMATE.md, flows 5 and 6. Not a register: Checkpoint only
+     reads it, and changes an action from it only when you confirm)
+   - `Checkpoint AuditRequests` (requests from the certification auditor
+     during an audit, logged and answered by a practitioner and read by
+     the auditor in the Auditor guide)
    - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is entitled by default going into the wizard's framework
    step; every other framework's control set is seeded either way, just

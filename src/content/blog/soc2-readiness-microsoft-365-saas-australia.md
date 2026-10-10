@@ -9,15 +9,15 @@ tags: ["SOC 2","Type 1","Type 2","SaaS","Australia","Microsoft 365"]
 image: /assets/illus-soc2.svg
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p><strong>SOC 2</strong> certification demonstrates to customers and partners that your organisation’s controls are <strong>secure, available, and confidential</strong>—and that they operate effectively over time.</p>
   <p>For Australian SaaS providers, the hardest part is not writing policies but <strong>proving compliance repeatedly and consistently</strong>.</p>
   <p>This guide outlines how to achieve SOC 2 Type 1 and Type 2 readiness faster by <strong>automating evidence directly within Microsoft 365, Azure, GitHub, and Azure DevOps</strong>—the systems your teams already use every day.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 Why Australian SaaS Companies Pursue SOC 2
 </h2>
 
@@ -33,15 +33,15 @@ Why Australian SaaS Companies Pursue SOC 2
 
 <p><strong>What SOC 2 does not do:</strong> SOC 2 is not a substitute for Privacy Act compliance. If your SaaS platform processes personal information of Australian individuals, the <em>Privacy Act 1988</em> and its 13 Australian Privacy Principles apply regardless of whether you hold a SOC 2 report. ISO 27701 covers the privacy management gap — and is increasingly pursued alongside SOC 2 by Australian SaaS companies selling to privacy-conscious customers.</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#BE4A1E;color:var(--on-accent);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> Define a Practical SOC 2 Scope
 </h2>
 
-<p style="margin:.2rem 0 1rem;color:#4b5563"><em>Start small and realistic.</em></p>
+<p style="margin:.2rem 0 1rem;color:#57534B"><em>Start small and realistic.</em></p>
 
 <ul>
   <li><strong>System Boundary:</strong> Identify the product or service in scope, data flows, hosting platforms, and key third-party providers.</li>
@@ -49,40 +49,40 @@ Why Australian SaaS Companies Pursue SOC 2
   <li><strong>System Description:</strong> Keep it factual and concise—a living narrative of how your platform actually works.</li>
 </ul>
 
-<blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px;margin-top:14px">
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Tip:</strong> The clearer your system description, the easier the audit and future updates.
+<blockquote style="background:#F6EEE8;border-left:4px solid #BE4A1E;padding:12px 18px;border-radius:8px;margin-top:14px">
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#BE4A1E"><use href="#ic-insight"/></svg> <strong>Tip:</strong> The clearer your system description, the easier the audit and future updates.
 </blockquote>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#BE4A1E;color:var(--on-accent);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> Align Controls With How You Work
 </h2>
 
-<div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
+<div style="background:#FAF7F1;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;margin:6px 0 0;font-size:0.96rem">
-    <thead style="background:#f3f4f6">
+    <thead style="background:#F5F0E8">
       <tr>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Area</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Evidence Source</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Typical Controls</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Area</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Evidence Source</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Typical Controls</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Access Management</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Entra ID / Azure AD</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Role-based access, MFA enforcement, SSO inventory</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Access Management</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Entra ID / Azure AD</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Role-based access, MFA enforcement, SSO inventory</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Change Management</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">GitHub / Azure DevOps</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">PR reviews, build scans, pipeline approvals</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Change Management</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">GitHub / Azure DevOps</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">PR reviews, build scans, pipeline approvals</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Vendor Governance</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">SharePoint / Contracts</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">SOC reports, DPAs, SLAs, renewal tracking</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Vendor Governance</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">SharePoint / Contracts</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">SOC reports, DPAs, SLAs, renewal tracking</td>
       </tr>
       <tr>
         <td style="padding:8px 10px"><strong>Logging &amp; Monitoring</strong></td>
@@ -93,13 +93,13 @@ Why Australian SaaS Companies Pursue SOC 2
   </table>
 </div>
 
-<p style="margin-top:10px;color:#4b5563">
+<p style="margin-top:10px;color:#57534B">
 When controls mirror daily operations, compliance stops feeling like an add-on and becomes part of your normal workflow.
 </p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#BE4A1E;color:var(--on-accent);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> Automate Evidence Collection
 </h2>
 
@@ -121,28 +121,28 @@ When controls mirror daily operations, compliance stops feeling like an add-on a
   <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> a repeatable, timestamped evidence trail aligned to auditor sampling periods.
 </blockquote>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#BE4A1E;color:var(--on-accent);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">4</span> Type 1 vs Type 2 — Choose Your Path
 </h2>
 
 <div style="overflow-x:auto">
   <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:0.96rem">
-    <thead style="background:#f3f4f6">
+    <thead style="background:#F5F0E8">
       <tr>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Type</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Purpose</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Duration</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Best For</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Type</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Purpose</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Duration</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Best For</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Type 1</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Point-in-time design validation</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">4–8 weeks</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Start-ups or early sales assurance</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Type 1</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Point-in-time design validation</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">4–8 weeks</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Start-ups or early sales assurance</td>
       </tr>
       <tr>
         <td style="padding:8px 10px"><strong>Type 2</strong></td>
@@ -156,31 +156,31 @@ When controls mirror daily operations, compliance stops feeling like an add-on a
 
 <p><strong>Recommended approach:</strong> Begin with Type 1 to confirm your control design, then move seamlessly into a Type 2 evidence cadence (monthly or quarterly).</p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#BE4A1E;color:var(--on-accent);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">5</span> Typical SOC 2 Readiness Timeline
 </h2>
 
-<div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
+<div style="background:#FAF7F1;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;margin:6px 0 0;font-size:0.96rem">
-    <thead style="background:#f3f4f6">
+    <thead style="background:#F5F0E8">
       <tr>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Phase</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Weeks</th>
-        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Key Deliverables</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Phase</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Weeks</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #DDD8CF">Key Deliverables</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Plan &amp; Scope</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">1–2</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Boundary definition, TSC mapping, system description</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Plan &amp; Scope</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">1–2</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Boundary definition, TSC mapping, system description</td>
       </tr>
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Build &amp; Integrate</strong></td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">3–6</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Control implementation, automated evidence flows</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF"><strong>Build &amp; Integrate</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">3–6</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #DDD8CF">Control implementation, automated evidence flows</td>
       </tr>
       <tr>
         <td style="padding:8px 10px"><strong>Readiness Review / Type 1 Audit</strong></td>
@@ -191,13 +191,13 @@ When controls mirror daily operations, compliance stops feeling like an add-on a
   </table>
 </div>
 
-<p style="margin-top:10px;color:#4b5563">
+<p style="margin-top:10px;color:#57534B">
 Most SaaS teams leveraging Microsoft 365 and Azure can reach <strong>SOC 2 Type 1 readiness within eight weeks</strong>.
 </p>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#BE4A1E;color:var(--on-accent);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">6</span> Common Pitfalls to Avoid
 </h2>
 
@@ -208,19 +208,19 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach <strong>SOC 2 Type 
   <li>Manual screenshots without version history or ownership</li>
 </ul>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
-<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+<h2 style="margin-top:2.2rem;color:#0B0B0C;font-size:1.6rem;font-weight:800">
 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#BE4A1E;color:var(--on-accent);font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">7</span> Next Steps
 </h2>
 
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
-  <a class="pill" href="/services/soc2/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">SOC 2 Readiness Services</a>
-  <a class="pill" href="/checklist/soc2/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">SOC 2 Checklist</a>
-  <a class="pill" href="/book/" style="text-decoration:none;padding:10px 14px;border:1px solid #4f46e5;border-radius:999px">Book a Roadmap Call</a>
+  <a class="pill" href="/services/soc2/" style="text-decoration:none;padding:10px 14px;border:1px solid #BE4A1E;border-radius:999px">SOC 2 Readiness Services</a>
+  <a class="pill" href="/checklist/soc2/" style="text-decoration:none;padding:10px 14px;border:1px solid #BE4A1E;border-radius:999px">SOC 2 Checklist</a>
+  <a class="pill" href="/book/" style="text-decoration:none;padding:10px 14px;border:1px solid #BE4A1E;border-radius:999px">Book a Roadmap Call</a>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 <!--
 SEO Highlights

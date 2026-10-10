@@ -8,12 +8,12 @@ tags: ["ISO 27001", "SOC 2", "Australia", "Certification"]
 image: "/assets/illus-soc2.svg"
 ---
 
-<div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+<div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>If you're an Australian technology company growing into enterprise or government accounts, you'll hit both ISO 27001 and SOC 2 questions at some point. Understanding which to prioritise — and when to pursue both — is one of the most common conversations we have with mid-market clients.</p>
   <p>The short answer: it depends on where your deals are coming from. The long answer is below.</p>
 </div>
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## What each framework actually does
 
@@ -23,7 +23,7 @@ image: "/assets/illus-soc2.svg"
 
 The key distinction: ISO 27001 certifies your *management system*. SOC 2 attests to your *controls against specific Trust Services Criteria* over a defined period.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## When to prioritise ISO 27001
 
@@ -34,7 +34,7 @@ Start with ISO 27001 if:
 - **You're selling into Europe.** ISO 27001 is the dominant enterprise security framework across the EU. A SOC 2 Type II from a US CPA firm holds far less weight with European procurement teams than an ISO 27001 certificate from an accredited body.
 - **You want a single standard that your entire business lives under.** ISO 27001 is a management system, not just a point-in-time audit. It creates an ongoing governance structure — risk register, policy framework, internal audit, management review — that matures over time.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## When to prioritise SOC 2
 
@@ -44,7 +44,7 @@ Start with SOC 2 if:
 - **You're a SaaS company with US growth ambitions.** VC-backed SaaS founders almost always hit the SOC 2 wall at Series B when enterprise deal sizes grow. If you're building for US revenue, it's usually better to prioritise SOC 2 early rather than retrofitting later.
 - **A specific enterprise deal has SOC 2 as an explicit contract requirement.** If the deal is stuck behind SOC 2 procurement language, you need the report — not ISO 27001 — to unblock it.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## The case for doing both (and doing them together)
 
@@ -54,7 +54,7 @@ Organisations pursuing both certifications simultaneously typically complete in 
 
 The combined approach also has a structural timing advantage. ISO 27001 certification can typically complete in 10–14 weeks. SOC 2 Type II requires a 3–6 month observation period after readiness is achieved. Running them in parallel means the ISO 27001 certificate arrives first (around week 14), followed by the SOC 2 Type II report around month 8 — giving you something credible to show in enterprise conversations at both points.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## The one question that resolves it
 
@@ -64,7 +64,7 @@ In Australian enterprise and government procurement, the answer is almost always
 
 If the answer is "we'd like both eventually," that's the signal to consider combined delivery from the start.
 
-<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+<hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
 ## A practical decision framework
 
@@ -79,7 +79,7 @@ If the answer is "we'd like both eventually," that's the signal to consider comb
 | You're already ISO 27001 certified | Add SOC 2 (fast, ~40% cheaper) |
 | You're already SOC 2 Type II | Add ISO 27001 (significant overlap) |
 
-<div style="background:#eff6ff;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #1e40af;">
+<div style="background:#FAF2EC;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #A63A12;">
   <p><strong>If you're an Australian mid-market company with enterprise ambitions in both markets,</strong> the most efficient path is combined ISO 27001 + SOC 2 delivery. You build the control framework once, evidence it once, and emerge with both certifications — typically in 14–18 weeks at 30–40% less than running them sequentially.</p>
   <p style="margin-bottom:0">A 30-minute call with our team will tell you which path fits your specific deal pipeline and timeline.</p>
 </div>

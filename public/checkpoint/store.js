@@ -873,6 +873,14 @@ window.DEFAULT_SETTINGS = {
      RECORDED either way (see segregationNote() in app.js) — the
      setting only decides whether it is also refused. */
   sodEnforced: 'false',
+  /* The approval matrix (Settings → Approvals). docReviewLevel: which
+     generated documents need a second person's review before approval:
+     '' none, 'isp' the information security policy, 'policies', 'all'.
+     riskAcceptSecond: a residual-risk acceptance is sent to the person
+     accepting it, who records it signed in as themselves. Off by
+     default: a small client with one practitioner would be stuck. */
+  docReviewLevel: '',
+  riskAcceptSecond: 'false',
   scanCadenceDays: '30',
   /* Light "paper" theme — 'true'|'false'. Read once at boot (bootUi()
      in app.js, before the first render) to set the data-theme
@@ -1682,6 +1690,20 @@ window.DemoStore = (function () {
       /* Illustrative progress history for the two demo actions already
          sitting at 'In progress', so a prospect exploring the demo sees
          the feature actually working, not an empty state. */
+      /* Linked tickets, so the demo shows an action whose ticket is
+         finished (ACT-003, Jira) and one still being worked (ACT-004,
+         Planner). */
+      /* Requests from the certification auditor, logged and answered by
+         the practitioner; the auditor reads them in the Auditor guide. */
+      auditRequests: [
+        { id: 'AR-001', title: 'Access review records for the last two quarters', request: 'Please provide the access review records for privileged accounts for the last two quarters.', requestedBy: 'J. Moreau (auditor)', requested: daysFrom(-6), due: daysFrom(-1), owner: 'K. Patel', status: 'Answered', response: 'Q2 and Q3 privileged access reviews, signed off by the ISMS owner.', evidenceUrl: '', answered: daysFrom(-2) },
+        { id: 'AR-002', title: 'Supplier review for the hosting provider', request: 'Show the most recent supplier security review for Northwind Cloud Hosting.', requestedBy: 'J. Moreau (auditor)', requested: daysFrom(-3), due: daysFrom(2), owner: 'S. Okafor', status: 'Open', response: '', evidenceUrl: '', answered: '' },
+        { id: 'AR-003', title: 'Backup restore test evidence', request: 'Evidence of the last backup restore test and its result.', requestedBy: 'J. Moreau (auditor)', requested: daysFrom(-8), due: daysFrom(-3), owner: 'K. Patel', status: 'Open', response: '', evidenceUrl: '', answered: '' }
+      ],
+      ticketLinks: [
+        { id: 'TL-1', action: 'ACT-003', system: 'Jira', key: 'SEC-41', url: 'https://meridianhealth.atlassian.net/browse/SEC-41', status: 'Done', updated: daysFrom(-1) },
+        { id: 'TL-2', action: 'ACT-004', system: 'Planner', key: 'Phishing programme', url: 'https://tasks.office.com/meridianhealth.example/Home/Task/demo', status: '50%', updated: daysFrom(-3) }
+      ],
       actionUpdates: [
         { id: 'UPD-0001', action: 'ACT-001', date: daysFrom(-18), note: 'Drafted the updated security schedule and sent to Legal for review before it goes to suppliers.', evidenceUrl: '', status: 'In progress', author: 'K. Patel' },
         { id: 'UPD-0002', action: 'ACT-001', date: daysFrom(-4), note: 'Legal review complete, minor wording changes only. Sent to the first 4 of 10 suppliers this week; remainder scheduled next week.', evidenceUrl: '', status: 'In progress', author: 'K. Patel' },
@@ -2036,6 +2058,9 @@ window.DemoStore = (function () {
     /* Append-only — no update/delete counterpart, same immutability the
        audit log already relies on. */
     addActionUpdate: async function (u) { S.actionUpdates.push(u); persist(); },
+    addTicketLink: async function (l) { (S.ticketLinks = S.ticketLinks || []).push(l); persist(); },
+    addAuditRequest: async function (r) { (S.auditRequests = S.auditRequests || []).push(r); persist(); },
+    updateAuditRequest: async function () { persist(); },
     updateControl: async function () { persist(); },
     updateClause: async function () { persist(); },
     addScan: async function (sc) { S.scans.push(sc); persist(); },
@@ -2521,6 +2546,26 @@ window.SpStore = (function () {
        the previous scan scored 'fail' on this one; anything less sharp
        (e.g. pass -> review) stays visible on the normal scan checklist
        without paging anyone. */
+    /* Tickets in Planner, Jira or ServiceNow that work an action
+       (POWER-AUTOMATE.md, flows 5 to 7). Written by the client's own
+       Power Automate flow, never by Checkpoint's registers: Checkpoint
+       reads these and offers to close an action whose ticket is done,
+       through its own audited path. Title holds the ticket key. */
+    /* Requests from the certification auditor during an audit (the
+       "provided by client" list): logged and answered by a
+       practitioner, read by the auditor in the Auditor guide. */
+    AuditRequests: [
+      { name: 'RefId', text: {} }, { name: 'Request', text: { allowMultipleLines: true } },
+      { name: 'RequestedBy', text: {} }, { name: 'Requested', text: {} }, { name: 'DueDate', text: {} },
+      { name: 'Owner', text: {} }, { name: 'Status', text: {} },
+      { name: 'Response', text: { allowMultipleLines: true } }, { name: 'EvidenceUrl', text: {} },
+      { name: 'AnsweredDate', text: {} }
+    ],
+    TicketLinks: [
+      { name: 'ActionRef', text: {} }, { name: 'System', text: {} },
+      { name: 'TicketUrl', text: {} }, { name: 'TicketStatus', text: {} },
+      { name: 'UpdatedAt', text: {} }
+    ],
     Alerts: [
       { name: 'CheckId', text: {} }, { name: 'CheckLabel', text: {} },
       { name: 'PreviousStatus', text: {} }, { name: 'NewStatus', text: {} },
@@ -3249,6 +3294,9 @@ window.SpStore = (function () {
     if (withRef) f.RefId = a.id;
     return f;
   }
+  function auditRequestFields(r) {
+    return { Title: r.title || '', RefId: r.id, Request: r.request || '', RequestedBy: r.requestedBy || '', Requested: r.requested || '', DueDate: r.due || '', Owner: r.owner || '', Status: r.status || 'Open', Response: r.response || '', EvidenceUrl: r.evidenceUrl || '', AnsweredDate: r.answered || '' };
+  }
   function incidentFields(n) {
     return {
       Title: n.id, RefId: n.id, Category: n.category || 'Other', Severity: n.severity || 'Medium',
@@ -3349,6 +3397,8 @@ window.SpStore = (function () {
       var draftItems = await items('PolicyDrafts');
       var incItems = await items('Incidents');
       var dispItems = await items('CheckDispositions');
+      var ticketItems = await items('TicketLinks');
+      var arItems = await items('AuditRequests');
 
       S = {
         mode: 'live',
@@ -3366,6 +3416,14 @@ window.SpStore = (function () {
            newest-first timeline (the action drawer) reverse it there,
            so the canonical order in S stays consistent no matter which
            view reads it. */
+        auditRequests: arItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId || ('AR-' + i.id), title: f.Title || '', request: f.Request || '', requestedBy: f.RequestedBy || '', requested: f.Requested || '', due: f.DueDate || '', owner: f.Owner || '', status: f.Status || 'Open', response: f.Response || '', evidenceUrl: f.EvidenceUrl || '', answered: f.AnsweredDate || '' };
+        }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
+        ticketLinks: ticketItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: 'TL-' + i.id, action: f.ActionRef || '', system: f.System || '', key: f.Title || '', url: f.TicketUrl || '', status: f.TicketStatus || '', updated: f.UpdatedAt || (i.lastModifiedDateTime || '') };
+        }),
         actionUpdates: actUpdItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, action: f.ActionRef || '', date: f.UpdateDate || '', note: f.Note || '', evidenceUrl: f.EvidenceUrl || '', status: f.Status || '', author: f.Author || '' };
@@ -3639,6 +3697,17 @@ window.SpStore = (function () {
     },
     /* Append-only — no update/delete counterpart, same immutability the
        audit log already relies on for its own credibility. */
+    addAuditRequest: async function (r) {
+      r._sp = await addItem('AuditRequests', auditRequestFields(r));
+      (S.auditRequests = S.auditRequests || []).push(r);
+    },
+    updateAuditRequest: async function (r) {
+      await patchItem('AuditRequests', r._sp, auditRequestFields(r));
+    },
+    addTicketLink: async function (l) {
+      l._sp = await addItem('TicketLinks', { Title: l.key || '', ActionRef: l.action, System: l.system || '', TicketUrl: l.url || '', TicketStatus: l.status || '', UpdatedAt: l.updated || '' });
+      (S.ticketLinks = S.ticketLinks || []).push(l);
+    },
     addActionUpdate: async function (u) {
       u._sp = await addItem('ActionUpdates', {
         Title: u.id, RefId: u.id, ActionRef: u.action, UpdateDate: u.date,
