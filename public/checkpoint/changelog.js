@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.156.0',
+    date: '2026-10-10',
+    entries: [
+      'Guided mode. Checkpoint opens on Start here, the Next step bar shows on every screen, and the menu lists only the screens for the steps reached so far (Show full menu still lists everything). It works out where you are from your own records, so an organisation part-way through picks up where it is. Switch it off in Settings → Features.',
+      'A tenant setting Checkpoint up for the first time also gets a weekly compliance digest to the person who set it up. With guided mode on, the digest opens with the next step and a button straight to it. It is sent by the scheduled monitor where that is deployed, or with Send digest now.',
+      'Help now has "Tell Compliance365": say what you were trying to do, and your email app opens a message to Compliance365 with the screen and step you were on.'
+    ]
+  },
+  {
     version: '1.155.0',
     date: '2026-10-10',
     entries: [

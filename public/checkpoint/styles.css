@@ -2048,3 +2048,9 @@ tr.asset-retired td { opacity: .85; }
 .howto-list{list-style:none;padding:0;margin:0;display:grid;gap:12px}
 .howto-list li{display:grid;gap:2px}
 @media (max-width:900px){.sh{grid-template-columns:1fr}.sh-now li{grid-template-columns:28px minmax(0,1fr)}.sh-now li .btn{grid-column:2;justify-self:start}}
+
+/* Guided mode: screens for steps not reached yet stay out of the Simple menu */
+body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{display:none}
+.nav-later-note{margin:6px 14px 4px;font-size:11.5px;color:var(--paper-dim);line-height:1.5}
+.howto-feedback{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.howto-feedback p{margin:4px 0 10px}
