@@ -19,8 +19,8 @@ import { MODULES, TIERS, ENTERPRISE, CONSULTING_DAY_RATE } from './pricing.js';
 
 /* Day choices for "Checkpoint plus consulting days". The visitor picks
    the number; we do not claim how many days any piece of work takes. */
-export const DAY_OPTIONS = [2, 5, 10, 20];
-export const DEFAULT_DAYS = 5;
+export const DAY_OPTIONS = [1, 2, 5, 10];
+export const DEFAULT_DAYS = 2;
 export { CONSULTING_DAY_RATE };
 
 export const SIZES = [
@@ -133,14 +133,18 @@ export function estimate(opts) {
       year1.push({ label: `Compliance365 consulting: ${days} days at ${aud(CONSULTING_DAY_RATE)} a day`, range: [fee, fee] });
     }
   }
-  if (f.audit) year1.push({ label: f.audit.label, range: f.audit.bands[opts.size] });
-  if (f.later) later.push({ label: f.later.label, range: times(f.later.bands[opts.size], 2) });
+  if (f.audit) year1.push({ label: f.audit.label, range: f.audit.bands[opts.size], external: true });
+  if (f.later) later.push({ label: f.later.label, range: times(f.later.bands[opts.size], 2), external: true });
   later.push({ label: 'Checkpoint licence, years 2 and 3', range: [lic.amount * 2, lic.amount * 2], from: lic.from });
   const sum = (items) => items.reduce((t, i) => add(t, i.range), [0, 0]);
   const y1 = sum(year1);
   return {
     year1, later,
     year1Total: y1,
+    // Year 1 split: what Compliance365 charges, and what the certification
+    // body or CPA firm charges (paid to them, not to us).
+    year1Ours: sum(year1.filter((i) => !i.external)),
+    year1External: sum(year1.filter((i) => i.external)),
     threeYearTotal: add(y1, sum(later)),
     // "from" only where a line is a starting price (Enterprise licences).
     year1From: year1.some((i) => i.from),
