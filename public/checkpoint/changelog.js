@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.150.0',
+    date: '2026-10-10',
+    entries: [
+      'Faster sign-in. After you sign in, Checkpoint now reads your registers from SharePoint six at a time instead of one after another, and no longer reads the controls and clauses lists twice. On a typical connection the wait before the dashboard appears is a fraction of what it was.'
+    ]
+  },
+  {
     version: '1.149.0',
     date: '2026-10-10',
     entries: [
