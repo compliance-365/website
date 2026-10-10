@@ -83,6 +83,14 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
+      - name: Fingerprint inline scripts for the Content Security Policy
+        # Same rule as the steps below: `npx astro build` does not run
+        # package.json's postbuild, so this is repeated here. Without it
+        # every is:inline script on the site is blocked by the policy
+        # Astro emits (security.csp in astro.config.mjs), and the step
+        # fails the deploy if a page has an inline onclick= handler.
+        run: node scripts/csp-inline-hashes.mjs dist
+
       - name: Minify Checkpoint's own JavaScript
         # MUST run before the hashing step below, never after: hashing
         # computes each file's content hash and the matching SRI digest,

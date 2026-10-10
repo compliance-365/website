@@ -42,6 +42,39 @@ export default defineConfig({
   // navigation feels instant. Same-origin only; nothing runs until the
   // visitor actually navigates.
   prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
+  // Content Security Policy, emitted as a <meta> on every page (static
+  // hosting has no response headers). Astro fingerprints the scripts it
+  // bundles; scripts/csp-inline-hashes.mjs adds the is:inline ones after
+  // the build. Origins: cdnjs (hero 3D ring); jsdelivr (jsPDF, Fuse.js);
+  // *.clarity.ms (Clarity: the loader fetches its engine and sends data
+  // across several subdomains, after cookie consent); assets.apollo.io +
+  // aplo-evnt.com (Apollo company identification); googletagmanager.com /
+  // google-analytics.com (GA4, cookieless until consent); Microsoft
+  // login/Graph (posture scan); the execute-api Lambdas (chat, forms);
+  // formspree.io (forms); Outlook (Bookings iframe); Paddle (/start only).
+  // Styles keep 'unsafe-inline': pages use thousands of style=""
+  // attributes, which fingerprints cannot cover.
+  security: {
+    csp: {
+      algorithm: 'SHA-256',
+      directives: [
+        "default-src 'self'",
+        "font-src 'self'",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com",
+        "frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self' https://formspree.io",
+      ],
+      scriptDirective: {
+        resources: ["'self'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://*.clarity.ms', 'https://assets.apollo.io', 'https://www.googletagmanager.com', 'https://cdn.paddle.com'],
+      },
+      styleDirective: {
+        resources: ["'self'", "'unsafe-inline'", 'https://*.paddle.com'],
+      },
+    },
+  },
   redirects: {
     // Old site legacy URLs
     '/thirdpartyrisk.html':            '/services/iso27001/',
@@ -59,6 +92,8 @@ export default defineConfig({
     '/blog/iso27001-vs-iso27701':      '/blog/iso-27001-vs-iso-27701-australia/',
     '/blog/iso42001-ai-governance':    '/blog/ai-governance-iso42001-playbook/',
   },
+  // No code blocks on the site; Shiki's inline styles conflict with the CSP.
+  markdown: { syntaxHighlight: false },
   integrations: [
     sitemap({
       filter: (page) => !SITEMAP_EXCLUDE.includes(page),

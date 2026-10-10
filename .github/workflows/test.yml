@@ -136,5 +136,8 @@ jobs:
       - name: Build the site
         run: npx astro build
 
+      - name: Fingerprint inline scripts for the Content Security Policy
+        run: node scripts/csp-inline-hashes.mjs dist
+
       - name: Check links and page weight
         run: node scripts/check-site.mjs dist

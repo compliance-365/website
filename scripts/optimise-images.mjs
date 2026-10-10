@@ -15,7 +15,7 @@ const ASSETS = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public', 
 // source, output basename, widths to emit. The source stays in the repo as
 // the master; the derivatives are what the pages actually reference.
 const JOBS = [
-  { src: 'about.png', out: 'about', widths: [1100, 700] },
+  // The /about/ photo is handled by Astro's <Picture> (src/assets/about.jpg).
   // Credential badges on /about/. Rendered ~100px tall, so 2x is plenty; the
   // Lead Auditor source is a 116 KB PNG at 300x350.
   // NOTE: `out` must differ from `src`, or the derivative would overwrite the
