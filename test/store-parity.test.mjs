@@ -32,3 +32,15 @@ test('savePolicyDraft: SharePoint in the live store, localStorage in the demo', 
   const src = readFileSync(new URL('../public/checkpoint/store.js', import.meta.url), 'utf8');
   assert.equal((src.match(/savePolicyDraft: async function/g) || []).length, 2, 'one per store');
 });
+
+test('no duplicate keys in any object literal (a duplicate silently replaces the first)', async () => {
+  const { buildSync } = await import('esbuild');
+  const { readdirSync } = await import('node:fs');
+  const dir = new URL('../public/checkpoint/', import.meta.url).pathname;
+  const files = readdirSync(dir).filter((f) => f.endsWith('.js') && !f.endsWith('.min.js')).map((f) => dir + f);
+  for (const f of files) {
+    const r = buildSync({ entryPoints: [f], write: false, logLevel: 'silent' });
+    const dups = r.warnings.filter((w) => w.id === 'duplicate-object-key' || /Duplicate key/.test(w.text));
+    assert.deepEqual(dups.map((w) => `${w.location && w.location.line}: ${w.text}`), [], f);
+  }
+});
