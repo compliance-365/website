@@ -1,0 +1,127 @@
+---
+// One page per self-serve framework: /checkpoint-console/iso-27001-software/ etc.
+// Content in src/data/checkpoint-frameworks.ts; prices from pricing.js.
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { frameworkPages, type FrameworkPage } from '../../data/checkpoint-frameworks';
+import { comparisons } from '../../data/checkpoint-comparisons';
+import { MODULES, TRIAL_DAYS, fmtAud } from '../../data/pricing.js';
+import { checkpointSoftwareSchema } from '../../data/checkpoint-schema';
+
+export function getStaticPaths() {
+  return frameworkPages.map((f) => ({ params: { slug: f.slug }, props: { f } }));
+}
+const { f } = Astro.props as { f: FrameworkPage };
+const base = import.meta.env.BASE_URL || '/';
+const mod: any = MODULES.find((m: any) => m.id === f.moduleId);
+const url = `https://www.compliance365.com.au/checkpoint-console/${f.slug}/`;
+const demoUrl = `${base}checkpoint/?demo=1&view=${f.demoView}`;
+const others = frameworkPages.filter((x) => x.slug !== f.slug);
+const faq = {
+  '@type': 'FAQPage',
+  mainEntity: f.faq.map((it) => ({ '@type': 'Question', name: it.q, acceptedAnswer: { '@type': 'Answer', text: it.a } })),
+};
+const software = checkpointSoftwareSchema({ moduleIds: [f.moduleId], url, name: `Checkpoint for ${f.name}`, description: f.description });
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Checkpoint', url: 'https://www.compliance365.com.au/checkpoint-console/' },
+  { name: `${f.name} software`, url },
+];
+---
+<Base title={f.title} description={f.description} schema={[software, faq]} breadcrumbs={breadcrumbs}>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="section ft-hero">
+  <div class="container">
+    <p class="ft-eyebrow"><a href={base + 'checkpoint-console/'}>Checkpoint</a> · {f.name}</p>
+    <h1>{f.h1}</h1>
+    <p class="ft-lead">{f.lead}</p>
+    <div class="ft-actions">
+      <a class="btn btn-primary" href={demoUrl} target="_blank" rel="noopener">{f.demoLabel}</a>
+      <a class="btn" href={base + 'pricing/'}>See pricing</a>
+    </div>
+    <p class="ft-note">The demo is the real console with sample data. No sign-up.</p>
+  </div>
+</section>
+
+<section class="section ft-body">
+  <div class="container fw-grid">
+    <div>
+      <div class="ft-sec">
+        <h2>What Checkpoint holds for {f.name}</h2>
+        <ul>{f.covers.map((li) => (<li>{li}</li>))}</ul>
+      </div>
+      <div class="ft-sec">
+        <h2>Measured from your Microsoft 365</h2>
+        <p>{f.scan}</p>
+        <p>Checkpoint signs in with Microsoft Entra and reads your settings through Microsoft Graph with read-only, delegated permissions. Your records are SharePoint lists in your own tenant, so if you stop using Checkpoint they are still yours. <a href={base + 'checkpoint-console/how-it-works/'}>How Checkpoint works</a>.</p>
+      </div>
+      <div class="ft-sec">
+        <h2>Questions</h2>
+        <dl class="ft-qa">
+          {f.faq.map((it) => (<div><dt>{it.q}</dt><dd>{it.a}</dd></div>))}
+        </dl>
+      </div>
+    </div>
+    <aside class="fw-side" aria-label={`${f.name} pricing`}>
+      <div class="fw-price">
+        <p class="fw-price-h">{f.name} in Checkpoint</p>
+        <p class="fw-price-n">{fmtAud(mod.prices.micro)}<span> a year</span></p>
+        <p class="fw-price-s">Under 50 staff. {fmtAud(mod.prices.growth)} a year for 50–250 staff. AUD, ex GST.</p>
+        <p class="fw-price-s">{TRIAL_DAYS}-day free trial. Included at no extra cost in a consulting engagement.</p>
+        <a class="btn btn-primary" href={base + 'start/'}>Start a free trial</a>
+      </div>
+      <div class="fw-links">
+        <p class="fw-price-h">Prefer help?</p>
+        <p><a href={base + f.servicePath}>{f.name} consulting with Compliance365</a></p>
+        <p class="fw-price-h">Comparing tools?</p>
+        <ul>{comparisons.map((c) => (<li><a href={`${base}checkpoint-console/compare/${c.slug}/`}>Checkpoint vs {c.name}</a></li>))}</ul>
+      </div>
+    </aside>
+  </div>
+  <div class="container">
+    <div class="ft-sec ft-more">
+      <h2>Checkpoint for other frameworks</h2>
+      <ul class="fw-others">
+        {others.map((o) => (<li><a href={`${base}checkpoint-console/${o.slug}/`}>{o.name} software</a></li>))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+</Base>
+
+<style>
+  .ft-hero { padding-top: 3rem; padding-bottom: 1rem; }
+  .ft-eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink, #A63A12); margin: 0 0 .8rem; }
+  .ft-eyebrow a { color: inherit; }
+  .ft-lead { max-width: 68ch; font-size: 1.1rem; line-height: 1.7; }
+  .ft-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0 .6rem; }
+  .ft-note { font-size: .88rem; color: #6B6860; }
+  .ft-body { padding-top: 0; }
+  .fw-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 2.5rem; align-items: start; }
+  .ft-sec { max-width: 72ch; margin-top: 2.25rem; }
+  .ft-sec h2 { font-size: 1.45rem; border-bottom: 2px solid #DDD8CF; padding-bottom: .5rem; }
+  .ft-sec p, .ft-sec li { line-height: 1.7; }
+  .ft-sec ul { padding-left: 1.2rem; }
+  .ft-sec li { margin: .45rem 0; }
+  .ft-qa > div { padding: .9rem 0; border-bottom: 1px solid #EEE9E0; }
+  .ft-qa dt { font-weight: 700; }
+  .ft-qa dd { margin: .3rem 0 0; line-height: 1.65; }
+  .fw-side { position: sticky; top: 96px; margin-top: 2.25rem; display: grid; gap: 1rem; }
+  .fw-price, .fw-links { border: 1px solid #DDD8CF; border-radius: 12px; padding: 1.25rem; background: #fff; }
+  .fw-price { border-top: 4px solid #BE4A1E; }
+  .fw-price-h { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: #6B6860; margin: 0 0 .4rem; }
+  .fw-price-n { font-size: 2rem; font-weight: 700; margin: 0; font-variant-numeric: tabular-nums; }
+  .fw-price-n span { font-size: 1rem; font-weight: 400; color: #6B6860; }
+  .fw-price-s { font-size: .9rem; color: #4A4740; line-height: 1.55; margin: .5rem 0; }
+  .fw-price .btn { margin-top: .5rem; width: 100%; text-align: center; }
+  .fw-links p, .fw-links li { font-size: .92rem; }
+  .fw-links ul { padding-left: 1.1rem; margin: 0; }
+  .fw-others { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; list-style: none; padding: 0 !important; }
+  @media (max-width: 860px) { .fw-grid { grid-template-columns: 1fr; } .fw-side { position: static; } }
+</style>

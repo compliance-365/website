@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import CheckpointCallout from '../../components/CheckpointCallout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -516,7 +517,8 @@ const pageDesc =
     <DigestSignup source="resource-inside-statement-of-applicability" />
   </section>
 
-  </main>
+  <CheckpointCallout slug="iso-27001-software" topic="your Statement of Applicability, with a justification for every control" />
+</main>
 
   <Footer />
 </Base>

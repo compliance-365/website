@@ -1,0 +1,89 @@
+---
+// The public demo as a page of its own, for "free ISO 27001 software" /
+// "compliance software demo" searches. Each tile deep-links into the demo
+// (?demo=1&view=<data-v>, see app.js); test/checkpoint-seo-pages.test.mjs
+// checks every view exists.
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { checkpointSoftwareSchema } from '../../data/checkpoint-schema';
+import { frameworkPages } from '../../data/checkpoint-frameworks';
+
+const base = import.meta.env.BASE_URL || '/';
+const demo = (v: string) => `${base}checkpoint/?demo=1&view=${v}`;
+const screens = [
+  { v: 'dash', t: 'Dashboard', d: 'Readiness by framework, what to do next and the posture trend.' },
+  { v: 'scan', t: 'Microsoft 365 posture scan', d: '49 checks across identity, devices, data and monitoring, with fixes for each gap.' },
+  { v: 'soa', t: 'Statement of Applicability', d: 'All 93 ISO 27001 Annex A controls, with justifications and evidence.' },
+  { v: 'risks', t: 'Risk register', d: 'Likelihood, impact, treatment actions and residual-risk acceptance.' },
+  { v: 'clauses', t: 'Clauses 4–10', d: 'Each management system requirement, with the evidence that meets it.' },
+  { v: 'audits', t: 'Internal audit', d: 'Plan, run and record an internal audit, with findings that become actions.' },
+  { v: 'trustcenter', t: 'Trust Center', d: 'A public page for customers, built from your own evidence.' },
+  { v: 'board', t: 'Board view', d: 'The summary your leadership team reads each month.' },
+];
+const url = 'https://www.compliance365.com.au/checkpoint-console/demo/';
+const software = checkpointSoftwareSchema();
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Checkpoint', url: 'https://www.compliance365.com.au/checkpoint-console/' },
+  { name: 'Live demo', url },
+];
+---
+<Base
+  title="Free Compliance Software Demo, No Sign-up | Checkpoint"
+  description="Try Checkpoint free: the real ISO 27001, Essential Eight and SOC 2 compliance console with sample data. No sign-up, no sales call, nothing installed."
+  schema={[software]}
+  breadcrumbs={breadcrumbs}
+>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="section ft-hero">
+  <div class="container">
+    <p class="ft-eyebrow"><a href={base + 'checkpoint-console/'}>Checkpoint</a> · Live demo</p>
+    <h1>Try the compliance console, free, with no sign-up</h1>
+    <p class="ft-lead">This is the real Checkpoint, loaded with a sample company's ISO 27001, Essential Eight and SOC 2 programme. Click around, run a scan, change a risk. Nothing is installed, nothing is sent to us, and the sample data stays in your browser.</p>
+    <div class="ft-actions">
+      <a class="btn btn-primary large" href={demo('dash')} target="_blank" rel="noopener">Open the demo</a>
+      <a class="btn" href={base + 'pricing/'}>See pricing</a>
+    </div>
+  </div>
+</section>
+
+<section class="section ft-body">
+  <div class="container">
+    <h2 class="dm-h">Jump straight to a screen</h2>
+    <ul class="dm-grid">
+      {screens.map((s) => (
+        <li><a href={demo(s.v)} target="_blank" rel="noopener"><b>{s.t}</b><span>{s.d}</span></a></li>
+      ))}
+    </ul>
+
+    <div class="ft-sec">
+      <h2>When you want it for real</h2>
+      <p>Checkpoint signs in with your Microsoft account and stores everything as SharePoint lists in your own Microsoft 365 tenant. Start a 7-day free trial, or have us run it with you as part of a consulting engagement. <a href={base + 'checkpoint-console/how-it-works/'}>How Checkpoint works</a>.</p>
+      <p>By framework: {frameworkPages.map((f, i) => (<>{i > 0 && ' · '}<a href={`${base}checkpoint-console/${f.slug}/`}>{f.name}</a></>))}</p>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+</Base>
+
+<style>
+  .ft-hero { padding-top: 3rem; padding-bottom: 1rem; }
+  .ft-eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink, #A63A12); margin: 0 0 .8rem; }
+  .ft-eyebrow a { color: inherit; }
+  .ft-lead { max-width: 68ch; font-size: 1.1rem; line-height: 1.7; }
+  .ft-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0 .6rem; }
+  .ft-body { padding-top: 0; }
+  .dm-h { font-size: 1.45rem; margin-top: 1.5rem; }
+  .dm-grid { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .9rem; }
+  .dm-grid a { display: grid; gap: .3rem; height: 100%; padding: 1.1rem 1.2rem; border: 1px solid #DDD8CF; border-radius: 12px; background: #fff; text-decoration: none; color: inherit; }
+  .dm-grid a:hover { border-color: #BE4A1E; }
+  .dm-grid span { color: #4A4740; font-size: .92rem; line-height: 1.55; }
+  .ft-sec { max-width: 72ch; margin-top: 2.25rem; }
+  .ft-sec h2 { font-size: 1.45rem; border-bottom: 2px solid #DDD8CF; padding-bottom: .5rem; }
+  .ft-sec p { line-height: 1.7; }
+</style>

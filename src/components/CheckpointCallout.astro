@@ -1,0 +1,23 @@
+---
+/*
+  CheckpointCallout — one line from a guide to the matching Checkpoint
+  framework page, for readers who want to do the work in software.
+  Usage: <CheckpointCallout slug="iso-27001-software" topic="your Statement of Applicability" />
+  The slug must be one of src/data/checkpoint-frameworks.ts.
+*/
+import { frameworkPages } from '../data/checkpoint-frameworks';
+const base = import.meta.env.BASE_URL || '/';
+const { slug, topic } = Astro.props;
+const f = frameworkPages.find((x) => x.slug === slug);
+---
+{f && (
+  <section class="ckc" aria-label="Checkpoint">
+    <div class="container ckc-in">
+      <p><b>Doing this yourself?</b> Checkpoint keeps {topic} in your own Microsoft 365 tenant and measures what it can from your settings. <a href={`${base}checkpoint-console/${f.slug}/`}>{f.name} software</a> · <a href={`${base}checkpoint-console/demo/`}>try the free demo</a></p>
+    </div>
+  </section>
+)}
+<style>
+  .ckc { padding: 1.5rem 0; }
+  .ckc-in p { margin: 0 auto; max-width: 860px; padding: 1rem 1.25rem; border-left: 4px solid #BE4A1E; background: #FAF7F1; border-radius: 8px; line-height: 1.65; }
+</style>
