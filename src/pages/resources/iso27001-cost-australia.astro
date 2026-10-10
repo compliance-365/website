@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
 import CheckpointCallout from '../../components/CheckpointCallout.astro';
+import CostEstimator from '../../components/CostEstimator.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -158,6 +159,9 @@ const breadcrumbLd = {
       </div>
     </div>
   </section>
+
+  <!-- ESTIMATOR: the components above, for your size -->
+  <CostEstimator fw="iso27001" heading="Estimate your ISO 27001 cost" />
 
   <!-- THE GRC PLATFORM QUESTION -->
   <section class="section">

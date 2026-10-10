@@ -1,0 +1,124 @@
+---
+/*
+  CostEstimator — year-one and three-year cost for one framework, by
+  organisation size and approach (Compliance365 engagement or self-serve
+  Checkpoint). Figures and their sources: src/data/cost-estimator.js.
+  Usage: <CostEstimator fw="iso27001" />
+*/
+import { FRAMEWORKS, SIZES } from '../data/cost-estimator.js';
+const { fw, heading } = Astro.props;
+const f = FRAMEWORKS[fw];
+const base = import.meta.env.BASE_URL || '/';
+const id = `ce-${fw}`;
+const bookUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+---
+{f && (
+  <section class="ce" id={id} data-cost-estimator={fw} aria-labelledby={`${id}-h`}>
+    <div class="container ce-in">
+      <p class="ce-eyebrow">Cost estimator · {f.name}</p>
+      <h2 id={`${id}-h`}>{heading || `What ${f.name} will cost you`}</h2>
+      <p class="ce-lead">Pick your size and how you want to do it. The ranges come from our published fixed prices, audit fees and Checkpoint licences, in AUD ex GST.</p>
+      <form class="ce-form">
+        <fieldset>
+          <legend>Organisation size</legend>
+          <div class="ce-opts">
+            {SIZES.map((s, i) => (<label><input type="radio" name={`${id}-size`} value={s.id} checked={i === 1} /> <span>{s.label}</span></label>))}
+          </div>
+        </fieldset>
+        {f.scopes.length > 1 && (
+          <fieldset>
+            <legend>What you need</legend>
+            <div class="ce-opts">
+              {f.scopes.map((s, i) => (<label><input type="radio" name={`${id}-scope`} value={s.id} checked={i === 0} /> <span>{s.label}</span></label>))}
+            </div>
+          </fieldset>
+        )}
+        <fieldset>
+          <legend>How you want to do it</legend>
+          <div class="ce-opts">
+            <label><input type="radio" name={`${id}-approach`} value="consulting" checked /> <span>With Compliance365 (fixed price, Checkpoint included)</span></label>
+            <label><input type="radio" name={`${id}-approach`} value="selfserve" /> <span>Ourselves, with Checkpoint</span></label>
+          </div>
+        </fieldset>
+        {f.hasIso27001 && (
+          <label class="ce-check"><input type="checkbox" name={`${id}-has27001`} /> <span>{f.hasIso27001.label}</span></label>
+        )}
+      </form>
+      <div class="ce-out" aria-live="polite">
+        <div class="ce-totals">
+          <div><span class="ce-k">Year 1</span><span class="ce-v" data-ce="y1"></span></div>
+          <div><span class="ce-k">Over 3 years</span><span class="ce-v" data-ce="y3"></span></div>
+        </div>
+        <table class="ce-lines"><tbody data-ce="lines"></tbody></table>
+        <p class="ce-note" data-ce="notes"></p>
+        <div class="ce-actions">
+          <a class="btn btn-primary" href={bookUrl} target="_blank" rel="noopener">Get a fixed-price quote</a>
+          <a class="btn" href={`${base}checkpoint-console/demo/`}>Try Checkpoint free</a>
+        </div>
+        <p class="ce-fine">An estimate, not a quote. Your fixed price is confirmed in a free scoping call before any work starts.</p>
+      </div>
+    </div>
+  </section>
+)}
+
+<script>
+  import { estimate, audRange } from '../data/cost-estimator.js';
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  for (const root of document.querySelectorAll('[data-cost-estimator]')) {
+    const fw = root.getAttribute('data-cost-estimator');
+    const id = root.id;
+    const val = (n) => (root.querySelector(`input[name="${id}-${n}"]:checked`) || {}).value;
+    const render = () => {
+      const r = estimate({ fw, size: val('size'), scope: val('scope'), approach: val('approach'), hasIso27001: !!root.querySelector(`input[name="${id}-has27001"]:checked`) });
+      root.querySelector('[data-ce="y1"]').textContent = (r.year1From ? 'from ' : '') + audRange(r.year1Total);
+      root.querySelector('[data-ce="y3"]').textContent = (r.threeYearFrom ? 'from ' : '') + audRange(r.threeYearTotal);
+      const row = (i) => `<tr><td>${esc(i.label)}${i.note ? ` <span class="ce-tag">${esc(i.note)}</span>` : ''}</td><td>${i.from ? 'from ' : ''}${audRange(i.range)}</td></tr>`;
+      root.querySelector('[data-ce="lines"]').innerHTML =
+        '<tr class="ce-sub"><th colspan="2">Year 1</th></tr>' + r.year1.map(row).join('') +
+        '<tr class="ce-sub"><th colspan="2">Years 2 and 3</th></tr>' + r.later.map(row).join('');
+      const notes = [...r.notes];
+      if (r.auditQuoted) notes.unshift(r.auditQuoted);
+      if (r.grcPlatform) notes.push(`A third-party GRC platform would add ${audRange(r.grcPlatform)} over three years in licences; Checkpoint replaces it.`);
+      root.querySelector('[data-ce="notes"]').textContent = notes.join(' ');
+    };
+    root.addEventListener('change', render);
+    render();
+  }
+</script>
+
+<style>
+  .ce { padding: 3.5rem 0; background: #FAF7F1; border-top: 1px solid #DDD8CF; border-bottom: 1px solid #DDD8CF; }
+  .ce-in { max-width: 900px; }
+  .ce-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-ink, #A63A12); margin: 0 0 8px; }
+  .ce h2 { margin: 0 0 .5rem; }
+  .ce-lead { color: #4A4740; max-width: 68ch; margin: 0 0 1.5rem; }
+  .ce-form { display: grid; gap: 1rem; }
+  .ce fieldset { border: 0; padding: 0; margin: 0; }
+  .ce legend { font-weight: 700; font-size: .9rem; margin-bottom: .5rem; }
+  .ce-opts { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .ce-opts label, .ce-check { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .85rem; background: #fff; border: 1px solid #DDD8CF; border-radius: 999px; cursor: pointer; font-size: .92rem; }
+  .ce-opts label:has(input:checked) { border-color: #BE4A1E; box-shadow: inset 0 0 0 1px #BE4A1E; }
+  .ce-opts input, .ce-check input { accent-color: #BE4A1E; }
+  .ce-check { border-radius: 10px; justify-self: start; }
+  .ce-out { margin-top: 1.75rem; background: #fff; border: 1px solid #DDD8CF; border-top: 4px solid #BE4A1E; border-radius: 12px; padding: 1.4rem 1.5rem; }
+  .ce-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .ce-k { display: block; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: #6B6860; }
+  .ce-v { display: block; font-size: clamp(1.4rem, 3.5vw, 2rem); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ce-lines { width: 100%; border-collapse: collapse; margin-top: 1.1rem; font-size: .93rem; }
+  /* Rows are written by the script, so they carry no scoped-style
+     attribute: style them through the table, which does. */
+  .ce-lines :global(td), .ce-lines :global(th) { padding: .5rem 0; border-top: 1px solid #EEE9E0; text-align: left; vertical-align: top; font-weight: 400; }
+  .ce-lines :global(td:last-child) { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; padding-left: 1rem; }
+  .ce-lines :global(.ce-sub th) { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: #6B6860; font-weight: 700; padding-top: .9rem; }
+  .ce-lines :global(.ce-tag) { font-size: .75rem; color: #3E6B47; background: #EEF5EF; border-radius: 999px; padding: .1rem .5rem; white-space: nowrap; margin-left: .25rem; }
+  .ce-note { font-size: .88rem; color: #4A4740; line-height: 1.6; margin: 1rem 0 0; }
+  .ce-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.1rem; }
+  .ce-fine { font-size: .8rem; color: #6B6860; margin: .8rem 0 0; }
+  @media (max-width: 560px) {
+    .ce-totals { grid-template-columns: 1fr; }
+    .ce-lines :global(td) { display: block; border-top: 0; padding: .1rem 0; }
+    .ce-lines :global(tr) { display: block; border-top: 1px solid #EEE9E0; padding: .45rem 0; }
+    .ce-lines :global(td:last-child) { text-align: left; padding-left: 0; font-weight: 700; }
+    .ce-lines :global(.ce-sub) { border-top: 0; }
+  }
+</style>
