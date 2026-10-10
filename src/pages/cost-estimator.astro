@@ -9,6 +9,7 @@ import CinematicBackground from '../components/CinematicBackground.astro';
 import CostEstimator from '../components/CostEstimator.astro';
 import { FRAMEWORKS } from '../data/cost-estimator.js';
 import { CONSULTING_DAY_RATE, fmtAud } from '../data/pricing.js';
+import DigestSignup from '../components/DigestSignup.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ids = Object.keys(FRAMEWORKS);
@@ -65,6 +66,9 @@ const app = {
         <p class="cep-more container"><a href={base + FRAMEWORKS[id].page}>{FRAMEWORKS[id].name} consulting: what is included</a> · <a href={base + 'pricing/'}>Checkpoint pricing</a></p>
       </div>
     ))}
+    <section class="container" style="padding-bottom:0;">
+      <DigestSignup source="cost-estimator" />
+    </section>
   </main>
   <Footer />
 </Base>

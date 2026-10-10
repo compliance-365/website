@@ -34,6 +34,7 @@ here.
 | `OWNER_TENANT_ID` | Compliance365's own Entra tenant id |
 | `OWNER_APP_CLIENT_ID` | The existing owner-roster app registration |
 | `OWNER_APP_CLIENT_SECRET` | Its secret |
+| `OWNER_NOTIFY_EMAIL` | Optional. A mailbox in your own tenant; turns on email alerts (§9) |
 
 ## 3. Deploy
 
@@ -46,7 +47,7 @@ here.
    Allow-Methods `POST, OPTIONS`, Allow-Headers `Content-Type`.
    See [CORS.md](CORS.md): the Lambda's own CORS headers stop applying the
    moment the gateway handles CORS. Verify with `npm run check:cors`.
-7. **Configuration → General configuration → Edit → Timeout: 10 sec.**
+7. **Configuration → General configuration → Edit → Timeout: 15 sec** (10 is enough without email alerts).
    Do not leave this at AWS's 3-second default: this makes four
    sequential round trips (token, site, list-resolve, item POST)
    against Graph, and that chain does not reliably finish inside 3
@@ -142,3 +143,29 @@ fetch(window.CHECKPOINT_CONFIG.errorReportUrl, {
 ```
 Expect `{ok: true}` and a *Manual test* row in the Health list. Delete that row
 afterwards.
+
+## 9. Email alerts (optional)
+
+Set `OWNER_NOTIFY_EMAIL` and the Lambda emails that address:
+
+- **Each new error from a signed-in client.** Subject `Checkpoint error: <client>: <error>`, with the tenant, version, screen, source and the first lines of the stack.
+- **A client's setup health turning failing.** Subject `Checkpoint setup failing: <client>`, with the details. Sent once when it turns failing, not on every report while it stays failing.
+
+Limits, because this endpoint is public:
+
+- Errors from the public demo (no signed-in tenant) are saved to the list but not emailed.
+- The same error from the same client is emailed at most once every 6 hours.
+- At most 10 alert emails an hour per Lambda container.
+
+The owner console's lists stay the full record.
+
+Setup:
+
+1. On the same owner app registration, add **Microsoft Graph → Application → Mail.Send** and grant admin consent. If signup emails from `provision.js` already work, this is already done.
+2. Set `OWNER_NOTIFY_EMAIL` on this Lambda (the same address as `provision.js` is fine). The email is sent from and to that mailbox.
+3. Raise the timeout to 15 seconds (§3 step 7).
+4. Redeploy `report-error.js`.
+
+To test it, sign in to Checkpoint in a real tenant and run `throw new Error('alert test')` in the browser console. The email arrives within a minute. If it doesn't, CloudWatch logs `alert email failed` with Graph's reason.
+
+To turn the alerts off, remove `OWNER_NOTIFY_EMAIL`.

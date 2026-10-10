@@ -6,6 +6,7 @@ import RelatedResources from '../../components/RelatedResources.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import CheckpointShot from '../../components/CheckpointShot.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -493,6 +494,11 @@ const faqLd = {
     <ScopingWidget calendlyUrl={ctaUrl} />
   </div>
 </section>
+
+<section class="container" style="padding-bottom:0;">
+    <DigestSignup source="service-disp-ism-irap" />
+  </section>
+
 
 <section class="svc-final-cta">
   <CinematicBackground static />
