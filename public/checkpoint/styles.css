@@ -420,6 +420,20 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .busy .ring{width:52px;height:52px;border-radius:50%;border:3px solid rgba(var(--paper-rgb),.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .busy span{font-size:var(--fs-1);letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim)}
+.busy .busy-brand,.busy .busy-steps{display:none}
+.busy.busy-signin{background:var(--ink);gap:22px}
+.busy.busy-signin .busy-brand{display:block;margin:0;font-size:var(--fs-1);letter-spacing:.32em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.busy.busy-signin .ring{width:40px;height:40px}
+.busy.busy-signin .busy-steps{display:flex;flex-direction:column;gap:12px;list-style:none;margin:0;padding:0;min-width:240px}
+.busy-steps li{display:flex;align-items:center;gap:12px;font-size:15px;color:var(--paper-faint)}
+.busy-steps li.now{color:var(--paper)}
+.busy-steps li.done{color:var(--paper-dim)}
+.busy-steps .bs-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid currentColor;flex:none}
+.busy-steps li.now .bs-dot{border-color:var(--gold);background:var(--gold);animation:bsPulse 1.2s ease-in-out infinite}
+.busy-steps li.done .bs-dot{border-color:var(--gold);background:var(--gold)}
+.busy.busy-signin span#busyMsg{font-size:13px;letter-spacing:0;text-transform:none;color:var(--paper-faint);min-height:1em}
+@keyframes bsPulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.busy-steps li.now .bs-dot{animation:none}}
 
 /* ===== onboarding wizard ===== */
 .wizard{display:none;min-height:100vh;align-items:flex-start;justify-content:center;padding:56px 24px 80px}

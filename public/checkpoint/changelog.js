@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.152.0',
+    date: '2026-10-10',
+    entries: [
+      'A cleaner sign-in. If you have used Checkpoint in this browser before, Sign in with Microsoft now goes straight through, without the set-up welcome or the permissions explanation, and without Microsoft\u2019s account picker. Use a different account is beneath the button when you need it.',
+      'While it loads, you see three plain steps (checking your access, loading your registers, preparing your dashboard) instead of a spinner reading out each technical check. Messages about creating lists now appear only when Checkpoint is actually creating them.',
+      'Faster sign-in, third pass. The check of which Microsoft 365 features your licences include now starts at the beginning of sign-in, asks about every feature at once, and no longer retries features your tenant is not licensed for. That check was most of the wait.'
+    ]
+  },
+  {
     version: '1.151.0',
     date: '2026-10-10',
     entries: [
