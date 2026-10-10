@@ -249,7 +249,7 @@ function showModal(opts) {
   });
 
   var W = null;          /* onboarding wizard state — in memory only, never persisted (see the "onboarding wizard" section near the bottom of this file); reset fresh every time Wizard.start()/startAt() runs */
-  var CAP = null;        /* capability detection result (see detectAppCapabilities() below) — session-cached, never persisted, re-probed fresh on every page load */
+  var CAP = null;        /* capability detection result (see detectAppCapabilities() below) — a remembered answer from this browser (up to a day old) is shown first and replaced once the background probes finish; the posture scan always uses the fresh one */
   /* Three-role model — {readOnly, detected, restricted} from
      Graph.detectRole(), or a demo-mode stand-in (see detectAppReadOnly()
      below). readOnly:true disables/hides mutating UI (see
@@ -5667,6 +5667,16 @@ function showModal(opts) {
     if (!on) { el.classList.remove('busy-signin'); var st = document.getElementById('busySteps'); if (st) st.innerHTML = ''; }
   }
   function signedInBefore() { try { return localStorage.getItem('cpSignedInBefore') === '1'; } catch (e) { return false; } }
+  /* Automatic sign-in on opening Checkpoint: only for a browser that has
+     signed in before, has not signed out since, and has not already
+     tried in this tab (so a browser with no Microsoft session sees the
+     gate after one quick round trip, never a loop). */
+  function autoSignInDue() {
+    try {
+      return signedInBefore() && localStorage.getItem('cpSignedOut') !== '1' &&
+        sessionStorage.getItem('cpAutoSignInTried') !== '1' && !Graph.redirectError();
+    } catch (e) { return false; }
+  }
   /* The sign-in screen: three plain steps instead of a spinner reading
      out each technical check. Messages from first-time set-up (lists
      being created) still show beneath it. */
@@ -26391,11 +26401,13 @@ function showModal(opts) {
          read it first; Microsoft shows its own consent screen the one
          time an administrator approves them. A browser that has signed
          in before also skips Microsoft's account picker. */
+      try { localStorage.removeItem('cpSignedOut'); } catch (e) { /* private browsing */ }
       busy(true); signInProgress('signin');
       Graph.signIn({ selectAccount: !signedInBefore() }).catch(function (e) { busy(false); if (e && e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e)); });
     },
     showSignInPermissions: function () { Wizard.start(); },
     signInOtherAccount: function () {
+      try { localStorage.removeItem('cpSignedOut'); } catch (e) { /* private browsing */ }
       busy(true); signInProgress('signin');
       Graph.signIn({ selectAccount: true }).catch(function (e) { busy(false); if (e && e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e)); });
     },
@@ -26982,6 +26994,15 @@ function showModal(opts) {
     }
     try { CAP = await Graph.detectCapabilities(); } catch (e) { warn(e); CAP = null; }
     applyAwsCapability();
+    /* A remembered answer was used: swap in the fresh one when the
+       background probes finish, and redraw what shows licences if
+       anything changed. */
+    var refreshing = Graph.capabilitiesRefreshing && Graph.capabilitiesRefreshing();
+    if (refreshing) refreshing.then(function (fresh) {
+      var changed = Object.keys(fresh).some(function (k) { return !CAP || !CAP[k] || CAP[k].available !== fresh[k].available; });
+      CAP = fresh; applyAwsCapability();
+      if (changed && S) { try { renderCoverage(); renderDash(); } catch (e) { warn(e); } }
+    }).catch(warn);
   }
 
   /* The 'aws' capability is not a Graph probe -- there is nothing in
@@ -28032,6 +28053,7 @@ function showModal(opts) {
     }
     loadTiming('activation check');
     try { localStorage.setItem('cpSignedInBefore', '1'); } catch (e) { /* private browsing: the welcome shows again next time */ }
+    Graph.rememberLogin();
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
     loadTiming('first screen');
   }
@@ -28470,7 +28492,7 @@ function showModal(opts) {
     nextBtn.disabled = true;
     nextBtn.textContent = 'Checking…';
 
-    var cap = await Graph.detectCapabilities();
+    var cap = await Graph.freshCapabilities();
     CAP = cap;
     keys.forEach(function (k) {
       var c = cap[k];
@@ -29141,6 +29163,16 @@ function showModal(opts) {
            afterSignIn() decides: onboarded -> straight to the
            dashboard; not yet -> the wizard picks up at step 3. */
         try { await afterSignIn(); return; } catch (e) { console.error(e); busy(false); }
+      }
+      if (ok && autoSignInDue()) {
+        /* This browser has signed in before and has not signed out:
+           check once per tab, without showing anything from Microsoft,
+           whether a Microsoft session is already open (prompt 'none').
+           If one is, Checkpoint opens with no click; if not, Microsoft
+           sends the browser straight back and the gate shows. */
+        try { sessionStorage.setItem('cpAutoSignInTried', '1'); } catch (e) { /* no sessionStorage: autoSignInDue() is false next time */ }
+        busy(true); signInProgress('signin');
+        try { await Graph.signIn({ silent: true }); return; } catch (e) { warn(e); busy(false); }
       }
       document.getElementById('btnGateSignIn').style.display = '';
       var other = document.getElementById('btnGateOtherAccount');
