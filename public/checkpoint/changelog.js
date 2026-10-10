@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.151.0',
+    date: '2026-10-10',
+    entries: [
+      'Faster sign-in, second pass. The access check, the licence check and your framework packs now run at the same time instead of one after another. Your SharePoint site and its lists are looked up once per sign-in instead of three times. The start-up checks on your lists run together. Long registers such as the audit log are read 999 rows at a time instead of 200.',
+      'Settings \u2192 Setup health now shows how long this sign-in took and which step took the time, so a slow sign-in can be traced.'
+    ]
+  },
+  {
     version: '1.150.0',
     date: '2026-10-10',
     entries: [

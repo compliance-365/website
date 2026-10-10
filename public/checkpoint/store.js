@@ -2700,7 +2700,32 @@ window.SpStore = (function () {
 
   var provisionOpts = { scopes: window.CHECKPOINT_CONFIG.scopesProvision };
 
+  /* The site and its list of lists are looked up once per sign-in, not
+     once by each step that needs them (the onboarding probe, the
+     activation read and the load each used to). Keyed on the configured
+     site, so switching sites looks again; a list Checkpoint creates
+     clears the cache. */
+  var _siteFor = null, _listsCache = null, _settingsCache = null;
   async function resolveSite() {
+    if (siteId && _siteFor === CONFIG.site) return;
+    await resolveSiteFresh();
+    _siteFor = CONFIG.site;
+  }
+  async function siteLists() {
+    if (_listsCache && _listsCache.site === siteId && Date.now() - _listsCache.at < 30000) return _listsCache.rows;
+    var rows = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+    _listsCache = { site: siteId, at: Date.now(), rows: rows };
+    return rows;
+  }
+  /* The Settings rows read by the onboarding probe, reused by the
+     activation read straight after it. */
+  async function settingsRowsShortLived() {
+    if (_settingsCache && _settingsCache.list === lists.Settings && Date.now() - _settingsCache.at < 60000) return _settingsCache.rows;
+    var rows = await items('Settings');
+    _settingsCache = { list: lists.Settings, at: Date.now(), rows: rows };
+    return rows;
+  }
+  async function resolveSiteFresh() {
     if (CONFIG.site === 'root') {
       var rootSite = await Graph.g('/sites/root?$select=id,webUrl', provisionOpts);
       siteId = rootSite.id;
@@ -2728,11 +2753,11 @@ window.SpStore = (function () {
   async function probeOnboardingState() {
     try {
       await resolveSite();
-      var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+      var existing = await siteLists();
       var settingsList = existing.find(function (l) { return l.displayName === listName('Settings'); });
       if (!settingsList) return { onboarded: false };
       lists.Settings = settingsList.id;
-      var rows = await items('Settings');
+      var rows = await settingsRowsShortLived();
       var row = rows.find(function (i) { return i.fields.SettingKey === 'onboardedDate'; });
       return { onboarded: !!(row && row.fields.SettingValue) };
     } catch (e) {
@@ -2794,11 +2819,11 @@ window.SpStore = (function () {
   async function readCachedActivation() {
     try {
       await resolveSite();
-      var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+      var existing = await siteLists();
       var settingsList = existing.find(function (l) { return l.displayName === listName('Settings'); });
       if (!settingsList) return { raw: null };
       lists.Settings = settingsList.id;
-      var rows = await items('Settings');
+      var rows = await settingsRowsShortLived();
       var row = rows.find(function (i) { return i.fields.SettingKey === 'entitlementFile'; });
       return { raw: (row && row.fields.SettingValue) || null };
     } catch (e) {
@@ -2843,7 +2868,7 @@ window.SpStore = (function () {
   }
 
   async function ensureLists(onStatus) {
-    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+    var existing = await siteLists();
     for (var k in DEFS) {
       var name = listName(k);
       var found = existing.find(function (l) { return l.displayName === name; });
@@ -2856,6 +2881,7 @@ window.SpStore = (function () {
         scopes: CONFIG.scopesProvision
       });
       lists[k] = created.id;
+      _listsCache = null;
       if (k === 'Controls') await seedControls(onStatus);
       if (k === 'Clauses') await seedClauses(onStatus);
       if (k === 'Entitlements') await seedEntitlements(onStatus);
@@ -2864,46 +2890,52 @@ window.SpStore = (function () {
     /* self-heal: a tenant provisioned before a new framework was added to
        the registry has a Controls list missing that framework's rows —
        add whatever's missing rather than requiring re-provisioning. */
-    await reconcileControls(onStatus);
+    var heals = [reconcileControls(onStatus)];
     /* Same self-heal, for a tenant provisioned before window.CLAUSE_DEFS
        gained a clause (or before the Clauses list existed at all). */
-    await reconcileClauses(onStatus);
+    heals.push(reconcileClauses(onStatus));
 
     /* self-heal: a tenant provisioned before a COLUMN was added to a
        list's schema (e.g. the Risks acceptance sign-off fields) has that
        column missing — patching it would fail with a generic "Invalid
        request", same class of problem as the SettingValue widening.
        Add whatever's missing rather than requiring re-provisioning. */
-    await reconcileColumns(onStatus);
+    heals.push(reconcileColumns(onStatus));
 
     /* document library — real evidence storage (ISMS manual, policies,
        risk treatment plan, training records), not just pasted URLs */
-    var docName = listName('Documents');
-    var foundDoc = existing.find(function (l) { return l.displayName === docName; });
-    if (foundDoc) {
-      docLibraryId = foundDoc.id;
-    } else {
-      assertActivationAuthorizesProvisioning(docName);
-      if (onStatus) onStatus('Creating document library “' + docName + '”…');
-      var createdDoc = await Graph.g('/sites/' + siteId + '/lists', {
-        method: 'POST',
-        body: { displayName: docName, list: { template: 'documentLibrary' } },
-        scopes: CONFIG.scopesProvision
-      });
-      docLibraryId = createdDoc.id;
-    }
-    try {
-      var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive', provisionOpts);
-      docDriveId = docList.drive && docList.drive.id;
-    } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
+    /* The self-heals above and the library below touch different lists,
+       so they run together rather than one after another. */
+    heals.push((async function () {
+      var docName = listName('Documents');
+      var foundDoc = existing.find(function (l) { return l.displayName === docName; });
+      if (foundDoc) {
+        docLibraryId = foundDoc.id;
+      } else {
+        assertActivationAuthorizesProvisioning(docName);
+        if (onStatus) onStatus('Creating document library “' + docName + '”…');
+        var createdDoc = await Graph.g('/sites/' + siteId + '/lists', {
+          method: 'POST',
+          body: { displayName: docName, list: { template: 'documentLibrary' } },
+          scopes: CONFIG.scopesProvision
+        });
+        docLibraryId = createdDoc.id;
+        _listsCache = null;
+      }
+      try {
+        var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive', provisionOpts);
+        docDriveId = docList.drive && docList.drive.id;
+      } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
 
-    /* Document-control columns (Clause 7.5.2/7.5.3). Deliberately not
-       allowed to fail the load: a tenant whose library predates these
-       columns, or whose admin has locked the library's schema, still
-       gets a fully working Documents view — just without the register
-       fields, which listDocuments() below degrades to blank rather
-       than erroring on. */
-    try { await ensureDocColumns(onStatus); } catch (e) { /* best-effort — see note above */ }
+      /* Document-control columns (Clause 7.5.2/7.5.3). Deliberately not
+         allowed to fail the load: a tenant whose library predates these
+         columns, or whose admin has locked the library's schema, still
+         gets a fully working Documents view — just without the register
+         fields, which listDocuments() below degrades to blank rather
+         than erroring on. */
+      try { await ensureDocColumns(onStatus); } catch (e) { /* best-effort — see note above */ }
+    })());
+    await Promise.all(heals);
   }
 
   /* Setup health (read-only): which Checkpoint lists are missing, and
@@ -3267,8 +3299,19 @@ window.SpStore = (function () {
     await Promise.all(pool);
     return out;
   }
+  /* Up to 999 rows a page (Graph's default is 200), so a long list such
+     as the audit log takes a fifth of the round trips. If a tenant ever
+     refuses the larger page, fall back to 200 for the rest of the session. */
+  var _pageSize = 999;
   async function items(k) {
-    return Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/items?$expand=fields&$top=200', provisionOpts);
+    var url = function (n) { return '/sites/' + siteId + '/lists/' + lists[k] + '/items?$expand=fields&$top=' + n; };
+    if (_pageSize === 200) return Graph.gAll(url(200), provisionOpts);
+    try { return await Graph.gAll(url(_pageSize), provisionOpts); }
+    catch (e) {
+      if (!e || e.status !== 400) throw e;
+      _pageSize = 200;
+      return Graph.gAll(url(200), provisionOpts);
+    }
   }
 
   function csv(a) { return (a || []).join(','); }
@@ -3847,6 +3890,7 @@ window.SpStore = (function () {
     },
     setSetting: async function (key, value) {
       S.settings[key] = value;
+      _settingsCache = null;
       async function write() {
         if (settingsRowId[key]) { await patchItem('Settings', settingsRowId[key], { SettingValue: value }); return; }
         settingsRowId[key] = await addItem('Settings', { Title: key, SettingKey: key, SettingValue: value });

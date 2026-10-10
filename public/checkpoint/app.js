@@ -2289,6 +2289,13 @@ function showModal(opts) {
       : '';
   }
 
+  function signInTimingHtml() {
+    var t = window._loadTimings || [];
+    if (!t.length) return '';
+    var total = t.reduce(function (n, x) { return n + x.ms; }, 0);
+    var sec = function (ms) { return (ms / 1000).toFixed(1) + 's'; };
+    return '<p class="src" style="margin-top:10px">This sign-in took ' + sec(total) + ': ' + t.map(function (x) { return esc(x.stage) + ' ' + sec(x.ms); }).join(' · ') + '.</p>';
+  }
   function renderSetupHealth() {
     renderSettingsPinned();
     var el = document.getElementById('setupHealthRow');
@@ -2319,7 +2326,7 @@ function showModal(opts) {
           ? '<button class="btn ghost sm" data-action="App.setupFix" data-id="' + esc(c.fix) + '">' + esc(SETUP_FIX_LABELS[c.fix] || 'Fix') + '</button>' : '';
         return '<tr><td style="white-space:nowrap"><span class="chip ' + chip[c.status] + '">' + word[c.status] + '</span></td>' +
           '<td style="color:var(--paper)">' + esc(c.label) + '<div class="src">' + esc(c.detail) + '</div></td><td style="text-align:right">' + fix + '</td></tr>';
-      }).join('') + '</tbody></table>' +
+      }).join('') + '</tbody></table>' + signInTimingHtml() +
       (Store.kind === 'sharepoint' && CONFIG.errorReportUrl
         ? '<p class="src" style="margin-top:10px"><label><input type="checkbox" data-change-action="App.toggleShareSetupHealth"' + (shareOn ? ' checked' : '') + (READONLY ? ' disabled' : '') + '> Share this setup status with Compliance365</label> so we can spot and fix problems before you do. It sends the OK/Check/Fix result of each line above, the app version and the last scan date. It never sends anything from your registers, scan results or documents.</p>'
         : '');
@@ -27494,15 +27501,14 @@ function showModal(opts) {
       return;
     }
 
-    for (var i = 0; i < toMerge.length; i++) {
-      var moduleId = toMerge[i];
-      try {
+    /* Each pack is fetched, checked and decrypted at the same time as
+       the others (they are independent files), then merged in order. */
+    async function preparePack(moduleId) {
         var key = moduleKeys[moduleId];
         if (!manifest[moduleId]) throw new Error('no pack published for this module');
         if (!key) throw new Error('this activation carries no content key for this module');
 
         var fetched = await window.CheckpointLib.fetchPackText(function (url) { return fetch(url); }, moduleId, manifest, loadManifest);
-        manifest = fetched.manifest;
         var entry = fetched.entry;
         var packText = fetched.text;
 
@@ -27533,6 +27539,17 @@ function showModal(opts) {
         }
         var shapeErr = window.CheckpointLib.validatePackShape(moduleId, content);
         if (shapeErr) throw new Error('decrypted content failed validation: ' + shapeErr);
+        return content;
+    }
+    var prepared = await Promise.all(toMerge.map(function (moduleId) {
+      return preparePack(moduleId).then(function (content) { return { content: content }; }, function (err) { return { error: err }; });
+    }));
+
+    for (var i = 0; i < toMerge.length; i++) {
+      var moduleId = toMerge[i];
+      try {
+        if (prepared[i].error) throw prepared[i].error;
+        var content = prepared[i].content;
 
         /* 'ai' is a purchasable add-on, not a compliance framework — its
            pack carries no real control set (content.framework.controls
@@ -27874,6 +27891,17 @@ function showModal(opts) {
     } catch (e) { return { blocked: false }; }
   }
 
+  /* How long each stage of a live sign-in took, kept for this browser
+     session and shown in Settings → Setup health, so a slow sign-in can
+     be traced to the stage that caused it. */
+  var _loadT0 = 0, _loadLast = 0;
+  function loadTiming(stage) {
+    var now = (window.performance && performance.now()) || Date.now();
+    if (stage === 'start') { _loadT0 = _loadLast = now; window._loadTimings = []; return; }
+    if (!_loadT0) return;
+    (window._loadTimings = window._loadTimings || []).push({ stage: stage, ms: Math.round(now - _loadLast) });
+    _loadLast = now;
+  }
   async function startLive() {
     Store = window.SpStore;
     busy(true);
@@ -27887,12 +27915,11 @@ function showModal(opts) {
        at this point, so this can't write to the tenant's own audit log
        either; the owner console's "Revoke access" action already
        records who/when/why on ITS OWN audit log. */
-    var revocation = await checkAccessRevoked(tenantInfo && tenantInfo.id);
-    if (revocation.blocked) {
-      busy(false);
-      showAccessRevokedScreen();
-      return;
-    }
+    /* The revocation check goes to a Compliance365 endpoint; it runs
+       alongside the read-only activation and pack steps below and is
+       awaited before anything is loaded or written. */
+    loadTiming('start');
+    var revocationP = checkAccessRevoked(tenantInfo && tenantInfo.id);
     var acceptIds = tenantIdsFor(tenantInfo);
 
     /* Pre-load check — authorises ensureLists() to (re)create a MISSING
@@ -27920,9 +27947,18 @@ function showModal(opts) {
        any module this pre-check got wrong just stays/returns to its
        empty stub once that definitive check runs. */
     if (preCheck.winner) { try { await mergeLicensedPacks(preCheck.winner.evalResult); } catch (e) { warn(e); } }
+    loadTiming('activation and packs');
+    var revocation = await revocationP;
+    if (revocation.blocked) {
+      busy(false);
+      showAccessRevokedScreen();
+      return;
+    }
+    loadTiming('access check');
 
     try {
       S = await Store.load(function (m) { if (status) status.textContent = m; });
+      loadTiming('registers');
     } catch (e) {
       /* Only reachable if ensureLists() refused to create a list this
          tenant is missing and window.CHECKPOINT_ACTIVATION.verified
@@ -27936,8 +27972,8 @@ function showModal(opts) {
       return;
     }
     S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
-    await detectAppCapabilities();
-    await detectAppReadOnly();
+    await Promise.all([detectAppCapabilities(), detectAppReadOnly()]);
+    loadTiming('licence and role');
 
     /* Definitive, post-load activation check — S.settings.entitlementFile
        is now guaranteed to reflect reality (Store.load() just
@@ -27948,7 +27984,9 @@ function showModal(opts) {
       showNotActivatedScreen('This tenant\'s activation is missing or no longer verifies — apply a current Compliance365 activation file to continue, or explore the demo instead.');
       return;
     }
+    loadTiming('activation check');
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
+    loadTiming('first screen');
   }
 
   /* Verifies and applies a pasted/uploaded activation file from the

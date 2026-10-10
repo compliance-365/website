@@ -13,10 +13,12 @@ function makeSandbox() {
   const names = {};      // displayName -> listId
   let nextId = 1, inFlight = 0, maxInFlight = 0;
   const gets = {};       // listId -> item GET count
+  const calls = { root: 0, lists: 0, tops: [] };
+  let reject999 = false;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const Graph = {
     async g(path, opts) {
-      if (/^\/sites\/root\?/.test(path)) return { id: 'site1', webUrl: 'https://contoso.sharepoint.com' };
+      if (/^\/sites\/root\?/.test(path)) { calls.root++; } if (/^\/sites\/root\?/.test(path)) return { id: 'site1', webUrl: 'https://contoso.sharepoint.com' };
       const m = /\/lists\/([^/]+)\/items$/.exec(path);
       if (m && opts && opts.method === 'POST') { const row = { id: String(nextId++), fields: opts.body.fields || {} }; lists[m[1]].push(row); return row; }
       if (/\/lists\/[^/]+\/items\/[^/]+\/fields$/.test(path)) return {};
@@ -24,10 +26,14 @@ function makeSandbox() {
       return {};
     },
     async gAll(path) {
+      if (/\/lists\?\$select=id,displayName/.test(path)) calls.lists++;
       if (/\/lists\?\$select=id,displayName/.test(path)) return Object.keys(names).map((n) => ({ id: names[n], displayName: n }));
       if (/\/columns\?/.test(path)) return [];
       const m = /\/lists\/([^/]+)\/items\?/.exec(path);
       if (m) {
+        const top = Number((/\$top=(\d+)/.exec(path) || [])[1]);
+        calls.tops.push(top);
+        if (reject999 && top === 999) { const e = new Error('Invalid request'); e.status = 400; throw e; }
         gets[m[1]] = (gets[m[1]] || 0) + 1;
         inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
         await sleep(5);
@@ -47,7 +53,7 @@ function makeSandbox() {
   vm.runInContext(src('guidance.js'), ctx);
   vm.runInContext(src('store.js'), ctx);
   window.CHECKPOINT_CONFIG.site = 'root';
-  return { window, lists, names, gets, stats: () => maxInFlight, addList(name) { const id = 'L' + nextId++; names[name] = id; lists[id] = []; return id; } };
+  return { window, lists, names, gets, calls, reject: () => { reject999 = true; }, stats: () => maxInFlight, addList(name) { const id = 'L' + nextId++; names[name] = id; lists[id] = []; return id; } };
 }
 
 test('registers load a few at a time, and Controls and Clauses are read once', async () => {
@@ -66,4 +72,28 @@ test('registers load a few at a time, and Controls and Clauses are read once', a
   assert.equal(sb.gets[ctl], 1, 'Controls read once');
   assert.equal(sb.gets[cl], 1, 'Clauses read once');
   assert.ok(sb.stats() > 1 && sb.stats() <= 6, 'several lists in flight, at most 6: ' + sb.stats());
+});
+
+test('one site lookup and one list-of-lists per sign-in; pages of 999 rows', async () => {
+  const sb = makeSandbox();
+  const S = sb.window.SpStore;
+  const prefix = sb.window.CHECKPOINT_CONFIG.listPrefix;
+  for (const k of Object.keys(S._defs).concat(['Documents'])) sb.addList(prefix + ' ' + k);
+  await S.probeOnboardingState();
+  await S.readCachedActivation();
+  await S.load();
+  assert.equal(sb.calls.root, 1, 'the site is resolved once');
+  assert.equal(sb.calls.lists, 1, 'the list of lists is read once');
+  assert.ok(sb.calls.tops.length && sb.calls.tops.every((t) => t === 999), 'pages of 999');
+});
+
+test('a tenant that refuses 999-row pages falls back to 200', async () => {
+  const sb = makeSandbox();
+  const S = sb.window.SpStore;
+  const prefix = sb.window.CHECKPOINT_CONFIG.listPrefix;
+  for (const k of Object.keys(S._defs).concat(['Documents'])) sb.addList(prefix + ' ' + k);
+  sb.reject();
+  await S.load();
+  assert.ok(sb.calls.tops.includes(200), 'retried at 200');
+  assert.ok(sb.calls.tops.filter((t) => t === 999).length <= 6, 'stops asking for 999 once refused');
 });
