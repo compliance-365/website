@@ -4,6 +4,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import EuAiActClassifier from '../../components/EuAiActClassifier.astro';
@@ -160,6 +161,7 @@ const faqLd = {
           <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
           <a href={`${base}checklist/iso42001/`} class="btn-hdk-ghost">Free readiness assessment</a>
         </div>
+        <p class="hero-estimate"><a href="#ce-iso42001">Estimate your cost: year one and three years, by size ↓</a></p>
       </div>
 
       <div class="svc-hero-image">
@@ -202,6 +204,9 @@ const faqLd = {
       </div>
     </div>
   </section>
+
+  <CostEstimator fw="iso42001" />
+
 
   <!-- WHERE THE REQUIREMENT STANDS -->
   <section class="section">
@@ -373,29 +378,13 @@ const faqLd = {
     <div class="container">
       <h2 class="center">What your deliverables look like</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        Your AI Management System lives inside Microsoft 365 alongside your existing security and privacy controls. Here's what a Risk Register and AIMS Statement of Applicability look like inside SharePoint.
+        Your AI Management System lives inside Microsoft 365 alongside your existing security and privacy controls. Here's what the Risk Register and the AIMS Statement of Applicability look like in Checkpoint, which keeps them as SharePoint lists in your own tenant.
       </p>
       <div style="margin-top:2.5rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#166534;margin:0 0 .75rem;">Risk Register — AI, Privacy &amp; Cybersecurity Risks</p>
-        <img
-          src={`${base}assets/mockup-risk-register.svg`}
-          alt="Risk Register in Microsoft SharePoint showing AI governance, privacy and cybersecurity risks with impact, likelihood and mitigation status"
-          width="880"
-          height="342"
-          style="width:100%;height:auto;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="riskRegister" label="Risk register" />
       </div>
       <div style="margin-top:2rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#166534;margin:0 0 .75rem;">Statement of Applicability — ISO 42001 AIMS Controls</p>
-        <img
-          src={`${base}assets/mockup-soa-iso42001.svg`}
-          alt="Statement of Applicability in SharePoint showing ISO 42001 AIMS controls including AI risk assessment, lifecycle management, data governance and human oversight"
-          width="880"
-          height="388"
-          style="width:100%;height:auto;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="soaIso42001" label="Statement of Applicability — ISO 42001" />
         <p class="muted small" style="margin-top:0.75rem;">
           10 of the 38 Annex A controls above are proposed automatically from a Checkpoint posture scan of your Microsoft 365 tenant — the rest (AI policy content, impact assessments, design documentation) are process controls no live signal can honestly evidence, so they stay self-reported.
         </p>
@@ -572,7 +561,6 @@ const faqLd = {
     </div>
   </section>
 
-  <CostEstimator fw="iso42001" />
   <RelatedResources fw="iso42001" />
 
   <!-- FINAL CTA -->

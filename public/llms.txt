@@ -28,6 +28,7 @@ Checkpoint is Compliance365's compliance software. It runs in the customer's own
 - [NIST CSF software](https://www.compliance365.com.au/checkpoint-console/nist-csf-software/)
 - [Checkpoint vs Vanta, Drata, Microsoft Purview Compliance Manager and spreadsheets](https://www.compliance365.com.au/checkpoint-console/compare/)
 - [Pricing](https://www.compliance365.com.au/pricing/)
+- [Cost estimator](https://www.compliance365.com.au/cost-estimator/): year-one and three-year cost for ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701 and NIST CSF, as a fixed-price engagement, Checkpoint plus consulting days ($2,000 a day ex GST), or Checkpoint alone
 
 ## Free Resources
 

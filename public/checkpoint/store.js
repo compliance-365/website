@@ -1713,6 +1713,12 @@ window.DemoStore = (function () {
       controls: (function () {
         var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
         var i27001 = 0; /* index within iso27001 only, so the demo status pattern is stable regardless of other frameworks' control counts */
+        var otherIdx = {}; /* the same, per other framework */
+        var DEMO_IN_PROGRESS = ['soc2', 'essential8', 'iso42001', 'iso27701', 'nistcsf', 'dispirap'];
+        var scanTargets = {};
+        Object.keys(window.DEMO_CHECK_SEEDS || {}).forEach(function (fw) {
+          scanTargets[fw] = Object.keys(window.DEMO_CHECK_SEEDS[fw]).reduce(function (acc, k) { return acc.concat(window.DEMO_CHECK_SEEDS[fw][k]); }, []);
+        });
         /* iso27001's real seed rows (allControlSeeds() only ever returns
            these now — the 6 premium frameworks' window.FRAMEWORKS
            entries are empty stubs, per the content-pack split) PLUS the
@@ -1741,8 +1747,24 @@ window.DemoStore = (function () {
             var verifiedBy = st === 'Implemented' ? owners[i % owners.length] : '';
             return { id: c.code, fw: c.fw, t: c.t, app: true, st: st, own: owners[i % owners.length], map: c.map, just: '', verified: verified, evidenceUrl: evidenceUrl, verifiedBy: verifiedBy };
           }
-          /* other frameworks not yet purchased in the demo — controls exist but untouched */
-          return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
+          /* The frameworks the website shows screenshots of are part-way
+             through too, so their SoA tabs show the same kind of picture
+             as ISO 27001's rather than a page of "Not started". The rest
+             stay untouched, so the dashboard still has frameworks "not
+             started" behind its toggle. Controls a demo scan check
+             targets stay at Not started: the scan only proposes a
+             status that differs from the current one, so they are what
+             keeps the scan's suggestions visible for that framework. */
+          if (DEMO_IN_PROGRESS.indexOf(c.fw) === -1) {
+            return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
+          }
+          var j = (otherIdx[c.fw] = (otherIdx[c.fw] || 0) + 1) - 1;
+          var targeted = scanTargets[c.fw] && scanTargets[c.fw].indexOf(c.code) > -1;
+          var ost = targeted ? 'Not started' : j % 3 === 0 ? 'Implemented' : j % 3 === 1 ? 'In progress' : 'Not started';
+          return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: ost, own: ost === 'Not started' ? '' : owners[j % owners.length], map: c.map, just: '',
+            verified: ost === 'Implemented' ? daysFrom(-20 - (j % 4) * 10) : '',
+            evidenceUrl: ost === 'Implemented' && j % 2 === 0 ? 'https://meridianhealthsaas.sharepoint.com/sites/compliance/Evidence/' + c.code + '.pdf' : '',
+            verifiedBy: ost === 'Implemented' ? owners[j % owners.length] : '' };
         });
       })(),
       /* Same demo-status pattern as controls above — a mix so the

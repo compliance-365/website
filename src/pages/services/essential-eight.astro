@@ -4,6 +4,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 
@@ -154,6 +155,7 @@ const faqLd = {
           <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
           <a href="#controls" class="btn-hdk-ghost">See all 8 controls</a>
         </div>
+        <p class="hero-estimate"><a href="#ce-essential8">Estimate your cost: year one and three years, by size ↓</a></p>
       </div>
 
       <div class="svc-hero-image">
@@ -213,6 +215,9 @@ const faqLd = {
       </p>
     </div>
   </section>
+
+  <CostEstimator fw="essential8" />
+
 
   <!-- WHY ESSENTIAL EIGHT MATTERS -->
   <section class="section">
@@ -445,16 +450,10 @@ const faqLd = {
     <div class="container">
       <h2 class="center">What your maturity assessment looks like</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        Every Essential Eight engagement tracks all 8 controls in a live SharePoint list — current maturity level, target, remediation status, and the M365 evidence source for each control.
+        Every Essential Eight engagement is tracked in Checkpoint: each of the eight strategies with its maturity level requirements underneath, the status and owner of each, and the evidence behind it.
       </p>
       <div style="margin-top:2rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-ink);margin:0 0 .75rem;">Essential Eight Maturity Assessment Tracker</p>
-        <img
-          src={`${base}assets/mockup-essential-eight.svg`}
-          alt="Essential Eight maturity assessment tracker in SharePoint showing all 8 ASD controls with current ML, target ML, status and Microsoft 365 evidence sources"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="soaEssential8" label="Essential Eight maturity in Checkpoint" />
       </div>
     </div>
   </section>
@@ -564,7 +563,6 @@ const faqLd = {
     </div>
   </section>
 
-  <CostEstimator fw="essential8" />
   <RelatedResources fw="essential-eight" />
 
   <!-- FINAL CTA -->

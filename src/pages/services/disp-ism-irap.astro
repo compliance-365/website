@@ -5,6 +5,7 @@ import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -399,18 +400,12 @@ const faqLd = {
   <!-- DELIVERABLE MOCKUP -->
   <section class="section">
     <div class="container">
-      <h2 class="center">What your ISM control register looks like</h2>
+      <h2 class="center">What your control register looks like</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        Every IRAP engagement is backed by a live ISM control register — control ID, domain, compliance status, and the exact Microsoft 365 evidence source mapped against each ASD requirement.
+        Every DISP and IRAP engagement is backed by a live control register in Checkpoint: each requirement's status and owner, the evidence behind it, and the ISO 27001 controls it also satisfies.
       </p>
       <div style="margin-top:2rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-ink);margin:0 0 .75rem;">ISM Control Assessment Register</p>
-        <img
-          src={`${base}assets/mockup-irap-ism.svg`}
-          alt="ISM control assessment register showing ISM control IDs, compliance status, domain classification and Microsoft 365 evidence sources for IRAP assessment"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="soaDispIrap" label="DISP and ISM controls in Checkpoint" />
       </div>
     </div>
   </section>

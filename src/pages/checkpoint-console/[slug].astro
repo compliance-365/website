@@ -8,6 +8,14 @@ import { frameworkPages, type FrameworkPage } from '../../data/checkpoint-framew
 import { comparisons } from '../../data/checkpoint-comparisons';
 import { MODULES, TRIAL_DAYS, fmtAud } from '../../data/pricing.js';
 import { checkpointSoftwareSchema } from '../../data/checkpoint-schema';
+import CheckpointShot from '../../components/CheckpointShot.astro';
+import type { ShotId } from '../../data/checkpoint-shots';
+
+/* The screen each framework page shows, from the demo tenant. */
+const SHOT_FOR: Record<string, ShotId> = {
+  iso27001: 'soaIso27001', essential8: 'soaEssential8', soc2: 'soaSoc2',
+  iso42001: 'soaIso42001', iso27701: 'soaIso27701', nistcsf: 'soaNistCsf',
+};
 
 export function getStaticPaths() {
   return frameworkPages.map((f) => ({ params: { slug: f.slug }, props: { f } }));
@@ -43,6 +51,7 @@ const breadcrumbs = [
       <a class="btn" href={base + 'pricing/'}>See pricing</a>
     </div>
     <p class="ft-note">The demo is the real console with sample data. No sign-up.</p>
+    {SHOT_FOR[f.moduleId] && <CheckpointShot id={SHOT_FOR[f.moduleId]} eager />}
   </div>
 </section>
 
