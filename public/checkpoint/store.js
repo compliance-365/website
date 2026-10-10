@@ -2126,24 +2126,6 @@ window.DemoStore = (function () {
       Object.keys(meta).forEach(function (k) { if (meta[k] !== undefined) d[k] = meta[k]; });
       persist();
     },
-    /* Upsert by DocName — a policy has exactly one current edited
-       version, and re-saving must replace it rather than accumulate
-       revisions the renderer would then have to choose between. The
-       audit log is where the history of who changed what lives. */
-    savePolicyDraft: async function (draft) {
-      var existing = (S.policyDrafts || []).find(function (d) { return d.docName === draft.docName; });
-      var fields = {
-        Title: draft.docName, DocName: draft.docName, TplId: draft.tplId || '',
-        Content: JSON.stringify(draft.content), UpdatedBy: draft.updatedBy || '', UpdatedDate: draft.updatedDate || ''
-      };
-      if (existing) {
-        await patchItem('PolicyDrafts', existing._sp, fields);
-        Object.assign(existing, draft);
-      } else {
-        draft._sp = await addItem('PolicyDrafts', fields);
-        S.policyDrafts.push(draft);
-      }
-    },
     savePolicyDraft: async function (draft) {
       S.policyDrafts = S.policyDrafts || [];
       var existing = S.policyDrafts.find(function (d) { return d.docName === draft.docName; });
@@ -3655,6 +3637,14 @@ window.SpStore = (function () {
           try { content = JSON.parse(f.Content || 'null'); } catch (e) { content = null; }
           return { _sp: i.id, docName: f.DocName || '', tplId: f.TplId || '', content: content, updatedBy: f.UpdatedBy || '', updatedDate: f.UpdatedDate || '' };
         }).filter(function (d) { return d.docName && d.content; }),
+        /* Drafts that were reset (content cleared) still have a list
+           item; savePolicyDraft reuses it rather than adding a second
+           item for the same document. */
+        _clearedPolicyDrafts: draftItems.map(function (i) {
+          var f = i.fields, content = null;
+          try { content = JSON.parse(f.Content || 'null'); } catch (e) { content = null; }
+          return content ? null : { _sp: i.id, docName: f.DocName || '' };
+        }).filter(function (d) { return d && d.docName; }),
         training: trnItems.map(function (i) {
           var f = i.fields;
           return {
@@ -4182,6 +4172,36 @@ window.SpStore = (function () {
         EntryHash: entry.entryHash || '', PrevHash: entry.prevHash || ''
       });
       S.auditLog.unshift(entry);
+    },
+    /* Upsert by DocName — a policy has exactly one current edited
+       version, and re-saving must replace it rather than accumulate
+       revisions the renderer would then have to choose between. The
+       audit log is where the history of who changed what lives.
+       (This lived inside DemoStore by mistake, where the demo's own
+       version overrode it, so a live tenant had no savePolicyDraft and
+       every edited policy failed to save.) */
+    savePolicyDraft: async function (draft) {
+      S.policyDrafts = S.policyDrafts || [];
+      var existing = S.policyDrafts.find(function (d) { return d.docName === draft.docName; });
+      if (!existing) {
+        var cleared = (S._clearedPolicyDrafts || []).find(function (d) { return d.docName === draft.docName; });
+        if (cleared) {
+          S._clearedPolicyDrafts = S._clearedPolicyDrafts.filter(function (d) { return d !== cleared; });
+          existing = { _sp: cleared._sp, docName: cleared.docName };
+          S.policyDrafts.push(existing);
+        }
+      }
+      var fields = {
+        Title: draft.docName, DocName: draft.docName, TplId: draft.tplId || '',
+        Content: JSON.stringify(draft.content), UpdatedBy: draft.updatedBy || '', UpdatedDate: draft.updatedDate || ''
+      };
+      if (existing) {
+        await patchItem('PolicyDrafts', existing._sp, fields);
+        Object.assign(existing, draft);
+      } else {
+        draft._sp = await addItem('PolicyDrafts', fields);
+        S.policyDrafts.push(draft);
+      }
     },
     ensureNistSubcategories: ensureNistSubcategories,
     reconcileControls: reconcileControls,

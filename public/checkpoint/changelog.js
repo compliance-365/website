@@ -15,6 +15,7 @@ window.CHECKPOINT_CHANGELOG = [
     version: '1.158.0',
     date: '2026-10-10',
     entries: [
+      'Fixed: saving an edited policy or document in a live tenant failed with "savePolicyDraft is not a function". The SharePoint save had ended up inside the demo, so only the demo could save edits. Edits now save to the PolicyDrafts list in your SharePoint, and re-editing a document whose edits were reset reuses its existing record rather than adding a second one.',
       'Not a Microsoft 365 administrator? The sign-in screen and the "Before you sign in" step now offer "Ask your IT admin to approve it": a drafted email with the one-off approval link, what it grants and why, which opens in your email app (and is copied, for a ticket or chat). If Microsoft turns sign-in away because no administrator has approved Checkpoint yet, the sign-in screen now says so and offers the same email.',
       'The "Before you sign in" step now says plainly that the one approval also covers the two permissions that write (Sites.Manage.All for Checkpoint\'s own SharePoint lists, Mail.Send for email you choose to send), all delegated.',
       'After a self-serve purchase is confirmed, Checkpoint offers to book the free 30-minute setup call that comes with it.',
