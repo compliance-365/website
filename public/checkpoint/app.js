@@ -5661,7 +5661,31 @@ function showModal(opts) {
     var good = higherIsBetter ? up : !up;
     return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + icon(up ? 'up' : 'down') + Math.abs(current - previous) + '</span>';
   }
-  function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
+  function busy(on) {
+    var el = document.getElementById('busy');
+    el.style.display = on ? 'flex' : 'none';
+    if (!on) { el.classList.remove('busy-signin'); var st = document.getElementById('busySteps'); if (st) st.innerHTML = ''; }
+  }
+  function signedInBefore() { try { return localStorage.getItem('cpSignedInBefore') === '1'; } catch (e) { return false; } }
+  /* The sign-in screen: three plain steps instead of a spinner reading
+     out each technical check. Messages from first-time set-up (lists
+     being created) still show beneath it. */
+  var SIGNIN_STEPS = [['signin', 'Signing you in'], ['access', 'Checking your access'], ['registers', 'Loading your registers'], ['dashboard', 'Preparing your dashboard']];
+  function signInProgress(step) {
+    var el = document.getElementById('busy'), list = document.getElementById('busySteps');
+    if (!el || !list) return;
+    el.classList.add('busy-signin');
+    var at = SIGNIN_STEPS.findIndex(function (x) { return x[0] === step; });
+    var steps = SIGNIN_STEPS.filter(function (x, i) { return i > 0 || step === 'signin'; });
+    list.innerHTML = steps.map(function (x) {
+      var i = SIGNIN_STEPS.indexOf(x);
+      var cls = i < at ? 'done' : i === at ? 'now' : '';
+      return '<li class="' + cls + '"><span class="bs-dot" aria-hidden="true"></span>' + esc(x[1]) + (i < at ? '<span class="sr-only"> (done)</span>' : '') + '</li>';
+    }).join('');
+    var msg = document.getElementById('busyMsg');
+    if (msg) msg.textContent = '';
+    el.style.display = 'flex';
+  }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
   /* Append-only audit trail — distinct from the activity feed above,
      which is prose for humans; this is structured (actor/action/target/
@@ -26358,7 +26382,19 @@ function showModal(opts) {
          with a live MSAL session never reaches this at all (init()'s
          "returning session" branch below fires before #gate is ever
          shown). */
+      /* A browser that has opened Checkpoint before skips the set-up
+         welcome and the permissions explainer: the organisation has
+         already approved them, so it signs straight in. */
+      if (signedInBefore()) {
+        busy(true); signInProgress('signin');
+        Graph.signIn({ selectAccount: false }).catch(function (e) { busy(false); if (e && e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e)); });
+        return;
+      }
       Wizard.start();
+    },
+    signInOtherAccount: function () {
+      busy(true); signInProgress('signin');
+      Graph.signIn({ selectAccount: true }).catch(function (e) { busy(false); if (e && e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e)); });
     },
 
     signOut: function () { Graph.signOut(); },
@@ -27919,7 +27955,12 @@ function showModal(opts) {
        alongside the read-only activation and pack steps below and is
        awaited before anything is loaded or written. */
     loadTiming('start');
+    signInProgress('access');
     var revocationP = checkAccessRevoked(tenantInfo && tenantInfo.id);
+    /* Licensing and role are read-only Graph probes that need nothing
+       loaded: start them now, so they finish while the rest runs. */
+    Graph.detectCapabilities().catch(function () {});
+    Graph.detectRole().catch(function () {});
     var acceptIds = tenantIdsFor(tenantInfo);
 
     /* Pre-load check — authorises ensureLists() to (re)create a MISSING
@@ -27955,6 +27996,7 @@ function showModal(opts) {
       return;
     }
     loadTiming('access check');
+    signInProgress('registers');
 
     try {
       S = await Store.load(function (m) { if (status) status.textContent = m; });
@@ -27972,6 +28014,7 @@ function showModal(opts) {
       return;
     }
     S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
+    signInProgress('dashboard');
     await Promise.all([detectAppCapabilities(), detectAppReadOnly()]);
     loadTiming('licence and role');
 
@@ -27985,6 +28028,7 @@ function showModal(opts) {
       return;
     }
     loadTiming('activation check');
+    try { localStorage.setItem('cpSignedInBefore', '1'); } catch (e) { /* private browsing: the welcome shows again next time */ }
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
     loadTiming('first screen');
   }
@@ -28082,7 +28126,7 @@ function showModal(opts) {
     applyStoredSitePreference();
     busy(true);
     var msg = document.getElementById('busyMsg');
-    if (msg) msg.textContent = 'Checking your tenant…';
+    signInProgress('access');
 
     /* Self-serve activation is checked FIRST — before the onboarded
        short-circuit below — because a just-completed Paddle purchase must
@@ -29096,6 +29140,8 @@ function showModal(opts) {
         try { await afterSignIn(); return; } catch (e) { console.error(e); busy(false); }
       }
       document.getElementById('btnGateSignIn').style.display = '';
+      var other = document.getElementById('btnGateOtherAccount');
+      if (other && signedInBefore()) other.style.display = '';
     }
     document.getElementById('gate').style.display = 'flex';
   })();

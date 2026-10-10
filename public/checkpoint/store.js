@@ -3432,10 +3432,8 @@ window.SpStore = (function () {
     getSiteId: function () { return siteId; },
     getSiteHostname: function () { return resolvedHost; },
     load: async function (onStatus) {
-      if (onStatus) onStatus('Requesting permission to store your compliance registers in this tenant’s SharePoint…');
       await resolveSite();
       await ensureLists(onStatus);
-      if (onStatus) onStatus('Loading registers…');
 
       /* Every register at once (a few requests at a time), not one
          after another: the lists in sequence were most of the wait after

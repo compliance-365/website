@@ -53,6 +53,7 @@
   <p>Posture scanning via Microsoft Graph, a linked risk and actions register, a living Statement of Applicability, and one-click audit reports. Every record is stored as SharePoint lists inside your own Microsoft 365 tenant.</p>
   <div class="btns">
     <button class="btn" id="btnGateSignIn" style="display:none" data-action="App.signIn">Sign in with Microsoft</button>
+    <button class="lnk" id="btnGateOtherAccount" style="display:none" data-action="App.signInOtherAccount">Use a different account</button>
     <button class="btn ghost" data-action="App.startDemo">Explore the demo</button>
   </div>
   <p class="note" id="gateNote">Sign-in only requests read-only Graph access for posture checks. Two further permissions are requested separately, only when first needed: SharePoint list access, the moment your registers are first loaded/created; email-send access, only if you use the "Email status update" button. An administrator must consent to each on first use.</p>
@@ -60,7 +61,7 @@
 </div>
 
 <!-- BUSY OVERLAY -->
-<div class="busy" id="busy"><div class="ring"></div><span id="busyMsg">Working…</span></div>
+<div class="busy" id="busy" role="status" aria-live="polite"><p class="busy-brand">Checkpoint</p><div class="ring"></div><ol class="busy-steps" id="busySteps"></ol><span id="busyMsg">Working…</span></div>
 
 <!-- ONBOARDING WIZARD — first-run setup for a new tenant. Fully separate
      from #appShell (no sidebar/topbar chrome yet — nothing to provision

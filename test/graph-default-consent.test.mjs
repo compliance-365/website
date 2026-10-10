@@ -26,7 +26,7 @@ test('other resources keep their own scopes', () => {
 
 test('graph.js routes sign-in, tokens and the permissions check through it', async () => {
   const src = await readFile(new URL('../public/checkpoint/graph.js', import.meta.url), 'utf8');
-  assert.match(src, /loginRedirect\(\{ scopes: scopesFor\(CONFIG\.scopesReadOnly\)/);
+  assert.match(src, /var req = \{ scopes: scopesFor\(CONFIG\.scopesReadOnly\) \};[\s\S]{0,120}await msalApp\.loginRedirect\(req\);/);
   assert.match(src, /scopes = scopesFor\(scopes \|\| CONFIG\.scopesReadOnly\)/);
   assert.match(src, /acquireTokenSilent\(\{ scopes: scopesFor\(CONFIG\.scopesReadOnly\)/);
   assert.doesNotMatch(src, /loginRedirect\(\{ scopes: CONFIG\./, 'no sign-in that lists the permissions one by one');

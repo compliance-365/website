@@ -45,8 +45,13 @@ window.Graph = (function () {
      whatever the organisation's admin has approved, in one go. Once an
      admin has granted consent nobody sees a permissions screen again;
      before that, an admin sees one screen covering everything. */
-  async function signIn() {
-    await msalApp.loginRedirect({ scopes: scopesFor(CONFIG.scopesReadOnly), prompt: 'select_account' });
+  /* opts.selectAccount shows Microsoft's account picker (first set-up,
+     or "Use a different account"). A returning user goes straight
+     through on the account the browser is already signed in with. */
+  async function signIn(opts) {
+    var req = { scopes: scopesFor(CONFIG.scopesReadOnly) };
+    if (!opts || opts.selectAccount !== false) req.prompt = 'select_account';
+    await msalApp.loginRedirect(req);
   }
 
   function scopesFor(scopes) { return window.CheckpointLib.graphTokenScopes(scopes); }
@@ -139,11 +144,12 @@ window.Graph = (function () {
      needing a signed-in MSAL session, which g() itself can't run
      without. */
   var GRAPH_MAX_RETRIES = 3;
-  async function fetchWithGraphRetry(fetchOnce) {
+  async function fetchWithGraphRetry(fetchOnce, maxRetries) {
     var res, attempt = 0;
+    var limit = typeof maxRetries === 'number' ? maxRetries : GRAPH_MAX_RETRIES;
     for (;;) {
       res = await fetchOnce();
-      if (!window.CheckpointLib.isRetryableGraphStatus(res.status) || attempt >= GRAPH_MAX_RETRIES) break;
+      if (!window.CheckpointLib.isRetryableGraphStatus(res.status) || attempt >= limit) break;
       var delay = window.CheckpointLib.graphRetryDelayMs(res.headers.get('Retry-After'), attempt);
       await new Promise(function (resolve) { setTimeout(resolve, delay); });
       attempt++;
@@ -169,7 +175,7 @@ window.Graph = (function () {
         ),
         body: opts.body ? JSON.stringify(opts.body) : undefined
       });
-    });
+    }, opts.retries);
     if (res.status === 204) return null;
     /* Graph's error responses are normally JSON ({error:{code,message,
        innerError}}), but a malformed/oversized request can be rejected
@@ -357,13 +363,23 @@ window.Graph = (function () {
     { key: 'mfaRegistrationReport', label: 'Entra ID authentication methods registration report', licence: 'Any Entra ID tier, with a role that can read reports', path: '/reports/authenticationMethods/userRegistrationDetails?$top=1',
       note: 'The authentication methods registration report is not readable — the MFA-registration-coverage check will show as Manual. The Conditional Access MFA check above still reports what policy REQUIRES; only what users can actually do is unavailable.' }
   ];
+  /* One run at a time: sign-in starts this early, and a second caller
+     while it is still running waits for the same answer. */
+  var capabilitiesInFlight = null;
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
+    if (capabilitiesInFlight && !force) return capabilitiesInFlight;
+    capabilitiesInFlight = probeCapabilities();
+    try { return await capabilitiesInFlight; } finally { capabilitiesInFlight = null; }
+  }
+  async function probeCapabilities() {
     var out = {};
-    for (var i = 0; i < CAPABILITY_PROBES.length; i++) {
-      var p = CAPABILITY_PROBES[i];
+    /* All probes at once, each tried once: a service the tenant is not
+       licensed for often answers 503/504, and retrying that with back-off
+       on every sign-in was most of the wait before the dashboard. */
+    await Promise.all(CAPABILITY_PROBES.map(async function (p) {
       try {
-        await g(p.path, p.opts);
+        await g(p.path, Object.assign({ retries: 0 }, p.opts || {}));
         out[p.key] = { key: p.key, label: p.label, licence: p.licence, available: true, status: 'available', note: '' };
       } catch (e) {
         /* Graph's error shape for "this doesn't exist for this tenant"
@@ -377,7 +393,10 @@ window.Graph = (function () {
         var status = (e.status === 401 || e.status === 403) ? 'noAccess' : 'notLicensed';
         out[p.key] = { key: p.key, label: p.label, licence: p.licence, available: false, status: status, note: p.note, error: e.message };
       }
-    }
+    }));
+    var ordered = {};
+    CAPABILITY_PROBES.forEach(function (p) { ordered[p.key] = out[p.key]; });
+    out = ordered;
     capabilitiesCache = out;
     return out;
   }
@@ -425,9 +444,14 @@ window.Graph = (function () {
      SharePoint itself lets them reach — SharePoint, not this flag, is
      what's actually protecting the data. Never remove SharePoint-side
      permissions and rely on this flag instead. */
-  var roleCache = null;
+  var roleCache = null, roleInFlight = null;
   async function detectRole(force) {
     if (roleCache && !force) return roleCache;
+    if (roleInFlight && !force) return roleInFlight;
+    roleInFlight = probeRole();
+    try { return await roleInFlight; } finally { roleInFlight = null; }
+  }
+  async function probeRole() {
     try {
       var groups = await gAll('/me/transitiveMemberOf/microsoft.graph.group?$select=displayName');
       var names = groups.map(function (grp) { return grp.displayName; });
