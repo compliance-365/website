@@ -56,7 +56,7 @@
     <button class="lnk" id="btnGateOtherAccount" style="display:none" data-action="App.signInOtherAccount">Use a different account</button>
     <button class="btn ghost" data-action="App.startDemo">Explore the demo</button>
   </div>
-  <p class="note" id="gateNote">Sign-in only requests read-only Graph access for posture checks. Two further permissions are requested separately, only when first needed: SharePoint list access, the moment your registers are first loaded/created; email-send access, only if you use the "Email status update" button. An administrator must consent to each on first use.</p>
+  <p class="note" id="gateNote">Sign-in uses the Microsoft permissions your organisation's administrator approved for Checkpoint, once, for everyone. <button class="lnk" data-action="App.showSignInPermissions">See exactly what Checkpoint asks for</button></p>
   <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser.</div>
 </div>
 

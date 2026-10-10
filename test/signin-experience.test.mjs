@@ -9,7 +9,11 @@ const f = (n) => readFileSync(new URL('../public/checkpoint/' + n, import.meta.u
 const app = f('app.js'), graph = f('graph.js'), store = f('store.js'), html = f('index.html');
 
 test('returning users skip the wizard and the account picker', () => {
-  assert.match(app, /if \(signedInBefore\(\)\) \{\s*busy\(true\); signInProgress\('signin'\);\s*Graph\.signIn\(\{ selectAccount: false \}\)/);
+  const signIn = app.slice(app.indexOf('    signIn: function () {'), app.indexOf('    showSignInPermissions:'));
+  assert.doesNotMatch(signIn, /Wizard\.start\(\)/, 'Sign in never opens the set-up welcome');
+  assert.match(signIn, /Graph\.signIn\(\{ selectAccount: !signedInBefore\(\) \}\)/);
+  assert.match(app, /showSignInPermissions: function \(\) \{ Wizard\.start\(\); \}/);
+  assert.match(html, /data-action="App\.showSignInPermissions">See exactly what Checkpoint asks for</);
   assert.match(app, /localStorage\.setItem\('cpSignedInBefore', '1'\)/);
   assert.match(graph, /if \(!opts \|\| opts\.selectAccount !== false\) req\.prompt = 'select_account';/);
   assert.match(html, /id="btnGateOtherAccount"[^>]*data-action="App\.signInOtherAccount">Use a different account</);

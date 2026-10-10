@@ -26385,13 +26385,16 @@ function showModal(opts) {
       /* A browser that has opened Checkpoint before skips the set-up
          welcome and the permissions explainer: the organisation has
          already approved them, so it signs straight in. */
-      if (signedInBefore()) {
-        busy(true); signInProgress('signin');
-        Graph.signIn({ selectAccount: false }).catch(function (e) { busy(false); if (e && e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e)); });
-        return;
-      }
-      Wizard.start();
+      /* Sign in goes straight to Microsoft for everyone. The list of
+         permissions Checkpoint asks for is one click away on the gate
+         (App.showSignInPermissions) for an administrator who wants to
+         read it first; Microsoft shows its own consent screen the one
+         time an administrator approves them. A browser that has signed
+         in before also skips Microsoft's account picker. */
+      busy(true); signInProgress('signin');
+      Graph.signIn({ selectAccount: !signedInBefore() }).catch(function (e) { busy(false); if (e && e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e)); });
     },
+    showSignInPermissions: function () { Wizard.start(); },
     signInOtherAccount: function () {
       busy(true); signInProgress('signin');
       Graph.signIn({ selectAccount: true }).catch(function (e) { busy(false); if (e && e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e)); });
