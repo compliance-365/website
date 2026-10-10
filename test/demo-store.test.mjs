@@ -72,8 +72,8 @@ describe('demo mode populates the same shared registries a real licensed tenant 
   });
 
   test('DEMO_CHECK_SEEDS never pairs a checkId whose demo lastResults is "fail" or "manual" (would silently suppress the demo suggestion)', () => {
-    // Every demo-seeded premium control starts at 'Not started' (see
-    // DemoStore's seed().controls mapping) — the same status a 'fail'
+    // Every premium control a demo check targets starts at 'Not started'
+    // (see DemoStore's seed().controls mapping) — the same status a 'fail'
     // result suggests — so pairing one in produces a suggestedSt that
     // equals the control's current status, and runScan() only ever
     // proposes a status that DIFFERS from the current one. Not wrong,

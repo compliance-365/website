@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.157.0',
+    date: '2026-10-10',
+    entries: [
+      'Demo: SOC 2, Essential Eight, ISO 42001, ISO 27701, NIST CSF and DISP/IRAP in the sample tenant are now part-way through, like ISO 27001, so their Statement of Applicability tabs show implemented, in-progress and not-started controls with owners and evidence rather than a page of Not started.',
+      'A demo link can open the Statement of Applicability on a chosen framework (?demo=1&view=soa&fw=essential8). The website uses it to open the screen each screenshot shows.',
+      'The status list in the Statement of Applicability is wide enough to show the whole status, so Implemented is no longer cut off.'
+    ]
+  },
+  {
     version: '1.156.0',
     date: '2026-10-10',
     entries: [

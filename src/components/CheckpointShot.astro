@@ -1,0 +1,45 @@
+---
+/*
+  CheckpointShot — a real Checkpoint screen from the demo tenant, with a
+  link that opens the demo on that screen.
+  Usage: <CheckpointShot id="riskRegister" label="Risk register" />
+  Images and sizes: src/data/checkpoint-shots.ts.
+*/
+import { SHOTS, type ShotId } from '../data/checkpoint-shots';
+interface Props { id: ShotId; label?: string; caption?: string; eager?: boolean }
+const { id, label, caption, eager } = Astro.props;
+const s = SHOTS[id];
+const base = import.meta.env.BASE_URL || '/';
+const src = `${base}assets/checkpoint-shots/${s.file}`;
+const demo = `${base}checkpoint/?demo=1&view=${s.view}${s.fw ? `&fw=${s.fw}` : ''}`;
+---
+<figure class="cps">
+  {label && <p class="cps-label">{label}</p>}
+  <a class="cps-frame" href={demo} target="_blank" rel="noopener" aria-label={`${label || 'This screen'}: open it in the Checkpoint demo`}>
+    <img
+      src={`${src}.webp`}
+      srcset={`${src}-900.webp 900w, ${src}.webp ${s.width}w`}
+      sizes="(max-width: 1100px) 100vw, 1060px"
+      width={s.width}
+      height={s.height}
+      alt={s.alt}
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+    />
+  </a>
+  <figcaption>
+    {caption && <span>{caption} </span>}
+    <span class="cps-src">Checkpoint, demo tenant with sample data. <a href={demo} target="_blank" rel="noopener">Open this screen in the demo</a></span>
+  </figcaption>
+</figure>
+
+<style>
+  .cps { margin: 2rem 0 0; }
+  .cps-label { font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-ink, #A63A12); margin: 0 0 .75rem; }
+  .cps-frame { display: block; border-radius: 12px; overflow: hidden; border: 1px solid #2A2724; background: #0E0D0C; box-shadow: 0 10px 30px rgba(20, 16, 12, .18); }
+  .cps-frame img { display: block; width: 100%; height: auto; }
+  .cps-frame:focus-visible { outline: 3px solid #BE4A1E; outline-offset: 3px; }
+  .cps figcaption { font-size: .85rem; color: #6B6860; margin-top: .7rem; line-height: 1.55; }
+  .cps figcaption span:first-child:not(.cps-src) { color: #4A4740; }
+  .cps-src a { color: var(--accent-ink, #A63A12); }
+</style>

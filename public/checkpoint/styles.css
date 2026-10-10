@@ -1309,6 +1309,7 @@ select.mini.st-Open{color:var(--fail);border-color:rgba(201,122,122,.5);backgrou
 select.mini.st-Inprogress,select.mini.st-Intreatment{color:var(--warn);border-color:rgba(240, 169, 127,.5);background:rgba(240, 169, 127,.1)}
 select.mini.st-Implemented{color:var(--pass);border-color:rgba(143,191,154,.5);background:rgba(143,191,154,.1)}
 select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);background:var(--surface-raised)}
+#soaRows select.mini{min-width:9.5em}
 .toggle{width:34px;height:19px;flex-shrink:0;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
 /* The switch is 34x19 — under the 24px minimum WCAG 2.2 AA asks of a
    pointer target (2.5.8), and there are 93 of them in the ISO SoA

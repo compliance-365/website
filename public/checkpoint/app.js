@@ -27156,6 +27156,9 @@ function showModal(opts) {
        has a menu item, so the link cannot reach anything hidden. */
     else if (Store.kind === 'demo' && !RESTRICTED_ACCESS && !READONLY) {
       var startView = String(new URLSearchParams(location.search).get('view') || '').replace(/[^a-z0-9-]/gi, '');
+      /* &fw=essential8 opens the SoA on that framework's tab. */
+      var startFw = String(new URLSearchParams(location.search).get('fw') || '').replace(/[^a-z0-9]/gi, '');
+      if (startFw && window.FRAMEWORKS && window.FRAMEWORKS[startFw]) window._soaFw = startFw;
       if (startView && document.querySelector('.nav-item[data-v="' + startView + '"]') && document.getElementById('v-' + startView)) App.go(startView);
     }
     applyReadOnlyUi();

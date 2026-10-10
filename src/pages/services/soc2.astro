@@ -4,6 +4,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 
@@ -143,6 +144,7 @@ const faqLd = {
           <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
           <a href={`${base}checklist/soc2/`} class="btn-hdk-ghost">Free readiness assessment</a>
         </div>
+        <p class="hero-estimate"><a href="#ce-soc2">Estimate your cost: year one and three years, by size ↓</a></p>
       </div>
 
       <div class="svc-hero-image">
@@ -206,6 +208,9 @@ const faqLd = {
       </p>
     </div>
   </section>
+
+  <CostEstimator fw="soc2" />
+
 
   <!-- TRUST SERVICES CRITERIA -->
   <section class="section">
@@ -314,20 +319,15 @@ const faqLd = {
   <!-- EVIDENCE PIPELINE MOCKUP -->
   <section class="section">
     <div class="container">
-      <h2 class="center">What the evidence pipeline looks like</h2>
+      <h2 class="center">What the evidence looks like</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        The Type II observation period requires continuous, automated evidence capture. Here's what that looks like inside your Microsoft 365 and cloud environment — every control mapped, every piece of evidence timestamped and indexed.
+        The Type II observation period requires continuous, automated evidence capture. Here's what that looks like in Checkpoint: each Trust Services Criterion with its status, owner, assurance and evidence, and the posture scan that re-checks your Microsoft 365 settings.
       </p>
       <div style="margin-top:2rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-ink);margin:0 0 .75rem;">SOC 2 Evidence Library — Live Collection</p>
-        <img
-          src={`${base}assets/mockup-evidence-pipeline.svg`}
-          alt="SOC 2 evidence library in SharePoint showing automated evidence collection from Microsoft Entra, Intune, Defender and Azure DevOps mapped to Trust Services Criteria"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="soaSoc2" label="SOC 2 criteria, status and evidence" />
+        <CheckpointShot id="postureScan" label="Posture scan of your Microsoft 365" />
         <p class="muted small" style="margin-top:0.75rem;">
-          13 Trust Services Criteria — the ones with a genuine live signal — get their status proposed automatically from this pipeline. The COSO-derived governance criteria, availability commitments, and most Privacy and Processing Integrity criteria, need a human either way and stay self-reported.
+          13 Trust Services Criteria — the ones with a genuine live signal — get their status proposed automatically from the posture scan. The COSO-derived governance criteria, availability commitments, and most Privacy and Processing Integrity criteria, need a human either way and stay self-reported.
         </p>
       </div>
     </div>
@@ -541,7 +541,6 @@ const faqLd = {
     </div>
   </section>
 
-  <CostEstimator fw="soc2" />
   <RelatedResources fw="soc2" />
 
   <!-- FINAL CTA -->

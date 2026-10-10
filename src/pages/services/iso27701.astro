@@ -4,6 +4,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 
@@ -143,6 +144,7 @@ const faqLd = {
           <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
           <a href={`${base}checklist/iso27701/`} class="btn-hdk-ghost">Free readiness assessment</a>
         </div>
+        <p class="hero-estimate"><a href="#ce-iso27701">Estimate your cost: year one and three years, by size ↓</a></p>
       </div>
 
       <div class="svc-hero-image">
@@ -189,6 +191,9 @@ const faqLd = {
       </p>
     </div>
   </section>
+
+  <CostEstimator fw="iso27701" />
+
 
   <!-- GDPR & CCPA CONTEXT -->
   <section class="section">
@@ -402,25 +407,13 @@ const faqLd = {
     <div class="container">
       <h2 class="center">What your deliverables look like</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        Your Privacy Information Management System lives inside Microsoft 365 — not a separate platform. Here's what a Risk Register and PIMS Statement of Applicability look like inside SharePoint, mapped to both ISO 27701 and the Australian Privacy Act.
+        Your Privacy Information Management System lives inside Microsoft 365 — not a separate platform. Here's what the Risk Register and the PIMS Statement of Applicability look like in Checkpoint, which keeps them as SharePoint lists in your own tenant.
       </p>
       <div style="margin-top:2.5rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#7c3aed;margin:0 0 .75rem;">Risk Register — Privacy &amp; Cybersecurity Controls</p>
-        <img
-          src={`${base}assets/mockup-risk-register.svg`}
-          alt="Risk Register in Microsoft SharePoint showing privacy and cybersecurity risks with impact, likelihood and mitigation status"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="riskRegister" label="Risk register" />
       </div>
       <div style="margin-top:2rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#7c3aed;margin:0 0 .75rem;">Statement of Applicability — ISO 27701 PIMS Controls</p>
-        <img
-          src={`${base}assets/mockup-soa-iso27701.svg`}
-          alt="Statement of Applicability in SharePoint showing ISO 27701 PIMS controls including DPIA, ROPA, consent and data subject rights mapped to Privacy Act obligations"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="soaIso27701" label="Statement of Applicability — ISO 27701" />
         <p class="muted small" style="margin-top:0.75rem;">
           A handful of the controls above are proposed automatically from a Checkpoint posture scan — data-in-transit protection, third-party disclosure logging, processor due diligence. Consent, data-subject requests and cross-border transfer basis need a human either way, so they stay self-reported.
         </p>
@@ -562,7 +555,6 @@ const faqLd = {
     </div>
   </section>
 
-  <CostEstimator fw="iso27701" />
   <RelatedResources fw="iso27701" />
 
   <!-- FINAL CTA -->

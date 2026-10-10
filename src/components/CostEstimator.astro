@@ -1,11 +1,11 @@
 ---
 /*
   CostEstimator — year-one and three-year cost for one framework, by
-  organisation size and approach (Compliance365 engagement or self-serve
-  Checkpoint). Figures and their sources: src/data/cost-estimator.js.
+  organisation size and approach (Compliance365 engagement, Checkpoint
+  plus consulting days, or self-serve Checkpoint). Figures and their sources: src/data/cost-estimator.js.
   Usage: <CostEstimator fw="iso27001" />
 */
-import { FRAMEWORKS, SIZES } from '../data/cost-estimator.js';
+import { FRAMEWORKS, SIZES, DAY_OPTIONS, DEFAULT_DAYS, CONSULTING_DAY_RATE, aud } from '../data/cost-estimator.js';
 const { fw, heading } = Astro.props;
 const f = FRAMEWORKS[fw];
 const base = import.meta.env.BASE_URL || '/';
@@ -17,7 +17,7 @@ const bookUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.co
     <div class="container ce-in">
       <p class="ce-eyebrow">Cost estimator · {f.name}</p>
       <h2 id={`${id}-h`}>{heading || `What ${f.name} will cost you`}</h2>
-      <p class="ce-lead">Pick your size and how you want to do it. The ranges come from our published fixed prices, audit fees and Checkpoint licences, in AUD ex GST.</p>
+      <p class="ce-lead">Pick your size and how you want to do it. The ranges come from our published fixed prices, audit fees, Checkpoint licences and day rate, in AUD ex GST.</p>
       <form class="ce-form">
         <fieldset>
           <legend>Organisation size</legend>
@@ -37,7 +37,14 @@ const bookUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.co
           <legend>How you want to do it</legend>
           <div class="ce-opts">
             <label><input type="radio" name={`${id}-approach`} value="consulting" checked /> <span>With Compliance365 (fixed price, Checkpoint included)</span></label>
+            <label><input type="radio" name={`${id}-approach`} value="days" /> <span>Ourselves, with Checkpoint and consulting days</span></label>
             <label><input type="radio" name={`${id}-approach`} value="selfserve" /> <span>Ourselves, with Checkpoint</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="ce-days" hidden>
+          <legend>Consulting days in year 1 <span class="ce-legend-note">{aud(CONSULTING_DAY_RATE)} a day, ex GST: for example the internal audit, set-up help or support on audit day</span></legend>
+          <div class="ce-opts">
+            {DAY_OPTIONS.map((d) => (<label><input type="radio" name={`${id}-days`} value={d} checked={d === DEFAULT_DAYS} /> <span>{d} days</span></label>))}
           </div>
         </fieldset>
         {f.hasIso27001 && (
@@ -52,7 +59,7 @@ const bookUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.co
         <table class="ce-lines"><tbody data-ce="lines"></tbody></table>
         <p class="ce-note" data-ce="notes"></p>
         <div class="ce-actions">
-          <a class="btn btn-primary" href={bookUrl} target="_blank" rel="noopener">Get a fixed-price quote</a>
+          <a class="btn btn-primary" href={bookUrl} target="_blank" rel="noopener" data-ce="cta">Get a fixed-price quote</a>
           <a class="btn" href={`${base}checkpoint-console/demo/`}>Try Checkpoint free</a>
         </div>
         <p class="ce-fine">An estimate, not a quote. Your fixed price is confirmed in a free scoping call before any work starts.</p>
@@ -69,7 +76,10 @@ const bookUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.co
     const id = root.id;
     const val = (n) => (root.querySelector(`input[name="${id}-${n}"]:checked`) || {}).value;
     const render = () => {
-      const r = estimate({ fw, size: val('size'), scope: val('scope'), approach: val('approach'), hasIso27001: !!root.querySelector(`input[name="${id}-has27001"]:checked`) });
+      const approach = val('approach');
+      root.querySelector('.ce-days').hidden = approach !== 'days';
+      root.querySelector('[data-ce="cta"]').textContent = approach === 'days' ? 'Book a call to plan your days' : 'Get a fixed-price quote';
+      const r = estimate({ fw, size: val('size'), scope: val('scope'), approach, days: val('days'), hasIso27001: !!root.querySelector(`input[name="${id}-has27001"]:checked`) });
       root.querySelector('[data-ce="y1"]').textContent = (r.year1From ? 'from ' : '') + audRange(r.year1Total);
       root.querySelector('[data-ce="y3"]').textContent = (r.threeYearFrom ? 'from ' : '') + audRange(r.threeYearTotal);
       const row = (i) => `<tr><td>${esc(i.label)}${i.note ? ` <span class="ce-tag">${esc(i.note)}</span>` : ''}</td><td>${i.from ? 'from ' : ''}${audRange(i.range)}</td></tr>`;
@@ -95,6 +105,7 @@ const bookUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.co
   .ce-form { display: grid; gap: 1rem; }
   .ce fieldset { border: 0; padding: 0; margin: 0; }
   .ce legend { font-weight: 700; font-size: .9rem; margin-bottom: .5rem; }
+  .ce-legend-note { display: block; font-weight: 400; font-size: .82rem; color: #6B6860; margin-top: .15rem; }
   .ce-opts { display: flex; flex-wrap: wrap; gap: .5rem; }
   .ce-opts label, .ce-check { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .85rem; background: #fff; border: 1px solid #DDD8CF; border-radius: 999px; cursor: pointer; font-size: .92rem; }
   .ce-opts label:has(input:checked) { border-color: #BE4A1E; box-shadow: inset 0 0 0 1px #BE4A1E; }

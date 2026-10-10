@@ -4,6 +4,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 
@@ -143,6 +144,7 @@ const faqLd = {
           <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
           <a href={`${base}checklist/iso27001/`} class="btn-hdk-ghost">Free readiness assessment</a>
         </div>
+        <p class="hero-estimate"><a href="#ce-iso27001">Estimate your cost: year one and three years, by size ↓</a></p>
       </div>
 
       <div class="svc-hero-image">
@@ -205,6 +207,9 @@ const faqLd = {
     </div>
   </section>
 
+  <CostEstimator fw="iso27001" />
+
+
   <!-- WHAT'S INCLUDED -->
   <section class="section">
     <div class="container">
@@ -259,27 +264,15 @@ const faqLd = {
     <div class="container">
       <h2 class="center">What your deliverables look like</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        Everything lives inside your Microsoft 365 tenant — not a third-party platform. Here's what a typical Risk Register and Statement of Applicability look like inside SharePoint.
+        Everything lives inside your Microsoft 365 tenant — not a third-party platform. Here's what the Risk Register and Statement of Applicability look like in Checkpoint, which keeps them as SharePoint lists in your own tenant.
       </p>
 
       <div style="margin-top:2.5rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-ink);margin:0 0 .75rem;">Risk Register — SharePoint List</p>
-        <img
-          src={`${base}assets/mockup-risk-register.svg`}
-          alt="Risk Register in Microsoft SharePoint showing risk titles, categories, impact, likelihood, risk ratings and mitigation status"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="riskRegister" label="Risk register" />
       </div>
 
       <div style="margin-top:2rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-ink);margin:0 0 .75rem;">Statement of Applicability — ISO 27001 Controls</p>
-        <img
-          src={`${base}assets/mockup-soa.svg`}
-          alt="Statement of Applicability in Microsoft SharePoint showing ISO 27001 Annex A controls with applicability and implementation status"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="soaIso27001" label="Statement of Applicability — ISO 27001" />
         <p class="muted small" style="margin-top:0.75rem;">
           19 Annex A controls — access control, monitoring, malware protection, device and vulnerability management — get their status proposed automatically. The physical security and organisational/HR process controls need a human either way.
         </p>
@@ -566,7 +559,6 @@ const faqLd = {
     </div>
   </section>
 
-  <CostEstimator fw="iso27001" />
   <RelatedResources fw="iso27001" />
 
   <!-- FINAL CTA -->

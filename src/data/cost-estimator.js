@@ -15,7 +15,13 @@
 // inside it and are our split of that range by organisation size: the
 // test checks they never go outside what is published. Change a band
 // only together with the page that publishes its range.
-import { MODULES, TIERS, ENTERPRISE } from './pricing.js';
+import { MODULES, TIERS, ENTERPRISE, CONSULTING_DAY_RATE } from './pricing.js';
+
+/* Day choices for "Checkpoint plus consulting days". The visitor picks
+   the number; we do not claim how many days any piece of work takes. */
+export const DAY_OPTIONS = [2, 5, 10, 20];
+export const DEFAULT_DAYS = 5;
+export { CONSULTING_DAY_RATE };
 
 export const SIZES = [
   { id: 's', label: 'Under 50 staff', tier: 'micro' },
@@ -108,7 +114,7 @@ const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
 const times = (a, n) => [a[0] * n, a[1] * n];
 const round = (a) => [Math.round(a[0] / 500) * 500, Math.round(a[1] / 500) * 500];
 
-/* One estimate. opts: { fw, size, scope, approach: 'consulting' | 'selfserve', hasIso27001 }.
+/* One estimate. opts: { fw, size, scope, approach: 'consulting' | 'days' | 'selfserve', days, hasIso27001 }.
    Returns line items for year 1 and years 2–3 and the totals. */
 export function estimate(opts) {
   const f = FRAMEWORKS[opts.fw];
@@ -121,6 +127,11 @@ export function estimate(opts) {
     year1.push({ label: `Compliance365 fixed-price engagement: ${scope.label.toLowerCase()}`, range: round(fee), note: 'Checkpoint included' });
   } else {
     year1.push({ label: 'Checkpoint licence, year 1', range: [lic.amount, lic.amount], from: lic.from });
+    if (opts.approach === 'days') {
+      const days = DAY_OPTIONS.includes(Number(opts.days)) ? Number(opts.days) : DEFAULT_DAYS;
+      const fee = days * CONSULTING_DAY_RATE;
+      year1.push({ label: `Compliance365 consulting: ${days} days at ${aud(CONSULTING_DAY_RATE)} a day`, range: [fee, fee] });
+    }
   }
   if (f.audit) year1.push({ label: f.audit.label, range: f.audit.bands[opts.size] });
   if (f.later) later.push({ label: f.later.label, range: times(f.later.bands[opts.size], 2) });
@@ -136,7 +147,9 @@ export function estimate(opts) {
     threeYearFrom: year1.concat(later).some((i) => i.from),
     grcPlatform: f.grcPlatform ? times(GRC_PLATFORM_PER_YEAR, 3) : null,
     auditQuoted: f.auditQuoted || null,
-    notes: f.notes,
+    notes: opts.approach === 'days'
+      ? f.notes.concat('Consulting days in years 2 and 3 are booked as you need them and are not included above.')
+      : f.notes,
   };
 }
 

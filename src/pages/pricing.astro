@@ -5,7 +5,7 @@ import Footer from '../components/Footer.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
 import {
   MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, ENTERPRISE,
-  TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive
+  TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive, CONSULTING_DAY_RATE
 } from '../data/pricing.js';
 
 const base = import.meta.env.BASE_URL || '/';
@@ -222,6 +222,41 @@ const live = isSelfServeLive();
 </section>
 
 <!-- FAQ -->
+<!-- WAYS TO BUY -->
+<section class="section" id="ways-to-buy" style="background:#FAF7F1;">
+  <div class="container">
+    <p class="eyebrow" style="text-align:center;">Three ways to buy</p>
+    <h2 style="text-align:center;margin-bottom:0.75rem;">As much help as you want</h2>
+    <p style="text-align:center;max-width:680px;margin:0 auto 2.5rem;color:var(--muted,#555);">
+      Checkpoint does most of the work in all three. What changes is how much of our time you want alongside it.
+    </p>
+    <div class="buy-grid">
+      <div class="buy-card">
+        <h3>Checkpoint on its own</h3>
+        <p class="buy-price">From {fmtAud(MODULES[0].prices.micro)}<span> a year per framework</span></p>
+        <p>Your team runs the programme with Checkpoint's guided build, How-to guides and next-step prompts.</p>
+        <a href={startUrl} class="buy-link">Start a {TRIAL_DAYS}-day free trial</a>
+      </div>
+      <div class="buy-card buy-card-mid">
+        <h3>Checkpoint plus consulting days</h3>
+        <p class="buy-price">{fmtAud(CONSULTING_DAY_RATE)}<span> a day, plus the licence</span></p>
+        <p>You run Checkpoint and book us by the day where you want an expert: the internal audit, help setting up, or support on audit day.</p>
+        <a href={ctaUrl} class="buy-link">Book a call to plan your days</a>
+      </div>
+      <div class="buy-card">
+        <h3>Fixed-price engagement</h3>
+        <p class="buy-price">Fixed fee<span>, Checkpoint included</span></p>
+        <p>We run the programme with you to certification for a price agreed before work starts.</p>
+        <a href={`${base}services/`} class="buy-link">See our services</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:2rem;">
+      <a href={`${base}cost-estimator/`} class="btn-hdk-primary">Estimate your total cost</a>
+    </p>
+    <p style="text-align:center;margin-top:.75rem;font-size:.9rem;color:var(--muted,#555);">Year one and three years for each option, audit fees included. AUD, ex GST.</p>
+  </div>
+</section>
+
 <section class="section">
   <div class="container" style="max-width:760px;">
     <p class="eyebrow" style="text-align:center;">Questions</p>
@@ -241,7 +276,7 @@ const live = isSelfServeLive();
       </details>
       <details>
         <summary>Do I need a consultant?</summary>
-        <p>No — self-serve Checkpoint is built to be run by your own team. If you'd rather have expert help, the same tool is available as a consulting-led engagement; <a href={ctaUrl} style="color:#A63A12;font-weight:600;">book a call</a> to talk it through.</p>
+        <p>No — self-serve Checkpoint is built to be run by your own team. If you want expert help for part of it, such as the internal audit, book consulting days at {fmtAud(CONSULTING_DAY_RATE)} a day ex GST. For the whole programme, the same tool comes with a fixed-price consulting engagement. <a href={ctaUrl} style="color:#A63A12;font-weight:600;">Book a call</a> to talk it through, or <a href={`${base}cost-estimator/`} style="color:#A63A12;font-weight:600;">estimate the cost</a>.</p>
       </details>
       <details>
         <summary>How is GST handled?</summary>
@@ -273,6 +308,15 @@ const live = isSelfServeLive();
 <Footer />
 
 <style>
+  .buy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; max-width: 1000px; margin: 0 auto; }
+  .buy-card { background: #fff; border: 1px solid #DDD8CF; border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; gap: .6rem; }
+  .buy-card-mid { border-color: #BE4A1E; box-shadow: inset 0 0 0 1px #BE4A1E; }
+  .buy-card h3 { margin: 0; font-size: 1.1rem; }
+  .buy-card p { margin: 0; color: #4A4740; line-height: 1.55; }
+  .buy-price { font-size: 1.5rem; font-weight: 700; line-height: 1.3; color: #1C1A17 !important; }
+  .buy-price span { font-size: .9rem; font-weight: 500; color: #6B6860; }
+  .buy-link { margin-top: auto; color: #A63A12; font-weight: 700; }
+  @media (max-width: 820px) { .buy-grid { grid-template-columns: 1fr; } }
   .price-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

@@ -90,12 +90,9 @@ export const TIERS = [
 // from $6,000/$8,000 to $8,999/$12,999, preserving SOC 2's premium over
 // the standard frameworks (it's the "Most in demand" / highest-intent
 // module) rather than letting the standard-framework increase invert
-// that ordering. NOTE: these numbers are DISPLAY ONLY here — actual
-// checkout amounts come from SELF_SERVE.priceIds' Paddle Price objects,
-// which still point at the OLD amounts until new Paddle Prices are
-// created and priceIds/provision.js/webhook.js are updated to match
-// (see SELF_SERVE's own comment above). Until that happens, this page
-// will show the new numbers but Paddle will charge the old ones.
+// that ordering. Paddle's Price objects were moved to these amounts
+// (confirmed October 2026), so checkout charges what this page shows.
+// Change a price here only together with its Paddle Price.
 export const MODULES = [
   { id: 'iso27001', name: 'ISO 27001',      tag: 'Information security', prices: { micro: 7000, growth: 9999, enterprise: null } },
   { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 8999, growth: 12999, enterprise: null } },
@@ -139,6 +136,12 @@ export const ENTERPRISE = {
     'Annual invoicing with purchase-order support, and a custom Master Service Agreement / Data Processing Agreement on request'
   ]
 };
+
+// Compliance365 consulting day rate, AUD ex GST: for clients who run
+// Checkpoint themselves and buy days as they need them (the internal
+// audit, set-up help, audit-day support). Used by the pricing page and
+// the cost estimator.
+export const CONSULTING_DAY_RATE = 2000;
 
 // Consulting-led / not self-serve — shown on the page as "Contact us".
 export const CONTACT_FRAMEWORKS = [

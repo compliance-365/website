@@ -4,6 +4,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 
@@ -125,6 +126,7 @@ const faqLd = {
           <a href={ctaUrl} class="btn-hdk-primary">{ctaLabel}</a>
           <a href={`${base}checklist/`} class="btn-hdk-ghost">Free Readiness Checklists</a>
         </div>
+        <p class="hero-estimate"><a href="#ce-nistcsf">Estimate your cost: year one and three years, by size ↓</a></p>
       </div>
 
       <div class="svc-hero-image">
@@ -167,6 +169,9 @@ const faqLd = {
       </div>
     </div>
   </section>
+
+  <CostEstimator fw="nistcsf" />
+
 
   <!-- AUSTRALIAN REGULATORY CONTEXT -->
   <section class="section" style="background:#FAF7F1;">
@@ -364,18 +369,12 @@ const faqLd = {
   <!-- DELIVERABLE MOCKUP -->
   <section class="section">
     <div class="container">
-      <h2 class="center">What your posture dashboard looks like</h2>
+      <h2 class="center">What NIST CSF looks like in Checkpoint</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        Your NIST CSF engagement produces a live posture dashboard across all six functions — current tier, target tier, remediation status, and cross-mappings to ISO 27001, Essential Eight and SOC 2.
+        Your NIST CSF engagement is tracked in Checkpoint across all six functions: each category's status, owner and evidence, and the ISO 27001, Essential Eight and SOC 2 controls it also satisfies.
       </p>
       <div style="margin-top:2rem;">
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-ink);margin:0 0 .75rem;">NIST CSF 2.0 Posture Dashboard</p>
-        <img
-          src={`${base}assets/mockup-nist-csf.svg`}
-          alt="NIST CSF 2.0 posture dashboard showing all six functions — Govern, Identify, Protect, Detect, Respond, Recover — with current tier, target tier, status and cross-framework mappings"
-          style="width:100%;border-radius:10px;border:1px solid #DDD8CF;box-shadow:0 4px 16px rgba(0,0,0,0.06);"
-          loading="lazy"
-        />
+        <CheckpointShot id="soaNistCsf" label="NIST CSF 2.0 in Checkpoint" />
         <p class="muted small" style="margin-top:0.75rem;">
           NIST CSF's categories are broad enough that a scan catches a live signal for over a third of them — a higher automated fraction than SOC 2 or ISO 42001's more granular controls.
         </p>
@@ -446,7 +445,6 @@ const faqLd = {
     </div>
   </section>
 
-  <CostEstimator fw="nistcsf" />
   <RelatedResources fw="nist-csf" />
 
   <!-- FINAL CTA – Matching Home page blue -->

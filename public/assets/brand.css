@@ -417,6 +417,11 @@ a.pill:hover {
   font-size: 1.2rem;
 }
 
+/* Service pages: a quiet link from the hero down to the cost estimator. */
+.hero-estimate { margin: -1.5rem 0 0; font-size: .95rem; }
+.hero-estimate a { color: #F0A97F; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.hero-estimate a:hover { color: #FAF7F1; }
+
 /* === Announcement Bar ====================================== */
 .announce {
   background: var(--primary-dark);
