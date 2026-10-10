@@ -20,6 +20,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
   <link rel="preconnect" href="https://login.microsoftonline.com" />
 
   <style is:global>
+  .ps-demo-btn:hover { border-color: #94A3B8 !important; color: #0B0B0C !important; }
     .ps-root {
       background: #F8FAFC;
       min-height: 60vh;
@@ -477,12 +478,12 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       </div>
 
       <div class="ps-modal-footer">
-        <button class="ps-scan-btn" style="background:#0F172A;color:#fff;" onmouseenter="psWarmMsal()" onfocus="psWarmMsal()" onclick="psHideTrust();psRun();">
+        <button class="ps-scan-btn" style="background:#0F172A;color:#fff;" data-ps-warm data-ps-click="psHideTrust psRun">
           <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
           Continue — Sign in with Microsoft
         </button>
         <p class="ps-modal-footer-note">By continuing you're signing in with your existing Microsoft work account. You can revoke access at any time in <strong>Entra ID → Enterprise applications</strong>.</p>
-        <button class="ps-modal-cancel" onclick="psHideTrust()">Cancel</button>
+        <button class="ps-modal-cancel" data-ps-click="psHideTrust">Cancel</button>
       </div>
     </div>
   </div>
@@ -502,11 +503,11 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
         <span class="ps-fw-chip" style="background:#F5F3FF;color:#7C3AED;">ISO 42001</span>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:4px;">
-        <button class="ps-scan-btn" onclick="psShowTrust()">
+        <button class="ps-scan-btn" data-ps-click="psShowTrust">
           <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
           Run scan with Microsoft
         </button>
-        <button onclick="psRunDemo()" style="background:transparent;border:1.5px solid #CBD5E1;color:#3A3632;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:border-color .15s,color .15s;" onmouseover="this.style.borderColor='#94A3B8';this.style.color='#0B0B0C';" onmouseout="this.style.borderColor='#CBD5E1';this.style.color='#3A3632';">
+        <button data-ps-click="psRunDemo" style="background:transparent;border:1.5px solid #CBD5E1;color:#3A3632;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:border-color .15s,color .15s;" class="ps-demo-btn">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           See a sample report
         </button>
@@ -558,7 +559,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
         <strong style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><use href="#ic-insight"/></svg> Popup blocked?</strong>
         Most browsers block the Microsoft sign-in popup by default. Look for a <strong>"Pop-up blocked"</strong> notice in your browser's address bar and click <strong>Allow</strong>, then try again. In Safari, go to <strong>Settings &rarr; Websites &rarr; Pop-up Windows</strong> and set this site to Allow.
         <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
-          <button onclick="window.psRun()" style="background:#0F172A;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Try again</button>
+          <button data-ps-click="psRun" style="background:#0F172A;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Try again</button>
           <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" style="background:transparent;border:1px solid #D97706;color:#92400E;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-block;">Book a call instead</a>
         </div>
       </div>
@@ -583,7 +584,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
           <span style="background:rgba(255,255,255,.2);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Sample report</span>
           <span style="font-size:14px;opacity:.9;">This is demo data for a typical mid-market Australian organisation — not your real tenant.</span>
         </div>
-        <button onclick="psShowTrust()" style="background:#fff;color:var(--accent-ink);border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">
+        <button data-ps-click="psShowTrust" style="background:#fff;color:var(--accent-ink);border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">
           <svg width="14" height="14" viewBox="0 0 23 23" style="vertical-align:middle;margin-right:6px;" aria-hidden="true"><path fill="#BE4A1E" d="M0 0h11v11H0z"/><path fill="#BE4A1E" d="M12 0h11v11H12z" opacity=".85"/><path fill="#BE4A1E" d="M0 12h11v11H0z" opacity=".85"/><path fill="#BE4A1E" d="M12 12h11v11H12z" opacity=".7"/></svg>
           Run with my real tenant
         </button>
@@ -593,7 +594,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
         <div class="ps-tabs" id="ps-tabs"></div>
         <div class="ps-sort-wrap">
           <label class="ps-sort-label" for="ps-sort">Sort by</label>
-          <select class="ps-sort-select" id="ps-sort" onchange="psSetSort(this.value)">
+          <select class="ps-sort-select" id="ps-sort" data-ps-sort>
             <option value="status">Status (gaps first)</option>
             <option value="effort">Effort (quick wins first)</option>
             <option value="weight">Risk (highest first)</option>
@@ -610,7 +611,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             Showing your top 5 quick wins
           </span>
-          <button class="ps-quickwins-toggle" id="ps-quickwins-toggle" onclick="psToggleQuickWins()">Show all controls</button>
+          <button class="ps-quickwins-toggle" id="ps-quickwins-toggle" data-ps-click="psToggleQuickWins">Show all controls</button>
         </div>
         <div id="ps-rowlist"></div>
       </div>
@@ -640,7 +641,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Book a remediation call
           </a>
-          <button class="ps-pdf-btn" onclick="psPrint()">
+          <button class="ps-pdf-btn" data-ps-click="psPrint">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             Download PDF report
           </button>
@@ -682,7 +683,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
         </div>
       </div>
 
-      <button class="ps-reset-btn" onclick="psReset()">← Run another scan</button>
+      <button class="ps-reset-btn" data-ps-click="psReset">← Run another scan</button>
     </section>
 
   </div><!-- /.ps-root -->
@@ -1564,5 +1565,15 @@ window.psReset = () => {
   if(panel){ panel.classList.remove("ps-hidden"); panel.style.display=""; const f=$("ps-capture-form"); if(f){f.style.display="";f.reset();} const s=$("ps-capture-sent"); if(s)s.classList.remove("show"); }
   show("ps-intro");
 };
-  </script>
+  
+// Buttons name the functions they call in data-ps-click (no inline
+// handlers, so the site's Content Security Policy can block them).
+document.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('[data-ps-click]');
+  if (!b) return;
+  for (const name of b.getAttribute('data-ps-click').split(' ')) if (typeof window[name] === 'function') window[name]();
+});
+for (const el of document.querySelectorAll('[data-ps-warm]')) { el.addEventListener('mouseenter', window.psWarmMsal); el.addEventListener('focus', window.psWarmMsal); }
+for (const el of document.querySelectorAll('[data-ps-sort]')) el.addEventListener('change', () => window.psSetSort(el.value));
+</script>
 </Base>

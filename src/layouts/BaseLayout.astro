@@ -193,31 +193,15 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       : <meta name="robots" content="index,follow" />
     }
     <meta name="theme-color" content="#0B0B0C" />
-    <!-- Content-Security-Policy: allowlists every third-party origin this
-         layout or a page actually loads a script/font/style/frame from
-         (cdnjs: hero 3D ring; jsdelivr: jsPDF + Fuse.js search; Clarity,
-         Apollo, GA4/GTM: analytics — Clarity loads only after cookie
-         consent (CookieBanner.astro), GA4 loads immediately but sends
-         only anonymised/cookieless pings until consent is granted, Apollo
-         (assets.apollo.io: script; aplo-evnt.com: the tracker's own
-         intent-pixel API calls) loads immediately as company-level,
-         not personal, identification. Clarity is *.clarity.ms, not just
-         www.clarity.ms — the tag loader on www. dynamically fetches the
-         actual recording engine from scripts.clarity.ms, and the
-         session-data/ID-sync calls it makes go to other subdomains again
-         (c.clarity.ms among them) — a single-host allowlist here silently
-         breaks recording while the loader script itself still "works";
-
-         outlook.office365.com/office.com: Microsoft Bookings iframe;
-         MSAL/Graph: posture scan). 'unsafe-inline' is required because
-         most page scripts are Astro `is:inline` blocks with no nonce
-         support — same trade-off already made in
-         public/checkpoint/index.html and public/marketing/index.html.
-         Paddle (cdn.paddle.com + *.paddle.com) is only ever loaded on
-         /start, and only once SELF_SERVE has a token configured (see
-         src/data/pricing.js) — but the CSP is site-wide, so it's
-         allowlisted here rather than per-page. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.clarity.ms https://assets.apollo.io https://www.googletagmanager.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://*.paddle.com; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com; frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
+    <!-- Content-Security-Policy: generated at build time, not written here.
+         Astro (security.csp in astro.config.mjs) emits the <meta> with the
+         allowlisted origins and a SHA-256 fingerprint for each script it
+         bundles; scripts/csp-inline-hashes.mjs then adds a fingerprint for
+         every is:inline script on the page. script-src has no
+         'unsafe-inline', so only scripts this site ships can run, and
+         inline event-handler attributes (onclick=…) are not allowed:
+         use addEventListener or a data- attribute instead. The origin
+         list and why each origin is there: astro.config.mjs. -->
     <!-- Discovery -->
     <link rel="canonical" href={canonical} />
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
@@ -262,7 +246,8 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="preload" href="/assets/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <!-- brand.css: preload + async so it never blocks first paint -->
-    <link rel="preload" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <link rel="preload" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} as="style" id="brandCss" />
+    <script is:inline>document.getElementById('brandCss').rel='stylesheet';</script>
     <noscript><link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} /></noscript>
     <!-- Base styling for the elements BaseLayout itself renders (html, body,
          the messaging FABs). NOTE: this block is scoped, not inlined — Astro

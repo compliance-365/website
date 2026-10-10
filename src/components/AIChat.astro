@@ -541,5 +541,12 @@
       setTimeout(function() { send(String(message)); }, 120);
     }
   };
+  // Buttons elsewhere open the chat with a prompt from data-chat-prompt
+  // (no inline onclick, so the site's Content Security Policy can block
+  // inline handlers).
+  document.addEventListener('click', function(e) {
+    var b = e.target.closest && e.target.closest('[data-chat-prompt]');
+    if (b) window.c365OpenChat(b.getAttribute('data-chat-prompt'));
+  });
 })();
 </script>
