@@ -146,6 +146,14 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
     successEl.style.cssText = 'color:#046A4E;display:none;margin:.6rem 0 0';
     form.appendChild(successEl);
 
+    // Prefill from a link such as the cost estimator's quote button:
+    // /contact/?subject=...&message=... Plain values only, length-capped.
+    const qp = new URLSearchParams(location.search);
+    const preSubject = (qp.get('subject') || '').slice(0, 200);
+    const preMessage = (qp.get('message') || '').slice(0, 2000);
+    if (preSubject) document.getElementById('inputSubject').value = preSubject;
+    if (preMessage) document.getElementById('inputMessage').value = preMessage;
+
     function validEmail(v) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
     }

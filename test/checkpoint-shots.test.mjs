@@ -105,3 +105,19 @@ test('the estimator is findable: menu, pricing page, its own page, and near the 
     assert.ok(at > 0 && sections <= 3, `${p}: estimator sits right after the hero and one section (found after ${sections})`);
   }
 });
+
+test('year 1 says how much goes to the certification body, and the quote button prefills the contact form', () => {
+  const r = estimate({ fw: 'iso27001', size: 's', approach: 'days', days: '2' });
+  assert.deepEqual(r.year1Ours, [7000 + 2 * CONSULTING_DAY_RATE, 7000 + 2 * CONSULTING_DAY_RATE]);
+  assert.deepEqual(r.year1External, FRAMEWORKS.iso27001.audit.bands.s);
+  assert.deepEqual([r.year1Ours[0] + r.year1External[0], r.year1Ours[1] + r.year1External[1]], r.year1Total);
+  assert.deepEqual(estimate({ fw: 'essential8', size: 's', approach: 'selfserve' }).year1External, [0, 0], 'no certification audit, no split');
+  assert.equal(DEFAULT_DAYS, 2);
+  const c = read('src/components/CostEstimator.astro');
+  assert.match(c, /checked=\{i === 0\} \/> <span>\{s\.label\}/, 'starts on the smallest size');
+  assert.match(c, /cta\.href = `\$\{cta\.dataset\.contact\}\?\$\{q\}`/);
+  const contact = read('src/pages/contact.astro');
+  assert.match(contact, /qp\.get\('subject'\) \|\| ''\)\.slice\(0, 200\)/);
+  assert.match(contact, /qp\.get\('message'\) \|\| ''\)\.slice\(0, 2000\)/);
+  assert.match(contact, /\.value = preMessage/, 'set as a value, never as HTML');
+});
