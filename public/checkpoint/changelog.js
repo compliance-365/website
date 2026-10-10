@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.153.0',
+    date: '2026-10-10',
+    entries: [
+      'Sign in with Microsoft now goes straight to Microsoft for everyone, every time, instead of opening the set-up welcome and the list of permissions first. The list is still one click away on the sign-in screen (See exactly what Checkpoint asks for), for an administrator who wants to read it before approving.'
+    ]
+  },
+  {
     version: '1.152.0',
     date: '2026-10-10',
     entries: [
