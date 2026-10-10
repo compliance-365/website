@@ -32,7 +32,7 @@
     {
       "what": "Demo enquiry",
       "when": "Only in the public demo, and only if the visitor fills in and sends the optional \"See it with your own Microsoft 365?\" card",
-      "sends": "The name, work email and organisation size the visitor typed, how long they spent in the demo and which screens they opened. Never sent from a real tenant.",
+      "sends": "The name, work email and organisation size the visitor typed, how long they spent in the demo and which screens they opened, and, if they accepted the website's analytics cookies, the date, landing page and referring site of their first visit. Never sent from a real tenant.",
       "to": "Compliance365, Amazon Web Services, Sydney (ap-southeast-2)",
       "control": "Only when the visitor presses Send"
     },

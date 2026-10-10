@@ -20736,7 +20736,7 @@ function showModal(opts) {
         var res = await fetch(CONFIG.contactUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name, email: email, subject: 'Checkpoint demo: pricing and walkthrough', message: window.CheckpointLib.demoLeadMessage({ size: size, views: Object.keys(_demoViews), minutes: Math.round((Date.now() - _demoStartedAt) / 60000) }) })
+          body: JSON.stringify({ name: name, email: email, subject: 'Checkpoint demo: pricing and walkthrough', message: window.CheckpointLib.demoLeadMessage({ size: size, views: Object.keys(_demoViews), minutes: Math.round((Date.now() - _demoStartedAt) / 60000), firstTouch: websiteFirstTouch() }) })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         try { localStorage.setItem('cpDemoLeadDone', 'sent'); } catch (e) { /* private browsing */ }
@@ -28770,6 +28770,16 @@ function showModal(opts) {
      and opened four screens in the demo, unless they closed it or sent it
      before. Never in a real tenant. */
   var _demoViews = {}, _demoStartedAt = 0;
+  /* How the visitor first reached compliance365.com.au, as the website
+     recorded it (BaseLayout's c365FirstTouch), only with their analytics
+     consent: Checkpoint runs on the same origin, so it can read it. */
+  function websiteFirstTouch() {
+    try {
+      var c = JSON.parse(localStorage.getItem('c365_consent') || 'null');
+      if (!c || c.analytics_storage !== 'granted') return null;
+      return JSON.parse(localStorage.getItem('c365FirstTouch') || 'null');
+    } catch (e) { return null; }
+  }
   function noteDemoView(v) {
     if (!_demoStartedAt) _demoStartedAt = Date.now();
     _demoViews[v] = true;

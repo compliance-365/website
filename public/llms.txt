@@ -4,6 +4,8 @@
 
 Compliance365 is a Brisbane-based consultancy helping mid-market and growth-stage Australian organisations achieve compliance certification using tools they already own. We specialise in Microsoft 365-native implementations (SharePoint, Power Automate, Purview, Defender, Sentinel) so organisations get audit-ready evidence without purchasing a separate GRC platform. Its own compliance software, Checkpoint, runs inside the customer's Microsoft 365 tenant. Our engagements are fixed-scope, fast, and lower cost than traditional consulting approaches.
 
+The full text of the main pages, in one file: https://www.compliance365.com.au/llms-full.txt
+
 ## Services
 
 - [ISO 27001 Certification](https://www.compliance365.com.au/services/iso27001/): Full ISMS implementation and Stage 1/Stage 2 audit support for Australian organisations. Typical timeline: 12–16 weeks.

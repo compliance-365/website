@@ -764,6 +764,51 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
      demo send their own events through c365Track. -->
 <script is:inline>
 (function () {
+  /* Where a lead came from, added to the enquiries the site sends to
+     Compliance365 (contact form, quick message, checklists, posture
+     scan, Checkpoint demo). With analytics consent the visitor's FIRST
+     arrival is remembered for 30 days (landing page, referring site,
+     utm_* tags, whether it came from a Google or Microsoft ad click);
+     without it, only the page they enquired from and the site that
+     referred them to it. */
+  var FT_KEY = 'c365FirstTouch';
+  function consented() {
+    try { var c = JSON.parse(localStorage.getItem('c365_consent')); return !!(c && c.analytics_storage === 'granted'); } catch (e) { return false; }
+  }
+  function refHost() {
+    try { var h = document.referrer ? new URL(document.referrer).hostname : ''; return h && h !== location.hostname ? h : ''; } catch (e) { return ''; }
+  }
+  function touchNow() {
+    var q = new URLSearchParams(location.search), t = { at: new Date().toISOString().slice(0, 10), landing: location.pathname, ref: refHost() };
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(function (k) { if (q.get(k)) t[k] = q.get(k).slice(0, 80); });
+    if (q.get('gclid')) t.ad = 'Google Ads'; else if (q.get('msclkid')) t.ad = 'Microsoft Ads';
+    return t;
+  }
+  /* Also called by the cookie banner the moment analytics is accepted,
+     so a visitor who accepts on their first page keeps that page and its
+     referrer as the first visit. */
+  window.c365RememberFirstTouch = function () {
+    try {
+      if (!consented()) return;
+      var old = JSON.parse(localStorage.getItem(FT_KEY) || 'null');
+      if (!old || (Date.now() - Date.parse(old.at)) > 30 * 864e5) localStorage.setItem(FT_KEY, JSON.stringify(touchNow()));
+    } catch (e) { /* storage blocked: the enquiry still says which page it came from */ }
+  };
+  window.c365RememberFirstTouch();
+  window.c365LeadSource = function () {
+    var first = null;
+    try { if (consented()) first = JSON.parse(localStorage.getItem(FT_KEY) || 'null'); } catch (e) { first = null; }
+    var lines = ['', '--- How they found us ---', 'Sent from: ' + location.pathname];
+    if (first) {
+      lines.push('First visit: ' + first.at + ', landed on ' + first.landing);
+      lines.push('Came from: ' + (first.ref || 'direct or not shown') + (first.ad ? ' (' + first.ad + ' click)' : ''));
+      var utm = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].filter(function (k) { return first[k]; }).map(function (k) { return k.slice(4) + '=' + first[k]; });
+      if (utm.length) lines.push('Campaign: ' + utm.join(', '));
+    } else {
+      lines.push('Referred by: ' + (refHost() || 'direct or not shown') + ' (no analytics consent, so the first visit is not known)');
+    }
+    return lines.join('\n');
+  };
   window.c365Track = function (name, params) {
     var p = params || {};
     p.page_location = window.location.href;

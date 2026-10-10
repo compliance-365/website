@@ -832,7 +832,7 @@ const TOTAL_Q = QUESTIONS.length;
               name: env['contact-name'] || env['org-name'] || 'Anonymous',
               email: env['contact-email'] || 'noreply@compliance365.com.au',
               subject: `Essential Eight Checklist - ${env['org-name'] || 'Anonymous'} - ${score}%`,
-              message: lines.join('\n'),
+              message: lines.join('\n') + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : ''),
             }),
           });
         } catch (err) { console.warn('API submission failed:', err); }

@@ -198,7 +198,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
         const res = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, subject, message })
+          body: JSON.stringify({ name, email, subject, message: message + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : '') })
         });
 
         if (!res.ok) {

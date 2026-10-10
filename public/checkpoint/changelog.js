@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.158.1',
+    date: '2026-10-10',
+    entries: [
+      'Demo: when you send the optional pricing request from the demo, it now also says how you first found the Compliance365 website (the first page, the site you came from, and any campaign), only if you accepted analytics cookies there. Nothing else changes.'
+    ]
+  },
+  {
     version: '1.158.0',
     date: '2026-10-10',
     entries: [

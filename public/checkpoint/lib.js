@@ -5788,7 +5788,9 @@
       'Screens opened: ' + ((x.views || []).join(', ') || 'none'),
       '',
       'They asked for pricing for their size and a 15-minute walkthrough.'
-    ].join('\n');
+    ].concat(x.firstTouch ? ['', '--- How they found us ---', 'First visit: ' + x.firstTouch.at + ', landed on ' + x.firstTouch.landing, 'Came from: ' + (x.firstTouch.ref || 'direct or not shown') + (x.firstTouch.ad ? ' (' + x.firstTouch.ad + ' click)' : '')].concat(
+      ['utm_source', 'utm_medium', 'utm_campaign'].filter(function (k) { return x.firstTouch[k]; }).length
+        ? ['Campaign: ' + ['utm_source', 'utm_medium', 'utm_campaign'].filter(function (k) { return x.firstTouch[k]; }).map(function (k) { return k.slice(4) + '=' + x.firstTouch[k]; }).join(', ')] : []) : []).join('\n');
   }
 
   function isValidTenantIdentifier(s) {

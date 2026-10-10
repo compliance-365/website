@@ -1541,7 +1541,7 @@ function showCapture() {
         body:JSON.stringify({
           name, email,
           subject:"Free posture scan — remediation plan request",
-          message:`Tenant: ${$("ps-f-tenant").value}\nScores: ${$("ps-f-scores").value}\nSummary: ${$("ps-f-summary").value}\nGaps:\n${$("ps-f-gaps").value}${$("ps-f-explanations").value?`\n\nAI explainer notes:\n${$("ps-f-explanations").value}`:""}`
+          message:`Tenant: ${$("ps-f-tenant").value}\nScores: ${$("ps-f-scores").value}\nSummary: ${$("ps-f-summary").value}\nGaps:\n${$("ps-f-gaps").value}${$("ps-f-explanations").value?`\n\nAI explainer notes:\n${$("ps-f-explanations").value}`:""}${(typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : '')}`
         })
       });
       if(!res.ok) throw new Error("Request failed: "+res.status);
