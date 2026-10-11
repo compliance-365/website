@@ -596,6 +596,7 @@ const TOTAL_Q = QUESTIONS.length;
           subject: `ISO 27701 Checklist - ${env['org-name'] || 'Anonymous'} - ${score}%`,
           message: lines.join('\n') + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : ''),
         };
+        if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: env['contact-email'], name: env['contact-name'], company: env['org-name'], form: 'ISO 27701 readiness checklist', subject: `ISO 27701 checklist: ${score}%`, message: `Readiness score ${score}% (${answered}/${TOTAL_Q} answered).` });
         try {
           await fetch(API_URL, {
             method: 'POST',

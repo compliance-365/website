@@ -1545,6 +1545,7 @@ function showCapture() {
         })
       });
       if(!res.ok) throw new Error("Request failed: "+res.status);
+      if (typeof window.c365SendLead === "function") window.c365SendLead({ email, name, form: "Posture scan remediation plan", subject: "Free posture scan: remediation plan request", message: "Scores: " + $("ps-f-scores").value + "\nSummary: " + $("ps-f-summary").value });
       form.style.display="none"; $("ps-capture-sent").classList.add("show");
     } catch(err){
       console.error("Posture scan lead capture error:", err);

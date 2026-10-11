@@ -103,7 +103,7 @@ const formId = `digest-form-${Math.random().toString(36).slice(2, 7)}`;
       const res = await fetch(SUBSCRIBE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, source, framework: topic }),
+        body: JSON.stringify({ email, source, framework: topic, page: location.pathname, touch: typeof window.c365LeadTouch === 'function' ? window.c365LeadTouch() : null }),
       });
 
       if (!res.ok) throw new Error('Non-200');
