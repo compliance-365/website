@@ -9,7 +9,7 @@ const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
 test('the sign-up sends what it is for, so the notification says which list', () => {
   const c = read('src/components/DigestSignup.astro');
-  assert.match(c, /body: JSON\.stringify\(\{ email, source, framework: topic \}\)/);
+  assert.match(c, /body: JSON\.stringify\(\{ email, source, framework: topic, /);
   assert.match(read('lambda/subscribe.js'), /body\.framework/, 'subscribe.js reads the topic as framework');
   const a = read('src/components/EssentialsAlert.astro');
   assert.match(a, /topic="Essentials series release alert"/);

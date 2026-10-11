@@ -809,6 +809,31 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     }
     return lines.join('\n');
   };
+  /* The first visit, only with analytics consent (null otherwise), for
+     the sign-up endpoint to store on the HubSpot contact. */
+  window.c365LeadTouch = function () {
+    try { return consented() ? JSON.parse(localStorage.getItem(FT_KEY) || 'null') : null; } catch (e) { return null; }
+  };
+  /* Copies an enquiry into Compliance365's HubSpot as a contact
+     (lambda/subscribe.js, type 'lead'), alongside the email the form
+     already sends. Fire and forget: the form's own send is what the
+     visitor waits on. The lead sits under "lead" so a sign-up endpoint
+     not yet updated for HubSpot rejects it (no top-level email) instead
+     of emailing it as a new subscriber. */
+  window.c365SendLead = function (lead) {
+    try {
+      var email = String((lead && lead.email) || '').trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || /@compliance365\.com\.au$/i.test(email)) return;
+      var body = { type: 'lead', lead: {
+        email: email, name: String(lead.name || '').slice(0, 120), company: String(lead.company || '').slice(0, 160),
+        form: String(lead.form || '').slice(0, 60), subject: String(lead.subject || '').slice(0, 200),
+        message: String(lead.message || '').slice(0, 4000), page: location.pathname, ref: refHost(), touch: window.c365LeadTouch()
+      } };
+      fetch('https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/subscribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true
+      }).catch(function () {});
+    } catch (e) { /* never get in the way of the form */ }
+  };
   window.c365Track = function (name, params) {
     var p = params || {};
     p.page_location = window.location.href;

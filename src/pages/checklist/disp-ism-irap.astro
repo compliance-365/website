@@ -808,6 +808,7 @@ const TOTAL_Q = QUESTIONS.length;
           const v = state[q.id];
           lines.push(`[${v === 2 ? 'YES' : v === 1 ? 'PARTIAL' : v === 0 ? 'NO' : 'UNANSWERED'}] ${q.label}`);
         });
+        if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: env['contact-email'], name: env['contact-name'], company: env['org-name'], form: 'DISP / ISM readiness checklist', subject: `DISP / ISM checklist: ${score}%`, message: `Readiness score ${score}% (${answered}/${TOTAL_Q} answered).` });
         try {
           await fetch(API_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },

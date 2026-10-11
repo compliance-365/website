@@ -184,7 +184,7 @@ const pageDesc  = 'Free compliance starter pack — interactive ISO 27001 and Es
         const res = await fetch(SUBSCRIBE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, org, framework, source: 'free-roadmap' }),
+          body: JSON.stringify({ email, org, framework, source: 'free-roadmap', page: location.pathname, touch: typeof window.c365LeadTouch === 'function' ? window.c365LeadTouch() : null }),
         });
 
         if (!res.ok) throw new Error('Non-200');
