@@ -57,7 +57,9 @@
  *       and the same Mail.Send application permission provision.js's
  *       signup emails use). Each new error from a signed-in client
  *       tenant, and each tenant whose setup health turns failing, is
- *       emailed to that address; see errorAlert() and healthAlert().
+ *       emailed to that address; see errorAlertEmail() and
+ *       healthAlertEmail(). ALERT_TIMEZONE (optional, default
+ *       Australia/Brisbane) sets the time zone the emails use.
  *       Unset = no emails, no behaviour change.
  *   8. Copy the endpoint URL into public/checkpoint/config.js's
  *      errorReportUrl. Leave it blank and this feature is simply never
@@ -182,57 +184,199 @@ export function shouldAlert(key, now, state) {
 }
 
 const CONSOLE_URL = 'https://www.compliance365.com.au/owner/';
-const firstLines = (s, n) => String(s || '').split('\n').slice(0, n).join('\n');
 
-/* The email for one error report, or null when it should not be emailed. */
-export function errorAlert(report, now, state) {
-  if (!GUID.test(report.tenantId)) return null;
-  if (!shouldAlert('err|' + report.tenantId.toLowerCase() + '|' + report.message.slice(0, 200), now, state)) return null;
-  const who = report.clientName || report.tenantId;
+/* Checkpoint's screens by their element id (public/checkpoint/index.html),
+   so the email names the screen the way the client sees it. A test keeps
+   this in step with index.html. */
+export const SCREEN_NAMES = {
+  'v-dash': 'Dashboard', 'v-integrations': 'Integrations', 'v-board': 'Board view', 'v-constellation': 'Cross-framework mapping',
+  'v-scan': 'Posture scan', 'v-risks': 'Risk register', 'v-quantrisk': 'Financial risk analysis', 'v-actions': 'Actions register',
+  'v-vendors': 'Supplier risk', 'v-aisystems': 'AI systems', 'v-threatintel': 'Threat intel', 'v-frameworks': 'Frameworks',
+  'v-settings': 'Settings', 'v-soa': 'Statement of Applicability', 'v-auditor': 'Auditor guide', 'v-start': 'Start here',
+  'v-build': 'Guided build', 'v-whodoes': 'Who does what', 'v-mytasks': 'My tasks', 'v-clauses': 'Management system clauses',
+  'v-sharedevidence': 'Shared evidence', 'v-documents': 'Documents', 'v-attestations': 'Policy attestation', 'v-training': 'Training',
+  'v-certification': 'Certification', 'v-audits': 'Internal audits', 'v-incidents': 'Incident register', 'v-reviews': 'Management review',
+  'v-objectives': 'Objectives register', 'v-assets': 'Asset register', 'v-legal': 'Legal & regulatory register',
+  'v-questionnaires': 'Security questionnaires', 'v-calendar': 'Compliance calendar', 'v-auditlog': 'Audit log',
+  'v-reports': 'Audit reports', 'v-selftest': 'Self-test', 'v-trustcenter': 'Trust Center', 'v-auditorpack': 'Auditor pack',
+  'v-aitools': 'AI tools'
+};
+export function screenName(context) {
   let view = '';
-  try { view = JSON.parse(report.context || '{}').view || ''; } catch (e) { /* context is free text */ }
+  try { view = String(JSON.parse(context || '{}').view || ''); } catch (e) { /* context is free text */ }
+  return SCREEN_NAMES[view] || (view ? view.replace(/^v-/, '') : 'unknown screen');
+}
+
+/* "Safari on macOS" from a user agent string; good enough to know where
+   to reproduce it. */
+export function browserName(ua) {
+  ua = String(ua || '');
+  const b = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  const o = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
+  return b && o ? b + ' on ' + o : (b || o || 'unknown browser');
+}
+
+/* When it happened, in the owner's own time zone (ALERT_TIMEZONE, default
+   Brisbane), e.g. "Sun 11 Oct 2026, 7:33 pm (Brisbane time)". */
+export function localTime(iso, tz) {
+  tz = tz || process.env.ALERT_TIMEZONE || 'Australia/Brisbane';
+  try {
+    const t = new Date(iso).toLocaleString('en-AU', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return t + ' (' + tz.split('/').pop().replace(/_/g, ' ') + ' time)';
+  } catch (e) { return iso; }
+}
+
+/* What the source means for the client, and a likely cause and next step
+   read from the error text. Plain English for the email; the raw error
+   stays underneath. */
+export function explainError(message, source) {
+  const m = String(message || '');
+  const seen = source === 'warn'
+    ? 'The client saw a "Sync issue" message: something they tried to load or save did not work.'
+    : source === 'unhandledrejection'
+      ? 'A background task failed, usually loading or saving data. The client may not have seen a message, but something on the screen may be missing or out of date.'
+      : source === 'window.onerror'
+        ? 'Part of the screen stopped working unexpectedly. The client may not have seen a message, but a button or panel may not have responded.'
+        : 'Checkpoint reported an error.';
+  const rules = [
+    [/\b401\b|InvalidAuthenticationToken|interaction_required|login_required|token.*expired|AADSTS/i,
+      'Their Microsoft sign-in expired or needs to be renewed.', 'Usually fixed by signing out and back in. If it keeps happening, check whether their admin has changed sign-in or Conditional Access settings.'],
+    [/\b403\b|Forbidden|accessDenied|Access ?denied|Authorization_RequestDenied|insufficient privileges/i,
+      'Microsoft refused access: the signed-in person, or Checkpoint, does not have permission for this.', 'Check their role and that admin consent was given for Checkpoint. Settings, Setup health shows what is missing.'],
+    [/\b404\b|itemNotFound|not found|does not exist|listNotFound/i,
+      'Something Checkpoint expected in their SharePoint was not there (a list, library or record).', 'Open Settings, Setup health with them; it can recreate missing lists. Check nobody deleted or renamed a Checkpoint list.'],
+    [/\b429\b|throttl|TooManyRequests|activityLimitReached/i,
+      'Microsoft temporarily slowed their requests (throttling).', 'Usually clears by itself within minutes. Only worth acting on if it repeats.'],
+    [/\b50[0-4]\b|serviceNotAvailable|generalException|ServiceUnavailable/i,
+      'A Microsoft service had a temporary problem.', 'Usually clears by itself. Check the Microsoft 365 service health page if it repeats.'],
+    [/Failed to fetch|NetworkError|Load failed|network|ERR_|timed? ?out|aborted/i,
+      'The connection dropped or timed out (their network, VPN, proxy or browser extension).', 'Usually nothing to fix in Checkpoint. If it repeats for this client, ask whether a proxy or web filter blocks graph.microsoft.com or SharePoint.'],
+    [/QuotaExceeded|storage|quota/i,
+      'Their browser or SharePoint ran out of space for something Checkpoint stores.', 'Check their SharePoint storage. In the browser, clearing site data for compliance365.com.au resets Checkpoint\'s local cache.'],
+    [/is not a function|is not defined|Cannot read propert|undefined is not|null is not|TypeError|ReferenceError|SyntaxError/i,
+      'Probably a bug in Checkpoint.', 'Note the screen and what they were doing, and try to reproduce it in the demo. Send it through for a fix.']
+  ];
+  const hit = rules.find(([re]) => re.test(m));
+  return { seen, likely: hit ? hit[1] : 'Not clear from the error alone.', todo: hit ? hit[2] : 'Check the owner console for other reports from this client around the same time, and ask them what they were doing.' };
+}
+
+const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/* A stack is only worth showing if it names a file; a console-thrown
+   error in Safari leaves just "@". */
+const usefulStack = (s) => (/\.js|\.mjs|https?:/.test(String(s || '')) ? String(s).split('\n').slice(0, 8).join('\n') : '');
+
+/* Who the client is, from the owner console's own lists (the client
+   roster and the latest health report). Empty fields when not found. */
+export function clientFromLists(tenantId, clients, health) {
+  const t = String(tenantId || '').toLowerCase();
+  const c = (clients || []).find((f) => String(f.TenantId || '').toLowerCase() === t) || {};
+  const h = (health || []).find((f) => String(f.TenantId || '').toLowerCase() === t) || {};
   return {
-    subject: 'Checkpoint error: ' + who + ': ' + report.message.slice(0, 120),
-    text: [
-      'A client hit an error in Checkpoint.',
-      '',
-      'Client: ' + who,
-      'Tenant id: ' + report.tenantId,
-      'Version: ' + (report.appVersion || 'unknown'),
-      'Screen: ' + (view || 'unknown'),
-      'Source: ' + report.source,
-      'Time (UTC): ' + report.reportedAt,
-      '',
-      'Error: ' + report.message,
-      '',
-      firstLines(report.stack, 8) || '(no stack trace)',
-      '',
-      'The same error from this client is not emailed again for 6 hours. Every report is in the owner console: ' + CONSOLE_URL
-    ].join('\n')
+    name: c.ClientName || h.ClientName || '',
+    contactName: c.ContactName || '',
+    contactEmail: c.ContactEmail || '',
+    status: c.Status || '',
+    domain: String(h.Domains || '').split(',').filter(Boolean)[0] || '',
+    health: h.Status || '',
+    healthHeadline: h.Headline || ''
   };
 }
 
-/* The email when a tenant's setup health turns failing (it was not
-   failing before), or null. */
-export function healthAlert(h, previousStatus, now, state) {
-  if (h.status !== 'failing' || previousStatus === 'failing') return null;
-  if (!shouldAlert('health|' + h.tenantId, now, state)) return null;
-  const who = h.clientName || h.tenantId;
-  return {
-    subject: 'Checkpoint setup failing: ' + who,
-    text: [
-      "A client's Checkpoint setup check has turned failing" + (previousStatus ? ' (was ' + previousStatus + ').' : '.'),
-      '',
-      'Client: ' + who,
-      'Tenant id: ' + h.tenantId,
-      'Version: ' + (h.appVersion || 'unknown'),
-      'Summary: ' + (h.headline || '(none)'),
-      '',
-      ...h.details.map((d) => '- ' + d),
-      '',
-      'Owner console: ' + CONSOLE_URL
-    ].join('\n')
-  };
+function rows(pairs) {
+  return '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:8px 0 16px;font-size:14px">' +
+    pairs.filter(([, v]) => v).map(([k, v]) => '<tr><td style="padding:3px 16px 3px 0;color:#6B6860;vertical-align:top;white-space:nowrap">' + esc(k) + '</td><td style="padding:3px 0;color:#1F1D1A">' + v + '</td></tr>').join('') +
+    '</table>';
+}
+function page(title, intro, body) {
+  return '<div style="font-family:Segoe UI,system-ui,-apple-system,sans-serif;max-width:640px;color:#1F1D1A;line-height:1.5">' +
+    '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A63A12">Checkpoint alert</p>' +
+    '<h2 style="margin:0 0 8px;font-size:20px">' + esc(title) + '</h2>' +
+    '<p style="margin:0 0 12px;font-size:15px">' + intro + '</p>' + body +
+    '<p style="margin:20px 0 8px"><a href="' + CONSOLE_URL + '" style="display:inline-block;background:#A63A12;color:#fff;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:6px">Open the owner console</a></p>' +
+    '</div>';
+}
+function clientRows(c, tenantId, version) {
+  return [
+    ['Client', '<b>' + esc(c.name || 'Not on your client list') + '</b>' + (c.status ? ' (' + esc(c.status) + ')' : '')],
+    ['Contact', c.contactName || c.contactEmail ? esc(c.contactName) + (c.contactEmail ? ' &lt;<a href="mailto:' + esc(c.contactEmail) + '">' + esc(c.contactEmail) + '</a>&gt;' : '') : ''],
+    ['Domain', esc(c.domain)],
+    ['Setup health', c.health ? esc(c.health) + (c.healthHeadline ? ': ' + esc(c.healthHeadline) : '') : ''],
+    ['Checkpoint', version ? 'v' + esc(version) : ''],
+    ['Tenant ID', '<span style="color:#6B6860">' + esc(tenantId) + '</span>']
+  ];
+}
+
+/* True when this error report should be emailed now (see the limits above). */
+export function errorAlertDue(report, now, state) {
+  return GUID.test(report.tenantId) && shouldAlert('err|' + report.tenantId.toLowerCase() + '|' + report.message.slice(0, 200), now, state);
+}
+
+/* The email for one error report. Every value from the report is
+   client-supplied, so all of it is escaped. */
+export function errorAlertEmail(report, client) {
+  const c = client || {};
+  const who = c.name || report.clientName || 'A client';
+  const screen = screenName(report.context);
+  const ex = explainError(report.message, report.source);
+  const stack = usefulStack(report.stack);
+  const html = page(
+    who + ' hit an error on ' + screen,
+    esc(ex.seen),
+    rows([
+      ['Likely cause', esc(ex.likely)],
+      ['What to do', esc(ex.todo)],
+      ['When', esc(localTime(report.reportedAt))],
+      ['Screen', esc(screen)],
+      ['Browser', esc(browserName(report.userAgent))]
+    ]) +
+    rows(clientRows(c, report.tenantId, report.appVersion)) +
+    '<p style="margin:0 0 4px;font-size:13px;color:#6B6860">The error as Checkpoint reported it:</p>' +
+    '<pre style="margin:0;padding:10px 12px;background:#F4F1EA;border-radius:6px;font-size:12px;white-space:pre-wrap;word-break:break-word">' + esc(report.message) + (stack ? '\n\n' + esc(stack) : '') + '</pre>' +
+    '<p style="margin:12px 0 0;font-size:12px;color:#6B6860">The same error from this client is not emailed again for 6 hours. Every report is listed in the owner console.</p>'
+  );
+  return { subject: who + ' hit an error in Checkpoint (' + screen + '): ' + report.message.slice(0, 90), html };
+}
+
+/* True when a tenant's setup health has just turned failing. */
+export function healthAlertDue(h, previousStatus, now, state) {
+  return h.status === 'failing' && previousStatus !== 'failing' && shouldAlert('health|' + h.tenantId, now, state);
+}
+
+export function healthAlertEmail(h, previousStatus, client) {
+  const c = Object.assign({}, client || {}, { health: '' }); // the health is the subject of this email
+  const who = c.name || h.clientName || 'A client';
+  const html = page(
+    who + "'s Checkpoint setup needs attention",
+    "Checkpoint's own setup check for this client has turned to <b>failing</b>" + (previousStatus ? ' (it was ' + esc(previousStatus) + ')' : '') + '. Until it is fixed, parts of Checkpoint may not load or save for them.',
+    rows([
+      ['Summary', esc(h.headline || 'No summary given')],
+      ['When', esc(localTime(h.reportedAt))]
+    ]) +
+    (h.details.length ? '<p style="margin:0 0 4px;font-size:14px"><b>What the check found</b></p><ul style="margin:0 0 16px;padding-left:20px;font-size:14px">' + h.details.map((d) => '<li>' + esc(d) + '</li>').join('') + '</ul>' : '') +
+    '<p style="margin:0 0 12px;font-size:14px"><b>What to do:</b> ask the client (or open Checkpoint with them) to go to Settings, Setup health. It explains each problem and offers a fix for the common ones: <b>Repair setup</b> recreates missing lists and the evidence library, and <b>Grant admin consent</b> covers missing permissions.</p>' +
+    rows(clientRows(c, h.tenantId, h.appVersion))
+  );
+  return { subject: who + "'s Checkpoint setup is failing: " + (h.headline || 'see details').slice(0, 100), html };
+}
+
+/* Looks the client up in the owner console's lists; never throws. */
+async function lookupClient(token, siteId, lists, tenantId) {
+  try {
+    const read = async (name, select) => {
+      const l = lists.find((x) => x.displayName === name);
+      if (!l) return [];
+      const page = await ownerGraph(token, '/sites/' + siteId + '/lists/' + l.id + '/items?$expand=fields($select=' + select + ')&$select=id&$top=500');
+      return (page.value || []).map((i) => i.fields || {});
+    };
+    const [clients, health] = await Promise.all([
+      read('Checkpoint Partner PartnerClients', 'TenantId,ClientName,ContactName,ContactEmail,Status'),
+      read('Checkpoint Partner Health', 'TenantId,ClientName,Domains,Status,Headline')
+    ]);
+    return clientFromLists(tenantId, clients, health);
+  } catch (e) {
+    console.error('report-error: client lookup failed (email sent without it):', e && e.message ? e.message : e);
+    return {};
+  }
 }
 
 async function sendAlert(token, mail) {
@@ -243,7 +387,7 @@ async function sendAlert(token, mail) {
     body: {
       message: {
         subject: mail.subject.slice(0, 250),
-        body: { contentType: 'text', content: mail.text },
+        body: { contentType: 'html', content: mail.html },
         toRecipients: [{ emailAddress: { address: mailbox } }]
       },
       saveToSentItems: false
@@ -300,7 +444,7 @@ async function writeToRoster(report) {
       Url: report.url, ReportedAt: report.reportedAt
     }) }
   });
-  return token;
+  return { token, siteId: site.id, lists: lists.value };
 }
 
 /* One row per tenant: the latest report replaces the previous one. The
@@ -327,7 +471,7 @@ async function upsertHealth(h) {
   }
   if (existing) await ownerGraph(token, base + '/' + existing.id + '/fields', { method: 'PATCH', body: fields });
   else await ownerGraph(token, base, { method: 'POST', body: { fields } });
-  return { token, previousStatus: existing ? String(existing.fields.Status || '') : '' };
+  return { token, siteId: site.id, lists: lists.value, previousStatus: existing ? String(existing.fields.Status || '') : '' };
 }
 
 export const handler = async (event) => {
@@ -369,8 +513,12 @@ export const handler = async (event) => {
       return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'write failed' }) };
     }
     if (process.env.OWNER_NOTIFY_EMAIL) {
-      try { await sendAlert(written.token, healthAlert(health, written.previousStatus, Date.now(), alertState)); }
-      catch (e) { console.error('report-error: health alert email failed:', e && e.message ? e.message : e); }
+      try {
+        if (healthAlertDue(health, written.previousStatus, Date.now(), alertState)) {
+          const client = await lookupClient(written.token, written.siteId, written.lists, health.tenantId);
+          await sendAlert(written.token, healthAlertEmail(health, written.previousStatus, client));
+        }
+      } catch (e) { console.error('report-error: health alert email failed:', e && e.message ? e.message : e); }
     }
     return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true }) };
   }
@@ -387,17 +535,21 @@ export const handler = async (event) => {
   // something to retry — dropping one report silently beats a retry
   // storm hitting this endpoint every time a tenant's SharePoint is
   // briefly unavailable.
-  let token;
+  let written;
   try {
-    token = await writeToRoster(report);
+    written = await writeToRoster(report);
   } catch (e) {
     console.error('report-error: failed to write to roster (report dropped):', e && e.message ? e.message : e);
     return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, dropped: 'write failed' }) };
   }
   // The report is saved; an email failing must not change the response.
   if (process.env.OWNER_NOTIFY_EMAIL) {
-    try { await sendAlert(token, errorAlert(report, Date.now(), alertState)); }
-    catch (e) { console.error('report-error: alert email failed:', e && e.message ? e.message : e); }
+    try {
+      if (errorAlertDue(report, Date.now(), alertState)) {
+        const client = await lookupClient(written.token, written.siteId, written.lists, report.tenantId);
+        await sendAlert(written.token, errorAlertEmail(report, client));
+      }
+    } catch (e) { console.error('report-error: alert email failed:', e && e.message ? e.message : e); }
   }
 
   return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: true }) };
