@@ -35,6 +35,7 @@ here.
 | `OWNER_APP_CLIENT_ID` | The existing owner-roster app registration |
 | `OWNER_APP_CLIENT_SECRET` | Its secret |
 | `OWNER_NOTIFY_EMAIL` | Optional. A mailbox in your own tenant; turns on email alerts (§9) |
+| `ALERT_TIMEZONE` | Optional. Time zone for alert emails, default `Australia/Brisbane` |
 
 ## 3. Deploy
 
@@ -148,8 +149,10 @@ afterwards.
 
 Set `OWNER_NOTIFY_EMAIL` and the Lambda emails that address:
 
-- **Each new error from a signed-in client.** Subject `Checkpoint error: <client>: <error>`, with the tenant, version, screen, source and the first lines of the stack.
-- **A client's setup health turning failing.** Subject `Checkpoint setup failing: <client>`, with the details. Sent once when it turns failing, not on every report while it stays failing.
+- **Each new error from a signed-in client.** Subject `<client> hit an error in Checkpoint (<screen>): <error>`. The email says what the client saw, the likely cause and what to do, when it happened in your time zone, the screen and browser, and the client's contact from your client list. The raw error is underneath.
+- **A client's setup health turning failing.** Subject `<client>'s Checkpoint setup is failing: <summary>`, with what the check found and which Setup health button fixes it. Sent once when it turns failing, not on every report while it stays failing.
+
+The client's name, contact and domain come from the owner console's own `PartnerClients` and `Health` lists, matched on tenant ID. A client that is not on your list shows as "Not on your client list". Times are in Brisbane time; set `ALERT_TIMEZONE` (for example `Australia/Sydney`) to change it.
 
 Limits, because this endpoint is public:
 
