@@ -17,11 +17,19 @@ Marketplace fulfillment endpoint is also configured
 (`marketplaceFulfillmentUrl`). The sections below are kept as the record of
 how it was set up, and for rebuilding it.
 
-Frameworks sold only by quote (no Paddle price): IS18, DISP/IRAP, CPS 234,
-RFFR and the Privacy Act (APPs). Adding one to self-serve means creating its
-products and prices in Paddle, then updating `pricing.js`, `lambda/provision.js`
-and `lambda/webhook.js` together (`test/paddle-price-map.test.mjs` checks
-they agree).
+Frameworks sold only by quote (no Paddle price): IS18, DISP/IRAP, CPS 234
+and RFFR. Adding one to self-serve means creating its products and prices in
+Paddle, then updating `pricing.js`, `lambda/provision.js` and
+`lambda/webhook.js` together (`test/paddle-price-map.test.mjs` checks they
+agree).
+
+**Privacy Act (APPs): listed, waiting on Paddle (October 2026).** It is on the pricing page at $4,999 a year (under 50 staff) and $6,999 (50–250). Until its prices exist, any `/start` selection that includes it shows the "book a call" fallback. To make it buyable online:
+
+1. In Paddle (production), go to **Catalog → Products → New product**: name "Checkpoint: Privacy Act", tax category Standard digital goods.
+2. Add two prices to it, the same way as the other frameworks: AUD, billed yearly, and the same trial period as the others.
+   - $4,999 with the description "Micro (under 50 staff)".
+   - $6,999 with the description "Growth (50–250 staff)".
+3. Send the two `pri_…` ids to whoever maintains the site. They are added as `privacyact_micro` / `privacyact_growth` in `pricing.js` `SELF_SERVE.priceIds`, and as `{ moduleId: 'privacyact', tier }` in `PRICE_TO_MODULE` in both `lambda/provision.js` and `lambda/webhook.js`. Then redeploy the two Lambdas.
 
 Until the Lambda is deployed and `config.js`'s `selfServeActivateUrl` is
 set, the pages degrade gracefully: `/pricing` and `/start` work fully
