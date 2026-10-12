@@ -187,16 +187,22 @@ const live = isSelfServeLive();
   // catalogue" — otherwise the checkout would silently omit whatever isn't
   // priced yet instead of charging for the full selection the customer saw.
   function priceIdFor(cfg, moduleId) { return cfg.priceIds[moduleId + '_' + tier]; }
-  function fullyPriced(cfg) {
+  // A bundle quote can only go to checkout once Paddle has the matching
+  // discount, or Paddle would charge the undiscounted total.
+  function fullyPriced(cfg, q) {
     if (!cfg.paddleToken) return false;
+    if (q.discount && !cfg.bundleDiscountId) return false;
     return validMods.every((m) => priceIdFor(cfg, m)) && adds.every((a) => cfg.priceIds[a]);
   }
+
+  let quote = null;
 
   if (!validMods.length && !adds.length) {
     linesEl.hidden = true;
     emptyEl.hidden = false;
   } else {
     const q = computeQuote(validMods, adds, tier);
+    quote = q;
     let html = '';
     const tierLabel = (TIERS.find((t) => t.id === tier) || {}).label || '';
     q.moduleLines.forEach((l) => {
@@ -214,7 +220,7 @@ const live = isSelfServeLive();
       actionEl.hidden = false;
 
       const cfg = window.__C365_SELF_SERVE;
-      if (fullyPriced(cfg)) {
+      if (fullyPriced(cfg, q)) {
         checkoutBtn.hidden = false;
       } else {
         fallbackEl.hidden = false;
@@ -242,6 +248,7 @@ const live = isSelfServeLive();
       if (typeof window.c365Track === 'function') window.c365Track('checkout_opened', { modules: validMods.join(','), addons: adds.join(','), tier });
       window.Paddle.Checkout.open({
         items,
+        ...(quote && quote.discount ? { discountId: cfg.bundleDiscountId } : {}),
         settings: { successUrl: new URL(cfg.activateUrl, location.origin).href }
       });
     });

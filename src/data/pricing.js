@@ -63,6 +63,9 @@ export const SELF_SERVE = {
     nistcsf_growth: 'pri_01kyvvzxfr78bx69grc818jt99',
     ai: 'pri_01kyvw1edqna8qn220c4rpkafg'
   },
+  // Paddle Discount id ('dsc_...') for the bundle in BUNDLE_DISCOUNTS.
+  // Empty = not created yet; see BUNDLE_DISCOUNTS below.
+  bundleDiscountId: '',
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
   fallbackBookingUrl: 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled'
@@ -163,15 +166,19 @@ export const CONTACT_FRAMEWORKS = [
 
 // Volume discount on the combined annual price when a client licenses
 // more than one module. Applied to the subtotal of all selected modules
-// (add-ons excluded). Highest qualifying threshold wins.
+// (add-ons excluded). Highest qualifying threshold wins, so keep this
+// list ordered from the largest minModules down.
 //
-// Deliberately empty for now (paused, not deleted) — going live without
-// a matching Paddle Discount object would have shown a discount here
-// that Paddle's checkout never actually applied, charging the full
-// undiscounted total instead. Re-add entries here (and create the
-// matching recurring % Discount in Paddle, then pass its id at checkout
-// in src/pages/start/index.astro) whenever bundle pricing is offered.
-export const BUNDLE_DISCOUNTS = [];
+// Checkout only applies it once SELF_SERVE.bundleDiscountId names the
+// matching recurring 10% Discount in Paddle (restricted to the framework
+// prices, not the AI add-on; steps in tools/SELF-SERVE-SETUP.md). Until
+// then /start/ sends any selection that qualifies to a call instead of
+// opening a checkout that would charge more than the quote it shows.
+export const BUNDLE_DISCOUNTS = [
+  { minModules: 3, rate: 0.10, label: 'Bundle: 10% off 3 or more frameworks' }
+];
+export const BUNDLE_MIN_MODULES = Math.min(...BUNDLE_DISCOUNTS.map((d) => d.minModules));
+export const BUNDLE_RATE_PCT = Math.round(BUNDLE_DISCOUNTS[BUNDLE_DISCOUNTS.length - 1].rate * 100);
 
 // Pure pricing math — exported so the configurator UI and any test use
 // the exact same computation. `selectedModuleIds` / `selectedAddonIds`

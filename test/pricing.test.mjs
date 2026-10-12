@@ -20,25 +20,25 @@ describe('computeQuote() — self-serve pricing', () => {
     assert.ok(soc2 > iso, 'SOC 2 should be the premium module');
   });
 
-  // BUNDLE_DISCOUNTS is currently paused (empty array) — see its own
-  // comment in pricing.js for why: shipping a displayed discount with no
-  // matching Paddle Discount object would show a total the checkout
-  // never actually charges. These tests confirm today's real behaviour;
-  // if bundle pricing is re-enabled, restore assertions on q.discount's
-  // rate/amount alongside re-adding entries to BUNDLE_DISCOUNTS.
-  test('multiple modules currently get no bundle discount (paused)', () => {
+  test('two modules get no bundle discount', () => {
     const q = computeQuote(['iso27001', 'soc2'], [], 'micro');
     assert.equal(q.subtotal, 7000 + 8999);
     assert.equal(q.discount, null);
     assert.equal(q.total, 7000 + 8999);
   });
 
-  test('four modules also get no discount while bundling is paused', () => {
-    const q = computeQuote(['iso27001', 'essential8', 'iso42001', 'iso27701'], [], 'growth');
-    assert.equal(q.discount, null);
-    const subtotal = 9999 * 4;
-    assert.equal(q.subtotal, subtotal);
-    assert.equal(q.total, subtotal);
+  test('three or more modules get 10% off the framework subtotal', () => {
+    const q = computeQuote(['iso27001', 'iso27701', 'iso42001'], [], 'growth');
+    assert.equal(q.subtotal, 9999 * 3);
+    assert.equal(q.discount.rate, 0.1);
+    assert.equal(q.discount.amount, 3000);
+    assert.equal(q.total, 26997);
+  });
+
+  test('the bundle discount never applies to add-ons', () => {
+    const q = computeQuote(['iso27001', 'essential8', 'iso42001', 'iso27701'], ['ai'], 'growth');
+    assert.equal(q.discount.amount, Math.round(9999 * 4 * 0.1));
+    assert.equal(q.total, 9999 * 4 - q.discount.amount + 1200);
   });
 
   test('add-ons are added on top of the module subtotal', () => {

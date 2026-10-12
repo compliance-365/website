@@ -293,6 +293,30 @@ finding it later.
   `lambda/DEPLOY-PROVISION.md`), and `app.js`'s
   `attemptSelfServeActivation()` starts running for real.
 
+### Bundle discount (10% off 3 or more frameworks)
+
+`BUNDLE_DISCOUNTS` in `src/data/pricing.js` shows the bundle on /pricing
+and in the /start quote. Checkout applies it only once Paddle has the
+matching discount; until then /start sends a qualifying selection to
+"book a call" so nobody is charged more than the quote showed.
+
+1. Paddle → **Catalog → Discounts → New discount**.
+   - Type: **Percentage**, amount **10**.
+   - **Recurring:** on, with no limit on billing periods, so renewals
+     keep the bundle price.
+   - **Restrict to:** every framework price id in `SELF_SERVE.priceIds`
+     (micro and growth). Leave the AI add-on (`ai`) out: the website's
+     quote excludes add-ons from the bundle.
+   - **Code:** leave blank. It is applied by the checkout, not typed by
+     the buyer.
+2. Copy its id (`dsc_...`) into `SELF_SERVE.bundleDiscountId` in
+   `src/data/pricing.js`.
+3. When the Privacy Act prices are created, add them to the discount's
+   restriction list too.
+
+For invoiced clients, set `AgreedPrice` on their PartnerClients row in
+the owner console so revenue reflects the discounted total.
+
 ## 6. The `?activate=1` return (done)
 
 `public/checkpoint/app.js`'s `afterSignIn()` now checks for
