@@ -5,13 +5,25 @@ import Footer from '../components/Footer.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
 import {
   MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, ENTERPRISE,
-  TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive, CONSULTING_DAY_RATE
+  TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive, CONSULTING_DAY_RATE,
+  BUNDLE_MIN_MODULES, BUNDLE_RATE_PCT, computeQuote
 } from '../data/pricing.js';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
 const startUrl = `${base}start/`;
 const live = isSelfServeLive();
+// The three ISO management systems together, the most common bundle.
+const isoTrio = computeQuote(['iso27001', 'iso27701', 'iso42001'], [], 'growth');
+
+// How much consulting a self-serve client typically books, by situation.
+// Day counts are our usual recommendation, not a minimum: every path
+// starts with Checkpoint alone and the free setup call.
+const consultingPaths = [
+  { who: 'You already run a management system', days: [0, 1], what: 'Usually none. Some teams book a day for an independent internal audit, because ISO 27001 requires internal audits to be objective and impartial.' },
+  { who: 'First certification, one standard', days: [2, 4], what: 'A scoping and risk workshop with leadership, the internal audit, and a readiness check before your certification body arrives.' },
+  { who: 'Adding ISO 27701 or ISO 42001 to an existing ISO 27001', days: [1, 2], what: 'Per standard: a privacy or AI impact workshop with the people who own the data or the systems. The rest builds on records you already have.' }
+];
 ---
 <Base
   title="Pricing — Checkpoint self-serve compliance | Compliance365"
@@ -69,6 +81,10 @@ const live = isSelfServeLive();
           <a href={startUrl} class="btn-hdk-primary" style="width:100%;text-align:center;margin-top:auto;">Start free trial</a>
         </div>
       ))}
+    </div>
+
+    <div class="bundle-note">
+      <p><b>Bundle: {BUNDLE_RATE_PCT}% off {BUNDLE_MIN_MODULES} or more frameworks.</b> Frameworks share one set of registers, one internal audit and one management review, so the third standard costs you less work, and less on the invoice. For example, ISO 27001, ISO 27701 and ISO 42001 together for 50–250 staff: {fmtAud(isoTrio.subtotal)} becomes <b>{fmtAud(isoTrio.total)} a year</b>. <a href={`${base}services/integrated-iso/`}>How the three run as one system</a>.</p>
     </div>
 
     <p style="text-align:center;margin-top:1.75rem;font-size:0.95rem;color:var(--muted,#555);">
@@ -257,6 +273,56 @@ const live = isSelfServeLive();
   </div>
 </section>
 
+<!-- HOW MUCH CONSULTING -->
+<section class="section" id="how-much-consulting">
+  <div class="container" style="max-width:1000px;">
+    <p class="eyebrow" style="text-align:center;">How much consulting do you need?</p>
+    <h2 style="text-align:center;margin-bottom:0.75rem;">Usually less than you'd expect</h2>
+    <p style="text-align:center;max-width:700px;margin:0 auto 2rem;color:var(--muted,#555);">
+      In a traditional engagement most consultant days go on writing policies, building registers and assembling audit packs. Checkpoint produces those from your own records, so paid time is only worth buying where a person's judgement matters.
+    </p>
+    <div class="need-grid">
+      <div class="need-card">
+        <h3>Checkpoint does</h3>
+        <ul>
+          <li>Policies and procedures drafted from your answers and approved in the tool</li>
+          <li>Risk, asset, supplier and action registers, with suggested risks from your scope</li>
+          <li>A Statement of Applicability with exclusions and justifications</li>
+          <li>Evidence from your Microsoft 365 posture scans, filed against each control</li>
+          <li>Owner reminders, management review packs and the Stage 1 readiness pack</li>
+        </ul>
+      </div>
+      <div class="need-card need-card-people">
+        <h3>Worth an expert's time</h3>
+        <ul>
+          <li>Agreeing scope and risk appetite with leadership</li>
+          <li>Workshops only your people can answer: privacy processing, AI impact</li>
+          <li>An independent internal audit, if no one in-house can audit impartially</li>
+          <li>A readiness check before the certification body arrives</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tblwrap need-table-wrap">
+      <table class="need-table">
+        <thead><tr><th>Your situation</th><th>Typical days</th><th>What the days are for</th></tr></thead>
+        <tbody>
+          {consultingPaths.map((p) => (
+            <tr>
+              <td><b>{p.who}</b></td>
+              <td class="need-days">{p.days[0] === 0 ? `0–${p.days[1]}` : `${p.days[0]}–${p.days[1]}`} days<span>{p.days[0] === 0 ? `up to ${fmtAud(p.days[1] * CONSULTING_DAY_RATE)}` : `${fmtAud(p.days[0] * CONSULTING_DAY_RATE)}–${fmtAud(p.days[1] * CONSULTING_DAY_RATE)}`}</span></td>
+              <td>{p.what}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p style="text-align:center;margin-top:1.25rem;font-size:.9rem;color:var(--muted,#555);">Days at {fmtAud(CONSULTING_DAY_RATE)} each, ex GST, billed only as used. If a quote for the same programme runs to weeks of consulting, ask which of those days Checkpoint would replace.</p>
+    <p style="text-align:center;margin-top:1rem;">
+      <a href={`${base}cost-estimator/`} class="btn-hdk-primary">Compare the cost of each option</a>
+    </p>
+  </div>
+</section>
+
 <section class="section">
   <div class="container" style="max-width:760px;">
     <p class="eyebrow" style="text-align:center;">Questions</p>
@@ -264,7 +330,7 @@ const live = isSelfServeLive();
     <div class="faq">
       <details>
         <summary>Is the price really per framework, per year?</summary>
-        <p>Yes. Each framework is a separate annual licence, billed independently — licence as many as you need.</p>
+        <p>Yes. Each framework is a separate annual licence. License {BUNDLE_MIN_MODULES} or more together and the framework licences are {BUNDLE_RATE_PCT}% off, every year you keep them together.</p>
       </details>
       <details>
         <summary>What happens after the {TRIAL_DAYS}-day trial?</summary>
@@ -308,6 +374,21 @@ const live = isSelfServeLive();
 <Footer />
 
 <style>
+  .bundle-note { max-width: 860px; margin: 1.75rem auto 0; background: #FBF7EF; border: 1px solid #E8D9C4; border-left: 4px solid #BE4A1E; border-radius: 10px; padding: 1rem 1.25rem; }
+  .bundle-note p { margin: 0; line-height: 1.6; color: #3A3632; }
+  .bundle-note a { color: #A63A12; font-weight: 700; }
+  .need-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+  .need-card { background: #fff; border: 1px solid #DDD8CF; border-radius: 14px; padding: 1.4rem 1.5rem; }
+  .need-card-people { background: #FBF7EF; border-color: #E8D9C4; }
+  .need-card h3 { margin: 0 0 .6rem; font-size: 1.05rem; }
+  .need-card ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .4rem; color: #4A4740; line-height: 1.5; }
+  .need-table-wrap { overflow-x: auto; }
+  .need-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #DDD8CF; border-radius: 12px; overflow: hidden; font-size: .92rem; }
+  .need-table th { text-align: left; background: #0B0B0C; color: #FAF7F1; padding: .7rem .9rem; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+  .need-table td { padding: .8rem .9rem; border-top: 1px solid #F0ECE4; vertical-align: top; color: #3A3632; line-height: 1.5; }
+  .need-days { white-space: nowrap; font-weight: 800; color: #0B0B0C; }
+  .need-days span { display: block; font-weight: 500; font-size: .8rem; color: #6B6860; }
+  @media (max-width: 720px) { .need-grid { grid-template-columns: 1fr; } .need-days { white-space: normal; } }
   .buy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; max-width: 1000px; margin: 0 auto; }
   .buy-card { background: #fff; border: 1px solid #DDD8CF; border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; gap: .6rem; }
   .buy-card-mid { border-color: #BE4A1E; box-shadow: inset 0 0 0 1px #BE4A1E; }

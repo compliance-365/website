@@ -1,0 +1,159 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CinematicBackground from '../components/CinematicBackground.astro';
+import { ENTERPRISE, fmtAud } from '../data/pricing.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+
+// Government and public-sector frameworks Compliance365 delivers, each
+// linking to its own page.
+const frameworks = [
+  { name: 'IS18 (QGEA)', who: 'Queensland Government agencies and their ICT suppliers', href: 'services/is18/' },
+  { name: 'ISM, DISP and IRAP', who: 'Commonwealth agencies, Defence and Defence industry', href: 'services/disp-ism-irap/' },
+  { name: 'Essential Eight', who: 'Every level of government, and suppliers asked to show a maturity level', href: 'services/essential-eight/' },
+  { name: 'RFFR', who: 'Employment services providers contracted by DEWR', href: 'services/rffr/' },
+  { name: 'ISO 27001, ISO 27701 and ISO 42001', who: 'Agencies, councils and government businesses certifying security, privacy or AI governance', href: 'services/integrated-iso/' },
+  { name: 'Privacy Act (APPs)', who: 'Commonwealth agencies and the organisations covered by the Australian Privacy Principles', href: 'checkpoint-console/privacy-act-software/' }
+];
+
+// The questions a government buyer's procurement and security teams ask,
+// answered from facts published elsewhere on this site.
+const answers = [
+  { q: 'Where is our data held?', a: 'In your own Microsoft 365 tenant. Checkpoint\'s registers are SharePoint lists and its documents and evidence sit in a SharePoint library on a site you choose, so data stays wherever your tenant stores SharePoint content. Compliance365 does not operate a database of client records.' },
+  { q: 'Who can sign in, and how?', a: 'Your own staff, with their Microsoft Entra ID accounts. Your Conditional Access policies and MFA apply. Checkpoint never sees or stores a password, and an external auditor can be given read-only access that expires on a date you set.' },
+  { q: 'What permissions does it need?', a: 'Delegated Microsoft Graph permissions only, requested in stages as features are first used, so Checkpoint acts with the signed-in user\'s own access. The full list, and when each is requested, is published.' },
+  { q: 'Is there an audit trail?', a: 'Yes. Every material change is appended to an audit log list in your own tenant, recording who, what and when. Every register, the audit log and the Statement of Applicability can be exported at any time.' },
+  { q: 'What happens if we stop?', a: 'Your records stay where they have always been, in your SharePoint. Nothing you hold depends on a Compliance365 service being available.' },
+  { q: 'Is it accessible?', a: 'Checkpoint is designed to WCAG 2.2 level AA. Our accessibility statement sets out what is in place and the known limitations.' }
+];
+
+const docs = [
+  { t: 'Security questionnaire answers', d: 'Ready answers for a vendor assessment: data location, every connection out of your tenant, access, encryption, audit, AI and exit.', href: 'security/questionnaire/' },
+  { t: 'The same answers as a spreadsheet', d: 'An Excel file to attach to your own assessment or supplier risk record.', href: 'security/checkpoint-security-answers.xlsx' },
+  { t: 'Security and architecture', d: 'How data flows, every Microsoft Graph permission and when it is requested, and our vulnerability disclosure policy.', href: 'security/' },
+  { t: 'Accessibility statement', d: 'What is in place, known limitations and how to report a barrier.', href: 'accessibility/' }
+];
+---
+<Base
+  title="For government and public-sector buyers | Compliance365"
+  description="IS18, ISM, Essential Eight, RFFR, ISO and Privacy Act compliance for Australian government agencies and government businesses. Data stays in your tenant; procurement documents ready to download."
+>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="svc-hero">
+  <CinematicBackground static />
+  <div class="svc-hero-copy" style="position:relative;z-index:1;max-width:880px;margin:0 auto;padding:0 22px;text-align:center;">
+    <p class="eyebrow">Government and public sector</p>
+    <h1>Compliance for agencies, councils and government businesses</h1>
+    <p class="section-lead">
+      Checkpoint runs inside your own Microsoft 365 tenant, so your records never leave your environment. The documents your procurement and security teams will ask for are on this page.
+    </p>
+    <div class="hero-ctas" style="justify-content:center;">
+      <a href="#procurement" class="btn-hdk-primary">Procurement documents</a>
+      <a href={ctaUrl} class="btn-hdk-ghost">Book a call</a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="max-width:1080px;">
+    <p class="eyebrow" style="text-align:center;">Frameworks</p>
+    <h2 style="text-align:center;margin-bottom:2rem;">The standards government buyers ask for</h2>
+    <div class="gov-grid">
+      {frameworks.map((f) => (
+        <a class="gov-card" href={base + f.href}>
+          <h3>{f.name}</h3>
+          <p>{f.who}</p>
+          <span class="gov-more">Read more →</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#F7F4EE;" id="how-to-buy">
+  <div class="container" style="max-width:960px;">
+    <p class="eyebrow" style="text-align:center;">How to buy</p>
+    <h2 style="text-align:center;margin-bottom:2rem;">Buying through your normal process</h2>
+    <div class="gov-grid gov-grid-3">
+      <div class="gov-box">
+        <h3>Queensland Government</h3>
+        <p>Compliance365 is a supplier under the Queensland Government ICT Services Standing Offer Arrangement, on QITC terms. Agencies can engage us through that arrangement.</p>
+      </div>
+      <div class="gov-box">
+        <h3>Purchase order and invoice</h3>
+        <p>Licences and consulting can be invoiced against your purchase order instead of paid by card. Annual licences are invoiced in advance, consulting days monthly for time used.</p>
+      </div>
+      <div class="gov-box">
+        <h3>Written quote first</h3>
+        <p>Every engagement starts with a written quote: licences, any consulting days and timing. Nothing is invoiced before you accept it. Larger estates start from {fmtAud(ENTERPRISE.startingPrice)} a year per framework.</p>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:1.5rem;font-size:.92rem;color:var(--muted,#555);">Prices on the <a href={`${base}pricing/`} style="color:#A63A12;font-weight:600;">pricing page</a> are published in full, AUD ex GST.</p>
+  </div>
+</section>
+
+<section class="section" id="procurement">
+  <div class="container" style="max-width:960px;">
+    <p class="eyebrow" style="text-align:center;">Procurement documents</p>
+    <h2 style="text-align:center;margin-bottom:.75rem;">Ready before you ask</h2>
+    <p style="text-align:center;max-width:640px;margin:0 auto 2rem;color:var(--muted,#555);">Download these for your vendor assessment. If your template asks something they don't cover, send it to us and we'll answer it.</p>
+    <div class="gov-grid gov-grid-2">
+      {docs.map((d) => (
+        <a class="gov-card" href={base + d.href}>
+          <h3>{d.t}</h3>
+          <p>{d.d}</p>
+          <span class="gov-more">Open →</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#F7F4EE;">
+  <div class="container" style="max-width:760px;">
+    <p class="eyebrow" style="text-align:center;">Common questions</p>
+    <h2 style="text-align:center;margin-bottom:2rem;">What security and procurement teams ask</h2>
+    <div class="gov-faq">
+      {answers.map((f) => (
+        <details><summary>{f.q}</summary><p>{f.a}</p></details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section class="svc-final-cta">
+  <CinematicBackground static />
+  <div class="container">
+    <h2>Talk to us about your agency</h2>
+    <p>A 30-minute call to understand your framework, your timeline and how you buy. We follow up with a written quote.</p>
+    <div class="final-buttons">
+      <a href={ctaUrl} class="btn-hdk-primary">Book a call</a>
+      <a href={`${base}checkpoint-console/demo/`} class="btn-hdk-ghost">Open the live demo</a>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+
+<style>
+  .gov-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+  .gov-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .gov-card, .gov-box { display: flex; flex-direction: column; gap: .45rem; background: #fff; border: 1px solid #E4DFD5; border-radius: 14px; padding: 1.35rem 1.4rem; color: inherit; text-decoration: none; }
+  .gov-card { transition: border-color .2s, box-shadow .2s; }
+  .gov-card:hover { border-color: #F0A97F; box-shadow: 0 10px 28px rgba(11,11,12,.08); }
+  .gov-card h3, .gov-box h3 { margin: 0; font-size: 1.05rem; color: #0B0B0C; }
+  .gov-card p, .gov-box p { margin: 0; color: #4A4740; line-height: 1.55; font-size: .94rem; }
+  .gov-more { margin-top: auto; color: #A63A12; font-weight: 700; font-size: .9rem; }
+  .gov-faq details { border-bottom: 1px solid #E4DFD5; padding: 1rem 0; }
+  .gov-faq summary { cursor: pointer; font-weight: 700; font-size: 1.05rem; color: #0B0B0C; }
+  .gov-faq p { margin: .8rem 0 0; color: #555; line-height: 1.7; }
+  @media (max-width: 860px) { .gov-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .gov-grid, .gov-grid-2 { grid-template-columns: 1fr; } }
+</style>
+</Base>
