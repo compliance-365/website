@@ -42,7 +42,8 @@ export const SELF_SERVE = {
   // (see git history for this file for the exact sandbox block).
   paddleToken: 'live_fc4782b247aa1e3974a7ed9e240',
   paddleEnv: 'production',
-  // All 6 self-serve framework modules + the AI add-on are priced.
+  // The first 6 self-serve framework modules + the AI add-on are priced;
+  // Privacy Act is waiting on its Paddle prices (see MODULES below).
   // Keep this in sync BY HAND with lambda/provision.js's and
   // lambda/webhook.js's PRICE_TO_MODULE whenever a price changes — see
   // this file's own top-of-file note on why they're duplicated rather
@@ -99,7 +100,15 @@ export const MODULES = [
   { id: 'essential8', name: 'Essential Eight', tag: 'ACSC maturity',      prices: { micro: 7000, growth: 9999, enterprise: null } },
   { id: 'iso42001', name: 'ISO 42001',      tag: 'AI governance',         prices: { micro: 7000, growth: 9999, enterprise: null } },
   { id: 'iso27701', name: 'ISO 27701',      tag: 'Privacy (PIMS)',        prices: { micro: 7000, growth: 9999, enterprise: null } },
-  { id: 'nistcsf',  name: 'NIST CSF',       tag: 'Cyber risk framework',  prices: { micro: 7000, growth: 9999, enterprise: null } }
+  { id: 'nistcsf',  name: 'NIST CSF',       tag: 'Cyber risk framework',  prices: { micro: 7000, growth: 9999, enterprise: null } },
+  // The 13 APPs and the Notifiable Data Breaches scheme: a smaller control
+  // set and no certification audit, so it is priced below the others.
+  // Until its two Paddle prices exist (privacyact_micro / privacyact_growth
+  // in SELF_SERVE.priceIds and PRICE_TO_MODULE in lambda/provision.js and
+  // lambda/webhook.js; steps in tools/SELF-SERVE-SETUP.md), /start/ shows
+  // the "talk to us" fallback for any selection that includes it, the
+  // same as any module without a price id.
+  { id: 'privacyact', name: 'Privacy Act', tag: 'Australian Privacy Principles', prices: { micro: 4999, growth: 6999, enterprise: null } }
 ];
 
 // Optional add-on, flat price regardless of headcount tier.
@@ -144,10 +153,12 @@ export const ENTERPRISE = {
 export const CONSULTING_DAY_RATE = 2000;
 
 // Consulting-led / not self-serve — shown on the page as "Contact us".
+// `detail` is what scoping covers, shown on the card.
 export const CONTACT_FRAMEWORKS = [
-  { id: 'is18', name: 'IS18 (QGEA)', tag: 'Queensland Government' },
-  { id: 'rffr', name: 'RFFR', tag: 'DEWR Employment Services' },
-  { id: 'dispirap', name: 'DISP / ISM / IRAP', tag: 'Defence & government' }
+  { id: 'is18', name: 'IS18 (QGEA)', tag: 'Queensland Government', detail: 'Scoped to your agency, systems in scope and the assurance report you need before anything is quoted.' },
+  { id: 'rffr', name: 'RFFR', tag: 'DEWR Employment Services', detail: 'Scoped to your provider arrangements and accreditation timeline before anything is quoted.' },
+  { id: 'dispirap', name: 'DISP / ISM / IRAP', tag: 'Defence & government', detail: 'Scoped to your sponsorship, vetting and classification requirements before anything is quoted.' },
+  { id: 'cps234', name: 'APRA CPS 234', tag: 'APRA-regulated entities', detail: 'For banks, insurers and super funds. Scoped to your information assets, third parties and board reporting before anything is quoted.' }
 ];
 
 // Volume discount on the combined annual price when a client licenses
