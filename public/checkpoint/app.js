@@ -3261,7 +3261,7 @@ function showModal(opts) {
       return {
         title: 'Leadership security meeting ' + r.n + ' minutes',
         frameworkAgnostic: true,
-        dashboard: { intro: (r.outcome ? 'Outcome: ' + r.outcome + '. ' : '') + 'Held ' + fmtDateY(r.date) + '. ' + a.label + '. Present: ' + (r.present || 'not recorded') + '.' + (r.reviewId ? ' Recorded as management review ' + r.reviewId + ' (Clause 9.3).' : '') },
+        dashboard: { intro: (r.outcome ? 'Outcome: ' + r.outcome + '. ' : '') + 'Held ' + fmtDateY(r.date) + '. ' + a.label + '. Present: ' + (r.present || 'not recorded') + '.' + (r.apologies ? ' Apologies: ' + r.apologies + '.' : '') + (r.reviewId ? ' Recorded as management review ' + r.reviewId + ' (Clause 9.3).' : '') },
         sections: [
           { heading: 'Minutes', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Item</th><th>Figures reviewed</th><th>Discussion</th><th>Decisions</th></tr></thead><tbody>' +
             a.items.map(function (i) {
@@ -11668,6 +11668,7 @@ function showModal(opts) {
     var decided = (rec && rec.escalations) || {};
     var acts = ((rec && rec.actions) || []).map(function (id) { return (S.actions || []).find(function (x) { return x.id === id; }); }).filter(Boolean);
     var byItem = (rec && rec.decisionItem) || {};
+    var focus = mode === 'minutes' ? srFocusKey(rec, a, draft) : '';
     return a.items.map(function (i, idx) {
       var k = esc(rec ? rec.id + '|' + i.key : i.key);
       var tools = editable && i.key !== 'decisions' ? '<span class="sr-tools">' +
@@ -11675,21 +11676,78 @@ function showModal(opts) {
         (idx < a.items.length - 2 ? '<button class="btn quiet sm" data-action="App.srMoveItem" data-id="' + k + '|down" aria-label="Move ' + esc(i.title) + ' down">↓</button>' : '') +
         '<button class="btn quiet sm" data-action="App.srSkipItem" data-id="' + k + '" aria-label="Remove ' + esc(i.title) + ' from this meeting">✕</button></span>' : '';
       var mine = acts.filter(function (x) { return byItem[x.id] === i.key; });
+      /* While minuting each item is a header (always shown, with its
+         state) and a body (open for the item in focus only). The bodies
+         stay in the page when folded, so nothing typed is lost. */
+      if (mode === 'minutes') {
+        var on = focus === i.key;
+        return '<div class="sr-item sr-m' + (on ? ' sr-on' : '') + '" data-key="' + esc(i.key) + '"><button class="sr-m-head" data-action="App.srFocus" data-id="' + esc(i.key) + '" aria-expanded="' + on + '"><span class="sr-time">' + esc(i.start) + '</span><b>' + esc(i.title) + '</b> <span class="src">' + esc(i.lead) + ' · ' + i.min + ' min</span><span class="sr-m-state" id="srState-' + esc(i.key) + '"></span></button>' +
+          '<div class="sr-m-body">' + srItemBodyHtml(rec, i, mode, decided) +
+          '<textarea class="mini sr-note" id="srNote-' + esc(i.key) + '" rows="3" placeholder="What was said. Start a line with Decision: to raise an action, e.g. Decision: Enforce MFA for contractors - Sam Lee - 30/11/2026" aria-label="Minutes for ' + esc(i.title) + '">' + esc(srDraftText(draft, i.key)) + '</textarea>' +
+          '<div class="sr-dec-row"><button class="btn ghost sm" data-action="App.srNoted" data-id="' + esc(i.key) + '">Noted, no change</button><button class="btn ghost sm" data-action="App.srDecisionLine" data-id="' + esc(i.key) + '">+ Decision</button>' +
+          (idx < a.items.length - 1 ? '<button class="btn sm" data-action="App.srNext" data-id="' + esc(i.key) + '">Next \u2192</button>' : '') + '</div>' +
+          (mine.length ? mine.map(function (x) { return '<div class="sr-decision">' + icon('check') + ' <button class="lnk" data-action="App.openAction" data-id="' + esc(x.id) + '">' + esc(x.id) + '</button> ' + esc(x.title) + ' <span class="src">' + esc(x.owner || '') + (x.due ? ' · ' + fmtDate(x.due) : '') + '</span></div>'; }).join('') : '') +
+          '</div></div>';
+      }
       return '<div class="sr-item"><span class="sr-time">' + esc(i.start) + '</span><div style="flex:1"><b>' + esc(i.title) + '</b> <span class="src">' + esc(i.lead) + ' · ' + i.min + ' min' + (i.added ? ' · added for this meeting' : '') + '</span>' + tools +
-        (srFactsShown(i, rec, mode).length && !(i.key === 'escalations' && rec) ? '<ul class="sr-facts">' + srFactsShown(i, rec, mode).map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
-        (i.key === 'escalations' && rec ? srEscalationRows(rec, mode, decided) : '') +
-        (i.key === 'actions' && rec ? srActionRows(rec, mode, decided) : '') +
-        (i.key === 'risks' && rec ? srRiskRows(rec, mode) : '') +
-        (i.key === 'incidents' && rec && mode === 'minutes' ? srIncidentRows(rec) : '') +
-        (i.key === 'people' && rec && mode === 'minutes' ? srSupplierRows(rec) : '') +
-        (i.key === 'mr' && rec ? srConclusionHtml(rec, mode) : '') +
-        (mode === 'minutes' ? '<textarea class="mini sr-note" id="srNote-' + esc(i.key) + '" rows="2" placeholder="Notes" aria-label="Notes for ' + esc(i.title) + '">' + esc(notes[i.key] || '') + '</textarea>' +
-          '<div class="sr-dec-row"><button class="btn ghost sm" data-action="App.srAddDecision" data-id="' + k + '">+ Decision</button>' +
-          '<textarea class="mini sr-note" id="srDec-' + esc(i.key) + '" rows="1" placeholder="Or type several, one per line: what - owner - due date" aria-label="Decisions for ' + esc(i.title) + '">' + esc((draft && draft.dec[i.key]) || '') + '</textarea></div>' : '') +
-        (mode !== 'minutes' && notes[i.key] ? '<p class="sr-minute">' + esc(notes[i.key]) + '</p>' : '') +
+        srItemBodyHtml(rec, i, mode, decided) +
+        (notes[i.key] ? '<p class="sr-minute">' + esc(notes[i.key]) + '</p>' : '') +
         (mine.length ? mine.map(function (x) { return '<div class="sr-decision">' + icon('check') + ' <button class="lnk" data-action="App.openAction" data-id="' + esc(x.id) + '">' + esc(x.id) + '</button> ' + esc(x.title) + ' <span class="src">' + esc(x.owner || '') + (x.due ? ' · ' + fmtDate(x.due) : '') + '</span></div>'; }).join('') : '') +
         '</div></div>';
     }).join('');
+  }
+
+  /* An item's figures and its own decision rows (overdue actions, risks
+     above appetite, incidents, suppliers, the 9.3 conclusion). */
+  function srItemBodyHtml(rec, i, mode, decided) {
+    return (srFactsShown(i, rec, mode).length && !(i.key === 'escalations' && rec) ? '<ul class="sr-facts">' + srFactsShown(i, rec, mode).map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
+      (i.key === 'escalations' && rec ? srEscalationRows(rec, mode, decided) : '') +
+      (i.key === 'actions' && rec ? srActionRows(rec, mode, decided) : '') +
+      (i.key === 'risks' && rec ? srRiskRows(rec, mode) : '') +
+      (i.key === 'incidents' && rec && mode === 'minutes' ? srIncidentRows(rec) : '') +
+      (i.key === 'people' && rec && mode === 'minutes' ? srSupplierRows(rec) : '') +
+      (i.key === 'mr' && rec ? srConclusionHtml(rec, mode) : '');
+  }
+  /* The text in an item's box: the draft, plus any decisions typed in
+     the old separate box by a draft saved before the boxes merged. */
+  function srDraftText(draft, key) {
+    var t = (draft && draft.notes && draft.notes[key]) || '';
+    var old = draft && draft.dec && draft.dec[key];
+    if (old && String(old).trim()) t = (t ? t + '\n' : '') + String(old).split(/\r?\n/).filter(function (l) { return l.trim(); }).map(function (l) { return 'Decision: ' + l.trim(); }).join('\n');
+    return t;
+  }
+  /* Items that already have a decision recorded with their own buttons. */
+  function srDecidedKeys(rec) {
+    var out = Object.keys((rec && rec.decisionItem) || {}).map(function (k) { return rec.decisionItem[k]; });
+    if (rec && rec.escalations && Object.keys(rec.escalations).length) out.push('escalations');
+    if (rec && rec.riskDecisions && Object.keys(rec.riskDecisions).length) out.push('risks');
+    return out;
+  }
+  /* The item in focus: the one chosen, else the first not yet minuted. */
+  function srFocusKey(rec, a, draft) {
+    var keys = a.items.map(function (i) { return i.key; });
+    if (draft && draft.focus && keys.indexOf(draft.focus) !== -1) return draft.focus;
+    var texts = {};
+    keys.forEach(function (k) { texts[k] = srDraftText(draft, k); });
+    var p = window.CheckpointLib.minutesProgress(keys, texts, srDecidedKeys(rec));
+    return keys.find(function (k) { return p.doneKeys.indexOf(k) === -1; }) || keys[0];
+  }
+  /* Each folded item's state, and the progress line, from what is in
+     the boxes now. Runs without redrawing, so typing is never lost. */
+  function srRefreshMinuteStates(rec) {
+    var a = secReviewAgenda(rec), keys = a.items.map(function (i) { return i.key; }), texts = {};
+    keys.forEach(function (k) { var el = document.getElementById('srNote-' + k); texts[k] = el ? el.value : ''; });
+    var decided = srDecidedKeys(rec);
+    var p = window.CheckpointLib.minutesProgress(keys, texts, decided);
+    keys.forEach(function (k) {
+      var st = document.getElementById('srState-' + k);
+      if (!st) return;
+      var t = String(texts[k] || '').trim(), n = window.CheckpointLib.splitMinuteText(t, rec.date).decisions.length;
+      st.textContent = /Noted, no change\.$/.test(t) && !n ? 'Noted, no change' : t || decided.indexOf(k) !== -1 ? 'Minuted' + (n ? ' \u00b7 ' + n + ' decision' + (n === 1 ? '' : 's') : '') : '';
+      st.className = 'sr-m-state' + (p.doneKeys.indexOf(k) !== -1 ? ' done' : '');
+    });
+    var pr = document.getElementById('srProgress');
+    if (pr) pr.textContent = p.done + ' of ' + p.total + ' items minuted';
   }
 
   /* The chair's three choices for an action overdue at two meetings in
@@ -11821,12 +11879,17 @@ function showModal(opts) {
   function srStashDraft(id) {
     var rec = secReviewById(id);
     if (!rec) return;
-    var d = { id: id, notes: {}, dec: {} };
+    var prev = srDraft(rec);
+    var open = document.querySelector('#drawer .sr-m.sr-on');
+    var d = { id: id, notes: Object.assign({}, prev.notes || {}), dec: {}, focus: (open && open.dataset.key) || prev.focus || '', att: Object.assign({}, prev.att || {}) };
+    ['srHeldOn', 'srPresent', 'srOutcome'].forEach(function (f) { d[f] = prev[f]; });
+    ['concl', 'changes', 'resources', 'sign'].forEach(function (f) { if (prev[f] !== undefined) d[f] = prev[f]; });
     secReviewAgenda(rec).items.forEach(function (i) {
-      var n = document.getElementById('srNote-' + i.key), x = document.getElementById('srDec-' + i.key);
+      var n = document.getElementById('srNote-' + i.key);
       if (n) d.notes[i.key] = n.value;
-      if (x) d.dec[i.key] = x.value;
+      else if (prev.dec && prev.dec[i.key]) d.notes[i.key] = srDraftText(prev, i.key);
     });
+    document.querySelectorAll('#drawer input.sr-att').forEach(function (el) { d.att[el.dataset.name] = el.checked; });
     ['srHeldOn', 'srPresent', 'srOutcome'].forEach(function (f) { var el = document.getElementById(f); if (el) d[f] = el.value; });
     if (document.getElementById('srMRchanges')) {
       d.concl = srReadConclusion();
@@ -11835,6 +11898,58 @@ function showModal(opts) {
     }
     window._srDraft = d;
   }
+  /* Who was there: the invitees ticked present (all ticked to start),
+     anyone else typed in, and apologies from those not ticked. */
+  function srInvitees() {
+    return window.CheckpointLib.securityReviewInvitees(secReviewSetup() || {}, secReviewRecipients(), function (e) { var u = directoryUser(e); return u ? u.name : ''; });
+  }
+  function srAttendance(draft) {
+    var ticks = srInvitees().map(function (p) { return { name: p.name, present: !draft.att || draft.att[p.name] !== false }; });
+    return window.CheckpointLib.securityReviewAttendanceText(ticks, draft.srPresent || '');
+  }
+  function srAttendanceHtml(rec, view) {
+    var d = srDraft(rec), people = srInvitees();
+    return '<div class="sr-att"><span class="src">Present (untick anyone who sent apologies)</span><div class="sr-att-list">' + people.map(function (p) {
+      var on = !d.att || d.att[p.name] !== false;
+      return '<label class="sr-att-p"><input type="checkbox" class="sr-att" data-name="' + esc(p.name) + '"' + (on ? ' checked' : '') + '> ' + esc(p.name) + (p.role ? ' <span class="src">' + esc(p.role) + '</span>' : '') + '</label>';
+    }).join('') + '</div><label class="src" style="display:block;margin-top:6px">Also present <input class="mini" id="srPresent" style="width:100%" placeholder="Anyone else who joined, comma-separated" value="' + esc(d.srPresent != null ? d.srPresent : '') + '" list="peopleList"></label></div>';
+  }
+  /* Everything typed so far, as the minutes will record it: notes per
+     item with Decision: lines lifted out as actions to raise. */
+  function srCollectMinutes(rec) {
+    var L = window.CheckpointLib, d = srDraft(rec), heldOn = d.srHeldOn || rec.date;
+    var att = srAttendance(d), notes = {}, decisions = [];
+    secReviewAgenda(rec).items.forEach(function (i) {
+      var sp = L.splitMinuteText(srDraftText(d, i.key), heldOn);
+      if (sp.note) notes[i.key] = sp.note;
+      sp.decisions.forEach(function (x) { decisions.push(Object.assign({ item: i }, x)); });
+    });
+    return { heldOn: heldOn, present: att.present, apologies: att.apologies, outcome: String(d.srOutcome || '').trim().slice(0, 200), notes: notes, decisions: decisions };
+  }
+  /* The minutes email exactly as it will be sent, before anything is
+     saved: decisions not yet raised show as "New". */
+  function srPreviewHtml(rec) {
+    var L = window.CheckpointLib, s = secReviewSetup() || {}, m = srCollectMinutes(rec);
+    var acts = (rec.actions || []).map(function (id) { return (S.actions || []).find(function (x) { return x.id === id; }); }).filter(Boolean);
+    var by = Object.assign({}, rec.decisionItem || {});
+    m.decisions.forEach(function (x, n) {
+      var u = directoryUser(x.owner), id = 'New ' + (n + 1);
+      acts.push({ id: id, title: x.title, owner: u ? u.name : (x.owner || s.owner || 'Unassigned'), due: x.due });
+      by[id] = x.item.key;
+    });
+    var att = L.securityReviewAttendance(m.present, s);
+    var tmp = Object.assign({}, rec, { date: m.heldOn, present: m.present, apologies: m.apologies, outcome: m.outcome, itemNotes: m.notes, decisionItem: by, attendance: { absent: att.absent, quorum: att.quorum } });
+    var to = secReviewRecipients();
+    return '<p class="src">' + (to.length ? 'To: ' + esc(to.join(', ')) : 'No attendee email addresses yet: add them in Settings to send the minutes.') + '</p>' +
+      '<div class="sr-preview-mail">' + L.securityReviewMinutesHtml(secReviewAgenda(rec), tmp, acts, Object.assign(secReviewMeta(rec), { date: fmtDate(m.heldOn) })) + '</div>';
+  }
+  /* Typing in a box updates its item's state and the progress line. */
+  var _srStateTimer = null;
+  document.addEventListener('input', function (e) {
+    if (!e.target || !e.target.classList || !e.target.classList.contains('sr-note') || !window._srMinutes) return;
+    clearTimeout(_srStateTimer);
+    _srStateTimer = setTimeout(function () { var rec = secReviewById(window._srMinutes); if (rec) srRefreshMinuteStates(rec); }, 250);
+  });
   /* The next management review on the compliance calendar. */
   async function bookNextManagementReview(r, owner) {
     var L = window.CheckpointLib;
@@ -24505,6 +24620,7 @@ function showModal(opts) {
       var view = rec || (nx ? { id: 'next', n: nx.n, date: nx.date, time: s.time, status: 'Preview', pack: secReviewPack(), preparedAt: new Date().toISOString().slice(0, 10) } : null);
       if (!view) return;
       var minuting = rec && window._srMinutes === rec.id && rec.status !== 'Held' && !READONLY;
+      var previewing = minuting && window._srPreview === rec.id;
       var a = secReviewAgenda(view);
       var held = view.status === 'Held';
       var acts = (view.actions || []).map(function (aid) { return (S.actions || []).find(function (x) { return x.id === aid; }); }).filter(Boolean);
@@ -24513,9 +24629,11 @@ function showModal(opts) {
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + (rec ? esc(rec.id) + ' · ' : '') + esc(a.label) + ' · ' + a.minutes + ' minutes · ' + (rec ? esc(rec.status) : 'Preview from live figures') + '</div>' +
         '<h2>Leadership meeting ' + a.n + ' — ' + fmtDate(view.date) + ' at ' + esc(view.time || s.time || '10:00') + '</h2>' +
-        (minuting ? '<div class="sr-minutes-head"><label class="src">Held on <input class="mini" type="date" id="srHeldOn" value="' + esc(srDraft(rec).srHeldOn || view.date) + '"></label><label class="src" style="flex:1">Present <input class="mini" id="srPresent" style="width:100%" value="' + esc(srDraft(rec).srPresent != null ? srDraft(rec).srPresent : view.present || [s.chair, s.owner, s.facilitator].filter(Boolean).join(', ')) + '" list="peopleList"></label></div>' +
+        (previewing ? '<p class="src">This is the email attendees will receive. Nothing is saved or sent until you choose Save minutes.</p>' :
+          minuting ? '<div class="sr-minutes-head"><label class="src">Held on <input class="mini" type="date" id="srHeldOn" value="' + esc(srDraft(rec).srHeldOn || view.date) + '"></label></div>' +
+            srAttendanceHtml(rec, view) +
             '<label class="src sr-outcome-in">Outcome in one line <input class="mini" id="srOutcome" maxlength="200" style="width:100%" placeholder="e.g. On track; MFA rollout slipped two weeks" value="' + esc(srDraft(rec).srOutcome != null ? srDraft(rec).srOutcome : view.outcome || '') + '"></label>' +
-            '<p class="src">Notes and decisions against each item. Each decision becomes an action with its owner and due date' + (a.kind === 'mr' ? '; this meeting is also recorded as the Clause 9.3 management review' : '') + '.</p>' :
+            '<p class="src">One box per item. <b>Noted, no change</b> records the figures as they stand; a line starting <b>Decision:</b> becomes an action (what - owner - due date)' + (a.kind === 'mr' ? '. This meeting is also recorded as the Clause 9.3 management review' : '') + '. <span id="srProgress" class="sr-progress"></span></p>' :
           READONLY ? '' : '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px">' +
           (!rec ? '<button class="btn sm" data-action="App.prepareSecurityReview">Prepare and save</button>' : !held ? btn('App.prepareSecurityReview', 'Refresh figures', true) : '') +
           (rec && !held ? btn('App.sendSecurityReview', rec.status === 'Sent' ? 'Send again' : 'Send to attendees') : '') +
@@ -24527,14 +24645,18 @@ function showModal(opts) {
           (held ? btn('App.secReviewMinutesDoc', 'Minutes document', true) + btn('App.sendSecurityReviewMinutes', rec.minutesSentAt ? 'Send minutes again' : 'Send minutes', true) : '') + '</div>') +
         (rec && rec.sentAt ? '<p class="src">Agenda sent ' + fmtDate(rec.sentAt) + ' to ' + esc(rec.sentTo || '') + (rec.agendaFiled ? ' · filed as Clause 9.1 evidence' : '') + '</p>' : '') +
         (held && view.outcome ? '<p class="sr-outcome"><b>Outcome:</b> ' + esc(view.outcome) + '</p>' : '') +
-        (held ? '<p class="src">Held ' + fmtDate(view.date) + ' · present: ' + esc(view.present || '—') + (view.minutesSentAt ? ' · minutes sent ' + fmtDate(view.minutesSentAt) : '') + (view.reviewId ? ' · recorded as management review <button class="lnk" data-action="App.openReview" data-id="' + esc(view.reviewId) + '">' + esc(view.reviewId) + '</button>' : '') + '</p>' : '') +
+        (held ? '<p class="src">Held ' + fmtDate(view.date) + ' · present: ' + esc(view.present || '—') + (view.apologies ? ' · apologies: ' + esc(view.apologies) : '') + (view.minutesSentAt ? ' · minutes sent ' + fmtDate(view.minutesSentAt) : '') + (view.reviewId ? ' · recorded as management review <button class="lnk" data-action="App.openReview" data-id="' + esc(view.reviewId) + '">' + esc(view.reviewId) + '</button>' : '') + '</p>' : '') +
         (!minuting ? srStatusHtml(view.pack) : '') +
+        (previewing ? '<div class="d-sec sr-preview">' + srPreviewHtml(rec) + '</div>' :
         '<div class="d-sec"><h4>' + (minuting ? 'Minutes' : held ? 'Agenda and minutes' : 'Agenda') + '</h4>' + srAgendaItemsHtml(rec || null, a, minuting ? 'minutes' : held ? 'held' : 'agenda') +
-          ((a.quiet || []).length ? '<p class="src sr-quiet"><b>Nothing to report:</b> ' + a.quiet.map(esc).join('; ') + '.</p>' : '') + '</div>' +
-        (minuting ? '<div class="d-actions" style="display:flex;gap:8px;margin:14px 0"><button class="btn sm" data-action="App.saveSecurityReviewMinutes" data-id="' + esc(rec.id) + '">Save minutes</button><button class="btn ghost sm" data-action="App.cancelSecurityReviewMinutes" data-id="' + esc(rec.id) + '">Cancel</button></div>' : '') +
+          ((a.quiet || []).length ? '<p class="src sr-quiet"><b>Nothing to report:</b> ' + a.quiet.map(esc).join('; ') + '.</p>' : '') + '</div>') +
+        (minuting ? '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0">' +
+          (previewing ? '<button class="btn sm" data-action="App.saveSecurityReviewMinutes" data-id="' + esc(rec.id) + '">Save minutes</button><button class="btn ghost sm" data-action="App.srBackToMinutes" data-id="' + esc(rec.id) + '">Back to editing</button>' :
+            '<button class="btn sm" data-action="App.srPreviewMinutes" data-id="' + esc(rec.id) + '">Preview minutes</button><button class="btn ghost sm" data-action="App.saveSecurityReviewMinutes" data-id="' + esc(rec.id) + '">Save minutes</button><button class="btn ghost sm" data-action="App.cancelSecurityReviewMinutes" data-id="' + esc(rec.id) + '">Cancel</button>') + '</div>' : '') +
         (held && view.notes ? '<div class="d-sec"><h4>General notes</h4><p class="sr-minute">' + esc(view.notes) + '</p></div>' : '') +
         (rec && !minuting ? recordHistoryHtml('SecurityReview', [rec.id], 6) : '');
       openDrawerUi('Leadership meeting ' + a.n);
+      if (minuting && !previewing) srRefreshMinuteStates(rec);
     },
     sendSecurityReview: async function (id) {
       var rec = secReviewById(id);
@@ -24624,8 +24746,57 @@ function showModal(opts) {
       window._srMinutes = id;
       App.openSecurityReview(id);
     },
-    cancelSecurityReviewMinutes: function (id) { window._srMinutes = null; window._srDraft = null; App.openSecurityReview(id); },
-    /* "+ Decision": the action is raised there and then, with an owner
+    cancelSecurityReviewMinutes: function (id) { window._srMinutes = null; window._srDraft = null; window._srPreview = null; App.openSecurityReview(id); },
+    /* Minuting one item at a time: open an item, mark it noted, move on.
+       Folding and opening never redraws the panel. */
+    srFocus: function (key) {
+      var rec = secReviewById(window._srMinutes);
+      if (!rec) return;
+      document.querySelectorAll('#drawer .sr-m').forEach(function (el) {
+        var on = el.dataset.key === key;
+        el.classList.toggle('sr-on', on);
+        var h = el.querySelector('.sr-m-head'); if (h) h.setAttribute('aria-expanded', on ? 'true' : 'false');
+      });
+      if (window._srDraft && window._srDraft.id === rec.id) window._srDraft.focus = key;
+      else { srStashDraft(rec.id); window._srDraft.focus = key; }
+      srRefreshMinuteStates(rec);
+      var item = document.querySelector('#drawer .sr-m[data-key="' + key + '"]');
+      if (item) { if (item.scrollIntoView) item.scrollIntoView({ block: 'nearest' }); var t = document.getElementById('srNote-' + key); if (t) t.focus({ preventScroll: true }); }
+    },
+    srNext: function (key) {
+      var rec = secReviewById(window._srMinutes);
+      if (!rec) return;
+      var keys = secReviewAgenda(rec).items.map(function (i) { return i.key; });
+      var next = keys[keys.indexOf(key) + 1];
+      if (next) App.srFocus(next); else srRefreshMinuteStates(rec);
+    },
+    srNoted: function (key) {
+      var rec = secReviewById(window._srMinutes);
+      if (!rec) return;
+      var it = secReviewAgenda(rec).items.find(function (i) { return i.key === key; });
+      var t = document.getElementById('srNote-' + key);
+      if (!it || !t) return;
+      var line = window.CheckpointLib.minuteNotedText(srFactsShown(it, rec, 'minutes'));
+      if (!t.value.trim()) t.value = line;
+      else if (!/Noted, no change\.$/.test(t.value.trim())) t.value = t.value.replace(/\s+$/, '') + '\nNoted, no change.';
+      App.srNext(key);
+    },
+    srDecisionLine: function (key) {
+      var t = document.getElementById('srNote-' + key);
+      if (!t) return;
+      t.value = t.value.replace(/\s+$/, '') + (t.value.trim() ? '\n' : '') + 'Decision: ';
+      t.focus();
+      try { t.setSelectionRange(t.value.length, t.value.length); } catch (e) { /* not every input type supports it */ }
+    },
+    srPreviewMinutes: function (id) {
+      if (!secReviewById(id)) return;
+      srStashDraft(id);
+      window._srPreview = id;
+      App.openSecurityReview(id);
+      var dr = document.getElementById('drawer'); if (dr) dr.scrollTop = 0;
+    },
+    srBackToMinutes: function (id) { window._srPreview = null; App.openSecurityReview(id); },
+    /* A lesson learned from an incident: the action is raised there and then, with an owner
        from the directory and a due date, and shown under its item. */
     srAddDecision: async function (key) {
       var p = String(key).split('|'), id = p[0], item = p[1], ref = p[2] || '';
@@ -24767,32 +24938,29 @@ function showModal(opts) {
       if (!rec) return;
       var s = secReviewSetup() || {};
       var a = secReviewAgenda(rec);
-      var heldOn = (document.getElementById('srHeldOn') || {}).value || rec.date;
-      var present = ((document.getElementById('srPresent') || {}).value || '').trim();
-      var outcome = ((document.getElementById('srOutcome') || {}).value || '').trim().slice(0, 200);
-      if (!present) { toast('Record who was present.'); return; }
+      /* Read from the draft, so saving works from the preview as well as
+         the boxes; anything still on screen is stashed first. */
+      if (!window._srPreview) srStashDraft(id);
+      var m = srCollectMinutes(rec), d = srDraft(rec);
+      var back = function (key) { window._srPreview = null; if (key && window._srDraft) window._srDraft.focus = key; App.openSecurityReview(id); };
+      var heldOn = m.heldOn, present = m.present, outcome = m.outcome;
+      if (!present) { back(); toast('Record who was present.'); return; }
       /* The management review meeting needs the chair's conclusion. */
       var L = window.CheckpointLib, concl = null, signOff = false;
       if (a.kind === 'mr') {
-        concl = srReadConclusion();
+        concl = d.concl || srReadConclusion();
         var gap = L.mrReadiness({ chair: s.chair || 'x', attendees: present, inputNotes: L.MR_INPUT_SECTIONS.reduce(function (o, x) { o[x.key] = { verdict: 'noted' }; return o; }, {}), conclusion: concl, actions: [] });
-        if (gap.length) { toast('Still to do: ' + esc(gap[0])); return; }
-        signOff = !!(document.getElementById('srMRsign') || {}).checked && mrIsChair({ chair: s.chair });
+        if (gap.length) { back('mr'); toast('Still to do: ' + esc(gap[0])); return; }
+        signOff = !!d.sign && mrIsChair({ chair: s.chair });
       }
-      var changesTxt = ((document.getElementById('srMRchanges') || {}).value || '').trim().slice(0, 1000);
-      var resourcesTxt = ((document.getElementById('srMRresources') || {}).value || '').trim().slice(0, 1000);
+      var changesTxt = String(d.changes || '').trim().slice(0, 1000);
+      var resourcesTxt = String(d.resources || '').trim().slice(0, 1000);
       var attendance = window.CheckpointLib.securityReviewAttendance(present, s);
       if (!attendance.quorum) {
-        srStashDraft(id);
         var goOn = await showModal({ title: 'Held without the chair or the ISMS owner?', message: 'Not in the attendance: ' + attendance.absent.join(', ') + '.\n\nThe minutes and decisions are still recorded, marked as held without them, and confirming the decisions goes on the next agenda.', confirmText: 'Record anyway', cancelText: 'Go back' });
-        if (!goOn) { App.openSecurityReview(id); return; }
+        if (!goOn) { back(); return; }
       }
-      var notes = {}, decisions = [];
-      a.items.forEach(function (i) {
-        var n = document.getElementById('srNote-' + i.key), d = document.getElementById('srDec-' + i.key);
-        if (n && n.value.trim()) notes[i.key] = n.value.trim();
-        if (d && d.value.trim()) window.CheckpointLib.parseReviewActionLines(d.value, heldOn).forEach(function (x) { decisions.push(Object.assign({ item: i }, x)); });
-      });
+      var notes = m.notes, decisions = m.decisions;
       busy(true);
       var raised = [], byItem = {};
       for (var k = 0; k < decisions.length; k++) {
@@ -24827,6 +24995,7 @@ function showModal(opts) {
       var saved = await updateSecReview(id, function (r) {
         if (!r.pack) r.pack = secReviewPack();
         r.status = 'Held'; r.date = heldOn; r.present = present; r.itemNotes = notes; r.heldAt = new Date().toISOString().slice(0, 10);
+        if (m.apologies) r.apologies = m.apologies; else delete r.apologies;
         if (outcome) r.outcome = outcome;
         r.attendance = { absent: attendance.absent, quorum: attendance.quorum };
         r.actions = raised.slice(); r.decisionItem = Object.assign(r.decisionItem || {}, byItem);
@@ -24835,7 +25004,7 @@ function showModal(opts) {
         if (concl) { r.conclusion = concl; r.changes = changesTxt; r.resources = resourcesTxt; }
       });
       audit('Security review held', 'SecurityReview', id, '', heldOn + ' — ' + present + (attendance.quorum ? '' : '; held without ' + attendance.absent.join(', ')) + (outcome ? '; outcome: ' + outcome : '') + (raised.length ? '; actions ' + raised.join(', ') : '') + (reviewId ? '; management review ' + reviewId : ''));
-      window._srMinutes = null; window._srDraft = null;
+      window._srMinutes = null; window._srDraft = null; window._srPreview = null;
       busy(false);
       toast('<b>' + esc(id) + '</b> minutes saved' + (raised.length ? ', ' + raised.length + ' action' + (raised.length === 1 ? '' : 's') + ' raised' : '') + (reviewId ? ', recorded as ' + reviewId : ''));
       renderSecurityReviewCard(); renderActions(); renderReviews(); renderNavCounts(); renderDash();

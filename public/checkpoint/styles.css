@@ -2073,3 +2073,28 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .wiz-setup-call{margin-top:16px;border:1px solid rgba(240,169,127,.45);background:rgba(240,169,127,.07);border-radius:8px;padding:12px 16px;text-align:left}
 .wiz-setup-call[hidden]{display:none}
 .wiz-setup-call p{margin:0 0 10px;font-size:13px;line-height:1.55}
+
+/* Minuting one item at a time: every item shows its header and state;
+   only the item in focus shows its body. Folded bodies stay in the
+   page (display only), so nothing typed is lost. */
+.sr-item.sr-m { display: block; padding: 0; }
+.sr-m-head { display: flex; align-items: baseline; gap: 10px; width: 100%; text-align: left; background: none; border: 0; color: inherit; font: inherit; padding: 9px 0; cursor: pointer; }
+.sr-m-head:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+.sr-m-head .src { flex: 1; }
+.sr-m-state { font-size: 11.5px; color: var(--paper-faint); white-space: nowrap; }
+.sr-m-state.done { color: var(--pass); font-weight: 700; }
+.sr-m-state.done::before { content: '\2713  '; }
+.sr-m .sr-m-body { display: none; padding: 0 0 12px 44px; }
+.sr-m.sr-on .sr-m-body { display: block; }
+.sr-m.sr-on { background: color-mix(in srgb, var(--gold) 5%, transparent); border-radius: 8px; }
+.sr-m .sr-dec-row { flex-wrap: wrap; margin-top: 6px; }
+.sr-progress { font-weight: 700; color: var(--paper); }
+.sr-att { margin: 8px 0; }
+.sr-att-list { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
+.sr-att-p { font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.sr-preview-mail { background: #fff; color: #222; border-radius: 8px; padding: 16px; border: 1px solid var(--line); overflow-x: auto; }
+@media (max-width: 640px) { .sr-m .sr-m-body { padding-left: 0; } }
+.sr-preview-mail h2, .sr-preview-mail h3, .sr-preview-mail p, .sr-preview-mail li, .sr-preview-mail td, .sr-preview-mail th, .sr-preview-mail b { color: #222; background: transparent; }
+.sr-preview-mail a { color: #1a5fb4; }
+.sr-m-head b { flex: 0 1 auto; }
+.sr-m-head .src { min-width: 70px; }

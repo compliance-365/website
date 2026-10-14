@@ -101,6 +101,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
     await page.waitForSelector('#drawer #srOutcome');
     // The chair accepts the risk on the stuck action, against its risk.
+    await page.click('#drawer .sr-m[data-key="escalations"] .sr-m-head');
     await page.click('#drawer button[data-action="App.srEscalate"][data-id$="|ACT-004|accept"]');
     await page.waitForSelector('#modalBox textarea');
     await page.locator('#modalBox textarea').fill('Awareness covered by onboarding training until the programme starts');
@@ -109,7 +110,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForTimeout(400);
     assert.match(await page.locator('#drawer').innerText(), /risk accepted on R-003/);
     // Held without the chair: a warning, then recorded as such.
-    await page.fill('#drawer #srPresent', 'Sam Okafor');
+    await page.uncheck('#drawer input.sr-att[data-name="Mei Chen"]');
     await page.fill('#drawer #srOutcome', 'Phishing programme deferred');
     await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForSelector('#modalBox .m-btns');

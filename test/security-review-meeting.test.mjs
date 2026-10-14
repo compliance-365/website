@@ -140,26 +140,36 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
     await page.waitForSelector('#drawer #srOutcome');
     await page.fill('#drawer #srOutcome', 'On track; phishing programme slipped');
-    await page.fill('#drawer #srNote-risks', 'Supplier clauses still the top risk.');
-    // + Decision raises the action straight away; the typed notes survive.
-    await page.click('#drawer button[data-action="App.srAddDecision"][data-id$="|risks"]');
-    await page.waitForSelector('#modalBox .m-field input');
-    const f = page.locator('#modalBox .m-field input');
-    await f.nth(0).fill('Send the security schedule to the remaining suppliers');
-    await f.nth(1).fill('K. Patel');
-    await f.nth(2).fill('2026-11-30');
-    await page.locator('#modalBox .m-btns .btn:not(.ghost)').click();
+    // One box per item: the note, and a Decision: line that becomes an action.
+    await page.click('#drawer .sr-m[data-key="risks"] .sr-m-head');
+    await page.fill('#drawer #srNote-risks', 'Supplier clauses still the top risk.\nDecision: Send the security schedule to the remaining suppliers - K. Patel - 2026-11-30');
     await page.waitForTimeout(400);
-    assert.equal(await page.inputValue('#drawer #srOutcome'), 'On track; phishing programme slipped');
-    assert.equal(await page.inputValue('#drawer #srNote-risks'), 'Supplier clauses still the top risk.');
-    assert.match(await page.locator('#drawer').innerText(), /Send the security schedule to the remaining suppliers[\s\S]*K\. Patel/);
-    // The chair extends the stuck action.
+    assert.match(await page.locator('#drawer #srState-risks').innerText(), /Minuted · 1 decision/);
+    // The chair extends the stuck action; what was typed survives the redraw.
+    await page.click('#drawer .sr-m[data-key="escalations"] .sr-m-head');
     await page.click('#drawer button[data-action="App.srEscalate"][data-id$="|ACT-004|extend"]');
     await page.waitForSelector('#modalBox .m-field input');
     await page.locator('#modalBox .m-field input').first().fill('2026-12-15');
     await page.locator('#modalBox .m-btns .btn:not(.ghost)').click();
     await page.waitForTimeout(400);
     assert.match(await page.locator('#drawer').innerText(), /extended to 15 Dec 2026, by Mei Chen/);
+    assert.equal(await page.inputValue('#drawer #srOutcome'), 'On track; phishing programme slipped');
+    assert.match(await page.inputValue('#drawer #srNote-risks'), /^Supplier clauses still the top risk\.\nDecision: Send the security schedule/);
+    // Noted, no change: the figures become the minute and the next item opens.
+    const blank = await page.evaluate(() => [...document.querySelectorAll('#drawer .sr-m')].map((el) => el.dataset.key).find((k) => k !== 'decisions' && !document.getElementById('srNote-' + k).value.trim()));
+    await page.click('#drawer .sr-m[data-key="' + blank + '"] .sr-m-head');
+    await page.click('#drawer .sr-m[data-key="' + blank + '"] button[data-action="App.srNoted"]');
+    assert.match(await page.inputValue('#drawer #srNote-' + blank), /Noted, no change\.$/);
+    assert.notEqual(await page.locator('#drawer .sr-m.sr-on').getAttribute('data-key'), blank, 'moves on to the next item');
+    assert.match(await page.locator('#drawer #srState-' + blank).innerText(), /Noted, no change/);
+    assert.match(await page.locator('#drawer #srProgress').innerText(), /^\d+ of \d+ items minuted$/);
+    // The preview is the email as it will be sent, before anything is saved.
+    await page.click('#drawer button[data-action="App.srPreviewMinutes"]');
+    await page.waitForSelector('#drawer .sr-preview-mail');
+    const preview = await page.locator('#drawer .sr-preview-mail').innerText();
+    assert.match(preview, /Supplier clauses still the top risk/);
+    assert.match(preview, /New 1[\s\S]*Send the security schedule to the remaining suppliers[\s\S]*K\. Patel/);
+    assert.doesNotMatch(preview, /Decision:/, 'decision lines are actions, not part of the note');
     await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForTimeout(600);
     const drawer = await page.locator('#drawer').innerText();
