@@ -6,6 +6,7 @@ import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
 import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
+import HeroShot from '../../components/HeroShot.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
 
@@ -149,11 +150,7 @@ const faqLd = {
       </div>
 
       <div class="svc-hero-image">
-        <img
-          src={`${base}assets/iso27001-engagement.svg`}
-          alt="Sample ISO 27001 engagement plan showing milestone deliverables and current progress"
-          loading="eager"
-        />
+        <HeroShot id="postureScan" />
       </div>
     </div>
   </section>

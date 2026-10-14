@@ -1,0 +1,30 @@
+---
+/*
+  HeroShot — a real Checkpoint screen for a service page's hero, framed
+  for the dark hero and linking to the same screen in the demo.
+  Usage: <HeroShot id="soaIso27001" />
+  Images and sizes: src/data/checkpoint-shots.ts.
+*/
+import { SHOTS, type ShotId } from '../data/checkpoint-shots';
+interface Props { id: ShotId }
+const { id } = Astro.props;
+const s = SHOTS[id];
+const base = import.meta.env.BASE_URL || '/';
+const src = `${base}assets/checkpoint-shots/${s.file}`;
+const demo = `${base}checkpoint/?demo=1&view=${s.view}${s.fw ? `&fw=${s.fw}` : ''}`;
+---
+<figure class="hero-shot">
+  <a class="hs-frame" href={demo} target="_blank" rel="noopener" aria-label="Open this screen in the Checkpoint demo">
+    <img src={`${src}-900.webp`} width={900} height={Math.round(900 * s.height / s.width)} alt={s.alt} loading="eager" decoding="async" />
+  </a>
+  <figcaption>Checkpoint, demo tenant with sample data. <a href={demo} target="_blank" rel="noopener">Open it in the demo</a></figcaption>
+</figure>
+
+<style>
+  .hero-shot { position: relative; margin: 0 auto; max-width: 560px; }
+  .hs-frame { display: block; border-radius: 12px; overflow: hidden; border: 1px solid rgba(250, 247, 241, .14); box-shadow: 0 30px 60px rgba(0, 0, 0, .5); }
+  .hs-frame:focus-visible { outline: 3px solid #F0A97F; outline-offset: 3px; }
+  .hero-shot img { display: block; width: 100%; height: auto; max-width: none; filter: none; }
+  .hero-shot figcaption { font-size: .8rem; color: rgba(250, 247, 241, .65); margin-top: .7rem; text-align: center; }
+  .hero-shot figcaption a { color: #F0A97F; text-decoration: underline; }
+</style>
