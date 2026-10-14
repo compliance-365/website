@@ -11,7 +11,7 @@
   <g font-family="Inter, system-ui" font-size="14">
     <!-- Three framework cards -->
     <g transform="translate(90,80)">
-      <rect width="300" height="180" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <rect width="300" height="180" rx="14" fill="#fff" stroke="#F5F0E8"/>
       <rect width="300" height="46" rx="14" fill="#0B0B0C"/>
       <rect y="30" width="300" height="16" fill="#0B0B0C"/>
       <text x="20" y="30" fill="#fff" font-weight="700" font-size="15">ISO 27001</text>
@@ -22,7 +22,7 @@
     </g>
 
     <g transform="translate(450,80)">
-      <rect width="300" height="180" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <rect width="300" height="180" rx="14" fill="#fff" stroke="#F5F0E8"/>
       <rect width="300" height="46" rx="14" fill="#BE4A1E"/>
       <rect y="30" width="300" height="16" fill="#BE4A1E"/>
       <text x="20" y="30" fill="#fff" font-weight="700" font-size="15">ISO 27701</text>
@@ -33,7 +33,7 @@
     </g>
 
     <g transform="translate(810,80)">
-      <rect width="300" height="180" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <rect width="300" height="180" rx="14" fill="#fff" stroke="#F5F0E8"/>
       <rect width="300" height="46" rx="14" fill="#A63A12"/>
       <rect y="30" width="300" height="16" fill="#A63A12"/>
       <text x="20" y="30" fill="#fff" font-weight="700" font-size="15">ISO 42001</text>

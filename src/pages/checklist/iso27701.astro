@@ -128,13 +128,13 @@ const TOTAL_Q = QUESTIONS.length;
       <div id="stage-1" class="stage">
         <div class="card spot" style="padding:2rem;">
           <h2 style="margin:0 0 0.5rem;">Tell us about your environment</h2>
-          <p class="muted" style="margin:0 0 2rem;">A few details to tailor your roadmap. Required fields are marked <span style="color:#dc2626;">*</span>.</p>
+          <p class="muted" style="margin:0 0 2rem;">A few details to tailor your roadmap. Required fields are marked <span style="color:#9B1C2E;">*</span>.</p>
 
           <div style="display:flex;flex-direction:column;gap:1.5rem;">
             {ENV_FIELDS.map(field => (
               <div class="env-field" data-field-id={field.id}>
                 <label for={field.id} style="display:block;font-weight:600;color:#0B0B0C;margin-bottom:0.4rem;font-size:0.9rem;">
-                  {field.label}{field.required && <span style="color:#dc2626;">&nbsp;*</span>}
+                  {field.label}{field.required && <span style="color:#9B1C2E;">&nbsp;*</span>}
                 </label>
                 {field.type === 'text' && (
                   <input type="text" id={field.id} name={field.id} placeholder={field.placeholder} style="width:100%;padding:10px 14px;border:1px solid #C8C3B8;border-radius:8px;font-size:0.95rem;outline:none;" />
@@ -152,7 +152,7 @@ const TOTAL_Q = QUESTIONS.length;
             ))}
           </div>
 
-          <div id="env-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
+          <div id="env-error" style="display:none;background:#F9E9EA;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
             Please complete the required fields.
           </div>
 
@@ -224,7 +224,7 @@ const TOTAL_Q = QUESTIONS.length;
 
             <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
               <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;"><- Back to environment</button>
-              <button type="button" id="resetBtn" class="btn btn-outline" style="cursor:pointer;color:#dc2626;border-color:#fca5a5;">Reset all answers</button>
+              <button type="button" id="resetBtn" class="btn btn-outline" style="cursor:pointer;color:#9B1C2E;border-color:#fca5a5;">Reset all answers</button>
             </div>
           </div>
 
@@ -339,7 +339,7 @@ const TOTAL_Q = QUESTIONS.length;
           [stage1, stage2, stage3].forEach((el, i) => { if (el) el.style.display = (i + 1 === n) ? '' : 'none'; });
           pills.forEach(p => {
             const s = parseInt(p.dataset.stage, 10);
-            p.style.background = (s === n) ? '#BE4A1E' : (s < n ? '#16a34a' : '#DDD8CF');
+            p.style.background = (s === n) ? '#BE4A1E' : (s < n ? '#046A4E' : '#DDD8CF');
             p.style.color = (s === n) ? 'var(--on-accent)' : (s < n ? 'var(--on-status)' : 'var(--text-subtle)');
           });
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -358,8 +358,8 @@ const TOTAL_Q = QUESTIONS.length;
             if (!el) return;
             if (!env[id]) {
               valid = false;
-              el.style.borderColor = '#dc2626';
-              el.style.background  = '#fef2f2';
+              el.style.borderColor = '#9B1C2E';
+              el.style.background  = '#F9E9EA';
             } else {
               el.style.borderColor = '#C8C3B8';
               el.style.background  = 'white';
@@ -390,9 +390,9 @@ const TOTAL_Q = QUESTIONS.length;
               o.style.borderColor = '#C8C3B8';
             });
             btn.classList.add('active');
-            if (val === 2) { btn.style.background = '#16a34a'; btn.style.color = 'var(--on-status)'; btn.style.borderColor = '#16a34a'; }
-            else if (val === 1) { btn.style.background = '#d97706'; btn.style.color = 'var(--on-status)'; btn.style.borderColor = '#d97706'; }
-            else { btn.style.background = '#dc2626'; btn.style.color = 'white'; btn.style.borderColor = '#dc2626'; }
+            if (val === 2) { btn.style.background = '#046A4E'; btn.style.color = 'var(--on-status)'; btn.style.borderColor = '#046A4E'; }
+            else if (val === 1) { btn.style.background = '#806300'; btn.style.color = 'var(--on-status)'; btn.style.borderColor = '#806300'; }
+            else { btn.style.background = '#9B1C2E'; btn.style.color = 'white'; btn.style.borderColor = '#9B1C2E'; }
             update();
           });
         });
@@ -471,17 +471,17 @@ const TOTAL_Q = QUESTIONS.length;
 
       function getBand(score, answered) {
         if (!answered) return { key: 'na', label: 'Not started', desc: 'Answer questions to score', color: '#6B6860' };
-        if (score >= 86) return { key: 'cr', label: 'Certification-Ready', desc: 'Strong posture — focus on evidence packaging and audit preparation', color: '#16a34a' };
+        if (score >= 86) return { key: 'cr', label: 'Certification-Ready', desc: 'Strong posture — focus on evidence packaging and audit preparation', color: '#046A4E' };
         if (score >= 61) return { key: 'nar', label: 'Nearly Audit-Ready', desc: 'Close minor gaps and tighten evidence packaging', color: '#BE4A1E' };
-        if (score >= 31) return { key: 'pr', label: 'Partially Ready', desc: 'Many core elements in place — focus and prioritisation needed', color: '#d97706' };
-        return { key: 'hr', label: 'High Risk', desc: 'Missing foundational privacy controls — structured remediation required', color: '#dc2626' };
+        if (score >= 31) return { key: 'pr', label: 'Partially Ready', desc: 'Many core elements in place — focus and prioritisation needed', color: '#806300' };
+        return { key: 'hr', label: 'High Risk', desc: 'Missing foundational privacy controls — structured remediation required', color: '#9B1C2E' };
       }
 
       function barColor(pct) {
         if (pct === null) return '#C8C3B8';
-        if (pct >= 75) return '#16a34a';
-        if (pct >= 50) return '#d97706';
-        return '#dc2626';
+        if (pct >= 75) return '#046A4E';
+        if (pct >= 50) return '#806300';
+        return '#9B1C2E';
       }
 
       function buildAIContext() {
@@ -535,7 +535,7 @@ const TOTAL_Q = QUESTIONS.length;
           document.querySelectorAll(`.section-count[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
           document.querySelectorAll(`.section-progress[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
           document.querySelectorAll(`.section-nav-item[data-section="${grp.key}"]`).forEach(el => {
-            el.style.background = a === total ? '#dcfce7' : '#F5F0E8';
+            el.style.background = a === total ? '#EAF4EF' : '#F5F0E8';
             el.style.color = a === total ? '#166534' : '#3A3632';
           });
           const bar = document.querySelector(`.domain-bar[data-section="${grp.key}"]`);

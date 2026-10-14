@@ -6,6 +6,7 @@ import RelatedResources from '../../components/RelatedResources.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
 import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
+import HeroShot from '../../components/HeroShot.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import EssentialsAlert from '../../components/EssentialsAlert.astro';
 
@@ -160,11 +161,7 @@ const faqLd = {
       </div>
 
       <div class="svc-hero-image">
-        <img
-          src={`${base}assets/essential-eight-maturity.svg`}
-          alt="Sample Essential Eight maturity dashboard showing current state and gaps across all 8 ASD controls"
-          loading="eager"
-        />
+        <HeroShot id="postureScan" />
       </div>
     </div>
   </section>
