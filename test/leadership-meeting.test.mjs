@@ -150,6 +150,9 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForTimeout(300);
     assert.match(await page.locator('#drawer').innerText(), /closed \(Finished last week\)/i);
 
+    // The item being worked on stays open after a decision is recorded.
+    assert.match(await page.locator('#drawer .sr-m.sr-on').innerText(), /closed \(Finished last week\)/i);
+    await page.click('#drawer .sr-m[data-key="risks"] .sr-m-head');
     const acceptBtn = page.locator('#drawer [data-action="App.srRiskDecision"][data-id$="|accept"]').first();
     const rid = (await acceptBtn.getAttribute('data-id')).split('|')[1];
     await acceptBtn.click();

@@ -161,9 +161,11 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForTimeout(300);
     assert.match(await page.locator('#secReviewCard').innerText(), /Agenda sent/);
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
-    await page.waitForSelector('#drawer #srDec-actions');
+    await page.waitForSelector('#drawer #srNote-actions', { state: 'attached' });
+    await page.click('#drawer .sr-m[data-key="posture"] .sr-m-head');
     await page.fill('#drawer #srNote-posture', 'Score up after MFA rollout.');
-    await page.fill('#drawer #srDec-actions', 'Enforce MFA for contractors - Sam Okafor - 2026-11-30');
+    await page.click('#drawer .sr-m[data-key="actions"] .sr-m-head');
+    await page.fill('#drawer #srNote-actions', 'Decision: Enforce MFA for contractors - Sam Okafor - 2026-11-30');
     await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForTimeout(500);
     const drawer = await page.locator('#drawer').innerText();

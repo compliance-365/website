@@ -7315,7 +7315,7 @@
     var acts = actions || [];
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px">' +
       '<h2 style="margin-bottom:4px">Minutes: ' + e(m.org || 'Security') + ' leadership security meeting ' + agenda.n + '</h2>' +
-      '<p style="color:#666;font-size:13px;margin-top:0">' + e(m.date) + ' \u00b7 ' + e(agenda.label) + ' \u00b7 Present: ' + e(r.present || 'not recorded') + '</p>' +
+      '<p style="color:#666;font-size:13px;margin-top:0">' + e(m.date) + ' \u00b7 ' + e(agenda.label) + ' \u00b7 Present: ' + e(r.present || 'not recorded') + (r.apologies ? ' \u00b7 Apologies: ' + e(r.apologies) : '') + '</p>' +
       ((r.attendance && r.attendance.absent && r.attendance.absent.length) ? '<p style="color:#666;font-size:13px;margin-top:0">Absent: ' + e(r.attendance.absent.join(', ')) + (r.attendance.quorum === false ? ' \u00b7 <b style="color:#c0392b">held without the chair or the ISMS owner</b>' : '') + '</p>' : '') +
       (r.outcome ? '<p style="font-size:15px;margin:12px 0;padding:10px 12px;background:#f4f6f8;border-left:3px solid #2e86c1"><b>Outcome:</b> ' + e(r.outcome) + '</p>' : '') +
       agenda.items.map(function (i) {
@@ -8708,6 +8708,68 @@
       out.push({ title: title, owner: owner, due: due });
     });
     return out;
+  }
+
+  /* One box per agenda item while minuting: a line starting "Decision:"
+     (or "Action:") is an action, "what - owner - due date"; every other
+     line is the minute. Plain lines are never read as actions, so
+     prose with a dash in it stays prose. */
+  var MINUTE_DECISION_RE = /^\s*(?:[-*•]\s*)?(?:decision|action)\s*:\s*/i;
+  function splitMinuteText(text, today) {
+    var note = [], dec = [];
+    String(text || '').split(/\r?\n/).forEach(function (line) {
+      if (MINUTE_DECISION_RE.test(line)) { var l = line.replace(MINUTE_DECISION_RE, '').trim(); if (l) dec.push(l); }
+      else note.push(line);
+    });
+    return { note: note.join('\n').trim(), decisions: dec.length ? parseReviewActionLines(dec.join('\n'), today) : [] };
+  }
+  /* "Noted, no change": the facts on the agenda become the minute. */
+  function minuteNotedText(facts) {
+    var f = (facts || []).map(function (x) { return String(x || '').trim().replace(/[.;]\s*$/, ''); }).filter(Boolean).slice(0, 3);
+    return (f.length ? f.join('; ') + '. ' : '') + 'Noted, no change.';
+  }
+  /* Who was invited: the chair, the ISMS owner, the facilitator, then
+     anyone else on the invite list (named from the directory where an
+     address is known). One entry per person. */
+  function securityReviewInvitees(setup, emails, nameOf) {
+    var s = setup || {}, out = [], seen = {};
+    var add = function (name, role) {
+      var n = String(name || '').trim();
+      if (!n || seen[n.toLowerCase()]) return;
+      seen[n.toLowerCase()] = true;
+      out.push({ name: n, role: role });
+    };
+    add(s.chair, 'Chair'); add(s.owner, 'ISMS owner'); add(s.facilitator, 'Facilitator');
+    (emails || []).forEach(function (e) {
+      var n = (typeof nameOf === 'function' && nameOf(e)) || '';
+      if (n && seen[n.toLowerCase()]) return;
+      if (!n) {
+        /* No directory name: "m.chen@" is Mei Chen when Mei Chen is
+           already listed; otherwise the address reads as "M. Chen". */
+        var parts = String(e).split('@')[0].split(/[._-]+/).filter(Boolean);
+        if (parts.length >= 2) {
+          var first = parts[0].toLowerCase(), last = parts[parts.length - 1].toLowerCase();
+          if (out.some(function (p) { var w = p.name.toLowerCase().split(/\s+/); return w.length > 1 && w[w.length - 1] === last && w[0].charAt(0) === first.charAt(0) && (first.length === 1 || w[0] === first); })) return;
+          n = parts.map(function (x) { return x.length === 1 ? x.toUpperCase() + '.' : x.charAt(0).toUpperCase() + x.slice(1); }).join(' ');
+        }
+      }
+      add(n || e, '');
+    });
+    return out;
+  }
+  /* Present, apologies and others, as the minutes record them. */
+  function securityReviewAttendanceText(ticked, others) {
+    var present = (ticked || []).filter(function (x) { return x.present; }).map(function (x) { return x.name; });
+    String(others || '').split(/\s*[,;\n]\s*/).map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (n) {
+      if (!present.some(function (p) { return p.toLowerCase() === n.toLowerCase(); })) present.push(n);
+    });
+    return { present: present.join(', '), apologies: (ticked || []).filter(function (x) { return !x.present; }).map(function (x) { return x.name; }).join(', ') };
+  }
+  /* How far through the agenda the minutes are: an item counts once it
+     has a minute, or an action or decision was recorded against it. */
+  function minutesProgress(itemKeys, texts, decidedKeys) {
+    var done = (itemKeys || []).filter(function (k) { return String((texts || {})[k] || '').trim() || (decidedKeys || []).indexOf(k) !== -1; });
+    return { done: done.length, total: (itemKeys || []).length, doneKeys: done };
   }
 
   /* The register snapshot that is the evidence for each record-based
@@ -12735,7 +12797,7 @@
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
     objectivesCheckResult: objectivesCheckResult,
-    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
+    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, splitMinuteText: splitMinuteText, minuteNotedText: minuteNotedText, securityReviewInvitees: securityReviewInvitees, securityReviewAttendanceText: securityReviewAttendanceText, minutesProgress: minutesProgress, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,

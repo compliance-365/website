@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.159.0',
+    date: '2026-10-14',
+    entries: [
+      'Leadership meeting minutes are quicker to take. Each agenda item now has one box: write what was said, and start a line with "Decision:" (what - owner - due date) to raise it as an action when the minutes are saved. The separate "+ Decision" form and second box are gone.',
+      'Noted, no change: one click on any item records its figures as they stand and moves on to the next item.',
+      'One item at a time: only the item being minuted is open, with Next to move on. The others fold to a single line showing whether they are done, and a progress line shows how many items are minuted.',
+      'Attendance: tick who was there from the invite list (the chair, the ISMS owner, the facilitator and the attendees), add anyone else, and those not ticked are recorded as apologies in the minutes.',
+      'Preview minutes shows the email exactly as attendees will receive it, with new decisions marked "New", before anything is saved or sent.'
+    ]
+  },
+  {
     version: '1.158.1',
     date: '2026-10-10',
     entries: [

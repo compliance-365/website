@@ -204,9 +204,9 @@ describe('in the browser', { skip: skipReason || false }, () => {
     assert.ok((await doc.content()).includes('Leadership security meeting 3 agenda'));
     await doc.close();
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
-    await page.waitForSelector('#drawer #srNote-mr');
-    await page.fill('#drawer #srNote-mr', 'ISMS remains suitable. Budget approved for the penetration test.');
-    await page.fill('#drawer #srDec-mr', 'Commission external penetration test - Sam Okafor - 2027-01-31');
+    await page.waitForSelector('#drawer #srNote-mr', { state: 'attached' });
+    await page.click('#drawer .sr-m[data-key="mr"] .sr-m-head');
+    await page.fill('#drawer #srNote-mr', 'ISMS remains suitable. Budget approved for the penetration test.\nDecision: Commission external penetration test - Sam Okafor - 2027-01-31');
     // The management review meeting needs the chair's conclusion first.
     await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForTimeout(300);

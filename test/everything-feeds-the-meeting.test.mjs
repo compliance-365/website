@@ -192,6 +192,8 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForSelector('#drawer button[data-action="App.recordSecurityReview"]');
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
     await page.waitForTimeout(300);
+    // Items fold while minuting; open the incidents item to read it.
+    await page.click('#drawer .sr-m[data-key="incidents"] .sr-m-head');
     const minutes = await page.locator('#drawer').innerText();
     assert.ok(!/Questionnaire gaps not yet treated: Lumen/.test(minutes));
     assert.match(minutes, /INC-0002[\s\S]*risk R-\d{3}/);
