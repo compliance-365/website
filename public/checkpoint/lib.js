@@ -11186,6 +11186,156 @@
     return def ? def.cia.slice() : [];
   }
   /* Which of C, I and A the register covers, for the "is it balanced" view. */
+  /* ===== AI system impact assessment (ISO/IEC 42001 A.5.2-A.5.5) =====
+     Structured to the shape ISO/IEC 42005:2025 (AI system impact
+     assessment, published May 2025) describes: who is affected, the
+     benefits and harms to individuals, groups and society (including
+     the environment), how likely and how severe, what reduces it, a
+     documented decision, and what triggers a reassessment. Stored as one
+     JSON object on the AI system: { assessedBy, assessedOn, nextDue,
+     triggers: [keys], entries: [{ party, scope, area, benefit, harm, L,
+     I, mitigation, rL, rI }], decision, decisionBy, decisionOn, notes }. */
+  var AI_IMPACT_SCOPES = [
+    { key: 'individual', label: 'Individuals', control: 'AI.5.4' },
+    { key: 'group', label: 'Groups of people', control: 'AI.5.4' },
+    { key: 'society', label: 'Society', control: 'AI.5.5' },
+    { key: 'environment', label: 'Environment', control: 'AI.5.5' }
+  ];
+  var AI_IMPACT_AREAS = [
+    { key: 'fairness', label: 'Fairness and discrimination', prompt: 'Could outcomes differ unfairly by age, sex, disability, ethnicity, location or another attribute?' },
+    { key: 'privacy', label: 'Privacy and personal information', prompt: 'What personal or sensitive information goes in or comes out, and could it be exposed or misused?' },
+    { key: 'safety', label: 'Safety and wellbeing', prompt: 'Could a wrong or late output cause physical, psychological or financial harm?' },
+    { key: 'autonomy', label: 'Rights and autonomy', prompt: 'Does it affect a decision about someone, and can they understand, question or appeal it?' },
+    { key: 'transparency', label: 'Transparency', prompt: 'Do people know they are dealing with AI, and can the output be explained?' },
+    { key: 'accessibility', label: 'Accessibility and inclusion', prompt: 'Does it work as well for people with disability, low literacy or limited English?' },
+    { key: 'work', label: 'Work and livelihoods', prompt: 'Does it change jobs, workloads or how people are assessed at work?' },
+    { key: 'information', label: 'Information and trust', prompt: 'Could it produce or spread false or misleading content?' },
+    { key: 'environment', label: 'Environmental', prompt: 'What energy, water or hardware does it use, and is that proportionate to the benefit?' }
+  ];
+  var AI_IMPACT_TRIGGERS = [
+    { key: 'model', label: 'The model or its version changes' },
+    { key: 'data', label: 'A new data source, or a change in the data used' },
+    { key: 'use', label: 'The intended use or the people using it changes' },
+    { key: 'affected', label: 'A new group of people is affected' },
+    { key: 'incident', label: 'An incident, complaint or near miss involving the system' },
+    { key: 'law', label: 'A relevant law, regulation or contract changes' },
+    { key: 'annual', label: 'Twelve months since the last assessment' }
+  ];
+  var AI_IMPACT_DECISIONS = ['Proceed', 'Proceed with conditions', 'Do not proceed'];
+
+  function aiImpactScore(L, I) {
+    var l = Math.max(0, Math.min(5, Number(L) || 0)), i = Math.max(0, Math.min(5, Number(I) || 0));
+    return l * i;
+  }
+  function aiImpactBand(score) { return score >= 15 ? 'High' : score >= 8 ? 'Medium' : score > 0 ? 'Low' : 'Not rated'; }
+
+  /* What the record shows and what it is still missing, in the order an
+     auditor sampling A.5.2-A.5.5 would ask. status is derived, never
+     typed: Completed needs entries for individuals or groups AND for
+     society or the environment, every rated harm mitigated, residual
+     rated, and a signed decision. */
+  function aiImpactSummary(sys, today) {
+    var ia = (sys && sys.impactAssessment) || null;
+    var entries = (ia && ia.entries || []).filter(function (e) { return e && (e.harm || e.benefit || e.party); });
+    var scored = entries.map(function (e) {
+      var inh = aiImpactScore(e.L, e.I), res = (e.rL || e.rI) ? aiImpactScore(e.rL, e.rI) : null;
+      return { e: e, inherent: inh, residual: res, band: aiImpactBand(res !== null ? res : inh) };
+    });
+    var scopeOf = function (k) { return scored.filter(function (x) { return x.e.scope === k; }).length; };
+    var hasPeople = scopeOf('individual') + scopeOf('group') > 0;
+    var hasSociety = scopeOf('society') + scopeOf('environment') > 0;
+    var unmitigated = scored.filter(function (x) { return x.inherent >= 8 && !String(x.e.mitigation || '').trim(); });
+    var unrated = scored.filter(function (x) { return x.e.harm && !x.inherent; });
+    var noResidual = scored.filter(function (x) { return x.inherent && x.residual === null; });
+    var high = scored.filter(function (x) { return (x.residual !== null ? x.residual : x.inherent) >= 15; });
+    var decided = !!(ia && ia.decision && ia.decisionBy);
+    var t = today || new Date().toISOString().slice(0, 10);
+    var overdue = !!(ia && ia.nextDue && ia.nextDue < t);
+    var gaps = [];
+    if (!entries.length) gaps.push('No impacts recorded yet');
+    else {
+      if (!hasPeople) gaps.push('No impact on individuals or groups considered (A.5.4)');
+      if (!hasSociety) gaps.push('No societal or environmental impact considered (A.5.5)');
+      if (unrated.length) gaps.push(unrated.length + ' harm(s) not rated for likelihood and severity');
+      if (unmitigated.length) gaps.push(unmitigated.length + ' medium or high harm(s) with no mitigation');
+      if (noResidual.length) gaps.push(noResidual.length + ' harm(s) with no residual rating after mitigation');
+      if (!decided) gaps.push('No documented decision and sign-off');
+    }
+    if (ia && !(ia.triggers || []).length) gaps.push('No reassessment triggers set');
+    if (ia && !ia.nextDue) gaps.push('No next reassessment date');
+    if (overdue) gaps.push('Reassessment overdue since ' + ia.nextDue);
+    var status = !entries.length ? 'Not started'
+      : (hasPeople && hasSociety && !unrated.length && !unmitigated.length && !noResidual.length && decided && !overdue) ? 'Completed' : 'In progress';
+    return {
+      status: status, entries: scored, hasPeople: hasPeople, hasSociety: hasSociety, high: high.length,
+      unmitigated: unmitigated.length, decided: decided, decision: (ia && ia.decision) || '', overdue: overdue,
+      nextDue: (ia && ia.nextDue) || '', gaps: gaps,
+      controls: [].concat(entries.length ? ['AI.5.2', 'AI.5.3'] : [], hasPeople ? ['AI.5.4'] : [], hasSociety ? ['AI.5.5'] : [])
+    };
+  }
+
+  /* ===== EU AI Act: when each obligation applies =====
+     As amended by the Digital Omnibus on AI (in force late July 2026).
+     Article 4 (AI literacy) applies to providers and deployers whatever
+     the tier, reworded by the Omnibus from "ensure a sufficient level"
+     to "take measures to support" AI literacy. Dates are the published
+     application dates; check the Official Journal text for edge cases
+     (Annex I products, Article 50(2) for systems already on the market). */
+  var AI_ACT_APPLIES = {
+    literacy: { date: '2025-02-02', label: 'AI literacy (Article 4) and prohibited practices (Article 5)' },
+    Prohibited: { date: '2025-02-02', label: 'Prohibited practices (Article 5)' },
+    gpai: { date: '2025-08-02', label: 'General-purpose AI model obligations' },
+    Limited: { date: '2026-08-02', label: 'Transparency duties (Article 50); machine-readable marking of AI-generated content (Article 50(2)) from 2 December 2026 for systems already on the market' },
+    High: { date: '2027-12-02', label: 'High-risk obligations for Annex III systems (Annex I, AI in regulated products, from 2 August 2028)' },
+    Minimal: { date: '', label: 'No tier-specific obligations' }
+  };
+  var AI_ACT_LITERACY = 'Take measures to support AI literacy among staff and others operating AI on your behalf, suited to their role and the context of use (Article 4, as amended by the 2026 Digital Omnibus). Applies to providers and deployers whatever the risk tier.';
+  function aiActTimeline(tier, today) {
+    var t = today || new Date().toISOString().slice(0, 10);
+    var keys = ['literacy'].concat(tier === 'Prohibited' ? ['Prohibited'] : tier === 'High' ? ['Limited', 'High'] : tier === 'Limited' ? ['Limited'] : []);
+    return keys.map(function (k) {
+      var x = AI_ACT_APPLIES[k];
+      return { key: k, date: x.date, label: x.label, applies: !!x.date && x.date <= t };
+    });
+  }
+
+  /* ===== Australia: Guidance for AI Adoption (National AI Centre,
+     October 2025, which replaced the 2024 Voluntary AI Safety Standard)
+     — its six essential practices, crosswalked to ISO/IEC 42001 and to
+     what Checkpoint holds for each. Coverage is computed from the AI
+     register and the ISO 42001 control statuses, so it reads as
+     evidence, not a claim. */
+  var AU_AI_PRACTICES = [
+    { key: 'accountable', label: 'Decide who is accountable', iso: ['5.1', '5.3', 'AI.3.2', 'AI.10.2'], check: 'owner' },
+    { key: 'impacts', label: 'Understand impacts and plan accordingly', iso: ['6.1.4', 'AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5'], check: 'impact' },
+    { key: 'risks', label: 'Measure and manage risks', iso: ['6.1.2', '6.1.3', '8.2', '8.3'], check: 'risk' },
+    { key: 'share', label: 'Share essential information', iso: ['AI.8.2', 'AI.8.3', 'AI.8.5'], check: 'intended' },
+    { key: 'test', label: 'Test and monitor', iso: ['AI.6.2.4', 'AI.6.2.6', '9.1'], check: 'monitor' },
+    { key: 'human', label: 'Maintain human control', iso: ['AI.9.2', 'AI.9.4'], check: 'oversight' }
+  ];
+  /* systems: the AI register; controls: iso42001 control rows
+     ({ id, st, app }); aiRisks: count of open AI risks in the risk
+     register. Each practice: covered (every system has the field, or
+     the related controls are Implemented), partly, or not yet. */
+  function auAiPracticeCoverage(systems, controls, aiRisks, today) {
+    systems = systems || [];
+    var byCode = {};
+    (controls || []).forEach(function (c) { byCode[c.id] = c; });
+    function share(pred) { return systems.length ? systems.filter(pred).length / systems.length : 0; }
+    return AU_AI_PRACTICES.map(function (p) {
+      var annex = p.iso.filter(function (c) { return /^AI\./.test(c) && byCode[c] && byCode[c].app; });
+      var implemented = annex.filter(function (c) { return byCode[c].st === 'Implemented'; }).length;
+      var frac = p.check === 'owner' ? share(function (s) { return s.owner && s.owner !== 'Unassigned'; })
+        : p.check === 'impact' ? share(function (s) { return aiImpactSummary(s, today).status === 'Completed'; })
+        : p.check === 'risk' ? (aiRisks > 0 ? 1 : 0)
+        : p.check === 'intended' ? share(function (s) { return String(s.intendedUse || '').trim(); })
+        : p.check === 'monitor' ? (annex.length ? implemented / annex.length : 0)
+        : share(function (s) { return String(s.humanOversight || '').trim(); });
+      var level = !systems.length ? 'none' : frac >= 1 ? 'covered' : frac > 0 ? 'partly' : 'none';
+      return { key: p.key, label: p.label, iso: p.iso, level: level, pct: Math.round(frac * 100), implemented: implemented, annex: annex.length };
+    });
+  }
+
   /* Defender software names are lower-case vendor product ids
      ('windows_11', 'windows_server_2022', 'macos', 'office', 'chrome').
      The operating system is the Windows/macOS/Linux family itself;
@@ -11277,6 +11427,30 @@
     var rank = { fail: 0, review: 1, pass: 2 };
     var result = configs.reduce(function (w, c) { return rank[c.result] < rank[w] ? c.result : w; }, 'pass');
     return { configs: configs, result: result };
+  }
+
+  /* Flat-framework scan suggestions (control code, no maturity
+     levels): map is check -> [codes] a pass can mark Implemented;
+     partial is check -> [codes] the check speaks to only in part, where
+     a pass suggests In progress at most. Worst suggestion wins per code.
+     Returns code -> { st, labels }. Used for ISO 42001, whose Annex A
+     controls are about documenting and governing AI systems: a
+     Microsoft 365 security check is at best partial evidence of one. */
+  function flatSuggestions(map, partial, results, labels) {
+    var RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+    var out = {};
+    function add(id, code, isPartial) {
+      var r = results && results[id];
+      var st = r === 'pass' ? (isPartial ? 'In progress' : 'Implemented') : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+      if (!st) return;
+      var e = out[code] || (out[code] = { st: st, labels: [] });
+      if (RANK[st] < RANK[e.st]) e.st = st;
+      var lbl = (labels && labels[id]) || id;
+      if (e.labels.indexOf(lbl) === -1) e.labels.push(lbl);
+    }
+    Object.keys(map || {}).forEach(function (id) { (map[id] || []).forEach(function (c) { add(id, c, false); }); });
+    Object.keys(partial || {}).forEach(function (id) { (partial[id] || []).forEach(function (c) { add(id, c, true); }); });
+    return out;
   }
 
   /* Scan results -> suggested status per Essential Eight level row.
@@ -13216,7 +13390,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,

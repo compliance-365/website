@@ -865,7 +865,7 @@ function showModal(opts) {
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk', 'addOpportunity', 'editOpportunity', 'reviewOpportunity', 'deleteOpportunity', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
     'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'requestVendorQuestionnaireLink', 'markVendorReviewed', 'toggleVendorPublicListed',
-    'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
+    'saveAiSystem', 'advanceAiImpactStatus', 'openAiImpact', 'aiIaAddRow', 'aiIaRemoveRow', 'saveAiImpact', 'aiIaRaiseRisk', 'aiImpactReport', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
     'setClauseStatus', 'verifyClause', 'setClauseEvidence', 'setClauseOwner', 'confirmClauseRequirement', 'removeClauseRequirement',
     'addControlEvidenceFiles', 'addClauseEvidenceFiles', 'syncEvidenceFolders',
@@ -3235,6 +3235,30 @@ function showModal(opts) {
     /* Monthly security review: the agenda with its figures, and the
        minutes against each item (Clause 9.1; 9.3 when the meeting is
        held as the management review). window._secReview = the record. */
+    aiimpact: function () {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === window._aiIaFor; });
+      if (!a) return null;
+      var L = window.CheckpointLib, d = a.impactAssessment || { entries: [] }, sum = L.aiImpactSummary(a);
+      var lab = function (list, k) { var x = list.find(function (y) { return y.key === k; }); return x ? x.label : k || ''; };
+      var sc = function (l, i) { var s = L.aiImpactScore(l, i); return s ? s + ' (' + L.aiImpactBand(s) + ')' : '–'; };
+      return {
+        title: 'AI system impact assessment: ' + a.name,
+        frameworkAgnostic: true,
+        dashboard: { intro: a.id + '. ' + (a.purpose || '') + ' Status ' + sum.status + (d.assessedOn ? ', assessed ' + fmtDateY(d.assessedOn) + (d.assessedBy ? ' by ' + d.assessedBy : '') : '') + (d.nextDue ? '; reassess by ' + fmtDateY(d.nextDue) : '') + '. Evidence for ISO/IEC 42001 A.5.2 to A.5.5, structured as ISO/IEC 42005:2025 describes.' },
+        sections: [
+          { heading: 'The system', pageBreak: false, html: '<table class="rpt-table"><tbody>' +
+            [['Intended use', a.intendedUse], ['Our role', a.orgRole], ['Supplier', a.vendor], ['Model type', a.modelType], ['Data sources', a.dataSources], ['Data provenance', a.dataProvenance], ['Human oversight', a.humanOversight], ['Responsibilities (provider and customer)', a.responsibilities], ['EU AI Act tier (screening)', a.riskTier]]
+              .map(function (r) { return '<tr><td><b>' + esc(r[0]) + '</b></td><td>' + esc(r[1] || 'Not recorded') + '</td></tr>'; }).join('') + '</tbody></table>' },
+          { heading: 'Impacts', pageBreak: false, html: d.entries && d.entries.length ? '<table class="rpt-table"><thead><tr><th>Who</th><th>Area</th><th>Benefit</th><th>Possible harm</th><th>Inherent</th><th>What reduces it</th><th>Residual</th></tr></thead><tbody>' +
+            d.entries.map(function (e) { return '<tr><td>' + esc(e.party || '') + '<br><span class="rpt-just">' + esc(lab(L.AI_IMPACT_SCOPES, e.scope)) + '</span></td><td>' + esc(lab(L.AI_IMPACT_AREAS, e.area)) + '</td><td>' + esc(e.benefit || '') + '</td><td>' + esc(e.harm || '') + '</td><td>' + sc(e.L, e.I) + '</td><td>' + esc(e.mitigation || '') + (e.risk ? '<br><span class="rpt-just">Risk ' + esc(e.risk) + '</span>' : '') + '</td><td>' + sc(e.rL, e.rI) + '</td></tr>'; }).join('') +
+            '</tbody></table>' : '<p>No impacts recorded.</p>' },
+          { heading: 'Decision and reassessment', pageBreak: false, html: '<p class="rpt-plain"><b>Decision:</b> ' + esc(d.decision || 'Not decided') + (d.decisionBy ? ', by ' + esc(d.decisionBy) : '') + (d.decisionOn ? ' on ' + esc(fmtDateY(d.decisionOn)) : '') + '</p>' +
+            (d.notes ? '<p class="rpt-plain">' + esc(d.notes) + '</p>' : '') +
+            '<p class="rpt-plain"><b>Reassess by</b> ' + esc(d.nextDue ? fmtDateY(d.nextDue) : 'not set') + ', or earlier if: ' + esc((d.triggers || []).map(function (k) { return lab(L.AI_IMPACT_TRIGGERS, k).toLowerCase(); }).join('; ') || 'no triggers set') + '.</p>' +
+            (sum.gaps.length ? '<p class="rpt-just">Still to complete: ' + esc(sum.gaps.join('; ')) + '.</p>' : '') }
+        ]
+      };
+    },
     toolboxtalk: function () {
       var c = courseById(window._talkCourse);
       if (!c || !c.talk) return null;
@@ -10048,12 +10072,129 @@ function showModal(opts) {
      control every tracked system evidences merely by existing in the
      register at all; everything else requires the specific field that
      backs it to be filled in. */
+  /* ===== AI impact assessment (A.5.2-A.5.5, ISO/IEC 42005 shape) =====
+     Edited in the drawer as a draft (window._aiIaDraft) so adding or
+     removing a row never loses what was typed; saved as one JSON
+     object on the AI system. The status column is derived from it. */
+  function aiIaBlank(sys) {
+    var today = new Date().toISOString().slice(0, 10);
+    return { assessedBy: (Graph.getAccount && Graph.getAccount() && Graph.getAccount().name) || '', assessedOn: today,
+      nextDue: window.CheckpointLib.addMonthsIso ? window.CheckpointLib.addMonthsIso(today, 12) : '',
+      triggers: ['model', 'data', 'use', 'incident', 'annual'],
+      entries: [{ party: '', scope: 'individual', area: 'privacy', benefit: '', harm: '', L: '', I: '', mitigation: '', rL: '', rI: '' },
+        { party: '', scope: 'society', area: 'environment', benefit: '', harm: '', L: '', I: '', mitigation: '', rL: '', rI: '' }],
+      decision: '', decisionBy: '', decisionOn: '', notes: '' };
+  }
+  function aiIaReadForm() {
+    var d = window._aiIaDraft;
+    if (!d) return null;
+    var v = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+    d.assessedBy = v('aiIaBy').trim(); d.assessedOn = v('aiIaOn'); d.nextDue = v('aiIaNext');
+    d.decision = v('aiIaDecision'); d.decisionBy = v('aiIaDecisionBy').trim(); d.notes = v('aiIaNotes').trim();
+    if (d.decision && !d.decisionOn) d.decisionOn = new Date().toISOString().slice(0, 10);
+    if (!d.decision) d.decisionOn = '';
+    d.triggers = [];
+    document.querySelectorAll('#aiIaTriggers input[type=checkbox]').forEach(function (cb) { if (cb.checked) d.triggers.push(cb.dataset.key); });
+    d.entries = d.entries.map(function (e, i) {
+      var f = function (k) { return v('aiIa_' + k + '_' + i); };
+      return { party: f('party').trim(), scope: f('scope'), area: f('area'), benefit: f('benefit').trim(), harm: f('harm').trim(),
+        L: f('L'), I: f('I'), mitigation: f('mitigation').trim(), rL: f('rL'), rI: f('rI'), risk: e.risk || '' };
+    });
+    return d;
+  }
+  function aiIaScoreSelect(id, val, label) {
+    return '<select class="mini" id="' + id + '" aria-label="' + esc(label) + '"><option value="">–</option>' +
+      [1, 2, 3, 4, 5].map(function (n) { return '<option' + (String(val) === String(n) ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>';
+  }
+  function renderAiImpactEditor(sys) {
+    var L = window.CheckpointLib, d = window._aiIaDraft;
+    var sum = L.aiImpactSummary({ impactAssessment: d });
+    var ro = !!READONLY;
+    var opt = function (list, cur, key, lab) { return list.map(function (x) { return '<option value="' + esc(x[key]) + '"' + (x[key] === cur ? ' selected' : '') + '>' + esc(x[lab]) + '</option>'; }).join(''); };
+    var rows = d.entries.map(function (e, i) {
+      var area = L.AI_IMPACT_AREAS.find(function (a) { return a.key === e.area; });
+      var inh = L.aiImpactScore(e.L, e.I), res = (e.rL || e.rI) ? L.aiImpactScore(e.rL, e.rI) : null;
+      return '<div class="ai-ia-row">' +
+        '<div class="ai-ia-head"><b>Impact ' + (i + 1) + '</b><span class="chip ' + (L.aiImpactBand(res !== null ? res : inh) === 'High' ? 'st-Open' : L.aiImpactBand(res !== null ? res : inh) === 'Medium' ? 'st-Intreatment' : 'st-Notstarted') + '">' + esc(L.aiImpactBand(res !== null ? res : inh)) + (res !== null ? ' residual' : '') + '</span>' +
+        (ro ? '' : '<button class="lnk src" data-action="App.aiIaRemoveRow" data-id="' + i + '">Remove</button>') + '</div>' +
+        '<div class="ai-ia-grid">' +
+        '<label>Who is affected<input class="mini" id="aiIa_party_' + i + '" value="' + esc(e.party) + '" placeholder="e.g. patients submitting tickets"></label>' +
+        '<label>Scope<select class="mini" id="aiIa_scope_' + i + '">' + opt(L.AI_IMPACT_SCOPES, e.scope, 'key', 'label') + '</select></label>' +
+        '<label>Area<select class="mini" id="aiIa_area_' + i + '">' + opt(L.AI_IMPACT_AREAS, e.area, 'key', 'label') + '</select></label>' +
+        '<label class="wide">Benefit<input class="mini" id="aiIa_benefit_' + i + '" value="' + esc(e.benefit) + '" placeholder="What this gives them"></label>' +
+        '<label class="wide">Possible harm<textarea class="mini" id="aiIa_harm_' + i + '" placeholder="' + esc(area ? area.prompt : '') + '">' + esc(e.harm) + '</textarea></label>' +
+        '<label>Likelihood (1-5)' + aiIaScoreSelect('aiIa_L_' + i, e.L, 'Likelihood') + '</label>' +
+        '<label>Severity (1-5)' + aiIaScoreSelect('aiIa_I_' + i, e.I, 'Severity') + '</label>' +
+        '<label class="wide">What reduces it<textarea class="mini" id="aiIa_mitigation_' + i + '" placeholder="Controls, human review, design changes, opt-outs">' + esc(e.mitigation) + '</textarea></label>' +
+        '<label>Residual likelihood' + aiIaScoreSelect('aiIa_rL_' + i, e.rL, 'Residual likelihood') + '</label>' +
+        '<label>Residual severity' + aiIaScoreSelect('aiIa_rI_' + i, e.rI, 'Residual severity') + '</label>' +
+        '</div>' +
+        (e.risk ? '<div class="src">In the risk register as <b>' + esc(e.risk) + '</b></div>'
+          : (!ro && (res !== null ? res : inh) >= 8 ? '<button class="btn ghost sm" data-action="App.aiIaRaiseRisk" data-id="' + i + '">Add to risk register</button>' : '')) +
+        '</div>';
+    }).join('');
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">' + esc(sys.id) + ' · AI system impact assessment</div><h2>' + esc(sys.name) + '</h2>' +
+      '<p class="src" style="margin-top:6px">ISO/IEC 42001 A.5.2 to A.5.5, structured as ISO/IEC 42005:2025 describes. Cover individuals or groups AND society or the environment; rate each harm, record what reduces it, rate what is left, then record a decision.</p>' +
+      '<div class="d-sec"><h4>Status: ' + esc(sum.status) + '</h4>' + (sum.gaps.length ? '<ul class="ai-ia-gaps">' + sum.gaps.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul>' : '<p class="src">Nothing missing.</p>') + '</div>' +
+      '<div class="d-sec"><h4>Assessment</h4><div class="ai-ia-grid">' +
+      '<label>Assessed by<input class="mini" id="aiIaBy" value="' + esc(d.assessedBy) + '"></label>' +
+      '<label>Assessed on<input class="mini" type="date" id="aiIaOn" value="' + esc(d.assessedOn) + '"></label>' +
+      '<label>Reassess by<input class="mini" type="date" id="aiIaNext" value="' + esc(d.nextDue) + '"></label></div>' +
+      '<div id="aiIaTriggers" class="ai-ia-triggers"><span class="src">Reassess earlier if:</span>' + L.AI_IMPACT_TRIGGERS.map(function (t) {
+        return '<label><input type="checkbox" data-key="' + t.key + '"' + ((d.triggers || []).indexOf(t.key) > -1 ? ' checked' : '') + '> ' + esc(t.label) + '</label>';
+      }).join('') + '</div></div>' +
+      '<div class="d-sec"><h4>Impacts</h4>' + rows + (ro ? '' : '<button class="btn ghost sm" data-action="App.aiIaAddRow">+ Add an impact</button>') + '</div>' +
+      '<div class="d-sec"><h4>Decision</h4><div class="ai-ia-grid">' +
+      '<label>Decision<select class="mini" id="aiIaDecision"><option value="">Not decided</option>' + L.AI_IMPACT_DECISIONS.map(function (x) { return '<option' + (d.decision === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></label>' +
+      '<label>Decided by<input class="mini" id="aiIaDecisionBy" value="' + esc(d.decisionBy) + '" placeholder="Name and role"></label>' +
+      '<label class="wide">Conditions or notes<textarea class="mini" id="aiIaNotes">' + esc(d.notes) + '</textarea></label></div></div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
+      (ro ? '' : '<button class="btn sm" data-action="App.saveAiImpact">Save assessment</button>') +
+      '<button class="btn ghost sm" data-action="App.openAiSystem" data-id="' + esc(sys.id) + '">Back</button></div>';
+    openDrawerUi('Impact assessment ' + sys.name);
+  }
+
+  /* The Australian Guidance for AI Adoption card on the AI register:
+     each of its six practices, the ISO 42001 references it maps to, and
+     how much of it the register and control statuses evidence today. */
+  function renderAuAiPractices() {
+    var el = document.getElementById('aiAuPractices');
+    if (!el) return;
+    var systems = S.aiSystems || [];
+    var ctrls = (S.controls || []).filter(function (c) { return c.fw === 'iso42001'; });
+    var aiRisks = (S.risks || []).filter(function (r) { return window.CheckpointLib.isAiRisk(r) && r.status !== 'Closed'; }).length;
+    var cov = window.CheckpointLib.auAiPracticeCoverage(systems, ctrls, aiRisks);
+    var chip = { covered: ['st-Implemented', 'Evidenced'], partly: ['st-Intreatment', 'Partly'], none: ['st-Notstarted', 'Not yet'] };
+    el.innerHTML = '<div class="card" style="padding:14px 16px;margin:12px 0"><h3 style="margin:0 0 4px">Australia: Guidance for AI Adoption</h3>' +
+      '<p class="src" style="margin:0 0 8px">The National AI Centre\'s six essential practices (October 2025, replacing the 2024 Voluntary AI Safety Standard), mapped to ISO/IEC 42001 and to what this register shows. Voluntary guidance, not law.</p>' +
+      cov.map(function (p) {
+        var c = chip[p.level];
+        return '<div class="ai-au-row"><span class="chip ' + c[0] + '">' + c[1] + (p.level === 'partly' ? ' ' + p.pct + '%' : '') + '</span><b>' + esc(p.label) + '</b><span class="src">ISO 42001 ' + esc(p.iso.join(', ')) + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  function aiReadAnnexFields(a) {
+    var v = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    a.intendedUse = v('aiIntendedUse'); a.dataProvenance = v('aiDataProvenance');
+    a.orgRole = v('aiOrgRole'); a.responsibilities = v('aiResponsibilities');
+  }
   function aiControlsFor(sys) {
     var codes = ['AI.4.2'];
     if (sys.owner) codes.push('AI.3.2');
     if (sys.dataSources) codes.push('AI.7.2', 'AI.7.3');
+    if (sys.dataProvenance) codes.push('AI.7.5');
+    if (sys.intendedUse) codes.push('AI.9.4', 'AI.8.2');
+    if (sys.responsibilities) codes.push('AI.10.2');
     if (sys.humanOversight) codes.push('AI.6.2.6', 'AI.9.2');
-    if (sys.impactAssessmentStatus === 'Completed') codes.push('AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5');
+    /* A structured assessment evidences the A.5 controls it actually
+       covers (A.5.4 only with people in it, A.5.5 only with society or
+       the environment); a bare "Completed" status with no structured
+       record still counts, as it did before 1.164.0. */
+    var ia = sys.impactAssessment ? window.CheckpointLib.aiImpactSummary(sys).controls : [];
+    if (ia.length) codes.push.apply(codes, ia);
+    else if (sys.impactAssessmentStatus === 'Completed') codes.push('AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5');
     if (sys.vendor) codes.push('AI.10.3');
     if (sys.riskTier) codes.push('AI.9.3');
     return codes;
@@ -10114,6 +10255,7 @@ function showModal(opts) {
     var wrap = document.getElementById('aiRows');
     if (!wrap) return;
     renderAiSystemsDashboard();
+    renderAuAiPractices();
     var tf = window._aiTierF || 'All';
     var sf = window._aiStatusF || 'All';
     document.getElementById('aiTierFilters').innerHTML = ['All'].concat(AI_RISK_TIERS).map(function (x) {
@@ -17911,25 +18053,17 @@ function showModal(opts) {
          evidences them. */
       S.iso42001Proposed = [];
       if (S.entitlements.iso42001 && window.CHECK_ISO42001) {
-        var ISO42001_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
-        var byIso42001 = {}; /* code -> { suggestedSt, checkLabels: [] } */
-        Object.keys(window.CHECK_ISO42001).forEach(function (checkId) {
-          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
-          if (!def) return;
-          var r = checkResult(def);
-          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
-          if (!suggestedSt) return;
-          window.CHECK_ISO42001[checkId].forEach(function (code) {
-            var entry = byIso42001[code] || (byIso42001[code] = { suggestedSt: suggestedSt, checkLabels: [] });
-            if (ISO42001_ST_RANK[suggestedSt] < ISO42001_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
-            entry.checkLabels.push(def.label);
-          });
-        });
+        /* CHECK_ISO42001_PARTIAL (extra.checkIso42001Partial): codes a
+           check speaks to only in part, where a pass suggests In
+           progress at most. See CheckpointLib.flatSuggestions(). */
+        var iso42Labels = {};
+        (window.CHECK_DEFS || []).forEach(function (d) { iso42Labels[d.id] = d.label; });
+        var byIso42001 = window.CheckpointLib.flatSuggestions(window.CHECK_ISO42001, window.CHECK_ISO42001_PARTIAL, allCheckResultsById(), iso42Labels);
         Object.keys(byIso42001).forEach(function (code) {
           var entry = byIso42001[code];
           var ctrl = S.controls.find(function (c) { return c.fw === 'iso42001' && c.id === code; });
-          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
-          S.iso42001Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.st) return;
+          S.iso42001Proposed.push({ checkLabel: entry.labels.join(' · '), code: code, from: ctrl.st, to: entry.st });
         });
       }
 
@@ -20541,7 +20675,7 @@ function showModal(opts) {
       if (!showing) {
         window._editingAiId = null;
         document.getElementById('aiPanelTitle').textContent = 'New AI system';
-        ['aiName', 'aiPurpose', 'aiOwner', 'aiModelType', 'aiVendor', 'aiDataSources', 'aiHumanOversight'].forEach(function (id) { document.getElementById(id).value = ''; });
+        ['aiName', 'aiPurpose', 'aiOwner', 'aiModelType', 'aiVendor', 'aiDataSources', 'aiHumanOversight', 'aiIntendedUse', 'aiDataProvenance', 'aiResponsibilities', 'aiOrgRole'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('aiImpactStatus').value = 'Not started';
         document.getElementById('aiLastReviewed').value = '';
         renderAiActQuestions({});
@@ -20579,6 +20713,10 @@ function showModal(opts) {
       document.getElementById('aiImpactStatus').value = a.impactAssessmentStatus;
       document.getElementById('aiLastReviewed').value = a.lastReviewed || '';
       document.getElementById('aiHumanOversight').value = a.humanOversight || '';
+      document.getElementById('aiIntendedUse').value = a.intendedUse || '';
+      document.getElementById('aiDataProvenance').value = a.dataProvenance || '';
+      document.getElementById('aiOrgRole').value = a.orgRole || '';
+      document.getElementById('aiResponsibilities').value = a.responsibilities || '';
       // renderAiActQuestions() recomputes a fresh suggestion from the
       // ticked boxes and writes it into aiRiskTier — set the select
       // back to what was actually SAVED afterward, so re-opening a
@@ -20612,6 +20750,10 @@ function showModal(opts) {
           a.impactAssessmentStatus = document.getElementById('aiImpactStatus').value;
           a.lastReviewed = document.getElementById('aiLastReviewed').value;
           a.humanOversight = document.getElementById('aiHumanOversight').value.trim();
+          aiReadAnnexFields(a);
+          /* A structured assessment decides the status; the select only
+             applies to systems assessed outside Checkpoint. */
+          if (a.impactAssessment) a.impactAssessmentStatus = window.CheckpointLib.aiImpactSummary(a).status;
           await Store.updateAiSystem(a);
           audit('AI system updated', 'AISystem', a.id, prevStatus, a.impactAssessmentStatus);
           log('<b>' + a.id + '</b> updated: ' + esc(a.name) + '.');
@@ -20632,6 +20774,7 @@ function showModal(opts) {
             humanOversight: document.getElementById('aiHumanOversight').value.trim(),
             spId: (prefill && prefill.spId) || ''
           };
+          aiReadAnnexFields(na);
           await Store.addAiSystem(na);
           audit('AI system added', 'AISystem', na.id, '', na.name + ' (' + na.riskTier + ')');
           log('<b>' + na.id + '</b> added to the AI systems register: ' + esc(na.name) + '.');
@@ -20656,32 +20799,115 @@ function showModal(opts) {
       // "why the tool suggested this" rather than restated as fact, so
       // that disagreement reads as expected, not as a bug.
       var classification = window.CheckpointLib.classifyAiActRisk(a.aiActAnswers || {});
-      var aiActSection = (a.aiActAnswers && Object.keys(a.aiActAnswers).some(function (k) { return a.aiActAnswers[k]; }))
-        ? '<div class="d-sec"><h4>EU AI Act obligations</h4>' +
-          '<div style="font-size:11.5px;color:var(--paper-dim);margin-bottom:6px">Why the tool suggested ' + esc(classification.tier) + ': ' + classification.reasons.map(esc).join('; ') + '</div>' +
-          classification.obligations.map(function (o) { return '<div class="d-kv"><span>' + esc(o) + '</span></div>'; }).join('') +
-          '<div style="font-size:11px;color:var(--paper-dim);margin-top:6px;font-style:italic">Screening aid, not legal advice — confirm borderline or high-stakes classifications with counsel.</div></div>'
-        : '';
+      var answered = a.aiActAnswers && Object.keys(a.aiActAnswers).some(function (k) { return a.aiActAnswers[k]; });
+      var timeline = window.CheckpointLib.aiActTimeline(a.riskTier);
+      var aiActSection = '<div class="d-sec"><h4>EU AI Act obligations</h4>' +
+          (answered ? '<div style="font-size:11.5px;color:var(--paper-dim);margin-bottom:6px">Why the tool suggested ' + esc(classification.tier) + ': ' + classification.reasons.map(esc).join('; ') + '</div>' +
+            classification.obligations.map(function (o) { return '<div class="d-kv"><span>' + esc(o) + '</span></div>'; }).join('') : '') +
+          '<div class="d-kv"><span>' + esc(window.CheckpointLib.AI_ACT_LITERACY) + '</span></div>' +
+          '<div style="font-size:11.5px;color:var(--paper-dim);margin:8px 0 4px">When they apply (' + esc(a.riskTier) + ' tier):</div>' +
+          timeline.map(function (t) { return '<div class="d-kv"><span>' + esc(t.label) + '</span><b>' + (t.date ? (t.applies ? 'Applies since ' : 'From ') + esc(fmtDateY(t.date)) : '') + '</b></div>'; }).join('') +
+          '<div style="font-size:11px;color:var(--paper-dim);margin-top:6px;font-style:italic">Screening aid, not legal advice. Dates reflect the AI Act as amended by the 2026 Digital Omnibus; confirm borderline or high-stakes classifications with counsel.</div></div>';
+      var iaSum = window.CheckpointLib.aiImpactSummary(a);
+      var iaSection = '<div class="d-sec"><h4>Impact assessment</h4>' +
+        '<div class="d-kv"><span>Status</span><b><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></b></div>' +
+        (a.impactAssessment ? '<div class="d-kv"><span>Impacts recorded</span><b>' + iaSum.entries.length + (iaSum.high ? ', ' + iaSum.high + ' high' : '') + '</b></div>' +
+          '<div class="d-kv"><span>Decision</span><b>' + esc(iaSum.decision || 'Not decided') + '</b></div>' +
+          '<div class="d-kv"><span>Reassess by</span><b>' + (iaSum.nextDue ? fmtDateY(iaSum.nextDue) + (iaSum.overdue ? ' (overdue)' : '') : 'Not set') + '</b></div>' +
+          (iaSum.gaps.length ? '<ul class="ai-ia-gaps">' + iaSum.gaps.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul>' : '')
+          : '<p class="src">No structured assessment yet. Start one to evidence A.5.2 to A.5.5: who is affected, the benefits and harms, what reduces them, and a decision.</p>') +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
+        (READONLY ? '' : '<button class="btn sm" data-action="App.openAiImpact" data-id="' + a.id + '">' + (a.impactAssessment ? 'Open impact assessment' : 'Start impact assessment') + '</button>') +
+        (a.impactAssessment ? '<button class="btn ghost sm" data-action="App.aiImpactReport" data-id="' + a.id + '">Assessment report</button>' : '') + '</div></div>';
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(a.riskTier) + ' risk (EU AI Act)</div><h2>' + esc(a.name) + '</h2>' +
         '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(a.purpose) + '</p>' +
         '<div class="d-sec"><h4>Governance</h4>' +
-        '<div class="d-kv"><span>Impact assessment</span><b><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></b></div>' +
         '<div class="d-kv"><span>Last reviewed</span><b>' + (a.lastReviewed ? fmtDate(a.lastReviewed) : 'Never') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + '</b></div>' +
         '<div class="d-kv"><span>Supplier</span><b>' + esc(a.vendor || '—') + '</b></div>' +
         '<div class="d-kv"><span>Model type</span><b>' + esc(a.modelType || '—') + '</b></div>' +
         '<div class="d-kv"><span>Data sources</span><b>' + esc(a.dataSources || '—') + '</b></div>' +
-        '<div class="d-kv"><span>Human oversight</span><b>' + esc(a.humanOversight || 'Not documented') + '</b></div></div>' +
-        aiActSection +
+        '<div class="d-kv"><span>Human oversight</span><b>' + esc(a.humanOversight || 'Not documented') + '</b></div>' +
+        '<div class="d-kv"><span>Intended use</span><b>' + esc(a.intendedUse || 'Not documented') + '</b></div>' +
+        '<div class="d-kv"><span>Data provenance</span><b>' + esc(a.dataProvenance || 'Not documented') + '</b></div>' +
+        '<div class="d-kv"><span>Our role</span><b>' + esc(a.orgRole || 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Provider and customer responsibilities</span><b>' + esc(a.responsibilities || 'Not documented') + '</b></div></div>' +
+        iaSection + aiActSection +
         '<div class="d-sec"><h4>ISO 42001 controls evidenced</h4>' + (linkedControls || '<div class="d-kv"><span>None yet — document more fields to evidence more controls</span></div>') + '</div>' +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
-        '<button class="btn sm" data-action="App.advanceAiImpactStatus" data-id="' + a.id + '">Advance impact assessment</button>' +
+        (a.impactAssessment || READONLY ? '' : '<button class="btn ghost sm" data-action="App.advanceAiImpactStatus" data-id="' + a.id + '">Mark assessed outside Checkpoint: next status</button>') +
         '<button class="btn ghost sm" data-action="App.editAiSystem" data-id="' + a.id + '">Edit</button>' +
         '</div>' + recordHistoryHtml('AISystem', [a.id], 6);
       openDrawerUi('AI system ' + a.name);
     },
+
+    openAiImpact: function (id) {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      window._aiIaFor = id;
+      window._aiIaDraft = a.impactAssessment ? JSON.parse(JSON.stringify(a.impactAssessment)) : aiIaBlank(a);
+      if (!window._aiIaDraft.entries) window._aiIaDraft.entries = [];
+      renderAiImpactEditor(a);
+    },
+    aiIaAddRow: function () {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === window._aiIaFor; });
+      var d = aiIaReadForm();
+      if (!a || !d) return;
+      d.entries.push({ party: '', scope: 'individual', area: 'fairness', benefit: '', harm: '', L: '', I: '', mitigation: '', rL: '', rI: '' });
+      renderAiImpactEditor(a);
+    },
+    aiIaRemoveRow: function (i) {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === window._aiIaFor; });
+      var d = aiIaReadForm();
+      if (!a || !d) return;
+      d.entries.splice(Number(i), 1);
+      renderAiImpactEditor(a);
+    },
+    saveAiImpact: async function () {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === window._aiIaFor; });
+      var d = aiIaReadForm();
+      if (!a || !d) return;
+      d.entries = d.entries.filter(function (e) { return e.party || e.harm || e.benefit; });
+      var prev = a.impactAssessmentStatus;
+      a.impactAssessment = d;
+      a.impactAssessmentStatus = window.CheckpointLib.aiImpactSummary(a).status;
+      a.lastReviewed = new Date().toISOString().slice(0, 10);
+      busy(true);
+      try {
+        await Store.updateAiSystem(a);
+        audit('AI impact assessment saved', 'AISystem', a.id, prev, a.impactAssessmentStatus + ' (' + d.entries.length + ' impact(s)' + (d.decision ? ', ' + d.decision : '') + ')');
+      } catch (e) { warn(e); }
+      busy(false);
+      toast('Impact assessment saved: <b>' + esc(a.impactAssessmentStatus) + '</b>');
+      renderAiSystems();
+      App.openAiSystem(a.id);
+    },
+    aiIaRaiseRisk: async function (i) {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === window._aiIaFor; });
+      var d = aiIaReadForm();
+      if (!a || !d || !d.entries[Number(i)]) return;
+      var e = d.entries[Number(i)], L = window.CheckpointLib;
+      var area = L.AI_IMPACT_AREAS.find(function (x) { return x.key === e.area; });
+      var rid = nextRegId(S.risks, 'R-');
+      var owner = a.owner && a.owner !== 'Unassigned' ? a.owner : ((Graph.getAccount() && Graph.getAccount().name) || 'Practitioner');
+      var iaControl = e.scope === 'society' || e.scope === 'environment' ? 'AI.5.5' : 'AI.5.4';
+      var r = { id: rid, title: a.name + ': ' + (area ? area.label.toLowerCase() : 'AI impact') + (e.party ? ' for ' + e.party : ''), cat: 'AI Governance', cia: [], src: 'AI impact assessment',
+        L: Number(e.L) || 3, I: Number(e.I) || 3, controls: [iaControl, 'AI.5.2'],
+        owner: owner, status: 'Open', treat: 'Treat', actions: [], threat: '', vulnerability: '', consequence: e.harm || '', type: 'Threat' };
+      if (e.rL && e.rI) { r.resL = Number(e.rL); r.resI = Number(e.rI); }
+      busy(true);
+      try {
+        await Store.addRisk(r);
+        e.risk = rid;
+        audit('Risk raised from AI impact assessment', 'Risk', rid, a.id, r.title);
+        toast('Risk <b>' + rid + '</b> added. Save the assessment to keep the link.');
+      } catch (err) { warn(err); }
+      busy(false);
+      renderAiImpactEditor(a);
+    },
+    aiImpactReport: function (id) { window._aiIaFor = id; App.report('aiimpact'); },
 
     advanceAiImpactStatus: async function (id) {
       var a = (S.aiSystems || []).find(function (x) { return x.id === id; });
@@ -28557,6 +28783,7 @@ function showModal(opts) {
         }
         if (moduleId === 'iso42001' && content.extra && content.extra.checkIso42001) {
           Object.assign(window.CHECK_ISO42001, content.extra.checkIso42001);
+          if (content.extra.checkIso42001Partial) Object.assign(window.CHECK_ISO42001_PARTIAL = window.CHECK_ISO42001_PARTIAL || {}, content.extra.checkIso42001Partial);
         }
         if (moduleId === 'iso27701' && content.extra && content.extra.checkIso27701) {
           Object.assign(window.CHECK_ISO27701, content.extra.checkIso27701);
