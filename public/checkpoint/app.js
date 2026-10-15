@@ -894,7 +894,7 @@ function showModal(opts) {
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
     'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
-    'addManualObjective', 'editObjective',
+    'addManualObjective', 'editObjective', 'addLibraryObjectives',
     /* Approving writes to the Answer library; AI drafting is gated for
        the same reason aiInterpretEvidence is. Matching evidence and
        exporting are read-only and open to a Viewer. */
@@ -949,7 +949,7 @@ function showModal(opts) {
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
     'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining',
-    'toggleAddObjective', 'toggleAddAsset'
+    'toggleAddObjective', 'toggleAddAsset', 'toggleObjectiveLibrary'
   ]);
 
   function isMutatingAction(path) {
@@ -14495,7 +14495,14 @@ function showModal(opts) {
       kpiTile({ value: overdue.length, label: 'Past due date', tone: 'warn',
         meter: { value: overdue.length, max: objectives.length },
         sub: overdue.length ? 'due date has passed' : 'nothing overdue' }) +
-      kpiTile({ value: achieved.length, label: 'Achieved', meter: { value: achieved.length, max: objectives.length } });
+      kpiTile({ value: achieved.length, label: 'Achieved', meter: { value: achieved.length, max: objectives.length } }) +
+      (function () {
+        var cov = window.CheckpointLib.objectiveCiaCoverage(objectives);
+        var gaps = ['C', 'I', 'A'].filter(function (x) { return !cov[x]; });
+        var names = { C: 'confidentiality', I: 'integrity', A: 'availability' };
+        return '<div class="card kpi obj-cov"><div class="obj-cov-row">' + ['C', 'I', 'A'].map(function (x) { return '<span class="cia-chip ' + x.toLowerCase() + (cov[x] ? '' : ' off') + '" title="' + names[x] + ': ' + cov[x] + ' objective' + (cov[x] === 1 ? '' : 's') + '">' + x + ' ' + cov[x] + '</span>'; }).join('') + '</div>' +
+          '<span>What the objectives protect</span><div class="src">' + (!objectives.length ? 'Choose objectives covering C, I and A' : gaps.length ? 'Nothing yet for ' + gaps.map(function (x) { return names[x]; }).join(', ').replace(/, ([^,]*)$/, ' or $1') + ': <button class="lnk" data-action="App.toggleObjectiveLibrary" data-id="' + gaps[0] + '">choose one</button>' : 'Confidentiality, integrity and availability all covered') + '</div></div>';
+      })();
     runCountUps(el);
   }
   /* Objectives Checkpoint suggested are measured from its records: the
@@ -14525,6 +14532,47 @@ function showModal(opts) {
     _objectiveSyncBusy = false;
   }
 
+  function ciaChips(tags) {
+    var names = { C: 'Confidentiality', I: 'Integrity', A: 'Availability' };
+    return (tags || []).length ? '<div class="cia-row">' + tags.map(function (x) { return '<span class="cia-chip ' + x.toLowerCase() + '" title="' + names[x] + '">' + x + '</span>'; }).join('') + '<span class="src">' + tags.map(function (x) { return names[x]; }).join(', ') + '</span></div>' : '';
+  }
+  /* The objectives library: pick any number, filter by what they protect,
+     and add them with one owner and date. Checkpoint measures the ones
+     marked so; the client tracks the rest. */
+  function renderObjectiveLibrary() {
+    var el = document.getElementById('objLibraryPanel');
+    if (!el) return;
+    var st = window._objLib || (window._objLib = { filter: 'all', picked: {} });
+    var all = window.CheckpointLib.objectiveLibrary(entitledFrameworks().concat('iso27001'), S.objectives || []);
+    var why = {};
+    window.CheckpointLib.suggestedObjectives(entitledFrameworks().concat('iso27001'), S.objectives || [], S.risks || []).forEach(function (o) { if (o.why) why[o.key] = o.why; });
+    var shown = all.filter(function (o) { return st.filter === 'all' ? true : st.filter === 'measured' ? o.measured : o.cia.indexOf(st.filter) !== -1; });
+    var n = Object.keys(st.picked).filter(function (k) { return st.picked[k]; }).length;
+    var chip = function (k, label) { var c = k === 'all' ? all.length : k === 'measured' ? all.filter(function (o) { return o.measured; }).length : all.filter(function (o) { return o.cia.indexOf(k) !== -1; }).length; return '<button class="obj-filter' + (st.filter === k ? ' on' : '') + '" data-action="App.objLibFilter" data-id="' + k + '">' + label + ' <b>' + c + '</b></button>'; };
+    el.innerHTML = '<div class="obj-lib-head"><div><h3 style="margin:0">Objectives library</h3><p class="src" style="margin:4px 0 0">Tick the ones that fit. Each shows what it protects: <b>C</b>onfidentiality, <b>I</b>ntegrity, <b>A</b>vailability. A balanced set covers all three. You can edit any of them after adding, or write your own.</p></div>' +
+      '<button class="btn ghost sm" data-action="App.toggleObjectiveLibrary">Close</button></div>' +
+      '<div class="obj-filters">' + chip('all', 'All') + chip('C', 'Confidentiality') + chip('I', 'Integrity') + chip('A', 'Availability') + chip('measured', 'Measured by Checkpoint') + '</div>' +
+      (shown.length ? '<div class="obj-lib-grid">' + shown.map(function (o) {
+        var on = !!st.picked[o.key];
+        return '<button class="obj-lib-card' + (on ? ' on' : '') + '" data-action="App.objLibPick" data-id="' + esc(o.key) + '" aria-pressed="' + on + '">' +
+          '<span class="obj-tick">' + (on ? icon('check') : '') + '</span>' +
+          '<span class="obj-lib-body"><b>' + esc(o.title) + '</b>' +
+          '<span class="obj-lib-target">' + esc(o.target) + ' · ' + esc(o.metric.charAt(0).toLowerCase() + o.metric.slice(1)) + '</span>' +
+          '<span class="cia-row">' + o.cia.map(function (x) { return '<span class="cia-chip ' + x.toLowerCase() + '">' + x + '</span>'; }).join('') +
+            (o.measured ? '<span class="obj-measured">Measured by Checkpoint</span>' : '<span class="src">You record progress</span>') + '</span>' +
+          (why[o.key] ? '<span class="obj-why">' + esc(why[o.key]) + '</span>' : '') +
+          '</span></button>';
+      }).join('') + '</div>' : '<p class="src">Everything in this group is already in your register.</p>') +
+      '<div class="obj-lib-foot"><input class="mini" id="objLibOwner" placeholder="Owner (e.g. ISMS Manager)" value="' + esc(st.owner || '') + '">' +
+      '<input class="mini" id="objLibDue" type="date" aria-label="Achieve by" value="' + esc(st.due || daysFrom(365)) + '">' +
+      '<button class="btn sm" data-action="App.addLibraryObjectives"' + (n ? '' : ' disabled') + '>' + (n ? 'Add ' + n + ' objective' + (n === 1 ? '' : 's') : 'Tick objectives to add') + '</button></div>';
+  }
+
+  function objLibKeep() {
+    var st = window._objLib || (window._objLib = { filter: 'all', picked: {} });
+    var ow = document.getElementById('objLibOwner'), du = document.getElementById('objLibDue');
+    if (ow) st.owner = ow.value; if (du) st.due = du.value;
+  }
   function renderObjectives() {
     var wrap = document.getElementById('objRows');
     if (!wrap) return;
@@ -14540,7 +14588,7 @@ function showModal(opts) {
       var m = objectiveMeasure(o);
       return '<tr><td style="color:var(--paper)">' + esc(o.title) + (o.metric ? '<div class="src">' + esc(o.metric) + (o.target ? ' — ' + esc(o.target) : '') + '</div>' : '') +
         (m ? '<div class="src" style="color:' + (m.met ? 'var(--pass)' : 'var(--warn)') + '">Measured by Checkpoint: ' + esc(m.display) + '</div>' : '') +
-        (m && m.cia ? '<div class="src">Protects: ' + esc(m.cia.map(function (x) { return { C: 'confidentiality', I: 'integrity', A: 'availability' }[x]; }).join(', ')) + '</div>' : '') +
+        ciaChips(window.CheckpointLib.objectiveCia(o)) +
         (o.resources ? '<div class="src">Resources: ' + esc(o.resources) + '</div>' : '<div class="src" style="color:var(--warn)">No resources recorded (Clause 6.2)</div>') + '</td>' +
         '<td>' + esc(o.owner || '—') + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(o.due) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
@@ -23745,6 +23793,40 @@ function showModal(opts) {
       }
     },
 
+    toggleObjectiveLibrary: function (focus) {
+      var el = document.getElementById('objLibraryPanel');
+      var show = el.style.display === 'none' || ['C', 'I', 'A'].indexOf(focus) !== -1;
+      el.style.display = show ? 'block' : 'none';
+      if (show) {
+        window._objLib = window._objLib || { filter: 'all', picked: {} };
+        if (['C', 'I', 'A'].indexOf(focus) !== -1) window._objLib.filter = focus;
+        renderObjectiveLibrary();
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    },
+    objLibFilter: function (k) { objLibKeep(); window._objLib.filter = k; renderObjectiveLibrary(); },
+    objLibPick: function (key) { objLibKeep(); var st = window._objLib; st.picked[key] = !st.picked[key]; renderObjectiveLibrary(); },
+    addLibraryObjectives: async function () {
+      objLibKeep();
+      var st = window._objLib || { picked: {} };
+      var lib = window.CheckpointLib.objectiveLibrary(entitledFrameworks().concat('iso27001'), S.objectives || []);
+      var pick = lib.filter(function (o) { return st.picked[o.key]; });
+      if (!pick.length) return;
+      if (!String(st.owner || '').trim()) { toast('Name an owner: Clause 6.2 expects each objective to be owned.'); document.getElementById('objLibOwner').focus(); return; }
+      var maxO = (S.objectives || []).reduce(function (m, o) { var k = parseInt(String(o.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, k); }, 0);
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < pick.length; i++) {
+        var d = pick[i];
+        var o = { id: 'OBJ-' + String(maxO + 1 + n).padStart(3, '0'), title: d.title, metric: d.metric, target: d.target, cia: d.cia.slice(),
+          owner: st.owner.trim(), due: st.due || daysFrom(365), resources: d.resources || '', status: 'Not started', notes: d.measured ? 'Measured by Checkpoint.' : '' };
+        try { await Store.addObjective(o); n++; audit('Objective added', 'Objective', o.id, '', o.title + ' — ' + o.metric + ' [' + o.cia.join(', ') + ']'); } catch (e) { warn(e); break; }
+      }
+      busy(false);
+      st.picked = {};
+      if (n) toast(n + ' objective' + (n > 1 ? 's' : '') + ' added. Edit any of them to fit.');
+      renderObjectives(); renderObjectiveLibrary(); renderClauses(); renderNavCounts();
+    },
     addManualObjective: async function () {
       var title = document.getElementById('naObjTitle').value.trim();
       if (!title) { toast('Enter an objective first'); return; }
@@ -23757,8 +23839,10 @@ function showModal(opts) {
         owner: document.getElementById('naObjOwner').value.trim() || 'Unassigned',
         due: document.getElementById('naObjDue').value || daysFrom(365),
         resources: ((document.getElementById('naObjResources') || {}).value || '').trim(),
+        cia: ['C', 'I', 'A'].filter(function (x) { var el = document.getElementById('naObj' + x); return el && el.checked; }),
         status: 'Not started', notes: ''
       };
+      ['C', 'I', 'A'].forEach(function (x) { var el = document.getElementById('naObj' + x); if (el) el.checked = false; });
       busy(true);
       try {
         await Store.addObjective(o);
@@ -23774,6 +23858,7 @@ function showModal(opts) {
     editObjective: async function (id) {
       var o = (S.objectives || []).find(function (x) { return x.id === id; });
       if (!o) return;
+      var objCia = window.CheckpointLib.objectiveCia(o);
       var v = await showModal({
         title: 'Edit ' + o.id,
         fields: [
@@ -23783,6 +23868,9 @@ function showModal(opts) {
           { id: 'owner', label: 'Owner', value: o.owner },
           { id: 'due', label: 'Due date', type: 'date', value: o.due },
           { id: 'resources', label: 'Resources needed (people, time, budget, tools)', type: 'textarea', value: o.resources || '' },
+          { id: 'cC', label: 'Protects confidentiality (C)', type: 'checkbox', value: objCia.indexOf('C') !== -1 ? 'yes' : '' },
+          { id: 'cI', label: 'Protects integrity (I)', type: 'checkbox', value: objCia.indexOf('I') !== -1 ? 'yes' : '' },
+          { id: 'cA', label: 'Protects availability (A)', type: 'checkbox', value: objCia.indexOf('A') !== -1 ? 'yes' : '' },
           { id: 'status', label: 'Status', type: 'select', value: o.status, options: OBJECTIVE_STATUS_OPTS },
           { id: 'notes', label: 'Progress notes', type: 'textarea', value: o.notes || '' }
         ],
@@ -23795,6 +23883,7 @@ function showModal(opts) {
       try {
         o.title = v.title; o.metric = v.metric; o.target = v.target;
         o.owner = v.owner || 'Unassigned'; o.due = v.due || o.due; o.status = v.status; o.notes = v.notes; o.resources = v.resources || '';
+        o.cia = ['C', 'I', 'A'].filter(function (x) { return v['c' + x] === 'yes'; });
         await Store.updateObjective(o);
         audit('Objective updated', 'Objective', o.id, prevStatus, o.status + (o.notes ? ' — ' + o.notes : ''));
         toast('<b>' + o.id + '</b> updated');
@@ -25675,7 +25764,7 @@ function showModal(opts) {
       var n = 0;
       for (var i = 0; i < sugg.length; i++) {
         if (v['o' + i] !== 'yes') continue;
-        var o = { id: 'OBJ-' + String(maxO + 1 + n).padStart(3, '0'), title: sugg[i].title, metric: sugg[i].metric, target: sugg[i].target,
+        var o = { id: 'OBJ-' + String(maxO + 1 + n).padStart(3, '0'), title: sugg[i].title, metric: sugg[i].metric, target: sugg[i].target, cia: sugg[i].cia.slice(),
           owner: v.owner.trim(), due: v.due || daysFrom(365), resources: sugg[i].resources || '', status: 'Not started', notes: 'Measured by Checkpoint.' };
         try { await Store.addObjective(o); n++; audit('Objective added', 'Objective', o.id, '', o.title + ' — ' + o.metric); } catch (e) { warn(e); break; }
       }

@@ -1890,12 +1890,12 @@ window.DemoStore = (function () {
          KPI tiles show something real in the demo, not all-green or
          all-empty. */
       objectives: [
-        { id: 'OBJ-001', title: 'Reduce phishing simulation click-through rate', metric: 'Click rate on quarterly phishing simulations', target: 'Under 5% by Q4', owner: 'M. Chen', due: daysFrom(70), status: 'On track', notes: 'Last simulation: 7.2%, down from 14% two quarters ago.' },
-        { id: 'OBJ-002', title: 'Achieve ISO 27001 certification', metric: 'Certification audit outcome', target: 'Stage 2 audit passed with no major non-conformities', owner: 'S. Okafor', due: daysFrom(150), status: 'At risk', notes: 'Readiness at 34% per last management review — behind the pace needed for the planned audit date.' },
-        { id: 'OBJ-003', title: 'Close all Critical and High residual risks', metric: 'Count of open Critical/High residual risks', target: 'Zero by year end', owner: 'K. Patel', due: daysFrom(120), status: 'On track', notes: '' },
-        { id: 'OBJ-004', title: 'Complete security awareness training for all staff', metric: '% of staff with current Security Awareness completion', target: '100% by Q2', owner: 'M. Chen', due: daysFrom(-15), status: 'Missed', notes: 'Landed at 91% — five staff never completed the refresh. Rolled into OBJ-001\'s owner for chasing.' },
-        { id: 'OBJ-005', title: 'Stand up a documented internal audit programme', metric: 'Internal audits completed against the annual plan', target: '2 of 2 planned audits completed', owner: 'S. Okafor', due: daysFrom(-33), status: 'Achieved', notes: 'AUD-001 completed; AUD-002 (ISO 42001) scheduled and on track.' },
-        { id: 'OBJ-006', title: 'Roll out supplier security questionnaires to top-10 suppliers', metric: 'Suppliers with a received, current questionnaire response', target: '10 of 10 by Q3', owner: 'K. Patel', due: daysFrom(45), status: 'Not started', notes: '' }
+        { id: 'OBJ-001', cia: ['C', 'I'], title: 'Reduce phishing simulation click-through rate', metric: 'Click rate on quarterly phishing simulations', target: 'Under 5% by Q4', owner: 'M. Chen', due: daysFrom(70), status: 'On track', notes: 'Last simulation: 7.2%, down from 14% two quarters ago.' },
+        { id: 'OBJ-002', cia: ['C', 'I', 'A'], title: 'Achieve ISO 27001 certification', metric: 'Certification audit outcome', target: 'Stage 2 audit passed with no major non-conformities', owner: 'S. Okafor', due: daysFrom(150), status: 'At risk', notes: 'Readiness at 34% per last management review — behind the pace needed for the planned audit date.' },
+        { id: 'OBJ-003', cia: ['C', 'I', 'A'], title: 'Close all Critical and High residual risks', metric: 'Count of open Critical/High residual risks', target: 'Zero by year end', owner: 'K. Patel', due: daysFrom(120), status: 'On track', notes: '' },
+        { id: 'OBJ-004', cia: ['C', 'I'], title: 'Complete security awareness training for all staff', metric: '% of staff with current Security Awareness completion', target: '100% by Q2', owner: 'M. Chen', due: daysFrom(-15), status: 'Missed', notes: 'Landed at 91% — five staff never completed the refresh. Rolled into OBJ-001\'s owner for chasing.' },
+        { id: 'OBJ-005', cia: ['I'], title: 'Stand up a documented internal audit programme', metric: 'Internal audits completed against the annual plan', target: '2 of 2 planned audits completed', owner: 'S. Okafor', due: daysFrom(-33), status: 'Achieved', notes: 'AUD-001 completed; AUD-002 (ISO 42001) scheduled and on track.' },
+        { id: 'OBJ-006', cia: ['C', 'A'], title: 'Roll out supplier security questionnaires to top-10 suppliers', metric: 'Suppliers with a received, current questionnaire response', target: '10 of 10 by Q3', owner: 'K. Patel', due: daysFrom(45), status: 'Not started', notes: '' }
       ],
       calendar: [
         { id: 'CAL-001', title: 'Access control review — all systems', category: 'Access control review', freq: 'Annual', nextDue: daysFrom(45), lastCompleted: daysFrom(-320), owner: 'K. Patel', notes: '', status: 'Active' },
@@ -2493,7 +2493,9 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'Metric', text: {} }, { name: 'Target', text: {} },
       { name: 'Owner', text: {} }, { name: 'DueDate', text: {} }, { name: 'Status', text: {} },
       { name: 'ProgressNotes', text: { allowMultipleLines: true } },
-      { name: 'Resources', text: { allowMultipleLines: true } }
+      { name: 'Resources', text: { allowMultipleLines: true } },
+      /* What it protects: any of C, I, A, comma-separated. */
+      { name: 'Cia', text: {} }
     ],
     /* Information asset register, ISO 27001 A.5.9. Title carries the
        asset name. Source/SourceId key rows synced from Microsoft 365
@@ -3116,7 +3118,7 @@ window.SpStore = (function () {
        result, note and finding, as JSON. */
     Audits: ['Results'],
     /* Resources: what each objective needs (Clause 6.2 b). */
-    Objectives: ['Resources'],
+    Objectives: ['Resources', 'Cia'],
     /* Retirement: the disposal record (A.7.14). */
     Assets: ['Retirement'],
     /* Method and QuizLog: training formats and per-question effectiveness. */
@@ -3586,7 +3588,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
         objectives: objItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, metric: f.Metric || '', target: f.Target || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Not started', notes: f.ProgressNotes || '', resources: f.Resources || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, metric: f.Metric || '', target: f.Target || '', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Not started', notes: f.ProgressNotes || '', resources: f.Resources || '', cia: String(f.Cia || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean) };
         }).sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); }),
         calendar: calItems.map(function (i) {
           var f = i.fields;
@@ -4134,14 +4136,14 @@ window.SpStore = (function () {
     addObjective: async function (o) {
       o._sp = await addItem('Objectives', {
         Title: o.title, RefId: o.id, Metric: o.metric || '', Target: o.target || '',
-        Owner: o.owner, DueDate: o.due || '', Status: o.status || 'Not started', ProgressNotes: o.notes || '', Resources: o.resources || ''
+        Owner: o.owner, DueDate: o.due || '', Status: o.status || 'Not started', ProgressNotes: o.notes || '', Resources: o.resources || '', Cia: (o.cia || []).join(',')
       });
       S.objectives.push(o);
     },
     updateObjective: async function (o) {
       await patchItem('Objectives', o._sp, {
         Title: o.title, Metric: o.metric || '', Target: o.target || '',
-        Owner: o.owner, DueDate: o.due || '', Status: o.status, ProgressNotes: o.notes || '', Resources: o.resources || ''
+        Owner: o.owner, DueDate: o.due || '', Status: o.status, ProgressNotes: o.notes || '', Resources: o.resources || '', Cia: (o.cia || []).join(',')
       });
     },
     addCalendarItem: async function (c) {

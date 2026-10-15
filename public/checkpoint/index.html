@@ -1371,7 +1371,8 @@
     <!-- OBJECTIVES -->
     <section class="view" id="v-objectives">
       <div class="vhead"><div class="rule"></div><h1>Objectives register</h1><p>ISO 27001 clause 6.2 requires information security objectives that are measurable, communicated and monitored — not just restated policy intent. Set a metric and a target for each one, and clause 9.1's requirement to track progress against them is what the status and progress notes below are for.</p></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddObjective">+ Add objective</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="objectives">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleObjectiveLibrary">Choose from the library</button><button class="btn ghost sm" data-action="App.toggleAddObjective">+ Write your own</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="objectives">Export CSV</button></div>
+      <div class="card" id="objLibraryPanel" style="margin-bottom:16px;display:none"></div>
       <div class="card" id="addObjectivePanel" style="margin-bottom:16px;display:none">
         <h3>New objective</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -1381,6 +1382,11 @@
           <input class="mini" id="naObjOwner" placeholder="Owner">
           <input class="mini" id="naObjDue" aria-label="Due date" type="date">
           <input class="mini" id="naObjResources" placeholder="Resources needed — people, time, budget, tools (Clause 6.2)" style="grid-column:1/-1">
+          <fieldset class="obj-cia-pick" style="grid-column:1/-1"><legend>What does it protect? Tick one, two or all three.</legend>
+            <label><input type="checkbox" id="naObjC"> <span class="cia-chip c">C</span> Confidentiality</label>
+            <label><input type="checkbox" id="naObjI"> <span class="cia-chip i">I</span> Integrity</label>
+            <label><input type="checkbox" id="naObjA"> <span class="cia-chip a">A</span> Availability</label>
+          </fieldset>
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.addManualObjective">Add</button>

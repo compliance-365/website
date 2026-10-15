@@ -186,7 +186,7 @@ describe('starter objectives and resources (1.118.0)', () => {
   test('resources are stored, reconciled on older tenants, editable and exported', () => {
     const store = readFileSync(new URL('../public/checkpoint/store.js', import.meta.url), 'utf8');
     const html = readFileSync(new URL('../public/checkpoint/index.html', import.meta.url), 'utf8');
-    assert.ok(store.includes("Objectives: ['Resources']"));
+    assert.ok(store.includes("Objectives: ['Resources', 'Cia']"));
     assert.equal((store.match(/Resources: o\.resources/g) || []).length, 2);
     assert.ok(html.includes('id="naObjResources"') && html.includes('data-action="App.toggleAddObjective"'));
     assert.ok(app.includes("{ id: 'resources', label: 'Resources needed"));
