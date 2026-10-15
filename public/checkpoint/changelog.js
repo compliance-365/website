@@ -16,7 +16,10 @@ window.CHECKPOINT_CHANGELOG = [
     date: '2026-10-15',
     entries: [
       'Essential Eight now explains itself. The Statement of Applicability has a "How Essential Eight works here" panel: pick your target maturity, see which strategies the scan can suggest a status for in your tenant and what each check says now, and which strategies are yours to assess (user application hardening and backups always are).',
-      'Each strategy lists what the scan cannot see, such as servers outside Intune, how often scans run, and how admin requests are approved, so a passing check is never read as the level being met. A strategy whose checks returned no reading on the last scan is flagged rather than shown as automated.'
+      'Each strategy lists what the scan cannot see, such as servers outside Intune, how often scans run, and how admin requests are approved, so a passing check is never read as the level being met. A strategy whose checks returned no reading on the last scan is flagged rather than shown as automated.',
+      'More of Essential Eight is read from Defender, for tenants with Defender advanced hunting (Defender for Endpoint Plan 2 or Defender Vulnerability Management). Application control is read from device events (enforcing, or only auditing, which ML1 does not accept). Macro settings are read from Defender\'s per-device configuration assessment, and so are the Office and PDF reader attack surface reduction rules, so user application hardening (E8.4) gets a scan suggestion for the first time. Tenants without advanced hunting keep the Secure Score readings.',
+      'Patching is now two checks, applications (E8.2) and operating systems (E8.6), and each also looks for end-of-support software, which both strategies\' ML1 requires removed or replaced.',
+      'Suggestions now land on each maturity level a check speaks to, not just your target level, so ML1 rows get them too. Where a check covers only part of a level (for example, phishing-resistant MFA for admins at ML2), a pass suggests In progress, not Implemented.'
     ]
   },
   {

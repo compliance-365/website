@@ -29,7 +29,7 @@ const US = {
   records: 'SharePoint lists in your own Microsoft 365 tenant. Compliance365 has no database holding your registers.',
   pricing: 'Published: from $7,000 a year per framework (AUD, ex GST), SOC 2 from $8,999. Enterprise from $14,999.',
   trial: 'A public demo of the real console with sample data, no sign-up, and a 7-day free trial.',
-  m365: '49 checks read from Microsoft Graph with delegated, read-only permissions.',
+  m365: '52 checks read from Microsoft Graph with delegated, read-only permissions.',
   au: 'Essential Eight, IS18, RFFR, CPS 234, DISP / IRAP and the Privacy Act, alongside ISO 27001, SOC 2, ISO 42001, ISO 27701 and NIST CSF.',
   people: 'Run it yourself, or get it at no extra cost in a fixed-price Compliance365 consulting engagement.',
 };

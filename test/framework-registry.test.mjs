@@ -446,6 +446,19 @@ describe('scan-suggest tables never disagree with their guidance.checks panel, a
         });
       });
 
+      if (fw === 'essential8') {
+        test('extra.checkE8Partial: real checks, real level codes, reflected in guidance', () => {
+          const partial = (pack.extra && pack.extra.checkE8Partial) || {};
+          Object.keys(partial).forEach((id) => {
+            assert.ok(checkIds.has(id), `checkE8Partial has "${id}", which isn't a CHECK_DEFS id`);
+            partial[id].forEach((code) => {
+              assert.ok(codes.has(code) && /-ML[123]$/.test(code), `checkE8Partial["${id}"] references "${code}", which isn't a real Essential Eight level code`);
+              assert.ok(guidance[code] && (guidance[code].checks || []).includes(id), `guidance["${code}"].checks is missing "${id}"`);
+            });
+          });
+        });
+      }
+
       test('guidance.checks entries are real CHECK_DEFS ids', () => {
         Object.keys(guidance).forEach((code) => {
           (guidance[code].checks || []).forEach((id) => {
@@ -519,8 +532,10 @@ describe('content packs — checks no pack maps', { skip: SKIP }, () => {
     const mapped = new Set();
     PREMIUM_FRAMEWORKS.forEach((fw) => {
       const extra = (PACKS[fw] && PACKS[fw].extra) || {};
-      const key = Object.keys(extra).find((k) => k.startsWith('check') && extra[k] && typeof extra[k] === 'object' && !Array.isArray(extra[k]));
-      if (key) Object.keys(extra[key]).forEach((id) => mapped.add(id));
+      // Every check map the pack carries: Essential Eight has two
+      // (checkE8 and checkE8Partial, levels a check speaks to in part).
+      Object.keys(extra).filter((k) => k.startsWith('check') && extra[k] && typeof extra[k] === 'object' && !Array.isArray(extra[k]))
+        .forEach((key) => Object.keys(extra[key]).forEach((id) => mapped.add(id)));
     });
     const unmapped = CHECK_DEFS
       .filter((c) => c.requiresCapability !== 'aws' && !mapped.has(c.id))
@@ -589,10 +604,17 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // The seven gh-* checks are populated only by the optional GitHub
     // collector and gated on the derived 'github' capability, exactly
     // like the aws-* pack.
-    assert.equal(CHECK_DEFS.length, 66);
+    // 66 -> 69 with the Essential Eight automation batch: 'patch-apps'
+    // and 'patch-os' split the Defender Vulnerability Management read
+    // 'patch' already makes (plus end-of-support software from the same
+    // scope), and 'asr' reads attack surface reduction rule state from
+    // Defender's secure configuration assessment. No new scope: all
+    // three use ThreatHunting.Read.All, with a Secure Score fallback for
+    // the two patch checks.
+    assert.equal(CHECK_DEFS.length, 69);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'github').length, 7);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws' && c.requiresCapability !== 'github').length, 49);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws' && c.requiresCapability !== 'github').length, 52);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

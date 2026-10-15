@@ -78,7 +78,7 @@ describe('demo mode populates the same shared registries a real licensed tenant 
     // equals the control's current status, and runScan() only ever
     // proposes a status that DIFFERS from the current one. Not wrong,
     // just silently pointless for demo purposes, so worth catching.
-    const lastResults = { 'mfa-all': 'pass', 'mfa-priv': 'review', legacy: 'fail', admins: 'review', pim: 'fail', guests: 'pass', riskyusers: 'review', 'access-review': 'fail', device: 'pass', 'compliance-policy': 'pass', patch: 'review', wdac: 'fail', macro: 'pass', riskyapps: 'review', labels: 'review', dlp: 'review', encryption: 'manual', sharing: 'fail', logging: 'pass', alerts: 'review' };
+    const lastResults = { 'mfa-all': 'pass', 'mfa-priv': 'review', legacy: 'fail', admins: 'review', pim: 'fail', guests: 'pass', riskyusers: 'review', 'access-review': 'fail', device: 'pass', 'compliance-policy': 'pass', patch: 'review', 'patch-apps': 'review', 'patch-os': 'review', asr: 'review', wdac: 'fail', macro: 'pass', riskyapps: 'review', labels: 'review', dlp: 'review', encryption: 'manual', sharing: 'fail', logging: 'pass', alerts: 'review' };
     Object.keys(window.DEMO_CHECK_SEEDS).forEach((fw) => {
       Object.keys(window.DEMO_CHECK_SEEDS[fw]).forEach((checkId) => {
         const r = lastResults[checkId];

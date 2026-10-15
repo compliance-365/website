@@ -11186,6 +11186,128 @@
     return def ? def.cia.slice() : [];
   }
   /* Which of C, I and A the register covers, for the "is it balanced" view. */
+  /* Defender software names are lower-case vendor product ids
+     ('windows_11', 'windows_server_2022', 'macos', 'office', 'chrome').
+     The operating system is the Windows/macOS/Linux family itself;
+     everything else is an application. Used to split Defender
+     Vulnerability Management rows between Essential Eight's E8.6 (patch
+     operating systems) and E8.2 (patch applications). */
+  function isOsSoftware(name) {
+    return /^(windows(_|$)|mac_?os|ios(_|$)|ipados|android(_|$)|linux(_|$)|ubuntu|debian|rhel|red_hat_enterprise_linux|centos|suse|amazon_linux)/i.test(String(name || ''));
+  }
+
+  /* End-of-support software from Defender's software inventory, one row
+     per product: { SoftwareName, SoftwareVendor, EndOfSupportStatus,
+     Devices }. Only products already past end of support count
+     ('Upcoming EOS …' is a warning, not a gap); Essential Eight ML1
+     requires unsupported software removed or replaced, so any is a
+     fail. */
+  function eosSoftwareResult(rows) {
+    var list = (rows || []).filter(function (r) {
+      var st = String((r && r.EndOfSupportStatus) || '');
+      return r && r.SoftwareName && /eos/i.test(st) && !/upcoming/i.test(st);
+    });
+    var devices = list.reduce(function (n, r) { return n + (Number(r.Devices) || 0); }, 0);
+    return {
+      products: list.length, devices: devices,
+      worst: list.slice().sort(function (a, b) { return (Number(b.Devices) || 0) - (Number(a.Devices) || 0); }).slice(0, 3).map(function (r) { return r.SoftwareName; }),
+      result: list.length ? 'fail' : 'pass'
+    };
+  }
+
+  /* One reading for E8.2 or E8.6 from the two Defender reads: exploitable
+     vulnerabilities still open past the patch window, and end-of-support
+     software. The worse of the two wins. */
+  function patchKindResult(tvmRows, eosRows, kind, windowDays, nowMs) {
+    var pick = function (r) { return (kind === 'os') === isOsSoftware(r.SoftwareName); };
+    var tvm = tvmExposureResult((tvmRows || []).filter(pick), windowDays, nowMs);
+    var eos = eosSoftwareResult((eosRows || []).filter(pick));
+    var rank = { fail: 0, review: 1, pass: 2 };
+    return { tvm: tvm, eos: eos, result: rank[eos.result] < rank[tvm.result] ? eos.result : tvm.result };
+  }
+
+  /* Windows Defender Application Control, from 30 days of Defender
+     device events summarised to one row: { Devices, Enforced, AuditOnly,
+     LoadedOnly } (devices with any App Control event; with a block; with
+     audit events and no block; with only a policy-load event) plus the
+     number of onboarded Windows workstations.
+
+     A block proves enforcement on that device. Audit events with no
+     block mean the policy is in audit mode, which Essential Eight ML1
+     does not accept. A device that only loaded a policy has one, mode
+     unknown. A device with no App Control event at all is not evidence
+     of anything, so no events anywhere returns null and the caller
+     falls back to Secure Score rather than calling it a fail. */
+  function appControlResult(row, workstations) {
+    var devices = Number(row && row.Devices) || 0;
+    if (!devices) return null;
+    var enforced = Number(row.Enforced) || 0, auditOnly = Number(row.AuditOnly) || 0, loadedOnly = Number(row.LoadedOnly) || 0;
+    var ws = Math.max(Number(workstations) || 0, devices);
+    var coveragePct = Math.round((enforced + loadedOnly) / ws * 100);
+    var result = enforced && !auditOnly && coveragePct >= 90 ? 'pass' : 'review';
+    return { devices: devices, workstations: ws, enforced: enforced, auditOnly: auditOnly, loadedOnly: loadedOnly, coveragePct: coveragePct, result: result };
+  }
+
+  /* Defender Vulnerability Management secure configuration assessment,
+     one row per configuration: { ConfigurationName, Applicable,
+     Compliant } (device counts). Grouped by what Essential Eight asks:
+     'macro' is E8.3's macro settings; 'asr' is E8.4 ML2's Office and PDF
+     reader rules (child processes, executable content, code
+     injection). Matched on Microsoft's configuration names, which are
+     stable and descriptive; Win32 API calls from macros is deliberately
+     in neither (it is beyond both strategies' ML1/ML2 wording here).
+     Each configuration passes at 90% of applicable devices compliant
+     and fails under 50%; the group takes its worst configuration. A
+     group with no matching configuration returns null so the caller
+     can fall back or say Manual — verify. */
+  var SECURE_CONFIG_GROUPS = {
+    macro: function (n) { return /macro/i.test(n) && !/win32/i.test(n); },
+    asr: function (n) { return /(child process|executable content|inject)/i.test(n) && /(office|word|excel|outlook|adobe|acrobat|reader|pdf)/i.test(n) && !/win32/i.test(n); }
+  };
+  function secureConfigResult(rows, group) {
+    var match = SECURE_CONFIG_GROUPS[group];
+    if (!match) return null;
+    var configs = (rows || []).filter(function (r) { return r && r.ConfigurationName && match(r.ConfigurationName) && Number(r.Applicable) > 0; })
+      .map(function (r) {
+        var pct = Math.round((Number(r.Compliant) || 0) / Number(r.Applicable) * 100);
+        return { name: r.ConfigurationName, applicable: Number(r.Applicable), pct: pct, result: pct >= 90 ? 'pass' : pct >= 50 ? 'review' : 'fail' };
+      })
+      .sort(function (a, b) { return a.pct - b.pct; });
+    if (!configs.length) return null;
+    var rank = { fail: 0, review: 1, pass: 2 };
+    var result = configs.reduce(function (w, c) { return rank[c.result] < rank[w] ? c.result : w; }, 'pass');
+    return { configs: configs, result: result };
+  }
+
+  /* Scan results -> suggested status per Essential Eight level row.
+     checkE8 maps a check to strategy codes ('E8.7': the target level) or
+     level codes ('E8.7-ML1': that level, if within the target).
+     partial maps a check to level codes it speaks to only in part: a
+     pass there suggests In progress, never Implemented. Several checks
+     on one level: the worst suggestion wins, so a passing baseline
+     check never papers over a failing stricter one. Returns
+     childCode -> { st, labels: [check labels] }. */
+  function e8LevelSuggestions(checkE8, partial, results, target, labels) {
+    var RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+    var out = {};
+    var tgt = Math.max(1, Math.min(3, Number(target) || 2));
+    function add(checkId, code, isPartial) {
+      var r = results && results[checkId];
+      var st = r === 'pass' ? (isPartial ? 'In progress' : 'Implemented') : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+      if (!st) return;
+      var m = /^(.*)-ML([123])$/.exec(code);
+      var child = m ? code : code + '-ML' + tgt;
+      if (m && Number(m[2]) > tgt) return;
+      var e = out[child] || (out[child] = { st: st, labels: [] });
+      if (RANK[st] < RANK[e.st]) e.st = st;
+      var lbl = (labels && labels[checkId]) || checkId;
+      if (e.labels.indexOf(lbl) === -1) e.labels.push(lbl);
+    }
+    Object.keys(checkE8 || {}).forEach(function (id) { (checkE8[id] || []).forEach(function (code) { add(id, code, false); }); });
+    Object.keys(partial || {}).forEach(function (id) { (partial[id] || []).forEach(function (code) { add(id, code, true); }); });
+    return out;
+  }
+
   /* Essential Eight "How this works" — per strategy, whether the scan
      can suggest a status at all, which checks feed it and what each one
      currently says, and what the scan cannot see however it reads. The
@@ -11196,24 +11318,35 @@
      pack's check -> [strategy] map (window.CHECK_E8); results is
      checkId -> 'pass'/'review'/'fail'/'manual'/null. */
   var E8_SCAN_LIMITS = {
-    'E8.1': { manualWhy: '', limits: 'Servers and devices not managed by Intune; whether the rule set is reviewed at least annually; whether allowed and blocked execution events are logged centrally (ML2).' },
-    'E8.2': { manualWhy: '', limits: 'Applications on devices not onboarded to Defender; how often vulnerability scans run; whether unsupported applications have been removed.' },
+    'E8.1': { manualWhy: '', limits: 'Servers and devices not onboarded to Defender; whether the rule set is reviewed at least annually; whether execution events reach your central logging (ML2) and are analysed (ML3).' },
+    'E8.2': { manualWhy: '', limits: 'Applications on devices not onboarded to Defender; how often vulnerability scans run; the 48-hour window for extreme-risk patches (ML2). Without Defender advanced hunting, only a Secure Score proxy that does not separate applications from operating systems.' },
     'E8.3': { manualWhy: '', limits: 'Whether each macro exception is justified and approved; trusted locations and signed-macro rules (ML2, ML3); whether macro events are logged.' },
-    'E8.4': { manualWhy: 'Attack surface reduction and browser settings are only readable through Microsoft\'s beta API, which Checkpoint does not use, so there is no reliable live signal.', limits: 'All of it: browser hardening, Office and PDF reader child-process blocking, PowerShell constrained language and logging. Attach the Intune profile or Group Policy export as evidence.' },
+    'E8.4': { manualWhy: 'Needs Defender advanced hunting (Defender for Endpoint Plan 2 or Defender Vulnerability Management) to read attack surface reduction rule state; without it there is no reliable live signal.', limits: 'Browser settings at ML1 (Java, web ads, Internet Explorer 11, users unable to change them); further browser hardening; PowerShell constrained language and logging (ML3). Attach the Intune profile or Group Policy export as evidence.' },
     'E8.5': { manualWhy: '', limits: 'How admin access requests are approved and revalidated; whether privileged accounts are barred from email and web browsing; separate admin workstations; privileged access logging (ML2).' },
-    'E8.6': { manualWhy: '', limits: 'Servers, network devices and anything outside Intune or Defender; whether unsupported operating systems have been replaced; how often scans run.' },
+    'E8.6': { manualWhy: '', limits: 'Servers, network devices and anything not onboarded to Defender; drivers and firmware; how often scans run; the 48-hour window for extreme-risk patches (ML2).' },
     'E8.7': { manualWhy: '', limits: 'Online services and remote access that do not sign in through Entra (third-party portals, VPNs); whether MFA events are logged (ML2).' },
     'E8.8': { manualWhy: 'Microsoft 365 exposes no live signal for backup coverage, retention or restore testing.', limits: 'All of it: what is backed up and how often, retention, restore tests, and who can reach or delete the backups. Attach the backup report and the last restore test record.' }
   };
-  function e8Automation(strategies, checkE8, checkDefs, results) {
-    var RANK = { fail: 0, review: 1, manual: 2, pass: 3 };
+  function e8Automation(strategies, checkE8, checkDefs, results, partial) {
     checkE8 = checkE8 || {};
+    partial = partial || {};
+    function levelsFor(map, id, code) {
+      return (map[id] || []).reduce(function (acc, c) {
+        if (c === code) acc.push('target');
+        else if (c.indexOf(code + '-ML') === 0) acc.push(Number(c.slice(code.length + 3)));
+        return acc;
+      }, []);
+    }
     return (strategies || []).map(function (s) {
-      var checks = Object.keys(checkE8).filter(function (id) { return (checkE8[id] || []).indexOf(s.code) > -1; }).map(function (id) {
+      var ids = Object.keys(checkE8).concat(Object.keys(partial)).filter(function (id, i, a) { return a.indexOf(id) === i; });
+      var checks = ids.map(function (id) {
+        var full = levelsFor(checkE8, id, s.code), part = levelsFor(partial, id, s.code);
+        if (!full.length && !part.length) return null;
         var def = (checkDefs || []).find(function (d) { return d.id === id; });
-        return { id: id, label: def ? def.label : id, result: (results && results[id]) || null };
-      });
+        return { id: id, label: def ? def.label : id, result: (results && results[id]) || null, levels: full, partialLevels: part };
+      }).filter(Boolean);
       var limits = E8_SCAN_LIMITS[s.code] || { manualWhy: '', limits: '' };
+      var RANK = { fail: 0, review: 1, pass: 2 };
       var scored = checks.filter(function (c) { return c.result === 'pass' || c.result === 'review' || c.result === 'fail'; });
       var worst = scored.reduce(function (w, c) { return w === null || RANK[c.result] < RANK[w] ? c.result : w; }, null);
       /* 'scan' = at least one live check feeds it; 'unread' = checks are
@@ -13083,7 +13216,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,

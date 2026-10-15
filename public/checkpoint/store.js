@@ -561,7 +561,7 @@ window.DEMO_NIST_SUBCATEGORIES = [
    it either (self-reported by design, see the DISP disclaimer above
    window.FRAMEWORKS.dispirap). */
 window.DEMO_CHECK_SEEDS = {
-  essential8: { macro: ['E8.3'], 'mfa-all': ['E8.7'], patch: ['E8.6'] },
+  essential8: { macro: ['E8.3'], 'mfa-all': ['E8.7-ML1'], 'patch-apps': ['E8.2-ML1'] },
   is18: { 'mfa-all': ['IS18.4.7'], dlp: ['IS18.3.3'] },
   iso42001: { riskyapps: ['AI.4.4'] },
   iso27701: { dlp: ['A.1.4.10'] },
@@ -696,6 +696,14 @@ window.CHECK_DEFS = [
   { id: 'device-jailbroken', area: 'Devices', label: 'No jailbroken or rooted mobile devices enrolled', tpl: 'device-jailbroken', scored: true, requiresCapability: 'intune' },
   { id: 'device-config', area: 'Devices', label: 'Device configuration profiles deployed', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
+  /* The same Defender Vulnerability Management read as 'patch', split
+     into applications and operating systems (Essential Eight treats them
+     as two strategies, E8.2 and E8.6), plus end-of-support software from
+     the Defender software inventory, which both strategies' ML1 requires
+     removed or replaced. Without advanced hunting both fall back to the
+     same Secure Score proxy 'patch' uses, and say so. */
+  { id: 'patch-apps', area: 'Devices',  label: 'Applications patched and vendor-supported',     tpl: null,        scored: true, requiresCapability: 'secureScore' },
+  { id: 'patch-os',   area: 'Devices',  label: 'Operating systems patched and vendor-supported', tpl: null,      scored: true, requiresCapability: 'secureScore' },
   /* Read from Defender advanced hunting (graph.js's 'threatHunting'
      probe) — whether every device Defender knows about runs a healthy
      endpoint sensor, including machines its device discovery found
@@ -704,6 +712,12 @@ window.CHECK_DEFS = [
   /* Apps & Data (8) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
   { id: 'macro',      area: 'Apps & Data', label: 'Office macro settings hardened',            tpl: null,        scored: true, requiresCapability: 'secureScore' },
+  /* Read from Defender Vulnerability Management's per-device secure
+     configuration assessment (advanced hunting): the attack surface
+     reduction rules that stop Office and PDF readers creating child
+     processes, creating executable content or injecting code. GA v1.0
+     (/security/runHuntingQuery), not the beta Settings Catalog. */
+  { id: 'asr',        area: 'Apps & Data', label: 'Office and PDF reader attack surface reduction rules', tpl: null, scored: true, requiresCapability: 'threatHunting' },
   { id: 'riskyapps',  area: 'Apps & Data', label: 'No high-privilege, unreviewed OAuth app grants', tpl: 'riskyapps', scored: true },
   /* oauth-consent reads consentType off the SAME oauth2PermissionGrants
      response riskyapps already fetches — already selected, never
@@ -1365,8 +1379,10 @@ window.CHECK_E8 = {
      verification exists in Checkpoint's current scope, so E8.8 stays
      self-reported until that changes.
 
-     E8.4 (User application hardening) is absent for the same reason,
-     checked and rejected rather than simply never attempted. The
+     E8.4 (User application hardening) was absent until 1.163.0, and the
+     history below is why the 'asr' check that now feeds it reads
+     Defender's per-device secure configuration assessment through
+     advanced hunting (GA v1.0) rather than either route rejected here: The
      obvious read is windows10EndpointProtectionConfiguration's
      defenderAttackSurfaceReductionExcludedPaths -- but that is an
      EXCLUSION list, not rule state; an empty list is indistinguishable
@@ -1379,8 +1395,16 @@ window.CHECK_E8 = {
      surface an ASR-related recommendation, but that pattern was
      deliberately abandoned for the alerts and logging checks in favour
      of direct signal; reintroducing it here for one strategy would
-     contradict that decision for no good reason. E8.4 stays manual
-     until Microsoft ships ASR rule state on a GA v1.0 endpoint. */
+     contradict that decision for no good reason. A tenant without
+     advanced hunting still has no E8.4 signal.
+
+     Codes may be a strategy ('E8.7': suggests at the target level) or a
+     level ('E8.7-ML1': suggests at that level, when it is within the
+     target). window.CHECK_E8_PARTIAL (extra.checkE8Partial) lists levels
+     a check speaks to only in part: a pass there suggests In progress,
+     never Implemented. See CheckpointLib.e8LevelSuggestions(). */
+};
+window.CHECK_E8_PARTIAL = {
 };
 
 /* Posture check id -> IS18 (QGEA) control code(s) it speaks to — the
@@ -1568,7 +1592,7 @@ window.DemoStore = (function () {
   function demoResults() {
     var now = {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'legacy-auth-observed': 'fail', 'priv-role-changes': 'review', 'dormant-accounts': 'fail', 'mfa-registration': 'review', 'ca-device': 'review', 'ca-risk': 'fail', 'ca-sif': 'fail', 'ca-tou': 'review', 'ca-cas': 'review', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail', 'leaver': 'fail', 'lifecycle-workflows': 'review',
-        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review', 'device-encryption': 'review', 'device-jailbroken': 'fail',
+        'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review', 'patch-apps': 'review', 'patch-os': 'review', 'asr': 'review', 'device-encryption': 'review', 'device-jailbroken': 'fail',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail', 'edr-coverage': 'review', 'phish-sim': 'pass',
         'privacy-srr': 'fail', 'retention': 'review'

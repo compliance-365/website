@@ -41,7 +41,7 @@ export const frameworkPages: FrameworkPage[] = [
       'Policies drafted for your organisation, approved with a recorded sign-off and exported to Word.',
       'A Stage 1 readiness pack, a Stage 2 sampling dry run and time-boxed, read-only access for your auditor.',
     ],
-    scan: 'The Microsoft 365 scan runs 49 checks across identity, devices, apps and data, monitoring, privacy, continuity, suppliers and governance, and suggests the status of the Annex A controls they evidence. Every scan is kept as dated evidence.',
+    scan: 'The Microsoft 365 scan runs 52 checks across identity, devices, apps and data, monitoring, privacy, continuity, suppliers and governance, and suggests the status of the Annex A controls they evidence. Every scan is kept as dated evidence.',
     faq: [
       { q: 'Does Checkpoint certify us to ISO 27001?', a: 'No. Certification comes from an accredited certification body. Checkpoint runs the management system and prepares the evidence and packs that body audits.' },
       { q: 'Which version of ISO 27001 does it use?', a: 'ISO/IEC 27001:2022, with its 93 Annex A controls.' },

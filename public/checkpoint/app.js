@@ -12330,7 +12330,7 @@ function showModal(opts) {
     var open = window._e8HowOpen === undefined ? !S.lastResults : window._e8HowOpen;
     var strategies = (window.FRAMEWORKS.essential8.controls || []).filter(function (c) { return !c.lvl; })
       .slice().sort(function (a, b) { return parseInt(a.code.split('.')[1], 10) - parseInt(b.code.split('.')[1], 10); });
-    var rows = window.CheckpointLib.e8Automation(strategies, window.CHECK_E8, window.CHECK_DEFS, allCheckResultsById());
+    var rows = window.CheckpointLib.e8Automation(strategies, window.CHECK_E8, window.CHECK_DEFS, allCheckResultsById(), window.CHECK_E8_PARTIAL);
     var nScan = rows.filter(function (r) { return r.mode === 'scan'; }).length;
     var hasMap = rows.some(function (r) { return r.checks.length; });
     var byCode = {};
@@ -12353,7 +12353,7 @@ function showModal(opts) {
     if (!open) { el.innerHTML = '<div class="card e8-how" style="padding:14px 16px;margin:12px 0">' + head + '</div>'; return; }
     var steps = '<ol class="e8-how-steps">' +
       '<li><b>Pick your target</b><span>Target maturity ' + lvlSelect + '. The table shows each strategy\'s levels up to it, and readiness is measured against it.</span></li>' +
-      '<li><b>Scan suggests, you decide</b><span>A scan proposes a status for the ML' + target + ' row of the strategies it can read. Confirm or dismiss each one above the table.</span></li>' +
+      '<li><b>Scan suggests, you decide</b><span>A scan proposes a status for each level, up to ML' + target + ', that a check speaks to. Where a check covers only part of a level ("in part"), a pass suggests In progress, not Implemented. Confirm or dismiss each one above the table.</span></li>' +
       '<li><b>Evidence proves it</b><span>A strategy is at ML2 only when ML1 and ML2 are both Implemented. Link evidence on each row; an auditor will ask for it.</span></li>' +
       '</ol>';
     var table = '<div class="e8-how-grid">' + rows.map(function (r) {
@@ -12361,7 +12361,11 @@ function showModal(opts) {
       var lvl = e8AssessedMaturity(r.code, byCode);
       var checks = r.checks.length ? r.checks.map(function (c) {
         var x = RES[c.result] || ['st-Notstarted', 'Not scanned'];
-        return '<span class="e8-how-check">' + esc(c.label) + ' <span class="chip ' + x[0] + '">' + esc(x[1]) + '</span></span>';
+        var lv = c.levels.map(function (l) { return l === 'target' ? 'ML' + target : 'ML' + l; })
+          .concat(c.partialLevels.map(function (l) { return (l === 'target' ? 'ML' + target : 'ML' + l) + ' in part'; }))
+          .filter(function (l) { return parseInt(l.slice(2), 10) <= target; });
+        return '<span class="e8-how-check">' + esc(c.label) + ' <span class="chip ' + x[0] + '">' + esc(x[1]) + '</span>' +
+          (lv.length ? '<span class="src">' + esc(lv.join(', ')) + '</span>' : '<span class="src">above your target</span>') + '</span>';
       }).join('') : '<span class="src">' + esc(r.manualWhy || 'No scan check feeds this strategy in the Essential Eight content this tenant holds.') + '</span>';
       return '<div class="e8-how-row">' +
         '<div class="e8-how-name"><span class="id-t">' + esc(r.code) + '</span> <b>' + esc(r.title) + '</b>' +
@@ -12372,7 +12376,7 @@ function showModal(opts) {
         '</div>';
     }).join('') + '</div>';
     el.innerHTML = '<div class="card e8-how" style="padding:14px 16px;margin:12px 0">' + head + steps + table +
-      '<p class="src" style="margin:10px 0 0">Scans read Microsoft 365, Intune, Entra and Defender only. A pass means the signal looks right, not that the level is met. Lower levels than your target never get a suggestion: confirm them yourself.' +
+      '<p class="src" style="margin:10px 0 0">Scans read Microsoft 365, Intune, Entra and Defender only. A pass means the signal looks right, not that the level is met: attach evidence for what the scan can\'t see before you confirm.' +
       (READONLY ? '' : ' <button class="lnk" data-action="App.go" data-id="scan">Go to the Scan page</button>') + '</p></div>';
   }
 
@@ -17813,27 +17817,19 @@ function showModal(opts) {
          paper over a failing stricter one for the same control. */
       S.e8Proposed = [];
       if (S.entitlements.essential8 && window.CHECK_E8) {
-        var e8Target = e8Lvl(S.settings.e8TargetLevel);
-        var E8_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
-        var byChild = {}; /* childCode -> { suggestedSt, checkLabels: [] } */
-        Object.keys(window.CHECK_E8).forEach(function (checkId) {
-          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
-          if (!def) return;
-          var r = checkResult(def);
-          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
-          if (!suggestedSt) return;
-          window.CHECK_E8[checkId].forEach(function (parentCode) {
-            var childCode = parentCode + '-ML' + e8Target;
-            var entry = byChild[childCode] || (byChild[childCode] = { suggestedSt: suggestedSt, checkLabels: [] });
-            if (E8_ST_RANK[suggestedSt] < E8_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
-            entry.checkLabels.push(def.label);
-          });
-        });
+        /* Per level, not just the target: a check mapped to 'E8.7-ML1'
+           suggests on the ML1 row, one mapped to a strategy code on the
+           target row; CHECK_E8_PARTIAL levels cap a pass at In progress.
+           See CheckpointLib.e8LevelSuggestions(). */
+        var e8Labels = {};
+        (window.CHECK_DEFS || []).forEach(function (d) { e8Labels[d.id] = d.label; });
+        var e8Results = allCheckResultsById();
+        var byChild = window.CheckpointLib.e8LevelSuggestions(window.CHECK_E8, window.CHECK_E8_PARTIAL, e8Results, e8Lvl(S.settings.e8TargetLevel), e8Labels);
         Object.keys(byChild).forEach(function (childCode) {
           var entry = byChild[childCode];
           var ctrl = S.controls.find(function (c) { return c.fw === 'essential8' && c.id === childCode; });
-          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
-          S.e8Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: childCode, from: ctrl.st, to: entry.suggestedSt });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.st) return;
+          S.e8Proposed.push({ checkLabel: entry.labels.join(' · '), code: childCode, from: ctrl.st, to: entry.st });
         });
       }
 
@@ -28551,6 +28547,7 @@ function showModal(opts) {
         }
         if (moduleId === 'essential8' && content.extra && content.extra.checkE8) {
           Object.assign(window.CHECK_E8, content.extra.checkE8);
+          if (content.extra.checkE8Partial) Object.assign(window.CHECK_E8_PARTIAL = window.CHECK_E8_PARTIAL || {}, content.extra.checkE8Partial);
         }
         if (moduleId === 'is18' && content.extra && content.extra.checkIs18) {
           Object.assign(window.CHECK_IS18, content.extra.checkIs18);
