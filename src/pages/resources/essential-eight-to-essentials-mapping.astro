@@ -1,0 +1,232 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
+import EssentialsAlert from '../../components/EssentialsAlert.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+const e8mm = 'https://www.cyber.gov.au/business-government/asds-cyber-security-frameworks/essential-eight/essential-eight-maturity-model';
+
+// Provisional: the Essentials side is Compliance365's reading, in our own
+// words, until checked against the published enterprise IT chapter. ASD's
+// principle and action references are deliberately not guessed.
+const strategies = [
+  { name: 'Patch applications', area: 'Internet-facing systems; workstations; servers', also: 'Cloud (customer-managed software)',
+    outcome: 'Known vulnerabilities are fixed or mitigated quickly, fastest where systems face the internet or an exploit exists, and unsupported software is removed.',
+    ml2: 'Internet-facing services patched within two weeks, or 48 hours if an exploit exists; office suites, browsers, email clients, PDF and security software within two weeks; other applications within one month; vulnerability scanning on a schedule; unsupported applications removed.',
+    evidence: 'Time to patch per asset group against the target, and how many assets are outside it.',
+    m365: 'Defender Vulnerability Management exposure and remediation reports.' },
+  { name: 'Patch operating systems', area: 'Internet-facing systems; workstations; servers', also: 'Cloud (VM images), operational technology',
+    outcome: 'Operating systems stay supported and current, with internet-facing systems patched first.',
+    ml2: 'Internet-facing servers and network devices patched within two weeks, or 48 hours if an exploit exists; workstations and other servers within one month; unsupported operating systems replaced.',
+    evidence: 'Time to patch for operating systems, plus the count of unsupported versions.',
+    m365: 'Intune update rings and feature update reports; Defender device inventory.' },
+  { name: 'Multi-factor authentication', area: 'Identity services', also: 'Cloud',
+    outcome: 'Every sign-in to organisational and online services is protected by strong, phishing-resistant authentication, with exceptions known and justified.',
+    ml2: 'MFA for users of online services and for privileged users, with stronger requirements on the methods accepted (see the maturity model for the exact wording).',
+    evidence: 'Share of sign-ins covered, accounts excluded and why, failed and blocked attempts.',
+    m365: 'Entra Conditional Access, authentication methods and sign-in logs.' },
+  { name: 'Restrict administrative privileges', area: 'Identity services; privileged access', also: 'Cloud (IAM roles), operational technology',
+    outcome: 'Privileged access is limited, time-bound, separated from everyday use and logged.',
+    ml2: 'Access validated when requested and revalidated; privileged accounts cannot use web or email; privileged access removed after inactivity; separate privileged environments; unique local administrator passwords; privileged events logged.',
+    evidence: 'Count of standing admin accounts, stale accounts removed, logged elevations.',
+    m365: 'Entra Privileged Identity Management, access reviews, Windows LAPS, Defender for Identity.' },
+  { name: 'Application control', area: 'Workstations; internet-facing servers', also: 'Operational technology',
+    outcome: 'Only approved code can run, and attempts to run anything else are blocked and seen.',
+    ml2: 'On workstations and internet-facing servers; Microsoft\'s recommended block rules; rulesets validated at least annually; allowed and blocked events logged.',
+    evidence: 'Blocked execution events reviewed; date the ruleset was last validated.',
+    m365: 'App Control for Business (WDAC) through Intune; Defender advanced hunting.' },
+  { name: 'Restrict Microsoft Office macros', area: 'Workstations (office productivity)', also: '',
+    outcome: 'Untrusted macros cannot run, and the macros that are allowed are controlled and logged.',
+    ml2: 'Macros blocked unless needed and blocked from the internet; macros scanned; Win32 API calls from macros blocked; users cannot change settings; macro events logged.',
+    evidence: 'Users with macros enabled and why; blocked macro events.',
+    m365: 'Intune Office policies; attack surface reduction rules.' },
+  { name: 'User application hardening', area: 'Workstations (browsers, office, PDF)', also: '',
+    outcome: 'Everyday applications are configured to resist exploitation, and users cannot weaken them.',
+    ml2: 'Browsers do not run web ads or Java from the internet; Office and PDF software blocked from creating child processes or injecting code; vendor hardening guidance applied; users cannot change settings.',
+    evidence: 'Hardening baseline compliance per device; attack surface reduction rule hits.',
+    m365: 'Intune security baselines; attack surface reduction rules in Defender.' },
+  { name: 'Regular backups', area: 'Backup and recovery', also: 'Cloud, operational technology',
+    outcome: 'Important data and systems can be restored to a known point, restores are tested, and backups cannot be changed or deleted by an attacker.',
+    ml2: 'Backups made and kept according to business criticality, synchronised to a common point and stored securely; restoration tested; accounts other than backup administrators cannot reach or change other accounts\' backups.',
+    evidence: 'Last restore test date and result; immutability or access restrictions shown.',
+    m365: 'Microsoft 365 Backup or Azure Backup reports; restore test records.' }
+];
+
+const gaps = [
+  { gap: 'Knowing what you have (asset inventory)', why: 'Reporting area by area needs the assets in each area listed', where: 'Intune, Entra and Defender device inventories; a maintained asset register' },
+  { gap: 'Logging and detection beyond admin and macro events', why: 'Effectiveness is shown with evidence over time', where: 'Defender, Sentinel, Entra sign-in and audit logs' },
+  { gap: 'Cloud workloads', why: 'A separate cloud chapter now exists', where: 'Azure Policy, Defender for Cloud, AWS Config' },
+  { gap: 'Operational technology', why: 'A separate OT chapter now exists; Essential Eight controls often cannot be applied to OT', where: 'Usually none: OT is mostly new work' },
+  { gap: 'Service and workload identities', why: 'Identity is treated as its own area, not just staff MFA', where: 'Entra workload identities, app registrations, key and secret expiry' }
+];
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Essential Eight to Essentials: A Provisional Mapping",
+  "author": { "@type": "Organization", "name": "Compliance365", "url": "https://www.compliance365.com.au" },
+  "publisher": { "@type": "Organization", "name": "Compliance365", "url": "https://www.compliance365.com.au" },
+  "datePublished": "2026-10-15",
+  "dateModified": "2026-10-15",
+  "url": "https://www.compliance365.com.au/resources/essential-eight-to-essentials-mapping/"
+};
+---
+<Base
+  title="Essential Eight to Essentials Mapping (Provisional) | Compliance365"
+  description="Where each Essential Eight strategy is likely to sit in ASD's Essentials, the outcome it will be measured against, and the Microsoft 365 evidence that shows it working."
+  schema={[articleSchema]}
+>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="svc-hero">
+  <CinematicBackground static />
+  <div class="container svc-hero-copy" style="position:relative;z-index:1;">
+    <p class="eyebrow">Essential Eight · ASD Essentials · Provisional · 15 October 2026</p>
+    <h1 style="max-width:900px;">Essential Eight to Essentials: a provisional mapping</h1>
+    <p class="section-lead" style="max-width:760px;">
+      ASD published the Essentials on 15 October 2026. This is where we expect each Essential Eight strategy to sit in it, the outcome it will be measured against, and the evidence that shows it working. It is our reading, in our own words: ASD's principle and action references will be added once checked against the enterprise IT chapter.
+    </p>
+    <div class="hero-ctas">
+      <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+      <a href={`${base}resources/asd-essentials-framework/`} class="btn-hdk-ghost">Read the transition guide</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-bottom:1rem;">
+  <div class="container" style="max-width:900px;">
+    <div class="card" style="border-left:4px solid #f59e0b;background:#fffbeb;">
+      <p style="font-weight:700;color:#92400e;margin:0 0 .4rem;">How to read this page</p>
+      <ul class="muted small" style="margin:0;padding-left:1.2rem;display:grid;gap:.35rem;">
+        <li><strong>Confirmed by ASD:</strong> the chapters (enterprise IT, cloud, operational technology), the three layers (principles, actions, domains), and reporting area by area with evidence-backed effectiveness ratings instead of one maturity level.</li>
+        <li><strong>Our provisional reading:</strong> the likely area and expected outcome for each strategy. Check them against the chapter before relying on them with an auditor or a customer.</li>
+        <li><strong>Unchanged:</strong> where a contract, insurer or the PSPF names the Essential Eight, the Essential Eight is still what you are assessed against.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="at-a-glance">
+  <div class="container" style="max-width:1000px;">
+    <h2>At a glance</h2>
+    <p class="muted" style="max-width:760px;">All eight strategies carry into the enterprise IT chapter. Patching, administrative privileges and backups are also expected to reappear in the cloud chapter.</p>
+    <div class="map-scroll">
+      <table class="map-table">
+        <thead><tr><th>Essential Eight strategy</th><th>Likely Essentials area</th><th>Also in</th></tr></thead>
+        <tbody>
+          {strategies.map((s) => (
+            <tr><td><a href={`#${s.name.toLowerCase().replace(/[^a-z]+/g, '-')}`}>{s.name}</a></td><td>{s.area}</td><td>{s.also || '—'}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#FAF7F1;" id="by-strategy">
+  <div class="container" style="max-width:1000px;">
+    <h2>Strategy by strategy</h2>
+    <p class="muted" style="max-width:760px;">The biggest change is the evidence. The Essentials rates how effective each area is, so the evidence has to show a control working, not just configured. The Maturity Level Two summaries are ours, from the <a href={e8mm} rel="noopener" target="_blank">Essential Eight Maturity Model (November 2023)</a>; check the exact wording there.</p>
+    <div class="map-cards">
+      {strategies.map((s) => (
+        <article class="card map-card" id={s.name.toLowerCase().replace(/[^a-z]+/g, '-')}>
+          <h3>{s.name}</h3>
+          <p class="map-area">{s.area}{s.also ? ` · also ${s.also}` : ''}</p>
+          <dl>
+            <dt>Expected outcome <span class="map-tag">provisional</span></dt><dd>{s.outcome}</dd>
+            <dt>Maturity Level Two today</dt><dd>{s.ml2}</dd>
+            <dt>Evidence that it works</dt><dd>{s.evidence}</dd>
+            <dt>Where it sits in Microsoft 365</dt><dd>{s.m365}</dd>
+            <dt>ASD reference</dt><dd class="map-todo">To be added from the enterprise IT chapter</dd>
+          </dl>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section class="section" id="gaps">
+  <div class="container" style="max-width:1000px;">
+    <h2>Where an Essential Eight programme will have gaps</h2>
+    <p class="muted" style="max-width:760px;">The Essential Eight was a set of mitigations for workstations and internet-facing servers, so expect the Essentials to ask for things a Maturity Level Two evidence pack never held. These are our expectations, not confirmed requirements.</p>
+    <div class="map-scroll">
+      <table class="map-table">
+        <thead><tr><th>Likely gap</th><th>Why we expect it</th><th>Where the evidence may already exist</th></tr></thead>
+        <tbody>
+          {gaps.map((g) => (<tr><td>{g.gap}</td><td>{g.why}</td><td>{g.where}</td></tr>))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#FAF7F1;" id="convert">
+  <div class="container" style="max-width:900px;">
+    <h2>Converting a Maturity Level Two evidence pack</h2>
+    <p class="muted">Re-map first, and rebuild only where a gap shows. Keep the Essential Eight pack alongside, because contracts and the PSPF still name it.</p>
+    <ol class="muted" style="padding-left:1.4rem;display:grid;gap:.6rem;">
+      <li><strong>Pick the chapters.</strong> Enterprise IT for almost everyone; add cloud or OT where those workloads are in scope.</li>
+      <li><strong>List the areas.</strong> Take the chapter's domains and list which of your assets sit in each.</li>
+      <li><strong>Re-file the evidence.</strong> Move each piece of evidence under the area it supports. One piece can support several areas.</li>
+      <li><strong>Show it working.</strong> For each area, add a measure over time (patch age, MFA coverage, blocked executions, last restore test) rather than a single screenshot.</li>
+      <li><strong>Rate each area.</strong> Give an effectiveness rating per area as the chapter defines it, with the evidence behind it.</li>
+      <li><strong>Log the gaps.</strong> Anything the chapter asks for that the pack does not cover becomes an action with an owner and a date.</li>
+    </ol>
+    <p class="muted" style="margin-top:1.25rem;">Checkpoint already collects most of the Microsoft 365 evidence above through its posture checks, so it can be regrouped by area rather than gathered again. <a href={`${base}checkpoint-console/essential-eight-software/`}>See Checkpoint for the Essential Eight</a>.</p>
+  </div>
+</section>
+
+<EssentialsAlert source="essentials-alert-mapping" />
+
+<section class="section" id="sources">
+  <div class="container" style="max-width:900px;">
+    <h2>Sources</h2>
+    <ul class="muted small" style="padding-left:1.2rem;display:grid;gap:.4rem;">
+      <li>ASD, <a href="https://www.cyber.gov.au/essentials" rel="noopener" target="_blank">The Essentials</a></li>
+      <li>ASD, <a href="https://www.cyber.gov.au/publication/what-is-the-essentials" rel="noopener" target="_blank">What is the Essentials?</a> (published 15 October 2026)</li>
+      <li>ASD, <a href={e8mm} rel="noopener" target="_blank">Essential Eight Maturity Model</a> and <a href="https://www.cyber.gov.au/business-government/asds-cyber-security-frameworks/essential-eight/essential-eight-maturity-model-changes" rel="noopener" target="_blank">Maturity Model changes (November 2023)</a></li>
+      <li>iTnews, <a href="https://www.itnews.com.au/news/asds-essential-eight-replacement-moves-away-from-maturity-ladder-629637" rel="noopener" target="_blank">ASD's Essential Eight replacement moves away from maturity ladder</a></li>
+      <li>OpenGov Asia, <a href="https://opengovasia.com/australia-expands-cyber-resilience-guidance-with-asd-essentials/" rel="noopener" target="_blank">Australia expands cyber resilience guidance with ASD Essentials</a></li>
+    </ul>
+    <p class="muted small">Provisional mapping by Compliance365. Last reviewed 15 October 2026.</p>
+  </div>
+</section>
+
+<section class="svc-final-cta">
+  <CinematicBackground static />
+  <div class="container">
+    <h2>Want your evidence pack mapped for you?</h2>
+    <p>A 30-minute call on how the Essentials affects your environment, and what it would take to re-map your Essential Eight evidence.</p>
+    <div class="final-buttons">
+      <a href={ctaUrl} class="btn-hdk-primary">Book a call</a>
+      <a href={`${base}services/essential-eight/`} class="btn-hdk-ghost">Essential Eight service</a>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+
+<style>
+  .map-scroll { overflow-x: auto; margin-top: 1.25rem; }
+  .map-table { width: 100%; border-collapse: collapse; font-size: .92rem; min-width: 560px; }
+  .map-table th { background: #BE4A1E; color: var(--on-accent, #fff); text-align: left; padding: .75rem 1rem; font-weight: 600; }
+  .map-table td { padding: .75rem 1rem; border-bottom: 1px solid #DDD8CF; color: #4A4740; vertical-align: top; }
+  .map-table tr:nth-child(even) td { background: #FAF7F1; }
+  .map-table a { color: var(--accent-ink, #A63A12); font-weight: 600; text-decoration: none; }
+  .map-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.1rem; margin-top: 1.5rem; }
+  .map-card { scroll-margin-top: 90px; }
+  .map-card h3 { margin: 0 0 .25rem; }
+  .map-area { margin: 0 0 .9rem; color: #A63A12; font-size: .85rem; font-weight: 600; }
+  .map-card dl { margin: 0; display: grid; gap: .55rem; }
+  .map-card dt { font-weight: 700; font-size: .82rem; color: #0B0B0C; }
+  .map-card dd { margin: 0; color: #4A4740; font-size: .9rem; line-height: 1.55; }
+  .map-tag { font-weight: 600; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: #92400e; background: #fef3c7; border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+  .map-todo { font-style: italic; color: #6B6860 !important; }
+  @media (max-width: 760px) { .map-cards { grid-template-columns: 1fr; } }
+</style>
+</Base>

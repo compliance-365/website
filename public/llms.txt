@@ -51,6 +51,7 @@ Checkpoint is Compliance365's compliance software. It runs in the customer's own
 
 - [Blog index](https://www.compliance365.com.au/blog/): Practical compliance insights for Australian organisations.
 - [ISO 27001 vs SOC 2 in Australia](https://www.compliance365.com.au/blog/iso27001-vs-soc2-australia/): Which framework is right for your organisation — a plain-language comparison.
+- [Essential Eight to Essentials mapping](https://www.compliance365.com.au/resources/essential-eight-to-essentials-mapping/): Provisional mapping of each Essential Eight strategy to the Essentials: likely area, expected outcome, Maturity Level Two today, evidence and Microsoft 365 sources.
 - [ASD has published the Essentials](https://www.compliance365.com.au/blog/asd-essentials-published/): The successor to the Essential Eight, published 15 October 2026: chapters for enterprise IT, cloud and OT, area-by-area reporting, and what to do now.
 - [Essential Eight ML2 vs ML3](https://www.compliance365.com.au/blog/essential-eight-ml2-vs-ml3-australia/): What changes between maturity levels and whether ML3 is worth pursuing.
 - [DISP Certification Requirements](https://www.compliance365.com.au/blog/disp-certification-requirements-australia/): Step-by-step guide to joining the Defence Industry Security Program.
