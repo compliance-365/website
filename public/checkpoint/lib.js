@@ -537,6 +537,107 @@
     };
   }
 
+  /* ---- Training: question banks, client details, effectiveness ----
+     A course carries a bank of questions; each attempt draws a few and
+     shuffles their options, so a retake tests understanding rather than
+     memory of "the second answer". The draw is seeded so a page re-render
+     shows the same attempt, and a new attempt gets a new draw. */
+  function seededRandom(seed) {
+    var h = 2166136261;
+    String(seed || '').split('').forEach(function (ch) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); });
+    return function () {
+      h += 0x6D2B79F5; var t = h;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffled(list, rnd) {
+    var a = list.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var x = a[i]; a[i] = a[j]; a[j] = x; }
+    return a;
+  }
+  /* bank: [{id, q, options, answer, why}]; returns n questions, each
+     {id, q, options (shuffled), answer (index into the shuffled options), why}. */
+  function drawQuiz(bank, n, seed) {
+    var rnd = seededRandom(seed);
+    var pick = shuffled((bank || []).filter(Boolean), rnd).slice(0, Math.max(1, n || (bank || []).length));
+    return pick.map(function (q) {
+      var order = shuffled(q.options.map(function (_, i) { return i; }), rnd);
+      return { id: q.id, q: q.q, options: order.map(function (i) { return q.options[i]; }), answer: order.indexOf(q.answer), why: q.why };
+    });
+  }
+  /* {{org}}, {{reportTo}}, {{privacyTo}}, {{aiTools}} filled from the
+     client's training profile. A sentence whose detail is not set is
+     left out rather than shown with a placeholder: no invented contact. */
+  function fillCourseText(text, profile) {
+    var p = profile || {}, missing = false;
+    var out = String(text == null ? '' : text).replace(/\{\{(\w+)\}\}/g, function (_, k) {
+      var v = p[k];
+      if (v == null || String(v).trim() === '') { missing = true; return ''; }
+      return String(v).trim();
+    });
+    return missing ? null : out;
+  }
+  /* QuizLog: one line per attempt, "YYYY-MM-DD:id+,id-". */
+  function quizLogLine(date, results) {
+    return date + ':' + (results || []).map(function (r) { return r.id + (r.ok ? '+' : '-'); }).join(',');
+  }
+  function parseQuizLog(log) {
+    return String(log || '').split(/\n/).map(function (line) {
+      var m = /^(\d{4}-\d{2}-\d{2}):(.*)$/.exec(line.trim());
+      if (!m) return null;
+      return { date: m[1], results: m[2].split(',').map(function (x) { var t = /^(.+)([+-])$/.exec(x.trim()); return t ? { id: t[1], ok: t[2] === '+' } : null; }).filter(Boolean) };
+    }).filter(Boolean);
+  }
+  /* Per-question effectiveness across everyone's attempts (Clause 7.2 c,
+     "evaluate the effectiveness of the actions taken"). Only questions
+     asked at least minAsked times are ranked, so one person's slip does
+     not headline. */
+  function trainingQuestionStats(records, courses, opts) {
+    var minAsked = (opts && opts.minAsked) || 3, since = (opts && opts.since) || '';
+    var byId = {};
+    (courses || []).forEach(function (c) { (c.quiz || []).forEach(function (q) { if (q.id) byId[q.id] = { course: c.title, courseId: c.id, q: q.q, topic: q.topic || '' }; }); });
+    var stats = {};
+    (records || []).forEach(function (t) {
+      parseQuizLog(t && t.quizLog).forEach(function (a) {
+        if (since && a.date < since) return;
+        a.results.forEach(function (r) {
+          var s = stats[r.id] || (stats[r.id] = { id: r.id, asked: 0, missed: 0 });
+          s.asked++; if (!r.ok) s.missed++;
+        });
+      });
+    });
+    return Object.keys(stats).map(function (k) {
+      var s = stats[k], meta = byId[k] || {};
+      return { id: k, course: meta.course || '', courseId: meta.courseId || '', q: meta.q || k, topic: meta.topic || '', asked: s.asked, missed: s.missed, rate: Math.round(s.missed / s.asked * 100) };
+    }).filter(function (s) { return s.asked >= minAsked; })
+      .sort(function (a, b) { return b.rate - a.rate || b.asked - a.asked; });
+  }
+  /* The refresher for a month: a fixed rotation through the library, so
+     a year of refreshers covers every topic once. */
+  function refresherForMonth(library, isoDate) {
+    var lib = (library || []).filter(Boolean);
+    if (!lib.length) return null;
+    var d = String(isoDate || '').slice(0, 7).split('-');
+    var idx = ((parseInt(d[0], 10) || 0) * 12 + (parseInt(d[1], 10) || 1) - 1) % lib.length;
+    return lib[idx];
+  }
+  /* This month's signal for a refresher: the client's own recent
+     incidents and the threat intel items it marked relevant, as short
+     lines without names. */
+  function refresherSignal(incidents, threats, today, days) {
+    var since = addDaysIso(today, -(days || 60));
+    var out = [];
+    (incidents || []).filter(function (n) { return n && (n.detected || n.occurred || '') >= since; })
+      .slice(0, 2).forEach(function (n) { out.push('Here recently: ' + String(n.title || '').replace(/\s+/g, ' ').trim() + (n.lessonsLearned ? '. Since then: ' + String(n.lessonsLearned).split('. ')[0].replace(/\.$/, '') + '.' : '')); });
+    (threats || []).filter(function (t) { return t && (t.affected || t.matchedStack) && (t.published || t.dateAdded || t.date || '') >= since; })
+      .slice(0, 1).forEach(function (t) {
+        out.push('In the news: attackers are exploiting a flaw in ' + String(t.product || t.name || t.title || 'software').trim() + ', which we use. Expect an update or restart soon: install it when asked rather than putting it off.');
+      });
+    return out;
+  }
+
   /* Review state of one document-control register row (ISO 27001
      Clause 7.5.2 c) — "review and approval for suitability and
      adequacy" on a defined cadence.
@@ -6962,7 +7063,8 @@
       certification: { readiness: typeof d.readiness === 'number' ? d.readiness : null, docsAwaiting: (d.docs || []).filter(function (x) { return x.status && x.status !== 'Approved'; }).length, nextAudit: d.nextAudit || '', certified: !!d.certified },
       people: { handovers: countLog(/^Leaver hand-over/), retired: countLog(/^Asset retired/), vendorsAdded: countLog(/^(Vendor|Supplier) added/),
         certsExpiring: vend.filter(function (v) { return v.certExpiryDate && v.certExpiryDate >= today && v.certExpiryDate <= soon; }).map(function (v) { return v.name; }).slice(0, 6),
-        supplierGaps: supplierGapStatus(vend, acts).filter(function (g) { return !g.treated; }).slice(0, 6).map(function (g) { return { id: g.id, name: g.name, count: g.gaps.length }; }) },
+        supplierGaps: supplierGapStatus(vend, acts).filter(function (g) { return !g.treated; }).slice(0, 6).map(function (g) { return { id: g.id, name: g.name, count: g.gaps.length }; }),
+        trainingGaps: (d.trainingGaps || []).slice(0, 3) },
       quarterly: { accessReview: access, suppliersDue: vend.filter(function (v) { return vendorNextReview(v, today) <= addDaysIso(today, 30); }).length,
         objectives: { open: obj.length, atRisk: obj.filter(function (o) { return /risk|behind|off/i.test(o.status || ''); }).length },
         attestPct: typeof d.attestPct === 'number' ? d.attestPct : null }
@@ -7017,6 +7119,7 @@
       if (p.people.certsExpiring.length) f.push('Supplier certificates expiring soon: ' + p.people.certsExpiring.slice(0, 3).join(', '));
       var sg = p.people.supplierGaps || [];
       if (sg.length) f.push('Questionnaire gaps not yet treated: ' + sg.slice(0, 3).map(function (g) { return g.name + ' (' + g.count + ')'; }).join(', ') + (sg.length > 3 ? ' and more' : ''));
+      (p.people.trainingGaps || []).slice(0, 2).forEach(function (t) { f.push('Training: ' + t); });
     } else if (key === 'decisions') {
       var att = p.attendance || {};
       if (att.lastQuorum === false) f.push('The last meeting was held without the chair or the ISMS owner: confirm its decisions');
@@ -7045,7 +7148,7 @@
     if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length && !(p.threat && (p.threat.remediationOpen || p.threat.awaiting))) return 'Posture score unchanged at ' + p.posture.score + '/100';
     if (key === 'certification' && p.certification.certified) return 'skip';
     if (key === 'certification' && !p.certification.nextAudit && !p.certification.docsAwaiting && (p.certification.readiness == null || p.certification.readiness >= 100)) return 'skip';
-    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length && !(p.people.supplierGaps || []).length) return 'No leavers, retired assets or supplier changes';
+    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length && !(p.people.supplierGaps || []).length && !(p.people.trainingGaps || []).length) return 'No leavers, retired assets or supplier changes';
     return '';
   }
   /* The timed agenda for meeting n. rec (optional) = the meeting's own
@@ -12880,7 +12983,7 @@
     threatIntelRelevance: threatIntelRelevance, rankThreatIntelItems: rankThreatIntelItems,
     threatIntelMatchSummary: threatIntelMatchSummary,
     soaFocusRows: soaFocusRows, soaFocusLabel: soaFocusLabel,
-    trainingFocusRows: trainingFocusRows, trainingSummary: trainingSummary,
+    trainingFocusRows: trainingFocusRows, trainingSummary: trainingSummary, drawQuiz: drawQuiz, fillCourseText: fillCourseText, quizLogLine: quizLogLine, parseQuizLog: parseQuizLog, trainingQuestionStats: trainingQuestionStats, refresherForMonth: refresherForMonth, refresherSignal: refresherSignal,
     documentFocusRows: documentFocusRows, documentFocusLabel: documentFocusLabel,
     dedupeAudience: dedupeAudience,
     THREAT_INTEL_INDUSTRY_TAGS: THREAT_INTEL_INDUSTRY_TAGS,

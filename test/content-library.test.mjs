@@ -321,8 +321,11 @@ describe('training course catalogue', { skip: SKIP }, () => {
     TRAINING_COURSES.forEach((c) => {
       assert.equal(typeof c.passMark, 'number', `${c.id}.passMark must be a number`);
       assert.ok(c.passMark >= 1, `${c.id}.passMark of ${c.passMark} would pass someone who got everything wrong`);
-      assert.ok(c.passMark <= c.quiz.length, `${c.id}.passMark of ${c.passMark} exceeds its ${c.quiz.length} questions — nobody could ever pass`);
-      assert.ok(c.passMark / c.quiz.length >= 0.6, `${c.id} passes at ${Math.round(c.passMark / c.quiz.length * 100)}%, which does not demonstrate comprehension`);
+      // Each attempt draws quizDraw questions from the bank; the pass mark is out of the draw.
+      const asked = c.quizDraw || c.quiz.length;
+      assert.ok(asked <= c.quiz.length, `${c.id} draws ${asked} questions from a bank of ${c.quiz.length}`);
+      assert.ok(c.passMark <= asked, `${c.id}.passMark of ${c.passMark} exceeds the ${asked} questions asked — nobody could ever pass`);
+      assert.ok(c.passMark / asked >= 0.6, `${c.id} passes at ${Math.round(c.passMark / asked * 100)}%, which does not demonstrate comprehension`);
     });
   });
 

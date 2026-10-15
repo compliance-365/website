@@ -1810,6 +1810,7 @@ window.DemoStore = (function () {
         trustCenterDataLocation: 'Australia (Microsoft Azure Australia East)',
         trustCenterShowSubProcessors: 'true',
         trustCenterDocuments: JSON.stringify([{ name: 'Information Security Policy (summary)', access: 'request', url: '' }, { name: 'Penetration test summary 2026', access: 'request', url: '' }, { name: 'Data processing agreement template', access: 'request', url: '' }]),
+        trainingProfile: JSON.stringify({ reportTo: 'security@meridianhealth.example or the IT service desk on ext. 4400', privacyTo: 'privacy@meridianhealth.example', aiTools: 'Microsoft 365 Copilot (work account)' }),
         securityReviewSetup: JSON.stringify({ chair: 'Mei Chen', owner: 'Sam Okafor', ownerEmail: 's.okafor@meridianhealth.example', facilitator: 'Compliance365', emails: 'm.chen@meridianhealth.example, s.okafor@meridianhealth.example, k.patel@meridianhealth.example', week: 2, weekday: 2, time: '10:00', teamsLink: '', autoSend: 'false', startDate: daysFrom(-70) }),
         securityReviews: JSON.stringify([
           { id: 'SR-001', n: 1, kind: 'kickoff', date: daysFrom(-63), time: '10:00', status: 'Held', preparedAt: daysFrom(-66), present: 'Mei Chen, Sam Okafor, Kim Patel', notes: 'Agreed terms of reference and roles. Baseline recorded.', actions: ['ACT-003'], pack: demoSecurityPack(daysFrom(-63), daysFrom(-94), 41, null, 6, 4, 2) },
@@ -1955,10 +1956,10 @@ window.DemoStore = (function () {
          and because attempt counts are part of what the record is for. */
       policyDrafts: [], /* backfilled below for returning demo sessions from before this collection existed */
       training: [
-        { id: 'TRN-0001', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-148), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
-        { id: 'TRN-0002', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-141), status: 'Completed', score: '4/5', attempts: 2, source: 'campaign', note: '' },
-        { id: 'TRN-0003', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'mchen@meridianhealth.example', userName: 'M. Chen', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-133), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
-        { id: 'TRN-0004', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'demo@meridianhealth.example', userName: 'Demo user', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-150), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
+        { id: 'TRN-0001', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-148), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '', method: 'Online', quizLog: '2026-05-18:sa-01+,sa-02+,sa-06+,sa-08+,sa-11+' },
+        { id: 'TRN-0002', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-141), status: 'Completed', score: '4/5', attempts: 2, source: 'campaign', note: '', method: 'Online', quizLog: '2026-05-25:sa-02-,sa-06-,sa-03+,sa-09+,sa-11+\n2026-05-25:sa-02+,sa-07+,sa-06-,sa-10+,sa-04+' },
+        { id: 'TRN-0003', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'mchen@meridianhealth.example', userName: 'M. Chen', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-133), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '', method: 'Online', quizLog: '2026-06-02:sa-06-,sa-02+,sa-05+,sa-12+,sa-01+' },
+        { id: 'TRN-0004', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'demo@meridianhealth.example', userName: 'Demo user', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-150), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '', method: 'Online', quizLog: '2026-05-17:sa-06+,sa-02-,sa-03+,sa-08+,sa-09+' },
         { id: 'TRN-0005', campaign: 'TCAMP-0002', courseId: 'ai-use-oversight', courseTitle: 'Using AI Safely and Responsibly', courseVersion: '1.0', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-10), due: daysFrom(20), completed: daysFrom(-6), status: 'Completed', score: '4/5', attempts: 1, source: 'campaign', note: '' },
         { id: 'TRN-0006', campaign: 'TCAMP-0002', courseId: 'ai-use-oversight', courseTitle: 'Using AI Safely and Responsibly', courseVersion: '1.0', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-10), due: daysFrom(20), completed: '', status: 'Assigned', score: '', attempts: 0, source: 'campaign', note: '' },
         { id: 'TRN-0007', campaign: 'TCAMP-0002', courseId: 'ai-use-oversight', courseTitle: 'Using AI Safely and Responsibly', courseVersion: '1.0', upn: 'mchen@meridianhealth.example', userName: 'M. Chen', assigned: daysFrom(-10), due: daysFrom(20), completed: '', status: 'Assigned', score: '', attempts: 0, source: 'campaign', note: '' },
@@ -2650,7 +2651,10 @@ window.SpStore = (function () {
       { name: 'UserUpn', text: {} }, { name: 'UserName', text: {} },
       { name: 'AssignedDate', text: {} }, { name: 'DueDate', text: {} }, { name: 'CompletedDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Score', text: {} }, { name: 'Attempts', number: {} },
-      { name: 'Source', text: {} }, { name: 'Note', text: { allowMultipleLines: true } }
+      { name: 'Source', text: {} }, { name: 'Note', text: { allowMultipleLines: true } },
+      /* How it was completed (Online, 5-minute, Toolbox talk) and one line
+         per quiz attempt, "YYYY-MM-DD:id+,id-", for per-question miss rates. */
+      { name: 'Method', text: {} }, { name: 'QuizLog', text: { allowMultipleLines: true } }
     ],
     /* Edited policy content — the source of truth for a generated
        document's words, once anyone has changed them.
@@ -3114,7 +3118,9 @@ window.SpStore = (function () {
     /* Resources: what each objective needs (Clause 6.2 b). */
     Objectives: ['Resources'],
     /* Retirement: the disposal record (A.7.14). */
-    Assets: ['Retirement']
+    Assets: ['Retirement'],
+    /* Method and QuizLog: training formats and per-question effectiveness. */
+    Training: ['Method', 'QuizLog']
   };
   /* Every column in every list's DEFS, not just COLUMN_RECONCILE's
      subset. The subset kept missing columns (PublicListed on Vendors was
@@ -3653,7 +3659,7 @@ window.SpStore = (function () {
             upn: f.UserUpn || '', userName: f.UserName || '',
             assigned: f.AssignedDate || '', due: f.DueDate || '', completed: f.CompletedDate || '',
             status: f.Status || 'Assigned', score: f.Score || '', attempts: f.Attempts || 0,
-            source: f.Source || 'campaign', note: f.Note || ''
+            source: f.Source || 'campaign', note: f.Note || '', method: f.Method || '', quizLog: f.QuizLog || ''
           };
         }),
         attestations: attItems.map(function (i) {
@@ -4061,7 +4067,8 @@ window.SpStore = (function () {
     updateTrainingRecord: async function (t) {
       await patchItem('Training', t._sp, {
         CompletedDate: t.completed || '', Status: t.status || 'Assigned',
-        Score: t.score || '', Attempts: t.attempts || 0, Note: t.note || ''
+        Score: t.score || '', Attempts: t.attempts || 0, Note: t.note || '',
+        Method: t.method || '', QuizLog: t.quizLog || ''
       });
     },
     addAudit: async function (a) {

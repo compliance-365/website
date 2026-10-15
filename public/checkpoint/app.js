@@ -913,6 +913,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
+    'editTrainingProfile', 'recordToolboxTalk', 'assignRefresher',
     'setupSecurityReview', 'srSuggestOutcome', 'srPasteRecap', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'addAuditRequest', 'answerAuditRequest', 'closeAuditRequest', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
@@ -3234,6 +3235,32 @@ function showModal(opts) {
     /* Monthly security review: the agenda with its figures, and the
        minutes against each item (Clause 9.1; 9.3 when the meeting is
        held as the management review). window._secReview = the record. */
+    toolboxtalk: function () {
+      var c = courseById(window._talkCourse);
+      if (!c || !c.talk) return null;
+      var t = c.talk, prof = trainingProfile(), L = window.CheckpointLib;
+      var local = [];
+      c.modules.forEach(function (m) { (m.local || []).forEach(function (x) { var f = L.fillCourseText(x, prof); if (f && local.indexOf(f) < 0) local.push(f); }); });
+      var rows = '';
+      for (var i = 0; i < 18; i++) rows += '<tr><td style="height:26px">' + (i + 1) + '</td><td></td><td></td><td></td></tr>';
+      var clock = 0;
+      return {
+        title: 'Toolbox talk: ' + c.title,
+        frameworkAgnostic: true,
+        noMethodology: true,
+        dashboard: { intro: t.minutes + ' minutes, run by a supervisor or team lead. Read the talking points, ask the questions, and have everyone sign the sheet. Record it in Checkpoint afterwards (Training, Record a toolbox talk) and upload the signed sheet as evidence for ISO 27001 A.6.3 and Clause 7.3.' },
+        sections: [
+          { heading: 'Open (2 minutes)', pageBreak: false, html: '<p class="rpt-plain">' + esc(t.opener) + '</p>' + (local.length ? '<p class="rpt-plain"><b>' + local.map(esc).join(' ') + '</b></p>' : '') },
+          { heading: 'Talking points', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Time</th><th>Topic</th><th>Say</th><th>Ask the group</th></tr></thead><tbody>' +
+            t.segments.map(function (g) { var at = clock + 2; clock += g.minutes; return '<tr><td class="rpt-idc">' + at + ':00</td><td><b>' + esc(g.heading) + '</b><br>' + g.minutes + ' min</td><td>' + g.say.map(esc).join('<br>') + '</td><td><i>' + esc(g.ask) + '</i></td></tr>'; }).join('') +
+            '</tbody></table><p class="rpt-plain"><b>Close:</b> ' + esc(t.close) + '</p>' },
+          { heading: 'What everyone should remember', pageBreak: false, html: '<ul>' + c.modules.map(function (m) { return '<li><b>' + esc(m.heading) + ':</b> ' + esc((m.key || [])[0] || '') + '</li>'; }).join('') + '</ul>' },
+          { heading: 'Attendance', pageBreak: true, html: '<p class="rpt-plain">Course: ' + esc(c.title) + ' v' + esc(c.version) + ' (toolbox talk) &nbsp; Date: ______________ &nbsp; Location: ______________ &nbsp; Facilitator: ______________________</p>' +
+            '<table class="rpt-table"><thead><tr><th style="width:6%">#</th><th style="width:38%">Name</th><th style="width:30%">Signature</th><th>Role or team</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<p class="rpt-just">By signing, each attendee confirms they attended this talk. Keep the signed sheet as evidence of awareness training.</p>' }
+        ]
+      };
+    },
     secagenda: function () {
       var r = secReviewById(window._secReview);
       if (!r) { toast('Prepare the agenda first.'); return null; }
@@ -11175,7 +11202,8 @@ function showModal(opts) {
       nextReviewDate: '',
       dashboard: parts.dashboard || null,
       sections: parts.sections || [],
-      methodology: buildMethodology(),
+      methodology: parts.noMethodology ? {} : buildMethodology(),
+      noMethodology: !!parts.noMethodology,
       signOff: { preparedBy: practitioner, clientApprover: '' }
     };
 
@@ -11423,7 +11451,8 @@ function showModal(opts) {
       failingTop: S.lastResults ? (window.CHECK_DEFS || []).filter(function (c) { return S.lastResults[c.id] === 'fail'; }).slice(0, 3).map(function (c) { return c.label; }) : [],
       certified: !!(certRecords().iso27001 && certRecords().iso27001.issued),
       periodic: secReviewPeriodic(),
-      threat: secReviewThreat()
+      threat: secReviewThreat(),
+      trainingGaps: trainingWeakSpots().filter(function (w) { return w.rate >= 30; }).slice(0, 2).map(function (w) { return w.rate + '% miss "' + w.q + '" (' + w.course + '): cover it in the next refresher'; })
     });
   }
   function secReviewAgenda(rec) {
@@ -13606,7 +13635,13 @@ function showModal(opts) {
       return (c.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; });
     });
   }
-  function courseById(id) { return (window.TRAINING_COURSES || []).find(function (c) { return c.id === id; }); }
+  function courseById(id) {
+    var c = (window.TRAINING_COURSES || []).find(function (x) { return x.id === id; });
+    if (c) return c;
+    var r = (window.TRAINING_REFRESHERS || []).find(function (x) { return x.id === id; });
+    var cur = currentRefresher();
+    return r ? (cur && cur.id === r.id ? cur : refresherCourse(r)) : null;
+  }
 
   function myOutstandingTraining() {
     var want = String(myUpn() || '').toLowerCase();
@@ -13673,12 +13708,18 @@ function showModal(opts) {
     el.innerHTML = courses.map(function (c) {
       var recs = (S.training || []).filter(function (t) { return t.courseId === c.id; });
       var completed = recs.filter(function (t) { return t.status === 'Completed'; }).length;
-      return '<div class="card kpi" style="text-align:left">' +
-        '<b style="font-size:var(--fs-3);color:var(--paper);display:block;line-height:1.35">' + esc(c.title) + '</b>' +
-        '<span style="margin-top:6px">v' + esc(c.version) + ' · ' + c.duration + ' min · ' + c.quiz.length + '-question check</span>' +
-        '<div class="src" style="margin-top:8px">' + esc(c.audience) + '</div>' +
-        '<div class="src" style="margin-top:4px">' + (recs.length ? completed + ' of ' + recs.length + ' assigned have completed it' : 'Not assigned yet') + '</div>' +
-        '<button class="btn ghost sm" style="margin-top:10px" data-action="App.openCourse" data-id="' + esc(c.id) + '">Read course</button>' +
+      var pct = recs.length ? Math.round(completed / recs.length * 100) : 0;
+      return '<div class="card tr-course">' +
+        '<div class="tr-course-art">' + trainingArt((c.modules[0] || {}).art, 56) + '</div>' +
+        '<b class="tr-course-title">' + esc(c.title) + '</b>' +
+        '<div class="src">' + esc(c.audience) + ' · v' + esc(c.version) + '</div>' +
+        (recs.length ? '<div class="tr-mini-bar" title="' + completed + ' of ' + recs.length + ' completed"><span style="width:' + pct + '%"></span></div><div class="src">' + completed + ' of ' + recs.length + ' assigned have completed it</div>' : '<div class="src">Not assigned yet</div>') +
+        '<div class="tr-formats">' +
+          '<button class="tr-format" data-action="App.openCourse" data-id="' + esc(c.id) + '">' + trainingArt('laptop', 26) + '<b>Full</b><span>' + c.duration + ' min, ' + c.modules.length + ' lessons</span></button>' +
+          (c.essentials ? '<button class="tr-format" data-action="App.openCourseQuick" data-id="' + esc(c.id) + '">' + trainingArt('phone', 26) + '<b>Quick</b><span>' + c.essentials.duration + ' min refresher</span></button>' : '') +
+          (c.talk ? '<button class="tr-format" data-action="App.courseTalkPack" data-id="' + esc(c.id) + '">' + trainingArt('report', 26) + '<b>Toolbox talk</b><span>' + c.talk.minutes + ' min, printable</span></button>' : '') +
+        '</div>' +
+        (c.talk && trainingCanManage() ? '<button class="btn ghost sm" style="margin-top:8px" data-action="App.recordToolboxTalk" data-id="' + esc(c.id) + '">Record a toolbox talk</button>' : '') +
         '</div>';
     }).join('');
   }
@@ -13788,6 +13829,8 @@ function showModal(opts) {
     var sel = document.getElementById('trainingCourse');
     if (!sel) return;
     var courses = coursesForTenant();
+    var ref = currentRefresher();
+    if (ref) courses = courses.concat([ref]);
     sel.innerHTML = courses.length
       ? courses.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.title) + ' — v' + esc(c.version) + '</option>'; }).join('')
       : '<option value="">No courses match this tenant\'s licensed frameworks</option>';
@@ -13925,6 +13968,7 @@ function showModal(opts) {
     renderTrainingSummary();
     renderMyTraining();
     renderCourseCatalogue();
+    renderTrainingExtras();
     renderTrainingCampaigns();
     renderTrainingRecords();
     renderTrainingCoursePicker();
@@ -13942,49 +13986,110 @@ function showModal(opts) {
     note: { border: 'var(--gold-light)', label: 'Note' }
   };
 
-  function renderCourseReader(courseId) {
+  /* The client's own details in courses: who to report to, the privacy
+     contact, the approved AI tools. Settings: trainingProfile (JSON). */
+  function trainingProfile() {
+    var o = {};
+    try { o = JSON.parse((S.settings && S.settings.trainingProfile) || '{}') || {}; } catch (e) { o = {}; }
+    o.org = clientDisplayLabel();
+    return o;
+  }
+  function trainingArt(key, size) {
+    var a = (window.TRAINING_ART || {})[key];
+    if (!a) return '';
+    return '<svg class="tr-art" viewBox="0 0 64 64" width="' + (size || 64) + '" height="' + (size || 64) + '" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + a + '</svg>';
+  }
+  /* Staff on a restricted (my-tasks-only) session read courses; they do not run them. */
+  function trainingCanManage() { return !RESTRICTED_ACCESS; }
+  /* A monthly refresher read as a one-lesson course. */
+  function refresherCourse(r, month) {
+    if (!r) return null;
+    return {
+      id: r.id, refresher: true, title: 'Refresher: ' + r.title, version: month || new Date().toISOString().slice(0, 7),
+      audience: 'Everyone, once a month', duration: 3, frameworks: [], controls: ['A.6.3'], clauses: 'ISO 27001 Clause 7.3 (awareness)',
+      purpose: 'Three minutes, one habit, one question.',
+      modules: [{ heading: r.title, art: r.art, key: r.points, intro: '', points: [], local: [], action: r.action }],
+      quiz: [Object.assign({ id: r.id + '-q' }, r.check)], quizDraw: 1, passMark: 1
+    };
+  }
+  function currentRefresher() {
+    var today = new Date().toISOString().slice(0, 10);
+    var r = window.CheckpointLib.refresherForMonth(window.TRAINING_REFRESHERS || [], today);
+    return r ? refresherCourse(r, today.slice(0, 7)) : null;
+  }
+  function refresherSignalLines() {
+    return window.CheckpointLib.refresherSignal(S.incidents || [], window._tiItems || [], new Date().toISOString().slice(0, 10), 60);
+  }
+
+  /* One lesson per screen: illustration, three things to remember, the
+     client's own details, a scenario to answer, and the full text behind
+     "More detail". The 5-minute version skips the detail and draws a
+     shorter check. */
+  function renderCourseReader(courseId, mode) {
     var c = courseById(courseId);
     var box = document.getElementById('courseReader');
     if (!c || !box) return;
-    window._courseState = { id: courseId, answers: {}, submitted: false };
-    var mine = (S.training || []).find(function (t) {
-      return t.courseId === courseId && String(t.upn || '').toLowerCase() === String(myUpn()).toLowerCase() && t.status !== 'Completed' && t.status !== 'Exempt';
-    });
-
-    var body =
-      '<button class="btn ghost sm" data-action="App.closeCourse" style="margin-bottom:18px">← Back to training</button>' +
-      '<div class="vhead"><div class="rule"></div><h1>' + esc(c.title) + '</h1>' +
-        '<p>' + esc(c.purpose) + '</p></div>' +
-      '<div class="card" style="margin-bottom:18px">' +
-        '<div class="d-kv"><span>Version</span><b>' + esc(c.version) + '</b></div>' +
-        '<div class="d-kv"><span>Audience</span><b>' + esc(c.audience) + '</b></div>' +
-        '<div class="d-kv"><span>Reading time</span><b>about ' + c.duration + ' minutes</b></div>' +
-        '<div class="d-kv"><span>Helps satisfy</span><b>' + esc((c.controls || []).join(', ')) + (c.clauses ? ' · ' + esc(c.clauses) : '') + '</b></div>' +
-        (mine ? '' : '<div class="d-kv"><span>Your record</span><b style="color:var(--paper-dim)">Reading only — this course is not currently assigned to you, so completing the check will not create a record.</b></div>') +
-      '</div>';
-
-    c.modules.forEach(function (m, i) {
-      var co = m.callout && (CALLOUT_STYLE[m.callout.kind] || CALLOUT_STYLE.note);
-      body += '<div class="card" style="margin-bottom:16px">' +
-        '<h3>' + (i + 1) + '. ' + esc(m.heading) + (m.jurisdiction ? ' <span class="chip st-Proposed">' + esc(m.jurisdiction) + '</span>' : '') + '</h3>' +
-        '<p style="font-size:13px;color:var(--paper-dim);margin:0 0 12px;max-width:80ch">' + esc(m.intro) + '</p>' +
-        '<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.75;max-width:80ch">' +
-          m.points.map(function (p) { return '<li style="margin-bottom:9px">' + esc(p) + '</li>'; }).join('') +
-        '</ul>' +
-        (co ? '<div style="margin-top:14px;padding:11px 14px;border-left:3px solid ' + co.border + ';background:rgba(255,255,255,.02)">' +
-          '<b style="font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:' + co.border + '">' + co.label + '</b>' +
-          '<div style="font-size:13px;margin-top:5px;max-width:80ch">' + esc(m.callout.text) + '</div></div>' : '') +
-        '</div>';
-    });
-
-    body += '<h2 style="margin:28px 0 6px">Comprehension check</h2>' +
-      '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px;max-width:80ch">' + c.quiz.length + ' questions, ' + c.passMark + ' correct to pass. Wrong answers explain themselves and you can retake it as many times as you like — the point is that it lands, not that anyone fails.</p>' +
-      '<div id="courseQuiz"></div>';
-
-    box.innerHTML = body;
+    mode = mode === 'essentials' && c.essentials ? 'essentials' : 'full';
+    window._courseState = { id: courseId, mode: mode, step: 0, answers: {}, scen: {}, submitted: false, seed: courseId + ':' + Date.now() };
     document.getElementById('trainingMain').style.display = 'none';
     box.style.display = 'block';
-    renderCourseQuiz();
+    renderCourseStep();
+  }
+  function courseMine(courseId) {
+    return (S.training || []).find(function (t) {
+      return t.courseId === courseId && String(t.upn || '').toLowerCase() === String(myUpn()).toLowerCase() && t.status !== 'Completed' && t.status !== 'Exempt';
+    });
+  }
+  function courseDraw(c, st) {
+    if (!st.drawn) {
+      var n = st.mode === 'essentials' ? c.essentials.quizDraw : (c.quizDraw || c.quiz.length);
+      st.drawn = window.CheckpointLib.drawQuiz(c.quiz, n, st.seed);
+      st.passMark = st.mode === 'essentials' ? c.essentials.passMark : Math.min(c.passMark, st.drawn.length);
+    }
+    return st.drawn;
+  }
+  function renderCourseStep() {
+    var st = window._courseState, c = courseById(st.id), box = document.getElementById('courseReader');
+    if (!c || !box) return;
+    var L = window.CheckpointLib, prof = trainingProfile();
+    var steps = c.modules.length + 1, essentials = st.mode === 'essentials';
+    var dots = '';
+    for (var k = 0; k < steps; k++) dots += '<button class="tr-dot' + (k === st.step ? ' on' : k < st.step ? ' done' : '') + '" data-action="App.courseStep" data-id="' + k + '" aria-label="' + (k < c.modules.length ? 'Lesson ' + (k + 1) : 'Check') + '"></button>';
+    var head = '<div class="tr-top"><button class="btn ghost sm" data-action="App.closeCourse">← Back to training</button>' +
+      (c.essentials ? '<div class="tr-mode" role="group" aria-label="Format"><button class="btn sm ' + (essentials ? 'ghost' : '') + '" data-action="App.courseMode" data-id="full">Full · ' + c.duration + ' min</button><button class="btn sm ' + (essentials ? '' : 'ghost') + '" data-action="App.courseMode" data-id="essentials">Quick · ' + c.essentials.duration + ' min</button></div>' : '') + '</div>' +
+      '<h1 class="tr-title">' + esc(c.title) + '</h1>' +
+      (st.step === 0 ? '<p class="tr-purpose">' + esc(essentials && c.essentials ? c.essentials.intro : c.purpose) + '</p>' : '') +
+      '<div class="tr-progress"><div class="tr-bar"><span style="width:' + Math.round(st.step / (steps - 1) * 100) + '%"></span></div><div class="tr-dots">' + dots + '</div></div>';
+    var body = '';
+    if (st.step < c.modules.length) {
+      var m = c.modules[st.step], sc = m.scenario, picked = st.scen[st.step];
+      var local = (m.local || []).map(function (t) { return L.fillCourseText(t, prof); }).filter(Boolean);
+      body = '<article class="tr-lesson">' +
+        '<div class="tr-hero"><div class="tr-art-tile">' + trainingArt(m.art, 72) + '</div><div><div class="tr-step">' + (c.refresher ? 'This month' : 'Lesson ' + (st.step + 1) + ' of ' + c.modules.length) + (m.jurisdiction ? ' · <span class="chip st-Proposed">' + esc(m.jurisdiction) + '</span>' : '') + '</div><h2>' + esc(m.heading) + '</h2>' +
+          (!essentials && m.intro ? '<p>' + esc(m.intro) + '</p>' : '') + '</div></div>' +
+        '<div class="tr-keys">' + (m.key || []).map(function (k, n) { return '<div class="tr-key"><span>' + (n + 1) + '</span>' + esc(k) + '</div>'; }).join('') + '</div>' +
+        (local.length ? '<div class="tr-local">' + icon('flag') + ' ' + local.map(esc).join(' ') + '</div>' : '') +
+        (m.action ? '<div class="tr-local">' + icon('check') + ' <b>Do this today:</b> ' + esc(m.action) + '</div>' : '') +
+        (c.refresher && st.step === 0 ? (function () { var sig = refresherSignalLines(); return sig.length ? '<div class="tr-signal">' + sig.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') + '</div>' : ''; })() : '') +
+        (sc ? '<div class="tr-scenario"><div class="tr-sc-label">What would you do?</div><p>' + esc(sc.setup) + '</p>' +
+          sc.choices.map(function (ch, n) {
+            var cls = picked === undefined ? '' : n === picked ? (ch.ok ? ' right' : ' wrong') : ch.ok ? ' right-dim' : '';
+            return '<button class="tr-choice' + cls + '" data-action="App.courseScenario" data-id="' + n + '"' + (picked !== undefined ? ' disabled' : '') + '>' + esc(ch.t) + '</button>';
+          }).join('') +
+          (picked !== undefined ? '<div class="tr-why ' + (sc.choices[picked].ok ? 'ok' : 'no') + '"><b>' + (sc.choices[picked].ok ? 'Yes. ' : 'Not quite. ') + '</b>' + esc(sc.choices[picked].why) + (sc.choices[picked].ok ? '' : ' ' + esc(sc.choices.find(function (x) { return x.ok; }).why)) + '</div>' : '') +
+          '</div>' : '') +
+        (!essentials && m.callout ? (function () { var co = CALLOUT_STYLE[m.callout.kind] || CALLOUT_STYLE.note; return '<div class="tr-callout" style="border-left-color:' + co.border + '"><b style="color:' + co.border + '">' + co.label + '</b> ' + esc(m.callout.text) + '</div>'; })() : '') +
+        (!essentials && (m.points || []).length ? '<details class="tr-more"><summary>More detail</summary><ul>' + m.points.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul></details>' : '') +
+        '</article>' +
+        '<div class="tr-nav">' + (st.step > 0 ? '<button class="btn ghost" data-action="App.courseStep" data-id="' + (st.step - 1) + '">Back</button>' : '<span></span>') +
+        '<button class="btn" data-action="App.courseStep" data-id="' + (st.step + 1) + '">' + (st.step + 1 < c.modules.length ? 'Next lesson' : 'Take the check') + '</button></div>';
+    } else {
+      var drawn = courseDraw(c, st), mine = courseMine(st.id);
+      body = '<div class="tr-check-head"><h2>Quick check</h2><p>' + drawn.length + ' question' + (drawn.length === 1 ? '' : 's') + ', ' + st.passMark + ' right to pass. Each attempt asks a different mix. Wrong answers explain themselves, and you can retry as often as you like.' +
+        (mine ? '' : ' <b>Reading only:</b> this is not assigned to you, so no record is made.') + '</p></div><div id="courseQuiz"></div>';
+    }
+    box.innerHTML = head + body;
+    if (st.step >= c.modules.length) renderCourseQuiz();
     window.scrollTo(0, 0);
   }
 
@@ -13993,48 +14098,71 @@ function showModal(opts) {
     var c = courseById(st.id);
     var wrap = document.getElementById('courseQuiz');
     if (!c || !wrap) return;
-    var correct = c.quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
-    var answeredAll = c.quiz.every(function (q, i) { return st.answers[i] !== undefined; });
+    var quiz = courseDraw(c, st);
+    var correct = quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
+    var answeredAll = quiz.every(function (q, i) { return st.answers[i] !== undefined; });
 
-    wrap.innerHTML = c.quiz.map(function (q, i) {
+    wrap.innerHTML = quiz.map(function (q, i) {
       var chosen = st.answers[i];
-      return '<div class="card" style="margin-bottom:14px">' +
-        '<b style="display:block;font-size:13.5px;color:var(--paper);margin-bottom:12px;max-width:80ch">' + (i + 1) + '. ' + esc(q.q) + '</b>' +
+      return '<div class="card tr-q">' +
+        '<b class="tr-q-text">' + (i + 1) + '. ' + esc(q.q) + '</b>' +
         q.options.map(function (o, oi) {
-          var picked = chosen === oi;
-          var tone = '';
-          if (st.submitted && picked) tone = oi === q.answer ? 'border-color:var(--pass)' : 'border-color:var(--fail)';
-          if (st.submitted && !picked && oi === q.answer) tone = 'border-color:var(--pass);opacity:.75';
-          return '<button class="btn ghost sm" style="display:block;width:100%;text-align:left;margin-bottom:7px;white-space:normal;line-height:1.5;' +
-            (picked ? 'background:rgba(190, 74, 30,.14);' : '') + tone + '" ' +
-            'data-action="App.answerCourseQuestion" data-id="' + i + ':' + oi + '">' + esc(o) + '</button>';
+          var cls = '';
+          if (st.submitted && chosen === oi) cls = oi === q.answer ? ' right' : ' wrong';
+          else if (st.submitted && oi === q.answer) cls = ' right-dim';
+          else if (chosen === oi) cls = ' picked';
+          return '<button class="tr-choice' + cls + '" data-action="App.answerCourseQuestion" data-id="' + i + ':' + oi + '"' + (st.submitted ? ' disabled' : '') + '>' + esc(o) + '</button>';
         }).join('') +
         (st.submitted && chosen !== undefined
-          ? '<div style="margin-top:10px;padding:10px 13px;border-left:3px solid ' + (chosen === q.answer ? 'var(--pass)' : 'var(--fail)') + ';font-size:12.5px;max-width:80ch">' +
-            '<b style="color:' + (chosen === q.answer ? 'var(--pass)' : 'var(--fail)') + '">' + (chosen === q.answer ? 'Correct. ' : 'Not quite. ') + '</b>' + esc(q.why) + '</div>'
+          ? '<div class="tr-why ' + (chosen === q.answer ? 'ok' : 'no') + '"><b>' + (chosen === q.answer ? 'Correct. ' : 'Not quite. ') + '</b>' + esc(q.why) + '</div>'
           : '') +
         '</div>';
     }).join('');
 
     if (!st.submitted) {
       wrap.innerHTML += '<button class="btn" data-action="App.submitCourseQuiz"' + (answeredAll ? '' : ' disabled') + '>' +
-        (answeredAll ? 'Submit answers' : 'Answer all ' + c.quiz.length + ' questions to submit') + '</button>';
+        (answeredAll ? 'Submit answers' : 'Answer all ' + quiz.length + ' to submit') + '</button>';
     } else {
-      var passed = correct >= c.passMark;
-      wrap.innerHTML += '<div class="card" style="border-left:3px solid var(--' + (passed ? 'pass' : 'warn') + ')">' +
-        '<h3 style="margin-top:0;color:var(--' + (passed ? 'pass' : 'warn') + ')">' + correct + ' of ' + c.quiz.length + (passed ? ' — passed' : ' — not passed yet') + '</h3>' +
-        '<p style="font-size:13px;color:var(--paper-dim);margin:0 0 12px;max-width:80ch">' +
+      var passed = correct >= st.passMark;
+      wrap.innerHTML += '<div class="card tr-result ' + (passed ? 'pass' : 'warn') + '">' +
+        '<div class="tr-result-big">' + (passed ? icon('check') : '') + ' ' + correct + ' of ' + quiz.length + (passed ? ': passed' : ': not yet') + '</div>' +
+        '<p>' +
           (passed
             ? (st.recorded === true ? 'Your completion has been recorded.'
-               : st.recorded === 'unassigned' ? 'This course is not currently assigned to you, so no record was created — read it as often as you like.'
+               : st.recorded === 'unassigned' ? 'This is not assigned to you, so no record was made. Read it as often as you like.'
                : st.recorded === false ? 'Your completion could NOT be saved. Try submitting again, or tell your ISMS contact.'
                : 'Recording your completion…')
-            : 'Review the explanations above and try again — retries are unlimited and only the passing attempt is recorded as completion.') +
+            : 'Read the explanations above and try again. A retry asks a fresh mix of questions, and only a pass counts as completion.') +
         '</p>' +
-        '<button class="btn ghost sm" data-action="App.retryCourseQuiz">' + (passed ? 'Retake the check' : 'Try again') + '</button> ' +
+        '<button class="btn ghost sm" data-action="App.retryCourseQuiz">' + (passed ? 'Try another set' : 'Try again') + '</button> ' +
         '<button class="btn ghost sm" data-action="App.closeCourse">Back to training</button>' +
         '</div>';
     }
+  }
+
+  /* Training effectiveness (Clause 7.2 c): the questions people miss most. */
+  function trainingWeakSpots() {
+    var courses = (window.TRAINING_COURSES || []).slice();
+    (window.TRAINING_REFRESHERS || []).forEach(function (r) { courses.push(refresherCourse(r)); });
+    return window.CheckpointLib.trainingQuestionStats(S.training || [], courses, { minAsked: 3 });
+  }
+  function renderTrainingExtras() {
+    var el = document.getElementById('trainingExtras');
+    if (!el) return;
+    var L = window.CheckpointLib, prof = trainingProfile(), ref = currentRefresher(), weak = trainingWeakSpots().filter(function (w) { return w.rate >= 25; }).slice(0, 4);
+    var refCard = ref ? '<div class="card tr-card"><div class="tr-card-head">' + trainingArt(ref.modules[0].art, 40) + '<div><div class="tr-step">This month\'s 3-minute refresher</div><b>' + esc(ref.modules[0].heading) + '</b></div></div>' +
+      '<p class="src">' + esc(ref.modules[0].key[0]) + '</p>' +
+      '<div class="tr-card-btns"><button class="btn ghost sm" data-action="App.openCourse" data-id="' + esc(ref.id) + '">Read it</button>' +
+      (trainingCanManage() ? '<button class="btn ghost sm" data-action="App.assignRefresher">Send to everyone</button>' : '') + '</div></div>' : '';
+    var set = [['reportTo', 'Report security concerns to'], ['privacyTo', 'Privacy contact'], ['aiTools', 'Approved AI tools']];
+    var profCard = '<div class="card tr-card"><div class="tr-card-head">' + trainingArt('person', 40) + '<div><div class="tr-step">In every course</div><b>Your organisation\'s details</b></div></div>' +
+      set.map(function (x) { return '<div class="d-kv"><span>' + x[1] + '</span><b>' + (prof[x[0]] ? esc(prof[x[0]]) : '<span class="verify-stale">not set</span>') + '</b></div>'; }).join('') +
+      (trainingCanManage() ? '<div class="tr-card-btns"><button class="btn ghost sm" data-action="App.editTrainingProfile">Edit</button></div>' : '') + '</div>';
+    var weakCard = '<div class="card tr-card"><div class="tr-card-head">' + trainingArt('target', 40) + '<div><div class="tr-step">Is the training working?</div><b>What people get wrong</b></div></div>' +
+      (weak.length ? weak.map(function (w) { return '<div class="tr-weak"><span class="tr-weak-pct">' + w.rate + '%</span><span>' + esc(w.q) + '<span class="src"> · ' + esc(w.course) + ', asked ' + w.asked + ' times</span></span></div>'; }).join('') +
+        '<p class="src">Questions missed by a quarter or more of people. Cover these in the next refresher or toolbox talk; this is your Clause 7.2 effectiveness evidence.</p>'
+        : '<p class="src">Nothing stands out yet. Once a few people have taken the checks, the questions they miss most appear here.</p>') + '</div>';
+    el.innerHTML = refCard + profCard + weakCard;
   }
 
   /* Audience pickers are shared by policy attestation and training —
@@ -21831,6 +21959,7 @@ function showModal(opts) {
     },
 
     openCourse: function (courseId) { renderCourseReader(courseId); },
+    openCourseQuick: function (courseId) { renderCourseReader(courseId, 'essentials'); },
     closeCourse: function () {
       document.getElementById('courseReader').style.display = 'none';
       document.getElementById('courseReader').innerHTML = '';
@@ -21846,12 +21975,103 @@ function showModal(opts) {
       st.answers[Number(parts[0])] = Number(parts[1]);
       renderCourseQuiz();
     },
+    /* A retry draws a fresh mix of questions. */
     retryCourseQuiz: function () {
       var st = window._courseState;
       if (!st) return;
       st.answers = {}; st.submitted = false; st.recorded = undefined;
-      renderCourseQuiz();
-      window.scrollTo(0, 0);
+      st.seed = st.id + ':' + Date.now(); st.drawn = null;
+      renderCourseStep();
+    },
+    courseStep: function (n) {
+      var st = window._courseState;
+      if (!st) return;
+      var c = courseById(st.id);
+      st.step = Math.max(0, Math.min(c.modules.length, Number(n) || 0));
+      renderCourseStep();
+    },
+    courseMode: function (mode) {
+      var st = window._courseState;
+      if (!st || st.mode === mode) return;
+      st.mode = mode; st.drawn = null; st.answers = {}; st.submitted = false; st.recorded = undefined;
+      renderCourseStep();
+    },
+    courseScenario: function (n) {
+      var st = window._courseState;
+      if (!st || st.scen[st.step] !== undefined) return;
+      st.scen[st.step] = Number(n);
+      renderCourseStep();
+    },
+    editTrainingProfile: async function () {
+      var p = trainingProfile();
+      var v = await showModal({
+        title: 'Your organisation\'s details in courses',
+        message: 'These appear in the courses so people know exactly who to tell. Anything left blank is simply left out.',
+        fields: [
+          { id: 'reportTo', label: 'Report security concerns to (an address, number or channel)', value: p.reportTo || '' },
+          { id: 'privacyTo', label: 'Privacy contact', value: p.privacyTo || '' },
+          { id: 'aiTools', label: 'Approved AI tools', value: p.aiTools || '' }
+        ],
+        confirmText: 'Save'
+      });
+      if (!v) return;
+      var next = { reportTo: v.reportTo.trim(), privacyTo: v.privacyTo.trim(), aiTools: v.aiTools.trim() };
+      var before = (S.settings && S.settings.trainingProfile) || '';
+      S.settings.trainingProfile = JSON.stringify(next);
+      try { await Store.setSetting('trainingProfile', S.settings.trainingProfile); } catch (e) { warn(e); toast('Could not save: ' + esc(e.message || e), 'error'); return; }
+      audit('Training details changed', 'Setting', 'trainingProfile', before, S.settings.trainingProfile);
+      renderTrainingExtras();
+      toast('Saved. Courses now show these details.');
+    },
+    assignRefresher: function () {
+      var p = document.getElementById('newTrainingPanel');
+      if (p.style.display === 'none') App.toggleNewTraining();
+      var ref = currentRefresher(), sel = document.getElementById('trainingCourse');
+      if (ref && sel) sel.value = ref.id;
+      p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    /* The facilitator's pack for a toolbox talk, with a sign-on sheet. */
+    courseTalkPack: function (id) { window._talkCourse = id; App.report('toolboxtalk'); },
+    /* Records a toolbox talk: everyone named who has the course assigned
+       is marked complete, by talk, with the facilitator and date. */
+    recordToolboxTalk: async function (id) {
+      var c = courseById(id);
+      if (!c) return;
+      var v = await showModal({
+        title: 'Record a toolbox talk: ' + c.title,
+        message: 'List who attended, one per line (name or email, as on the sign-on sheet). Anyone with this course assigned is marked complete, by toolbox talk. Keep the signed sheet: upload it as evidence.',
+        fields: [
+          { id: 'date', label: 'Date held', type: 'date', value: new Date().toISOString().slice(0, 10) },
+          { id: 'by', label: 'Facilitator', value: myDisplayName() || '' },
+          { id: 'who', label: 'Attendees', type: 'textarea', value: '' }
+        ],
+        confirmText: 'Record',
+        validate: function (x) { return !x.who.trim() ? 'List at least one attendee.' : !x.by.trim() ? 'Who facilitated it?' : null; }
+      });
+      if (!v) return;
+      var names = v.who.split(/\n|;/).map(function (x) { return x.trim(); }).filter(Boolean);
+      var open = (S.training || []).filter(function (t) { return t.courseId === id && t.status !== 'Completed' && t.status !== 'Exempt'; });
+      var matched = [], unmatched = [], already = [];
+      names.forEach(function (n) {
+        var k = n.toLowerCase();
+        var t = open.find(function (x) { return matched.indexOf(x) < 0 && (String(x.upn).toLowerCase() === k || String(x.userName || '').toLowerCase() === k); });
+        if (t) matched.push(t);
+        else if ((S.training || []).some(function (x) { return x.courseId === id && x.status === 'Completed' && (String(x.upn).toLowerCase() === k || String(x.userName || '').toLowerCase() === k); })) already.push(n);
+        else unmatched.push(n);
+      });
+      if (!matched.length) { toast(already.length ? 'Everyone listed has already completed this course.' : 'Nobody listed has this course assigned. Assign it first, then record the talk.'); return; }
+      busy(true);
+      var saved = 0;
+      for (var i = 0; i < matched.length; i++) {
+        var t = matched[i], before = { status: t.status, completed: t.completed, method: t.method, note: t.note };
+        t.status = 'Completed'; t.completed = v.date; t.method = 'Toolbox talk';
+        t.note = ((t.note ? t.note + '\n' : '') + 'Toolbox talk on ' + v.date + ', facilitated by ' + v.by.trim()).slice(0, 2000);
+        try { await Store.updateTrainingRecord(t); saved++; } catch (e) { warn(e); Object.assign(t, before); }
+      }
+      busy(false);
+      audit('Toolbox talk recorded', 'Training', id, '', c.title + ' v' + c.version + ' on ' + v.date + ' by ' + v.by.trim() + ': ' + saved + ' attendee' + (saved === 1 ? '' : 's') + ' marked complete' + (unmatched.length ? '; not assigned: ' + unmatched.join(', ') : ''));
+      renderTraining();
+      toast(saved + ' marked complete by toolbox talk.' + (already.length ? ' Already complete: ' + esc(already.join(', ')) + '.' : '') + (unmatched.length ? ' Not assigned this course: ' + esc(unmatched.join(', ')) + '.' : ''));
     },
 
     /* Marks the assignment complete on a pass. Deliberately NOT in
@@ -21871,8 +22091,9 @@ function showModal(opts) {
       var c = courseById(st.id);
       if (!c) return;
       st.submitted = true;
-      var correct = c.quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
-      var passed = correct >= c.passMark;
+      var quiz = courseDraw(c, st);
+      var correct = quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
+      var passed = correct >= st.passMark;
 
       var rec = (S.training || []).find(function (t) {
         return t.courseId === st.id && String(t.upn || '').toLowerCase() === String(myUpn()).toLowerCase() &&
@@ -21880,19 +22101,22 @@ function showModal(opts) {
       });
       if (!rec) { st.recorded = 'unassigned'; renderCourseQuiz(); return; }
 
-      var before = { status: rec.status, completed: rec.completed, score: rec.score, attempts: rec.attempts };
+      var before = { status: rec.status, completed: rec.completed, score: rec.score, attempts: rec.attempts, method: rec.method, quizLog: rec.quizLog };
       rec.attempts = (rec.attempts || 0) + 1;
-      rec.score = correct + '/' + c.quiz.length;
+      rec.score = correct + '/' + quiz.length;
+      var today0 = new Date().toISOString().slice(0, 10);
+      rec.quizLog = ((rec.quizLog ? rec.quizLog + '\n' : '') + window.CheckpointLib.quizLogLine(today0, quiz.map(function (q, i) { return { id: q.id, ok: st.answers[i] === q.answer }; }))).slice(-3000);
       if (passed) {
         rec.status = 'Completed';
         rec.completed = new Date().toISOString().slice(0, 10);
+        rec.method = st.mode === 'essentials' ? '5-minute' : 'Online';
         if (!rec.userName) rec.userName = myDisplayName();
       }
       renderCourseQuiz();
       try {
         await Store.updateTrainingRecord(rec);
       } catch (e) {
-        rec.status = before.status; rec.completed = before.completed; rec.score = before.score; rec.attempts = before.attempts;
+        rec.status = before.status; rec.completed = before.completed; rec.score = before.score; rec.attempts = before.attempts; rec.method = before.method; rec.quizLog = before.quizLog;
         warn(e);
         st.recorded = false;
         renderCourseQuiz();
