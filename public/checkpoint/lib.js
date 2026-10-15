@@ -6805,11 +6805,11 @@
      clause each item evidences is kept for the evidence document, not
      shown on the agenda people read. */
   var SECURITY_REVIEW_AGENDA = [
-    { key: 'actions', title: 'Actions', min: 5, lead: 'owner', clause: '9.3.2 a, 10.1' },
-    { key: 'escalations', title: 'Needs a decision', min: 5, lead: 'chair', clause: '9.3.3, 10.1', optional: true },
-    { key: 'risks', title: 'Risks', min: 8, lead: 'chair', clause: '6.1.2, 6.1.3, 8.2, 8.3' },
     { key: 'incidents', title: 'Incidents', min: 7, lead: 'owner', clause: 'A.5.24 to A.5.27' },
     { key: 'posture', title: 'Security posture', min: 5, lead: 'owner', clause: '9.1' },
+    { key: 'risks', title: 'Risks', min: 8, lead: 'chair', clause: '6.1.2, 6.1.3, 8.2, 8.3' },
+    { key: 'actions', title: 'Actions', min: 5, lead: 'owner', clause: '9.3.2 a, 10.1' },
+    { key: 'escalations', title: 'Needs a decision', min: 5, lead: 'chair', clause: '9.3.3, 10.1', optional: true },
     { key: 'certification', title: 'Certification progress', min: 5, lead: 'facilitator', clause: '9.1, 7.5', optional: true },
     { key: 'people', title: 'People and suppliers', min: 5, lead: 'owner', clause: 'A.5.19 to A.5.23, A.6.1 to A.6.5', optional: true },
     { key: 'decisions', title: 'Decisions and any other business', min: 5, lead: 'chair', clause: '9.3.3' }
@@ -7192,6 +7192,9 @@
       add('certification', 'Certification', p.certification.docsAwaiting || (p.certification.readiness != null && p.certification.readiness < 80) ? 'amber' : 'green',
         (p.certification.readiness != null ? p.certification.readiness + '% ready' : '') + (p.certification.docsAwaiting ? (p.certification.readiness != null ? ', ' : '') + p.certification.docsAwaiting + ' document' + (p.certification.docsAwaiting === 1 ? '' : 's') + ' to approve' : '') || 'On track');
     }
+    /* In agenda order: facts first, then judgement. */
+    var order = ['incidents', 'posture', 'risks', 'actions', 'threat', 'certification'];
+    out.sort(function (a, b) { return order.indexOf(a.key) - order.indexOf(b.key); });
     return out;
   }
   /* A week after a meeting: the owners of its decisions that have not
@@ -8722,6 +8725,42 @@
       else note.push(line);
     });
     return { note: note.join('\n').trim(), decisions: dec.length ? parseReviewActionLines(dec.join('\n'), today) : [] };
+  }
+  /* The one-line outcome, suggested from what the meeting did: the
+     chair's calls on actions and risks, and the new decisions. */
+  function securityReviewOutcomeDraft(o) {
+    o = o || {};
+    var esc8 = o.escalations || {}, rd = o.riskDecisions || {}, fresh = o.newActions || [];
+    var n = function (obj, choice) { return Object.keys(obj).filter(function (k) { return (obj[k] || {}).choice === choice; }).length; };
+    var plural = function (c, one, many) { return c + ' ' + (c === 1 ? one : many); };
+    var parts = [];
+    var acts = [['close', 'closed'], ['extend', 'extended'], ['reassign', 'reassigned']].map(function (x) { var c = n(esc8, x[0]); return c ? c + ' ' + x[1] : ''; }).filter(Boolean);
+    if (acts.length) parts.push(plural(n(esc8, 'close') + n(esc8, 'extend') + n(esc8, 'reassign'), 'overdue action', 'overdue actions') + ': ' + acts.join(', '));
+    var accepted = n(esc8, 'accept') + n(rd, 'accept'), treated = n(rd, 'treat');
+    if (accepted) parts.push(plural(accepted, 'risk accepted', 'risks accepted'));
+    if (treated) parts.push(plural(treated, 'risk treated', 'risks treated'));
+    if (fresh.length) parts.push(plural(fresh.length, 'new action', 'new actions') + ': ' + fresh.slice(0, 2).map(function (t) { return String(t).replace(/[.;]\s*$/, ''); }).join('; ') + (fresh.length > 2 ? ' and ' + (fresh.length - 2) + ' more' : ''));
+    var out = parts.length ? parts.join('; ') : 'Reviewed; no change needed';
+    return out.length > 200 ? out.slice(0, 197).replace(/\s+\S*$/, '') + '...' : out;
+  }
+  /* "Since last meeting": the previous meeting's outcome and how each
+     action it raised stands now. */
+  function securityReviewSinceLast(meetings, current, actions, today) {
+    var cur = current || {};
+    var prev = (meetings || []).filter(function (r) { return r && r.status === 'Held' && r.id !== cur.id && r.date && (!cur.date || r.date <= cur.date); })
+      .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); })[0];
+    if (!prev) return null;
+    var byId = {};
+    (actions || []).forEach(function (a) { if (a && a.id) byId[a.id] = a; });
+    var items = (prev.actions || []).map(function (id) {
+      var a = byId[id];
+      if (!a) return null;
+      var st = a.status === 'Done' || a.status === 'Closed' ? 'done' : a.status === 'Cancelled' ? 'cancelled' : a.due && today && a.due < today ? 'overdue' : 'open';
+      return { id: a.id, title: a.title, owner: a.owner || '', due: a.due || '', state: st };
+    }).filter(Boolean);
+    return { id: prev.id, n: prev.n, date: prev.date, outcome: prev.outcome || '', items: items,
+      done: items.filter(function (x) { return x.state === 'done' || x.state === 'cancelled'; }).length,
+      overdue: items.filter(function (x) { return x.state === 'overdue'; }).length };
   }
   /* "Noted, no change": the facts on the agenda become the minute. */
   function minuteNotedText(facts) {
@@ -12797,7 +12836,7 @@
     bcpCheckResult: bcpCheckResult, supplierCheckResult: supplierCheckResult, policyCheckResult: policyCheckResult,
     independentReviewResult: independentReviewResult, incidentLessonsResult: incidentLessonsResult,
     objectivesCheckResult: objectivesCheckResult,
-    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, splitMinuteText: splitMinuteText, minuteNotedText: minuteNotedText, securityReviewInvitees: securityReviewInvitees, securityReviewAttendanceText: securityReviewAttendanceText, minutesProgress: minutesProgress, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
+    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS, parseReviewActionLines: parseReviewActionLines, splitMinuteText: splitMinuteText, minuteNotedText: minuteNotedText, securityReviewOutcomeDraft: securityReviewOutcomeDraft, securityReviewSinceLast: securityReviewSinceLast, securityReviewInvitees: securityReviewInvitees, securityReviewAttendanceText: securityReviewAttendanceText, minutesProgress: minutesProgress, CLAUSE_SNAPSHOTS: CLAUSE_SNAPSHOTS,
     nextBestActions: nextBestActions, controlToCheckIds: controlToCheckIds, overdueDaysOf: overdueDaysOf,
     MONITOR_APP_PERMISSIONS: MONITOR_APP_PERMISSIONS, monitorGrantSnippet: monitorGrantSnippet,
     resolvableFindings: resolvableFindings,

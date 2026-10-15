@@ -913,7 +913,7 @@ function showModal(opts) {
     'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
-    'setupSecurityReview', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'addAuditRequest', 'answerAuditRequest', 'closeAuditRequest', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'srSuggestOutcome', 'srPasteRecap', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'addAuditRequest', 'answerAuditRequest', 'closeAuditRequest', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -11881,7 +11881,7 @@ function showModal(opts) {
     if (!rec) return;
     var prev = srDraft(rec);
     var open = document.querySelector('#drawer .sr-m.sr-on');
-    var d = { id: id, notes: Object.assign({}, prev.notes || {}), dec: {}, focus: (open && open.dataset.key) || prev.focus || '', att: Object.assign({}, prev.att || {}) };
+    var d = { id: id, notes: Object.assign({}, prev.notes || {}), dec: {}, focus: (open && open.dataset.key) || prev.focus || '', att: Object.assign({}, prev.att || {}), ai: !!prev.ai };
     ['srHeldOn', 'srPresent', 'srOutcome'].forEach(function (f) { d[f] = prev[f]; });
     ['concl', 'changes', 'resources', 'sign'].forEach(function (f) { if (prev[f] !== undefined) d[f] = prev[f]; });
     secReviewAgenda(rec).items.forEach(function (i) {
@@ -11926,6 +11926,22 @@ function showModal(opts) {
     });
     return { heldOn: heldOn, present: att.present, apologies: att.apologies, outcome: String(d.srOutcome || '').trim().slice(0, 200), notes: notes, decisions: decisions };
   }
+  /* The outcome line suggested from what the meeting did. */
+  function srOutcomeSuggestion(rec, m) {
+    return window.CheckpointLib.securityReviewOutcomeDraft({ escalations: rec.escalations, riskDecisions: rec.riskDecisions, newActions: (m || srCollectMinutes(rec)).decisions.map(function (x) { return x.title; }) });
+  }
+  /* Since last meeting: its outcome and how each action it raised
+     stands now, so nobody needs the old minutes open. */
+  function srSinceLastHtml(view) {
+    var L = window.CheckpointLib, today = new Date().toISOString().slice(0, 10);
+    var sl = L.securityReviewSinceLast(secReviews(), view, S.actions || [], today);
+    if (!sl) return '';
+    var label = { done: 'Done', cancelled: 'Closed', overdue: 'Overdue', open: 'Open' };
+    return '<div class="d-sec sr-since"><h4>Since last meeting</h4><p class="src">Meeting ' + esc(sl.n || '') + ', ' + fmtDate(sl.date) + (sl.outcome ? ': ' + esc(sl.outcome) : '') + '</p>' +
+      (sl.items.length ? '<p class="src">' + sl.done + ' of ' + sl.items.length + ' decision' + (sl.items.length === 1 ? '' : 's') + ' done' + (sl.overdue ? ', ' + sl.overdue + ' overdue' : '') + '.</p><ul class="sr-since-list">' + sl.items.map(function (x) {
+        return '<li class="sr-since-' + x.state + '"><span class="sr-since-st">' + label[x.state] + '</span> <button class="lnk" data-action="App.openAction" data-id="' + esc(x.id) + '">' + esc(x.id) + '</button> ' + esc(x.title) + ' <span class="src">' + esc(x.owner) + (x.due ? ' · ' + fmtDate(x.due) : '') + '</span></li>';
+      }).join('') + '</ul>' : '<p class="src">No decisions were raised at that meeting.</p>') + '</div>';
+  }
   /* The minutes email exactly as it will be sent, before anything is
      saved: decisions not yet raised show as "New". */
   function srPreviewHtml(rec) {
@@ -11938,7 +11954,7 @@ function showModal(opts) {
       by[id] = x.item.key;
     });
     var att = L.securityReviewAttendance(m.present, s);
-    var tmp = Object.assign({}, rec, { date: m.heldOn, present: m.present, apologies: m.apologies, outcome: m.outcome, itemNotes: m.notes, decisionItem: by, attendance: { absent: att.absent, quorum: att.quorum } });
+    var tmp = Object.assign({}, rec, { date: m.heldOn, present: m.present, apologies: m.apologies, outcome: m.outcome || srOutcomeSuggestion(rec, m), itemNotes: m.notes, decisionItem: by, attendance: { absent: att.absent, quorum: att.quorum } });
     var to = secReviewRecipients();
     return '<p class="src">' + (to.length ? 'To: ' + esc(to.join(', ')) : 'No attendee email addresses yet: add them in Settings to send the minutes.') + '</p>' +
       '<div class="sr-preview-mail">' + L.securityReviewMinutesHtml(secReviewAgenda(rec), tmp, acts, Object.assign(secReviewMeta(rec), { date: fmtDate(m.heldOn) })) + '</div>';
@@ -24632,7 +24648,8 @@ function showModal(opts) {
         (previewing ? '<p class="src">This is the email attendees will receive. Nothing is saved or sent until you choose Save minutes.</p>' :
           minuting ? '<div class="sr-minutes-head"><label class="src">Held on <input class="mini" type="date" id="srHeldOn" value="' + esc(srDraft(rec).srHeldOn || view.date) + '"></label></div>' +
             srAttendanceHtml(rec, view) +
-            '<label class="src sr-outcome-in">Outcome in one line <input class="mini" id="srOutcome" maxlength="200" style="width:100%" placeholder="e.g. On track; MFA rollout slipped two weeks" value="' + esc(srDraft(rec).srOutcome != null ? srDraft(rec).srOutcome : view.outcome || '') + '"></label>' +
+            '<label class="src sr-outcome-in">Outcome in one line <input class="mini" id="srOutcome" maxlength="200" style="width:100%" placeholder="Left blank, it is suggested from the decisions when you save" value="' + esc(srDraft(rec).srOutcome != null ? srDraft(rec).srOutcome : view.outcome || '') + '"></label>' +
+            '<div class="sr-dec-row"><button class="btn ghost sm" data-action="App.srSuggestOutcome" data-id="' + esc(rec.id) + '">Suggest the outcome</button><button class="btn ghost sm" data-action="App.srPasteRecap" data-id="' + esc(rec.id) + '">Paste the Teams recap</button>' + (srDraft(rec).ai ? '<span class="src">Drafted with AI from the recap: check each item before saving.</span>' : '') + '</div>' +
             '<p class="src">One box per item. <b>Noted, no change</b> records the figures as they stand; a line starting <b>Decision:</b> becomes an action (what - owner - due date)' + (a.kind === 'mr' ? '. This meeting is also recorded as the Clause 9.3 management review' : '') + '. <span id="srProgress" class="sr-progress"></span></p>' :
           READONLY ? '' : '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px">' +
           (!rec ? '<button class="btn sm" data-action="App.prepareSecurityReview">Prepare and save</button>' : !held ? btn('App.prepareSecurityReview', 'Refresh figures', true) : '') +
@@ -24647,6 +24664,7 @@ function showModal(opts) {
         (held && view.outcome ? '<p class="sr-outcome"><b>Outcome:</b> ' + esc(view.outcome) + '</p>' : '') +
         (held ? '<p class="src">Held ' + fmtDate(view.date) + ' · present: ' + esc(view.present || '—') + (view.apologies ? ' · apologies: ' + esc(view.apologies) : '') + (view.minutesSentAt ? ' · minutes sent ' + fmtDate(view.minutesSentAt) : '') + (view.reviewId ? ' · recorded as management review <button class="lnk" data-action="App.openReview" data-id="' + esc(view.reviewId) + '">' + esc(view.reviewId) + '</button>' : '') + '</p>' : '') +
         (!minuting ? srStatusHtml(view.pack) : '') +
+        (!held && !previewing ? srSinceLastHtml(view) : '') +
         (previewing ? '<div class="d-sec sr-preview">' + srPreviewHtml(rec) + '</div>' :
         '<div class="d-sec"><h4>' + (minuting ? 'Minutes' : held ? 'Agenda and minutes' : 'Agenda') + '</h4>' + srAgendaItemsHtml(rec || null, a, minuting ? 'minutes' : held ? 'held' : 'agenda') +
           ((a.quiet || []).length ? '<p class="src sr-quiet"><b>Nothing to report:</b> ' + a.quiet.map(esc).join('; ') + '.</p>' : '') + '</div>') +
@@ -24796,6 +24814,52 @@ function showModal(opts) {
       var dr = document.getElementById('drawer'); if (dr) dr.scrollTop = 0;
     },
     srBackToMinutes: function (id) { window._srPreview = null; App.openSecurityReview(id); },
+    srSuggestOutcome: function (id) {
+      var rec = secReviewById(id), el = document.getElementById('srOutcome');
+      if (!rec || !el) return;
+      srStashDraft(id);
+      el.value = srOutcomeSuggestion(rec);
+      el.focus();
+    },
+    /* Paste the meeting's Teams or Copilot recap: the AI drafts each
+       item's minute and decisions into the boxes, from the recap only,
+       for the person taking the minutes to check. Nothing is saved. */
+    srPasteRecap: async function (id) {
+      var rec = secReviewById(id);
+      if (!rec) return;
+      srStashDraft(id);
+      if (!(S.entitlements && S.entitlements.ai)) { toast('The AI assistant is not licensed for this tenant.'); return; }
+      var cfg = aiGetConfig();
+      if (!(cfg.enabled && cfg.endpoint && cfg.deployment)) { toast('The AI assistant is not set up yet: see Settings, AI assistant.'); return; }
+      if (Store.kind === 'demo') { toast('Drafting minutes from a recap is not available in the demo.'); return; }
+      var v = await showModal({
+        title: 'Paste the meeting recap',
+        message: 'Paste the Teams meeting recap, Copilot summary or transcript. Your own Azure OpenAI drafts a minute and any decisions for each agenda item, and they appear in the boxes for you to check. Nothing is saved until you save the minutes.',
+        fields: [{ id: 'recap', label: 'Recap or transcript', type: 'textarea', value: '' }],
+        confirmText: 'Draft the minutes',
+        validate: function (x) { return x.recap.trim().length < 40 ? 'Paste the recap first.' : null; }
+      });
+      if (!v) { App.openSecurityReview(id); return; }
+      var items = secReviewAgenda(rec).items;
+      busy(true);
+      try {
+        var res = await window.CheckpointAI.chat('minutes', window.CheckpointAI.buildMinutesDraftPrompt(items, v.recap), {});
+        var draft = window.CheckpointAI.parseMinutesDraft(res.text, items.map(function (i) { return i.key; }));
+        var d = window._srDraft;
+        var merged = window.CheckpointAI.mergeMinutesDraft(d.notes, draft, items.map(function (i) { return i.key; }));
+        var filled = merged.filled;
+        d.notes = merged.notes;
+        d.ai = true;
+        audit('AI draft: meeting minutes', 'SecurityReview', id, '', filled + ' of ' + items.length + ' items drafted from a pasted recap');
+        busy(false);
+        App.openSecurityReview(id);
+        toast(filled ? 'Drafted ' + filled + ' item' + (filled === 1 ? '' : 's') + ' from the recap. Check each one before saving.' : 'The recap did not mention any agenda item.');
+      } catch (e) {
+        busy(false);
+        App.openSecurityReview(id);
+        toast(e.code === 'auth_error' ? 'Not authorised: check the Cognitive Services OpenAI User role.' : e.code === 'rate_limited' ? 'The AI endpoint is busy: try again shortly.' : 'Could not draft the minutes: ' + esc(e.message || e), 'error');
+      }
+    },
     /* A lesson learned from an incident: the action is raised there and then, with an owner
        from the directory and a due date, and shown under its item. */
     srAddDecision: async function (key) {
@@ -24943,7 +25007,7 @@ function showModal(opts) {
       if (!window._srPreview) srStashDraft(id);
       var m = srCollectMinutes(rec), d = srDraft(rec);
       var back = function (key) { window._srPreview = null; if (key && window._srDraft) window._srDraft.focus = key; App.openSecurityReview(id); };
-      var heldOn = m.heldOn, present = m.present, outcome = m.outcome;
+      var heldOn = m.heldOn, present = m.present, outcome = m.outcome || srOutcomeSuggestion(rec, m);
       if (!present) { back(); toast('Record who was present.'); return; }
       /* The management review meeting needs the chair's conclusion. */
       var L = window.CheckpointLib, concl = null, signOff = false;
@@ -24996,6 +25060,7 @@ function showModal(opts) {
         if (!r.pack) r.pack = secReviewPack();
         r.status = 'Held'; r.date = heldOn; r.present = present; r.itemNotes = notes; r.heldAt = new Date().toISOString().slice(0, 10);
         if (m.apologies) r.apologies = m.apologies; else delete r.apologies;
+        if (d.ai) r.aiAssisted = true;
         if (outcome) r.outcome = outcome;
         r.attendance = { absent: attendance.absent, quorum: attendance.quorum };
         r.actions = raised.slice(); r.decisionItem = Object.assign(r.decisionItem || {}, byItem);

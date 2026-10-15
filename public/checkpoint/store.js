@@ -1813,7 +1813,7 @@ window.DemoStore = (function () {
         securityReviewSetup: JSON.stringify({ chair: 'Mei Chen', owner: 'Sam Okafor', ownerEmail: 's.okafor@meridianhealth.example', facilitator: 'Compliance365', emails: 'm.chen@meridianhealth.example, s.okafor@meridianhealth.example, k.patel@meridianhealth.example', week: 2, weekday: 2, time: '10:00', teamsLink: '', autoSend: 'false', startDate: daysFrom(-70) }),
         securityReviews: JSON.stringify([
           { id: 'SR-001', n: 1, kind: 'kickoff', date: daysFrom(-63), time: '10:00', status: 'Held', preparedAt: daysFrom(-66), present: 'Mei Chen, Sam Okafor, Kim Patel', notes: 'Agreed terms of reference and roles. Baseline recorded.', actions: ['ACT-003'], pack: demoSecurityPack(daysFrom(-63), daysFrom(-94), 41, null, 6, 4, 2) },
-          { id: 'SR-002', n: 2, kind: 'monthly', date: daysFrom(-35), time: '10:00', status: 'Held', preparedAt: daysFrom(-38), present: 'Mei Chen, Sam Okafor', notes: 'Phishing incident reviewed; MFA gaps prioritised.', actions: [], pack: demoSecurityPack(daysFrom(-35), daysFrom(-63), 48, 41, 4, 3, 1) }
+          { id: 'SR-002', n: 2, kind: 'monthly', date: daysFrom(-35), time: '10:00', status: 'Held', preparedAt: daysFrom(-38), present: 'Mei Chen, Sam Okafor', notes: 'Phishing incident reviewed; MFA gaps prioritised.', outcome: 'Phishing incident closed; MFA gaps prioritised', actions: ['ACT-001', 'ACT-003'], pack: demoSecurityPack(daysFrom(-35), daysFrom(-63), 48, 41, 4, 3, 1) }
         ])
       }),
       proposed: [],

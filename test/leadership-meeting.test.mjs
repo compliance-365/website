@@ -139,6 +139,9 @@ describe('in the browser', { skip: skipReason || false }, () => {
     if (await page.locator('#drawer button[data-action="App.prepareSecurityReview"]').count()) await page.click('#drawer button[data-action="App.prepareSecurityReview"]');
     await page.waitForSelector('#drawer button[data-action="App.recordSecurityReview"]');
     await page.click('#drawer button[data-action="App.recordSecurityReview"]');
+    // Incidents come first now: open the item holding the overdue actions.
+    await page.waitForSelector('#drawer [data-action="App.srEscalate"][data-id$="|close"]', { state: 'attached' });
+    await page.locator('#drawer .sr-m', { has: page.locator('[data-action="App.srEscalate"][data-id$="|close"]') }).first().locator('.sr-m-head').click();
     await page.waitForSelector('#drawer [data-action="App.srEscalate"][data-id$="|close"]');
 
     const closeBtn = page.locator('#drawer [data-action="App.srEscalate"][data-id$="|close"]').first();

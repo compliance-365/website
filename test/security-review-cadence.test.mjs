@@ -113,7 +113,7 @@ describe('the scheduled function', () => {
     const mail = f.calls.find((c) => /sendMail/.test(c.path));
     const msg = mail.opts.body.message;
     assert.deepEqual(msg.toRecipients.map((r) => r.emailAddress.address), ['ekin@mg.example', 'cem@mg.example']);
-    assert.match(msg.body.content, /Kick-off[\s\S]*At a glance[\s\S]*Actions[\s\S]*1 overdue, oldest ACT-1 \(Cem\)[\s\S]*1 action overdue[\s\S]*INC-1 Lost laptop[\s\S]*Posture score 62\/100[\s\S]*on 9 Oct 2026/);
+    assert.match(msg.body.content, /Kick-off[\s\S]*At a glance[\s\S]*Actions[\s\S]*1 overdue, oldest ACT-1 \(Cem\)[\s\S]*INC-1 Lost laptop[\s\S]*Posture score 62\/100[\s\S]*1 action overdue[\s\S]*on 9 Oct 2026/);
     assert.ok(!/9\.3\.2|A\.5\.24/.test(msg.body.content), 'no clause references in the email');
     assert.match(Buffer.from(msg.attachments[0].contentBytes, 'base64').toString(), /DTSTART:20261012T230000Z/);
     const saved = f.calls.find((c) => c.opts && c.opts.method === 'PATCH');
@@ -188,14 +188,13 @@ describe('in the browser', { skip: skipReason || false }, () => {
     let drawer = await page.locator('#drawer').innerText();
     assert.match(drawer, /AOB: penetration test scope/);
     assert.ok(!/Security posture/.test(drawer.split("Agenda")[1] || ""));
-    // Twice: the demo has an action stuck since the last meeting, so
-    // "Needs a decision" sits between Actions and Risks.
-    await page.click('#drawer button[data-action="App.srMoveItem"][data-id="SR-003|risks|up"]');
-    await page.waitForTimeout(200);
-    await page.click('#drawer button[data-action="App.srMoveItem"][data-id="SR-003|risks|up"]');
-    await page.waitForTimeout(200);
-    const order = await page.$$eval('#drawer .sr-item b', (els) => els.map((e) => e.textContent));
+    // Risks come before Actions by default; a meeting can still move an item.
+    let order = await page.$$eval('#drawer .sr-item b', (els) => els.map((e) => e.textContent));
     assert.ok(order.indexOf('Risks') < order.indexOf('Actions'));
+    await page.click('#drawer button[data-action="App.srMoveItem"][data-id="SR-003|actions|up"]');
+    await page.waitForTimeout(200);
+    order = await page.$$eval('#drawer .sr-item b', (els) => els.map((e) => e.textContent));
+    assert.ok(order.indexOf('Actions') < order.indexOf('Risks'));
     const popup = context.waitForEvent('page');
     await page.click('#drawer button[data-action="App.secReviewDoc"]');
     const doc = await popup;

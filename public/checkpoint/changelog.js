@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.160.0',
+    date: '2026-10-15',
+    entries: [
+      'The leadership meeting now runs facts first: Incidents, Security posture, Risks, then Actions and Needs a decision, so the risk discussion is informed by what happened and the actions follow from it. "At a glance" uses the same order. Any meeting can still move items.',
+      'Since last meeting: before the meeting is held, the drawer shows the previous meeting\'s outcome and each decision it raised, marked Done, Open or Overdue, with a link to the action.',
+      'Suggest the outcome: one click drafts the one-line outcome from what the meeting decided (actions closed or extended, risks accepted or treated, new actions). Left blank, the outcome is filled the same way when the minutes are saved. Edit it as you like.',
+      'Paste the Teams recap: paste a Teams meeting recap, Copilot summary or transcript and your own Azure OpenAI drafts a minute and any decisions for each agenda item, from the recap only. The drafts appear in the boxes for you to check; nothing is saved until you save the minutes, and the record notes that AI helped draft them.'
+    ]
+  },
+  {
     version: '1.159.0',
     date: '2026-10-14',
     entries: [

@@ -8,11 +8,11 @@
   var DONE_ACTION = function (a) { return a && (a.status === 'Done' || a.status === 'Cancelled'); };
   var SECURITY_REVIEW_LENGTH = { kickoff: 50, monthly: 30, quarterly: 45, mr: 60 };
   var SECURITY_REVIEW_AGENDA = [
-    { key: 'actions', title: 'Actions', min: 5, lead: 'owner', clause: '9.3.2 a, 10.1' },
-    { key: 'escalations', title: 'Needs a decision', min: 5, lead: 'chair', clause: '9.3.3, 10.1', optional: true },
-    { key: 'risks', title: 'Risks', min: 8, lead: 'chair', clause: '6.1.2, 6.1.3, 8.2, 8.3' },
     { key: 'incidents', title: 'Incidents', min: 7, lead: 'owner', clause: 'A.5.24 to A.5.27' },
     { key: 'posture', title: 'Security posture', min: 5, lead: 'owner', clause: '9.1' },
+    { key: 'risks', title: 'Risks', min: 8, lead: 'chair', clause: '6.1.2, 6.1.3, 8.2, 8.3' },
+    { key: 'actions', title: 'Actions', min: 5, lead: 'owner', clause: '9.3.2 a, 10.1' },
+    { key: 'escalations', title: 'Needs a decision', min: 5, lead: 'chair', clause: '9.3.3, 10.1', optional: true },
     { key: 'certification', title: 'Certification progress', min: 5, lead: 'facilitator', clause: '9.1, 7.5', optional: true },
     { key: 'people', title: 'People and suppliers', min: 5, lead: 'owner', clause: 'A.5.19 to A.5.23, A.6.1 to A.6.5', optional: true },
     { key: 'decisions', title: 'Decisions and any other business', min: 5, lead: 'chair', clause: '9.3.3' }
@@ -163,6 +163,9 @@
       add('certification', 'Certification', p.certification.docsAwaiting || (p.certification.readiness != null && p.certification.readiness < 80) ? 'amber' : 'green',
         (p.certification.readiness != null ? p.certification.readiness + '% ready' : '') + (p.certification.docsAwaiting ? (p.certification.readiness != null ? ', ' : '') + p.certification.docsAwaiting + ' document' + (p.certification.docsAwaiting === 1 ? '' : 's') + ' to approve' : '') || 'On track');
     }
+    /* In agenda order: facts first, then judgement. */
+    var order = ['incidents', 'posture', 'risks', 'actions', 'threat', 'certification'];
+    out.sort(function (a, b) { return order.indexOf(a.key) - order.indexOf(b.key); });
     return out;
   }
   function securityReviewFollowUps(reviews, actions, today) {

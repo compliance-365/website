@@ -86,7 +86,12 @@
        risks, no actions, no scan detail: the question is "what does
        THIS document evidence", and sending a register it has no use for
        would be sending client data for no reason. */
-    evidenceInterpret: ['controlList', 'soaSummary']
+    evidenceInterpret: ['controlList', 'soaSummary'],
+    /* Meeting minutes from a pasted Teams or Copilot recap — sees no
+       register at all. The agenda items and the recap travel in the
+       user message; the draft is shown in the minute boxes for the
+       person taking the minutes to accept or change. */
+    minutes: []
   };
 
   /* Fixed priority order sections are considered in when the character
@@ -693,6 +698,51 @@
     };
   }
 
+  /* Leadership meeting minutes from a pasted meeting recap or
+     transcript. One minute per agenda item, and decisions as
+     "what - owner - due date"; nothing is invented for items the recap
+     does not mention. */
+  var MINUTES_RECAP_MAX = 24000;
+  function buildMinutesDraftPrompt(items, recap) {
+    var list = (items || []).map(function (i) { return '- ' + i.key + ': ' + i.title; }).join('\n');
+    return 'Draft the minutes of a leadership security meeting from the meeting recap below. The agenda items are:\n' + list + '\n\n' +
+      'Respond in EXACTLY this format, nothing before or after it, one line each, using the item keys above:\n' +
+      'ITEM <key>: <what was said about this item, one to three plain sentences>\n' +
+      'DECISION <key>: <what will be done> - <owner\'s name> - <due date as YYYY-MM-DD, or leave out if none was agreed>\n\n' +
+      'Only include items and decisions the recap actually mentions. Never invent an owner or a date. Put anything that fits no item under the key "decisions".\n\n' +
+      'RECAP:\n' + String(recap || '').slice(0, MINUTES_RECAP_MAX);
+  }
+  /* Never throws. Lines for keys not on the agenda are dropped, so the
+     draft can only ever land in a real item's box. */
+  function parseMinutesDraft(text, keys) {
+    var out = { notes: {}, decisions: {} }, ok = {};
+    (keys || []).forEach(function (k) { ok[String(k).toLowerCase()] = k; });
+    String(text || '').split('\n').forEach(function (line) {
+      var m = /^\s*(ITEM|DECISION)\s+([A-Za-z0-9_-]+)\s*:\s*(.+?)\s*$/i.exec(line);
+      if (!m) return;
+      var key = ok[m[2].toLowerCase()];
+      if (!key) return;
+      if (m[1].toUpperCase() === 'ITEM') out.notes[key] = (out.notes[key] ? out.notes[key] + ' ' : '') + m[3];
+      else (out.decisions[key] = out.decisions[key] || []).push(m[3]);
+    });
+    return out;
+  }
+  /* Adds the drafted minute and "Decision:" lines under whatever the
+     person has already typed in each box; never replaces it. */
+  function mergeMinutesDraft(notes, draft, keys) {
+    var out = Object.assign({}, notes || {}), filled = 0;
+    (keys || []).forEach(function (k) {
+      var add = [];
+      if (draft.notes && draft.notes[k]) add.push(draft.notes[k]);
+      ((draft.decisions && draft.decisions[k]) || []).forEach(function (x) { add.push('Decision: ' + x); });
+      if (!add.length) return;
+      var cur = String(out[k] || '').replace(/\s+$/, '');
+      out[k] = (cur ? cur + '\n' : '') + add.join('\n');
+      filled++;
+    });
+    return { notes: out, filled: filled };
+  }
+
   /* Test-only: drops wiring and resets the concurrency queue between
      test cases. Never called from app.js. */
   function _resetForTests() { _state = null; _queue = null; }
@@ -721,6 +771,9 @@
     parseEvidenceRequestList: parseEvidenceRequestList,
     buildEvidenceInterpretPrompt: buildEvidenceInterpretPrompt,
     parseEvidenceInterpretation: parseEvidenceInterpretation,
+    buildMinutesDraftPrompt: buildMinutesDraftPrompt,
+    parseMinutesDraft: parseMinutesDraft,
+    mergeMinutesDraft: mergeMinutesDraft,
     _resetForTests: _resetForTests
   };
 });

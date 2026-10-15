@@ -60,11 +60,11 @@ describe('pack and agenda', () => {
   test('the agenda is 30 minutes on what matters, led by named people, answered from the pack', () => {
     const a = Lib.securityReviewAgenda(setup, 2, pack);
     assert.equal(a.minutes, 30);
-    assert.deepEqual(a.items.map((i) => i.title), ['Actions', 'Risks', 'Incidents', 'Security posture', 'Certification progress', 'People and suppliers', 'Decisions and any other business']);
-    assert.equal(a.items[0].lead, 'Cem');
-    assert.match(a.items[0].facts.join(' | '), /Decisions from last meeting: 1 of 2 done \| 1 action overdue \| ACT-1 Enforce MFA \(Cem\)/);
-    assert.match(a.items[2].facts.join(' '), /1 incident since 8 Sep 2026, 1 still open[\s\S]*INC-1 Lost laptop \(Medium\)/);
-    assert.match(a.items[3].facts[0], /Posture score 48\/100 \(\+7 since 8 Sep 2026\)/);
+    assert.deepEqual(a.items.map((i) => i.title), ['Incidents', 'Security posture', 'Risks', 'Actions', 'Certification progress', 'People and suppliers', 'Decisions and any other business']);
+    assert.equal(a.items[3].lead, 'Cem');
+    assert.match(a.items[3].facts.join(' | '), /Decisions from last meeting: 1 of 2 done \| 1 action overdue \| ACT-1 Enforce MFA \(Cem\)/);
+    assert.match(a.items[0].facts.join(' '), /1 incident since 8 Sep 2026, 1 still open[\s\S]*INC-1 Lost laptop \(Medium\)/);
+    assert.match(a.items[1].facts[0], /Posture score 48\/100 \(\+7 since 8 Sep 2026\)/);
     assert.ok(a.items.every((i) => !('clause' in i) || typeof i.clause === 'string'), 'clauses kept as data only');
   });
   test('kick-off about 50 minutes, quarterly 45, the management review meeting 60 with its sign-off', () => {
@@ -169,7 +169,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.click('#drawer button[data-action="App.saveSecurityReviewMinutes"]');
     await page.waitForTimeout(500);
     const drawer = await page.locator('#drawer').innerText();
-    assert.match(drawer, /Actions[\s\S]*Enforce MFA for contractors[\s\S]*Sam Okafor[\s\S]*Security posture[\s\S]*Score up after MFA rollout/i);
+    assert.match(drawer, /Outcome: 1 new action: Enforce MFA for contractors[\s\S]*Security posture[\s\S]*Score up after MFA rollout[\s\S]*Actions[\s\S]*Enforce MFA for contractors[\s\S]*Sam Okafor/i, 'a blank outcome is filled from the decisions');
     assert.ok(await page.evaluate(() => window.App && document.body.innerText !== ''));
     assert.match(await page.locator('#secReviewCard').innerText(), /Meeting 4/, 'the next meeting comes up');
     await page.evaluate(() => window.App.closeDrawer());
