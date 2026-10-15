@@ -8,6 +8,10 @@ tags: ["Essential Eight", "Essentials Series", "ASD", "ACSC", "Australia"]
 image: "/assets/illus-essential-eight.svg"
 ---
 
+<div style="background:#f0fdf4;border:1px solid #16a34a;border-radius:12px;padding:16px 22px;margin:24px 0">
+  <p style="margin:0"><strong>Update, 15 October 2026:</strong> ASD has now published the Essentials. See <a href="/blog/asd-essentials-published/">ASD has published the Essentials: what changed</a>. This post is kept as it stood on 10 October.</p>
+</div>
+
 <div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>In June 2026 ASD announced that the Essential Eight will be replaced by a new framework, the <strong>Essentials series</strong>. Consultation on its first chapter closed on 12 July 2026.</p>
   <p>As at 10 October 2026, ASD has not published the final framework or given a release date. Here is what is known, what isn't, and what to keep doing in the meantime.</p>
@@ -39,7 +43,7 @@ Treat any article that gives a firm release date, or a mapping of maturity level
 3. **Map, don't rebuild.** When the enterprise IT chapter is published, map your existing controls to its outcomes before changing anything.
 4. **Watch your contracts.** Note which customers, panels or insurers name the Essential Eight, so you know who to talk to when they update their requirements.
 
-Our full guide, [The Essential Eight is being retired: what you need to know](/resources/asd-essentials-framework/), covers the transition in more detail. You can also sign up there for **one email when ASD publishes** the final chapter. For an assessment against the current Essential Eight, see our [Essential Eight service](/services/essential-eight/).
+Our full guide, [ASD has published the Essentials: what it means for your Essential Eight work](/resources/asd-essentials-framework/), covers the transition in more detail. You can also sign up there for **one email when our Essential Eight to Essentials mapping** is published. For an assessment against the current Essential Eight, see our [Essential Eight service](/services/essential-eight/).
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 

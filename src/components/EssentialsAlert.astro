@@ -1,20 +1,21 @@
 ---
-// A one-off email when ASD publishes the final Essentials series, for the
-// Essential Eight pages. Uses the same sign-up endpoint as the digest; the
-// topic tells Compliance365 which list the person asked for.
+// A one-off email when Compliance365 publishes its Essential Eight to
+// Essentials mapping, for the Essential Eight pages. Uses the same sign-up
+// endpoint as the digest; the topic tells Compliance365 which list the
+// person asked for.
 import DigestSignup from './DigestSignup.astro';
 interface Props { source: string }
 const { source } = Astro.props;
 ---
 <section class="container" style="padding-bottom:0;">
   <DigestSignup
-    label="Essentials series alert"
-    heading="Get one email when ASD publishes the final Essentials series"
-    subtext="ASD has not given a date. We'll email you once when it is published, with what it changes for the Essential Eight work you have already done. One email, not a newsletter."
-    button="Email me when it's out"
+    label="Essentials mapping alert"
+    heading="Get one email when our Essential Eight to Essentials mapping is out"
+    subtext="ASD published the Essentials on 15 October 2026. We're mapping each Essential Eight control to the new chapters. We'll email you once when the mapping is published. One email, not a newsletter."
+    button="Email me the mapping"
     successTitle="You're on the list."
-    successText="We'll email you once when ASD publishes the final Essentials series."
-    topic="Essentials series release alert"
+    successText="We'll email you once when our Essential Eight to Essentials mapping is published."
+    topic="Essentials mapping alert"
     source={source}
   />
 </section>
