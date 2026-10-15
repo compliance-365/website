@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.163.0',
+    date: '2026-10-15',
+    entries: [
+      'Essential Eight now explains itself. The Statement of Applicability has a "How Essential Eight works here" panel: pick your target maturity, see which strategies the scan can suggest a status for in your tenant and what each check says now, and which strategies are yours to assess (user application hardening and backups always are).',
+      'Each strategy lists what the scan cannot see, such as servers outside Intune, how often scans run, and how admin requests are approved, so a passing check is never read as the level being met. A strategy whose checks returned no reading on the last scan is flagged rather than shown as automated.'
+    ]
+  },
+  {
     version: '1.162.0',
     date: '2026-10-15',
     entries: [

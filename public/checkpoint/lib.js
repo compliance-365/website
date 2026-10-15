@@ -11186,6 +11186,45 @@
     return def ? def.cia.slice() : [];
   }
   /* Which of C, I and A the register covers, for the "is it balanced" view. */
+  /* Essential Eight "How this works" — per strategy, whether the scan
+     can suggest a status at all, which checks feed it and what each one
+     currently says, and what the scan cannot see however it reads. The
+     limits are written against the ACSC Essential Eight Maturity Model
+     (November 2023): they are the parts of each strategy no Microsoft
+     365, Intune or Entra signal speaks to, so a passing check is never
+     read as "this maturity level is met". checkE8 is the content
+     pack's check -> [strategy] map (window.CHECK_E8); results is
+     checkId -> 'pass'/'review'/'fail'/'manual'/null. */
+  var E8_SCAN_LIMITS = {
+    'E8.1': { manualWhy: '', limits: 'Servers and devices not managed by Intune; whether the rule set is reviewed at least annually; whether allowed and blocked execution events are logged centrally (ML2).' },
+    'E8.2': { manualWhy: '', limits: 'Applications on devices not onboarded to Defender; how often vulnerability scans run; whether unsupported applications have been removed.' },
+    'E8.3': { manualWhy: '', limits: 'Whether each macro exception is justified and approved; trusted locations and signed-macro rules (ML2, ML3); whether macro events are logged.' },
+    'E8.4': { manualWhy: 'Attack surface reduction and browser settings are only readable through Microsoft\'s beta API, which Checkpoint does not use, so there is no reliable live signal.', limits: 'All of it: browser hardening, Office and PDF reader child-process blocking, PowerShell constrained language and logging. Attach the Intune profile or Group Policy export as evidence.' },
+    'E8.5': { manualWhy: '', limits: 'How admin access requests are approved and revalidated; whether privileged accounts are barred from email and web browsing; separate admin workstations; privileged access logging (ML2).' },
+    'E8.6': { manualWhy: '', limits: 'Servers, network devices and anything outside Intune or Defender; whether unsupported operating systems have been replaced; how often scans run.' },
+    'E8.7': { manualWhy: '', limits: 'Online services and remote access that do not sign in through Entra (third-party portals, VPNs); whether MFA events are logged (ML2).' },
+    'E8.8': { manualWhy: 'Microsoft 365 exposes no live signal for backup coverage, retention or restore testing.', limits: 'All of it: what is backed up and how often, retention, restore tests, and who can reach or delete the backups. Attach the backup report and the last restore test record.' }
+  };
+  function e8Automation(strategies, checkE8, checkDefs, results) {
+    var RANK = { fail: 0, review: 1, manual: 2, pass: 3 };
+    checkE8 = checkE8 || {};
+    return (strategies || []).map(function (s) {
+      var checks = Object.keys(checkE8).filter(function (id) { return (checkE8[id] || []).indexOf(s.code) > -1; }).map(function (id) {
+        var def = (checkDefs || []).find(function (d) { return d.id === id; });
+        return { id: id, label: def ? def.label : id, result: (results && results[id]) || null };
+      });
+      var limits = E8_SCAN_LIMITS[s.code] || { manualWhy: '', limits: '' };
+      var scored = checks.filter(function (c) { return c.result === 'pass' || c.result === 'review' || c.result === 'fail'; });
+      var worst = scored.reduce(function (w, c) { return w === null || RANK[c.result] < RANK[w] ? c.result : w; }, null);
+      /* 'scan' = at least one live check feeds it; 'unread' = checks are
+         mapped but none returned a scored result on the last scan (not
+         scanned yet, or every one came back Manual — verify), which is
+         the case worth flagging, since it LOOKS automated and isn't. */
+      var mode = !checks.length ? 'self' : scored.length ? 'scan' : 'unread';
+      return { code: s.code, title: s.t, mode: mode, checks: checks, worst: worst, manualWhy: limits.manualWhy, limits: limits.limits };
+    });
+  }
+
   function objectiveCiaCoverage(objectives) {
     var live = (objectives || []).filter(function (o) { return o && o.status !== 'Achieved' && o.status !== 'Missed'; });
     var out = { C: 0, I: 0, A: 0 };
@@ -13044,7 +13083,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,

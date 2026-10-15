@@ -905,7 +905,7 @@ function showModal(opts) {
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
-    'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
+    'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel', 'toggleE8How',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
     'confirmRffrSuggestion', 'dismissRffrSuggestion', 'confirmIso42001Suggestion', 'dismissIso42001Suggestion',
     'confirmIso27701Suggestion', 'dismissIso27701Suggestion',
@@ -12316,6 +12316,66 @@ function showModal(opts) {
       }).join('') + '</div>';
   }
 
+  /* "How this works" for Essential Eight — which strategies the scan
+     can suggest a status for in THIS tenant (from the live results, not
+     the static map: a mapped check that came back Manual — verify is
+     called out, since it looks automated and is not), what each check
+     says now, and what no scan can see. Open by default until the
+     first scan; in-memory toggle after that, like every other view
+     filter. */
+  function renderE8HowItWorks(isE8, target, rawRows) {
+    var el = document.getElementById('soaE8How');
+    if (!el) return;
+    if (!isE8) { el.innerHTML = ''; return; }
+    var open = window._e8HowOpen === undefined ? !S.lastResults : window._e8HowOpen;
+    var strategies = (window.FRAMEWORKS.essential8.controls || []).filter(function (c) { return !c.lvl; })
+      .slice().sort(function (a, b) { return parseInt(a.code.split('.')[1], 10) - parseInt(b.code.split('.')[1], 10); });
+    var rows = window.CheckpointLib.e8Automation(strategies, window.CHECK_E8, window.CHECK_DEFS, allCheckResultsById());
+    var nScan = rows.filter(function (r) { return r.mode === 'scan'; }).length;
+    var hasMap = rows.some(function (r) { return r.checks.length; });
+    var byCode = {};
+    (rawRows || []).forEach(function (c) { byCode[c.id] = c; });
+    var RES = { pass: ['st-Implemented', 'Pass'], review: ['st-Intreatment', 'Review'], fail: ['st-Open', 'Fail'], manual: ['st-Proposed', 'Manual — verify'] };
+    var MODE = {
+      scan: ['st-Implemented', 'Scan suggests'],
+      unread: ['st-Intreatment', 'No live signal yet'],
+      self: ['st-Notstarted', 'You assess']
+    };
+    var summary = !hasMap
+      ? 'Scan suggestions arrive with the Essential Eight content pack. Until then every strategy is assessed by you, with evidence.'
+      : nScan + ' of ' + rows.length + ' strategies get a scan suggestion in this tenant' + (S.lastResults ? '' : ' once you run a scan') + '. Suggestions are never applied until you confirm them.';
+    var lvlSelect = READONLY ? '<b>' + esc('ML' + target) + '</b>' :
+      '<select class="mini" data-change-action="App.setE8TargetLevel" aria-label="Essential Eight target maturity level">' +
+      ['ML1', 'ML2', 'ML3'].map(function (s) { return '<option' + (('ML' + target) === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
+    var head = '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">' +
+      '<div><h3 style="margin:0 0 4px">How Essential Eight works here</h3><p class="src" style="margin:0">' + esc(summary) + '</p></div>' +
+      '<button class="btn ghost sm" data-action="App.toggleE8How" aria-expanded="' + (open ? 'true' : 'false') + '">' + (open ? 'Hide' : 'How this works') + '</button></div>';
+    if (!open) { el.innerHTML = '<div class="card e8-how" style="padding:14px 16px;margin:12px 0">' + head + '</div>'; return; }
+    var steps = '<ol class="e8-how-steps">' +
+      '<li><b>Pick your target</b><span>Target maturity ' + lvlSelect + '. The table shows each strategy\'s levels up to it, and readiness is measured against it.</span></li>' +
+      '<li><b>Scan suggests, you decide</b><span>A scan proposes a status for the ML' + target + ' row of the strategies it can read. Confirm or dismiss each one above the table.</span></li>' +
+      '<li><b>Evidence proves it</b><span>A strategy is at ML2 only when ML1 and ML2 are both Implemented. Link evidence on each row; an auditor will ask for it.</span></li>' +
+      '</ol>';
+    var table = '<div class="e8-how-grid">' + rows.map(function (r) {
+      var m = MODE[r.mode];
+      var lvl = e8AssessedMaturity(r.code, byCode);
+      var checks = r.checks.length ? r.checks.map(function (c) {
+        var x = RES[c.result] || ['st-Notstarted', 'Not scanned'];
+        return '<span class="e8-how-check">' + esc(c.label) + ' <span class="chip ' + x[0] + '">' + esc(x[1]) + '</span></span>';
+      }).join('') : '<span class="src">' + esc(r.manualWhy || 'No scan check feeds this strategy in the Essential Eight content this tenant holds.') + '</span>';
+      return '<div class="e8-how-row">' +
+        '<div class="e8-how-name"><span class="id-t">' + esc(r.code) + '</span> <b>' + esc(r.title) + '</b>' +
+        '<div class="e8-how-chips"><span class="chip ' + m[0] + '">' + m[1] + '</span><span class="chip ' + (lvl ? 'st-Implemented' : 'st-Notstarted') + '">' + (lvl ? 'At ML' + lvl : 'Not assessed') + '</span></div></div>' +
+        '<div class="e8-how-detail"><div class="e8-how-checks">' + checks + '</div>' +
+        (r.mode === 'unread' ? '<p class="src">' + (S.lastResults ? 'Mapped checks did not return a reading on the last scan. Open the check on the Scan page to see why, and assess this strategy yourself meanwhile.' : 'Run a scan to get a reading.') + '</p>' : '') +
+        (r.limits ? '<p class="src"><b>The scan can\'t see:</b> ' + esc(r.limits) + '</p>' : '') + '</div>' +
+        '</div>';
+    }).join('') + '</div>';
+    el.innerHTML = '<div class="card e8-how" style="padding:14px 16px;margin:12px 0">' + head + steps + table +
+      '<p class="src" style="margin:10px 0 0">Scans read Microsoft 365, Intune, Entra and Defender only. A pass means the signal looks right, not that the level is met. Lower levels than your target never get a suggestion: confirm them yourself.' +
+      (READONLY ? '' : ' <button class="lnk" data-action="App.go" data-id="scan">Go to the Scan page</button>') + '</p></div>';
+  }
+
   function renderSoa() {
     renderExclusionCard();
     renderEvidenceChecks();
@@ -12348,6 +12408,7 @@ function showModal(opts) {
     }).join('');
 
     renderAnnexPlan(activeFw);
+    renderE8HowItWorks(isE8, e8Target, S.controls.filter(function (c) { return c.fw === 'essential8'; }));
 
     /* Category lookup is definitional (from the framework registry), not
        per-tenant state, so it's never persisted to SharePoint — just
@@ -26169,6 +26230,12 @@ function showModal(opts) {
         renderDash(); renderFrameworksAdmin();
       } catch (e) { warn(e); }
       busy(false);
+    },
+
+    toggleE8How: function () {
+      var cur = window._e8HowOpen === undefined ? !S.lastResults : window._e8HowOpen;
+      window._e8HowOpen = !cur;
+      renderSoa();
     },
 
     setE8TargetLevel: async function (level) {
