@@ -363,6 +363,7 @@
         <button class="nav-item" data-v="vendors">Supplier risk <span class="n" id="nVendors"></span></button>
         <button class="nav-item" data-v="assets">Asset register <span class="n" id="nAssets"></span></button>
         <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
+        <button class="nav-item" data-v="privacy">Privacy registers <span class="n" id="nPrivacy"></span></button>
       </details>
       <details class="nav-group" data-group="controls" open>
         <summary class="nav-label">Controls</summary>
@@ -1010,6 +1011,7 @@
       <div class="filters" id="soaFwTabs" role="group" aria-label="Framework"></div>
       <div class="filters" id="soaCatFilters" style="margin-top:6px" role="group" aria-label="Filter by category"></div>
       <div id="soaE8How"></div>
+      <div id="soaSoc2Pack"></div>
       <div id="soaE8Suggestions"></div>
       <div id="soaAnnexPlan"></div>
       <div class="grid kpis" id="soaKpiRow" style="margin:16px 0 8px"></div>
@@ -1446,6 +1448,22 @@
       <div class="grid kpis reg-strip" id="legalKpiRow"></div>
       <div class="reg-tidy" id="legalTidy"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Requirement</th><th scope="col">Applies</th><th scope="col">Owner</th><th scope="col">Controls</th><th scope="col">Reviewed</th><th scope="col"></th></tr></thead><tbody id="legalRows"></tbody></table></div>
+    </section>
+
+    <!-- PRIVACY REGISTERS -->
+    <section class="view" id="v-privacy">
+      <div class="vhead"><div class="rule"></div><h1>Privacy registers</h1><p>Your records of processing: what personal information you handle, why, on what basis, who it goes to, where it is sent and how long you keep it, with consent arrangements and a privacy impact assessment where one is expected. Below it, the log of requests from individuals. The evidence an ISO/IEC 27701 auditor samples, and what the Privacy Act's APPs ask you to be able to show.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn sm" data-action="App.addRopa">+ Add processing activity</button>
+        <button class="btn ghost sm" data-action="App.report" data-id="ropa">Records of processing report</button>
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="ropa">Export CSV</button>
+      </div>
+      <div class="grid kpis reg-strip" id="privacyKpiRow"></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Processing activity</th><th scope="col">Role</th><th scope="col">Basis</th><th scope="col">PIA</th><th scope="col">Gaps</th><th scope="col">Owner</th></tr></thead><tbody id="ropaRows"></tbody></table></div>
+      <h2 style="margin:28px 0 6px">Requests from individuals</h2>
+      <p style="color:var(--paper-dim);font-size:13px;max-width:78ch;margin:0 0 12px">Access, correction, deletion, objection, consent withdrawal and complaints. Record a reference only, never the person's details: keep the request itself in your own system. Due dates default to 30 days.</p>
+      <div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn ghost sm" data-action="App.addPrivacyRequest">+ Log a request</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="privacyRequests">Export CSV</button></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Reference</th><th scope="col">Type</th><th scope="col">Received</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Owner</th></tr></thead><tbody id="privacyReqRows"></tbody></table></div>
     </section>
 
     <!-- SECURITY QUESTIONNAIRES -->

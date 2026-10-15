@@ -942,6 +942,16 @@ window.DEFAULT_SETTINGS = {
      which almost always overstates the real observation window — set
      this explicitly once observation actually starts. */
   soc2ObservationStart: '',
+  /* SOC 2 report pack (1.165.0): service commitments and significant
+     changes for the system description, complementary user entity
+     controls (JSON array of strings), and what the bridge letter needs.
+     Ordinary Settings rows, so no list schema change. */
+  soc2Commitments: '',
+  soc2Changes: '',
+  soc2Cuecs: '',
+  soc2LastReportEnd: '',
+  soc2Auditor: '',
+  soc2BridgeSigner: '',
   /* Set once, at the end of the first-run onboarding wizard (see
      Wizard in app.js) — an ISO date string, or '' for a tenant that
      hasn't completed it yet. SpStore.probeOnboardingState() reads this
@@ -1488,6 +1498,7 @@ window.CHECK_ISO42001_PARTIAL = {};
    MFA checks, A.3.25 Logging, and so on). Consent records, requests from
    individuals, retention schedules and transfer bases stay self-reported. */
 window.CHECK_ISO27701 = {};
+window.CHECK_ISO27701_PARTIAL = {}; /* codes a check speaks to only in part; see CheckpointLib.flatSuggestions() */
 
 /* Posture check id -> SOC 2 Trust Services Criteria control code(s) it
    speaks to — same flat, suggest-only contract as CHECK_ISO42001/
@@ -1509,6 +1520,7 @@ window.CHECK_ISO27701 = {};
    Integrity / most Privacy criteria (consent and disclosure records)
    have no live Graph signal and stay self-reported. */
 window.CHECK_SOC2 = {};
+window.CHECK_SOC2_PARTIAL = {}; /* codes a check speaks to only in part; see CheckpointLib.flatSuggestions() */
 
 /* Posture check id -> NIST CSF 2.0 category code(s) it speaks to —
    same flat, suggest-only contract as the others above. Ships as part
@@ -1834,6 +1846,8 @@ window.DemoStore = (function () {
       /* A monthly security review already running: two meetings held,
          so the card shows its trend and the next agenda. */
       settings: Object.assign({}, window.DEFAULT_SETTINGS, {
+        soc2Commitments: 'Patient portal available 99.9% of each month outside published maintenance windows; customer data encrypted in transit and at rest; security incidents affecting customer data notified within 72 hours of confirmation.',
+        soc2Cuecs: JSON.stringify(window.CheckpointLib ? window.CheckpointLib.SOC2_CUEC_STARTERS.slice(0, 4) : []),
         threatIntelTriage: JSON.stringify({ 'CVE-2023-27997': { status: 'na', note: 'No Fortinet devices in the estate; edge firewall is Palo Alto. Confirmed with K. Patel.', by: 'Sam Okafor', date: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10) } }),
         trustCenterContactEmail: 'security@meridianhealth.example',
         trustCenterTagline: 'We protect patient and clinic data with an ISO 27001 information security programme, run and checked every day.',
@@ -1901,6 +1915,27 @@ window.DemoStore = (function () {
         { id: 'AST-009', name: 'Marketing asset library', type: 'Information location', owner: 'Riley Morgan', classification: 'Internal', criticality: 'Low', location: 'SharePoint site', source: 'Manual', sourceId: '', status: 'Active', lastSynced: '', lastReviewed: daysFrom(-400), notes: '' },
         { id: 'AST-010', name: 'MER-LT-0031', type: 'Device', owner: 'm.chen@meridianhealth.example', classification: '', criticality: '', location: 'Windows 10 · end of life', source: 'Intune', sourceId: 'dev-0031', status: 'Retired', lastSynced: daysFrom(-90), lastReviewed: daysFrom(-85), notes: '', retirement: { date: daysFrom(-85), reason: 'Replaced', method: 'Wiped (certificate or report)', evidenceUrl: 'https://meridianhealth.sharepoint.com/sites/isms/Evidence/MER-LT-0031-wipe.pdf', by: 'S. Okafor', note: 'Collected by the recycler; wipe certificate on file.' } }
       ],
+      ropa: [
+        { id: 'PA-001', title: 'Patient support tickets', role: 'Controller', purpose: 'Answer patient questions about appointments, billing and the portal, and triage urgent clinical concerns to a nurse.', lawfulBasis: 'Required or authorised by law',
+          individuals: 'Patients and their carers', dataCategories: 'Name, contact details, Medicare number, symptoms and other health information written into the ticket', sensitive: true, sources: 'Directly from patients via the portal and email',
+          recipients: ['VEN-001'], recipientNotes: 'Treating clinicians on request', transfers: 'United States (support platform hosting)', transferBasis: 'Supplier contract binds the provider to handle the information consistently with the APPs; data processing agreement in place.',
+          retention: '7 years after last contact (health records), then deleted by the platform\'s retention policy', systems: ['AST-001'], owner: 'S. Okafor', lastReviewed: daysFrom(-30), consent: null,
+          pia: { assessedBy: 'S. Okafor', assessedOn: daysFrom(-30), nextDue: daysFrom(335), entries: [
+            { area: 'security', risk: 'Health information in tickets seen by support staff who do not need it', L: 3, I: 4, mitigation: 'Role-based queues; clinical tickets visible to nurses only', rL: 2, rI: 3 },
+            { area: 'transfer', risk: 'Information held in the United States is accessed under foreign law', L: 2, I: 4, mitigation: 'Contractual APP obligations; encryption at rest', rL: 2, rI: 3 }
+          ], decision: 'Proceed with conditions', decisionBy: 'S. Okafor, Privacy Officer', notes: 'Condition: review access to clinical queues each quarter.' }, notes: '' },
+        { id: 'PA-002', title: 'Staff payroll and HR records', role: 'Controller', purpose: 'Pay staff, meet tax and superannuation obligations, and manage employment.', lawfulBasis: 'Legal obligation',
+          individuals: 'Employees and contractors', dataCategories: 'Name, address, bank details, tax file number, salary, leave, performance notes', sensitive: false, sources: 'From staff at onboarding and from managers',
+          recipients: [], recipientNotes: 'ATO, superannuation funds', transfers: '', transferBasis: '', retention: '7 years after employment ends (Fair Work and tax record keeping)', systems: ['AST-003'], owner: 'K. Patel', lastReviewed: daysFrom(-200), consent: null, pia: null, notes: '' },
+        { id: 'PA-003', title: 'Newsletter and marketing emails', role: 'Controller', purpose: 'Send product news and health tips to people who signed up.', lawfulBasis: 'Consent',
+          individuals: 'Subscribers', dataCategories: 'Name, email address, email engagement', sensitive: false, sources: 'Website sign-up form', recipients: [], recipientNotes: '', transfers: 'United States (email platform)', transferBasis: '',
+          retention: 'Until unsubscribe, then suppressed for 2 years', systems: [], owner: 'M. Chen', lastReviewed: daysFrom(-60), consent: { how: 'Unticked box on the sign-up form', where: 'Email platform subscriber record with timestamp and form version', withdraw: '' }, pia: null, notes: '' }
+      ],
+      privacyRequests: [
+        { id: 'PRQ-001', ref: 'SUP-48213', type: 'Access', received: daysFrom(-40), due: daysFrom(-10), status: 'Completed', identityVerified: true, activities: ['PA-001'], owner: 'S. Okafor', closed: daysFrom(-18), outcome: 'Copy of ticket history provided through the portal.', notes: '' },
+        { id: 'PRQ-002', ref: 'SUP-49102', type: 'Correction', received: daysFrom(-35), due: daysFrom(-5), status: 'In progress', identityVerified: true, activities: ['PA-001'], owner: 'S. Okafor', closed: '', outcome: '', notes: 'Waiting on clinician to confirm the correction.' },
+        { id: 'PRQ-003', ref: 'MKT-0071', type: 'Withdraw consent', received: daysFrom(-3), due: daysFrom(27), status: 'Open', identityVerified: false, activities: ['PA-003'], owner: 'M. Chen', closed: '', outcome: '', notes: '' }
+      ],
       legal: [
         { id: 'LEG-001', title: 'Privacy Act 1988 (Cth) — Australian Privacy Principles', type: 'Legislation', jurisdiction: 'Australia (Cth)', requirement: 'Handle personal information in line with the 13 APPs. Health service provider, so the small-business exemption does not apply.', applies: 'Yes', owner: 'S. Okafor', controls: ['A.5.34', 'A.5.31'], lastReviewed: daysFrom(-90), notes: '' },
         { id: 'LEG-002', title: 'Notifiable Data Breaches scheme (Privacy Act Part IIIC)', type: 'Legislation', jurisdiction: 'Australia (Cth)', requirement: 'Assess a suspected eligible data breach within 30 days; notify individuals and the OAIC.', applies: 'Yes', owner: 'S. Okafor', controls: ['A.5.24', 'A.5.26', 'A.5.34'], lastReviewed: daysFrom(-90), notes: '' },
@@ -1939,7 +1974,7 @@ window.DemoStore = (function () {
         { id: 'CAL-009', title: 'Supplier review — Aria Payments Gateway', category: 'Supplier security review', freq: 'Annual', nextDue: daysFrom(60), lastCompleted: daysFrom(-305), owner: 'S. Okafor', notes: 'Auto-linked to supplier VEN-002', status: 'Active' }
       ],
       vendors: [
-        { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', certExpiryDate: daysFrom(-12), owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008', publicListed: true, dataCategories: ['Health information', 'Customer PII', 'Production system access'] },
+        { subservice: 'Carved out', csocs: 'Physical and environmental security of the data centres\nBackup and restoration of the hosting platform\nPatching of the hypervisor and host operating systems', id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', certExpiryDate: daysFrom(-12), owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008', publicListed: true, dataCategories: ['Health information', 'Customer PII', 'Production system access'] },
         { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', certExpiryDate: daysFrom(200), owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), questionnaireReceivedDate: daysFrom(-312), questionnaireAnswers: { certification: 'Yes', certificationDetail: 'SOC 2 Type II, renews annually; PCI DSS Level 1', encryption: 'Yes', mfa: 'Yes', incidentResponse: 'Yes', dataLocation: 'US (AWS us-east-1), with encrypted backups in us-west-2', subProcessors: 'Yes', subProcessorsDetail: 'AWS (hosting), Twilio (SMS verification)', dataAtContractEnd: 'Deleted within 30 days of contract termination, confirmed in writing', usesAi: 'No' }, calRef: 'CAL-009', publicListed: true, dataCategories: ['Financial / payment data'] },
         { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '', publicListed: false, dataCategories: ['Company confidential'] }
       ],
@@ -2201,6 +2236,11 @@ window.DemoStore = (function () {
     updateAsset: async function () { persist(); },
     deleteAsset: async function (a) { S.assets = (S.assets || []).filter(function (x) { return x !== a; }); persist(); },
     addLegal: async function (r) { S.legal = S.legal || []; S.legal.push(r); persist(); },
+    addRopa: async function (r) { S.ropa = S.ropa || []; S.ropa.push(r); persist(); },
+    updateRopa: async function () { persist(); },
+    deleteRopa: async function (r) { S.ropa = (S.ropa || []).filter(function (x) { return x !== r; }); persist(); },
+    addPrivacyRequest: async function (r) { S.privacyRequests = S.privacyRequests || []; S.privacyRequests.push(r); persist(); },
+    updatePrivacyRequest: async function () { persist(); },
     updateLegal: async function () { persist(); },
     deleteLegal: async function (r) { S.legal = (S.legal || []).filter(function (x) { return x !== r; }); persist(); },
     updateAnswer: async function () { persist(); },
@@ -2566,6 +2606,36 @@ window.SpStore = (function () {
       { name: 'Owner', text: {} }, { name: 'Controls', text: {} }, { name: 'LastReviewed', text: {} },
       { name: 'Notes', text: { allowMultipleLines: true } }
     ],
+    /* Records of processing (ISO/IEC 27701:2025 A.1.2.x/A.1.5.x and
+       A.2.2.7, the Privacy Act's APPs): one row per processing
+       activity. Title carries the activity. Consent and Pia are JSON
+       objects (how consent is obtained, recorded and withdrawn; the
+       privacy impact assessment) for the same reason AISystems keeps
+       its assessment in one column: the shape can grow without a
+       schema migration. Recipients/Systems carry supplier and asset
+       IDs so the record links to those registers. */
+    ProcessingActivities: [
+      { name: 'RefId', text: {} }, { name: 'Role', text: {} },
+      { name: 'Purpose', text: { allowMultipleLines: true } }, { name: 'LawfulBasis', text: {} },
+      { name: 'Individuals', text: { allowMultipleLines: true } }, { name: 'DataCategories', text: { allowMultipleLines: true } },
+      { name: 'Sensitive', text: {} }, { name: 'Sources', text: { allowMultipleLines: true } },
+      { name: 'Recipients', text: {} }, { name: 'RecipientNotes', text: { allowMultipleLines: true } },
+      { name: 'Transfers', text: {} }, { name: 'TransferBasis', text: { allowMultipleLines: true } },
+      { name: 'Retention', text: { allowMultipleLines: true } }, { name: 'Systems', text: {} },
+      { name: 'Owner', text: {} }, { name: 'LastReviewed', text: {} },
+      { name: 'Consent', text: { allowMultipleLines: true } }, { name: 'Pia', text: { allowMultipleLines: true } },
+      { name: 'Notes', text: { allowMultipleLines: true } }
+    ],
+    /* Privacy requests from individuals (access, correction, deletion,
+       objection, consent withdrawal, complaints) — ISO 27701 A.1.3.x,
+       APPs 12 and 13. Title carries a reference, never the person's
+       details: the request itself lives in the client's own system. */
+    PrivacyRequests: [
+      { name: 'RefId', text: {} }, { name: 'ReqType', text: {} }, { name: 'Received', text: {} },
+      { name: 'DueDate', text: {} }, { name: 'Status', text: {} }, { name: 'IdentityVerified', text: {} },
+      { name: 'Activities', text: {} }, { name: 'Owner', text: {} }, { name: 'ClosedDate', text: {} },
+      { name: 'Outcome', text: { allowMultipleLines: true } }, { name: 'Notes', text: { allowMultipleLines: true } }
+    ],
     /* Security questionnaire answer library — answers a practitioner has
        reviewed and approved, reused the next time a customer asks the
        same thing (see lib.js's assessQuestion()). Title carries the
@@ -2642,6 +2712,10 @@ window.SpStore = (function () {
          a data processing agreement are in place; and the Microsoft 365
          applications this vendor supplies (from discovery). */
       { name: 'Tier', text: {} }, { name: 'ContractInPlace', boolean: {} }, { name: 'DpaInPlace', boolean: {} },
+      // SOC 2 (1.165.0): whether this supplier is a subservice organisation
+      // in the SOC 2 report ('Carved out' or 'Inclusive'), and the
+      // complementary subservice organisation controls (CSOCs) relied on.
+      { name: 'Subservice', text: {} }, { name: 'Csocs', text: { allowMultipleLines: true } },
       { name: 'Apps', text: { allowMultipleLines: true } }
     ],
     /* AI Governance (ISO 42001) — only shown/populated while iso42001 is
@@ -3165,7 +3239,7 @@ window.SpStore = (function () {
        provisioned before either existed has a Vendors list missing
        them, same "Field not recognized" failure class as the others in
        this map. */
-    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate', 'Tier', 'ContractInPlace', 'DpaInPlace', 'Apps', 'PublicListed', 'DataCategories', 'CalRef'],
+    Vendors: ['CertExpiryDate', 'QuestionnaireAnswers', 'QuestionnaireReceivedDate', 'Tier', 'ContractInPlace', 'DpaInPlace', 'Apps', 'PublicListed', 'DataCategories', 'CalRef', 'Subservice', 'Csocs'],
     /* Requirements added with the clause requirement checklists. */
     Clauses: ['Requirements'],
     /* Results added with in-app internal audits: each workpack line's
@@ -3411,6 +3485,21 @@ window.SpStore = (function () {
     if (withRef) f.RefId = a.id;
     return f;
   }
+  function ropaFields(r, withRef) {
+    var f = { Title: String(r.title || '').slice(0, 255), Role: r.role || 'Controller', Purpose: r.purpose || '', LawfulBasis: r.lawfulBasis || '',
+      Individuals: r.individuals || '', DataCategories: r.dataCategories || '', Sensitive: r.sensitive ? 'Yes' : 'No', Sources: r.sources || '',
+      Recipients: csv(r.recipients || []), RecipientNotes: r.recipientNotes || '', Transfers: r.transfers || '', TransferBasis: r.transferBasis || '',
+      Retention: r.retention || '', Systems: csv(r.systems || []), Owner: r.owner || '', LastReviewed: r.lastReviewed || '',
+      Consent: r.consent ? JSON.stringify(r.consent) : '', Pia: r.pia ? JSON.stringify(r.pia) : '', Notes: r.notes || '' };
+    if (withRef) f.RefId = r.id;
+    return f;
+  }
+  function privacyRequestFields(r, withRef) {
+    var f = { Title: String(r.ref || '').slice(0, 255), ReqType: r.type || 'Access', Received: r.received || '', DueDate: r.due || '', Status: r.status || 'Open',
+      IdentityVerified: r.identityVerified ? 'Yes' : 'No', Activities: csv(r.activities || []), Owner: r.owner || '', ClosedDate: r.closed || '', Outcome: r.outcome || '', Notes: r.notes || '' };
+    if (withRef) f.RefId = r.id;
+    return f;
+  }
   function legalFields(r, withRef) {
     var f = { Title: String(r.title || '').slice(0, 255), ReqType: r.type || 'Legislation', Jurisdiction: r.jurisdiction || '', Requirement: r.requirement || '',
       Applies: r.applies || 'To confirm', Owner: r.owner || '', Controls: csv(r.controls), LastReviewed: r.lastReviewed || '', Notes: r.notes || '' };
@@ -3505,7 +3594,7 @@ window.SpStore = (function () {
          after another: the lists in sequence were most of the wait after
          sign-in. Controls and Clauses were just read by the self-heal
          above and are reused rather than fetched twice. */
-      var got = await loadItems(['Risks', 'Actions', 'ActionUpdates', 'Controls', 'Clauses', 'Scans', 'Activity', 'Entitlements', 'Settings', 'Audits', 'Reviews', 'Objectives', 'Answers', 'Assets', 'LegalRegister', 'Calendar', 'AuditLog', 'Alerts', 'Vendors', 'AISystems', 'Attestations', 'Training', 'PolicyDrafts', 'Incidents', 'CheckDispositions', 'TicketLinks', 'AuditRequests']);
+      var got = await loadItems(['Risks', 'Actions', 'ActionUpdates', 'Controls', 'Clauses', 'Scans', 'Activity', 'Entitlements', 'Settings', 'Audits', 'Reviews', 'Objectives', 'Answers', 'Assets', 'LegalRegister', 'ProcessingActivities', 'PrivacyRequests', 'Calendar', 'AuditLog', 'Alerts', 'Vendors', 'AISystems', 'Attestations', 'Training', 'PolicyDrafts', 'Incidents', 'CheckDispositions', 'TicketLinks', 'AuditRequests']);
       var riskItems = got.Risks;
       var actItems = got.Actions;
       var actUpdItems = got.ActionUpdates;
@@ -3521,6 +3610,8 @@ window.SpStore = (function () {
       var ansItems = got.Answers;
       var assetItems = got.Assets;
       var legalItems = got.LegalRegister;
+      var ropaItems = got.ProcessingActivities || [];
+      var prqItems = got.PrivacyRequests || [];
       var calItems = got.Calendar;
       var logItems = got.AuditLog;
       var alertItems = got.Alerts;
@@ -3632,6 +3723,20 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, name: f.Title || '', type: f.AssetType || 'Other', owner: f.Owner || '', classification: f.Classification || '', criticality: f.Criticality || '', location: f.Location || '', source: f.Source || 'Manual', sourceId: f.SourceId || '', status: f.Status || 'Active', lastSynced: f.LastSynced || '', lastReviewed: f.LastReviewed || '', notes: f.Notes || '', retirement: window.CheckpointLib.parseRetirement(f.Retirement) };
         }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
+        ropa: ropaItems.map(function (i) {
+          var f = i.fields;
+          var j = function (x) { try { return x ? JSON.parse(x) : null; } catch (e) { return null; } };
+          return { _sp: i.id, id: f.RefId, title: f.Title || '', role: f.Role || 'Controller', purpose: f.Purpose || '', lawfulBasis: f.LawfulBasis || '',
+            individuals: f.Individuals || '', dataCategories: f.DataCategories || '', sensitive: f.Sensitive === 'Yes', sources: f.Sources || '',
+            recipients: uncsv(f.Recipients), recipientNotes: f.RecipientNotes || '', transfers: f.Transfers || '', transferBasis: f.TransferBasis || '',
+            retention: f.Retention || '', systems: uncsv(f.Systems), owner: f.Owner || '', lastReviewed: f.LastReviewed || '',
+            consent: j(f.Consent), pia: j(f.Pia), notes: f.Notes || '' };
+        }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
+        privacyRequests: prqItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, ref: f.Title || '', type: f.ReqType || 'Access', received: f.Received || '', due: f.DueDate || '', status: f.Status || 'Open',
+            identityVerified: f.IdentityVerified === 'Yes', activities: uncsv(f.Activities), owner: f.Owner || '', closed: f.ClosedDate || '', outcome: f.Outcome || '', notes: f.Notes || '' };
+        }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }),
         legal: legalItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, title: f.Title || '', type: f.ReqType || 'Legislation', jurisdiction: f.Jurisdiction || '', requirement: f.Requirement || '', applies: f.Applies || 'To confirm', owner: f.Owner || '', controls: uncsv(f.Controls), lastReviewed: f.LastReviewed || '', notes: f.Notes || '' };
@@ -3670,7 +3775,7 @@ window.SpStore = (function () {
             questionnaireAnswers: questionnaireAnswers, questionnaireReceivedDate: f.QuestionnaireReceivedDate || '',
             calRef: f.CalRef || '', publicListed: !!f.PublicListed, dataCategories: uncsv(f.DataCategories),
             certExpiryDate: f.CertExpiryDate || '', tier: parseTier(f.Tier),
-            contract: !!f.ContractInPlace, dpa: !!f.DpaInPlace, apps: uncsv(f.Apps)
+            contract: !!f.ContractInPlace, dpa: !!f.DpaInPlace, apps: uncsv(f.Apps), subservice: f.Subservice || '', csocs: f.Csocs || ''
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         aiSystems: aiItems.map(function (i) {
@@ -3888,7 +3993,7 @@ window.SpStore = (function () {
         QuestionnaireAnswers: JSON.stringify(v.questionnaireAnswers || {}), QuestionnaireReceivedDate: v.questionnaireReceivedDate || '',
         CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories),
         CertExpiryDate: v.certExpiryDate || '', Tier: v.tier ? JSON.stringify(v.tier) : '',
-        ContractInPlace: !!v.contract, DpaInPlace: !!v.dpa, Apps: csv(v.apps || [])
+        ContractInPlace: !!v.contract, DpaInPlace: !!v.dpa, Apps: csv(v.apps || []), Subservice: v.subservice || '', Csocs: v.csocs || ''
       });
       S.vendors.push(v);
     },
@@ -3902,7 +4007,7 @@ window.SpStore = (function () {
         QuestionnaireAnswers: JSON.stringify(v.questionnaireAnswers || {}), QuestionnaireReceivedDate: v.questionnaireReceivedDate || '',
         CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories),
         CertExpiryDate: v.certExpiryDate || '', Tier: v.tier ? JSON.stringify(v.tier) : '',
-        ContractInPlace: !!v.contract, DpaInPlace: !!v.dpa, Apps: csv(v.apps || [])
+        ContractInPlace: !!v.contract, DpaInPlace: !!v.dpa, Apps: csv(v.apps || []), Subservice: v.subservice || '', Csocs: v.csocs || ''
       });
     },
     addAiSystem: async function (a) {
@@ -4172,6 +4277,14 @@ window.SpStore = (function () {
       await Graph.g('/sites/' + siteId + '/lists/' + lists.Assets + '/items/' + a._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
       S.assets = (S.assets || []).filter(function (x) { return x !== a; });
     },
+    addRopa: async function (r) { r._sp = await addItem('ProcessingActivities', ropaFields(r, true)); S.ropa = S.ropa || []; S.ropa.push(r); },
+    updateRopa: async function (r) { await patchItem('ProcessingActivities', r._sp, ropaFields(r, false)); },
+    deleteRopa: async function (r) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.ProcessingActivities + '/items/' + r._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+      S.ropa = (S.ropa || []).filter(function (x) { return x !== r; });
+    },
+    addPrivacyRequest: async function (r) { r._sp = await addItem('PrivacyRequests', privacyRequestFields(r, true)); S.privacyRequests = S.privacyRequests || []; S.privacyRequests.push(r); },
+    updatePrivacyRequest: async function (r) { await patchItem('PrivacyRequests', r._sp, privacyRequestFields(r, false)); },
     addLegal: async function (r) {
       r._sp = await addItem('LegalRegister', legalFields(r, true));
       S.legal = S.legal || [];

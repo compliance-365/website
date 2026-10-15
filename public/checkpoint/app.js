@@ -865,7 +865,7 @@ function showModal(opts) {
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk', 'addOpportunity', 'editOpportunity', 'reviewOpportunity', 'deleteOpportunity', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
     'saveVendor', 'sendVendorQuestionnaire', 'recordVendorQuestionnaire', 'requestVendorQuestionnaireLink', 'markVendorReviewed', 'toggleVendorPublicListed',
-    'saveAiSystem', 'advanceAiImpactStatus', 'openAiImpact', 'aiIaAddRow', 'aiIaRemoveRow', 'saveAiImpact', 'aiIaRaiseRisk', 'aiImpactReport', 'addAiCandidate', 'dismissAiCandidate',
+    'saveAiSystem', 'advanceAiImpactStatus', 'toggleSoc2Pack', 'addSubservice', 'editSubservice', 'editCuecs', 'editSoc2Description', 'soc2BridgeLetter', 'addRopa', 'editRopa', 'openRopa', 'openPia', 'piaAddRow', 'piaRemoveRow', 'savePia', 'piaReport', 'addPrivacyRequest', 'editPrivacyRequest', 'openAiImpact', 'aiIaAddRow', 'aiIaRemoveRow', 'saveAiImpact', 'aiIaRaiseRisk', 'aiImpactReport', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'setControlJustification', 'setControlOwner', 'applySharedEvidence',
     'setClauseStatus', 'verifyClause', 'setClauseEvidence', 'setClauseOwner', 'confirmClauseRequirement', 'removeClauseRequirement',
     'addControlEvidenceFiles', 'addClauseEvidenceFiles', 'syncEvidenceFolders',
@@ -1308,6 +1308,20 @@ function showModal(opts) {
           var a = x.asset, r = a.retirement || {};
           return [a.id, a.name, a.type, r.date || '', r.reason || '', r.method || '', r.evidenceUrl || '', r.by || '', r.note || '', x.gaps.length ? 'No: ' + x.gaps.join(', ') : 'Yes'];
         });
+      }
+    },
+    {
+      key: 'ropa', label: 'Records of processing', filename: 'records-of-processing.csv',
+      header: ['ID', 'Processing activity', 'Role', 'Purpose', 'Lawful basis', 'Whose information', 'Kinds of information', 'Sensitive', 'Sources', 'Supplier recipients', 'Other recipients', 'Overseas', 'Transfer basis', 'Retention', 'Systems', 'Consent', 'PIA', 'Owner', 'Last reviewed'],
+      rows: function () {
+        return (S.ropa || []).map(function (r) { var c = r.consent || {}; return [r.id, r.title, r.role, r.purpose, r.lawfulBasis, r.individuals, r.dataCategories, r.sensitive ? 'Yes' : 'No', r.sources, (r.recipients || []).join(' '), r.recipientNotes, r.transfers, r.transferBasis, r.retention, (r.systems || []).join(' '), [c.how, c.where, c.withdraw].filter(Boolean).join(' / '), window.CheckpointLib.piaSummary(r).status, r.owner, r.lastReviewed]; });
+      }
+    },
+    {
+      key: 'privacyRequests', label: 'Privacy requests', filename: 'privacy-requests.csv',
+      header: ['ID', 'Reference', 'Type', 'Received', 'Due', 'Status', 'Identity verified', 'Activities', 'Owner', 'Closed', 'Outcome'],
+      rows: function () {
+        return (S.privacyRequests || []).map(function (r) { return [r.id, r.ref, r.type, r.received, r.due, r.status, r.identityVerified ? 'Yes' : 'No', (r.activities || []).join(' '), r.owner, r.closed, r.outcome]; });
       }
     },
     {
@@ -3235,6 +3249,96 @@ function showModal(opts) {
     /* Monthly security review: the agenda with its figures, and the
        minutes against each item (Clause 9.1; 9.3 when the meeting is
        held as the management review). window._secReview = the record. */
+    soc2sysdesc: function () {
+      var p = soc2PackData(), st = S.settings || {}, org = orgProfileValue('orgLegalName') || 'The organisation';
+      var start = st.soc2ObservationStart || '', today = new Date().toISOString().slice(0, 10);
+      var ctrls = (S.controls || []).filter(function (c) { return c.fw === 'soc2' && c.app; });
+      var cats = {}; ctrls.forEach(function (c) { var k = (window.FRAMEWORKS.soc2.controls.find(function (x) { return x.code === c.id; }) || {}).cat || 'CC'; cats[k] = true; });
+      var catName = { CC: 'Security (common criteria)', A: 'Availability', C: 'Confidentiality', PI: 'Processing integrity', P: 'Privacy' };
+      var assets = S.assets || [];
+      var byType = function (re) { return assets.filter(function (a) { return re.test(String(a.type || '')); }).map(function (a) { return a.name; }); };
+      var incidents = (S.incidents || []).filter(function (i) { return !start || String(i.detected || i.occurred || '') >= start; });
+      var docs = (window._docs || S.documents || []).filter(function (d) { return /polic|procedure|standard|plan/i.test(String(d.name || d.title || '')); }).map(function (d) { return d.name || d.title; });
+      var na = function (x) { return x && String(x).trim() ? esc(x) : '<i>Not yet recorded in Checkpoint.</i>'; };
+      var list = function (xs) { return xs.length ? '<ul>' + xs.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p><i>None recorded in Checkpoint.</i></p>'; };
+      return {
+        title: 'System description: ' + org,
+        frameworkAgnostic: true,
+        noMethodology: true,
+        dashboard: { intro: 'Draft system description following the AICPA description criteria (DC 200), assembled from Checkpoint\'s registers' + (start ? ' for the period from ' + fmtDateY(start) + ' to ' + fmtDateY(today) : '') + '. Review and edit before giving it to your service auditor: management is responsible for its accuracy.' },
+        sections: [
+          { heading: '1. Types of services provided', pageBreak: false, html: '<p class="rpt-plain">' + na(p.o.services) + '</p>' },
+          { heading: '2. Principal service commitments and system requirements', pageBreak: false, html: '<p class="rpt-plain">' + na(p.o.commitments) + '</p>' },
+          { heading: '3. Components of the system', pageBreak: false, html: '<h4>Infrastructure</h4>' + list(byType(/hardware|device|infra|network|cloud|server/i)) + '<h4>Software</h4>' + list(byType(/software|application|service|saas/i)) +
+            '<h4>People</h4><p class="rpt-plain">Control owners recorded in Checkpoint: ' + esc(ctrls.map(function (c) { return c.own; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(', ') || 'none recorded') + '.</p>' +
+            '<h4>Data</h4>' + list(byType(/information|data/i)) + '<h4>Procedures and policies</h4>' + list(docs) },
+          { heading: '4. System incidents during the period', pageBreak: false, html: incidents.length ? list(incidents.map(function (i) { return (i.id || '') + ' ' + (i.title || '') + (i.severity ? ' (' + i.severity + ')' : ''); })) : '<p class="rpt-plain">No incidents recorded in Checkpoint for the period.</p>' },
+          { heading: '5. Applicable trust services criteria and related controls', pageBreak: false, html: '<p class="rpt-plain">Categories in scope: ' + esc(Object.keys(cats).map(function (k) { return catName[k] || k; }).join(', ')) + '. ' + ctrls.length + ' criteria applicable, ' + ctrls.filter(function (c) { return c.st === 'Implemented'; }).length + ' implemented.</p>' },
+          { heading: '6. Complementary user entity controls', pageBreak: false, html: list(p.o.cuecs) },
+          { heading: '7. Subservice organisations and complementary subservice organisation controls', pageBreak: false, html: p.subs.length ? '<table class="rpt-table"><thead><tr><th>Subservice organisation</th><th>Method</th><th>Controls relied on</th></tr></thead><tbody>' +
+            p.subs.map(function (s) { return '<tr><td>' + esc(s.name) + '</td><td>' + esc(s.mode) + '</td><td>' + (s.csocs ? esc(s.csocs).replace(/\n/g, '<br>') : '<i>Not recorded</i>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<p><i>No subservice organisations marked in Checkpoint.</i></p>' },
+          { heading: '8. Significant changes during the period', pageBreak: false, html: '<p class="rpt-plain">' + (st.soc2Changes ? esc(st.soc2Changes) : 'None recorded.') + '</p>' }
+        ]
+      };
+    },
+    soc2bridge: function () {
+      var st = S.settings || {}, org = orgProfileValue('orgLegalName') || 'The organisation';
+      if (!st.soc2LastReportEnd) return null;
+      var today = new Date().toISOString().slice(0, 10);
+      var changes = st.soc2Changes ? esc(st.soc2Changes) : 'no material changes to the system or its controls';
+      var since = (S.incidents || []).filter(function (i) { return String(i.detected || i.occurred || '') > st.soc2LastReportEnd; });
+      return {
+        title: 'Bridge letter',
+        frameworkAgnostic: true,
+        noMethodology: true,
+        dashboard: { intro: 'Prepared ' + fmtDateY(today) + '. Review the wording and the facts before signing: management makes these statements, not the auditor.' },
+        sections: [
+          { heading: 'To our customers and their auditors', pageBreak: false, html:
+            '<p class="rpt-plain">' + esc(org) + ' engaged ' + esc(st.soc2Auditor || '[service auditor]') + ' to examine its system and controls, with a SOC 2 report covering the period ending ' + esc(fmtDateY(st.soc2LastReportEnd)) + '.</p>' +
+            '<p class="rpt-plain">This letter covers the period from ' + esc(fmtDateY(addDaysIso(st.soc2LastReportEnd, 1))) + ' to ' + esc(fmtDateY(today)) + ', for which no SOC 2 report has yet been issued. To the best of management\'s knowledge, during this period there have been ' + changes + '.</p>' +
+            '<p class="rpt-plain">' + (since.length ? since.length + ' security incident(s) were recorded during this period and handled under our incident management process.' : 'No security incidents affecting the system were recorded during this period.') + '</p>' +
+            '<p class="rpt-plain">Our next SOC 2 report is expected to cover a period beginning after ' + esc(fmtDateY(st.soc2LastReportEnd)) + '. This letter is not a substitute for that report and has not been examined by a service auditor.</p>' +
+            '<p class="rpt-plain" style="margin-top:28px">Signed: ______________________________<br>' + esc(st.soc2BridgeSigner || '[Name, title]') + '<br>' + esc(org) + '<br>Date: ' + esc(fmtDateY(today)) + '</p>' }
+        ]
+      };
+    },
+    ropa: function () {
+      var L = window.CheckpointLib, list = S.ropa || [];
+      if (!list.length) { toast('Add a processing activity first.'); return null; }
+      var vname = function (id) { var v = (S.vendors || []).find(function (x) { return x.id === id; }); return v ? v.name : id; };
+      return {
+        title: 'Records of processing',
+        frameworkAgnostic: true,
+        dashboard: { intro: list.length + ' processing activities as at ' + fmtDateY(new Date().toISOString().slice(0, 10)) + '. Evidence for ISO/IEC 27701:2025 A.1.2.9 / A.2.2.7 and the Privacy Act APPs: what personal information is handled, why, on what basis, who receives it, where it is sent and how long it is kept.' },
+        sections: list.map(function (r) {
+          var rv = L.ropaReview(r, S.vendors || []);
+          var rows = [['Our role', r.role], ['Purpose', r.purpose], ['Lawful basis', r.lawfulBasis], ['Whose information', r.individuals], ['Kinds of information', r.dataCategories + (r.sensitive ? ' (includes sensitive information)' : '')],
+            ['Sources', r.sources], ['Suppliers who receive it', (r.recipients || []).map(vname).join(', ')], ['Other recipients', r.recipientNotes], ['Sent overseas to', r.transfers || 'None'],
+            ['Basis for overseas transfer', r.transfers ? r.transferBasis : 'Not applicable'], ['Retention and disposal', r.retention], ['Consent', r.consent ? [r.consent.how, r.consent.where, r.consent.withdraw ? 'withdraw: ' + r.consent.withdraw : ''].filter(Boolean).join('; ') : 'Not applicable'],
+            ['Privacy impact assessment', rv.pia.status], ['Owner', r.owner], ['Last reviewed', r.lastReviewed ? fmtDateY(r.lastReviewed) : 'Never']];
+          return { heading: r.id + ' ' + r.title, pageBreak: false, html: '<table class="rpt-table"><tbody>' + rows.map(function (x) { return '<tr><td style="width:28%"><b>' + esc(x[0]) + '</b></td><td>' + esc(x[1] || 'Not recorded') + '</td></tr>'; }).join('') + '</tbody></table>' +
+            (rv.gaps.length ? '<p class="rpt-just">Still to complete: ' + esc(rv.gaps.join('; ')) + '.</p>' : '') };
+        })
+      };
+    },
+    pia: function () {
+      var r = (S.ropa || []).find(function (x) { return x.id === window._piaFor; });
+      if (!r || !r.pia) return null;
+      var L = window.CheckpointLib, d = r.pia, sum = L.piaSummary(r);
+      var lab = function (k) { var a = L.PIA_AREAS.find(function (x) { return x.key === k; }); return a ? a.label : k; };
+      var sc = function (l, i) { var s = L.aiImpactScore(l, i); return s ? s + ' (' + L.aiImpactBand(s) + ')' : '–'; };
+      return {
+        title: 'Privacy impact assessment: ' + r.title,
+        frameworkAgnostic: true,
+        dashboard: { intro: r.id + '. ' + (r.purpose || '') + ' Status ' + sum.status + (d.assessedOn ? ', assessed ' + fmtDateY(d.assessedOn) + (d.assessedBy ? ' by ' + d.assessedBy : '') : '') + (d.nextDue ? '; review by ' + fmtDateY(d.nextDue) : '') + '. Evidence for ISO/IEC 27701:2025 A.1.2.6.' },
+        sections: [
+          { heading: 'Privacy risks', pageBreak: false, html: (d.entries || []).length ? '<table class="rpt-table"><thead><tr><th>Area</th><th>Risk</th><th>Inherent</th><th>What reduces it</th><th>Residual</th></tr></thead><tbody>' +
+            d.entries.map(function (e) { return '<tr><td>' + esc(lab(e.area)) + '</td><td>' + esc(e.risk) + '</td><td>' + sc(e.L, e.I) + '</td><td>' + esc(e.mitigation || '') + '</td><td>' + sc(e.rL, e.rI) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No risks recorded.</p>' },
+          { heading: 'Decision', pageBreak: false, html: '<p class="rpt-plain"><b>Decision:</b> ' + esc(d.decision || 'Not decided') + (d.decisionBy ? ', by ' + esc(d.decisionBy) : '') + '</p>' + (d.notes ? '<p class="rpt-plain">' + esc(d.notes) + '</p>' : '') +
+            (sum.gaps.length ? '<p class="rpt-just">Still to complete: ' + esc(sum.gaps.join('; ')) + '.</p>' : '') }
+        ]
+      };
+    },
     aiimpact: function () {
       var a = (S.aiSystems || []).find(function (x) { return x.id === window._aiIaFor; });
       if (!a) return null;
@@ -5807,7 +5911,7 @@ function showModal(opts) {
     'addAiSystem', 'updateAiSystem', 'setCheckDisposition', 'clearCheckDisposition', 'setEntitlement', 'setSetting',
     'updateDocumentMeta', 'addAttestations', 'updateAttestation', 'addTrainingAssignments', 'updateTrainingRecord',
     'addAudit', 'updateAudit', 'addIncident', 'updateIncident', 'addReview', 'addObjective', 'updateObjective',
-    'addCalendarItem', 'updateCalendarItem'
+    'addCalendarItem', 'updateCalendarItem', 'addRopa', 'updateRopa', 'addPrivacyRequest', 'updatePrivacyRequest'
   ];
   var WRITE_GUARD = window.CheckpointLib.createWriteGuard({
     methods: STORE_WRITE_METHODS,
@@ -5989,6 +6093,9 @@ function showModal(opts) {
     var aEl = document.getElementById('nAssets');
     if (aEl) { var aN = aSum.noOwner + aSum.missing; aEl.textContent = aN || ''; aEl.style.display = aN ? 'inline-block' : 'none'; }
     var lSum = window.CheckpointLib.legalRegisterSummary(S.legal || [], today, 365);
+    var pSum = window.CheckpointLib.privacyRegisterSummary(S.ropa || [], S.privacyRequests || [], S.vendors || [], today);
+    var pEl = document.getElementById('nPrivacy');
+    if (pEl) { var pN = pSum.requests.overdue + pSum.piaNeeded; pEl.textContent = pN || ''; pEl.style.display = pN ? 'inline-block' : 'none'; }
     var lEl = document.getElementById('nLegal');
     if (lEl) { var lN = lSum.toConfirm + lSum.noOwner; lEl.textContent = lN || ''; lEl.style.display = lN ? 'inline-block' : 'none'; }
 
@@ -10747,8 +10854,13 @@ function showModal(opts) {
      since there's no scan history to summarise for a control with no
      live signal in the first place. */
   function soc2ControlEffectiveness(code, sinceDate) {
-    var checkIds = Object.keys(window.CHECK_SOC2 || {}).filter(function (id) {
-      return (window.CHECK_SOC2[id] || []).indexOf(code) > -1;
+    /* Both maps: a check that covers a criterion only in part (every
+       SOC 2 mapping since 1.165.0) is still real operating-effectiveness
+       evidence across the period; "in part" limits what a pass may
+       suggest, not whether the observations count. */
+    var full = window.CHECK_SOC2 || {}, part = window.CHECK_SOC2_PARTIAL || {};
+    var checkIds = Object.keys(full).concat(Object.keys(part)).filter(function (id, i, a) {
+      return a.indexOf(id) === i && ((full[id] || []).indexOf(code) > -1 || (part[id] || []).indexOf(code) > -1);
     });
     if (!checkIds.length) return null;
     var history = scanResultHistory();
@@ -12555,6 +12667,7 @@ function showModal(opts) {
 
     renderAnnexPlan(activeFw);
     renderE8HowItWorks(isE8, e8Target, S.controls.filter(function (c) { return c.fw === 'essential8'; }));
+    renderSoc2Pack(activeFw === 'soc2');
 
     /* Category lookup is definitional (from the framework registry), not
        per-tenant state, so it's never persisted to SharePoint — just
@@ -15174,6 +15287,235 @@ function showModal(opts) {
     }).join('');
     revealRows(wrap);
   }
+  /* SOC 2 report pack card (SoA, SOC 2 tab): readiness of the
+     deliverables the service auditor asks for beyond the controls. */
+  function soc2Cuecs() { try { var x = JSON.parse((S.settings && S.settings.soc2Cuecs) || '[]'); return Array.isArray(x) ? x : []; } catch (e) { return []; } }
+  function soc2PackData() {
+    var L = window.CheckpointLib, today = new Date().toISOString().slice(0, 10);
+    var ctrls = (S.controls || []).filter(function (c) { return c.fw === 'soc2'; });
+    var coverage = L.soc2PeriodCoverage(ctrls, scanResultHistory(), { full: window.CHECK_SOC2 || {}, partial: window.CHECK_SOC2_PARTIAL || {} }, (S.settings && S.settings.soc2ObservationStart) || '', today);
+    var subs = L.soc2SubserviceReview(S.vendors || [], today);
+    var o = { services: orgProfileValue('orgServices'), commitments: (S.settings && S.settings.soc2Commitments) || '', cuecs: soc2Cuecs(), subservice: subs, coverage: coverage };
+    return { o: o, status: L.soc2PackStatus(o), coverage: coverage, subs: subs };
+  }
+  function renderSoc2Pack(isSoc2) {
+    var el = document.getElementById('soaSoc2Pack');
+    if (!el) return;
+    if (!isSoc2) { el.innerHTML = ''; return; }
+    var p = soc2PackData(), ro = !!READONLY;
+    var open = window._soc2PackOpen !== false;
+    var head = '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3 style="margin:0 0 4px">SOC 2 report pack</h3>' +
+      '<p class="src" style="margin:0">' + p.status.filter(function (x) { return x.ok; }).length + ' of ' + p.status.length + ' ready. What the service auditor asks for beyond the criteria themselves.</p></div>' +
+      '<button class="btn ghost sm" data-action="App.toggleSoc2Pack">' + (open ? 'Hide' : 'Show') + '</button></div>';
+    if (!open) { el.innerHTML = '<div class="card" style="padding:14px 16px;margin:12px 0">' + head + '</div>'; return; }
+    var lines = p.status.map(function (x) { return '<div class="ai-au-row"><span class="chip ' + (x.ok ? 'st-Implemented' : 'st-Intreatment') + '">' + (x.ok ? 'Ready' : 'To do') + '</span><b>' + esc(x.label) + '</b><span class="src">' + esc(x.note) + '</span></div>'; }).join('');
+    var months = p.coverage.months.map(function (m) {
+      var cls = m.covered === 0 ? 'st-Open' : m.pct < 50 ? 'st-Intreatment' : 'st-Implemented';
+      return '<span class="chip ' + cls + '" title="' + m.covered + ' of ' + m.total + ' criteria with evidence, ' + m.scans + ' scan(s)">' + esc(m.month) + ' ' + m.pct + '%</span>';
+    }).join(' ');
+    var subs = p.subs.length ? p.subs.map(function (s) {
+      return '<div class="ai-au-row"><b>' + esc(s.id + ' ' + s.name) + '</b><span class="chip st-Notstarted">' + esc(s.mode) + '</span>' + (s.gaps.length ? '<span class="verify-stale">' + icon('flag') + ' ' + esc(s.gaps.join('; ')) + '</span>' : '<span class="src">Complete</span>') +
+        (ro ? '' : '<button class="btn ghost sm" data-action="App.editSubservice" data-id="' + esc(s.id) + '">Edit</button>') + '</div>';
+    }).join('') : '<p class="src">No supplier marked as a subservice organisation. Mark your hosting and platform providers (for example Microsoft or AWS) and record the controls you rely on them for.</p>';
+    var cuecs = p.o.cuecs;
+    el.innerHTML = '<div class="card" style="padding:14px 16px;margin:12px 0">' + head + lines +
+      '<h4 style="margin:14px 0 6px">Evidence by month' + (S.settings && S.settings.soc2ObservationStart ? ' since ' + fmtDateY(S.settings.soc2ObservationStart) : ' (last 12 months: set the observation period start in Settings)') + '</h4>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">' + months + '</div>' +
+      (p.coverage.never.length ? '<p class="src" style="margin:6px 0 0">No evidence in the period: ' + esc(p.coverage.never.slice(0, 12).join(', ')) + (p.coverage.never.length > 12 ? ' and ' + (p.coverage.never.length - 12) + ' more' : '') + '. Verify these with evidence, or link them to a check.</p>' : '') +
+      '<h4 style="margin:14px 0 6px">Subservice organisations</h4>' + subs +
+      (ro ? '' : '<button class="btn ghost sm" data-action="App.addSubservice">Mark a supplier as a subservice organisation</button>') +
+      '<h4 style="margin:14px 0 6px">Complementary user entity controls (' + cuecs.length + ')</h4>' +
+      (cuecs.length ? '<ol class="src" style="margin:0 0 6px;padding-left:18px">' + cuecs.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' : '<p class="src">None recorded. These are the controls your customers must operate for your controls to work, and they appear in the report.</p>') +
+      (ro ? '' : '<button class="btn ghost sm" data-action="App.editCuecs">' + (cuecs.length ? 'Edit' : 'Start from a typical list') + '</button>') +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">' +
+      (ro ? '' : '<button class="btn ghost sm" data-action="App.editSoc2Description">System description details</button>') +
+      '<button class="btn sm" data-action="App.report" data-id="soc2sysdesc">System description</button>' +
+      '<button class="btn ghost sm" data-action="App.soc2BridgeLetter">Bridge letter</button></div></div>';
+  }
+
+  /* ================= Privacy registers (ISO 27701, Privacy Act) ================= */
+  function renderPrivacy() {
+    var wrap = document.getElementById('ropaRows');
+    if (!wrap) return;
+    var L = window.CheckpointLib, today = new Date().toISOString().slice(0, 10);
+    var sum = L.privacyRegisterSummary(S.ropa || [], S.privacyRequests || [], S.vendors || [], today);
+    var kpi = document.getElementById('privacyKpiRow');
+    kpi.innerHTML =
+      kpiTile({ value: sum.activities, label: 'Processing activities', sub: sum.complete + ' with nothing missing' }) +
+      kpiTile({ value: sum.piaNeeded, label: 'PIAs needed or unfinished', tone: 'warn', sub: 'sensitive data, overseas transfers, automated decisions' }) +
+      kpiTile({ value: sum.overseas, label: 'Sent overseas', sub: 'each needs a recorded basis' }) +
+      kpiTile({ value: sum.requests.overdue, label: 'Requests overdue', tone: 'fail', sub: sum.requests.open + ' open' + (sum.requests.avgDays !== null ? ', ' + sum.requests.avgDays + ' days on average to close' : '') });
+    runCountUps(kpi);
+    var ropa = S.ropa || [];
+    wrap.innerHTML = ropa.length ? ropa.map(function (r) {
+      var rv = L.ropaReview(r, S.vendors || [], today);
+      var pcls = rv.pia.status === 'Completed' ? 'st-Implemented' : rv.pia.status === 'Not needed' ? 'st-Notstarted' : rv.pia.status === 'Needed' ? 'st-Open' : 'st-Intreatment';
+      return '<tr data-action="App.openRopa" data-id="' + esc(r.id) + '"><td class="src"><button class="lnk" data-action="App.openRopa" data-id="' + esc(r.id) + '">' + esc(r.id) + '</button></td>' +
+        '<td style="color:var(--paper);max-width:340px">' + esc(r.title) + (r.sensitive ? ' <span class="chip st-Intreatment">Sensitive</span>' : '') + (r.purpose ? '<div class="src">' + esc(r.purpose.slice(0, 120)) + '</div>' : '') + '</td>' +
+        '<td>' + esc(r.role) + '</td><td class="src">' + esc(r.lawfulBasis || '—') + '</td>' +
+        '<td><span class="chip ' + pcls + '">' + esc(rv.pia.status) + '</span></td>' +
+        '<td>' + (rv.gaps.length ? '<span class="verify-stale">' + icon('flag') + ' ' + rv.gaps.length + '</span>' : '<span class="chip st-Implemented">None</span>') + '</td>' +
+        '<td>' + esc(r.owner || '—') + '</td></tr>';
+    }).join('') : emptyState({ kind: 'shield', asRow: true, colspan: 7, text: 'No processing activities recorded. Start with the ones every organisation has: payroll and HR, customer accounts, marketing lists, and anything involving health or other sensitive information.', cta: { label: 'Add processing activity', action: 'App.addRopa' } });
+    var rq = document.getElementById('privacyReqRows');
+    var reqs = (S.privacyRequests || []).slice().sort(function (a, b) { return String(b.received).localeCompare(String(a.received)); });
+    rq.innerHTML = reqs.length ? reqs.map(function (r) {
+      var open = r.status !== 'Completed' && r.status !== 'Refused';
+      var late = open && r.due && r.due < today;
+      return '<tr data-action="App.editPrivacyRequest" data-id="' + esc(r.id) + '"><td class="src"><button class="lnk" data-action="App.editPrivacyRequest" data-id="' + esc(r.id) + '">' + esc(r.id) + '</button></td>' +
+        '<td>' + esc(r.ref || '—') + (open && !r.identityVerified && r.type !== 'Complaint' ? '<div class="src">Identity not yet verified</div>' : '') + '</td><td>' + esc(r.type) + '</td>' +
+        '<td class="src">' + (r.received ? fmtDate(r.received) : '—') + '</td>' +
+        '<td>' + (r.due ? (late ? '<span class="verify-stale">' + icon('flag') + ' ' + fmtDate(r.due) + '</span>' : fmtDate(r.due)) : '—') + '</td>' +
+        '<td><span class="chip ' + (r.status === 'Completed' ? 'st-Implemented' : r.status === 'Refused' ? 'st-Notstarted' : late ? 'st-Open' : 'st-Intreatment') + '">' + esc(r.status) + '</span></td>' +
+        '<td>' + esc(r.owner || '—') + '</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="src">No requests logged.</td></tr>';
+    revealRows(wrap);
+  }
+
+  async function ropaEditModal(r) {
+    var L = window.CheckpointLib, isNew = !r, c = (r && r.consent) || {};
+    var vendorHint = (S.vendors || []).slice(0, 12).map(function (v) { return v.id + ' ' + v.name; }).join('; ');
+    var v = await showModal({
+      title: isNew ? 'New processing activity' : 'Edit ' + r.id,
+      fields: [
+        { id: 'title', label: 'Processing activity (e.g. Payroll, Customer accounts, Marketing emails)', value: r ? r.title : '' },
+        { id: 'role', label: 'Our role', type: 'select', value: r ? r.role : 'Controller', options: L.ROPA_ROLES },
+        { id: 'purpose', label: 'Purpose: why we process it', type: 'textarea', value: r ? r.purpose : '' },
+        { id: 'lawfulBasis', label: 'Lawful basis', type: 'select', value: r ? (r.lawfulBasis || 'Not yet determined') : 'Not yet determined', options: L.ROPA_BASES },
+        { id: 'individuals', label: 'Whose information (e.g. staff, customers, patients)', value: r ? r.individuals : '' },
+        { id: 'dataCategories', label: 'What kinds of information', type: 'textarea', value: r ? r.dataCategories : '' },
+        { id: 'sensitive', label: 'Includes sensitive information (health, biometrics, racial or ethnic origin, criminal record and similar)', type: 'checkbox', value: r ? r.sensitive : false },
+        { id: 'sources', label: 'Where it comes from', value: r ? r.sources : '' },
+        { id: 'recipients', label: 'Suppliers who receive it (supplier IDs, comma-separated' + (vendorHint ? ': ' + vendorHint : '') + ')', value: r ? (r.recipients || []).join(', ') : '' },
+        { id: 'recipientNotes', label: 'Other recipients (regulators, related companies)', value: r ? r.recipientNotes : '' },
+        { id: 'transfers', label: 'Countries it is sent to outside Australia (blank if none)', value: r ? r.transfers : '' },
+        { id: 'transferBasis', label: 'Basis for the overseas transfer (e.g. contract binding the recipient to the APPs, standard contractual clauses)', type: 'textarea', value: r ? r.transferBasis : '' },
+        { id: 'retention', label: 'How long it is kept, and how it is destroyed', value: r ? r.retention : '' },
+        { id: 'systems', label: 'Systems it is held in (asset IDs, comma-separated)', value: r ? (r.systems || []).join(', ') : '' },
+        { id: 'consentHow', label: 'If consent: how it is obtained', value: c.how || '' },
+        { id: 'consentWhere', label: 'If consent: where consent is recorded', value: c.where || '' },
+        { id: 'consentWithdraw', label: 'If consent: how someone withdraws it', value: c.withdraw || '' },
+        { id: 'owner', label: 'Owner', value: r ? r.owner : '' },
+        { id: 'reviewed', label: 'Mark as reviewed today', type: 'select', value: 'Yes', options: ['Yes', 'No'] },
+        { id: 'notes', label: 'Notes', type: 'textarea', value: r ? r.notes : '' }
+      ],
+      confirmText: isNew ? 'Add' : 'Save changes',
+      validate: function (v) { return v.title ? null : 'Name the processing activity.'; }
+    });
+    if (!v) return null;
+    var ids = function (x) { return String(x || '').split(/[,;\s]+/).map(function (y) { return y.trim(); }).filter(Boolean); };
+    var fields = { title: v.title, role: v.role, purpose: v.purpose, lawfulBasis: v.lawfulBasis, individuals: v.individuals, dataCategories: v.dataCategories,
+      sensitive: !!v.sensitive, sources: v.sources, recipients: ids(v.recipients), recipientNotes: v.recipientNotes, transfers: v.transfers, transferBasis: v.transferBasis,
+      retention: v.retention, systems: ids(v.systems), owner: v.owner, notes: v.notes,
+      consent: (v.consentHow || v.consentWhere || v.consentWithdraw) ? { how: v.consentHow, where: v.consentWhere, withdraw: v.consentWithdraw } : null };
+    busy(true);
+    try {
+      if (isNew) {
+        r = Object.assign({ id: nextRegId(S.ropa || [], 'PA-'), pia: null, lastReviewed: v.reviewed === 'Yes' ? new Date().toISOString().slice(0, 10) : '' }, fields);
+        await Store.addRopa(r);
+        audit('Processing activity added', 'Ropa', r.id, '', r.title);
+      } else {
+        Object.assign(r, fields);
+        if (v.reviewed === 'Yes') r.lastReviewed = new Date().toISOString().slice(0, 10);
+        await Store.updateRopa(r);
+        audit('Processing activity updated', 'Ropa', r.id, '', r.title);
+      }
+      toast('<b>' + r.id + '</b> saved');
+    } catch (e) { warn(e); }
+    busy(false);
+    renderPrivacy(); renderNavCounts();
+    return r;
+  }
+
+  async function privacyRequestModal(r) {
+    var L = window.CheckpointLib, isNew = !r, today = new Date().toISOString().slice(0, 10);
+    var v = await showModal({
+      title: isNew ? 'Log a request' : 'Request ' + r.id,
+      fields: [
+        { id: 'ref', label: 'Reference (your ticket or case number, not the person\'s details)', value: r ? r.ref : '' },
+        { id: 'type', label: 'Type', type: 'select', value: r ? r.type : 'Access', options: L.PRIVACY_REQUEST_TYPES },
+        { id: 'received', label: 'Received', type: 'date', value: r ? r.received : today },
+        { id: 'due', label: 'Respond by (defaults to 30 days after received)', type: 'date', value: r ? r.due : '' },
+        { id: 'status', label: 'Status', type: 'select', value: r ? r.status : 'Open', options: L.PRIVACY_REQUEST_STATUSES },
+        { id: 'identityVerified', label: 'Identity verified', type: 'checkbox', value: r ? r.identityVerified : false },
+        { id: 'activities', label: 'Processing activities involved (IDs, comma-separated)', value: r ? (r.activities || []).join(', ') : '' },
+        { id: 'owner', label: 'Owner', value: r ? r.owner : '' },
+        { id: 'outcome', label: 'Outcome (what was provided, corrected or deleted, or why refused)', type: 'textarea', value: r ? r.outcome : '' },
+        { id: 'notes', label: 'Notes', type: 'textarea', value: r ? r.notes : '' }
+      ],
+      confirmText: isNew ? 'Log request' : 'Save changes'
+    });
+    if (!v) return;
+    var due = v.due || (v.received ? addDaysIso(v.received, L.PRIVACY_REQUEST_DAYS) : '');
+    var done = v.status === 'Completed' || v.status === 'Refused';
+    var fields = { ref: v.ref, type: v.type, received: v.received, due: due, status: v.status, identityVerified: !!v.identityVerified,
+      activities: String(v.activities || '').split(/[,;\s]+/).filter(Boolean), owner: v.owner, outcome: v.outcome, notes: v.notes };
+    busy(true);
+    try {
+      if (isNew) {
+        r = Object.assign({ id: nextRegId(S.privacyRequests || [], 'PRQ-'), closed: done ? today : '' }, fields);
+        await Store.addPrivacyRequest(r);
+        audit('Privacy request logged', 'PrivacyRequest', r.id, '', r.type + ' — ' + r.status);
+      } else {
+        var before = r.status;
+        Object.assign(r, fields);
+        r.closed = done ? (r.closed || today) : '';
+        await Store.updatePrivacyRequest(r);
+        audit('Privacy request updated', 'PrivacyRequest', r.id, before, r.status);
+      }
+      toast('<b>' + r.id + '</b> saved');
+    } catch (e) { warn(e); }
+    busy(false);
+    renderPrivacy(); renderNavCounts();
+  }
+  function addDaysIso(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+
+  function renderPiaEditor(r) {
+    var L = window.CheckpointLib, d = window._piaDraft, ro = !!READONLY;
+    var sum = L.piaSummary(Object.assign({}, r, { pia: d }));
+    var opt = function (cur) { return L.PIA_AREAS.map(function (a) { return '<option value="' + a.key + '"' + (a.key === cur ? ' selected' : '') + '>' + esc(a.label) + '</option>'; }).join(''); };
+    var rows = d.entries.map(function (e, i) {
+      var area = L.PIA_AREAS.find(function (a) { return a.key === e.area; });
+      return '<div class="ai-ia-row"><div class="ai-ia-head"><b>Risk ' + (i + 1) + '</b>' + (ro ? '' : '<button class="lnk src" data-action="App.piaRemoveRow" data-id="' + i + '">Remove</button>') + '</div><div class="ai-ia-grid">' +
+        '<label>Area<select class="mini" id="pia_area_' + i + '">' + opt(e.area) + '</select></label>' +
+        '<label class="wide">Privacy risk<textarea class="mini" id="pia_risk_' + i + '" placeholder="' + esc(area ? area.prompt : '') + '">' + esc(e.risk || '') + '</textarea></label>' +
+        '<label>Likelihood (1-5)' + aiIaScoreSelect('pia_L_' + i, e.L, 'Likelihood') + '</label>' +
+        '<label>Severity (1-5)' + aiIaScoreSelect('pia_I_' + i, e.I, 'Severity') + '</label>' +
+        '<label class="wide">What reduces it<textarea class="mini" id="pia_mitigation_' + i + '">' + esc(e.mitigation || '') + '</textarea></label>' +
+        '<label>Residual likelihood' + aiIaScoreSelect('pia_rL_' + i, e.rL, 'Residual likelihood') + '</label>' +
+        '<label>Residual severity' + aiIaScoreSelect('pia_rI_' + i, e.rI, 'Residual severity') + '</label></div></div>';
+    }).join('');
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">' + esc(r.id) + ' · Privacy impact assessment</div><h2>' + esc(r.title) + '</h2>' +
+      '<p class="src" style="margin-top:6px">ISO/IEC 27701 A.1.2.6. Work through how the information is collected, used, kept accurate, secured, accessed, sent overseas and disposed of; rate each risk to the people concerned, record what reduces it, then record a decision.' + (sum.needed.length ? ' Expected here because: ' + esc(sum.needed.join(', ').toLowerCase()) + '.' : '') + '</p>' +
+      '<div class="d-sec"><h4>Status: ' + esc(sum.status) + '</h4>' + (sum.gaps.length ? '<ul class="ai-ia-gaps">' + sum.gaps.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
+      '<div class="d-sec"><h4>Assessment</h4><div class="ai-ia-grid">' +
+      '<label>Assessed by<input class="mini" id="piaBy" value="' + esc(d.assessedBy || '') + '"></label>' +
+      '<label>Assessed on<input class="mini" type="date" id="piaOn" value="' + esc(d.assessedOn || '') + '"></label>' +
+      '<label>Review by<input class="mini" type="date" id="piaNext" value="' + esc(d.nextDue || '') + '"></label></div></div>' +
+      '<div class="d-sec"><h4>Privacy risks</h4>' + rows + (ro ? '' : '<button class="btn ghost sm" data-action="App.piaAddRow">+ Add a risk</button>') + '</div>' +
+      '<div class="d-sec"><h4>Decision</h4><div class="ai-ia-grid">' +
+      '<label>Decision<select class="mini" id="piaDecision"><option value="">Not decided</option>' + L.AI_IMPACT_DECISIONS.map(function (x) { return '<option' + (d.decision === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></label>' +
+      '<label>Decided by<input class="mini" id="piaDecisionBy" value="' + esc(d.decisionBy || '') + '"></label>' +
+      '<label class="wide">Conditions or notes<textarea class="mini" id="piaNotes">' + esc(d.notes || '') + '</textarea></label></div></div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' + (ro ? '' : '<button class="btn sm" data-action="App.savePia">Save PIA</button>') +
+      '<button class="btn ghost sm" data-action="App.openRopa" data-id="' + esc(r.id) + '">Back</button></div>';
+    openDrawerUi('Privacy impact assessment ' + r.title);
+  }
+  function piaReadForm() {
+    var d = window._piaDraft;
+    if (!d) return null;
+    var v = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+    d.assessedBy = v('piaBy').trim(); d.assessedOn = v('piaOn'); d.nextDue = v('piaNext');
+    d.decision = v('piaDecision'); d.decisionBy = v('piaDecisionBy').trim(); d.notes = v('piaNotes').trim();
+    d.entries = d.entries.map(function (e, i) {
+      var f = function (k) { return v('pia_' + k + '_' + i); };
+      return { area: f('area'), risk: f('risk').trim(), L: f('L'), I: f('I'), mitigation: f('mitigation').trim(), rL: f('rL'), rI: f('rI') };
+    });
+    return d;
+  }
+
   /* ================= /registers ================= */
 
   async function legalEditModal(r) {
@@ -17210,6 +17552,12 @@ function showModal(opts) {
        not a feature toggle: it's meaningless without that framework.
        Not to be confused with the AI TOOLS nav below — that one is
        ai.js's drafting assistant, an unrelated purchasable add-on. */
+    var privNav = document.querySelector('.nav-item[data-v="privacy"]');
+    if (privNav) {
+      var privOn = !!(S.entitlements && (S.entitlements.iso27701 || S.entitlements.privacyact));
+      privNav.style.display = privOn ? '' : 'none';
+      if (!privOn && privNav.classList.contains('on')) App.go('dash');
+    }
     var aiGovNav = document.querySelector('.nav-item[data-v="aisystems"]');
     if (aiGovNav) {
       var aiGovOn = !!(S.entitlements && S.entitlements.iso42001);
@@ -17325,6 +17673,7 @@ function showModal(opts) {
     questionnaires: renderQuestionnaires,
     assets: renderAssets,
     legal: renderLegal,
+    privacy: renderPrivacy,
     calendar: renderCalendar,
     incidents: renderIncidents,
     auditlog: renderAuditLog,
@@ -18078,25 +18427,17 @@ function showModal(opts) {
          live technical signal and stay self-reported by design. */
       S.iso27701Proposed = [];
       if (S.entitlements.iso27701 && window.CHECK_ISO27701) {
-        var ISO27701_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
-        var byIso27701 = {}; /* code -> { suggestedSt, checkLabels: [] } */
-        Object.keys(window.CHECK_ISO27701).forEach(function (checkId) {
-          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
-          if (!def) return;
-          var r = checkResult(def);
-          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
-          if (!suggestedSt) return;
-          window.CHECK_ISO27701[checkId].forEach(function (code) {
-            var entry = byIso27701[code] || (byIso27701[code] = { suggestedSt: suggestedSt, checkLabels: [] });
-            if (ISO27701_ST_RANK[suggestedSt] < ISO27701_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
-            entry.checkLabels.push(def.label);
-          });
-        });
-        Object.keys(byIso27701).forEach(function (code) {
-          var entry = byIso27701[code];
+        /* window.CHECK_ISO27701_PARTIAL: codes a check speaks to only in part (a pass
+           suggests In progress, never Implemented). See
+           CheckpointLib.flatSuggestions(). */
+        var iso27701Labels = {};
+        (window.CHECK_DEFS || []).forEach(function (d) { iso27701Labels[d.id] = d.label; });
+        var iso27701By = window.CheckpointLib.flatSuggestions(window.CHECK_ISO27701, window.CHECK_ISO27701_PARTIAL, allCheckResultsById(), iso27701Labels);
+        Object.keys(iso27701By).forEach(function (code) {
+          var entry = iso27701By[code];
           var ctrl = S.controls.find(function (c) { return c.fw === 'iso27701' && c.id === code; });
-          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
-          S.iso27701Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.st) return;
+          S.iso27701Proposed.push({ checkLabel: entry.labels.join(' · '), code: code, from: ctrl.st, to: entry.st });
         });
       }
 
@@ -18113,25 +18454,17 @@ function showModal(opts) {
          consent records. */
       S.soc2Proposed = [];
       if (S.entitlements.soc2 && window.CHECK_SOC2) {
-        var SOC2_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
-        var bySoc2 = {}; /* code -> { suggestedSt, checkLabels: [] } */
-        Object.keys(window.CHECK_SOC2).forEach(function (checkId) {
-          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
-          if (!def) return;
-          var r = checkResult(def);
-          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
-          if (!suggestedSt) return;
-          window.CHECK_SOC2[checkId].forEach(function (code) {
-            var entry = bySoc2[code] || (bySoc2[code] = { suggestedSt: suggestedSt, checkLabels: [] });
-            if (SOC2_ST_RANK[suggestedSt] < SOC2_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
-            entry.checkLabels.push(def.label);
-          });
-        });
-        Object.keys(bySoc2).forEach(function (code) {
-          var entry = bySoc2[code];
+        /* window.CHECK_SOC2_PARTIAL: codes a check speaks to only in part (a pass
+           suggests In progress, never Implemented). See
+           CheckpointLib.flatSuggestions(). */
+        var soc2Labels = {};
+        (window.CHECK_DEFS || []).forEach(function (d) { soc2Labels[d.id] = d.label; });
+        var soc2By = window.CheckpointLib.flatSuggestions(window.CHECK_SOC2, window.CHECK_SOC2_PARTIAL, allCheckResultsById(), soc2Labels);
+        Object.keys(soc2By).forEach(function (code) {
+          var entry = soc2By[code];
           var ctrl = S.controls.find(function (c) { return c.fw === 'soc2' && c.id === code; });
-          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
-          S.soc2Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.st) return;
+          S.soc2Proposed.push({ checkLabel: entry.labels.join(' · '), code: code, from: ctrl.st, to: entry.st });
         });
       }
 
@@ -20842,6 +21175,139 @@ function showModal(opts) {
         '</div>' + recordHistoryHtml('AISystem', [a.id], 6);
       openDrawerUi('AI system ' + a.name);
     },
+
+    toggleSoc2Pack: function () { window._soc2PackOpen = window._soc2PackOpen === false; renderSoa(); },
+    addSubservice: async function () {
+      var cand = (S.vendors || []).filter(function (v) { return !v.subservice; });
+      if (!cand.length) { toast('Every supplier is already marked, or none are recorded. Add the supplier in Supplier risk first.'); return; }
+      var v = await showModal({ title: 'Mark a subservice organisation', message: 'A subservice organisation is a supplier whose controls your system depends on, such as your hosting or identity provider. Carved out (the usual choice): the report excludes their controls and lists what you rely on them for. Inclusive: their controls are tested as part of your report.',
+        fields: [{ id: 'vendor', label: 'Supplier', type: 'select', value: cand[0].id, options: cand.map(function (x) { return x.id; }) },
+          { id: 'mode', label: 'Treatment in the report', type: 'select', value: 'Carved out', options: ['Carved out', 'Inclusive'] },
+          { id: 'csocs', label: 'Controls you rely on them for (one per line, e.g. physical security of data centres; backup of the hosting platform)', type: 'textarea', value: '' }],
+        confirmText: 'Save' });
+      if (!v) return;
+      var x = (S.vendors || []).find(function (y) { return y.id === v.vendor; });
+      if (!x) return;
+      x.subservice = v.mode; x.csocs = v.csocs;
+      busy(true); try { await Store.updateVendor(x); audit('Subservice organisation marked', 'Vendor', x.id, '', v.mode); } catch (e) { warn(e); } busy(false);
+      renderSoa();
+    },
+    editSubservice: async function (id) {
+      var x = (S.vendors || []).find(function (y) { return y.id === id; });
+      if (!x) return;
+      var v = await showModal({ title: x.id + ' ' + x.name, fields: [
+        { id: 'mode', label: 'Treatment in the report', type: 'select', value: x.subservice, options: ['Carved out', 'Inclusive', 'Not a subservice organisation'] },
+        { id: 'csocs', label: 'Complementary subservice organisation controls (one per line)', type: 'textarea', value: x.csocs || '' }], confirmText: 'Save' });
+      if (!v) return;
+      var before = x.subservice;
+      x.subservice = v.mode === 'Not a subservice organisation' ? '' : v.mode; x.csocs = v.csocs;
+      busy(true); try { await Store.updateVendor(x); audit('Subservice organisation updated', 'Vendor', x.id, before, x.subservice || 'Not a subservice organisation'); } catch (e) { warn(e); } busy(false);
+      renderSoa();
+    },
+    editCuecs: async function () {
+      var cur = soc2Cuecs();
+      var v = await showModal({ title: 'Complementary user entity controls', message: 'Controls your customers must operate for your controls to achieve their objectives. One per line. They appear in the system description and the auditor\'s report.',
+        fields: [{ id: 'cuecs', label: 'One per line', type: 'textarea', value: (cur.length ? cur : window.CheckpointLib.SOC2_CUEC_STARTERS).join('\n') }], confirmText: 'Save' });
+      if (!v) return;
+      var list = String(v.cuecs || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+      try { await Store.setSetting('soc2Cuecs', JSON.stringify(list)); S.settings.soc2Cuecs = JSON.stringify(list); audit('Setting changed', 'Setting', 'soc2Cuecs', cur.length + ' CUECs', list.length + ' CUECs'); } catch (e) { warn(e); }
+      renderSoa();
+    },
+    editSoc2Description: async function () {
+      var st = S.settings || {};
+      var v = await showModal({ title: 'System description details', message: 'Used in the system description (AICPA DC 200) alongside your registers. Services come from the scope & context questionnaire.',
+        fields: [
+          { id: 'services', label: 'Services the system provides', type: 'textarea', value: orgProfileValue('orgServices') || '' },
+          { id: 'commitments', label: 'Principal service commitments and system requirements (what you promise customers: availability, security, confidentiality)', type: 'textarea', value: st.soc2Commitments || '' },
+          { id: 'changes', label: 'Significant changes to the system during the period (blank if none)', type: 'textarea', value: st.soc2Changes || '' }],
+        confirmText: 'Save' });
+      if (!v) return;
+      try {
+        await Store.setSetting('orgServices', v.services); S.settings.orgServices = v.services;
+        await Store.setSetting('soc2Commitments', v.commitments); S.settings.soc2Commitments = v.commitments;
+        await Store.setSetting('soc2Changes', v.changes); S.settings.soc2Changes = v.changes;
+        audit('Setting changed', 'Setting', 'soc2Description', '', 'System description details updated');
+      } catch (e) { warn(e); }
+      renderSoa();
+    },
+    soc2BridgeLetter: async function () {
+      var st = S.settings || {};
+      var v = await showModal({ title: 'Bridge letter', message: 'Covers the gap between the end of your last SOC 2 report period and today, until the next report is issued. Management signs it; the auditor does not.',
+        fields: [{ id: 'end', label: 'Last report period ended', type: 'date', value: st.soc2LastReportEnd || '' },
+          { id: 'auditor', label: 'Service auditor (CPA firm) that issued it', value: st.soc2Auditor || '' },
+          { id: 'signer', label: 'Signed by (name and title)', value: st.soc2BridgeSigner || '' }],
+        confirmText: 'Prepare letter', validate: function (x) { return x.end ? null : 'Enter the date the last report period ended.'; } });
+      if (!v) return;
+      try {
+        await Store.setSetting('soc2LastReportEnd', v.end); S.settings.soc2LastReportEnd = v.end;
+        await Store.setSetting('soc2Auditor', v.auditor); S.settings.soc2Auditor = v.auditor;
+        await Store.setSetting('soc2BridgeSigner', v.signer); S.settings.soc2BridgeSigner = v.signer;
+      } catch (e) { warn(e); }
+      App.report('soc2bridge');
+    },
+
+    addRopa: function () { ropaEditModal(null); },
+    editRopa: async function (id) { var r = (S.ropa || []).find(function (x) { return x.id === id; }); if (r) { App.closeDrawer(); await ropaEditModal(r); App.openRopa(id); } },
+    openRopa: function (id) {
+      var r = (S.ropa || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      var L = window.CheckpointLib, rv = L.ropaReview(r, S.vendors || []);
+      var kv = function (k, v) { return '<div class="d-kv"><span>' + esc(k) + '</span><b>' + esc(v || 'Not recorded') + '</b></div>'; };
+      var vend = (r.recipients || []).map(function (vid) { var vv = (S.vendors || []).find(function (x) { return x.id === vid; }); return vid + (vv ? ' ' + vv.name + (vv.dpa ? '' : ' (no DPA)') : ' (not in supplier register)'); }).join('; ');
+      var ctl = rv.controls.map(function (code) {
+        var c = S.controls.find(function (x) { return x.fw === 'iso27701' && x.id === code; });
+        return '<div class="d-kv"><span>' + esc(code) + (c ? ' — ' + esc(c.t) : '') + '</span><b>' + (c ? esc(c.st) : '') + '</b></div>';
+      }).join('');
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + esc(r.id) + ' · ' + esc(r.role) + (r.sensitive ? ' · Sensitive information' : '') + '</div><h2>' + esc(r.title) + '</h2>' +
+        (rv.gaps.length ? '<div class="d-sec"><h4>Missing</h4><ul class="ai-ia-gaps">' + rv.gaps.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul></div>' : '') +
+        '<div class="d-sec"><h4>Record of processing</h4>' + kv('Purpose', r.purpose) + kv('Lawful basis', r.lawfulBasis) + kv('Whose information', r.individuals) + kv('Kinds of information', r.dataCategories) +
+        kv('Sources', r.sources) + kv('Suppliers who receive it', vend) + kv('Other recipients', r.recipientNotes) + kv('Sent overseas to', r.transfers || 'None') +
+        (r.transfers ? kv('Basis for overseas transfer', r.transferBasis) : '') + kv('Retention and disposal', r.retention) + kv('Systems', (r.systems || []).join(', ')) +
+        (r.lawfulBasis === 'Consent' || r.consent ? kv('Consent obtained by', r.consent && r.consent.how) + kv('Consent recorded in', r.consent && r.consent.where) + kv('How to withdraw', r.consent && r.consent.withdraw) : '') +
+        kv('Owner', r.owner) + kv('Last reviewed', r.lastReviewed ? fmtDateY(r.lastReviewed) : 'Never') + '</div>' +
+        '<div class="d-sec"><h4>Privacy impact assessment</h4><div class="d-kv"><span>Status</span><b>' + esc(rv.pia.status) + '</b></div>' +
+        (rv.pia.needed.length ? '<div class="d-kv"><span>Expected because</span><b>' + esc(rv.pia.needed.join(', ')) + '</b></div>' : '') +
+        (r.pia ? '<div class="d-kv"><span>Decision</span><b>' + esc(rv.pia.decision || 'Not decided') + '</b></div>' : '') +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' + (READONLY ? '' : '<button class="btn sm" data-action="App.openPia" data-id="' + esc(r.id) + '">' + (r.pia ? 'Open PIA' : 'Start PIA') + '</button>') +
+        (r.pia ? '<button class="btn ghost sm" data-action="App.piaReport" data-id="' + esc(r.id) + '">PIA report</button>' : '') + '</div></div>' +
+        '<div class="d-sec"><h4>ISO 27701 controls this record evidences</h4>' + (ctl || '<div class="d-kv"><span>None yet: fill in the record above</span></div>') + '</div>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' + (READONLY ? '' : '<button class="btn ghost sm" data-action="App.editRopa" data-id="' + esc(r.id) + '">Edit</button>') + '</div>' +
+        recordHistoryHtml('Ropa', [r.id], 6);
+      openDrawerUi('Processing activity ' + r.title);
+    },
+    openPia: function (id) {
+      var r = (S.ropa || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      window._piaFor = id;
+      var today = new Date().toISOString().slice(0, 10);
+      window._piaDraft = r.pia ? JSON.parse(JSON.stringify(r.pia)) : { assessedBy: (Graph.getAccount && Graph.getAccount() && Graph.getAccount().name) || '', assessedOn: today,
+        nextDue: window.CheckpointLib.addMonthsIso(today, 12), entries: ['collection', 'use', 'security', 'retention'].concat(r.transfers ? ['transfer'] : []).map(function (k) { return { area: k, risk: '', L: '', I: '', mitigation: '', rL: '', rI: '' }; }),
+        decision: '', decisionBy: '', notes: '' };
+      renderPiaEditor(r);
+    },
+    piaAddRow: function () { var r = (S.ropa || []).find(function (x) { return x.id === window._piaFor; }); var d = piaReadForm(); if (!r || !d) return; d.entries.push({ area: 'use', risk: '', L: '', I: '', mitigation: '', rL: '', rI: '' }); renderPiaEditor(r); },
+    piaRemoveRow: function (i) { var r = (S.ropa || []).find(function (x) { return x.id === window._piaFor; }); var d = piaReadForm(); if (!r || !d) return; d.entries.splice(Number(i), 1); renderPiaEditor(r); },
+    savePia: async function () {
+      var r = (S.ropa || []).find(function (x) { return x.id === window._piaFor; });
+      var d = piaReadForm();
+      if (!r || !d) return;
+      d.entries = d.entries.filter(function (e) { return e.risk; });
+      r.pia = d;
+      busy(true);
+      try {
+        await Store.updateRopa(r);
+        audit('Privacy impact assessment saved', 'Ropa', r.id, '', window.CheckpointLib.piaSummary(r).status);
+      } catch (e) { warn(e); }
+      busy(false);
+      toast('PIA saved: <b>' + esc(window.CheckpointLib.piaSummary(r).status) + '</b>');
+      renderPrivacy(); renderNavCounts();
+      App.openRopa(r.id);
+    },
+    piaReport: function (id) { window._piaFor = id; App.report('pia'); },
+    addPrivacyRequest: function () { privacyRequestModal(null); },
+    editPrivacyRequest: function (id) { var r = (S.privacyRequests || []).find(function (x) { return x.id === id; }); if (r) privacyRequestModal(r); },
 
     openAiImpact: function (id) {
       var a = (S.aiSystems || []).find(function (x) { return x.id === id; });
@@ -28787,9 +29253,11 @@ function showModal(opts) {
         }
         if (moduleId === 'iso27701' && content.extra && content.extra.checkIso27701) {
           Object.assign(window.CHECK_ISO27701, content.extra.checkIso27701);
+          if (content.extra.checkIso27701Partial) Object.assign(window.CHECK_ISO27701_PARTIAL = window.CHECK_ISO27701_PARTIAL || {}, content.extra.checkIso27701Partial);
         }
         if (moduleId === 'soc2' && content.extra && content.extra.checkSoc2) {
           Object.assign(window.CHECK_SOC2, content.extra.checkSoc2);
+          if (content.extra.checkSoc2Partial) Object.assign(window.CHECK_SOC2_PARTIAL = window.CHECK_SOC2_PARTIAL || {}, content.extra.checkSoc2Partial);
         }
         if (moduleId === 'nistcsf' && content.extra && content.extra.checkNistCsf) {
           Object.assign(window.CHECK_NISTCSF, content.extra.checkNistCsf);

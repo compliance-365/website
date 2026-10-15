@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.165.0',
+    date: '2026-10-15',
+    entries: [
+      'New Privacy registers (shown with ISO 27701 or the Privacy Act). Records of processing: for each activity, the purpose, lawful basis, whose information and what kinds, sources, the suppliers and others who receive it, countries it is sent to and the basis for that, retention, the systems it is held in, and how consent is obtained, recorded and withdrawn. Checkpoint lists what each record is still missing and the ISO 27701 controls it evidences, and prints the full records of processing as a report.',
+      'Privacy impact assessments per processing activity. Checkpoint says when one is expected (sensitive information, an overseas transfer, automated decisions); work through collection, use, accuracy, security, access, overseas transfer and retention, rate each risk, record what reduces it and a decision. It prints as a report and evidences A.1.2.6.',
+      'A log of requests from individuals: access, correction, deletion, objection, consent withdrawal and complaints, with a 30-day default due date, identity check and outcome. Overdue requests show on the nav. Record a reference only, never the person\'s details.',
+      'SOC 2 report pack on the SOC 2 tab of the Statement of Applicability: evidence for each criterion in every month of the observation period, subservice organisations (carved out or inclusive) with the controls you rely on them for, complementary user entity controls (start from a typical list), a draft system description following the AICPA description criteria, and a bridge letter for the gap after your last report.',
+      'More honest scan suggestions for SOC 2 and ISO 27701. A single Microsoft 365 setting no longer suggests a whole SOC 2 criterion is implemented: a pass suggests In progress. ISO 27701 no longer treats the audit log as a record of PII transfers or disclosures, sensitivity labels as processing records, or guest access as processor contracts. SOC 2 Type II operating-effectiveness evidence still counts every scan.'
+    ]
+  },
+  {
     version: '1.164.0',
     date: '2026-10-15',
     entries: [

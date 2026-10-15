@@ -196,7 +196,7 @@ export const SCREEN_NAMES = {
   'v-build': 'Guided build', 'v-whodoes': 'Who does what', 'v-mytasks': 'My tasks', 'v-clauses': 'Management system clauses',
   'v-sharedevidence': 'Shared evidence', 'v-documents': 'Documents', 'v-attestations': 'Policy attestation', 'v-training': 'Training',
   'v-certification': 'Certification', 'v-audits': 'Internal audits', 'v-incidents': 'Incident register', 'v-reviews': 'Management review',
-  'v-objectives': 'Objectives register', 'v-assets': 'Asset register', 'v-legal': 'Legal & regulatory register',
+  'v-objectives': 'Objectives register', 'v-assets': 'Asset register', 'v-legal': 'Legal & regulatory register', 'v-privacy': 'Privacy registers',
   'v-questionnaires': 'Security questionnaires', 'v-calendar': 'Compliance calendar', 'v-auditlog': 'Audit log',
   'v-reports': 'Audit reports', 'v-selftest': 'Self-test', 'v-trustcenter': 'Trust Center', 'v-auditorpack': 'Auditor pack',
   'v-aitools': 'AI tools'
