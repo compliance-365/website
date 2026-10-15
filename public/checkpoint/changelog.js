@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.164.0',
+    date: '2026-10-15',
+    entries: [
+      'AI impact assessments are now a real assessment, not just a status. For each AI system, record who is affected (individuals, groups, society, the environment), the benefits and possible harms, how likely and how severe, what reduces them and what is left, then a decision and who made it. It follows ISO/IEC 42005:2025 and evidences ISO 42001 A.5.2 to A.5.5. Checkpoint works out the status and lists what is still missing, any medium or high harm can go straight into the risk register, and the assessment prints as a report for your auditor.',
+      'Each assessment has a reassessment date and triggers (a model change, new data, a new use, an incident, a change in the law), and an overdue one reopens.',
+      'The AI register now records each system\'s intended use (A.9.4), data provenance (A.7.5), your role (provider, deployer or both) and who does what between you and the provider (A.10.2).',
+      'EU AI Act screening shows when each obligation applies for the system\'s tier, as amended by the 2026 Digital Omnibus: high-risk Annex III obligations from 2 December 2027, transparency duties since 2 August 2026. It also lists the AI literacy duty (Article 4) for every system.',
+      'New card on the AI register: Australia\'s Guidance for AI Adoption (October 2025). It maps the six essential practices to ISO 42001 and shows how far your register evidences each one.',
+      'ISO 42001 scan suggestions are more honest. Microsoft 365 security checks such as MFA and patching no longer suggest that AI controls about documenting resources (A.4.2, A.4.5) are implemented. Where a check still speaks to an AI control (audit logging for AI event logs, sensitivity labels for data resources), a pass suggests In progress, never Implemented.'
+    ]
+  },
+  {
     version: '1.163.0',
     date: '2026-10-15',
     entries: [

@@ -827,6 +827,7 @@
     <section class="view" id="v-aisystems">
       <div class="vhead"><div class="rule"></div><h1>AI systems</h1><p>Every AI system in use, its impact assessment status, and the ISO 42001 controls it evidences — the register ISO 42001 certification is actually built on, not a slide deck assembled the week before audit. EU AI Act risk tiers (Prohibited/High/Limited/Minimal) drive how much scrutiny each system gets.</p></div>
       <div class="grid kpis" id="aiKpiRow" style="margin-bottom:16px"></div>
+      <div id="aiAuPractices"></div>
       <div class="card" style="margin-bottom:16px">
         <h3>Impact assessment status by risk tier</h3>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">A Prohibited or High-tier system with no impact assessment started is the one an assessor asks about first.</p>
@@ -852,6 +853,10 @@
           <select class="mini" id="aiImpactStatus" aria-label="Impact assessment status"><option>Not started</option><option>In progress</option><option>Completed</option></select>
           <input class="mini" id="aiLastReviewed" aria-label="Last reviewed" type="date">
           <textarea class="mini" id="aiHumanOversight" placeholder="Human oversight arrangements" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
+          <textarea class="mini" id="aiIntendedUse" placeholder="Intended use: what it is for, who uses it, and what it must not be used for (A.9.4)" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
+          <textarea class="mini" id="aiDataProvenance" placeholder="Data provenance: where the training and input data comes from and how it is kept current (A.7.5)" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
+          <select class="mini" id="aiOrgRole" aria-label="Our role for this system"><option value="">Our role: not set</option><option>Deployer (we use it)</option><option>Provider (we build or supply it)</option><option>Provider and deployer</option></select>
+          <textarea class="mini" id="aiResponsibilities" placeholder="Who does what between the provider and us: monitoring, incidents, model updates, data (A.10.2)" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.saveAiSystem">Save</button>

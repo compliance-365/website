@@ -446,6 +446,23 @@ describe('scan-suggest tables never disagree with their guidance.checks panel, a
         });
       });
 
+      if (fw === 'iso42001') {
+        test('extra.checkIso42001Partial: real checks and controls, reflected in guidance, and no security check claims a documentation control', () => {
+          const partial = (pack.extra && pack.extra.checkIso42001Partial) || {};
+          Object.keys(partial).forEach((id) => {
+            assert.ok(checkIds.has(id), `checkIso42001Partial has "${id}", which isn't a CHECK_DEFS id`);
+            partial[id].forEach((code) => {
+              assert.ok(codes.has(code), `checkIso42001Partial["${id}"] references "${code}", which isn't a real ISO 42001 control`);
+              assert.ok(guidance[code] && (guidance[code].checks || []).includes(id), `guidance["${code}"].checks is missing "${id}"`);
+            });
+          });
+          // A.4.2 and A.4.5 ask for AI resources to be DOCUMENTED; a
+          // Microsoft 365 security check is not evidence of that.
+          [checkMap, partial].forEach((m) => Object.keys(m).forEach((id) => {
+            assert.ok(!m[id].includes('AI.4.2') && !m[id].includes('AI.4.5'), `${id} must not map to AI.4.2 or AI.4.5`);
+          }));
+        });
+      }
       if (fw === 'essential8') {
         test('extra.checkE8Partial: real checks, real level codes, reflected in guidance', () => {
           const partial = (pack.extra && pack.extra.checkE8Partial) || {};

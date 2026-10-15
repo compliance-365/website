@@ -2218,3 +2218,16 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .e8-how-check{display:inline-flex;align-items:center;gap:6px}
 .e8-how-detail p{margin:6px 0 0}
 @media (max-width:720px){.e8-how-row{grid-template-columns:1fr}}
+
+/* AI impact assessment editor + Australian guidance card (AI register) */
+.ai-ia-row{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:0 0 10px}
+.ai-ia-head{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.ai-ia-head .lnk{margin-left:auto}
+.ai-ia-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px}
+.ai-ia-grid label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--paper-dim)}
+.ai-ia-grid label.wide{grid-column:1/-1}
+.ai-ia-grid textarea{min-height:44px;font-family:Manrope}
+.ai-ia-triggers{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px}
+.ai-ia-gaps{margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--paper-dim)}
+.ai-au-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px}
+.ai-au-row .src{margin-left:auto}
