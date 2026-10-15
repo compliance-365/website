@@ -494,3 +494,255 @@ window.TRAINING_COURSES = [
     passMark: 4
   }
 ];
+
+/* ============================================================
+   Lessons, formats and question banks (1.161.0)
+
+   Each course is read one lesson per screen: an illustration, three
+   things to remember, a scenario to answer, and the full detail
+   behind "More detail". The quiz is a bank: each attempt draws
+   quizDraw questions and shuffles their answers (CheckpointLib
+   .drawQuiz), so a retake tests understanding rather than memory.
+
+   Three formats per course:
+     full        the lessons above, about 15 minutes
+     essentials  the take-aways and scenarios only, about 5 minutes,
+                 for refreshers
+     talk        a facilitator's toolbox talk (15 minutes, printable
+                 with a sign-on sheet) for teams away from a screen
+
+   `local` lines carry the client's own details ({{reportTo}} and the
+   like, from the training profile). A line whose detail is not set is
+   left out, never shown with a placeholder.
+   ============================================================ */
+window.TRAINING_ART = {
+  target: '<circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="12"/><circle cx="32" cy="32" r="4" fill="currentColor"/><path d="M50 14 36 28M50 14v8M50 14h-8"/>',
+  hook: '<path d="M34 10v26a10 10 0 1 1-20 0"/><path d="M14 36l-4-6M14 36l6-3"/><rect x="38" y="16" width="18" height="13" rx="2"/><path d="m38 18 9 6 9-6"/>',
+  key: '<circle cx="22" cy="32" r="10"/><circle cx="22" cy="32" r="3"/><path d="M32 32h22M48 32v7M42 32v5"/>',
+  laptop: '<rect x="14" y="16" width="36" height="24" rx="2"/><path d="M8 46h48l-4 4H12z"/><path d="M27 28h10M32 23v10"/>',
+  report: '<path d="M14 26v12h8l16 10V16L22 26z"/><path d="M44 24c3 3 3 13 0 16M49 20c6 6 6 18 0 24"/>',
+  person: '<rect x="12" y="14" width="40" height="36" rx="3"/><circle cx="25" cy="29" r="5"/><path d="M17 42c2-5 14-5 16 0M38 26h8M38 32h8M38 38h5"/>',
+  filter: '<path d="M12 14h40L37 32v14l-10 6V32z"/>',
+  archive: '<rect x="12" y="14" width="40" height="10" rx="2"/><path d="M15 24v24h34V24M27 32h10"/>',
+  globe: '<circle cx="32" cy="32" r="20"/><path d="M12 32h40M32 12c-8 8-8 32 0 40M32 12c8 8 8 32 0 40"/>',
+  siren: '<path d="M20 44V32a12 12 0 0 1 24 0v12"/><path d="M14 44h36v6H14zM32 12v5M16 18l3 3M48 18l-3 3"/>',
+  ai: '<rect x="16" y="16" width="32" height="32" rx="6"/><path d="M26 10v6M38 10v6M26 48v6M38 48v6M10 26h6M10 38h6M48 26h6M48 38h6"/><path d="M26 38l6-14 6 14M28 33h8"/>',
+  upload: '<path d="M32 40V16M22 26l10-10 10 10"/><path d="M14 44v6h36v-6"/><path d="M12 12l40 40" stroke-width="3"/>',
+  check: '<circle cx="32" cy="32" r="20"/><path d="m22 32 7 7 13-14"/>',
+  scales: '<path d="M32 12v40M20 52h24M16 20h32"/><path d="M16 20 9 34h14zM48 20l-7 14h14z"/>',
+  eye: '<path d="M8 32s9-14 24-14 24 14 24 14-9 14-24 14S8 32 8 32z"/><circle cx="32" cy="32" r="6"/>',
+  qr: '<rect x="12" y="12" width="14" height="14"/><rect x="38" y="12" width="14" height="14"/><rect x="12" y="38" width="14" height="14"/><path d="M38 38h6v6h-6zM46 46h6v6h-6zM38 50h4M50 38v4"/>',
+  phone: '<rect x="20" y="8" width="24" height="48" rx="4"/><path d="M29 50h6"/><path d="M26 22h12v12H26z"/>',
+  money: '<rect x="10" y="20" width="44" height="26" rx="3"/><circle cx="32" cy="33" r="6"/><path d="M16 26v14M48 26v14"/>',
+  share: '<circle cx="18" cy="32" r="6"/><circle cx="46" cy="18" r="6"/><circle cx="46" cy="46" r="6"/><path d="m23 29 18-8M23 35l18 8"/>',
+  door: '<rect x="18" y="10" width="28" height="44" rx="2"/><circle cx="39" cy="33" r="2" fill="currentColor"/><path d="M12 54h40"/>',
+  plane: '<path d="M8 36l48-18-14 32-8-12z"/><path d="M34 38 56 18"/>'
+};
+
+(function () {
+  var X = {
+    'security-awareness': {
+      quizDraw: 5,
+      art: ['target', 'hook', 'key', 'laptop', 'report'],
+      key: [
+        ['Most attacks start with a person, not a firewall.', 'A message that knows your name and role can still be fake.', 'Slow down at three moments: a prompt you did not start, a request to move money or data, a link asking you to sign in.'],
+        ['A sign-in prompt you did not start means someone has your password: deny it and report it.', 'Urgency, secrecy and a payment change together is the classic scam.', 'A real service (a genuine file-share link) can still deliver a fake.'],
+        ['One password per service, kept in the password manager.', 'Passkeys or number matching beat SMS codes.', 'Never read a code out to anyone, including "IT".'],
+        ['Keep work data in approved systems only.', 'Check the recipient before you press send.', 'Lost device? Report it now, not when you are sure it is gone.'],
+        ['Report anything that feels wrong, as soon as it does.', 'Report your own mistakes too: fast reports turn incidents into near-misses.', 'Nobody is disciplined for reporting.']
+      ],
+      local: [[], [], [], [], ['Here, report security concerns to {{reportTo}}.']],
+      scenarios: [
+        { setup: 'An email arrives from your CEO, by name, mentioning the project you are on. It asks you to buy gift cards for a client today and keep it quiet until it is done.', choices: [
+          { t: 'Buy them: it knows my project, so it is real', ok: false, why: 'Your project is often public, on LinkedIn or the company website. Knowing it proves nothing.' },
+          { t: 'Check with the CEO on a number or channel you already have, and report the email', ok: true, why: 'Urgency plus secrecy plus money is the pattern. Verify out of band and report it.' },
+          { t: 'Reply to the email asking if it is genuine', ok: false, why: 'A reply goes straight back to the attacker, who will say yes.' }] },
+        { setup: 'Your phone shows a Microsoft sign-in approval you did not start. Then another. Then another.', choices: [
+          { t: 'Approve one so they stop', ok: false, why: 'That hands your account to whoever is typing your password.' },
+          { t: 'Deny them all and report it straight away', ok: true, why: 'The prompts mean your password is known. Your report is the warning.' },
+          { t: 'Ignore them, it is probably a glitch', ok: false, why: 'Prompts are not random. Someone is trying to sign in as you.' }] },
+        { setup: 'A caller says they are from IT, need to "verify your account", and ask you to read out the code just sent to your phone.', choices: [
+          { t: 'Read it out: they are from IT', ok: false, why: 'No genuine support process needs your code. The code is the key to your account.' },
+          { t: 'Refuse, hang up, and report the call', ok: true, why: 'Codes are never shared. Report it so others are warned.' },
+          { t: 'Ask them to email you first, then read it out', ok: false, why: 'An email is just as easy to fake. The answer is still no.' }] },
+        { setup: 'You need to finish a customer report at the weekend on your home computer.', choices: [
+          { t: 'Email it to your personal address', ok: false, why: 'A personal mailbox is outside every protection and can never be retrieved.' },
+          { t: 'Open it from OneDrive or SharePoint with your work account', ok: true, why: 'The data stays in approved systems, protected and recoverable.' },
+          { t: 'Copy it to a USB stick and delete it after', ok: false, why: 'USB copies get lost, and "delete after" rarely happens.' }] },
+        { setup: 'Ten minutes ago you entered your password on a page that now looks wrong.', choices: [
+          { t: 'Wait and see if anything happens', ok: false, why: 'Waiting spends the window where this is easy to contain.' },
+          { t: 'Report it now, even though it was your click', ok: true, why: 'A password reset and session revoke within the hour usually ends it completely.' },
+          { t: 'Change your password quietly and say nothing', ok: false, why: 'Sessions already opened stay open. Others may have got the same email.' }] }
+      ],
+      bank: [
+        { q: 'Which of these is the strongest sign that an email asking for a payment is a scam?', options: ['It has a spelling mistake', 'It combines urgency, secrecy and a change of bank details', 'It comes from an external address', 'It has an attachment'], answer: 1, why: 'Modern scams are often well written and come from real, compromised mailboxes. Urgency, secrecy and a payment change together is the pattern to stop on.' },
+        { q: 'A QR code on a poster in the car park promises faster building access if you sign in. What is the risk?', options: ['None: QR codes cannot carry links', 'It moves you to your phone, outside work filtering, onto a page that may be fake', 'It will drain your phone battery', 'It only matters if the poster looks unofficial'], answer: 1, why: 'A QR code is just a link. It takes you to your phone, where the address is harder to check and work protections often do not apply.' },
+        { q: 'An app asks you to "allow access to your Microsoft 365 account" after clicking a shared-document link. What should you do?', options: ['Allow it: it did not ask for your password', 'Stop, decline, and report it', 'Allow it, then remove it later', 'Allow it only on your phone'], answer: 1, why: 'Consent phishing grants an app access without any password, and MFA does not stop it. Decline and report.' },
+        { q: 'Why is reusing your work password on another website dangerous?', options: ['It is not, if the website is reputable', 'When that site is breached, attackers try the same password on Microsoft 365', 'It makes your password expire sooner', 'It slows down sign-in'], answer: 1, why: 'Leaked passwords are tried against work accounts automatically and at scale. One reuse turns somebody else\'s breach into ours.' },
+        { q: 'You find a USB stick in the office car park labelled "Salaries 2026". What do you do?', options: ['Plug it in to find the owner', 'Hand it to IT or security without plugging it in', 'Take it home to check on a personal laptop', 'Throw it away'], answer: 1, why: 'Dropped drives with tempting labels are a known attack. Hand it in unplugged so it can be checked safely.' },
+        { q: 'When is it acceptable to share a SharePoint file with "anyone with the link"?', options: ['Whenever it is quicker', 'Only when there is a genuine reason, ideally with an expiry', 'Never, under any circumstances', 'Only for files without a sensitivity label'], answer: 1, why: 'Anyone-links can be forwarded endlessly. Share with specific people by default, and use anyone-links only with a reason and an expiry.' },
+        { q: 'A colleague asks to borrow your login because theirs is locked. What is the right answer?', options: ['Lend it, just for an hour', 'Lend it, then change your password', 'Decline and help them contact IT to get unlocked', 'Lend it if your manager agrees'], answer: 2, why: 'Everything done under your login is recorded as you. Accounts are personal; IT can unlock theirs.' }
+      ],
+      essentials: { duration: 5, quizDraw: 3, passMark: 2, intro: 'The five habits that stop most attacks, in five minutes. Read the take-aways, answer the scenarios, then a three-question check.' },
+      talk: {
+        minutes: 15,
+        opener: 'Ask the group: has anyone had a strange text, call or email at work this month? Take one or two stories. Most attacks look exactly like that: ordinary, and aimed at people rather than computers.',
+        segments: [
+          { minutes: 3, heading: 'Prompts you did not start', say: ['A sign-in approval you did not trigger means someone has your password.', 'Deny it, then report it. Never approve to make it stop.'], ask: 'What would you do if your phone buzzed with three approvals at 9pm?' },
+          { minutes: 4, heading: 'Money and data requests', say: ['Urgency, secrecy and a change of bank details together is the scam.', 'Check using a number you already have, never one from the message.'], ask: 'Who here approves or makes payments? How would you check a "new bank details" email?' },
+          { minutes: 3, heading: 'Passwords and codes', say: ['One password per service, in the password manager.', 'Nobody, including IT, ever needs your code.'], ask: 'Has anyone been asked for a code on the phone?' },
+          { minutes: 3, heading: 'Reporting', say: ['Report anything that feels wrong, including your own mistakes.', 'Fast reports are what make problems small. Nobody is in trouble for reporting.'], ask: 'Does everyone know where to report? Say it out loud together.' }
+        ],
+        close: 'Finish by confirming the reporting contact with the group and asking each person to sign the attendance sheet.'
+      }
+    },
+    'privacy-awareness': {
+      quizDraw: 5,
+      art: ['person', 'filter', 'archive', 'globe', 'siren'],
+      key: [
+        ['Personal information is anything about an identifiable person, true or not.', 'Combined details can identify someone even when each alone does not.', 'Health, financial and similar details need extra care.'],
+        ['Collect only what the task needs.', 'Use it only for the reason it was collected.', 'Do not make untracked copies, and never use real data in tests or demos.'],
+        ['Look at personal information only for a work reason.', 'Keep it only as long as needed, then delete it, including your own copies.', 'A request about someone\'s data goes to the privacy contact the same day.'],
+        ['Every supplier that sees personal information is a disclosure.', 'New tools are assessed before they get real data, not after.', 'Never paste personal information into an unapproved service.'],
+        ['A breach is often just an email to the wrong person.', 'Report on suspicion; the clock starts then, not at certainty.', 'Keep the evidence, and do not contact the person yourself.']
+      ],
+      local: [[], [], ['Here, privacy requests and concerns go to {{privacyTo}}.'], [], ['Here, report a suspected breach to {{privacyTo}}.']],
+      scenarios: [
+        { setup: 'A support ticket contains a note: "Customer sounded unwell, probably the medication." Is that personal information?', choices: [
+          { t: 'No, it is only a guess', ok: false, why: 'It does not have to be true. A guess about someone\'s health is personal, and sensitive.' },
+          { t: 'Yes, and sensitive: it should not be recorded unless needed', ok: true, why: 'Health information carries the highest risk. Record only what the task needs.' },
+          { t: 'Only if it includes their name', ok: false, why: 'It is attached to their ticket, so it identifies them anyway.' }] },
+        { setup: 'Marketing asks for the full customer list "to see who might like the new product".', choices: [
+          { t: 'Export it to a spreadsheet and send it over', ok: false, why: 'That is a new use and an untracked copy of everyone\'s data.' },
+          { t: 'Ask what they actually need, and check it fits why the data was collected', ok: true, why: 'Use for the stated purpose, and share the minimum, often an aggregate.' },
+          { t: 'Send it, but ask them to delete it after', ok: false, why: 'Untracked copies are almost never deleted.' }] },
+        { setup: 'A customer on the phone says: "Can you tell me everything you have on me?"', choices: [
+          { t: 'Read out what is on your screen', ok: false, why: 'Your screen is not the full picture, and a partial answer can be wrong.' },
+          { t: 'Log it as an access request and pass it to the privacy contact today', ok: true, why: 'Requests count however they arrive, and the deadline starts now.' },
+          { t: 'Tell them to write a formal letter', ok: false, why: 'A request does not need a formal channel to be valid.' }] },
+        { setup: 'You find a free online tool that cleans up messy spreadsheets. Your spreadsheet holds staff names and salaries.', choices: [
+          { t: 'Upload it: it will save an hour', ok: false, why: 'That discloses staff data to an unassessed supplier, permanently.' },
+          { t: 'Ask for the tool to be assessed, or clean the data another way', ok: true, why: 'Suppliers are assessed before they see personal information.' },
+          { t: 'Upload it, then delete it from the site', ok: false, why: 'Deleting afterwards does not undo the disclosure.' }] },
+        { setup: 'You just emailed a staff spreadsheet to the wrong external address.', choices: [
+          { t: 'Email them asking to delete it, and leave it there', ok: false, why: 'Contacting them yourself can make it worse, and the organisation needs to know.' },
+          { t: 'Report it now and keep the sent email as evidence', ok: true, why: 'Fast reporting is what lets it be contained, possibly before it becomes notifiable.' },
+          { t: 'Delete the sent email so there is no trace', ok: false, why: 'That destroys the evidence needed to assess it.' }] }
+      ],
+      bank: [
+        { q: 'Which of these should be treated as sensitive personal information by default?', options: ['A work phone number', 'A note about someone\'s health', 'A company name', 'A product order number'], answer: 1, why: 'Health, biometric, financial, criminal record and similar details carry much higher risk and stricter handling.' },
+        { q: 'You are building a demo for a prospect. What data should it use?', options: ['A copy of real customer records, for realism', 'Synthetic, made-up data', 'Real data with the names changed', 'Last year\'s customer data'], answer: 1, why: 'Synthetic data takes minutes and removes the risk entirely. Changing names often still leaves people identifiable.' },
+        { q: 'You are curious about a well-known person who appears in our customer records. May you look?', options: ['Yes, if you do not tell anyone', 'No: access needs a work reason, and access is logged', 'Yes, if they are a public figure', 'Only outside work hours'], answer: 1, why: 'Looking without a work reason is misuse, whoever the person is.' },
+        { q: 'A supplier tells us they had a breach that may include our customers\' data. What happens?', options: ['Nothing: it is their breach', 'Escalate it immediately: it is ours to assess as well', 'Wait for their final report', 'Ask the supplier to notify the customers'], answer: 1, why: 'Our data in a supplier\'s breach is our breach to assess, and the assessment clock may already be running.' },
+        { q: 'When should personal information be deleted?', options: ['Never: it might be useful', 'When there is no longer a business or legal reason to keep it', 'After exactly one year', 'Only when the person asks'], answer: 1, why: 'Holding data longer than needed is the quiet risk: it does no harm until the day it is breached.' },
+        { q: 'Which of these is most often the cause of a data breach?', options: ['Hackers breaking encryption', 'Human error, such as an email to the wrong recipient', 'Power cuts', 'Old printers'], answer: 1, why: 'Most breaches have no attacker at all: a misdirected email, a link shared too widely, a lost device.' },
+        { q: 'A postcode, a birth date and a job title are each harmless. Together they:', options: ['Are still harmless', 'May identify exactly one person, so they are personal information', 'Are only personal if a name is added', 'Are anonymous by definition'], answer: 1, why: 'Combined details often identify one individual, which makes them personal information.' }
+      ],
+      essentials: { duration: 5, quizDraw: 3, passMark: 2, intro: 'What counts as personal information, and the judgements that come up every week, in five minutes.' },
+      talk: {
+        minutes: 15,
+        opener: 'Ask the group: what personal information do we handle in this team? List it on a whiteboard. Most teams find the list is longer than they thought.',
+        segments: [
+          { minutes: 3, heading: 'What counts', say: ['Anything about an identifiable person, true or not.', 'Health and financial details need extra care.'], ask: 'Which items on our list are sensitive?' },
+          { minutes: 4, heading: 'Collect less, share less', say: ['Only collect what the job needs, and use it for that reason.', 'Every copy and every new tool is another place it can leak.'], ask: 'Is there anything on our list we collect but do not need?' },
+          { minutes: 4, heading: 'Requests and suppliers', say: ['A request about someone\'s data goes to the privacy contact the same day, however it arrives.', 'No personal information goes into a tool that has not been approved.'], ask: 'How would a customer request reach us, and what would you do with it?' },
+          { minutes: 2, heading: 'When it goes wrong', say: ['Wrong recipient, wrong link, lost device: report it straight away.', 'Keep the evidence and do not contact the person yourself.'], ask: 'Who do we report a mistake to?' }
+        ],
+        close: 'Confirm the privacy contact with the group and ask each person to sign the attendance sheet.'
+      }
+    },
+    'ai-use-oversight': {
+      quizDraw: 5,
+      art: ['ai', 'upload', 'check', 'scales', 'eye'],
+      key: [
+        ['AI governance asks: if this is wrong about a person, what happens to them?', 'Risk follows the consequence, not how clever the tool is.', 'We stay accountable for what AI produces.'],
+        ['Use approved AI tools only.', 'Never paste personal, confidential or credential data into an unapproved tool.', 'If you would not email it outside the organisation, do not paste it.'],
+        ['AI makes things up, confidently.', 'Check facts, figures and sources before anything leaves you.', 'Reviewing means you could defend the decision yourself.'],
+        ['AI repeats patterns in its training data, good and bad.', 'Watch for groups it works worse for.', 'Report patterns, not just single errors.'],
+        ['Shadow AI is any AI tool used for work that is not on the register.', 'New AI features inside approved tools still need raising.', 'Asking first is easy; nobody is in trouble for raising a tool.']
+      ],
+      local: [[], ['Here, the approved AI tools are: {{aiTools}}.'], [], [], ['Here, raise a new AI tool with {{reportTo}}.']],
+      scenarios: [
+        { setup: 'A team wants an AI tool to rank job applicants before a person sees them.', choices: [
+          { t: 'Fine: it is only ranking, a person decides later', ok: false, why: 'The ranking shapes who gets seen at all. That affects people and needs assessing.' },
+          { t: 'Raise it for assessment: it affects individuals', ok: true, why: 'Anything that influences decisions about people is assessed before use.' },
+          { t: 'Fine if the tool is from a large vendor', ok: false, why: 'Vendor size says nothing about fairness or accuracy for our applicants.' }] },
+        { setup: 'You want a free chatbot to summarise a client contract.', choices: [
+          { t: 'Paste it in: summaries are harmless', ok: false, why: 'The whole contract, confidential terms included, goes to an unassessed supplier.' },
+          { t: 'Use the approved AI tool, or summarise it yourself', ok: true, why: 'Approved tools have contracts covering where the data goes.' },
+          { t: 'Paste it in with the client name removed', ok: false, why: 'The rest of the contract is still confidential.' }] },
+        { setup: 'An AI draft for a client quotes a regulation by section number.', choices: [
+          { t: 'Send it: the section number shows it is real', ok: false, why: 'Models invent section numbers in exactly the same confident style.' },
+          { t: 'Check the section against the real source first', ok: true, why: 'Anything going out under our name is verified first.' },
+          { t: 'Ask the AI if it is sure', ok: false, why: 'Its confidence is not linked to whether it is right.' }] },
+        { setup: 'A transcription tool keeps misspelling names from one community.', choices: [
+          { t: 'Fix each one and move on', ok: false, why: 'Fixing one-offs hides a pattern that affects a whole group.' },
+          { t: 'Fix them and report the pattern', ok: true, why: 'A pattern is systematic, and reporting it is how it gets fixed.' },
+          { t: 'Stop using names in transcripts', ok: false, why: 'That avoids the symptom and leaves the bias in place.' }] },
+        { setup: 'A meeting tool you already use has quietly started an AI note-taker in client calls.', choices: [
+          { t: 'Nothing to do: the tool was approved', ok: false, why: 'The approval covered the old tool, not a new feature recording clients.' },
+          { t: 'Raise it so it can be assessed', ok: true, why: 'New AI features need assessing even inside approved products.' },
+          { t: 'Turn it off for your own meetings only', ok: false, why: 'It keeps running for everyone else, and stays off the register.' }] }
+      ],
+      bank: [
+        { q: 'Which is the safest threshold for pasting text into an unapproved AI tool?', options: ['Anything not marked confidential', 'Nothing you could not email to someone outside the organisation', 'Anything without names in it', 'Anything under one page'], answer: 1, why: 'Treat an unapproved tool like an external recipient. If you would not email it out, do not paste it.' },
+        { q: 'An AI assistant in an approved tool shows you a document you did not know you could see. What does that tell you?', options: ['The AI is faulty', 'Your access is broader than it should be: report it', 'You are now allowed to use the document', 'Nothing important'], answer: 1, why: 'AI sees what your account can see. It surfaces permission problems that already existed.' },
+        { q: 'Who is accountable for work you produce with AI help?', options: ['The AI supplier', 'You', 'Nobody, if it was automated', 'The IT team'], answer: 1, why: 'AI-assisted work is your work. You remain the author and answer for it.' },
+        { q: 'Why can a system that is accurate on average still cause harm?', options: ['It cannot', 'It can work much worse for one group, hidden inside the average', 'Averages are always wrong', 'Only if it is slow'], answer: 1, why: 'Good average accuracy is exactly what hides poor performance for a smaller group.' },
+        { q: 'You have been using an AI browser extension for months without raising it. What now?', options: ['Keep quiet to avoid trouble', 'Raise it now: the register needs to be honest', 'Uninstall it and say nothing', 'Only raise it if asked'], answer: 1, why: 'Nobody is in trouble for surfacing a tool. We cannot assess what we do not know about.' },
+        { q: 'What makes human review of AI decisions meaningful?', options: ['A person clicks approve on each one', 'The reviewer could reach and defend the decision themselves', 'The process is documented', 'The AI is from a trusted vendor'], answer: 1, why: 'Clicking approve without being able to defend the decision is a signature, not oversight.' },
+        { q: 'Before loading real data into a new AI tool, you should:', options: ['Try it with real data first to see if it is useful', 'Get it approved first', 'Use it for a week, then raise it', 'Check online reviews'], answer: 1, why: 'Approval is much harder once data has already gone in. Raise it before real data touches it.' }
+      ],
+      essentials: { duration: 5, quizDraw: 3, passMark: 2, intro: 'Using AI at work safely, in five minutes: what you can put in, what to check, and when to ask.' },
+      talk: {
+        minutes: 15,
+        opener: 'Ask the group: who has used an AI tool for work this week? Which one? Write the list down: it is your first look at the team\'s real AI use.',
+        segments: [
+          { minutes: 4, heading: 'What goes in', say: ['Approved tools only.', 'Nothing personal, confidential or a password goes into an unapproved tool.'], ask: 'Is every tool on our list approved? Which ones are we not sure about?' },
+          { minutes: 4, heading: 'What comes out', say: ['AI makes things up, confidently.', 'Check facts, figures and sources before anything leaves you.'], ask: 'Has anyone caught an AI tool inventing something?' },
+          { minutes: 3, heading: 'Who it affects', say: ['If it influences a decision about a person, it needs assessing.', 'Report patterns of errors, not just single ones.'], ask: 'Does anything we use affect customers or staff directly?' },
+          { minutes: 2, heading: 'Raising a tool', say: ['New AI features in old tools still need raising.', 'Asking is easy and nobody is in trouble for it.'], ask: 'Which tool from our list should be raised this week?' }
+        ],
+        close: 'Hand the list of tools to the ISMS owner, and ask each person to sign the attendance sheet.'
+      }
+    }
+  };
+  var prefix = { 'security-awareness': 'sa', 'privacy-awareness': 'pa', 'ai-use-oversight': 'ai' };
+  (window.TRAINING_COURSES || []).forEach(function (c) {
+    var x = X[c.id];
+    if (!x) return;
+    var bank = c.quiz.concat(x.bank || []);
+    bank.forEach(function (q, i) { if (!q.id) q.id = prefix[c.id] + '-' + (i < 9 ? '0' : '') + (i + 1); });
+    c.quiz = bank;
+    c.quizDraw = x.quizDraw;
+    c.essentials = x.essentials;
+    c.talk = x.talk;
+    c.modules.forEach(function (m, i) {
+      m.art = x.art[i];
+      m.key = x.key[i];
+      m.local = (x.local[i] || []);
+      m.scenario = x.scenarios[i];
+    });
+  });
+})();
+
+/* Monthly refreshers: three minutes, one habit, one question. A fixed
+   rotation (CheckpointLib.refresherForMonth) covers every topic once a
+   year; each month also carries the client's own recent signal
+   (CheckpointLib.refresherSignal). Completing one is recorded like a
+   course, so a year of refreshers is year-round awareness evidence for
+   ISO 27001 A.6.3. */
+window.TRAINING_REFRESHERS = [
+  { id: 'ref-mfa-fatigue', title: 'The prompt you did not start', art: 'phone', points: ['A sign-in approval you did not trigger means someone has your password.', 'Deny it every time, then report it.', 'Number matching and passkeys make this attack much harder.'], action: 'Check your authenticator app uses number matching. If you are not sure, ask.', check: { q: 'Three sign-in prompts arrive that you did not start. You:', options: ['Approve one so they stop', 'Deny them and report it', 'Ignore them'], answer: 1, why: 'The prompts mean your password is known. Denying and reporting is the only response that helps.' } },
+  { id: 'ref-invoice-fraud', title: 'New bank details? Stop and check', art: 'money', points: ['Scammers change bank details on real invoices, often from a real supplier mailbox.', 'Verify any change on a number you already hold.', 'Urgency and secrecy are part of the scam.'], action: 'If you handle payments, find where your verified supplier phone numbers are kept.', check: { q: 'A supplier emails new bank details. You confirm by:', options: ['Replying to the email', 'Calling a number you already hold for them', 'Checking the email signature'], answer: 1, why: 'Only a channel you already had proves anything. A reply reaches the attacker.' } },
+  { id: 'ref-qr', title: 'QR codes are links too', art: 'qr', points: ['A QR code can send you to any website.', 'On a phone the address is harder to check and work protection may not apply.', 'Be wary of codes in emails, PDFs and stickers in public places.'], action: 'Before signing in after scanning a code, look at the full web address.', check: { q: 'A QR code in an email asks you to sign in to keep your mailbox. You:', options: ['Scan it on your phone', 'Report the email', 'Forward it to a colleague to check'], answer: 1, why: 'A sign-in request delivered by QR code is a known phishing trick. Report it.' } },
+  { id: 'ref-ai-data', title: 'What goes into an AI tool', art: 'ai', points: ['Use the approved AI tools only.', 'No personal, confidential or password data in anything unapproved.', 'Uploading a document sends everything in it, comments included.'], action: 'Check the AI tools you used this month are on the approved list.', check: { q: 'You want a free AI site to tidy a customer list. You:', options: ['Paste it in, then delete it', 'Use an approved tool or another way', 'Remove the names first and paste it'], answer: 1, why: 'Pasting into an unapproved tool is a disclosure, and it cannot be undone.' } },
+  { id: 'ref-sharing', title: 'Share with people, not with links', art: 'share', points: ['"Anyone with the link" can be forwarded endlessly.', 'Share with named people by default.', 'Set an expiry when you do need a wider link.'], action: 'Open one folder you shared recently and check who can see it.', check: { q: 'The safest default when sharing a SharePoint file is:', options: ['Anyone with the link', 'Specific people', 'Everyone in the organisation'], answer: 1, why: 'Named sharing keeps control of who can open it.' } },
+  { id: 'ref-lost-device', title: 'Lost a device? Say so now', art: 'laptop', points: ['Report a lost laptop or phone straight away, even if it may turn up.', 'Remote wipe works best before anyone has had time with it.', 'Encryption plus a quick report usually means no breach at all.'], action: 'Save the reporting contact in your phone today.', check: { q: 'You cannot find your work phone after a taxi ride. You:', options: ['Wait a day in case it turns up', 'Report it now', 'Only report it if it had customer data'], answer: 1, why: 'A fast report lets it be wiped before anyone can use it.' } },
+  { id: 'ref-passwords', title: 'One password, one service', art: 'key', points: ['Reused passwords turn other sites\' breaches into ours.', 'Use the password manager for long, unique passwords.', 'Passkeys cannot be phished the same way.'], action: 'If your work password is used anywhere else, change it today.', check: { q: 'Why is reusing a password risky?', options: ['It expires sooner', 'A breach elsewhere exposes your work account', 'It is not risky'], answer: 1, why: 'Leaked passwords are tried against work accounts automatically.' } },
+  { id: 'ref-callback', title: 'The invoice with only a phone number', art: 'phone', points: ['Some scams have no link, just a number to call about a "renewal".', 'The person who answers talks you into installing remote-access software.', 'Look up the company yourself instead of using the number given.'], action: 'Never install remote-access software because a caller asked.', check: { q: 'An unexpected renewal invoice gives a number to call to cancel. You:', options: ['Call it to cancel', 'Report it and check with the real company', 'Pay it to be safe'], answer: 1, why: 'The number goes to the scammer. Look the company up yourself.' } },
+  { id: 'ref-privacy-requests', title: 'Spotting a privacy request', art: 'person', points: ['"What do you hold about me?" is a formal request, however casually it is asked.', 'Requests to correct or delete data count too.', 'Pass them on the same day: they have deadlines.'], action: 'Note who the privacy contact is.', check: { q: 'A customer asks in chat to see all their data. You:', options: ['Answer from your screen', 'Pass it to the privacy contact today', 'Ask them to write in'], answer: 1, why: 'It is a valid request, and the deadline has started.' } },
+  { id: 'ref-tailgating', title: 'Hold the door, check the badge', art: 'door', points: ['Following someone through a secure door is the oldest trick there is.', 'It is fine to ask a stranger who they are visiting.', 'Visitors sign in and are accompanied.'], action: 'Next time someone follows you in, ask politely who they are here to see.', check: { q: 'Someone you do not know follows you through a secure door. You:', options: ['Assume they work here', 'Ask who they are visiting', 'Ignore it'], answer: 1, why: 'A polite question is all it takes, and it is expected.' } },
+  { id: 'ref-travel', title: 'Working away from the office', art: 'plane', points: ['Lock your screen whenever you step away.', 'Treat certificate warnings on public Wi-Fi as a reason to stop.', 'Keep devices with you, never in checked luggage.'], action: 'Set your screen to lock after a few minutes of inactivity.', check: { q: 'Public Wi-Fi shows a certificate warning. You:', options: ['Click through', 'Stop and use your phone hotspot instead', 'Try again later on the same network'], answer: 1, why: 'A certificate warning can mean someone is intercepting the connection.' } },
+  { id: 'ref-near-miss', title: 'Report the near-miss too', art: 'report', points: ['Something you spotted and avoided still shows a gap.', 'Near-miss reports protect the next person who is less lucky.', 'Nobody is in trouble for reporting.'], action: 'Think of one suspicious thing you ignored this month, and report it.', check: { q: 'You spot a phishing email and delete it. Should you still report it?', options: ['No, it was deleted', 'Yes, so others can be warned', 'Only if you clicked'], answer: 1, why: 'Others may have received the same email. Your report protects them.' } }
+];

@@ -76,7 +76,7 @@
     if (key === 'posture' && p.posture.score != null && p.posture.prev === p.posture.score && !(p.posture.failingTop || []).length && !(p.threat && (p.threat.remediationOpen || p.threat.awaiting))) return 'Posture score unchanged at ' + p.posture.score + '/100';
     if (key === 'certification' && p.certification.certified) return 'skip';
     if (key === 'certification' && !p.certification.nextAudit && !p.certification.docsAwaiting && (p.certification.readiness == null || p.certification.readiness >= 100)) return 'skip';
-    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length && !(p.people.supplierGaps || []).length) return 'No leavers, retired assets or supplier changes';
+    if (key === 'people' && !p.people.handovers && !p.people.retired && !p.people.vendorsAdded && !p.people.certsExpiring.length && !(p.people.supplierGaps || []).length && !(p.people.trainingGaps || []).length) return 'No leavers, retired assets or supplier changes';
     return '';
   }
   /* The agenda keys a held meeting covered. Meetings recorded before
@@ -260,6 +260,7 @@
       if (p.people.certsExpiring.length) f.push('Supplier certificates expiring soon: ' + p.people.certsExpiring.slice(0, 3).join(', '));
       var sg = p.people.supplierGaps || [];
       if (sg.length) f.push('Questionnaire gaps not yet treated: ' + sg.slice(0, 3).map(function (g) { return g.name + ' (' + g.count + ')'; }).join(', ') + (sg.length > 3 ? ' and more' : ''));
+      (p.people.trainingGaps || []).slice(0, 2).forEach(function (t) { f.push('Training: ' + t); });
     } else if (key === 'decisions') {
       var att = p.attendance || {};
       if (att.lastQuorum === false) f.push('The last meeting was held without the chair or the ISMS owner: confirm its decisions');

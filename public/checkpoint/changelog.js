@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.161.0',
+    date: '2026-10-15',
+    entries: [
+      'Training is easier to take: each course now goes one lesson at a time, with an illustration, three things to remember and a "What would you do?" scenario. The full text sits behind More detail, and a progress bar shows how far through you are.',
+      'Three formats per course: Full (about 15 minutes), Quick (5 minutes, for refreshers) and a printable Toolbox talk for teams away from a screen, with talking points, questions to ask the group and a sign-on sheet. Record a toolbox talk marks everyone who attended as complete, by toolbox talk.',
+      'The check is no longer the same five questions every time. Each course has a bank of 12, each attempt draws a fresh mix, and the answers are shuffled, so a retake tests understanding rather than memory.',
+      'Courses show your organisation\'s own details: who to report a security concern to, the privacy contact and the approved AI tools. Set them once on the Training page; anything left blank is left out.',
+      'Is the training working? Checkpoint now records which questions each person got right or wrong, and shows the questions people miss most. It is your Clause 7.2 effectiveness evidence, and the leadership meeting\'s People item raises any question missed by 30% or more.',
+      'A 3-minute refresher every month: twelve short topics in rotation (sign-in prompts, invoice fraud, QR codes, AI tools and more), each with one habit and one question, plus a line on your own recent incidents and any exploited flaw in software you use. Send it to everyone from the Training page.'
+    ]
+  },
+  {
     version: '1.160.0',
     date: '2026-10-15',
     entries: [

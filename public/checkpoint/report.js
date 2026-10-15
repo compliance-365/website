@@ -1133,7 +1133,8 @@
     var entries = [];
     if (spec.dashboard) entries.push({ id: 'sec-dashboard', heading: 'Executive dashboard' });
     (spec.sections || []).forEach(function (s, i) { entries.push({ id: slugify(s.heading, i), heading: s.heading }); });
-    entries.push({ id: 'sec-methodology', heading: 'Methodology' });
+    /* A practical handout (a toolbox talk) has no scan behind it to explain. */
+    if (!spec.noMethodology) entries.push({ id: 'sec-methodology', heading: 'Methodology' });
     entries.push({ id: 'sec-signoff', heading: 'Sign-off' });
     return entries;
   }
@@ -1237,7 +1238,7 @@
     var body = coverPage(spec) + docControlPage(spec) + tocPage(entries) +
       dashboardSection(spec, 'sec-dashboard') +
       contentSections(spec, entries, contentEntryStart) +
-      methodologyPage(spec, 'sec-methodology') +
+      (spec.noMethodology ? '' : methodologyPage(spec, 'sec-methodology')) +
       signOffPage(spec, 'sec-signoff');
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css(fontBase, accent) + pageMarginCss(spec) + '</style></head><body>' +
       header + '<div class="rpt-doc">' + body + '</div>' + footer +
