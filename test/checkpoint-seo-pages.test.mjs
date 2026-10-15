@@ -45,12 +45,12 @@ test('the counts the pages quote match Checkpoint', () => {
   let w; try { w = fn(vm.window, { getItem() { return null; }, setItem() {} }); } catch (e) { w = vm.window; }
   const defs = w.CHECK_DEFS;
   const m365 = defs.filter((c) => !/^(aws|gh)-/.test(c.id)).length;
-  assert.equal(m365, 49);
+  assert.equal(m365, 52);
   assert.equal(defs.filter((c) => /^aws-/.test(c.id)).length, 10);
   assert.equal(defs.filter((c) => /^gh-/.test(c.id)).length, 7);
   assert.equal(w.FRAMEWORKS.iso27001.controls.length, 93);
   for (const id of ['wdac', 'macro', 'patch', 'admins', 'pim', 'backup', 'riskyapps', 'privacy-srr', 'retention']) assert.ok(defs.some((c) => c.id === id), id);
-  for (const f of [fw, cmp, demoPage, pub('llms.txt')]) for (const n of f.matchAll(/(\d+) (?:checks|posture checks)/g)) assert.ok(['49', '10', '7'].includes(n[1]), n[0]);
+  for (const f of [fw, cmp, demoPage, pub('llms.txt')]) for (const n of f.matchAll(/(\d+) (?:checks|posture checks)/g)) assert.ok(['52', '10', '7'].includes(n[1]), n[0]);
 });
 
 test('every comparison cites its sources and dates them', () => {

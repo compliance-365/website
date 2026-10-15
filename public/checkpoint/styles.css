@@ -2205,3 +2205,16 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .obj-lib-foot { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(127,127,127,.2); }
 .obj-lib-foot .mini { min-width: 200px; }
 @media (max-width: 760px) { .obj-lib-grid { grid-template-columns: 1fr; } }
+
+/* Essential Eight "How this works" panel (SoA) */
+.e8-how-steps{list-style:none;counter-reset:e8s;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:12px 0;padding:0}
+.e8-how-steps li{counter-increment:e8s;border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.e8-how-steps li::before{content:counter(e8s);font-weight:800;color:var(--gold-light);font-size:var(--fs-eyebrow)}
+.e8-how-steps li span{color:var(--paper-dim)}
+.e8-how-grid{display:flex;flex-direction:column}
+.e8-how-row{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:12.5px}
+.e8-how-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.e8-how-checks{display:flex;flex-wrap:wrap;gap:6px 14px}
+.e8-how-check{display:inline-flex;align-items:center;gap:6px}
+.e8-how-detail p{margin:6px 0 0}
+@media (max-width:720px){.e8-how-row{grid-template-columns:1fr}}

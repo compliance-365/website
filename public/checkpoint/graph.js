@@ -1215,27 +1215,121 @@ window.Graph = (function () {
        CVEs with a known public exploit are read — the ones Essential
        Eight's patching timeframes and A.8.8 care about first. */
     var patchScored = false;
-    if (capabilities.threatHunting && capabilities.threatHunting.available) {
+    var huntOk = !!(capabilities.threatHunting && capabilities.threatHunting.available);
+    var tvmRows = null, eosRows = null;
+    if (huntOk) {
       try {
-        var tvmRows = await hunt(
+        /* Grouped by software as well as CVE (Kind = OS or application)
+           so the same rows serve 'patch' and its Essential Eight split
+           into 'patch-apps' (E8.2) and 'patch-os' (E8.6). */
+        tvmRows = await hunt(
           'DeviceTvmSoftwareVulnerabilities' +
           ' | where VulnerabilitySeverityLevel in ("Critical", "High")' +
           ' | join kind=inner (DeviceTvmSoftwareVulnerabilitiesKB | where IsExploitAvailable == true | project CveId, PublishedDate) on CveId' +
-          ' | summarize Devices = dcount(DeviceId), PublishedDate = min(PublishedDate) by CveId, Severity = VulnerabilitySeverityLevel' +
-          ' | order by Devices desc | take 500');
-        var tvm = window.CheckpointLib.tvmExposureResult(tvmRows, patchExploitWindowDays, Date.now());
-        raw['patch'] = { source: 'defenderTvm', windowDays: patchExploitWindowDays, summary: tvm, rows: tvmRows };
+          ' | summarize Devices = dcount(DeviceId), PublishedDate = min(PublishedDate) by CveId, Severity = VulnerabilitySeverityLevel, SoftwareName' +
+          ' | order by Devices desc | take 1000');
+        /* 'patch' keeps its one-row-per-CVE reading: a CVE in two
+           products is still one exposure. */
+        var byCve = {};
+        tvmRows.forEach(function (r) {
+          var k = r.CveId, cur = byCve[k];
+          if (!cur) byCve[k] = { CveId: r.CveId, Severity: r.Severity, PublishedDate: r.PublishedDate, Devices: Number(r.Devices) || 0 };
+          else cur.Devices = Math.max(cur.Devices, Number(r.Devices) || 0);
+        });
+        var cveRows = Object.keys(byCve).map(function (k) { return byCve[k]; });
+        var tvm = window.CheckpointLib.tvmExposureResult(cveRows, patchExploitWindowDays, Date.now());
+        raw['patch'] = { source: 'defenderTvm', windowDays: patchExploitWindowDays, summary: tvm, rows: cveRows };
         set('patch', tvm.result, tvm.exploitable === 0
           ? 'No critical or high vulnerabilities with a known exploit on any onboarded device (Defender Vulnerability Management)'
           : tvm.exploitable + ' exploitable critical/high CVE(s) present; ' + tvm.criticalOverdue + ' critical and ' + tvm.highOverdue +
             ' high published more than ' + patchExploitWindowDays + ' days ago' + (tvm.worst.length ? ' (e.g. ' + tvm.worst.join(', ') + ')' : ''));
         patchScored = true;
-      } catch (e) { /* fall through to the Secure Score proxy — an unreadable hunting query is not evidence of anything */ }
+      } catch (e) { tvmRows = null; /* fall through to the Secure Score proxy — an unreadable hunting query is not evidence of anything */ }
+      if (tvmRows) {
+        try {
+          eosRows = await hunt(
+            'DeviceTvmSoftwareInventory' +
+            ' | where isnotempty(EndOfSupportStatus) and EndOfSupportStatus !startswith "Upcoming"' +
+            ' | summarize Devices = dcount(DeviceId) by SoftwareVendor, SoftwareName, EndOfSupportStatus' +
+            ' | order by Devices desc | take 500');
+        } catch (e) { eosRows = null; }
+      }
     }
     if (!patchScored) fromSecureScore('patch', 'Verify patch currency in Intune / Defender TVM');
-    fromSecureScore('macro',      'Verify Office macro hardening policy');
+
+    /* Essential Eight's two patching strategies, read separately. */
+    [['patch-apps', 'app', 'applications'], ['patch-os', 'os', 'operating systems']].forEach(function (k) {
+      if (!tvmRows) {
+        var proxyResult = results['patch'] || 'manual';
+        raw[k[0]] = { source: 'secureScoreProxy' };
+        set(k[0], proxyResult, proxyResult === 'manual'
+          ? 'Verify ' + k[2] + ' patching and vendor support in Intune / Defender Vulnerability Management'
+          : 'Same reading as OS & application patch currency (Secure Score proxy, which does not separate ' + k[2] + ' from the rest; Defender advanced hunting gives a separate reading): ' + (notes['patch'] || ''));
+        return;
+      }
+      var pk = window.CheckpointLib.patchKindResult(tvmRows, eosRows || [], k[1], patchExploitWindowDays, Date.now());
+      raw[k[0]] = { source: 'defenderTvm', windowDays: patchExploitWindowDays, tvm: pk.tvm, eos: eosRows ? pk.eos : null };
+      var parts = [];
+      parts.push(pk.tvm.exploitable === 0
+        ? 'No exploitable critical/high vulnerabilities in ' + k[2]
+        : pk.tvm.exploitable + ' exploitable critical/high CVE(s) in ' + k[2] + '; ' + (pk.tvm.criticalOverdue + pk.tvm.highOverdue) + ' published more than ' + patchExploitWindowDays + ' days ago' + (pk.tvm.worst.length ? ' (e.g. ' + pk.tvm.worst.join(', ') + ')' : ''));
+      parts.push(!eosRows ? 'end-of-support software not readable'
+        : pk.eos.products ? pk.eos.products + ' end-of-support product(s) on ' + pk.eos.devices + ' device install(s), e.g. ' + pk.eos.worst.join(', ')
+        : 'no end-of-support ' + k[2] + ' found');
+      set(k[0], eosRows ? pk.result : (pk.tvm.result === 'pass' ? 'review' : pk.tvm.result), parts.join('; ') + ' (Defender Vulnerability Management, onboarded devices only)');
+    });
+
+    /* Application control: Defender device events say whether App
+       Control policies are enforcing (blocks) or only auditing. No
+       events at all falls back to the Secure Score name match. */
+    var wdacScored = false;
+    if (huntOk) {
+      try {
+        var acRows = await hunt(
+          'DeviceEvents | where Timestamp > ago(30d) and ActionType startswith "AppControl"' +
+          ' | summarize Blocked = countif(ActionType endswith "Blocked"), Audited = countif(ActionType endswith "Audited"), Loaded = countif(ActionType == "AppControlCodeIntegrityPolicyLoaded") by DeviceId' +
+          ' | summarize Devices = count(), Enforced = countif(Blocked > 0), AuditOnly = countif(Blocked == 0 and Audited > 0), LoadedOnly = countif(Blocked == 0 and Audited == 0 and Loaded > 0)');
+        var wsRows = await hunt(
+          'DeviceInfo | where Timestamp > ago(7d) and OSPlatform startswith "Windows" and DeviceType == "Workstation"' +
+          ' | summarize arg_max(Timestamp, OnboardingStatus) by DeviceId | where OnboardingStatus == "Onboarded"' +
+          ' | summarize Workstations = count()');
+        var ac = window.CheckpointLib.appControlResult(acRows[0], (wsRows[0] || {}).Workstations);
+        if (ac) {
+          raw['wdac'] = { source: 'defenderEvents', summary: ac };
+          set('wdac', ac.result, ac.enforced + ' of ' + ac.workstations + ' Windows workstation(s) blocked an unapproved file in the last 30 days (enforced); ' +
+            ac.auditOnly + ' only logged audit events (audit mode, which ML1 does not accept); ' + ac.loadedOnly + ' loaded a policy with no block or audit event. ' +
+            'A device with no App Control event at all is not counted as enforced. Defender device events.');
+          wdacScored = true;
+        }
+      } catch (e) { /* fall through to Secure Score */ }
+    }
+    if (!wdacScored) fromSecureScore('wdac', 'Verify application control (WDAC / App Control for Business)');
+
+    /* Macro settings (E8.3) and Office/PDF attack surface reduction
+       rules (E8.4), from Defender's per-device secure configuration
+       assessment. One query serves both. */
+    var cfgRows = null;
+    if (huntOk) {
+      try {
+        cfgRows = await hunt(
+          'DeviceTvmSecureConfigurationAssessment | where IsApplicable == true' +
+          ' | join kind=inner (DeviceTvmSecureConfigurationAssessmentKB | project ConfigurationId, ConfigurationName) on ConfigurationId' +
+          ' | where ConfigurationName contains "macro" or ConfigurationName contains "child process" or ConfigurationName contains "executable content" or ConfigurationName contains "inject"' +
+          ' | summarize Applicable = dcount(DeviceId), Compliant = dcountif(DeviceId, IsCompliant == true) by ConfigurationId, ConfigurationName');
+      } catch (e) { cfgRows = null; }
+    }
+    function cfgNote(r) {
+      return r.configs.map(function (c) { return c.name + ': ' + c.pct + '% of ' + c.applicable + ' device(s)'; }).join('; ') + ' (Defender secure configuration assessment)';
+    }
+    var macroCfg = cfgRows ? window.CheckpointLib.secureConfigResult(cfgRows, 'macro') : null;
+    if (macroCfg) { raw['macro'] = { source: 'defenderTvmConfig', configs: macroCfg.configs }; set('macro', macroCfg.result, cfgNote(macroCfg)); }
+    else fromSecureScore('macro', 'Verify Office macro hardening policy');
+    var asrCfg = cfgRows ? window.CheckpointLib.secureConfigResult(cfgRows, 'asr') : null;
+    if (!huntOk) set('asr', 'manual', capabilities.threatHunting ? capabilities.threatHunting.note : 'Defender advanced hunting not probed');
+    else if (!cfgRows) set('asr', 'review', 'Defender secure configuration assessment not readable');
+    else if (!asrCfg) set('asr', 'manual', 'Defender reported no Office or PDF reader attack surface reduction assessment for any device. Verify the rules in Intune.');
+    else { raw['asr'] = { source: 'defenderTvmConfig', configs: asrCfg.configs }; set('asr', asrCfg.result, cfgNote(asrCfg)); }
     fromSecureScore('logging',    'Verify unified audit logging in Purview');
-    fromSecureScore('wdac',       'Verify application control (WDAC / App Control for Business)');
     /* 'alerts' prefers a DIRECT read of the Defender XDR alert queue and
        only falls back to the Secure Score proxy below when Defender XDR
        is not available to this tenant.

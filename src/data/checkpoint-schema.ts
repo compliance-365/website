@@ -55,7 +55,7 @@ export function checkpointSoftwareSchema(opts: { moduleIds?: string[]; url?: str
     potentialAction: { '@type': 'ViewAction', name: 'Try the live demo', target: `${SITE}/checkpoint-console/demo/` },
     featureList: [
       'Records stored as SharePoint lists in your own Microsoft 365 tenant',
-      '49 Microsoft 365 posture checks via Microsoft Graph, read-only',
+      '52 Microsoft 365 posture checks via Microsoft Graph, read-only',
       `${TRIAL_DAYS}-day free trial and a public demo with no sign-up`,
     ],
   };
