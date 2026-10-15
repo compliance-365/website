@@ -446,6 +446,31 @@ describe('scan-suggest tables never disagree with their guidance.checks panel, a
         });
       });
 
+      test(`extra.${key}Partial (if any): real checks and controls, reflected in guidance`, () => {
+        const partial = (pack.extra && pack.extra[key + 'Partial']) || {};
+        Object.keys(partial).forEach((id) => {
+          assert.ok(checkIds.has(id), `${key}Partial has "${id}", which isn't a CHECK_DEFS id`);
+          partial[id].forEach((code) => {
+            assert.ok(codes.has(code), `${key}Partial["${id}"] references "${code}", which isn't a real ${fw} control`);
+            assert.ok(guidance[code] && (guidance[code].checks || []).includes(id), `guidance["${code}"].checks is missing "${id}"`);
+          });
+        });
+      });
+
+      if (fw === 'soc2') {
+        test('SOC 2: no single Microsoft check claims a criterion outright', () => {
+          assert.deepEqual(Object.keys(checkMap), [], 'every SOC 2 mapping is partial: one setting never evidences a whole criterion');
+        });
+      }
+      if (fw === 'iso27701') {
+        test('ISO 27701: audit logging, labels and guest access do not claim controller records or processor contracts', () => {
+          const all = { ...checkMap };
+          Object.entries(pack.extra.checkIso27701Partial || {}).forEach(([k, v]) => { all[k] = (all[k] || []).concat(v); });
+          ['A.1.5.4', 'A.1.5.5', 'A.2.5.4', 'A.1.2.9', 'A.1.2.7'].forEach((code) => {
+            Object.keys(all).forEach((id) => assert.ok(!all[id].includes(code), `${id} must not map to ${code}`));
+          });
+        });
+      }
       if (fw === 'iso42001') {
         test('extra.checkIso42001Partial: real checks and controls, reflected in guidance, and no security check claims a documentation control', () => {
           const partial = (pack.extra && pack.extra.checkIso42001Partial) || {};

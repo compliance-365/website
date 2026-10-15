@@ -11336,6 +11336,210 @@
     });
   }
 
+  /* ===== Privacy registers (ISO/IEC 27701:2025, Privacy Act APPs) =====
+     Records of processing (ROPA), with consent, transfers, retention and
+     a privacy impact assessment per activity, and a log of requests from
+     individuals. Everything here reads the records only: the evidence a
+     PIMS auditor samples (A.1.2.x, A.1.3.x, A.1.4.8, A.1.5.x, A.2.2.7). */
+  var ROPA_ROLES = ['Controller', 'Processor', 'Joint controller'];
+  var ROPA_BASES = ['Consent', 'Contract', 'Legal obligation', 'Required or authorised by law', 'Legitimate interests', 'Vital interests', 'Public task', 'Not yet determined'];
+  var PRIVACY_REQUEST_TYPES = ['Access', 'Correction', 'Deletion', 'Objection', 'Withdraw consent', 'Copy of data', 'Complaint'];
+  var PRIVACY_REQUEST_STATUSES = ['Open', 'In progress', 'Extended', 'Completed', 'Refused'];
+  /* Privacy risk areas for a PIA, following the life of personal
+     information (and the APPs / ISO 27701 A.1 groupings). */
+  var PIA_AREAS = [
+    { key: 'collection', label: 'Collection', prompt: 'Is more collected than needed, or collected without people knowing?' },
+    { key: 'use', label: 'Use and disclosure', prompt: 'Could it be used or shared for a purpose people would not expect?' },
+    { key: 'quality', label: 'Accuracy', prompt: 'Could out-of-date or wrong information lead to a bad decision about someone?' },
+    { key: 'security', label: 'Security', prompt: 'What happens if it is lost, stolen or seen by the wrong person?' },
+    { key: 'access', label: 'Access and correction', prompt: 'Can people see and fix what is held about them?' },
+    { key: 'transfer', label: 'Overseas transfer', prompt: 'Does it leave the country, and are the recipients bound to protect it?' },
+    { key: 'retention', label: 'Retention and disposal', prompt: 'Is it kept longer than needed, or not properly destroyed?' },
+    { key: 'automated', label: 'Automated decisions', prompt: 'Is any decision about a person made by a system without human review?' }
+  ];
+  function ropaFieldFilled(v) { return Array.isArray(v) ? v.length > 0 : String(v || '').trim() !== '' && v !== 'Not yet determined'; }
+
+  /* When a PIA is expected (A.1.2.6, APP-guided practice): sensitive
+     information, an overseas transfer, consent as the only basis for
+     sensitive data, or many people affected by automated processing. */
+  function piaReasons(r) {
+    var out = [];
+    if (r.sensitive) out.push('Sensitive information');
+    if (ropaFieldFilled(r.transfers)) out.push('Sent overseas');
+    if (/automat|profil|scor|ai\b|artificial/i.test(String(r.purpose || '') + ' ' + String(r.notes || ''))) out.push('Automated decisions or profiling');
+    return out;
+  }
+  function piaSummary(r, today) {
+    var pia = (r && r.pia) || null;
+    var t = today || new Date().toISOString().slice(0, 10);
+    var entries = (pia && pia.entries || []).filter(function (e) { return e && (e.risk || e.area); });
+    var rated = entries.map(function (e) {
+      var inh = aiImpactScore(e.L, e.I), res = (e.rL || e.rI) ? aiImpactScore(e.rL, e.rI) : null;
+      return { e: e, inherent: inh, residual: res };
+    });
+    var unmitigated = rated.filter(function (x) { return x.inherent >= 8 && !String(x.e.mitigation || '').trim(); }).length;
+    var noResidual = rated.filter(function (x) { return x.inherent && x.residual === null; }).length;
+    var unrated = rated.filter(function (x) { return x.e.risk && !x.inherent; }).length;
+    var decided = !!(pia && pia.decision && pia.decisionBy);
+    var overdue = !!(pia && pia.nextDue && pia.nextDue < t);
+    var needed = piaReasons(r || {});
+    var gaps = [];
+    if (!entries.length) { if (needed.length) gaps.push('PIA expected (' + needed.join(', ').toLowerCase() + ') but not started'); }
+    else {
+      if (unrated) gaps.push(unrated + ' risk(s) not rated');
+      if (unmitigated) gaps.push(unmitigated + ' medium or high risk(s) with no mitigation');
+      if (noResidual) gaps.push(noResidual + ' risk(s) with no residual rating');
+      if (!decided) gaps.push('No documented decision and sign-off');
+      if (!pia.nextDue) gaps.push('No review date');
+    }
+    if (overdue) gaps.push('PIA review overdue since ' + pia.nextDue);
+    var status = !entries.length ? (needed.length ? 'Needed' : 'Not needed') : (!unrated && !unmitigated && !noResidual && decided && !overdue) ? 'Completed' : 'In progress';
+    return { status: status, needed: needed, entries: rated, high: rated.filter(function (x) { return (x.residual !== null ? x.residual : x.inherent) >= 15; }).length, decided: decided, decision: (pia && pia.decision) || '', overdue: overdue, nextDue: (pia && pia.nextDue) || '', gaps: gaps };
+  }
+
+  /* What one processing record is missing, and the ISO 27701 controls it
+     evidences. Controller records evidence the A.1 table, processor
+     records the A.2 table. */
+  function ropaReview(r, vendors, today) {
+    vendors = vendors || [];
+    var ctrl = r.role !== 'Processor';
+    var gaps = [], controls = [];
+    var need = function (ok, gap, codes) { if (ok) controls.push.apply(controls, codes); else gaps.push(gap); };
+    need(ropaFieldFilled(r.purpose), 'No purpose recorded', ctrl ? ['A.1.2.2'] : ['A.2.2.3']);
+    if (ctrl) need(ropaFieldFilled(r.lawfulBasis), 'No lawful basis recorded', ['A.1.2.3']);
+    need(ropaFieldFilled(r.individuals) && ropaFieldFilled(r.dataCategories), 'Whose information, or what kinds, not recorded', ctrl ? ['A.1.2.9'] : ['A.2.2.7']);
+    need(ropaFieldFilled(r.retention), 'No retention period', ctrl ? ['A.1.4.8'] : []);
+    if (ctrl && r.lawfulBasis === 'Consent') {
+      var c = r.consent || {};
+      need(ropaFieldFilled(c.how) && ropaFieldFilled(c.where), 'Consent basis, but how it is obtained and recorded is not documented', ['A.1.2.4', 'A.1.2.5']);
+      need(ropaFieldFilled(c.withdraw), 'Consent basis, but no way to withdraw recorded', ['A.1.3.5']);
+    }
+    if (ropaFieldFilled(r.transfers)) need(ropaFieldFilled(r.transferBasis), 'Sent overseas, but no basis for the transfer recorded', ctrl ? ['A.1.5.2', 'A.1.5.3', 'A.1.5.4'] : ['A.2.5.2', 'A.2.5.3']);
+    var recips = (r.recipients || []).map(function (id) { return vendors.find(function (v) { return v.id === id; }); });
+    if (recips.length) {
+      var noDpa = recips.filter(function (v) { return !v || !v.dpa; }).length;
+      need(!noDpa, noDpa + ' recipient(s) with no data processing agreement recorded in the supplier register', ctrl ? ['A.1.2.7', 'A.1.5.5'] : ['A.2.5.7']);
+    }
+    var pia = piaSummary(r, today);
+    if (pia.status === 'Completed') controls.push('A.1.2.6');
+    if (pia.gaps.length && pia.status !== 'Not needed') gaps.push.apply(gaps, pia.gaps.map(function (g) { return 'PIA: ' + g; }));
+    var t = today || new Date().toISOString().slice(0, 10);
+    if (!r.lastReviewed || addMonthsIso(r.lastReviewed, 12) < t) gaps.push('Not reviewed in the last 12 months');
+    if (!ropaFieldFilled(r.owner)) gaps.push('No owner');
+    return { gaps: gaps, controls: controls.filter(function (x, i, a) { return a.indexOf(x) === i; }), pia: pia };
+  }
+
+  /* Request handling (A.1.3.x, APP 12/13). Default due date is 30
+     days, the period the OAIC treats as reasonable for an access
+     request under APP 12; the client can change it per request. */
+  var PRIVACY_REQUEST_DAYS = 30;
+  function privacyRequestSummary(reqs, today) {
+    var t = today || new Date().toISOString().slice(0, 10);
+    var open = (reqs || []).filter(function (r) { return r.status !== 'Completed' && r.status !== 'Refused'; });
+    var overdue = open.filter(function (r) { return r.due && r.due < t; });
+    var closed = (reqs || []).filter(function (r) { return r.closed && r.received; });
+    var late = closed.filter(function (r) { return r.due && r.closed > r.due; });
+    var days = closed.map(function (r) { return Math.round((Date.parse(r.closed) - Date.parse(r.received)) / 86400000); }).filter(function (n) { return !isNaN(n) && n >= 0; });
+    var unverified = open.filter(function (r) { return !r.identityVerified && r.type !== 'Complaint'; });
+    return {
+      total: (reqs || []).length, open: open.length, overdue: overdue.length, closed: closed.length, lateClosed: late.length,
+      avgDays: days.length ? Math.round(days.reduce(function (a, b) { return a + b; }, 0) / days.length) : null,
+      unverified: unverified.length, overdueIds: overdue.map(function (r) { return r.id; })
+    };
+  }
+  function privacyRegisterSummary(ropa, reqs, vendors, today) {
+    var reviews = (ropa || []).map(function (r) { return { r: r, rv: ropaReview(r, vendors, today) }; });
+    return {
+      activities: reviews.length,
+      complete: reviews.filter(function (x) { return !x.rv.gaps.length; }).length,
+      piaNeeded: reviews.filter(function (x) { return x.rv.pia.status === 'Needed' || x.rv.pia.status === 'In progress'; }).length,
+      overseas: (ropa || []).filter(function (r) { return ropaFieldFilled(r.transfers); }).length,
+      requests: privacyRequestSummary(reqs, today)
+    };
+  }
+
+  /* ===== SOC 2 report pack =====
+     What the service auditor asks for beyond the controls themselves:
+     the system description (AICPA DC 200), the subservice organisations
+     and the complementary controls relied on, complementary user entity
+     controls (CUECs), a bridge letter after the period ends, and
+     evidence that controls operated in every month of the observation
+     period. */
+  var SOC2_CUEC_STARTERS = [
+    'Customers are responsible for managing their own user accounts in the service, including promptly removing access for people who leave.',
+    'Customers are responsible for enabling and enforcing multi-factor authentication for their users where the service offers it.',
+    'Customers are responsible for the accuracy and lawfulness of the data they submit to the service.',
+    'Customers are responsible for securing the devices and networks their users use to access the service.',
+    'Customers are responsible for notifying us promptly of any suspected security incident or unauthorised access they become aware of.',
+    'Customers are responsible for reviewing the access, activity and change reports the service makes available to them.'
+  ];
+  var SOC2_SUBSERVICE = ['', 'Carved out', 'Inclusive'];
+
+  /* Month by month across the observation period: how many applicable
+     SOC 2 criteria have evidence from that month, either a posture scan
+     reading of a check mapped to them (full or partial map) or the
+     criterion verified with evidence that month. A month with no
+     evidence for a criterion is a gap an auditor's sample can land in. */
+  function soc2PeriodCoverage(controls, history, maps, start, today) {
+    var t = today || new Date().toISOString().slice(0, 10);
+    var s = start || addMonthsIso(t, -11);
+    var months = [];
+    var d = s.slice(0, 7);
+    while (d <= t.slice(0, 7) && months.length < 24) { months.push(d); d = addMonthsIso(d + '-01', 1).slice(0, 7); }
+    var full = (maps && maps.full) || {}, part = (maps && maps.partial) || {};
+    var checksFor = function (code) {
+      return Object.keys(full).concat(Object.keys(part)).filter(function (id, i, a) {
+        return a.indexOf(id) === i && ((full[id] || []).indexOf(code) > -1 || (part[id] || []).indexOf(code) > -1);
+      });
+    };
+    var app = (controls || []).filter(function (c) { return c.app; });
+    var perControl = app.map(function (c) {
+      var ids = checksFor(c.id);
+      var seen = {};
+      (history || []).forEach(function (h) {
+        if (!h.date || h.date < s) return;
+        if (ids.some(function (id) { var r = h.results[id]; return r === 'pass' || r === 'review' || r === 'fail'; })) seen[h.date.slice(0, 7)] = true;
+      });
+      var ver = c.verified || c.lastVerified;
+      if (ver && ver >= s) seen[String(ver).slice(0, 7)] = true;
+      return { id: c.id, automated: ids.length > 0, months: seen };
+    });
+    var byMonth = months.map(function (m) {
+      var covered = perControl.filter(function (x) { return x.months[m]; }).length;
+      var scans = (history || []).filter(function (h) { return h.date && h.date.slice(0, 7) === m; }).length;
+      return { month: m, covered: covered, total: perControl.length, pct: perControl.length ? Math.round(covered / perControl.length * 100) : 0, scans: scans };
+    });
+    var never = perControl.filter(function (x) { return !Object.keys(x.months).length; }).map(function (x) { return x.id; });
+    return { start: s, months: byMonth, never: never, automated: perControl.filter(function (x) { return x.automated; }).length, total: perControl.length };
+  }
+
+  /* Subservice organisations: every supplier marked Carved out or
+     Inclusive, with what is missing for the report. A carved-out
+     subservice organisation needs its complementary subservice
+     organisation controls (CSOCs) written down and its own assurance
+     report (usually a SOC 2) on file and current. */
+  function soc2SubserviceReview(vendors, today) {
+    var t = today || new Date().toISOString().slice(0, 10);
+    return (vendors || []).filter(function (v) { return v.subservice === 'Carved out' || v.subservice === 'Inclusive'; }).map(function (v) {
+      var gaps = [];
+      if (v.subservice === 'Carved out' && !String(v.csocs || '').trim()) gaps.push('No complementary subservice organisation controls (CSOCs) written down');
+      if (!/soc ?2|soc ?1|iso ?27001/i.test(String(v.certifications || ''))) gaps.push('No SOC report or ISO 27001 certificate recorded');
+      if (v.certExpiryDate && v.certExpiryDate < t) gaps.push('Assurance report or certificate expired ' + v.certExpiryDate);
+      return { id: v.id, name: v.name, mode: v.subservice, csocs: v.csocs || '', gaps: gaps };
+    });
+  }
+
+  /* Overall readiness of the report pack, one line per deliverable. */
+  function soc2PackStatus(o) {
+    var subs = o.subservice || [];
+    return [
+      { key: 'description', label: 'System description (DC 200)', ok: !!(o.services && o.commitments), note: o.services && o.commitments ? 'Services and commitments recorded' : 'Record your services and service commitments' },
+      { key: 'subservice', label: 'Subservice organisations', ok: subs.length > 0 && subs.every(function (x) { return !x.gaps.length; }), note: subs.length ? subs.filter(function (x) { return x.gaps.length; }).length + ' of ' + subs.length + ' with gaps' : 'None marked yet: mark hosting and other providers your system relies on' },
+      { key: 'cuecs', label: 'Complementary user entity controls', ok: (o.cuecs || []).length > 0, note: (o.cuecs || []).length + ' recorded' },
+      { key: 'period', label: 'Evidence in every month of the period', ok: !!o.coverage && o.coverage.months.length > 0 && o.coverage.months.every(function (m) { return m.covered > 0; }) && !o.coverage.never.length, note: o.coverage ? o.coverage.never.length + ' criteria with no evidence in the period' : 'Set the observation period start' }
+    ];
+  }
+
   /* Defender software names are lower-case vendor product ids
      ('windows_11', 'windows_server_2022', 'macos', 'office', 'chrome').
      The operating system is the Windows/macOS/Linux family itself;
@@ -13390,7 +13594,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
