@@ -79,8 +79,8 @@ describe('the pre-read in the calendar invite', () => {
   const st = Lib.securityReviewStatus(pack);
   const text = Lib.securityReviewInviteText(a, st, { teamsLink: 'https://teams.microsoft.com/l/x', appUrl: 'https://app.example/' });
   test('plain text: traffic lights, then the timed agenda with its figures', () => {
-    assert.match(text, /^AT A GLANCE\n. Actions: 2 overdue, oldest A1 \(Cem\) \(Watch\)/);
-    assert.match(text, /AGENDA \(30 minutes\)\n0:00  Actions \(Cem\)\n      - 2 actions overdue/);
+    assert.match(text, /^AT A GLANCE\n. Incidents: None \(On track\)\n. Security posture[\s\S]*\n. Actions: 2 overdue, oldest A1 \(Cem\) \(Watch\)/);
+    assert.match(text, /AGENDA \(30 minutes\)\n0:00  Security posture \(Cem\)[\s\S]*\n0:08  Actions \(Cem\)\n      - 2 actions overdue/);
     assert.match(text, /Needs a decision from Ekin \(Ekin\)/);
     assert.match(text, /Join on Teams: https:\/\/teams\.microsoft\.com\/l\/x/);
   });

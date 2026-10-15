@@ -2098,3 +2098,10 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .sr-preview-mail a { color: #1a5fb4; }
 .sr-m-head b { flex: 0 1 auto; }
 .sr-m-head .src { min-width: 70px; }
+/* Since last meeting: how the previous meeting's decisions stand now */
+.sr-since-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.sr-since-list li { padding: 4px 0; border-bottom: 1px solid var(--line, #e4dfd5); font-size: .92rem; }
+.sr-since-st { display: inline-block; min-width: 62px; font-size: .78rem; font-weight: 700; border-radius: 6px; padding: 1px 6px; text-align: center; background: #eef2ee; color: #2e5e3e; }
+.sr-since-open .sr-since-st { background: #eef1f6; color: #34507a; }
+.sr-since-overdue .sr-since-st { background: #fbeae4; color: #a63a12; }
+.sr-since-cancelled .sr-since-st { background: #f1efeb; color: #5a554c; }
