@@ -29,7 +29,7 @@ const articleSchema = {
     }
   },
   "datePublished": "2026-06-22",
-  "dateModified": "2026-06-22",
+  "dateModified": "2026-10-15",
   "url": "https://www.compliance365.com.au/resources/essential-eight-guide/"
 };
 
@@ -114,7 +114,7 @@ const faqSchema = {
       "name": "How often should we reassess our Essential Eight maturity?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "ASD recommends at least annual reassessment. In practice, control drift is significant — particularly for patch compliance and application control — and 30% of controls regress within 6 months without continuous monitoring. Organisations at ML2 should have continuous monitoring in place (Defender VM, Intune compliance dashboards, Sentinel alerts) supplemented by quarterly evidence reviews and annual independent reassessment."
+        "text": "ASD recommends at least annual reassessment. In practice, control drift is significant — particularly for patch compliance and application control, and controls drift out of compliance within months without continuous monitoring. Organisations at ML2 should have continuous monitoring in place (Defender VM, Intune compliance dashboards, Sentinel alerts) supplemented by quarterly evidence reviews and annual independent reassessment."
       }
     }
   ]
@@ -173,14 +173,14 @@ const breadcrumbSchema = {
   <section class="svc-hero">
     <CinematicBackground static />
     <div class="container svc-hero-copy" style="position:relative;z-index:1;">
-      <p class="eyebrow">Essential Eight · Complete Guide · Updated June 2026</p>
+      <p class="eyebrow">Essential Eight · Complete Guide · Updated October 2026</p>
       <h1 style="max-width:900px;">The Essential Eight explained — everything you need to know.</h1>
       <p class="section-lead" style="max-width:760px;">
         The Essential Eight — also written <strong>Essential 8</strong> or <strong>E8</strong> — is Australia's most widely applied cyber security framework, developed by the ASD (Australian Signals Directorate) and maintained by the ACSC. It is designed to protect organisations against the most common and damaging attack techniques observed in real Australian incidents. This guide covers what it is, who needs it, how the maturity model works, each of the eight controls in detail, and exactly how to achieve ML2 — the ASD-recommended baseline.
       </p>
       <ul class="trust-signals">
         <li>4,000+ words</li>
-        <li>Updated June 2026</li>
+        <li>Updated October 2026</li>
         <li>Covers ML1 / ML2 / ML3</li>
         <li>All 8 controls</li>
       </ul>
@@ -195,7 +195,7 @@ const breadcrumbSchema = {
   <section style="background:#FEF3C7;border-bottom:1px solid #FDE68A;padding:1rem 0;">
     <div class="container" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       <span style="background:#D97706;color:var(--on-status);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:6px;white-space:nowrap;">Heads up</span>
-      <p style="margin:0;font-size:14px;color:#A63A12;line-height:1.5;flex:1;">ASD has announced it will retire the Essential Eight within two years and replace it with the new <strong>Essentials series</strong>. Public consultation on <em>Essentials for enterprise IT</em> closed <strong>12 July 2026</strong>; ASD is reviewing submissions and has not yet published the final guidance or a date. Existing E8 work maps across — don't stop your programme. <a href={`${base}resources/asd-essentials-framework/`} style="color:#92400E;font-weight:700;text-decoration:underline;">Read our transition guide →</a></p>
+      <p style="margin:0;font-size:14px;color:#A63A12;line-height:1.5;flex:1;">ASD published the <strong>Essentials</strong>, the successor to the Essential Eight, on <strong>15 October 2026</strong>. It replaces the single maturity level with area-by-area reporting, across chapters for enterprise IT, cloud and operational technology. The Essential Eight still applies wherever a contract or regulator names it, and existing E8 work counts — don't stop your programme. <a href={`${base}resources/asd-essentials-framework/`} style="color:#92400E;font-weight:700;text-decoration:underline;">Read our transition guide →</a></p>
     </div>
   </section>
 
@@ -257,10 +257,10 @@ const breadcrumbSchema = {
         The Essential Eight is derived directly from the ACSC's broader publication, <em>Strategies to Mitigate Cyber Security Incidents</em>, which lists 37 prioritised mitigation strategies ranked by their assessed effectiveness. The Essential Eight represents the top eight strategies from this list — the controls that offer the highest risk reduction relative to implementation effort for the widest range of Australian organisations.
       </p>
       <p class="muted">
-        In 2018, the Australian Government's Protective Security Policy Framework (PSPF) was updated to mandate Essential Eight compliance for non-corporate Commonwealth entities — effectively all federal government departments and most Commonwealth agencies. This mandate gave the framework significant momentum and established it as the de facto baseline for Australian public sector cyber security. Since then, adoption has spread rapidly into the private sector, driven by cyber insurance requirements, government procurement conditions, and enterprise supply chain due diligence programmes.
+        Under the Australian Government's Protective Security Policy Framework (PSPF), non-corporate Commonwealth entities — effectively all federal government departments and most Commonwealth agencies — must implement the Essential Eight, and ASD describes Maturity Level Two as their mandatory baseline. This requirement gave the framework significant momentum and established it as the de facto baseline for Australian public sector cyber security. Since then, adoption has spread rapidly into the private sector, driven by cyber insurance requirements, government procurement conditions, and enterprise supply chain due diligence programmes.
       </p>
       <p class="muted">
-        The framework is not static. The ASD updates the Essential Eight and its accompanying assessment guidance regularly as threat actors evolve their techniques. Significant updates were made in 2021 (refining the maturity model), 2022 (strengthening MFA requirements in response to credential-based attacks), and 2023-2024 (phishing-resistant MFA becoming the ML3 standard for privileged accounts). Organisations should always reference the current ASD guidance rather than relying on older versions of the framework, which may no longer reflect current ACSC recommendations.
+        The framework is not static. ASD updates the Essential Eight maturity model and its assessment guidance as threat actors change their techniques; the current version is the November 2023 maturity model. On 15 October 2026 ASD also published the <a href="https://www.cyber.gov.au/essentials" rel="noopener" target="_blank">Essentials</a>, its successor, with chapters for enterprise IT, cloud and operational technology and area-by-area reporting instead of one maturity level (see our <a href={`${base}resources/asd-essentials-framework/`}>transition guide</a>). Until regulators and contracts change their references, the Essential Eight is still what you are assessed against. Always work from the current ASD guidance rather than older versions.
       </p>
     </div>
   </section>
@@ -749,7 +749,7 @@ const breadcrumbSchema = {
 
         <div class="card">
           <h3>How often should we reassess our Essential Eight maturity?</h3>
-          <p class="muted small">ASD recommends annual reassessment as a minimum. In practice, control drift occurs continuously — new devices are enrolled, software is updated, staff change, and exceptions accumulate. Approximately 30% of controls regress measurably within 6 months of initial ML2 achievement without continuous monitoring. Organisations at ML2 should operate continuous monitoring (Defender Vulnerability Management dashboards, Intune compliance reporting, Conditional Access sign-in monitoring, Sentinel alerts for MFA bypass attempts) supplemented by quarterly internal evidence reviews and annual independent reassessment. Think of Essential Eight maturity as something you maintain, not something you achieve once.</p>
+          <p class="muted small">ASD recommends annual reassessment as a minimum. In practice, control drift occurs continuously — new devices are enrolled, software is updated, staff change, and exceptions accumulate. Without continuous monitoring, controls drift out of compliance within months. Organisations at ML2 should operate continuous monitoring (Defender Vulnerability Management dashboards, Intune compliance reporting, Conditional Access sign-in monitoring, Sentinel alerts for MFA bypass attempts) supplemented by quarterly internal evidence reviews and annual independent reassessment. Think of Essential Eight maturity as something you maintain, not something you achieve once.</p>
         </div>
 
       </div>

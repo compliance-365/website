@@ -44,7 +44,8 @@ test('time-sensitive regulatory notes cite sources and a review date', () => {
   const e8 = read('src/pages/resources/asd-essentials-framework.astro');
   assert.match(e8, /cyber\.gov\.au\/about-us\/view-all-content\/news\/consultation-on-evolution-of-essential-eight/);
   assert.match(e8, /itnews\.com\.au/);
-  assert.match(e8, /Last reviewed 10 October 2026/);
+  assert.match(e8, /cyber\.gov\.au\/publication\/what-is-the-essentials/, 'the published Essentials is cited');
+  assert.match(e8, /Last reviewed 15 October 2026/);
   assert.ok(!/expected late 2026/.test(e8 + read('src/pages/services/essential-eight.astro') + read('src/pages/resources/essential-eight-guide.astro')), 'no unsourced release date');
   const priv = read('src/pages/resources/privacy-act-2024-readiness.astro');
   assert.match(priv, /exposure draft of the Privacy Amendment \(Personal Data Protection\) Bill 2026/);

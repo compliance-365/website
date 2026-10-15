@@ -12,8 +12,9 @@ test('the sign-up sends what it is for, so the notification says which list', ()
   assert.match(c, /body: JSON\.stringify\(\{ email, source, framework: topic, /);
   assert.match(read('lambda/subscribe.js'), /body\.framework/, 'subscribe.js reads the topic as framework');
   const a = read('src/components/EssentialsAlert.astro');
-  assert.match(a, /topic="Essentials series release alert"/);
-  assert.match(a, /ASD has not given a date/);
+  assert.match(a, /topic="Essentials mapping alert"/, 'still matched by the subscribe Lambda as an Essentials sign-up');
+  assert.match(a, /published the Essentials on 15 October 2026/);
+  assert.match(read('lambda/subscribe.js'), /\/essentials\/i\.test\(x\.topic/);
 });
 
 test('the Essentials alert is on the three Essential Eight pages', () => {
