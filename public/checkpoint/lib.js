@@ -11139,6 +11139,59 @@
     { key: 'obj-ai-training', resources: 'Checkpoint AI use and oversight course; about 30 minutes per person', fws: ['iso42001'], cia: ['C', 'I'], title: 'Everyone using AI knows how to use it responsibly', metric: 'Staff with current AI use and oversight training', target: 'At least 95%', risks: ['ctx-ai-tools'] },
     { key: 'obj-privacy-rights', resources: 'Privacy officer\'s time; the PII principal rights procedure', fws: ['iso27701', 'privacyact'], cia: ['C'], title: 'Answer privacy requests on time', metric: 'Requests from individuals answered within the legal time limit', target: '100%', risks: ['ctx-privacy-breach'] }
   ];
+  /* The wider library a client picks from: common objectives Checkpoint
+     cannot measure itself, so the client records progress. Each carries
+     the C, I and A it protects (one, two or all three). */
+  var OBJECTIVE_LIBRARY = [
+    { key: 'lib-encryption', cia: ['C'], fws: ['iso27001'], title: 'Every laptop and phone is encrypted', metric: 'Managed devices with full-disk encryption on', target: '100% of managed devices', resources: 'Intune or your device management tool; IT time to remediate stragglers' },
+    { key: 'lib-leavers', cia: ['C'], fws: ['iso27001'], title: 'Leavers lose access on their last day', metric: 'Leavers whose access was removed within one business day', target: '100%', resources: 'HR notifying IT on time; the leaver checklist' },
+    { key: 'lib-access-review', cia: ['C', 'I'], fws: ['iso27001'], title: 'Access to sensitive systems is reviewed every quarter', metric: 'Quarterly access reviews completed for sensitive systems', target: '4 of 4 each year', resources: 'System owners\' time, about an hour per system per quarter' },
+    { key: 'lib-labels', cia: ['C'], fws: ['iso27001'], title: 'Sensitive information is labelled and protected', metric: 'Sensitive documents and sites carrying a sensitivity label', target: 'At least 90%', resources: 'Microsoft Purview sensitivity labels; a short guide for staff' },
+    { key: 'lib-sharing', cia: ['C'], fws: ['iso27001'], title: 'No sensitive files shared with "anyone" links', metric: 'Files shared with anyone-links that have no expiry', target: 'None', resources: 'SharePoint sharing settings; a monthly sharing report' },
+    { key: 'lib-phishing', cia: ['C', 'I'], fws: ['iso27001'], title: 'Fewer people fall for phishing', metric: 'Phishing simulation click rate', target: 'Below 5%, and reporting rate above 50%', resources: 'Defender Attack Simulation Training or similar; follow-up training' },
+    { key: 'lib-supplier-assess', cia: ['C', 'I', 'A'], fws: ['iso27001'], title: 'Suppliers are assessed before they get our data', metric: 'New suppliers handling our data assessed before onboarding', target: '100%', resources: 'The supplier questionnaire; procurement checking before contract' },
+    { key: 'lib-patching', cia: ['I', 'A'], fws: ['iso27001'], title: 'Software is kept patched', metric: 'Critical security updates applied within 14 days', target: 'At least 95% of devices', resources: 'Intune update rings or Windows Update for Business; monthly patch report' },
+    { key: 'lib-vulns', cia: ['C', 'I', 'A'], fws: ['iso27001'], title: 'Vulnerabilities are fixed on time', metric: 'High and critical vulnerabilities fixed within 30 days', target: 'At least 90%', resources: 'Defender Vulnerability Management or a scanner; owners\' time to fix' },
+    { key: 'lib-change', cia: ['I', 'A'], fws: ['iso27001'], title: 'Changes to key systems are approved and tested', metric: 'Production changes with approval and testing recorded', target: '100%', resources: 'A change record for each production change; a reviewer' },
+    { key: 'lib-code-review', cia: ['I'], fws: ['iso27001'], title: 'Code is reviewed before release', metric: 'Code changes peer-reviewed before merging to main', target: '100%', resources: 'Branch protection in GitHub or similar; a second developer' },
+    { key: 'lib-assets', cia: ['C', 'I', 'A'], fws: ['iso27001'], title: 'We know what we have', metric: 'Assets in the register reviewed in the last 12 months', target: '100%', resources: 'The asset register; owners\' time once a year' },
+    { key: 'lib-audit-findings', cia: ['I'], fws: ['iso27001'], title: 'Audit findings are closed on time', metric: 'Internal and external audit nonconformities closed by their due date', target: '100%', resources: 'Action owners\' time; follow-up at the leadership meeting' },
+    { key: 'lib-uptime', cia: ['A'], fws: ['iso27001'], title: 'Customer-facing services stay available', metric: 'Monthly uptime of customer-facing services', target: 'At least 99.5% each month', resources: 'Monitoring and alerting; an on-call arrangement' },
+    { key: 'lib-bcp-test', cia: ['A'], fws: ['iso27001'], title: 'The business continuity plan is tested', metric: 'Continuity exercises completed, with lessons recorded', target: 'At least one exercise a year', resources: 'Half a day for a tabletop exercise; the continuity plan' },
+    { key: 'lib-rto', cia: ['A'], fws: ['iso27001'], title: 'We recover within our target time', metric: 'Restore tests completed within the recovery time objective', target: '100% of restore tests', resources: 'Agreed recovery time objectives; backup tooling; test time' },
+    { key: 'lib-key-people', cia: ['A'], fws: ['iso27001'], title: 'No single person is a point of failure', metric: 'Critical roles and admin accounts with a trained backup person', target: '100%', resources: 'Documented procedures; time to cross-train' },
+    { key: 'lib-supplier-continuity', cia: ['A'], fws: ['iso27001'], title: 'Critical suppliers can keep us running', metric: 'Critical suppliers with continuity arrangements confirmed', target: '100%, reviewed yearly', resources: 'Supplier reviews; contract clauses on continuity' },
+    { key: 'lib-pia', cia: ['C'], fws: ['iso27701', 'privacyact'], title: 'New uses of personal information are assessed first', metric: 'New or changed processing with a privacy impact assessment before go-live', target: '100%', resources: 'The privacy impact assessment template; the privacy officer\'s time' },
+    { key: 'lib-breach-assess', cia: ['C'], fws: ['iso27701', 'privacyact'], title: 'Suspected data breaches are assessed in time', metric: 'Suspected breaches assessed within 30 days', target: '100%', resources: 'The data breach response plan; the privacy officer' },
+    { key: 'lib-ai-register', cia: ['C', 'I'], fws: ['iso42001'], title: 'Every AI tool in use is on the register', metric: 'AI tools in use that are recorded and approved', target: '100%, checked each quarter', resources: 'The AI systems register; a quarterly check with team leads' }
+  ];
+  /* The whole library a client picks from: Checkpoint's measured
+     objectives first, then the rest, filtered to the client's
+     frameworks and leaving out anything already in the register. */
+  function objectiveLibrary(frameworks, objectives) {
+    var fws = frameworks || ['iso27001'];
+    var have = {};
+    (objectives || []).forEach(function (o) { if (o && o.title) have[String(o.title).trim().toLowerCase()] = true; });
+    return SUGGESTED_OBJECTIVES.map(function (o) { return Object.assign({ measured: true }, o); })
+      .concat(OBJECTIVE_LIBRARY.map(function (o) { return Object.assign({ measured: false }, o); }))
+      .filter(function (o) { return o.fws.some(function (f) { return fws.indexOf(f) !== -1; }) && !have[o.title.toLowerCase()]; });
+  }
+  /* What an objective protects: its own tags, else the library's for the
+     same metric, else nothing. */
+  function objectiveCia(o) {
+    if (!o) return [];
+    if (Array.isArray(o.cia) && o.cia.length) return ['C', 'I', 'A'].filter(function (x) { return o.cia.indexOf(x) !== -1; });
+    var m = String(o.metric || '').trim().toLowerCase();
+    var def = SUGGESTED_OBJECTIVES.concat(OBJECTIVE_LIBRARY).find(function (x) { return x.metric.toLowerCase() === m; });
+    return def ? def.cia.slice() : [];
+  }
+  /* Which of C, I and A the register covers, for the "is it balanced" view. */
+  function objectiveCiaCoverage(objectives) {
+    var live = (objectives || []).filter(function (o) { return o && o.status !== 'Achieved' && o.status !== 'Missed'; });
+    var out = { C: 0, I: 0, A: 0 };
+    live.forEach(function (o) { objectiveCia(o).forEach(function (x) { out[x]++; }); });
+    return out;
+  }
   /* `risks` (optional): open risks from the register. A suggestion
      aimed at one of them carries `why` naming it and comes first, so the
      objectives follow the organisation's own top risks. */
@@ -11159,8 +11212,8 @@
     var list = (objectives || []).filter(function (o) { return o && o.title && o.status !== 'Achieved' && o.status !== 'Missed'; });
     if (!list.length) return 'set each year in the objectives register and approved by top management';
     return list.map(function (o) {
-      var def = SUGGESTED_OBJECTIVES.find(function (x) { return x.metric.toLowerCase() === String(o.metric || '').trim().toLowerCase(); });
-      var cia = def ? ' [' + def.cia.join(', ') + ']' : '';
+      var tags = objectiveCia(o);
+      var cia = tags.length ? ' [' + tags.join(', ') + ']' : '';
       return o.title + (o.target ? ' (' + o.target + (o.due ? ', by ' + o.due : '') + ')' : '') + (o.owner && o.owner !== 'Unassigned' ? ', owned by ' + o.owner : '') + cia;
     }).join('; ');
   }
@@ -12991,7 +13044,7 @@
     clauseUpdatesForDocument: clauseUpdatesForDocument,
     valueDelivered: valueDelivered, VALUE_HOURS: VALUE_HOURS,
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
-    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
+    SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
     parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,

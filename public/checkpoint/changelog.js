@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.162.0',
+    date: '2026-10-15',
+    entries: [
+      'Objectives library: choose from about 30 sample objectives instead of writing them from scratch. Each shows what it protects (confidentiality, integrity, availability: one, two or all three), with filters for each. Tick as many as fit, give them an owner and date, and add them in one go. Checkpoint measures the ones marked "Measured by Checkpoint"; you record progress on the rest.',
+      'Write your own: the new objective form and the edit form now ask what the objective protects (tick C, I and/or A). The register shows the tags on every objective, and the policy\'s objectives statement includes them.',
+      'A new tile shows how many objectives protect each of C, I and A, and points to the library when one of them has nothing.'
+    ]
+  },
+  {
     version: '1.161.0',
     date: '2026-10-15',
     entries: [

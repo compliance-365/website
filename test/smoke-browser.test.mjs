@@ -371,7 +371,7 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     assert.match(await modal.innerText(), /\[C\]|\[A, I\]|\[C, I\]/);
     await modal.getByRole('button', { name: 'Adopt', exact: true }).click();
     await page.evaluate(() => window.App.go('objectives'));
-    await page.waitForFunction(() => /Protects: /.test(document.getElementById('objRows').innerText), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Confidentiality|Integrity|Availability/.test(document.getElementById('objRows').innerText), null, { timeout: 5000 });
 
     await page.evaluate(() => window.App.go('documents'));
     await page.evaluate(() => window.App.openDocTool('docGenerate'));
