@@ -345,7 +345,8 @@
            need. Groups are collapsible <details>; App.go() force-opens the
            group holding the view navigated to, and a person's own
            expand/collapse is remembered (applyNavGroupState()). -->
-      <div class="nav-group">
+      <div class="nav-group" data-group="home">
+        <div class="nav-label">Home</div>
         <button class="nav-item" data-v="start">Start here</button>
         <button class="nav-item" data-v="mytasks">My tasks <span class="n" id="nMyTasks"></span></button>
         <button class="nav-item on" data-v="dash" aria-current="page">Dashboard</button>
@@ -407,12 +408,16 @@
         <button class="nav-item" data-v="integrations">Integrations</button>
         <button class="nav-item" data-v="settings">Settings</button>
         <p class="nav-later-note" id="navLaterNote" style="display:none">More screens appear as you reach each step.</p>
-        <button class="nav-mode" id="navModeBtn" data-action="App.toggleNavMode" aria-pressed="false">Show full menu</button>
+        <button class="nav-mode" id="navModeBtn" data-action="App.toggleNavMode" aria-pressed="false" aria-label="Show full menu"><span class="nm-k">Menu</span><span class="nm-seg" aria-hidden="true"><span class="nm-opt nm-simple">Simple</span><span class="nm-opt nm-full">Full</span></span></button>
       </div>
     </nav>
-    <button class="nav-help" data-action="App.showWelcome">How this works</button>
-    <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant.</div>
-    <button class="version-tag" id="versionTag" data-action="App.openChangelog">Checkpoint</button>
+    <!-- One compact footer row, so the menu gets the height: a 900px
+         laptop screen used to give a fifth of the sidebar to these. -->
+    <div class="side-foot">
+      <button class="nav-help" data-action="App.showWelcome">How this works</button>
+      <button class="version-tag" id="versionTag" data-action="App.openChangelog" title="What's new">Checkpoint</button>
+      <p class="foot" title="Data residency: all client records live in the client's Microsoft 365 tenant.">Records stay in your Microsoft 365</p>
+    </div>
   </aside>
 
   <main class="main" id="mainContent" tabindex="-1">

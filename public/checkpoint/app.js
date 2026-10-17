@@ -6049,92 +6049,92 @@ function showModal(opts) {
   }
 
   /* ================= render ================= */
+  /* One rule for every badge: it counts what needs someone's attention
+     there, never a register's size, and says what it counts on hover
+     and to a screen reader. A zero hides the badge. */
+  function setNavBadge(id, n, what) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var show = typeof n === 'string' ? !!n : n > 0;
+    el.textContent = show ? String(n) : '';
+    el.style.display = show ? 'inline-block' : 'none';
+    if (show) { el.title = what; el.setAttribute('aria-label', what); } else { el.removeAttribute('title'); el.removeAttribute('aria-label'); }
+  }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
   function renderNavCounts() {
-    var nMine = document.getElementById('nMyTasks');
-    if (nMine) { try { nMine.textContent = myTasks().items.length || ''; } catch (e) { nMine.textContent = ''; } }
-    document.getElementById('nRisks').textContent = S.risks.filter(function (r) { return r.status !== 'Closed'; }).length;
-    document.getElementById('nActions').textContent = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; }).length;
-    var p = proposalGroups().length; var el = document.getElementById('nScan');
-    el.textContent = p || ''; el.style.display = p ? 'inline-block' : 'none';
+    var today = new Date().toISOString().slice(0, 10);
+    var mineN = 0;
+    try { mineN = myTasks().items.length; } catch (e) { mineN = 0; }
+    setNavBadge('nMyTasks', mineN, plural(mineN, 'task') + ' waiting on you');
+
+    /* Risks and actions badge what needs a decision, like every other
+       register: a risk above appetite or overdue for review, an action
+       past its due date. Their totals are on the registers themselves. */
+    var riskIds = {};
+    risksAboveAppetite().concat(risksOverdueForReview()).forEach(function (r) { if (r && r.status !== 'Closed') riskIds[r.id] = true; });
+    var riskN = Object.keys(riskIds).length;
+    setNavBadge('nRisks', riskN, plural(riskN, 'risk') + ' above appetite or overdue for review');
+    var actN = (S.actions || []).filter(function (a) { return ['Done', 'Cancelled', 'Closed', 'Completed'].indexOf(a.status) === -1 && overdueDays(a) > 0; }).length;
+    setNavBadge('nActions', actN, plural(actN, 'action') + ' overdue');
+    var p = proposalGroups().length;
+    setNavBadge('nScan', p, plural(p, 'scan finding') + ' to review');
 
     /* Scan-suggested SoA statuses, summed across every entitled
-       framework. Every other register in this sidebar badges what is
-       waiting; the SoA — where a single scan can leave twenty-plus
-       decisions spread over eight framework tabs — badged nothing at
-       all, so the app announced 12 proposed risks and stayed silent
-       about the rest. */
+       framework: a single scan can leave twenty-plus decisions spread
+       over several framework tabs. */
     var sugg = totalPendingSuggestions();
-    var sEl = document.getElementById('nSoa');
-    if (sEl) { sEl.textContent = sugg || ''; sEl.style.display = sugg ? 'inline-block' : 'none'; }
+    setNavBadge('nSoa', sugg, plural(sugg, 'scan suggestion') + ' to confirm');
 
     /* Certification: a certification body audit due within 90 days, or overdue. */
     var certDueN = certifiedFrameworks().filter(function (fw) {
-      var n = window.CheckpointLib.certificationCycle(certRecords()[fw], new Date().toISOString().slice(0, 10)).next;
+      var n = window.CheckpointLib.certificationCycle(certRecords()[fw], today).next;
       return n && (n.state === 'due-soon' || n.state === 'overdue');
     }).length;
-    var certEl = document.getElementById('nCert');
-    if (certEl) { certEl.textContent = certDueN || ''; certEl.style.display = certDueN ? 'inline-block' : 'none'; }
+    setNavBadge('nCert', certDueN, plural(certDueN, 'certification audit') + ' due within 90 days or overdue');
 
     var notStartedClauses = visibleClauses().filter(function (c) { return c.st === 'Not started'; }).length;
-    var clEl = document.getElementById('nClauses');
-    if (clEl) { clEl.textContent = notStartedClauses || ''; clEl.style.display = notStartedClauses ? 'inline-block' : 'none'; }
+    setNavBadge('nClauses', notStartedClauses, plural(notStartedClauses, 'clause') + ' not started');
 
-    var today = new Date().toISOString().slice(0, 10);
     var overdueAudits = (S.audits || []).filter(function (a) { return a.status === 'Planned' && a.planned && a.planned < today; }).length;
-    var aEl = document.getElementById('nAudits');
-    aEl.textContent = overdueAudits || ''; aEl.style.display = overdueAudits ? 'inline-block' : 'none';
+    setNavBadge('nAudits', overdueAudits, plural(overdueAudits, 'planned audit') + ' overdue');
 
     var lastReview = (S.reviews || [])[S.reviews.length - 1];
     var reviewOverdue = lastReview && lastReview.nextDue && lastReview.nextDue < today;
-    var rEl = document.getElementById('nReviews');
-    rEl.textContent = reviewOverdue ? '!' : ''; rEl.style.display = reviewOverdue ? 'inline-block' : 'none';
+    setNavBadge('nReviews', reviewOverdue ? '!' : '', 'Management review overdue');
 
     var aSum = window.CheckpointLib.assetRegisterSummary(S.assets || [], today, 365);
-    var aEl = document.getElementById('nAssets');
-    if (aEl) { var aN = aSum.noOwner + aSum.missing; aEl.textContent = aN || ''; aEl.style.display = aN ? 'inline-block' : 'none'; }
+    var aN = aSum.noOwner + aSum.missing;
+    setNavBadge('nAssets', aN, plural(aN, 'asset') + ' without an owner or missing');
     var lSum = window.CheckpointLib.legalRegisterSummary(S.legal || [], today, 365);
     var pSum = window.CheckpointLib.privacyRegisterSummary(S.ropa || [], S.privacyRequests || [], S.vendors || [], today);
-    var pEl = document.getElementById('nPrivacy');
-    if (pEl) { var pN = pSum.requests.overdue + pSum.piaNeeded; pEl.textContent = pN || ''; pEl.style.display = pN ? 'inline-block' : 'none'; }
-    var lEl = document.getElementById('nLegal');
-    if (lEl) { var lN = lSum.toConfirm + lSum.noOwner; lEl.textContent = lN || ''; lEl.style.display = lN ? 'inline-block' : 'none'; }
+    var pN = pSum.requests.overdue + pSum.piaNeeded;
+    setNavBadge('nPrivacy', pN, plural(pN, 'overdue request or needed privacy impact assessment', 'overdue requests or needed privacy impact assessments'));
+    var lN = lSum.toConfirm + lSum.noOwner;
+    setNavBadge('nLegal', lN, plural(lN, 'requirement') + ' to confirm or without an owner');
 
     var atRiskObjectives = (S.objectives || []).filter(function (o) { return o.status === 'At risk' || o.status === 'Missed'; }).length;
-    var oEl = document.getElementById('nObjectives');
-    if (oEl) { oEl.textContent = atRiskObjectives || ''; oEl.style.display = atRiskObjectives ? 'inline-block' : 'none'; }
+    setNavBadge('nObjectives', atRiskObjectives, plural(atRiskObjectives, 'objective') + ' at risk or missed');
 
     var overdueCal = (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c) && c.nextDue && c.nextDue < today; }).length;
-    var cEl = document.getElementById('nCalendar');
-    cEl.textContent = overdueCal || ''; cEl.style.display = overdueCal ? 'inline-block' : 'none';
+    setNavBadge('nCalendar', overdueCal, plural(overdueCal, 'activity', 'activities') + ' overdue');
 
     var overdueVendors = (S.vendors || []).filter(vendorOverdue).length;
-    var vEl = document.getElementById('nVendors');
-    vEl.textContent = overdueVendors || ''; vEl.style.display = overdueVendors ? 'inline-block' : 'none';
+    setNavBadge('nVendors', overdueVendors, plural(overdueVendors, 'supplier review') + ' overdue');
 
-    var incSummary = window.CheckpointLib.incidentRegisterSummary(S.incidents || [], new Date().toISOString().slice(0, 10));
-    var iEl = document.getElementById('nIncidents');
-    if (iEl) { iEl.textContent = incSummary.assessmentOverdue || ''; iEl.style.display = incSummary.assessmentOverdue ? 'inline-block' : 'none'; }
+    var incSummary = window.CheckpointLib.incidentRegisterSummary(S.incidents || [], today);
+    setNavBadge('nIncidents', incSummary.assessmentOverdue, plural(incSummary.assessmentOverdue, 'privacy assessment') + ' overdue');
 
     var aiPending = (S.aiCandidates || []).length;
-    var aiEl = document.getElementById('nAiSystems');
-    if (aiEl) { aiEl.textContent = aiPending || ''; aiEl.style.display = aiPending ? 'inline-block' : 'none'; }
+    setNavBadge('nAiSystems', aiPending, plural(aiPending, 'AI tool') + ' found to review');
 
-    /* The attestation badge counts what THIS signed-in person owes, not
-       the tenant-wide outstanding total. Everyone who opens Checkpoint
-       sees this nav item, most of them employees with one policy to
-       read — a badge showing the whole organisation's backlog would be
-       noise to them and would hide their own single outstanding item
-       in a number they can't act on. The practitioner's tenant-wide
-       view is the campaigns table inside. */
+    /* The attestation and training badges count what THIS signed-in
+       person owes, not the organisation's backlog: most people who open
+       Checkpoint have one policy to read, and the practitioner's
+       tenant-wide view is the campaigns table inside. */
     var mine = myOutstandingAttestations().length;
-    var atEl = document.getElementById('nAttest');
-    if (atEl) { atEl.textContent = mine || ''; atEl.style.display = mine ? 'inline-block' : 'none'; }
-
-    /* Same reasoning as the attestation badge: this counts what THIS
-       person owes, not the organisation's backlog. */
+    setNavBadge('nAttest', mine, plural(mine, 'policy', 'policies') + ' for you to acknowledge');
     var mineT = myOutstandingTraining().length;
-    var tEl = document.getElementById('nTraining');
-    if (tEl) { tEl.textContent = mineT || ''; tEl.style.display = mineT ? 'inline-block' : 'none'; }
+    setNavBadge('nTraining', mineT, plural(mineT, 'course') + ' for you to complete');
 
     /* A collapsed nav group hides its own badges — flag the group's
        summary instead so nothing overdue goes unnoticed just because
@@ -6146,10 +6146,24 @@ function showModal(opts) {
         return badge.style.display !== 'none' && badge.textContent.trim() !== '';
       });
       var summary = grp.querySelector(':scope > summary');
-      if (summary) summary.classList.toggle('has-alert', alert);
+      if (summary) {
+        summary.classList.toggle('has-alert', alert);
+        var tips = Array.prototype.filter.call(grp.querySelectorAll('.nav-item .n'), function (badge) { return badge.style.display !== 'none' && badge.title; }).map(function (badge) { return badge.title; });
+        if (tips.length) summary.title = 'Needs attention: ' + tips.join('; '); else summary.removeAttribute('title');
+      }
     });
+    updateNavFade();
   }
 
+  /* A soft fade at whichever edge of the menu has more to scroll to, so
+     an item cut off by the edge reads as "more here", not as a glitch. */
+  function updateNavFade() {
+    var ns = document.querySelector('.nav-scroll');
+    if (!ns) return;
+    if (!ns._fadeBound) { ns._fadeBound = true; ns.addEventListener('scroll', updateNavFade, { passive: true }); window.addEventListener('resize', updateNavFade); ns.addEventListener('toggle', updateNavFade, true); }
+    ns.classList.toggle('fade-top', ns.scrollTop > 2);
+    ns.classList.toggle('fade-bottom', ns.scrollTop + ns.clientHeight < ns.scrollHeight - 2);
+  }
   /* Two governance-card rows fed by data the dashboard doesn't own.
 
      The document register is fetched on demand (it lives in a
@@ -7031,6 +7045,14 @@ function showModal(opts) {
 
   /* The Simple menu, trimmed to the screens for the steps reached. */
   function applyGuidedNav() {
+    /* Once the build is complete, Start here and the Guided build are
+       finished lists: they leave the menu (still reachable from the
+       command palette and links) unless you are on one of them. */
+    var built = false;
+    if (!RESTRICTED_ACCESS) { try { built = !!buildState().complete; } catch (e) { built = false; } }
+    document.querySelectorAll('.nav-item[data-v="start"],.nav-item[data-v="build"]').forEach(function (el) {
+      el.classList.toggle('nav-built', built && !el.classList.contains('on'));
+    });
     var views = null;
     if (isGuidedClient() && navMode() === 'simple') { try { views = window.CheckpointLib.guidedNavViews(buildState()); } catch (e) { views = null; } }
     var keep = views ? views.reduce(function (o, v) { o[v] = true; return o; }, {}) : null;
@@ -28629,7 +28651,7 @@ function showModal(opts) {
     startReadOnlyObserver();
     applyRestrictedUi();
     var versionTag = document.getElementById('versionTag');
-    if (versionTag) versionTag.textContent = window.CHECKPOINT_VERSION ? 'Checkpoint v' + window.CHECKPOINT_VERSION : 'Checkpoint';
+    if (versionTag) { versionTag.textContent = window.CHECKPOINT_VERSION ? 'v' + window.CHECKPOINT_VERSION : 'What\u2019s new'; versionTag.title = 'Checkpoint' + (window.CHECKPOINT_VERSION ? ' v' + window.CHECKPOINT_VERSION : '') + ': what\u2019s new'; }
     checkForNewVersion();
     busy(false);
     /* In the background: the console is usable while SharePoint is read. */
@@ -30114,7 +30136,7 @@ function showModal(opts) {
     var simple = navMode() === 'simple';
     document.body.classList.toggle('nav-simple', simple);
     var btn = document.getElementById('navModeBtn');
-    if (btn) { btn.textContent = simple ? 'Show full menu' : 'Show simple menu'; btn.setAttribute('aria-pressed', String(!simple)); }
+    if (btn) { btn.setAttribute('aria-label', simple ? 'Show full menu' : 'Show simple menu'); btn.setAttribute('aria-pressed', String(!simple)); btn.classList.toggle('is-full', !simple); }
     if (S) applyGuidedNav();
   }
 
