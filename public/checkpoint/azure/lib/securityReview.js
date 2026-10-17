@@ -339,6 +339,11 @@
     var open = list.filter(function (r) { return r.status !== 'Held'; }).sort(function (a, b) { return a.date.localeCompare(b.date); })[0];
     var n = open ? open.n : list.reduce(function (m, r) { return Math.max(m, r.n || 0); }, 0) + 1;
     var from = setup.startDate && setup.startDate > today ? setup.startDate : today;
+    /* The next meeting comes after the slot of the last one held (the
+       date it was booked for, or held on): minutes saved on the day, or
+       a meeting held early, must not make that same slot due again. */
+    var lastSlot = list.filter(function (r) { return r.status === 'Held'; }).map(function (r) { return String(r.slot || r.date || '').slice(0, 10); }).sort().pop();
+    if (lastSlot && addDaysIso(lastSlot, 1) > from) from = addDaysIso(lastSlot, 1);
     var date = open ? open.date : nextSecurityReviewDate(setup, from);
     if (!date) return null;
     var prepareOn = workingDaysBefore(date, 2);
@@ -373,6 +378,13 @@
       (/^https:\/\//i.test(m.appUrl || '') ? '<p style="margin-top:16px"><a href="' + e(m.appUrl) + '">Open Checkpoint</a> for the detail behind each figure.</p>' : '') +
       '<p style="color:#999;font-size:11px;margin-top:24px">Prepared by Checkpoint from live ISMS data' + (agenda.asOf ? ' on ' + e(srDate(agenda.asOf)) : '') + '.</p></div>';
   }
+  /* Whether the agenda email carries a calendar invite: not when the
+     meeting was booked outside Checkpoint (someone already sent their
+     own invite), or attendees would get a second calendar entry. */
+  function securityReviewInviteAttached(booked, rec) {
+    var b = booked || {};
+    return !(b.external && rec && b.n === rec.n && b.date === String(rec.date || '').slice(0, 10));
+  }
   function securityReviewIcs(meta) {
     var m = meta || {};
     var stamp = function (iso) { return String(iso).replace(/[-:]/g, '').replace(/\.\d+/, '').slice(0, 15) + 'Z'; };
@@ -389,7 +401,7 @@
       return out.join('\r\n');
     };
     return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Compliance365//Checkpoint//EN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
-      'UID:' + esc(m.uid || 'checkpoint-security-review'), 'DTSTAMP:' + stamp(m.stampUtc || m.startUtc), 'DTSTART:' + stamp(m.startUtc), 'DTEND:' + stamp(m.endUtc),
+      'UID:' + esc(m.uid || 'checkpoint-security-review'), m.sequence != null ? 'SEQUENCE:' + (Number(m.sequence) || 0) : '', 'DTSTAMP:' + stamp(m.stampUtc || m.startUtc), 'DTSTART:' + stamp(m.startUtc), 'DTEND:' + stamp(m.endUtc),
       'SUMMARY:' + esc(m.summary), 'DESCRIPTION:' + esc(m.description), m.html ? 'X-ALT-DESC;FMTTYPE=text/html:' + esc(m.html) : '', m.location ? 'LOCATION:' + esc(m.location) : '', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).map(fold).join('\r\n');
   }
   function securityReviewInviteText(agenda, status, meta) {
@@ -534,6 +546,6 @@
 
 module.exports = {
   SUPPLIER_GAP_RULES, supplierQuestionnaireGaps, supplierGapStatus,
-  srDate, addDaysIso, securityReviewCovered, securityReviewLastCovered, securityReviewPeriodic, securityReviewCoverage, SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
+  srDate, addDaysIso, securityReviewCovered, securityReviewLastCovered, securityReviewPeriodic, securityReviewCoverage, SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteAttached, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };

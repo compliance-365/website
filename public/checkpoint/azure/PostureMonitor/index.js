@@ -2390,7 +2390,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     const status = SR.securityReviewStatus(rec.pack);
     const html = SR.securityReviewEmailHtml(agenda, meta, status);
     const startUtc = SR.wallTimeToUtc(rec.date, rec.time || setup.time, setup.timeZone);
-    const ics = SR.securityReviewIcs({ uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc, endUtc: new Date(Date.parse(startUtc) + agenda.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
+    const ics = SR.securityReviewIcs({ uid: 'checkpoint-' + rec.id + '-' + rec.date, sequence: 1, startUtc, endUtc: new Date(Date.parse(startUtc) + agenda.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
       summary: label + ' leadership security meeting ' + rec.n + ' (' + agenda.label + ')', description: SR.securityReviewInviteText(agenda, status, meta), html,
       location: /^https:\/\//i.test(setup.teamsLink || '') ? setup.teamsLink : 'Microsoft Teams' });
     try {
@@ -2398,7 +2398,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
         subject: label + ' leadership security meeting ' + rec.n + ' \u2014 ' + SR.srDate(rec.date),
         body: { contentType: 'HTML', content: html },
         toRecipients: to.map(address => ({ emailAddress: { address } })),
-        attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] }, saveToSentItems: false } });
+        attachments: SR.securityReviewInviteAttached(parseJsonSetting(settings.securityReviewBooked, null), rec) ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] : [] }, saveToSentItems: false } });
       rec.status = 'Sent'; rec.sentAt = today; rec.sentTo = to.join(', ');
       done.push('sent ' + rec.id);
     } catch (e) { context.log.error('Checkpoint security review: could not send the agenda: ' + (e && e.message ? e.message : e)); }
