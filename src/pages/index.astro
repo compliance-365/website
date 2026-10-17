@@ -285,60 +285,60 @@ const faqLd = {
   </div>
 </section>
 
-<!-- HOW IT WORKS — the 365 cycle: as you scroll the steps, the dot
-     travels round the C of the logo, one quarter per step. -->
+<!-- HOW IT WORKS — the 365 cycle, compact. A tilted, layered C (3D via CSS
+     perspective) beside the four steps. Choosing a step sends the dot round
+     the C to it; on first view it plays through all four once, in under five
+     seconds, then stops. Without JS every step and its text is shown. -->
 <section class="section reveal-section band-light" id="method">
   <div class="container">
-    <div style="margin-bottom:40px;">
-      <p class="home-eyebrow">How it works</p>
-      <h2 style="max-width:24ch;">Four steps to audit-ready, at a price agreed up front.</h2>
-      <p class="home-lead">Every step happens inside the Microsoft 365 you already use. Scroll through them and follow the dot around the cycle.</p>
-    </div>
-    <div class="method-grid">
-      <div class="cycle-pane" aria-hidden="true">
-        <div class="cycle-stage">
-          <svg viewBox="-24 -24 248 248" fill="none" id="cycleSvg">
+    <p class="home-eyebrow">How it works</p>
+    <h2 style="max-width:24ch;">Four steps to audit-ready, at a price agreed up front.</h2>
+    <p class="home-lead">Every step happens inside the Microsoft 365 you already use.</p>
+    <div class="flow" id="flow">
+      <div class="orbit-stage" aria-hidden="true">
+        <div class="orbit" id="orbit">
+          <div class="orbit-floor"></div>
+          <svg class="orbit-depth" viewBox="-24 -24 248 248" fill="none">
+            <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(11,11,12,.10)" stroke-width="10" stroke-linecap="round"/>
+          </svg>
+          <svg class="orbit-ring" viewBox="-24 -24 248 248" fill="none">
             <defs>
               <linearGradient id="cycGrad" gradientUnits="userSpaceOnUse" x1="100" y1="12" x2="100" y2="188">
                 <stop offset="0" stop-color="#BE4A1E"/>
                 <stop offset="1" stop-color="#0B0B0C"/>
               </linearGradient>
               <radialGradient id="cycGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/>
+                <stop offset="0" stop-color="#BE4A1E" stop-opacity=".14"/>
                 <stop offset="1" stop-color="#BE4A1E" stop-opacity="0"/>
               </radialGradient>
             </defs>
-            <circle cx="100" cy="100" r="118" fill="url(#cycGlow)"/>
-            <circle cx="100" cy="100" r="68" stroke="rgba(11,11,12,.09)" stroke-width="1" stroke-dasharray="2 5"/>
-            <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(11,11,12,.1)" stroke-width="8" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="120" fill="url(#cycGlow)"/>
+            <circle cx="100" cy="100" r="68" stroke="rgba(11,11,12,.10)" stroke-width="1" stroke-dasharray="2 5"/>
+            <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(11,11,12,.10)" stroke-width="8" stroke-linecap="round"/>
             <path id="cycleProg" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="url(#cycGrad)" stroke-width="8" stroke-linecap="round"/>
-          <g class="cyc-mark" data-i="0"><circle cx="176.2" cy="56.0" r="5.5"/><text x="196.1" y="47.5" text-anchor="middle">01</text></g>
-          <g class="cyc-mark" data-i="1"><circle cx="77.2" cy="15.0" r="5.5"/><text x="71.3" y="-4.2" text-anchor="middle">02</text></g>
-          <g class="cyc-mark" data-i="2"><circle cx="12.0" cy="100.0" r="5.5"/><text x="-11.0" y="103.0" text-anchor="middle">03</text></g>
-          <g class="cyc-mark" data-i="3"><circle cx="77.2" cy="185.0" r="5.5"/><text x="71.3" y="210.2" text-anchor="middle">04</text></g>
-          <g class="cyc-mark cyc-end" data-i="4"><circle cx="176.2" cy="144.0" r="7"/><path d="M173.2,144.0 l2.2,2.3 l4,-4.6" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g>
-            <circle id="cycleHalo" class="cyc-halo" cx="176.2" cy="56" r="17" fill="#BE4A1E"/>
-            <circle id="cycleDot" cx="176.2" cy="56" r="10" fill="#BE4A1E" stroke="#FAF7F1" stroke-width="2.5"/>
+            <g class="cyc-mark" data-i="0"><circle cx="176.2" cy="56.0" r="6"/><text x="197.0" y="47.2" text-anchor="middle">01</text></g>
+            <g class="cyc-mark" data-i="1"><circle cx="43.4" cy="32.6" r="6"/><text x="28.0" y="17.4" text-anchor="middle">02</text></g>
+            <g class="cyc-mark" data-i="2"><circle cx="43.4" cy="167.4" r="6"/><text x="28.0" y="189.0" text-anchor="middle">03</text></g>
+            <g class="cyc-mark" data-i="3"><circle cx="176.2" cy="144.0" r="6"/><text x="197.0" y="159.2" text-anchor="middle">04</text></g>
+            <circle id="cycleHalo" class="cyc-halo" cx="176.2" cy="56.0" r="17" fill="#BE4A1E"/>
+            <circle id="cycleDot" cx="176.2" cy="56.0" r="10" fill="#BE4A1E" stroke="#FAF7F1" stroke-width="2.5"/>
           </svg>
-          <div class="cycle-centre">
-            <span class="cc-step">Step</span>
-            <b class="cc-num" id="cycleBig">01</b>
-            <span class="cc-name" id="cycleCentreName">{steps[0].title}</span>
+          <div class="orbit-core">
+            <span>Step</span>
+            <b id="coreNum">01</b>
+            <em id="coreName">{steps[0].title}</em>
           </div>
         </div>
-        <div class="cycle-label">
-          <span id="cycleNum">STEP 01</span>
-          <b id="cycleName">{steps[0].title}</b>
-        </div>
       </div>
-      <ol id="phases" class="phases">
+      <ol class="flow-steps">
         {steps.map((s, i) => (
-          <li class={`phase${i === 0 ? ' active' : ''}`} data-name={s.title} data-num={`STEP 0${i + 1}`}>
-            <span class="phase-mark" aria-hidden="true">0{i + 1}</span>
-            <div class="phase-num">Step 0{i + 1}</div>
-            <h3>{s.title}</h3>
-            <p>{s.text}</p>
-            <div class="phase-deliver">{s.when}</div>
+          <li class={i === 0 ? 'active' : ''}>
+            <button type="button" class="flow-step" data-i={i} aria-expanded={i === 0 ? 'true' : 'false'} aria-controls={`flow-text-${i}`}>
+              <span class="fs-num">0{i + 1}</span>
+              <span class="fs-title">{s.title}</span>
+              <span class="fs-when">{s.when}</span>
+            </button>
+            <p class="fs-text" id={`flow-text-${i}`}>{s.text}</p>
           </li>
         ))}
       </ol>
@@ -942,59 +942,48 @@ const faqLd = {
   .needs-foot{margin-top:1.75rem;color:var(--bd-soft);font-size:15px;line-height:1.8}
   .needs-foot a{color:var(--bd-link);font-weight:600}
 
-  /* ─── How it works: the 365 cycle ───
-     The pane sticks while the four steps scroll past; the script maps
-     scroll progress through #phases onto the arc, so the dot reaches each
-     numbered marker as its step comes into focus and the centre of the C
-     names the step. The active step lifts into a card; the others stay
-     fully readable, with or without the script. */
-  .method-grid{display:grid;grid-template-columns:minmax(0,44fr) minmax(0,56fr);gap:clamp(30px,5vw,72px);align-items:start}
-  .cycle-pane{position:sticky;top:96px;display:flex;flex-direction:column;align-items:center;padding:8px 0 40px}
-  .cycle-stage{position:relative;width:min(100%,420px);aspect-ratio:1}
-  .cycle-stage svg{width:100%;height:100%;display:block;overflow:visible}
-  .cyc-mark circle{fill:#FAF7F1;stroke:rgba(11,11,12,.28);stroke-width:1.5;transition:fill .4s var(--ease),stroke .4s var(--ease)}
-  .cyc-mark text{font-family:Manrope,system-ui;font-size:9px;font-weight:800;letter-spacing:.08em;fill:#6B6860;transition:fill .4s var(--ease)}
-  .cyc-mark path{stroke:rgba(11,11,12,.35);transition:stroke .4s var(--ease)}
+  /* ─── How it works: the 365 cycle, compact ───
+     The C is tilted in CSS 3D: a soft floor shadow and a darker copy of the
+     arc sit behind it for depth, and the centre disc floats in front. The
+     pointer nudges the tilt (fine pointers only, not with reduced motion). */
+  .flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(28px,5vw,64px);align-items:center;margin-top:2.25rem}
+  .orbit-stage{perspective:1100px;display:flex;justify-content:center}
+  .orbit{position:relative;width:min(100%,400px);aspect-ratio:1;transform-style:preserve-3d;transform:rotateX(var(--rx,16deg)) rotateY(var(--ry,-16deg));transition:transform .7s var(--ease)}
+  .orbit-floor{position:absolute;left:12%;right:12%;bottom:-2%;height:22%;border-radius:50%;background:radial-gradient(closest-side,rgba(20,16,12,.22),transparent);transform:translateZ(-90px);filter:blur(10px)}
+  .orbit-depth,.orbit-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .orbit-depth{transform:translateZ(-22px) translateY(6px);filter:blur(1px)}
+  .orbit-ring{transform:translateZ(0);filter:drop-shadow(0 14px 16px rgba(20,16,12,.12))}
+  .cyc-mark circle{fill:#FAF7F1;stroke:rgba(11,11,12,.3);stroke-width:1.5;transition:fill .4s var(--ease),stroke .4s var(--ease)}
+  .cyc-mark text{font-family:Manrope,system-ui;font-size:9.5px;font-weight:800;letter-spacing:.08em;fill:#6B6860;transition:fill .4s var(--ease)}
   .cyc-mark.on circle{fill:#BE4A1E;stroke:#BE4A1E}
   .cyc-mark.on text{fill:#A63A12}
-  .cyc-mark.on path{stroke:#FFFFFF}
   .cyc-halo{opacity:.18;transform-box:fill-box;transform-origin:center}
-  #cycleDot{filter:drop-shadow(0 3px 6px rgba(190,74,30,.45))}
+  #cycleDot{filter:drop-shadow(0 3px 6px rgba(190,74,30,.5))}
   @media (prefers-reduced-motion: no-preference){
     .cyc-halo{animation:cycHalo 2.4s ease-in-out infinite}
     @keyframes cycHalo{0%,100%{transform:scale(.75);opacity:.26}50%{transform:scale(1.25);opacity:.06}}
   }
-  .cycle-centre{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
-  .cc-step{font-family:Manrope,system-ui;font-size:11px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:#A63A12}
-  .cc-num{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:clamp(56px,6.5vw,88px);line-height:1;color:#0B0B0C;letter-spacing:-.02em;margin:4px 0 2px;font-variant-numeric:tabular-nums}
-  .cc-name{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:20px;color:#0B0B0C}
-  .cycle-centre.swap .cc-num,.cycle-centre.swap .cc-name{animation:ccSwap .45s var(--ease)}
+  .orbit-core{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;transform:translate(-50%,-50%) translateZ(70px);border-radius:50%;background:linear-gradient(150deg,#FFFFFF 0%,#F4EFE7 100%);box-shadow:0 28px 46px rgba(20,16,12,.18),0 0 0 1px rgba(11,11,12,.06),inset 0 1px 0 #FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .orbit-core span{font-family:Manrope,system-ui;font-size:10px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:#A63A12}
+  .orbit-core b{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:clamp(40px,4.6vw,60px);line-height:1;color:#0B0B0C;margin:2px 0;font-variant-numeric:tabular-nums}
+  .orbit-core em{font-style:normal;font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:16px;color:#0B0B0C}
+  .orbit-core.swap b,.orbit-core.swap em{animation:ccSwap .45s var(--ease)}
   @keyframes ccSwap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-  .cycle-label{display:none}
-  .phases{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
-  .phase{position:relative;overflow:hidden;min-height:44vh;display:flex;flex-direction:column;justify-content:center;padding:36px 34px;border-radius:16px;border:1px solid transparent;transition:background-color .5s var(--ease),border-color .5s var(--ease),box-shadow .5s var(--ease),transform .5s var(--ease)}
-  .phase::before{content:"";position:absolute;left:0;top:22%;bottom:22%;width:3px;border-radius:0 3px 3px 0;background:#BE4A1E;opacity:0;transition:opacity .5s var(--ease),top .5s var(--ease),bottom .5s var(--ease)}
-  .phase.active{background:#FFFFFF;border-color:var(--bd-card-bd);box-shadow:0 24px 50px rgba(20,16,12,.09);transform:translateX(-6px)}
-  .phase.active::before{opacity:1;top:0;bottom:0}
-  .phase-mark{position:absolute;right:22px;top:6px;font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:700;font-size:120px;line-height:1;color:rgba(11,11,12,.04);pointer-events:none;transition:color .5s var(--ease)}
-  .phase.active .phase-mark{color:rgba(190,74,30,.09)}
-  .phase-num{font-family:Manrope,system-ui;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--bd-eyebrow);font-weight:800;margin-bottom:12px}
-  .phase h3{position:relative;font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:clamp(1.6rem,2.8vw,2.3rem);color:var(--bd-fg);margin:0 0 12px}
-  .phase p{position:relative;font-size:16px;line-height:1.75;color:var(--bd-soft);max-width:46ch;margin:0 0 18px}
-  .phase-deliver{align-self:flex-start;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-fg);font-weight:700;font-family:Manrope,system-ui;border:1px solid var(--bd-card-bd);border-radius:999px;padding:6px 12px;background:#FAF7F1}
+  .flow-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .flow-step{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:16px 20px;border:1px solid var(--bd-card-bd);border-radius:12px;background:#FFFFFF;color:var(--bd-fg);font:inherit;text-align:left;cursor:pointer;transition:border-color .3s var(--ease),box-shadow .3s var(--ease),transform .3s var(--ease)}
+  .flow-step:hover{border-color:rgba(190,74,30,.5)}
+  .flow-step:focus-visible{outline:2px solid #A63A12;outline-offset:2px}
+  .flow-steps li.active .flow-step{border-color:#BE4A1E;box-shadow:0 14px 30px rgba(20,16,12,.08);transform:translateX(-4px)}
+  .fs-num{font-family:Manrope,system-ui;font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--bd-eyebrow)}
+  .fs-title{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:20px}
+  .fs-when{font-family:Manrope,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);border:1px solid var(--bd-card-bd);border-radius:999px;padding:5px 10px;white-space:nowrap}
+  .fs-text{margin:10px 20px 6px 76px;font-size:15px;line-height:1.7;color:var(--bd-soft)}
+  .flow.js-flow .fs-text{display:none}
+  .flow.js-flow li.active .fs-text{display:block;animation:ccSwap .4s var(--ease)}
   @media(max-width:900px){
-    .method-grid{grid-template-columns:minmax(0,1fr);gap:8px}
-    /* Phones: a compact cycle pinned under the header while the steps
-       scroll beneath it, so the dot still travels with the reader. */
-    .cycle-pane{position:sticky;top:68px;z-index:3;flex-direction:row;justify-content:flex-start;gap:16px;padding:10px 0;margin:0 -20px;padding-left:20px;background:rgba(250,247,241,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--bd-rule)}
-    .cycle-stage{width:76px;flex:0 0 76px}
-    .cycle-centre,.cyc-mark text{display:none}
-    .cycle-label{display:block;text-align:left}
-    .cycle-label span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--bd-eyebrow);font-weight:800;font-family:Manrope,system-ui}
-    .cycle-label b{display:block;font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:20px;color:var(--bd-fg)}
-    .phase{min-height:auto;padding:28px 24px}
-    .phase.active{transform:none}
-    .phase-mark{font-size:90px}
+    .flow{grid-template-columns:minmax(0,1fr);gap:20px}
+    .orbit{width:min(78vw,300px)}
+    .fs-text{margin-left:20px}
   }
 
   /* ─── Checkpoint ─── */
@@ -1084,50 +1073,85 @@ const faqLd = {
   sections.forEach(function (s) { io.observe(s); });
 
 
-  /* ── Scroll-driven 365 cycle ── */
+  /* ── 365 cycle: choose a step, the dot travels round the C to it ── */
+  var flow = document.getElementById('flow');
   var cyclePath = document.getElementById('cyclePath');
-  var cycleProg = document.getElementById('cycleProg');
-  var cycleDot  = document.getElementById('cycleDot');
-  var cycleHalo = document.getElementById('cycleHalo');
-  var phasesWrap = document.getElementById('phases');
-  if (cyclePath && cycleProg && cycleDot && phasesWrap) {
+  if (flow && cyclePath) {
+    flow.classList.add('js-flow');
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var prog = document.getElementById('cycleProg');
+    var dot = document.getElementById('cycleDot');
+    var halo = document.getElementById('cycleHalo');
+    var core = flow.querySelector('.orbit-core');
+    var coreNum = document.getElementById('coreNum');
+    var coreName = document.getElementById('coreName');
+    var marks = flow.querySelectorAll('.cyc-mark');
+    var items = flow.querySelectorAll('.flow-steps li');
+    var btns = flow.querySelectorAll('.flow-step');
+    var STOPS = [0, 1 / 3, 2 / 3, 1];
     var L = cyclePath.getTotalLength();
-    cycleProg.style.strokeDasharray  = L;
-    cycleProg.style.strokeDashoffset = L;
-    var phaseEls  = phasesWrap.querySelectorAll('.phase');
-    var marks     = document.querySelectorAll('.cyc-mark');
-    var cycleNum  = document.getElementById('cycleNum');
-    var cycleName = document.getElementById('cycleName');
-    var centre    = document.querySelector('.cycle-centre');
-    var bigNum    = document.getElementById('cycleBig');
-    var centreName = document.getElementById('cycleCentreName');
-    var lastIdx = -1;
-    function updateCycle() {
-      var r = phasesWrap.getBoundingClientRect(), vh = window.innerHeight;
-      var p = Math.min(Math.max((vh * 0.55 - r.top) / r.height, 0), 1);
-      var pt = cyclePath.getPointAtLength(L * p);
-      cycleDot.setAttribute('cx', pt.x);
-      cycleDot.setAttribute('cy', pt.y);
-      if (cycleHalo) { cycleHalo.setAttribute('cx', pt.x); cycleHalo.setAttribute('cy', pt.y); }
-      cycleProg.style.strokeDashoffset = L * (1 - p);
-      var idx = Math.min(Math.floor(p * 4), 3);
-      marks.forEach(function (m) {
-        var i = +m.getAttribute('data-i');
-        m.classList.toggle('on', i < 4 ? i <= idx : p > 0.97);
-      });
-      if (idx === lastIdx) return;
-      lastIdx = idx;
-      var ph = phaseEls[idx];
-      phaseEls.forEach(function (el, i) { el.classList.toggle('active', i === idx); });
-      if (cycleName && cycleNum) { cycleNum.textContent = ph.dataset.num; cycleName.textContent = ph.dataset.name; }
-      if (bigNum && centreName && centre) {
-        bigNum.textContent = '0' + (idx + 1);
-        centreName.textContent = ph.dataset.name;
-        centre.classList.remove('swap'); void centre.offsetWidth; centre.classList.add('swap');
-      }
+    var at = 0, current = 0, raf = 0, userTook = false;
+    prog.style.strokeDasharray = L;
+    function place(f) {
+      var p = cyclePath.getPointAtLength(L * f);
+      dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y);
+      halo.setAttribute('cx', p.x); halo.setAttribute('cy', p.y);
+      prog.style.strokeDashoffset = L * (1 - f);
+      at = f;
     }
-    window.addEventListener('scroll', updateCycle, { passive: true });
-    updateCycle();
+    function travel(to) {
+      cancelAnimationFrame(raf);
+      if (reduced) { place(to); return; }
+      var from = at, t0 = performance.now(), dur = 650;
+      (function frame(now) {
+        var k = Math.min((now - t0) / dur, 1), e = 1 - Math.pow(1 - k, 3);
+        place(from + (to - from) * e);
+        if (k < 1) raf = requestAnimationFrame(frame);
+      })(t0);
+    }
+    function setStep(i) {
+      if (i === current && at === STOPS[i]) return;
+      current = i;
+      travel(STOPS[i]);
+      marks.forEach(function (m, k) { m.classList.toggle('on', k <= i); });
+      items.forEach(function (li, k) { li.classList.toggle('active', k === i); });
+      btns.forEach(function (b, k) { b.setAttribute('aria-expanded', k === i ? 'true' : 'false'); });
+      coreNum.textContent = '0' + (i + 1);
+      coreName.textContent = btns[i].querySelector('.fs-title').textContent;
+      core.classList.remove('swap'); void core.offsetWidth; core.classList.add('swap');
+    }
+    place(0);
+    marks.forEach(function (m, k) { m.classList.toggle('on', k === 0); });
+    btns.forEach(function (b) {
+      var go = function () { userTook = true; setStep(+b.dataset.i); };
+      b.addEventListener('click', go);
+      b.addEventListener('focus', go);
+      b.addEventListener('mouseenter', go);
+    });
+    /* First view: play through the four steps once (about 4.5s), then stop. */
+    if (!reduced && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (es, ob) {
+        if (!es[0].isIntersecting) return;
+        ob.disconnect();
+        [1, 2, 3].forEach(function (i, n) {
+          setTimeout(function () { if (!userTook) setStep(i); }, 900 + n * 1200);
+        });
+      }, { threshold: 0.5 }).observe(flow);
+    }
+    /* Pointer tilt: a few degrees either way, fine pointers only. */
+    var orbit = document.getElementById('orbit');
+    var stage = flow.querySelector('.orbit-stage');
+    if (!reduced && orbit && stage && window.matchMedia('(pointer: fine)').matches) {
+      stage.addEventListener('pointermove', function (e) {
+        var r = stage.getBoundingClientRect();
+        var x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+        orbit.style.setProperty('--ry', (-16 + x * 16).toFixed(1) + 'deg');
+        orbit.style.setProperty('--rx', (16 - y * 14).toFixed(1) + 'deg');
+      });
+      stage.addEventListener('pointerleave', function () {
+        orbit.style.removeProperty('--ry'); orbit.style.removeProperty('--rx');
+      });
+    }
   }
 })();
 </script>
