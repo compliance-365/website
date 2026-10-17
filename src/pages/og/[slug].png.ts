@@ -25,7 +25,7 @@ const SERVICE_PAGES = [
   { slug: 'og-rffr',     eyebrow: 'RFFR · ISM SoA · DEWR',           title: 'Right Fit For Risk (RFFR)',      description: 'The full ISM Statement of Applicability on an ISO 27001 ISMS with Essential Eight — assessed from your tenant.' },
   { slug: 'og-nist',     eyebrow: 'NIST CSF 2.0 · AUSTRALIA',        title: 'NIST CSF 2.0 Consulting',        description: 'Current & Target Profiles, prioritised roadmap, measurable KPIs. Board-ready.' },
   { slug: 'og-home',     eyebrow: 'COMPLIANCE365 · AUSTRALIA',       title: 'Audit-ready, inside your own Microsoft 365.', accentFrom: 13, description: 'ISO 27001, SOC 2, Essential Eight, ISO 27701 and ISO 42001. Fixed-price.' },
-  { slug: 'og-checkpoint', eyebrow: 'CHECKPOINT · COMPLIANCE CONSOLE', title: 'The compliance console that never leaves your tenant.', description: 'Posture scans, risk register, live SoA and audit reports, all in your own SharePoint.' },
+  { slug: 'og-checkpoint', eyebrow: 'CHECKPOINT · COMPLIANCE CONSOLE', title: 'The compliance console that never leaves your tenant.', accentFrom: 23, description: 'Posture scans, risk register, live SoA and audit reports, all in your own SharePoint.' },
   { slug: 'og-about',    eyebrow: 'ABOUT · COMPLIANCE365',           title: 'Australian Compliance Specialists', description: 'Senior-led. Fixed-price. Evidence-backed. Based in Brisbane, serving organisations nationally.' },
 ];
 
@@ -50,9 +50,10 @@ export const GET: APIRoute = async ({ props }) => {
   const { eyebrow, title, description, accentFrom } = props as { eyebrow: string; title: string; description: string; accentFrom?: number };
   const t = clamp(title, 68);
   /* The headline: cream, with the part after accentFrom on its own line in
-     pale orange (the brand's text orange on dark, as the "365" in the header). */
+     the full brand orange. #BE4A1E is 3.92:1 on #0B0B0C, which clears the
+     3:1 large-text floor at 66px; the small eyebrow and "365" stay pale. */
   const head = accentFrom && accentFrom < t.length
-    ? [{ type: 'div', props: { children: t.slice(0, accentFrom).trim() } }, { type: 'div', props: { style: { color: '#F0A97F' }, children: t.slice(accentFrom).trim() } }]
+    ? [{ type: 'div', props: { children: t.slice(0, accentFrom).trim() } }, { type: 'div', props: { style: { color: '#BE4A1E' }, children: t.slice(accentFrom).trim() } }]
     : t;
   const ring = (size: number, right: number, top: number, alpha: number) => ({ type: 'div', props: { style: { position: 'absolute', width: size, height: size, right, top, borderRadius: size, border: `1.5px solid rgba(240,169,127,${alpha})` } } });
 

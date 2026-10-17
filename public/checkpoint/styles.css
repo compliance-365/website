@@ -80,6 +80,12 @@
   --gold:#BE4A1E; --gold-light:#F0A97F; --gold-rgb:190,74,30; --gold-light-rgb:240,169,127;
   /* Forced-dark scope: same dark-ground end of the ramp as :root. */
   --accent-ink:#F0A97F; --accent-fill:var(--gold); --accent-fill-hover:#A63A12; --on-accent:#FFFFFF;
+  /* The full brand orange as a HEADLINE colour only: 3.92:1 on the page
+     ground and 3.41:1 on the card tier clear the 3:1 large-text floor but
+     not 4.5:1, so it is for display type, never body text, eyebrows or
+     links (test/accent-display.test.mjs). Same role as the website's
+     --accent-display. */
+  --accent-display:#BE4A1E;
   /* ===== The accent ramp, ported from the website's tokens.css =====
      Three steps, not one colour, and which step you use depends on
      whether the accent is a FILL or a GLYPH:
@@ -289,6 +295,7 @@
      alpha was already comfortably passing (6.8:1) and is unchanged. */
   --paper:#0B0B0C; --paper-dim:rgba(var(--paper-rgb),.68); --paper-faint:rgba(var(--paper-rgb),.6);
   --gold:#A63A12; --gold-light:#8A2F0E; --gold-rgb:166,58,18; --gold-light-rgb:138,47,14;
+  --accent-display:#A63A12;
   /* Light ground takes the DARK end of the ramp as text — #A63A12 is
      6.07:1 on cream, 6.49:1 on white, 5.91:1 on the panel ground (the
      website's own measured figures, same token). The fill and its
@@ -403,6 +410,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .gate{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
 .gate .lockup{display:flex;align-items:center;gap:14px;margin-bottom:10px}
 .gate h1{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-6);margin-top:22px}
+/* Two-tone headline, as on the website heroes, link preview cards and
+   LinkedIn banner: the second phrase in the full brand orange, upright
+   (Bricolage ships no italic). */
+.gate h1 em,.wizard-hero h1 em{color:var(--accent-display);font-style:normal;font-weight:600}
+/* Brand backdrop: a soft orange glow at the top right and two thin rings,
+   the same motif as the cards and banners. Decorative only, so it sits
+   behind the content and ignores the pointer. */
+.gate{position:relative;overflow:hidden;isolation:isolate}
+.gate::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60vmax 60vmax at 100% 0%,rgba(var(--gold-rgb),.28),transparent 60%)}
+.gate::after{content:'';position:absolute;z-index:-1;pointer-events:none;width:72vmax;height:72vmax;right:-30vmax;top:-34vmax;border-radius:50%;border:1.5px solid rgba(var(--gold-light-rgb),.16);outline:1.5px solid rgba(var(--gold-light-rgb),.10);outline-offset:9vmax}
 .gate p{color:var(--paper-dim);max-width:52ch;line-height:1.7;margin-top:12px;font-size:var(--fs-2)}
 .gate .btns{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;justify-content:center}
 .gate .note{margin-top:26px;font-size:var(--fs-1);color:var(--paper-faint);max-width:56ch;line-height:1.7}

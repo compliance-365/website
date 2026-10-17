@@ -82,6 +82,15 @@
      3.92:1, so the correct answer is now the opposite one. */
   --on-accent: #FFFFFF;
 
+  /* The accent as a HEADLINE colour: the full brand orange, for display
+     type only (24px and up, or 18.66px bold). It is the same value on
+     every ground because large text only has to clear 3:1, and #BE4A1E
+     does that everywhere this site puts a headline: 3.92:1 on #0B0B0C,
+     4.57:1 on the panel, ~4.6:1 on cream. Never use it for body copy,
+     eyebrows or links on dark — that is --accent-ink's job, and
+     test/accent-display.test.mjs fails the build if it is. */
+  --accent-display: #BE4A1E;
+
   /* Text on the light-to-mid STATUS fills — the green, amber and grey
      chips in the checklist tools. Separate from --on-accent because
      these are not the accent: 14 call sites had borrowed the accent's

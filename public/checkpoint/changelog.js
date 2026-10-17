@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.170.0',
+    date: '2026-10-17',
+    entries: [
+      'The sign-in screen and the setup welcome now match the Compliance365 website and LinkedIn look: the second half of the headline is in the brand orange, with a soft orange glow and rings behind the sign-in screen.'
+    ]
+  },
+  {
     version: '1.169.0',
     date: '2026-10-17',
     entries: [
