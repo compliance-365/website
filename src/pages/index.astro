@@ -195,7 +195,7 @@ const faqLd = {
       <div class="ring-fallback">
         <svg viewBox="0 0 200 200" fill="none" style="width:min(62%,340px);height:auto;">
           <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="10" stroke-linecap="round"/>
-          <circle class="ring-pulse-dot" cx="188" cy="100" r="9" fill="#A9812E"/>
+          <circle class="ring-pulse-dot" cx="188" cy="100" r="9" fill="#BE4A1E"/>
         </svg>
       </div>
       <div class="stage-hint" id="stageHint">Drag to rotate · Click a framework</div>
@@ -575,7 +575,7 @@ const faqLd = {
 <section class="final-cta band-dark" style="background:#0B0B0C;color:#FAF7F1;text-align:center;padding:8rem 0;position:relative;overflow:hidden;">
   <svg class="final-ring-bg" viewBox="0 0 200 200" fill="none" aria-hidden="true">
     <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="4" stroke-linecap="round"/>
-    <circle cx="188" cy="100" r="7" fill="#A9812E"/>
+    <circle cx="188" cy="100" r="7" fill="#BE4A1E"/>
   </svg>
   <div class="container" style="position:relative;z-index:1;">
     <div class="pull-rule" style="margin:0 auto 18px;"></div>
@@ -1335,14 +1335,14 @@ const faqLd = {
       });
 
       var checkpoint=new THREE.Mesh(new THREE.SphereGeometry(.17,32,32),
-        new THREE.MeshStandardMaterial({color:0xA9812E,emissive:0xA9812E,emissiveIntensity:.55,metalness:.4,roughness:.3}));
+        new THREE.MeshStandardMaterial({color:0xBE4A1E,emissive:0xBE4A1E,emissiveIntensity:.55,metalness:.4,roughness:.3}));
       checkpoint.position.set(1.9,0,0); group.add(checkpoint);
       var goldLight=new THREE.PointLight(0xD8BA78,1.2,4);
       goldLight.position.set(1.9,0,.4); group.add(goldLight);
 
       var core=new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(.55,1)),
-        new THREE.LineBasicMaterial({color:0xA9812E,transparent:true,opacity:.28}));
+        new THREE.LineBasicMaterial({color:0xBE4A1E,transparent:true,opacity:.28}));
       group.add(core);
       /* a second, smaller wireframe counter-spinning inside the first — a subtle gyroscope layer */
       var core2=new THREE.LineSegments(

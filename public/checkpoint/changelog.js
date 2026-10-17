@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.169.0',
+    date: '2026-10-17',
+    entries: [
+      'The Compliance365 mark now has a brand-orange dot instead of the old gold, matching the orange "365" beside it: in the menu, the sign-in screen, report mastheads and the browser tab icon (which still turns red while you have an open Critical risk).'
+    ]
+  },
+  {
     version: '1.168.0',
     date: '2026-10-17',
     entries: [

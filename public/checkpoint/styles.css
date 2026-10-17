@@ -117,23 +117,17 @@
   --accent-fill:var(--gold);
   --accent-fill-hover:#A63A12;
   --on-accent:#FFFFFF;
-  /* ===== The brand mark's dot is NOT this accent, on purpose =====
-     The gold circle closing the "C" in the Compliance 365 mark
-     (index.html's three lockups, onboarding.html, report.js's report
-     masthead, and the canvas favicon app.js draws) is #A9812E and
-     stays that way. It is the one place the old gold survives, and it
-     survives deliberately: the identity is two colours — a gold mark
-     beside an orange interface — not one colour that half-migrated.
-
-     Written down because it looks exactly like an oversight and is
-     not. "Replace the gold accent with orange #BE4A1E" rewrote those
-     very SVG lines — it changed their stroke and left the dot alone —
-     so keeping it was a decision then, and has been re-confirmed
-     since. Do not "finish the migration": the dot appears 23 times
-     across this app, the owner console, the marketing page and the
-     public website (its header, footer, homepage, the homepage's 3D
-     scene, favicon.svg and logo.svg). They move together or not at
-     all, and the answer is not at all.
+  /* ===== The brand mark's dot is the brand orange, #BE4A1E =====
+     The circle closing the "C" in the Compliance 365 mark (index.html's
+     lockups, onboarding.html, report.js's report masthead, the canvas
+     favicon app.js draws, the owner console, the marketing page and the
+     public website's header, footer, homepage, 3D scene, favicon.svg
+     and logo.svg) was the old gold #A9812E until 1.169.0, kept on
+     purpose as a gold mark beside an orange interface. The owner
+     re-coloured it to the brand orange so the dot matches the orange
+     "365" beside it and every other orange in the brand. Every copy
+     moved together; test/favicon-geometry.test.mjs asserts they stay
+     together.
 
      No contrast floor applies to it: a dot is a fill, never text. */
   --line:rgba(255,255,255,.12);
