@@ -17,7 +17,8 @@ window.CHECKPOINT_CHANGELOG = [
     entries: [
       'Fixed: saving the leadership meeting minutes on the day of the meeting made that same day the next meeting, so the next agenda could be prepared and sent for a meeting that had just finished. The next meeting now always comes after the slot of the last one held, whether it was held early, on the day or late.',
       'The next meeting is booked as soon as the minutes are saved. With the agenda set to send automatically, a calendar invite for the next meeting goes to the attendees straight away; otherwise the Send minutes prompt offers to send the minutes and the invite together. The agenda two working days before updates the same calendar entry instead of adding a second one.',
-      'The leadership meeting card says whether the next meeting is in attendees\u2019 calendars yet, or whether its date changed after the invite went out, with a Send the invite button.'
+      'The leadership meeting card says whether the next meeting is in attendees\u2019 calendars yet, or whether its date changed after the invite went out, with a Send the invite button.',
+      'Already in calendars: when someone has sent their own Outlook invite for the next meeting, record it as booked instead. Checkpoint sends nothing, and the agenda two working days before goes without a calendar attachment, so attendees keep one entry.'
     ]
   },
   {

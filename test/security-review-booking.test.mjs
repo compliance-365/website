@@ -58,3 +58,38 @@ describe('booking the next meeting', () => {
     assert.match(app, /data-action="App\.sendNextSecReviewInvite">Send the invite/);
   });
 });
+
+describe('already in calendars', () => {
+  const rec = { id: 'SR-002', n: 2, date: '2026-11-10' };
+  test('the agenda leaves the invite off when the meeting was booked outside Checkpoint', () => {
+    assert.equal(Lib.securityReviewInviteAttached(null, rec), true);
+    assert.equal(Lib.securityReviewInviteAttached({ n: 2, date: '2026-11-10', sentAt: '2026-10-17' }, rec), true, 'Checkpoint’s own booking: the agenda updates it');
+    assert.equal(Lib.securityReviewInviteAttached({ n: 2, date: '2026-11-10', external: true }, rec), false);
+    assert.equal(Lib.securityReviewInviteAttached({ n: 2, date: '2026-12-08', external: true }, rec), true, 'a booking for another date does not count');
+    assert.equal(String(Az.securityReviewInviteAttached), String(Lib.securityReviewInviteAttached));
+  });
+  test('the app records the booking without sending, and the card says so', () => {
+    assert.match(app, /'sendNextSecReviewInvite', 'markSecReviewBooked',/, 'a Viewer cannot record it');
+    assert.match(app, /var b = \{ n: nx\.n, date: nx\.date, time: time, sentAt: [^}]*external: true/);
+    assert.match(app, /data-action="App\.markSecReviewBooked">Already in calendars/);
+    assert.match(app, /' · in calendars \(invite sent outside Checkpoint\)'/);
+    assert.match(app, /securityReviewInviteAttached\(secReviewBooked\(\), rec\) \? \[/);
+  });
+  test('the scheduled function sends the agenda without an invite', async () => {
+    const { runSecurityReview } = require('../public/checkpoint/azure/PostureMonitor/index.js').__test;
+    process.env.NOTIFY_FROM = 'checkpoint@mg.example';
+    const calls = [];
+    const g = async (path, opts) => { calls.push({ path, opts }); if (/\/lists\/settings\/items\?/.test(path)) return { value: [{ id: '7', fields: { SettingKey: 'securityReviews' } }] }; return {}; };
+    const gAll = async () => [];
+    const ctx = { log: Object.assign(() => {}, { error: () => {} }) };
+    const s = { ...setup, emails: 'ekin@mg.example', ownerEmail: 'cem@mg.example', timeZone: 'Australia/Sydney' };
+    const held = [{ id: 'SR-001', n: 1, date: '2026-10-13', status: 'Held' }];
+    const settings = { clientDisplayName: 'MineGuard', securityReviewSetup: JSON.stringify(s), securityReviews: JSON.stringify(held),
+      securityReviewBooked: JSON.stringify({ n: 2, date: '2026-11-10', time: '10:00', external: true }) };
+    const optional = { Actions: null, Incidents: null, Risks: null, Vendors: null, Calendar: null, Objectives: null, Controls: null, Documents: null };
+    const done = await runSecurityReview(g, gAll, ctx, 'site', { Settings: 'settings' }, optional, settings, '2026-11-06', 70);
+    assert.ok(done.includes('sent SR-002'), JSON.stringify(done));
+    const mail = calls.find((c) => /sendMail/.test(c.path) && /leadership security meeting 2/.test(c.opts.body.message.subject));
+    assert.deepEqual(mail.opts.body.message.attachments, []);
+  });
+});

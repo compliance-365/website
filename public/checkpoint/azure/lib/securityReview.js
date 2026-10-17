@@ -378,6 +378,13 @@
       (/^https:\/\//i.test(m.appUrl || '') ? '<p style="margin-top:16px"><a href="' + e(m.appUrl) + '">Open Checkpoint</a> for the detail behind each figure.</p>' : '') +
       '<p style="color:#999;font-size:11px;margin-top:24px">Prepared by Checkpoint from live ISMS data' + (agenda.asOf ? ' on ' + e(srDate(agenda.asOf)) : '') + '.</p></div>';
   }
+  /* Whether the agenda email carries a calendar invite: not when the
+     meeting was booked outside Checkpoint (someone already sent their
+     own invite), or attendees would get a second calendar entry. */
+  function securityReviewInviteAttached(booked, rec) {
+    var b = booked || {};
+    return !(b.external && rec && b.n === rec.n && b.date === String(rec.date || '').slice(0, 10));
+  }
   function securityReviewIcs(meta) {
     var m = meta || {};
     var stamp = function (iso) { return String(iso).replace(/[-:]/g, '').replace(/\.\d+/, '').slice(0, 15) + 'Z'; };
@@ -539,6 +546,6 @@
 
 module.exports = {
   SUPPLIER_GAP_RULES, supplierQuestionnaireGaps, supplierGapStatus,
-  srDate, addDaysIso, securityReviewCovered, securityReviewLastCovered, securityReviewPeriodic, securityReviewCoverage, SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
+  srDate, addDaysIso, securityReviewCovered, securityReviewLastCovered, securityReviewPeriodic, securityReviewCoverage, SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE, securityReviewKind, securityReviewQuiet, securityReviewStatus, securityReviewFollowUps, securityReviewFollowUpHtml, securityReviewDayIn, nextSecurityReviewDate, workingDaysBefore, securityReviewFacts, securityReviewAgenda, securityReviewDue, securityReviewEmailHtml, securityReviewIcs, securityReviewInviteAttached, securityReviewInviteText, srNamePresent, securityReviewAttendance, securityReviewAbsences, securityReviewTrend, chairSummary, chairSummaryHtml, wallTimeToUtc,
   SECURITY_REVIEW_LENGTH, SECURITY_REVIEW_AGENDA, SECURITY_REVIEW_QUARTERLY, SECURITY_REVIEW_KICKOFF, SECURITY_REVIEW_KIND_LABEL, DONE_ACTION
 };

@@ -2398,7 +2398,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
         subject: label + ' leadership security meeting ' + rec.n + ' \u2014 ' + SR.srDate(rec.date),
         body: { contentType: 'HTML', content: html },
         toRecipients: to.map(address => ({ emailAddress: { address } })),
-        attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] }, saveToSentItems: false } });
+        attachments: SR.securityReviewInviteAttached(parseJsonSetting(settings.securityReviewBooked, null), rec) ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + rec.n + '.ics', contentType: 'text/calendar', contentBytes: Buffer.from(ics, 'utf8').toString('base64') }] : [] }, saveToSentItems: false } });
       rec.status = 'Sent'; rec.sentAt = today; rec.sentTo = to.join(', ');
       done.push('sent ' + rec.id);
     } catch (e) { context.log.error('Checkpoint security review: could not send the agenda: ' + (e && e.message ? e.message : e)); }

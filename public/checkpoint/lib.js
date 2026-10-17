@@ -7378,6 +7378,13 @@
      plain text; html (optional) = the same as formatted text, which
      Outlook and Teams show in the invite body. Lines are folded at 75
      octets as RFC 5545 requires. */
+  /* Whether the agenda email carries a calendar invite: not when the
+     meeting was booked outside Checkpoint (someone already sent their
+     own invite), or attendees would get a second calendar entry. */
+  function securityReviewInviteAttached(booked, rec) {
+    var b = booked || {};
+    return !(b.external && rec && b.n === rec.n && b.date === String(rec.date || '').slice(0, 10));
+  }
   function securityReviewIcs(meta) {
     var m = meta || {};
     var stamp = function (iso) { return String(iso).replace(/[-:]/g, '').replace(/\.\d+/, '').slice(0, 15) + 'Z'; };
@@ -13571,7 +13578,7 @@
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,
     wallTimeToUtc: wallTimeToUtc, securityReviewDue: securityReviewDue, securityReviewMinutesHtml: securityReviewMinutesHtml, SECURITY_REVIEW_KIND_LABEL: SECURITY_REVIEW_KIND_LABEL, securityReviewDayIn: securityReviewDayIn, nextSecurityReviewDate: nextSecurityReviewDate, workingDaysBefore: workingDaysBefore,
     buildSecurityReviewPack: buildSecurityReviewPack, securityReviewFacts: securityReviewFacts, securityReviewAgenda: securityReviewAgenda,
-    securityReviewEmailHtml: securityReviewEmailHtml, securityReviewIcs: securityReviewIcs, securityReviewTrend: securityReviewTrend, securityReviewYearSummary: securityReviewYearSummary,
+    securityReviewEmailHtml: securityReviewEmailHtml, securityReviewIcs: securityReviewIcs, securityReviewInviteAttached: securityReviewInviteAttached, securityReviewTrend: securityReviewTrend, securityReviewYearSummary: securityReviewYearSummary,
     EXCLUSION_RULES: EXCLUSION_RULES, REMOTE_APPLICABLE: REMOTE_APPLICABLE, remoteApplicableReason: remoteApplicableReason,
     suggestedExclusions: suggestedExclusions, suggestedJustification: suggestedJustification, exclusionConflicts: exclusionConflicts, exclusionsStatement: exclusionsStatement,
     ASSET_RETIRE_REASONS: ASSET_RETIRE_REASONS, ASSET_DISPOSAL_METHODS: ASSET_DISPOSAL_METHODS,
