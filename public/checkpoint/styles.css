@@ -678,8 +678,10 @@ table{width:100%;border-collapse:collapse}
    Sentence-case labels also step up from 9.5px to 11px: lowercase has
    less presence than caps at the same size, and the tracking that made
    caps legible is what makes lowercase look loose, so it goes too. */
-th{font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);font-weight:700;text-align:left;padding:12px 14px;border-bottom:1px solid var(--line)}
+th{font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);font-weight:700;text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
 td{padding:14px;border-bottom:1px solid var(--line);font-size:var(--fs-2);color:var(--paper-dim);vertical-align:middle}
+/* The actions register has ten columns: a little less side padding keeps it inside its card at 1400px and up, where the card does not scroll. */
+#v-actions .card > table th,#v-actions .card > table td{padding-left:10px;padding-right:10px}
 /* Evidence drawer's per-check data table (App.viewEvidence/
    renderEvidenceData in app.js) — the drawer is much narrower than a
    full-width register view, so this tightens the base table/th/td
@@ -1408,6 +1410,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
    set, so nesting the toggle inside .top would trap it below .side/
    .nav-overlay regardless of its own z-index. Fixed-positioned here
    instead, it competes directly with them and safely wins. */
+.top-more{display:none}
 .nav-toggle{display:none;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:4px;width:36px;height:36px;align-items:center;justify-content:center;transition:border-color .15s var(--ease),color .15s var(--ease)}
 .nav-toggle:hover{border-color:var(--gold);color:var(--gold-light)}
 .nav-toggle:active{background:var(--surface-hover)}
@@ -1644,6 +1647,11 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
   .top .client{min-width:0}
   .top .modenote{display:none}
   .gsearch{order:3;flex-basis:100%;max-width:none;margin:0}
+  /* One row on phones: Reset, Help and Settings fold behind More. */
+  .top-more{display:inline-flex;min-width:40px;justify-content:center;font-size:var(--fs-3);line-height:1}
+  .top .right > .btn:not(#btnScanTop):not(.top-more){display:none}
+  .top.more-open .right{flex-wrap:wrap;justify-content:flex-end}
+  .top.more-open .right > .btn:not(#btnScanTop):not(.top-more){display:inline-flex}
   .view{padding:18px}
   .vhead h1{font-size:var(--fs-4)}
   /* every "+ Add X" panel's 2-column form (risks/actions/audits/
@@ -1859,6 +1867,7 @@ tr.asset-retired td { opacity: .85; }
 .integ-card { margin-bottom: 14px; }
 .integ-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .integ-head h3 { margin: 0 0 4px; }
+@media (max-width:600px){ .integ-head { flex-direction: column; gap: 8px; } .integ-head .integ-st { order: -1; align-self: flex-start; } }
 .integ-head p { margin: 0; max-width: 720px; }
 .integ-st { white-space: nowrap; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); }
 .integ-on { color: var(--pass); border-color: var(--pass); }
@@ -2051,7 +2060,11 @@ tr.asset-retired td { opacity: .85; }
 .pg-howto{white-space:normal}
 .pg-foot{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:6px 12px}
 .pg-foot:empty{display:none}
-.next-step-bar.in-guide{margin:4px 0 0;flex:0 1 auto;margin-left:auto}
+.next-step-bar.in-guide{margin:4px 0 0;flex:1 1 auto}
+.page-guide.pg-folded{padding:6px 12px}
+.pg-about summary{cursor:pointer;color:var(--paper-dim);font-size:var(--fs-1);padding:4px 0}
+.pg-about[open]{flex-basis:100%}
+.pg-about[open] > p{margin-top:6px}
 .howto-steps{margin:0;padding-left:20px;display:grid;gap:10px;line-height:1.6}
 .howto-list{list-style:none;padding:0;margin:0;display:grid;gap:12px}
 .howto-list li{display:grid;gap:2px}

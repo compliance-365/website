@@ -7223,6 +7223,14 @@ function showModal(opts) {
   /* "What is this page?": one plain line under each page's heading,
      what it is and what this person does there, plus the words on the
      page explained. */
+  /* Pages whose help has been seen before, as of this session's start:
+     their help folds to one "About this page" line. A page seen for the
+     first time keeps its help open for the rest of the session. */
+  var PAGE_GUIDE_SEEN_KEY = 'cpGuideSeen';
+  var _guideSeenAtStart = (function () { try { var a = JSON.parse(localStorage.getItem(PAGE_GUIDE_SEEN_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
+  function markPageGuideSeen(v) {
+    try { var a = JSON.parse(localStorage.getItem(PAGE_GUIDE_SEEN_KEY) || '[]'); if (!Array.isArray(a)) a = []; if (a.indexOf(v) === -1) { a.push(v); localStorage.setItem(PAGE_GUIDE_SEEN_KEY, JSON.stringify(a)); } } catch (e) { /* private window: help stays open */ }
+  }
   function renderPageGuide(v) {
     var sec = document.getElementById('v-' + v);
     var head = sec && sec.querySelector('.vhead');
@@ -7232,11 +7240,17 @@ function showModal(opts) {
     if (!g) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.className = 'page-guide'; head.appendChild(el); }
     var guides = window.CheckpointLib.howTosFor(v);
-    el.innerHTML = '<p><b>What this page is:</b> ' + esc(g.what) + ' <b>What you do here:</b> ' + esc(g.you) +
-      (guides.length ? ' <span class="pg-howto"><b>How to:</b> ' + howToLinksHtml(guides) + '</span>' : '') + '</p>' +
-      /* The terms toggle and the Next step bar share one row, so the
-         help takes no more height than it did before the bar existed. */
-      '<div class="pg-foot">' + (g.terms.length ? '<details class="pg-terms"><summary>Words used on this page</summary><dl>' + g.terms.map(function (t) { return '<dt>' + esc(t.term) + '</dt><dd>' + esc(t.def) + '</dd>'; }).join('') + '</dl></details>' : '') + '</div>';
+    var body = '<p><b>What this page is:</b> ' + esc(g.what) + ' <b>What you do here:</b> ' + esc(g.you) +
+      (guides.length ? ' <span class="pg-howto"><b>How to:</b> ' + howToLinksHtml(guides) + '</span>' : '') + '</p>';
+    var terms = g.terms.length ? '<details class="pg-terms"><summary>Words used on this page</summary><dl>' + g.terms.map(function (t) { return '<dt>' + esc(t.term) + '</dt><dd>' + esc(t.def) + '</dd>'; }).join('') + '</dl></details>' : '';
+    var folded = _guideSeenAtStart.indexOf(v) !== -1;
+    var keepOpen = el.querySelector('.pg-about[open]');
+    el.classList.toggle('pg-folded', folded);
+    /* The terms toggle (or, folded, the About line) and the Next step
+       bar share one row, so the help takes as little height as it can. */
+    el.innerHTML = folded ? '<div class="pg-foot"><details class="pg-about"' + (keepOpen ? ' open' : '') + '><summary>About this page</summary>' + body + terms + '</details></div>'
+      : body + '<div class="pg-foot">' + terms + '</div>';
+    markPageGuideSeen(v);
   }
   /* Which welcome and which page help someone gets: top management,
      view-only, own-tasks-only, or the person running the ISMS. */
@@ -19567,6 +19581,14 @@ function showModal(opts) {
 
     closeDrawer: function () {
       closeDrawerUi();
+    },
+
+    toggleTopMore: function () {
+      var top = document.querySelector('.top'), b = document.getElementById('btnTopMore');
+      if (!top) return;
+      var on = !top.classList.contains('more-open');
+      top.classList.toggle('more-open', on);
+      if (b) b.setAttribute('aria-expanded', on ? 'true' : 'false');
     },
 
     toggleNav: function () {

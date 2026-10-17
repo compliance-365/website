@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.167.0',
+    date: '2026-10-17',
+    entries: [
+      'Page help folds away once you have seen it: from your next visit, each page shows one About this page line (open it any time) instead of the full explanation, so the page starts with its content.',
+      'Phones: Reset, Help and Settings sit behind a More button, so the top bar is one row shorter.',
+      'The Next step bar now lines up on the left of the page help instead of floating to the right.',
+      'Integrations on phones: the Reporting badge sits above each card\u2019s title instead of squeezing its description into a narrow column.',
+      'Column headings stay on one line in every register, and the Actions register now fits inside its card on wide screens instead of running past the edge.'
+    ]
+  },
+  {
     version: '1.166.1',
     date: '2026-10-17',
     entries: [
