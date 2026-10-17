@@ -285,21 +285,38 @@ const faqLd = {
   </div>
 </section>
 
-<!-- HOW IT WORKS — four steps, no scroll trick -->
+<!-- HOW IT WORKS — the 365 cycle: as you scroll the steps, the dot
+     travels round the C of the logo, one quarter per step. -->
 <section class="section reveal-section band-light" id="method">
   <div class="container">
-    <p class="home-eyebrow">How it works</p>
-    <h2 style="max-width:24ch;">Four steps to audit-ready, at a price agreed up front.</h2>
-    <ol class="steps">
-      {steps.map((s, i) => (
-        <li class="step" style={`--stagger:${i}`}>
-          <span class="step-num">0{i + 1}</span>
-          <h3>{s.title}</h3>
-          <p>{s.text}</p>
-          <span class="step-when">{s.when}</span>
-        </li>
-      ))}
-    </ol>
+    <div style="margin-bottom:40px;">
+      <p class="home-eyebrow">How it works</p>
+      <h2 style="max-width:24ch;">Four steps to audit-ready, at a price agreed up front.</h2>
+      <p class="home-lead">Every step happens inside the Microsoft 365 you already use. Scroll through them and follow the dot around the cycle.</p>
+    </div>
+    <div class="method-grid">
+      <div class="cycle-pane" aria-hidden="true">
+        <svg viewBox="0 0 200 200" fill="none" id="cycleSvg" style="width:min(100%,340px);">
+          <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(11,11,12,.12)" stroke-width="7" stroke-linecap="round"/>
+          <path id="cycleProg" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="7" stroke-linecap="round"/>
+          <circle id="cycleDot" cx="176.2" cy="56" r="10" fill="#BE4A1E"/>
+        </svg>
+        <div class="cycle-label">
+          <span id="cycleNum">STEP 01</span>
+          <b id="cycleName">{steps[0].title}</b>
+        </div>
+      </div>
+      <ol id="phases" class="phases">
+        {steps.map((s, i) => (
+          <li class={`phase${i === 0 ? ' active' : ''}`} data-name={s.title} data-num={`STEP 0${i + 1}`}>
+            <div class="phase-num">0{i + 1}</div>
+            <h3>{s.title}</h3>
+            <p>{s.text}</p>
+            <div class="phase-deliver">{s.when}</div>
+          </li>
+        ))}
+      </ol>
+    </div>
     <p style="margin-top:2rem;"><a class="home-more" href={`${base}how-we-work/`}>See how we work in detail →</a></p>
   </div>
 </section>
@@ -831,12 +848,12 @@ const faqLd = {
     transform: none;
   }
   @media (prefers-reduced-motion: no-preference) {
-    .need-card, .step, .pl-item {
+    .need-card, .pl-item {
       opacity: 0; transform: translateY(10px);
       transition: opacity .5s var(--ease), transform .5s var(--ease);
       transition-delay: calc(var(--stagger, 0) * 90ms);
     }
-    .is-visible .need-card, .is-visible .step,
+    .is-visible .need-card,
     .hero-dk .pl-item { opacity: 1; transform: none; }
     /* proof-ledger sits in the hero, which has no reveal-section wrapper —
        stagger it in on load instead of on scroll. */
@@ -899,13 +916,26 @@ const faqLd = {
   .needs-foot{margin-top:1.75rem;color:var(--bd-soft);font-size:15px;line-height:1.8}
   .needs-foot a{color:var(--bd-link);font-weight:600}
 
-  /* ─── How it works ─── */
-  .steps{list-style:none;padding:0;margin:2.5rem 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;counter-reset:none}
-  .step{background:var(--bd-card);border:1px solid var(--bd-card-bd);border-top:3px solid #BE4A1E;border-radius:10px;padding:24px 22px;display:flex;flex-direction:column;gap:8px}
-  .step-num{font-family:Manrope,system-ui;font-size:11px;letter-spacing:.2em;color:var(--bd-eyebrow);font-weight:800;font-variant-numeric:tabular-nums}
-  .step h3{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:22px;margin:0;color:var(--bd-fg)}
-  .step p{font-size:14.5px;line-height:1.65;color:var(--bd-soft);margin:0;flex:1}
-  .step-when{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);font-weight:700;font-family:Manrope,system-ui}
+  /* ─── How it works: the 365 cycle ───
+     The pane sticks while the four steps scroll past; the script maps
+     scroll progress through #phases onto the arc, so the dot reaches each
+     quarter of the C as its step comes into focus. The active step is
+     marked by an orange rule, not by dimming the others: every step stays
+     readable, with or without the script. */
+  .method-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(30px,5vw,72px);align-items:start}
+  .cycle-pane{position:sticky;top:110px;display:flex;flex-direction:column;align-items:center;padding:20px 0 40px}
+  .cycle-label{margin-top:18px;text-align:center}
+  .cycle-label b{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:22px;display:block;color:var(--bd-fg)}
+  .cycle-label span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--bd-eyebrow);font-weight:700;font-family:Manrope,system-ui}
+  .phases{list-style:none;margin:0;padding:0}
+  .phase{min-height:46vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid var(--bd-rule);border-left:2px solid transparent;padding:36px 0 36px 22px;transition:border-color .5s var(--ease)}
+  .phase:last-child{border-bottom:none}
+  .phase.active{border-left-color:#BE4A1E}
+  .phase-num{font-family:Manrope,system-ui;font-size:11px;letter-spacing:.2em;color:var(--bd-eyebrow);font-weight:800;margin-bottom:12px;font-variant-numeric:tabular-nums}
+  .phase h3{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:clamp(1.5rem,2.6vw,2.1rem);color:var(--bd-fg);margin:0 0 12px}
+  .phase p{font-size:15px;line-height:1.75;color:var(--bd-soft);max-width:48ch;margin:0 0 16px}
+  .phase-deliver{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);font-weight:700;font-family:Manrope,system-ui}
+  @media(max-width:900px){.method-grid{grid-template-columns:minmax(0,1fr)}.cycle-pane{position:relative;top:0;padding-bottom:10px}.phase{min-height:auto;padding:28px 0 28px 22px}}
 
   /* ─── Checkpoint ─── */
   .ckpt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(30px,5vw,64px);align-items:center}
@@ -993,6 +1023,37 @@ const faqLd = {
   }, { threshold: 0.1 });
   sections.forEach(function (s) { io.observe(s); });
 
+
+  /* ── Scroll-driven 365 cycle ── */
+  var cyclePath = document.getElementById('cyclePath');
+  var cycleProg = document.getElementById('cycleProg');
+  var cycleDot  = document.getElementById('cycleDot');
+  var phasesWrap = document.getElementById('phases');
+  if (cyclePath && cycleProg && cycleDot && phasesWrap) {
+    var L = cyclePath.getTotalLength();
+    cycleProg.style.strokeDasharray  = L;
+    cycleProg.style.strokeDashoffset = L;
+    var phaseEls  = phasesWrap.querySelectorAll('.phase');
+    var cycleNum  = document.getElementById('cycleNum');
+    var cycleName = document.getElementById('cycleName');
+    function updateCycle() {
+      var r = phasesWrap.getBoundingClientRect(), vh = window.innerHeight;
+      var p = Math.min(Math.max((vh * 0.55 - r.top) / r.height, 0), 0.9999);
+      var pt = cyclePath.getPointAtLength(L * p);
+      cycleDot.setAttribute('cx', pt.x);
+      cycleDot.setAttribute('cy', pt.y);
+      cycleProg.style.strokeDashoffset = L * (1 - p);
+      var idx = Math.min(Math.floor(p * 4), 3);
+      var ph  = phaseEls[idx];
+      phaseEls.forEach(function (el, i) { el.classList.toggle('active', i === idx); });
+      if (cycleName && cycleNum && cycleName.textContent !== ph.dataset.name) {
+        cycleNum.textContent  = ph.dataset.num;
+        cycleName.textContent = ph.dataset.name;
+      }
+    }
+    window.addEventListener('scroll', updateCycle, { passive: true });
+    updateCycle();
+  }
 })();
 </script>
 
