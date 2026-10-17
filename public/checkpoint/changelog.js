@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.166.1',
+    date: '2026-10-17',
+    entries: [
+      'Fixed: an empty bar showed above the table on Actions, Suppliers, the Statement of Applicability and Documents. The bulk-action and focus bars now appear only when you select rows or filter.',
+      'The search box in the top bar no longer shrinks to a sliver on laptop screens, and the top bar buttons stay on one line. The demo note next to the client name is left out below 1500 pixels wide to make room.'
+    ]
+  },
+  {
     version: '1.166.0',
     date: '2026-10-17',
     entries: [

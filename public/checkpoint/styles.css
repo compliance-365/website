@@ -519,7 +519,10 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .client{display:flex;align-items:center;gap:10px;font-size:var(--fs-2);color:var(--paper-dim);min-width:0}
 .client .cname{color:var(--paper);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .right{display:flex;gap:10px;align-items:center}
-.gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
+.gsearch{position:relative;flex:1 1 200px;min-width:180px;max-width:340px;margin:0 18px}
+.client .modenote{min-width:0;flex:0 1 auto}
+@media(min-width:1001px){.top .right .btn{white-space:nowrap}}
+@media(max-width:1500px){.top .modenote{display:none}}
 .gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:var(--r-sm);font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
 .gsearch input:hover{border-color:rgba(190, 74, 30,.5)}
 .gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(var(--paper-rgb),.07)}
@@ -1016,6 +1019,7 @@ a.tk-chip:hover{color:var(--paper);border-color:var(--gold-light)}
    read as selected while hovered, so the selection wash wins. */
 .row-sel:hover > td{background:rgba(var(--gold-rgb),.12)}
 @media(max-width:860px){.bulk-bar{position:static}}
+.bulk-bar[hidden],.focus-bar[hidden]{display:none}
 .focus-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:11px 16px;border:1px solid rgba(var(--gold-light-rgb),.35);border-left:3px solid var(--gold);border-radius:var(--r-sm);background:rgba(var(--gold-rgb),.07);font-size:var(--fs-2);color:var(--paper-dim)}
 .focus-bar b{color:var(--paper);font-variant-numeric:tabular-nums}
 .status-quiet{display:inline-flex;align-items:center;gap:7px;color:var(--paper-dim);white-space:nowrap}
