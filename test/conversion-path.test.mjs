@@ -52,7 +52,10 @@ test('the IT admin email: approval link, honest about what it grants, short enou
 test('homepage offers the self-serve path, priced from pricing.js', () => {
   const home = read('src/pages/index.astro');
   assert.match(home, /class="hdk-self/);
-  assert.match(home, /fmtAud\(Math\.min\(\.\.\.MODULES\.map\(\(m\) => m\.prices\.micro\)\)\)/);
+  // One price, the standard per-framework one, used everywhere on the page
+  // (it used to quote the cheapest module in the hero and $7,000 elsewhere).
+  assert.match(home, /const fromPrice = fmtAud\(MODULES\.find\(\(m\) => m\.id === 'iso27001'\)\.prices\.micro\)/);
+  assert.ok(!/\$7,000|\$4,999/.test(home), 'no hard-coded Checkpoint price');
   assert.match(home, /checkpoint\/\?demo=1/);
 });
 

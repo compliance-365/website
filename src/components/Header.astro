@@ -69,7 +69,6 @@ const latestPosts = (await getPosts())
 
     <!-- Primary nav -->
     <nav id="primaryNav" class="nav" aria-label="Primary">
-      <a class={`nav-link${isActive(base) && pathname === base ? ' active' : ''}`} href={base}>Home</a>
 
       <!-- Services dropdown -->
       <div class="nav-dd">
@@ -124,23 +123,26 @@ const latestPosts = (await getPosts())
         <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-compass"/></svg> Checkpoint
       </a>
 
-      <!-- Free Resources dropdown -->
+      <!-- Resources dropdown -->
       <div class="nav-dd">
         <button
-          class={`nav-link nav-dd-btn${isActive(base + 'checklist') || isActive(base + 'resources') || isActive(base + 'blog') ? ' active' : ''}`}
+          class={`nav-link nav-dd-btn${isActive(base + 'checklist') || isActive(base + 'resources') || isActive(base + 'blog') || isActive(base + 'case-studies') ? ' active' : ''}`}
           type="button"
           aria-expanded="false"
           aria-controls="freeResourcesMenu"
         >
-          Free Resources <span class="chev" aria-hidden="true">▾</span>
+          Resources <span class="chev" aria-hidden="true">▾</span>
         </button>
-        <div id="freeResourcesMenu" class="nav-dd-menu nav-dd-menu--wide" role="menu" aria-label="Free Resources">
+        <div id="freeResourcesMenu" class="nav-dd-menu nav-dd-menu--wide" role="menu" aria-label="Resources">
           <div class="nav-dd-col" role="none">
           <a role="menuitem" href={base + 'free-roadmap/'} style="background:rgba(190, 74, 30,0.08);border:1px solid rgba(190, 74, 30,0.2);border-radius:8px;margin-bottom:4px;">
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-gift"/></svg></span> Free starter pack
           </a>
           <a role="menuitem" href={base + 'posture-scan/'} style="background:rgba(190, 74, 30,0.08);border:1px solid rgba(190, 74, 30,0.2);border-radius:8px;margin-bottom:4px;">
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-bolt"/></svg></span> Free posture scan
+          </a>
+          <a role="menuitem" href={base + 'case-studies/'}>
+            <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-shield"/></svg></span> Case studies
           </a>
           <a role="menuitem" href={base + 'cost-estimator/'}>
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-note"/></svg></span> Cost estimator
@@ -179,7 +181,6 @@ const latestPosts = (await getPosts())
         </div>
       </div>
 
-      <a class={`nav-link${isActive(base + 'case-studies') ? ' active' : ''}`} href={base + 'case-studies/'}>Results</a>
       <a class={`nav-link${isActive(base + 'about') ? ' active' : ''}`} href={base + 'about/'}>About</a>
       <a class={`nav-link${isActive(base + 'contact') ? ' active' : ''}`} href={base + 'contact/'}>Contact</a>
 

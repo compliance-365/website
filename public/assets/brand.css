@@ -1417,9 +1417,10 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   height: 22px;
 }
 
-@media (min-width: 900px) {
-  .fab-call { display: none; }
-}
+/* Phones get one contact button, not two: the call option lives in the
+   messaging menu (first item), so the separate call bubble no longer
+   stacks above it and covers the page. */
+.fab-call { display: none; }
 
 /* Desktop-only Microsoft Teams chat */
 .fab-teams {
