@@ -374,6 +374,10 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
         font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 400; font-size: clamp(2.1rem, 4.2vw, 3.2rem);
         line-height: 1.1; color: #FAF7F1; margin: 0 0 20px;
       }
+      /* The second phrase of a hero headline, in the full brand orange — the
+         same two-tone line as the link preview cards and LinkedIn banner.
+         Upright: Bricolage ships no italic. */
+      .svc-hero-copy h1 em, .svc-final-cta h2 em { color: var(--accent-display); font-style: normal; font-weight: 600; }
       .svc-hero-copy .section-lead, .svc-hero-copy p {
         color: rgba(250,247,241,.62); font-size: 16px; line-height: 1.75; max-width: 58ch;
         font-family: Manrope, system-ui, sans-serif; margin: 0 0 16px;
