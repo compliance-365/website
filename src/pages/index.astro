@@ -147,9 +147,9 @@ const faqLd = {
         <span class="hl"><span class="hl-i" style="--hl:4"><em class="hdk-accent">you rent.</em></span></span>
       </h1>
       <p class="hdk-sub hdk-rise" style="--rise:2">
-        ISO 27001, SOC 2, Essential Eight and ISO 42001 — audit-ready in 8–14 weeks, inside the Microsoft 365
-        you already own. Fixed price. No third-party platform holding your data.
-        <strong>Every client we've taken to certification has passed on the first attempt.</strong>
+        We get your organisation audit-ready in weeks, not months, and set you up to stay that way.
+        It all runs inside the Microsoft 365 you already use, for a fixed price, with no extra
+        platform holding your data.{' '}<strong>Every client we've taken to certification has passed on the first attempt.</strong>
       </p>
       <div class="hdk-ctas hdk-rise" style="--rise:3">
         <a href={ctaUrl} class="btn-hdk-primary">Scope my certification →</a>
@@ -779,7 +779,7 @@ const faqLd = {
   .hdk-self { margin: 18px 0 0; font-size: .95rem; line-height: 1.6; color: rgba(250, 247, 241, .78); max-width: 640px; }
   .hdk-self span { color: rgba(250, 247, 241, .55); margin-right: .25rem; }
   .hdk-self b { color: #FAF7F1; }
-  .hdk-self a { color: #F0A97F; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; margin-left: .6rem; white-space: nowrap; }
+  .hdk-self a { display: inline-block; color: #F0A97F; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; margin-left: .6rem; white-space: nowrap; } /* inline-block: an unbreakable link moves to the next line whole instead of running off a phone screen */
   .hdk-self a:hover { color: #FAF7F1; }
   /* .btn-hdk-primary / .btn-hdk-ghost now live in BaseLayout.astro (site-wide design system) */
 
@@ -960,7 +960,10 @@ const faqLd = {
   /* Mobile hero */
   @media (max-width: 900px) {
     .hero-dk-inner {
-      grid-template-columns: 1fr;
+      /* minmax(0, 1fr), not 1fr: a bare 1fr track never shrinks below its
+         widest child's min-content, which held the column at 388px and
+         pushed the copy past the right edge on 360-390px phones. */
+      grid-template-columns: minmax(0, 1fr);
       min-height: auto;
       padding-top: 40px;
     }
