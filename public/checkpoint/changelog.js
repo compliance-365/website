@@ -12,6 +12,18 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.168.0',
+    date: '2026-10-17',
+    entries: [
+      'Menu badges now mean one thing everywhere: something needs your attention there. The Risk register badge counts risks above appetite or overdue for review, and the Actions register badge counts overdue actions, instead of every open one.',
+      'Hover over any badge to see what it counts (for example, 17 clauses not started); a closed menu group lists everything that needs attention inside it. Screen readers read the same words.',
+      'More room for the menu: the footer is now one compact block, and the rows are a little tighter, so the menu scrolls less on a laptop and fits on a larger screen.',
+      'The menu fades at its top or bottom edge when there is more to scroll to.',
+      'The Simple and Full menu choice is now a clear switch at the bottom of the menu.',
+      'The first menu group is headed Home. Once your build is complete, Start here and Guided build leave the menu; they stay reachable from search.'
+    ]
+  },
+  {
     version: '1.167.0',
     date: '2026-10-17',
     entries: [

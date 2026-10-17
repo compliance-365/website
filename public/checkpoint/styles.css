@@ -472,18 +472,21 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
    .version-tag below the viewport with no way to reach them —
    min-height:0 overrides flex's default min-height:auto, which is
    what let this overflow past .side's fixed 100vh instead of scrolling. */
-.nav-scroll{flex:1;min-height:0;overflow-y:auto}
+.nav-scroll{flex:1;min-height:0;overflow-y:auto;--ft:0px;--fb:0px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%)}
+.nav-scroll.fade-top{--ft:28px}
+.nav-scroll.fade-bottom{--fb:28px}
+.nav-item.nav-built{display:none}
 .word{display:flex;align-items:baseline;line-height:1;font-size:var(--fs-2)}
 .word .c1{font-weight:300;letter-spacing:.13em;color:var(--paper)}
 .word .c2{font-weight:800;color:var(--accent-ink);margin-left:.05em}
 .prod{padding:14px 22px 6px;font-size:var(--fs-1);letter-spacing:.24em;text-transform:uppercase;color:var(--accent-ink);font-weight:700}
-.nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--paper-dim);font-size:var(--fs-2);padding:11px 22px;text-align:left;transition:color .15s var(--ease),background .15s var(--ease);border-left:3px solid transparent;cursor:pointer}
+.nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--paper-dim);font-size:var(--fs-2);padding:7px 22px;text-align:left;transition:color .15s var(--ease),background .15s var(--ease);border-left:3px solid transparent;cursor:pointer}
 .nav-item:hover{color:var(--paper);background:var(--surface-hover)}
 .nav-item:active{background:rgba(var(--paper-rgb),.08)}
 .nav-item:disabled,.nav-item[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
 .nav-item.on{color:var(--paper);background:var(--surface-hover);border-left-color:var(--gold)}
 .nav-item .n{background:rgba(190, 74, 30,.18);color:var(--gold-light);font-size:var(--fs-1);font-weight:800;border-radius:99px;padding:2px 8px}
-.nav-group{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.nav-group{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .nav-group:first-child{margin-top:2px;padding-top:0;border-top:none}
 .nav-label{padding:0 22px 6px;font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
 summary.nav-label{cursor:pointer;list-style:none;user-select:none}
@@ -498,9 +501,10 @@ summary.nav-label:hover{color:var(--paper-dim)}
    shown while collapsed; once open, the real badges are visible and
    this would be redundant. */
 details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold-light);margin-left:6px;vertical-align:middle}
-.side .foot{margin-top:auto;padding:16px 22px 0;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--paper-faint);line-height:1.7}
+.side-foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 16px 12px;border-top:1px solid var(--line)}
+.side .foot{margin:0;flex-basis:100%;font-size:var(--fs-1);color:var(--paper-faint);line-height:1.4}
 .side .foot b{color:var(--paper-dim);display:block;letter-spacing:.1em;text-transform:uppercase;font-size:var(--fs-eyebrow)}
-.version-tag{margin:10px 22px 16px;background:none;border:none;padding:0;text-align:left;font-family:Manrope,sans-serif;font-size:var(--fs-1);letter-spacing:.06em;color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
+.version-tag{margin:0;background:none;border:none;padding:0;text-align:left;font-family:Manrope,sans-serif;font-size:var(--fs-1);letter-spacing:.06em;color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
 .version-tag:hover,.version-tag:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
 .version-tag:active{color:var(--accent-ink)}
 
@@ -1716,7 +1720,12 @@ select.inline-edit{max-width:112px}
 
 /* Simple menu: specialist views hidden (applyNavMode()). */
 body.nav-simple .nav-full{display:none!important}
-.nav-mode{display:block;width:100%;background:none;border:none;text-align:left;padding:8px 22px;font:inherit;font-size:var(--fs-1);color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent}
+.nav-mode{display:flex;align-items:center;justify-content:space-between;gap:10px;width:calc(100% - 32px);margin:8px 16px 4px;background:none;border:none;padding:0;font:inherit;font-size:var(--fs-1);color:var(--paper-faint);cursor:pointer}
+.nav-mode .nm-k{letter-spacing:.12em;text-transform:uppercase;font-weight:700;font-size:var(--fs-eyebrow)}
+.nav-mode .nm-seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;padding:2px}
+.nav-mode .nm-opt{padding:3px 10px;border-radius:99px;color:var(--paper-faint)}
+.nav-mode:not(.is-full) .nm-simple,.nav-mode.is-full .nm-full{background:var(--surface-hover);color:var(--paper);font-weight:700}
+.nav-mode:focus-visible .nm-seg{outline:2px solid var(--gold);outline-offset:2px}
 .nav-mode:hover,.nav-mode:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
 
 /* SoA: one line per control. */
@@ -1934,7 +1943,7 @@ tr.asset-retired td { opacity: .85; }
 .nfy-k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
 #nextForYou,#myNextForYou{border-left:3px solid var(--gold)}
 .nfy-b{flex:0 0 auto}
-.nav-help{display:block;margin:8px 16px 0;background:none;border:1px solid var(--line);border-radius:8px;color:var(--paper-dim);font:inherit;font-size:var(--fs-2);padding:8px 10px;text-align:left;cursor:pointer}
+.nav-help{display:inline-block;margin:0;background:none;border:1px solid var(--line);border-radius:8px;color:var(--paper-dim);font:inherit;font-size:var(--fs-1);padding:5px 10px;text-align:left;cursor:pointer}
 .nav-help:hover,.nav-help:focus-visible{color:var(--paper);border-color:var(--gold)}
 
 /* What is this page: a plain-English line under each heading. */
