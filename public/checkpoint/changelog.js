@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.166.0',
+    date: '2026-10-17',
+    entries: [
+      'Fixed: saving the leadership meeting minutes on the day of the meeting made that same day the next meeting, so the next agenda could be prepared and sent for a meeting that had just finished. The next meeting now always comes after the slot of the last one held, whether it was held early, on the day or late.',
+      'The next meeting is booked as soon as the minutes are saved. With the agenda set to send automatically, a calendar invite for the next meeting goes to the attendees straight away; otherwise the Send minutes prompt offers to send the minutes and the invite together. The agenda two working days before updates the same calendar entry instead of adding a second one.',
+      'The leadership meeting card says whether the next meeting is in attendees\u2019 calendars yet, or whether its date changed after the invite went out, with a Send the invite button.'
+    ]
+  },
+  {
     version: '1.165.0',
     date: '2026-10-15',
     entries: [

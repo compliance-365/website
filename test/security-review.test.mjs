@@ -172,6 +172,13 @@ describe('in the browser', { skip: skipReason || false }, () => {
     assert.match(drawer, /Outcome: 1 new action: Enforce MFA for contractors[\s\S]*Security posture[\s\S]*Score up after MFA rollout[\s\S]*Actions[\s\S]*Enforce MFA for contractors[\s\S]*Sam Okafor/i, 'a blank outcome is filled from the decisions');
     assert.ok(await page.evaluate(() => window.App && document.body.innerText !== ''));
     assert.match(await page.locator('#secReviewCard').innerText(), /Meeting 4/, 'the next meeting comes up');
+    const nextCard = await page.locator('#secReviewCard').innerText();
+    assert.match(nextCard, /not in attendees’ calendars yet/, 'the next meeting is not booked yet');
+    await page.evaluate(() => window.App.closeDrawer());
+    await page.click('#secReviewCard button[data-action="App.sendNextSecReviewInvite"]');
+    await page.waitForTimeout(300);
+    assert.match(await page.locator('#secReviewCard').innerText(), /invite sent/, 'booking the next meeting is recorded');
+    assert.equal(await page.locator('#secReviewCard button[data-action="App.sendNextSecReviewInvite"]').count(), 0);
     await page.evaluate(() => window.App.closeDrawer());
     await page.click('[data-action="App.toggleAddReview"]');
     await page.waitForTimeout(300);

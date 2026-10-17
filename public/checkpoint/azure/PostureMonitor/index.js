@@ -2390,7 +2390,7 @@ async function runSecurityReview(g, gAll, context, siteId, lists, optional, sett
     const status = SR.securityReviewStatus(rec.pack);
     const html = SR.securityReviewEmailHtml(agenda, meta, status);
     const startUtc = SR.wallTimeToUtc(rec.date, rec.time || setup.time, setup.timeZone);
-    const ics = SR.securityReviewIcs({ uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc, endUtc: new Date(Date.parse(startUtc) + agenda.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
+    const ics = SR.securityReviewIcs({ uid: 'checkpoint-' + rec.id + '-' + rec.date, sequence: 1, startUtc, endUtc: new Date(Date.parse(startUtc) + agenda.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
       summary: label + ' leadership security meeting ' + rec.n + ' (' + agenda.label + ')', description: SR.securityReviewInviteText(agenda, status, meta), html,
       location: /^https:\/\//i.test(setup.teamsLink || '') ? setup.teamsLink : 'Microsoft Teams' });
     try {

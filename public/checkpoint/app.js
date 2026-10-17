@@ -914,7 +914,7 @@ function showModal(opts) {
     /* bulk equivalents of the per-row actions above — same writes, same
        gating, so a Viewer can't reach them either */
     'editTrainingProfile', 'recordToolboxTalk', 'assignRefresher',
-    'setupSecurityReview', 'srSuggestOutcome', 'srPasteRecap', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'addAuditRequest', 'answerAuditRequest', 'closeAuditRequest', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
+    'setupSecurityReview', 'sendNextSecReviewInvite', 'srSuggestOutcome', 'srPasteRecap', 'prepareSecurityReview', 'sendSecurityReview', 'recordSecurityReview', 'srRiskDecision', 'treatSupplierGaps', 'linkIncidentRisk', 'saveSecurityReviewMinutes', 'sendSecurityReviewMinutes', 'srMoveItem', 'srSkipItem', 'srRestoreItems', 'srAddItem', 'srAddDecision', 'srEscalate', 'fileSecYear', 'setMyNotifyPref', 'securityReviewWalkthrough', 'planRiskAudits', 'acceptVendorRenewal', 'sendChairSummary', 'sendPolicyForAck', 'fileWhoDoes', 'assessThreat', 'fileThreatIntel', 'agreeRiskAppetite', 'setStage1Target', 'topMgmtInterview', 'markClauseImplemented', 'backupNow', 'setBackupEnabled', 'setAckChase', 'setPremises', 'applyExclusionSuggestion', 'dismissExclusionSuggestion', 'retireAsset', 'keepAsset', 'restoreAsset', 'handOver', 'registerReviewKeep', 'registerReviewChange', 'registerReviewRetire', 'checkEvidence', 'runMockAudit', 'requestApproval', 'approveRequested', 'addAuditRequest', 'answerAuditRequest', 'closeAuditRequest', 'draftNdbNotice', 'requestReview', 'reviewRequested', 'recordDocReview', 'setDocReviewLevel', 'toggleRiskAcceptSecond', 'requestRiskAcceptance', 'acceptRequestedRisk', 'setActionField', 'applyTicketSync', 'linkTicket', 'matchOwners', 'reviewNoChange', 'discoverVendors', 'addDiscoveredVendor', 'dismissVendorCandidate', 'vendorTierChanged', 'approveAllProposed', 'approveCriticalProposed', 'dismissGroup', 'groupExistingRisks', 'dismissAllProposed', 'confirmAllSuggestions', 'dismissAllSuggestions',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk',
@@ -11748,7 +11748,7 @@ function showModal(opts) {
     var s = secReviewSetup() || {}, a = secReviewAgenda(rec);
     var startUtc = window.CheckpointLib.wallTimeToUtc(rec.date, rec.time || s.time, s.timeZone);
     return window.CheckpointLib.securityReviewIcs({
-      uid: 'checkpoint-' + rec.id + '-' + rec.date, startUtc: startUtc, endUtc: new Date(Date.parse(startUtc) + a.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
+      uid: 'checkpoint-' + rec.id + '-' + rec.date, sequence: 1, startUtc: startUtc, endUtc: new Date(Date.parse(startUtc) + a.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
       summary: clientDisplayLabel() + ' leadership security meeting ' + rec.n + ' (' + a.label + ')',
       description: window.CheckpointLib.securityReviewInviteText(a, window.CheckpointLib.securityReviewStatus(rec.pack), secReviewMeta(rec)),
       html: window.CheckpointLib.securityReviewEmailHtml(a, secReviewMeta(rec), window.CheckpointLib.securityReviewStatus(rec.pack)),
@@ -11757,6 +11757,42 @@ function showModal(opts) {
   }
   function secReviewRecipients() {
     return String((secReviewSetup() || {}).emails || '').split(/[,;\s]+/).filter(function (x) { return /@/.test(x); });
+  }
+  /* The next meeting, booked once the last one's minutes are saved: a
+     calendar invite so attendees hold the slot. It carries the UID the
+     agenda invite uses two working days before (with a higher SEQUENCE),
+     so the agenda updates this event instead of adding a second one. */
+  function secReviewBooked() {
+    try { var b = JSON.parse((S.settings && S.settings.securityReviewBooked) || 'null'); return b && typeof b === 'object' ? b : null; } catch (e) { return null; }
+  }
+  function secReviewNeedsInvite(nx) {
+    var b = secReviewBooked();
+    return !!(nx && !nx.rec && nx.date && !(b && b.n === nx.n && b.date === nx.date));
+  }
+  async function sendNextSecReviewInvite(quiet) {
+    var L = window.CheckpointLib, nx = secReviewNext(), s = secReviewSetup() || {}, to = secReviewRecipients();
+    if (!nx || nx.rec || !nx.date) return false;
+    if (!to.length) { if (!quiet) toast('Add the attendees’ email addresses in the leadership meeting settings first.'); return false; }
+    var id = 'SR-' + String(nx.n).padStart(3, '0'), a = L.securityReviewAgenda(s, nx.n, null, null), time = s.time || '10:00';
+    var startUtc = L.wallTimeToUtc(nx.date, time, s.timeZone);
+    var teams = /^https:\/\//i.test(s.teamsLink || '') ? s.teamsLink : '';
+    var title = clientDisplayLabel() + ' leadership security meeting ' + nx.n + ' (' + a.label + ')';
+    var note = 'Booked when the minutes of the last meeting were saved. The agenda and live figures follow two working days before and update this invite.';
+    var ics = L.securityReviewIcs({ uid: 'checkpoint-' + id + '-' + nx.date, sequence: 0, startUtc: startUtc, endUtc: new Date(Date.parse(startUtc) + a.minutes * 60000).toISOString(), stampUtc: new Date().toISOString(),
+      summary: title, description: note + (teams ? '\n\nJoin: ' + teams : ''), location: teams || 'Microsoft Teams' });
+    if (Store.kind === 'sharepoint') {
+      try {
+        await Graph.sendMail(to.join(','), 'Save the date: ' + clientDisplayLabel() + ' leadership security meeting ' + nx.n + ' — ' + fmtDate(nx.date),
+          '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px"><p>The next leadership security meeting is booked: <b>' + esc(fmtDate(nx.date)) + ' at ' + esc(time) + '</b>, ' + a.minutes + ' minutes (' + esc(a.label) + (s.chair ? ', chair ' + esc(s.chair) : '') + ').</p>' +
+          '<p>The calendar invite is attached. ' + esc(note.replace(/^Booked [^.]*\. /, '')) + '</p>' + (teams ? '<p><a href="' + esc(teams) + '">Join in Microsoft Teams</a></p>' : '') + '</div>',
+          [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'security-review-' + nx.n + '.ics', contentType: 'text/calendar', contentBytes: btoa(unescape(encodeURIComponent(ics))) }]);
+      } catch (e) { warn(e); if (!quiet) toast('Could not send the invite: ' + esc(e.message || e), 'error'); return false; }
+    } else if (!quiet) toast('Demo: the invite for ' + fmtDate(nx.date) + ' would be emailed to ' + esc(to.join(', ')) + '.');
+    var b = { n: nx.n, date: nx.date, time: time, sentAt: new Date().toISOString().slice(0, 10), sentTo: to.join(', ') };
+    try { var v = JSON.stringify(b); S.settings.securityReviewBooked = v; await Store.setSetting('securityReviewBooked', v); } catch (e) { warn(e); }
+    audit('Security review booked', 'SecurityReview', id, '', 'Meeting ' + nx.n + ' on ' + nx.date + ' at ' + time + ', invite sent to ' + to.join(', ') + (quiet ? ' (automatically)' : ''));
+    if (!quiet && Store.kind === 'sharepoint') toast('Meeting ' + nx.n + ' booked for ' + fmtDate(nx.date) + ': invite sent to ' + to.length + ' attendee' + (to.length === 1 ? '' : 's'));
+    return true;
   }
   /* Files the agenda (Clause 9.1) or the minutes (9.1, or 9.3 for a
      management review meeting) into the clause's evidence folder. */
@@ -11840,6 +11876,8 @@ function showModal(opts) {
     if (rec && nx.send && Store.kind === 'sharepoint' && rec.status === 'Prepared') await sendSecurityReviewNow(rec, true);
     else if (rec && rec.status === 'Sent' && !rec.agendaFiled) await fileSecReviewEvidence(rec, 'agenda');
     if (Store.kind === 'sharepoint') await sendSecReviewFollowUps();
+    var today = new Date().toISOString().slice(0, 10), s = secReviewSetup() || {};
+    if (!nx.rec && !nx.prepare && nx.date > today && s.autoSend === 'true' && Store.kind === 'sharepoint' && secReviewRecipients().length && secReviewNeedsInvite(nx)) await sendNextSecReviewInvite(true);
     renderSecurityReviewCard();
   }
   /* A week after a meeting, a nudge to the owners of its decisions that
@@ -11896,6 +11934,8 @@ function showModal(opts) {
     var rec = nx && nx.rec;
     var mins = nx ? window.CheckpointLib.securityReviewAgenda(s, nx.n, null, rec).minutes : 60;
     var state = !rec ? (nx.prepareOn > today ? 'Agenda will be prepared on ' : 'Agenda due to be prepared since ') + fmtDate(nx.prepareOn) : rec.status === 'Sent' ? 'Agenda sent ' + fmtDate(rec.sentAt) : 'Agenda prepared ' + fmtDate(rec.preparedAt) + ', not yet sent';
+    var bk = secReviewBooked(), needsInvite = secReviewNeedsInvite(nx);
+    if (nx && !rec) state += needsInvite ? (bk && bk.n === nx.n ? ' · the date changed after the invite went out' : ' · not in attendees’ calendars yet') : ' · invite sent ' + fmtDate(bk.sentAt);
     var trend = window.CheckpointLib.securityReviewTrend(list.filter(function (r) { return r.status === 'Held'; }).concat(rec && rec.pack ? [rec] : []));
     var held = list.filter(function (r) { return r.status === 'Held'; }).sort(function (a, b) { return b.date.localeCompare(a.date); });
     var mrEvery = Number(s.mrEvery) || 12;
@@ -11906,6 +11946,7 @@ function showModal(opts) {
         '<button class="btn sm" data-action="App.openSecurityReview" data-id="' + esc(rec ? rec.id : 'next') + '">' + (rec ? 'Open agenda' : 'Preview agenda') + '</button>' +
         (READONLY ? '' : (rec && rec.status !== 'Sent' ? '<button class="btn ghost sm" data-action="App.sendSecurityReview" data-id="' + esc(rec.id) + '">Send to attendees</button>' : '') +
           (rec ? '<button class="btn ghost sm" data-action="App.recordSecurityReview" data-id="' + esc(rec.id) + '">Record minutes</button>' : '') +
+          (needsInvite ? '<button class="btn ghost sm" data-action="App.sendNextSecReviewInvite">Send the invite</button>' : '') +
           '<button class="btn quiet sm" data-action="App.setupSecurityReview">Settings</button>') +
       '</div></div>' +
       srCoverageHtml(s, nx) +
@@ -25683,6 +25724,12 @@ function showModal(opts) {
       renderSecurityReviewCard();
       if (rec) { toast(canSend ? 'Kick-off agenda sent' : 'Kick-off agenda prepared'); App.openSecurityReview(rec.id); }
     },
+    sendNextSecReviewInvite: async function () {
+      busy(true);
+      await sendNextSecReviewInvite(false);
+      busy(false);
+      renderSecurityReviewCard();
+    },
     prepareSecurityReview: async function () {
       busy(true);
       var rec = await prepareSecurityReview(false);
@@ -26120,7 +26167,7 @@ function showModal(opts) {
       }
       var saved = await updateSecReview(id, function (r) {
         if (!r.pack) r.pack = secReviewPack();
-        r.status = 'Held'; r.date = heldOn; r.present = present; r.itemNotes = notes; r.heldAt = new Date().toISOString().slice(0, 10);
+        if (!r.slot) r.slot = r.date; r.status = 'Held'; r.date = heldOn; r.present = present; r.itemNotes = notes; r.heldAt = new Date().toISOString().slice(0, 10);
         if (m.apologies) r.apologies = m.apologies; else delete r.apologies;
         if (d.ai) r.aiAssisted = true;
         if (outcome) r.outcome = outcome;
@@ -26140,7 +26187,17 @@ function showModal(opts) {
       if (saved && Store.kind === 'sharepoint') {
         await fileSecReviewEvidence(saved, 'minutes');
         if (reviewId) { try { await App.fileReviewMinutes(reviewId); } catch (e) { warn(e); } }
-        if (secReviewRecipients().length && await showModal({ title: 'Send the minutes?', message: 'Email the minutes, with each decision’s owner and due date, to:\n' + secReviewRecipients().join('\n'), confirmText: 'Send', cancelText: 'Not now' })) await sendSecurityReviewMinutesNow(secReviewById(id), false);
+        var nx2 = secReviewNext(), book = secReviewNeedsInvite(nx2) && secReviewRecipients().length > 0;
+        var autoBook = book && s.autoSend === 'true' && await sendNextSecReviewInvite(true);
+        var nextLine = nx2 ? 'meeting ' + nx2.n + ' (' + secReviewLabel(nx2.n) + ') on ' + fmtDate(nx2.date) + ' at ' + (s.time || '10:00') : '';
+        if (secReviewRecipients().length && await showModal({ title: book && !autoBook ? 'Send the minutes and book the next meeting?' : 'Send the minutes?',
+          message: 'Email the minutes, with each decision’s owner and due date, to:\n' + secReviewRecipients().join('\n') +
+            (autoBook ? '\n\nThe next meeting is booked: the invite for ' + nextLine + ' has gone out.' : book ? '\n\nWith them, the calendar invite for ' + nextLine + ', so the slot is held. The agenda follows two working days before and updates the invite.' : ''),
+          confirmText: book && !autoBook ? 'Send both' : 'Send', cancelText: 'Not now' })) {
+          await sendSecurityReviewMinutesNow(secReviewById(id), false);
+          if (book && !autoBook) await sendNextSecReviewInvite(false);
+        }
+        renderSecurityReviewCard();
         App.openSecurityReview(id);
       }
     },

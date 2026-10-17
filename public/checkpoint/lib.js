@@ -7334,6 +7334,11 @@
     var open = list.filter(function (r) { return r.status !== 'Held'; }).sort(function (a, b) { return a.date.localeCompare(b.date); })[0];
     var n = open ? open.n : list.reduce(function (m, r) { return Math.max(m, r.n || 0); }, 0) + 1;
     var from = setup.startDate && setup.startDate > today ? setup.startDate : today;
+    /* The next meeting comes after the slot of the last one held (the
+       date it was booked for, or held on): minutes saved on the day, or
+       a meeting held early, must not make that same slot due again. */
+    var lastSlot = list.filter(function (r) { return r.status === 'Held'; }).map(function (r) { return String(r.slot || r.date || '').slice(0, 10); }).sort().pop();
+    if (lastSlot && addDaysIso(lastSlot, 1) > from) from = addDaysIso(lastSlot, 1);
     var date = open ? open.date : nextSecurityReviewDate(setup, from);
     if (!date) return null;
     var prepareOn = workingDaysBefore(date, 2);
@@ -7389,7 +7394,7 @@
       return out.join('\r\n');
     };
     return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Compliance365//Checkpoint//EN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
-      'UID:' + esc(m.uid || 'checkpoint-security-review'), 'DTSTAMP:' + stamp(m.stampUtc || m.startUtc), 'DTSTART:' + stamp(m.startUtc), 'DTEND:' + stamp(m.endUtc),
+      'UID:' + esc(m.uid || 'checkpoint-security-review'), m.sequence != null ? 'SEQUENCE:' + (Number(m.sequence) || 0) : '', 'DTSTAMP:' + stamp(m.stampUtc || m.startUtc), 'DTSTART:' + stamp(m.startUtc), 'DTEND:' + stamp(m.endUtc),
       'SUMMARY:' + esc(m.summary), 'DESCRIPTION:' + esc(m.description), m.html ? 'X-ALT-DESC;FMTTYPE=text/html:' + esc(m.html) : '', m.location ? 'LOCATION:' + esc(m.location) : '', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).map(fold).join('\r\n');
   }
   /* The invite's own text: the traffic lights and the agenda, so the
