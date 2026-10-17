@@ -59,7 +59,7 @@
   function slugify(s, i) { return 'sec-' + i + '-' + String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40); }
 
   function mast() {
-    return '<div class="rpt-mast"><svg width="22" height="22" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div>';
+    return '<div class="rpt-mast"><svg width="22" height="22" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#BE4A1E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div>';
   }
 
   /* ============================================================

@@ -145,11 +145,10 @@ describe('drawing degrades rather than throws', () => {
    them by search and replace and left favicon.svg and logo.svg gold: the
    browser tab showed one mark and the header another.
 
-   The dot is the one element that stayed gold on purpose. Orange does
-   every working job on the site — buttons, rules, eyebrows, links — and
-   the mark keeps the single gold accent it always had. That only reads
-   as deliberate if it is gold in every copy, which is what this asserts,
-   against favicon.svg rather than a literal written here. */
+   Since 1.169.0 the dot is the brand orange, like every other orange
+   on the site. Whatever its colour, it only reads as deliberate if it
+   is the same in every copy, which is what this asserts, against
+   favicon.svg rather than a literal written here. */
 describe('every inline copy of the mark uses the same dot colour', () => {
   const DOT = /cx="188" cy="100" r="\d+" fill="(#[0-9A-Fa-f]{6})"/g;
   const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n')
@@ -176,49 +175,43 @@ describe('every inline copy of the mark uses the same dot colour', () => {
   });
 });
 
-/* ===== The mark's dot stays gold =====
-   #A9812E is the one place the pre-1.65 gold survives, and it survives
-   on purpose: the identity is a gold mark beside an orange interface,
-   not one colour that half-migrated. That is invisible in the source —
-   a reader who knows the accent is #BE4A1E sees #A9812E and reasonably
-   concludes someone missed it. "Replace the gold accent with orange
-   #BE4A1E" in fact rewrote these very lines and left the dot alone.
-
-   Asserted rather than only commented, because the failure mode is
-   someone tidying it in good faith across 23 files at once. If the
-   brand mark is ever genuinely re-coloured, this test is the place
-   that says so out loud — update it deliberately, in the same change.
+/* ===== The mark's dot is the brand orange =====
+   Until 1.169.0 the dot was the old gold #A9812E, kept on purpose as a
+   gold mark beside an orange interface. The owner re-coloured it to the
+   brand orange #BE4A1E so it matches the orange "365" beside it. Every
+   copy moved in the same change; this asserts none is left behind in
+   gold, and that the canvas favicon draws the same orange. If the mark
+   is ever re-coloured again, change this test in the same commit.
 
    The red Critical state (#c97a7a) is the documented exception: the
    canvas favicon turns the dot red when the tenant has an open
    Critical residual risk, which is a status signal, not the brand. */
-describe('brand mark — the dot is deliberately still gold', () => {
-  const GOLD = '#A9812E';
+describe('brand mark — the dot is the brand orange', () => {
+  const ORANGE = '#BE4A1E';
   const files = [
     'public/assets/favicon.svg',
     'public/assets/logo.svg',
     'public/checkpoint/index.html',
     'public/checkpoint/onboarding.html',
     'public/checkpoint/report.js',
+    'public/owner/index.html',
+    'public/marketing/index.html',
     'src/components/Header.astro',
-    'src/components/Footer.astro'
+    'src/components/Footer.astro',
+    'src/pages/index.astro',
+    'src/pages/how-we-work.astro'
   ];
 
-  test('every lockup still draws the gold dot', () => {
+  test('every lockup draws the orange dot, and none the old gold', () => {
     for (const f of files) {
       const src = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-      assert.ok(/#A9812E/i.test(src) || /%23A9812E/i.test(src),
-        f + ' no longer contains ' + GOLD + ' — if the brand mark was re-coloured on ' +
-        'purpose, change this test in the same commit; if not, this is the accidental ' +
-        '"finish the orange migration" that the comment in styles.css warns about');
+      assert.ok(/#BE4A1E/i.test(src) || /%23BE4A1E/i.test(src), f + ' no longer contains ' + ORANGE);
+      assert.ok(!/(<circle|%3Ccircle)[^>]*(#|%23)A9812E/i.test(src), f + ' still draws the old gold dot');
     }
   });
 
-  test('the canvas favicon draws the same gold, not the UI accent', () => {
-    assert.match(fn, /#A9812E/i,
-      'updateFavicon() must draw the brand gold; #BE4A1E here would make the tab icon ' +
-      'disagree with every other lockup');
-    assert.doesNotMatch(fn, /#BE4A1E/i,
-      'the UI accent has no business in the brand mark');
+  test('the canvas favicon draws the same orange, not the old gold', () => {
+    assert.match(fn, /#BE4A1E/i, 'updateFavicon() must draw the brand orange dot');
+    assert.doesNotMatch(fn, /#A9812E/i, 'the old gold has no place in the brand mark');
   });
 });

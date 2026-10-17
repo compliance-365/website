@@ -2805,7 +2805,7 @@ function showModal(opts) {
        favicon-geometry.test.mjs reads favicon.svg to assert this canvas
        still matches it. The site-wide gold-to-orange pass rewrote this
        line by search and replace; that test is what caught it. */
-    ctx.fillStyle = hasCritical ? '#c97a7a' : '#A9812E';
+    ctx.fillStyle = hasCritical ? '#c97a7a' : '#BE4A1E';
     ctx.beginPath();
     ctx.arc(188 * K, 100 * K, 17 * K, 0, Math.PI * 2);
     ctx.fill();
