@@ -298,30 +298,46 @@ const faqLd = {
       <div class="orbit-stage" aria-hidden="true">
         <div class="orbit" id="orbit">
           <div class="orbit-floor"></div>
-          <svg class="orbit-depth" viewBox="-24 -24 248 248" fill="none">
-            <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(11,11,12,.10)" stroke-width="10" stroke-linecap="round"/>
-          </svg>
           <svg class="orbit-ring" viewBox="-24 -24 248 248" fill="none">
             <defs>
-              <linearGradient id="cycGrad" gradientUnits="userSpaceOnUse" x1="100" y1="12" x2="100" y2="188">
-                <stop offset="0" stop-color="#BE4A1E"/>
-                <stop offset="1" stop-color="#0B0B0C"/>
-              </linearGradient>
               <radialGradient id="cycGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0" stop-color="#BE4A1E" stop-opacity=".14"/>
+                <stop offset="0" stop-color="#BE4A1E" stop-opacity=".10"/>
                 <stop offset="1" stop-color="#BE4A1E" stop-opacity="0"/>
               </radialGradient>
+              <!-- Spheres for the markers and the dot: lit from the top left. -->
+              <radialGradient id="sphOn" cx="35%" cy="30%" r="75%">
+                <stop offset="0" stop-color="#F6B892"/>
+                <stop offset=".38" stop-color="#D0582A"/>
+                <stop offset="1" stop-color="#8E3111"/>
+              </radialGradient>
+              <radialGradient id="sphOff" cx="35%" cy="30%" r="75%">
+                <stop offset="0" stop-color="#FFFFFF"/>
+                <stop offset=".5" stop-color="#EEE8DF"/>
+                <stop offset="1" stop-color="#C9C0B2"/>
+              </radialGradient>
+              <filter id="cycSoft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.5"/></filter>
+              <filter id="cycSheen" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation=".7"/></filter>
             </defs>
             <circle cx="100" cy="100" r="120" fill="url(#cycGlow)"/>
-            <circle cx="100" cy="100" r="68" stroke="rgba(11,11,12,.10)" stroke-width="1" stroke-dasharray="2 5"/>
-            <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(11,11,12,.10)" stroke-width="8" stroke-linecap="round"/>
-            <path id="cycleProg" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="url(#cycGrad)" stroke-width="8" stroke-linecap="round"/>
-            <g class="cyc-mark" data-i="0"><circle cx="176.2" cy="56.0" r="6"/><circle class="cyc-hit" cx="176.2" cy="56.0" r="14"/><text x="197.0" y="47.2" text-anchor="middle">01</text></g>
-            <g class="cyc-mark" data-i="1"><circle cx="43.4" cy="32.6" r="6"/><circle class="cyc-hit" cx="43.4" cy="32.6" r="14"/><text x="28.0" y="17.4" text-anchor="middle">02</text></g>
-            <g class="cyc-mark" data-i="2"><circle cx="43.4" cy="167.4" r="6"/><circle class="cyc-hit" cx="43.4" cy="167.4" r="14"/><text x="28.0" y="189.0" text-anchor="middle">03</text></g>
-            <g class="cyc-mark" data-i="3"><circle cx="176.2" cy="144.0" r="6"/><circle class="cyc-hit" cx="176.2" cy="144.0" r="14"/><text x="197.0" y="159.2" text-anchor="middle">04</text></g>
-            <circle id="cycleHalo" class="cyc-halo" cx="176.2" cy="56.0" r="17" fill="#BE4A1E"/>
-            <circle id="cycleDot" cx="176.2" cy="56.0" r="10" fill="#BE4A1E" stroke="#FAF7F1" stroke-width="2.5"/>
+            <circle cx="100" cy="100" r="66" stroke="rgba(11,11,12,.10)" stroke-width="1" stroke-dasharray="2 5"/>
+            <!-- The ring is drawn as a tube: a soft shadow under it, a darker
+                 rim, a lighter body, and a thin highlight along the top. -->
+            <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(20,16,12,.22)" stroke-width="15" stroke-linecap="round" transform="translate(0 6)" filter="url(#cycSoft)"/>
+            <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#D6CEC1" stroke-width="15" stroke-linecap="round"/>
+            <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#EAE4DB" stroke-width="10" stroke-linecap="round"/>
+            <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FFFFFF" stroke-opacity=".9" stroke-width="2.4" stroke-linecap="round" transform="translate(0 -2.4)" filter="url(#cycSheen)"/>
+            <g id="cycleProg">
+              <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#A23D13" stroke-width="15" stroke-linecap="round"/>
+              <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#C5501F" stroke-width="10" stroke-linecap="round"/>
+              <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#F7BC98" stroke-opacity=".6" stroke-width="2.4" stroke-linecap="round" transform="translate(0 -2.4)" filter="url(#cycSheen)"/>
+            </g>
+            <g class="cyc-mark" data-i="0"><circle cx="176.2" cy="56.0" r="6.5"/><circle class="cyc-hit" cx="176.2" cy="56.0" r="14"/><text x="197.0" y="47.2" text-anchor="middle">01</text></g>
+            <g class="cyc-mark" data-i="1"><circle cx="43.4" cy="32.6" r="6.5"/><circle class="cyc-hit" cx="43.4" cy="32.6" r="14"/><text x="28.0" y="17.4" text-anchor="middle">02</text></g>
+            <g class="cyc-mark" data-i="2"><circle cx="43.4" cy="167.4" r="6.5"/><circle class="cyc-hit" cx="43.4" cy="167.4" r="14"/><text x="28.0" y="189.0" text-anchor="middle">03</text></g>
+            <g class="cyc-mark" data-i="3"><circle cx="176.2" cy="144.0" r="6.5"/><circle class="cyc-hit" cx="176.2" cy="144.0" r="14"/><text x="197.0" y="159.2" text-anchor="middle">04</text></g>
+            <circle id="cycleHalo" class="cyc-halo" cx="176.2" cy="56.0" r="19" fill="#BE4A1E"/>
+            <circle id="cycleDotShadow" cx="176.2" cy="61.0" r="10" fill="rgba(20,16,12,.35)" filter="url(#cycSoft)"/>
+            <circle id="cycleDot" cx="176.2" cy="56.0" r="11.5" fill="url(#sphOn)" stroke="#FFFFFF" stroke-width="2.5"/>
           </svg>
           <div class="orbit-core">
             <span>Step</span>
@@ -947,30 +963,30 @@ const faqLd = {
      arc sit behind it for depth, and the centre disc floats in front. The
      pointer nudges the tilt (fine pointers only, not with reduced motion). */
   .flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(28px,5vw,64px);align-items:center;margin-top:2.25rem}
-  .orbit-stage{perspective:1100px;display:flex;justify-content:center}
+  .orbit-stage{display:flex;justify-content:center}
   .orbit-stage{touch-action:pan-y;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
-  .orbit{position:relative;width:min(100%,400px);aspect-ratio:1;transform-style:preserve-3d;transform:rotateX(var(--rx,16deg)) rotateY(var(--ry,-16deg));transition:transform .35s var(--ease);will-change:transform}
+  .orbit{position:relative;width:min(100%,400px);aspect-ratio:1}
   .cyc-mark{cursor:pointer}
   /* Only the markers take the pointer inside the ring: the glow and track
      would otherwise sit on top of them and swallow clicks. */
   .orbit-ring *{pointer-events:none}
   .orbit-ring .cyc-mark,.orbit-ring .cyc-mark *{pointer-events:auto}
   .cyc-mark .cyc-hit{fill:transparent!important;stroke:none!important}
-  .orbit-floor{position:absolute;left:12%;right:12%;bottom:-2%;height:22%;border-radius:50%;background:radial-gradient(closest-side,rgba(20,16,12,.22),transparent);transform:translateZ(-90px);filter:blur(10px)}
-  .orbit-depth,.orbit-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-  .orbit-depth{transform:translateZ(-22px) translateY(6px);filter:blur(1px)}
-  .orbit-ring{transform:translateZ(0);filter:drop-shadow(0 14px 16px rgba(20,16,12,.12))}
-  .cyc-mark circle{fill:#FAF7F1;stroke:rgba(11,11,12,.3);stroke-width:1.5;transition:fill .4s var(--ease),stroke .4s var(--ease)}
+  /* Upright, not tilted: the depth comes from the object itself (a shaded
+     tube, glossy spheres, a raised disc and soft shadows), and movement is
+     a small parallax between the layers rather than a rotation. */
+  .orbit-floor{position:absolute;left:16%;right:16%;bottom:-1%;height:12%;border-radius:50%;background:radial-gradient(closest-side,rgba(20,16,12,.20),transparent);filter:blur(8px);transform:translate(calc(var(--px,0px) * -.5),0);transition:transform .5s var(--ease)}
+  .orbit-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible;transform:translate(calc(var(--px,0px) * -.35),calc(var(--py,0px) * -.35));transition:transform .5s var(--ease)}
+  .cyc-mark circle{fill:url(#sphOff);stroke:rgba(11,11,12,.18);stroke-width:1;filter:drop-shadow(0 1.5px 1.5px rgba(20,16,12,.25))}
   .cyc-mark text{font-family:Manrope,system-ui;font-size:9.5px;font-weight:800;letter-spacing:.08em;fill:#6B6860;transition:fill .4s var(--ease)}
-  .cyc-mark.on circle{fill:#BE4A1E;stroke:#BE4A1E}
+  .cyc-mark.on circle{fill:url(#sphOn);stroke:#8E3111}
   .cyc-mark.on text{fill:#A63A12}
   .cyc-halo{opacity:.18;transform-box:fill-box;transform-origin:center}
-  #cycleDot{filter:drop-shadow(0 3px 6px rgba(190,74,30,.5))}
   @media (prefers-reduced-motion: no-preference){
     .cyc-halo{animation:cycHalo 2.4s ease-in-out infinite}
     @keyframes cycHalo{0%,100%{transform:scale(.75);opacity:.26}50%{transform:scale(1.25);opacity:.06}}
   }
-  .orbit-core{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;transform:translate(-50%,-50%) translateZ(52px);border-radius:50%;background:linear-gradient(150deg,#FFFFFF 0%,#F4EFE7 100%);box-shadow:0 28px 46px rgba(20,16,12,.18),0 0 0 1px rgba(11,11,12,.06),inset 0 1px 0 #FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .orbit-core{position:absolute;left:50%;top:50%;width:46%;aspect-ratio:1;transform:translate(calc(-50% + var(--px,0px)),calc(-50% + var(--py,0px)));transition:transform .5s var(--ease);border-radius:50%;background:radial-gradient(circle at 35% 25%,#FFFFFF 0%,#FBF8F3 45%,#EFE9DF 100%);box-shadow:0 2px 3px rgba(20,16,12,.08),0 18px 30px rgba(20,16,12,.14),0 40px 60px rgba(20,16,12,.10),0 0 0 1px rgba(11,11,12,.05),inset 0 2px 0 #FFFFFF,inset 0 -6px 14px rgba(20,16,12,.05);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .orbit-core span{font-family:Manrope,system-ui;font-size:10px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:#A63A12}
   .orbit-core b{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:clamp(40px,4.6vw,60px);line-height:1;color:#0B0B0C;margin:2px 0;font-variant-numeric:tabular-nums}
   .orbit-core em{font-style:normal;font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:16px;color:#0B0B0C}
@@ -1089,6 +1105,8 @@ const faqLd = {
     var prog = document.getElementById('cycleProg');
     var dot = document.getElementById('cycleDot');
     var halo = document.getElementById('cycleHalo');
+    var dotShadow = document.getElementById('cycleDotShadow');
+    var progLayers = prog.querySelectorAll('path');
     var core = flow.querySelector('.orbit-core');
     var coreNum = document.getElementById('coreNum');
     var coreName = document.getElementById('coreName');
@@ -1098,12 +1116,13 @@ const faqLd = {
     var STOPS = [0, 1 / 3, 2 / 3, 1];
     var L = cyclePath.getTotalLength();
     var at = 0, current = 0, raf = 0, userTook = false;
-    prog.style.strokeDasharray = L;
+    progLayers.forEach(function (pl) { pl.style.strokeDasharray = L; });
     function place(f) {
       var p = cyclePath.getPointAtLength(L * f);
       dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y);
       halo.setAttribute('cx', p.x); halo.setAttribute('cy', p.y);
-      prog.style.strokeDashoffset = L * (1 - f);
+      dotShadow.setAttribute('cx', p.x); dotShadow.setAttribute('cy', p.y + 5);
+      progLayers.forEach(function (pl) { pl.style.strokeDashoffset = L * (1 - f); });
       at = f;
     }
     function travel(to) {
@@ -1150,9 +1169,10 @@ const faqLd = {
     }
     function takeOver() { userTook = true; playTimers.forEach(clearTimeout); playTimers = []; }
 
-    /* Tilt, on every device. The base tilt follows the scroll, so the C
-       turns as it passes through the screen on a phone as well as a laptop;
-       a mouse adds to it, and a finger can drag it. */
+    /* Parallax, on every device. The C stays upright; its layers shift a
+       few pixels against each other (the disc one way, the ring and its
+       shadow the other) as the section scrolls, as a mouse moves over it,
+       and while a finger drags it. */
     var orbit = document.getElementById('orbit');
     var stage = flow.querySelector('.orbit-stage');
     var pointer = { x: 0, y: 0 }, drag = null, ticking = false, lastTouch = 0;
@@ -1160,13 +1180,11 @@ const faqLd = {
       ticking = false;
       var r = stage.getBoundingClientRect(), vh = window.innerHeight || 1;
       var c = Math.max(-1, Math.min(1, ((r.top + r.height / 2) - vh / 2) / (vh / 2)));
-      /* Kept within about +/-14deg of the resting pose: past that the
-         floating disc slides off the ring and the illusion breaks. */
-      var dx = drag ? drag.dx / 10 : 0;
-      var ry = -16 + c * 9 + pointer.x * 14 + dx;
-      var rx = 16 + c * 5 - pointer.y * 12;
-      orbit.style.setProperty('--ry', Math.max(-30, Math.min(-2, ry)).toFixed(1) + 'deg');
-      orbit.style.setProperty('--rx', Math.max(8, Math.min(26, rx)).toFixed(1) + 'deg');
+      var dx = drag ? drag.dx / 14 : 0;
+      var px = Math.max(-9, Math.min(9, pointer.x * 14 + dx));
+      var py = Math.max(-9, Math.min(9, c * 7 + pointer.y * 12));
+      orbit.style.setProperty('--px', px.toFixed(1) + 'px');
+      orbit.style.setProperty('--py', py.toFixed(1) + 'px');
     }
     function queueTilt() { if (!ticking) { ticking = true; requestAnimationFrame(applyTilt); } }
     if (orbit && stage) {
