@@ -51,7 +51,8 @@ export default defineConfig({
   // aplo-evnt.com (Apollo company identification); googletagmanager.com /
   // google-analytics.com (GA4, cookieless until consent); Microsoft
   // login/Graph (posture scan); the execute-api Lambdas (chat, forms);
-  // formspree.io (forms); Outlook (Bookings iframe); Paddle (/start only).
+  // formspree.io (forms); 'self' frames (the how-we-work explainer);
+  // Outlook (Bookings iframe); Paddle (/start only).
   // Styles keep 'unsafe-inline': pages use thousands of style=""
   // attributes, which fingerprints cannot cover.
   security: {
@@ -62,7 +63,7 @@ export default defineConfig({
         "font-src 'self'",
         "img-src 'self' data: https:",
         "connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com",
-        "frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com",
+        "frame-src 'self' https://outlook.office365.com https://outlook.office.com https://*.paddle.com",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self' https://formspree.io",
