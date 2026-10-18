@@ -6,6 +6,7 @@ import CinematicBackground from '../../components/CinematicBackground.astro';
 import { frameworkPages } from '../../data/checkpoint-frameworks';
 import { comparisons } from '../../data/checkpoint-comparisons';
 import { checkpointSoftwareSchema } from '../../data/checkpoint-schema';
+import { MODULES, fmtAud } from '../../data/pricing.js';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -23,7 +24,7 @@ const today = new Date();
 const projectedDate = new Date(today.getTime() + 84 * 24 * 60 * 60 * 1000);
 const projectedLabel = projectedDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 
-// ── Vignette 1: Control Constellation ───────────────────────────────
+// ── Vignette 1: Cross-framework mapping (the app's "constellation" view) ───────────────────────────────
 // Deterministic radial layout — one sector per "framework", subdivided
 // into wedges, same shape (not the same code) as constellationLayout()
 // in Checkpoint's own lib.js.
@@ -152,7 +153,7 @@ const tourPhases = [
       'Cross-framework edges show exactly which controls do double duty',
       'Filter by framework or drill into any single node',
     ],
-    visual: cxSvg, visualLabel: 'Control Constellation',
+    visual: cxSvg, visualLabel: 'Cross-framework mapping',
   },
   {
     key: 'plan', num: '02', name: 'Plan', icon: 'map',
@@ -168,10 +169,10 @@ const tourPhases = [
   {
     key: 'implement', num: '03', name: 'Implement', icon: 'gear',
     tagline: "One glance answers 'how ready are we, really?'",
-    body: 'Each ring is a control theme; the arc is how much of it is actually implemented; the colour band moves from grey to gold to green as evidence lands behind it. The centre number is the one figure a CFO or an auditor actually wants.',
+    body: 'Each ring is a control theme; the arc is how much of it is actually implemented; the colour band moves from grey to orange to green as evidence lands behind it. The centre number is the one figure a CFO or an auditor actually wants.',
     bullets: [
       'Live readiness rings, grouped automatically by control theme',
-      'Colour bands: grey (not started), gold (in progress), green (implemented)',
+      'Colour bands: grey (not started), orange (in progress), green (implemented)',
       "An outer evidence ring — because 'implemented' and 'evidenced' are different claims",
     ],
     visual: fpSvg, visualLabel: 'Compliance Fingerprint',
@@ -179,7 +180,7 @@ const tourPhases = [
   {
     key: 'evidence', num: '04', name: 'Evidence', icon: 'clipboard',
     tagline: "Proof it didn't stop the week after kickoff.",
-    body: 'A 26-week activity strip — scans, evidence captured, attestations, reviews, audits — rendered as a four-step gold intensity ramp. A quiet strip is exactly as informative as a busy one, and it never lies.',
+    body: 'A 26-week activity strip — scans, evidence captured, attestations, reviews, audits — rendered as a four-step orange intensity ramp. A quiet strip is exactly as informative as a busy one, and it never lies.',
     bullets: [
       'Every scan, upload, attestation, review and audit logged automatically',
       'Click any week to filter the activity feed to it',
@@ -229,12 +230,12 @@ const tourPhases = [
   <CinematicBackground static />
   <div class="svc-hero-copy" style="position:relative;z-index:1;max-width:860px;margin:0 auto;padding:0 22px;">
     <p class="eyebrow">Product</p>
-    <h1>Checkpoint — the compliance console that lives in <em>your tenant</em></h1>
+    <h1>Checkpoint — the compliance console that <em>never leaves your tenant</em></h1>
     <p class="section-lead">
       Most third-party GRC platforms ask you to copy your riskiest data — your risk register, your audit findings, your control gaps — into someone else's SaaS. Checkpoint doesn't. Every record is a SharePoint list in your own Microsoft 365 tenant; posture checks read your live Entra, Intune and Defender signals via Microsoft Graph and never leave your browser.
     </p>
     <p style="margin-top:1rem;font-size:1rem;line-height:1.75;color:rgba(250,247,241,.68);">
-      Run it yourself from <strong style="color:#FAF7F1;">$7,000/year</strong> per framework, or get it at no extra cost as part of a consulting engagement — same tool either way. It's provisioned in your tenant on day one, and it stays there: if you ever stop paying us or working with us, your registers, evidence and audit trail don't get walled off in our database, because there is no our database. They're already yours.
+      Run it yourself from <strong style="color:#FAF7F1;">{fmtAud(MODULES.find((m) => m.id === 'iso27001').prices.micro)}/year</strong> per framework, or get it at no extra cost as part of a consulting engagement — same tool either way. It's provisioned in your tenant on day one, and it stays there: if you ever stop paying us or working with us, your registers, evidence and audit trail don't get walled off in our database, because there is no our database. They're already yours.
     </p>
     <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
       <a href="#demo" class="btn-hdk-primary">Try the live demo — no sign-up</a>

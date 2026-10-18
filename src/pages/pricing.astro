@@ -27,7 +27,7 @@ const consultingPaths = [
 ---
 <Base
   title="Pricing — Checkpoint self-serve compliance | Compliance365"
-  description="Transparent per-framework pricing for Checkpoint — ISO 27001, SOC 2, Essential Eight and more, inside your own tenant. From $7,000/year, 7-day free trial."
+  description={`Transparent per-framework pricing for Checkpoint — ISO 27001, SOC 2, Essential Eight and more, inside your own tenant. From ${fmtAud(MODULES.find((m) => m.id === 'iso27001').prices.micro)}/year, ${TRIAL_DAYS}-day free trial.`}
 >
 
 <Header />
