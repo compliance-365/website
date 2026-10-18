@@ -967,7 +967,7 @@ describe('buildPolicyDocx()', () => {
   test('layout: formal uses Times New Roman for headings and body, and the document-control table’s header column is shaded', () => {
     var styles = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: 'formal' })))['word/styles.xml'];
     assert.match(styles, /Times New Roman/);
-    assert.doesNotMatch(styles, /Bricolage Grotesque|Manrope|Calibri/);
+    assert.doesNotMatch(styles, /Bricolage Grotesque|Bricolage Grotesque|Calibri/);
     var doc = docxParts(buildPolicyDocx(t, Object.assign({}, opts, { layout: 'formal' })))['word/document.xml'];
     assert.match(doc, /<w:shd w:val="clear" w:color="auto" w:fill="F7F5F2"\/>/);
   });

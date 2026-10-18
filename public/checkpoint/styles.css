@@ -1,5 +1,5 @@
 /* Vendored locally (fonts/), not loaded from Google Fonts at runtime —
-   only the two weight ranges actually used ('Bricolage Grotesque' 400/500, Manrope
+   only the two weight ranges actually used ('Bricolage Grotesque' 400/500, Bricolage Grotesque
    300-800), Latin subset only. Re-fetch from Google Fonts' CSS API and
    re-run this same pair of curl commands if new weights/scripts are
    ever needed; see RELEASE.md. */
@@ -326,8 +326,8 @@
      drops all three to ~4.3:1 and fails. */
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--ink);color:var(--paper);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;font-size:var(--fs-2)}
-button{font-family:Manrope;cursor:pointer}
+body{background:var(--ink);color:var(--paper);font-family:Bricolage Grotesque,sans-serif;-webkit-font-smoothing:antialiased;font-size:var(--fs-2)}
+button{font-family:Bricolage Grotesque;cursor:pointer}
 /* Tabular figures wherever a number needs to hold still and stay
    comparable to the one above/below it — KPI values, table cells
    (scores/dates/counts), chip badges, trend deltas, key-value pairs in
@@ -515,7 +515,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .side-foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 16px 12px;border-top:1px solid var(--line)}
 .side .foot{margin:0;flex-basis:100%;font-size:var(--fs-1);color:var(--paper-faint);line-height:1.4}
 .side .foot b{color:var(--paper-dim);display:block;letter-spacing:.1em;text-transform:uppercase;font-size:var(--fs-eyebrow)}
-.version-tag{margin:0;background:none;border:none;padding:0;text-align:left;font-family:Manrope,sans-serif;font-size:var(--fs-1);letter-spacing:.06em;color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
+.version-tag{margin:0;background:none;border:none;padding:0;text-align:left;font-family:Bricolage Grotesque,sans-serif;font-size:var(--fs-1);letter-spacing:.06em;color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:color .15s var(--ease),text-decoration-color .15s var(--ease)}
 .version-tag:hover,.version-tag:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
 .version-tag:active{color:var(--accent-ink)}
 
@@ -538,7 +538,7 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .client .modenote{min-width:0;flex:0 1 auto}
 @media(min-width:1001px){.top .right .btn{white-space:nowrap}}
 @media(max-width:1500px){.top .modenote{display:none}}
-.gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:var(--r-sm);font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
+.gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:var(--r-sm);font-family:Bricolage Grotesque;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
 .gsearch input:hover{border-color:rgba(190, 74, 30,.5)}
 .gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(var(--paper-rgb),.07)}
 /* Row styling shared by the command palette below — one visual
@@ -558,14 +558,14 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 .cmdk{display:none;position:fixed;top:14vh;left:50%;transform:translateX(-50%);width:min(600px,calc(100% - 40px));max-height:70vh;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);z-index:91;box-shadow:var(--elev-3);flex-direction:column;overflow:hidden}
 .cmdk.open{display:flex}
 .cmdk-inputwrap{border-bottom:1px solid var(--line);flex:none}
-.cmdk-input{width:100%;background:none;border:none;color:var(--paper);font-family:Manrope;font-size:var(--fs-3);padding:18px 20px}
+.cmdk-input{width:100%;background:none;border:none;color:var(--paper);font-family:Bricolage Grotesque;font-size:var(--fs-3);padding:18px 20px}
 .cmdk-input:focus{outline:none}
 .cmdk-results{overflow-y:auto;flex:1}
 .cmdk-group-label{padding:12px 14px 6px;font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
 .cmdk-results .gsearch-row .gs-key{margin-left:auto;font-size:var(--fs-eyebrow);color:var(--paper-faint);white-space:nowrap}
 .cmdk-hint{display:flex;gap:16px;padding:10px 16px;border-top:1px solid var(--line);font-size:var(--fs-eyebrow);color:var(--paper-faint);flex:none}
 .cmdk-hint span{display:flex;align-items:center;gap:5px}
-.cmdk-hint kbd{background:rgba(var(--paper-rgb),.08);border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:Manrope;font-size:var(--fs-eyebrow)}
+.cmdk-hint kbd{background:rgba(var(--paper-rgb),.08);border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:Bricolage Grotesque;font-size:var(--fs-eyebrow)}
 
 /* ===== Boardroom Mode — a full-screen, auto-cycling slide deck built
    from the Board view's own data, for presenting at a live QBR.
@@ -1049,7 +1049,7 @@ a.tk-chip:hover{color:var(--paper);border-color:var(--gold-light)}
    Documents and Attestations divided themselves with bare <h2> tags —
    and NOTHING in this file matched a bare h2 (every h2 rule here is
    scoped: .bd-slide h2, .drawer h2, .automation-centre h2, this one).
-   So those six headings rendered at the browser's default: Manrope
+   So those six headings rendered at the browser's default: Bricolage Grotesque
    19.5px/700, against the Dashboard's 'Bricolage Grotesque' 20px/500. Same size,
    different family, different weight — near enough to read as a
    mistake rather than as a decision, which is exactly how it looked.
@@ -1096,7 +1096,7 @@ a.tk-chip:hover{color:var(--paper);border-color:var(--gold-light)}
 .automation-card:focus-visible{box-shadow:0 0 0 3px rgba(var(--gold-light-rgb),.28),var(--elev-2)}
 .automation-card-kicker{display:block;font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:16px}
 .automation-card>b{display:block;font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-size:clamp(2rem,3.3vw,2.7rem);font-weight:500;line-height:1;color:var(--paper)}
-.automation-card>b small{font-family:Manrope,sans-serif;font-size:var(--fs-2);font-weight:700;color:var(--gold-light)}
+.automation-card>b small{font-family:Bricolage Grotesque,sans-serif;font-size:var(--fs-2);font-weight:700;color:var(--gold-light)}
 .automation-card h3{font-size:var(--fs-2);color:var(--paper);margin:11px 0 5px}
 .automation-card p{font-size:var(--fs-1);line-height:1.55;color:var(--paper-dim);margin:0;min-height:3.2em}
 .automation-link{display:block;margin-top:14px;color:var(--gold-light);font-size:var(--fs-1);font-weight:800}
@@ -1304,7 +1304,7 @@ button.card,button.board-tile{appearance:none;-webkit-appearance:none;font:inher
 .soa-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .6s var(--ease)}
 .fw-chips{display:flex;gap:5px;flex-wrap:wrap}
 .fw-chips span{font-size:var(--fs-eyebrow);letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
-select.mini,input.mini,textarea.mini{background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
+select.mini,input.mini,textarea.mini{background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Bricolage Grotesque;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
 select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(190, 74, 30,.6)}
 /* :focus-visible, and the ring is NOT suppressed. This was
    `select.mini:focus{outline:none;border-color:var(--gold)}`, which is
@@ -1453,7 +1453,7 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 .modal-box .m-table th,.modal-box .m-table td{padding:5px 8px;border-top:1px solid var(--line);text-align:left;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.01em;color:var(--paper-faint);margin-bottom:6px}
-.modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
+.modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Bricolage Grotesque;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
 .modal-box .m-field.m-check{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
 .modal-box .m-field.m-check input{width:auto;flex:0 0 auto;margin-top:3px;accent-color:var(--gold)}
 .modal-box .m-field.m-check label{margin:0;color:var(--paper);line-height:1.5;font-size:var(--fs-2)}
@@ -1903,9 +1903,11 @@ tr.asset-retired td { opacity: .85; }
 .integ-env td { padding: 4px 10px 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
 
 /* Touch screens: text links and row checkboxes reach the 24px minimum
-   target (WCAG 2.2 2.5.8) without changing the desktop layout. */
+   target (WCAG 2.2 2.5.8) without changing the desktop layout. 25px, not
+   24: Bricolage's shorter line box let sub-pixel layout land a link at
+   23.99px. */
 @media (pointer:coarse){
-  .lnk{padding-top:5px;padding-bottom:5px;min-width:24px}
+  .lnk{padding-top:5px;padding-bottom:5px;min-width:25px;min-height:25px}
   .soa-fam-toggle{min-height:32px}
   .scope-pill{min-height:26px}
   table input[type=checkbox],.m-check input[type=checkbox]{width:24px;height:24px}
@@ -2263,7 +2265,7 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .ai-ia-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px}
 .ai-ia-grid label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--paper-dim)}
 .ai-ia-grid label.wide{grid-column:1/-1}
-.ai-ia-grid textarea{min-height:44px;font-family:Manrope}
+.ai-ia-grid textarea{min-height:44px;font-family:Bricolage Grotesque}
 .ai-ia-triggers{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px}
 .ai-ia-gaps{margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--paper-dim)}
 .ai-au-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px}

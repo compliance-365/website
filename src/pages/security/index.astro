@@ -23,7 +23,7 @@ function buildBoundaryA() {
   ];
   const hub = { x: 152, y: 150, w: 94, h: 44, label: 'Checkpoint' };
   const boundary = `<rect class="bd-boundary" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${br}" fill="none" stroke="#BE4A1E" stroke-width="2" stroke-dasharray="${perim}" stroke-dashoffset="${perim}"/>`;
-  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#BE4A1E" font-weight="700">YOUR MICROSOFT 365 TENANT</text>`;
+  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#BE4A1E" font-weight="700">YOUR MICROSOFT 365 TENANT</text>`;
   const edges = nodes
     .map((n, i) => {
       const x1 = hub.x + hub.w / 2, y1 = hub.y + hub.h / 2;
@@ -36,7 +36,7 @@ function buildBoundaryA() {
       return (
         `<g class="bd-node" style="transition-delay:${420 + i * 90}ms">` +
         `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="#141416" stroke="rgba(255,255,255,.16)"/>` +
-        `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10.5" fill="rgba(250,247,241,.82)">${n.label}</text>` +
+        `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="10.5" fill="rgba(250,247,241,.82)">${n.label}</text>` +
         `</g>`
       );
     })
@@ -44,7 +44,7 @@ function buildBoundaryA() {
   const hubBox =
     `<g class="bd-hub" style="transition-delay:250ms">` +
     `<rect x="${hub.x}" y="${hub.y}" width="${hub.w}" height="${hub.h}" rx="8" fill="#BE4A1E"/>` +
-    `<text x="${hub.x + hub.w / 2}" y="${hub.y + hub.h / 2 + 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="11" font-weight="700" fill="#0B0B0C">${hub.label}</text>` +
+    `<text x="${hub.x + hub.w / 2}" y="${hub.y + hub.h / 2 + 4}" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="11" font-weight="700" fill="#0B0B0C">${hub.label}</text>` +
     `</g>`;
   return `<svg viewBox="0 0 380 300" aria-hidden="true" class="bd-svg" id="bdSvgA">${boundary}${label}${edges}${hubBox}${nodeBoxes}</svg>`;
 }
@@ -52,10 +52,10 @@ function buildBoundaryA() {
 function buildBoundaryB() {
   const bx = 20, by = 26, bw = 220, bh = 250, br = 16;
   const boundary = `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${br}" fill="none" stroke="rgba(250,247,241,.28)" stroke-width="2" stroke-dasharray="6,6"/>`;
-  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="rgba(250,247,241,.4)" font-weight="700">YOUR TENANT</text>`;
-  const regNode = `<g><rect x="${bx + 40}" y="140" width="140" height="44" rx="8" fill="rgba(255,255,255,.05)" stroke="rgba(250,247,241,.2)"/><text x="${bx + 110}" y="166" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10.5" fill="rgba(250,247,241,.5)">Risk &amp; evidence data</text></g>`;
+  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="rgba(250,247,241,.4)" font-weight="700">YOUR TENANT</text>`;
+  const regNode = `<g><rect x="${bx + 40}" y="140" width="140" height="44" rx="8" fill="rgba(255,255,255,.05)" stroke="rgba(250,247,241,.2)"/><text x="${bx + 110}" y="166" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="10.5" fill="rgba(250,247,241,.5)">Risk &amp; evidence data</text></g>`;
   const cloudX = 300, cloudY = 130;
-  const cloud = `<g opacity=".85"><ellipse cx="${cloudX + 40}" cy="${cloudY + 28}" rx="58" ry="34" fill="rgba(201,122,122,.1)" stroke="rgba(201,122,122,.5)" stroke-width="1.5"/><text x="${cloudX + 40}" y="${cloudY + 22}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#c97a7a">THIRD-PARTY</text><text x="${cloudX + 40}" y="${cloudY + 36}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#c97a7a">VENDOR CLOUD</text></g>`;
+  const cloud = `<g opacity=".85"><ellipse cx="${cloudX + 40}" cy="${cloudY + 28}" rx="58" ry="34" fill="rgba(201,122,122,.1)" stroke="rgba(201,122,122,.5)" stroke-width="1.5"/><text x="${cloudX + 40}" y="${cloudY + 22}" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#c97a7a">THIRD-PARTY</text><text x="${cloudX + 40}" y="${cloudY + 36}" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#c97a7a">VENDOR CLOUD</text></g>`;
   const arrow = `<defs><marker id="bdArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#c97a7a"/></marker></defs><line x1="${bx + 180}" y1="162" x2="${cloudX - 6}" y2="${cloudY + 32}" stroke="#c97a7a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#bdArrow)"/>`;
   return `<svg viewBox="0 0 420 300" aria-hidden="true" class="bd-svg bd-svg-grey">${boundary}${label}${regNode}${arrow}${cloud}</svg>`;
 }
@@ -290,7 +290,7 @@ object-src 'none'; base-uri 'self'</pre>
         </ul>
       </div>
     </div>
-    <p style="margin-top:2.5rem;"><a href={`${base}checkpoint-console/#ai`} style="color:#F0A97F;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">More on Checkpoint's AI assistant →</a></p>
+    <p style="margin-top:2.5rem;"><a href={`${base}checkpoint-console/#ai`} style="color:#F0A97F;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Bricolage Grotesque,system-ui,sans-serif;">More on Checkpoint's AI assistant →</a></p>
   </div>
 </section>
 
@@ -446,7 +446,7 @@ object-src 'none'; base-uri 'self'</pre>
 
 <style is:global>
   .sec-eyebrow {
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
     font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase;
     color: var(--accent-ink); margin: 0 0 18px;
   }
@@ -455,7 +455,7 @@ object-src 'none'; base-uri 'self'</pre>
 
   .sec-jumplinks { display: flex; flex-wrap: wrap; gap: 8px 4px; margin-top: 2rem; }
   .sec-jumplinks a {
-    font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 600;
+    font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 12px; font-weight: 600;
     color: var(--accent-ink); text-decoration: none; border: 1px solid rgba(190, 74, 30,.3);
     border-radius: 99px; padding: 8px 16px; transition: background .2s, color .2s;
   }
@@ -466,7 +466,7 @@ object-src 'none'; base-uri 'self'</pre>
   @media (max-width: 860px) { .bd-grid { grid-template-columns: 1fr; } }
   .bd-panel { background: #141416; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 24px; }
   .bd-panel-b { opacity: .78; }
-  .bd-panel-label { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 16px; }
+  .bd-panel-label { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 16px; }
   .bd-panel-label-good { color: #8fbf9a; }
   .bd-panel-label-bad { color: #c97a7a; }
   .bd-visual { width: 100%; }
@@ -493,7 +493,7 @@ object-src 'none'; base-uri 'self'</pre>
   .perm-stage { background: white; border: 1px solid #DDD8CF; border-radius: 10px; overflow: hidden; }
   .perm-stage-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 20px; background: #FAF7F1; border-bottom: 1px solid #DDD8CF; }
   .perm-stage-head h3 { margin: 0; font-size: 15px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; color: #0B0B0C; }
-  .perm-tag { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); background: rgba(190, 74, 30,.08); border: 1px solid rgba(190, 74, 30,.25); border-radius: 99px; padding: 4px 12px; }
+  .perm-tag { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); background: rgba(190, 74, 30,.08); border: 1px solid rgba(190, 74, 30,.25); border-radius: 99px; padding: 4px 12px; }
   .perm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .perm-table th { text-align: left; padding: 10px 20px; font-weight: 600; color: #6B6860; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid #EFEAE0; }
   .perm-table td { padding: 12px 20px; border-bottom: 1px solid #F2EEE5; color: #3A3632; vertical-align: top; }
@@ -520,7 +520,7 @@ object-src 'none'; base-uri 'self'</pre>
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
   .ai-disclaimer { margin-top: 18px; font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 17px; color: #F0A97F; padding: 14px 18px; border-left: 2px solid #BE4A1E; background: rgba(190, 74, 30,.06); max-width: 52ch; }
   .ai-rails { background: #0B0B0C; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 28px; }
-  .ai-rails-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 18px; }
+  .ai-rails-label { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 18px; }
   .ai-rails-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
   .ai-rails-list li { display: flex; gap: 12px; align-items: flex-start; }
   .ai-rails-list svg { width: 16px; height: 16px; flex-shrink: 0; color: #BE4A1E; margin-top: 2px; }

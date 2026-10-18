@@ -5036,7 +5036,7 @@
      looks are supposed to be built on what's already there, not a
      substitute for a missing brand font. */
   var DOCX_LAYOUT_STYLES = {
-    standard: { bodyFont: 'Manrope', headingFont: 'Bricolage Grotesque', titleSz: '48', clientSz: '32', metaSz: '16', headingSz: '27', headingColorMode: 'accent', headingCaps: false, headingBold: false },
+    standard: { bodyFont: 'Bricolage Grotesque', headingFont: 'Bricolage Grotesque', titleSz: '48', clientSz: '32', metaSz: '16', headingSz: '27', headingColorMode: 'accent', headingCaps: false, headingBold: false },
     formal: { bodyFont: 'Times New Roman', headingFont: 'Times New Roman', titleSz: '44', clientSz: '30', metaSz: '17', headingSz: '24', headingColorMode: 'ink', headingCaps: false, headingBold: true },
     minimal: { bodyFont: 'Calibri', headingFont: 'Calibri', titleSz: '52', clientSz: '20', metaSz: '15', headingSz: '18', headingColorMode: 'ink', headingCaps: true, headingBold: true },
     enterprise: { bodyFont: 'Arial', headingFont: 'Arial', titleSz: '60', clientSz: '28', metaSz: '16', headingSz: '26', headingColorMode: 'navy', headingCaps: false, headingBold: true }

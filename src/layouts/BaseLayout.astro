@@ -243,7 +243,6 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          missed the ~100ms block period was dropped for that page load — so
          first-time visitors often never saw the brand faces at all. Only the
          latin subsets are preloaded; latin-ext stays unicode-range gated. -->
-    <link rel="preload" href="/assets/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <!-- brand.css: preload + async so it never blocks first paint -->
     <link rel="preload" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} as="style" id="brandCss" />
@@ -266,7 +265,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       }
       *,*::before,*::after{box-sizing:border-box}
       html,body{margin:0;padding:0}
-      body{font-family:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#0B0B0C;background:var(--light);line-height:1.65;-webkit-font-smoothing:antialiased}
+      body{font-family:Bricolage Grotesque,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#0B0B0C;background:var(--light);line-height:1.65;-webkit-font-smoothing:antialiased}
       body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.02;pointer-events:none;z-index:9000;}
       img,svg,video{max-width:100%;height:auto;display:block}
       p{margin:0 0 1rem}
@@ -281,7 +280,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       .muted{color:var(--muted)}
       .small{font-size:.875rem}
       .center{text-align:center}
-      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:3px;font:700 1rem/1 Manrope,system-ui;text-decoration:none;cursor:pointer;border:2px solid transparent;transition:background .2s,color .2s,border-color .2s}
+      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:3px;font:700 1rem/1 Bricolage Grotesque,system-ui;text-decoration:none;cursor:pointer;border:2px solid transparent;transition:background .2s,color .2s,border-color .2s}
       .btn-primary{background:#0B0B0C;color:#FAF7F1;border-color:var(--primary)}
       .btn-primary:hover{background:#1B1B1D}
       .btn-ghost,.btn-outline{background:transparent;color:var(--accent-ink);border-color:var(--primary)}
@@ -291,7 +290,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       /* Header */
       .site-header{position:sticky;top:0;z-index:100;background:#0B0B0C;border-bottom:1px solid rgba(255,255,255,0.08);box-shadow:0 1px 8px rgba(0,0,0,.2)}
       .nav-inner{max-width:1120px;margin:0 auto;padding:0 22px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
-      .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:Manrope,system-ui;font-size:1.05rem}
+      .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:Bricolage Grotesque,system-ui;font-size:1.05rem}
       .brand-name{color:#FAF7F1;font-weight:300;letter-spacing:.1em}
       .brand-365{color:var(--accent-ink);font-weight:800}
       /* Hero */
@@ -321,7 +320,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <!-- Design system: premium gold CTA buttons + cursor-spotlight cards — used site-wide -->
     <style is:global>
       .btn-hdk-primary {
-        background: #BE4A1E; color: var(--on-accent); font-family: Manrope, system-ui, sans-serif;
+        background: #BE4A1E; color: var(--on-accent); font-family: Bricolage Grotesque, system-ui, sans-serif;
         font-weight: 700; font-size: 13px; letter-spacing: .05em; padding: 15px 28px;
         border-radius: 3px; text-decoration: none; transition: background .2s, box-shadow .3s;
         text-transform: uppercase; border: 1px solid #BE4A1E; display: inline-block;
@@ -341,7 +340,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
         @keyframes btn-shine { to { left: 130%; } }
       }
       .btn-hdk-ghost {
-        border: 1px solid #BE4A1E; color: #F0A97F; font-family: Manrope, system-ui, sans-serif;
+        border: 1px solid #BE4A1E; color: #F0A97F; font-family: Bricolage Grotesque, system-ui, sans-serif;
         font-weight: 500; font-size: 13px; letter-spacing: .05em; padding: 15px 24px;
         border-radius: 3px; text-decoration: none; transition: background .2s, color .2s;
         text-transform: uppercase; display: inline-block;
@@ -367,7 +366,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
         gap: clamp(28px, 4vw, 64px); max-width: 1120px; margin: 0 auto; padding: 0 22px;
       }
       .svc-hero-copy .eyebrow {
-        font-family: Manrope, system-ui, sans-serif; font-size: 12px; letter-spacing: .28em;
+        font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 12px; letter-spacing: .28em;
         text-transform: uppercase; color: var(--accent-ink); font-weight: 700; margin: 0 0 20px;
       }
       .svc-hero-copy h1 {
@@ -380,7 +379,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       .svc-hero-copy h1 em, .svc-final-cta h2 em { color: var(--accent-display); font-style: normal; font-weight: 600; }
       .svc-hero-copy .section-lead, .svc-hero-copy p {
         color: rgba(250,247,241,.62); font-size: 16px; line-height: 1.75; max-width: 58ch;
-        font-family: Manrope, system-ui, sans-serif; margin: 0 0 16px;
+        font-family: Bricolage Grotesque, system-ui, sans-serif; margin: 0 0 16px;
       }
       .svc-hero-copy .section-lead strong, .svc-hero-copy p strong { color: #FAF7F1; }
       .svc-hero-copy ul.trust-signals {
@@ -390,7 +389,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       .svc-hero-copy ul.trust-signals li {
         display: flex; align-items: center; gap: .55rem; font-size: .85rem; font-weight: 700;
         color: #FAF7F1; background: rgba(255,255,255,.04); border: 1px solid rgba(240, 169, 127,.25);
-        border-radius: 8px; padding: .5rem .75rem; margin: 0; font-family: Manrope, system-ui, sans-serif;
+        border-radius: 8px; padding: .5rem .75rem; margin: 0; font-family: Bricolage Grotesque, system-ui, sans-serif;
       }
       .svc-hero-copy ul.trust-signals li::before {
         content: '\2713'; display: inline-flex; align-items: center; justify-content: center;
@@ -624,7 +623,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   }
   #sticky-cta.is-on { transform: translateY(0); }
   #sticky-cta .sc-text {
-    font: 600 12.5px/1.35 Manrope, system-ui, sans-serif;
+    font: 600 12.5px/1.35 Bricolage Grotesque, system-ui, sans-serif;
     color: rgba(250,247,241,.72);   /* 8.6:1 on #0B0B0C */
     min-width: 0;
   }
@@ -638,7 +637,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     border-radius: 3px;
     background: #BE4A1E;
     color: var(--on-accent);                 /* 5.0:1 on the accent */
-    font: 700 13px/1 Manrope, system-ui, sans-serif;
+    font: 700 13px/1 Bricolage Grotesque, system-ui, sans-serif;
     letter-spacing: .04em;
     text-transform: uppercase;
     text-decoration: none;

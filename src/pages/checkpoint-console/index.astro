@@ -88,7 +88,7 @@ function buildFingerprintSvg() {
       );
     })
     .join('');
-  return `<svg viewBox="0 0 200 200" aria-hidden="true" class="vig-svg">${ringsSvg}<text x="100" y="95" text-anchor="middle" font-family="'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="32" fill="#FAF7F1">76%</text><text x="100" y="116" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9" letter-spacing="2" fill="#F0A97F">READINESS</text></svg>`;
+  return `<svg viewBox="0 0 200 200" aria-hidden="true" class="vig-svg">${ringsSvg}<text x="100" y="95" text-anchor="middle" font-family="'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="32" fill="#FAF7F1">76%</text><text x="100" y="116" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="9" letter-spacing="2" fill="#F0A97F">READINESS</text></svg>`;
 }
 
 // ── Vignette 3: Certification Journey ───────────────────────────────
@@ -115,7 +115,7 @@ function buildJourneySvg(label) {
     svg +=
       `<line x1="${x.toFixed(1)}" y1="${y}" x2="${x.toFixed(1)}" y2="${(above ? ty + 8 : ty - 8).toFixed(1)}" stroke="${colors[m.status]}" stroke-width="1"/>` +
       `<circle cx="${x.toFixed(1)}" cy="${y}" r="${r}" fill="${colors[m.status]}"${cls}/>` +
-      `<text x="${x.toFixed(1)}" y="${(above ? ty : ty + 4).toFixed(1)}" text-anchor="${i === milestones.length - 1 ? 'end' : i === 0 ? 'start' : 'middle'}" font-family="Manrope,system-ui,sans-serif" font-size="10" fill="rgba(250,247,241,.78)">${m.label}</text>`;
+      `<text x="${x.toFixed(1)}" y="${(above ? ty : ty + 4).toFixed(1)}" text-anchor="${i === milestones.length - 1 ? 'end' : i === 0 ? 'start' : 'middle'}" font-family="Bricolage Grotesque,system-ui,sans-serif" font-size="10" fill="rgba(250,247,241,.78)">${m.label}</text>`;
   });
   return `<svg viewBox="0 0 600 120" aria-hidden="true" class="vig-svg">${svg}</svg>`;
 }
@@ -448,7 +448,7 @@ const tourPhases = [
         <p style="color:rgba(250,247,241,.65);margin:0;">Every register change is versioned by your own SharePoint, every material action is written to the audit log, and every scan's raw evidence is hashed and filed.</p>
       </div>
     </div>
-    <p style="text-align:center;margin-top:2.5rem;"><a href={`${base}security/`} style="color:#F0A97F;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">Full security &amp; architecture page — every Graph permission, the tenant-boundary diagram, disclosure policy →</a></p>
+    <p style="text-align:center;margin-top:2.5rem;"><a href={`${base}security/`} style="color:#F0A97F;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Bricolage Grotesque,system-ui,sans-serif;">Full security &amp; architecture page — every Graph permission, the tenant-boundary diagram, disclosure policy →</a></p>
   </div>
 </section>
 
@@ -522,7 +522,7 @@ const tourPhases = [
 
 <style is:global>
   .ckpt-eyebrow, .ckpt-tour-eyebrow, .ckpt-demo-eyebrow {
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: .2em;
@@ -576,14 +576,14 @@ const tourPhases = [
   @media (max-width: 860px) { .tour-rail { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,.14); } }
   .tour-tab {
     background: none; border: none; border-bottom: 1px solid rgba(255,255,255,.14);
-    color: rgba(250,247,241,.62); font-family: Manrope, system-ui, sans-serif;
+    color: rgba(250,247,241,.62); font-family: Bricolage Grotesque, system-ui, sans-serif;
     font-size: 13px; text-align: left; padding: 15px 18px; cursor: pointer;
     display: flex; align-items: center; gap: 10px; white-space: nowrap;
     transition: color .2s, background .2s;
   }
   .tour-tab:hover { color: #FAF7F1; }
   .tour-tab.on { color: #FAF7F1; background: #0B0B0C; box-shadow: inset 3px 0 0 #BE4A1E; }
-  .tour-tab-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; color: #BE4A1E; }
+  .tour-tab-num { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 10px; font-weight: 700; color: #BE4A1E; }
   .tour-tab-ic { width: 16px; height: 16px; flex-shrink: 0; color: #BE4A1E; display: flex; }
   .tour-tab-ic svg { width: 16px; height: 16px; }
   .tour-tab.on .tour-tab-ic { color: #F0A97F; }
@@ -593,7 +593,7 @@ const tourPhases = [
   .tour-panel.on { display: block; }
   .tour-panel-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr); gap: clamp(30px,4vw,56px); align-items: center; }
   @media (max-width: 780px) { .tour-panel-grid { grid-template-columns: 1fr; } }
-  .tour-panel-step { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 10px; }
+  .tour-panel-step { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 10px; }
   .tour-panel h3 { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: clamp(1.35rem,2.4vw,1.85rem); color: #FAF7F1; margin: 0; line-height: 1.2; }
   .tour-panel-body { margin-top: 14px; font-size: 14px; line-height: 1.75; color: rgba(250,247,241,.62); max-width: 54ch; }
   .tour-panel-bullets { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
@@ -606,7 +606,7 @@ const tourPhases = [
   .vig-svg { width: 100%; max-width: 240px; height: auto; }
   .vig-frame-compact .vig-svg { max-width: 100%; height: 22px; }
   .vig-frame-wide .vig-svg { max-width: 100%; height: auto; }
-  .tour-visual-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(250,247,241,.5); font-weight: 600; margin: 0; }
+  .tour-visual-label { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(250,247,241,.5); font-weight: 600; margin: 0; }
   .tour-no-visual { color: #BE4A1E; width: 72px; height: 72px; border: 1px solid rgba(190, 74, 30,.35); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
   /* ── AI section ── */
@@ -618,7 +618,7 @@ const tourPhases = [
     max-width: 52ch;
   }
   .ckpt-ai-rails { background: #0B0B0C; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 28px; }
-  .ckpt-ai-rails-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 18px; }
+  .ckpt-ai-rails-label { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; margin: 0 0 18px; }
   .ckpt-ai-rails-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
   .ckpt-ai-rails-list li { display: flex; gap: 12px; align-items: flex-start; }
   .ckpt-ai-rails-list svg { width: 16px; height: 16px; flex-shrink: 0; color: #BE4A1E; margin-top: 2px; }
@@ -637,9 +637,9 @@ const tourPhases = [
   .board-frame { width: 100%; max-width: 260px; }
   .board-bezel { background: #1B1B1D; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 4px; box-shadow: 0 20px 40px rgba(0,0,0,.4); }
   .board-slide { background: #0B0B0C; border-radius: 6px; padding: 24px 20px 18px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .board-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; }
+  .board-eyebrow { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #BE4A1E; font-weight: 700; }
   .board-num { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 38px; color: #F0A97F; margin-top: 6px; line-height: 1; }
-  .board-cap { font-family: Manrope, system-ui, sans-serif; font-size: 9px; color: rgba(250,247,241,.5); margin-top: 6px; }
+  .board-cap { font-family: Bricolage Grotesque, system-ui, sans-serif; font-size: 9px; color: rgba(250,247,241,.5); margin-top: 6px; }
   .board-dots { display: flex; gap: 5px; margin-top: 16px; }
   .board-dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(250,247,241,.25); display: block; }
   .board-dots i.on { background: #BE4A1E; }

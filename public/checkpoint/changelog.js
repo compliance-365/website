@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.170.3',
+    date: '2026-10-18',
+    entries: [
+      'Checkpoint now uses one typeface, Bricolage Grotesque, for all text, the same as the Compliance365 website. Generated reports and charts follow it too.'
+    ]
+  },
+  {
     version: '1.170.2',
     date: '2026-10-18',
     entries: [

@@ -144,7 +144,7 @@
   function placeholderSvg(w, h, message) {
     return '<svg viewBox="0 0 ' + fx(w, 0) + ' ' + fx(h, 0) + '" width="100%" role="img" aria-label="' + escSvgText(message) + '">' +
       '<rect x="0.5" y="0.5" width="' + fx(w - 1, 0) + '" height="' + fx(h - 1, 0) + '" fill="none" stroke="#D9D4C8" stroke-width="1" stroke-dasharray="4,4"/>' +
-      '<text x="' + fx(w / 2) + '" y="' + fx(h / 2) + '" text-anchor="middle" dominant-baseline="middle" font-family="Manrope,sans-serif" font-size="12" fill="#8b877d">' + escSvgText(message) + '</text>' +
+      '<text x="' + fx(w / 2) + '" y="' + fx(h / 2) + '" text-anchor="middle" dominant-baseline="middle" font-family="Bricolage Grotesque,sans-serif" font-size="12" fill="#8b877d">' + escSvgText(message) + '</text>' +
       '</svg>';
   }
 
@@ -216,13 +216,13 @@
       var y = 40 + i * 24;
       var segPct = total ? Math.round(seg[1] / total * 100) : 0;
       return '<rect x="220" y="' + (y - 10) + '" width="12" height="12" fill="' + (seg[3] ? hatchFill : seg[2]) + '"/>' +
-        '<text x="238" y="' + y + '" font-family="Manrope,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(seg[0]) + '</text>' +
-        '<text x="440" y="' + y + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" font-weight="700" fill="#4b473e">' + seg[1] + ' (' + segPct + '%)</text>';
+        '<text x="238" y="' + y + '" font-family="Bricolage Grotesque,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(seg[0]) + '</text>' +
+        '<text x="440" y="' + y + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="11" font-weight="700" fill="#4b473e">' + seg[1] + ' (' + segPct + '%)</text>';
     }).join('');
     return '<svg viewBox="0 0 460 200" width="100%" role="img" aria-label="Readiness donut: ' + pct + '% of applicable controls implemented">' + hatch.html +
       arcs +
       '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="28" font-weight="500" fill="#0B0B0C">' + pct + '%</text>' +
-      '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="#8b877d">IMPLEMENTED</text>' +
+      '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="9" letter-spacing="1" fill="#8b877d">IMPLEMENTED</text>' +
       legend +
       '</svg>';
   }
@@ -254,7 +254,7 @@
     var gridlines = [0, 50, 100].map(function (v) {
       var y = fx(yFor(v));
       return '<line x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '" stroke="rgba(11,11,12,.12)" stroke-width="1"/>' +
-        '<text x="' + (x0 - 10) + '" y="' + fx(y + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + v + '</text>';
+        '<text x="' + (x0 - 10) + '" y="' + fx(y + 3) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="#8b877d">' + v + '</text>';
     }).join('');
 
     var targetHtml = '';
@@ -262,21 +262,21 @@
       var ty = fx(yFor(targetScore));
       targetHtml = '<rect x="' + x0 + '" y="' + y0 + '" width="' + fx(x1 - x0) + '" height="' + fx(ty - y0) + '" fill="rgba(58,122,58,.08)"/>' +
         '<line x1="' + x0 + '" y1="' + ty + '" x2="' + x1 + '" y2="' + ty + '" stroke="' + PAL.good + '" stroke-width="1" stroke-dasharray="4,3"/>' +
-        '<text x="' + (x0 + 4) + '" y="' + fx(ty - 4) + '" font-family="Manrope,sans-serif" font-size="9" fill="' + PAL.good + '">target ' + fx(targetScore, 0) + '</text>';
+        '<text x="' + (x0 + 4) + '" y="' + fx(ty - 4) + '" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + PAL.good + '">target ' + fx(targetScore, 0) + '</text>';
     }
 
     var scorePts = scans.map(function (s, i) { return [fx(xFor(i)), fx(yFor(s.score))]; });
     var dateLabels = n === 1
-      ? '<text x="' + fx(xFor(0)) + '" y="' + (y1 + 18) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(scans[0].dateLabel || '') + '</text>'
+      ? '<text x="' + fx(xFor(0)) + '" y="' + (y1 + 18) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(scans[0].dateLabel || '') + '</text>'
       : [0, n - 1].map(function (i) {
-          return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 18) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(scans[i].dateLabel || '') + '</text>';
+          return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 18) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(scans[i].dateLabel || '') + '</text>';
         }).join('');
 
     var scoreLineHtml, pointsHtml;
     if (n === 1) {
       scoreLineHtml = '';
       pointsHtml = '<circle cx="' + scorePts[0][0] + '" cy="' + scorePts[0][1] + '" r="4.5" fill="' + PAL.gold + '"/>' +
-        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[0].score, 0) + '</text>';
+        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[0].score, 0) + '</text>';
     } else {
       var line = scorePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
       var area = '<polygon points="' + line + ' ' + scorePts[n - 1][0] + ',' + y1 + ' ' + scorePts[0][0] + ',' + y1 + '" fill="rgba(190, 74, 30,.10)"/>';
@@ -285,7 +285,7 @@
         var isEnd = i === n - 1;
         return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(190, 74, 30,.55)') + '"/>';
       }).join('') +
-        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[n - 1].score, 0) + '</text>';
+        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[n - 1].score, 0) + '</text>';
     }
 
     var readinessScans = scans.filter(function (s) { return typeof s.readiness === 'number'; });
@@ -295,9 +295,9 @@
       readinessHtml = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="' + PAL.warn + '" stroke-width="1.5" stroke-dasharray="3,3"/>';
     }
 
-    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Posture score</text>' +
-      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Control readiness</text>' : '') +
-      (n === 1 ? '<text x="330" y="185" font-family="Manrope,sans-serif" font-size="9" font-style="italic" fill="#8b877d">First scan — trend appears after a second one.</text>' : '');
+    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + legendColor + '">Posture score</text>' +
+      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + legendColor + '">Control readiness</text>' : '') +
+      (n === 1 ? '<text x="330" y="185" font-family="Bricolage Grotesque,sans-serif" font-size="9" font-style="italic" fill="#8b877d">First scan — trend appears after a second one.</text>' : '');
 
     return '<svg viewBox="0 0 600 196" width="100%" role="img" aria-label="Posture score trend over ' + n + ' scan' + (n > 1 ? 's' : '') + '">' +
       gridlines + targetHtml +
@@ -428,7 +428,7 @@
       if (showValues) {
         var parts = legendDefs.map(function (def, j) { return values[j] > 0 ? values[j] + ' ' + def.label.toLowerCase() : ''; }).filter(Boolean);
         var summary = (parts.length ? parts.join(' · ') : 'none yet') + ' — ' + total + ' total';
-        valuesLine = '<text x="' + barX + '" y="' + (y + rowH + 12) + '" font-family="Manrope,sans-serif" font-size="10" fill="' + legendColor + '">' + escSvgText(summary) + '</text>';
+        valuesLine = '<text x="' + barX + '" y="' + (y + rowH + 12) + '" font-family="Bricolage Grotesque,sans-serif" font-size="10" fill="' + legendColor + '">' + escSvgText(summary) + '</text>';
       }
       /* Per-row label colour is opt-in (g.labelColor) — every existing
          caller (control-status-by-theme, risk severity, action
@@ -440,7 +440,7 @@
          carry a DIFFERENT signal (done/in-progress/open) this chart
          exists to show. */
       var labelWeight = g.labelColor ? ' font-weight="700"' : '';
-      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11"' + labelWeight + ' fill="' + (g.labelColor || labelColor) + '">' + escSvgText(g.label) + '</text>' + rects + valuesLine;
+      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="11"' + labelWeight + ' fill="' + (g.labelColor || labelColor) + '">' + escSvgText(g.label) + '</text>' + rects + valuesLine;
     }).join('');
 
     var height = top + rows.length * (rowH + rowGap) + 10;
@@ -449,7 +449,7 @@
     var legend = legendDefs.map(function (def, i) {
       var x = 10 + i * legendColW;
       return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="' + (def.hatch ? hatchFill : def.color) + '"/>' +
-        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="' + legendColor + '">' + escSvgText(def.label) + '</text>';
+        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Bricolage Grotesque,sans-serif" font-size="9.5" fill="' + legendColor + '">' + escSvgText(def.label) + '</text>';
     }).join('');
 
     return '<svg viewBox="0 0 600 ' + fx(height + 24, 0) + '" width="100%" role="img" aria-label="Composition by group, ' + rows.length + ' group(s)">' + hatch.html +
@@ -493,11 +493,11 @@
       var w = max > 0 ? (v / max) * barW : 0;
       var y = top + i * (rowH + rowGap);
       var mid = y + rowH / 2 + 4;
-      return '<text x="' + labelW + '" y="' + mid + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(r.label) + '</text>' +
-        (r.sub ? '<text x="' + labelW + '" y="' + (mid + 12) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + dimColor + '">' + escSvgText(r.sub) + '</text>' : '') +
+      return '<text x="' + labelW + '" y="' + mid + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(r.label) + '</text>' +
+        (r.sub ? '<text x="' + labelW + '" y="' + (mid + 12) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + dimColor + '">' + escSvgText(r.sub) + '</text>' : '') +
         '<rect x="' + barX + '" y="' + y + '" width="' + fx(barW) + '" height="' + rowH + '" rx="2" fill="' + trackColor + '"/>' +
         (w > 0.5 ? '<rect x="' + barX + '" y="' + y + '" width="' + fx(w) + '" height="' + rowH + '" rx="2" fill="' + (r.color || PAL.gold) + '"/>' : '') +
-        '<text x="' + (barX + barW + 8) + '" y="' + mid + '" font-family="Manrope,sans-serif" font-size="11" font-weight="700" fill="' + (v > 0 ? labelColor : dimColor) + '">' + fx(v, 0) + '</text>';
+        '<text x="' + (barX + barW + 8) + '" y="' + mid + '" font-family="Bricolage Grotesque,sans-serif" font-size="11" font-weight="700" fill="' + (v > 0 ? labelColor : dimColor) + '">' + fx(v, 0) + '</text>';
     }).join('');
 
     var height = top + rows.length * (rowH + rowGap) + 4;
@@ -530,7 +530,7 @@
     var cells = '';
     for (var Ii = 5; Ii >= 1; Ii--) {
       var row = 5 - Ii;
-      cells += '<text x="' + (gridX - 10) + '" y="' + (gridY + row * cell + cell / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" fill="#8b877d">I' + Ii + '</text>';
+      cells += '<text x="' + (gridX - 10) + '" y="' + (gridY + row * cell + cell / 2 + 4) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="10" fill="#8b877d">I' + Ii + '</text>';
       for (var L = 1; L <= 5; L++) {
         var n = counts[L + '-' + Ii] || 0;
         var sev = bandLocal(L * Ii);
@@ -538,17 +538,17 @@
         var x = gridX + (L - 1) * cell, y = gridY + row * cell;
         var textColor = alpha > 0.55 ? '#FAF7F1' : '#0B0B0C';
         cells += '<rect x="' + x + '" y="' + y + '" width="' + (cell - 2) + '" height="' + (cell - 2) + '" fill="rgba(' + hexToRgb(SEV_HEX[sev]) + ',' + alpha + ')"/>' +
-          (n ? '<text x="' + (x + (cell - 2) / 2) + '" y="' + (y + (cell - 2) / 2 + 4) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="12" font-weight="700" fill="' + textColor + '">' + n + '</text>' : '');
+          (n ? '<text x="' + (x + (cell - 2) / 2) + '" y="' + (y + (cell - 2) / 2 + 4) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="12" font-weight="700" fill="' + textColor + '">' + n + '</text>' : '');
       }
     }
     var colLabels = [1, 2, 3, 4, 5].map(function (L) {
-      return '<text x="' + (gridX + (L - 1) * cell + (cell - 2) / 2) + '" y="' + (gridY + 5 * cell + 14) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" fill="#8b877d">L' + L + '</text>';
+      return '<text x="' + (gridX + (L - 1) * cell + (cell - 2) / 2) + '" y="' + (gridY + 5 * cell + 14) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="10" fill="#8b877d">L' + L + '</text>';
     }).join('');
     var legendY = gridY + 5 * cell + 34;
     var legend = ['Low', 'Medium', 'High', 'Critical'].map(function (sev, i) {
       var x = gridX + i * 90;
       return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="rgba(' + hexToRgb(SEV_HEX[sev]) + ',.75)"/>' +
-        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">' + sev + '</text>';
+        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Bricolage Grotesque,sans-serif" font-size="9.5" fill="#4b473e">' + sev + '</text>';
     }).join('');
 
     return '<svg viewBox="0 0 400 ' + (legendY + 14) + '" width="100%" role="img" aria-label="Residual risk heatmap, likelihood by impact, ' + residuals.length + ' open risk(s)">' +
@@ -576,9 +576,9 @@
       (autoW > 0.5 ? '<rect x="' + trackX + '" y="' + trackY + '" width="' + fx(autoW) + '" height="' + trackH + '" rx="4" fill="' + PAL.gold + '"/>' : '') +
       (manualW > 0.5 ? '<rect x="' + fx(trackX + autoW) + '" y="' + trackY + '" width="' + fx(manualW) + '" height="' + trackH + '" fill="' + PAL.neutral + '"/>' : '') +
       '<rect x="' + trackX + '" y="' + trackY + '" width="' + trackW + '" height="' + trackH + '" rx="4" fill="none" stroke="rgba(11,11,12,.15)"/>' +
-      '<rect x="0" y="66" width="10" height="10" fill="' + PAL.gold + '"/><text x="15" y="75" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">Auto-captured (' + autoCaptured + ')</text>' +
-      '<rect x="180" y="66" width="10" height="10" fill="' + PAL.neutral + '"/><text x="195" y="75" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">Manual (' + manual + ')</text>' +
-      '<rect x="330" y="66" width="10" height="10" fill="' + PAL.muted + '"/><text x="345" y="75" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">No evidence (' + (total - covered) + ')</text>' +
+      '<rect x="0" y="66" width="10" height="10" fill="' + PAL.gold + '"/><text x="15" y="75" font-family="Bricolage Grotesque,sans-serif" font-size="9.5" fill="#4b473e">Auto-captured (' + autoCaptured + ')</text>' +
+      '<rect x="180" y="66" width="10" height="10" fill="' + PAL.neutral + '"/><text x="195" y="75" font-family="Bricolage Grotesque,sans-serif" font-size="9.5" fill="#4b473e">Manual (' + manual + ')</text>' +
+      '<rect x="330" y="66" width="10" height="10" fill="' + PAL.muted + '"/><text x="345" y="75" font-family="Bricolage Grotesque,sans-serif" font-size="9.5" fill="#4b473e">No evidence (' + (total - covered) + ')</text>' +
       '</svg>';
   }
 
@@ -598,8 +598,8 @@
       var arrow = it.trend === 'up' ? '▲' : it.trend === 'down' ? '▼' : '';
       return (i > 0 ? '<line x1="' + x + '" y1="10" x2="' + x + '" y2="' + (h - 10) + '" stroke="rgba(11,11,12,.15)"/>' : '') +
         '<text x="' + (x + tileW / 2) + '" y="42" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="26" font-weight="500" fill="' + PAL.gold + '">' + escSvgText(it.value) +
-        (arrow ? '<tspan dx="4" font-family="Manrope,sans-serif" font-size="15" fill="' + arrowColor + '">' + arrow + '</tspan>' : '') + '</text>' +
-        '<text x="' + (x + tileW / 2) + '" y="62" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing=".5" fill="#8b877d">' + escSvgText((it.label || '').toUpperCase()) + '</text>';
+        (arrow ? '<tspan dx="4" font-family="Bricolage Grotesque,sans-serif" font-size="15" fill="' + arrowColor + '">' + arrow + '</tspan>' : '') + '</text>' +
+        '<text x="' + (x + tileW / 2) + '" y="62" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="9" letter-spacing=".5" fill="#8b877d">' + escSvgText((it.label || '').toUpperCase()) + '</text>';
     }).join('');
     return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" role="img" aria-label="' + escSvgText('Key metrics: ' + items.map(function (it) { return it.label + ' ' + it.value; }).join(', ')) + '">' +
       '<line x1="0" y1="8" x2="' + w + '" y2="8" stroke="rgba(11,11,12,.2)"/><line x1="0" y1="' + (h - 8) + '" x2="' + w + '" y2="' + (h - 8) + '" stroke="rgba(11,11,12,.2)"/>' +
@@ -701,7 +701,7 @@
     var capHalf = numSize * 0.36;
     var centerHtml = compact ? '' :
       '<text x="' + cx + '" y="' + fx(cy + capHalf - 3) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="' + fx(numSize) + '" font-weight="500" fill="' + P.text + '"' + (interactive ? ' class="rpt-fp-num" data-count="' + fx(centerPct, 0) + '"' : '') + '>' + fx(centerPct, 0) + '</text>' +
-      '<text x="' + cx + '" y="' + fx(cy + capHalf + 12) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="' + P.textDim + '">READINESS</text>';
+      '<text x="' + cx + '" y="' + fx(cy + capHalf + 12) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="9" letter-spacing="1" fill="' + P.textDim + '">READINESS</text>';
 
     var ariaLabel = escSvgText('Compliance fingerprint: ' + fx(centerPct, 0) + '% overall readiness across ' + rings.length + ' theme(s)' + (evidencePct != null ? ', ' + fx(evidencePct, 0) + '% evidence coverage' : ''));
     var titleHtml = (!interactive && opts.title) ? '<title>' + escSvgText(opts.title) + '</title>' : '';
@@ -735,12 +735,12 @@
       return '<circle cx="' + linePts[i][0] + '" cy="' + linePts[i][1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(190, 74, 30,.55)') + '"/>';
     }).join('');
     var dateLabels = [0, n - 1].map(function (i) {
-      return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(pts[i].dateLabel || '') + '</text>';
+      return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(pts[i].dateLabel || '') + '</text>';
     }).join('');
-    var lastLabel = '<text x="' + linePts[n - 1][0] + '" y="' + (linePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(pts[n - 1].weeksNeeded, 0) + 'w</text>';
+    var lastLabel = '<text x="' + linePts[n - 1][0] + '" y="' + (linePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(pts[n - 1].weeksNeeded, 0) + 'w</text>';
     return '<svg viewBox="0 0 580 170" width="100%" role="img" aria-label="' + escSvgText('Audit-ready projection drift: ' + fx(pts[n - 1].weeksNeeded, 0) + ' weeks projected as of the latest scan') + '">' +
       '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="rgba(11,11,12,.15)"/>' +
-      '<text x="' + x0 + '" y="14" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">Weeks to audit-ready (at scan-time velocity)</text>' +
+      '<text x="' + x0 + '" y="14" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="#8b877d">Weeks to audit-ready (at scan-time velocity)</text>' +
       '<polyline points="' + line + '" fill="none" stroke="' + PAL.gold + '" stroke-width="2"/>' + dots + lastLabel + dateLabels +
       '</svg>';
   }
@@ -826,8 +826,8 @@
       return '<g' + tipAttr + '>' +
         '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + lineY2 + '" stroke="' + color + '" stroke-width="1"/>' +
         markerShape +
-        '<text x="' + x + '" y="' + labelY + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="' + P.text + '">' + escSvgText(m.label) + '</text>' +
-        '<text x="' + x + '" y="' + (labelY + (above ? 12 : -12)) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date + (m.pct != null ? ' · ' + fx(m.pct, 0) + '%' : '')) + '</text>' +
+        '<text x="' + x + '" y="' + labelY + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + P.text + '">' + escSvgText(m.label) + '</text>' +
+        '<text x="' + x + '" y="' + (labelY + (above ? 12 : -12)) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date + (m.pct != null ? ' · ' + fx(m.pct, 0) + '%' : '')) + '</text>' +
         '</g>';
     }).join('');
 
@@ -836,8 +836,8 @@
       var label = escSvgText(m.label + ' — ' + m.date + ' (beyond chart, at current velocity)');
       var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + label + '" data-tip="' + label + '"' : '';
       return '<g' + tipAttr + '>' +
-        '<text x="' + (x1 + 6) + '" y="' + (y + 4) + '" font-family="Manrope,sans-serif" font-size="13" fill="' + color + '">»</text>' +
-        '<text x="' + (x1 + 6) + '" y="' + (y + 22) + '" font-family="Manrope,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date) + '</text>' +
+        '<text x="' + (x1 + 6) + '" y="' + (y + 4) + '" font-family="Bricolage Grotesque,sans-serif" font-size="13" fill="' + color + '">»</text>' +
+        '<text x="' + (x1 + 6) + '" y="' + (y + 22) + '" font-family="Bricolage Grotesque,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date) + '</text>' +
         '</g>';
     }).join('');
 
@@ -945,11 +945,11 @@
     }
     var axis = '';
     for (var a = 1; a <= 5; a++) {
-      axis += '<text x="' + fx(margin + (a - 0.5) * cell) + '" y="' + fx(size - margin + 14) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
-      axis += '<text x="' + fx(margin - 8) + '" y="' + fx(size - margin - (a - 0.5) * cell + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+      axis += '<text x="' + fx(margin + (a - 0.5) * cell) + '" y="' + fx(size - margin + 14) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+      axis += '<text x="' + fx(margin - 8) + '" y="' + fx(size - margin - (a - 0.5) * cell + 3) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
     }
-    axis += '<text x="' + fx(margin + 2.5 * cell) + '" y="' + fx(size - 6) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '">LIKELIHOOD</text>';
-    axis += '<text x="10" y="' + fx(margin + 2.5 * cell) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '" transform="rotate(-90 10 ' + fx(margin + 2.5 * cell) + ')">IMPACT</text>';
+    axis += '<text x="' + fx(margin + 2.5 * cell) + '" y="' + fx(size - 6) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '">LIKELIHOOD</text>';
+    axis += '<text x="10" y="' + fx(margin + 2.5 * cell) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '" transform="rotate(-90 10 ' + fx(margin + 2.5 * cell) + ')">IMPACT</text>';
 
     var trails = Array.isArray(data && data.trails) ? data.trails : [];
     var trailHtml = opts.showTrails === false ? '' : trails.map(function (t) {
@@ -972,7 +972,7 @@
       var otip = escSvgText(overflowCount + ' more open risk' + (overflowCount === 1 ? '' : 's') + ' not shown individually');
       var oattrs = interactive ? ' tabindex="0" role="img" aria-label="' + otip + '" data-tip="' + otip + '"' : '';
       overflowHtml = '<g' + oattrs + '><circle cx="' + fx(ox) + '" cy="' + fx(oy) + '" r="13" fill="' + PAL.neutral + '" fill-opacity=".85"/>' +
-        '<text x="' + fx(ox) + '" y="' + fx(oy + 3) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" font-weight="700" fill="#FAF7F1">+' + overflowCount + '</text></g>';
+        '<text x="' + fx(ox) + '" y="' + fx(oy + 3) + '" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="9" font-weight="700" fill="#FAF7F1">+' + overflowCount + '</text></g>';
     }
 
     var ariaLabel = escSvgText('Risk landscape: ' + bubbles.length + ' open risk' + (bubbles.length === 1 ? '' : 's') + ' plotted by likelihood × impact' + (overflowCount ? ', ' + overflowCount + ' more not shown individually' : ''));
@@ -1018,7 +1018,7 @@
     var gridlines = [0, 0.25, 0.5, 0.75, 1].map(function (p) {
       var y = fx(yFor(p));
       return '<line x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1"/>' +
-        '<text x="' + (x0 - 8) + '" y="' + fx(y + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + Math.round(p * 100) + '%</text>';
+        '<text x="' + (x0 - 8) + '" y="' + fx(y + 3) + '" text-anchor="end" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + textColor + '">' + Math.round(p * 100) + '%</text>';
     }).join('');
 
     var pts = curve.map(function (pt) { return [fx(xFor(pt.x)), fx(yFor(pt.p))]; });
@@ -1033,7 +1033,7 @@
     for (var i = 0; i < labelCount; i++) {
       var idx = Math.round((i / (labelCount - 1)) * (curve.length - 1));
       var pt = curve[idx];
-      xLabels.push('<text x="' + fx(xFor(pt.x)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : i === labelCount - 1 ? 'end' : 'middle') + '" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + escSvgText(fmtUsdCompact(pt.x)) + '</text>');
+      xLabels.push('<text x="' + fx(xFor(pt.x)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : i === labelCount - 1 ? 'end' : 'middle') + '" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + textColor + '">' + escSvgText(fmtUsdCompact(pt.x)) + '</text>');
     }
 
     var interactiveDots = '';
@@ -1045,7 +1045,7 @@
     }
 
     var p50 = curve.reduce(function (best, pt) { return Math.abs(pt.p - 0.5) < Math.abs(best.p - 0.5) ? pt : best; }, curve[0]);
-    var headline = '<text x="' + x0 + '" y="12" font-family="Manrope,sans-serif" font-size="9" fill="' + textStrong + '" font-weight="700">' + escSvgText('~50% chance annual loss exceeds ' + fmtUsdCompact(p50.x)) + '</text>';
+    var headline = '<text x="' + x0 + '" y="12" font-family="Bricolage Grotesque,sans-serif" font-size="9" fill="' + textStrong + '" font-weight="700">' + escSvgText('~50% chance annual loss exceeds ' + fmtUsdCompact(p50.x)) + '</text>';
 
     var ariaLabel = escSvgText('Loss exceedance curve, median annual loss around ' + fmtUsdCompact(p50.x));
     return '<svg viewBox="0 0 580 200" width="100%" role="img" aria-label="' + ariaLabel + '">' + headline + gridlines + pathHtml + interactiveDots + xLabels.join('') + '</svg>';
@@ -1151,7 +1151,7 @@
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       '@page{size:A4;margin:34mm 16mm 26mm 16mm}' +
       'html,body{margin:0;padding:0}' +
-      'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;font-size:12.5px;line-height:1.6}' +
+      'body{font-family:Bricolage Grotesque,sans-serif;background:#FAF7F1;color:#0B0B0C;font-size:12.5px;line-height:1.6}' +
       '.rpt-doc{max-width:900px;margin:0 auto;padding:28px 40px}' +
       '.rpt-mast{display:flex;align-items:center;gap:8px;margin-bottom:28px}.w1{font-weight:300;letter-spacing:.13em;font-size:12px}.w2{font-weight:800;color:#BE4A1E;font-size:12px}' +
       'h1{font-family:Bricolage Grotesque,sans-serif;font-weight:500}h2{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:18px;margin:0 0 4px}h3{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:14px;margin:22px 0 8px}' +
@@ -1205,7 +1205,7 @@
     return '"' + String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').slice(0, 140).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/</g, '\\3c ') + '"';
   }
   function pageMarginCss(spec) {
-    var box = 'font-family:Manrope,sans-serif;font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#8b877d;border-top:1px solid rgba(11,11,12,.15);padding-top:3mm;vertical-align:top';
+    var box = 'font-family:Bricolage Grotesque,sans-serif;font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#8b877d;border-top:1px solid rgba(11,11,12,.15);padding-top:3mm;vertical-align:top';
     return '@page{' +
         '@top-left{content:' + cssStr(((spec.client && spec.client.name) || '') + ' \u2014 ' + spec.reportTitle) + ';' + box.replace('border-top', 'border-bottom').replace('padding-top', 'padding-bottom').replace('vertical-align:top', 'vertical-align:bottom') + '}' +
         '@top-right{content:' + cssStr(spec.classification) + ';' + box.replace('border-top', 'border-bottom').replace('padding-top', 'padding-bottom').replace('vertical-align:top', 'vertical-align:bottom') + '}' +

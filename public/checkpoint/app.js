@@ -694,7 +694,7 @@ function showModal(opts) {
     var boxes = '';
     if (opts.title) {
       /* Margin boxes do not inherit the page's font. */
-      var box = 'font-family:' + (opts.font || 'Manrope,"Segoe UI",Arial,sans-serif') + ';font-size:7.5pt;letter-spacing:.06em;text-transform:uppercase;color:' + (opts.draft ? '#b91c1c' : '#6b675e');
+      var box = 'font-family:' + (opts.font || 'Bricolage Grotesque,"Segoe UI",Arial,sans-serif') + ';font-size:7.5pt;letter-spacing:.06em;text-transform:uppercase;color:' + (opts.draft ? '#b91c1c' : '#6b675e');
       var cls = [String(opts.classification || '').toUpperCase(), opts.draft ? 'DRAFT \u2014 NOT APPROVED' : ''].filter(Boolean).join(' \u00b7 ');
       boxes = '@page{' +
           '@top-left{content:' + cssStrLit(cls) + ';' + box + ';font-weight:600}' +
@@ -2830,7 +2830,7 @@ function showModal(opts) {
     bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
     var printBtn = w.document.createElement('button');
     printBtn.textContent = 'PRINT / SAVE AS PDF';
-    printBtn.style.cssText = 'background:#BE4A1E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
+    printBtn.style.cssText = 'background:#BE4A1E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Bricolage Grotesque,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
     bar.appendChild(printBtn);
     wbody.appendChild(bar);
 
@@ -2871,7 +2871,7 @@ function showModal(opts) {
     bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
     var printBtn = w.document.createElement('button');
     printBtn.textContent = 'EXPORT PDF';
-    printBtn.style.cssText = 'background:#BE4A1E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
+    printBtn.style.cssText = 'background:#BE4A1E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Bricolage Grotesque,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
     bar.appendChild(printBtn);
     wbody.appendChild(bar);
 
@@ -4919,7 +4919,7 @@ function showModal(opts) {
         '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-64px -72px 24px}';
     }
     // 'standard' — the original, unchanged.
-    return 'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
+    return 'body{font-family:Bricolage Grotesque,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
       '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
       '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
       '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
@@ -15723,7 +15723,7 @@ function showModal(opts) {
             (it.topics.length ? '<div class="src" style="margin-top:4px">' + esc(it.topics.join(' · ')) + '</div>' : '') + '</td>' +
           '<td><span class="chip ' + qrVerdictCls(it.verdict) + '">' + esc(it.verdict) + '</span>' +
             '<details style="margin-top:6px;font-size:12px;color:var(--paper-dim)"><summary>Why</summary>' + detail + '</details></td>' +
-          '<td><textarea class="mini" id="qrAns-' + i + '" aria-label="Answer to question ' + (i + 1) + '" style="width:100%;min-height:74px;font-family:Manrope" placeholder="' + (it.verdict === 'Yes' ? '' : 'The evidence does not support a yes on its own. Write what is true.') + '">' + esc(it.answer || '') + '</textarea>' +
+          '<td><textarea class="mini" id="qrAns-' + i + '" aria-label="Answer to question ' + (i + 1) + '" style="width:100%;min-height:74px;font-family:Bricolage Grotesque" placeholder="' + (it.verdict === 'Yes' ? '' : 'The evidence does not support a yes on its own. Write what is true.') + '">' + esc(it.answer || '') + '</textarea>' +
             '<div class="src" style="margin-top:4px' + (it.evidenceChanged && !it.approvedId ? ';color:var(--fail)' : '') + '">' + esc(qrSourceLabel(it)) + '</div>' +
             it.cautions.map(function (c) { return '<div class="src" style="margin-top:2px;color:var(--warn)">' + esc(c) + '</div>'; }).join('') + '</td>' +
           '<td style="white-space:nowrap">' + (it.approvedId ? '' : '<button class="btn ghost sm" data-action="App.qrApprove" data-id="' + i + '">Approve</button>') + '</td>' +
@@ -17204,7 +17204,7 @@ function showModal(opts) {
       '<div id="copilotStarters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
       COPILOT_STARTERS.map(function (q) { return '<button class="btn ghost sm" data-action="App.copilotAskStarter" data-id="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') +
       '</div>' +
-      '<textarea id="copilotInput" class="mini" style="width:100%;min-height:60px;font-family:Manrope" placeholder="Ask about your compliance state…" aria-label="Ask about your compliance state"></textarea>' +
+      '<textarea id="copilotInput" class="mini" style="width:100%;min-height:60px;font-family:Bricolage Grotesque" placeholder="Ask about your compliance state…" aria-label="Ask about your compliance state"></textarea>' +
       '<button class="btn sm" id="copilotSendBtn" data-action="App.copilotSend" style="margin-top:10px">Send</button>';
     renderCopilotMessages();
   }
@@ -25494,7 +25494,7 @@ function showModal(opts) {
       if (!v) return;
       var d = window.CheckpointLib.ndbNoticeDrafts({ org: v.org, contact: v.contact, description: v.description, kinds: v.kinds, occurred: n.occurred ? fmtDateY(n.occurred) : '', detected: n.detected ? fmtDateY(n.detected) : '', steps: String(v.steps || '').split('\n') });
       var block = function (h, t) { return '<h2>' + esc(h) + '</h2><pre style="white-space:pre-wrap;font:inherit;line-height:1.6">' + esc(t) + '</pre>'; };
-      var html = '<!doctype html><html><head><meta charset="utf-8"><title>Breach notices — ' + esc(n.id) + '</title><style>body{font-family:Manrope,Arial,sans-serif;color:#0B0B0C;max-width:760px;margin:32px auto;padding:0 24px;font-size:13px}h1{font-size:20px}h2{font-size:15px;margin-top:28px;border-bottom:1px solid #ccc;padding-bottom:4px}.draft{border:2px solid #b91c1c;color:#b91c1c;padding:8px 12px;font-weight:700}</style></head><body>' +
+      var html = '<!doctype html><html><head><meta charset="utf-8"><title>Breach notices — ' + esc(n.id) + '</title><style>body{font-family:Bricolage Grotesque,Arial,sans-serif;color:#0B0B0C;max-width:760px;margin:32px auto;padding:0 24px;font-size:13px}h1{font-size:20px}h2{font-size:15px;margin-top:28px;border-bottom:1px solid #ccc;padding-bottom:4px}.draft{border:2px solid #b91c1c;color:#b91c1c;padding:8px 12px;font-weight:700}</style></head><body>' +
         '<p class="draft">DRAFT for review. Not sent. Lodge the statement through the OAIC’s online form, and send the notice to affected people as soon as practicable.</p>' +
         '<h1>Breach notices — ' + esc(n.id) + ' ' + esc(n.title || '') + '</h1>' +
         block('Statement to the OAIC', d.commissioner) + block('Notice to affected individuals', d.individuals) + '</body></html>';

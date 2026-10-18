@@ -183,15 +183,15 @@ const serviceLd = {
   </section>
   <style is:global>
     .finder{max-width:900px;margin:0 auto}
-    .finder-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:0 0 20px}
-    .q-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(11,11,12,.6);font-weight:700;margin:26px 0 10px;font-family:Manrope,system-ui,sans-serif}
+    .finder-eyebrow{font-family:Bricolage Grotesque,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:0 0 20px}
+    .q-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(11,11,12,.6);font-weight:700;margin:26px 0 10px;font-family:Bricolage Grotesque,system-ui,sans-serif}
     .f-opts{display:flex;flex-wrap:wrap;gap:8px}
-    .f-opt{border:1px solid rgba(11,11,12,.12);border-radius:3px;padding:9px 16px;font-size:13px;color:rgba(11,11,12,.7);cursor:pointer;transition:all .2s var(--ease,cubic-bezier(.22,1,.36,1));user-select:none;font-family:Manrope,system-ui,sans-serif}
+    .f-opt{border:1px solid rgba(11,11,12,.12);border-radius:3px;padding:9px 16px;font-size:13px;color:rgba(11,11,12,.7);cursor:pointer;transition:all .2s var(--ease,cubic-bezier(.22,1,.36,1));user-select:none;font-family:Bricolage Grotesque,system-ui,sans-serif}
     .f-opt:hover{border-color:#BE4A1E;color:#0B0B0C}
     .f-opt.sel{background:#BE4A1E;border-color:#BE4A1E;color:#FAF7F1;font-weight:700}
     .finder-result{margin-top:34px;background:#0B0B0C;color:#FAF7F1;border:1px solid rgba(240, 169, 127,.35);border-radius:8px;padding:34px 36px;box-shadow:0 30px 60px rgba(0,0,0,.25);opacity:0;transform:translateY(12px);transition:opacity .6s var(--ease,cubic-bezier(.22,1,.36,1)),transform .6s var(--ease,cubic-bezier(.22,1,.36,1));pointer-events:none}
     .finder-result.show{opacity:1;transform:none;pointer-events:auto}
-    .finder-result .fr-tag{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;font-family:Manrope,system-ui,sans-serif}
+    .finder-result .fr-tag{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;font-family:Bricolage Grotesque,system-ui,sans-serif}
     .finder-result h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:clamp(1.5rem,2.8vw,2.1rem);margin:10px 0 0;color:#FAF7F1}
     .finder-result p{margin:12px 0 0;font-size:14px;line-height:1.75;color:rgba(250,247,241,.62);max-width:64ch}
     .finder-result .fr-pair{margin-top:16px;font-size:12px}
@@ -227,12 +227,12 @@ const serviceLd = {
     </div>
   </section>
   <style is:global>
-    .exp-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:0 0 20px}
+    .exp-eyebrow{font-family:Bricolage Grotesque,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:0 0 20px}
     .explorer{display:grid;grid-template-columns:255px 1fr;border-radius:8px;overflow:hidden;margin-top:54px;background:#141416;color:#FAF7F1;box-shadow:0 30px 60px rgba(0,0,0,.22)}
     @media(max-width:860px){.explorer{grid-template-columns:1fr}}
     .exp-rail{border-right:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column}
     @media(max-width:860px){.exp-rail{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid rgba(255,255,255,.14)}}
-    .exp-tab{background:none;border:none;border-bottom:1px solid rgba(255,255,255,.14);color:rgba(250,247,241,.62);font-family:Manrope,system-ui,sans-serif;font-size:13px;text-align:left;padding:17px 22px;cursor:pointer;transition:color .2s var(--ease,cubic-bezier(.22,1,.36,1)),background .2s var(--ease,cubic-bezier(.22,1,.36,1));display:flex;align-items:center;gap:10px;white-space:nowrap}
+    .exp-tab{background:none;border:none;border-bottom:1px solid rgba(255,255,255,.14);color:rgba(250,247,241,.62);font-family:Bricolage Grotesque,system-ui,sans-serif;font-size:13px;text-align:left;padding:17px 22px;cursor:pointer;transition:color .2s var(--ease,cubic-bezier(.22,1,.36,1)),background .2s var(--ease,cubic-bezier(.22,1,.36,1));display:flex;align-items:center;gap:10px;white-space:nowrap}
     .exp-tab:hover{color:#FAF7F1}
     .exp-tab.on{color:#FAF7F1;background:#0B0B0C;box-shadow:inset 3px 0 0 #BE4A1E}
     .exp-tab .exp-tag{font-size:8.5px;letter-spacing:.12em;color:var(--accent-ink);border:1px solid rgba(190, 74, 30,.5);border-radius:3px;padding:2px 6px;font-weight:700}
@@ -243,13 +243,13 @@ const serviceLd = {
     .exp-who{margin-top:10px;font-size:13.5px;color:rgba(250,247,241,.62);line-height:1.7;max-width:60ch}
     .exp-who strong{color:#F0A97F;font-weight:700}
     .tl{margin-top:28px}
-    .tl-cap{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin-bottom:8px;font-family:Manrope,system-ui,sans-serif}
+    .tl-cap{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin-bottom:8px;font-family:Bricolage Grotesque,system-ui,sans-serif}
     .tl-cap b{color:#F0A97F;font-variant-numeric:tabular-nums}
     .tl-track{height:7px;background:rgba(250,247,241,.1);border-radius:99px;overflow:hidden}
     .tl-fill{height:100%;width:0;background:linear-gradient(90deg,#BE4A1E,#F0A97F);border-radius:99px;transition:width 1s var(--ease,cubic-bezier(.22,1,.36,1))}
     .exp-cols{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:30px}
     @media(max-width:700px){.exp-cols{grid-template-columns:1fr}}
-    .exp-cols h4{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:0 0 12px;font-family:Manrope,system-ui,sans-serif}
+    .exp-cols h4{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:0 0 12px;font-family:Bricolage Grotesque,system-ui,sans-serif}
     .exp-cols ul{list-style:none;margin:0;padding:0}
     .exp-cols li{font-size:13px;color:rgba(250,247,241,.62);line-height:1.6;padding:8px 0 8px 20px;border-bottom:1px solid rgba(255,255,255,.14);position:relative}
     .exp-cols li:last-child{border-bottom:none}
@@ -258,8 +258,8 @@ const serviceLd = {
     .overlap-chip:last-child{border-bottom:none}
     .overlap-bar{flex:1;height:4px;background:rgba(250,247,241,.1);border-radius:99px;overflow:hidden}
     .overlap-bar i{display:block;height:100%;width:0;background:#BE4A1E;transition:width .9s var(--ease,cubic-bezier(.22,1,.36,1))}
-    .overlap-chip b{color:#F0A97F;font-weight:800;font-size:12px;min-width:34px;text-align:right;font-family:Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums}
-    .exp-cta{display:inline-block;margin-top:30px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#F0A97F;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif}
+    .overlap-chip b{color:#F0A97F;font-weight:800;font-size:12px;min-width:34px;text-align:right;font-family:Bricolage Grotesque,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .exp-cta{display:inline-block;margin-top:30px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#F0A97F;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(240, 169, 127,.4);padding-bottom:4px;font-family:Bricolage Grotesque,system-ui,sans-serif}
   </style>
 
   <!-- HOW TO CHOOSE -->
