@@ -116,7 +116,9 @@ const images = {
     .explainer-horizontal { display: none; }
     .explainer-vertical { display: block; }
   }
-  .explainer-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* :global — the iframe is created by the click handler, so it never
+     carries this component's scoping attribute. */
+  .explainer-frame :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
   .explainer-poster {
     position: absolute; inset: 0; width: 100%; height: 100%;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
@@ -167,6 +169,15 @@ const images = {
 })();
 </script>
 
+<style>
+  /* The four phases are long; the global 115px section padding doubled
+     to ~230px of blank cream between them, and the alternate band was
+     the same cream as the page so nothing marked the break. Tighter
+     padding, and the even phases sit on a deeper cream. */
+  #phase-assess, #phase-implement, #phase-evidence, #phase-certify { padding-top: 4rem; padding-bottom: 4rem; }
+  #phase-assess .section-lead, #phase-implement .section-lead, #phase-evidence .section-lead, #phase-certify .section-lead { margin-left: 0; }
+</style>
+
 <!-- PHASE 1: ASSESS -->
 <section class="section" id="phase-assess">
   <div class="container">
@@ -210,7 +221,7 @@ const images = {
 </section>
 
 <!-- PHASE 2: IMPLEMENT -->
-<section class="section" id="phase-implement" style="background:#FAF7F1;">
+<section class="section" id="phase-implement" style="background:#F2ECE2;">
   <div class="container">
     <div style="max-width:860px;margin:0 auto;">
       <div style="display:inline-block;background:#BE4A1E;color:var(--on-accent);padding:4px 14px;border-radius:999px;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;margin-bottom:1rem;">PHASE 02 — WEEKS 3–10</div>
@@ -287,7 +298,7 @@ const images = {
 </section>
 
 <!-- PHASE 4: CERTIFY -->
-<section class="section" id="phase-certify" style="background:#FAF7F1;">
+<section class="section" id="phase-certify" style="background:#F2ECE2;">
   <div class="container">
     <div style="max-width:860px;margin:0 auto;">
       <div style="display:inline-block;background:#BE4A1E;color:var(--on-accent);padding:4px 14px;border-radius:999px;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;margin-bottom:1rem;">PHASE 04 — EXTERNAL AUDIT</div>

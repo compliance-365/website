@@ -4,27 +4,25 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Compliance365 — Brand Explainer</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  @font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;font-display:swap;src:url('/assets/fonts/bricolage-grotesque-latin-wght-normal.woff2') format('woff2-variations')}
   :root{
-    --navy-deep:#070f24;
-    --navy:#0c1a3e;
-    --navy-2:#11254f;
-    --blue:#1e40af;
-    --blue-bright:#3b76f6;
-    --glow:rgba(59,118,246,.55);
+    --ink-deep:#0B0B0C;
+    --ink-2:#141416;
+    --ink-3:#1C1C1F;
+    --accent-deep:#A63A12;
+    --accent-bright:#BE4A1E;
+    --glow:rgba(190,74,30,.55);
     --gold:#BE4A1E;
     --gold-soft:#F0A97F;
-    --ice:#eaf1ff;
-    --slate:#8ba0c8;
-    --slate-dim:#5e739c;
-    --line:rgba(139,160,200,.16);
+    --cream:#FAF7F1;
+    --slate:#A8A39A;
+    --slate-dim:#7A756C;
+    --line:rgba(168,163,154,.16);
     --stage-max:1120px;
-    --display:"Space Grotesk",system-ui,sans-serif;
-    --body:"Inter",system-ui,sans-serif;
-    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --display:'Bricolage Grotesque',system-ui,sans-serif;
+    --body:'Bricolage Grotesque',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
@@ -32,10 +30,10 @@
   html,body{height:100%}
   body{
     background:
-      radial-gradient(1200px 700px at 50% -10%, #0e1d44 0%, transparent 60%),
-      radial-gradient(900px 600px at 85% 110%, #0b1736 0%, transparent 55%),
-      var(--navy-deep);
-    color:var(--ice);
+      radial-gradient(1200px 700px at 50% -10%, #1A1412 0%, transparent 60%),
+      radial-gradient(900px 600px at 85% 110%, #121214 0%, transparent 55%),
+      var(--ink-deep);
+    color:var(--cream);
     font-family:var(--body);
     min-height:100%;
     display:flex;
@@ -47,7 +45,10 @@
   }
 
   /* ---------- Stage ---------- */
-  .frame{width:100%;max-width:var(--stage-max)}
+  /* Width is capped by height too: inside the how-we-work iframe the
+     stage, the controls row and the body padding must all fit, or the
+     centred column overflows and the top of the stage is cropped. */
+  .frame{width:100%;max-width:min(var(--stage-max), calc((100vh - 130px) * 16 / 9))}
 
   .stage{
     position:relative;
@@ -56,8 +57,8 @@
     border-radius:18px;
     overflow:hidden;
     background:
-      radial-gradient(130% 120% at 50% 0%, #11224b 0%, #0a1430 55%, #070f24 100%);
-    border:1px solid rgba(139,160,200,.18);
+      radial-gradient(130% 120% at 50% 0%, #19191C 0%, #101012 55%, #0B0B0C 100%);
+    border:1px solid rgba(168,163,154,.18);
     box-shadow:0 40px 90px -40px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.04);
     isolation:isolate;
   }
@@ -78,9 +79,9 @@
     content:"";position:absolute;inset:-20%;z-index:0;pointer-events:none;
     background-image:
       radial-gradient(2px 2px at 20% 30%, rgba(190,74,30,.5) 50%, transparent),
-      radial-gradient(2px 2px at 70% 60%, rgba(59,118,246,.6) 50%, transparent),
-      radial-gradient(1.5px 1.5px at 85% 25%, rgba(234,241,255,.5) 50%, transparent),
-      radial-gradient(1.5px 1.5px at 35% 80%, rgba(59,118,246,.45) 50%, transparent),
+      radial-gradient(2px 2px at 70% 60%, rgba(190,74,30,.6) 50%, transparent),
+      radial-gradient(1.5px 1.5px at 85% 25%, rgba(250,247,241,.5) 50%, transparent),
+      radial-gradient(1.5px 1.5px at 35% 80%, rgba(190,74,30,.45) 50%, transparent),
       radial-gradient(2px 2px at 55% 15%, rgba(190,74,30,.4) 50%, transparent);
     animation:drift 26s linear infinite;
     opacity:.7;
@@ -108,7 +109,7 @@
     opacity:.6;pointer-events:none;
   }
   /* SWAP TO A REAL PHOTO: hide .tableau and drop an <img class="photo"> in the scene instead.
-     .photo gets the navy duotone treatment automatically. */
+     .photo gets the dark duotone treatment automatically. */
   .photo{
     position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;
     opacity:.32;filter:grayscale(1) brightness(.7) sepia(.5) hue-rotate(178deg) saturate(2.2);
@@ -145,7 +146,7 @@
     max-width:42ch;
   }
   .gold{color:var(--gold-soft)}
-  .ice{color:var(--ice)}
+  .ice{color:var(--cream)}
 
   /* staggered line reveal */
   .reveal{opacity:0;transform:translateY(14px);}
@@ -165,7 +166,7 @@
     letter-spacing:-.02em;
     display:flex;align-items:baseline;gap:.04em;
   }
-  .logo .c{color:var(--ice)}
+  .logo .c{color:var(--cream)}
   .logo .three65{
     color:var(--gold);
     position:relative;
@@ -186,7 +187,7 @@
     display:flex;align-items:center;justify-content:center;
   }
   .ring-o{
-    position:absolute;border:1px solid rgba(139,160,200,.22);border-radius:50%;
+    position:absolute;border:1px solid rgba(168,163,154,.22);border-radius:50%;
   }
   .ring-o.r1{inset:14%}
   .ring-o.r2{inset:0}
@@ -200,20 +201,20 @@
   .core{
     position:relative;z-index:3;
     width:34%;height:34%;border-radius:18px;
-    background:linear-gradient(160deg,#1b3a86,#0f255a);
-    border:1px solid rgba(120,160,255,.4);
-    box-shadow:0 0 0 6px rgba(30,64,175,.12), 0 14px 40px -10px rgba(30,64,175,.7);
+    background:linear-gradient(160deg,#5A2A16,#1F1A17);
+    border:1px solid rgba(240,169,127,.4);
+    box-shadow:0 0 0 6px rgba(166,58,18,.12), 0 14px 40px -10px rgba(166,58,18,.7);
     display:flex;align-items:center;justify-content:center;
     font-family:var(--mono);font-size:clamp(9px,1.4vw,13px);font-weight:600;
-    letter-spacing:.04em;color:var(--ice);padding:6%;line-height:1.25;
+    letter-spacing:.04em;color:var(--cream);padding:6%;line-height:1.25;
   }
   .core small{display:block;color:var(--slate);font-weight:400;font-size:.78em;margin-top:.3em;letter-spacing:.12em}
   .sat{
     position:absolute;top:50%;left:50%;
     transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1 * var(--a)));
     font-family:var(--mono);font-size:clamp(8px,1.25vw,12px);
-    color:var(--ice);background:rgba(13,28,64,.92);
-    border:1px solid rgba(139,160,200,.3);
+    color:var(--cream);background:rgba(20,20,22,.92);
+    border:1px solid rgba(168,163,154,.3);
     padding:.45em .7em;border-radius:8px;white-space:nowrap;
     box-shadow:0 6px 18px -8px rgba(0,0,0,.6);
   }
@@ -224,8 +225,8 @@
   .chip{
     font-family:var(--mono);font-size:clamp(10px,1.5vw,15px);
     padding:.55em .9em;border-radius:10px;
-    background:rgba(20,37,79,.7);border:1px solid rgba(139,160,200,.28);
-    color:var(--ice);opacity:0;transform:translateY(10px) scale(.96);
+    background:rgba(28,28,31,.7);border:1px solid rgba(168,163,154,.28);
+    color:var(--cream);opacity:0;transform:translateY(10px) scale(.96);
   }
   .is-active .chip{animation:pop .55s cubic-bezier(.2,.8,.2,1) forwards}
   .is-active .chip:nth-child(1){animation-delay:.2s}
@@ -253,11 +254,11 @@
   .phase .pdesc{color:var(--slate);font-size:clamp(9px,1.3vw,12px);margin-top:.35em;line-height:1.35}
   .track{
     position:relative;width:100%;max-width:760px;height:2px;margin-top:1.5em;
-    background:rgba(139,160,200,.2);border-radius:2px;overflow:hidden;
+    background:rgba(168,163,154,.2);border-radius:2px;overflow:hidden;
   }
   .track i{
     position:absolute;left:0;top:0;height:100%;width:0;
-    background:linear-gradient(90deg,var(--blue-bright),var(--gold));
+    background:linear-gradient(90deg,var(--accent-bright),var(--gold));
   }
   .is-active .track i{animation:fill 6s .25s cubic-bezier(.4,0,.2,1) forwards}
   @keyframes fill{to{width:100%}}
@@ -270,7 +271,7 @@
   .is-active .stat:nth-child(2){animation-delay:.45s}
   .is-active .stat:nth-child(3){animation-delay:.7s}
   .is-active .stat:nth-child(4){animation-delay:.95s}
-  .stat .big{font-family:var(--display);font-weight:700;font-size:clamp(26px,5.4vw,58px);line-height:1;letter-spacing:-.02em;color:var(--ice)}
+  .stat .big{font-family:var(--display);font-weight:700;font-size:clamp(26px,5.4vw,58px);line-height:1;letter-spacing:-.02em;color:var(--cream)}
   .stat .big.g{color:var(--gold-soft)}
   .stat .lbl{font-family:var(--mono);font-size:clamp(8px,1.15vw,12px);color:var(--slate);margin-top:.85em;letter-spacing:.1em;line-height:1.4}
 
@@ -291,7 +292,7 @@
   /* ---------- Progress ring (top-right) ---------- */
   .ring{position:absolute;top:16px;right:16px;z-index:6;width:40px;height:40px;transform:rotate(-90deg)}
   .ring circle{fill:none;stroke-width:3}
-  .ring .bg{stroke:rgba(139,160,200,.22)}
+  .ring .bg{stroke:rgba(168,163,154,.22)}
   .ring .fg{stroke:var(--gold);stroke-linecap:round;transition:stroke-dashoffset .12s linear}
 
   /* watermark logo (real brand mark, rendered white on the dark stage) */
@@ -307,11 +308,11 @@
   }
   .btn{
     width:42px;height:42px;border-radius:50%;
-    border:1px solid rgba(139,160,200,.3);background:rgba(18,33,68,.7);
-    color:var(--ice);cursor:pointer;display:grid;place-items:center;
+    border:1px solid rgba(168,163,154,.3);background:rgba(24,24,27,.7);
+    color:var(--cream);cursor:pointer;display:grid;place-items:center;
     transition:border-color .2s,background .2s,transform .15s;
   }
-  .btn:hover{border-color:var(--gold);background:rgba(30,64,175,.4)}
+  .btn:hover{border-color:var(--gold);background:rgba(166,58,18,.4)}
   .btn:active{transform:scale(.93)}
   .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .btn.on{border-color:var(--gold);color:var(--gold);background:rgba(190,74,30,.12)}
@@ -319,7 +320,7 @@
   .dots{display:flex;gap:9px;align-items:center;margin-left:2px}
   .dotbtn{
     width:9px;height:9px;border-radius:50%;border:none;padding:0;cursor:pointer;
-    background:rgba(139,160,200,.32);transition:background .25s,width .25s,border-radius .25s;
+    background:rgba(168,163,154,.32);transition:background .25s,width .25s,border-radius .25s;
   }
   .dotbtn:hover{background:var(--slate)}
   .dotbtn.on{background:var(--gold);width:24px;border-radius:5px}
@@ -328,7 +329,7 @@
     font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
     color:var(--slate);margin-left:auto;white-space:nowrap;
   }
-  .scene-label b{color:var(--ice)}
+  .scene-label b{color:var(--cream)}
 
   .caption{
     width:100%;max-width:var(--stage-max);margin-top:10px;padding:0 6px;
@@ -357,7 +358,7 @@
   <div class="frame">
     <div class="stage" id="stage" aria-label="Compliance365 brand explainer">
 
-      <img class="wm" src="https://www.compliance365.com.au/assets/logo.svg" alt="Compliance365" />
+      <img class="wm" src="/assets/logo.svg" alt="Compliance365" />
       <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
         <circle class="bg" cx="20" cy="20" r="17"></circle>
         <circle class="fg" id="ringFg" cx="20" cy="20" r="17"></circle>
@@ -368,8 +369,8 @@
         <svg class="tableau" viewBox="0 0 800 320" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
           <defs>
             <radialGradient id="scr-hook" cx="50%" cy="42%" r="72%">
-              <stop offset="0%" stop-color="rgba(59,118,246,.5)"/>
-              <stop offset="100%" stop-color="rgba(59,118,246,0)"/>
+              <stop offset="0%" stop-color="rgba(190,74,30,.5)"/>
+              <stop offset="100%" stop-color="rgba(190,74,30,0)"/>
             </radialGradient>
             <linearGradient id="fade-hook" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#000" stop-opacity="0"/>
@@ -380,15 +381,15 @@
           </defs>
           <g mask="url(#m-hook)">
             <rect x="252" y="20" width="296" height="150" rx="12" fill="url(#scr-hook)"/>
-            <rect x="252" y="20" width="296" height="150" rx="12" fill="none" stroke="rgba(139,160,200,.32)"/>
-            <g stroke="rgba(234,241,255,.22)" stroke-width="7" stroke-linecap="round">
+            <rect x="252" y="20" width="296" height="150" rx="12" fill="none" stroke="rgba(168,163,154,.32)"/>
+            <g stroke="rgba(250,247,241,.22)" stroke-width="7" stroke-linecap="round">
               <line x1="300" y1="64" x2="500" y2="64"/><line x1="300" y1="95" x2="462" y2="95"/><line x1="300" y1="126" x2="420" y2="126"/>
             </g>
-            <g fill="#05080f">
+            <g fill="#070708">
               <use href="#person-hook" x="150"/><use href="#person-hook" x="320"/><use href="#person-hook" x="490"/><use href="#person-hook" x="660"/>
             </g>
-            <rect x="0" y="250" width="800" height="70" fill="#0a1738"/>
-            <rect x="0" y="250" width="800" height="6" fill="rgba(120,160,255,.22)"/>
+            <rect x="0" y="250" width="800" height="70" fill="#121214"/>
+            <rect x="0" y="250" width="800" height="6" fill="rgba(240,169,127,.22)"/>
           </g>
         </svg>
         <div class="scene-content">
@@ -481,10 +482,10 @@
             <rect x="252" y="20" width="296" height="150" rx="12" fill="url(#scr-cta)"/>
             <rect x="252" y="20" width="296" height="150" rx="12" fill="none" stroke="rgba(190,74,30,.4)"/>
             <path d="M345 96 l38 40 l72 -82" fill="none" stroke="rgba(240,169,127,.95)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-            <g fill="#05080f">
+            <g fill="#070708">
               <use href="#person-cta" x="150"/><use href="#person-cta" x="320"/><use href="#person-cta" x="490"/><use href="#person-cta" x="660"/>
             </g>
-            <rect x="0" y="250" width="800" height="70" fill="#0a1738"/>
+            <rect x="0" y="250" width="800" height="70" fill="#121214"/>
             <rect x="0" y="250" width="800" height="6" fill="rgba(190,74,30,.28)"/>
           </g>
         </svg>
