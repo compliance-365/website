@@ -316,10 +316,10 @@ const faqLd = {
             <circle cx="100" cy="100" r="68" stroke="rgba(11,11,12,.10)" stroke-width="1" stroke-dasharray="2 5"/>
             <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(11,11,12,.10)" stroke-width="8" stroke-linecap="round"/>
             <path id="cycleProg" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="url(#cycGrad)" stroke-width="8" stroke-linecap="round"/>
-            <g class="cyc-mark" data-i="0"><circle cx="176.2" cy="56.0" r="6"/><text x="197.0" y="47.2" text-anchor="middle">01</text></g>
-            <g class="cyc-mark" data-i="1"><circle cx="43.4" cy="32.6" r="6"/><text x="28.0" y="17.4" text-anchor="middle">02</text></g>
-            <g class="cyc-mark" data-i="2"><circle cx="43.4" cy="167.4" r="6"/><text x="28.0" y="189.0" text-anchor="middle">03</text></g>
-            <g class="cyc-mark" data-i="3"><circle cx="176.2" cy="144.0" r="6"/><text x="197.0" y="159.2" text-anchor="middle">04</text></g>
+            <g class="cyc-mark" data-i="0"><circle cx="176.2" cy="56.0" r="6"/><circle class="cyc-hit" cx="176.2" cy="56.0" r="14"/><text x="197.0" y="47.2" text-anchor="middle">01</text></g>
+            <g class="cyc-mark" data-i="1"><circle cx="43.4" cy="32.6" r="6"/><circle class="cyc-hit" cx="43.4" cy="32.6" r="14"/><text x="28.0" y="17.4" text-anchor="middle">02</text></g>
+            <g class="cyc-mark" data-i="2"><circle cx="43.4" cy="167.4" r="6"/><circle class="cyc-hit" cx="43.4" cy="167.4" r="14"/><text x="28.0" y="189.0" text-anchor="middle">03</text></g>
+            <g class="cyc-mark" data-i="3"><circle cx="176.2" cy="144.0" r="6"/><circle class="cyc-hit" cx="176.2" cy="144.0" r="14"/><text x="197.0" y="159.2" text-anchor="middle">04</text></g>
             <circle id="cycleHalo" class="cyc-halo" cx="176.2" cy="56.0" r="17" fill="#BE4A1E"/>
             <circle id="cycleDot" cx="176.2" cy="56.0" r="10" fill="#BE4A1E" stroke="#FAF7F1" stroke-width="2.5"/>
           </svg>
@@ -948,7 +948,14 @@ const faqLd = {
      pointer nudges the tilt (fine pointers only, not with reduced motion). */
   .flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(28px,5vw,64px);align-items:center;margin-top:2.25rem}
   .orbit-stage{perspective:1100px;display:flex;justify-content:center}
-  .orbit{position:relative;width:min(100%,400px);aspect-ratio:1;transform-style:preserve-3d;transform:rotateX(var(--rx,16deg)) rotateY(var(--ry,-16deg));transition:transform .7s var(--ease)}
+  .orbit-stage{touch-action:pan-y;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+  .orbit{position:relative;width:min(100%,400px);aspect-ratio:1;transform-style:preserve-3d;transform:rotateX(var(--rx,16deg)) rotateY(var(--ry,-16deg));transition:transform .35s var(--ease);will-change:transform}
+  .cyc-mark{cursor:pointer}
+  /* Only the markers take the pointer inside the ring: the glow and track
+     would otherwise sit on top of them and swallow clicks. */
+  .orbit-ring *{pointer-events:none}
+  .orbit-ring .cyc-mark,.orbit-ring .cyc-mark *{pointer-events:auto}
+  .cyc-mark .cyc-hit{fill:transparent!important;stroke:none!important}
   .orbit-floor{position:absolute;left:12%;right:12%;bottom:-2%;height:22%;border-radius:50%;background:radial-gradient(closest-side,rgba(20,16,12,.22),transparent);transform:translateZ(-90px);filter:blur(10px)}
   .orbit-depth,.orbit-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
   .orbit-depth{transform:translateZ(-22px) translateY(6px);filter:blur(1px)}
@@ -963,7 +970,7 @@ const faqLd = {
     .cyc-halo{animation:cycHalo 2.4s ease-in-out infinite}
     @keyframes cycHalo{0%,100%{transform:scale(.75);opacity:.26}50%{transform:scale(1.25);opacity:.06}}
   }
-  .orbit-core{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;transform:translate(-50%,-50%) translateZ(70px);border-radius:50%;background:linear-gradient(150deg,#FFFFFF 0%,#F4EFE7 100%);box-shadow:0 28px 46px rgba(20,16,12,.18),0 0 0 1px rgba(11,11,12,.06),inset 0 1px 0 #FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .orbit-core{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;transform:translate(-50%,-50%) translateZ(52px);border-radius:50%;background:linear-gradient(150deg,#FFFFFF 0%,#F4EFE7 100%);box-shadow:0 28px 46px rgba(20,16,12,.18),0 0 0 1px rgba(11,11,12,.06),inset 0 1px 0 #FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .orbit-core span{font-family:Manrope,system-ui;font-size:10px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:#A63A12}
   .orbit-core b{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:clamp(40px,4.6vw,60px);line-height:1;color:#0B0B0C;margin:2px 0;font-variant-numeric:tabular-nums}
   .orbit-core em{font-style:normal;font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:16px;color:#0B0B0C}
@@ -1123,33 +1130,86 @@ const faqLd = {
     place(0);
     marks.forEach(function (m, k) { m.classList.toggle('on', k === 0); });
     btns.forEach(function (b) {
-      var go = function () { userTook = true; setStep(+b.dataset.i); };
+      var go = function () { takeOver(); setStep(+b.dataset.i); };
       b.addEventListener('click', go);
       b.addEventListener('focus', go);
       b.addEventListener('mouseenter', go);
     });
-    /* First view: play through the four steps once (about 4.5s), then stop. */
+    /* Each time it comes into view (until the visitor takes over): play
+       through the four steps once, about 4.5s, then stop. */
+    var playTimers = [];
     if (!reduced && 'IntersectionObserver' in window) {
-      new IntersectionObserver(function (es, ob) {
-        if (!es[0].isIntersecting) return;
-        ob.disconnect();
+      new IntersectionObserver(function (es) {
+        playTimers.forEach(clearTimeout); playTimers = [];
+        if (!es[0].isIntersecting || userTook) return;
+        setStep(0);
         [1, 2, 3].forEach(function (i, n) {
-          setTimeout(function () { if (!userTook) setStep(i); }, 900 + n * 1200);
+          playTimers.push(setTimeout(function () { if (!userTook) setStep(i); }, 900 + n * 1200));
         });
-      }, { threshold: 0.5 }).observe(flow);
+      }, { threshold: 0.45 }).observe(flow);
     }
-    /* Pointer tilt: a few degrees either way, fine pointers only. */
+    function takeOver() { userTook = true; playTimers.forEach(clearTimeout); playTimers = []; }
+
+    /* Tilt, on every device. The base tilt follows the scroll, so the C
+       turns as it passes through the screen on a phone as well as a laptop;
+       a mouse adds to it, and a finger can drag it. */
     var orbit = document.getElementById('orbit');
     var stage = flow.querySelector('.orbit-stage');
-    if (!reduced && orbit && stage && window.matchMedia('(pointer: fine)').matches) {
+    var pointer = { x: 0, y: 0 }, drag = null, ticking = false, lastTouch = 0;
+    function applyTilt() {
+      ticking = false;
+      var r = stage.getBoundingClientRect(), vh = window.innerHeight || 1;
+      var c = Math.max(-1, Math.min(1, ((r.top + r.height / 2) - vh / 2) / (vh / 2)));
+      /* Kept within about +/-14deg of the resting pose: past that the
+         floating disc slides off the ring and the illusion breaks. */
+      var dx = drag ? drag.dx / 10 : 0;
+      var ry = -16 + c * 9 + pointer.x * 14 + dx;
+      var rx = 16 + c * 5 - pointer.y * 12;
+      orbit.style.setProperty('--ry', Math.max(-30, Math.min(-2, ry)).toFixed(1) + 'deg');
+      orbit.style.setProperty('--rx', Math.max(8, Math.min(26, rx)).toFixed(1) + 'deg');
+    }
+    function queueTilt() { if (!ticking) { ticking = true; requestAnimationFrame(applyTilt); } }
+    if (orbit && stage) {
+      if (!reduced) {
+        window.addEventListener('scroll', queueTilt, { passive: true });
+        window.addEventListener('resize', queueTilt);
+        applyTilt();
+      }
       stage.addEventListener('pointermove', function (e) {
         var r = stage.getBoundingClientRect();
-        var x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-        orbit.style.setProperty('--ry', (-16 + x * 16).toFixed(1) + 'deg');
-        orbit.style.setProperty('--rx', (16 - y * 14).toFixed(1) + 'deg');
+        if (drag && e.pointerId === drag.id) { drag.dx = e.clientX - drag.x; if (Math.abs(drag.dx) > 8) drag.moved = true; }
+        else if (e.pointerType === 'mouse') {
+          pointer.x = (e.clientX - r.left) / r.width - 0.5;
+          pointer.y = (e.clientY - r.top) / r.height - 0.5;
+        }
+        if (!reduced) queueTilt();
       });
-      stage.addEventListener('pointerleave', function () {
-        orbit.style.removeProperty('--ry'); orbit.style.removeProperty('--rx');
+      stage.addEventListener('pointerleave', function () { pointer.x = pointer.y = 0; if (!reduced) queueTilt(); });
+      /* Touch or pen: tap for the next step, swipe left or right to move
+         between steps; the C follows the finger while it drags. */
+      stage.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'mouse') return;
+        drag = { id: e.pointerId, x: e.clientX, dx: 0, moved: false };
+      });
+      function endDrag(e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        var d = drag; drag = null; lastTouch = Date.now();
+        takeOver();
+        if (d.moved && Math.abs(d.dx) > 40) setStep((current + (d.dx < 0 ? 1 : 3)) % 4);
+        else if (!d.moved) setStep((current + 1) % 4);
+        if (!reduced) queueTilt();
+      }
+      stage.addEventListener('pointerup', endDrag);
+      stage.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.id) { drag = null; if (!reduced) queueTilt(); } });
+      /* A mouse click on the C, or on a numbered marker, picks a step too. */
+      marks.forEach(function (m) {
+        m.addEventListener('click', function (e) { e.stopPropagation(); if (Date.now() - lastTouch < 600) return; takeOver(); setStep(+m.getAttribute('data-i')); });
+      });
+      stage.addEventListener('click', function (e) {
+        /* Touch taps are handled on pointerup; ignore the click that
+           follows them (older Safari reports it without a pointerType). */
+        if (Date.now() - lastTouch < 600 || (e.pointerType && e.pointerType !== 'mouse')) return;
+        takeOver(); setStep((current + 1) % 4);
       });
     }
   }
