@@ -8,6 +8,7 @@ import CheckpointShot from '../components/CheckpointShot.astro';
 import { MODULES, TRIAL_DAYS, fmtAud } from '../data/pricing.js';
 import landcomSvg from '../../public/assets/clients/landcom.svg?raw';
 import megaportSvg from '../../public/assets/clients/megaport.svg?raw';
+import kindeSvg from '../../public/assets/clients/kinde.svg?raw';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -17,8 +18,9 @@ const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com
 // load each file in its own document context and currentColor would
 // resolve to black regardless of the page's colour scheme.
 const clientLogos = [
-  { name: 'Landcom', svg: landcomSvg },
+  { name: 'Landcom', svg: landcomSvg, tall: true },
   { name: 'Megaport', svg: megaportSvg },
+  { name: 'Kinde', svg: kindeSvg },
 ];
 
 // Framework rotator — real destinations, no href="#". Used both by the
@@ -223,7 +225,7 @@ const faqLd = {
     <p class="trust-strip-label">Trusted by teams at</p>
     <div class="trust-strip-logos">
       {clientLogos.map(l => (
-        <span class="trust-logo-item" aria-label={l.name} set:html={l.svg} />
+        <span class={l.tall ? 'trust-logo-item trust-logo-tall' : 'trust-logo-item'} aria-label={l.name} set:html={l.svg} />
       ))}
     </div>
   </div>
@@ -231,11 +233,13 @@ const faqLd = {
 <style>
   .trust-strip{background:#0B0B0C;padding:8px 0 40px;}
   .trust-strip-inner{display:flex;align-items:center;justify-content:center;gap:clamp(20px,4vw,48px);flex-wrap:wrap;}
-  .trust-strip-label{margin:0;font-family:Manrope,system-ui;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.55);white-space:nowrap;}
+  .trust-strip-label{margin:0;font-family:Bricolage Grotesque,system-ui;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.55);white-space:nowrap;}
   .trust-strip-logos{display:flex;align-items:center;gap:clamp(28px,4vw,56px);flex-wrap:wrap;}
   .trust-logo-item{color:rgba(250,247,241,.55);transition:color .2s;display:flex;align-items:center;}
   .trust-logo-item:hover{color:rgba(250,247,241,.9);}
   .trust-logo-item :global(svg){height:22px;width:auto;display:block;}
+  /* Landcom's logo is a stacked lockup, so it needs more height to read at the same size. */
+  .trust-logo-tall :global(svg){height:40px;}
 </style>
 
 <!-- WHAT DO YOU NEED? — start from the goal, not the acronym -->
@@ -607,7 +611,7 @@ const faqLd = {
     to { opacity: 0.12; transform: translateY(-56px) scale(0.985); }
   }
   .hdk-eyebrow {
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
     font-size: 12px;
     letter-spacing: .28em;
     text-transform: uppercase;
@@ -647,7 +651,7 @@ const faqLd = {
     color: rgba(250,247,241,.62);
     max-width: 56ch;
     font-weight: 400;
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
   }
   .hdk-sub strong { color: #FAF7F1; font-weight: 700; }
   .hdk-ctas {
@@ -681,7 +685,7 @@ const faqLd = {
   .pl-item:last-child { border-right: none; margin-right: 0; }
   .pl-item b {
     display: block;
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
     font-weight: 800;
     font-size: 20px;
     color: #F0A97F;
@@ -696,7 +700,7 @@ const faqLd = {
     text-transform: uppercase;
     color: rgba(250,247,241,.55);
     font-weight: 500;
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
   }
 
   /* Framework index — hero table of contents */
@@ -706,7 +710,7 @@ const faqLd = {
     flex-wrap: wrap;
     align-items: baseline;
     row-gap: 8px;
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
   }
   .fw-index .fi-label {
     font-size: 10px;
@@ -779,7 +783,7 @@ const faqLd = {
   .ring-stage.ready .ring-static-fallback { display: none; }
   .ring-static-fallback li { margin: 0; }
   .ring-static-fallback a {
-    display: inline-block; font-family: Manrope, system-ui, sans-serif;
+    display: inline-block; font-family: Bricolage Grotesque, system-ui, sans-serif;
     font-size: 11px; font-weight: 600; letter-spacing: .04em;
     color: #F0A97F; text-decoration: none; border: 1px solid rgba(240, 169, 127,.35);
     border-radius: 99px; padding: 7px 14px; transition: background .2s var(--ease);
@@ -809,7 +813,7 @@ const faqLd = {
     position: absolute; bottom: 6px; left: 0; right: 0;
     text-align: center; font-size: 10px; letter-spacing: .22em;
     text-transform: uppercase; color: rgba(250,247,241,.68);
-    font-weight: 500; font-family: Manrope,system-ui,sans-serif;
+    font-weight: 500; font-family: Bricolage Grotesque,system-ui,sans-serif;
     pointer-events: none; transition: opacity .5s var(--ease);
   }
   .ring-stage.touched .stage-hint { opacity: 0; }
@@ -826,7 +830,7 @@ const faqLd = {
     text-transform: uppercase;
     padding-bottom: 40px;
     font-weight: 500;
-    font-family: Manrope, system-ui, sans-serif;
+    font-family: Bricolage Grotesque, system-ui, sans-serif;
   }
   .hdk-cue-line {
     width: 1px;
@@ -909,21 +913,21 @@ const faqLd = {
   .dossier{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.35);max-width:980px}
   .dossier-head{padding:26px 36px;border-bottom:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
   .dossier-head h3{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:20px;color:#FAF7F1;margin:0}
-  .dossier-head span{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;font-family:Manrope,system-ui,sans-serif}
+  .dossier-head span{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;font-family:Bricolage Grotesque,system-ui,sans-serif}
   .d-row{display:grid;grid-template-columns:180px 1fr;gap:24px;padding:22px 36px;border-bottom:1px solid rgba(255,255,255,.14);font-size:14px;line-height:1.7}
   .d-row:last-of-type{border-bottom:none}
-  .d-row .dk{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;padding-top:5px;font-family:Manrope,system-ui,sans-serif}
+  .d-row .dk{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;padding-top:5px;font-family:Bricolage Grotesque,system-ui,sans-serif}
   .d-row .dv{color:rgba(250,247,241,.62)}
   .d-row .dv strong{color:#FAF7F1;font-weight:700}
   @media(max-width:640px){.d-row{grid-template-columns:1fr;gap:6px}}
   .d-quote{padding:30px 36px;background:rgba(190, 74, 30,.06)}
   .d-quote p{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight: 500;font-size:17px;line-height:1.6;max-width:60ch;color:#FAF7F1;margin:0}
-  .d-quote footer{margin-top:12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#F0A97F;font-weight:700;font-family:Manrope,system-ui,sans-serif}
+  .d-quote footer{margin-top:12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#F0A97F;font-weight:700;font-family:Bricolage Grotesque,system-ui,sans-serif}
 
   .compare-table{border:1px solid var(--bd-card-bd);border-radius:8px;overflow:hidden;background:var(--bd-card);}
   .ct-row{display:grid;grid-template-columns:1.1fr 1.4fr 1.4fr;gap:16px;padding:16px 22px;border-top:1px solid var(--bd-card-bd);align-items:center;font-size:13.5px;}
   .ct-row:first-child{border-top:none;}
-  .ct-head{padding-top:14px;padding-bottom:14px;font-family:Manrope,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);}
+  .ct-head{padding-top:14px;padding-bottom:14px;font-family:Bricolage Grotesque,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);}
   .ct-head .ct-us{color:var(--bd-link);}
   .ct-row > div:first-child{color:var(--bd-fg);font-weight:600;}
   .ct-neg{color:var(--bd-faint);}
@@ -937,9 +941,9 @@ const faqLd = {
   }
 
   /* ─── Shared section furniture ─── */
-  .home-eyebrow{font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--bd-eyebrow, var(--accent-ink));margin:0 0 14px}
+  .home-eyebrow{font-family:Bricolage Grotesque,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--bd-eyebrow, var(--accent-ink));margin:0 0 14px}
   .home-lead{color:var(--bd-soft);max-width:60ch;margin:14px 0 0;font-size:16px;line-height:1.75}
-  .home-more{color:var(--bd-link);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:4px;font-family:Manrope,system-ui,sans-serif}
+  .home-more{color:var(--bd-link);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:4px;font-family:Bricolage Grotesque,system-ui,sans-serif}
   .home-ctas{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.75rem}
   /* Two-tone headline on the dark bands, as on the hero, link previews and
      LinkedIn banner. Upright: Bricolage ships no italic. Weight 700, not
@@ -978,7 +982,7 @@ const faqLd = {
   .orbit-floor{position:absolute;left:16%;right:16%;bottom:-1%;height:12%;border-radius:50%;background:radial-gradient(closest-side,rgba(20,16,12,.20),transparent);filter:blur(8px);transform:translate(calc(var(--px,0px) * -.5),0);transition:transform .5s var(--ease)}
   .orbit-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible;transform:translate(calc(var(--px,0px) * -.35),calc(var(--py,0px) * -.35));transition:transform .5s var(--ease)}
   .cyc-mark circle{fill:url(#sphOff);stroke:rgba(11,11,12,.18);stroke-width:1;filter:drop-shadow(0 1.5px 1.5px rgba(20,16,12,.25))}
-  .cyc-mark text{font-family:Manrope,system-ui;font-size:9.5px;font-weight:800;letter-spacing:.08em;fill:#6B6860;transition:fill .4s var(--ease)}
+  .cyc-mark text{font-family:Bricolage Grotesque,system-ui;font-size:9.5px;font-weight:800;letter-spacing:.08em;fill:#6B6860;transition:fill .4s var(--ease)}
   .cyc-mark.on circle{fill:url(#sphOn);stroke:#8E3111}
   .cyc-mark.on text{fill:#A63A12}
   .cyc-halo{opacity:.18;transform-box:fill-box;transform-origin:center}
@@ -987,7 +991,7 @@ const faqLd = {
     @keyframes cycHalo{0%,100%{transform:scale(.75);opacity:.26}50%{transform:scale(1.25);opacity:.06}}
   }
   .orbit-core{position:absolute;left:50%;top:50%;width:46%;aspect-ratio:1;transform:translate(calc(-50% + var(--px,0px)),calc(-50% + var(--py,0px)));transition:transform .5s var(--ease);border-radius:50%;background:radial-gradient(circle at 35% 25%,#FFFFFF 0%,#FBF8F3 45%,#EFE9DF 100%);box-shadow:0 2px 3px rgba(20,16,12,.08),0 18px 30px rgba(20,16,12,.14),0 40px 60px rgba(20,16,12,.10),0 0 0 1px rgba(11,11,12,.05),inset 0 2px 0 #FFFFFF,inset 0 -6px 14px rgba(20,16,12,.05);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-  .orbit-core span{font-family:Manrope,system-ui;font-size:10px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:#A63A12}
+  .orbit-core span{font-family:Bricolage Grotesque,system-ui;font-size:10px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:#A63A12}
   .orbit-core b{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:clamp(40px,4.6vw,60px);line-height:1;color:#0B0B0C;margin:2px 0;font-variant-numeric:tabular-nums}
   .orbit-core em{font-style:normal;font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:16px;color:#0B0B0C}
   .orbit-core.swap b,.orbit-core.swap em{animation:ccSwap .45s var(--ease)}
@@ -997,9 +1001,9 @@ const faqLd = {
   .flow-step:hover{border-color:rgba(190,74,30,.5)}
   .flow-step:focus-visible{outline:2px solid #A63A12;outline-offset:2px}
   .flow-steps li.active .flow-step{border-color:#BE4A1E;box-shadow:0 14px 30px rgba(20,16,12,.08);transform:translateX(-4px)}
-  .fs-num{font-family:Manrope,system-ui;font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--bd-eyebrow)}
+  .fs-num{font-family:Bricolage Grotesque,system-ui;font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--bd-eyebrow)}
   .fs-title{font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:20px}
-  .fs-when{font-family:Manrope,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);border:1px solid var(--bd-card-bd);border-radius:999px;padding:5px 10px;white-space:nowrap}
+  .fs-when{font-family:Bricolage Grotesque,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-faint);border:1px solid var(--bd-card-bd);border-radius:999px;padding:5px 10px;white-space:nowrap}
   .fs-text{margin:10px 20px 6px 76px;font-size:15px;line-height:1.7;color:var(--bd-soft)}
   .flow.js-flow .fs-text{display:none}
   .flow.js-flow li.active .fs-text{display:block;animation:ccSwap .4s var(--ease)}
@@ -1022,7 +1026,7 @@ const faqLd = {
 
   /* ─── Start free + starter pack ─── */
   .start-free{margin:4rem auto 0;max-width:1000px;text-align:left}
-  .start-free-title{font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#F0A97F;text-align:center;margin:0 0 20px}
+  .start-free-title{font-family:Bricolage Grotesque,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#F0A97F;text-align:center;margin:0 0 20px}
   .free-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
   .free-card{display:flex;flex-direction:column;gap:8px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:22px;text-decoration:none;color:#FAF7F1;transition:border-color .2s var(--ease),transform .2s var(--ease)}
   .free-card:hover,.free-card:focus-visible{border-color:#BE4A1E;transform:translateY(-2px)}
@@ -1328,11 +1332,11 @@ const faqLd = {
         if(g.roundRect){g.beginPath();g.roundRect(4,10,248,H-20,10);g.fill();g.stroke();}
         else{g.fillRect(4,10,248,H-20);g.strokeRect(4,10,248,H-20);}
         g.shadowBlur=0;
-        g.fillStyle='#FAF7F1'; g.font='700 23px Manrope,sans-serif';
+        g.fillStyle='#FAF7F1'; g.font='700 23px Bricolage Grotesque,sans-serif';
         g.textAlign='center'; g.textBaseline='middle';
         if(sub){
           g.fillText(txt.toUpperCase(),128,H*0.4);
-          g.fillStyle='#F0A97F'; g.font='700 15px Manrope,sans-serif';
+          g.fillStyle='#F0A97F'; g.font='700 15px Bricolage Grotesque,sans-serif';
           g.fillText(sub.toUpperCase(),128,H*0.4+26);
         } else {
           g.fillText(txt.toUpperCase(),128,H/2+1);

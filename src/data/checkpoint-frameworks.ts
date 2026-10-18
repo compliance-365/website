@@ -5,6 +5,10 @@
 // prices come from src/data/pricing.js, never typed here.
 // test/checkpoint-seo-pages.test.mjs pins the counts most likely to drift.
 
+import { MODULES, fmtAud } from './pricing.js';
+
+const fromPrice = (id: string) => fmtAud(MODULES.find((m) => m.id === id)!.prices.micro);
+
 export interface FrameworkPage {
   slug: string;
   moduleId: string;          // pricing.js MODULES id
@@ -27,7 +31,7 @@ export const frameworkPages: FrameworkPage[] = [
     moduleId: 'iso27001',
     name: 'ISO 27001',
     title: 'ISO 27001 Compliance Software for Microsoft 365 | Checkpoint',
-    description: 'ISO 27001 software that runs in your own Microsoft 365 tenant: all 93 Annex A controls, Clauses 4–10, risk register, SoA and audit packs. From $7,000 a year, AUD.',
+    description: `ISO 27001 software that runs in your own Microsoft 365 tenant: all 93 Annex A controls, Clauses 4–10, risk register, SoA and audit packs. From ${fromPrice('iso27001')} a year, AUD.`,
     h1: 'ISO 27001 software that runs in your own Microsoft 365',
     lead: 'Checkpoint holds your whole ISO 27001 management system, from the risk register to the Statement of Applicability, as SharePoint lists in your own tenant. It reads your Microsoft 365 security settings to evidence the technical controls, and it gets you to the Stage 1 and Stage 2 audits with the packs your certifier asks for.',
     servicePath: 'services/iso27001/',
@@ -54,7 +58,7 @@ export const frameworkPages: FrameworkPage[] = [
     moduleId: 'essential8',
     name: 'Essential Eight',
     title: 'Essential Eight Compliance Software for Microsoft 365 | Checkpoint',
-    description: 'Essential Eight software for Microsoft 365: each strategy assessed against ML1–ML3, measured from your tenant, with the uplift plan and evidence. From $7,000 a year, AUD.',
+    description: `Essential Eight software for Microsoft 365: each strategy assessed against ML1–ML3, measured from your tenant, with the uplift plan and evidence. From ${fromPrice('essential8')} a year, AUD.`,
     h1: 'Essential Eight software, measured from your Microsoft 365',
     lead: 'Checkpoint assesses each of the eight mitigation strategies against the maturity level you are targeting, reads the settings Microsoft 365 already holds, and turns the gaps into an uplift plan with owners and evidence.',
     servicePath: 'services/essential-eight/',
@@ -78,7 +82,7 @@ export const frameworkPages: FrameworkPage[] = [
     moduleId: 'soc2',
     name: 'SOC 2',
     title: 'SOC 2 Compliance Software for Australian SaaS | Checkpoint',
-    description: 'SOC 2 readiness software for Australian SaaS on Microsoft 365: all Trust Services Criteria, live evidence, a Trust Center and questionnaire answers. From $8,999 a year, AUD.',
+    description: `SOC 2 readiness software for Australian SaaS on Microsoft 365: all Trust Services Criteria, live evidence, a Trust Center and questionnaire answers. From ${fromPrice('soc2')} a year, AUD.`,
     h1: 'SOC 2 software for Australian SaaS on Microsoft 365',
     lead: 'Checkpoint carries the full set of Trust Services Criteria, evidences the security criteria from your Microsoft 365 tenant, and gives your sales team a Trust Center and ready answers to security questionnaires while you prepare for the audit.',
     servicePath: 'services/soc2/',
@@ -102,7 +106,7 @@ export const frameworkPages: FrameworkPage[] = [
     moduleId: 'iso42001',
     name: 'ISO 42001',
     title: 'ISO 42001 AI Governance Software for Microsoft 365 | Checkpoint',
-    description: 'ISO 42001 software for AI governance: the AI management system, Annex A controls, an AI systems register and impact assessments, in your own tenant. From $7,000 a year.',
+    description: `ISO 42001 software for AI governance: the AI management system, Annex A controls, an AI systems register and impact assessments, in your own tenant. From ${fromPrice('iso42001')} a year.`,
     h1: 'ISO 42001 software for AI governance',
     lead: 'Checkpoint runs an ISO/IEC 42001 AI management system alongside your ISO 27001 one: an AI systems register, impact assessments and the Annex A controls, with the same risk register, audits and management reviews.',
     servicePath: 'services/iso42001/',
@@ -126,7 +130,7 @@ export const frameworkPages: FrameworkPage[] = [
     moduleId: 'iso27701',
     name: 'ISO 27701',
     title: 'ISO 27701 Privacy Software for Microsoft 365 | Checkpoint',
-    description: 'ISO 27701:2025 privacy software: a standalone PIMS with all 78 Annex A controls, Clauses 4–10 and Privacy Act mapping, in your own Microsoft 365. From $7,000 a year.',
+    description: `ISO 27701:2025 privacy software: a standalone PIMS with all 78 Annex A controls, Clauses 4–10 and Privacy Act mapping, in your own Microsoft 365. From ${fromPrice('iso27701')} a year.`,
     h1: 'ISO 27701 privacy software, in your own tenant',
     lead: 'Checkpoint runs ISO/IEC 27701:2025 as a privacy information management system in its own right, certifiable alone or alongside ISO 27001, with the personal information records kept where they already are: in your Microsoft 365.',
     servicePath: 'services/iso27701/',
@@ -150,7 +154,7 @@ export const frameworkPages: FrameworkPage[] = [
     moduleId: 'nistcsf',
     name: 'NIST CSF',
     title: 'NIST CSF 2.0 Compliance Software for Microsoft 365 | Checkpoint',
-    description: 'NIST CSF 2.0 software for Microsoft 365: all 22 categories, optional subcategory depth, current and target profiles, mapped to ISO 27001. From $7,000 a year, AUD.',
+    description: `NIST CSF 2.0 software for Microsoft 365: all 22 categories, optional subcategory depth, current and target profiles, mapped to ISO 27001. From ${fromPrice('nistcsf')} a year, AUD.`,
     h1: 'NIST CSF 2.0 software, measured from your Microsoft 365',
     lead: 'Checkpoint runs the NIST Cybersecurity Framework 2.0 across Govern, Identify, Protect, Detect, Respond and Recover, measures what it can from your Microsoft 365 tenant, and maps the work to ISO 27001 and Essential Eight so nothing is done twice.',
     servicePath: 'services/nist-csf/',
@@ -174,7 +178,7 @@ export const frameworkPages: FrameworkPage[] = [
     moduleId: 'privacyact',
     name: 'Privacy Act',
     title: 'Privacy Act (APPs) Compliance Software for Microsoft 365 | Checkpoint',
-    description: 'Australian Privacy Act software for Microsoft 365: the 13 APPs and the Notifiable Data Breaches scheme, mapped to ISO 27001, in your own tenant. From $4,999 a year, AUD.',
+    description: `Australian Privacy Act software for Microsoft 365: the 13 APPs and the Notifiable Data Breaches scheme, mapped to ISO 27001, in your own tenant. From ${fromPrice('privacyact')} a year, AUD.`,
     h1: 'Privacy Act compliance, run from your Microsoft 365',
     lead: 'Checkpoint carries the Australian Privacy Principles and the Notifiable Data Breaches scheme as their own framework, maps each requirement to the ISO 27001 controls that already evidence it, and keeps the records in your own Microsoft 365.',
     servicePath: 'services/iso27701/',

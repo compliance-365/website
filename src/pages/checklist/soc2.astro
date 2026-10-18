@@ -546,7 +546,7 @@ const TOTAL_Q = QUESTIONS.length;
             });
             btn.classList.add('active');
             if (val === 2) { btn.style.background = '#046A4E'; btn.style.color = 'var(--on-status)'; btn.style.borderColor = '#046A4E'; }
-            else if (val === 1) { btn.style.background = '#806300'; btn.style.color = 'var(--on-status)'; btn.style.borderColor = '#806300'; }
+            else if (val === 1) { btn.style.background = '#A63A12'; btn.style.color = 'var(--on-status)'; btn.style.borderColor = '#A63A12'; }
             else { btn.style.background = '#9B1C2E'; btn.style.color = 'white'; btn.style.borderColor = '#9B1C2E'; }
             update();
           });
@@ -620,14 +620,14 @@ const TOTAL_Q = QUESTIONS.length;
         if (!answered) return { label: 'Not started', desc: 'Answer questions to score', color: '#6B6860' };
         if (score >= 86) return { label: 'Audit-Ready', desc: 'Strong posture — focus on evidence packaging and audit scheduling', color: '#046A4E' };
         if (score >= 61) return { label: 'Nearly Ready', desc: 'Close minor gaps and tighten evidence packaging', color: '#BE4A1E' };
-        if (score >= 31) return { label: 'Partially Ready', desc: 'Many core controls in place — focus and prioritisation needed', color: '#806300' };
+        if (score >= 31) return { label: 'Partially Ready', desc: 'Many core controls in place — focus and prioritisation needed', color: '#A63A12' };
         return { label: 'High Risk', desc: 'Missing foundational controls — structured remediation required', color: '#9B1C2E' };
       }
 
       function barColor(pct) {
         if (pct === null) return '#C8C3B8';
         if (pct >= 75) return '#046A4E';
-        if (pct >= 50) return '#806300';
+        if (pct >= 50) return '#A63A12';
         return '#9B1C2E';
       }
 

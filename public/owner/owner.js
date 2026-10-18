@@ -1937,7 +1937,7 @@ function showModal(opts) {
   var BRAND = {
     ink: '#0B0B0C', gold: '#BE4A1E', goldDark: '#A63A12', goldLight: '#F0A97F',
     cream: '#FAF7F1', border: '#DDD8CF', muted: '#6B6860',
-    fontBody: "Manrope, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
+    fontBody: "Bricolage Grotesque, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
     fontHeading: "Georgia, 'Times New Roman', serif" /* email-safe stand-in for Bricolage Grotesque — see the PDF's use of the real font-shape equivalent (Times-Bold) for the same reason */
   };
 

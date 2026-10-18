@@ -24,10 +24,10 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-root {
       background: #FAF7F1;
       min-height: 60vh;
-      font-family: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+      font-family: Bricolage Grotesque, system-ui, -apple-system, sans-serif;
       -webkit-font-smoothing: antialiased;
-      --ps-accent:#BE4A1E; --ps-accent-light:#F0A97F; --ps-green:#2E8B6A; --ps-purple:#A9812E;
-      --ps-amber:#A9812E; --ps-red:#B33A3A; --ps-ink:#0B0B0C; --ps-ink2:#2A2724;
+      --ps-accent:#BE4A1E; --ps-accent-light:#F0A97F; --ps-green:#2E8B6A; --ps-purple:#A63A12;
+      --ps-amber:#BE4A1E; --ps-red:#B33A3A; --ps-ink:#0B0B0C; --ps-ink2:#2A2724;
       --ps-slate:#6B6860; --ps-muted:#8A8172; --ps-line:#DDD8CF; --ps-line2:#F5F0E8;
       --ps-bg:#FAF7F1; --ps-card:#FFFFFF;
       --ps-shadow:0 1px 3px rgba(11,11,12,.07),0 1px 2px rgba(11,11,12,.05);
@@ -167,7 +167,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-gauge-word { font-size:10px; color:var(--ps-muted); font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin-top:3px; }
     .ps-summary-body { flex:1; min-width:200px; }
     .ps-summary-org { font-size:12px; color:var(--ps-muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
-    .ps-summary-title { font-size:22px; font-weight:800; letter-spacing:-.02em; margin-bottom:6px; color:var(--ps-ink); }
+    .ps-summary-title { font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif; font-size:22px; font-weight:800; letter-spacing:-.02em; margin-bottom:6px; color:var(--ps-ink); }
     .ps-summary-meta { font-size:14px; color:var(--ps-slate); line-height:1.5; }
     .ps-stat-pills { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
     .ps-stat-pill { font-size:12px; font-weight:600; padding:5px 11px; border-radius:8px; display:flex; align-items:center; gap:6px; }
@@ -233,15 +233,15 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-row-clause { font-size:11.5px; color:var(--ps-muted); font-weight:500; }
     .ps-method-badge { font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:7px; flex-shrink:0; white-space:nowrap; }
     .ps-method-auto   { background:rgba(190, 74, 30,0.08); color:var(--ps-accent); }
-    .ps-method-attest { background:#F6EFD9; color:var(--ps-purple); }
+    .ps-method-attest { background:#FBEAE2; color:var(--ps-purple); }
     .ps-status-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:999px; flex-shrink:0; white-space:nowrap; }
     .ps-badge-pass    { background:#EAF4EF; color:#046A4E; }
-    .ps-badge-partial { background:#F6EFD9; color:#806300; }
+    .ps-badge-partial { background:#FBEAE2; color:#A63A12; }
     .ps-badge-fail    { background:#F9E9EA; color:#9B1C2E; }
-    .ps-badge-attest  { background:#F6EFD9; color:var(--ps-purple); }
+    .ps-badge-attest  { background:#FBEAE2; color:var(--ps-purple); }
     .ps-effort-badge { font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:7px; flex-shrink:0; white-space:nowrap; }
     .ps-effort-quick    { background:#EAF4EF; color:#046A4E; }
-    .ps-effort-moderate { background:#F6EFD9; color:#6B5200; }
+    .ps-effort-moderate { background:#FBEAE2; color:#A63A12; }
     .ps-effort-project  { background:#F9E9EA; color:#7A1524; }
     .ps-ml-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:7px; white-space:nowrap; background:rgba(190, 74, 30,0.08); color:var(--ps-accent); }
     .ps-trend-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:7px; flex-shrink:0; white-space:nowrap; }
@@ -286,16 +286,16 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-explainer-eyebrow {
       display:inline-flex; align-items:center; gap:7px;
       font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
-      color:var(--ps-purple); background:#F6EFD9; border:1px solid #EFE0BD;
+      color:var(--ps-purple); background:#FBEAE2; border:1px solid #F3C7B1;
       padding:5px 12px; border-radius:999px;
     }
-    .ps-explainer-title { font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--ps-ink); margin:10px 0 4px; }
+    .ps-explainer-title { font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif; font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--ps-ink); margin:10px 0 4px; }
     .ps-explainer-sub { font-size:13.5px; color:var(--ps-muted); line-height:1.6; margin:0 0 20px; }
     .ps-explainer-loading { display:flex; align-items:center; gap:12px; padding:24px 0; color:var(--ps-slate); font-size:14px; }
     .ps-explainer-spinner { width:18px; height:18px; border-radius:50%; border:2.5px solid var(--ps-line); border-top-color:var(--ps-purple); animation:ps-spin .8s linear infinite; flex-shrink:0; }
     .ps-explainer-error { font-size:13.5px; color:var(--ps-slate); background:var(--ps-line2); border-radius:10px; padding:12px 16px; line-height:1.6; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
-    .ps-explainer-retry { font-size:12.5px; font-weight:700; color:var(--ps-purple); background:none; border:1.5px solid #EFE0BD; border-radius:7px; padding:6px 14px; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0; }
-    .ps-explainer-retry:hover { background:#F6EFD9; }
+    .ps-explainer-retry { font-size:12.5px; font-weight:700; color:var(--ps-purple); background:none; border:1.5px solid #F3C7B1; border-radius:7px; padding:6px 14px; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0; }
+    .ps-explainer-retry:hover { background:#FBEAE2; }
     .ps-explainer-retry:disabled { opacity:.5; cursor:default; }
     .ps-explainer-list { display:flex; flex-direction:column; gap:14px; }
     .ps-explainer-item { border:1px solid var(--ps-line); border-radius:14px; padding:16px 18px; }
@@ -365,7 +365,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     @media print {
       body > *:not(.ps-print-view) { display:none !important; }
       .ps-print-view {
-        display:block !important; font-family:'Segoe UI',system-ui,sans-serif;
+        display:block !important; font-family:Bricolage Grotesque,system-ui,sans-serif;
         color:#0B0B0C; font-size:11pt; line-height:1.5; padding:0;
       }
       .pv-header {
@@ -390,7 +390,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       .pv-gap-table tr:last-child td { border-bottom:none; }
       .pv-status { font-size:8pt; font-weight:700; padding:2px 8px; border-radius:999px; }
       .pv-status-fail    { background:#F9E9EA; color:#9B1C2E; }
-      .pv-status-partial { background:#F6EFD9; color:#806300; }
+      .pv-status-partial { background:#FBEAE2; color:#A63A12; }
       .pv-footer { margin-top:32px; padding:16px 32px; border-top:1px solid #DDD8CF; display:flex; justify-content:space-between; font-size:8pt; color:var(--text-muted); }
       @page { margin:0; size:A4; }
     }
@@ -500,7 +500,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
         <span class="ps-fw-chip" style="background:rgba(190, 74, 30,0.08);color:var(--accent-ink);">Essential Eight</span>
         <span class="ps-fw-chip" style="background:rgba(190, 74, 30,0.08);color:#2A2724;">ISO 27001</span>
         <span class="ps-fw-chip" style="background:#EAF4EF;color:var(--ok-ink);">ISO 27701</span>
-        <span class="ps-fw-chip" style="background:#F6EFD9;color:#806300;">ISO 42001</span>
+        <span class="ps-fw-chip" style="background:#FBEAE2;color:#A63A12;">ISO 42001</span>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:4px;">
         <button class="ps-scan-btn" data-ps-click="psShowTrust">
@@ -555,12 +555,12 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       </div>
 
       <!-- Popup blocked tip -->
-      <div id="ps-popup-tip" class="ps-hidden" style="margin-top:16px;background:#F6EFD9;border:1px solid #EFE0BD;border-radius:12px;padding:16px 20px;font-size:13.5px;line-height:1.6;color:#A63A12;">
+      <div id="ps-popup-tip" class="ps-hidden" style="margin-top:16px;background:#FBEAE2;border:1px solid #F3C7B1;border-radius:12px;padding:16px 20px;font-size:13.5px;line-height:1.6;color:#A63A12;">
         <strong style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><use href="#ic-insight"/></svg> Popup blocked?</strong>
         Most browsers block the Microsoft sign-in popup by default. Look for a <strong>"Pop-up blocked"</strong> notice in your browser's address bar and click <strong>Allow</strong>, then try again. In Safari, go to <strong>Settings &rarr; Websites &rarr; Pop-up Windows</strong> and set this site to Allow.
         <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
           <button data-ps-click="psRun" style="background:#0B0B0C;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Try again</button>
-          <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" style="background:transparent;border:1px solid #A9812E;color:#6B5200;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-block;">Book a call instead</a>
+          <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" style="background:transparent;border:1px solid #BE4A1E;color:#A63A12;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-block;">Book a call instead</a>
         </div>
       </div>
     </section>
@@ -707,7 +707,7 @@ const FRAMEWORKS = {
   e8:      { label:"Essential Eight", color:"#BE4A1E", dot:"#F0A97F" },
   iso27001:{ label:"ISO 27001",       color:"#2A2724", dot:"#8A8172" },
   iso27701:{ label:"ISO 27701",       color:"#046A4E", dot:"#5BB592" },
-  iso42001:{ label:"ISO 42001",       color:"#806300", dot:"#D9C38A" },
+  iso42001:{ label:"ISO 42001",       color:"#A63A12", dot:"#F0A97F" },
 };
 
 /* weight: 1=low 2=medium 3=high risk impact
@@ -944,7 +944,7 @@ $("ps-trust-modal").addEventListener("click", e => { if(e.target===$("ps-trust-m
 
 /* ── scoring ── */
 const W  = { pass:1, partial:0.5, fail:0, attest:0.5 };
-const SC = { pass:"#2E8B6A", partial:"#A9812E", fail:"#B33A3A", attest:"#A9812E" };
+const SC = { pass:"#2E8B6A", partial:"#BE4A1E", fail:"#B33A3A", attest:"#A63A12" };
 const ST = { pass:"Met", partial:"Partial", fail:"Gap", attest:"Attest" };
 const EFFORT_ORDER = { quick:0, moderate:1, project:2 };
 const STATUS_ORDER = { fail:0, partial:1, attest:2, pass:3 };
@@ -1000,7 +1000,7 @@ function saveCurrent() {
 /* ── gauge ── */
 function gauge(pct) {
   const r=56, cx=72, cy=72, circ=2*Math.PI*r, off=circ*(1-pct/100);
-  const col = pct>=90?"#2E8B6A":pct>=60?"#BE4A1E":pct>=30?"#A9812E":"#B33A3A";
+  const col = pct>=90?"#2E8B6A":pct>=60?"#BE4A1E":pct>=30?"#A63A12":"#B33A3A";
   return `<svg width="144" height="144" viewBox="0 0 144 144">
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F5F0E8" stroke-width="11"/>
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="11"
@@ -1028,7 +1028,7 @@ function render() {
       <div class="ps-stat-pills">
         <span class="ps-stat-pill" style="background:#EAF4EF;color:#046A4E"><span class="ps-stat-dot" style="background:#2E8B6A"></span>${passCount} met</span>
         <span class="ps-stat-pill" style="background:rgba(190, 74, 30,0.08);color:var(--accent-ink)"><span class="ps-stat-dot" style="background:#BE4A1E"></span>${autoCount} automated</span>
-        <span class="ps-stat-pill" style="background:#F6EFD9;color:#806300"><span class="ps-stat-dot" style="background:#A9812E"></span>${attestCount} attested</span>
+        <span class="ps-stat-pill" style="background:#FBEAE2;color:#A63A12"><span class="ps-stat-dot" style="background:#BE4A1E"></span>${attestCount} attested</span>
         ${prevScores ? `<span class="ps-stat-pill" style="background:#F5F0E8;color:var(--text-muted)"><span class="ps-stat-dot" style="background:#8A8172"></span>Re-scan</span>` : ""}
       </div>
     </div>`;
@@ -1276,7 +1276,7 @@ window.psPrint = () => {
   const now = new Date().toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"});
   const fwScores = Object.entries(FRAMEWORKS).map(([k,f])=>{
     const s=scoreFor(k);
-    const col=s>=90?"#2E8B6A":s>=60?"#BE4A1E":s>=30?"#A9812E":"#B33A3A";
+    const col=s>=90?"#2E8B6A":s>=60?"#BE4A1E":s>=30?"#A63A12":"#B33A3A";
     return `<div class="pv-score-card"><div class="pv-score-pct" style="color:${col}">${s}%</div><div class="pv-score-fw">${f.label}</div></div>`;
   }).join("");
 
@@ -1289,7 +1289,7 @@ window.psPrint = () => {
   const gapRows = deduped.map(g=>{
     const sc2=g.status==="fail"?"pv-status-fail":"pv-status-partial";
     const el2={quick:"Quick win",moderate:"Moderate",project:"Project"}[g.effort]||"";
-    const aiHtml = explanations[g.id] ? `<div style="margin-top:5px;padding-top:5px;border-top:1px solid #F5F0E8;color:#806300"><strong>AI explainer:</strong> ${explanations[g.id]}</div>` : "";
+    const aiHtml = explanations[g.id] ? `<div style="margin-top:5px;padding-top:5px;border-top:1px solid #F5F0E8;color:#A63A12"><strong>AI explainer:</strong> ${explanations[g.id]}</div>` : "";
     return `<tr>
       <td><strong>${g.title}</strong><br><span style="font-size:8.5pt;color:var(--text-muted)">${g.fw}</span></td>
       <td><span class="pv-status ${sc2}">${ST[g.status]}</span></td>

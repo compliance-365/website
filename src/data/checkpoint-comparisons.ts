@@ -8,6 +8,10 @@
 //   - say plainly when the other product is the better fit.
 // Re-check every row before changing CHECKED.
 
+import { MODULES, ENTERPRISE, fmtAud } from './pricing.js';
+
+const fromPrice = (id: string) => fmtAud(MODULES.find((m) => m.id === id)!.prices.micro);
+
 export const CHECKED = 'October 2026';
 
 export interface CompareRow { topic: string; them: string; us: string }
@@ -27,7 +31,7 @@ export interface Comparison {
 
 const US = {
   records: 'SharePoint lists in your own Microsoft 365 tenant. Compliance365 has no database holding your registers.',
-  pricing: 'Published: from $7,000 a year per framework (AUD, ex GST), SOC 2 from $8,999. Enterprise from $14,999.',
+  pricing: `Published: from ${fromPrice('iso27001')} a year per framework (AUD, ex GST), SOC 2 from ${fromPrice('soc2')}. Enterprise from ${fmtAud(ENTERPRISE.startingPrice)}.`,
   trial: 'A public demo of the real console with sample data, no sign-up, and a 7-day free trial.',
   m365: '52 checks read from Microsoft Graph with delegated, read-only permissions.',
   au: 'Essential Eight, IS18, RFFR, CPS 234, DISP / IRAP and the Privacy Act, alongside ISO 27001, SOC 2, ISO 42001, ISO 27701 and NIST CSF.',
@@ -67,7 +71,7 @@ export const comparisons: Comparison[] = [
     faq: [
       { q: 'Does Vanta support Essential Eight?', a: 'Yes, Vanta lists Essential Eight maturity levels 1–3 on its website. Checkpoint does too, and also covers IS18, RFFR, CPS 234 and DISP / IRAP.' },
       { q: 'Can I move from Vanta to Checkpoint?', a: 'Yes. Checkpoint imports registers from Excel or CSV with a mapping and duplicate check, so risks, assets and suppliers come across without retyping.' },
-      { q: 'Is Checkpoint cheaper than Vanta?', a: 'Vanta does not publish prices, so we cannot compare like for like. Checkpoint’s prices are on our pricing page: from $7,000 a year per framework, AUD.' },
+      { q: 'Is Checkpoint cheaper than Vanta?', a: `Vanta does not publish prices, so we cannot compare like for like. Checkpoint’s prices are on our pricing page: from ${fromPrice('iso27001')} a year per framework, AUD.` },
     ],
   },
   {
