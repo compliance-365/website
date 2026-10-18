@@ -9133,7 +9133,7 @@ function showModal(opts) {
     if (!groups.length || READONLY) { w.innerHTML = ''; return; }
     var size = window.CheckpointLib.registerSizeAfterGrouping(S.risks || []);
     var moved = groups.reduce(function (n, g) { return n + g.risks.length; }, 0);
-    var head = '<div class="card" style="margin-bottom:16px;border-color:rgba(var(--gold-rgb,169,129,46),.45)">' +
+    var head = '<div class="card" style="margin-bottom:16px;border-color:rgba(var(--gold-rgb,190,74,30),.45)">' +
       '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h3 style="margin:0 0 4px">Group into business risks</h3>' +
       '<div class="src">' + moved + ' technical risk' + (moved === 1 ? '' : 's') + ' from scans and scope answers belong under ' + groups.length + ' business risk' + (groups.length === 1 ? '' : 's') + '. Grouping takes the open register from ' + size.now + ' to ' + size.after + ' risks: what an auditor expects to read. Their actions move across and the originals close with a note saying where they went.</div></div>' +
       '<button class="btn ghost sm" data-action="App.toggleRiskGrouping">' + (_groupingOpen ? 'Hide' : 'Review') + '</button>' +

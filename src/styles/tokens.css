@@ -70,9 +70,14 @@
      colour rather than as distinct states. Both were pushed apart —
      warn yellower to 46°, danger cooler to 351° — giving 29° and 26° of
      separation while keeping every ratio above the floor.
-     ok 6.18/6.61/6.02 · warn 5.30/5.67/5.17 · danger 7.56/8.08/7.36 */
+     ok 6.18/6.61/6.02 · warn 5.30/5.67/5.17 · danger 7.56/8.08/7.36
+
+     warn then moved again, off that yellow-gold #806300 onto the dark
+     brand orange #A63A12, when the last of the old gold was retired
+     from the site. Its separation from danger now comes from the label
+     and the warmer, lighter hue rather than from a yellow cast. */
   --ok-ink: #046A4E;
-  --warn-ink: #806300;
+  --warn-ink: #A63A12;
   --danger-ink: #9B1C2E;
 
   /* Text sitting ON the accent fill. This is the one value that inverted

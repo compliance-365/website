@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.170.2',
+    date: '2026-10-18',
+    entries: [
+      'The last of the old gold is gone: in the light theme, "in progress" and warning states are now the dark brand orange, and the Start here progress bar and next-step outline fall back to orange as well.'
+    ]
+  },
+  {
     version: '1.170.1',
     date: '2026-10-18',
     entries: [
