@@ -235,8 +235,9 @@ const faqLd = {
   .trust-strip-inner{display:flex;align-items:center;justify-content:center;gap:clamp(20px,4vw,48px);flex-wrap:wrap;}
   .trust-strip-label{margin:0;font-family:Bricolage Grotesque,system-ui;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.55);white-space:nowrap;}
   .trust-strip-logos{display:flex;align-items:center;gap:clamp(28px,4vw,56px);flex-wrap:wrap;}
-  .trust-logo-item{color:rgba(250,247,241,.55);transition:color .2s;display:flex;align-items:center;}
-  .trust-logo-item:hover{color:rgba(250,247,241,.9);}
+  /* Client logos in their own colours, at full strength: Kinde's mark is
+     currentColor, white on this dark strip as Kinde's own artwork does. */
+  .trust-logo-item{color:#FFFFFF;display:flex;align-items:center;}
   .trust-logo-item :global(svg){height:22px;width:auto;display:block;}
   /* Landcom's logo is a stacked lockup, so it needs more height to read at the same size. */
   .trust-logo-tall :global(svg){height:40px;}
