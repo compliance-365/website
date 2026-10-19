@@ -50,7 +50,7 @@
   </div>
   <div class="prod" style="padding:0;letter-spacing:.3em">CHECKPOINT</div>
   <h1>The compliance console <em>that never leaves your tenant.</em></h1>
-  <p>Posture scanning via Microsoft Graph, a linked risk and actions register, a living Statement of Applicability, and one-click audit reports. Every record is stored as SharePoint lists inside your own Microsoft 365 tenant.</p>
+  <p>Your risks, controls, evidence and audit reports in one place, kept in your own Microsoft 365. Checkpoint checks your security settings, tells you what to fix next and produces the reports your auditor asks for.</p>
   <div class="btns">
     <button class="btn" id="btnGateSignIn" style="display:none" data-action="App.signIn">Sign in with Microsoft</button>
     <button class="lnk" id="btnGateOtherAccount" style="display:none" data-action="App.signInOtherAccount">Use a different account</button>
@@ -82,7 +82,7 @@
         </div>
         <div class="prod" style="padding:0;letter-spacing:.3em;margin-top:10px">CHECKPOINT SETUP</div>
         <h1>Let's get <em>your tenant</em> set up.</h1>
-        <p>Checkpoint scans your Microsoft 365 tenant's security posture, keeps a linked risk and actions register, and builds a living Statement of Applicability — every record stored as SharePoint lists inside <em>your own</em> tenant.</p>
+        <p>Checkpoint checks your Microsoft 365 security settings, keeps your risks and actions in one place and builds your Statement of Applicability, with every record stored in SharePoint inside <em>your own</em> tenant.</p>
         <div class="resid" style="margin:26px auto 0;max-width:52ch;text-align:left">
           <b>Data residency</b>Checkpoint has no backend and no database. Nothing is copied anywhere else — posture checks are read at scan time straight from Microsoft Graph and never leave your browser. Setup takes about five minutes.
         </div>
@@ -130,14 +130,14 @@
       <div class="vhead" style="text-align:center;margin-bottom:22px">
         <div class="rule" style="margin:0 auto 14px"></div>
         <h1>Activate this tenant</h1>
-        <p style="max-width:56ch;margin:10px auto 0">Paste or upload the activation file Compliance365 issued for this tenant. It's verified entirely in this browser (Ed25519 signature, tenant match, expiry) — nothing is sent anywhere to check it, and nothing is provisioned until it verifies.</p>
+        <p style="max-width:56ch;margin:10px auto 0">Upload or paste the activation file Compliance365 sent you. Checkpoint checks it in this browser: that it is genuine, is for this tenant and has not expired. Nothing is sent anywhere to check it, and nothing is set up until it passes.</p>
       </div>
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <input type="file" id="wizActFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
           <button class="btn ghost sm" data-action="Wizard.applyActivation">Verify</button>
         </div>
-        <textarea class="mini" id="wizActPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
+        <textarea class="mini" id="wizActPasteInput" rows="3" placeholder="…or paste the contents of the activation file here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
         <div id="wizActStatus" style="margin-top:12px;font-size:12.5px;min-height:18px"></div>
         <div class="wiz-setup-call" id="wizSetupCall" hidden>
           <p><b>Your free 30-minute setup call.</b> It comes with your purchase: we go through the next steps with you, including the Microsoft 365 approval and your SharePoint site, so you start with everything working.</p>
@@ -297,7 +297,7 @@
       <input type="file" id="naFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
       <button class="btn sm" data-action="App.retryActivation">Verify &amp; retry</button>
     </div>
-    <textarea class="mini" id="naPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
+    <textarea class="mini" id="naPasteInput" rows="3" placeholder="…or paste the contents of the activation file here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
   </div>
   <button class="btn ghost" data-action="App.startDemo">Explore the demo instead</button>
 </div>

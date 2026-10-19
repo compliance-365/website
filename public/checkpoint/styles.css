@@ -423,11 +423,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .gate p{color:var(--paper-dim);max-width:52ch;line-height:1.7;margin-top:12px;font-size:var(--fs-2)}
 .gate .btns{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;justify-content:center}
 .gate .note{margin-top:26px;font-size:var(--fs-1);color:var(--paper-faint);max-width:56ch;line-height:1.7}
+/* The two links in the sign-in note have to look like links: .lnk alone
+   inherits the faint note colour with a transparent underline. */
+.gate .note .lnk{color:var(--gold-light);text-decoration-color:currentColor}
 .gate-consent{margin-top:22px;max-width:56ch;border:1px solid rgba(240,169,127,.5);background:rgba(240,169,127,.08);border-radius:8px;padding:14px 18px;text-align:left}
 .gate-consent p{margin:0;color:var(--paper)}
 .gate-consent .btns{margin-top:12px}
 .gate .resid{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--paper-faint);letter-spacing:.04em;max-width:46ch;line-height:1.7}
-.gate .resid b{color:var(--paper-dim);display:block;letter-spacing:.14em;text-transform:uppercase;font-size:var(--fs-eyebrow);margin-bottom:4px}
+.gate .resid b,.wizard .resid b{color:var(--paper-dim);display:block;letter-spacing:.14em;text-transform:uppercase;font-size:var(--fs-eyebrow);margin-bottom:4px}
 
 /* ===== busy overlay ===== */
 .busy{display:none;position:fixed;inset:0;background:rgba(var(--ink-rgb),.82);z-index:80;align-items:center;justify-content:center;flex-direction:column;gap:18px}
@@ -465,6 +468,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .wiz-perm-row:last-child{border-bottom:none}
 .wiz-perm-row .wiz-perm-name{font-weight:700;font-size:var(--fs-1);color:var(--gold-light);white-space:nowrap;letter-spacing:.02em}
 .wiz-perm-row .wiz-perm-why{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.55}
+/* Phones: a long permission name (DeviceManagementManagedDevices.Read.All)
+   left its reason a sliver of a column cut off at the edge, so the name
+   sits above its reason instead. */
+@media (max-width:600px){.wiz-perm-row{flex-direction:column;gap:2px}.wiz-perm-row .wiz-perm-name{white-space:normal;overflow-wrap:anywhere}}
+.wiz-cap-row .chip{white-space:nowrap}
+/* File pickers (activation file, logo) in the app's own button style
+   rather than the browser's grey default. */
+input[type=file]{color:var(--paper-dim);font:inherit;font-size:var(--fs-2)}
+input[type=file]::file-selector-button{font:inherit;font-size:var(--fs-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--paper);background:transparent;border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 12px;margin-right:12px;cursor:pointer}
+input[type=file]::file-selector-button:hover{border-color:var(--gold-light)}
 .wiz-cap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:var(--fs-2)}
 .wiz-cap-row:last-child{border-bottom:none}
 .wiz-cap-row .wiz-cap-label{color:var(--paper)}
