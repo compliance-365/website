@@ -27488,7 +27488,7 @@ function showModal(opts) {
       var rawText;
       if (file) { rawText = await file.text(); }
       else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
-      else { toast('Choose a file or paste the activation JSON first.'); return; }
+      else { toast('Choose the activation file, or paste its contents, first.'); return; }
 
       busy(true);
       var tenantInfo = await Graph.tenantInfo();
@@ -28636,6 +28636,8 @@ function showModal(opts) {
        person running it always sees where they are and what to do. */
     else if (Store.kind === 'sharepoint' && startHereDue()) App.go('start');
     SELFTEST_MODE = Store.kind === 'demo' && /[?&]selftest=1\b/.test(location.search);
+    /* The search box's keyboard-shortcut hint means nothing on a phone. */
+    try { if (window.matchMedia && matchMedia('(pointer:coarse)').matches) { var gsIn = document.getElementById('gsearchInput'); if (gsIn) gsIn.placeholder = 'Search or run a command…'; } } catch (e) { /* matchMedia unavailable */ }
     if (SELFTEST_MODE) App.go('selftest');
     /* Demo deep link (?demo=1&view=documents): the website's feature
        pages open the demo on the screen they describe. Only a view that
@@ -29817,7 +29819,7 @@ function showModal(opts) {
     var rawText;
     if (file) { rawText = await file.text(); }
     else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
-    else { toast('Choose a file or paste the activation JSON first.'); return; }
+    else { toast('Choose the activation file, or paste its contents, first.'); return; }
 
     busy(true);
     var tenantInfo = await Graph.tenantInfo();
@@ -30224,7 +30226,18 @@ function showModal(opts) {
     'DeviceManagementManagedDevices.Read.All': 'Reads Intune device compliance status.',
     'DeviceManagementConfiguration.Read.All': 'Checks whether Intune compliance policies exist at all.',
     'RoleManagement.Read.Directory': 'Checks whether privileged directory roles use time-bound (PIM-eligible) assignment rather than standing access.',
-    'IdentityRiskyUser.Read.All': "Checks for risky sign-ins and risky users — needs Microsoft Entra ID P2, skipped gracefully if you don't have it."
+    'IdentityRiskyUser.Read.All': "Checks for risky sign-ins and risky users — needs Microsoft Entra ID P2, skipped gracefully if you don't have it.",
+    'SensitivityLabels.Read.All': 'Checks whether Microsoft Purview sensitivity labels are published, for the labelling and classification check.',
+    'AccessReview.Read.All': 'Checks whether periodic access reviews are set up in Microsoft Entra.',
+    'SharePointTenantSettings.Read.All': 'Reads the SharePoint and OneDrive external-sharing setting.',
+    'SecurityIncident.Read.All': 'Reads Microsoft Defender incidents so open ones show in your reports. It cannot assign, change or close them.',
+    'SecurityAlert.Read.All': 'Reads Microsoft Defender alerts alongside the incidents. It cannot triage or close them.',
+    'SubjectRightsRequest.Read.All': 'Reads Microsoft Priva privacy requests, to check they are answered on time.',
+    'RecordsManagement.Read.All': 'Checks whether Microsoft Purview retention labels are published.',
+    'LifecycleWorkflows.Read.All': 'Checks whether joiner, mover and leaver automation is set up in Microsoft Entra.',
+    'AuditLog.Read.All': 'Reads sign-in and directory audit logs, to spot legacy sign-ins that succeeded and changes to admin roles. It cannot change or delete a log.',
+    'ThreatHunting.Read.All': 'Runs fixed, read-only Defender queries for vulnerability and endpoint sensor status. It cannot change anything in Defender.',
+    'AttackSimulation.Read.All': 'Reads your phishing simulation campaigns and results. It cannot launch a simulation.'
   };
   function renderWizardConsentList() {
     var el = document.getElementById('wizConsentList');
@@ -30316,7 +30329,7 @@ function showModal(opts) {
     var rawText;
     if (file) { rawText = await file.text(); }
     else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
-    else { if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Choose a file or paste the activation JSON first.</span>'; return; }
+    else { if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Choose the activation file, or paste its contents, first.</span>'; return; }
 
     if (statusEl) statusEl.textContent = 'Verifying…';
     if (nextBtn) nextBtn.disabled = true;

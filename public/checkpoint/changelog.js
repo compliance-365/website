@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.171.0',
+    date: '2026-10-19',
+    entries: [
+      'Setup is clearer for a new client: every Microsoft permission now says what it is used for (eleven of them used to say only "Used by a posture check"), the permission list reads properly on a phone, the activation step is in plain English, and file pickers match the rest of the app.',
+      'The sign-in screen says what Checkpoint does in plain words, and its two help links now look like links.',
+      'Fixed the "Data residency" note on the first setup screen, which ran its heading into the text.',
+      'On phones, the search box no longer shows a keyboard shortcut you cannot use.'
+    ]
+  },
+  {
     version: '1.170.3',
     date: '2026-10-18',
     entries: [
