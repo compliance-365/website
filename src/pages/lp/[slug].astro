@@ -12,7 +12,7 @@
    as a key event in GA4 and import it into Google Ads as the campaign's
    conversion — see GOOGLE-ADS.md. */
 import Base from '../../layouts/BaseLayout.astro';
-import { AD_LANDING_PAGES, BOOKING_URL } from '../../data/ad-landing-pages.js';
+import { AD_LANDING_PAGES, BOOKING_URL, CONSULTING_DAY_RATE, TRIAL_DAYS, fmtAud, licenceFrom } from '../../data/ad-landing-pages.js';
 
 export function getStaticPaths() {
   return AD_LANDING_PAGES.map((page) => ({ params: { slug: page.slug }, props: { page } }));
@@ -49,7 +49,7 @@ const year = new Date().getFullYear();
         <ul class="lp-trust">
           {page.trust.map((t) => <li>{t}</li>)}
         </ul>
-        <a href="#enquire" class="lp-btn lp-jump">Get my fixed quote</a>
+        <a href="#enquire" class="lp-btn lp-jump">Get my price</a>
         <p class="lp-alt">
           Rather pick a time yourself? <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">Open the booking calendar →</a>
         </p>
@@ -57,8 +57,8 @@ const year = new Date().getFullYear();
 
       <div class="lp-form-card band-light" id="enquire">
         <div id="lpFormWrap">
-          <h2>Get a fixed quote</h2>
-          <p class="lp-form-sub">Free 30-minute scoping call with a senior consultant. We reply within 1 business day.</p>
+          <h2>Get your price</h2>
+          <p class="lp-form-sub">Tell us your size and scope and we’ll come back with a price for the option that suits you, within 1 business day.</p>
           <form id="lpForm" novalidate data-framework={page.framework} data-slug={page.slug}>
             <div class="lp-row">
               <label><span>Name <b aria-hidden="true">*</b></span>
@@ -97,6 +97,16 @@ const year = new Date().getFullYear();
                 </select>
               </label>
             </div>
+            {page.module && (
+              <label>How hands-on do you want us?
+                <select id="lpApproach" name="approach">
+                  <option value="">Not sure yet</option>
+                  <option>Checkpoint on its own</option>
+                  <option>Checkpoint plus expert days</option>
+                  <option>Fully managed, fixed price</option>
+                </select>
+              </label>
+            )}
             <label>Anything else? (deadline, scope)
               <textarea id="lpMessage" name="message" rows="3"></textarea>
             </label>
@@ -105,7 +115,7 @@ const year = new Date().getFullYear();
               <label>Leave this empty <input id="lpWebsite" name="website" tabindex="-1" autocomplete="off" /></label>
             </div>
             <p id="lpError" class="lp-error" role="alert" hidden></p>
-            <button id="lpSubmit" type="submit" class="lp-btn">Get my fixed quote</button>
+            <button id="lpSubmit" type="submit" class="lp-btn">Get my price</button>
             <p class="lp-fine">No obligation. By submitting you agree to our <a href={`${base}privacy/`}>Privacy Policy</a>.</p>
           </form>
         </div>
@@ -146,14 +156,52 @@ const year = new Date().getFullYear();
     </div>
   </section>
 
-  <section class="lp-section">
-    <div class="container lp-two">
-      <div class="lp-price">
-        <p class="lp-eyebrow lp-eyebrow-light">Pricing</p>
-        <p class="lp-price-head">{page.price.headline}</p>
-        <p>{page.price.detail}</p>
-        <a href="#enquire" class="lp-btn">Get my fixed quote</a>
-      </div>
+  <section class="lp-section" id="pricing">
+    <div class="container">
+      {page.module ? (
+        <>
+          <h2 class="lp-h2">Three ways to get there</h2>
+          <p class="lp-sub">Every option runs on Checkpoint, our compliance software, inside your own Microsoft 365. What changes is how much of our time you want alongside it. AUD, ex GST.</p>
+          <div class="lp-options">
+            <div class="lp-option">
+              <h3>Checkpoint on its own</h3>
+              <p class="lp-from">Starting from</p>
+              <p class="lp-amount">{licenceFrom(page.module)}<span> a year</span></p>
+              <p>Your team runs the programme with Checkpoint’s guided build and next-step prompts. Includes a free 30-minute setup call and a {TRIAL_DAYS}-day free trial.</p>
+              <a href={`${base}pricing/`} class="lp-option-link">See Checkpoint pricing →</a>
+            </div>
+            <div class="lp-option lp-option-mid">
+              <p class="lp-badge">Our usual recommendation</p>
+              <h3>Checkpoint plus expert days</h3>
+              <p class="lp-from">Starting from</p>
+              <p class="lp-amount">{licenceFrom(page.module)}<span> a year + {fmtAud(CONSULTING_DAY_RATE)} a day</span></p>
+              <p>You run Checkpoint and book a senior consultant only for the days you need: the risk workshop, the internal audit, or audit day. We usually recommend 2–4 days for a first programme.</p>
+              <a href="#enquire" class="lp-option-link">Plan my days →</a>
+            </div>
+            <div class="lp-option">
+              <h3>Fully managed, fixed price</h3>
+              <p class="lp-from">Starting from</p>
+              <p class="lp-amount">{page.price.managed}</p>
+              <p>{page.price.managedDetail} Checkpoint included.</p>
+              <a href="#enquire" class="lp-option-link">Get a fixed quote →</a>
+            </div>
+          </div>
+          {page.price.note && <p class="lp-note">{page.price.note}</p>}
+          <p class="lp-note"><a href={`${base}cost-estimator/`}>Compare all three over three years in the cost estimator →</a></p>
+        </>
+      ) : (
+        <div class="lp-option lp-option-solo">
+          <p class="lp-eyebrow lp-eyebrow-light">Pricing</p>
+          <p class="lp-amount">{page.price.managed}</p>
+          <p>{page.price.managedDetail}</p>
+          <a href="#enquire" class="lp-btn">Get my quote</a>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="lp-section lp-alt-bg">
+    <div class="container lp-narrow">
       <div class="lp-proof">
         <p class="lp-eyebrow lp-eyebrow-light">Client result</p>
         <p class="lp-proof-head">{page.caseStudy.label}</p>
@@ -163,7 +211,7 @@ const year = new Date().getFullYear();
     </div>
   </section>
 
-  <section class="lp-section lp-alt-bg">
+  <section class="lp-section">
     <div class="container lp-narrow">
       <h2 class="lp-h2">Common questions</h2>
       {page.faqs.map((f) => (
@@ -178,8 +226,8 @@ const year = new Date().getFullYear();
 
   <section class="lp-final band-dark">
     <div class="container lp-narrow">
-      <h2>Find out what {page.framework} will cost you — in 30 minutes.</h2>
-      <a href="#enquire" class="lp-btn">Get my fixed quote</a>
+      <h2>Find out what {page.framework} will cost you.</h2>
+      <a href="#enquire" class="lp-btn">Get my price</a>
     </div>
   </section>
 
@@ -202,7 +250,7 @@ const year = new Date().getFullYear();
   var framework = form.getAttribute('data-framework');
   var started = false;
 
-  function val(id) { return (document.getElementById(id).value || '').trim(); }
+  function val(id) { var el = document.getElementById(id); return el ? (el.value || '').trim() : ''; }
   function fail(msg) { err.textContent = msg; err.hidden = false; }
   function track(name, p) { if (typeof window.c365Track === 'function') window.c365Track(name, p); }
 
@@ -229,6 +277,7 @@ const year = new Date().getFullYear();
       'Phone: ' + (val('lpPhone') || '-'),
       'Staff: ' + (val('lpSize') || '-'),
       'Driver: ' + (val('lpDriver') || '-'),
+      'Approach: ' + (val('lpApproach') || 'Not sure yet'),
       '',
       val('lpMessage') || '(no message)'
     ].join('\n');
@@ -247,7 +296,7 @@ const year = new Date().getFullYear();
       });
       if (!res.ok) throw new Error('Request failed: ' + res.status);
       if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: email, name: name, company: company, form: 'Ad landing: ' + framework, subject: 'Quote request: ' + framework, message: details });
-      track('generate_lead', { form: 'ad_landing', framework: framework, company_size: val('lpSize') });
+      track('generate_lead', { form: 'ad_landing', framework: framework, company_size: val('lpSize'), approach: val('lpApproach') });
 
       document.getElementById('lpFormWrap').hidden = true;
       var done = document.getElementById('lpDone');
@@ -318,12 +367,23 @@ const year = new Date().getFullYear();
   .lp-steps h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
   .lp-steps p { margin: 0; color: var(--text-subtle); line-height: 1.55; font-size: 0.95rem; }
 
-  .lp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-  .lp-price, .lp-proof { background: #fff; border: 1px solid #DDD8CF; border-radius: 16px; padding: 2rem; }
-  .lp-price { border: 2px solid #BE4A1E; }
+  .lp-sub { text-align: center; max-width: 680px; margin: -1.25rem auto 2.25rem; color: var(--text-subtle); line-height: 1.6; }
+  .lp-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-items: stretch; }
+  .lp-option { position: relative; background: #fff; border: 1px solid #DDD8CF; border-radius: 16px; padding: 1.75rem; display: flex; flex-direction: column; }
+  .lp-option h3 { margin: 0 0 1rem; font-size: 1.15rem; }
+  .lp-option p { color: var(--text-subtle); line-height: 1.6; margin: 0 0 1rem; }
+  .lp-option-mid { border: 2px solid #BE4A1E; }
+  .lp-option-solo { max-width: 640px; margin: 0 auto; }
+  .lp-badge { position: absolute; top: -0.8rem; left: 1.75rem; background: #BE4A1E; color: var(--on-accent) !important; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px; margin: 0 !important; }
+  .lp-from { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.15rem !important; }
+  .lp-amount { font-size: 2rem; font-weight: 800; color: #0B0B0C !important; margin: 0 0 1rem !important; line-height: 1.15; }
+  .lp-amount span { font-size: 0.95rem; font-weight: 600; color: var(--text-subtle); }
+  .lp-option-link { margin-top: auto; color: var(--accent-ink); font-weight: 700; }
+  .lp-note { text-align: center; color: var(--text-subtle); font-size: 0.9rem; margin: 1.5rem 0 0; }
+  .lp-note a { color: var(--accent-ink); font-weight: 600; }
+  .lp-proof { background: #fff; border: 1px solid #DDD8CF; border-radius: 16px; padding: 2rem; text-align: center; }
   .lp-eyebrow-light { color: var(--accent-ink); }
-  .lp-price-head { font-size: 1.6rem; font-weight: 800; margin: 0 0 0.75rem; }
-  .lp-price p, .lp-proof p { color: var(--text-subtle); line-height: 1.6; }
+  .lp-proof p { color: var(--text-subtle); line-height: 1.6; }
   .lp-proof-head { font-size: 1.25rem; font-weight: 700; color: #0B0B0C !important; margin: 0 0 0.75rem; }
   .lp-proof a, .lp-more a { color: var(--accent-ink); font-weight: 600; }
   .lp-clients { margin-top: 1.5rem; font-size: 0.9rem; }
@@ -341,7 +401,8 @@ const year = new Date().getFullYear();
   .lp-foot a { color: rgba(250,247,241,0.8); }
 
   @media (max-width: 900px) {
-    .lp-hero-grid, .lp-two { grid-template-columns: 1fr; gap: 2rem; }
+    .lp-hero-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .lp-options { grid-template-columns: 1fr; gap: 1.75rem; }
     .lp-cards { grid-template-columns: 1fr; }
     .lp-steps { grid-template-columns: 1fr 1fr; }
   }

@@ -684,6 +684,9 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   var SELF_EXCLUDED = ['/contact', '/book', '/thank-you'];
   var here = location.pathname.replace(/\/+$/, '') || '/';
   if (SELF_EXCLUDED.indexOf(here) !== -1) return;
+  /* Ad landing pages carry their own form; a bar sending the click off
+     to /book/ would only split it. */
+  if (here.indexOf('/lp/') === 0) return;
 
   var shown = false;
   function update() {

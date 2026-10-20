@@ -106,7 +106,7 @@ Headline limit is 30 characters; description limit is 90 characters.
   - Built in Your Microsoft 365
   - Australian ISO 27001 Experts
   - Get a Fixed Quote Today
-  - From $25k, Fixed Price
+  - Starting From $7,000/yr
 - Descriptions:
   - Senior consultants build your ISMS inside Microsoft 365. No Vanta or Drata needed.
   - Gap assessment to certificate in 10–14 weeks. Free 30-minute scoping call.
@@ -120,7 +120,7 @@ Headline limit is 30 characters; description limit is 90 characters.
   - 30–40% Less with ISO 27001
   - Get a Fixed Quote Today
 - Descriptions:
-  - An AI management system your customers and insurers accept. Fixed price from $18k.
+  - An AI management system your customers and insurers accept. Starting from $7,000/yr.
   - AI inventory, risk assessment and oversight in Microsoft 365. Free scoping call.
 
 **Essential Eight**
@@ -129,7 +129,7 @@ Headline limit is 30 characters; description limit is 90 characters.
   - E8 Assessment in 2–3 Weeks
   - Reach ML2 in 12–16 Weeks
   - Use the M365 You Already Own
-  - Fixed Price From $8k
+  - Starting From $7,000/yr
   - ASD-Mapped Evidence Packs
 - Descriptions:
   - Know your real Essential Eight maturity in 2–3 weeks, then reach ML2 at a fixed price.
@@ -166,8 +166,26 @@ Headline limit is 30 characters; description limit is 90 characters.
   about $1,500, or it has produced no qualified enquiries, rework the page
   and ads, or stop the campaign.
 
+## Pricing on the pages
+
+Each page leads with the **starting-from** price: the Checkpoint licence for
+under 50 staff. The pricing section then shows all three ways to buy:
+
+1. Checkpoint on its own.
+2. Checkpoint plus consulting days.
+3. A fully managed fixed-price engagement.
+
+The Checkpoint licence and the day rate are read from `src/data/pricing.js`,
+so they always match `/pricing/` and checkout. When Paddle prices change, the
+ads must change with them: update the "Starting From $7,000/yr" headlines
+above.
+
 ## Keeping the pages accurate
 
-Every figure on these pages (prices, timelines, the pass rate) is copied from
-the FAQ on the matching `/services/` page. When a figure changes, update the
-service page first, then `ad-landing-pages.js`.
+Timelines, the pass rate and the fixed-price engagement figures are copied
+from the FAQ on the matching `/services/` page. When a figure changes, update
+the service page first, then `ad-landing-pages.js`.
+
+The form asks how hands-on the visitor wants us to be. The answer appears in
+the enquiry email as "Approach" and is sent to GA4 as the `approach`
+parameter on `generate_lead`.
