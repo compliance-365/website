@@ -9,6 +9,7 @@ import { MODULES, TRIAL_DAYS, fmtAud } from '../data/pricing.js';
 import landcomSvg from '../../public/assets/clients/landcom.svg?raw';
 import megaportSvg from '../../public/assets/clients/megaport.svg?raw';
 import kindeSvg from '../../public/assets/clients/kinde.svg?raw';
+import mineguardSvg from '../../public/assets/clients/mineguard.svg?raw';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
@@ -17,10 +18,18 @@ const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com
 // SVGs picks up the CSS color set on .trust-logo-item — an <img> would
 // load each file in its own document context and currentColor would
 // resolve to black regardless of the page's colour scheme.
-const clientLogos = [
+/* The carousel shows the logo list twice so it can loop seamlessly; the
+   second copy's SVG ids get a suffix so no id appears twice on the page. */
+const uniqueSvgIds = (svg: string, suffix: string) =>
+  svg.replace(/id="([^"]+)"/g, `id="$1${suffix}"`).replace(/url\(#([^)]+)\)/g, `url(#$1${suffix})`);
+const clientLogos: { name: string; svg?: string; text?: string; tall?: boolean; wide?: boolean }[] = [
   { name: 'Landcom', svg: landcomSvg, tall: true },
   { name: 'Megaport', svg: megaportSvg },
   { name: 'Kinde', svg: kindeSvg },
+  { name: 'Mine Guard AI', svg: mineguardSvg, wide: true },
+  /* Named in text only: the Queensland Coat of Arms may not be used
+     without the State's authorisation. */
+  { name: 'Queensland Government', text: 'Queensland Government' },
 ];
 
 // Framework rotator — real destinations, no href="#". Used both by the
@@ -223,10 +232,20 @@ const faqLd = {
 <section class="trust-strip" aria-label="Organisations we have worked with">
   <div class="container trust-strip-inner">
     <p class="trust-strip-label">Trusted by teams at</p>
-    <div class="trust-strip-logos">
-      {clientLogos.map(l => (
-        <span class={l.tall ? 'trust-logo-item trust-logo-tall' : 'trust-logo-item'} aria-label={l.name} set:html={l.svg} />
-      ))}
+    <div class="trust-marquee">
+      <div class="trust-track">
+        {[0, 1].map((copy) => (
+          <ul class="trust-strip-logos" aria-hidden={copy ? 'true' : undefined}>
+            {clientLogos.map((l) => (
+              <li class={'trust-logo-item' + (l.tall ? ' trust-logo-tall' : '') + (l.wide ? ' trust-logo-wide' : '')}>
+                {l.svg
+                  ? <span set:html={copy ? uniqueSvgIds(l.svg, '-dup') : l.svg} />
+                  : <span class="trust-logo-text">{l.text}</span>}
+              </li>
+            ))}
+          </ul>
+        ))}
+      </div>
     </div>
   </div>
 </section>
@@ -234,13 +253,30 @@ const faqLd = {
   .trust-strip{background:#0B0B0C;padding:8px 0 40px;}
   .trust-strip-inner{display:flex;align-items:center;justify-content:center;gap:clamp(20px,4vw,48px);flex-wrap:wrap;}
   .trust-strip-label{margin:0;font-family:Bricolage Grotesque,system-ui;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.55);white-space:nowrap;}
-  .trust-strip-logos{display:flex;align-items:center;gap:clamp(28px,4vw,56px);flex-wrap:wrap;}
+  /* A slow, continuous carousel: the list is rendered twice and the track
+     slides by exactly one copy, so the loop has no visible jump. It pauses
+     on hover or keyboard focus, and stands still for anyone who has asked
+     for reduced motion. */
+  .trust-marquee{flex:1 1 0;min-width:0;max-width:880px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);}
+  .trust-track{display:flex;width:max-content;animation:trust-scroll 32s linear infinite;}
+  .trust-marquee:hover .trust-track,.trust-marquee:focus-within .trust-track{animation-play-state:paused;}
+  @keyframes trust-scroll{to{transform:translateX(-50%);}}
+  .trust-strip-logos{display:flex;align-items:center;gap:clamp(36px,5vw,64px);padding:0 clamp(18px,2.5vw,32px);margin:0;list-style:none;}
+  .trust-logo-text{font-family:Bricolage Grotesque,system-ui;font-weight:600;font-size:15px;letter-spacing:-.01em;white-space:nowrap;line-height:1;}
+  @media (prefers-reduced-motion: reduce){
+    .trust-track{animation:none;width:auto;flex-wrap:wrap;justify-content:center;}
+    .trust-strip-logos[aria-hidden]{display:none;}
+    .trust-strip-logos{flex-wrap:wrap;justify-content:center;}
+  }
+  @media (max-width:640px){.trust-marquee{flex-basis:100%;}}
   /* Client logos in their own colours, at full strength: Kinde's mark is
      currentColor, white on this dark strip as Kinde's own artwork does. */
   .trust-logo-item{color:#FFFFFF;display:flex;align-items:center;}
   .trust-logo-item :global(svg){height:22px;width:auto;display:block;}
   /* Landcom's logo is a stacked lockup, so it needs more height to read at the same size. */
   .trust-logo-tall :global(svg){height:40px;}
+  /* Mine Guard AI's wordmark is long and light, so it needs a little more height. */
+  .trust-logo-wide :global(svg){height:27px;}
 </style>
 
 <!-- WHAT DO YOU NEED? — start from the goal, not the acronym -->
