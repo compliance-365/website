@@ -1,0 +1,362 @@
+---
+/* Google Ads landing pages — one per campaign, content in
+   src/data/ad-landing-pages.js.
+
+   Built for a paid click, not for browsing: no site navigation to wander
+   off into, the enquiry form in the first screen, and a single goal.
+   noindex (and left out of the sitemap in astro.config.mjs) because the
+   /services/ pages are the ones meant to rank; these would only compete
+   with them as near-duplicates.
+
+   A sent enquiry fires `generate_lead` through c365Track. Mark that event
+   as a key event in GA4 and import it into Google Ads as the campaign's
+   conversion — see GOOGLE-ADS.md. */
+import Base from '../../layouts/BaseLayout.astro';
+import { AD_LANDING_PAGES, BOOKING_URL } from '../../data/ad-landing-pages.js';
+
+export function getStaticPaths() {
+  return AD_LANDING_PAGES.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+const base = import.meta.env.BASE_URL || '/';
+const year = new Date().getFullYear();
+---
+
+<Base title={page.title} description={page.description} robots="noindex,follow">
+
+<header class="lp-top">
+  <div class="container lp-top-inner">
+    <a href={base} class="lp-brand" aria-label="Compliance365 home">
+      <svg width="28" height="28" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="18" stroke-linecap="round"/>
+        <circle cx="188" cy="100" r="14" fill="#BE4A1E"/>
+      </svg>
+      <span>COMPLIANCE<span class="lp-365">365</span></span>
+    </a>
+    <a href="tel:+61468752243" class="lp-phone">Call 0468 752 243</a>
+  </div>
+</header>
+
+<main id="main-content" tabindex="-1">
+
+  <section class="lp-hero band-dark">
+    <div class="container lp-hero-grid">
+      <div class="lp-hero-copy">
+        <p class="lp-eyebrow">{page.eyebrow}</p>
+        <h1 set:html={page.h1} />
+        <p class="lp-lead">{page.lead}</p>
+        <ul class="lp-trust">
+          {page.trust.map((t) => <li>{t}</li>)}
+        </ul>
+        <a href="#enquire" class="lp-btn lp-jump">Get my fixed quote</a>
+        <p class="lp-alt">
+          Rather pick a time yourself? <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">Open the booking calendar →</a>
+        </p>
+      </div>
+
+      <div class="lp-form-card band-light" id="enquire">
+        <div id="lpFormWrap">
+          <h2>Get a fixed quote</h2>
+          <p class="lp-form-sub">Free 30-minute scoping call with a senior consultant. We reply within 1 business day.</p>
+          <form id="lpForm" novalidate data-framework={page.framework} data-slug={page.slug}>
+            <div class="lp-row">
+              <label><span>Name <b aria-hidden="true">*</b></span>
+                <input id="lpName" name="name" autocomplete="name" required />
+              </label>
+              <label><span>Work email <b aria-hidden="true">*</b></span>
+                <input id="lpEmail" name="email" type="email" autocomplete="email" required />
+              </label>
+            </div>
+            <div class="lp-row">
+              <label>Company
+                <input id="lpCompany" name="company" autocomplete="organization" />
+              </label>
+              <label>Phone
+                <input id="lpPhone" name="phone" type="tel" autocomplete="tel" />
+              </label>
+            </div>
+            <div class="lp-row">
+              <label>Staff
+                <select id="lpSize" name="size">
+                  <option value="">Select…</option>
+                  <option>Under 50</option>
+                  <option>50–200</option>
+                  <option>200–500</option>
+                  <option>500+</option>
+                </select>
+              </label>
+              <label>What’s driving this?
+                <select id="lpDriver" name="driver">
+                  <option value="">Select…</option>
+                  <option>A customer or tender requires it</option>
+                  <option>Cyber insurance</option>
+                  <option>Board or executive request</option>
+                  <option>Regulation or government contract</option>
+                  <option>Other</option>
+                </select>
+              </label>
+            </div>
+            <label>Anything else? (deadline, scope)
+              <textarea id="lpMessage" name="message" rows="3"></textarea>
+            </label>
+            <!-- Honeypot: hidden from people, filled in by form-spam bots. -->
+            <div class="lp-hp" aria-hidden="true">
+              <label>Leave this empty <input id="lpWebsite" name="website" tabindex="-1" autocomplete="off" /></label>
+            </div>
+            <p id="lpError" class="lp-error" role="alert" hidden></p>
+            <button id="lpSubmit" type="submit" class="lp-btn">Get my fixed quote</button>
+            <p class="lp-fine">No obligation. By submitting you agree to our <a href={`${base}privacy/`}>Privacy Policy</a>.</p>
+          </form>
+        </div>
+        <div id="lpDone" class="lp-done" hidden tabindex="-1">
+          <h2>Thanks — we’ve got it.</h2>
+          <p>A senior consultant will reply within 1 business day. If you’d like to lock in a time now:</p>
+          <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" class="lp-btn">Choose a time →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section">
+    <div class="container">
+      <h2 class="lp-h2">What you get</h2>
+      <div class="lp-cards">
+        {page.outcomes.map((o) => (
+          <div class="lp-card">
+            <h3>{o.h}</h3>
+            <p>{o.p}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section lp-alt-bg">
+    <div class="container">
+      <h2 class="lp-h2">How it works</h2>
+      <ol class="lp-steps">
+        {page.steps.map((s) => (
+          <li>
+            <h3>{s.h}</h3>
+            <p>{s.p}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="lp-section">
+    <div class="container lp-two">
+      <div class="lp-price">
+        <p class="lp-eyebrow lp-eyebrow-light">Pricing</p>
+        <p class="lp-price-head">{page.price.headline}</p>
+        <p>{page.price.detail}</p>
+        <a href="#enquire" class="lp-btn">Get my fixed quote</a>
+      </div>
+      <div class="lp-proof">
+        <p class="lp-eyebrow lp-eyebrow-light">Client result</p>
+        <p class="lp-proof-head">{page.caseStudy.label}</p>
+        <a href={`${base}case-studies/${page.caseStudy.slug}/`}>Read the case study →</a>
+        <p class="lp-clients">Trusted by teams including Landcom, Megaport, Kinde, Mine Guard AI and the Queensland Government.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section lp-alt-bg">
+    <div class="container lp-narrow">
+      <h2 class="lp-h2">Common questions</h2>
+      {page.faqs.map((f) => (
+        <details class="lp-faq">
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+      <p class="lp-more">More detail on our <a href={`${base}${page.servicePage}`}>{page.framework} service page</a>.</p>
+    </div>
+  </section>
+
+  <section class="lp-final band-dark">
+    <div class="container lp-narrow">
+      <h2>Find out what {page.framework} will cost you — in 30 minutes.</h2>
+      <a href="#enquire" class="lp-btn">Get my fixed quote</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="lp-foot">
+  <div class="container">
+    © {year} Compliance365 Pty Ltd · Brisbane, Australia ·
+    <a href={`${base}privacy/`}>Privacy</a> · <a href={`${base}terms/`}>Terms</a>
+  </div>
+</footer>
+
+<script is:inline>
+(function () {
+  var API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
+  var form = document.getElementById('lpForm');
+  if (!form) return;
+  var btn = document.getElementById('lpSubmit');
+  var err = document.getElementById('lpError');
+  var framework = form.getAttribute('data-framework');
+  var started = false;
+
+  function val(id) { return (document.getElementById(id).value || '').trim(); }
+  function fail(msg) { err.textContent = msg; err.hidden = false; }
+  function track(name, p) { if (typeof window.c365Track === 'function') window.c365Track(name, p); }
+
+  /* First interaction with the form — the gap between this and
+     generate_lead is the form's own drop-off. */
+  form.addEventListener('focusin', function () {
+    if (started) return;
+    started = true;
+    track('lp_form_start', { framework: framework });
+  });
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    err.hidden = true;
+    if (val('lpWebsite')) return;
+
+    var name = val('lpName'), email = val('lpEmail'), company = val('lpCompany');
+    if (name.length < 2) return fail('Please enter your name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('Please enter a valid email address.');
+
+    var details = [
+      'Framework: ' + framework,
+      'Company: ' + (company || '-'),
+      'Phone: ' + (val('lpPhone') || '-'),
+      'Staff: ' + (val('lpSize') || '-'),
+      'Driver: ' + (val('lpDriver') || '-'),
+      '',
+      val('lpMessage') || '(no message)'
+    ].join('\n');
+
+    btn.disabled = true;
+    try {
+      var res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          subject: 'Quote request (ad landing page): ' + framework,
+          message: details + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : '')
+        })
+      });
+      if (!res.ok) throw new Error('Request failed: ' + res.status);
+      if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: email, name: name, company: company, form: 'Ad landing: ' + framework, subject: 'Quote request: ' + framework, message: details });
+      track('generate_lead', { form: 'ad_landing', framework: framework, company_size: val('lpSize') });
+
+      document.getElementById('lpFormWrap').hidden = true;
+      var done = document.getElementById('lpDone');
+      done.hidden = false;
+      done.focus();
+    } catch (ex) {
+      console.error(ex);
+      fail('Could not send right now. Please call 0468 752 243 or email info@compliance365.com.au.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
+
+<style>
+  .lp-top { background: #0B0B0C; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .lp-top-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 60px; }
+  .lp-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: #FAF7F1; font-family: Bricolage Grotesque, system-ui, sans-serif; letter-spacing: 0.12em; font-weight: 300; font-size: 1rem; }
+  .lp-365 { color: #F0A97F; }
+  .lp-phone { color: #FAF7F1; text-decoration: none; font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
+  .lp-phone:hover { color: #F0A97F; }
+
+  .lp-hero { background: #0B0B0C; color: #FAF7F1; padding: 3.5rem 0 4rem; }
+  .lp-hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 3rem; align-items: start; }
+  .lp-eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 0.75rem; }
+  .lp-hero h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; margin: 0 0 1.25rem; color: #FAF7F1; }
+  .lp-lead { font-size: 1.1rem; line-height: 1.65; color: rgba(250,247,241,0.85); margin: 0 0 1.5rem; }
+  .lp-trust { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 1.25rem; }
+  .lp-trust li { position: relative; padding-left: 1.6rem; font-weight: 600; }
+  .lp-trust li::before { content: '✓'; position: absolute; left: 0; color: #F0A97F; font-weight: 800; }
+  .lp-alt { color: rgba(250,247,241,0.75); font-size: 0.95rem; margin: 0; }
+  .lp-alt a { color: var(--accent-ink); }
+
+  .lp-form-card { background: #FFFFFF; color: #0B0B0C; border-radius: 16px; padding: 1.75rem; box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
+  .lp-form-card h2 { margin: 0 0 0.35rem; font-size: 1.4rem; color: #0B0B0C; }
+  .lp-form-sub { margin: 0 0 1.25rem; color: var(--text-muted); font-size: 0.95rem; }
+  .lp-form-card form { display: grid; gap: 0.85rem; }
+  .lp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+  .lp-form-card label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; color: var(--text-subtle); }
+  .lp-form-card label b { color: var(--danger-ink); }
+  .lp-form-card input, .lp-form-card select, .lp-form-card textarea { font: inherit; font-weight: 400; padding: 10px; border: 1px solid #CFC9BE; border-radius: 8px; background: #fff; color: #0B0B0C; width: 100%; box-sizing: border-box; }
+  .lp-form-card input:focus, .lp-form-card select:focus, .lp-form-card textarea:focus { outline: 2px solid #BE4A1E; outline-offset: 1px; border-color: #BE4A1E; }
+  .lp-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .lp-error { color: var(--danger-ink); font-size: 0.9rem; margin: 0; }
+  .lp-fine { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+  .lp-fine a { color: var(--accent-ink); }
+  .lp-done h2 { margin-top: 0; }
+  .lp-done p { color: var(--text-subtle); }
+
+  .lp-btn { display: inline-flex; justify-content: center; align-items: center; background: #BE4A1E; color: var(--on-accent); border: 0; border-radius: 10px; padding: 0.9rem 1.5rem; font: inherit; font-weight: 700; font-size: 1rem; text-decoration: none; cursor: pointer; }
+  .lp-btn:hover { background: #A63A12; }
+  .lp-btn:disabled { opacity: 0.6; cursor: wait; }
+  .lp-form-card .lp-btn { width: 100%; }
+  .lp-jump { display: none; }
+
+  .lp-section { padding: 4rem 0; background: #FAF7F1; }
+  .lp-alt-bg { background: #F7F4EE; }
+  .lp-h2 { text-align: center; margin: 0 0 2.25rem; font-size: clamp(1.6rem, 3vw, 2.1rem); }
+  .lp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .lp-card { background: #fff; border: 1px solid #DDD8CF; border-radius: 14px; padding: 1.5rem; }
+  .lp-card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+  .lp-card p { margin: 0; color: var(--text-subtle); line-height: 1.6; }
+
+  .lp-steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+  .lp-steps li { counter-increment: step; background: #fff; border: 1px solid #DDD8CF; border-radius: 14px; padding: 1.5rem; }
+  .lp-steps li::before { content: counter(step); display: inline-flex; width: 2rem; height: 2rem; border-radius: 50%; background: #BE4A1E; color: var(--on-accent); align-items: center; justify-content: center; font-weight: 800; margin-bottom: 0.75rem; }
+  .lp-steps h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+  .lp-steps p { margin: 0; color: var(--text-subtle); line-height: 1.55; font-size: 0.95rem; }
+
+  .lp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .lp-price, .lp-proof { background: #fff; border: 1px solid #DDD8CF; border-radius: 16px; padding: 2rem; }
+  .lp-price { border: 2px solid #BE4A1E; }
+  .lp-eyebrow-light { color: var(--accent-ink); }
+  .lp-price-head { font-size: 1.6rem; font-weight: 800; margin: 0 0 0.75rem; }
+  .lp-price p, .lp-proof p { color: var(--text-subtle); line-height: 1.6; }
+  .lp-proof-head { font-size: 1.25rem; font-weight: 700; color: #0B0B0C !important; margin: 0 0 0.75rem; }
+  .lp-proof a, .lp-more a { color: var(--accent-ink); font-weight: 600; }
+  .lp-clients { margin-top: 1.5rem; font-size: 0.9rem; }
+
+  .lp-narrow { max-width: 760px; }
+  .lp-faq { background: #fff; border: 1px solid #DDD8CF; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+  .lp-faq summary { cursor: pointer; font-weight: 700; }
+  .lp-faq p { margin: 0.75rem 0 0; color: var(--text-subtle); line-height: 1.6; }
+  .lp-more { text-align: center; margin-top: 1.5rem; color: var(--text-subtle); }
+
+  .lp-final { background: #0B0B0C; color: #FAF7F1; padding: 4rem 0; text-align: center; }
+  .lp-final h2 { color: #FAF7F1; margin: 0 0 1.5rem; font-size: clamp(1.5rem, 3vw, 2rem); }
+
+  .lp-foot { background: #0B0B0C; color: rgba(250,247,241,0.6); font-size: 0.85rem; padding: 1.25rem 0; border-top: 1px solid rgba(255,255,255,0.08); }
+  .lp-foot a { color: rgba(250,247,241,0.8); }
+
+  @media (max-width: 900px) {
+    .lp-hero-grid, .lp-two { grid-template-columns: 1fr; gap: 2rem; }
+    .lp-cards { grid-template-columns: 1fr; }
+    .lp-steps { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .lp-hero { padding: 2rem 0 2.5rem; }
+    .lp-row, .lp-trust, .lp-steps { grid-template-columns: 1fr; }
+    .lp-jump { display: flex; width: 100%; margin-bottom: 1rem; }
+    .lp-phone { font-size: 0.85rem; }
+    .lp-section { padding: 3rem 0; }
+  }
+</style>
+
+<style is:global>
+  /* Global because the h1 is set with set:html: its em has no scope attribute. */
+  .lp-hero h1 em { font-style: normal; color: var(--accent-display); }
+</style>
+
+</Base>

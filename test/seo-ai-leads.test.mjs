@@ -31,7 +31,7 @@ test('every enquiry carries how the visitor found the site', () => {
   assert.match(base, /c365_consent[\s\S]{0,120}analytics_storage === 'granted'/, 'first visit only with analytics consent');
   assert.match(base, /30 \* 864e5/);
   assert.match(read('src/components/CookieBanner.astro'), /c365RememberFirstTouch\(\)/);
-  for (const p of ['src/pages/contact.astro', 'src/pages/book.astro', 'src/pages/posture-scan/index.astro',
+  for (const p of ['src/pages/contact.astro', 'src/pages/book.astro', 'src/pages/posture-scan/index.astro', 'src/pages/lp/[slug].astro',
     ...['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential-eight', 'disp-ism-irap'].map((f) => `src/pages/checklist/${f}.astro`)]) {
     assert.match(read(p), /window\.c365LeadSource\(\)/, p);
   }
