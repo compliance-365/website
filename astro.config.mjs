@@ -104,7 +104,8 @@ export default defineConfig({
   markdown: { syntaxHighlight: false },
   integrations: [
     sitemap({
-      filter: (page) => !SITEMAP_EXCLUDE.includes(page),
+      // /lp/ pages are Google Ads landing pages: noindex, so kept out too.
+      filter: (page) => !SITEMAP_EXCLUDE.includes(page) && !page.includes('/lp/'),
       // <lastmod> from the last git commit that touched each page's source, so
       // Google can tell a genuinely updated page from an untouched one.
       serialize: (item) => {
