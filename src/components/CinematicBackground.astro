@@ -235,6 +235,11 @@ void main(){
     // still run the live loop: richer noise, sharper resolution.
     const hq = !isStatic;
 
+    // Phones keep the CSS gradient underneath and never start WebGL: even
+    // one still frame cost ~0.9 s of main-thread time on a throttled mobile
+    // CPU, and at phone size the gradient reads almost the same.
+    if (window.innerWidth < 640) return;
+
     const gl = canvas.getContext('webgl', {
       alpha: false, antialias: false, depth: false, stencil: false,
       powerPreference: 'low-power'
@@ -296,11 +301,14 @@ void main(){
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    if (reduced || isStatic) {
-      render(24.0, 0, 1);
-      canvas.classList.add('on');
-      return;
-    }
+    // Every instance draws one still frame straight away: it looks the same
+    // as the moving scene, costs a single draw, and is all a static page or
+    // a reduced-motion visitor ever gets. (The loop used to start on load and
+    // was ~99% of all main-thread work in Lighthouse.)
+    render(24.0, 0, 1);
+    canvas.classList.add('on');
+    const saveData = !!(navigator.connection && navigator.connection.saveData);
+    if (reduced || isStatic || saveData) return;
 
     // Pulse the scene when a visitor hovers a framework on the hero's 3D ring —
     // dispatched by index.astro; harmless no-op if that script never loads.
@@ -309,17 +317,18 @@ void main(){
       pulseTarget = e.detail && e.detail.active ? 1 : 0;
     });
 
-    // Ease the scan-line/particle motion out as the scene scrolls past the viewport.
-    function scrollFade() {
-      const r = canvas.getBoundingClientRect();
-      const vh = window.innerHeight;
-      if (r.bottom <= 0 || r.top >= vh) return 0;
-      const visible = Math.min(r.bottom, vh) - Math.max(r.top, 0);
-      return Math.max(0, Math.min(1, visible / Math.min(r.height, vh)));
-    }
-
+    // Visibility and the scroll fade both come from one IntersectionObserver,
+    // so the loop never reads layout (getBoundingClientRect every frame was a
+    // forced reflow).
     let visible = true;
-    new IntersectionObserver((es) => { visible = es[0].isIntersecting; }).observe(canvas);
+    let fadeNow = 1;
+    const steps = Array.from({ length: 21 }, (_, i) => i / 20);
+    new IntersectionObserver((es) => {
+      const e = es[0];
+      visible = e.isIntersecting;
+      const vh = window.innerHeight;
+      fadeNow = visible ? Math.max(0, Math.min(1, e.intersectionRect.height / Math.min(e.boundingClientRect.height, vh))) : 0;
+    }, { threshold: steps }).observe(canvas);
 
     // Pausing stops scheduling frames altogether rather than rendering
     // nothing each frame, so the GPU genuinely goes idle. `origin` absorbs
@@ -330,20 +339,37 @@ void main(){
     let pausedAt = 0;
     let frame = 0;
 
+    // 30 frames a second is plenty for slow drifting light, and halves the cost.
+    let last = 0;
     function tick(now) {
       frame = requestAnimationFrame(tick);
-      if (!visible || document.hidden) return;
-      mx += (px - mx) * 0.04;
-      my += (py - my) * 0.04;
-      pulse += (pulseTarget - pulse) * 0.06;
-      render((now - origin) / 1000, pulse, scrollFade());
+      if (!visible || document.hidden || now - last < 33) return;
+      last = now;
+      mx += (px - mx) * 0.08;
+      my += (py - my) * 0.08;
+      pulse += (pulseTarget - pulse) * 0.12;
+      render((now - origin) / 1000, pulse, fadeNow);
     }
-    frame = requestAnimationFrame(tick);
-    canvas.classList.add('on');
 
     // The control lives beside .cinebg, as a child of the hero.
     const toggle = canvas.closest('.cinebg')
       ?.parentElement?.querySelector(':scope > [data-cinebg-toggle]');
+
+    // The scene only starts moving once the visitor does something (moves
+    // the pointer, scrolls, touches, types). Until then the still frame
+    // above is on screen, so first load does no animation work at all.
+    let started = false;
+    const startEvents = ['pointermove', 'pointerdown', 'scroll', 'keydown', 'touchstart', 'wheel'];
+    function start() {
+      if (started) return;
+      started = true;
+      startEvents.forEach((ev) => window.removeEventListener(ev, start));
+      origin = performance.now() - 24000;
+      frame = requestAnimationFrame(tick);
+      // Only now that it controls a running loop is it worth showing.
+      if (toggle) toggle.hidden = false;
+    }
+    startEvents.forEach((ev) => window.addEventListener(ev, start, { passive: true }));
     if (!toggle) return;
 
     function setPaused(next) {
@@ -363,8 +389,6 @@ void main(){
     }
 
     toggle.addEventListener('click', () => setPaused(!paused));
-    // Only now that it controls a running loop is it worth showing.
-    toggle.hidden = false;
   }
 
   document.querySelectorAll('canvas[data-cinebg]').forEach((c) => {

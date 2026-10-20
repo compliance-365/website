@@ -37,7 +37,11 @@ export default defineConfig({
   trailingSlash: 'always',
   outDir: 'dist',
   output: 'static',
-  build: { format: 'directory' },
+  /* inlineStylesheets: every page's CSS ships inside its HTML instead of as
+     separate files the browser must fetch before first paint (Lighthouse
+     "render-blocking requests", ~0.4-0.9 s on mobile). GitHub Pages caches
+     files for only 10 minutes anyway, so separate CSS files bought little. */
+  build: { format: 'directory', inlineStylesheets: 'always' },
   // Fetch the next page when a visitor hovers or focuses a link, so
   // navigation feels instant. Same-origin only; nothing runs until the
   // visitor actually navigates.
