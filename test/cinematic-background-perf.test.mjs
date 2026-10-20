@@ -13,8 +13,15 @@ test('phones never start WebGL', () => {
 
 test('the loop waits for the visitor to interact before it starts', () => {
   assert.match(src, /startEvents\.forEach\(\(ev\) => window\.addEventListener\(ev, start/);
-  const beforeStart = src.slice(0, src.indexOf('function start()'));
-  assert.doesNotMatch(beforeStart, /frame = requestAnimationFrame\(tick\);/, 'the loop must not be scheduled before start()');
+  // The loop is scheduled in exactly three places: tick() re-arming itself,
+  // start() (first interaction) and the pause button's resume. None of them
+  // runs at load, and start() is the one that begins it.
+  const calls = src.match(/frame = requestAnimationFrame\(tick\);/g) || [];
+  assert.equal(calls.length, 3);
+  const startFn = src.slice(src.indexOf('function start()'), src.indexOf('startEvents.forEach((ev) => window.addEventListener'));
+  assert.match(startFn, /frame = requestAnimationFrame\(tick\);/);
+  const resumeFn = src.slice(src.indexOf('function setPaused('), src.indexOf("toggle.addEventListener('click'"));
+  assert.match(resumeFn, /frame = requestAnimationFrame\(tick\);/);
 });
 
 test('the loop is capped at about 30 frames a second and reads no layout', () => {
