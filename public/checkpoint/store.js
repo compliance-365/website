@@ -2446,7 +2446,11 @@ window.SpStore = (function () {
     ActionUpdates: [
       { name: 'RefId', text: {} }, { name: 'ActionRef', text: {} }, { name: 'UpdateDate', text: {} },
       { name: 'Note', text: { allowMultipleLines: true } }, { name: 'EvidenceUrl', text: {} },
-      { name: 'Status', text: {} }, { name: 'Author', text: {} }
+      /* UpdatedBy, not Author: Author is SharePoint's own built-in
+         "Created By" field and is read-only, so every update written with
+         Author failed ("Field 'Author' is read-only"). Existing tenants
+         get UpdatedBy added by reconcileColumns() on their next load. */
+      { name: 'Status', text: {} }, { name: 'UpdatedBy', text: {} }
     ],
     Controls: [
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
@@ -3651,7 +3655,7 @@ window.SpStore = (function () {
         }),
         actionUpdates: actUpdItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, action: f.ActionRef || '', date: f.UpdateDate || '', note: f.Note || '', evidenceUrl: f.EvidenceUrl || '', status: f.Status || '', author: f.Author || '' };
+          return { _sp: i.id, id: f.RefId, action: f.ActionRef || '', date: f.UpdateDate || '', note: f.Note || '', evidenceUrl: f.EvidenceUrl || '', status: f.Status || '', author: f.UpdatedBy || '' };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
@@ -3959,10 +3963,20 @@ window.SpStore = (function () {
       (S.ticketLinks = S.ticketLinks || []).push(l);
     },
     addActionUpdate: async function (u) {
-      u._sp = await addItem('ActionUpdates', {
+      var fields = {
         Title: u.id, RefId: u.id, ActionRef: u.action, UpdateDate: u.date,
-        Note: u.note || '', EvidenceUrl: u.evidenceUrl || '', Status: u.status || '', Author: u.author || ''
-      });
+        Note: u.note || '', EvidenceUrl: u.evidenceUrl || '', Status: u.status || '', UpdatedBy: u.author || ''
+      };
+      try {
+        u._sp = await addItem('ActionUpdates', fields);
+      } catch (e) {
+        /* A tenant whose list has not gained the UpdatedBy column yet
+           (the person signed in cannot add columns) still saves the
+           update itself; only the name is left off. */
+        if (!/UpdatedBy/.test(String(e && e.message))) throw e;
+        delete fields.UpdatedBy;
+        u._sp = await addItem('ActionUpdates', fields);
+      }
       S.actionUpdates.push(u);
     },
     updateControl: async function (c) {

@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.171.1',
+    date: '2026-10-22',
+    entries: [
+      'Fixed: "Add update" on an action failed with "Field \'Author\' is read-only". Updates now save, with the person who made them recorded. The first time someone who can manage the list opens Checkpoint, it adds the new column automatically.'
+    ]
+  },
+  {
     version: '1.171.0',
     date: '2026-10-19',
     entries: [
