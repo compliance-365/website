@@ -177,8 +177,12 @@ describe('Delivery tab in the browser', { skip: skipReason || false }, () => {
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(baseUrl + '/owner/index.html');
     await page.waitForFunction(() => window.__ownerTest && window.CheckpointLib);
-    const certified = snap({ certs: { iso27001: { issued: '2026-09-01', expires: '2029-09-01', nextAudit: 'Surveillance audit 1', nextDue: '2027-09-01' } }, aiUse: 'tools' });
-    const behind = snap({ plan: { week: 8, behind: 5, readyBy: '2026-11-01' }, bookings: { stage2: '2026-10-20' } });
+    /* Dates relative to the day the test runs: the owner page compares
+       against the real clock, and fixed dates (a Stage 2 booked for
+       2026-10-20, activity on 2026-10-06) aged out and broke this test. */
+    const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+    const certified = snap({ certs: { iso27001: { issued: '2026-09-01', expires: '2029-09-01', nextAudit: 'Surveillance audit 1', nextDue: '2027-09-01' } }, aiUse: 'tools', lastActivity: day(0) });
+    const behind = snap({ plan: { week: 8, behind: 5, readyBy: day(40) }, bookings: { stage2: day(20) }, lastActivity: day(0) });
     await page.evaluate(({ certified, behind, today }) => {
       document.getElementById('appShell').style.display = '';
       window.__ownerTest.seed({

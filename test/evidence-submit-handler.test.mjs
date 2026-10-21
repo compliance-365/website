@@ -134,8 +134,9 @@ describe('EvidenceSubmit handler — POST (submit)', () => {
     assert.equal(postCalls[0].fields.ActionRef, 'ACT-001');
     assert.equal(postCalls[0].fields.Note, 'Rotated the keys today.');
     assert.equal(postCalls[0].fields.Status, 'Done');
-    assert.match(postCalls[0].fields.Author, /K\. Patel/);
-    assert.match(postCalls[0].fields.Author, /no Checkpoint sign-in/);
+    assert.match(postCalls[0].fields.UpdatedBy, /K\. Patel/);
+    assert.match(postCalls[0].fields.UpdatedBy, /no Checkpoint sign-in/);
+    assert.equal(postCalls[0].fields.Author, undefined, 'Author is SharePoint\'s read-only Created By field');
     assert.equal(postCalls[0].fields.Title, postCalls[0].fields.RefId, 'Title and RefId use the same generated id');
 
     assert.equal(patchCalls.length, 1);

@@ -25,7 +25,7 @@
  * A submission writes exactly like a practitioner's own "Complete
  * action" / progress-note flow in the browser app (recordActionUpdate()
  * in app.js): an append-only ActionUpdates row, plus the Action's own
- * Status/EvidenceUrl fields patched to match. The Author field and the
+ * Status/EvidenceUrl fields patched to match. The UpdatedBy field and the
  * email's own "no sign-in" framing keep this provenance visible in the
  * audit trail — this was never meant to look indistinguishable from a
  * practitioner-authored update. Deliberately narrower than the browser
@@ -145,13 +145,21 @@ module.exports = async function (context, req) {
   const author = (f.Owner ? f.Owner + ' ' : '') + '(submitted via evidence link, no Checkpoint sign-in)';
   const updateId = newUpdateId();
   try {
-    await g(`/sites/${siteId}/lists/${lists.ActionUpdates}/items`, {
-      method: 'POST',
-      body: { fields: {
-        Title: updateId, RefId: updateId, ActionRef: f.RefId || '', UpdateDate: today,
-        Note: validated.note, EvidenceUrl: validated.evidenceUrl, Status: validated.status, Author: author
-      } }
-    });
+    /* UpdatedBy, not Author: Author is SharePoint's read-only built-in
+       "Created By" field. A list that has not gained UpdatedBy yet still
+       takes the update, with the provenance kept in the note instead. */
+    const fields = {
+      Title: updateId, RefId: updateId, ActionRef: f.RefId || '', UpdateDate: today,
+      Note: validated.note, EvidenceUrl: validated.evidenceUrl, Status: validated.status, UpdatedBy: author
+    };
+    try {
+      await g(`/sites/${siteId}/lists/${lists.ActionUpdates}/items`, { method: 'POST', body: { fields } });
+    } catch (e) {
+      if (!/UpdatedBy/.test(String(e && e.message))) throw e;
+      delete fields.UpdatedBy;
+      fields.Note = fields.Note + ' [' + author + ']';
+      await g(`/sites/${siteId}/lists/${lists.ActionUpdates}/items`, { method: 'POST', body: { fields } });
+    }
     const patch = { Status: validated.status };
     if (validated.evidenceUrl) patch.EvidenceUrl = validated.evidenceUrl;
     await g(`/sites/${siteId}/lists/${lists.Actions}/items/${encodeURIComponent(verified.actionItemId)}/fields`, {
