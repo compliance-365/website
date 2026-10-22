@@ -115,6 +115,10 @@
       msgEl.innerHTML = '<p class="error">Add a short note or an evidence link before submitting.</p>';
       return;
     }
+    if (evidenceUrl.length > 255) {
+      msgEl.innerHTML = '<p class="error">This link is ' + evidenceUrl.length + ' characters long, but SharePoint only accepts up to 255 characters here. Use a shorter link: in SharePoint, OneDrive or Teams, open the file\u2019s Share menu, choose Copy link, and paste that instead.</p>';
+      return;
+    }
     btn.disabled = true;
     msgEl.innerHTML = '<p class="skel">Recording…</p>';
     fetch(apiBase + '?token=' + encodeURIComponent(token), {

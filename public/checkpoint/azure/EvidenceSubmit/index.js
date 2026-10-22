@@ -59,6 +59,11 @@ function json(status, body) {
 /* Validates the POST body's shape without touching Graph — split out so
    it can be unit tested without a mocked network at all. Returns
    { ok:true, note, evidenceUrl, status } or { ok:false, error }. */
+var MAX_URL_LENGTH = 255;
+function longLinkMessage(n) {
+  return 'This link is ' + n + ' characters long, but SharePoint only accepts up to ' + MAX_URL_LENGTH +
+    ' characters here. Use a shorter link: in SharePoint, OneDrive or Teams, open the file\'s Share menu, choose Copy link, and paste that instead.';
+}
 function validateSubmission(body) {
   body = body || {};
   var status = body.status;
@@ -72,6 +77,10 @@ function validateSubmission(body) {
   var evidenceUrl = typeof body.evidenceUrl === 'string' ? body.evidenceUrl.trim() : '';
   if (evidenceUrl && !isSafeUrl(evidenceUrl)) {
     return { ok: false, error: 'evidenceUrl must start with http:// or https://' };
+  }
+  /* EvidenceUrl is a one-line SharePoint column: 255 characters at most. */
+  if (evidenceUrl.length > MAX_URL_LENGTH) {
+    return { ok: false, error: longLinkMessage(evidenceUrl.length) };
   }
   if (!note && !evidenceUrl) {
     return { ok: false, error: 'record at least a note or an evidence link' };
@@ -175,4 +184,4 @@ module.exports = async function (context, req) {
   context.res = json(200, { ok: true });
 };
 
-module.exports.__test = { validateSubmission, isSafeUrl, newUpdateId, ALLOWED_STATUSES, MAX_NOTE_LENGTH };
+module.exports.__test = { validateSubmission, isSafeUrl, newUpdateId, ALLOWED_STATUSES, MAX_NOTE_LENGTH, MAX_URL_LENGTH };

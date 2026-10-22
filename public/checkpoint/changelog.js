@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.171.2',
+    date: '2026-10-22',
+    entries: [
+      'A link longer than 255 characters (the most SharePoint accepts in a link field) is now caught before saving, with a plain message: use the file\'s Share menu and choose Copy link, which gives a short link. Previously the save failed with an unhelpful sync error. The same check is on the evidence link page owners use.'
+    ]
+  },
+  {
     version: '1.171.1',
     date: '2026-10-22',
     entries: [
