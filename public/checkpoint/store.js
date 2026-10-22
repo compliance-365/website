@@ -3414,13 +3414,43 @@ window.SpStore = (function () {
     }
   }
 
+  /* SharePoint caps a one-line text column at 255 characters and rejects
+     the whole save past that with an error nobody can act on. Long
+     evidence links are the usual cause: a link copied from a document's
+     address bar can run past 300 characters, while the Share menu's
+     Copy link gives a short one. So a value that won't fit is caught
+     here, before the request, with a message that says what to do. */
+  var TEXT_LIMIT = 255;
+  function oneLineColumns(k) {
+    var out = { Title: true };
+    (DEFS[k] || []).forEach(function (d) { if (d.text && !d.text.allowMultipleLines) out[d.name] = true; });
+    return out;
+  }
+  function tooLongMessage(name, value) {
+    var n = value.length;
+    if (/^https?:\/\//i.test(value)) {
+      return 'This link is ' + n + ' characters long, but SharePoint only accepts up to ' + TEXT_LIMIT +
+        ' characters here. Use a shorter link: in SharePoint, OneDrive or Teams, open the file\'s Share menu, choose Copy link, and paste that instead.';
+    }
+    return 'The ' + name + ' entry is ' + n + ' characters long, but SharePoint only accepts up to ' + TEXT_LIMIT +
+      ' characters here. Shorten it and try again.';
+  }
+  function checkTextLimits(k, fields) {
+    var cols = oneLineColumns(k);
+    for (var name in fields) {
+      var v = fields[name];
+      if (cols[name] && typeof v === 'string' && v.length > TEXT_LIMIT) throw new Error(tooLongMessage(name, v));
+    }
+  }
   async function addItem(k, fields) {
+    checkTextLimits(k, fields);
     var j = await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/items', {
       method: 'POST', body: { fields: fields }, scopes: CONFIG.scopesProvision
     });
     return j.id;
   }
   async function patchItem(k, itemId, fields) {
+    checkTextLimits(k, fields);
     await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/items/' + itemId + '/fields', {
       method: 'PATCH', body: fields, scopes: CONFIG.scopesProvision
     });
