@@ -133,6 +133,11 @@ window.CHECKPOINT_CONFIG = {
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],
+  /* Requested the first time interview times are fitted around people's
+     calendars (Internal audits, Send invites). Free/busy only: Calendars.
+     ReadBasic cannot read a meeting's subject, body or attendees, and
+     getSchedule returns only busy/free blocks. */
+  scopesCalendar: ['Calendars.ReadBasic'],
   /* Requested the first time the AI assistant is used (incremental
      consent, same pattern as scopesProvision/scopesMail) — Entra ID
      bearer auth against the client's OWN Azure OpenAI resource in

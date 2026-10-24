@@ -2400,3 +2400,7 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .ar-table .btn.sm{padding:4px 10px}
 @media (max-width:640px){.ar-table th:nth-child(3),.ar-table td:nth-child(3){display:none}}
 .ar-table td:nth-child(4){min-width:150px}
+.cs-ex td{background:rgba(224,108,96,.07)}
+/* A line's draft from a pasted interview recap: held for the auditor. */
+.aw-iv{margin-top:6px;padding:8px 10px;border:1px dashed rgba(var(--paper-rgb),.25);border-radius:6px;font-size:12px}
+.aw-iv p{margin:4px 0 6px;line-height:1.5}

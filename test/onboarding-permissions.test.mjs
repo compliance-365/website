@@ -16,7 +16,7 @@ const html = readFileSync(new URL('../public/checkpoint/onboarding.html', import
 
 const tbody = html.slice(html.indexOf('<tbody>', html.indexOf('What we ask for, and why')), html.indexOf('</tbody>', html.indexOf('What we ask for, and why')));
 const listed = [...tbody.matchAll(/<span class="mono">([^<]+)<\/span>/g)].map(m => m[1].trim());
-const graphScopes = [...CONFIG.scopesReadOnly, ...CONFIG.scopesProvision, ...CONFIG.scopesMail];
+const graphScopes = [...CONFIG.scopesReadOnly, ...CONFIG.scopesProvision, ...CONFIG.scopesMail, ...CONFIG.scopesCalendar];
 
 test('every Graph permission Checkpoint requests is listed in the onboarding guide', () => {
   const missing = graphScopes.filter(s => !listed.includes(s));

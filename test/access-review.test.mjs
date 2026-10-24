@@ -159,7 +159,7 @@ describe('wiring', () => {
     assert.match(graph, /signInActivity&\$top=999/);
     assert.match(graph, /catch \(e\) \{ signInKnown = false;/);
     assert.match(graph, /roleManagement\/directory\/roleAssignments/);
-    assert.doesNotMatch(graph.slice(graph.indexOf('async function accountInventory'), graph.indexOf('async function listTenantGroups')), /method: '(POST|PATCH|DELETE)'/);
+    assert.doesNotMatch(graph.slice(graph.indexOf('async function accountInventory'), graph.indexOf('async function getSchedules')), /method: '(POST|PATCH|DELETE)'/);
   });
   test('the calendar activities open the new flows; writes are gated for viewers', () => {
     assert.match(app, /if \(rdef && rdef\.key === 'access-review'\) \{ App\.openAccessReview\(\); return; \}/);

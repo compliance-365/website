@@ -652,10 +652,11 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // scope), and 'asr' reads attack surface reduction rule state from
     // Defender's secure configuration assessment. No new scope: all
     // three use ThreatHunting.Read.All, with a Secure Score fallback for
-    // the two patch checks.
-    assert.equal(CHECK_DEFS.length, 69);
+    // the two patch checks. 69 -> 70 when 'gh-change-sample' was added
+    // (A.8.32): the GitHub collector's sample of merged pull requests.
+    assert.equal(CHECK_DEFS.length, 70);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'github').length, 7);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'github').length, 8);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws' && c.requiresCapability !== 'github').length, 52);
   });
 

@@ -493,6 +493,13 @@ function showModal(opts) {
         { t: 'Archive or exclude repositories that are not in ISMS scope so the rule applies where it matters', pr: 'Low', days: 45, control: 'A.8.25' }
       ]
     },
+    'gh-change-sample': {
+      risk: { title: 'Changes reach production without the approval and testing the change process requires', cat: 'Ops', cia: ['I', 'A'], L: 3, I: 4, controls: ['A.8.32'] },
+      actions: [
+        { t: 'Go through each sampled change merged without an independent approval or with a failed check, and record why it was allowed', pr: 'High', days: 14, control: 'A.8.32' },
+        { t: 'Remove the bypass that let them merge: admin override, a repository outside the ruleset, or optional checks', pr: 'High', days: 30, control: 'A.8.32' }
+      ]
+    },
     'gh-secret-alerts': {
       risk: { title: 'Leaked credentials in source control remain valid', cat: 'Access', cia: ['C', 'I'], L: 4, I: 5, controls: ['A.5.17', 'A.8.28'] },
       actions: [
@@ -892,7 +899,7 @@ function showModal(opts) {
        policy they have just been sent. Launching and chasing campaigns
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'checkAccounts', 'expectAccount', 'startAccessReview', 'decideAccess', 'acceptAccessSuggestions', 'confirmAccessAll', 'sendAccessReview', 'finishAccessReview', 'cancelAccessReview', 'recordRestoreTest', 'editRestoreSets', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'checkAccounts', 'expectAccount', 'startAccessReview', 'decideAccess', 'acceptAccessSuggestions', 'confirmAccessAll', 'sendAccessReview', 'finishAccessReview', 'cancelAccessReview', 'recordRestoreTest', 'editRestoreSets', 'fileChangeSample', 'auditInterviewRecap', 'useInterviewNote', 'dismissInterviewDraft', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
     'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
     'addManualObjective', 'editObjective', 'addLibraryObjectives',
     /* Approving writes to the Answer library; AI drafting is gated for
@@ -3503,6 +3510,18 @@ function showModal(opts) {
           w.people.map(function (p) { return '<tr><td class="rpt-idc">' + esc(p.name) + '</td><td>' + esc(p.roles.join('; ') || 'Owner') + '</td><td>' + esc(L.whoAreaText(p.areas) || '—') + '</td></tr>'; }).join('') + '</tbody></table>' }]
       };
     },
+    /* The GitHub collector's change sample, as filed for A.8.32. */
+    changeSample: function () {
+      var cs = latestChangeSample();
+      if (!cs) { toast('No change sample yet: it arrives with the GitHub collector’s next run.'); return null; }
+      var ex = cs.items.filter(changeSampleException).length, traced = cs.items.filter(function (i) { return i.ref; }).length;
+      return {
+        title: 'Change management sample',
+        frameworkAgnostic: true,
+        dashboard: { intro: (cs.demo ? 'EXAMPLE DATA. ' : '') + cs.size + ' of ' + cs.population + ' pull requests merged into default branches between ' + fmtDateY(cs.from) + ' and ' + fmtDateY(cs.to) + ', read from GitHub by the Checkpoint collector on ' + fmtDateY(cs.scanDate) + '. ' + cs.method + ' ' + (ex ? ex + ' exception' + (ex === 1 ? '' : 's') + ': merged without an approval from someone other than the author, or with a failed check.' : 'No exceptions: every change was approved by someone other than its author and none merged with a failed check.') + ' ' + traced + ' of ' + cs.size + ' link to a ticket or issue. Evidence for ISO/IEC 27001 A.8.32.' },
+        sections: [{ heading: 'The sample', pageBreak: false, html: changeSampleTableHtml(cs, 'rpt-table') }]
+      };
+    },
     /* The quarterly access review as filed for A.5.18: who was
        reviewed, by whom, what was decided and the actions raised. */
     accessReview: function () {
@@ -4174,7 +4193,8 @@ function showModal(opts) {
           '</tbody></table>' });
       });
       return { title: 'Internal audit plan and interview schedule \u2014 ' + a.id, frameworkAgnostic: true, sections: sections,
-        dashboard: { intro: plan.people + ' interview' + (plan.people === 1 ? '' : 's') + ' covering ' + plan.lines + ' item' + (plan.lines === 1 ? '' : 's') + ', over ' + plan.days.length + ' day' + (plan.days.length === 1 ? '' : 's') + '.', charts: [] } };
+        dashboard: { intro: plan.people + ' interview' + (plan.people === 1 ? '' : 's') + ' covering ' + plan.lines + ' item' + (plan.lines === 1 ? '' : 's') + ', over ' + plan.days.length + ' day' + (plan.days.length === 1 ? '' : 's') + '.' +
+          (plan.fitted ? ' Times fitted around people\u2019s calendars (free/busy) checked on ' + fmtDateY((auditBusyMap()[a.id] || {}).checked) + '.' + (plan.conflicts.length ? ' Clashes to resolve: ' + plan.conflicts.map(function (c) { return c.who + ' (' + c.title + ', ' + c.start + ')'; }).join('; ') + '.' : '') : ''), charts: [] } };
     },
 
     /* The closing meeting: conclusion, every finding with its owner and
@@ -6907,12 +6927,13 @@ function showModal(opts) {
             envTable([['TENANT_ID', tenantId, 'Your Entra tenant ID'], ['CLIENT_ID', '', 'The app registration\u2019s client ID'], ['CLIENT_SECRET', '', 'Keep it in AWS Secrets Manager'], ['SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['SP_SITE_PATH', path, 'Leave out for the root site'], ['MAX_KEY_AGE_DAYS', '', 'Optional, default 90']]) + '</li>' +
           '<li><b>Check it.</b> Run the function once. It returns <code>{ "merged": true, "checks": 10 }</code>, and this card turns to Reporting after the next refresh.</li></ol>' +
           (demo ? '<p class="src">In a real tenant the tenant ID and SharePoint values above are filled in for you.</p>' : '') }) +
-      card({ name: 'GitHub', what: 'A scheduled GitHub Actions workflow in your own organisation: branch reviews, required checks, secret scanning, Dependabot, code scanning and organisation 2FA.', st: status(gh, 7), meta: checks('gh-') + ' checks · read-only GitHub App · results merge into the day\u2019s posture scan',
+      card({ name: 'GitHub', what: 'A scheduled GitHub Actions workflow in your own organisation: branch reviews, required checks, secret scanning, Dependabot, code scanning, organisation 2FA, and a sample of merged changes for A.8.32.', st: status(gh, 7), meta: checks('gh-') + ' checks · read-only GitHub App · results merge into the day\u2019s posture scan',
         body: '<ol class="integ-steps">' +
-          '<li><b>GitHub App.</b> Create a private GitHub App with read-only access to administration, code scanning alerts, Dependabot alerts, secret scanning alerts and members; install it on the organisation.</li>' +
+          '<li><b>GitHub App.</b> Create a private GitHub App with read-only access to administration, code scanning alerts, Dependabot alerts, secret scanning alerts, pull requests, checks, commit statuses and members; install it on the organisation.</li>' +
           '<li><b>Workflow.</b> Add <code>public/checkpoint/github/checkpoint-github-collector.yml</code> and its <code>collector/</code> folder to a repository in the organisation.</li>' +
           '<li><b>Settings for the workflow.</b>' + envTable([['vars.CHECKPOINT_GH_APP_ID', '', 'The GitHub App\u2019s ID'], ['secrets.CHECKPOINT_GH_APP_PRIVATE_KEY', '', 'The GitHub App\u2019s private key'], ['vars.CHECKPOINT_TENANT_ID', tenantId, 'Your Entra tenant ID'], ['vars.CHECKPOINT_CLIENT_ID', '', 'The app registration\u2019s client ID'], ['secrets.CHECKPOINT_CLIENT_SECRET', '', 'Its client secret'], ['vars.CHECKPOINT_SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['vars.CHECKPOINT_SP_SITE_PATH', path, 'Leave out for the root site']]) + '</li>' +
-          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' }) +
+          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' +
+          (latestChangeSample() ? '<p style="margin-top:10px"><button class="btn ghost sm" data-action="App.openChangeSample">Change sample (A.8.32)</button></p>' : '') }) +
       card({ name: 'Planner, Jira and ServiceNow', what: 'Actions worked as tickets: a Power Automate flow in your own tenant creates the ticket and records its status in the Ticket Links list; Checkpoint shows it on the action and offers to complete the action when the ticket is done.',
         st: ticketsLast ? status(ticketsLast, 30) : { cls: 'off', text: 'Not set up' },
         meta: (S.ticketLinks || []).length + ' linked ticket' + ((S.ticketLinks || []).length === 1 ? '' : 's') + ' · nothing changes an action without your confirmation, and every change is in the audit log',
@@ -9604,6 +9625,64 @@ function showModal(opts) {
   function accessReviewForReport() {
     var id = window._accessReviewId;
     return accessReviews().filter(function (r) { return r && (!id || r.id === id); }).pop() || null;
+  }
+
+  /* ===== A.8.32 change sample (GitHub collector) =====
+     The newest scan whose Detail carries the collector's changeSample. */
+  var DEMO_CHANGE_SAMPLE = {
+    from: '', to: '', days: 90, population: 64, size: 6, unreadableRepos: 0, demo: true,
+    method: 'Pull requests merged into each in-scope default branch in the last 90 days; a random sample, seeded by the organisation and month so it can be re-drawn.',
+    items: [
+      { repo: 'patient-portal', n: 412, title: 'Add rate limiting to the login endpoint', author: 'k-obrien', mergedAt: '-12', mergedBy: 'j-chen', approvers: ['j-chen'], checks: 'passed', ref: 'PORTAL-218' },
+      { repo: 'patient-portal', n: 398, title: 'Upgrade session library', author: 'dependabot[bot]', mergedAt: '-30', mergedBy: 'k-obrien', approvers: ['k-obrien'], checks: 'passed', ref: '' },
+      { repo: 'billing-api', n: 77, title: 'Hotfix: rounding on invoices', author: 'a-nguyen', mergedAt: '-41', mergedBy: 'a-nguyen', approvers: [], checks: 'passed', ref: 'BILL-91' },
+      { repo: 'billing-api', n: 74, title: 'Log masking for card references', author: 's-patel', mergedAt: '-55', mergedBy: 'j-chen', approvers: ['j-chen'], checks: 'passed', ref: 'BILL-88' },
+      { repo: 'infra', n: 203, title: 'Rotate the staging database password', author: 'j-chen', mergedAt: '-63', mergedBy: 'j-chen', approvers: ['s-patel'], checks: 'none', ref: '#201' },
+      { repo: 'patient-portal', n: 371, title: 'Accessibility fixes on the booking form', author: 'k-obrien', mergedAt: '-80', mergedBy: 'k-obrien', approvers: ['a-nguyen'], checks: 'failed', ref: 'PORTAL-190' }
+    ]
+  };
+  function latestChangeSample() {
+    var scans = (S.scans || []).slice().reverse();
+    for (var i = 0; i < scans.length; i++) {
+      try { var d = JSON.parse(scans[i].detail || '{}'); if (d.changeSample && Array.isArray(d.changeSample.items)) return Object.assign({ scanDate: scans[i].date }, d.changeSample); } catch (e) { /* not JSON */ }
+    }
+    if (Store.kind === 'demo') {
+      var rel = function (v) { return /^-\d+$/.test(String(v)) ? daysFrom(+v) : v; };
+      return Object.assign({}, DEMO_CHANGE_SAMPLE, { from: daysFrom(-90), to: daysFrom(0), scanDate: daysFrom(0), items: DEMO_CHANGE_SAMPLE.items.map(function (x) { return Object.assign({}, x, { mergedAt: rel(x.mergedAt) }); }) });
+    }
+    return null;
+  }
+  function changeSampleException(i) {
+    return (Array.isArray(i.approvers) && !i.approvers.length) || i.checks === 'failed';
+  }
+  var CS_CHECKS = { passed: 'Passed', failed: 'Failed', none: 'None ran', unknown: 'Not readable' };
+  function changeSampleTableHtml(cs, cls) {
+    return '<table class="' + cls + '"><thead><tr><th scope="col">Change</th><th scope="col">Merged</th><th scope="col">Approved by</th><th scope="col">Checks</th><th scope="col">Ticket</th></tr></thead><tbody>' +
+      cs.items.map(function (i) {
+        var noAppr = Array.isArray(i.approvers) && !i.approvers.length;
+        return '<tr' + (changeSampleException(i) ? ' class="cs-ex"' : '') + '><td><b>' + esc(i.repo) + '#' + esc(i.n) + '</b> ' + esc(i.title) + '<div class="src">by ' + esc(i.author || '?') + '</div></td>' +
+          '<td>' + esc(fmtDate(i.mergedAt)) + (i.mergedBy ? '<div class="src">by ' + esc(i.mergedBy) + '</div>' : '') + '</td>' +
+          '<td>' + (i.approvers === null ? '<span class="src">Not readable</span>' : noAppr ? '<b style="color:var(--fail)">No independent approval</b>' : esc(i.approvers.join(', '))) + '</td>' +
+          '<td>' + (i.checks === 'failed' ? '<b style="color:var(--fail)">Failed</b>' : esc(CS_CHECKS[i.checks] || i.checks)) + '</td>' +
+          '<td>' + (i.ref ? esc(i.ref) : '<span class="src">None found</span>') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function renderChangeSample() {
+    var cs = latestChangeSample();
+    var body;
+    if (!cs) body = '<p style="font-size:13px">No change sample yet. It arrives with the GitHub collector’s next run once its GitHub App can read pull requests, checks and commit statuses (see Integrations, GitHub).</p>';
+    else {
+      var ex = cs.items.filter(changeSampleException).length, traced = cs.items.filter(function (i) { return i.ref; }).length;
+      body = (cs.demo ? '<p class="src">Example data: in a real tenant this comes from the GitHub collector.</p>' : '') +
+        '<div class="d-sec"><h4>' + cs.size + ' of ' + cs.population + ' changes merged ' + esc(fmtDate(cs.from)) + ' to ' + esc(fmtDate(cs.to)) + '</h4>' +
+        '<p style="font-size:13px;line-height:1.6">' + (ex ? '<b style="color:var(--fail)">' + ex + ' exception' + (ex === 1 ? '' : 's') + '</b>: merged without an approval from someone other than the author, or with a failed check. Each needs a reason on record, or a fix to the process.' : 'Every sampled change was approved by someone other than its author, and none merged with a failed check.') +
+        ' ' + traced + ' of ' + cs.size + ' link to a ticket or issue.</p><p class="src">' + esc(cs.method) + '</p>' +
+        changeSampleTableHtml(cs, 'ar-table') +
+        (READONLY ? '' : '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" data-action="App.fileChangeSample">File as A.8.32 evidence</button><button class="btn ghost sm" data-action="App.report" data-id="changeSample">Open the report</button></div>') + '</div>';
+    }
+    document.getElementById('drawer').innerHTML = '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">A.8.32 Change management</div><h2>Change sample</h2>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">The sample an auditor draws: merged pull requests, each checked for an approval by someone other than its author, passing checks, and a link to the request behind it. From the GitHub collector, read-only.</p>' + body;
   }
 
   /* ===== Backup restore tests (A.8.13) =====
@@ -13061,8 +13140,38 @@ function showModal(opts) {
     var wp = auditWorkpackFor(a), lines = Lib.auditWorkpackLines(wp);
     var auto = a.status === 'Completed' ? { lines: {}, counts: {}, tested: 0, total: 0 } : auditAutoTestFor(a, wp);
     var carry = a.status === 'Completed' ? {} : Lib.auditCarryForward(a, lines, auto, S.audits || []);
-    var plan = Lib.auditInterviewPlan(a, wp, auto, carry, { guidance: window.GUIDANCE || {}, actions: S.actions || [] });
+    var fit = a.status === 'Completed' ? null : auditBusyMap()[a.id];
+    var plan = Lib.auditInterviewPlan(a, wp, auto, carry, { guidance: window.GUIDANCE || {}, actions: S.actions || [], busy: fit && fit.busy ? fit.busy : null, auditor: a.auditor || '' });
     return { wp: wp, lines: lines, auto: auto, carry: carry, plan: plan };
+  }
+  /* Free/busy per audit (Settings: auditBusy { auditId: { checked,
+     busy, found, missing } }), so the plan, the invites and the report
+     all show the same fitted times. */
+  function auditBusyMap() {
+    try { var o = JSON.parse((S.settings && S.settings.auditBusy) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+  }
+  /* Reads the free/busy of everyone in the plan (and the auditor) for
+     two weeks from the audit day, and saves it for the plan to fit to.
+     Calendars.ReadBasic, asked for on first use. */
+  async function fitAuditToCalendars(a, users) {
+    var Lib = window.CheckpointLib;
+    var map = auditBusyMap(); delete map[a.id];
+    S.settings.auditBusy = JSON.stringify(map);
+    var plan = auditBundle(a).plan;
+    var names = plan.slots.filter(function (x) { return x.kind === 'interview'; }).map(function (x) { return x.who; });
+    if (a.auditor && names.indexOf(a.auditor) === -1) names.push(a.auditor);
+    var people = names.map(function (n) { var u = Lib.matchOwnerToUser(n, users); return { who: n, mail: u ? (u.mail || u.upn) : '' }; });
+    var withMail = people.filter(function (p) { return p.mail; });
+    if (!withMail.length) return { found: 0, total: people.length };
+    var start = new Date(plan.days[0] + 'T00:00:00'), end = new Date(start.getTime() + 14 * 86400000);
+    var schedules = await Graph.getSchedules(withMail.map(function (p) { return p.mail; }), start.toISOString(), end.toISOString());
+    var busy = Lib.busyFromSchedules(withMail, schedules);
+    var readable = schedules.filter(function (x) { return !x.error; }).length;
+    map[a.id] = { checked: new Date().toISOString().slice(0, 10), busy: busy, found: readable, total: people.length };
+    S.settings.auditBusy = JSON.stringify(map);
+    await Store.setSetting('auditBusy', S.settings.auditBusy);
+    audit('Interview times fitted to calendars', 'Audit', a.id, '', readable + ' of ' + people.length + ' calendars read (free/busy only)');
+    return { found: readable, total: people.length };
   }
   function auditInvitesMap() {
     try { var o = JSON.parse((S.settings && S.settings.auditInvites) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
@@ -25788,6 +25897,18 @@ function showModal(opts) {
       renderAccessReview(); renderNavCounts();
     },
 
+    /* ---------- A.8.32 change sample ---------- */
+    openChangeSample: function () { renderChangeSample(); openDrawerUi('Change sample', { wide: true }); },
+    fileChangeSample: async function () {
+      var cs = latestChangeSample();
+      if (!cs) return;
+      if (cs.demo || Store.kind === 'demo') { toast('Filing evidence is not available in demo mode. The report opens instead.'); App.report('changeSample'); return; }
+      var url = null;
+      try { url = await fileControlReport('changeSample', 'A.8.32', 'Change management sample ' + cs.to); } catch (e) { warn(e); }
+      toast(url !== null ? 'Filed as A.8.32 evidence' : 'Could not file it: control A.8.32 is not in this tenant’s Statement of Applicability. The report opens instead.');
+      if (url === null) App.report('changeSample');
+    },
+
     /* ---------- Backup restore tests (A.8.13) ---------- */
     openRestoreTests: function () { renderRestoreTests(); openDrawerUi('Restore tests', { wide: true }); },
     editRestoreSets: async function () {
@@ -26231,6 +26352,7 @@ function showModal(opts) {
         var isOpen = !!openSet[l.key];
         var cf = carry[l.key];
         var chip = r.r ? '<span class="chip ' + AUTO_CHIP[r.r] + '" title="Recorded">' + esc(short[r.r]) + '</span>'
+          : r.iv && r.iv.s ? '<span class="chip ghost-chip ' + AUTO_CHIP[r.iv.s] + '" title="From the interview with ' + esc(r.iv.who) + '">' + esc(short[r.iv.s]) + '?</span>'
           : t && t.suggest ? '<span class="chip ghost-chip ' + AUTO_CHIP[t.suggest] + '" title="Suggested by Checkpoint">' + esc(short[t.suggest]) + '?</span>'
           : cf ? '<span class="chip ghost-chip st-Implemented" title="' + esc(cf.note) + '">Unchanged?</span>'
           : '<span class="chip st-Notstarted" title="No automated test">Not tested</span>';
@@ -26240,7 +26362,7 @@ function showModal(opts) {
           '<button class="aw-toggle" aria-expanded="' + isOpen + '" aria-label="Details for ' + esc(l.id) + '" data-action="App.toggleAuditLine" data-id="' + ref + '">' + icon('chevron') + '</button>' +
           chip +
           '<div class="aw-name"><b>' + esc(l.id) + '</b> ' + esc(l.title || '') + (r.ref ? ' <span class="aw-ref">' + esc(r.ref) + '</span>' : '') + '</div>' +
-          (!ro && ((t && t.suggest) || cf) && !r.r ? '<button class="btn quiet sm aw-accept" data-action="App.acceptAuditSuggestion" data-id="' + ref + '">' + (cf && (!t || !t.suggest || t.suggest === 'C') ? 'Re-confirm' : 'Accept') + '</button>' : '') +
+          (!ro && ((t && t.suggest) || cf || (r.iv && r.iv.s)) && !r.r ? '<button class="btn quiet sm aw-accept" data-action="App.acceptAuditSuggestion" data-id="' + ref + '">' + (!(r.iv && r.iv.s) && cf && (!t || !t.suggest || t.suggest === 'C') ? 'Re-confirm' : 'Accept') + '</button>' : '') +
           '<select class="mini aw-select" aria-label="Result for ' + esc(l.id) + '" data-change-action="App.setAuditResult" data-id="' + ref + '"' + (ro ? ' disabled' : '') + '>' +
           opts.map(function (o) { return '<option value="' + o.value + '"' + (o.value === (r.r || '') ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
           '</div>' +
@@ -26250,6 +26372,8 @@ function showModal(opts) {
           (cf && !r.r ? '<div class="aw-carry">' + icon('check') + ' ' + esc(cf.note) + '</div>' : '') +
           (function () { var q = reqMap[(a.fw || 'iso27001') + '|' + l.id]; return q && q.audit === a.id && !r.r ? '<div class="aw-asked">Evidence requested from ' + esc(q.owner) + ' on ' + esc(fmtDate(q.date)) + (q.due ? ', due ' + esc(fmtDate(q.due)) : '') + '.</div>' : ''; })() +
           (r.auto && r.auto.carried ? '<div class="src">Re-confirmed from ' + esc(r.auto.carried) + '.</div>' : '') +
+          (r.iv && !r.r ? '<div class="aw-iv"><div class="audit-auto-head">From the interview with ' + esc(r.iv.who) + (r.iv.s ? ': suggests <span class="chip ' + AUTO_CHIP[r.iv.s] + '">' + esc(resultLabel[r.iv.s] || r.iv.s) + '</span>' : ': not settled by the recap') + ' <span class="src">drafted with AI, ' + esc(fmtDate(r.iv.at)) + '</span></div><p>' + esc(r.iv.note) + '</p>' +
+            (ro ? '' : '<button class="btn quiet sm" data-action="App.useInterviewNote" data-id="' + ref + '">Use as the note</button> <button class="btn quiet sm" data-action="App.dismissInterviewDraft" data-id="' + ref + '">Dismiss</button>') + '</div>' : '') +
           auditAutoLineHtml(a, l, t, r, ro, resultLabel) +
           '<div class="aw-note">' +
           (l.evidenceUrl && isSafeUrl(l.evidenceUrl) ? '<a class="btn ghost sm" href="' + esc(l.evidenceUrl) + '" target="_blank" rel="noopener">Open evidence ' + icon('external') + '</a>' : '') +
@@ -26282,7 +26406,7 @@ function showModal(opts) {
         (ro ? '' : '<button class="btn ' + (n.conforms ? 'ghost ' : '') + 'sm" data-action="App.completeAudit" data-id="' + esc(a.id) + '">Complete the audit</button>') +
         '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + esc(a.id) + '">' + (a.status === 'Completed' ? 'Audit report' : 'Workpack') + '</button>' +
         (a.status !== 'Completed' ? '<button class="btn ghost sm" data-action="App.auditPlan" data-id="' + esc(a.id) + '">Interview plan</button>' +
-          (!ro ? '<button class="btn ghost sm" data-action="App.sendAuditInvites" data-id="' + esc(a.id) + '">Send interview invites</button>' : '') : '') +
+          (!ro ? '<button class="btn ghost sm" data-action="App.sendAuditInvites" data-id="' + esc(a.id) + '">Send interview invites</button><button class="btn ghost sm" data-action="App.auditInterviewRecap" data-id="' + esc(a.id) + '">Paste an interview recap</button>' : '') : '') +
         (sum.assessed ? '<button class="btn ghost sm" data-action="App.auditClosingPack" data-id="' + esc(a.id) + '">Closing meeting pack</button>' : '') +
         (a.status === 'Completed' && !READONLY ? '<button class="btn ghost sm" data-action="App.fileAuditReport" data-id="' + esc(a.id) + '">Save report as Clause 9.2 evidence</button>' : '') + '</div>' +
         (auto.tested ? '<p class="aw-note-9-2">Results marked with ? are Checkpoint’s suggestions. Nothing is recorded until you accept or choose a result: Clause 9.2 needs the auditor’s judgement. A nonconformity or improvement raises its finding in Actions.</p>' : '') +
@@ -26365,10 +26489,20 @@ function showModal(opts) {
       }
       var users = [];
       try { users = await Graph.listTenantUsers(); } catch (e) { warn(e); return; }
+      /* Fit the times around people's calendars before anything is sent. */
+      var fitNote = '';
+      busy(true);
+      try {
+        var fr = await fitAuditToCalendars(a, users);
+        fitNote = fr.found ? 'Times fitted around Outlook calendars (free/busy) for ' + fr.found + ' of ' + fr.total + ' people.' : 'Nobody in the plan was found in the directory, so the times are not fitted to calendars.';
+      } catch (e) { warn(e); fitNote = 'Calendars could not be read (' + (e.message || e) + '), so the times run back to back.'; }
+      busy(false);
+      plan = auditBundle(a).plan;
+      interviews = plan.slots.filter(function (x) { return x.kind === 'interview'; });
       var send = interviews.map(function (x) { var u = Lib.matchOwnerToUser(x.who, users); return { slot: x, to: u ? (u.mail || u.upn) : '' }; });
       var ok = await showModal({
         title: 'Send interview invitations for ' + a.id,
-        message: send.map(function (x) { return '\u2022 ' + x.slot.who + (x.to ? ' (' + x.to + ')' : ' (not found in the directory, not sent)') + ': ' + fmtDate(x.slot.date) + ' ' + x.slot.start + ', ' + x.slot.lines.length + ' item(s)'; }).join('\n') +
+        message: fitNote + (plan.conflicts && plan.conflicts.length ? '\nStill clashing: ' + plan.conflicts.map(function (c) { return c.who + ' (' + c.title + ', ' + fmtDate(c.date) + ' ' + c.start + ')'; }).join('; ') + '.' : '') + '\n\n' + send.map(function (x) { return '\u2022 ' + x.slot.who + (x.to ? ' (' + x.to + ')' : ' (not found in the directory, not sent)') + ': ' + fmtDate(x.slot.date) + ' ' + x.slot.start + ', ' + x.slot.lines.length + ' item(s)'; }).join('\n') +
           '\n\nEach person gets their interview, the opening and closing meetings, and the questions, as a calendar invite. The full schedule also downloads for you.',
         confirmText: 'Send invitations'
       });
@@ -26423,6 +26557,15 @@ function showModal(opts) {
       var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
       if (!a) return;
       var key = parts.slice(1).join('#');
+      /* What the interview showed outranks Checkpoint's own tests. */
+      var iv = ((a.results || {})[key] || {}).iv;
+      if (iv && iv.s) {
+        var ri = a.results[key];
+        if (!String(ri.note || '').trim()) ri.note = iv.note;
+        delete ri.iv;
+        await App.setAuditResult(ref, iv.s);
+        return;
+      }
       var wp = auditWorkpackFor(a), auto = auditAutoTestFor(a, wp);
       var t = auto.lines[key];
       var cf = window.CheckpointLib.auditCarryForward(a, window.CheckpointLib.auditWorkpackLines(wp), auto, S.audits || [])[key];
@@ -26458,6 +26601,74 @@ function showModal(opts) {
       App.conductAudit(a.id);
     },
 
+    /* Paste an interview's Teams or Copilot recap: the AI drafts what
+       was said and the result it supports for each line covered, held
+       on the line for the auditor. Nothing is recorded until they accept. */
+    auditInterviewRecap: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      if (!(S.entitlements && S.entitlements.ai)) { toast('The AI assistant is not licensed for this tenant.'); return; }
+      var cfg = aiGetConfig();
+      if (!(cfg.enabled && cfg.endpoint && cfg.deployment)) { toast('The AI assistant is not set up yet: see Settings, AI assistant.'); return; }
+      if (Store.kind === 'demo') { toast('Drafting interview notes from a recap is not available in the demo.'); return; }
+      var plan = auditBundle(a).plan;
+      var interviews = plan.slots.filter(function (x) { return x.kind === 'interview'; });
+      var allLines = window.CheckpointLib.auditWorkpackLines(auditWorkpackFor(a)).filter(function (l) { return !((a.results || {})[l.key] || {}).r; });
+      var v = await showModal({
+        title: 'Paste an interview recap',
+        message: 'Paste the Teams recap, Copilot summary or transcript of one interview. Your own Azure OpenAI drafts what was said and shown, and the result it supports, on each line it covers. You accept, change or dismiss each one: nothing is recorded until you do.',
+        fields: [
+          { id: 'who', label: 'Which interview', type: 'select', value: interviews[0] ? interviews[0].who : '', options: interviews.map(function (x) { return { value: x.who, label: x.who + ' (' + x.lines.length + ' item' + (x.lines.length === 1 ? '' : 's') + ')' }; }).concat([{ value: '*', label: 'Another conversation: any open line' }]) },
+          { id: 'recap', label: 'Recap or transcript', type: 'textarea', value: '' }
+        ],
+        confirmText: 'Draft the notes',
+        validate: function (x) { return x.recap.trim().length < 40 ? 'Paste the recap first.' : null; }
+      });
+      if (!v) return;
+      var slot = interviews.find(function (x) { return x.who === v.who; });
+      var lines = (slot ? slot.lines.map(function (l) { return Object.assign({ key: l.kind + '|' + l.id }, l); }) : allLines.map(function (l) { return { key: l.key, id: l.id, title: l.title, questions: [] }; })).slice(0, 60);
+      if (!lines.length) { toast('Every line is already recorded.'); return; }
+      var who = slot ? slot.who : 'the interviewee';
+      busy(true);
+      try {
+        var res = await window.CheckpointAI.chat('auditInterview', window.CheckpointAI.buildAuditInterviewPrompt(lines, v.recap, slot ? slot.who : ''), {});
+        var draft = window.CheckpointAI.parseAuditInterviewDraft(res.text, lines.length);
+        var today = new Date().toISOString().slice(0, 10), n = 0;
+        a.results = a.results || {};
+        Object.keys(draft).forEach(function (i) {
+          var l = lines[+i], cur = a.results[l.key] || {};
+          if (cur.r) return;
+          a.results[l.key] = Object.assign({}, cur, { iv: { s: draft[i].s, note: draft[i].note, who: who, at: today } });
+          n++;
+        });
+        if (n) await Store.updateAudit(a);
+        audit('AI draft: audit interview notes', 'Audit', a.id, '', n + ' of ' + lines.length + ' line(s) drafted from a pasted recap (' + who + ')');
+        busy(false);
+        App.conductAudit(a.id);
+        toast(n ? 'Drafted ' + n + ' line' + (n === 1 ? '' : 's') + ' from the recap. Check each one: open a line to accept, change or dismiss it.' : 'The recap did not cover any of these lines.');
+      } catch (e) {
+        busy(false);
+        toast(e.code === 'auth_error' ? 'Not authorised: check the Cognitive Services OpenAI User role.' : e.code === 'rate_limited' ? 'The AI endpoint is busy: try again shortly.' : 'Could not draft the notes: ' + esc(e.message || e), 'error');
+      }
+    },
+    useInterviewNote: async function (ref) {
+      var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
+      var key = parts.slice(1).join('#'), r = a && a.results && a.results[key];
+      if (!r || !r.iv) return;
+      r.note = (String(r.note || '').trim() ? r.note + ' ' : '') + r.iv.note;
+      if (!r.iv.s) delete r.iv;
+      try { await Store.updateAudit(a); } catch (e) { warn(e); }
+      App.conductAudit(a.id);
+    },
+    dismissInterviewDraft: async function (ref) {
+      var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
+      var key = parts.slice(1).join('#'), r = a && a.results && a.results[key];
+      if (!r || !r.iv) return;
+      delete r.iv;
+      if (!Object.keys(r).length) delete a.results[key];
+      try { await Store.updateAudit(a); } catch (e) { warn(e); }
+      App.conductAudit(a.id);
+    },
     setAuditResult: async function (ref, value) {
       var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
       if (!a) return;

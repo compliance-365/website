@@ -652,7 +652,7 @@ window.GUIDANCE = {
     how: "Run changes through a documented change management process — request, risk assessment, approval, testing, rollback plan — proportionate to the change's risk. A lightweight ticket-based workflow with a required approval step satisfies this for most SMEs; the point is changes aren't made ad hoc to production.",
     evidence: "Change records for a sample of recent changes showing the approval and testing steps were followed.",
     link: "https://admin.microsoft.com",
-    checks: ["gh-branch-review"]
+    checks: ["gh-branch-review", "gh-change-sample"]
   },
   'A.8.33': {
     how: "Protect test data the same way you'd protect the production data it's derived from — mask or synthesise sensitive fields before use in testing, and apply the same access restrictions to test environments containing real data as you would in production.",

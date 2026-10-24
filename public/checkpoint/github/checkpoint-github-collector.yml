@@ -44,6 +44,8 @@ jobs:
           REPOS: ${{ vars.CHECKPOINT_REPOS }}                 # optional: comma-separated allowlist
           VULN_WINDOW_DAYS: ${{ vars.CHECKPOINT_VULN_WINDOW_DAYS }}     # optional, default 30
           SECRET_WINDOW_DAYS: ${{ vars.CHECKPOINT_SECRET_WINDOW_DAYS }} # optional, default 7
+          SAMPLE_DAYS: ${{ vars.CHECKPOINT_SAMPLE_DAYS }}               # optional: change sample window, default 90
+          SAMPLE_SIZE: ${{ vars.CHECKPOINT_SAMPLE_SIZE }}               # optional: changes sampled, default 25
           TENANT_ID: ${{ vars.CHECKPOINT_TENANT_ID }}
           CLIENT_ID: ${{ vars.CHECKPOINT_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHECKPOINT_CLIENT_SECRET }}
