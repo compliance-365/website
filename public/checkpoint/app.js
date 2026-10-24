@@ -892,7 +892,7 @@ function showModal(opts) {
        policy they have just been sent. Launching and chasing campaigns
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'checkAccounts', 'expectAccount', 'startAccessReview', 'decideAccess', 'acceptAccessSuggestions', 'confirmAccessAll', 'sendAccessReview', 'finishAccessReview', 'cancelAccessReview', 'recordRestoreTest', 'editRestoreSets', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
     'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
     'addManualObjective', 'editObjective', 'addLibraryObjectives',
     /* Approving writes to the Answer library; AI drafting is gated for
@@ -3501,6 +3501,48 @@ function showModal(opts) {
         dashboard: { intro: 'Who is responsible for what in the information security management system, from the owners recorded on each register and the roles in the leadership security meeting. Evidence for ISO/IEC 27001 Clause 5.3.' + (Object.keys(w.unowned).length ? ' Without an owner: ' + L.whoAreaText(w.unowned) + '.' : ' Everything has an owner.') },
         sections: [{ heading: 'People', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Person</th><th>Role</th><th>Responsible for</th></tr></thead><tbody>' +
           w.people.map(function (p) { return '<tr><td class="rpt-idc">' + esc(p.name) + '</td><td>' + esc(p.roles.join('; ') || 'Owner') + '</td><td>' + esc(L.whoAreaText(p.areas) || '—') + '</td></tr>'; }).join('') + '</tbody></table>' }]
+      };
+    },
+    /* The quarterly access review as filed for A.5.18: who was
+       reviewed, by whom, what was decided and the actions raised. */
+    accessReview: function () {
+      var r = accessReviewForReport(), L = window.CheckpointLib;
+      if (!r || !r.items) { toast('No access review to report on yet.'); return null; }
+      var p = L.accessReviewProgress(r), KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff' };
+      var ex = accountExceptions();
+      var row = function (i) {
+        return '<tr><td class="rpt-idc">' + esc(i.n) + '<div class="rpt-just">' + esc(i.e || i.u) + '</div></td><td>' + KIND[i.k] + (i.r ? '<div class="rpt-just">' + esc(i.r) + '</div>' : '') + '</td><td>' + (i.ls ? esc(fmtDateY(i.ls)) : (r.signInKnown ? 'Never' : '—')) + '</td>' +
+          '<td>' + (i.s === 'remove' ? 'Remove' : i.s === 'check' ? 'Check' : 'Keep') + (i.why ? '<div class="rpt-just">' + esc(i.why) + '</div>' : '') + '</td>' +
+          '<td><b>' + (i.d === 'remove' ? 'Remove' : i.d === 'keep' ? 'Keep' : 'Not confirmed') + '</b>' + (i.d ? '<div class="rpt-just">' + esc(i.by) + ', ' + esc(fmtDateY(i.at)) + '</div>' : '') + ((r.actioned || {})[String(i.u).toLowerCase()] ? '<div class="rpt-just">Action ' + esc(r.actioned[String(i.u).toLowerCase()]) + '</div>' : '') + '</td></tr>';
+      };
+      var exKeys = Object.keys(ex);
+      return {
+        title: 'Access review ' + r.id,
+        frameworkAgnostic: true,
+        dashboard: { intro: 'Review of user, guest and administrator access, started ' + fmtDateY(r.created) + (r.done ? ' and finished ' + fmtDateY(r.done) : '') + ', owned by ' + ((r.owner && r.owner.name) || 'the review owner') + '. Accounts read from Microsoft 365 (Entra ID)' + (r.signInKnown ? ' with their last sign-in' : '; sign-in activity was not available') + '. ' + p.total + ' accounts reviewed: ' + p.byKind.admin + ' admin, ' + p.byKind.guest + ' guest and ' + p.byKind.member + ' staff. ' + p.decided + ' decided, ' + p.remove + ' to remove' + (p.decided < p.total ? ', ' + (p.total - p.decided) + ' not confirmed' : '') + '. Evidence for ISO/IEC 27001 A.5.15, A.5.18 and A.8.2.' },
+        sections: [
+          { heading: 'Reviewers', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Reviewer</th><th>Accounts</th><th>Decided</th><th>To remove</th><th>Asked</th></tr></thead><tbody>' +
+            Object.keys(r.reviewers || {}).map(function (k) { var rv = r.reviewers[k], b = p.byReviewer[k] || { total: 0, decided: 0, remove: 0 }; return '<tr><td class="rpt-idc">' + esc(rv.name) + '<div class="rpt-just">' + esc(rv.mail || '') + '</div></td><td>' + b.total + '</td><td>' + b.decided + '</td><td>' + b.remove + '</td><td>' + (rv.sent ? esc(fmtDateY(rv.sent)) : 'In Checkpoint') + '</td></tr>'; }).join('') + '</tbody></table>' },
+          { heading: 'Accounts', pageBreak: true, html: '<table class="rpt-table"><thead><tr><th>Account</th><th>Access</th><th>Last sign-in</th><th>Suggested</th><th>Decision</th></tr></thead><tbody>' + r.items.map(row).join('') + '</tbody></table>' },
+          { heading: 'Accounts marked as expected', pageBreak: false, html: exKeys.length ? '<table class="rpt-table"><thead><tr><th>Account</th><th>Reason</th><th>Recorded</th><th>Check again</th></tr></thead><tbody>' + exKeys.map(function (k) { var e = ex[k]; return '<tr><td class="rpt-idc">' + esc(k) + '</td><td>' + esc(e.reason) + '</td><td>' + esc(e.by || '') + ', ' + esc(fmtDateY(e.date)) + '</td><td>' + esc(fmtDateY(e.until)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>None.</p>' }
+        ]
+      };
+    },
+    /* One backup restore test as filed for A.8.13. */
+    restoreTest: function () {
+      var t = restoreTestForReport(), L = window.CheckpointLib;
+      if (!t) { toast('No restore test recorded yet.'); return null; }
+      var kv = function (k, v) { return '<tr><th style="width:32%;text-align:left">' + esc(k) + '</th><td>' + v + '</td></tr>'; };
+      return {
+        title: 'Backup restore test ' + t.id,
+        frameworkAgnostic: true,
+        dashboard: { intro: 'Restore of ' + t.set + ' from backup on ' + fmtDateY(t.date) + ', by ' + (t.tester || 'the tester') + '. Result: ' + RESTORE_RESULT[t.result].toLowerCase() + '. Evidence for ISO/IEC 27001 A.8.13.' },
+        sections: [{ heading: 'The test', pageBreak: false, html: '<table class="rpt-table"><tbody>' +
+          kv('Data set', esc(t.set)) + kv('What was restored', esc(t.what)) + kv('Backup restored', t.from ? esc(fmtDateY(t.from)) : '—') + kv('Test date', esc(fmtDateY(t.date))) +
+          kv('Time taken', isFinite(t.minutes) ? esc(L.fmtHours(t.minutes / 60)) : '—') + kv('Recover within (RTO)', t.rtoH ? esc(L.fmtHours(t.rtoH)) : 'Not set') + kv('Lose at most (RPO)', t.rpoH ? esc(L.fmtHours(t.rpoH)) : 'Not set') +
+          kv('Complete and usable', t.intact === 'yes' ? 'Yes' : t.intact === 'partly' ? 'Partly' : 'No') + kv('Result', '<b>' + esc(RESTORE_RESULT[t.result]) + '</b>') +
+          kv('Issues', (t.issues || []).length ? esc(t.issues.join(' ')) : 'None') + ((t.notesAuto || []).length ? kv('To check', esc(t.notesAuto.join(' '))) : '') +
+          kv('Action raised', t.action ? esc(t.action) : 'None needed') + (t.notes ? kv('Notes', esc(t.notes)) : '') + '</tbody></table>' }]
       };
     },
     /* The top management readiness interview, as recorded, beside what
@@ -9336,6 +9378,293 @@ function showModal(opts) {
       '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">Owners whose Microsoft 365 account is disabled, across risks, actions, suppliers, assets, requirements, controls, clauses, objectives and activities. Hand each person’s items to someone else in one step; every change is logged against the record.</p>' + body;
   }
 
+  async function finishCalItem(c, rdef, evidenceUrl, markImplemented) {
+    var L = window.CheckpointLib;
+    var prevDue = c.nextDue;
+    c.lastCompleted = new Date().toISOString().slice(0, 10);
+    if (rdef && evidenceUrl) {
+      c.notes = (String(c.notes || '').replace(/\s*Last evidence: \S+( \(\d{4}-\d{2}-\d{2}\))?/g, '') + ' Last evidence: ' + evidenceUrl + ' (' + c.lastCompleted + ')').trim();
+    }
+    var advanceDays = { Annual: 365, Biannual: 182, Quarterly: 91, Monthly: 30 }[c.freq];
+    if (advanceDays) {
+      c.nextDue = daysFrom(advanceDays);
+    } else {
+      c.status = 'Done';
+    }
+    try { await Store.updateCalendarItem(c); } catch (e) { warn(e); }
+    log('<b>' + c.id + '</b> completed: ' + esc(c.title) + (advanceDays ? '. Next due ' + fmtDate(c.nextDue) + '.' : ' (one-off — marked done).'));
+    toast('<b>' + c.id + '</b> marked complete');
+    audit('Compliance calendar item completed', 'Calendar', c.id, 'Due ' + prevDue, (advanceDays ? 'Next due ' + c.nextDue : 'Done (one-off)') + (evidenceUrl ? ' · evidence ' + evidenceUrl : ''));
+    if (rdef && evidenceUrl) {
+      var attester = (typeof Graph !== 'undefined' && Graph.getAccount && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+      var ups = L.rhythmCompletionUpdates(rdef, S.controls, evidenceUrl, c.lastCompleted, attester, markImplemented);
+      ups.forEach(function (u) {
+        var ctl = u.control, key = ctl.fw + '|' + ctl.id;
+        if (u.set.evidenceUrl) audit('Evidence link changed', 'Control', key, '(none)', u.set.evidenceUrl);
+        if (u.set.st) audit('Control status changed', 'Control', key, ctl.st, u.set.st + ' (' + c.title + ' completed)');
+        audit('Control verified', 'Control', key, ctl.verified || 'never verified', u.set.verified + ' by ' + u.set.verifiedBy);
+        Object.keys(u.set).forEach(function (k) { ctl[k] = u.set[k]; });
+        Store.updateControl(ctl).catch(function (e) { warn(e); });
+      });
+      if (ups.length) toast(ups.length + ' control' + (ups.length > 1 ? 's' : '') + ' verified: ' + esc(ups.map(function (u) { return u.control.id; }).join(', ')));
+      renderSoa();
+    }
+    renderCalendar(); renderNavCounts(); renderDash();
+  }
+  /* ===== Access review and account check (A.5.18, A.8.2, A.6.5) =====
+     Settings rows: accountScan { date, signInKnown, rolesKnown, findings }
+     (the last check, read by the audit radar), accountExceptions
+     { upn: { reason, by, date, until } }, accessReviews [record]
+     (lib.accessReviewBuild). Checkpoint reads the directory and never
+     changes it: every removal becomes an action for whoever runs it. */
+  var DEMO_ACCOUNTS = {
+    signInKnown: true, rolesKnown: true,
+    users: [
+      { id: 'd1', upn: 'admin@meridianhealth.example', name: 'Meridian Admin', type: 'Member', enabled: true, created: '2023-02-01', lastSignIn: '', licensed: 0, roles: ['Global Administrator'], manager: null },
+      { id: 'd2', upn: 'j.chen@meridianhealth.example', name: 'Jordan Chen', type: 'Member', enabled: true, created: '2022-06-01', lastSignIn: '-2', licensed: 1, roles: ['Global Administrator'], manager: null },
+      { id: 'd3', upn: 'r.morgan@meridianhealth.example', name: 'Riley Morgan', type: 'Member', enabled: false, created: '2022-09-01', lastSignIn: '-130', licensed: 1, roles: ['SharePoint Administrator'], manager: null },
+      { id: 'd4', upn: 's.patel@meridianhealth.example', name: 'Sam Patel', type: 'Member', enabled: true, created: '2023-03-01', lastSignIn: '-1', licensed: 1, roles: [], manager: { name: 'Jordan Chen', mail: 'j.chen@meridianhealth.example' } },
+      { id: 'd5', upn: 'a.nguyen@meridianhealth.example', name: 'Alex Nguyen', type: 'Member', enabled: true, created: '2023-05-01', lastSignIn: '-121', licensed: 1, roles: [], manager: { name: 'Jordan Chen', mail: 'j.chen@meridianhealth.example' } },
+      { id: 'd6', upn: 'k.obrien@meridianhealth.example', name: 'Kate O’Brien', type: 'Member', enabled: true, created: '2024-01-10', lastSignIn: '-3', licensed: 1, roles: [], manager: { name: 'Sam Patel', mail: 's.patel@meridianhealth.example' } },
+      { id: 'd7', upn: 'training@meridianhealth.example', name: 'Training room', type: 'Member', enabled: true, created: '-200', lastSignIn: '', licensed: 0, roles: [], manager: null },
+      { id: 'd8', upn: 'consultant_partner.example#EXT#@meridianhealth.example', name: 'Pat (Contoso Consulting)', type: 'Guest', enabled: true, created: '2025-02-01', lastSignIn: '-210', licensed: 0, roles: [], manager: null },
+      { id: 'd9', upn: 'auditor_cb.example#EXT#@meridianhealth.example', name: 'Certification auditor', type: 'Guest', enabled: true, created: '-20', lastSignIn: '-5', licensed: 0, roles: [], manager: null }
+    ]
+  };
+  function demoAccounts() {
+    var rel = function (v) { return /^-\d+$/.test(String(v)) ? daysFrom(+v) : v; };
+    return { signInKnown: true, rolesKnown: true, users: DEMO_ACCOUNTS.users.map(function (u) { return Object.assign({}, u, { created: rel(u.created), lastSignIn: rel(u.lastSignIn) }); }) };
+  }
+  function settingJson(key, dflt) {
+    try { var v = JSON.parse((S.settings && S.settings[key]) || 'null'); return v == null ? dflt : v; } catch (e) { return dflt; }
+  }
+  async function saveSettingJson(key, v) {
+    var s = JSON.stringify(v);
+    S.settings[key] = s;
+    await Store.setSetting(key, s);
+  }
+  function accountExceptions() { var o = settingJson('accountExceptions', {}); return o && typeof o === 'object' ? o : {}; }
+  function accountScan() { return settingJson('accountScan', null); }
+  /* The last check's findings, minus accounts since marked expected. */
+  function accountScanFindings() {
+    var sc = accountScan(), ex = accountExceptions(), today = new Date().toISOString().slice(0, 10);
+    return ((sc && sc.findings) || []).filter(function (f) { return !window.CheckpointLib.accountExceptionLive(ex, f.upn, today); });
+  }
+  function accessReviews() { var a = settingJson('accessReviews', []); return Array.isArray(a) ? a : []; }
+  function openAccessReview() { return accessReviews().filter(function (r) { return r && r.status === 'open'; }).pop() || null; }
+  async function saveAccessReview(rec) {
+    var list = accessReviews().filter(function (r) { return r && r.id !== rec.id; }).concat([rec]);
+    await saveSettingJson('accessReviews', window.CheckpointLib.compactAccessReviews(list));
+  }
+  async function loadAccountInventory() {
+    if (Store.kind === 'demo') return demoAccounts();
+    if (Store.kind !== 'sharepoint' || !Graph.accountInventory) return null;
+    return Graph.accountInventory();
+  }
+  var _accountInv = null, _accountChecking = false;
+  async function runAccountCheck(quiet) {
+    if (_accountChecking) return null;
+    _accountChecking = true;
+    try {
+      var inv = await loadAccountInventory();
+      if (!inv) return null;
+      _accountInv = inv;
+      var today = new Date().toISOString().slice(0, 10);
+      var findings = window.CheckpointLib.accountFindings(inv, today, accountExceptions());
+      await saveSettingJson('accountScan', { date: today, signInKnown: inv.signInKnown, rolesKnown: inv.rolesKnown, accounts: inv.users.length, findings: findings.slice(0, 150) });
+      if (!quiet) audit('Accounts checked', 'Access review', today, '', inv.users.length + ' accounts, ' + findings.length + ' finding(s)');
+      return { inv: inv, findings: findings };
+    } catch (e) {
+      warn(e);
+      if (!quiet) toast('Could not read the accounts from Microsoft 365: ' + esc(e.message || e));
+      return null;
+    } finally { _accountChecking = false; }
+  }
+  /* Weekly, quietly, for a practitioner: keeps the radar current. */
+  var _accountAutoTried = false;
+  function autoAccountCheck() {
+    if (_accountAutoTried || READONLY || RESTRICTED_ACCESS || Store.kind !== 'sharepoint') return;
+    _accountAutoTried = true;
+    var sc = accountScan();
+    if (sc && sc.date && sc.date > daysFrom(-7)) return;
+    runAccountCheck(true).then(function (r) { if (r) { renderAuditRadar(); scheduleProgressSnapshot(); } }).catch(warn);
+  }
+  function accessReviewCal() {
+    return (S.calendar || []).filter(function (c) { var d = window.CheckpointLib.rhythmDefFor(c); return d && d.key === 'access-review' && window.CheckpointLib.calendarItemLive(c); })[0] || null;
+  }
+  function restoreCal() {
+    return (S.calendar || []).filter(function (c) { var d = window.CheckpointLib.rhythmDefFor(c); return d && d.key === 'backup-restore' && window.CheckpointLib.calendarItemLive(c); })[0] || null;
+  }
+  /* Reviews a person is asked to answer, for My tasks. */
+  function myAccessReviewTasks(me) {
+    var r = openAccessReview();
+    if (!r || RESTRICTED_ACCESS) return [];
+    return Object.keys(r.reviewers || {}).filter(function (k) {
+      var rv = r.reviewers[k];
+      return me.indexOf(k) !== -1 || me.indexOf(String(rv.name || '').toLowerCase()) !== -1 || (rv.mail && me.indexOf(String(rv.mail).toLowerCase()) !== -1);
+    }).map(function (k) {
+      var p = window.CheckpointLib.accessReviewProgress(r).byReviewer[k] || { total: 0, decided: 0 };
+      return p.decided < p.total ? { kind: 'Access review', ref: r.id, arg: r.id + '|' + k, title: 'Confirm ' + (p.total - p.decided) + ' account' + (p.total - p.decided === 1 ? '' : 's') + ' still need access', due: r.due || '', overdue: !!(r.due && r.due < new Date().toISOString().slice(0, 10)) } : null;
+    }).filter(Boolean);
+  }
+  var AR_KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff' };
+  var _arFilter = 'open', _arReviewer = '', _arMine = false;
+  function accountFindingsHtml(findings, sc) {
+    var L = window.CheckpointLib;
+    if (!sc) return '<p class="src">Not checked yet.</p>';
+    var head = '<p class="src" style="margin:0 0 8px">Checked ' + esc(fmtDate(sc.date)) + ': ' + (sc.accounts || 0) + ' accounts.' +
+      (sc.signInKnown === false ? ' Sign-in activity could not be read (it needs Microsoft Entra ID P1), so unused accounts are not flagged.' : '') +
+      (sc.rolesKnown === false ? ' Admin roles could not be read.' : '') + '</p>';
+    if (!findings.length) return head + '<p style="font-size:13px">' + icon('check') + ' No unused, leftover or over-privileged accounts.</p>';
+    return head + '<ul class="ev-check-list">' + findings.slice(0, 40).map(function (f) {
+      return '<li><span class="chip ' + RADAR_SEV_CHIP[f.sev] + '" style="margin-right:6px">' + esc(RADAR_SEV_LABEL[f.sev]) + '</span><b>' + esc(f.name) + '</b> <span class="src">' + esc(AR_KIND[f.kind]) + ' · ' + esc(L.ACCOUNT_FINDING_LABEL[f.key]) + '</span>' +
+        '<div class="src">' + esc(f.text) + ' ' + esc(f.fix) + '</div>' +
+        (READONLY ? '' : '<button class="btn ghost sm" style="margin-top:4px" data-action="App.expectAccount" data-id="' + esc(f.upn) + '">This is expected</button>') + '</li>';
+    }).join('') + '</ul>' + (findings.length > 40 ? '<p class="src">And ' + (findings.length - 40) + ' more. Start the review to work through all of them.</p>' : '');
+  }
+  function accessReviewRowsHtml(r, onlyReviewer) {
+    var items = r.items.filter(function (i) {
+      if (onlyReviewer && i.rv !== onlyReviewer) return false;
+      if (_arFilter === 'open') return !i.d;
+      if (_arFilter === 'remove') return i.s !== 'keep' || i.d === 'remove';
+      return true;
+    });
+    var shown = items.slice(0, 150);
+    var btn = function (i, d, label) { return '<button class="btn sm' + (i.d === d ? '' : ' ghost') + '" data-action="App.decideAccess" data-id="' + esc(i.u + '|' + d) + '" aria-pressed="' + (i.d === d) + '">' + label + '</button>'; };
+    return '<table class="ar-table"><thead><tr><th scope="col">Account</th><th scope="col">Access</th><th scope="col">Last sign-in</th><th scope="col">Suggested</th><th scope="col">Decision</th></tr></thead><tbody>' +
+      (shown.length ? shown.map(function (i) {
+        return '<tr><td><b>' + esc(i.n) + '</b><div class="src">' + esc(i.e || i.u) + '</div></td><td>' + esc(AR_KIND[i.k]) + (i.r ? '<div class="src">' + esc(i.r) + '</div>' : '') + '</td>' +
+          '<td>' + (i.ls ? esc(fmtDate(i.ls)) : (r.signInKnown ? 'Never' : '—')) + '</td>' +
+          '<td>' + (i.s === 'remove' ? '<b style="color:var(--fail)">Remove?</b>' : i.s === 'check' ? '<b style="color:var(--warn)">Check</b>' : 'Keep') + (i.why ? '<div class="src">' + esc(i.why) + '</div>' : '') + '</td>' +
+          '<td style="white-space:nowrap">' + (READONLY ? esc(i.d ? (i.d === 'keep' ? 'Keep' : 'Remove') : '—') : btn(i, 'keep', 'Keep') + ' ' + btn(i, 'remove', 'Remove')) + (i.d ? '<div class="src">' + esc(i.by) + ', ' + esc(fmtDate(i.at)) + '</div>' : '') + '</td></tr>';
+      }).join('') : '<tr><td colspan="5" class="src">' + (_arFilter === 'open' ? 'Every account here has a decision.' : 'Nothing to show.') + '</td></tr>') + '</tbody></table>' +
+      (items.length > shown.length ? '<p class="src">Showing 150 of ' + items.length + '. Use the bulk buttons per reviewer for the rest.</p>' : '');
+  }
+  function renderAccessReview() {
+    var L = window.CheckpointLib, r = openAccessReview(), sc = accountScan(), findings = accountScanFindings();
+    var last = accessReviews().filter(function (x) { return x && x.status === 'done'; }).pop() || null;
+    var body = '';
+    if (r && _arMine && _arReviewer && r.reviewers[_arReviewer]) {
+      /* A reviewer from My tasks sees only the accounts they look after. */
+      var bp0 = L.accessReviewProgress(r).byReviewer[_arReviewer] || { total: 0, decided: 0 };
+      body += '<div class="d-sec"><h4>Your accounts \u00b7 answer by ' + esc(fmtDate(r.due)) + '</h4><p style="font-size:13px;line-height:1.6">For each account, choose Keep if the person still needs this access, or Remove if not. ' + bp0.decided + ' of ' + bp0.total + ' done. Your answers are saved as you go and kept as the review record.</p>' +
+        '<div class="aw-tabs" role="tablist">' + [['open', 'Needs a decision'], ['all', 'All']].map(function (t) {
+          return '<button class="aw-tab' + (_arFilter === t[0] ? ' on' : '') + '" role="tab" aria-selected="' + (_arFilter === t[0]) + '" data-action="App.setAccessFilter" data-id="' + t[0] + '">' + t[1] + '</button>';
+        }).join('') + '</div>' + accessReviewRowsHtml(r, _arReviewer) + '</div>';
+      document.getElementById('drawer').innerHTML = '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button><div class="id-t">Access review ' + esc(r.id) + '</div><h2>Confirm access</h2>' + body;
+      return;
+    }
+    if (r) {
+      var p = L.accessReviewProgress(r);
+      var mineOnly = _arReviewer && r.reviewers[_arReviewer] ? _arReviewer : '';
+      body += '<div class="d-sec"><h4>Review ' + esc(r.id) + ' · answers due ' + esc(fmtDate(r.due)) + '</h4>' +
+        '<div class="aw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + p.total + '" aria-valuenow="' + p.decided + '" aria-label="Accounts decided"><i style="width:' + p.pct + '%"></i></div><div class="aw-progress-text"><span><b>' + p.decided + ' of ' + p.total + '</b> decided, ' + p.remove + ' to remove</span><span>' + p.byKind.admin + ' admin \u00b7 ' + p.byKind.guest + ' guest \u00b7 ' + p.byKind.member + ' staff</span></div>' +
+        '<table class="ar-table" style="margin-top:10px"><thead><tr><th scope="col">Reviewer</th><th scope="col">Accounts</th><th scope="col">Asked</th><th scope="col"></th></tr></thead><tbody>' +
+        Object.keys(r.reviewers).map(function (k) {
+          var rv = r.reviewers[k], bp = p.byReviewer[k] || { total: 0, decided: 0, remove: 0 };
+          return '<tr><td><button class="lnk" data-action="App.accessReviewer" data-id="' + esc(k) + '"' + (mineOnly === k ? ' style="font-weight:700"' : '') + '>' + esc(rv.name) + '</button>' + (rv.mail ? '<div class="src">' + esc(rv.mail) + '</div>' : '') + '</td>' +
+            '<td>' + bp.decided + ' of ' + bp.total + (bp.remove ? '<div class="src">' + bp.remove + ' to remove</div>' : '') + '</td>' +
+            '<td>' + (rv.sent ? esc(fmtDate(rv.sent)) : '<span class="src">Not yet</span>') + '</td>' +
+            '<td style="white-space:nowrap">' + (READONLY || bp.decided === bp.total ? '' :
+              '<button class="btn ghost sm" data-action="App.acceptAccessSuggestions" data-id="' + esc(k) + '">Accept suggestions</button> ' +
+              '<button class="btn ghost sm" data-action="App.confirmAccessAll" data-id="' + esc(k) + '">All still need access</button>') + '</td></tr>';
+        }).join('') + '</tbody></table>' +
+        (READONLY ? '' : '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+          '<button class="btn sm" data-action="App.sendAccessReview">' + (Object.keys(r.reviewers).some(function (k) { return r.reviewers[k].sent; }) ? 'Remind reviewers who have not answered' : 'Email the reviewers') + '</button>' +
+          '<button class="btn ' + (p.done ? '' : 'ghost ') + 'sm" data-action="App.finishAccessReview">Finish the review</button>' +
+          '<button class="btn ghost sm" data-action="App.cancelAccessReview">Discard</button></div>') +
+        '<p class="src" style="margin-top:8px">Reviewers answer by email, or under My tasks if they use Checkpoint. Record email answers here with the buttons. Finishing raises an action for each account to remove, files the review as A.5.18 evidence and completes the calendar activity.</p></div>' +
+        '<div class="d-sec"><h4>' + (mineOnly ? esc(r.reviewers[mineOnly].name) + '’s accounts <button class="lnk" data-action="App.accessReviewer" data-id="">show everyone</button>' : 'Accounts') + '</h4>' +
+        '<div class="aw-tabs" role="tablist">' + [['open', 'Needs a decision'], ['remove', 'Suggested removals'], ['all', 'All']].map(function (t) {
+          return '<button class="aw-tab' + (_arFilter === t[0] ? ' on' : '') + '" role="tab" aria-selected="' + (_arFilter === t[0]) + '" data-action="App.setAccessFilter" data-id="' + t[0] + '">' + t[1] + '</button>';
+        }).join('') + '</div>' + accessReviewRowsHtml(r, mineOnly) + '</div>';
+    } else {
+      body += '<div class="d-sec"><h4>Quarterly access review</h4><p style="font-size:13px;line-height:1.6">Checkpoint lists every account from Microsoft 365: admins and guests for you to confirm, and staff for their manager. Each comes with a suggestion from its sign-in record. You email the reviewers, record their answers, and finishing files the record as evidence.</p>' +
+        (READONLY ? '' : '<button class="btn sm" data-action="App.startAccessReview">Start the access review</button>') +
+        (last ? '<p class="src" style="margin-top:8px">Last review ' + esc(last.id) + ', finished ' + esc(fmtDate(last.done)) + ': ' + (last.summary ? last.summary.total + ' accounts, ' + last.summary.removed : L.accessReviewProgress(last).total + ' accounts, ' + L.accessReviewProgress(last).remove) + ' marked for removal' + '.</p>' : '') + '</div>';
+    }
+    body += '<div class="d-sec"><h4>Account check' + (READONLY ? '' : ' <button class="btn ghost sm" style="margin-left:8px" data-action="App.checkAccounts">Check now</button>') + '</h4>' + accountFindingsHtml(findings, sc) + '</div>';
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">A.5.18 Access rights · A.8.2 Privileged access · A.6.5 Leavers</div><h2>Access review</h2>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">Who still has access, and whether they should. Checkpoint reads Microsoft 365 and never changes it: removals become actions for your administrator.</p>' + body;
+  }
+  async function accessReviewBulk(k, mode) {
+    var r = openAccessReview();
+    if (!r || !r.reviewers[k]) return;
+    var rv = r.reviewers[k], me = myDisplayName();
+    var by = String(rv.name || '').toLowerCase() === String(me).toLowerCase() ? me : (rv.name || 'Reviewer') + ' (recorded by ' + me + ')';
+    var res = window.CheckpointLib.accessReviewDecide(r, { reviewer: k }, mode === 'all' ? 'keep' : '', by, new Date().toISOString().slice(0, 10), mode === 'all' ? '' : 'suggested');
+    if (!res.changed) { toast(mode === 'all' ? 'Nothing left to confirm.' : 'Nothing to accept: the rest need a person to check.'); return; }
+    try { await saveAccessReview(res.rec); } catch (e) { warn(e); return; }
+    audit(mode === 'all' ? 'Access confirmed' : 'Access suggestions accepted', 'Access review', r.id, '', res.changed + ' account(s) for ' + rv.name + ' (' + by + ')');
+    toast(res.changed + ' account' + (res.changed === 1 ? '' : 's') + ' recorded for ' + esc(rv.name));
+    renderAccessReview(); renderNavCounts();
+  }
+  function accessReviewForReport() {
+    var id = window._accessReviewId;
+    return accessReviews().filter(function (r) { return r && (!id || r.id === id); }).pop() || null;
+  }
+
+  /* ===== Backup restore tests (A.8.13) =====
+     Settings rows: restoreSets [{ name, rtoH, rpoH }], restoreTests
+     [{ id, set, date, what, from, minutes, intact, rtoH, rpoH, tester,
+     notes, result, issues, action }]. */
+  function restoreSetsList() { var a = settingJson('restoreSets', null); return Array.isArray(a) && a.length ? a : window.CheckpointLib.RESTORE_DEFAULT_SETS; }
+  function restoreTests() { var a = settingJson('restoreTests', []); return Array.isArray(a) ? a : []; }
+  /* The radar counts untested sets only once someone has set the sets
+     or recorded a test; until then the calendar activity covers it. */
+  function restoreRadarInput() {
+    return S.settings && (S.settings.restoreSets || S.settings.restoreTests) ? { sets: restoreSetsList(), tests: restoreTests() } : null;
+  }
+  var RESTORE_RESULT = { pass: 'Passed', partial: 'Passed with issues', fail: 'Failed' };
+  var RESTORE_CHIP = { pass: 'st-Implemented', partial: 'st-Inprogress', fail: 'st-Open' };
+  function renderRestoreTests() {
+    var L = window.CheckpointLib, today = new Date().toISOString().slice(0, 10);
+    var cov = L.restoreCoverage(restoreSetsList(), restoreTests(), today);
+    var tests = restoreTests().slice().reverse();
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">A.8.13 Information backup</div><h2>Restore tests</h2>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">An auditor asks for proof that backups can be restored, not just that they run. Test one data set at a time; Checkpoint suggests which, checks the result against its recovery objectives, and files the record as evidence.</p>' +
+      '<div class="d-sec"><h4>Data sets · ' + cov.tested + ' of ' + cov.total + ' tested in the last year</h4>' +
+      '<table class="ar-table"><thead><tr><th scope="col">Data set</th><th scope="col">Recover within</th><th scope="col">Last test</th></tr></thead><tbody>' +
+      cov.rows.map(function (r) {
+        return '<tr><td><b>' + esc(r.set.name) + '</b>' + (cov.next && cov.next.name === r.set.name ? ' <span class="chip st-Notstarted">Test next</span>' : '') + '</td>' +
+          '<td>' + (r.set.rtoH ? esc(L.fmtHours(r.set.rtoH)) : '<span class="src">Not set</span>') + (r.set.rpoH ? '<div class="src">Lose at most ' + esc(L.fmtHours(r.set.rpoH)) + '</div>' : '') + '</td>' +
+          '<td>' + (r.last ? esc(fmtDate(r.last.date)) + ' <span class="chip ' + RESTORE_CHIP[r.last.result] + '">' + esc(RESTORE_RESULT[r.last.result]) + '</span>' : '<span class="src">Never</span>') + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (READONLY ? '' : '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" data-action="App.recordRestoreTest">Record a restore test</button><button class="btn ghost sm" data-action="App.editRestoreSets">Edit data sets</button></div>') + '</div>' +
+      '<div class="d-sec"><h4>History</h4>' + (tests.length ? '<ul class="ev-check-list">' + tests.slice(0, 20).map(function (t) {
+        return '<li><b>' + esc(t.set) + '</b> ' + esc(fmtDate(t.date)) + ' <span class="chip ' + RESTORE_CHIP[t.result] + '">' + esc(RESTORE_RESULT[t.result]) + '</span>' +
+          '<div class="src">' + esc(t.what || '') + (t.minutes ? ' · took ' + esc(L.fmtHours(t.minutes / 60)) : '') + (t.tester ? ' · ' + esc(t.tester) : '') + (t.action ? ' · action ' + esc(t.action) : '') + '</div>' +
+          ((t.issues || []).length ? '<div class="src" style="color:var(--warn)">' + esc(t.issues.join(' ')) + '</div>' : '') +
+          '<button class="lnk" data-action="App.openRestoreReport" data-id="' + esc(t.id) + '">Open the record</button></li>';
+      }).join('') + '</ul>' : '<p class="src">No restore test recorded in Checkpoint yet.</p>') + '</div>';
+  }
+  function restoreTestForReport() {
+    var id = window._restoreTestId;
+    return restoreTests().filter(function (t) { return !id || t.id === id; }).pop() || null;
+  }
+  /* Completes a rhythm calendar item with evidence already filed: the
+     same roll-forward and control verification as App.completeCalItem. */
+  async function completeRhythmItem(c, evidenceUrl, markImplemented) {
+    if (!c) return;
+    await finishCalItem(c, window.CheckpointLib.rhythmDefFor(c), evidenceUrl, markImplemented);
+  }
+  async function fileControlReport(type, controlId, filename, globals) {
+    var ctrl = (S.controls || []).find(function (x) { return (x.fw || 'iso27001') === 'iso27001' && x.id === controlId; });
+    if (!ctrl || Store.kind === 'demo') return null;
+    var saved = {};
+    Object.keys(globals || {}).forEach(function (k) { saved[k] = window[k]; window[k] = globals[k]; });
+    var built;
+    try { built = buildReportFor(type); } finally { Object.keys(saved).forEach(function (k) { window[k] = saved[k]; }); }
+    if (!built) return null;
+    await addEvidenceFilesFor('control', ctrl, [new File([built.html], filename.replace(/[\\/:*?"<>|#%]+/g, '-') + '.html', { type: 'text/html' })]);
+    audit('Report filed as evidence', 'Control', 'iso27001|' + controlId, '', built.parts.title);
+    return ctrl.evidenceUrl || '';
+  }
+
   /* ===== Annual register review ===== */
   var _rrKind = '', _rrDone = { kept: 0, changed: 0, retired: 0 }, _rrSkipped = {};
   var RR_KINDS = {
@@ -12521,6 +12850,7 @@ function showModal(opts) {
     });
     myRiskAcceptRequests().forEach(function (r) { items.push({ kind: 'Accept risk', ref: r.risk, title: r.risk + ' ' + (r.title || ''), due: r.requested || '', overdue: false }); });
     items = items.concat(secReviewTasksFor(me));
+    items = items.concat(myAccessReviewTasks(me));
     (S.reviews || []).forEach(function (r) {
       var rec = window.CheckpointLib.parseReviewRecord(r.record);
       if (rec.v && !rec.signedOffBy && rec.chair && me.indexOf(String(rec.chair).toLowerCase()) !== -1) items.push({ kind: 'Sign off minutes', ref: r.id, title: 'Management review ' + r.id + ' (' + fmtDate(r.date) + ')', due: r.date || '', overdue: false });
@@ -12549,6 +12879,7 @@ function showModal(opts) {
     if (i.kind === 'Accept risk') return b('App.acceptRequestedRisk', i.ref, 'Decide');
     if (i.kind === 'Audit request') return b('App.answerAuditRequest', i.ref, 'Answer');
     if (i.kind === 'Sign off minutes') return b('App.openReview', i.ref, 'Read and sign off');
+    if (i.kind === 'Access review') return b('App.openMyAccessReview', i.arg, 'Confirm access');
     if (i.kind === 'Decision') return buildItemButton({ id: i.ref }, true);
     if (i.kind === 'Security review') return b(/^Record/.test(i.title) ? 'App.recordSecurityReview' : 'App.openSecurityReview', i.ref, /^Record/.test(i.title) ? 'Record minutes' : 'Open agenda');
     return '';
@@ -12830,7 +13161,8 @@ function showModal(opts) {
       docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, status: docStatusOf(d), nextReview: d.nextReview || '' }; }),
       policyGaps: policyPracticeGapList().map(function (g) { return { name: g.doc.name, kind: g.kind, key: g.key }; }),
       lastResults: scan.lastResults, checkControls: scan.checkControls, checkLabels: scan.checkLabels, scanDate: scan.scanDate,
-      expiredEvidence: stale, aboveAppetite: risksAboveAppetite().map(function (r) { return r.id; })
+      expiredEvidence: stale, aboveAppetite: risksAboveAppetite().map(function (r) { return r.id; }),
+      accountFindings: accountScanFindings(), restore: restoreRadarInput()
     }, new Date().toISOString().slice(0, 10));
   }
   var RADAR_SEV_LABEL = { Major: 'Major', Minor: 'Minor', OFI: 'Improve' };
@@ -16397,7 +16729,7 @@ function showModal(opts) {
       return '<tr data-id="' + c.id + '" data-action="App.editCalItem" style="cursor:pointer' + (live ? '' : ';opacity:.6') + '"><td class="id-t">' + c.id + (live ? '' : '<div class="src">' + esc(stLabel.replace(/ \(.*$/, '')) + '</div>') + '</td><td style="color:var(--paper)">' + esc(c.title) + (noteText ? '<div class="src" style="margin-top:4px">' + esc(noteText) + '</div>' : '') + ctlLine + evLine + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
         '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
-        '<td style="white-space:nowrap">' + (live ? '<button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.editCalItem" data-id="' + c.id + '">Edit</button></td></tr>';
+        '<td style="white-space:nowrap">' + (live ? '<button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">' + (rdef && rdef.key === 'access-review' ? (openAccessReview() ? 'Open review' : 'Start review') : rdef && rdef.key === 'backup-restore' ? 'Record test' : 'Complete') + '</button> ' : '') + '<button class="btn ghost sm" data-action="App.editCalItem" data-id="' + c.id + '">Edit</button></td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -18240,7 +18572,7 @@ function showModal(opts) {
     }
     App.go('auditor');
   }
-  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderPageGuide(((document.querySelector('.view.on') || {}).id || '').replace(/^v-/, '')); renderNextStepBar(); applyGuidedNav(); maybeWelcome(); renderTrialBanner(); scheduleProgressSnapshot(); }
+  function renderAll() { if (!_dirUsers && !_dirLoading && Store && Store.kind) loadDirectory().then(function () { ['risks', 'actions', 'vendors', 'assets', 'legal'].forEach(renderTidy); }); setTimeout(landAuditorOnce, 0); if (!_ownerRemindersTried && ownerRemindersDue()) { _ownerRemindersTried = true; sendOwnerReminders(true).catch(warn); } autoSecurityReview().catch(warn); autoAccountCheck(); applyTrainingCheckResult(); applyRegisterCheckResults(); backfillScanRiskCia(); runClauseAutomation(); syncObjectiveMeasures(); refreshContextProposals(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderScanDrift(); renderCoverage(); renderProposed(); renderResolvable(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); scheduleScrollRegions(); renderPageGuide(((document.querySelector('.view.on') || {}).id || '').replace(/^v-/, '')); renderNextStepBar(); applyGuidedNav(); maybeWelcome(); renderTrialBanner(); scheduleProgressSnapshot(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -25289,6 +25621,245 @@ function showModal(opts) {
       renderAssets(); renderNavCounts(); refreshAssetDrawer();
     },
 
+    /* ---------- Access review and account check (A.5.18, A.8.2) ---------- */
+    openAccessReview: async function () {
+      _arMine = false;
+      var sc = accountScan(), today = new Date().toISOString().slice(0, 10);
+      if (!READONLY && (!sc || sc.date < today) && (Store.kind === 'demo' || Store.kind === 'sharepoint')) {
+        busy(true);
+        await runAccountCheck(true);
+        busy(false);
+      }
+      renderAccessReview();
+      openDrawerUi('Access review', { wide: true });
+    },
+    openMyAccessReview: function (ref) {
+      _arMine = true;
+      _arReviewer = String(ref || '').split('|')[1] || '';
+      _arFilter = 'open';
+      renderAccessReview();
+      openDrawerUi('Access review', { wide: true });
+    },
+    checkAccounts: async function () {
+      busy(true);
+      var r = await runAccountCheck(false);
+      busy(false);
+      if (r) toast(r.inv.users.length + ' accounts checked: ' + (r.findings.length ? '<b>' + r.findings.length + '</b> to look at' : 'nothing to look at'));
+      renderAccessReview(); renderAuditRadar();
+    },
+    expectAccount: async function (upn) {
+      var f = accountScanFindings().find(function (x) { return x.upn === upn; });
+      var v = await showModal({
+        title: 'Expected: ' + (f ? f.name : upn),
+        message: 'Checkpoint stops flagging this account until the review date. Use it for accounts that are meant to look like this, such as an emergency access (break-glass) admin or a shared mailbox. The reason is kept with the access review record.',
+        fields: [
+          { id: 'reason', label: 'Why this is expected', value: '', placeholder: 'e.g. Emergency access account, signed in to test each quarter' },
+          { id: 'until', label: 'Check again on', type: 'date', value: daysFrom(365) }
+        ],
+        confirmText: 'Mark as expected',
+        validate: function (x) { return x.reason ? null : 'Say why this account is expected to look like this.'; }
+      });
+      if (!v) return;
+      var ex = accountExceptions();
+      ex[String(upn).toLowerCase()] = { reason: v.reason.slice(0, 200), by: myDisplayName(), date: new Date().toISOString().slice(0, 10), until: v.until || daysFrom(365) };
+      try { await saveSettingJson('accountExceptions', ex); } catch (e) { warn(e); return; }
+      audit('Account marked expected', 'Access review', upn, f ? window.CheckpointLib.ACCOUNT_FINDING_LABEL[f.key] : '', v.reason + ' (until ' + v.until + ')');
+      toast('Marked as expected until ' + esc(fmtDate(v.until)));
+      renderAccessReview(); renderAuditRadar();
+    },
+    startAccessReview: async function () {
+      var v = await showModal({
+        title: 'Start the access review',
+        message: 'Admins and guests come to the review owner. Staff accounts go to their manager in Microsoft 365, or to the owner when no manager is set.',
+        fields: [
+          { id: 'name', label: 'Review owner', value: myDisplayName() },
+          { id: 'mail', label: 'Owner’s email', value: myUpn() },
+          { id: 'due', label: 'Answers due', type: 'date', value: daysFrom(14) }
+        ],
+        confirmText: 'Build the review',
+        validate: function (x) { return x.name ? null : 'Name the review owner.'; }
+      });
+      if (!v) return;
+      busy(true);
+      var inv = _accountInv;
+      if (!inv) { var r0 = await runAccountCheck(true); inv = r0 && r0.inv; }
+      busy(false);
+      if (!inv) { toast('Could not read the accounts from Microsoft 365.'); return; }
+      var today = new Date().toISOString().slice(0, 10);
+      var cal = accessReviewCal();
+      var rec = window.CheckpointLib.accessReviewBuild(inv, { today: today, owner: { name: v.name, mail: v.mail }, exceptions: accountExceptions(), cal: cal ? cal.id : '', days: 14 });
+      rec.due = v.due || rec.due;
+      if (accessReviews().some(function (x) { return x.id === rec.id; })) rec.id += '-' + (accessReviews().length + 1);
+      try { await saveAccessReview(rec); } catch (e) { warn(e); toast('Could not save the review.'); return; }
+      var p = window.CheckpointLib.accessReviewProgress(rec);
+      audit('Access review started', 'Access review', rec.id, '', p.total + ' accounts, ' + Object.keys(rec.reviewers).length + ' reviewer(s), ' + p.suggestedRemove + ' suggested for removal');
+      _arFilter = 'open'; _arReviewer = '';
+      toast('<b>' + esc(rec.id) + '</b>: ' + p.total + ' accounts, ' + p.suggestedRemove + ' suggested for removal');
+      renderAccessReview(); renderNavCounts();
+    },
+    setAccessFilter: function (f) { _arFilter = f || 'open'; renderAccessReview(); },
+    accessReviewer: function (k) { _arReviewer = _arReviewer === k ? '' : (k || ''); renderAccessReview(); },
+    decideAccess: async function (id) {
+      var r = openAccessReview();
+      if (!r) return;
+      var p = String(id).split('|'), upn = p[0], d = p[1];
+      var item = r.items.find(function (i) { return i.u === upn; });
+      if (!item) return;
+      if (item.d === d) d = '';
+      var rv = r.reviewers[item.rv] || {}, me = myDisplayName();
+      var mine = [String(me).toLowerCase(), String(myUpn()).toLowerCase()];
+      var by = mine.indexOf(String(rv.name || '').toLowerCase()) !== -1 || (rv.mail && mine.indexOf(String(rv.mail).toLowerCase()) !== -1) ? me : (rv.name || 'Reviewer') + ' (recorded by ' + me + ')';
+      var res = window.CheckpointLib.accessReviewDecide(r, [upn], d, by, new Date().toISOString().slice(0, 10));
+      try { await saveAccessReview(res.rec); } catch (e) { warn(e); return; }
+      audit(d ? 'Access confirmed' : 'Access decision cleared', 'Access review', r.id, item.d || '', upn + (d ? ': ' + (d === 'keep' ? 'keep' : 'remove') + ' (' + by + ')' : ''));
+      renderAccessReview(); renderNavCounts();
+    },
+    acceptAccessSuggestions: async function (k) { await accessReviewBulk(k, 'suggested'); },
+    confirmAccessAll: async function (k) { await accessReviewBulk(k, 'all'); },
+    sendAccessReview: async function () {
+      var r = openAccessReview();
+      if (!r) return;
+      var L = window.CheckpointLib, p = L.accessReviewProgress(r), me = [String(myDisplayName()).toLowerCase(), String(myUpn()).toLowerCase()];
+      var keys = Object.keys(r.reviewers).filter(function (k) {
+        var rv = r.reviewers[k], bp = p.byReviewer[k] || {};
+        return bp.decided < bp.total && rv.mail && me.indexOf(String(rv.mail).toLowerCase()) === -1;
+      });
+      var noMail = Object.keys(r.reviewers).filter(function (k) { return !r.reviewers[k].mail; }).length;
+      if (!keys.length) { toast('Nobody else to email: ' + (noMail ? noMail + ' reviewer(s) have no email address.' : 'the remaining accounts are yours to confirm here.')); return; }
+      var ok = await showModal({ title: 'Email ' + keys.length + ' reviewer' + (keys.length === 1 ? '' : 's') + '?', message: 'Each gets the list of accounts they look after, with Checkpoint’s suggestions, and is asked to reply by ' + fmtDate(r.due) + '. It is sent from your mailbox.', confirmText: 'Send', cancelText: 'Cancel' });
+      if (!ok) return;
+      if (Store.kind === 'demo') { toast('Email is not sent in demo mode.'); return; }
+      busy(true);
+      var sent = 0, today = new Date().toISOString().slice(0, 10);
+      for (var i = 0; i < keys.length; i++) {
+        var m = L.accessReviewEmail(r, keys[i], { org: clientDisplayLabel(), appUrl: location.origin + location.pathname });
+        try { await Graph.sendMail(m.to, m.subject, m.html); r.reviewers[keys[i]].sent = today; sent++; } catch (e) { warn(e); }
+      }
+      busy(false);
+      try { await saveAccessReview(r); } catch (e) { warn(e); }
+      audit('Access review sent', 'Access review', r.id, '', sent + ' reviewer(s) emailed');
+      toast(sent + ' of ' + keys.length + ' reviewer' + (keys.length === 1 ? '' : 's') + ' emailed');
+      renderAccessReview();
+    },
+    finishAccessReview: async function () {
+      var r = openAccessReview();
+      if (!r) return;
+      var L = window.CheckpointLib, p = L.accessReviewProgress(r), today = new Date().toISOString().slice(0, 10);
+      var v = await showModal({
+        title: 'Finish ' + r.id,
+        message: (p.done ? 'Every account has a decision. ' : (p.total - p.decided) + ' account' + (p.total - p.decided === 1 ? ' has' : 's have') + ' no decision and will be recorded as not confirmed, so the review is filed as partly complete. ') +
+          (p.remove ? p.remove + ' account' + (p.remove === 1 ? '' : 's') + ' to remove: each becomes an action, due in 3 days for admins and 7 for others. ' : 'Nothing to remove. ') +
+          'The review is filed as A.5.18 evidence and the calendar activity is completed.',
+        fields: p.remove ? [{ id: 'owner', label: 'Who removes the access (your Microsoft 365 administrator)', value: r.owner && r.owner.name || myDisplayName() }] : [],
+        confirmText: 'Finish and file'
+      });
+      if (!v) return;
+      busy(true);
+      var specs = L.accessReviewActions(r, today);
+      r.actioned = r.actioned || {};
+      for (var i = 0; i < specs.length; i++) {
+        var sp = specs[i];
+        var act = { id: nextRegId(S.actions, 'ACT-'), title: sp.title, risk: '', control: sp.control, pr: sp.pr, owner: (v.owner || '').trim() || 'Unassigned', due: sp.due, status: 'Open', evidenceUrl: '', src: 'Access review', evidence: sp.evidence };
+        try { await Store.addAction(act); r.actioned[String(sp.upn).toLowerCase()] = act.id; r.actions = (r.actions || []).concat([act.id]); audit('Action raised', 'Action', act.id, '', sp.title); } catch (e) { warn(e); }
+      }
+      r.status = 'done'; r.done = today;
+      try { await saveAccessReview(r); } catch (e) { warn(e); }
+      var url = null;
+      try { url = await fileControlReport('accessReview', 'A.5.18', 'Access review ' + r.id + ' ' + today, { _accessReviewId: r.id }); } catch (e) { warn(e); }
+      if (url !== null) {
+        r.filed = true;
+        try { await saveAccessReview(r); } catch (e) { warn(e); }
+        var cal = (S.calendar || []).find(function (c) { return c.id === r.cal; }) || accessReviewCal();
+        if (cal) await completeRhythmItem(cal, url, p.done);
+      }
+      busy(false);
+      audit('Access review finished', 'Access review', r.id, p.decided + ' of ' + p.total + ' decided', p.remove + ' to remove, ' + specs.length + ' action(s)' + (url !== null ? ', filed as A.5.18 evidence' : ''));
+      toast('<b>' + esc(r.id) + '</b> finished: ' + p.remove + ' to remove' + (specs.length ? ', ' + specs.length + ' action(s) raised' : '') + (url !== null ? ', filed as A.5.18 evidence' : ''));
+      if (url === null) { window._accessReviewId = r.id; App.report('accessReview'); }
+      renderAccessReview(); renderActions(); renderNavCounts(); renderAuditRadar();
+    },
+    cancelAccessReview: async function () {
+      var r = openAccessReview();
+      if (!r) return;
+      var ok = await showModal({ title: 'Discard ' + r.id + '?', message: 'The review and every decision recorded in it are removed. The audit log keeps what was recorded.', confirmText: 'Discard', cancelText: 'Keep it' });
+      if (!ok) return;
+      try { await saveSettingJson('accessReviews', accessReviews().filter(function (x) { return x.id !== r.id; })); } catch (e) { warn(e); return; }
+      audit('Access review discarded', 'Access review', r.id, window.CheckpointLib.accessReviewProgress(r).decided + ' decided', '');
+      renderAccessReview(); renderNavCounts();
+    },
+
+    /* ---------- Backup restore tests (A.8.13) ---------- */
+    openRestoreTests: function () { renderRestoreTests(); openDrawerUi('Restore tests', { wide: true }); },
+    editRestoreSets: async function () {
+      var L = window.CheckpointLib;
+      var v = await showModal({
+        title: 'Data sets to restore-test',
+        message: 'One per line: name | recover within (hours) | lose at most (hours). The second is the recovery point objective: how much recent data you could lose. Use what your continuity plan says.',
+        fields: [{ id: 'sets', label: 'Data sets', type: 'textarea', value: L.restoreSetsText(restoreSetsList()) }],
+        confirmText: 'Save',
+        validate: function (x) { return L.parseRestoreSets(x.sets).length ? null : 'Add at least one data set.'; }
+      });
+      if (!v) return;
+      var sets = L.parseRestoreSets(v.sets);
+      try { await saveSettingJson('restoreSets', sets); } catch (e) { warn(e); return; }
+      audit('Restore test data sets changed', 'Restore test', 'A.8.13', '', sets.map(function (s) { return s.name; }).join(', '));
+      renderRestoreTests(); renderAuditRadar();
+    },
+    recordRestoreTest: async function (calId) {
+      var L = window.CheckpointLib, today = new Date().toISOString().slice(0, 10);
+      var sets = restoreSetsList(), cov = L.restoreCoverage(sets, restoreTests(), today);
+      var v = await showModal({
+        title: 'Record a restore test',
+        message: 'Restore something real from backup to a safe place, check it opens and is complete, and record it here.' + (cov.next ? ' Next due for a test: ' + cov.next.name + '.' : ''),
+        fields: [
+          { id: 'set', label: 'Data set', type: 'select', value: cov.next ? cov.next.name : sets[0].name, options: sets.map(function (s) { return s.name; }).concat(['Other']) },
+          { id: 'other', label: 'If other, which data set', value: '' },
+          { id: 'what', label: 'What was restored, from which backup tool, to where', type: 'textarea', value: '', placeholder: 'e.g. The Finance SharePoint site, from Veeam for Microsoft 365, to a test site' },
+          { id: 'date', label: 'Date of the test', type: 'date', value: today },
+          { id: 'from', label: 'Date of the backup restored', type: 'date', value: daysFrom(-1) },
+          { id: 'minutes', label: 'How long it took (minutes)', type: 'number', value: '' },
+          { id: 'intact', label: 'Did the data come back complete and usable?', type: 'select', value: 'yes', options: [{ value: 'yes', label: 'Yes, complete and usable' }, { value: 'partly', label: 'Partly' }, { value: 'no', label: 'No' }] },
+          { id: 'tester', label: 'Tested by', value: myDisplayName() },
+          { id: 'notes', label: 'Notes (optional)', type: 'textarea', value: '' }
+        ],
+        confirmText: 'Save and file',
+        validate: function (x) {
+          if (x.set === 'Other' && !x.other) return 'Name the data set.';
+          if (!x.what) return 'Say what was restored.';
+          if (!(parseFloat(x.minutes) >= 0)) return 'Say how long the restore took, in minutes.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var name = v.set === 'Other' ? v.other.trim().slice(0, 120) : v.set;
+      var set = sets.find(function (s) { return s.name === name; }) || { name: name };
+      var t = { set: name, date: v.date || today, what: v.what.slice(0, 1000), from: v.from || '', minutes: parseFloat(v.minutes), intact: v.intact, rtoH: set.rtoH || null, rpoH: set.rpoH || null, tester: v.tester || '', notes: (v.notes || '').slice(0, 1000) };
+      var a = L.restoreTestAssess(t);
+      var list = restoreTests();
+      t.id = 'RT-' + String(list.reduce(function (m, x) { return Math.max(m, parseInt(String(x.id).replace(/\D/g, ''), 10) || 0); }, 0) + 1).padStart(3, '0');
+      t.result = a.result; t.issues = a.issues; t.notesAuto = a.notes;
+      busy(true);
+      if (a.result !== 'pass') {
+        var act = { id: nextRegId(S.actions, 'ACT-'), title: 'Fix the restore of ' + name + ': ' + (a.issues[0] || 'the test did not pass'), risk: '', control: 'A.8.13', pr: a.result === 'fail' ? 'High' : 'Medium', owner: t.tester || 'Unassigned', due: daysFrom(a.result === 'fail' ? 14 : 30), status: 'Open', evidenceUrl: '', src: 'Restore test', evidence: 'Restore test ' + t.id + ' on ' + t.date + ': ' + a.issues.join(' ') + ' Test again once fixed.' };
+        try { await Store.addAction(act); t.action = act.id; audit('Action raised', 'Action', act.id, '', act.title); } catch (e) { warn(e); }
+      }
+      list.push(t);
+      try { await saveSettingJson('restoreTests', list.slice(-40)); } catch (e) { warn(e); busy(false); toast('Could not save the test.'); return; }
+      audit('Restore test recorded', 'Restore test', t.id, '', name + ': ' + RESTORE_RESULT[t.result]);
+      var url = null;
+      try { url = await fileControlReport('restoreTest', 'A.8.13', 'Restore test ' + t.id + ' ' + name + ' ' + t.date, { _restoreTestId: t.id }); } catch (e) { warn(e); }
+      if (url !== null) {
+        var cal = (calId && (S.calendar || []).find(function (c) { return c.id === calId; })) || restoreCal();
+        if (cal) await completeRhythmItem(cal, url, a.result === 'pass');
+      }
+      busy(false);
+      toast('<b>' + esc(t.id) + '</b> ' + esc(RESTORE_RESULT[t.result].toLowerCase()) + (t.action ? ', action <b>' + esc(t.action) + '</b> raised' : '') + (url !== null ? ', filed as A.8.13 evidence' : ''));
+      if (url === null) { window._restoreTestId = t.id; App.report('restoreTest'); }
+      renderRestoreTests(); openDrawerUi('Restore tests', { wide: true });
+      renderActions(); renderNavCounts(); renderAuditRadar();
+    },
+    openRestoreReport: function (id) { window._restoreTestId = id; App.report('restoreTest'); },
+
     /* ---------- Owners who have left (A.5.11, A.6.5) ---------- */
     openLeavers: async function () {
       busy(true);
@@ -27407,6 +27978,10 @@ function showModal(opts) {
       var c = (S.calendar || []).find(function (x) { return x.id === id; });
       if (!c) return;
       var L = window.CheckpointLib, rdef = L.rhythmDefFor(c);
+      /* The access review and the restore test are done in Checkpoint,
+         which completes the activity when the record is filed. */
+      if (rdef && rdef.key === 'access-review') { App.openAccessReview(); return; }
+      if (rdef && rdef.key === 'backup-restore') { App.recordRestoreTest(id); return; }
       var evidenceUrl = '', markImplemented = false;
       /* A rhythm activity is completed with its evidence: that link is
          what verifies the controls it covers. */
@@ -27431,36 +28006,7 @@ function showModal(opts) {
         evidenceUrl = (cv.url || '').trim();
         markImplemented = cv.mark === 'implemented';
       }
-      var prevDue = c.nextDue;
-      c.lastCompleted = new Date().toISOString().slice(0, 10);
-      if (rdef && evidenceUrl) {
-        c.notes = (String(c.notes || '').replace(/\s*Last evidence: \S+( \(\d{4}-\d{2}-\d{2}\))?/g, '') + ' Last evidence: ' + evidenceUrl + ' (' + c.lastCompleted + ')').trim();
-      }
-      var advanceDays = { Annual: 365, Biannual: 182, Quarterly: 91, Monthly: 30 }[c.freq];
-      if (advanceDays) {
-        c.nextDue = daysFrom(advanceDays);
-      } else {
-        c.status = 'Done';
-      }
-      try { await Store.updateCalendarItem(c); } catch (e) { warn(e); }
-      log('<b>' + c.id + '</b> completed: ' + esc(c.title) + (advanceDays ? '. Next due ' + fmtDate(c.nextDue) + '.' : ' (one-off — marked done).'));
-      toast('<b>' + c.id + '</b> marked complete');
-      audit('Compliance calendar item completed', 'Calendar', c.id, 'Due ' + prevDue, (advanceDays ? 'Next due ' + c.nextDue : 'Done (one-off)') + (evidenceUrl ? ' · evidence ' + evidenceUrl : ''));
-      if (rdef && evidenceUrl) {
-        var attester = (typeof Graph !== 'undefined' && Graph.getAccount && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
-        var ups = L.rhythmCompletionUpdates(rdef, S.controls, evidenceUrl, c.lastCompleted, attester, markImplemented);
-        ups.forEach(function (u) {
-          var ctl = u.control, key = ctl.fw + '|' + ctl.id;
-          if (u.set.evidenceUrl) audit('Evidence link changed', 'Control', key, '(none)', u.set.evidenceUrl);
-          if (u.set.st) audit('Control status changed', 'Control', key, ctl.st, u.set.st + ' (' + c.title + ' completed)');
-          audit('Control verified', 'Control', key, ctl.verified || 'never verified', u.set.verified + ' by ' + u.set.verifiedBy);
-          Object.keys(u.set).forEach(function (k) { ctl[k] = u.set[k]; });
-          Store.updateControl(ctl).catch(function (e) { warn(e); });
-        });
-        if (ups.length) toast(ups.length + ' control' + (ups.length > 1 ? 's' : '') + ' verified: ' + esc(ups.map(function (u) { return u.control.id; }).join(', ')));
-        renderSoa();
-      }
-      renderCalendar(); renderNavCounts(); renderDash();
+      await finishCalItem(c, rdef, evidenceUrl, markImplemented);
     },
 
     setRiskAppetite: async function (level) {

@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.177.0',
+    date: '2026-10-24',
+    entries: [
+      'The quarterly access review, done in Checkpoint. It lists every account from Microsoft 365 with its last sign-in and admin roles, and suggests which to remove. Admins and guests come to the review owner; staff go to their manager. Email each reviewer their list, record their answers (or they answer under My tasks), and finishing raises an action for each account to remove, files the review as A.5.18 evidence and completes the calendar activity. Checkpoint reads the directory and never changes it.',
+      'Account check: admin accounts not used in 90 days, disabled accounts still holding admin roles or licences, guests and staff accounts nobody uses. Checked weekly, shown on the audit radar, and mark an account as expected (an emergency access account, say) until a review date. Needs Microsoft Entra ID P1 for sign-in activity; without it, the role and licence checks still run.',
+      'Backup restore tests on a proper record: pick the data set (Checkpoint suggests the one tested longest ago), record what was restored, from which backup and how long it took. It is checked against the data set\u2019s recovery time objective, a failed or slow restore raises an action, and the record is filed as A.8.13 evidence. Untested data sets and failed restores show on the audit radar.'
+    ]
+  },
+  {
     version: '1.176.0',
     date: '2026-10-24',
     entries: [
