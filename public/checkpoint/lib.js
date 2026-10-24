@@ -13696,6 +13696,241 @@
     n = n || 6;
     return ids.slice(0, n).join(', ') + (ids.length > n ? ' and ' + (ids.length - n) + ' more' : '');
   }
+  /* ================= Accounts, access reviews and restore tests =================
+     Account check (A.5.18, A.8.2): what the directory says about who
+     still has access. inv = { users: [{ id, upn, name, mail, type
+     ('Member'|'Guest'), enabled, created, lastSignIn, licensed (count),
+     roles: [names], manager: { name, mail } | null }], signInKnown }.
+     signInKnown is false when the tenant cannot read sign-in activity
+     (it needs Entra ID P1); then only the checks that do not depend on
+     it run. exceptions = { upn (lower case): { reason, until } }: an
+     account that is meant to look like this (an emergency access
+     account, a shared mailbox), until its review date. */
+  function escHtmlLib(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var ACCOUNT_STALE_DAYS = 90;
+  var ACCOUNT_FINDING_LABEL = {
+    'disabled-role': 'Disabled but still holds an admin role',
+    'stale-admin': 'Admin account not used in 90 days',
+    'stale-guest': 'Guest not used in 90 days',
+    'never-signed-in': 'Never signed in',
+    'stale-member': 'Not used in 90 days',
+    'disabled-licensed': 'Disabled but still licensed'
+  };
+  /* A guest's sign-in name is its email rewritten by Entra
+     (jo_partner.example#EXT#@tenant): show the email instead. */
+  function accountEmail(u) {
+    if (u && u.mail) return u.mail;
+    var upn = String((u && u.upn) || '');
+    var m = upn.match(/^(.*)_([^_#]+)#EXT#@/i);
+    return m ? m[1] + '@' + m[2] : upn;
+  }
+  function accountExceptionLive(ex, upn, today) {
+    var e = ex && upn ? ex[String(upn).toLowerCase()] : null;
+    return !!(e && (!e.until || e.until >= today));
+  }
+  function accountFindings(inv, today, exceptions) {
+    inv = inv || {};
+    var out = [], known = inv.signInKnown !== false, S = ACCOUNT_STALE_DAYS;
+    var ago = function (iso) { return iso ? daysBetweenDateStr(String(iso).slice(0, 10), today) : null; };
+    (inv.users || []).forEach(function (u) {
+      if (!u || !u.upn || accountExceptionLive(exceptions, u.upn, today)) return;
+      var roles = u.roles || [], admin = roles.length > 0, guest = u.type === 'Guest';
+      var age = ago(u.created), last = ago(u.lastSignIn);
+      var kind = admin ? 'admin' : guest ? 'guest' : 'member';
+      var f = function (key, sev, text, fix) {
+        out.push({ key: key, sev: sev, id: u.id || '', upn: u.upn, email: accountEmail(u), name: u.name || u.upn, kind: kind, roles: roles.slice(0, 4), lastSignIn: u.lastSignIn ? String(u.lastSignIn).slice(0, 10) : '', text: text, fix: fix });
+      };
+      if (u.enabled === false) {
+        if (admin) f('disabled-role', 'Major', 'Disabled, but still assigned ' + roles.join(', ') + '.', 'Remove the role assignment.');
+        else if (u.licensed) f('disabled-licensed', 'OFI', 'Disabled, but still holds ' + u.licensed + ' licence' + (u.licensed === 1 ? '' : 's') + '.', 'Remove the licence, unless it is a shared mailbox that needs one.');
+        return;
+      }
+      if (!known) return;
+      var unused = last === null ? (age === null || age > S) : last > S;
+      if (admin && (last === null ? (age === null || age > 30) : last > S)) f('stale-admin', 'Major', (last === null ? 'Has never signed in' : 'Last signed in ' + last + ' days ago') + ', but holds ' + roles.join(', ') + '.', 'Remove the role, or disable the account if nobody needs it.');
+      else if (guest && unused) f('stale-guest', 'Minor', last === null ? 'Invited ' + (age === null ? 'some time ago' : age + ' days ago') + ' and has never signed in.' : 'Last signed in ' + last + ' days ago.', 'Remove the guest, or confirm with the person who invited them.');
+      else if (!guest && last === null && age !== null && age > 30) f('never-signed-in', 'Minor', 'Created ' + age + ' days ago and has never signed in.', 'Disable it if nobody uses it.');
+      else if (!guest && last !== null && last > S) f('stale-member', 'Minor', 'Last signed in ' + last + ' days ago.', 'Disable it if the person has left or no longer needs it.');
+    });
+    var rank = { Major: 0, Minor: 1, OFI: 2 };
+    out.sort(function (a, b) { return rank[a.sev] - rank[b.sev] || a.name.localeCompare(b.name); });
+    return out;
+  }
+
+  /* The quarterly access review (rhythm 'access-review'): every enabled
+     account, plus disabled ones that still hold a role, each with a
+     suggestion and the person who should confirm it. Admins and guests
+     go to the review owner; members to their manager, or the owner
+     when Entra has no manager. Kept compact: it is stored in Settings. */
+  function accessReviewBuild(inv, opts) {
+    inv = inv || {}; opts = opts || {};
+    var today = opts.today, owner = opts.owner || { name: 'Review owner', mail: '' };
+    var finds = {};
+    accountFindings(inv, today, opts.exceptions).forEach(function (x) { finds[String(x.upn).toLowerCase()] = x; });
+    var reviewers = {};
+    var rvKey = function (p) {
+      var k = String(p.mail || p.name || '').toLowerCase();
+      if (!reviewers[k]) reviewers[k] = { name: p.name || p.mail, mail: p.mail || '' };
+      return k;
+    };
+    var ownerKey = rvKey(owner);
+    var items = [];
+    (inv.users || []).forEach(function (u) {
+      if (!u || !u.upn) return;
+      var roles = u.roles || [], admin = roles.length > 0, guest = u.type === 'Guest';
+      if (u.enabled === false && !admin) return;
+      var fd = finds[String(u.upn).toLowerCase()];
+      var ex = accountExceptionLive(opts.exceptions, u.upn, today) ? opts.exceptions[String(u.upn).toLowerCase()] : null;
+      var s = 'keep', why = '';
+      if (fd && fd.key !== 'disabled-licensed') { s = fd.key === 'never-signed-in' ? 'check' : 'remove'; why = ACCOUNT_FINDING_LABEL[fd.key]; }
+      else if (ex) why = 'Expected: ' + ex.reason;
+      var rv = admin || guest || !(u.manager && (u.manager.mail || u.manager.name)) ? ownerKey : rvKey(u.manager);
+      items.push({ u: u.upn, e: accountEmail(u), n: u.name || u.upn, k: admin ? 'admin' : guest ? 'guest' : 'member', r: roles.join(', '), ls: u.lastSignIn ? String(u.lastSignIn).slice(0, 10) : '', s: s, why: why, rv: rv, d: '', by: '', at: '' });
+    });
+    var kr = { admin: 0, guest: 1, member: 2 }, sr = { remove: 0, check: 1, keep: 2 };
+    items.sort(function (a, b) { return kr[a.k] - kr[b.k] || sr[a.s] - sr[b.s] || a.n.localeCompare(b.n); });
+    Object.keys(reviewers).forEach(function (k) { if (!items.some(function (i) { return i.rv === k; })) delete reviewers[k]; });
+    return { id: opts.id || 'AR-' + String(today || '').replace(/-/g, ''), created: today, due: addDaysIso(today, opts.days || 14), owner: owner, cal: opts.cal || '',
+      signInKnown: inv.signInKnown !== false, rolesKnown: inv.rolesKnown !== false, items: items, reviewers: reviewers, status: 'open', done: '', actions: [], filed: false };
+  }
+  function accessReviewProgress(rec) {
+    var items = (rec && rec.items) || [];
+    var p = { total: items.length, decided: 0, remove: 0, keep: 0, suggestedRemove: 0, byReviewer: {}, byKind: { admin: 0, guest: 0, member: 0 } };
+    items.forEach(function (i) {
+      var r = p.byReviewer[i.rv] = p.byReviewer[i.rv] || { total: 0, decided: 0, remove: 0 };
+      r.total++; p.byKind[i.k] = (p.byKind[i.k] || 0) + 1;
+      if (i.s === 'remove') p.suggestedRemove++;
+      if (i.d) { p.decided++; r.decided++; }
+      if (i.d === 'remove') { p.remove++; r.remove++; }
+      if (i.d === 'keep') p.keep++;
+    });
+    p.done = p.total > 0 && p.decided === p.total;
+    p.pct = p.total ? Math.round(p.decided / p.total * 100) : 0;
+    return p;
+  }
+  /* Records decisions. which: an array of UPNs, or { reviewer: key }
+     with mode 'suggested' (each line takes its suggestion; 'check'
+     lines are left for a person) or 'all' (every open line). */
+  function accessReviewDecide(rec, which, decision, by, today, mode) {
+    var r = JSON.parse(JSON.stringify(rec || {}));
+    var set = Array.isArray(which) ? which.map(function (x) { return String(x).toLowerCase(); }) : null;
+    var n = 0;
+    (r.items || []).forEach(function (i) {
+      if (set ? set.indexOf(String(i.u).toLowerCase()) === -1 : i.rv !== which.reviewer) return;
+      if (!set && i.d) return;
+      var d = decision;
+      if (mode === 'suggested') { if (i.s === 'check') return; d = i.s; }
+      if (d !== 'keep' && d !== 'remove' && d !== '') return;
+      i.d = d; i.by = d ? by || '' : ''; i.at = d ? today : ''; n++;
+    });
+    return { rec: r, changed: n };
+  }
+  /* One action per account to remove that has none yet. Checkpoint
+     reads the directory and never changes it, so removal is a task. */
+  function accessReviewActions(rec, today) {
+    var have = (rec && rec.actioned) || {};
+    return ((rec && rec.items) || []).filter(function (i) { return i.d === 'remove' && !have[String(i.u).toLowerCase()]; }).map(function (i) {
+      return { upn: i.u, title: 'Remove access: ' + i.n + ' (' + i.u + ')' + (i.k === 'admin' ? ', remove ' + (i.r || 'the admin role') : i.k === 'guest' ? ', remove the guest' : ', disable the account'),
+        control: i.k === 'admin' ? 'A.8.2' : 'A.5.18', pr: i.k === 'admin' ? 'High' : 'Medium', due: addDaysIso(today, i.k === 'admin' ? 3 : 7),
+        evidence: 'Access review ' + rec.id + ': ' + (i.why ? i.why + '. ' : '') + 'Removal confirmed by ' + (i.by || 'the reviewer') + ' on ' + i.at + '.' };
+    });
+  }
+  function accessReviewEmail(rec, key, opts) {
+    opts = opts || {};
+    var rv = (rec.reviewers || {})[key] || { name: key };
+    var mine = (rec.items || []).filter(function (i) { return i.rv === key; });
+    var KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff' };
+    var e = escHtmlLib;
+    var rows = mine.map(function (i) {
+      return '<tr><td style="padding:6px 8px;border-bottom:1px solid #ddd"><b>' + e(i.n) + '</b><br><span style="color:#666;font-size:12px">' + e(i.e || i.u) + '</span></td>' +
+        '<td style="padding:6px 8px;border-bottom:1px solid #ddd">' + KIND[i.k] + (i.r ? '<br><span style="color:#666;font-size:12px">' + e(i.r) + '</span>' : '') + '</td>' +
+        '<td style="padding:6px 8px;border-bottom:1px solid #ddd">' + (i.ls ? e(srDate(i.ls)) : (rec.signInKnown ? 'Never' : '—')) + '</td>' +
+        '<td style="padding:6px 8px;border-bottom:1px solid #ddd">' + (i.s === 'remove' ? '<b style="color:#b42318">Remove?</b>' : i.s === 'check' ? '<b style="color:#b54708">Check</b>' : 'Keep') + (i.why ? '<br><span style="color:#666;font-size:12px">' + e(i.why) + '</span>' : '') + '</td></tr>';
+    }).join('');
+    var sugg = mine.filter(function (i) { return i.s !== 'keep'; }).length;
+    var html = '<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#222;max-width:720px">' +
+      '<p>Hi ' + e(String(rv.name || '').split(' ')[0] || 'there') + ',</p>' +
+      '<p>As part of ' + e(opts.org || 'our') + ' quarterly access review, please confirm that each account below still needs its access. ' +
+      (sugg ? 'Checkpoint suggests removing or checking <b>' + sugg + '</b> of them, based on Microsoft 365 sign-in records.' : 'Nothing below looks unused.') + '</p>' +
+      '<table style="border-collapse:collapse;width:100%;font-size:13px"><thead><tr style="text-align:left;background:#f4f4f4"><th style="padding:6px 8px">Account</th><th style="padding:6px 8px">Access</th><th style="padding:6px 8px">Last sign-in</th><th style="padding:6px 8px">Suggested</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p><b>Please answer by ' + e(srDate(rec.due)) + '.</b> Reply to this email with any account that should be removed, or "all confirmed" if everyone still needs their access.' +
+      (opts.appUrl ? ' If you use Checkpoint, you can also answer under <a href="' + e(opts.appUrl) + '#mytasks">My tasks</a>.' : '') + '</p>' +
+      '<p style="color:#666;font-size:12px">Access review ' + e(rec.id) + ' (ISO 27001 A.5.18). Your answer is kept as the review record.</p></div>';
+    return { to: rv.mail, subject: 'Access review: please confirm ' + mine.length + ' account' + (mine.length === 1 ? '' : 's') + ' by ' + srDate(rec.due), html: html, count: mine.length };
+  }
+  /* Once filed as evidence, a finished review keeps only its counts
+     and removals; the full record is the filed report. Keeps the
+     Settings row small. */
+  function compactAccessReviews(list, keepFull) {
+    keepFull = keepFull || 2;
+    var arr = (list || []).slice(-12);
+    return arr.map(function (r, idx) {
+      if (!r || r.status !== 'done' || !r.filed || idx >= arr.length - keepFull || !r.items) return r;
+      var p = accessReviewProgress(r);
+      var c = Object.assign({}, r, { summary: { total: p.total, removed: p.remove, kept: p.keep, byKind: p.byKind, removedList: r.items.filter(function (i) { return i.d === 'remove'; }).map(function (i) { return i.u; }).slice(0, 50) } });
+      delete c.items;
+      return c;
+    });
+  }
+
+  /* Backup restore tests (rhythm 'backup-restore', A.8.13). sets: the
+     data sets that must be recoverable, each with a recovery time
+     objective (rtoH, hours) and recovery point objective (rpoH, hours).
+     A test records what was restored, the backup point it came from,
+     how long it took and whether it came back intact. */
+  var RESTORE_DEFAULT_SETS = [
+    { name: 'Microsoft 365 mailboxes', rtoH: 24, rpoH: 24 },
+    { name: 'SharePoint and OneDrive files', rtoH: 24, rpoH: 24 },
+    { name: 'Line-of-business application data', rtoH: 8, rpoH: 24 }
+  ];
+  function parseRestoreSets(text) {
+    return String(text || '').split(/\r?\n/).map(function (l) {
+      var p = l.split('|').map(function (x) { return x.trim(); });
+      if (!p[0]) return null;
+      var n = function (v) { var x = parseFloat(v); return isFinite(x) && x > 0 ? x : null; };
+      return { name: p[0].slice(0, 120), rtoH: n(p[1]), rpoH: n(p[2]) };
+    }).filter(Boolean).slice(0, 30);
+  }
+  function restoreSetsText(sets) {
+    return (sets || []).map(function (s) { return s.name + ' | ' + (s.rtoH || '') + ' | ' + (s.rpoH || ''); }).join('\n');
+  }
+  function restoreTestAssess(t) {
+    t = t || {};
+    var issues = [], result = 'pass';
+    var mins = parseFloat(t.minutes), hoursTook = isFinite(mins) ? mins / 60 : null;
+    var pointAge = null;
+    if (t.from && t.date) {
+      var a = Date.parse(String(t.from).length <= 10 ? t.from + 'T00:00:00Z' : t.from), b = Date.parse(t.date + 'T00:00:00Z');
+      if (isFinite(a) && isFinite(b)) pointAge = Math.max(0, Math.round((b - a) / 3600000));
+    }
+    if (t.intact === 'no') { result = 'fail'; issues.push('The data did not come back usable.'); }
+    else if (t.intact === 'partly') { result = 'partial'; issues.push('Only part of the data came back usable.'); }
+    if (t.rtoH && hoursTook !== null && hoursTook > t.rtoH) { if (result === 'pass') result = 'partial'; issues.push('The restore took ' + fmtHours(hoursTook) + ', longer than its recovery time objective of ' + fmtHours(t.rtoH) + '.'); }
+    /* The backup restored may be an older one on purpose, so its age is
+       a note to check, not a failed test. */
+    var notes = [];
+    if (t.rpoH && pointAge !== null && pointAge > t.rpoH) notes.push('The backup restored was ' + fmtHours(pointAge) + ' old. Check that backups run at least every ' + fmtHours(t.rpoH) + ' (the recovery point objective).');
+    return { result: result, issues: issues, notes: notes, hoursTook: hoursTook, pointAgeH: pointAge };
+  }
+  function fmtHours(h) {
+    if (h < 1) return Math.round(h * 60) + ' minutes';
+    if (h < 48) { var r = Math.round(h * 10) / 10; return r + ' hour' + (r === 1 ? '' : 's'); }
+    return Math.round(h / 24) + ' days';
+  }
+  /* Which data set to test next: never tested first, then the one
+     tested longest ago. Coverage counts sets tested in the last year. */
+  function restoreCoverage(sets, tests, today) {
+    var yearAgo = addDaysIso(today, -365);
+    var last = {};
+    (tests || []).forEach(function (t) { if (t && t.set && (!last[t.set] || t.date > last[t.set].date)) last[t.set] = t; });
+    var rows = (sets || []).map(function (s) { var t = last[s.name] || null; return { set: s, last: t, current: !!(t && t.date >= yearAgo) }; });
+    var next = rows.slice().sort(function (a, b) { return String(a.last ? a.last.date : '').localeCompare(String(b.last ? b.last.date : '')); })[0] || null;
+    return { rows: rows, total: rows.length, tested: rows.filter(function (r) { return r.current; }).length,
+      untested: rows.filter(function (r) { return !r.current; }).map(function (r) { return r.set.name; }),
+      failing: rows.filter(function (r) { return r.last && r.last.result === 'fail'; }).map(function (r) { return r.set.name; }),
+      next: next ? next.set : null };
+  }
+
   function auditRadar(d, today) {
     d = d || {};
     var out = [];
@@ -13840,6 +14075,34 @@
     if (ownerless.length) add({ id: 'asset-ownerless', kind: 'assets', sev: 'OFI', ref: 'A.5.9', refs: ['A.5.9'],
       title: ownerless.length + ' asset' + (ownerless.length === 1 ? ' has' : 's have') + ' no owner',
       detail: listSome(ownerless) + '. Every asset in the inventory needs an owner (A.5.9).', fix: { action: 'App.go', id: 'assets', label: 'Open assets' } });
+
+    /* 9. Accounts nobody uses, and restores nobody has tested. */
+    var acc = d.accountFindings || [];
+    var accGroup = function (key, sev, ref, refs, title, detail) {
+      var xs = acc.filter(function (x) { return x.key === key; });
+      if (!xs.length) return;
+      add({ id: 'accounts-' + key, kind: 'accounts', sev: sev, ref: ref, refs: refs, title: title(xs.length),
+        detail: listSome(xs.map(function (x) { return x.name; }), 4) + '. ' + detail, fix: { action: 'App.openAccessReview', id: '', label: 'Review accounts' } });
+    };
+    accGroup('disabled-role', 'Major', 'A.8.2', ['A.5.18', 'A.8.2'], function (n) { return n + ' disabled account' + (n === 1 ? ' still holds' : 's still hold') + ' an admin role'; }, 'Privileged access must be removed when it is no longer needed (A.8.2).');
+    accGroup('stale-admin', 'Major', 'A.8.2', ['A.5.18', 'A.8.2'], function (n) { return n + ' admin account' + (n === 1 ? ' has' : 's have') + ' not been used in 90 days'; }, 'Unused privileged access is the first thing an auditor samples (A.8.2).');
+    accGroup('stale-guest', 'Minor', 'A.5.18', ['A.5.18'], function (n) { return n + ' guest' + (n === 1 ? ' has' : 's have') + ' not been used in 90 days'; }, 'Access rights must be reviewed and removed when no longer needed (A.5.18).');
+    var staleM = acc.filter(function (x) { return x.key === 'stale-member' || x.key === 'never-signed-in'; });
+    if (staleM.length) add({ id: 'accounts-stale-member', kind: 'accounts', sev: 'Minor', ref: 'A.5.18', refs: ['A.5.18', 'A.6.5'],
+      title: staleM.length + ' staff account' + (staleM.length === 1 ? ' is' : 's are') + ' enabled but unused',
+      detail: listSome(staleM.map(function (x) { return x.name; }), 4) + '. Not used in 90 days, or never. Leavers’ access must be removed (A.6.5).', fix: { action: 'App.openAccessReview', id: '', label: 'Review accounts' } });
+    accGroup('disabled-licensed', 'OFI', 'A.5.18', ['A.5.18'], function (n) { return n + ' disabled account' + (n === 1 ? ' still holds' : 's still hold') + ' a licence'; }, 'Usually a leaver nobody finished off. Shared mailboxes over 50 GB are the exception.');
+    var rs = d.restore;
+    if (rs && rs.sets && rs.sets.length) {
+      var cov = restoreCoverage(rs.sets, rs.tests, today);
+      if (cov.failing.length) add({ id: 'restore-failing', kind: 'restore', sev: 'Major', ref: 'A.8.13', refs: ['A.8.13'],
+        title: 'The last restore test of ' + listSome(cov.failing, 3) + ' failed',
+        detail: 'A backup that cannot be restored is not a backup (A.8.13). Fix it and test again.', fix: { action: 'App.openRestoreTests', id: '', label: 'Open restore tests' } });
+      var untestedNotFailing = cov.untested.filter(function (n) { return cov.failing.indexOf(n) === -1; });
+      if (untestedNotFailing.length) add({ id: 'restore-untested', kind: 'restore', sev: 'Minor', ref: 'A.8.13', refs: ['A.8.13'],
+        title: untestedNotFailing.length + ' data set' + (untestedNotFailing.length === 1 ? ' has' : 's have') + ' no restore test in the last year',
+        detail: listSome(untestedNotFailing, 4) + '. Backups must be tested (A.8.13).', fix: { action: 'App.openRestoreTests', id: '', label: 'Open restore tests' } });
+    }
 
     out.sort(function (a, b) { return RADAR_RANK[a.sev] - RADAR_RANK[b.sev] || String(a.ref).localeCompare(String(b.ref), undefined, { numeric: true }); });
     var counts = { Major: 0, Minor: 0, OFI: 0 };
@@ -14250,7 +14513,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditDeliverySummary: auditDeliverySummary, auditInterviewIcs: auditInterviewIcs, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditDeliverySummary: auditDeliverySummary, accountFindings: accountFindings, ACCOUNT_FINDING_LABEL: ACCOUNT_FINDING_LABEL, ACCOUNT_STALE_DAYS: ACCOUNT_STALE_DAYS, accountExceptionLive: accountExceptionLive, accountEmail: accountEmail, accessReviewBuild: accessReviewBuild, accessReviewProgress: accessReviewProgress, accessReviewDecide: accessReviewDecide, accessReviewActions: accessReviewActions, accessReviewEmail: accessReviewEmail, compactAccessReviews: compactAccessReviews, RESTORE_DEFAULT_SETS: RESTORE_DEFAULT_SETS, parseRestoreSets: parseRestoreSets, restoreSetsText: restoreSetsText, restoreTestAssess: restoreTestAssess, restoreCoverage: restoreCoverage, fmtHours: fmtHours, auditInterviewIcs: auditInterviewIcs, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,

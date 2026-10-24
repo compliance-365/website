@@ -1502,7 +1502,7 @@
     <!-- COMPLIANCE CALENDAR -->
     <section class="view" id="v-calendar">
       <div class="vhead"><div class="rule"></div><h1>Compliance calendar</h1><p>Every recurring ISMS activity in one place — access control reviews, BCP/DR and backup restore tests, supplier reviews, awareness training, the external surveillance audit cycle and certificate expiry. Complete an item and, if it recurs, its next due date rolls forward automatically.</p></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddCalItem">+ Add activity</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="calendar">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddCalItem">+ Add activity</button><button class="btn ghost sm" data-action="App.openAccessReview">Access review</button><button class="btn ghost sm" data-action="App.openRestoreTests">Restore tests</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="calendar">Export CSV</button></div>
       <div class="card" id="addCalPanel" style="margin-bottom:16px;display:none">
         <h3>Add a recurring activity</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">

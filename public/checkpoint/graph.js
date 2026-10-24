@@ -2038,6 +2038,45 @@ window.Graph = (function () {
       .map(function (u) { return { id: u.id, name: u.displayName || u.userPrincipalName, upn: u.userPrincipalName, mail: u.mail || u.userPrincipalName, jobTitle: u.jobTitle || '' }; });
   }
 
+  /* Every account with what the access review needs (A.5.18, A.8.2):
+     enabled, member or guest, created, last sign-in, licence count,
+     active directory roles and manager. Read-only. Sign-in activity
+     needs Entra ID P1 and AuditLog.Read.All; without it the list still
+     loads and signInKnown is false. Roles are active assignments only
+     (an eligible PIM role is not standing access). */
+  async function accountInventory() {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var sel = 'id,displayName,userPrincipalName,mail,accountEnabled,userType,createdDateTime,assignedLicenses';
+    var users, signInKnown = true;
+    try { users = await gAll('/users?$select=' + sel + ',signInActivity&$top=999', opts); }
+    catch (e) { signInKnown = false; users = await gAll('/users?$select=' + sel + '&$top=999', opts); }
+    var roles = {}, rolesKnown = true;
+    try {
+      var names = {};
+      (await gAll('/roleManagement/directory/roleDefinitions?$select=id,displayName', opts)).forEach(function (d) { names[d.id] = d.displayName; });
+      (await gAll('/roleManagement/directory/roleAssignments?$select=principalId,roleDefinitionId', opts)).forEach(function (a) {
+        var n = names[a.roleDefinitionId] || 'Directory role';
+        var list = roles[a.principalId] = roles[a.principalId] || [];
+        if (list.indexOf(n) === -1) list.push(n);
+      });
+    } catch (e) { rolesKnown = false; }
+    var managers = {};
+    try {
+      (await gAll('/users?$select=id&$expand=manager($select=displayName,mail,userPrincipalName)&$top=999', opts)).forEach(function (u) {
+        if (u.manager) managers[u.id] = { name: u.manager.displayName || '', mail: u.manager.mail || u.manager.userPrincipalName || '' };
+      });
+    } catch (e) { /* no manager data: reviews go to the review owner */ }
+    return {
+      signInKnown: signInKnown, rolesKnown: rolesKnown,
+      users: users.filter(function (u) { return u.userPrincipalName; }).map(function (u) {
+        var si = u.signInActivity || {};
+        var last = [si.lastSignInDateTime, si.lastNonInteractiveSignInDateTime, si.lastSuccessfulSignInDateTime].filter(Boolean).sort().pop() || '';
+        return { id: u.id, upn: u.userPrincipalName, name: u.displayName || u.userPrincipalName, mail: u.mail || '', type: u.userType === 'Guest' || u.userPrincipalName.indexOf('#EXT#') !== -1 ? 'Guest' : 'Member',
+          enabled: u.accountEnabled !== false, created: u.createdDateTime || '', lastSignIn: last, licensed: (u.assignedLicenses || []).length, roles: roles[u.id] || [], manager: managers[u.id] || null };
+      })
+    };
+  }
+
   async function listTenantGroups() {
     var opts = { scopes: CONFIG.scopesReadOnly };
     var groups = await gAll('/groups?$select=id,displayName,mailNickname&$top=999', opts);
@@ -2282,7 +2321,7 @@ window.Graph = (function () {
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, uploadFileToPath: uploadFileToPath, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
-    listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
+    listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, accountInventory: accountInventory, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop
