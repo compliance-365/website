@@ -2283,3 +2283,12 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .ai-ia-gaps{margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--paper-dim)}
 .ai-au-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px}
 .ai-au-row .src{margin-left:auto}
+/* Internal audit: Checkpoint's automated tests on each workpack line */
+.audit-auto{margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-hover);font-size:12px}
+.audit-auto-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.audit-auto ul{margin:0;padding:0;list-style:none;line-height:1.6}
+.audit-auto li span[aria-hidden]{display:inline-block;width:1em;font-weight:800}
+.audit-auto .auto-pass span[aria-hidden]{color:var(--pass)}
+.audit-auto .auto-ofi span[aria-hidden]{color:var(--warn)}
+.audit-auto .auto-fail span[aria-hidden]{color:var(--fail)}
+.audit-auto-sum{margin-top:10px;padding:10px 12px;border-left:3px solid var(--gold-light);background:var(--surface-hover);font-size:12.5px;line-height:1.6}
