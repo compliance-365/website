@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.175.0',
+    date: '2026-10-24',
+    entries: [
+      'The audit day, planned for you. From any planned audit, the interview plan schedules who to see and when: an opening meeting, top management first, then each owner for 10 minutes plus 5 per item, lunch, 45 minutes for the auditor to confirm findings, and the closing meeting. Only lines that still need a person are scheduled; ones already recorded, unchanged or expected to conform are not. Each interview lists its questions, drawn from what Checkpoint found, the clause, the evidence the control needs and the sample.',
+      'Send interview invites: each person gets an email with their questions and a calendar invite for their interview and the opening and closing meetings. The full schedule downloads as a calendar file for the auditor.',
+      'Opening and closing meeting packs. The interview plan opens with the opening meeting (scope, criteria, method, how findings are graded, timetable). The closing meeting pack gives the conclusion, every finding with its owner and due date, what was shown to work and the next steps, with sign-off lines.',
+      'One next step on every audit: request evidence, send invites, confirm the expected conforms, work through what needs you, then hold the closing meeting. Completing an audit now files the report and closing pack as Clause 9.2 evidence, and offers to send the closing summary to top management and the finding owners.'
+    ]
+  },
+  {
     version: '1.174.0',
     date: '2026-10-24',
     entries: [

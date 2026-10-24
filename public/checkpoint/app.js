@@ -892,7 +892,7 @@ function showModal(opts) {
        policy they have just been sent. Launching and chasing campaigns
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
     'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
     'addManualObjective', 'editObjective', 'addLibraryObjectives',
     /* Approving writes to the Answer library; AI drafting is gated for
@@ -4099,6 +4099,68 @@ function showModal(opts) {
         },
         sections: sections
       };
+    },
+
+    /* The opening meeting and the interview schedule: who, when and
+       what to ask, generated from the workpack. */
+    auditPlan: function () {
+      var a = (S.audits || []).find(function (x) { return x.id === window._workpackAudit; });
+      if (!a) { toast('Open an internal audit first.'); return null; }
+      var b = auditBundle(a), plan = b.plan;
+      if (!b.wp.readable) { toast('Checkpoint can\'t read this audit\'s scope yet. Open its workpack first.'); return null; }
+      var interviews = plan.slots.filter(function (x) { return x.kind === 'interview'; });
+      var sections = [];
+      sections.push({ heading: 'Opening meeting', pageBreak: false, html:
+        '<p class="rpt-intro">' + esc(fmtDateY(plan.slots[0].date)) + ', ' + esc(plan.slots[0].start) + '\u2013' + esc(plan.slots[0].end) + '. Top management and everyone being interviewed.</p>' +
+        '<ol class="rpt-plain">' +
+        '<li><b>Purpose and scope.</b> ' + esc(a.id) + ': ' + esc(a.scope) + '. Auditor: ' + esc(a.auditor || 'Unassigned') + '.</li>' +
+        '<li><b>Criteria.</b> ' + esc(fwName(a.fw)) + ', and the organisation\u2019s own policies, procedures and records.</li>' +
+        '<li><b>Method.</b> Interviews, sampling of records, and review of evidence. Checkpoint has already tested each line against the scan results and registers it holds; those are suggestions, and the auditor confirms every result.</li>' +
+        '<li><b>How findings are graded.</b> Major nonconformity: a requirement not met at all, or a breakdown of the system. Minor nonconformity: a lapse that does not undermine the system. Opportunity for improvement: no requirement missed, but it could be better.</li>' +
+        '<li><b>Independence and confidentiality.</b> The auditor does not audit their own work. What is seen stays in the organisation\u2019s own Microsoft 365.</li>' +
+        '<li><b>Timetable.</b> As below, with the closing meeting at ' + esc(plan.slots[plan.slots.length - 1].start) + (plan.days.length > 1 ? ' on ' + esc(fmtDateY(plan.slots[plan.slots.length - 1].date)) : '') + '.</li>' +
+        '</ol>' });
+      sections.push({ heading: 'Timetable', pageBreak: false, html:
+        '<table class="rpt-table"><thead><tr><th>Date</th><th>Time</th><th>Who</th><th>What</th></tr></thead><tbody>' +
+        plan.slots.map(function (x) { return '<tr><td>' + esc(fmtDateY(x.date)) + '</td><td>' + esc(x.start) + '\u2013' + esc(x.end) + '</td><td>' + esc(x.who || '') + '</td><td>' + esc(x.kind === 'interview' ? x.lines.length + ' item' + (x.lines.length === 1 ? '' : 's') : x.title) + '</td></tr>'; }).join('') +
+        '</tbody></table>' +
+        (b.lines.length > plan.lines ? '<p class="rpt-intro">' + (b.lines.length - plan.lines) + ' of ' + b.lines.length + ' lines need no interview: already recorded, unchanged since the last audit, or expected to conform from Checkpoint\u2019s tests. Confirm those in Checkpoint.</p>' : '') });
+      interviews.forEach(function (x) {
+        sections.push({ heading: x.who + ' \u2014 ' + x.start + ', ' + fmtDateY(x.date), pageBreak: false, html:
+          '<table class="rpt-table"><thead><tr><th>Item</th><th>Questions</th></tr></thead><tbody>' +
+          x.lines.map(function (l) { return '<tr><td class="rpt-idc"><b>' + esc(l.id) + '</b><br>' + esc(l.title || '') + '</td><td><ul class="rpt-plain">' + l.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ul></td></tr>'; }).join('') +
+          '</tbody></table>' });
+      });
+      return { title: 'Internal audit plan and interview schedule \u2014 ' + a.id, frameworkAgnostic: true, sections: sections,
+        dashboard: { intro: plan.people + ' interview' + (plan.people === 1 ? '' : 's') + ' covering ' + plan.lines + ' item' + (plan.lines === 1 ? '' : 's') + ', over ' + plan.days.length + ' day' + (plan.days.length === 1 ? '' : 's') + '.', charts: [] } };
+    },
+
+    /* The closing meeting: conclusion, every finding with its owner and
+       due date, what was shown to work, and what happens next. */
+    auditClosing: function () {
+      var a = (S.audits || []).find(function (x) { return x.id === window._workpackAudit; });
+      if (!a) { toast('Open an internal audit first.'); return null; }
+      var Lib = window.CheckpointLib, wp = auditWorkpackFor(a);
+      var c = Lib.auditClosingSummary(a, Lib.auditWorkpackLines(wp), S.actions || [], new Date().toISOString().slice(0, 10));
+      var label = { Major: 'Major nonconformity', Minor: 'Minor nonconformity', OFI: 'Opportunity for improvement' };
+      var sections = [];
+      sections.push({ heading: 'Conclusion', pageBreak: false, html:
+        '<p class="rpt-intro"><b>' + esc(c.conclusion) + '</b></p><p class="rpt-intro">' + esc(c.text) + '</p>' +
+        '<p class="rpt-intro">Audit ' + esc(a.id) + ': ' + esc(a.scope) + '. Auditor: ' + esc(a.auditor || 'Unassigned') + '.' + (a.completed ? ' Completed ' + esc(fmtDateY(a.completed)) + '.' : '') + '</p>' });
+      sections.push({ heading: 'Findings (' + c.findings.length + ')', pageBreak: false, html: c.findings.length
+        ? '<table class="rpt-table"><thead><tr><th>Item</th><th>Grade</th><th>Finding</th><th>Action</th><th>Owner</th><th>Due</th></tr></thead><tbody>' +
+          c.findings.map(function (f) { return '<tr><td class="rpt-idc"><b>' + esc(f.id) + '</b><br>' + esc(f.title || '') + '</td><td>' + esc(label[f.result] || f.result) + '</td><td>' + esc(f.note) + '</td><td>' + esc(f.ref || '\u2014') + '</td><td>' + esc(f.owner || '\u2014') + '</td><td>' + (f.due ? esc(fmtDateY(f.due)) : '\u2014') + '</td></tr>'; }).join('') + '</tbody></table>'
+        : '<p class="rpt-intro">No nonconformities or opportunities for improvement were raised.</p>' });
+      sections.push({ heading: 'What was shown to work', pageBreak: false, html:
+        '<p class="rpt-intro">' + c.counts.C + ' item' + (c.counts.C === 1 ? '' : 's') + ' conform' + (c.counts.C === 1 ? 's' : '') + '.' +
+        (c.tested.length ? ' ' + c.tested.length + ' confirmed from Checkpoint\u2019s tests of the records (' + esc(c.tested.slice(0, 12).join(', ')) + (c.tested.length > 12 ? ' and ' + (c.tested.length - 12) + ' more' : '') + ').' : '') +
+        (c.carried.length ? ' ' + c.carried.length + ' unchanged since the previous audit and re-confirmed.' : '') + '</p>' });
+      sections.push({ heading: 'Next steps', pageBreak: false, html: '<ol class="rpt-plain">' + c.next.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ol>' });
+      sections.push({ heading: 'Agreed at the closing meeting', pageBreak: false, html:
+        '<table class="rpt-table"><tbody><tr><td style="width:40%">Auditor</td><td>' + esc(a.auditor || '') + '</td></tr><tr><td>For the organisation</td><td></td></tr><tr><td>Date</td><td></td></tr></tbody></table>' });
+      return { title: 'Internal audit closing meeting \u2014 ' + a.id, frameworkAgnostic: true, sections: sections,
+        dashboard: { intro: c.conclusion, charts: [{ figure: 1, title: 'Results', caption: 'As recorded in the audit.', svg: RC.kpiStrip([
+          { value: String(c.counts.Major), label: 'Major' }, { value: String(c.counts.Minor), label: 'Minor' }, { value: String(c.counts.OFI), label: 'Improve' }, { value: String(c.counts.C), label: 'Conform' }]) }] } };
     },
 
     ready: function (activeFw, fwLabel) {
@@ -12660,6 +12722,75 @@ function showModal(opts) {
       (!READONLY && done && t.state === 'fixed' && window.CheckpointLib.capaStatus(a).isNc && !String(a.effectivenessReview || '').trim()
         ? '<button class="btn sm" style="margin-top:8px" data-action="App.useRetestAsEffectiveness" data-id="' + esc(a.id) + '">Record as the effectiveness review</button>' : '') +
       '</div></div>';
+  }
+  /* The whole picture for one audit, in one place: workpack, lines,
+     Checkpoint's tests, what carries forward, and the interview plan. */
+  function auditBundle(a) {
+    var Lib = window.CheckpointLib;
+    var wp = auditWorkpackFor(a), lines = Lib.auditWorkpackLines(wp);
+    var auto = a.status === 'Completed' ? { lines: {}, counts: {}, tested: 0, total: 0 } : auditAutoTestFor(a, wp);
+    var carry = a.status === 'Completed' ? {} : Lib.auditCarryForward(a, lines, auto, S.audits || []);
+    var plan = Lib.auditInterviewPlan(a, wp, auto, carry, { guidance: window.GUIDANCE || {}, actions: S.actions || [] });
+    return { wp: wp, lines: lines, auto: auto, carry: carry, plan: plan };
+  }
+  function auditInvitesMap() {
+    try { var o = JSON.parse((S.settings && S.settings.auditInvites) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+  }
+  /* The one thing to do next on this audit, so nobody has to know the
+     process: evidence, invites, the lines, the closing meeting, done. */
+  function auditNextStep(a, n, unasked, sum, plan) {
+    var id = esc(a.id);
+    if (a.status === 'Completed') return { text: 'Audit complete. The report and closing pack are filed as Clause 9.2 evidence; Checkpoint re-tests each finding as its action closes.', btn: '' };
+    if (unasked.length) return { text: 'Ask owners for the evidence the audit needs before the day: ' + unasked.length + ' item' + (unasked.length === 1 ? '' : 's') + ' are missing or out of date.', btn: '<button class="btn sm" data-action="App.requestAuditEvidence" data-id="' + id + '">Request evidence</button>' };
+    if (plan.people && !auditInvitesMap()[a.id]) return { text: 'Send the interview invitations: ' + plan.people + ' interview' + (plan.people === 1 ? '' : 's') + ' on ' + fmtDate(plan.days[0]) + ', each with its questions.', btn: '<button class="btn sm" data-action="App.sendAuditInvites" data-id="' + id + '">Send invites</button>' };
+    if (n.conforms) return { text: 'Confirm the ' + n.conforms + ' line' + (n.conforms === 1 ? '' : 's') + ' Checkpoint expects to conform, so you only spend time on the rest.', btn: '<button class="btn sm" data-action="App.acceptAuditConforms" data-id="' + id + '">Confirm ' + n.conforms + '</button>' };
+    if (n.attention) return { text: 'Work through the ' + n.attention + ' line' + (n.attention === 1 ? '' : 's') + ' that need you. Accept Checkpoint\u2019s suggestion where you agree.', btn: '' };
+    return { text: 'Every line is recorded. Hold the closing meeting with the pack, then complete the audit: Checkpoint files the report as evidence.', btn: '<button class="btn sm" data-action="App.auditClosingPack" data-id="' + id + '">Closing meeting pack</button><button class="btn ghost sm" data-action="App.completeAudit" data-id="' + id + '">Complete the audit</button>' };
+  }
+  /* After an audit is completed: file the report and the closing pack
+     as Clause 9.2 evidence, and offer to send the closing summary to
+     the people interviewed and top management. */
+  async function afterAuditCompleted(a) {
+    var clause = findClauseByCode(a.fw === 'iso42001' ? 'iso42001' : 'iso27001', '9.2');
+    if (Store.kind !== 'demo' && clause) {
+      var filed = 0;
+      try { if (await fileReportAsEvidence('workpack', clause, { _workpackAudit: a.id })) filed++; } catch (e) { warn(e); }
+      try { if (await fileReportAsEvidence('auditClosing', clause, { _workpackAudit: a.id })) filed++; } catch (e) { warn(e); }
+      if (filed) { toast('Audit report and closing pack filed as Clause 9.2 evidence.'); renderClauses(); }
+    }
+    if (READONLY) return;
+    var Lib = window.CheckpointLib;
+    var c = Lib.auditClosingSummary(a, Lib.auditWorkpackLines(auditWorkpackFor(a)), S.actions || [], new Date().toISOString().slice(0, 10));
+    var names = {};
+    (S.clauses || []).forEach(function (x) { if ((x.fw || 'iso27001') === (a.fw || 'iso27001') && /^5(\.|$)/.test(x.id) && x.own) names[x.own] = 1; });
+    c.findings.forEach(function (f) { if (f.owner) names[f.owner] = 1; });
+    var to = '';
+    if (Store.kind !== 'demo') {
+      try {
+        var users = await Graph.listTenantUsers();
+        to = Object.keys(names).map(function (nm) { var u = Lib.matchOwnerToUser(nm, users); return u ? (u.mail || u.upn) : ''; }).filter(Boolean).join(', ');
+      } catch (e) { warn(e); }
+    }
+    var v = await showModal({
+      title: 'Send the closing summary',
+      message: c.conclusion + '\n\n' + c.findings.length + ' finding' + (c.findings.length === 1 ? '' : 's') + ', each with an owner and due date in Actions. The summary goes to top management and the finding owners.',
+      fields: [{ id: 'to', label: 'Send to (comma-separated)', value: to, placeholder: 'name@company.com' }],
+      confirmText: 'Send summary', cancelText: 'Not now'
+    });
+    if (!v || !String(v.to || '').trim()) return;
+    if (Store.kind === 'demo') { toast('Sending email needs a real tenant.'); return; }
+    var label = { Major: 'Major nonconformity', Minor: 'Minor nonconformity', OFI: 'Opportunity for improvement' };
+    var html = '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px"><h2 style="margin-bottom:4px">Internal audit ' + esc(a.id) + ' \u2014 ' + esc(clientDisplayLabel()) + '</h2>' +
+      '<p style="font-size:13px"><b>' + esc(c.conclusion) + '</b></p><p style="font-size:13px">' + esc(c.text) + '</p>' +
+      (c.findings.length ? '<table style="border-collapse:collapse;font-size:12.5px;width:100%"><tr><th align="left">Item</th><th align="left">Grade</th><th align="left">Owner</th><th align="left">Due</th></tr>' +
+        c.findings.map(function (f) { return '<tr style="border-top:1px solid #eee"><td>' + esc(f.id + ' ' + (f.title || '')) + '</td><td>' + esc(label[f.result] || f.result) + '</td><td>' + esc(f.owner || '\u2014') + '</td><td>' + esc(f.due ? fmtDate(f.due) : '\u2014') + '</td></tr>'; }).join('') + '</table>' : '') +
+      '<p style="font-size:13px"><b>Next steps</b></p><ol style="font-size:13px">' + c.next.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' +
+      '<p style="color:#999;font-size:11px;margin-top:20px">Sent from Checkpoint by Compliance365. The full report is filed in Checkpoint as Clause 9.2 evidence.</p></div>';
+    try {
+      await Graph.sendMail(v.to, 'Internal audit ' + a.id + ' results \u2014 ' + clientDisplayLabel(), html);
+      audit('Audit closing summary sent', 'Audit', a.id, '', v.to);
+      toast('Closing summary sent.');
+    } catch (e) { warn(e); }
   }
   /* What this audit still needs from owners, and when by. */
   function auditEvidenceAsksFor(a, wp, auto, carry) {
@@ -24825,6 +24956,7 @@ function showModal(opts) {
       toast('<b>' + a.id + '</b> marked complete');
       audit('Internal audit completed', 'Audit', a.id, prevStatus, 'Completed: ' + a.summary);
       renderAudits(); renderNavCounts(); renderDash();
+      await afterAuditCompleted(a);
     },
 
     toggleAddObjective: function () {
@@ -25564,8 +25696,12 @@ function showModal(opts) {
         (!ro && a.status === 'Planned' && unasked.length ? '<button class="btn ghost sm" data-action="App.requestAuditEvidence" data-id="' + esc(a.id) + '">Request ' + unasked.length + ' missing evidence item' + (unasked.length === 1 ? '' : 's') + ' from owners</button>' : '') +
         (ro ? '' : '<button class="btn ' + (n.conforms ? 'ghost ' : '') + 'sm" data-action="App.completeAudit" data-id="' + esc(a.id) + '">Complete the audit</button>') +
         '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + esc(a.id) + '">' + (a.status === 'Completed' ? 'Audit report' : 'Workpack') + '</button>' +
+        (a.status !== 'Completed' ? '<button class="btn ghost sm" data-action="App.auditPlan" data-id="' + esc(a.id) + '">Interview plan</button>' +
+          (!ro ? '<button class="btn ghost sm" data-action="App.sendAuditInvites" data-id="' + esc(a.id) + '">Send interview invites</button>' : '') : '') +
+        (sum.assessed ? '<button class="btn ghost sm" data-action="App.auditClosingPack" data-id="' + esc(a.id) + '">Closing meeting pack</button>' : '') +
         (a.status === 'Completed' && !READONLY ? '<button class="btn ghost sm" data-action="App.fileAuditReport" data-id="' + esc(a.id) + '">Save report as Clause 9.2 evidence</button>' : '') + '</div>' +
         (auto.tested ? '<p class="aw-note-9-2">Results marked with ? are Checkpoint’s suggestions. Nothing is recorded until you accept or choose a result: Clause 9.2 needs the auditor’s judgement. A nonconformity or improvement raises its finding in Actions.</p>' : '') +
+        (function () { var ns = ro && a.status !== 'Completed' ? null : auditNextStep(a, n, unasked, sum, window.CheckpointLib.auditInterviewPlan(a, wp, auto, carry, { guidance: window.GUIDANCE || {}, actions: S.actions || [] })); return ns ? '<div class="aw-next"><span class="aw-next-tag">Next</span><span class="aw-next-text">' + esc(ns.text) + '</span>' + (READONLY ? '' : ns.btn) + '</div>' : ''; })() +
         '<div class="aw-tabs" role="tablist" aria-label="Filter lines">' + tab('attention', 'Needs you') + tab('conforms', 'Suggested conforms') + tab('done', 'Recorded') + tab('all', 'All') + '</div>' +
         '</div>' +
         '<div class="aw-lines">' + (rows || '<p class="src" style="padding:16px 0">Nothing here.</p>') + '</div>' +
@@ -25625,6 +25761,56 @@ function showModal(opts) {
       audit('Audit evidence requested', 'Audit', a.id, '', sent + ' owner(s) emailed' + (held ? ', ' + held + ' via weekly digest' : '') + '; due ' + asks.due);
       toast('Evidence requested from ' + sent + ' owner' + (sent === 1 ? '' : 's') + (held ? '; ' + held + ' more will see it in their weekly digest' : '') + '. Due ' + fmtDate(asks.due) + '.');
       App.conductAudit(a.id);
+    },
+    auditPlan: function (id) { window._workpackAudit = id; App.report('auditPlan'); },
+    auditClosingPack: function (id) { window._workpackAudit = id; App.report('auditClosing'); },
+    /* Each person gets their own interview, plus the opening and
+       closing meetings, as a calendar invite with the questions in it. */
+    sendAuditInvites: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var Lib = window.CheckpointLib, plan = auditBundle(a).plan;
+      var interviews = plan.slots.filter(function (x) { return x.kind === 'interview'; });
+      if (!interviews.length) { toast('Nothing needs an interview: every line is recorded, unchanged or expected to conform.'); return; }
+      var meta = { id: a.id, scope: a.scope, stamp: new Date().toISOString().slice(0, 10) };
+      if (Store.kind === 'demo') {
+        downloadBlob(a.id + '-interviews.ics', new Blob([Lib.auditInterviewIcs(plan, meta)], { type: 'text/calendar' }));
+        toast('Sending email needs a real tenant. The full schedule was downloaded as a calendar file: ' + interviews.length + ' interview(s).');
+        return;
+      }
+      var users = [];
+      try { users = await Graph.listTenantUsers(); } catch (e) { warn(e); return; }
+      var send = interviews.map(function (x) { var u = Lib.matchOwnerToUser(x.who, users); return { slot: x, to: u ? (u.mail || u.upn) : '' }; });
+      var ok = await showModal({
+        title: 'Send interview invitations for ' + a.id,
+        message: send.map(function (x) { return '\u2022 ' + x.slot.who + (x.to ? ' (' + x.to + ')' : ' (not found in the directory, not sent)') + ': ' + fmtDate(x.slot.date) + ' ' + x.slot.start + ', ' + x.slot.lines.length + ' item(s)'; }).join('\n') +
+          '\n\nEach person gets their interview, the opening and closing meetings, and the questions, as a calendar invite. The full schedule also downloads for you.',
+        confirmText: 'Send invitations'
+      });
+      if (!ok) return;
+      downloadBlob(a.id + '-interviews.ics', new Blob([Lib.auditInterviewIcs(plan, meta)], { type: 'text/calendar' }));
+      var sent = 0, label = clientDisplayLabel();
+      for (var i = 0; i < send.length; i++) {
+        if (!send[i].to) continue;
+        var x = send[i].slot, ics = Lib.auditInterviewIcs(plan, meta, x.who);
+        var html = '<div style="font-family:Arial,sans-serif;color:#222;max-width:640px"><h2 style="margin-bottom:4px">Internal audit interview \u2014 ' + esc(label) + '</h2>' +
+          '<p style="font-size:13px">Hi ' + esc(x.who) + ', the internal audit (' + esc(a.scope) + ') includes a ' + x.minutes + '-minute interview with you on <b>' + esc(fmtDate(x.date)) + ' at ' + esc(x.start) + '</b>. The calendar invite is attached. Please have the records to hand for:</p>' +
+          x.lines.map(function (l) { return '<div style="border-top:1px solid #eee;padding:8px 0;font-size:13px"><b>' + esc(l.id) + ' ' + esc(l.title || '') + '</b><ul style="margin:4px 0 0 18px;padding:0">' + l.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ul></div>'; }).join('') +
+          '<p style="color:#999;font-size:11px;margin-top:20px">Sent from Checkpoint by Compliance365.</p></div>';
+        try {
+          await Graph.sendMail(send[i].to, 'Internal audit interview, ' + fmtDate(x.date) + ' ' + x.start + ' \u2014 ' + label, html,
+            [{ '@odata.type': '#microsoft.graph.fileAttachment', name: a.id + '-interview.ics', contentType: 'text/calendar', contentBytes: btoa(unescape(encodeURIComponent(ics))) }]);
+          sent++;
+        } catch (e) { warn(e); }
+      }
+      audit('Audit interviews scheduled', 'Audit', a.id, '', sent + ' invitation(s) sent for ' + plan.days.join(', '));
+      if (sent) {
+        var inv = auditInvitesMap(); inv[a.id] = new Date().toISOString().slice(0, 10);
+        S.settings.auditInvites = JSON.stringify(inv);
+        Store.setSetting('auditInvites', S.settings.auditInvites).catch(warn);
+      }
+      App.conductAudit(a.id);
+      toast(sent + ' interview invitation' + (sent === 1 ? '' : 's') + ' sent.');
     },
     toggleAuditLine: function (ref) {
       var parts = String(ref).split('#'), key = parts.slice(1).join('#');

@@ -2388,3 +2388,7 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .audit-start-steps b{color:var(--paper)}
 .audit-start-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
 @media (max-width:700px){.audit-start{flex-direction:column;padding:18px}.audit-start-steps{grid-template-columns:1fr}}
+.aw-next{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border:1px solid rgba(240,169,127,.45);border-radius:8px;background:rgba(240,169,127,.08)}
+.aw-next-tag{flex:none;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--gold-light)}
+.aw-next-text{flex:1;min-width:200px;font-size:12.5px;color:var(--paper);line-height:1.5}
+.aw-next .btn{flex:none}

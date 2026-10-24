@@ -13874,6 +13874,135 @@
     }
     return { items: out, due: due };
   }
+  /* ============================================================
+     Interview plan
+     ------------------------------------------------------------
+     Who the auditor needs to see, when, and what to ask, from the
+     workpack. Only lines that still need a person are scheduled: not
+     ones already recorded, carried forward unchanged, or that
+     Checkpoint expects to conform. Top management (Clause 5 owners)
+     goes first, then owners with the most to cover. Each interview is
+     10 minutes plus 5 per line, in 15-minute steps, at most 90. The
+     day opens with a 30-minute opening meeting, breaks for lunch at
+     12:30, gives the auditor 45 minutes to confirm findings, and ends
+     with the closing meeting; a long plan runs into
+     the next working day. Questions come from what failed, the clause
+     prompt, what evidence the control needs and the sample drawn.
+     opts: { guidance, actions, today, start ('09:00') } */
+  var IV = { open: 30, close: 30, prep: 45, lunchAt: 12 * 60 + 30, lunch: 45, dayEnd: 17 * 60, max: 90 };
+  function ivMin(hhmm) { var m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : 9 * 60; }
+  function ivTime(min) { return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); }
+  function nextWorkday(iso) {
+    var d = new Date(iso + 'T00:00:00Z');
+    do { d.setUTCDate(d.getUTCDate() + 1); } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+    return d.toISOString().slice(0, 10);
+  }
+  function auditInterviewPlan(audit, wp, auto, carry, opts) {
+    var a = audit || {}, w = wp || {}, o = opts || {}, results = a.results || {};
+    var today = o.today || new Date().toISOString().slice(0, 10);
+    var day = a.planned && a.planned >= today ? a.planned : nextWorkday(today);
+    var acts = {};
+    (o.actions || []).forEach(function (x) { if (x && x.id) acts[x.id] = x; });
+    var people = {}, order = [];
+    var add = function (owner, line) {
+      var who = String(owner || '').trim() || 'ISMS manager (no owner recorded)';
+      var k = who.toLowerCase();
+      if (!people[k]) { people[k] = { who: who, lines: [], top: false }; order.push(k); }
+      people[k].lines.push(line);
+      if (line.kind === 'clause' && /^5(\.|$)/.test(line.id)) people[k].top = true;
+    };
+    var questions = function (kind, id, title) {
+      var t = ((auto || {}).lines || {})[kind + '|' + id];
+      var q = [];
+      (t ? t.tests : []).filter(function (x) { return x.sev !== 'pass' && x.sev !== 'info'; }).slice(0, 2).forEach(function (x) {
+        q.push('Checkpoint found: ' + x.text + ' What is the position now, and what is the record?');
+      });
+      if (kind === 'clause') { var p = CLAUSE_AUDIT_PROMPTS[String(id).split('.')[0]]; if (p && q.length < 3) q.push(p); }
+      var g = (o.guidance || {})[id];
+      if (kind === 'control' && g && g.evidence && q.length < 3) q.push('Show me: ' + String(g.evidence).replace(/\.$/, '') + '.');
+      if (t && t.sample && t.sample.ids.length && q.length < 3) q.push('Show the records for the sample: ' + t.sample.ids.join(', ') + '.');
+      if (kind === 'follow') q.push('What was done about ' + id + ', and how do you know it worked?');
+      if (!q.length) q.push('Show me how ' + (title || id) + ' works in practice, and the record that proves it.');
+      return q.slice(0, 3);
+    };
+    var needs = function (key) {
+      if ((results[key] || {}).r || (carry || {})[key]) return false;
+      var t = ((auto || {}).lines || {})[key];
+      return !(t && t.suggest === 'C');
+    };
+    (w.followUps || []).forEach(function (f) { if (needs('follow|' + f.id)) add((acts[f.id] || {}).owner, { kind: 'follow', id: f.id, title: f.title, questions: questions('follow', f.id, f.title) }); });
+    (w.clauses || []).forEach(function (c) { if (needs('clause|' + c.id)) add(c.owner, { kind: 'clause', id: c.id, title: c.title, questions: questions('clause', c.id, c.title) }); });
+    (w.controls || []).forEach(function (c) { if (needs('control|' + c.id)) add(c.owner, { kind: 'control', id: c.id, title: c.title, questions: questions('control', c.id, c.title) }); });
+    var list = order.map(function (k) { return people[k]; }).sort(function (x, y) { return (y.top ? 1 : 0) - (x.top ? 1 : 0) || y.lines.length - x.lines.length; });
+    var slots = [], days = [day], t = ivMin(o.start || '09:00'), lunched = false;
+    var push = function (kind, dur, extra) {
+      /* Lunch goes in before anything that would run past 12:30. */
+      if (kind !== 'opening' && !lunched && t + dur > IV.lunchAt) { slots.push({ date: day, start: ivTime(t), end: ivTime(t + IV.lunch), kind: 'break', minutes: IV.lunch, title: 'Lunch' }); t += IV.lunch; lunched = true; }
+      slots.push(Object.assign({ date: day, start: ivTime(t), end: ivTime(t + dur), kind: kind, minutes: dur }, extra || {})); t += dur;
+    };
+    push('opening', IV.open, { who: 'Top management and everyone interviewed', title: 'Opening meeting' });
+    list.forEach(function (p) {
+      var dur = Math.min(IV.max, Math.max(15, Math.ceil((10 + 5 * p.lines.length) / 15) * 15));
+      if (t + dur + (lunched || t + dur <= IV.lunchAt ? 0 : IV.lunch) > IV.dayEnd - IV.prep - IV.close) { day = nextWorkday(day); days.push(day); t = ivMin(o.start || '09:00'); lunched = false; }
+      push('interview', dur, { who: p.who, title: 'Interview: ' + p.who, lines: p.lines });
+    });
+    /* The auditor needs time to grade findings before presenting them. */
+    if (t + IV.prep + IV.close + (lunched || t + IV.prep <= IV.lunchAt ? 0 : IV.lunch) > IV.dayEnd) { day = nextWorkday(day); days.push(day); t = ivMin(o.start || '09:00'); lunched = false; }
+    push('prep', IV.prep, { who: 'Auditor', title: 'Auditor: confirm findings and prepare the closing meeting' });
+    push('closing', IV.close, { who: 'Top management and the people interviewed', title: 'Closing meeting' });
+    return { days: days, slots: slots, people: list.length, lines: list.reduce(function (n, p) { return n + p.lines.length; }, 0) };
+  }
+  /* The plan as calendar invites: one event per slot, in local time
+     (floating), so each person's calendar shows it at their clock. who
+     limits it to one person's interview plus the opening and closing. */
+  function auditInterviewIcs(plan, meta, who) {
+    var m = meta || {};
+    var esc = function (s) { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); };
+    var dt = function (d, hm) { return d.replace(/-/g, '') + 'T' + hm.replace(':', '') + '00'; };
+    var fold = function (line) { var out = []; while (line.length > 74) { out.push(line.slice(0, 74)); line = ' ' + line.slice(74); } out.push(line); return out.join('\r\n'); };
+    var slots = (plan.slots || []).filter(function (s) { return s.kind !== 'break' && s.kind !== 'prep' && (!who || s.kind !== 'interview' || s.who === who); });
+    var ev = [];
+    slots.forEach(function (s, i) {
+      var desc = (m.scope ? 'Internal audit ' + (m.id || '') + ': ' + m.scope + '\n\n' : '') +
+        (s.lines ? 'What we will cover:\n' + s.lines.map(function (l) { return '- ' + l.id + ' ' + l.title + '\n' + l.questions.map(function (q) { return '    ' + q; }).join('\n'); }).join('\n') :
+          s.kind === 'opening' ? 'Scope, method and timetable for the audit.' : 'Findings, conclusion and next steps.');
+      ev.push('BEGIN:VEVENT', 'UID:' + esc((m.id || 'audit') + '-' + s.date + '-' + s.start + '-' + i + '@checkpoint'), 'DTSTAMP:' + dt(m.stamp || s.date, '00:00') + 'Z',
+        'DTSTART:' + dt(s.date, s.start), 'DTEND:' + dt(s.date, s.end), 'SUMMARY:' + esc((m.id ? m.id + ' ' : '') + s.title), 'DESCRIPTION:' + esc(desc),
+        m.location ? 'LOCATION:' + esc(m.location) : '', 'END:VEVENT');
+    });
+    return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Compliance365//Checkpoint//EN', 'METHOD:PUBLISH'].concat(ev, ['END:VCALENDAR']).filter(Boolean).map(fold).join('\r\n');
+  }
+
+  /* ============================================================
+     Closing meeting
+     ------------------------------------------------------------
+     Everything the closing meeting walks through, from the results:
+     the conclusion, each finding with its owner and due date, what
+     was shown to work, and what happens next. */
+  function auditClosingSummary(audit, lines, actions, today) {
+    var a = audit || {}, results = a.results || {};
+    var sum = auditResultsSummary(lines, results);
+    var acts = {};
+    (actions || []).forEach(function (x) { if (x && x.id) acts[x.id] = x; });
+    var rank = { Major: 0, Minor: 1, OFI: 2 };
+    var findings = (lines || []).map(function (l) { var r = results[l.key]; return r && r.r && r.r !== 'C' ? { line: l, r: r, act: acts[r.ref] || null } : null; })
+      .filter(Boolean).sort(function (x, y) { return rank[x.r.r] - rank[y.r.r]; })
+      .map(function (f) { return { id: f.line.id, title: f.line.title, result: f.r.r, ref: f.r.ref || '', note: f.r.note || (f.act ? String(f.act.title || '').replace(/^(Clause |Follow-up of )?[^:]*: /, '') : ''), owner: f.act ? f.act.owner : '', due: f.act ? f.act.due : '' }; });
+    var tested = (lines || []).filter(function (l) { var r = results[l.key]; return r && r.r === 'C' && r.auto && !r.auto.carried; }).map(function (l) { return l.id; });
+    var carried = (lines || []).filter(function (l) { var r = results[l.key]; return r && r.r === 'C' && r.auto && r.auto.carried; }).map(function (l) { return l.id; });
+    var next = [];
+    var majors = findings.filter(function (f) { return f.result === 'Major'; }), minors = findings.filter(function (f) { return f.result === 'Minor'; });
+    if (majors.length) next.push('Correct the ' + majors.length + ' major nonconformit' + (majors.length === 1 ? 'y' : 'ies') + ' before the certification body\u2019s visit: containment now, root cause and corrective action by the due date.');
+    if (minors.length) next.push('Plan corrective action for the ' + minors.length + ' minor nonconformit' + (minors.length === 1 ? 'y' : 'ies') + ', each with a root cause, by its due date.');
+    if (findings.length) next.push('Checkpoint re-tests each finding\u2019s control when its action is completed, and records whether the correction worked.');
+    next.push('Present these results at the next management review (Clause 9.3.2 c).');
+    if (sum.unassessed.length) next.push(sum.unassessed.length + ' line' + (sum.unassessed.length === 1 ? ' was' : 's were') + ' not audited: plan them into the next audit so the programme still covers everything.');
+    /* A conclusion only speaks for what was audited. */
+    var conclusion = sum.unassessed.length ? sum.conclusion.replace(/\.$/, '') + ', for the ' + sum.assessed + ' of ' + sum.total + ' items audited.' : sum.conclusion;
+    return { conclusion: conclusion, text: sum.text, counts: { C: sum.C, OFI: sum.OFI, Minor: sum.Minor, Major: sum.Major, total: sum.total, assessed: sum.assessed },
+      findings: findings, tested: tested, carried: carried, next: next };
+  }
+
   /* First-seen dates for radar items, carried between visits, so the
      radar can say what is new. Items no longer found drop out and are
      counted as resolved. */
@@ -14070,7 +14199,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditInterviewIcs: auditInterviewIcs, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
