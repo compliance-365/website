@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.172.0',
+    date: '2026-10-24',
+    entries: [
+      'Internal audits now arrive pre-tested. Before you open a workpack line, Checkpoint tests it against what it already holds: posture scan and collector results, evidence freshness, recurring activities and their records, the clause requirement checklists, policy vs practice, training and supplier reviews. Each line shows what passed and what failed, and a suggested result: conforms, opportunity for improvement, or minor or major nonconformity.',
+      'Suggestions only: the auditor accepts, changes or ignores each one, as Clause 9.2 requires. Conforms is only suggested when an independent test passed, never because a control is marked Implemented. Accepting a nonconformity drafts the finding from the failed tests, with a short title and the full text kept in the action.',
+      'Samples are drawn for you. Where a control is tested by sampling (leavers, new starters, incidents, documents, treated risks, corrective actions), Checkpoint picks the records at random from the last 12 months, seeded by the audit, so the same sample is drawn again on re-test, and the report says how it was chosen.',
+      'The audit report records which results came from Checkpoint\'s tests, the sample used and who confirmed them. "Accept the suggested Conforms" records every passing line in one step.'
+    ]
+  },
+  {
     version: '1.171.2',
     date: '2026-10-22',
     entries: [

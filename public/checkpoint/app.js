@@ -4026,7 +4026,8 @@ function showModal(opts) {
       var resultCells = function (key) {
         var r = results[key];
         if (!r || !r.r) return '<td style="min-width:70px"></td><td style="min-width:120px"></td>';
-        return '<td>' + esc(resultLabel[r.r] || r.r) + (r.ref ? ' (' + esc(r.ref) + ')' : '') + '</td><td>' + esc(r.note || '') + '</td>';
+        return '<td>' + esc(resultLabel[r.r] || r.r) + (r.ref ? ' (' + esc(r.ref) + ')' : '') + '</td><td>' + esc(r.note || '') +
+          (r.auto ? '<br><span style="color:#666">Tested by Checkpoint on ' + esc(fmtDateY(r.auto.at)) + (r.auto.sample && r.auto.sample.length ? '; sample ' + esc(r.auto.sample.join(', ')) : '') + '; result confirmed by ' + esc(r.by || 'the auditor') + '.</span>' : '') + '</td>';
       };
       var resultSum = window.CheckpointLib.auditResultsSummary(window.CheckpointLib.auditWorkpackLines(wp), results);
       var isReport = a.status === 'Completed' || resultSum.assessed > 0;
@@ -11429,7 +11430,7 @@ function showModal(opts) {
       validate: function (v) { return v.title ? null : 'Describe the finding.'; }
     });
     if (!v) return null;
-    var act = { id: nextRegId(S.actions, 'ACT-'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(auditFindingDays()), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+    var act = { id: nextRegId(S.actions, 'ACT-'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(auditFindingDays()), status: 'Open', evidenceUrl: '', src: 'Internal audit', evidence: preset.detail || '' };
     busy(true);
     try {
       await Store.addAction(act);
@@ -12605,6 +12606,49 @@ function showModal(opts) {
       rows + (READONLY ? '' : '<button class="btn sm" style="margin-top:10px" data-action="App.addAuditRequest">+ Log a request</button>') + '</div>';
   }
 
+  /* Everything Checkpoint holds that can test a workpack line: the
+     latest scan and collector results, evidence freshness, the clause
+     checklists, policy vs practice, and the operating records. */
+  function auditAutoTestFor(a, wp) {
+    var lastScan = (S.scans || [])[(S.scans || []).length - 1];
+    var labels = {};
+    (window.CHECK_DEFS || []).forEach(function (d) { labels[d.id] = d.label; });
+    var ctx = clauseContext();
+    var checklists = {};
+    (wp.clauses || []).forEach(function (c) {
+      var row = (S.clauses || []).find(function (x) { return x.id === c.id && x.fw === (a.fw || 'iso27001'); });
+      if (row) { try { checklists[c.id] = clauseChecklistFor(row, ctx); } catch (e) { /* no checklist for this clause */ } }
+    });
+    var stale = {};
+    ((evidenceCheckState() || {}).issues || []).forEach(function (x) { if (x.kind === 'control' && x.issue === 'stale') stale[x.key] = x; });
+    return window.CheckpointLib.auditAutoTest(a, wp, {
+      lastResults: S.lastResults || {}, lastNotes: S.lastNotes || {}, checkControls: window.CHECK_CONTROLS || {}, checkLabels: labels,
+      scanDate: lastScan ? lastScan.date : '', expiredEvidence: stale, clauseChecklists: checklists,
+      policyGaps: policyPracticeGapList().map(function (g) { return { name: g.doc.name, kind: g.kind, key: g.key }; }),
+      calendar: S.calendar || [], training: S.training || [], attestations: S.attestations || [], vendors: S.vendors || [], incidents: S.incidents || [],
+      auditLog: S.auditLog || [], risks: S.risks || [], actions: S.actions || [],
+      docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, status: docStatusOf(d), approvedBy: d.approvedBy || '', nextReview: d.nextReview || '' }; })
+    }, new Date().toISOString().slice(0, 10));
+  }
+  var AUTO_CHIP = { C: 'st-Implemented', OFI: 'sev-Medium', Minor: 'sev-High', Major: 'sev-Critical' };
+  function auditAutoRecord(t) {
+    return { suggest: t.suggest, at: new Date().toISOString().slice(0, 10), tests: t.tests.length, sample: t.sample ? t.sample.ids : [] };
+  }
+  /* One workpack line's automated tests: what passed and failed, the
+     sample drawn, and the suggested result with an Accept button. */
+  function auditAutoLineHtml(a, l, t, r, ro, resultLabel) {
+    if (!t || !t.tests.length) return r.auto ? '<div class="src">Recorded from Checkpoint\u2019s tests on ' + esc(fmtDate(r.auto.at)) + (r.auto.sample && r.auto.sample.length ? '; sample ' + esc(r.auto.sample.join(', ')) : '') + '.</div>' : '';
+    var mark = { pass: '\u2713', info: '?', OFI: '\u2022', Minor: '\u2717', Major: '\u2717' };
+    return '<div class="audit-auto">' +
+      '<div class="audit-auto-head">' + (t.suggest ? 'Checkpoint suggests <span class="chip ' + AUTO_CHIP[t.suggest] + '">' + esc(resultLabel[t.suggest] || t.suggest) + '</span>' : 'Checkpoint\u2019s tests') +
+      (!ro && t.suggest && !r.r ? ' <button class="btn quiet sm" data-action="App.acceptAuditSuggestion" data-id="' + esc(a.id + '#' + l.key) + '">Accept</button>' : '') +
+      (r.auto ? ' <span class="src">Recorded from Checkpoint\u2019s tests on ' + esc(fmtDate(r.auto.at)) + '</span>' : '') + '</div>' +
+      '<ul>' + t.tests.map(function (x) {
+        return '<li class="auto-' + (x.sev === 'pass' ? 'pass' : x.sev === 'OFI' || x.sev === 'info' ? 'ofi' : 'fail') + '"><span aria-hidden="true">' + mark[x.sev] + '</span> ' + esc(x.text) + ' <span class="src">' + esc(x.source) + '</span></li>';
+      }).join('') + '</ul>' +
+      (t.sample ? '<div class="src">Sample: ' + esc(t.sample.ids.join(', ')) + '. ' + esc(t.sample.method) + '</div>' : '') +
+      '</div>';
+  }
   function auditWorkpackFor(a) {
     return window.CheckpointLib.auditWorkpack(a, {
       clauses: S.clauses || [], controls: S.controls || [], actions: S.actions || [], risks: S.risks || [], audits: S.audits || [],
@@ -25273,6 +25317,17 @@ function showModal(opts) {
       var sum = window.CheckpointLib.auditResultsSummary(lines, a.results);
       var ro = !!READONLY || a.status === 'Completed';
       var opts = [{ value: '', label: 'Not yet audited' }].concat(window.CheckpointLib.AUDIT_RESULTS);
+      /* A completed audit keeps the results it recorded; today's tests
+         would not be what the auditor saw then. */
+      var auto = a.status === 'Completed' ? { lines: {}, counts: {}, tested: 0, total: 0 } : auditAutoTestFor(a, wp);
+      var resultLabel = {};
+      window.CheckpointLib.AUDIT_RESULTS.forEach(function (o) { resultLabel[o.value] = o.label; });
+      var openC = lines.filter(function (l) { var t = auto.lines[l.key]; return t && t.suggest === 'C' && !(a.results[l.key] || {}).r; }).length;
+      var autoHead = auto.tested ? '<div class="audit-auto-sum"><b>Checkpoint tested ' + auto.tested + ' of ' + auto.total + ' lines</b> against your scan results, records and evidence. It suggests ' +
+        [['C', 'conform'], ['OFI', 'opportunit' + (auto.counts.OFI === 1 ? 'y' : 'ies') + ' for improvement'], ['Minor', 'minor nonconformit' + (auto.counts.Minor === 1 ? 'y' : 'ies')], ['Major', 'major nonconformit' + (auto.counts.Major === 1 ? 'y' : 'ies')]]
+          .filter(function (x) { return auto.counts[x[0]]; }).map(function (x) { return auto.counts[x[0]] + ' ' + x[1]; }).join(', ') +
+        '. Each is a suggestion: Clause 9.2 needs the auditor\u2019s judgement, so accept it, change it, or record your own result.' +
+        (!ro && openC ? ' <button class="btn ghost sm" data-action="App.acceptAuditConforms" data-id="' + esc(a.id) + '">Accept the ' + openC + ' suggested \u201cConforms\u201d</button>' : '') + '</div>' : '';
       var heads = { follow: 'Open findings to follow up', clause: 'Management-system clauses', control: 'Controls' };
       var lastKind = '';
       var rows = lines.map(function (l) {
@@ -25285,6 +25340,7 @@ function showModal(opts) {
           (l.evidenceUrl && isSafeUrl(l.evidenceUrl) ? ' <a class="src" href="' + esc(l.evidenceUrl) + '" target="_blank" rel="noopener">Evidence ' + icon('external') + '</a>' : ' <span class="src">No evidence linked</span>') + '</div>' +
           (l.flags && l.flags.length ? '<div class="src">Look at first: ' + esc(l.flags.join('; ')) + '</div>' : '') +
           (prompt && l.id.indexOf('.') === -1 ? '<div class="src">' + esc(prompt) + '</div>' : '') +
+          auditAutoLineHtml(a, l, auto.lines[l.key], r, ro, resultLabel) +
           '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">' +
           '<select class="mini" aria-label="Result for ' + esc(l.id) + '" data-change-action="App.setAuditResult" data-id="' + esc(a.id + '#' + l.key) + '"' + (ro ? ' disabled' : '') + '>' +
           opts.map(function (o) { return '<option value="' + o.value + '"' + (o.value === (r.r || '') ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
@@ -25301,8 +25357,44 @@ function showModal(opts) {
         (ro ? '' : '<button class="btn sm" data-action="App.completeAudit" data-id="' + esc(a.id) + '">Complete the audit</button>') +
         '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + esc(a.id) + '">' + (a.status === 'Completed' ? 'Audit report' : 'Workpack') + '</button>' +
         (a.status === 'Completed' && !READONLY ? '<button class="btn ghost sm" data-action="App.fileAuditReport" data-id="' + esc(a.id) + '">Save report as Clause 9.2 evidence</button>' : '') + '</div>' +
-        '</div>' + rows;
+        autoHead + '</div>' + rows;
       openDrawerUi('Audit ' + a.id);
+    },
+
+    /* Take Checkpoint's suggested result for a line: its drafted
+       finding becomes the note (unless the auditor already wrote one),
+       and the tests behind it are kept with the result. */
+    acceptAuditSuggestion: async function (ref) {
+      var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
+      if (!a) return;
+      var key = parts.slice(1).join('#');
+      var t = auditAutoTestFor(a, auditWorkpackFor(a)).lines[key];
+      if (!t || !t.suggest) return;
+      a.results = a.results || {};
+      var r = a.results[key] = Object.assign({}, a.results[key] || {});
+      if (!String(r.note || '').trim()) r.note = t.draft;
+      r.auto = auditAutoRecord(t);
+      await App.setAuditResult(ref, t.suggest);
+    },
+    acceptAuditConforms: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var auto = auditAutoTestFor(a, auditWorkpackFor(a));
+      var who = (Graph.getAccount() && Graph.getAccount().name) || a.auditor || '', today = new Date().toISOString().slice(0, 10);
+      a.results = a.results || {};
+      var n = 0;
+      Object.keys(auto.lines).forEach(function (key) {
+        var t = auto.lines[key];
+        if (t.suggest !== 'C' || (a.results[key] || {}).r) return;
+        var r = a.results[key] = Object.assign({}, a.results[key] || {});
+        if (!String(r.note || '').trim()) r.note = t.draft;
+        r.r = 'C'; r.by = who; r.date = today; r.auto = auditAutoRecord(t);
+        n++;
+      });
+      if (!n) return;
+      try { await Store.updateAudit(a); } catch (e) { warn(e); }
+      audit('Audit results accepted from automated tests', 'Audit', a.id, '', n + ' line(s) recorded as Conforms');
+      App.conductAudit(a.id);
     },
 
     setAuditResult: async function (ref, value) {
@@ -25311,16 +25403,19 @@ function showModal(opts) {
       var key = parts.slice(1).join('#');
       a.results = a.results || {};
       var r = a.results[key] = Object.assign({}, a.results[key] || {}, { r: value, by: (Graph.getAccount() && Graph.getAccount().name) || a.auditor || '', date: new Date().toISOString().slice(0, 10) });
+      /* A result the auditor changed is theirs, not Checkpoint's. */
+      if (r.auto && r.auto.suggest !== value) delete r.auto;
       if (!value) delete a.results[key];
       if (value && value !== 'C' && !r.ref) {
         var kind = key.split('|')[0], id = key.split('|').slice(1).join('|');
         var act = await createAuditFinding(a, {
           type: value === 'Major' ? 'Non-conformity (Major)' : value === 'Minor' ? 'Non-conformity (Minor)' : 'Observation',
-          title: (kind === 'clause' ? 'Clause ' : kind === 'control' ? '' : 'Follow-up of ') + id + ': ' + (r.note || ''),
+          title: (kind === 'clause' ? 'Clause ' : kind === 'control' ? '' : 'Follow-up of ') + id + ': ' + window.CheckpointLib.shortFinding(r.note || '', 200),
+          detail: String(r.note || '').length > 200 ? r.note : '',
           control: kind === 'control' ? id : ''
         });
         if (act) r.ref = act.id;
-        else { delete r.r; }
+        else { delete r.r; delete r.auto; }
       }
       try { await Store.updateAudit(a); } catch (e) { warn(e); }
       App.conductAudit(a.id);

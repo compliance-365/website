@@ -13426,6 +13426,191 @@
     };
   }
 
+  /* ============================================================
+     Workpack auto-tests
+     ------------------------------------------------------------
+     Before the auditor opens a line, test it against what Checkpoint
+     already holds: posture scan and collector results, evidence
+     freshness, the operating rhythm, the clause requirement checklists,
+     policy vs practice, training, suppliers and a reproducible sample
+     of the operating records (stage2DryRun, seeded by the audit id so
+     the same audit always draws the same sample).
+
+     Each test is { sev, text, source }, sev one of 'pass', 'info'
+     (a claim to check, not a test), 'OFI', 'Minor', 'Major'. The suggested result is the worst failing test.
+     'C' is suggested only when an independent test passed and none
+     failed: a control marked Implemented is a claim, not a test.
+     Majors follow ISO/IEC 17021-1's meaning: a requirement absent
+     altogether. Clause 9.2 needs the auditor to decide, so every
+     result here is a suggestion the auditor accepts, changes or
+     ignores. ev:
+       lastResults {checkId: 'pass'|'fail'|'review'|...}, lastNotes,
+       checkControls {checkId: [control ids]}, checkLabels, scanDate,
+       expiredEvidence {fw|id: {modified, validUntil, freq}},
+       clauseChecklists {clauseId: clauseChecklist()},
+       policyGaps [{name, kind, key}]  (policyPracticeGaps()),
+       calendar, training, attestations, vendors, incidents,
+       auditLog, docs, risks, actions  (stage2DryRun's inputs) */
+  var AUTO_RANK = { info: 0, pass: 0, C: 0, OFI: 1, Minor: 2, Major: 3 };
+  var STAGE2_SAMPLE_REFS = {
+    leavers: ['A.5.18', 'A.6.5'], starters: ['A.6.3', 'A.5.10'], incidents: ['A.5.24', 'A.5.26', 'A.5.27'],
+    documents: ['7.5.2', '7.5.3'], risks: ['8.3', '6.1.3'], corrective: ['10.2']
+  };
+  var STAGE2_SAMPLE_LABEL = {
+    leavers: 'leavers', starters: 'new starters', incidents: 'incidents', documents: 'approved documents',
+    activities: 'recurring activities', risks: 'treated risks', corrective: 'closed corrective actions'
+  };
+  function refMatches(ref, id) {
+    ref = String(ref || ''); id = String(id || '');
+    return !!ref && !!id && (ref === id || ref.indexOf(id + '.') === 0);
+  }
+  /* A finding title that fits a one-line field: whole sentences up to
+     max characters, else the first sentence cut at a word. The full
+     text goes in the finding's details. */
+  function shortFinding(text, max) {
+    text = String(text || '').trim();
+    if (text.length <= max) return text;
+    var sentences = text.match(/[^.!?]+[.!?]+(\s|$)/g) || [text], out = '';
+    for (var i = 0; i < sentences.length && (out + sentences[i]).length <= max; i++) out += sentences[i];
+    out = out.trim();
+    if (out) return out;
+    return text.slice(0, max - 1).replace(/\s+\S*$/, '') + '\u2026';
+  }
+  function auditAutoTest(audit, wp, ev, today) {
+    var a = audit || {}, w = wp || {}, e = ev || {};
+    var seed = 'audit:' + (a.id || '');
+    var results = e.lastResults || {}, notes = e.lastNotes || {}, labels = e.checkLabels || {};
+    var byControl = {};
+    Object.keys(e.checkControls || {}).forEach(function (chk) {
+      (e.checkControls[chk] || []).forEach(function (cid) { (byControl[cid] = byControl[cid] || []).push(chk); });
+    });
+    var onDate = e.scanDate ? ' on ' + srDate(e.scanDate) : '';
+    var yearAgo = addDaysIso(today, -365);
+    var s2 = stage2DryRun(e, today, seed);
+    var out = {};
+
+    function finish(line, tests, sample) {
+      var worst = tests.reduce(function (m, t) { return AUTO_RANK[t.sev] > AUTO_RANK[m] ? t.sev : m; }, 'pass');
+      var passed = tests.some(function (t) { return t.sev === 'pass'; });
+      var suggest = worst !== 'pass' ? worst : passed ? 'C' : '';
+      var failing = tests.filter(function (t) { return t.sev === worst && worst !== 'pass'; });
+      var draft = '';
+      if (suggest && suggest !== 'C') {
+        draft = failing.map(function (t) { return t.text; }).join(' ');
+        if (sample && sample.ids.length) draft += ' Sample: ' + sample.ids.join(', ') + '.';
+      } else if (suggest === 'C') {
+        draft = 'Conforms. ' + tests.filter(function (t) { return t.sev === 'pass'; }).map(function (t) { return t.text; }).join(' ');
+      }
+      out[line.key] = { suggest: suggest, tests: tests, draft: draft.trim(), sample: sample || null };
+    }
+
+    function stage2For(id) {
+      /* Recurring activities are tested in full above, not sampled. */
+      return (s2.findings || []).filter(function (f) { return f.area !== 'Operating rhythm' && refMatches(f.ref, id); }).map(function (f) {
+        return { sev: f.severity === 'Observation' ? 'OFI' : f.severity, text: f.text, source: 'Sampled records' };
+      });
+    }
+    function sampleFor(id) {
+      var ids = [], parts = [];
+      Object.keys(STAGE2_SAMPLE_REFS).forEach(function (k) {
+        if (!STAGE2_SAMPLE_REFS[k].some(function (r) { return refMatches(r, id); })) return;
+        var x = (s2.sample || {})[k] || [];
+        if (x.length) { ids = ids.concat(x); parts.push(x.length + ' ' + STAGE2_SAMPLE_LABEL[k]); }
+      });
+      var acts = (e.calendar || []).filter(function (c) { return ((s2.sample || {}).activities || []).indexOf(c.id) !== -1 && ((rhythmDefFor(c) || {}).controls || []).indexOf(id) !== -1; });
+      if (acts.length) { ids = ids.concat(acts.map(function (c) { return c.id; })); parts.push(acts.length + ' ' + STAGE2_SAMPLE_LABEL.activities); }
+      return ids.length ? { ids: ids, method: 'Selected at random by Checkpoint from the last 12 months’ records (' + parts.join(', ') + '), seeded by audit ' + (a.id || '') + ' so the same sample is drawn again on re-test.' } : null;
+    }
+
+    (w.controls || []).forEach(function (c) {
+      var line = { key: 'control|' + c.id }, tests = [];
+      (byControl[c.id] || []).forEach(function (chk) {
+        var r = results[chk], label = labels[chk] || chk, note = notes[chk] ? ' ' + String(notes[chk]).replace(/\s+$/, '') : '';
+        if (r === 'pass') tests.push({ sev: 'pass', text: 'Posture check “' + label + '” passed' + onDate + '.', source: 'Posture scan' });
+        else if (r === 'fail') tests.push({ sev: c.status === 'Implemented' ? 'Minor' : 'OFI', text: (c.status === 'Implemented' ? c.id + ' is marked Implemented, but the posture check “' : 'The posture check “') + label + '” failed' + onDate + '.' + note, source: 'Posture scan' });
+        else if (r === 'review') tests.push({ sev: 'OFI', text: 'Posture check “' + label + '” needs review' + onDate + '.' + note, source: 'Posture scan' });
+      });
+      if (c.status === 'Implemented' && !c.evidenceUrl) tests.push({ sev: 'Minor', text: c.id + ' is marked Implemented with no evidence linked.', source: 'Statement of Applicability' });
+      var ex = (e.expiredEvidence || {})[(a.fw || 'iso27001') + '|' + c.id];
+      if (c.evidenceUrl && ex) tests.push({ sev: 'Minor', text: c.id + ' evidence is out of date: last changed ' + srDate(ex.modified) + ', current only until ' + srDate(ex.validUntil) + '.', source: 'Evidence check' });
+      if (c.status !== 'Implemented') tests.push({ sev: 'OFI', text: c.id + ' is applicable but ' + String(c.status || 'Not started').toLowerCase() + '. Check the risk treatment plan gives an owner and a date.', source: 'Statement of Applicability' });
+      if (!String(c.owner || '').trim()) tests.push({ sev: 'OFI', text: c.id + ' has no owner.', source: 'Statement of Applicability' });
+      (e.calendar || []).forEach(function (cal) {
+        var def = rhythmDefFor(cal);
+        if (!calendarItemLive(cal) || !def || (def.controls || []).indexOf(c.id) === -1) return;
+        if (!cal.lastCompleted || cal.lastCompleted < yearAgo) tests.push({ sev: 'Minor', text: '“' + cal.title + '” (' + String(cal.freq || '').toLowerCase() + ') has no completed record in the last 12 months.', source: 'Operating rhythm' });
+        else if (!rhythmLastEvidence(cal.notes)) tests.push({ sev: 'OFI', text: '“' + cal.title + '” was done on ' + srDate(cal.lastCompleted) + ' with no evidence recorded.', source: 'Operating rhythm' });
+        else tests.push({ sev: 'pass', text: '“' + cal.title + '” done on ' + srDate(cal.lastCompleted) + ', with evidence.', source: 'Operating rhythm' });
+        if (cal.lastCompleted && cal.nextDue && cal.nextDue < today) tests.push({ sev: 'OFI', text: '“' + cal.title + '” was due on ' + srDate(cal.nextDue) + ' and is overdue.', source: 'Operating rhythm' });
+      });
+      (e.policyGaps || []).forEach(function (g) {
+        /* A gap is about one recurring activity, so it belongs on that
+           activity's controls, not on everything its policy covers. */
+        var cad = CADENCES[g.key] || {}, def = cad.calendar ? rhythmDef(cad.calendar) : null;
+        if (!def || (def.controls || []).indexOf(c.id) === -1) return;
+        if (g.kind === 'unscheduled') tests.push({ sev: 'Minor', text: String(g.name || '').replace(/\.html$/i, '') + ' commits to an activity that is not scheduled, so the policy is not being followed.', source: 'Policy vs practice' });
+        else if (g.kind === 'changed' || g.kind === 'legacy') tests.push({ sev: 'OFI', text: String(g.name || '').replace(/\.html$/i, '') + ' states a frequency that no longer matches practice.', source: 'Policy vs practice' });
+      });
+      if (c.id === 'A.6.3') {
+        var late = (e.training || []).filter(function (t) { return t && t.status !== 'Completed' && t.due && t.due < today; });
+        var done = (e.training || []).filter(function (t) { return t && t.status === 'Completed'; });
+        if (late.length) tests.push({ sev: late.length > 2 ? 'Minor' : 'OFI', text: late.length + ' assigned training record' + (late.length === 1 ? ' is' : 's are') + ' past due and not completed.', source: 'Training' });
+        else if (done.length) tests.push({ sev: 'pass', text: done.length + ' training completion' + (done.length === 1 ? '' : 's') + ' recorded, none overdue.', source: 'Training' });
+      }
+      if (/^A\.5\.(19|20|21|22)$/.test(c.id)) {
+        var lapsed = (e.vendors || []).filter(function (v) { return v && v.nextReviewDue && v.nextReviewDue < today; });
+        var key = lapsed.filter(function (v) { return /critical|high/i.test(v.criticality || ''); });
+        if (key.length) tests.push({ sev: 'Minor', text: key.length + ' high or critical supplier' + (key.length === 1 ? ' is' : 's are') + ' overdue for review (' + key.slice(0, 5).map(function (v) { return v.name || v.id; }).join(', ') + ').', source: 'Suppliers' });
+        else if (lapsed.length) tests.push({ sev: 'OFI', text: lapsed.length + ' supplier' + (lapsed.length === 1 ? ' is' : 's are') + ' overdue for review.', source: 'Suppliers' });
+        else if ((e.vendors || []).length) tests.push({ sev: 'pass', text: 'Every supplier review is in date.', source: 'Suppliers' });
+      }
+      tests = tests.concat(stage2For(c.id));
+      finish(line, tests, sampleFor(c.id));
+    });
+
+    (w.clauses || []).forEach(function (c) {
+      var line = { key: 'clause|' + c.id }, tests = [];
+      var cl = (e.clauseChecklists || {})[c.id];
+      if (cl && cl.items && cl.items.length) {
+        var open = cl.items.filter(function (i) { return i.status === 'open'; });
+        var partial = cl.items.filter(function (i) { return i.status === 'partial'; });
+        var why = function (i) {
+          var seen = {}, parts = String(i.note || '').split('; ').filter(function (x) { if (!x || seen[x]) return false; seen[x] = true; return true; });
+          return parts.length ? ' (' + parts.join('; ') + ')' : '';
+        };
+        if (open.length === cl.items.length) tests.push({ sev: 'Major', text: 'None of Clause ' + c.id + '’s ' + cl.items.length + ' requirements is met: ' + open.map(function (i) { return i.text.replace(/\.$/, ''); }).join('; ') + '.', source: 'Clause requirements' });
+        else open.forEach(function (i) { tests.push({ sev: 'Minor', text: 'Clause ' + c.id + ' requirement not met: ' + i.text.replace(/\.$/, '') + why(i) + '.', source: 'Clause requirements' }); });
+        partial.forEach(function (i) { tests.push({ sev: 'OFI', text: 'Clause ' + c.id + ' requirement partly met: ' + i.text.replace(/\.$/, '') + why(i) + '.', source: 'Clause requirements' }); });
+        if (cl.complete) {
+          /* Met from Checkpoint's own records is a test. Met only
+             because the organisation confirmed it is a claim for the
+             auditor to check, so it never suggests Conforms by itself. */
+          var autoMet = cl.items.filter(function (i) { return i.how !== 'confirmed'; }).length, confirmed = cl.total - autoMet;
+          var all = cl.total === 1 ? 'The Clause ' + c.id + ' requirement is met' : 'All ' + cl.total + ' Clause ' + c.id + ' requirements are met';
+          if (autoMet) tests.push({ sev: 'pass', text: all + (confirmed ? ': ' + autoMet + ' shown by Checkpoint’s records, ' + confirmed + ' confirmed by the organisation (check those).' : ', shown by Checkpoint’s records.'), source: 'Clause requirements' });
+          else tests.push({ sev: 'info', text: all + ' on the organisation’s own confirmation. Check the evidence for each.', source: 'Clause requirements' });
+        }
+      }
+      if (c.status === 'Implemented' && !c.evidenceUrl) tests.push({ sev: 'Minor', text: 'Clause ' + c.id + ' is marked Implemented with no evidence linked.', source: 'Clauses' });
+      tests = tests.concat(stage2For(c.id));
+      finish(line, tests, sampleFor(c.id));
+    });
+
+    (w.followUps || []).forEach(function (f) {
+      var line = { key: 'follow|' + f.id }, tests = [];
+      var act = (e.actions || []).find(function (x) { return x && x.id === f.id; }) || {};
+      if (f.due && f.due < today) tests.push({ sev: /^Non-conformity/.test(f.type || '') ? 'Minor' : 'OFI', text: f.id + ' was due on ' + srDate(f.due) + ' and is still open.', source: 'Actions' });
+      var failing = (byControl[act.control] || []).filter(function (chk) { return results[chk] === 'fail'; });
+      if (failing.length) tests.push({ sev: 'OFI', text: 'The posture check' + (failing.length === 1 ? ' “' + (labels[failing[0]] || failing[0]) + '” still fails' : 's ' + failing.map(function (chk) { return '“' + (labels[chk] || chk) + '”'; }).join(', ') + ' still fail') + onDate + ', so the finding is not yet resolved.', source: 'Posture scan' });
+      finish(line, tests, null);
+    });
+
+    var keys = Object.keys(out);
+    var count = { C: 0, OFI: 0, Minor: 0, Major: 0, none: 0 };
+    keys.forEach(function (k) { count[out[k].suggest || 'none']++; });
+    return { lines: out, counts: count, tested: keys.length - count.none, total: keys.length, seed: seed };
+  }
+
   /* What Checkpoint has done for a client over a period, from the audit
      log and the registers, with a conservative estimate of the hours it
      replaced. Every assumption is listed next to its line, so the
@@ -13608,7 +13793,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
