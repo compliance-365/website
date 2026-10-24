@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.176.0',
+    date: '2026-10-24',
+    entries: [
+      'Partners see every client\u2019s internal audit in the owner console. The Delivery tab gains an Internal audit column and an Internal audits section: the next audit and whether it is ready (evidence requested, invites sent, lines recorded), the last result, open audit findings and what the audit radar would raise, soonest and overdue first.',
+      'New attention flags: an internal audit past its planned date, evidence not requested two weeks out, invites not sent a week out, open major nonconformities or past-due audit findings, major issues on the audit radar, and no internal audit scheduled. Clients share counts, dates and the radar\u2019s top headlines at Sync, never notes or evidence.'
+    ]
+  },
+  {
     version: '1.175.0',
     date: '2026-10-24',
     entries: [

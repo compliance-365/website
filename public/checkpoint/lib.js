@@ -12667,6 +12667,44 @@
     return { met: met, total: total, pct: pct };
   }
 
+  /* The internal audit facts the partner console needs: the next audit
+     and how ready it is, the last one's results, open findings, and the
+     audit radar. Counts, dates, ids, the audit's scope and the radar's
+     top three headlines (so the partner sees what to raise); never the
+     audit notes or evidence. d: { audits, lineCounts {auditId: {total,
+     assessed}}, radarItems, radarSeen, actions, evidenceRequests,
+     invites, today } */
+  function auditDeliverySummary(d) {
+    d = d || {};
+    var today = d.today || '';
+    var audits = (d.audits || []).filter(Boolean);
+    var planned = audits.filter(function (a) { return a.status !== 'Completed'; }).sort(function (a, b) { return String(a.planned || '9999').localeCompare(String(b.planned || '9999')); });
+    var done = audits.filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return String(b.completed || '').localeCompare(String(a.completed || '')); });
+    var reqs = d.evidenceRequests || {}, inv = d.invites || {};
+    var asked = function (id) { return Object.keys(reqs).some(function (k) { return reqs[k] && reqs[k].audit === id; }); };
+    var next = planned[0] || null, nextOut = null;
+    if (next) {
+      var lc = (d.lineCounts || {})[next.id] || {};
+      nextOut = { id: next.id, scope: String(next.scope || '').slice(0, 120), planned: next.planned || '', total: lc.total || 0, assessed: lc.assessed || 0,
+        evidenceAsked: asked(next.id), invitesSent: !!inv[next.id], overdue: !!(next.planned && next.planned < today) };
+    }
+    var last = done[0] || null, lastOut = null;
+    if (last) {
+      var c = { C: 0, OFI: 0, Minor: 0, Major: 0 };
+      Object.keys(last.results || {}).forEach(function (k) { var r = last.results[k]; if (r && c[r.r] !== undefined) c[r.r]++; });
+      lastOut = { id: last.id, completed: last.completed || '', major: c.Major, minor: c.Minor, ofi: c.OFI, conform: c.C };
+    }
+    var open = (d.actions || []).filter(function (a) { return a && (/audit/i.test(a.src || '') || /^Non-conformity/.test(a.type || '')) && ['Done', 'Closed', 'Cancelled'].indexOf(a.status) === -1; });
+    var items = d.radarItems || [], seen = d.radarSeen || {};
+    var since = last && last.completed ? last.completed : addDaysIso(today, -14);
+    return {
+      next: nextOut, last: lastOut, planned: planned.length,
+      findings: { open: open.length, overdue: open.filter(function (a) { return a.due && a.due < today; }).length, major: open.filter(function (a) { return a.type === 'Non-conformity (Major)'; }).length },
+      radar: { major: items.filter(function (x) { return x.sev === 'Major'; }).length, minor: items.filter(function (x) { return x.sev === 'Minor'; }).length, ofi: items.filter(function (x) { return x.sev === 'OFI'; }).length,
+        fresh: items.filter(function (x) { return seen[x.id] && seen[x.id] > since; }).length,
+        top: items.slice(0, 3).map(function (x) { return { sev: x.sev, ref: x.ref, title: String(x.title || '').slice(0, 140) }; }) }
+    };
+  }
   var PROGRESS_SNAPSHOT_VERSION = 1;
   function buildProgressSnapshot(s) {
     s = s || {};
@@ -12725,7 +12763,8 @@
         aiUse: s.delivery.aiUse || '',
         stage1Ready: !!s.delivery.stage1Ready, stage2Ready: !!s.delivery.stage2Ready,
         auditorOverdue: s.delivery.auditorOverdue || 0,
-        health: s.delivery.health ? { score: s.delivery.health.score, band: s.delivery.health.band, factors: (s.delivery.health.factors || []).slice(0, 4) } : null
+        health: s.delivery.health ? { score: s.delivery.health.score, band: s.delivery.health.band, factors: (s.delivery.health.factors || []).slice(0, 4) } : null,
+        audit: s.delivery.audit || null
       } : null
     };
   }
@@ -12804,6 +12843,18 @@
     if (p && p.registers && p.registers.overdueActions > 5) out.push({ level: 'amber', key: 'actions', text: p.registers.overdueActions + ' overdue actions' });
     if (d && d.objectives && d.objectives.atRisk) out.push({ level: 'amber', key: 'objectives', text: d.objectives.atRisk + ' objective(s) at risk' });
     if (d && d.auditorOverdue) out.push({ level: 'red', key: 'auditor', text: 'Auditor access window ended but not removed' });
+    var au = d && d.audit;
+    if (au) {
+      var nx = au.next, toGo = nx && nx.planned ? -days(nx.planned) : null;
+      if (nx && nx.overdue) out.push({ level: 'red', key: 'ia-overdue', text: 'Internal audit ' + nx.id + ' was planned for ' + nx.planned + ' and is not complete' });
+      else if (nx && toGo !== null && toGo <= 14 && !nx.evidenceAsked) out.push({ level: 'amber', key: 'ia-evidence', text: nx.id + ' on ' + nx.planned + ': evidence not requested from owners yet' });
+      else if (nx && toGo !== null && toGo <= 7 && !nx.invitesSent) out.push({ level: 'amber', key: 'ia-invites', text: nx.id + ' on ' + nx.planned + ': interview invites not sent' });
+      if (au.findings && au.findings.major) out.push({ level: 'red', key: 'ia-major', text: au.findings.major + ' major nonconformit' + (au.findings.major === 1 ? 'y' : 'ies') + ' open' });
+      else if (au.findings && au.findings.overdue) out.push({ level: 'amber', key: 'ia-findings', text: au.findings.overdue + ' audit finding(s) past due' });
+      if (au.radar && au.radar.major) out.push({ level: 'red', key: 'radar-major', text: 'Audit radar: ' + au.radar.major + ' major issue(s)' + (au.radar.top && au.radar.top[0] ? ', e.g. ' + au.radar.top[0].title : '') });
+      else if (au.radar && au.radar.fresh >= 3) out.push({ level: 'amber', key: 'radar-new', text: 'Audit radar: ' + au.radar.fresh + ' new issue(s) since the last audit' });
+      if (!nx && stage !== 'Certified' && p && p.path && p.path.done > 0) out.push({ level: 'amber', key: 'ia-none', text: 'No internal audit scheduled' });
+    }
     var mods = c.modules || [];
     if (stage === 'Certified' && d && d.certs && d.certs.iso27001 && d.certs.iso27001.issued && mods.indexOf('iso42001') === -1 && (d.aiUse === 'tools' || d.aiUse === 'builds')) {
       out.push({ level: 'info', key: 'iso42001', text: 'Certified to ISO 27001 and ' + (d.aiUse === 'builds' ? 'builds AI into its products' : 'uses AI tools') + ': ready for an ISO 42001 conversation' });
@@ -14199,7 +14250,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditInterviewIcs: auditInterviewIcs, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditDeliverySummary: auditDeliverySummary, auditInterviewIcs: auditInterviewIcs, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,

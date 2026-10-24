@@ -1395,7 +1395,7 @@ function showModal(opts) {
       '<label class="src">Show <select class="mini" id="deliveryFilter" data-change-action="OwnerApp.setDeliveryFilter">' + opt('all', 'All clients', _deliveryFilter) + opt('attention', 'Needs attention', _deliveryFilter) + opt('upsell', 'ISO 42001 opportunities', _deliveryFilter) + '</select></label>' +
       '<label class="src">Sort by <select class="mini" id="deliverySort" data-change-action="OwnerApp.setDeliverySort">' + opt('attention', 'Most urgent first', _deliverySort) + opt('progress', 'Most progress first', _deliverySort) + opt('health', 'Lowest ISMS health first', _deliverySort) + opt('name', 'Name', _deliverySort) + '</select></label>' +
       '</div>' +
-      (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">ISMS health</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
+      (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">Internal audit</th><th scope="col">ISMS health</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
         shown.map(function (r) {
           var d = r.d, plan = d.plan, b = d.bookings || {};
           var moved = (r.c.progressHistory || []).length ? r.c.progressHistory[r.c.progressHistory.length - 1].d : '';
@@ -1407,12 +1407,60 @@ function showModal(opts) {
             '<td style="white-space:nowrap">' + pct(r.head && r.head.annexA) + sparkline(r.c.progressHistory, 'annexA') + '</td>' +
             '<td style="font-size:12.5px">' + (plan ? 'Week ' + esc(String(plan.week)) + (plan.behind ? ', <span style="color:var(--warn)">' + esc(String(plan.behind)) + ' behind</span>' : ', on plan') + (plan.target && r.stage !== 'Certified' ? '<div class="src">' + (plan.atRisk ? '<span style="color:var(--fail)">Stage 1 target ' + esc(fmtDate(plan.target)) + ' at risk</span>' : 'Stage 1 target ' + esc(fmtDate(plan.target))) + '</div>' : plan.readyBy && r.stage !== 'Certified' ? '<div class="src">ready ' + esc(fmtDate(plan.readyBy)) + '</div>' : '') : '—') + '</td>' +
             '<td style="font-size:12.5px">' + ([b.stage1 ? 'S1 ' + esc(fmtDate(b.stage1)) : '', b.stage2 ? 'S2 ' + esc(fmtDate(b.stage2)) : ''].filter(Boolean).join('<br>') || '—') + '</td>' +
+            '<td style="font-size:12.5px">' + internalAuditCell(r) + '</td>' +
             '<td style="font-size:12.5px">' + ismsHealthCell(r) + '</td>' +
             '<td>' + flagList(r.flags) + '</td>' +
             '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerStatusNote" data-id="' + esc(r.c._sp) + '">Status note</button></td>' +
             '</tr>';
         }).join('') + '</tbody></table></div>'
-        : '<p style="color:var(--paper-faint);font-size:12.5px">No clients match this filter.</p>');
+        : '<p style="color:var(--paper-faint);font-size:12.5px">No clients match this filter.</p>') +
+      internalAuditPortfolio(rows);
+  }
+  /* A client's internal audit at a glance: the next one, how far it is,
+     and the radar's major and minor counts. */
+  function radarChips(rd) {
+    if (!rd) return '';
+    return [['major', 'sev-Critical', 'major'], ['minor', 'sev-High', 'minor']].filter(function (k) { return rd[k[0]]; })
+      .map(function (k) { return '<span class="chip ' + k[1] + '" style="margin-right:4px">' + rd[k[0]] + ' ' + k[2] + '</span>'; }).join('');
+  }
+  function internalAuditCell(r) {
+    var au = r.d && r.d.audit;
+    if (!au) return '<span style="color:var(--paper-faint)">\u2014</span>';
+    var nx = au.next;
+    return (nx ? (nx.overdue ? '<span style="color:var(--fail)">' + esc(nx.id) + ' overdue</span>' : esc(nx.id) + ' ' + esc(fmtDate(nx.planned))) +
+        (nx.total ? '<div class="src">' + nx.assessed + ' of ' + nx.total + ' recorded</div>' : '')
+      : '<span class="src">None scheduled</span>') +
+      (au.radar && (au.radar.major || au.radar.minor) ? '<div style="margin-top:3px">' + radarChips(au.radar) + '</div>' : '');
+  }
+  /* Every client's internal audit, soonest first: what is due, whether
+     it is ready (evidence asked for, invites out, lines recorded), the
+     last result, open findings, and what the radar would raise. */
+  function internalAuditPortfolio(rows) {
+    var list = rows.filter(function (r) { return r.d && r.d.audit; });
+    if (!list.length) return '<div class="card" style="margin-top:20px"><h3 style="margin:0 0 6px">Internal audits</h3><p class="src" style="margin:0">Clients report their internal audits and audit radar here from Checkpoint 1.176.0, at their next Sync.</p></div>';
+    var today = todayStr(), in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    var key = function (r) { var nx = r.d.audit.next; return nx ? (nx.overdue ? '0' : '1') + (nx.planned || '9999') : '2'; };
+    list.sort(function (a, b) { return key(a).localeCompare(key(b)) || a.c.name.localeCompare(b.c.name); });
+    var sum = function (f) { return list.reduce(function (n, r) { return n + (f(r.d.audit) || 0); }, 0); };
+    var due30 = list.filter(function (r) { var nx = r.d.audit.next; return nx && nx.planned && nx.planned >= today && nx.planned <= in30; }).length;
+    var tick = function (ok, label) { return '<span style="color:' + (ok ? 'var(--pass)' : 'var(--paper-faint)') + '">' + (ok ? '\u2713 ' : '\u25cb ') + label + '</span>'; };
+    return '<h2 style="margin:28px 0 12px">Internal audits</h2>' +
+      '<div class="grid kpis" style="margin-bottom:16px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + due30 + '</b></div><span>Due in the next 30 days</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (sum(function (a) { return a.next && a.next.overdue ? 1 : 0; }) ? 'var(--fail)' : 'var(--pass)') + '">' + sum(function (a) { return a.next && a.next.overdue ? 1 : 0; }) + '</b></div><span>Overdue</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + sum(function (a) { return a.findings && a.findings.open; }) + '</b></div><span>Open audit findings</span><div class="sub">' + sum(function (a) { return a.findings && a.findings.overdue; }) + ' past due</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (sum(function (a) { return a.radar && a.radar.major; }) ? 'var(--fail)' : 'var(--pass)') + '">' + sum(function (a) { return a.radar && a.radar.major; }) + '</b></div><span>Major issues on client radars</span><div class="sub">' + sum(function (a) { return a.radar && a.radar.minor; }) + ' minor</div></div>' +
+      '</div>' +
+      '<div class="card" style="padding:0 10px"><table id="internalAuditTable"><thead><tr><th scope="col">Client</th><th scope="col">Next internal audit</th><th scope="col">Ready?</th><th scope="col">Last audit</th><th scope="col">Open findings</th><th scope="col">Audit radar</th></tr></thead><tbody>' +
+      list.map(function (r) {
+        var au = r.d.audit, nx = au.next, la = au.last, f = au.findings || {}, rd = au.radar || {};
+        return '<tr><td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+          '<td style="font-size:12.5px">' + (nx ? '<b' + (nx.overdue ? ' style="color:var(--fail)"' : '') + '>' + esc(nx.id) + '</b> ' + (nx.planned ? esc(fmtDate(nx.planned)) + (nx.overdue ? ' (overdue)' : '') : 'no date') + '<div class="src">' + esc(nx.scope) + '</div>' : '<span class="src">None scheduled</span>') + '</td>' +
+          '<td style="font-size:12px;line-height:1.7">' + (nx ? tick(nx.evidenceAsked, 'evidence requested') + '<br>' + tick(nx.invitesSent, 'invites sent') + '<br>' + tick(nx.total && nx.assessed === nx.total, nx.assessed + ' of ' + nx.total + ' recorded') : '\u2014') + '</td>' +
+          '<td style="font-size:12.5px">' + (la ? esc(la.id) + ' ' + esc(fmtDate(la.completed)) + '<div class="src">' + la.major + ' major, ' + la.minor + ' minor, ' + la.ofi + ' improve</div>' : '<span class="src">None yet</span>') + '</td>' +
+          '<td style="font-size:12.5px">' + (f.open ? f.open + ' open' + (f.overdue ? ', <span style="color:var(--warn)">' + f.overdue + ' past due</span>' : '') + (f.major ? '<div style="color:var(--fail)">' + f.major + ' major</div>' : '') : '<span class="src">None</span>') + '</td>' +
+          '<td style="font-size:12.5px">' + (rd.major || rd.minor || rd.ofi ? radarChips(rd) + (rd.ofi ? '<span class="chip sev-Medium">' + rd.ofi + ' improve</span>' : '') + (rd.fresh ? '<div class="src">' + rd.fresh + ' new since the last audit</div>' : '') + (rd.top && rd.top[0] ? '<div class="src" style="margin-top:3px">' + esc(rd.top[0].ref) + ': ' + esc(rd.top[0].title) + '</div>' : '') : '<span style="color:var(--pass)">Clear</span>') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
   }
 
   async function renderPartnerClientRows() {
