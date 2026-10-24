@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.174.0',
+    date: '2026-10-24',
+    entries: [
+      'Unchanged lines carry forward. In a surveillance year, a line that conformed at the last audit, still points at the same evidence and fails nothing Checkpoint tests today is marked Unchanged, with the audit it carries from. Re-confirm it with one click, or all of them with the suggested Conforms. Checkpoint now remembers the evidence each result was based on, so next year it can tell when that changes.',
+      'Ask owners for evidence before the audit. From a planned audit, one button emails each owner the lines the auditor will look at that have no current evidence, what to provide and where to put it, due a week before the audit. Each line shows who was asked and by when, and the requests reach the owners\u2019 weekly reminders.',
+      'A clearer first visit to Internal audits: instead of four tiles reading 0, one step that plans the programme for you (a pre-certification audit, or a three-year programme once certified). You only name the auditor.'
+    ]
+  },
+  {
     version: '1.173.0',
     date: '2026-10-24',
     entries: [

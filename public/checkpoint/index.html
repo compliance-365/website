@@ -1331,9 +1331,10 @@
           <button class="btn ghost sm" data-action="App.toggleAddAudit">Cancel</button>
         </div>
       </div>
+      <div id="auditStart" style="display:none;margin:0 0 16px"></div>
       <div id="auditRadar" style="margin:0 0 16px"></div>
       <div class="grid kpis" id="auditKpiRow" style="margin:0 0 16px"></div>
-      <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Framework</th><th scope="col">Scope</th><th scope="col">Auditor</th><th scope="col">Planned</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="auditRows"></tbody></table></div>
+      <div class="card" id="auditTable" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Framework</th><th scope="col">Scope</th><th scope="col">Auditor</th><th scope="col">Planned</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="auditRows"></tbody></table></div>
     </section>
 
     <!-- INCIDENTS -->

@@ -12040,11 +12040,17 @@
     });
     return { byOwner: order.map(function (k) { return by[k]; }), unowned: unowned };
   }
-  function evidenceRequestHtml(entry, clientLabel, appUrl) {
+  /* opts (optional): { auditDate, due } for a request ahead of an
+     internal audit, so the owner knows what it is for and by when. */
+  function evidenceRequestHtml(entry, clientLabel, appUrl, opts) {
     var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    var o = opts || {}, n = entry.controls.length;
+    var intro = o.auditDate
+      ? 'Hi ' + e(entry.owner) + ', the internal audit is on ' + e(srDate(o.auditDate)) + '. You own ' + n + ' item' + (n === 1 ? '' : 's') + ' the auditor will look at. Please add the evidence described below' + (o.due ? ' by <b>' + e(srDate(o.due)) + '</b>' : '') + ', so the audit can check it rather than chase it.'
+      : 'Hi ' + e(entry.owner) + ', you own ' + n + ' security control' + (n === 1 ? '' : 's') + ' that need evidence for the certification audit. For each, please add the evidence described below.';
     return '<div style="font-family:Arial,sans-serif;color:#222;max-width:640px">' +
       '<h2 style="margin-bottom:4px">Evidence needed — ' + e(clientLabel) + '</h2>' +
-      '<p style="font-size:13px">Hi ' + e(entry.owner) + ', you own ' + entry.controls.length + ' security control' + (entry.controls.length === 1 ? '' : 's') + ' that need evidence for the certification audit. For each, please add the evidence described below.</p>' +
+      '<p style="font-size:13px">' + intro + '</p>' +
       entry.controls.map(function (c) {
         return '<div style="border-top:1px solid #eee;padding:10px 0;font-size:13px"><b>' + e(c.id) + ' ' + e(c.title) + '</b><br><span style="color:#444">What to provide: ' + e(c.evidence) + '</span><br>' +
           (c.folderUrl ? '<a href="' + e(c.folderUrl) + '">Add it to this control’s evidence folder</a>' : (appUrl ? '<a href="' + e(appUrl) + '">Open Checkpoint</a> › Statement of Applicability › ' + e(c.id) + ' › Add evidence' : '')) + '</div>';
@@ -13810,6 +13816,64 @@
       (failing ? 'The correction has not yet worked.' : 'The correction is effective.');
     return { state: state, tests: tests, text: text };
   }
+  /* Carry forward what has not changed. In a surveillance year most
+     lines are as they were: a line conformed at the latest completed
+     audit that covered it, its evidence link is the one the auditor
+     looked at then (when that was recorded), and nothing Checkpoint
+     tests on it fails today. Those lines are offered for re-confirming
+     in one click, citing the audit they carry from. Follow-ups never
+     carry: each one is about a finding still open. lines from
+     auditWorkpackLines(); auto from auditAutoTest(). */
+  function auditCarryForward(audit, lines, auto, audits) {
+    var a = audit || {}, out = {};
+    var done = (audits || []).filter(function (x) { return x && x.id !== a.id && x.status === 'Completed' && (x.fw || 'iso27001') === (a.fw || 'iso27001') && x.results; })
+      .sort(function (x, y) { return String(y.completed || '').localeCompare(String(x.completed || '')); });
+    (lines || []).forEach(function (l) {
+      if (l.kind === 'follow') return;
+      var from = done.find(function (x) { return x.results[l.key] && x.results[l.key].r; });
+      if (!from) return;
+      var p = from.results[l.key];
+      if (p.r !== 'C') return;
+      var t = ((auto || {}).lines || {})[l.key];
+      if (t && t.tests.some(function (x) { return AUTO_RANK[x.sev] > 0; })) return;
+      if (p.ev !== undefined && String(p.ev || '') !== String(l.evidenceUrl || '')) return;
+      var when = from.completed || p.date || '';
+      out[l.key] = {
+        from: from.id, date: when,
+        note: 'Unchanged since ' + from.id + (when ? ' (' + srDate(when) + ')' : '') + ', where it conformed' +
+          (p.ev !== undefined ? '; the evidence is the same record' : '') +
+          (t && t.suggest === 'C' ? ', and Checkpoint’s tests still pass' : ', and nothing Checkpoint tests on it has failed since') + '. Re-confirmed.'
+      };
+    });
+    return out;
+  }
+  /* What to ask owners for before the audit: every clause and control
+     line with no evidence, evidence that is out of date or overdue for
+     re-verification, unless it is already recorded or carries forward
+     unchanged. due is a week before the audit, but never sooner than
+     three days from today. */
+  var EVIDENCE_GAP_FLAGS = /No evidence linked|not re-verified|Verification overdue|Never verified/;
+  function auditEvidenceAsks(audit, wp, auto, carry, today) {
+    var a = audit || {}, w = wp || {}, results = a.results || {}, out = [];
+    var stale = function (key) { var t = ((auto || {}).lines || {})[key]; return !!t && t.tests.some(function (x) { return x.source === 'Evidence check'; }); };
+    var consider = function (kind, rows) {
+      (rows || []).forEach(function (r) {
+        var key = kind + '|' + r.id;
+        if ((results[key] || {}).r || (carry || {})[key]) return;
+        var gap = !r.evidenceUrl ? 'none' : stale(key) ? 'stale' : (r.flags || []).some(function (f) { return EVIDENCE_GAP_FLAGS.test(f); }) ? 'reverify' : '';
+        if (!gap) return;
+        out.push({ key: key, kind: kind, id: r.id, title: r.title || '', owner: r.owner || '', fw: a.fw || 'iso27001', gap: gap });
+      });
+    };
+    consider('clause', w.clauses);
+    consider('control', w.controls);
+    var due = addDaysIso(today, 7);
+    if (a.planned && a.planned > today) {
+      var weekBefore = addDaysIso(a.planned, -7), soonest = addDaysIso(today, 3);
+      due = weekBefore < soonest ? soonest : weekBefore;
+    }
+    return { items: out, due: due };
+  }
   /* First-seen dates for radar items, carried between visits, so the
      radar can say what is new. Items no longer found drop out and are
      counted as resolved. */
@@ -14006,7 +14070,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,

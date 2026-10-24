@@ -4030,7 +4030,7 @@ function showModal(opts) {
         var r = results[key];
         if (!r || !r.r) return '<td style="min-width:70px"></td><td style="min-width:120px"></td>';
         return '<td>' + esc(resultLabel[r.r] || r.r) + (r.ref ? ' (' + esc(r.ref) + ')' : '') + '</td><td>' + esc(r.note || '') +
-          (r.auto ? '<br><span style="color:#666">Tested by Checkpoint on ' + esc(fmtDateY(r.auto.at)) + (r.auto.sample && r.auto.sample.length ? '; sample ' + esc(r.auto.sample.join(', ')) : '') + '; result confirmed by ' + esc(r.by || 'the auditor') + '.</span>' : '') + '</td>';
+          (r.auto ? '<br><span style="color:#666">' + (r.auto.carried ? 'Unchanged since ' + esc(r.auto.carried) + ', checked by Checkpoint on ' : 'Tested by Checkpoint on ') + esc(fmtDateY(r.auto.at)) + (r.auto.sample && r.auto.sample.length ? '; sample ' + esc(r.auto.sample.join(', ')) : '') + '; result confirmed by ' + esc(r.by || 'the auditor') + '.</span>' : '') + '</td>';
       };
       var resultSum = window.CheckpointLib.auditResultsSummary(window.CheckpointLib.auditWorkpackLines(wp), results);
       var isReport = a.status === 'Completed' || resultSum.assessed > 0;
@@ -12661,6 +12661,13 @@ function showModal(opts) {
         ? '<button class="btn sm" style="margin-top:8px" data-action="App.useRetestAsEffectiveness" data-id="' + esc(a.id) + '">Record as the effectiveness review</button>' : '') +
       '</div></div>';
   }
+  /* What this audit still needs from owners, and when by. */
+  function auditEvidenceAsksFor(a, wp, auto, carry) {
+    return window.CheckpointLib.auditEvidenceAsks(a, wp, auto, carry, new Date().toISOString().slice(0, 10));
+  }
+  function auditCarryRecord(cf, t) {
+    return { suggest: 'C', at: new Date().toISOString().slice(0, 10), tests: t ? t.tests.length : 0, sample: [], carried: cf.from };
+  }
   function auditAutoRecord(t) {
     return { suggest: t.suggest, at: new Date().toISOString().slice(0, 10), tests: t.tests.length, sample: t.sample ? t.sample.ids : [] };
   }
@@ -14967,6 +14974,9 @@ function showModal(opts) {
     var planned = audits.filter(function (a) { return a.status === 'Planned'; });
     var overdue = planned.filter(function (a) { return a.planned && a.planned < today; });
     var completed = audits.filter(function (a) { return a.status === 'Completed'; });
+    /* Four zeros tell a new client nothing: the guided start below does. */
+    if (!audits.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+    el.style.display = '';
     el.innerHTML =
       kpiTile({ value: audits.length, label: 'Audits in programme',
         sub: audits.length ? 'ISO 27001 clause 9.2' : 'clause 9.2 expects a recurring programme' }) +
@@ -15959,10 +15969,27 @@ function showModal(opts) {
       fwSelect.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) { return '<option value="' + fw + '">' + esc(fwName(fw)) + '</option>'; }).join('');
     }
     var audits = S.audits || [];
+    var start = document.getElementById('auditStart'), table = document.getElementById('auditTable');
     if (!audits.length) {
-      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 7, text: 'No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.', cta: { label: '+ Schedule audit', action: 'App.toggleAddAudit' } });
+      var certified = entitledFrameworks().some(function (f) { var c = certRecords()[f]; return c && c.issued; });
+      if (start) {
+        start.style.display = '';
+        start.innerHTML = '<div class="audit-start">' +
+          '<div class="audit-start-icon" aria-hidden="true"><svg viewBox="0 0 48 48" width="28" height="28">' + EMPTY_ILLUSTRATIONS.shield + '</svg></div>' +
+          '<div class="audit-start-body"><h3>Set up your internal audit programme</h3>' +
+          '<p>ISO 27001 needs an internal audit before certification and every year after (Clause 9.2). Checkpoint plans it for you: ' +
+          (certified ? 'a three-year programme that covers every clause and control before recertification.' : 'one full audit before your Stage 2 visit, so its findings are closed in time.') +
+          ' You only name the auditor.</p>' +
+          '<ol class="audit-start-steps"><li><b>Plan</b> the programme in one step.</li><li><b>Ask owners for evidence</b> a week ahead, from the audit itself.</li><li><b>Run it</b> with every line already tested against your records.</li></ol>' +
+          (READONLY ? '' : '<div class="audit-start-actions"><button class="btn" data-action="App.planAuditProgramme">Plan the audit programme</button><button class="btn quiet sm" data-action="App.toggleAddAudit">Or schedule one audit yourself</button></div>') +
+          '</div></div>';
+      }
+      if (table) table.style.display = 'none';
+      wrap.innerHTML = '';
       return;
     }
+    if (start) { start.style.display = 'none'; start.innerHTML = ''; }
+    if (table) table.style.display = '';
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = audits.slice().reverse().map(function (a) {
       var overdue = a.status === 'Planned' && a.planned && a.planned < today;
@@ -25452,13 +25479,14 @@ function showModal(opts) {
       var resultLabel = {};
       window.CheckpointLib.AUDIT_RESULTS.forEach(function (o) { resultLabel[o.value] = o.label; });
       var short = { C: 'Conforms', OFI: 'Improve', Minor: 'Minor NC', Major: 'Major NC' };
+      var carry = a.status === 'Completed' ? {} : window.CheckpointLib.auditCarryForward(a, lines, auto, S.audits || []);
 
       /* Three piles: what needs the auditor, what Checkpoint expects to
          conform (one click to confirm), and what is recorded. */
       var bucket = function (l) {
         if ((a.results[l.key] || {}).r) return 'done';
         var t = auto.lines[l.key];
-        return t && t.suggest === 'C' ? 'conforms' : 'attention';
+        return (t && t.suggest === 'C') || carry[l.key] ? 'conforms' : 'attention';
       };
       var n = { attention: 0, conforms: 0, done: 0, all: lines.length };
       lines.forEach(function (l) { n[bucket(l)]++; });
@@ -25469,7 +25497,11 @@ function showModal(opts) {
       var openSet = _auditOpen[a.id] = _auditOpen[a.id] || {};
 
       var sugg = { Major: 0, Minor: 0, OFI: 0, C: 0, none: 0 };
-      lines.forEach(function (l) { if ((a.results[l.key] || {}).r) return; var t = auto.lines[l.key]; sugg[(t && t.suggest) || 'none']++; });
+      lines.forEach(function (l) { if ((a.results[l.key] || {}).r) return; var t = auto.lines[l.key]; sugg[(t && t.suggest) || (carry[l.key] ? 'C' : 'none')]++; });
+      var nCarry = lines.filter(function (l) { return carry[l.key] && !(a.results[l.key] || {}).r; }).length;
+      var asks = a.status === 'Completed' ? { items: [] } : auditEvidenceAsksFor(a, wp, auto, carry);
+      var reqMap = evidenceRequestsMap();
+      var unasked = asks.items.filter(function (x) { var q = reqMap[x.fw + '|' + x.id]; return !(q && q.audit === a.id); });
       var pct = sum.total ? Math.round(100 * sum.assessed / sum.total) : 0;
 
       var heads = { follow: 'Open findings to follow up', clause: 'Management-system clauses', control: 'Controls' };
@@ -25480,8 +25512,10 @@ function showModal(opts) {
         lastKind = l.kind;
         var prompt = l.kind === 'clause' ? (wp.prompts.find(function (p) { return p.clause === String(l.id).split('.')[0]; }) || {}).prompt : '';
         var isOpen = !!openSet[l.key];
+        var cf = carry[l.key];
         var chip = r.r ? '<span class="chip ' + AUTO_CHIP[r.r] + '" title="Recorded">' + esc(short[r.r]) + '</span>'
           : t && t.suggest ? '<span class="chip ghost-chip ' + AUTO_CHIP[t.suggest] + '" title="Suggested by Checkpoint">' + esc(short[t.suggest]) + '?</span>'
+          : cf ? '<span class="chip ghost-chip st-Implemented" title="' + esc(cf.note) + '">Unchanged?</span>'
           : '<span class="chip st-Notstarted" title="No automated test">Not tested</span>';
         var ref = esc(a.id + '#' + l.key);
         return head + '<div class="aw-line' + (isOpen ? ' open' : '') + (r.r ? ' recorded' : '') + '" data-audit-line="' + esc(l.key) + '">' +
@@ -25489,13 +25523,16 @@ function showModal(opts) {
           '<button class="aw-toggle" aria-expanded="' + isOpen + '" aria-label="Details for ' + esc(l.id) + '" data-action="App.toggleAuditLine" data-id="' + ref + '">' + icon('chevron') + '</button>' +
           chip +
           '<div class="aw-name"><b>' + esc(l.id) + '</b> ' + esc(l.title || '') + (r.ref ? ' <span class="aw-ref">' + esc(r.ref) + '</span>' : '') + '</div>' +
-          (!ro && t && t.suggest && !r.r ? '<button class="btn quiet sm aw-accept" data-action="App.acceptAuditSuggestion" data-id="' + ref + '">Accept</button>' : '') +
+          (!ro && ((t && t.suggest) || cf) && !r.r ? '<button class="btn quiet sm aw-accept" data-action="App.acceptAuditSuggestion" data-id="' + ref + '">' + (cf && (!t || !t.suggest || t.suggest === 'C') ? 'Re-confirm' : 'Accept') + '</button>' : '') +
           '<select class="mini aw-select" aria-label="Result for ' + esc(l.id) + '" data-change-action="App.setAuditResult" data-id="' + ref + '"' + (ro ? ' disabled' : '') + '>' +
           opts.map(function (o) { return '<option value="' + o.value + '"' + (o.value === (r.r || '') ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
           '</div>' +
           '<div class="aw-detail">' +
           (l.flags && l.flags.length ? '<div class="aw-flags">' + l.flags.map(function (f) { return '<span>' + esc(f) + '</span>'; }).join('') + '</div>' : '') +
           (prompt && l.id.indexOf('.') === -1 ? '<p class="src">' + esc(prompt) + '</p>' : '') +
+          (cf && !r.r ? '<div class="aw-carry">' + icon('check') + ' ' + esc(cf.note) + '</div>' : '') +
+          (function () { var q = reqMap[(a.fw || 'iso27001') + '|' + l.id]; return q && q.audit === a.id && !r.r ? '<div class="aw-asked">Evidence requested from ' + esc(q.owner) + ' on ' + esc(fmtDate(q.date)) + (q.due ? ', due ' + esc(fmtDate(q.due)) : '') + '.</div>' : ''; })() +
+          (r.auto && r.auto.carried ? '<div class="src">Re-confirmed from ' + esc(r.auto.carried) + '.</div>' : '') +
           auditAutoLineHtml(a, l, t, r, ro, resultLabel) +
           '<div class="aw-note">' +
           (l.evidenceUrl && isSafeUrl(l.evidenceUrl) ? '<a class="btn ghost sm" href="' + esc(l.evidenceUrl) + '" target="_blank" rel="noopener">Open evidence ' + icon('external') + '</a>' : '') +
@@ -25523,7 +25560,8 @@ function showModal(opts) {
         (auto.tested ? '<span>Checkpoint tested ' + auto.tested + ' of ' + auto.total + ' lines against your scan results, records and evidence</span>' : '') + '</div>' +
         (auto.tested ? '<div class="aw-stats" aria-label="Suggested results not yet recorded">' + stat('Major', 'Major NC', 'sev-Critical') + stat('Minor', 'Minor NC', 'sev-High') + stat('OFI', 'Improve', 'sev-Medium') + stat('C', 'Conforms', 'st-Implemented') + stat('none', 'Not tested', 'st-Notstarted') + '</div>' : '') +
         '<div class="aw-actions">' +
-        (!ro && n.conforms ? '<button class="btn sm" data-action="App.acceptAuditConforms" data-id="' + esc(a.id) + '">Confirm ' + n.conforms + ' suggested Conforms</button>' : '') +
+        (!ro && n.conforms ? '<button class="btn sm" data-action="App.acceptAuditConforms" data-id="' + esc(a.id) + '">Confirm ' + n.conforms + ' suggested Conforms' + (nCarry ? ' (' + nCarry + ' unchanged since the last audit)' : '') + '</button>' : '') +
+        (!ro && a.status === 'Planned' && unasked.length ? '<button class="btn ghost sm" data-action="App.requestAuditEvidence" data-id="' + esc(a.id) + '">Request ' + unasked.length + ' missing evidence item' + (unasked.length === 1 ? '' : 's') + ' from owners</button>' : '') +
         (ro ? '' : '<button class="btn ' + (n.conforms ? 'ghost ' : '') + 'sm" data-action="App.completeAudit" data-id="' + esc(a.id) + '">Complete the audit</button>') +
         '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + esc(a.id) + '">' + (a.status === 'Completed' ? 'Audit report' : 'Workpack') + '</button>' +
         (a.status === 'Completed' && !READONLY ? '<button class="btn ghost sm" data-action="App.fileAuditReport" data-id="' + esc(a.id) + '">Save report as Clause 9.2 evidence</button>' : '') + '</div>' +
@@ -25537,6 +25575,56 @@ function showModal(opts) {
         var back = focusId ? drawer.querySelector('[data-id="' + focusId.replace(/"/g, '\\"') + '"]') : null;
         if (back) back.focus();
       } else openDrawerUi('Audit ' + a.id, { wide: true, audit: a.id });
+    },
+    /* Before the audit: one email per owner listing what the auditor
+       will look at that has no current evidence, due a week before the
+       audit. Requests are recorded against the audit, show on each
+       line, and reach the owners' weekly reminders. */
+    requestAuditEvidence: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var Lib = window.CheckpointLib;
+      var wp = auditWorkpackFor(a), auto = auditAutoTestFor(a, wp);
+      var carry = Lib.auditCarryForward(a, Lib.auditWorkpackLines(wp), auto, S.audits || []);
+      var asks = auditEvidenceAsksFor(a, wp, auto, carry);
+      var req = evidenceRequestsMap();
+      var todo = asks.items.filter(function (x) { var q = req[x.fw + '|' + x.id]; return !(q && q.audit === a.id); });
+      if (!todo.length) { toast('Every line already has current evidence or has been requested.'); return; }
+      var items = todo.map(function (x) {
+        var f = evidenceFolderFor(x.kind, x.fw, x.id);
+        return { control: { fw: x.fw, id: x.id, t: x.title + (x.gap === 'stale' ? ' (current evidence is out of date)' : x.gap === 'reverify' ? ' (please confirm it is still current)' : ''), own: x.owner }, folderUrl: f && f.url ? f.url : '' };
+      });
+      var plan = Lib.evidenceRequestsByOwner(items, window.GUIDANCE || {});
+      if (!plan.byOwner.length) { toast('None of these lines has an owner yet. Name owners first: ' + plan.unowned.join(', ') + '.'); return; }
+      if (Store.kind === 'demo') { toast('Sending email needs a real tenant. ' + plan.byOwner.length + ' owner(s) would be asked for ' + (todo.length - plan.unowned.length) + ' item(s), due ' + fmtDate(asks.due) + '.' + (plan.unowned.length ? ' ' + plan.unowned.length + ' more have no owner yet: ' + plan.unowned.join(', ') + '.' : '')); return; }
+      var users = [];
+      try { users = await Graph.listTenantUsers(); } catch (e) { warn(e); return; }
+      var send = plan.byOwner.map(function (o) { var u = Lib.matchOwnerToUser(o.owner, users); return { o: o, to: u ? (u.mail || u.upn) : '' }; });
+      var ok = await showModal({
+        title: 'Request evidence before ' + a.id,
+        message: 'Each owner gets one email listing what the auditor will look at, what to provide and where to put it, due ' + fmtDate(asks.due) + (a.planned ? ' (a week before the audit on ' + fmtDate(a.planned) + ')' : '') + ':\n\n' +
+          send.map(function (x) { return '\u2022 ' + x.o.owner + (x.to ? ' (' + x.to + ')' : ' (not found in the directory, not sent)') + ': ' + x.o.controls.map(function (c) { return c.id; }).join(', '); }).join('\n') +
+          (plan.unowned.length ? '\n\nNo owner, so not requested: ' + plan.unowned.join(', ') + '.' : ''),
+        confirmText: 'Send requests'
+      });
+      if (!ok) return;
+      var today = new Date().toISOString().slice(0, 10), label = clientDisplayLabel(), sent = 0, held = 0;
+      for (var i = 0; i < send.length; i++) {
+        if (!send[i].to) continue;
+        var mark = function (o) { o.controls.forEach(function (c) { req[c.key] = { owner: o.owner, email: send[i].to, date: today, due: asks.due, audit: a.id }; }); };
+        if (weeklyOnly(send[i].o.owner, send[i].to)) { mark(send[i].o); held++; continue; }
+        try {
+          await Graph.sendMail(send[i].to, 'Evidence needed before the internal audit on ' + fmtDate(a.planned || asks.due) + ' \u2014 ' + label,
+            Lib.evidenceRequestHtml(send[i].o, label, location.origin + location.pathname, { auditDate: a.planned, due: asks.due }));
+          mark(send[i].o);
+          sent++;
+        } catch (e) { warn(e); }
+      }
+      S.settings.evidenceRequests = JSON.stringify(req);
+      try { await Store.setSetting('evidenceRequests', S.settings.evidenceRequests); } catch (e) { warn(e); }
+      audit('Audit evidence requested', 'Audit', a.id, '', sent + ' owner(s) emailed' + (held ? ', ' + held + ' via weekly digest' : '') + '; due ' + asks.due);
+      toast('Evidence requested from ' + sent + ' owner' + (sent === 1 ? '' : 's') + (held ? '; ' + held + ' more will see it in their weekly digest' : '') + '. Due ' + fmtDate(asks.due) + '.');
+      App.conductAudit(a.id);
     },
     toggleAuditLine: function (ref) {
       var parts = String(ref).split('#'), key = parts.slice(1).join('#');
@@ -25564,27 +25652,33 @@ function showModal(opts) {
       var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
       if (!a) return;
       var key = parts.slice(1).join('#');
-      var t = auditAutoTestFor(a, auditWorkpackFor(a)).lines[key];
-      if (!t || !t.suggest) return;
+      var wp = auditWorkpackFor(a), auto = auditAutoTestFor(a, wp);
+      var t = auto.lines[key];
+      var cf = window.CheckpointLib.auditCarryForward(a, window.CheckpointLib.auditWorkpackLines(wp), auto, S.audits || [])[key];
+      if ((!t || !t.suggest) && !cf) return;
       a.results = a.results || {};
       var r = a.results[key] = Object.assign({}, a.results[key] || {});
-      if (!String(r.note || '').trim()) r.note = t.draft;
-      r.auto = auditAutoRecord(t);
-      await App.setAuditResult(ref, t.suggest);
+      var useCarry = cf && (!t || !t.suggest || t.suggest === 'C');
+      if (!String(r.note || '').trim()) r.note = useCarry ? cf.note : t.draft;
+      r.auto = useCarry ? auditCarryRecord(cf, t) : auditAutoRecord(t);
+      await App.setAuditResult(ref, useCarry ? 'C' : t.suggest);
     },
     acceptAuditConforms: async function (id) {
       var a = (S.audits || []).find(function (x) { return x.id === id; });
       if (!a) return;
-      var auto = auditAutoTestFor(a, auditWorkpackFor(a));
+      var wp = auditWorkpackFor(a), auto = auditAutoTestFor(a, wp), lines = window.CheckpointLib.auditWorkpackLines(wp);
+      var carry = window.CheckpointLib.auditCarryForward(a, lines, auto, S.audits || []);
       var who = (Graph.getAccount() && Graph.getAccount().name) || a.auditor || '', today = new Date().toISOString().slice(0, 10);
       a.results = a.results || {};
       var n = 0;
-      Object.keys(auto.lines).forEach(function (key) {
-        var t = auto.lines[key];
-        if (t.suggest !== 'C' || (a.results[key] || {}).r) return;
+      lines.forEach(function (l) {
+        var key = l.key, t = auto.lines[key], cf = carry[key];
+        var isC = t && t.suggest === 'C';
+        if ((!isC && !(cf && (!t || !t.suggest))) || (a.results[key] || {}).r) return;
         var r = a.results[key] = Object.assign({}, a.results[key] || {});
-        if (!String(r.note || '').trim()) r.note = t.draft;
-        r.r = 'C'; r.by = who; r.date = today; r.auto = auditAutoRecord(t);
+        if (!String(r.note || '').trim()) r.note = cf ? cf.note : t.draft;
+        r.r = 'C'; r.by = who; r.date = today; r.ev = l.evidenceUrl || '';
+        r.auto = cf ? auditCarryRecord(cf, t) : auditAutoRecord(t);
         n++;
       });
       if (!n) return;
@@ -25601,6 +25695,9 @@ function showModal(opts) {
       var r = a.results[key] = Object.assign({}, a.results[key] || {}, { r: value, by: (Graph.getAccount() && Graph.getAccount().name) || a.auditor || '', date: new Date().toISOString().slice(0, 10) });
       /* A result the auditor changed is theirs, not Checkpoint's. */
       if (r.auto && r.auto.suggest !== value) delete r.auto;
+      /* The evidence looked at, so next year can tell if it changed. */
+      var ln = window.CheckpointLib.auditWorkpackLines(auditWorkpackFor(a)).find(function (x) { return x.key === key; });
+      if (ln && ln.kind !== 'follow') r.ev = ln.evidenceUrl || '';
       if (!value) delete a.results[key];
       if (value && value !== 'C' && !r.ref) {
         var kind = key.split('|')[0], id = key.split('|').slice(1).join('|');
