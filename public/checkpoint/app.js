@@ -18145,6 +18145,20 @@ function showModal(opts) {
     out.aiUse = orgProfileValue('orgAiUse') || '';
     try { var r = bookingReadinessFor('iso27001'); out.stage1Ready = r.stage1.ok; out.stage2Ready = r.stage2.ok; } catch (e) { warn(e); }
     try { out.auditorOverdue = L.auditorAccessState(auditorEntries(), '', today).overdueRemoval.length; } catch (e) { warn(e); }
+    try {
+      var ent = entitledFrameworks(), fw = ent.indexOf('iso27001') !== -1 ? 'iso27001' : ent[0];
+      var radar = auditRadarNow(fw), prevRadar = null;
+      try { prevRadar = JSON.parse((S.settings && S.settings.auditRadar) || 'null'); } catch (e2) { prevRadar = null; }
+      var lineCounts = {};
+      (S.audits || []).filter(function (x) { return x.status !== 'Completed'; }).forEach(function (x) {
+        var wp = auditWorkpackFor(x);
+        if (!wp.readable) return;
+        var sm = L.auditResultsSummary(L.auditWorkpackLines(wp), x.results || {});
+        lineCounts[x.id] = { total: sm.total, assessed: sm.assessed };
+      });
+      out.audit = L.auditDeliverySummary({ audits: S.audits || [], lineCounts: lineCounts, radarItems: radar.items, radarSeen: prevRadar ? prevRadar.seen : {},
+        actions: S.actions || [], evidenceRequests: evidenceRequestsMap(), invites: auditInvitesMap(), today: today });
+    } catch (e) { warn(e); }
     return out;
   }
   async function saveProgressSnapshot() {
