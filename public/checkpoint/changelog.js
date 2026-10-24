@@ -12,6 +12,25 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.175.0',
+    date: '2026-10-24',
+    entries: [
+      'The audit day, planned for you. From any planned audit, the interview plan schedules who to see and when: an opening meeting, top management first, then each owner for 10 minutes plus 5 per item, lunch, 45 minutes for the auditor to confirm findings, and the closing meeting. Only lines that still need a person are scheduled; ones already recorded, unchanged or expected to conform are not. Each interview lists its questions, drawn from what Checkpoint found, the clause, the evidence the control needs and the sample.',
+      'Send interview invites: each person gets an email with their questions and a calendar invite for their interview and the opening and closing meetings. The full schedule downloads as a calendar file for the auditor.',
+      'Opening and closing meeting packs. The interview plan opens with the opening meeting (scope, criteria, method, how findings are graded, timetable). The closing meeting pack gives the conclusion, every finding with its owner and due date, what was shown to work and the next steps, with sign-off lines.',
+      'One next step on every audit: request evidence, send invites, confirm the expected conforms, work through what needs you, then hold the closing meeting. Completing an audit now files the report and closing pack as Clause 9.2 evidence, and offers to send the closing summary to top management and the finding owners.'
+    ]
+  },
+  {
+    version: '1.174.0',
+    date: '2026-10-24',
+    entries: [
+      'Unchanged lines carry forward. In a surveillance year, a line that conformed at the last audit, still points at the same evidence and fails nothing Checkpoint tests today is marked Unchanged, with the audit it carries from. Re-confirm it with one click, or all of them with the suggested Conforms. Checkpoint now remembers the evidence each result was based on, so next year it can tell when that changes.',
+      'Ask owners for evidence before the audit. From a planned audit, one button emails each owner the lines the auditor will look at that have no current evidence, what to provide and where to put it, due a week before the audit. Each line shows who was asked and by when, and the requests reach the owners\u2019 weekly reminders.',
+      'A clearer first visit to Internal audits: instead of four tiles reading 0, one step that plans the programme for you (a pre-certification audit, or a three-year programme once certified). You only name the auditor.'
+    ]
+  },
+  {
     version: '1.173.0',
     date: '2026-10-24',
     entries: [

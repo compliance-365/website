@@ -125,7 +125,9 @@ test('long findings get a short title that fits SharePoint, with the full text k
 
 test('the auditor stays in charge: accepting is a click per line, and only Conforms can be accepted in bulk', () => {
   assert.match(app, /acceptAuditSuggestion: async function/);
-  assert.match(app, /if \(t\.suggest !== 'C' \|\| \(a\.results\[key\] \|\| \{\}\)\.r\) return;/);
+  /* Bulk records Conforms only: a suggested Conforms, or a line unchanged since the last audit. */
+  assert.match(app, /if \(\(!isC && !\(cf && \(!t \|\| !t\.suggest\)\)\) \|\| \(a\.results\[key\] \|\| \{\}\)\.r\) return;/);
+  assert.match(app, /r\.r = 'C'; r\.by = who;/);
   assert.match(app, /Clause 9\.2 needs the auditor(\\u2019|’)s judgement/);
 });
 
