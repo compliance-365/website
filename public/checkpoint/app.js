@@ -973,10 +973,13 @@ function showModal(opts) {
   var _paletteResults = []; /* flat, index-addressable list matching the rendered rows, rebuilt on every renderPalette() call */
   var _paletteHi = -1;
   var _recentCommandIds = []; /* in-memory only — never localStorage, per spec; most-recent first, capped */
-  function openDrawerUi(label) {
+  function openDrawerUi(label, opts) {
     var drawer = document.getElementById('drawer');
     var overlay = document.getElementById('overlay');
     drawer.setAttribute('aria-label', label || 'Details');
+    /* A workspace (the audit) takes a wider panel; everything else the standard one. */
+    drawer.classList.toggle('wide', !!(opts && opts.wide));
+    if (opts && opts.audit) drawer.setAttribute('data-audit', opts.audit); else drawer.removeAttribute('data-audit');
     drawer.classList.add('open');
     overlay.classList.add('open');
     _drawerReturnFocus = document.activeElement;
@@ -12610,9 +12613,7 @@ function showModal(opts) {
      latest scan and collector results, evidence freshness, the clause
      checklists, policy vs practice, and the operating records. */
   function auditAutoTestFor(a, wp) {
-    var lastScan = (S.scans || [])[(S.scans || []).length - 1];
-    var labels = {};
-    (window.CHECK_DEFS || []).forEach(function (d) { labels[d.id] = d.label; });
+    var scan = scanEvidenceBag();
     var ctx = clauseContext();
     var checklists = {};
     (wp.clauses || []).forEach(function (c) {
@@ -12622,8 +12623,8 @@ function showModal(opts) {
     var stale = {};
     ((evidenceCheckState() || {}).issues || []).forEach(function (x) { if (x.kind === 'control' && x.issue === 'stale') stale[x.key] = x; });
     return window.CheckpointLib.auditAutoTest(a, wp, {
-      lastResults: S.lastResults || {}, lastNotes: S.lastNotes || {}, checkControls: window.CHECK_CONTROLS || {}, checkLabels: labels,
-      scanDate: lastScan ? lastScan.date : '', expiredEvidence: stale, clauseChecklists: checklists,
+      lastResults: scan.lastResults, lastNotes: scan.lastNotes, checkControls: scan.checkControls, checkLabels: scan.checkLabels,
+      scanDate: scan.scanDate, expiredEvidence: stale, clauseChecklists: checklists, radar: auditRadarNow(a.fw).items,
       policyGaps: policyPracticeGapList().map(function (g) { return { name: g.doc.name, kind: g.kind, key: g.key }; }),
       calendar: S.calendar || [], training: S.training || [], attestations: S.attestations || [], vendors: S.vendors || [], incidents: S.incidents || [],
       auditLog: S.auditLog || [], risks: S.risks || [], actions: S.actions || [],
@@ -12631,6 +12632,35 @@ function showModal(opts) {
     }, new Date().toISOString().slice(0, 10));
   }
   var AUTO_CHIP = { C: 'st-Implemented', OFI: 'sev-Medium', Minor: 'sev-High', Major: 'sev-Critical' };
+  /* The audit screen's filter and expanded lines, per audit, kept
+     across re-renders. */
+  var _auditFilter = {}, _auditOpen = {};
+  function scanEvidenceBag() {
+    var lastScan = (S.scans || [])[(S.scans || []).length - 1];
+    var labels = {};
+    (window.CHECK_DEFS || []).forEach(function (d) { labels[d.id] = d.label; });
+    return { lastResults: S.lastResults || {}, lastNotes: S.lastNotes || {}, checkControls: window.CHECK_CONTROLS || {}, checkLabels: labels, scanDate: lastScan ? lastScan.date : '' };
+  }
+  /* A finding is re-tested when it has a control Checkpoint can test:
+     nonconformities, and anything an audit raised. */
+  function isRetestable(a) {
+    return !!a && !!a.control && (/^Non-conformity/.test(a.type || '') || /audit/i.test(a.src || ''));
+  }
+  function retestFor(a) {
+    return window.CheckpointLib.findingRetest(a, scanEvidenceBag(), new Date().toISOString().slice(0, 10));
+  }
+  function retestBlockHtml(a) {
+    if (!isRetestable(a)) return '';
+    var t = retestFor(a);
+    if (t.state === 'untested') return '';
+    var done = a.status === 'Done' || a.status === 'Closed';
+    var head = t.state === 'fixed' ? (done ? 'Re-test: the fix is holding' : 'Re-test: the control now passes') : (done ? 'Re-test: the fix has not held' : 'Re-test: still failing');
+    return '<div class="d-sec"><h4>Checkpoint re-test</h4><div class="audit-auto retest-' + t.state + '"><div class="audit-auto-head"><b>' + esc(head) + '</b></div><ul>' +
+      t.tests.map(function (x) { return '<li class="auto-' + (x.sev === 'pass' ? 'pass' : 'fail') + '"><span aria-hidden="true">' + (x.sev === 'pass' ? '\u2713' : '\u2717') + '</span> ' + esc(x.text) + '</li>'; }).join('') + '</ul>' +
+      (!READONLY && done && t.state === 'fixed' && window.CheckpointLib.capaStatus(a).isNc && !String(a.effectivenessReview || '').trim()
+        ? '<button class="btn sm" style="margin-top:8px" data-action="App.useRetestAsEffectiveness" data-id="' + esc(a.id) + '">Record as the effectiveness review</button>' : '') +
+      '</div></div>';
+  }
   function auditAutoRecord(t) {
     return { suggest: t.suggest, at: new Date().toISOString().slice(0, 10), tests: t.tests.length, sample: t.sample ? t.sample.ids : [] };
   }
@@ -12647,6 +12677,70 @@ function showModal(opts) {
         return '<li class="auto-' + (x.sev === 'pass' ? 'pass' : x.sev === 'OFI' || x.sev === 'info' ? 'ofi' : 'fail') + '"><span aria-hidden="true">' + mark[x.sev] + '</span> ' + esc(x.text) + ' <span class="src">' + esc(x.source) + '</span></li>';
       }).join('') + '</ul>' +
       (t.sample ? '<div class="src">Sample: ' + esc(t.sample.ids.join(', ')) + '. ' + esc(t.sample.method) + '</div>' : '') +
+      '</div>';
+  }
+  /* The audit radar for one framework: cross-register contradictions,
+     as of now. */
+  function auditRadarNow(fw) {
+    var scan = scanEvidenceBag();
+    var stale = {};
+    ((evidenceCheckState() || {}).issues || []).forEach(function (x) { if (x.kind === 'control' && x.issue === 'stale') stale[x.key] = x; });
+    return window.CheckpointLib.auditRadar({
+      fw: fw || 'iso27001', controls: S.controls || [], risks: S.risks || [], actions: S.actions || [], objectives: S.objectives || [],
+      reviews: S.reviews || [], audits: S.audits || [], training: S.training || [], attestations: S.attestations || [], vendors: S.vendors || [],
+      incidents: S.incidents || [], assets: S.assets || [], calendar: S.calendar || [],
+      docs: (window._docs || S.documents || []).map(function (d) { return { name: d.name, status: docStatusOf(d), nextReview: d.nextReview || '' }; }),
+      policyGaps: policyPracticeGapList().map(function (g) { return { name: g.doc.name, kind: g.kind, key: g.key }; }),
+      lastResults: scan.lastResults, checkControls: scan.checkControls, checkLabels: scan.checkLabels, scanDate: scan.scanDate,
+      expiredEvidence: stale, aboveAppetite: risksAboveAppetite().map(function (r) { return r.id; })
+    }, new Date().toISOString().slice(0, 10));
+  }
+  var RADAR_SEV_LABEL = { Major: 'Major', Minor: 'Minor', OFI: 'Improve' };
+  var RADAR_SEV_CHIP = { Major: 'sev-Critical', Minor: 'sev-High', OFI: 'sev-Medium' };
+  /* The radar on the Audits page: what an auditor would raise today,
+     newest first within each severity, each with the one fix. */
+  function renderAuditRadar() {
+    var el = document.getElementById('auditRadar');
+    if (!el) return;
+    var ent = entitledFrameworks();
+    var fw = ent.indexOf('iso27001') !== -1 ? 'iso27001' : ent[0];
+    var r = auditRadarNow(fw);
+    var today = new Date().toISOString().slice(0, 10);
+    var prev = null;
+    try { prev = JSON.parse((S.settings && S.settings.auditRadar) || 'null'); } catch (e) { prev = null; }
+    var tr = window.CheckpointLib.radarTrack(prev, r.items, today);
+    if (tr.changed && !READONLY && Store.kind !== 'demo') {
+      S.settings.auditRadar = JSON.stringify({ seen: tr.seen, resolvedAt: tr.resolved.length ? today : (prev && prev.resolvedAt) || '', resolved: tr.resolved.length ? tr.resolved.length : (prev && prev.resolved) || 0 });
+      Store.setSetting('auditRadar', S.settings.auditRadar).catch(warn);
+    }
+    var lastAudit = (S.audits || []).filter(function (a) { return a.status === 'Completed' && a.completed; }).map(function (a) { return a.completed; }).sort().pop() || '';
+    /* New: first seen after the last completed audit (or within the
+       last fortnight when there is none). Nothing is new on the very
+       first look, as there is nothing to compare with. */
+    var since = lastAudit || new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+    var isNew = function (x) { var f = tr.seen[x.id]; return !!prev && !!f && f > since; };
+    var newCount = r.items.filter(isNew).length;
+    var open = el.getAttribute('data-open') === '1';
+    if (!r.items.length) {
+      el.innerHTML = '<div class="radar radar-clear"><div class="radar-head"><span class="radar-pulse ok" aria-hidden="true"></span><div><h3>Audit radar</h3><p>Nothing an auditor would raise across your registers right now. Checkpoint keeps checking.</p></div></div></div>';
+      return;
+    }
+    var shown = open ? r.items : r.items.slice(0, 5);
+    el.innerHTML = '<div class="radar">' +
+      '<div class="radar-head"><span class="radar-pulse" aria-hidden="true"></span><div><h3>Audit radar</h3>' +
+      '<p>What an auditor would raise if they looked today, found by cross-checking your registers, scan results and records. ' +
+      (newCount ? '<b>' + newCount + ' new</b> since ' + (lastAudit ? 'the last audit' : 'the last fortnight') + '. ' : '') +
+      (prev && prev.resolved ? prev.resolved + ' resolved since ' + esc(fmtDate(prev.resolvedAt)) + '. ' : '') + 'The next audit\u2019s workpack starts with these.</p></div>' +
+      '<div class="radar-counts">' + ['Major', 'Minor', 'OFI'].map(function (k) {
+        return '<span class="radar-count ' + RADAR_SEV_CHIP[k] + (r.counts[k] ? '' : ' zero') + '"><b>' + r.counts[k] + '</b>' + (k === 'OFI' ? 'Improve' : k) + '</span>';
+      }).join('') + '</div></div>' +
+      '<ol class="radar-list">' + shown.map(function (x) {
+        return '<li><span class="chip ' + RADAR_SEV_CHIP[x.sev] + '">' + RADAR_SEV_LABEL[x.sev] + '</span>' +
+          '<div class="radar-body"><div class="radar-title">' + esc(x.title) + (isNew(x) ? ' <span class="radar-new">New</span>' : '') + '</div>' +
+          '<div class="radar-detail"><span class="radar-ref">' + esc(x.ref) + '</span> ' + esc(x.detail) + '</div></div>' +
+          (x.fix && !READONLY ? '<button class="btn quiet sm" data-action="' + esc(x.fix.action) + '"' + (x.fix.id ? ' data-id="' + esc(x.fix.id) + '"' : '') + '>' + esc(x.fix.label) + '</button>' : '') + '</li>';
+      }).join('') + '</ol>' +
+      (r.items.length > 5 ? '<button class="btn ghost sm radar-more" data-action="App.toggleAuditRadar">' + (open ? 'Show the top 5' : 'Show all ' + r.items.length) + '</button>' : '') +
       '</div>';
   }
   function auditWorkpackFor(a) {
@@ -15859,6 +15953,7 @@ function showModal(opts) {
     var wrap = document.getElementById('auditRows');
     if (!wrap) return;
     renderAuditsDashboard();
+    renderAuditRadar();
     var fwSelect = document.getElementById('naAuditFw');
     if (fwSelect && !fwSelect.options.length) {
       fwSelect.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) { return '<option value="' + fw + '">' + esc(fwName(fw)) + '</option>'; }).join('');
@@ -19501,6 +19596,13 @@ function showModal(opts) {
       }
       busy(false);
       renderAll();
+      /* A finding closed while its control still fails its test has
+         not been fixed: say so now, not at the next audit. */
+      if (upd && isRetestable(a)) {
+        var rt = retestFor(a);
+        if (rt.state === 'failing') toast('<b>' + esc(a.id) + '</b> is completed, but ' + esc(a.control) + ' still fails its posture check. Re-run the scan once the change has applied, or the finding will show on the audit radar.', 'error');
+        else if (rt.state === 'fixed' && window.CheckpointLib.capaStatus(a).isNc) toast('<b>' + esc(a.id) + '</b>: ' + esc(a.control) + ' now passes its posture check. Open it to record that as the effectiveness review.');
+      }
       /* The last treatment action done: the residual is now a guess
          until someone reassesses it. */
       if (r && window.CheckpointLib.riskNeedsReassessment(r, S.actions, S.actionUpdates)) {
@@ -19571,6 +19673,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Ticket</span><b>' + (ticketFor(a.id) ? ticketChipHtml(ticketFor(a.id)) : '\u2014') + '</b></div>' +
         '<div class="d-kv"><span>Current evidence link</span><b>' + (a.evidenceUrl && isSafeUrl(a.evidenceUrl) ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener">Open ' + icon('external') + '</a>' : '—') + '</b></div>' +
         (capa.isNc ? '<div class="src" style="margin-top:4px">' + esc(capa.nextStep) + '</div>' : '') +
+        retestBlockHtml(a) +
         (READONLY ? '' :
           '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0">' +
           '<button class="btn sm" data-action="App.addActionUpdate" data-id="' + a.id + '">Add update</button>' +
@@ -20676,6 +20779,32 @@ function showModal(opts) {
        corrective action is completed — verification that it worked.
        capaStatus() (lib.js) tracks which step is owed next; the register
        row shows it. Only meaningful for a Non-conformity finding type. */
+    toggleAuditRadar: function () {
+      var el = document.getElementById('auditRadar');
+      if (!el) return;
+      el.setAttribute('data-open', el.getAttribute('data-open') === '1' ? '0' : '1');
+      renderAuditRadar();
+    },
+
+    useRetestAsEffectiveness: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var t = retestFor(a);
+      if (t.state !== 'fixed') { toast('The control does not pass its re-test yet.'); return; }
+      a.effectivenessReview = t.text;
+      a.effectivenessBy = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      a.effectivenessDate = new Date().toISOString().slice(0, 10);
+      busy(true);
+      try {
+        await Store.updateAction(a);
+        audit('Corrective action effectiveness recorded from re-test', 'Action', a.id, '', t.text);
+        toast('Effectiveness review recorded for <b>' + esc(a.id) + '</b>');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+      App.openAction(a.id);
+    },
+
     recordCapa: async function (id) {
       var a = S.actions.find(function (x) { return x.id === id; });
       if (!a) return;
@@ -25322,43 +25451,110 @@ function showModal(opts) {
       var auto = a.status === 'Completed' ? { lines: {}, counts: {}, tested: 0, total: 0 } : auditAutoTestFor(a, wp);
       var resultLabel = {};
       window.CheckpointLib.AUDIT_RESULTS.forEach(function (o) { resultLabel[o.value] = o.label; });
-      var openC = lines.filter(function (l) { var t = auto.lines[l.key]; return t && t.suggest === 'C' && !(a.results[l.key] || {}).r; }).length;
-      var autoHead = auto.tested ? '<div class="audit-auto-sum"><b>Checkpoint tested ' + auto.tested + ' of ' + auto.total + ' lines</b> against your scan results, records and evidence. It suggests ' +
-        [['C', 'conform'], ['OFI', 'opportunit' + (auto.counts.OFI === 1 ? 'y' : 'ies') + ' for improvement'], ['Minor', 'minor nonconformit' + (auto.counts.Minor === 1 ? 'y' : 'ies')], ['Major', 'major nonconformit' + (auto.counts.Major === 1 ? 'y' : 'ies')]]
-          .filter(function (x) { return auto.counts[x[0]]; }).map(function (x) { return auto.counts[x[0]] + ' ' + x[1]; }).join(', ') +
-        '. Each is a suggestion: Clause 9.2 needs the auditor\u2019s judgement, so accept it, change it, or record your own result.' +
-        (!ro && openC ? ' <button class="btn ghost sm" data-action="App.acceptAuditConforms" data-id="' + esc(a.id) + '">Accept the ' + openC + ' suggested \u201cConforms\u201d</button>' : '') + '</div>' : '';
+      var short = { C: 'Conforms', OFI: 'Improve', Minor: 'Minor NC', Major: 'Major NC' };
+
+      /* Three piles: what needs the auditor, what Checkpoint expects to
+         conform (one click to confirm), and what is recorded. */
+      var bucket = function (l) {
+        if ((a.results[l.key] || {}).r) return 'done';
+        var t = auto.lines[l.key];
+        return t && t.suggest === 'C' ? 'conforms' : 'attention';
+      };
+      var n = { attention: 0, conforms: 0, done: 0, all: lines.length };
+      lines.forEach(function (l) { n[bucket(l)]++; });
+      _auditFilter[a.id] = _auditFilter[a.id] || (n.attention ? 'attention' : 'all');
+      if (_auditFilter[a.id] !== 'all' && !n[_auditFilter[a.id]]) _auditFilter[a.id] = n.attention ? 'attention' : 'all';
+      var filter = _auditFilter[a.id];
+      var shown = lines.filter(function (l) { return filter === 'all' || bucket(l) === filter; });
+      var openSet = _auditOpen[a.id] = _auditOpen[a.id] || {};
+
+      var sugg = { Major: 0, Minor: 0, OFI: 0, C: 0, none: 0 };
+      lines.forEach(function (l) { if ((a.results[l.key] || {}).r) return; var t = auto.lines[l.key]; sugg[(t && t.suggest) || 'none']++; });
+      var pct = sum.total ? Math.round(100 * sum.assessed / sum.total) : 0;
+
       var heads = { follow: 'Open findings to follow up', clause: 'Management-system clauses', control: 'Controls' };
       var lastKind = '';
-      var rows = lines.map(function (l) {
-        var r = a.results[l.key] || {};
-        var head = l.kind !== lastKind ? '<h4 style="margin:16px 0 4px">' + heads[l.kind] + '</h4>' : '';
+      var rows = shown.map(function (l) {
+        var r = a.results[l.key] || {}, t = auto.lines[l.key];
+        var head = l.kind !== lastKind ? '<h4 class="aw-group">' + heads[l.kind] + '</h4>' : '';
         lastKind = l.kind;
         var prompt = l.kind === 'clause' ? (wp.prompts.find(function (p) { return p.clause === String(l.id).split('.')[0]; }) || {}).prompt : '';
-        return head + '<div class="d-sec" style="padding-top:8px" data-audit-line="' + esc(l.key) + '">' +
-          '<div style="font-size:12.5px"><b>' + esc(l.id) + '</b> ' + esc(l.title || '') +
-          (l.evidenceUrl && isSafeUrl(l.evidenceUrl) ? ' <a class="src" href="' + esc(l.evidenceUrl) + '" target="_blank" rel="noopener">Evidence ' + icon('external') + '</a>' : ' <span class="src">No evidence linked</span>') + '</div>' +
-          (l.flags && l.flags.length ? '<div class="src">Look at first: ' + esc(l.flags.join('; ')) + '</div>' : '') +
-          (prompt && l.id.indexOf('.') === -1 ? '<div class="src">' + esc(prompt) + '</div>' : '') +
-          auditAutoLineHtml(a, l, auto.lines[l.key], r, ro, resultLabel) +
-          '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">' +
-          '<select class="mini" aria-label="Result for ' + esc(l.id) + '" data-change-action="App.setAuditResult" data-id="' + esc(a.id + '#' + l.key) + '"' + (ro ? ' disabled' : '') + '>' +
+        var isOpen = !!openSet[l.key];
+        var chip = r.r ? '<span class="chip ' + AUTO_CHIP[r.r] + '" title="Recorded">' + esc(short[r.r]) + '</span>'
+          : t && t.suggest ? '<span class="chip ghost-chip ' + AUTO_CHIP[t.suggest] + '" title="Suggested by Checkpoint">' + esc(short[t.suggest]) + '?</span>'
+          : '<span class="chip st-Notstarted" title="No automated test">Not tested</span>';
+        var ref = esc(a.id + '#' + l.key);
+        return head + '<div class="aw-line' + (isOpen ? ' open' : '') + (r.r ? ' recorded' : '') + '" data-audit-line="' + esc(l.key) + '">' +
+          '<div class="aw-row">' +
+          '<button class="aw-toggle" aria-expanded="' + isOpen + '" aria-label="Details for ' + esc(l.id) + '" data-action="App.toggleAuditLine" data-id="' + ref + '">' + icon('chevron') + '</button>' +
+          chip +
+          '<div class="aw-name"><b>' + esc(l.id) + '</b> ' + esc(l.title || '') + (r.ref ? ' <span class="aw-ref">' + esc(r.ref) + '</span>' : '') + '</div>' +
+          (!ro && t && t.suggest && !r.r ? '<button class="btn quiet sm aw-accept" data-action="App.acceptAuditSuggestion" data-id="' + ref + '">Accept</button>' : '') +
+          '<select class="mini aw-select" aria-label="Result for ' + esc(l.id) + '" data-change-action="App.setAuditResult" data-id="' + ref + '"' + (ro ? ' disabled' : '') + '>' +
           opts.map(function (o) { return '<option value="' + o.value + '"' + (o.value === (r.r || '') ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
-          '<input class="mini" style="flex:1;min-width:160px" aria-label="Note for ' + esc(l.id) + '" placeholder="What you sampled and saw" value="' + esc(r.note || '') + '" data-change-action="App.setAuditNote" data-id="' + esc(a.id + '#' + l.key) + '"' + (ro ? ' disabled' : '') + '>' +
-          (r.ref ? '<span class="chip" style="align-self:center">' + esc(r.ref) + '</span>' : '') +
-          '</div></div>';
+          '</div>' +
+          '<div class="aw-detail">' +
+          (l.flags && l.flags.length ? '<div class="aw-flags">' + l.flags.map(function (f) { return '<span>' + esc(f) + '</span>'; }).join('') + '</div>' : '') +
+          (prompt && l.id.indexOf('.') === -1 ? '<p class="src">' + esc(prompt) + '</p>' : '') +
+          auditAutoLineHtml(a, l, t, r, ro, resultLabel) +
+          '<div class="aw-note">' +
+          (l.evidenceUrl && isSafeUrl(l.evidenceUrl) ? '<a class="btn ghost sm" href="' + esc(l.evidenceUrl) + '" target="_blank" rel="noopener">Open evidence ' + icon('external') + '</a>' : '') +
+          '<input class="mini" aria-label="Note for ' + esc(l.id) + '" placeholder="What you sampled and saw" value="' + esc(r.note || '') + '" data-change-action="App.setAuditNote" data-id="' + ref + '"' + (ro ? ' disabled' : '') + '>' +
+          '</div></div></div>';
       }).join('');
-      document.getElementById('drawer').innerHTML =
+
+      var tab = function (k, label) {
+        return '<button role="tab" class="aw-tab' + (filter === k ? ' on' : '') + '" aria-selected="' + (filter === k) + '" data-action="App.setAuditFilter" data-id="' + esc(a.id + '#' + k) + '">' + label + ' <span>' + n[k] + '</span></button>';
+      };
+      var stat = function (k, label, cls) { return '<div class="aw-stat ' + cls + (sugg[k] ? '' : ' zero') + '"><b>' + sugg[k] + '</b><span>' + label + '</span></div>'; };
+      var drawer = document.getElementById('drawer');
+      var reopen = drawer.classList.contains('open') && drawer.getAttribute('data-audit') === a.id;
+      var keepScroll = reopen ? drawer.scrollTop : 0;
+      var focusId = reopen && document.activeElement && drawer.contains(document.activeElement) ? document.activeElement.getAttribute('data-id') : null;
+      drawer.innerHTML =
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
-        '<div class="id-t">' + esc(a.id) + ' \u00b7 ' + esc(fwName(a.fw)) + '</div><h2>Conduct the audit</h2>' +
-        '<div class="d-sec"><p class="src" style="margin:0">' + esc(a.scope) + '. Auditor: ' + esc(a.auditor || 'Unassigned') + '. Record a result for each line as you go: it is saved straight away. A nonconformity or opportunity for improvement raises its finding in the Actions register.</p>' +
-        '<div class="d-kv" style="margin-top:8px"><span>Progress</span><b id="auditProgress">' + esc(sum.assessed + ' of ' + sum.total + ' audited') + '</b></div>' +
-        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' +
-        (ro ? '' : '<button class="btn sm" data-action="App.completeAudit" data-id="' + esc(a.id) + '">Complete the audit</button>') +
+        '<div class="aw">' +
+        '<div class="aw-top">' +
+        '<div class="id-t">' + esc(a.id) + ' · ' + esc(fwName(a.fw)) + ' · ' + esc(a.status === 'Completed' ? 'Completed ' + fmtDate(a.completed) : 'Planned ' + fmtDate(a.planned)) + '</div>' +
+        '<h2>' + esc(a.scope) + '</h2>' +
+        '<div class="aw-meta">Auditor: <b>' + esc(a.auditor || 'Unassigned') + '</b></div>' +
+        '<div class="aw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + sum.total + '" aria-valuenow="' + sum.assessed + '" aria-label="Lines recorded"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="aw-progress-text"><b id="auditProgress">' + esc(sum.assessed + ' of ' + sum.total + ' audited') + '</b>' +
+        (auto.tested ? '<span>Checkpoint tested ' + auto.tested + ' of ' + auto.total + ' lines against your scan results, records and evidence</span>' : '') + '</div>' +
+        (auto.tested ? '<div class="aw-stats" aria-label="Suggested results not yet recorded">' + stat('Major', 'Major NC', 'sev-Critical') + stat('Minor', 'Minor NC', 'sev-High') + stat('OFI', 'Improve', 'sev-Medium') + stat('C', 'Conforms', 'st-Implemented') + stat('none', 'Not tested', 'st-Notstarted') + '</div>' : '') +
+        '<div class="aw-actions">' +
+        (!ro && n.conforms ? '<button class="btn sm" data-action="App.acceptAuditConforms" data-id="' + esc(a.id) + '">Confirm ' + n.conforms + ' suggested Conforms</button>' : '') +
+        (ro ? '' : '<button class="btn ' + (n.conforms ? 'ghost ' : '') + 'sm" data-action="App.completeAudit" data-id="' + esc(a.id) + '">Complete the audit</button>') +
         '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + esc(a.id) + '">' + (a.status === 'Completed' ? 'Audit report' : 'Workpack') + '</button>' +
         (a.status === 'Completed' && !READONLY ? '<button class="btn ghost sm" data-action="App.fileAuditReport" data-id="' + esc(a.id) + '">Save report as Clause 9.2 evidence</button>' : '') + '</div>' +
-        autoHead + '</div>' + rows;
-      openDrawerUi('Audit ' + a.id);
+        (auto.tested ? '<p class="aw-note-9-2">Results marked with ? are Checkpoint’s suggestions. Nothing is recorded until you accept or choose a result: Clause 9.2 needs the auditor’s judgement. A nonconformity or improvement raises its finding in Actions.</p>' : '') +
+        '<div class="aw-tabs" role="tablist" aria-label="Filter lines">' + tab('attention', 'Needs you') + tab('conforms', 'Suggested conforms') + tab('done', 'Recorded') + tab('all', 'All') + '</div>' +
+        '</div>' +
+        '<div class="aw-lines">' + (rows || '<p class="src" style="padding:16px 0">Nothing here.</p>') + '</div>' +
+        '</div>';
+      if (reopen) {
+        drawer.scrollTop = keepScroll;
+        var back = focusId ? drawer.querySelector('[data-id="' + focusId.replace(/"/g, '\\"') + '"]') : null;
+        if (back) back.focus();
+      } else openDrawerUi('Audit ' + a.id, { wide: true, audit: a.id });
+    },
+    toggleAuditLine: function (ref) {
+      var parts = String(ref).split('#'), key = parts.slice(1).join('#');
+      var set = _auditOpen[parts[0]] = _auditOpen[parts[0]] || {};
+      set[key] = !set[key];
+      var el = document.querySelector('#drawer [data-audit-line="' + key.replace(/"/g, '\\"') + '"]');
+      if (el) {
+        el.classList.toggle('open', !!set[key]);
+        var b = el.querySelector('.aw-toggle');
+        if (b) b.setAttribute('aria-expanded', String(!!set[key]));
+      }
+    },
+    setAuditFilter: function (ref) {
+      var parts = String(ref).split('#');
+      _auditFilter[parts[0]] = parts[1];
+      var drawer = document.getElementById('drawer');
+      App.conductAudit(parts[0]);
+      drawer.scrollTop = 0;
     },
 
     /* Take Checkpoint's suggested result for a line: its drafted

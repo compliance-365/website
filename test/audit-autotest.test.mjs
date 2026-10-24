@@ -126,7 +126,7 @@ test('long findings get a short title that fits SharePoint, with the full text k
 test('the auditor stays in charge: accepting is a click per line, and only Conforms can be accepted in bulk', () => {
   assert.match(app, /acceptAuditSuggestion: async function/);
   assert.match(app, /if \(t\.suggest !== 'C' \|\| \(a\.results\[key\] \|\| \{\}\)\.r\) return;/);
-  assert.match(app, /Clause 9\.2 needs the auditor\\u2019s judgement/);
+  assert.match(app, /Clause 9\.2 needs the auditor(\\u2019|’)s judgement/);
 });
 
 test('a result the auditor changes, or a finding they cancel, is no longer reported as Checkpoint\'s', () => {

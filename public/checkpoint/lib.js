@@ -13450,7 +13450,8 @@
        clauseChecklists {clauseId: clauseChecklist()},
        policyGaps [{name, kind, key}]  (policyPracticeGaps()),
        calendar, training, attestations, vendors, incidents,
-       auditLog, docs, risks, actions  (stage2DryRun's inputs) */
+       auditLog, docs, risks, actions  (stage2DryRun's inputs),
+       radar  (auditRadar().items) */
   var AUTO_RANK = { info: 0, pass: 0, C: 0, OFI: 1, Minor: 2, Major: 3 };
   var STAGE2_SAMPLE_REFS = {
     leavers: ['A.5.18', 'A.6.5'], starters: ['A.6.3', 'A.5.10'], incidents: ['A.5.24', 'A.5.26', 'A.5.27'],
@@ -13504,6 +13505,12 @@
       out[line.key] = { suggest: suggest, tests: tests, draft: draft.trim(), sample: sample || null };
     }
 
+    /* Radar findings the line-level tests above do not already cover. */
+    var RADAR_IN_WORKPACK = { 'risk-control': 1, 'risk-accept': 1, objective: 1, corrective: 1, retest: 1, documents: 1, people: 1, incidents: 1, assets: 1 };
+    function radarFor(id) {
+      return (e.radar || []).filter(function (x) { return RADAR_IN_WORKPACK[x.kind] && radarMatches(x, id); })
+        .map(function (x) { return { sev: x.sev, text: x.title + '. ' + x.detail, source: 'Audit radar' }; });
+    }
     function stage2For(id) {
       /* Recurring activities are tested in full above, not sampled. */
       return (s2.findings || []).filter(function (f) { return f.area !== 'Operating rhythm' && refMatches(f.ref, id); }).map(function (f) {
@@ -13564,7 +13571,7 @@
         else if (lapsed.length) tests.push({ sev: 'OFI', text: lapsed.length + ' supplier' + (lapsed.length === 1 ? ' is' : 's are') + ' overdue for review.', source: 'Suppliers' });
         else if ((e.vendors || []).length) tests.push({ sev: 'pass', text: 'Every supplier review is in date.', source: 'Suppliers' });
       }
-      tests = tests.concat(stage2For(c.id));
+      tests = tests.concat(stage2For(c.id), radarFor(c.id));
       finish(line, tests, sampleFor(c.id));
     });
 
@@ -13592,7 +13599,7 @@
         }
       }
       if (c.status === 'Implemented' && !c.evidenceUrl) tests.push({ sev: 'Minor', text: 'Clause ' + c.id + ' is marked Implemented with no evidence linked.', source: 'Clauses' });
-      tests = tests.concat(stage2For(c.id));
+      tests = tests.concat(stage2For(c.id), radarFor(c.id));
       finish(line, tests, sampleFor(c.id));
     });
 
@@ -13609,6 +13616,212 @@
     var count = { C: 0, OFI: 0, Minor: 0, Major: 0, none: 0 };
     keys.forEach(function (k) { count[out[k].suggest || 'none']++; });
     return { lines: out, counts: count, tested: keys.length - count.none, total: keys.length, seed: seed };
+  }
+
+  /* ============================================================
+     Audit radar
+     ------------------------------------------------------------
+     The contradictions an auditor looks for, found across registers
+     between audits: a control claimed but failing its own test, a
+     risk relying on a control that is not there, a policy promising
+     what nobody does, a corrective action closed without proof it
+     worked. Each item has a stable id (so "new since" can be tracked),
+     a severity, the clause or control it would be raised against, and
+     the one thing that fixes it. Several records of one kind are one
+     item listing them, so the radar reads as a short agenda, not a
+     dump. d:
+       fw, controls, risks, actions, objectives, reviews, audits, docs,
+       training, attestations, vendors, incidents, assets, calendar,
+       policyGaps [{name, kind, key}], lastResults, checkControls,
+       checkLabels, scanDate, expiredEvidence, aboveAppetite [risk ids] */
+  var RADAR_RANK = { Major: 0, Minor: 1, OFI: 2 };
+  function listSome(ids, n) {
+    n = n || 6;
+    return ids.slice(0, n).join(', ') + (ids.length > n ? ' and ' + (ids.length - n) + ' more' : '');
+  }
+  function auditRadar(d, today) {
+    d = d || {};
+    var out = [];
+    var add = function (x) { out.push(x); };
+    var fw = d.fw || 'iso27001';
+    var yearAgo = addDaysIso(today, -365);
+    var openA = function (a) { return a && ['Done', 'Closed', 'Cancelled'].indexOf(a.status) === -1; };
+    var controls = (d.controls || []).filter(function (c) { return c && c.fw === fw; });
+    var byId = {};
+    controls.forEach(function (c) { byId[c.id] = c; });
+    var results = d.lastResults || {}, labels = d.checkLabels || {};
+    var onDate = d.scanDate ? ' on ' + srDate(d.scanDate) : '';
+
+    /* 1. Claimed but failing its own test. */
+    var failingBy = {};
+    Object.keys(d.checkControls || {}).forEach(function (chk) {
+      if (results[chk] !== 'fail') return;
+      (d.checkControls[chk] || []).forEach(function (cid) { (failingBy[cid] = failingBy[cid] || []).push(chk); });
+    });
+    controls.forEach(function (c) {
+      if (!c.app || c.st !== 'Implemented' || !failingBy[c.id]) return;
+      var names = failingBy[c.id].map(function (chk) { return '“' + (labels[chk] || chk) + '”'; });
+      add({ id: 'claimed-failing|' + c.id, kind: 'claimed-failing', sev: 'Minor', ref: c.id,
+        title: c.id + ' is marked Implemented but fails its posture check',
+        detail: 'The Statement of Applicability says ' + c.id + ' ' + (c.t || '') + ' is implemented, but ' + names.join(' and ') + (names.length === 1 ? ' fails' : ' fail') + onDate + '. An auditor treats this as a control that is not operating.',
+        fix: { action: 'App.go', id: 'scan', label: 'Open the scan' } });
+    });
+
+    /* 2. Claimed with nothing to show for it. */
+    var noEv = controls.filter(function (c) { return c.app && c.st === 'Implemented' && !c.evidenceUrl; }).map(function (c) { return c.id; });
+    if (noEv.length) add({ id: 'claimed-no-evidence', kind: 'claimed-no-evidence', sev: 'Minor', ref: 'SoA', refs: noEv,
+      title: noEv.length + ' control' + (noEv.length === 1 ? ' is' : 's are') + ' marked Implemented with no evidence',
+      detail: listSome(noEv) + '. Each needs a record that shows it operating.', fix: { action: 'App.go', id: 'soa', label: 'Open the SoA' } });
+    var stale = controls.filter(function (c) { return c.evidenceUrl && (d.expiredEvidence || {})[c.fw + '|' + c.id]; }).map(function (c) { return c.id; });
+    if (stale.length) add({ id: 'stale-evidence', kind: 'stale-evidence', sev: 'Minor', ref: 'SoA', refs: stale,
+      title: stale.length + ' control' + (stale.length === 1 ? '’s evidence is' : 's’ evidence is') + ' out of date',
+      detail: listSome(stale) + '. The evidence is older than the activity behind it allows.', fix: { action: 'App.go', id: 'soa', label: 'Open the SoA' } });
+
+    /* 3. Risks relying on controls that are not there. */
+    (d.risks || []).forEach(function (r) {
+      if (!r || r.status === 'Closed' || r.type === 'Opportunity' || !/treat/i.test(r.treat || 'Treat')) return;
+      var missing = (r.controls || []).filter(function (cid) { var c = byId[cid]; return c && (!c.app || c.st !== 'Implemented'); });
+      if (!missing.length) return;
+      var excluded = missing.filter(function (cid) { return !byId[cid].app; });
+      var acts = (d.actions || []).filter(function (a) { return openA(a) && ((r.actions || []).indexOf(a.id) !== -1 || a.risk === r.id); });
+      if (excluded.length) add({ id: 'risk-excluded|' + r.id, kind: 'risk-control', sev: 'Minor', ref: '6.1.3', refs: [r.id].concat(excluded),
+        title: r.id + ' is treated by ' + excluded.join(', ') + ', which ' + (excluded.length === 1 ? 'is' : 'are') + ' excluded',
+        detail: 'The risk treatment relies on a control the Statement of Applicability excludes (6.1.3 d). Include the control, or change the treatment.',
+        fix: { action: 'App.openRisk', id: r.id, label: 'Open the risk' } });
+      else if (!acts.length) add({ id: 'risk-unbacked|' + r.id, kind: 'risk-control', sev: 'OFI', ref: '6.1.3', refs: [r.id].concat(missing),
+        title: r.id + ' relies on ' + missing.join(', ') + ', not yet implemented, with no open treatment action',
+        detail: 'Nothing in the plan says when ' + (missing.length === 1 ? 'that control' : 'those controls') + ' will be in place (6.1.3 e).',
+        fix: { action: 'App.openRisk', id: r.id, label: 'Add a treatment action' } });
+    });
+    var unaccepted = (d.risks || []).filter(function (r) { return r && (d.aboveAppetite || []).indexOf(r.id) !== -1 && !r.acceptedBy; }).map(function (r) { return r.id; });
+    if (unaccepted.length) add({ id: 'risk-unaccepted', kind: 'risk-accept', sev: 'Minor', ref: '6.1.3', refs: unaccepted,
+      title: unaccepted.length + ' risk' + (unaccepted.length === 1 ? ' is' : 's are') + ' above appetite with no residual risk acceptance',
+      detail: listSome(unaccepted) + '. Risk owners must accept the residual risk (6.1.3 f).', fix: { action: 'App.go', id: 'risks', label: 'Open risks' } });
+
+    /* 4. Policies promising what nobody does. */
+    (d.policyGaps || []).forEach(function (g) {
+      if (g.kind !== 'unscheduled') return;
+      var cad = CADENCES[g.key] || {};
+      add({ id: 'policy-unscheduled|' + g.key + '|' + g.name, kind: 'policy-practice', sev: 'Minor', ref: '7.5.3', refs: ((cad.calendar && rhythmDef(cad.calendar)) || {}).controls || [],
+        title: String(g.name || '').replace(/\.html$/i, '') + ' promises a ' + String(cad.label || g.key).toLowerCase() + ' that is not scheduled',
+        detail: 'The approved document commits to it, but nothing in the compliance calendar makes it happen, so the policy is not being followed.',
+        fix: { action: 'App.setupOperatingRhythm', label: 'Schedule it' } });
+    });
+    (d.calendar || []).forEach(function (cal) {
+      var def = rhythmDefFor(cal);
+      if (!calendarItemLive(cal) || !def) return;
+      if (cal.lastCompleted && cal.lastCompleted >= yearAgo && cal.nextDue && cal.nextDue >= today) return;
+      var never = !cal.lastCompleted || cal.lastCompleted < yearAgo;
+      if (!never && (!cal.nextDue || cal.nextDue >= addDaysIso(today, -30))) return;
+      add({ id: 'activity-missed|' + cal.id, kind: 'activity', sev: never ? 'Minor' : 'OFI', ref: (def.controls || [])[0] || '', refs: def.controls || [],
+        title: never ? '“' + cal.title + '” has no record in the last 12 months' : '“' + cal.title + '” is more than 30 days overdue',
+        detail: never ? 'A recurring activity with no record is a control the auditor cannot see operating.' : 'Last done ' + srDate(cal.lastCompleted) + ', due ' + srDate(cal.nextDue) + '.',
+        fix: { action: 'App.editCalItem', id: cal.id, label: 'Record it' } });
+    });
+
+    /* 5. Objectives that cannot be measured, or have slipped. */
+    var unmeasurable = (d.objectives || []).filter(function (o) { return o && o.status !== 'Achieved' && (!String(o.metric || '').trim() || !String(o.target || '').trim()); }).map(function (o) { return o.id; });
+    if (unmeasurable.length) add({ id: 'objective-unmeasurable', kind: 'objective', sev: 'Minor', ref: '6.2', refs: unmeasurable,
+      title: unmeasurable.length + ' objective' + (unmeasurable.length === 1 ? ' has' : 's have') + ' no metric or target',
+      detail: listSome(unmeasurable) + '. Objectives must be measurable (6.2 b).', fix: { action: 'App.go', id: 'objectives', label: 'Open objectives' } });
+    var slipped = (d.objectives || []).filter(function (o) { return o && o.due && o.due < today && ['Achieved', 'Closed', 'Cancelled'].indexOf(o.status) === -1; }).map(function (o) { return o.id; });
+    if (slipped.length) add({ id: 'objective-overdue', kind: 'objective', sev: 'OFI', ref: '6.2', refs: slipped,
+      title: slipped.length + ' objective' + (slipped.length === 1 ? ' is' : 's are') + ' past due and not achieved',
+      detail: listSome(slipped) + '. Record progress, or re-plan with management.', fix: { action: 'App.go', id: 'objectives', label: 'Open objectives' } });
+
+    /* 6. Management review. */
+    var review = (d.reviews || []).filter(function (r) { return r && r.date && r.date >= yearAgo; }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); })[0];
+    if (!review) add({ id: 'mr-none', kind: 'review', sev: 'Major', ref: '9.3', title: 'No management review in the last 12 months',
+      detail: 'Top management must review the management system at planned intervals (9.3). Without one, certification cannot go ahead.', fix: { action: 'App.startManagementReview', label: 'Start the review' } });
+    else if (!String(review.decisions || '').trim()) add({ id: 'mr-no-outputs|' + review.date, kind: 'review', sev: 'Minor', ref: '9.3.3', title: 'The ' + srDate(review.date) + ' management review records no decisions',
+      detail: 'The review must result in decisions on improvement and any changes needed (9.3.3).', fix: { action: 'App.go', id: 'reviews', label: 'Record the outputs' } });
+
+    /* 7. Corrective action (10.2). */
+    var ncs = (d.actions || []).filter(function (a) { return a && /^Non-conformity/.test(a.type || ''); });
+    var lateNc = ncs.filter(function (a) { return openA(a) && a.due && a.due < today; }).map(function (a) { return a.id; });
+    if (lateNc.length) add({ id: 'nc-overdue', kind: 'corrective', sev: 'Minor', ref: '10.2', refs: lateNc,
+      title: lateNc.length + ' nonconformit' + (lateNc.length === 1 ? 'y is' : 'ies are') + ' past their due date',
+      detail: listSome(lateNc) + '. Corrective action must be taken without undue delay.', fix: { action: 'App.openAction', id: lateNc[0], label: 'Open ' + lateNc[0] } });
+    var unproven = ncs.filter(function (a) { return !openA(a) && a.status !== 'Cancelled' && (!String(a.rootCause || '').trim() || !String(a.effectivenessReview || '').trim()); }).map(function (a) { return a.id; });
+    if (unproven.length) add({ id: 'nc-unproven', kind: 'corrective', sev: 'Minor', ref: '10.2', refs: unproven,
+      title: unproven.length + ' closed nonconformit' + (unproven.length === 1 ? 'y has' : 'ies have') + ' no root cause or effectiveness check',
+      detail: listSome(unproven) + '. 10.2 needs the cause found and the action shown to have worked.', fix: { action: 'App.openAction', id: unproven[0], label: 'Open ' + unproven[0] } });
+    var refailing = (d.actions || []).filter(function (a) {
+      return a && !openA(a) && a.status !== 'Cancelled' && a.control && (/^Non-conformity/.test(a.type || '') || /audit/i.test(a.src || '')) && failingBy[a.control];
+    }).map(function (a) { return a.id; });
+    if (refailing.length) add({ id: 'fix-not-holding', kind: 'retest', sev: 'Minor', ref: '10.2', refs: refailing,
+      title: refailing.length + ' closed finding' + (refailing.length === 1 ? '’s control fails' : 's’ controls fail') + ' its posture check again',
+      detail: listSome(refailing) + ' ' + (refailing.length === 1 ? 'was' : 'were') + ' closed, but the latest scan' + onDate + ' fails the same control, so the correction has not held.',
+      fix: { action: 'App.openAction', id: refailing[0], label: 'Open ' + refailing[0] } });
+
+    /* 8. Documents, people, suppliers, incidents, assets. */
+    var overdueDocs = (d.docs || []).filter(function (x) { return x && x.status === 'Approved' && x.nextReview && x.nextReview < today; }).map(function (x) { return String(x.name).replace(/\.html$/i, ''); });
+    if (overdueDocs.length) add({ id: 'docs-overdue', kind: 'documents', sev: 'Minor', ref: '7.5.3', refs: [],
+      title: overdueDocs.length + ' approved document' + (overdueDocs.length === 1 ? ' is' : 's are') + ' past its review date',
+      detail: listSome(overdueDocs, 4) + '.', fix: { action: 'App.go', id: 'documents', label: 'Open documents' } });
+    var lateTraining = (d.training || []).filter(function (t) { return t && t.status !== 'Completed' && t.due && t.due < today; });
+    if (lateTraining.length) add({ id: 'training-overdue', kind: 'people', sev: lateTraining.length > 2 ? 'Minor' : 'OFI', ref: 'A.6.3', refs: ['A.6.3', '7.2'],
+      title: lateTraining.length + ' training assignment' + (lateTraining.length === 1 ? ' is' : 's are') + ' overdue',
+      detail: 'Awareness training must be completed (7.3, A.6.3).', fix: { action: 'App.go', id: 'training', label: 'Open training' } });
+    var lateAck = (d.attestations || []).filter(function (t) { return t && t.status !== 'Acknowledged' && t.assigned && t.assigned < addDaysIso(today, -30); });
+    if (lateAck.length) add({ id: 'ack-overdue', kind: 'people', sev: 'OFI', ref: 'A.5.10', refs: ['A.5.10', '7.3'],
+      title: lateAck.length + ' policy acknowledgement' + (lateAck.length === 1 ? ' is' : 's are') + ' outstanding after 30 days',
+      detail: 'Staff must be aware of the policies that apply to them (7.3).', fix: { action: 'App.go', id: 'attestations', label: 'Open acknowledgements' } });
+    var lateSup = (d.vendors || []).filter(function (v) { return v && v.nextReviewDue && v.nextReviewDue < today && /critical|high/i.test(v.criticality || ''); }).map(function (v) { return v.name || v.id; });
+    if (lateSup.length) add({ id: 'supplier-overdue', kind: 'suppliers', sev: 'Minor', ref: 'A.5.22', refs: ['A.5.19', 'A.5.22'],
+      title: lateSup.length + ' high or critical supplier' + (lateSup.length === 1 ? ' is' : 's are') + ' overdue for review',
+      detail: listSome(lateSup, 4) + '.', fix: { action: 'App.go', id: 'vendors', label: 'Open suppliers' } });
+    var incNoCause = (d.incidents || []).filter(function (n) { return n && n.status === 'Closed' && !String(n.rootCause || '').trim(); }).map(function (n) { return n.id; });
+    if (incNoCause.length) add({ id: 'incident-no-cause', kind: 'incidents', sev: 'Minor', ref: 'A.5.27', refs: ['A.5.26', 'A.5.27'].concat(incNoCause),
+      title: incNoCause.length + ' closed incident' + (incNoCause.length === 1 ? ' has' : 's have') + ' no root cause',
+      detail: listSome(incNoCause) + '. Learning from incidents is a control (A.5.27).', fix: { action: 'App.openIncident', id: incNoCause[0], label: 'Open ' + incNoCause[0] } });
+    var incOld = (d.incidents || []).filter(function (n) { return n && n.status !== 'Closed' && (n.detected || n.occurred) && String(n.detected || n.occurred).slice(0, 10) < addDaysIso(today, -30); }).map(function (n) { return n.id; });
+    if (incOld.length) add({ id: 'incident-open', kind: 'incidents', sev: 'OFI', ref: 'A.5.26', refs: ['A.5.26'].concat(incOld),
+      title: incOld.length + ' incident' + (incOld.length === 1 ? ' has' : 's have') + ' been open for over 30 days',
+      detail: listSome(incOld) + '.', fix: { action: 'App.openIncident', id: incOld[0], label: 'Open ' + incOld[0] } });
+    var ownerless = (d.assets || []).filter(function (x) { return x && x.status !== 'Retired' && !String(x.owner || '').trim(); }).map(function (x) { return x.id; });
+    if (ownerless.length) add({ id: 'asset-ownerless', kind: 'assets', sev: 'OFI', ref: 'A.5.9', refs: ['A.5.9'],
+      title: ownerless.length + ' asset' + (ownerless.length === 1 ? ' has' : 's have') + ' no owner',
+      detail: listSome(ownerless) + '. Every asset in the inventory needs an owner (A.5.9).', fix: { action: 'App.go', id: 'assets', label: 'Open assets' } });
+
+    out.sort(function (a, b) { return RADAR_RANK[a.sev] - RADAR_RANK[b.sev] || String(a.ref).localeCompare(String(b.ref), undefined, { numeric: true }); });
+    var counts = { Major: 0, Minor: 0, OFI: 0 };
+    out.forEach(function (x) { counts[x.sev]++; });
+    return { items: out, counts: counts };
+  }
+  /* Did the fix work? Re-runs the tests behind a finding's control and
+     says so: every mapped posture check now passing is evidence the
+     correction is effective; any still failing means it is not. With
+     no automated test for the control, it says so rather than guess.
+     ev: lastResults, checkControls, checkLabels, scanDate. */
+  function findingRetest(a, ev, today) {
+    ev = ev || {};
+    if (!a || !a.control) return { state: 'untested', tests: [], text: '' };
+    var checks = Object.keys(ev.checkControls || {}).filter(function (chk) { return (ev.checkControls[chk] || []).indexOf(a.control) !== -1; });
+    var res = ev.lastResults || {}, labels = ev.checkLabels || {};
+    var on = ev.scanDate ? ' on ' + srDate(ev.scanDate) : '';
+    var tests = checks.filter(function (chk) { return res[chk] === 'pass' || res[chk] === 'fail'; }).map(function (chk) {
+      return { sev: res[chk] === 'pass' ? 'pass' : 'Minor', text: 'Posture check \u201c' + (labels[chk] || chk) + '\u201d ' + (res[chk] === 'pass' ? 'passes' : 'still fails') + on + '.', source: 'Posture scan' };
+    });
+    if (!tests.length) return { state: 'untested', tests: [], text: '' };
+    var failing = tests.some(function (t) { return t.sev !== 'pass'; });
+    var state = failing ? 'failing' : 'fixed';
+    var text = 'Re-tested by Checkpoint on ' + srDate(today) + ' for ' + a.control + ': ' + tests.map(function (t) { return t.text.replace(/\.$/, ''); }).join('; ') + '. ' +
+      (failing ? 'The correction has not yet worked.' : 'The correction is effective.');
+    return { state: state, tests: tests, text: text };
+  }
+  /* First-seen dates for radar items, carried between visits, so the
+     radar can say what is new. Items no longer found drop out and are
+     counted as resolved. */
+  function radarTrack(prev, items, today) {
+    var seen = (prev && prev.seen) || {}, next = {}, added = 0;
+    items.forEach(function (x) { if (seen[x.id]) next[x.id] = seen[x.id]; else { next[x.id] = today; added++; } });
+    var resolved = Object.keys(seen).filter(function (k) { return !next[k]; });
+    return { seen: next, resolved: resolved, added: added, changed: added > 0 || resolved.length > 0 };
+  }
+  /* Is this radar item about a workpack line? */
+  function radarMatches(item, lineId) {
+    return refMatches(item.ref, lineId) || (item.refs || []).some(function (r) { return refMatches(r, lineId); });
   }
 
   /* What Checkpoint has done for a client over a period, from the audit
@@ -13793,7 +14006,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
