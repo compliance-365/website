@@ -310,9 +310,12 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
     const selects = page.locator('#drawer select[data-change-action="App.setAuditResult"]');
     await selects.first().waitFor({ timeout: 5000 });
     /* Checkpoint has already tested the lines it holds evidence for. */
-    const autoSum = await page.locator('#drawer .audit-auto-sum').innerText({ timeout: 5000 });
+    const autoSum = await page.locator('#drawer .aw-progress-text').innerText({ timeout: 5000 });
     assert.match(autoSum, /Checkpoint tested \d+ of \d+ lines/);
-    assert.ok(await page.locator('#drawer .audit-auto').count() > 0, 'workpack lines show their automated tests');
+    assert.ok(await page.locator('#drawer .audit-auto').count() > 0, 'workpack lines carry their automated tests');
+    assert.ok(await page.locator('#drawer .aw-tab').count() === 4, 'the lines can be filtered');
+    await page.locator('#drawer .aw-toggle').first().click();
+    assert.ok(await page.locator('#drawer .aw-line.open .audit-auto').first().isVisible(), 'a line expands to show what was tested');
     await selects.nth(0).selectOption('C');
     await page.waitForFunction(() => /1 of \d+ audited/.test(document.getElementById('auditProgress').innerText), null, { timeout: 5000 });
     await page.locator('#drawer select[data-change-action="App.setAuditResult"]').nth(1).selectOption('Minor');

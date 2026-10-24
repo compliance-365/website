@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.173.0',
+    date: '2026-10-24',
+    entries: [
+      'Audit radar, on the Internal audits page: what an auditor would raise if they looked today, found by cross-checking your registers rather than one record at a time. A control marked Implemented that fails its own posture check; a risk relying on a control that is excluded or not built; a policy promising an activity nobody has scheduled; objectives that cannot be measured; a management review with no decisions; nonconformities closed without a root cause or proof the fix worked. Each item says the clause or control it would be raised against and has the one button that fixes it. It marks what is new since the last audit and counts what has been resolved.',
+      'The next audit starts with the radar: its findings flow into the matching workpack lines as tests.',
+      'Findings are re-tested when their action closes. A nonconformity whose control now passes its posture check offers to record that as the effectiveness review; one that still fails says so when it is completed, and a closed finding whose control fails again shows on the radar.',
+      'Conducting an audit is now a workspace: a wider panel with progress, the suggested results at a glance, and three piles: Needs you, Suggested conforms (confirm them in one click) and Recorded. Each line is one row with its result; open it to see what Checkpoint tested, the sample and your note.'
+    ]
+  },
+  {
     version: '1.172.0',
     date: '2026-10-24',
     entries: [
