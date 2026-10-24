@@ -21,7 +21,7 @@ Is every change reviewed before it merges? Do tests and scans gate the
 merge? Are leaked secrets and vulnerable dependencies caught and fixed?
 
 Entirely optional. Skip it and Checkpoint behaves exactly as before:
-the seven `Secure development (GitHub)` checks are never populated,
+the eight `Secure development (GitHub)` checks are never populated,
 resolve to *not measured*, and are left out of the posture score and
 hidden in the UI. They appear once the first collector run lands.
 
@@ -36,6 +36,7 @@ hidden in the UI. They appear once the first collector run lands.
 | `gh-dependabot` | No open critical Dependabot alert older than `VULN_WINDOW_DAYS` (30); an overdue high is a Review | A.8.8, A.8.28 |
 | `gh-code-scanning` | Every repository has a code-scanning analysis in the last 30 days, with no critical/high finding open past the window | A.8.28, A.8.29 |
 | `gh-org-2fa` | The organisation requires two-factor authentication | A.8.4, A.8.5 |
+| `gh-change-sample` | In a random sample of pull requests merged in the last 90 days (25, or all if fewer), every one was approved by someone other than its author and none merged with a failed check. One exception is a Review; more than one in ten is a Fail | A.8.32 |
 
 **A.8.26 and A.8.27 are deliberately not mapped.** They are about what
 was *decided*: the security requirements for an application and the
@@ -77,6 +78,9 @@ webhook and no callback URL. Grant **read-only** permissions:
 | Repository → Dependabot alerts | Read | `gh-dependabot` |
 | Repository → Code scanning alerts | Read | `gh-code-scanning` |
 | Organization → Administration | Read | Whether 2FA is required (`gh-org-2fa`) |
+| Repository → Pull requests | Read | Merged pull requests and their reviews (`gh-change-sample`) |
+| Repository → Checks | Read | Whether a sampled change's checks passed (`gh-change-sample`) |
+| Repository → Commit statuses | Read | The same, for CI that reports commit statuses (`gh-change-sample`) |
 
 Nothing here can write. Install the App on the organisation (all
 repositories, or just the in-scope ones). Generate a private key, and
@@ -104,8 +108,9 @@ In a **private** repository in the organisation (a dedicated
 3. Add **repository variables**: `CHECKPOINT_GH_APP_ID`,
    `CHECKPOINT_TENANT_ID`, `CHECKPOINT_CLIENT_ID`,
    `CHECKPOINT_SP_HOSTNAME`, and optionally `CHECKPOINT_SP_SITE_PATH`,
-   `CHECKPOINT_REPOS`, `CHECKPOINT_VULN_WINDOW_DAYS` and
-   `CHECKPOINT_SECRET_WINDOW_DAYS`.
+   `CHECKPOINT_REPOS`, `CHECKPOINT_VULN_WINDOW_DAYS`,
+   `CHECKPOINT_SECRET_WINDOW_DAYS`, `CHECKPOINT_SAMPLE_DAYS` and
+   `CHECKPOINT_SAMPLE_SIZE`.
 4. Add **repository secrets**: `CHECKPOINT_GH_APP_PRIVATE_KEY` (the
    App's .pem) and `CHECKPOINT_CLIENT_SECRET` (the Graph app's secret).
 5. Run it once from the **Actions** tab (`workflow_dispatch`) and check
@@ -117,6 +122,24 @@ your runner when you choose to take it.
 
 To see what it would write without touching SharePoint, run
 `DRY_RUN=1 GH_TOKEN=… GH_ORG=… node collector/index.mjs` locally.
+
+## The change sample (A.8.32)
+
+A branch rule says what should happen; an auditor tests whether it did.
+Each run draws the sample an auditor would: pull requests merged into
+each in-scope default branch in the last `SAMPLE_DAYS` (90), then a
+random `SAMPLE_SIZE` (25) of them, seeded by the organisation and month
+so the same sample is drawn all month and can be re-drawn. For each one
+it records who approved it (not its author), whether its checks and
+commit statuses passed, and the ticket or issue it refers to (a Jira
+key such as `PAY-142`, `closes #12`, or a ServiceNow, Azure DevOps or
+issue link in the title, branch name or description). Ticket links are
+reported, not scored, because teams trace changes in different ways.
+
+The sample is stored with the day's scan. Checkpoint shows it under
+Integrations → GitHub → Change sample, and files it as A.8.32 evidence.
+Set `CHANGE_SAMPLE=false` to skip it. That costs about three API calls
+per sampled change, plus one to five per repository to list what merged.
 
 ## How results reach the app
 

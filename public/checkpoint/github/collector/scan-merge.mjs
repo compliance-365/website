@@ -32,19 +32,20 @@ export async function mergeIntoScan(g, siteId, scansListId, ghOut, today) {
   const rows = (existing.value || []).filter(i => (i.fields || {}).ScanDate === today);
   const row = rows[rows.length - 1];
 
-  let results = {}, notes = {}, source = 'github-collector';
+  let results = {}, notes = {}, source = 'github-collector', extra = {};
   if (row && row.fields.Detail) {
     try {
       const prior = JSON.parse(row.fields.Detail);
       results = prior.results || {};
       notes = prior.notes || {};
       source = withSource(prior.source, 'github');
+      extra = prior;
     } catch (e) { /* malformed prior detail — keep this run's findings rather than discarding them */ }
   }
   Object.assign(results, ghOut.results);
   Object.assign(notes, ghOut.notes);
   const score = scoreOf(results);
-  const fields = { Title: 'Scan ' + today, ScanDate: today, Score: score, Detail: JSON.stringify({ results, notes, source }) };
+  const fields = { Title: 'Scan ' + today, ScanDate: today, Score: score, Detail: JSON.stringify(Object.assign({}, extra, { results, notes, source }, ghOut.changeSample ? { changeSample: ghOut.changeSample } : {})) };
 
   if (row) {
     await g(`/sites/${siteId}/lists/${scansListId}/items/${row.id}`, { method: 'PATCH', body: { fields } });

@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.178.0',
+    date: '2026-10-24',
+    entries: [
+      'Audit interviews fitted around people\u2019s calendars. Before the invites go, Checkpoint reads each person\u2019s free and busy times (and the auditor\u2019s) from Outlook and moves every interview to when both are free, keeping lunch clear. Anyone busy during the opening or closing meeting is named so you can move it. Free/busy only: Checkpoint cannot see what a meeting is or who is in it. Asks once for the Calendars.ReadBasic permission.',
+      'Paste an interview\u2019s Teams recap or transcript into the audit, and your own Azure OpenAI drafts what was said and shown on each line it covers, with the result it supports. Each draft waits on its line: accept it, use it as the note, change it or dismiss it. Nothing is recorded until you do.',
+      'Change management evidence from GitHub (A.8.32). The GitHub collector now draws the sample an auditor would: pull requests merged in the last 90 days, a reproducible random 25, each checked for an approval from someone other than its author, passing checks, and the ticket or issue behind it. A new check scores it, and Integrations, GitHub, Change sample shows the table and files it as A.8.32 evidence. The collector\u2019s GitHub App needs read access to pull requests, checks and commit statuses.'
+    ]
+  },
+  {
     version: '1.177.0',
     date: '2026-10-24',
     entries: [

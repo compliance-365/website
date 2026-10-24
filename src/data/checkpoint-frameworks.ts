@@ -94,7 +94,7 @@ export const frameworkPages: FrameworkPage[] = [
       'A Trust Center page and answers to customer security questionnaires, built from your own evidence.',
       'Risk register, policies, suppliers, incidents and access reviews in the same console.',
     ],
-    scan: 'The Microsoft 365 scan evidences the access, change, monitoring and incident criteria from your tenant. Optional collectors add AWS (10 checks) and GitHub (7 checks), for SaaS teams that build there.',
+    scan: 'The Microsoft 365 scan evidences the access, change, monitoring and incident criteria from your tenant. Optional collectors add AWS (10 checks) and GitHub (8 checks), for SaaS teams that build there.',
     faq: [
       { q: 'Does Checkpoint issue the SOC 2 report?', a: 'No. A SOC 2 report is issued by a licensed CPA firm. Checkpoint prepares the controls and evidence the auditor tests.' },
       { q: 'Type I or Type II?', a: 'Both. Type II needs evidence across an observation period, and Checkpoint records the observation dates and keeps evidence dated throughout.' },

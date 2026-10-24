@@ -31,7 +31,8 @@ export const GITHUB_CHECK_LABELS = {
   'gh-secret-alerts': 'No unresolved leaked-secret alerts',
   'gh-dependabot': 'Vulnerable dependencies fixed within the window',
   'gh-code-scanning': 'Code scanning (SAST) runs on every repository',
-  'gh-org-2fa': 'Two-factor authentication required for the organisation'
+  'gh-org-2fa': 'Two-factor authentication required for the organisation',
+  'gh-change-sample': 'Sampled changes were independently approved and passed their checks'
 };
 
 const ok = (note) => ({ result: 'pass', note });
@@ -166,6 +167,28 @@ export function orgTwoFactorCheck(org) {
     : bad('The organisation does not require two-factor authentication — a phished password is enough to push code.');
 }
 
+/* A.8.32 — what the branch rule promises, tested on real changes: a
+   sample of merged pull requests, each needing an approval from
+   someone other than its author and no failed check. One exception is
+   a review; more than one in ten is a fail. Ticket links are reported,
+   not scored: teams trace changes in different ways. */
+export function changeSampleCheck(cs) {
+  if (!cs) return unknown('Merged pull requests were not sampled — set CHANGE_SAMPLE to true, or grant Pull requests: read.');
+  if (!cs.population) return cs.unreadableRepos ? unknown(`Pull requests could not be read in ${plural(cs.unreadableRepos, 'repository', 'repositories')} — grant the collector's GitHub App Pull requests: read.`) : unknown(`No pull requests were merged into a default branch in the last ${cs.days} days.`);
+  const items = cs.items || [];
+  const unread = items.filter(i => i.approvers === null).length;
+  const noApproval = items.filter(i => Array.isArray(i.approvers) && !i.approvers.length);
+  const failed = items.filter(i => i.checks === 'failed');
+  const ex = new Set(noApproval.concat(failed).map(i => i.repo + '#' + i.n));
+  const traced = items.filter(i => i.ref).length;
+  const head = `${plural(items.length, 'change')} sampled from ${cs.population} merged in ${cs.days} days`;
+  const tail = ` ${traced} of ${items.length} link to a ticket or issue.` + (unread ? ` Reviews could not be read for ${unread}.` : '');
+  if (unread === items.length) return unknown('Pull request reviews could not be read — grant the collector\'s GitHub App Pull requests: read.');
+  if (!ex.size) return ok(`${head}: every one was approved by someone other than its author and no check failed.${tail}`);
+  const why = [noApproval.length ? `${noApproval.length} merged without an independent approval (${listSome(noApproval.map(i => i.repo + '#' + i.n))})` : '', failed.length ? `${failed.length} merged with a failed check (${listSome(failed.map(i => i.repo + '#' + i.n))})` : ''].filter(Boolean).join('; ');
+  return (ex.size / items.length > 0.1 ? bad : meh)(`${head}: ${why}.${tail}`);
+}
+
 /* Whole-organisation roll-up, in the same {results, notes} shape every
    other collector writes into a Scans row. */
 export function buildGithubResults(input, opts) {
@@ -181,5 +204,7 @@ export function buildGithubResults(input, opts) {
   put('gh-dependabot', dependabotCheck(input.dependabotAlerts, vulnWindow, today));
   put('gh-code-scanning', codeScanningCheck(input.repos, input.codeScanningAlerts, vulnWindow, today));
   put('gh-org-2fa', orgTwoFactorCheck(input.org));
+  put('gh-change-sample', changeSampleCheck(input.changeSample));
+  if (input.changeSample) out.changeSample = input.changeSample;
   return out;
 }

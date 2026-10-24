@@ -1725,7 +1725,7 @@
       controls: ['A.8.25', 'A.8.28', 'A.8.29'], checks: ['gh-branch-review', 'gh-status-checks', 'gh-code-scanning'],
       yes: 'Software is built under a secure development life cycle: every change is peer-reviewed before merge, and automated security testing gates release.' },
     { key: 'change', label: 'Change management', re: /change (management|control|approval)|changes to production|release (management|process)/i,
-      controls: ['A.8.32'], checks: ['gh-branch-review'],
+      controls: ['A.8.32'], checks: ['gh-branch-review', 'gh-change-sample'],
       yes: 'Changes to production systems follow a documented change management process, with approval before release.' },
     { key: 'secrets', label: 'Secrets & credentials in code', re: /secrets?\b|hard[- ]?coded|api keys?|access keys?|credential leak/i,
       controls: ['A.5.17', 'A.8.24'], checks: ['gh-secret-scanning', 'gh-secret-alerts', 'aws-key-age'],
@@ -6400,7 +6400,7 @@
     'patch': 'biz-attack-undetected', 'edr-coverage': 'biz-attack-undetected', 'xdr-incidents': 'biz-attack-undetected',
     'sharing': 'biz-data-exposure', 'labels': 'biz-data-exposure', 'retention': 'biz-data-exposure', 'ca-cas': 'biz-data-exposure',
     'riskyapps': 'biz-third-party', 'oauth-consent': 'biz-third-party', 'supplier': 'biz-third-party', 'ctx-saas-supplier': 'biz-third-party',
-    'gh-branch-review': 'biz-insecure-product', 'gh-dependabot': 'biz-insecure-product', 'ctx-source-code': 'biz-insecure-product',
+    'gh-branch-review': 'biz-insecure-product', 'gh-change-sample': 'biz-insecure-product', 'gh-dependabot': 'biz-insecure-product', 'ctx-source-code': 'biz-insecure-product',
     'ctx-release-testing': 'biz-insecure-product', 'ctx-outsourced-dev': 'biz-insecure-product', 'ctx-cloud-misconfig': 'biz-insecure-product',
     'backup': 'biz-recovery', 'bcp': 'biz-recovery', 'ctx-backup': 'biz-recovery', 'ctx-key-person': 'biz-recovery',
     'privacy-srr': 'biz-privacy', 'ctx-privacy-breach': 'biz-privacy',
@@ -14255,16 +14255,89 @@
       slots.push(Object.assign({ date: day, start: ivTime(t), end: ivTime(t + dur), kind: kind, minutes: dur }, extra || {})); t += dur;
     };
     push('opening', IV.open, { who: 'Top management and everyone interviewed', title: 'Opening meeting' });
-    list.forEach(function (p) {
-      var dur = Math.min(IV.max, Math.max(15, Math.ceil((10 + 5 * p.lines.length) / 15) * 15));
-      if (t + dur + (lunched || t + dur <= IV.lunchAt ? 0 : IV.lunch) > IV.dayEnd - IV.prep - IV.close) { day = nextWorkday(day); days.push(day); t = ivMin(o.start || '09:00'); lunched = false; }
-      push('interview', dur, { who: p.who, title: 'Interview: ' + p.who, lines: p.lines });
-    });
+    var ivDur = function (p) { return Math.min(IV.max, Math.max(15, Math.ceil((10 + 5 * p.lines.length) / 15) * 15)); };
+    /* busy = { 'name, lower case': [{ date, start, end }] } from people's
+       calendars (free/busy only). Each interview goes at the earliest
+       time both the person and the auditor are free, whoever is free
+       first going next; lunch stays clear. Without busy times, the
+       plan runs back to back as before. */
+    var B = o.busy || null, conflicts = [];
+    var clash = function (k, d, a0, a1) {
+      return ((B && B[String(k || '').toLowerCase()]) || []).some(function (b) { return b.date === d && a0 < ivMin(b.end) && a1 > ivMin(b.start); });
+    };
+    if (B) {
+      var pending = list.slice(), lim = IV.dayEnd - IV.prep - IV.close, guard = 0;
+      while (pending.length && guard++ < 60) {
+        var best = null;
+        pending.forEach(function (p, idx) {
+          var dur = ivDur(p);
+          for (var st = t; st + dur <= lim; st += 15) {
+            var en = st + dur;
+            if (!lunched && st < IV.lunchAt + IV.lunch && en > IV.lunchAt) continue;
+            if (clash(p.who, day, st, en) || (o.auditor && clash(o.auditor, day, st, en))) continue;
+            if (!best || st < best.st) best = { st: st, dur: dur, idx: idx };
+            break;
+          }
+        });
+        if (!best) {
+          if (days.length >= 10) break;
+          day = nextWorkday(day); days.push(day); t = ivMin(o.start || '09:00'); lunched = false;
+          continue;
+        }
+        if (!lunched && best.st >= IV.lunchAt + IV.lunch) { slots.push({ date: day, start: ivTime(IV.lunchAt), end: ivTime(IV.lunchAt + IV.lunch), kind: 'break', minutes: IV.lunch, title: 'Lunch' }); lunched = true; }
+        var pp = pending.splice(best.idx, 1)[0];
+        t = best.st;
+        slots.push({ date: day, start: ivTime(t), end: ivTime(t + best.dur), kind: 'interview', minutes: best.dur, who: pp.who, title: 'Interview: ' + pp.who, lines: pp.lines, fitted: true });
+        t += best.dur;
+      }
+      /* Nobody free within ten working days: placed anyway, and flagged. */
+      pending.forEach(function (p) { push('interview', ivDur(p), { who: p.who, title: 'Interview: ' + p.who, lines: p.lines }); conflicts.push({ who: p.who, date: day, start: slots[slots.length - 1].start, title: 'Interview: ' + p.who }); });
+      slots.sort(function (x, y) { return (x.date + x.start).localeCompare(y.date + y.start); });
+    } else {
+      list.forEach(function (p) {
+        var dur = ivDur(p);
+        if (t + dur + (lunched || t + dur <= IV.lunchAt ? 0 : IV.lunch) > IV.dayEnd - IV.prep - IV.close) { day = nextWorkday(day); days.push(day); t = ivMin(o.start || '09:00'); lunched = false; }
+        push('interview', dur, { who: p.who, title: 'Interview: ' + p.who, lines: p.lines });
+      });
+    }
     /* The auditor needs time to grade findings before presenting them. */
     if (t + IV.prep + IV.close + (lunched || t + IV.prep <= IV.lunchAt ? 0 : IV.lunch) > IV.dayEnd) { day = nextWorkday(day); days.push(day); t = ivMin(o.start || '09:00'); lunched = false; }
     push('prep', IV.prep, { who: 'Auditor', title: 'Auditor: confirm findings and prepare the closing meeting' });
     push('closing', IV.close, { who: 'Top management and the people interviewed', title: 'Closing meeting' });
-    return { days: days, slots: slots, people: list.length, lines: list.reduce(function (n, p) { return n + p.lines.length; }, 0) };
+    /* The opening and closing meetings are for everyone: say who is busy then. */
+    if (B) slots.filter(function (x) { return x.kind === 'opening' || x.kind === 'closing'; }).forEach(function (x) {
+      var who = list.filter(function (p) { return clash(p.who, x.date, ivMin(x.start), ivMin(x.end)); }).map(function (p) { return p.who; });
+      if (who.length) conflicts.push({ who: who.join(', '), date: x.date, start: x.start, title: x.title });
+    });
+    return { days: days, slots: slots, people: list.length, lines: list.reduce(function (n, p) { return n + p.lines.length; }, 0), fitted: !!B, conflicts: conflicts };
+  }
+  /* Free/busy from Microsoft Graph getSchedule (scheduleItems with
+     start/end in UTC) to the plan's busy map, in the browser's local
+     time. Free and working-elsewhere time is not busy. people:
+     [{ who, mail }]; schedules: getSchedule's value array. */
+  function busyFromSchedules(people, schedules) {
+    var out = {}, byMail = {};
+    (people || []).forEach(function (p) { if (p.mail) byMail[String(p.mail).toLowerCase()] = String(p.who).toLowerCase(); });
+    var two = function (n) { return (n < 10 ? '0' : '') + n; };
+    var local = function (dt) {
+      var d = new Date(String(dt).replace(/Z?$/, 'Z').replace(/\.\d+Z$/, 'Z'));
+      return { date: d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()), hm: two(d.getHours()) + ':' + two(d.getMinutes()) };
+    };
+    (schedules || []).forEach(function (sc) {
+      var k = byMail[String(sc.scheduleId || '').toLowerCase()];
+      if (!k || sc.error) return;
+      (sc.scheduleItems || []).forEach(function (it) {
+        if (['busy', 'oof', 'tentative'].indexOf(String(it.status || '').toLowerCase()) === -1) return;
+        var a = local(it.start && it.start.dateTime), b = local(it.end && it.end.dateTime);
+        /* An item over midnight or several days blocks each day it touches. */
+        var d = a.date;
+        for (var i = 0; i < 14 && d <= b.date; i++) {
+          (out[k] = out[k] || []).push({ date: d, start: d === a.date ? a.hm : '00:00', end: d === b.date ? b.hm : '23:59' });
+          d = addDaysIso(d, 1);
+        }
+      });
+    });
+    return out;
   }
   /* The plan as calendar invites: one event per slot, in local time
      (floating), so each person's calendar shows it at their clock. who
@@ -14513,7 +14586,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditDeliverySummary: auditDeliverySummary, accountFindings: accountFindings, ACCOUNT_FINDING_LABEL: ACCOUNT_FINDING_LABEL, ACCOUNT_STALE_DAYS: ACCOUNT_STALE_DAYS, accountExceptionLive: accountExceptionLive, accountEmail: accountEmail, accessReviewBuild: accessReviewBuild, accessReviewProgress: accessReviewProgress, accessReviewDecide: accessReviewDecide, accessReviewActions: accessReviewActions, accessReviewEmail: accessReviewEmail, compactAccessReviews: compactAccessReviews, RESTORE_DEFAULT_SETS: RESTORE_DEFAULT_SETS, parseRestoreSets: parseRestoreSets, restoreSetsText: restoreSetsText, restoreTestAssess: restoreTestAssess, restoreCoverage: restoreCoverage, fmtHours: fmtHours, auditInterviewIcs: auditInterviewIcs, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditDeliverySummary: auditDeliverySummary, accountFindings: accountFindings, ACCOUNT_FINDING_LABEL: ACCOUNT_FINDING_LABEL, ACCOUNT_STALE_DAYS: ACCOUNT_STALE_DAYS, accountExceptionLive: accountExceptionLive, accountEmail: accountEmail, accessReviewBuild: accessReviewBuild, accessReviewProgress: accessReviewProgress, accessReviewDecide: accessReviewDecide, accessReviewActions: accessReviewActions, accessReviewEmail: accessReviewEmail, compactAccessReviews: compactAccessReviews, RESTORE_DEFAULT_SETS: RESTORE_DEFAULT_SETS, parseRestoreSets: parseRestoreSets, restoreSetsText: restoreSetsText, restoreTestAssess: restoreTestAssess, restoreCoverage: restoreCoverage, fmtHours: fmtHours, auditInterviewIcs: auditInterviewIcs, busyFromSchedules: busyFromSchedules, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,

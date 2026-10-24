@@ -155,10 +155,91 @@ export async function collectGithub(gh, org, opts = {}) {
     severity: a.rule && (a.rule.security_severity_level || a.rule.severity), rule: a.rule && a.rule.id
   })).filter(inScope);
 
+  if (opts.changeSample !== false && out.repos) out.changeSample = await collectChangeSample(gh, org, out.repos, { today, days: opts.sampleDays || 90, size: opts.sampleSize || 25, log });
+
   const ss = await gh.all(`/orgs/${enc(org)}/secret-scanning/alerts?state=open&per_page=100`);
   out.secretAlerts = ss && ss.map(a => ({ repo: a.repository && a.repository.name, createdIso: a.created_at, type: a.secret_type_display_name || a.secret_type })).filter(inScope);
 
   return out;
+}
+
+/* ---------- A.8.32 change sample ----------------------------------
+   The sample an auditor draws for change management: pull requests
+   merged into each in-scope default branch in the last `days`, a
+   reproducible random sample of `size` (or all, if fewer), and for each
+   one who approved it, whether its checks passed and what request it
+   traces to. Reads only. */
+export function sampleSeed(str) {
+  let h = 2166136261;
+  for (const c of String(str)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return () => { h = (Math.imul(h ^ (h >>> 15), 2246822507) + 0x6d2b79f5) >>> 0; return h / 4294967296; };
+}
+export function drawSample(population, size, seed) {
+  const rnd = sampleSeed(seed);
+  const list = population.slice().sort((a, b) => (a.repo + '#' + a.n).localeCompare(b.repo + '#' + b.n));
+  for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+  return list.slice(0, size);
+}
+/* A Jira-style key (ABC-123), a GitHub issue reference, or a link to a
+   ticketing system, from the title, branch name or description. */
+export function ticketRef(text) {
+  const t = String(text || '');
+  /* Standards and algorithms look like ticket keys; skip them. */
+  const jira = [...t.matchAll(/\b([A-Z][A-Z0-9]{1,9}-\d{1,6})\b/g)].map(m => m[1]).find(k => !/^(SHA|UTF|ISO|IEC|AES|RSA|RFC|CVE|CWE|TLS|SSL|HTTP|ES|PEP|GHSA|X)-/.test(k));
+  if (jira) return jira;
+  const closes = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+((?:[\w.-]+\/[\w.-]+)?#\d+)/i.exec(t);
+  if (closes) return closes[1];
+  const url = /https?:\/\/[^\s)]*(?:atlassian\.net\/browse\/[A-Z0-9]+-\d+|service-now\.com\/[^\s)]+|dev\.azure\.com\/[^\s)]+\/_workitems\/edit\/\d+|\/issues\/\d+)/i.exec(t);
+  if (url) return url[0].slice(0, 120);
+  const hash = /(?:^|\s)(#\d+)\b/.exec(t);
+  return hash ? hash[1] : '';
+}
+export async function collectChangeSample(gh, org, repos, opts) {
+  const since = new Date(Date.parse(opts.today + 'T00:00:00Z') - opts.days * 86400000).toISOString();
+  const population = [];
+  let unreadable = 0;
+  for (const r of repos.filter(x => !x.archived && x.defaultBranch)) {
+    let url = `/repos/${enc(org)}/${enc(r.name)}/pulls?state=closed&base=${enc(r.defaultBranch)}&sort=updated&direction=desc&per_page=100`, pages = 0;
+    while (url && pages < 5) {
+      const res = await gh.req(url);
+      if (res.status !== 200) { if (pages === 0) unreadable++; break; }
+      const prs = Array.isArray(res.body) ? res.body : [];
+      prs.filter(p => p.merged_at && p.merged_at >= since).forEach(p => population.push({
+        repo: r.name, n: p.number, title: String(p.title || '').slice(0, 120), author: p.user && p.user.login, mergedAt: p.merged_at,
+        mergedBy: p.merged_by ? p.merged_by.login : '', head: p.head && p.head.sha, ref: ticketRef([p.title, p.head && p.head.ref, String(p.body || '').slice(0, 4000)].join('\n'))
+      }));
+      const oldest = prs.length ? prs[prs.length - 1].updated_at : '';
+      const m = /<([^>]+)>;\s*rel="next"/.exec(res.link);
+      url = m && oldest >= since ? m[1] : null;
+      pages++;
+    }
+  }
+  const picked = drawSample(population, opts.size, org + '|' + opts.today.slice(0, 7));
+  const items = [];
+  for (const p of picked) {
+    const rv = await gh.req(`/repos/${enc(org)}/${enc(p.repo)}/pulls/${p.n}/reviews?per_page=100`);
+    let approvers = null;
+    if (rv.status === 200 && Array.isArray(rv.body)) {
+      const last = {};
+      rv.body.forEach(x => { if (x.user && x.user.login) last[x.user.login] = x.state; });
+      approvers = Object.keys(last).filter(u => last[u] === 'APPROVED' && u !== p.author);
+    }
+    let checks = 'unknown';
+    if (p.head) {
+      const cr = await gh.req(`/repos/${enc(org)}/${enc(p.repo)}/commits/${p.head}/check-runs?per_page=100`);
+      const st = await gh.req(`/repos/${enc(org)}/${enc(p.repo)}/commits/${p.head}/status`);
+      const runs = cr.status === 200 && cr.body && Array.isArray(cr.body.check_runs) ? cr.body.check_runs : null;
+      const statuses = st.status === 200 && st.body && Array.isArray(st.body.statuses) ? st.body.statuses : null;
+      if (runs !== null || statuses !== null) {
+        const bad = (runs || []).some(x => ['failure', 'timed_out', 'cancelled', 'action_required'].includes(x.conclusion)) || (statuses || []).some(x => x.state === 'failure' || x.state === 'error');
+        checks = bad ? 'failed' : ((runs || []).length + (statuses || []).length ? 'passed' : 'none');
+      }
+    }
+    items.push({ repo: p.repo, n: p.n, title: p.title, author: p.author, mergedAt: String(p.mergedAt).slice(0, 10), mergedBy: p.mergedBy, approvers, checks, ref: p.ref });
+  }
+  return { from: since.slice(0, 10), to: opts.today, days: opts.days, population: population.length, size: items.length, unreadableRepos: unreadable,
+    method: 'Pull requests merged into each in-scope default branch in the ' + opts.days + ' days to ' + opts.today + '; ' + (population.length > opts.size ? 'a random sample of ' + opts.size + ', seeded by the organisation and month so it can be re-drawn' : 'all of them, as there were ' + population.length) + '.',
+    items };
 }
 
 /* ---------- Microsoft Graph (write side) — same as the AWS collector */
@@ -212,7 +293,10 @@ export async function run(env = process.env) {
     today, log,
     repos: (env.REPOS || '').split(',').map(s => s.trim()).filter(Boolean),
     includeForks: env.INCLUDE_FORKS === 'true',
-    maxRepos: Number(env.MAX_REPOS) || 200
+    maxRepos: Number(env.MAX_REPOS) || 200,
+    changeSample: env.CHANGE_SAMPLE !== 'false',
+    sampleDays: Number(env.SAMPLE_DAYS) || 90,
+    sampleSize: Number(env.SAMPLE_SIZE) || 25
   });
   const ghOut = buildGithubResults(raw, {
     today,

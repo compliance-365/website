@@ -91,7 +91,12 @@
        register at all. The agenda items and the recap travel in the
        user message; the draft is shown in the minute boxes for the
        person taking the minutes to accept or change. */
-    minutes: []
+    minutes: [],
+    /* Internal audit interview notes from a pasted recap or transcript —
+       sees no register either. The audit lines and the recap travel in
+       the user message; each draft waits on its line for the auditor to
+       accept, change or ignore. Nothing is recorded by the model. */
+    auditInterview: []
   };
 
   /* Fixed priority order sections are considered in when the character
@@ -727,6 +732,33 @@
     });
     return out;
   }
+  /* Internal audit interview notes from a pasted Teams or Copilot recap
+     or transcript. For each audit line covered: what was said and shown,
+     and the result it supports. Lines are numbered L1..Ln so the model
+     never has to repeat a key. UNSURE when the recap does not settle it. */
+  var AUDIT_RECAP_MAX = 24000;
+  function buildAuditInterviewPrompt(lines, recap, who) {
+    var list = (lines || []).map(function (l, i) { return 'L' + (i + 1) + ': ' + l.id + ' ' + (l.title || '') + (l.questions && l.questions.length ? ' (asked: ' + l.questions.join(' ') + ')' : ''); }).join('\n');
+    return 'You are helping an ISO/IEC 27001 internal auditor write up an interview' + (who ? ' with ' + who : '') + ' from the recap or transcript below. The audit lines covered are:\n' + list + '\n\n' +
+      'Respond in EXACTLY this format, nothing before or after it, one line per audit line the recap actually covers:\n' +
+      'L<n>: <C|OFI|Minor|Major|UNSURE> | <what the person said and what records they showed, one to three plain sentences>\n\n' +
+      'C means it conforms, with a record shown. OFI is an opportunity for improvement. Minor is a nonconformity that does not stop the requirement being met overall. Major means the requirement is not met. Use UNSURE whenever the recap does not show a record or does not settle it. Never invent a record, a name or a date. Leave out lines the recap does not mention.\n\n' +
+      'RECAP:\n' + String(recap || '').slice(0, AUDIT_RECAP_MAX);
+  }
+  /* Never throws. Unknown line numbers and results are dropped. */
+  function parseAuditInterviewDraft(text, n) {
+    var out = {};
+    String(text || '').split('\n').forEach(function (line) {
+      var m = /^\s*L(\d+)\s*:\s*(C|OFI|Minor|Major|UNSURE)\s*\|\s*(.+?)\s*$/i.exec(line);
+      if (!m) return;
+      var i = parseInt(m[1], 10);
+      if (!(i >= 1 && i <= n)) return;
+      var r = { c: 'C', ofi: 'OFI', minor: 'Minor', major: 'Major', unsure: '' }[m[2].toLowerCase()];
+      out[i - 1] = { s: r, note: m[3].slice(0, 600) };
+    });
+    return out;
+  }
+
   /* Adds the drafted minute and "Decision:" lines under whatever the
      person has already typed in each box; never replaces it. */
   function mergeMinutesDraft(notes, draft, keys) {
@@ -774,6 +806,8 @@
     buildMinutesDraftPrompt: buildMinutesDraftPrompt,
     parseMinutesDraft: parseMinutesDraft,
     mergeMinutesDraft: mergeMinutesDraft,
+    buildAuditInterviewPrompt: buildAuditInterviewPrompt,
+    parseAuditInterviewDraft: parseAuditInterviewDraft,
     _resetForTests: _resetForTests
   };
 });

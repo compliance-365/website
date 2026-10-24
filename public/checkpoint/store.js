@@ -804,7 +804,8 @@ window.CHECK_DEFS = [
   { id: 'gh-secret-alerts',   area: 'Secure development (GitHub)', label: 'No unresolved leaked-secret alerts',                       tpl: 'gh-secret-alerts', scored: true, requiresCapability: 'github' },
   { id: 'gh-dependabot',      area: 'Secure development (GitHub)', label: 'Vulnerable dependencies fixed within the window',          tpl: 'gh-dependabot', scored: true, requiresCapability: 'github' },
   { id: 'gh-code-scanning',   area: 'Secure development (GitHub)', label: 'Code scanning (SAST) runs on every repository',            tpl: null, scored: true, requiresCapability: 'github' },
-  { id: 'gh-org-2fa',         area: 'Secure development (GitHub)', label: 'Two-factor authentication required for the organisation', tpl: null, scored: true, requiresCapability: 'github' }
+  { id: 'gh-org-2fa',         area: 'Secure development (GitHub)', label: 'Two-factor authentication required for the organisation', tpl: null, scored: true, requiresCapability: 'github' },
+  { id: 'gh-change-sample',   area: 'Secure development (GitHub)', label: 'Sampled changes were independently approved and passed their checks', tpl: 'gh-change-sample', scored: true, requiresCapability: 'github' }
 ];
 
 /* Optional dashboard/workflow features — practitioners can switch these
@@ -1368,6 +1369,7 @@ window.CHECK_CONTROLS = {
   'gh-dependabot': ['A.8.8', 'A.8.28'],
   'gh-code-scanning': ['A.8.28', 'A.8.29'],
   'gh-org-2fa': ['A.8.4', 'A.8.5'],
+  'gh-change-sample': ['A.8.32'],
   'sod': ['A.5.3']
 };
 

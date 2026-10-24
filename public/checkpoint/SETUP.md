@@ -106,7 +106,14 @@ questionnaires, reminders):
 |---|---|---|
 | `Mail.Send` | Sends the status email as the signed-in user, never a service account | Yes |
 
-All three groups are covered by the one admin consent. The consent
+**Used to fit internal audit interviews around calendars** (Internal
+audits → Send invites):
+
+| Permission | Why | Admin consent |
+|---|---|---|
+| `Calendars.ReadBasic` | Free/busy times of the people being interviewed (`getSchedule`), so each interview lands when they are free. Cannot read a meeting's subject, body or attendees | No (unless the tenant blocks user consent) |
+
+All four groups are covered by the one admin consent. The consent
 screen shows the publisher as **Compliance365** with Microsoft's
 verified badge (publisher verification, Partner Center global account,
 on the app registration's Branding & properties page); keep it
@@ -2939,11 +2946,12 @@ and `score()`'s pass-versus-excluded-from-denominator arithmetic.
 
 The optional GitHub collector (`public/checkpoint/github/`, see its
 README) runs as a scheduled Actions workflow in the client's own GitHub
-organisation, as a read-only GitHub App. It merges seven `gh-*` checks
+organisation, as a read-only GitHub App. It merges eight `gh-*` checks
 into the day's scan row, the same way the AWS collector does. They
 cover review-before-merge, required status checks, secret scanning and
 push protection, open leaked-secret alerts, Dependabot alerts, code
-scanning, and organisation 2FA. Together they give ISO 27001 A.8.25,
+scanning, organisation 2FA, and a sample of merged pull requests checked
+for independent approval and passing checks. Together they give ISO 27001 A.8.25,
 A.8.28, A.8.29 and A.8.32 their first automated evidence. A.8.26 and
 A.8.27 stay documentary on purpose. The checks are hidden and left out
 of the score until the first collector run lands.

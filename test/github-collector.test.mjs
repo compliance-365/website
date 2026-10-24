@@ -28,7 +28,7 @@ describe('GitHub checks — an unreadable signal abstains, it never guesses', ()
   test('every check is manual when its input is missing', () => {
     const r = buildGithubResults({}, { today: TODAY });
     Object.entries(r.results).forEach(([id, v]) => assert.equal(v, 'manual', id));
-    assert.equal(Object.keys(r.results).length, 7);
+    assert.equal(Object.keys(r.results).length, 8);
   });
   test('repositories whose protection could not be read are not counted as unprotected', () => {
     const v = branchReviewCheck([repo(), repo({ name: 'web', protection: { requiredReviews: null, requiredStatusChecks: null } })]);

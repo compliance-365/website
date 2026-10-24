@@ -2077,6 +2077,19 @@ window.Graph = (function () {
     };
   }
 
+  /* Free/busy for up to 20 people at a time between two instants
+     (POST /me/calendar/getSchedule). Calendars.ReadBasic, requested
+     on first use. Returns getSchedule's value array, times in UTC. */
+  async function getSchedules(mails, startIso, endIso) {
+    var out = [], list = (mails || []).filter(Boolean);
+    for (var i = 0; i < list.length; i += 20) {
+      var j = await g('/me/calendar/getSchedule', { method: 'POST', scopes: CONFIG.scopesCalendar, body: {
+        schedules: list.slice(i, i + 20), startTime: { dateTime: startIso.replace(/Z$/, ''), timeZone: 'UTC' }, endTime: { dateTime: endIso.replace(/Z$/, ''), timeZone: 'UTC' }, availabilityViewInterval: 15 } });
+      out = out.concat((j && j.value) || []);
+    }
+    return out;
+  }
+
   async function listTenantGroups() {
     var opts = { scopes: CONFIG.scopesReadOnly };
     var groups = await gAll('/groups?$select=id,displayName,mailNickname&$top=999', opts);
@@ -2321,7 +2334,7 @@ window.Graph = (function () {
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, uploadFileToPath: uploadFileToPath, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
-    listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, accountInventory: accountInventory, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
+    listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, accountInventory: accountInventory, getSchedules: getSchedules, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop
