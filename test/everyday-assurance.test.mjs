@@ -180,6 +180,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     assert.ok(!(await page.locator('#v-dash').evaluate((e) => e.classList.contains('on'))), 'the fix button opens the page that fixes it');
     // My tasks: the email preference (weekly needs the digest on).
     await page.evaluate(() => window.App.go('mytasks'));
+    await page.click('#myTasksBody .my-settings summary');
     await page.waitForSelector('#myTasksBody .my-notify select');
     assert.equal(await page.locator('#myTasksBody .my-notify option[value="weekly"]').isDisabled(), true);
     // The auditor question bank.

@@ -12,6 +12,19 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.181.0',
+    date: '2026-10-25',
+    entries: [
+      'Content starts higher. On a page you have visited before, the introduction under the heading folds into one \u201cAbout this page\u201d line, and the next step shows as a thin strip.',
+      'One next step on the Dashboard: the Next step bar no longer repeats there, and the path to certification card has a single Continue button. Do next is the list to work from.',
+      'The Statement of Applicability starts with the framework switcher. The evidence check and exclusions sit side by side as one compact strip.',
+      'Fewer buttons on the registers: Export CSV, Excel, Word and Import CSV are now in one Export menu, and where three or more other buttons were left, they are in a More menu.',
+      'Buttons and status chips use sentence case, and risk review dates read like the rest of the app (5 Oct rather than 2026-10-05).',
+      'On phones, the top bar is one row (menu, organisation, search and More, with Run posture scan inside More), and register rows show as cards with each field labelled.',
+      'My tasks groups your tasks into Overdue, This week and Later. The demo\u2019s \u201cviewing as\u201d and the email preference are in a small settings menu.'
+    ]
+  },
+  {
     version: '1.180.0',
     date: '2026-10-25',
     entries: [

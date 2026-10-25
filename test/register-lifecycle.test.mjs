@@ -184,6 +184,8 @@ describe('in the browser', { skip: skipReason || false }, () => {
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
     await page.evaluate(() => window.App.go('assets'));
+    // Owners who have left sits in the assets toolbar's More menu.
+    await page.click('#v-assets details.btn-menu:not(:has([data-action^="App.export"])) summary');
     await page.click('#v-assets button[data-action="App.openLeavers"]');
     await page.waitForSelector('#drawer .d-sec.leaver');
     assert.match(await page.locator('#drawer').innerText(), /Riley Morgan[\s\S]*Account disabled[\s\S]*AST-009/i);
@@ -193,6 +195,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForTimeout(300);
     assert.equal(await page.evaluate(() => window.App && document.querySelector('#assetRows').innerText.includes('Mei Chen')), true);
     await page.evaluate(() => window.App.closeDrawer());
+    await page.click('#v-assets details.btn-menu:not(:has([data-action^="App.export"])) summary');
     await page.click('#v-assets button[data-action="App.openRegisterReview"]');
     await page.waitForSelector('#drawer .rr-card');
     const first = await page.locator('#drawer .rr-card .src').first().innerText();

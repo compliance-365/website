@@ -2612,6 +2612,30 @@ function showModal(opts) {
       }
     });
   }
+  /* Phones: register tables show as one card per row. Each cell gets
+     its column heading as data-label, which the stylesheet prints
+     beside the value (see .stack-tbl in styles.css). */
+  var STACK_TABLES = ['riskRows', 'actRows', 'vendorRows', 'aiRows', 'soaRows', 'clauseRows', 'docRows', 'auditRows', 'incidentRows', 'objRows', 'assetRows', 'legalRows', 'ropaRows', 'calRows'];
+  var _phoneMq = window.matchMedia ? window.matchMedia('(max-width:600px)') : null;
+  function labelStackTables() {
+    if (!_phoneMq || !_phoneMq.matches) return;
+    STACK_TABLES.forEach(function (id) {
+      var tb = document.getElementById(id), t = tb && tb.closest('table');
+      if (!t || !t.tHead) return;
+      t.classList.add('stack-tbl');
+      var heads = Array.prototype.map.call(t.tHead.rows[0].cells, function (th) { return th.textContent.trim(); });
+      Array.prototype.forEach.call(tb.rows, function (tr) {
+        Array.prototype.forEach.call(tr.cells, function (td, i) {
+          if (td.colSpan === 1 && heads[i] && !td.hasAttribute('data-label')) td.setAttribute('data-label', heads[i]);
+        });
+      });
+    });
+  }
+  (function () {
+    if (!_phoneMq || !window.MutationObserver) return;
+    var t = null;
+    new MutationObserver(function () { if (!_phoneMq.matches) return; clearTimeout(t); t = setTimeout(labelStackTables, 60); }).observe(document.documentElement, { childList: true, subtree: true });
+  })();
   var _scrollRegionTimer = null;
   function scheduleScrollRegions() {
     clearTimeout(_scrollRegionTimer);
@@ -6695,8 +6719,10 @@ function showModal(opts) {
           (s.done ? '' : pathStepButton(s, false)) +
           '</div>';
       }).join('') + '</details>';
-    /* One line: progress, where the plan stands and the next step. The
-       stepper, the dated plan and every step open on demand. */
+    /* One line: progress, where the plan stands and the next step, with
+       one button (the step's own button lives in Do next and Guided
+       build, not here as well). The stepper, the dated plan and every
+       step open on demand. */
     var gb = buildState(steps), gst = gb.stages[gb.current];
     var gNext = gst && gst.items.find(function (i) { return !i.done; });
     var pct = gb.pct;
@@ -6705,7 +6731,7 @@ function showModal(opts) {
       '<div class="gs-bar"><i style="width:' + pct + '%"></i></div>' +
       '<span class="src">Week ' + plan.week + ' of your plan · ' + gb.pct + '% built · ' + gb.stages.filter(function (x) { return x.done; }).length + ' of ' + gb.stages.length + ' stages done' + (lateMs.length ? ' · <span style="color:var(--fail)">' + lateMs.length + ' milestone' + (lateMs.length === 1 ? '' : 's') + ' late</span>' : plan.behind.length ? ' · <span style="color:var(--fail)">' + plan.behind.length + ' behind plan</span>' : ' · on plan') + (plan.target ? ' · Stage 1 target ' + fmtDate(plan.target) : ' · Stage 1 ready by ' + fmtDate(readyBy)) + '</span>' +
       '<div class="gs-next"><b>Next:</b> ' + esc(gNext ? gNext.label : next.label) + '</div></div>' +
-      '<div class="gs-actions"><button class="btn sm" data-action="App.openBuild">Continue</button>' + (gNext ? buildItemButton(gNext, false) : pathStepButton(next, false)) + '</div></div>' +
+      '<div class="gs-actions"><button class="btn sm" data-action="App.openBuild">Continue</button></div></div>' +
       '<details class="gs-detail"' + (window._gsOpen ? ' open' : '') + ' data-toggle-key="_gsOpen"><summary class="src">The plan and all ' + steps.length + ' steps</summary>' + stepperHtml + nextHtml + listHtml + '</details>';
   }
 
@@ -7315,7 +7341,7 @@ function showModal(opts) {
     var slot = head.querySelector('.page-guide .pg-foot') || head;
     var bar = head.querySelector('.next-step-bar');
     if (bar && bar.parentNode !== slot) { bar.remove(); bar = null; }
-    var off = !guidedUi() || RESTRICTED_ACCESS || READONLY || nextStepHidden() || ['start', 'build', 'selftest', 'auditor'].indexOf(v) !== -1 || !S;
+    var off = !guidedUi() || RESTRICTED_ACCESS || READONLY || nextStepHidden() || ['start', 'build', 'selftest', 'auditor', 'dash'].indexOf(v) !== -1 || !S;
     var h = null;
     if (!off) { try { h = window.CheckpointLib.startHere(buildState()); } catch (e) { h = null; } }
     if (h) rememberNextStep(h);
@@ -7412,6 +7438,11 @@ function showModal(opts) {
     var folded = _guideSeenAtStart.indexOf(v) !== -1;
     var keepOpen = el.querySelector('.pg-about[open]');
     el.classList.toggle('pg-folded', folded);
+    /* Seen before: the intro paragraph under the heading folds into
+       About this page too, so the page's content starts higher. */
+    head.classList.toggle('vh-folded', folded);
+    var intro = head.querySelector(':scope > p');
+    if (folded && intro) body = '<p>' + esc(intro.textContent.replace(/\s+/g, ' ').trim()) + '</p>' + body;
     /* The terms toggle (or, folded, the About line) and the Next step
        bar share one row, so the help takes as little height as it can. */
     el.innerHTML = folded ? '<div class="pg-foot"><details class="pg-about"' + (keepOpen ? ' open' : '') + '><summary>About this page</summary>' + body + terms + '</details></div>'
@@ -9208,8 +9239,8 @@ function showModal(opts) {
     var st = riskReviewStatus(r);
     if (r.status === 'Closed') return '<span class="src">—</span>';
     if (st.neverReviewed) return '<span class="chip st-Notstarted" title="Never reviewed since it was raised">Never</span>';
-    if (st.due) return '<span class="chip sev-High" title="Last reviewed ' + esc(r.lastReviewed) + '">' + st.daysOverdue + 'd over</span>';
-    return '<span class="chip st-Implemented" title="Last reviewed ' + esc(r.lastReviewed) + (r.lastReviewedBy ? ' by ' + esc(r.lastReviewedBy) : '') + '">' + esc(r.lastReviewed) + '</span>';
+    if (st.due) return '<span class="chip sev-High" title="Last reviewed ' + esc(fmtDate(r.lastReviewed)) + '">' + st.daysOverdue + 'd over</span>';
+    return '<span class="chip st-Implemented" title="Last reviewed ' + esc(fmtDate(r.lastReviewed)) + (r.lastReviewedBy ? ' by ' + esc(r.lastReviewedBy) : '') + '">' + esc(fmtDate(r.lastReviewed)) + '</span>';
   }
 
   /* Thin wrapper over lib.js's pure riskReviewStatus() — supplies
@@ -13037,18 +13068,35 @@ function showModal(opts) {
     var prefHtml = meKey && !(Store.kind === 'demo' && window._myTasksAs) ? '<p class="src my-notify">Email me about new tasks <select class="mini" data-change-action="App.setMyNotifyPref" aria-label="How to email me">' +
       '<option value="immediate"' + (pref === 'immediate' ? ' selected' : '') + '>as they happen</option><option value="weekly"' + (pref === 'weekly' ? ' selected' : '') + (digestOn ? '' : ' disabled') + '>in one weekly email</option></select>' +
       (digestOn ? '' : ' <span>(the weekly email is off in Settings, so new tasks are emailed as they happen)</span>') + '</p>' : '';
-    el.innerHTML = picker + prefHtml +
+    /* The demo's "viewing as" and the email preference are settings, not
+       tasks: they sit in a small menu so the tasks come first. */
+    var setOpen = !!el.querySelector('.my-settings[open]');
+    var settings = picker || prefHtml ? '<div class="my-settings-row"><details class="btn-menu my-settings"' + (setOpen ? ' open' : '') + '><summary class="btn ghost sm">' +
+      (Store.kind === 'demo' && window._myTasksAs ? 'Viewing as ' + esc(window._myTasksAs) : 'Settings') + ' <span aria-hidden="true">▾</span></summary>' +
+      '<div class="btn-menu-list my-settings-list">' + picker + prefHtml + '</div></details></div>' : '';
+    /* Overdue, then due in the next seven days, then everything later. */
+    var wk = new Date(); wk.setDate(wk.getDate() + 7);
+    var wkIso = wk.toISOString().slice(0, 10);
+    var groups = [
+      { k: 'Overdue', items: t.items.filter(function (i) { return i.overdue; }) },
+      { k: 'This week', items: t.items.filter(function (i) { return !i.overdue && i.due && i.due <= wkIso; }) },
+      { k: 'Later', items: t.items.filter(function (i) { return !i.overdue && !(i.due && i.due <= wkIso); }) }
+    ].filter(function (g) { return g.items.length; });
+    var taskRow = function (i) {
+      return '<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)">' +
+        '<div style="font-size:13px"><span class="src">' + esc(i.kind) + (i.ref ? ' · ' + esc(i.ref) : '') + '</span><div style="color:var(--paper)">' + esc(i.title || '') + '</div>' +
+        (i.due ? '<span class="src" style="' + (i.overdue ? 'color:var(--fail)' : '') + '">' + (i.overdue ? 'Overdue: ' : (i.kind === 'Evidence requested' ? 'Requested ' : 'Due ')) + fmtDate(i.due) + '</span>' : '') + '</div>' +
+        '<div style="flex:0 0 auto">' + myTaskButton(i) + '</div></div>';
+    };
+    el.innerHTML = settings +
       '<div class="card" style="padding:14px 16px;margin-bottom:16px"><b>Progress towards certification</b>' +
       '<div style="height:10px;border-radius:6px;background:var(--line);margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--gold)"></div></div>' +
       '<span class="src">' + done + ' of ' + steps.length + ' steps done (' + pct + '%)</span></div>' +
       '<div class="card" style="padding:6px 16px">' +
       (t.items.length
         ? '<p class="src" style="margin:10px 0">' + t.items.length + ' task' + (t.items.length === 1 ? '' : 's') + (od ? ', ' + od + ' overdue' : '') + '.</p>' +
-          t.items.map(function (i) {
-            return '<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)">' +
-              '<div style="font-size:13px"><span class="src">' + esc(i.kind) + (i.ref ? ' · ' + esc(i.ref) : '') + '</span><div style="color:var(--paper)">' + esc(i.title || '') + '</div>' +
-              (i.due ? '<span class="src" style="' + (i.overdue ? 'color:var(--fail)' : '') + '">' + (i.overdue ? 'Overdue: ' : (i.kind === 'Evidence requested' ? 'Requested ' : 'Due ')) + fmtDate(i.due) + '</span>' : '') + '</div>' +
-              '<div style="flex:0 0 auto">' + myTaskButton(i) + '</div></div>';
+          groups.map(function (g) {
+            return '<h3 class="my-group' + (g.k === 'Overdue' ? ' my-group-od' : '') + '">' + g.k + ' <span class="src">' + g.items.length + '</span></h3>' + g.items.map(taskRow).join('');
           }).join('')
         : '<p style="margin:14px 0">' + icon('check') + ' Nothing assigned to you right now.</p>') + '</div>';
     renderNextForYou();
@@ -30195,6 +30243,47 @@ function showModal(opts) {
     if (themeColorMeta) themeColorMeta.setAttribute('content', isLight ? '#FAF7F1' : '#06060A');
   }
 
+  /* Register toolbars: Export CSV, Excel, Word and Import CSV fold into
+     one Export menu, and when three or more other secondary buttons are
+     left beside the primary action, they fold into More. The buttons are
+     moved, not copied, so their data-action wiring, read-only locking and
+     any test selectors are unchanged. Runs once, on the static toolbars. */
+  var EXPORT_ACTIONS = ['App.exportCsv', 'App.exportXlsx', 'App.exportRegisterWord', 'App.importCsv'];
+  function toolbarMenu(label, buttons) {
+    var d = document.createElement('details');
+    d.className = 'btn-menu';
+    d.innerHTML = '<summary class="btn ghost sm">' + esc(label) + ' <span aria-hidden="true">▾</span></summary><div class="btn-menu-list" role="group" aria-label="' + esc(label) + '"></div>';
+    buttons[0].parentNode.insertBefore(d, buttons[0]);
+    var list = d.querySelector('.btn-menu-list');
+    buttons.forEach(function (b) { list.appendChild(b); });
+    return d;
+  }
+  function groupToolbarMenus(root) {
+    var seen = [];
+    (root || document).querySelectorAll('.view [data-action]').forEach(function (b) {
+      if (EXPORT_ACTIONS.indexOf(b.dataset.action) === -1 || seen.indexOf(b.parentNode) !== -1) return;
+      seen.push(b.parentNode);
+    });
+    seen.forEach(function (bar) {
+      if (bar.closest('.btn-menu')) return;
+      var kids = Array.prototype.filter.call(bar.children, function (c) { return c.tagName === 'BUTTON'; });
+      var ex = kids.filter(function (c) { return EXPORT_ACTIONS.indexOf(c.dataset.action) !== -1; });
+      if (ex.length < 2) return;
+      toolbarMenu('Export', ex);
+      var rest = kids.filter(function (c) { return ex.indexOf(c) === -1 && c.classList.contains('ghost') && !c.id; });
+      if (rest.length >= 3) toolbarMenu('More', rest);
+    });
+  }
+  /* One menu open at a time; a click outside it, or on one of its
+     buttons, closes it (a select inside stays usable). */
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.btn-menu[open]').forEach(function (d) {
+      if (!d.contains(e.target)) { d.removeAttribute('open'); return; }
+      var item = e.target.closest('.btn-menu-list button');
+      if (item && d.contains(item)) d.removeAttribute('open');
+    });
+  });
+
   function bootUi(modeLabel, clientLabel) {
     /* Restore the persisted theme before anything else paints — the
        earliest point this can happen, since S.settings.lightTheme only
@@ -30214,6 +30303,7 @@ function showModal(opts) {
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
     updateRoleChip();
     applyRestrictedNav();
+    groupToolbarMenus();
     aiInitOnce();
     window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
     renderAll();

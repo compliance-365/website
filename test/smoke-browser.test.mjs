@@ -462,6 +462,8 @@ describe('Checkpoint — browser smoke test (demo mode)', { skip: skipReason || 
 
     await page.evaluate(() => window.App.go('mytasks'));
     await page.waitForSelector('#myTasksBody', { timeout: 5000 });
+    // The demo's "viewing as" picker sits in the My tasks settings menu.
+    await page.click('#myTasksBody .my-settings summary');
     const picker = page.locator('#myTasksBody select[data-change-action="App.setMyTasksAs"]');
     await picker.waitFor({ timeout: 5000 });
     await picker.selectOption({ index: 1 });
