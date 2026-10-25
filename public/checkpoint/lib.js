@@ -2981,6 +2981,25 @@
     });
   }
 
+  /* After a phishing simulation (A.6.3): who was compromised, who
+     reported it, and which of the compromised still need a refresher
+     (no open or completed record of the course since the simulation). */
+  function phishFollowUp(result, training, courseId) {
+    var users = (result && result.users) || [];
+    var since = (result && result.sim && (result.sim.completed || result.sim.launched)) || '';
+    var compromised = users.filter(function (u) { return u.compromised; });
+    var has = {};
+    (training || []).forEach(function (t) {
+      if (t.courseId !== courseId || t.status === 'Exempt') return;
+      if (t.status !== 'Completed' || String(t.completed || '') >= since) has[String(t.upn || '').toLowerCase()] = true;
+    });
+    return {
+      total: users.length, compromised: compromised.length, reported: users.filter(function (u) { return u.reported; }).length,
+      pct: users.length ? Math.round(compromised.length / users.length * 1000) / 10 : 0,
+      toAssign: compromised.filter(function (u) { return u.email && !has[String(u.email).toLowerCase()]; }).map(function (u) { return { upn: u.email, name: u.name || u.email }; })
+    };
+  }
+
   /* Controls in an own-evidence framework (ISO 42001) holding the very
      evidence link of a control they are mapped to in another framework:
      copied across before propagation stopped crossing into them.
@@ -13848,13 +13867,33 @@
     });
     var kr = { admin: 0, guest: 1, member: 2 }, sr = { remove: 0, check: 1, keep: 2 };
     items.sort(function (a, b) { return kr[a.k] - kr[b.k] || sr[a.s] - sr[b.s] || a.n.localeCompare(b.n); });
+    /* Group access (opts.groups: [{ id, name, owners: [{ name, mail }],
+       members: [{ upn, name, mail, type }] }]): each membership is its
+       own line, confirmed by the group's owner, or the review owner when
+       the group has none. A member whose account is flagged is suggested
+       for removal; a guest is to be checked. */
+    (opts.groups || []).forEach(function (g) {
+      var go = (g.owners || []).filter(function (o) { return o && (o.mail || o.name); })[0];
+      var rv = go ? rvKey(go) : ownerKey;
+      (g.members || []).forEach(function (m) {
+        if (!m || !m.upn) return;
+        var fd = finds[String(m.upn).toLowerCase()];
+        var guest = m.type === 'Guest' || String(m.upn).indexOf('#EXT#') !== -1;
+        var s = 'keep', why = '';
+        if (fd && fd.key !== 'disabled-licensed') { s = 'remove'; why = ACCOUNT_FINDING_LABEL[fd.key]; }
+        else if (guest) { s = 'check'; why = 'Guest in this group'; }
+        items.push({ u: m.upn, g: g.id, e: accountEmail(m), n: m.name || m.upn, k: 'group', r: g.name, ls: fd ? fd.lastSignIn : '', s: s, why: why, rv: rv, d: '', by: '', at: '' });
+      });
+    });
     Object.keys(reviewers).forEach(function (k) { if (!items.some(function (i) { return i.rv === k; })) delete reviewers[k]; });
     return { id: opts.id || 'AR-' + String(today || '').replace(/-/g, ''), created: today, due: addDaysIso(today, opts.days || 14), owner: owner, cal: opts.cal || '',
       signInKnown: inv.signInKnown !== false, rolesKnown: inv.rolesKnown !== false, items: items, reviewers: reviewers, status: 'open', done: '', actions: [], filed: false };
   }
+  /* A line's key: the account, or the account in a group. */
+  function accessItemKey(i) { return i.g ? i.u + '::' + i.g : i.u; }
   function accessReviewProgress(rec) {
     var items = (rec && rec.items) || [];
-    var p = { total: items.length, decided: 0, remove: 0, keep: 0, suggestedRemove: 0, byReviewer: {}, byKind: { admin: 0, guest: 0, member: 0 } };
+    var p = { total: items.length, decided: 0, remove: 0, keep: 0, suggestedRemove: 0, byReviewer: {}, byKind: { admin: 0, guest: 0, member: 0, group: 0 } };
     items.forEach(function (i) {
       var r = p.byReviewer[i.rv] = p.byReviewer[i.rv] || { total: 0, decided: 0, remove: 0 };
       r.total++; p.byKind[i.k] = (p.byKind[i.k] || 0) + 1;
@@ -13875,7 +13914,7 @@
     var set = Array.isArray(which) ? which.map(function (x) { return String(x).toLowerCase(); }) : null;
     var n = 0;
     (r.items || []).forEach(function (i) {
-      if (set ? set.indexOf(String(i.u).toLowerCase()) === -1 : i.rv !== which.reviewer) return;
+      if (set ? set.indexOf(accessItemKey(i).toLowerCase()) === -1 : i.rv !== which.reviewer) return;
       if (!set && i.d) return;
       var d = decision;
       if (mode === 'suggested') { if (i.s === 'check') return; d = i.s; }
@@ -13888,8 +13927,8 @@
      reads the directory and never changes it, so removal is a task. */
   function accessReviewActions(rec, today) {
     var have = (rec && rec.actioned) || {};
-    return ((rec && rec.items) || []).filter(function (i) { return i.d === 'remove' && !have[String(i.u).toLowerCase()]; }).map(function (i) {
-      return { upn: i.u, title: 'Remove access: ' + i.n + ' (' + i.u + ')' + (i.k === 'admin' ? ', remove ' + (i.r || 'the admin role') : i.k === 'guest' ? ', remove the guest' : ', disable the account'),
+    return ((rec && rec.items) || []).filter(function (i) { return i.d === 'remove' && !have[accessItemKey(i).toLowerCase()]; }).map(function (i) {
+      return { upn: accessItemKey(i), title: 'Remove access: ' + i.n + ' (' + (i.e || i.u) + ')' + (i.k === 'group' ? ', remove from the group ' + i.r : i.k === 'admin' ? ', remove ' + (i.r || 'the admin role') : i.k === 'guest' ? ', remove the guest' : ', disable the account'),
         control: i.k === 'admin' ? 'A.8.2' : 'A.5.18', pr: i.k === 'admin' ? 'High' : 'Medium', due: addDaysIso(today, i.k === 'admin' ? 3 : 7),
         evidence: 'Access review ' + rec.id + ': ' + (i.why ? i.why + '. ' : '') + 'Removal confirmed by ' + (i.by || 'the reviewer') + ' on ' + i.at + '.' };
     });
@@ -13898,7 +13937,7 @@
     opts = opts || {};
     var rv = (rec.reviewers || {})[key] || { name: key };
     var mine = (rec.items || []).filter(function (i) { return i.rv === key; });
-    var KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff' };
+    var KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff', group: 'Group' };
     var e = escHtmlLib;
     var rows = mine.map(function (i) {
       return '<tr><td style="padding:6px 8px;border-bottom:1px solid #ddd"><b>' + e(i.n) + '</b><br><span style="color:#666;font-size:12px">' + e(i.e || i.u) + '</span></td>' +
@@ -14552,7 +14591,7 @@
     normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, graphTokenScopes: graphTokenScopes, GRAPH_DEFAULT_SCOPE: GRAPH_DEFAULT_SCOPE, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, progressHeadline: progressHeadline, mergeProgressHistory: mergeProgressHistory, clientStage: clientStage, clientAttentionFlags: clientAttentionFlags, clientStatusNote: clientStatusNote, clauseReadiness: clauseReadiness, DOCUMENT_IMPLEMENTED_CONTROLS: DOCUMENT_IMPLEMENTED_CONTROLS, controlsImplementedByDocument: controlsImplementedByDocument, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
-    sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions, copiedAcrossEvidence: copiedAcrossEvidence, linkedClauseSuggestions: linkedClauseSuggestions, LINKED_CLAUSES: LINKED_CLAUSES, OWN_EVIDENCE_FRAMEWORKS: OWN_EVIDENCE_FRAMEWORKS,
+    sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions, copiedAcrossEvidence: copiedAcrossEvidence, linkedClauseSuggestions: linkedClauseSuggestions, phishFollowUp: phishFollowUp, LINKED_CLAUSES: LINKED_CLAUSES, OWN_EVIDENCE_FRAMEWORKS: OWN_EVIDENCE_FRAMEWORKS,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     scanResultsChanged: scanResultsChanged, scanDrift: scanDrift,
     legacyAuthObservedResult: legacyAuthObservedResult, privRoleChangeResult: privRoleChangeResult,
@@ -14645,7 +14684,7 @@
     clauseRequirementFixes: clauseRequirementFixes, clauseAutopilot: clauseAutopilot, CLAUSE_RECORD_FIXES: CLAUSE_RECORD_FIXES,
     SUGGESTED_OBJECTIVES: SUGGESTED_OBJECTIVES, objectiveLibrary: objectiveLibrary, objectiveCia: objectiveCia, objectiveCiaCoverage: objectiveCiaCoverage, E8_SCAN_LIMITS: E8_SCAN_LIMITS, e8Automation: e8Automation, isOsSoftware: isOsSoftware, eosSoftwareResult: eosSoftwareResult, patchKindResult: patchKindResult, appControlResult: appControlResult, secureConfigResult: secureConfigResult, e8LevelSuggestions: e8LevelSuggestions, flatSuggestions: flatSuggestions, AI_IMPACT_SCOPES: AI_IMPACT_SCOPES, AI_IMPACT_AREAS: AI_IMPACT_AREAS, AI_IMPACT_TRIGGERS: AI_IMPACT_TRIGGERS, AI_IMPACT_DECISIONS: AI_IMPACT_DECISIONS, aiImpactScore: aiImpactScore, aiImpactBand: aiImpactBand, aiImpactSummary: aiImpactSummary, AI_ACT_APPLIES: AI_ACT_APPLIES, AI_ACT_LITERACY: AI_ACT_LITERACY, aiActTimeline: aiActTimeline, AU_AI_PRACTICES: AU_AI_PRACTICES, auAiPracticeCoverage: auAiPracticeCoverage, ROPA_ROLES: ROPA_ROLES, ROPA_BASES: ROPA_BASES, PRIVACY_REQUEST_TYPES: PRIVACY_REQUEST_TYPES, PRIVACY_REQUEST_STATUSES: PRIVACY_REQUEST_STATUSES, PRIVACY_REQUEST_DAYS: PRIVACY_REQUEST_DAYS, PIA_AREAS: PIA_AREAS, piaReasons: piaReasons, piaSummary: piaSummary, ropaReview: ropaReview, privacyRequestSummary: privacyRequestSummary, privacyRegisterSummary: privacyRegisterSummary, SOC2_CUEC_STARTERS: SOC2_CUEC_STARTERS, SOC2_SUBSERVICE: SOC2_SUBSERVICE, soc2PeriodCoverage: soc2PeriodCoverage, soc2SubserviceReview: soc2SubserviceReview, soc2PackStatus: soc2PackStatus, suggestedObjectives: suggestedObjectives, objectivesStatement: objectivesStatement, measureObjective: measureObjective, certApplicationAnswers: certApplicationAnswers, scopeAdvice: scopeAdvice, certificationBookingReadiness: certificationBookingReadiness, auditorAccessState: auditorAccessState, ownerWorkItems: ownerWorkItems, matchOwnerToUser: matchOwnerToUser, evidenceRequestsByOwner: evidenceRequestsByOwner, evidenceRequestHtml: evidenceRequestHtml, ownerDigestHtml: ownerDigestHtml, notifyPref: notifyPref, ANNEX_STEPS: ANNEX_STEPS, annexAPlan: annexAPlan, annexAPlanGroups: annexAPlanGroups, CONTEXT_OPPORTUNITIES: CONTEXT_OPPORTUNITIES,
     contextOpportunitySuggestions: contextOpportunitySuggestions, preCertificationAudits: preCertificationAudits,
-    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditDeliverySummary: auditDeliverySummary, accountFindings: accountFindings, ACCOUNT_FINDING_LABEL: ACCOUNT_FINDING_LABEL, ACCOUNT_STALE_DAYS: ACCOUNT_STALE_DAYS, accountExceptionLive: accountExceptionLive, accountEmail: accountEmail, accessReviewBuild: accessReviewBuild, accessReviewProgress: accessReviewProgress, accessReviewDecide: accessReviewDecide, accessReviewActions: accessReviewActions, accessReviewEmail: accessReviewEmail, compactAccessReviews: compactAccessReviews, RESTORE_DEFAULT_SETS: RESTORE_DEFAULT_SETS, parseRestoreSets: parseRestoreSets, restoreSetsText: restoreSetsText, restoreTestAssess: restoreTestAssess, restoreCoverage: restoreCoverage, fmtHours: fmtHours, auditInterviewIcs: auditInterviewIcs, busyFromSchedules: busyFromSchedules, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
+    parseAuditScope: parseAuditScope, auditWorkpack: auditWorkpack, auditAutoTest: auditAutoTest, shortFinding: shortFinding, auditRadar: auditRadar, radarTrack: radarTrack, findingRetest: findingRetest, auditCarryForward: auditCarryForward, auditEvidenceAsks: auditEvidenceAsks, auditInterviewPlan: auditInterviewPlan, auditDeliverySummary: auditDeliverySummary, accountFindings: accountFindings, ACCOUNT_FINDING_LABEL: ACCOUNT_FINDING_LABEL, ACCOUNT_STALE_DAYS: ACCOUNT_STALE_DAYS, accountExceptionLive: accountExceptionLive, accountEmail: accountEmail, accessReviewBuild: accessReviewBuild, accessReviewProgress: accessReviewProgress, accessReviewDecide: accessReviewDecide, accessItemKey: accessItemKey, accessReviewActions: accessReviewActions, accessReviewEmail: accessReviewEmail, compactAccessReviews: compactAccessReviews, RESTORE_DEFAULT_SETS: RESTORE_DEFAULT_SETS, parseRestoreSets: parseRestoreSets, restoreSetsText: restoreSetsText, restoreTestAssess: restoreTestAssess, restoreCoverage: restoreCoverage, fmtHours: fmtHours, auditInterviewIcs: auditInterviewIcs, busyFromSchedules: busyFromSchedules, auditClosingSummary: auditClosingSummary, radarMatches: radarMatches, AUDIT_RESULTS: AUDIT_RESULTS, parseAuditResults: parseAuditResults,
     auditWorkpackLines: auditWorkpackLines, auditResultsSummary: auditResultsSummary, CLAUSE_AUDIT_PROMPTS: CLAUSE_AUDIT_PROMPTS,
     clauseOperatingEvidence: clauseOperatingEvidence, clauseAutomationUpdates: clauseAutomationUpdates,
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,

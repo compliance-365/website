@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.180.0',
+    date: '2026-10-25',
+    entries: [
+      'Follow up a phishing simulation from Training: Checkpoint reads the latest Microsoft Defender attack simulation, shows who was compromised and who reported it, assigns the security awareness course to everyone compromised who does not already have it, tracks their completion, and files the result as A.6.3 evidence. Needs Defender for Office 365 Plan 2.',
+      'Group access in the access review: choose the groups that grant access to sensitive information, and each membership becomes a line for the group\u2019s owner to confirm. Members whose accounts are unused are suggested for removal, and guests are flagged to check.',
+      'Integrated audits: from an ISO 27001, ISO 42001 or ISO 27701 audit, plan the other standards you hold on the same day with the same auditor. Shared clauses (7.1 to 7.5, 9.2, 9.3, 10.1 and 10.2) are recorded once and carried across; each audit keeps its own Annex A lines and report.',
+      'Partners: a monthly portfolio report in the owner console\u2019s Delivery tab, with headline counts, every client\u2019s status and what needs attention, and each client\u2019s status note ready to open as an email draft.'
+    ]
+  },
+  {
     version: '1.179.0',
     date: '2026-10-25',
     entries: [
