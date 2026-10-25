@@ -44,3 +44,30 @@ describe('ISO 42001 controls keep their own evidence', () => {
     assert.match(app, /'removeCopiedEvidence', /, 'gated for viewers');
   });
 });
+
+describe('shared clauses across ISO management system standards', () => {
+  const cl = () => [
+    { fw: 'iso27001', id: '7.2', st: 'Implemented', evidenceUrl: 'https://t/competence.xlsx' },
+    { fw: 'iso42001', id: '7.2', st: 'Not started' },
+    { fw: 'iso27701', id: '7.2', st: 'In progress', evidenceUrl: 'https://t/other.xlsx' },
+    { fw: 'iso42001', id: '5.2', st: 'Not started' },
+    { id: '5.2', st: 'Implemented', evidenceUrl: 'https://t/isp.docx' }
+  ];
+  test('a linked clause is offered to the other standards held, never onto other evidence', () => {
+    const c = cl();
+    assert.deepEqual(L.linkedClauseSuggestions(c[0], c, { iso42001: true, iso27701: true }).map((x) => x.fw), ['iso42001']);
+  });
+  test('only when the tenant holds more than one standard', () => {
+    const c = cl();
+    assert.deepEqual(L.linkedClauseSuggestions(c[0], c, {}), []);
+  });
+  test('policy, risk, objectives and operation clauses are not linked', () => {
+    const c = cl();
+    assert.deepEqual(L.linkedClauseSuggestions(c[4], c, { iso42001: true }), []);
+    for (const id of ['5.2', '6.1.2', '6.1.3', '6.2', '8.1', '8.2']) assert.ok(!L.LINKED_CLAUSES.includes(id), id);
+  });
+  test('offered after a clause is set Implemented; each target is checked against its own requirements', () => {
+    assert.match(app, /if \(v === 'Implemented'\) await offerLinkedClauses\(c\);/);
+    assert.match(app, /var gate = clauseGateFor\(t\);\n\s*t\.st = gate\.ok \? 'Implemented' : 'In progress';/);
+  });
+});

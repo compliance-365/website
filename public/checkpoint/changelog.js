@@ -16,7 +16,8 @@ window.CHECKPOINT_CHANGELOG = [
     date: '2026-10-25',
     entries: [
       'ISO 42001 Annex A controls now keep their own evidence. Marking an ISO 27001 control Implemented no longer offers to copy its status and evidence onto the related ISO 42001 control (for example, the information security policy onto the AI policy, A.2.2), and ISO 42001 controls no longer copy onto other frameworks. Other frameworks that share controls with ISO 27001 still do.',
-      'If evidence was already copied across, the ISO 42001 Statement of Applicability lists the affected controls and removes the copied link in one click, putting each control back to its status before the copy so its own evidence can be linked.'
+      'If evidence was already copied across, the ISO 42001 Statement of Applicability lists the affected controls and removes the copied link in one click, putting each control back to its status before the copy so its own evidence can be linked.',
+      'Shared clauses across ISO 27001, ISO 42001 and ISO 27701. When you hold more than one of these standards, marking clause 7.1 to 7.5 (resources, competence, awareness, communication, documented information), 9.2 (internal audit), 9.3 (management review) or 10.1 and 10.2 (improvement) Implemented offers to use the same evidence for that clause in the other standards. Each becomes Implemented only if its own requirements are met. Policy, risk, objectives and operation clauses stay separate: their numbers match but their subject does not.'
     ]
   },
   {

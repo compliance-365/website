@@ -15756,6 +15756,38 @@ function showModal(opts) {
      linked before 42001 rows existed) resolves to ISO 27001, the only
      framework whose clauses existed then. */
   function clauseKey(c) { return c.fw + '|' + c.id; }
+  /* The same clause in the other ISO management system standards this
+     tenant holds (lib LINKED_CLAUSES): offered once the source is
+     Implemented with evidence. The evidence link is shared; each target
+     becomes Implemented only if its own requirement checklist is met,
+     otherwise In progress. Never offered with one standard. */
+  async function offerLinkedClauses(source) {
+    if (READONLY) return 0;
+    var targets = window.CheckpointLib.linkedClauseSuggestions(source, S.clauses || [], S.entitlements || {});
+    if (!targets.length) return 0;
+    var ok = await showModal({
+      title: 'Same clause in ' + (targets.length === 1 ? fwName(targets[0].fw || 'iso27001') : targets.length + ' other standards'),
+      message: 'Clause ' + source.id + ' reads the same in ' + targets.map(function (t) { return fwName(t.fw || 'iso27001'); }).join(' and ') + '. Use the same evidence there too?' +
+        (/^9\./.test(source.id) ? '\n\nOnly if the ' + (source.id === '9.2' ? 'internal audit' : 'management review') + ' covered every standard: the record must show it.' : '') +
+        '\n\nEach one becomes Implemented if its own requirements are met, otherwise In progress.',
+      confirmText: 'Use it for ' + targets.length, cancelText: 'Not now'
+    });
+    if (!ok) return 0;
+    var n = 0;
+    for (var i = 0; i < targets.length; i++) {
+      var t = targets[i], prevSt = t.st, prevUrl = t.evidenceUrl;
+      t.evidenceUrl = source.evidenceUrl;
+      var gate = clauseGateFor(t);
+      t.st = gate.ok ? 'Implemented' : 'In progress';
+      try { await Store.updateClause(t); } catch (e) { warn(e); continue; }
+      if (prevUrl !== t.evidenceUrl) audit('Evidence link changed', 'Clause', clauseLabel(t), prevUrl || '(none)', t.evidenceUrl + ' (shared with ' + clauseLabel(source) + ')');
+      if (prevSt !== t.st) audit('Clause status changed', 'Clause', clauseLabel(t), prevSt, t.st + ' (shared clause, from ' + clauseLabel(source) + ')');
+      n++;
+    }
+    toast(n + ' clause' + (n === 1 ? '' : 's') + ' updated from ' + esc(clauseLabel(source)));
+    renderClauses(); renderDash(); renderNavCounts();
+    return n;
+  }
   function findClause(key) {
     var parts = String(key).split('|');
     var fw = parts.length > 1 ? parts[0] : 'iso27001', code = parts.length > 1 ? parts[1] : parts[0];
@@ -22964,6 +22996,7 @@ function showModal(opts) {
       try { await Store.updateClause(c); } catch (e) { warn(e); }
       audit('Clause status changed', 'Clause', clauseLabel(c), prevSt, v);
       renderClauses(); renderDash(); renderNavCounts();
+      if (v === 'Implemented') await offerLinkedClauses(c);
     },
 
     /* The last step of Finish this clause. setClauseStatus applies the

@@ -2954,6 +2954,33 @@
     return out;
   }
 
+  /* Clauses the ISO management system standards share word for word
+     (the harmonised structure): resources, competence, awareness,
+     communication, documented information, internal audit, management
+     review and improvement. One record can serve every standard the
+     tenant holds. Policy, risk, objectives and operation are left out:
+     their numbers match but their subject differs (an AI policy is not
+     an information security policy). */
+  var LINKED_CLAUSE_FRAMEWORKS = ['iso27001', 'iso42001', 'iso27701'];
+  var LINKED_CLAUSES = ['7.1', '7.2', '7.3', '7.4', '7.5.1', '7.5.2', '7.5.3', '9.2', '9.3', '10.1', '10.2'];
+  /* The same clause in the other standards this tenant holds, where it
+     is behind the source: an Implemented source with evidence, only
+     for linked clauses, only between entitled management system
+     standards, never onto a clause holding other evidence. */
+  function linkedClauseSuggestions(source, clauses, entitlements) {
+    var s = source || {}, sfw = s.fw || 'iso27001';
+    if (LINKED_CLAUSE_FRAMEWORKS.indexOf(sfw) === -1 || LINKED_CLAUSES.indexOf(s.id) === -1) return [];
+    if (s.st !== 'Implemented' || !s.evidenceUrl) return [];
+    var ent = entitlements || {};
+    var held = LINKED_CLAUSE_FRAMEWORKS.filter(function (fw) { return fw === 'iso27001' || ent[fw]; });
+    if (held.length < 2) return [];
+    return (clauses || []).filter(function (c) {
+      var fw = c.fw || 'iso27001';
+      return fw !== sfw && held.indexOf(fw) !== -1 && c.id === s.id && c.st !== 'Implemented' && c.st !== 'Not applicable' &&
+        (!c.evidenceUrl || c.evidenceUrl === s.evidenceUrl);
+    });
+  }
+
   /* Controls in an own-evidence framework (ISO 42001) holding the very
      evidence link of a control they are mapped to in another framework:
      copied across before propagation stopped crossing into them.
@@ -14525,7 +14552,7 @@
     normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, graphTokenScopes: graphTokenScopes, GRAPH_DEFAULT_SCOPE: GRAPH_DEFAULT_SCOPE, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, progressHeadline: progressHeadline, mergeProgressHistory: mergeProgressHistory, clientStage: clientStage, clientAttentionFlags: clientAttentionFlags, clientStatusNote: clientStatusNote, clauseReadiness: clauseReadiness, DOCUMENT_IMPLEMENTED_CONTROLS: DOCUMENT_IMPLEMENTED_CONTROLS, controlsImplementedByDocument: controlsImplementedByDocument, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
-    sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions, copiedAcrossEvidence: copiedAcrossEvidence, OWN_EVIDENCE_FRAMEWORKS: OWN_EVIDENCE_FRAMEWORKS,
+    sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions, copiedAcrossEvidence: copiedAcrossEvidence, linkedClauseSuggestions: linkedClauseSuggestions, LINKED_CLAUSES: LINKED_CLAUSES, OWN_EVIDENCE_FRAMEWORKS: OWN_EVIDENCE_FRAMEWORKS,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     scanResultsChanged: scanResultsChanged, scanDrift: scanDrift,
     legacyAuthObservedResult: legacyAuthObservedResult, privRoleChangeResult: privRoleChangeResult,
