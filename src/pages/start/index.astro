@@ -152,6 +152,13 @@ const live = isSelfServeLive();
   .btn-hdk-primary.start-checkout-btn:hover {
     box-shadow: 0 12px 36px rgba(240, 169, 127,.4);
   }
+  /* Same trap as .start-fallback above, twice over: the site-wide
+     .btn-hdk-primary{display:inline-block} and the block rule here both
+     beat the browser's [hidden], so the checkout button showed even when
+     the script hid it, next to the fallback, for a plan checkout can't
+     charge correctly (a module with no Paddle price yet, or a bundle
+     before its discount exists). */
+  .start-checkout-btn[hidden] { display: none; }
   @media (prefers-reduced-motion: no-preference) {
     .btn-hdk-primary.start-checkout-btn:hover { transform: translateY(-1px); }
   }
