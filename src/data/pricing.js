@@ -66,6 +66,14 @@ export const SELF_SERVE = {
   // Paddle Discount id ('dsc_...') for the bundle in BUNDLE_DISCOUNTS.
   // Empty = not created yet; see BUNDLE_DISCOUNTS below.
   bundleDiscountId: '',
+  // Currencies checkout may charge in. A currency belongs here only once
+  // every price in SELF_SERVE.priceIds carries its Paddle
+  // unit_price_override (run tools/paddle-price-overrides.mjs, then add
+  // the code here). Until then /pricing still SHOWS that currency's list
+  // prices, and /start/ offers a call or an AUD checkout instead of
+  // opening a checkout that would charge a different amount from the one
+  // the visitor was quoted. AUD is the catalogue's base currency.
+  liveCurrencies: ['AUD'],
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
   fallbackBookingUrl: 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled'
@@ -180,23 +188,185 @@ export const BUNDLE_DISCOUNTS = [
 export const BUNDLE_MIN_MODULES = Math.min(...BUNDLE_DISCOUNTS.map((d) => d.minModules));
 export const BUNDLE_RATE_PCT = Math.round(BUNDLE_DISCOUNTS[BUNDLE_DISCOUNTS.length - 1].rate * 100);
 
+// Published list prices in other currencies. AUD lives on MODULES /
+// ADDONS / ENTERPRISE above; everything here is the same catalogue,
+// priced for that market rather than converted at today's rate — round
+// local numbers that hold still when the exchange rate moves.
+//
+// Paddle charges these through unit_price_overrides on the SAME price
+// ids (one override per currency, for the countries listed), so the
+// Lambdas' PRICE_TO_MODULE maps need nothing new.
+// tools/paddle-price-overrides.mjs writes exactly these amounts to
+// Paddle; change a number here, re-run it, and checkout follows.
+//
+// `countries` is who Paddle charges in that currency. Anyone outside
+// every list is charged the AUD base price (Paddle may show it in their
+// local currency at the day's rate), so detectCurrency() quotes them AUD.
+// `tax` is the suffix the pages print after a price.
+//
+// Consulting (CONSULTING_DAY_RATE) is not here: it is delivered from
+// Australia and quoted in AUD wherever the client is.
+export const EUROZONE = ['AT', 'BE', 'HR', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES'];
+
+export const CURRENCIES = [
+  { code: 'AUD', label: 'AUD $', locale: 'en-AU', tax: 'ex GST', countries: ['AU'] },
+  { code: 'USD', label: 'USD $', locale: 'en-US', tax: 'plus applicable sales tax', countries: ['US'] },
+  { code: 'GBP', label: 'GBP £', locale: 'en-GB', tax: 'ex VAT', countries: ['GB', 'IM', 'JE', 'GG'] },
+  { code: 'EUR', label: 'EUR €', locale: 'en-IE', tax: 'ex VAT', countries: EUROZONE },
+  { code: 'NZD', label: 'NZD $', locale: 'en-NZ', tax: 'ex GST', countries: ['NZ'] }
+];
+export const BASE_CURRENCY = CURRENCY;
+
+// Same shape for every currency, so a missing number is a failing test
+// (test/pricing.test.mjs) rather than a "$0" on the page. Starting
+// position, not gospel: roughly the AUD prices at a market rate, rounded
+// to local price points, keeping every ordering the AUD list has (SOC 2
+// above standard, Growth above Micro, Enterprise above Growth).
+export const PRICE_BOOK = {
+  USD: {
+    modules: {
+      iso27001: { micro: 4500, growth: 6500 },
+      soc2: { micro: 5900, growth: 8500 },
+      essential8: { micro: 4500, growth: 6500 },
+      iso42001: { micro: 4500, growth: 6500 },
+      iso27701: { micro: 4500, growth: 6500 },
+      nistcsf: { micro: 4500, growth: 6500 },
+      privacyact: { micro: 3200, growth: 4500 }
+    },
+    addons: { ai: 790 },
+    enterprise: { startingPrice: 9900, startingPriceSoc2: 11900 }
+  },
+  GBP: {
+    modules: {
+      iso27001: { micro: 3600, growth: 5200 },
+      soc2: { micro: 4700, growth: 6800 },
+      essential8: { micro: 3600, growth: 5200 },
+      iso42001: { micro: 3600, growth: 5200 },
+      iso27701: { micro: 3600, growth: 5200 },
+      nistcsf: { micro: 3600, growth: 5200 },
+      privacyact: { micro: 2600, growth: 3600 }
+    },
+    addons: { ai: 620 },
+    enterprise: { startingPrice: 7900, startingPriceSoc2: 9400 }
+  },
+  EUR: {
+    modules: {
+      iso27001: { micro: 4200, growth: 6000 },
+      soc2: { micro: 5500, growth: 7900 },
+      essential8: { micro: 4200, growth: 6000 },
+      iso42001: { micro: 4200, growth: 6000 },
+      iso27701: { micro: 4200, growth: 6000 },
+      nistcsf: { micro: 4200, growth: 6000 },
+      privacyact: { micro: 3000, growth: 4200 }
+    },
+    addons: { ai: 720 },
+    enterprise: { startingPrice: 9200, startingPriceSoc2: 10900 }
+  },
+  NZD: {
+    modules: {
+      iso27001: { micro: 7700, growth: 10999 },
+      soc2: { micro: 9900, growth: 14299 },
+      essential8: { micro: 7700, growth: 10999 },
+      iso42001: { micro: 7700, growth: 10999 },
+      iso27701: { micro: 7700, growth: 10999 },
+      nistcsf: { micro: 7700, growth: 10999 },
+      privacyact: { micro: 5499, growth: 7699 }
+    },
+    addons: { ai: 1320 },
+    enterprise: { startingPrice: 16499, startingPriceSoc2: 19799 }
+  }
+};
+
+export function currencyInfo(code) {
+  return CURRENCIES.find((c) => c.code === code) || CURRENCIES[0];
+}
+
+export function isCurrency(code) {
+  return CURRENCIES.some((c) => c.code === code);
+}
+
+// One module's annual price for a tier in a currency. null = custom
+// (enterprise), exactly like MODULES' own prices.
+export function modulePrice(moduleId, tierId, currency = BASE_CURRENCY) {
+  const m = MODULES.find((x) => x.id === moduleId);
+  if (!m || m.prices[tierId] == null) return null;
+  if (currency === BASE_CURRENCY) return m.prices[tierId];
+  const book = PRICE_BOOK[currency];
+  return book && book.modules[moduleId] ? book.modules[moduleId][tierId] ?? null : null;
+}
+
+export function addonPrice(addonId, currency = BASE_CURRENCY) {
+  const a = ADDONS.find((x) => x.id === addonId);
+  if (!a) return null;
+  if (currency === BASE_CURRENCY) return a.price;
+  const book = PRICE_BOOK[currency];
+  return book ? book.addons[addonId] ?? null : null;
+}
+
+export function enterprisePrices(currency = BASE_CURRENCY) {
+  if (currency === BASE_CURRENCY || !PRICE_BOOK[currency]) {
+    return { startingPrice: ENTERPRISE.startingPrice, startingPriceSoc2: ENTERPRISE.startingPriceSoc2, addonPrice: ENTERPRISE.addonPrice };
+  }
+  const book = PRICE_BOOK[currency];
+  return { ...book.enterprise, addonPrice: book.addons.ai };
+}
+
+export function currencyForCountry(countryCode) {
+  const cc = String(countryCode || '').toUpperCase();
+  const hit = CURRENCIES.find((c) => c.countries.includes(cc));
+  return hit ? hit.code : BASE_CURRENCY;
+}
+
+// Best guess at the visitor's billing country from what the browser
+// already knows — no IP lookup, no third party. Time zone first: an
+// Australian on an en-US browser is still in Australia/Sydney. The
+// language region only breaks ties where the zone says nothing (UTC).
+// A guess picks the default only; the visitor can always switch.
+const ZONE_COUNTRY = {
+  'Europe/London': 'GB', 'Europe/Belfast': 'GB', 'Europe/Isle_of_Man': 'IM', 'Europe/Jersey': 'JE', 'Europe/Guernsey': 'GG',
+  'Pacific/Auckland': 'NZ', 'Pacific/Chatham': 'NZ',
+  'Europe/Vienna': 'AT', 'Europe/Brussels': 'BE', 'Europe/Zagreb': 'HR', 'Asia/Nicosia': 'CY', 'Europe/Nicosia': 'CY',
+  'Europe/Tallinn': 'EE', 'Europe/Helsinki': 'FI', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Athens': 'GR',
+  'Europe/Dublin': 'IE', 'Europe/Rome': 'IT', 'Europe/Riga': 'LV', 'Europe/Vilnius': 'LT', 'Europe/Luxembourg': 'LU',
+  'Europe/Malta': 'MT', 'Europe/Amsterdam': 'NL', 'Europe/Lisbon': 'PT', 'Atlantic/Madeira': 'PT', 'Atlantic/Azores': 'PT',
+  'Europe/Bratislava': 'SK', 'Europe/Ljubljana': 'SI', 'Europe/Madrid': 'ES', 'Atlantic/Canary': 'ES'
+};
+const US_ZONES = /^(America\/(New_York|Detroit|Chicago|Denver|Phoenix|Boise|Los_Angeles|Anchorage|Juneau|Sitka|Nome|Adak|Metlakatla|Yakutat|Menominee|Indiana\/.+|Kentucky\/.+|North_Dakota\/.+)|Pacific\/Honolulu)$/;
+
+export function guessCountry(timeZone, languages = []) {
+  const tz = String(timeZone || '');
+  if (tz.startsWith('Australia/') || tz === 'Antarctica/Macquarie') return 'AU';
+  if (ZONE_COUNTRY[tz]) return ZONE_COUNTRY[tz];
+  if (US_ZONES.test(tz)) return 'US';
+  if (tz && tz !== 'UTC' && tz !== 'Etc/UTC') return '';
+  for (const lang of languages) {
+    const region = String(lang).split('-')[1];
+    if (region && region.length === 2) return region.toUpperCase();
+  }
+  return '';
+}
+
+export function detectCurrency(timeZone, languages) {
+  return currencyForCountry(guessCountry(timeZone, languages));
+}
+
 // Pure pricing math — exported so the configurator UI and any test use
 // the exact same computation. `selectedModuleIds` / `selectedAddonIds`
 // are arrays of ids; `tierId` one of TIERS. Returns a fully itemised
 // quote, or flags `custom: true` if the tier or any module has no listed
 // price (→ the UI shows "Talk to us" instead of a total).
-export function computeQuote(selectedModuleIds, selectedAddonIds, tierId) {
+export function computeQuote(selectedModuleIds, selectedAddonIds, tierId, currency = BASE_CURRENCY) {
   const modules = MODULES.filter((m) => selectedModuleIds.includes(m.id));
   const addons = ADDONS.filter((a) => selectedAddonIds.includes(a.id));
-  const custom = tierId === 'enterprise' || modules.some((m) => m.prices[tierId] == null);
+  const moduleLines = modules.map((m) => ({ id: m.id, name: m.name, price: modulePrice(m.id, tierId, currency) }));
+  const custom = tierId === 'enterprise' || moduleLines.some((l) => l.price == null);
 
-  const moduleLines = modules.map((m) => ({ id: m.id, name: m.name, price: m.prices[tierId] }));
   const subtotal = moduleLines.reduce((s, l) => s + (l.price || 0), 0);
 
   const discount = BUNDLE_DISCOUNTS.find((d) => modules.length >= d.minModules) || null;
   const discountAmount = discount ? Math.round(subtotal * discount.rate) : 0;
 
-  const addonLines = addons.map((a) => ({ id: a.id, name: a.name, price: a.price }));
+  const addonLines = addons.map((a) => ({ id: a.id, name: a.name, price: addonPrice(a.id, currency) || 0 }));
   const addonTotal = addonLines.reduce((s, l) => s + l.price, 0);
 
   const total = subtotal - discountAmount + addonTotal;
@@ -204,6 +374,7 @@ export function computeQuote(selectedModuleIds, selectedAddonIds, tierId) {
   return {
     custom,
     tierId,
+    currency,
     moduleLines,
     addonLines,
     subtotal,
@@ -217,4 +388,13 @@ export function computeQuote(selectedModuleIds, selectedAddonIds, tierId) {
 // sub-dollar). Kept here so page and configurator format identically.
 export function fmtAud(n) {
   return '$' + Number(n || 0).toLocaleString('en-AU');
+}
+
+// Any currency in CURRENCIES, whole units. AUD and NZD both print "$"
+// on their own pages, so a non-base dollar gets its code ("US$", "NZ$")
+// to stay unambiguous next to the AUD figures elsewhere on the site.
+const SYMBOL = { AUD: '$', USD: 'US$', NZD: 'NZ$', GBP: '£', EUR: '€' };
+export function fmtMoney(n, currency = BASE_CURRENCY) {
+  const c = currencyInfo(currency);
+  return (SYMBOL[c.code] || c.code + ' ') + Number(n || 0).toLocaleString(c.locale);
 }

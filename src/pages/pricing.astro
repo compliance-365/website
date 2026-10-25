@@ -6,7 +6,7 @@ import CinematicBackground from '../components/CinematicBackground.astro';
 import {
   MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, ENTERPRISE,
   TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive, CONSULTING_DAY_RATE,
-  BUNDLE_MIN_MODULES, BUNDLE_RATE_PCT, computeQuote
+  BUNDLE_MIN_MODULES, BUNDLE_RATE_PCT, computeQuote, CURRENCIES, currencyInfo
 } from '../data/pricing.js';
 
 const base = import.meta.env.BASE_URL || '/';
@@ -15,6 +15,10 @@ const startUrl = `${base}start/`;
 const live = isSelfServeLive();
 // The three ISO management systems together, the most common bundle.
 const isoTrio = computeQuote(['iso27001', 'iso27701', 'iso42001'], [], 'growth');
+// The page renders in AUD (what search engines index and what most
+// visitors pay); the script at the bottom re-prices every [data-price]
+// element when the visitor's currency is another one.
+const baseTax = currencyInfo('AUD').tax;
 
 // How much consulting a self-serve client typically books, by situation.
 // Day counts are our usual recommendation, not a minimum: every path
@@ -48,7 +52,7 @@ const consultingPaths = [
       <a href="#configure" class="btn-hdk-ghost">Build a quote</a>
     </div>
     <p style="margin-top:1rem;font-size:0.9rem;color:rgba(250,247,241,.55);">
-      Card required to start the trial, charged only on day {TRIAL_DAYS + 1} unless you cancel. Prices in AUD, ex GST.
+      Card required to start the trial, charged only on day {TRIAL_DAYS + 1} unless you cancel. <span data-cur-note>Prices in AUD, {baseTax}.</span>
     </p>
   </div>
 </section>
@@ -62,6 +66,13 @@ const consultingPaths = [
       Every framework is the full Checkpoint experience — the control set, continuous evidence, posture scanning, reports and the AI tools. The only thing that changes with headcount is the audit/evidence scope, so there are two straightforward tiers.
     </p>
 
+    <div class="cur-pick">
+      <label for="curSelectTop">Currency</label>
+      <select id="curSelectTop" class="cur-select">
+        {CURRENCIES.map((c) => <option value={c.code}>{c.label}</option>)}
+      </select>
+    </div>
+
     <div class="price-grid">
       {MODULES.map((m) => (
         <div class={`price-card${m.premium ? ' price-card-premium' : ''}`}>
@@ -70,11 +81,11 @@ const consultingPaths = [
           <p class="price-tag-line">{m.tag}</p>
           <div class="price-tiers">
             <div class="price-tier">
-              <span class="pt-amount">{fmtAud(m.prices.micro)}</span>
+              <span class="pt-amount" data-price={`m:${m.id}:micro`}>{fmtAud(m.prices.micro)}</span>
               <span class="pt-label">/yr · under 50 staff</span>
             </div>
             <div class="price-tier">
-              <span class="pt-amount">{fmtAud(m.prices.growth)}</span>
+              <span class="pt-amount" data-price={`m:${m.id}:growth`}>{fmtAud(m.prices.growth)}</span>
               <span class="pt-label">/yr · 50–250 staff</span>
             </div>
           </div>
@@ -84,7 +95,7 @@ const consultingPaths = [
     </div>
 
     <div class="bundle-note">
-      <p><b>Bundle: {BUNDLE_RATE_PCT}% off {BUNDLE_MIN_MODULES} or more frameworks.</b> Frameworks share one set of registers, one internal audit and one management review, so the third standard costs you less work, and less on the invoice. For example, ISO 27001, ISO 27701 and ISO 42001 together for 50–250 staff: {fmtAud(isoTrio.subtotal)} becomes <b>{fmtAud(isoTrio.total)} a year</b>. <a href={`${base}services/integrated-iso/`}>How the three run as one system</a>.</p>
+      <p><b>Bundle: {BUNDLE_RATE_PCT}% off {BUNDLE_MIN_MODULES} or more frameworks.</b> Frameworks share one set of registers, one internal audit and one management review, so the third standard costs you less work, and less on the invoice. For example, ISO 27001, ISO 27701 and ISO 42001 together for 50–250 staff: <span data-price="trio:subtotal">{fmtAud(isoTrio.subtotal)}</span> becomes <b><span data-price="trio:total">{fmtAud(isoTrio.total)}</span> a year</b>. <a href={`${base}services/integrated-iso/`}>How the three run as one system</a>.</p>
     </div>
 
     <p style="text-align:center;margin-top:1.75rem;font-size:0.95rem;color:var(--muted,#555);">
@@ -106,15 +117,15 @@ const consultingPaths = [
       <div class="ent-price-block">
         <div class="ent-price-row">
           <span class="ent-price-label">Standard frameworks</span>
-          <span class="ent-price-amount">From {fmtAud(ENTERPRISE.startingPrice)}<span class="ent-price-period">/yr per framework</span></span>
+          <span class="ent-price-amount">From <span data-price="ent:startingPrice">{fmtAud(ENTERPRISE.startingPrice)}</span><span class="ent-price-period">/yr per framework</span></span>
         </div>
         <div class="ent-price-row">
           <span class="ent-price-label">SOC 2</span>
-          <span class="ent-price-amount">From {fmtAud(ENTERPRISE.startingPriceSoc2)}<span class="ent-price-period">/yr</span></span>
+          <span class="ent-price-amount">From <span data-price="ent:startingPriceSoc2">{fmtAud(ENTERPRISE.startingPriceSoc2)}</span><span class="ent-price-period">/yr</span></span>
         </div>
         <div class="ent-price-row">
           <span class="ent-price-label">AI assistant add-on</span>
-          <span class="ent-price-amount">{fmtAud(ENTERPRISE.addonPrice)}<span class="ent-price-period">/yr</span></span>
+          <span class="ent-price-amount"><span data-price="ent:addonPrice">{fmtAud(ENTERPRISE.addonPrice)}</span><span class="ent-price-period">/yr</span></span>
         </div>
         <p class="ent-billing"><b>Billing:</b> {ENTERPRISE.billingPeriod}.</p>
       </div>
@@ -144,6 +155,13 @@ const consultingPaths = [
 
     <div class="cfg-wrap">
       <div class="cfg-controls">
+        <div class="cfg-block">
+          <label class="cfg-label" for="curSelectCfg">Currency</label>
+          <select id="curSelectCfg" class="cur-select">
+            {CURRENCIES.map((c) => <option value={c.code}>{c.label}</option>)}
+          </select>
+        </div>
+
         <div class="cfg-block">
           <label class="cfg-label">Company size</label>
           <div class="cfg-tiers" id="cfgTiers">
@@ -189,10 +207,10 @@ const consultingPaths = [
         </div>
         <div id="cfgTotalWrap" class="cfg-total-wrap" hidden>
           <div class="cfg-total-row"><span>Annual total</span><span id="cfgTotal" class="cfg-total"></span></div>
-          <p class="cfg-total-note">Billed yearly in AUD, ex GST. {TRIAL_DAYS}-day free trial, cancel anytime.</p>
+          <p class="cfg-total-note"><span data-cur-billed>Billed yearly in AUD, {baseTax}.</span> {TRIAL_DAYS}-day free trial, cancel anytime.</p>
         </div>
         <div id="cfgCustom" class="cfg-custom" hidden>
-          <p><b>Enterprise scope.</b> Starting from {fmtAud(ENTERPRISE.startingPrice)}/yr per framework ({fmtAud(ENTERPRISE.startingPriceSoc2)}/yr for SOC 2) — see the full <a href="#enterprise" style="color:#A63A12;font-weight:600;">Enterprise pricing and features</a> above. Your exact annual fee is confirmed in writing before anything is charged.</p>
+          <p><b>Enterprise scope.</b> Starting from <span data-price="ent:startingPrice">{fmtAud(ENTERPRISE.startingPrice)}</span>/yr per framework (<span data-price="ent:startingPriceSoc2">{fmtAud(ENTERPRISE.startingPriceSoc2)}</span>/yr for SOC 2) — see the full <a href="#enterprise" style="color:#A63A12;font-weight:600;">Enterprise pricing and features</a> above. Your exact annual fee is confirmed in writing before anything is charged.</p>
           <a href={ctaUrl} class="btn btn-primary" style="width:100%;text-align:center;">Talk to us</a>
         </div>
         <a href={startUrl} id="cfgStart" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1rem;" hidden>Start free trial →</a>
@@ -249,7 +267,7 @@ const consultingPaths = [
     <div class="buy-grid">
       <div class="buy-card">
         <h3>Checkpoint on its own</h3>
-        <p class="buy-price">From {fmtAud(MODULES[0].prices.micro)}<span> a year per framework</span></p>
+        <p class="buy-price">From <span data-price={`m:${MODULES[0].id}:micro`}>{fmtAud(MODULES[0].prices.micro)}</span><span> a year per framework</span></p>
         <p>Your team runs the programme with Checkpoint's guided build, How-to guides and next-step prompts. Includes a free 30-minute setup call.</p>
         <a href={startUrl} class="buy-link">Start a {TRIAL_DAYS}-day free trial</a>
       </div>
@@ -522,6 +540,9 @@ const consultingPaths = [
   .faq details[open] summary::before { content: '–'; }
   .faq p { margin: .8rem 0 0; color: #555; line-height: 1.7; }
 
+  .cur-pick { display: flex; align-items: center; justify-content: center; gap: .6rem; margin: -1rem 0 2rem; font-size: .9rem; color: var(--muted,#555); }
+  .cur-select { font: inherit; font-size: .9rem; padding: .45rem 2rem .45rem .75rem; border: 1px solid #E4DFD5; border-radius: 8px; background: #fff; color: #0B0B0C; }
+  .cfg-block .cur-select { width: 100%; }
   @media (max-width: 720px) {
     .cfg-wrap { grid-template-columns: 1fr; }
     .cfg-summary { position: static; }
@@ -529,7 +550,51 @@ const consultingPaths = [
 </style>
 
 <script>
-  import { MODULES, ADDONS, computeQuote, fmtAud, TRIAL_DAYS } from '../data/pricing.js';
+  import {
+    computeQuote, fmtMoney, currencyInfo, isCurrency, detectCurrency, modulePrice, enterprisePrices
+  } from '../data/pricing.js';
+
+  // Currency: ?currency= (a shared link), then the visitor's earlier
+  // pick, then a guess from their time zone. Storage can throw (private
+  // windows, blocked site data), and the page works without it.
+  const CUR_KEY = 'c365-currency';
+  function initialCurrency() {
+    const fromUrl = (new URLSearchParams(location.search).get('currency') || '').toUpperCase();
+    if (isCurrency(fromUrl)) return fromUrl;
+    try { const saved = localStorage.getItem(CUR_KEY); if (isCurrency(saved)) return saved; } catch (e) {}
+    try { return detectCurrency(Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.languages || []); } catch (e) { return 'AUD'; }
+  }
+  let currency = initialCurrency();
+  const curSelects = Array.from(document.querySelectorAll('.cur-select'));
+
+  // Every static price on the page carries data-price="<kind>:<args>",
+  // so switching currency re-prices them from pricing.js rather than
+  // from numbers typed into this script.
+  const trio = (c) => computeQuote(['iso27001', 'iso27701', 'iso42001'], [], 'growth', c);
+  function priceOf(key, c) {
+    const [kind, a, b] = key.split(':');
+    if (kind === 'm') return modulePrice(a, b, c);
+    if (kind === 'ent') return enterprisePrices(c)[a];
+    if (kind === 'trio') return trio(c)[a];
+    return null;
+  }
+  function applyCurrency() {
+    const info = currencyInfo(currency);
+    document.querySelectorAll('[data-price]').forEach((el) => {
+      const n = priceOf(el.dataset.price, currency);
+      if (n != null) el.textContent = fmtMoney(n, currency);
+    });
+    document.querySelectorAll('[data-cur-note]').forEach((el) => { el.textContent = `Prices in ${info.code}, ${info.tax}.`; });
+    document.querySelectorAll('[data-cur-billed]').forEach((el) => { el.textContent = `Billed yearly in ${info.code}, ${info.tax}.`; });
+    curSelects.forEach((s) => { s.value = currency; });
+  }
+  curSelects.forEach((s) => s.addEventListener('change', () => {
+    currency = s.value;
+    try { localStorage.setItem(CUR_KEY, currency); } catch (e) {}
+    if (typeof window.c365Track === 'function') window.c365Track('currency_selected', { currency });
+    applyCurrency();
+    render();
+  }));
 
   const tierBtns = Array.from(document.querySelectorAll('.cfg-tier'));
   const modInputs = Array.from(document.querySelectorAll('.cfg-mod-input'));
@@ -555,16 +620,17 @@ const consultingPaths = [
       return;
     }
 
-    const q = computeQuote(mods, adds, tier);
+    const q = computeQuote(mods, adds, tier, currency);
+    const fmt = (n) => fmtMoney(n, currency);
     let html = '';
     q.moduleLines.forEach((l) => {
-      html += `<div class="cfg-line"><span>${l.name}</span><span>${l.price == null ? 'Custom' : fmtAud(l.price)}</span></div>`;
+      html += `<div class="cfg-line"><span>${l.name}</span><span>${l.price == null ? 'Custom' : fmt(l.price)}</span></div>`;
     });
     if (q.discount) {
-      html += `<div class="cfg-line discount"><span>${q.discount.label}</span><span>−${fmtAud(q.discount.amount)}</span></div>`;
+      html += `<div class="cfg-line discount"><span>${q.discount.label}</span><span>−${fmt(q.discount.amount)}</span></div>`;
     }
     q.addonLines.forEach((l) => {
-      html += `<div class="cfg-line"><span>${l.name} (add-on)</span><span>${fmtAud(l.price)}</span></div>`;
+      html += `<div class="cfg-line"><span>${l.name} (add-on)</span><span>${fmt(l.price)}</span></div>`;
     });
     linesEl.innerHTML = html;
 
@@ -572,13 +638,14 @@ const consultingPaths = [
       totalWrap.hidden = true; startBtn.hidden = true; customEl.hidden = false;
     } else {
       customEl.hidden = true;
-      totalEl.textContent = fmtAud(q.total) + '/yr';
+      totalEl.textContent = fmt(q.total) + '/yr';
       totalWrap.hidden = false;
       startBtn.hidden = false;
       const params = new URLSearchParams();
       if (mods.length) params.set('modules', mods.join(','));
       if (adds.length) params.set('addons', adds.join(','));
       params.set('tier', tier);
+      params.set('currency', currency);
       startBtn.setAttribute('href', startBtn.getAttribute('href').split('?')[0] + '?' + params.toString());
     }
   }
@@ -589,6 +656,7 @@ const consultingPaths = [
     render();
   }));
   modInputs.concat(addonInputs).forEach((i) => i.addEventListener('change', render));
+  applyCurrency();
   render();
 </script>
 </Base>

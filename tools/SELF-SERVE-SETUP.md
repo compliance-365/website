@@ -317,6 +317,43 @@ matching discount; until then /start sends a qualifying selection to
 For invoiced clients, set `AgreedPrice` on their PartnerClients row in
 the owner console so revenue reflects the discounted total.
 
+### Local-currency prices (USD, GBP, EUR, NZD)
+
+`PRICE_BOOK` and `CURRENCIES` in `src/data/pricing.js` hold the list
+prices for buyers outside Australia and which countries pay each
+currency. /pricing guesses the visitor's currency from their time zone
+(they can switch), and passes it to /start. Paddle charges them as
+**price overrides** on the existing price ids, so the Lambdas need no
+change: a USD buyer of `iso27001_micro` gets the same price id and the
+same module.
+
+/start only opens checkout in a currency listed in
+`SELF_SERVE.liveCurrencies`. Any other currency shows its prices, then
+offers a setup call or the same plan in AUD, so nobody is charged an
+amount they weren't quoted.
+
+1. Paddle → **Developer tools → Authentication → New API key** with
+   **Prices: write**. Keep it out of the repo.
+2. Dry run, and check the amounts:
+   `node tools/paddle-price-overrides.mjs`
+3. Write them:
+   `PADDLE_API_KEY=pdl_... node tools/paddle-price-overrides.mjs --apply`
+   Each run replaces every override on those prices, so hand-made
+   overrides in the dashboard are overwritten.
+4. Open a checkout with the billing country set to the US, the UK, an
+   EU country and New Zealand, and confirm each shows the price the
+   website quotes.
+5. Add the codes to `SELF_SERVE.liveCurrencies`, for example
+   `['AUD', 'USD', 'GBP', 'EUR', 'NZD']`, and deploy.
+
+Paddle picks the currency from the billing country the buyer enters,
+not from the website, so a visitor quoted USD who enters an Australian
+address is charged AUD. Checkout reports that to GA4 as
+`checkout_currency_mismatch`, which is worth watching after launch.
+When a price changes, change `PRICE_BOOK`, then repeat steps 2 and 3.
+The Privacy Act prices need their overrides too once they exist: add
+their ids to `SELF_SERVE.priceIds` first and the tool picks them up.
+
 ## 6. The `?activate=1` return (done)
 
 `public/checkpoint/app.js`'s `afterSignIn()` now checks for
