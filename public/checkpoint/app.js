@@ -899,7 +899,7 @@ function showModal(opts) {
        policy they have just been sent. Launching and chasing campaigns
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'checkAccounts', 'expectAccount', 'startAccessReview', 'decideAccess', 'acceptAccessSuggestions', 'confirmAccessAll', 'sendAccessReview', 'finishAccessReview', 'cancelAccessReview', 'recordRestoreTest', 'editRestoreSets', 'fileChangeSample', 'auditInterviewRecap', 'useInterviewNote', 'dismissInterviewDraft', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'checkAccounts', 'expectAccount', 'startAccessReview', 'decideAccess', 'acceptAccessSuggestions', 'confirmAccessAll', 'sendAccessReview', 'finishAccessReview', 'cancelAccessReview', 'recordRestoreTest', 'editRestoreSets', 'fileChangeSample', 'removeCopiedEvidence', 'auditInterviewRecap', 'useInterviewNote', 'dismissInterviewDraft', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
     'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
     'addManualObjective', 'editObjective', 'addLibraryObjectives',
     /* Approving writes to the Answer library; AI drafting is gated for
@@ -1891,7 +1891,7 @@ function showModal(opts) {
          point of a shared control — but only onto a target with nothing
          of its own already attached. A practitioner's own link is never
          overwritten, same rule captureAutoEvidence() follows. */
-      if (!target.evidenceUrl && source.evidenceUrl) target.evidenceUrl = source.evidenceUrl;
+      if (!target.evidenceUrl && source.evidenceUrl) { target.evidenceUrl = source.evidenceUrl; audit('Evidence link changed', 'Control', p.fw + '|' + p.code, '(none)', source.evidenceUrl + ' (cross-framework from ' + p.viaFw + '|' + p.viaCode + ')'); }
       try { await Store.updateControl(target); } catch (e) { warn(e); continue; }
       audit('Control status changed', 'Control', p.fw + '|' + p.code, prev, p.to + ' (cross-framework from ' + p.viaFw + '|' + p.viaCode + ', practitioner-confirmed)');
       applied++;
@@ -13340,9 +13340,22 @@ function showModal(opts) {
       reviewCadenceDays: S.settings && S.settings.controlReviewCadenceDays
     });
   }
+  /* ISO 42001 controls still holding evidence copied across from a
+     related ISO 27001 control: offered for removal, one click. */
+  function copiedEvidenceNotice(fw) {
+    if (fw !== 'iso42001' || READONLY) return '';
+    var list = window.CheckpointLib.copiedAcrossEvidence(S.controls || []).filter(function (x) { return x.control.app !== false; });
+    if (!list.length) return '';
+    return '<div class="card" style="padding:14px 16px;margin:12px 0;border-color:var(--warn)">' +
+      '<h3 style="margin:0 0 4px">' + list.length + ' AI control' + (list.length === 1 ? ' holds' : 's hold') + ' evidence copied from ISO 27001</h3>' +
+      '<p class="src" style="margin:0 0 8px">' + esc(list.map(function (x) { return x.control.id.replace(/^AI\./, 'A.') + ' from ' + x.from.id; }).join(', ')) +
+      '. ISO 42001 needs its own evidence: the information security policy is not an AI policy. Removing the copied link puts each control back to where it was before it was copied, so you can link its own evidence.</p>' +
+      '<button class="btn sm" data-action="App.removeCopiedEvidence">Remove the copied evidence</button></div>';
+  }
   function renderAnnexPlan(fw) {
     var el = document.getElementById('soaAnnexPlan');
     if (!el) return;
+    var copied = copiedEvidenceNotice(fw);
     var app = (S.controls || []).filter(function (c) { return c.fw === fw && c.app; });
     var isIso = fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701';
     var name = isIso ? 'Annex A' : fwName(fw) + ' controls';
@@ -13350,13 +13363,13 @@ function showModal(opts) {
     var pending = groups.reduce(function (n, g) { return n + g.controls.length; }, 0);
     var done = app.filter(function (c) { return c.st === 'Implemented' && c.evidenceUrl; }).length;
     if (!groups.length) {
-      el.innerHTML = app.length ? '<div class="card" style="padding:14px 16px;margin:12px 0">' + icon('check') + ' <b>Every applicable control is Implemented with evidence.</b> <span class="src">Keep the operating rhythm running and re-verify each control when its review falls due.</span></div>' : '';
+      el.innerHTML = copied + (app.length ? '<div class="card" style="padding:14px 16px;margin:12px 0">' + icon('check') + ' <b>Every applicable control is Implemented with evidence.</b> <span class="src">Keep the operating rhythm running and re-verify each control when its review falls due.</span></div>' : '');
       return;
     }
     var heads = { checkpoint: 'Checkpoint does it', meeting: 'Scheduled for you', you: 'Needs you' };
     var open = window._annexOpen || '';
     var ro = !!READONLY;
-    el.innerHTML = '<div class="card" style="padding:14px 16px;margin:12px 0">' +
+    el.innerHTML = copied + '<div class="card" style="padding:14px 16px;margin:12px 0">' +
       '<h3 style="margin:0 0 4px">Getting ' + esc(name) + ' to 100%</h3>' +
       '<p class="src" style="margin:0 0 8px">' + done + ' of ' + app.length + ' applicable controls Implemented with evidence. ' + pending + ' control' + (pending === 1 ? '' : 's') + ' with a next step, one each:</p>' +
       groups.map(function (g) {
@@ -20561,6 +20574,34 @@ function showModal(opts) {
        new tab's ability to reach back into this one, the standard
        substitute for `noopener` when the caller needs to keep its own
        handle to later set `.location`. */
+    /* Takes ISO 27001 evidence back off ISO 42001 controls it was copied
+       onto, and puts each control back to its status before the copy
+       (from the audit log), or In progress if that is not recorded. */
+    removeCopiedEvidence: async function () {
+      var list = window.CheckpointLib.copiedAcrossEvidence(S.controls || []);
+      if (!list.length) return;
+      var ok = await showModal({ title: 'Remove copied evidence from ' + list.length + ' AI control' + (list.length === 1 ? '' : 's') + '?',
+        message: list.map(function (x) { return '\u2022 ' + x.control.id.replace(/^AI\./, 'A.') + ' ' + (x.control.t || '') + ': evidence copied from ISO 27001 ' + x.from.id; }).join('\n') +
+          '\n\nThe ISO 27001 controls keep their evidence. Each AI control goes back to its status before the copy, ready for its own evidence.',
+        confirmText: 'Remove', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i].control, key = c.fw + '|' + c.id, url = c.evidenceUrl, prev = c.st;
+        var copy = (S.auditLog || []).filter(function (e) { return e.targetType === 'Control' && e.targetId === key && e.action === 'Control status changed' && /cross-framework/.test(e.after || ''); }).pop();
+        var back = copy && copy.before ? copy.before : (c.st === 'Implemented' ? 'In progress' : c.st);
+        c.evidenceUrl = '';
+        if (c.st === 'Implemented') { c.st = back === 'Implemented' ? 'In progress' : back; c.verified = ''; c.verifiedBy = ''; }
+        try { await Store.updateControl(c); } catch (e) { warn(e); continue; }
+        audit('Evidence link changed', 'Control', key, url, '(none): copied from ISO 27001 ' + list[i].from.id + ', not ISO 42001 evidence');
+        if (c.st !== prev) audit('Control status changed', 'Control', key, prev, c.st + ' (copied ISO 27001 evidence removed)');
+        n++;
+      }
+      busy(false);
+      toast(n + ' AI control' + (n === 1 ? '' : 's') + ' cleared. Link each one\u2019s own evidence.');
+      renderSoa(); renderNavCounts(); renderDash();
+    },
     openEvidenceDoc: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;

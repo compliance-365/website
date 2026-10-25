@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.179.0',
+    date: '2026-10-25',
+    entries: [
+      'ISO 42001 Annex A controls now keep their own evidence. Marking an ISO 27001 control Implemented no longer offers to copy its status and evidence onto the related ISO 42001 control (for example, the information security policy onto the AI policy, A.2.2), and ISO 42001 controls no longer copy onto other frameworks. Other frameworks that share controls with ISO 27001 still do.',
+      'If evidence was already copied across, the ISO 42001 Statement of Applicability lists the affected controls and removes the copied link in one click, putting each control back to its status before the copy so its own evidence can be linked.'
+    ]
+  },
+  {
     version: '1.178.0',
     date: '2026-10-24',
     entries: [

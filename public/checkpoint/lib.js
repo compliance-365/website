@@ -2920,9 +2920,16 @@
      ctx: { controls, entitlements } — same shape sharedEvidenceClosure
      takes. Returns [{ fw, code, title, from, to, viaFw, viaCode }]. */
   var PROPAGATION_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+  /* Frameworks whose controls need their own evidence. ISO 42001's
+     Annex A maps to ISO 27001 as RELATED requirements (AI.2.2 the AI
+     policy beside A.5.1 the information security policy), not the same
+     control: the information security policy is not an AI policy, so
+     a status or evidence link never crosses into or out of them. */
+  var OWN_EVIDENCE_FRAMEWORKS = ['iso42001'];
   function crossFrameworkStatusSuggestions(source, ctx) {
     var s = source || {};
     if (!s.app || s.st !== 'Implemented' || !s.evidenceUrl) return [];
+    if (OWN_EVIDENCE_FRAMEWORKS.indexOf(s.fw) !== -1) return [];
     var out = [];
     sharedEvidenceClosure(s, ctx).forEach(function (c) {
       /* Cross-framework ONLY — never propagate within the source's own
@@ -2938,10 +2945,35 @@
          view (which reports, and never writes); only propagation is
          restricted. */
       if (c.fw === s.fw) return;
+      if (OWN_EVIDENCE_FRAMEWORKS.indexOf(c.fw) !== -1) return;
       if (!c.app) return;
       var from = PROPAGATION_ST_RANK[c.st];
       if (typeof from !== 'number' || from >= PROPAGATION_ST_RANK[s.st]) return;
       out.push({ fw: c.fw, code: c.id, title: c.t || '', from: c.st, to: s.st, viaFw: s.fw, viaCode: s.id });
+    });
+    return out;
+  }
+
+  /* Controls in an own-evidence framework (ISO 42001) holding the very
+     evidence link of a control they are mapped to in another framework:
+     copied across before propagation stopped crossing into them.
+     Returns [{ control, from: { fw, id } }]. */
+  function copiedAcrossEvidence(controls) {
+    var all = controls || [], out = [];
+    all.forEach(function (c) {
+      if (!c || OWN_EVIDENCE_FRAMEWORKS.indexOf(c.fw) === -1 || !c.evidenceUrl) return;
+      var hit = null;
+      parseMapTokens(c.map).some(function (ref) {
+        var m = all.find(function (x) { return x.fw === ref.fw && x.id === ref.code; });
+        if (m && m.evidenceUrl === c.evidenceUrl) { hit = m; return true; }
+        return false;
+      });
+      if (!hit) all.some(function (o) {
+        if (!o || o.fw === c.fw || o.evidenceUrl !== c.evidenceUrl) return false;
+        if (parseMapTokens(o.map).some(function (e) { return e.fw === c.fw && e.code === c.id; })) { hit = o; return true; }
+        return false;
+      });
+      if (hit) out.push({ control: c, from: { fw: hit.fw, id: hit.id } });
     });
     return out;
   }
@@ -14493,7 +14525,7 @@
     normaliseDateInput: normaliseDateInput,
     band: band, residual: residual, riskScenarioGaps: riskScenarioGaps, residualAcceptanceStale: residualAcceptanceStale, checkResult: checkResult, activeDisposition: activeDisposition, score: score, incidentTriageResult: incidentTriageResult, alertTriageResult: alertTriageResult, deviceCheckinResult: deviceCheckinResult, leaverHygieneResult: leaverHygieneResult, caDeviceComplianceResult: caDeviceComplianceResult, caRiskBasedResult: caRiskBasedResult, caSignInFrequencyResult: caSignInFrequencyResult, caTermsOfUseResult: caTermsOfUseResult, caCloudAppSecurityResult: caCloudAppSecurityResult, oauthConsentRiskResult: oauthConsentRiskResult, describeServicePrincipal: describeServicePrincipal, lifecycleWorkflowsResult: lifecycleWorkflowsResult, subjectRightsResult: subjectRightsResult, retentionLabelResult: retentionLabelResult, tvmExposureResult: tvmExposureResult, edrCoverageResult: edrCoverageResult, attackSimulationResult: attackSimulationResult, labelProtectionResult: labelProtectionResult, QUESTION_TOPICS: QUESTION_TOPICS, matchQuestionTopics: matchQuestionTopics, questionSimilarity: questionSimilarity, parseQuestionnaireInput: parseQuestionnaireInput, assessQuestion: assessQuestion, ASSET_TYPES: ASSET_TYPES, ASSET_CLASSIFICATIONS: ASSET_CLASSIFICATIONS, mergeDiscoveredAssets: mergeDiscoveredAssets, assetRegisterSummary: assetRegisterSummary, LEGAL_BASELINE_AU: LEGAL_BASELINE_AU, LEGAL_TYPES: LEGAL_TYPES, LEGAL_APPLIES: LEGAL_APPLIES, legalRegisterSummary: legalRegisterSummary, soaInclusionReasons: soaInclusionReasons, MANDATORY_DOCS: MANDATORY_DOCS, mandatoryDocumentation: mandatoryDocumentation, CLAUSE_REQUIREMENTS: CLAUSE_REQUIREMENTS, CLAUSE_REQUIREMENTS_42: CLAUSE_REQUIREMENTS_42, clauseRequirementsFor: clauseRequirementsFor, CLAUSE_RECORD_KINDS: CLAUSE_RECORD_KINDS, isAiRisk: isAiRisk, isPrivacyRisk: isPrivacyRisk, clauseRecordStatus: clauseRecordStatus, clauseChecklist: clauseChecklist, clauseImplementGate: clauseImplementGate, parseClauseConfirmations: parseClauseConfirmations, PENDING_MARKER_PREFIX: PENDING_MARKER_PREFIX, pendingMarker: pendingMarker, pendingMarkersIn: pendingMarkersIn, readinessPct: readinessPct, EVIDENCE_ROOT: EVIDENCE_ROOT, evidenceFolderSegment: evidenceFolderSegment, evidenceFolderName: evidenceFolderName, evidenceFolderCode: evidenceFolderCode, evidenceKey: evidenceKey, planEvidenceFolders: planEvidenceFolders, diffEvidenceFolders: diffEvidenceFolders, evidenceFolderSummary: evidenceFolderSummary, evidenceFolderLinkUpdates: evidenceFolderLinkUpdates, evidenceFolderFreshness: evidenceFolderFreshness, SETUP_CHECK_IDS: SETUP_CHECK_IDS, setupHealthChecks: setupHealthChecks, setupHealthSummary: setupHealthSummary, scopesFromAccessToken: scopesFromAccessToken, graphTokenScopes: graphTokenScopes, GRAPH_DEFAULT_SCOPE: GRAPH_DEFAULT_SCOPE, matchHealthReport: matchHealthReport, sitePathsFromSearchHits: sitePathsFromSearchHits, buildProgressSnapshot: buildProgressSnapshot, progressHeadline: progressHeadline, mergeProgressHistory: mergeProgressHistory, clientStage: clientStage, clientAttentionFlags: clientAttentionFlags, clientStatusNote: clientStatusNote, clauseReadiness: clauseReadiness, DOCUMENT_IMPLEMENTED_CONTROLS: DOCUMENT_IMPLEMENTED_CONTROLS, controlsImplementedByDocument: controlsImplementedByDocument, tidyProfileAnswer: tidyProfileAnswer, scopeProfileWarnings: scopeProfileWarnings, parseProgressSnapshot: parseProgressSnapshot,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
-    sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions,
+    sharedEvidenceClosure: sharedEvidenceClosure, crossFrameworkStatusSuggestions: crossFrameworkStatusSuggestions, copiedAcrossEvidence: copiedAcrossEvidence, OWN_EVIDENCE_FRAMEWORKS: OWN_EVIDENCE_FRAMEWORKS,
     controlsForCheck: controlsForCheck, operatingEffectiveness: operatingEffectiveness,
     scanResultsChanged: scanResultsChanged, scanDrift: scanDrift,
     legacyAuthObservedResult: legacyAuthObservedResult, privRoleChangeResult: privRoleChangeResult,
