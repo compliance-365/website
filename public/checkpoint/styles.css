@@ -644,14 +644,14 @@ details.nav-group:not([open])>summary.nav-label.has-alert::after{content:'';disp
 @media(max-width:860px){.bd-num{font-size:64px}.bd-slide{padding:32px}}
 @keyframes flashRow{0%{background:rgba(240, 169, 127,.35)}100%{background:transparent}}
 tr.flash{animation:flashRow 1.8s ease}
-.btn{background:var(--accent-fill);color:var(--on-accent);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:var(--r-sm);border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
+.btn{background:var(--accent-fill);color:var(--on-accent);font-weight:700;font-size:var(--fs-2);letter-spacing:.01em;padding:10px 18px;border-radius:var(--r-sm);border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
 .btn:hover{background:var(--accent-fill-hover)}
 .btn:active{transform:translateY(1px)}
 .btn:disabled,.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none;transform:none}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--paper-dim)}
 .btn.ghost:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
 .btn.ghost:active{background:rgba(var(--paper-rgb),.08)}
-.btn.sm{padding:6px 12px;font-size:var(--fs-1)}
+.btn.sm{padding:6px 12px;font-size:12px}
 /* No border, no fill, low-contrast text until hover/focus — for an
    affordance that needs to stay on every row of a long list (the
    posture scan's "Not via Microsoft?") without visually competing with
@@ -736,7 +736,7 @@ tr:last-child td{border-bottom:none}
 tbody tr{transition:background .15s var(--ease)}
 tbody tr:hover{background:var(--surface-hover);cursor:pointer}
 tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;background:var(--surface-hover)}
-.chip{display:inline-block;font-size:var(--fs-eyebrow);letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:4px 10px;border-radius:3px;border:1px solid}
+.chip{display:inline-block;font-size:var(--fs-1);letter-spacing:.02em;font-weight:700;white-space:nowrap;padding:4px 10px;border-radius:3px;border:1px solid}
 .sev-Critical{color:var(--critical);border-color:rgba(224,144,143,.45)}
 .sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
 .sev-Medium{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
@@ -1689,6 +1689,25 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
   [style="grid-template-columns:1fr 1fr;gap:12px"]{grid-template-columns:1fr!important}
 }
 
+/* Phones: the top bar is one row — menu, tenant name, search icon,
+   More. The search box shrinks to an icon (it only opens the command
+   palette anyway) and Run posture scan joins Reset, Help and Settings
+   behind More. */
+@media(max-width:600px){
+  .top{flex-wrap:nowrap;padding:10px 12px 10px 58px;gap:8px;min-height:60px}
+  .top .client{flex:1 1 auto;display:flex;align-items:center;gap:8px;overflow:hidden}
+  .top .client .cname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-2)}
+  .top .role-chip{display:none}
+  .gsearch{order:0;flex:0 0 40px;min-width:40px;max-width:40px}
+  .gsearch input{height:38px;padding:0;color:transparent;font-size:16px;background:rgba(var(--paper-rgb),.05) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a8a29a' stroke-width='1.6'%3E%3Ccircle cx='7' cy='7' r='4.6'/%3E%3Cpath d='M10.4 10.4 14 14'/%3E%3C/svg%3E") center/16px no-repeat}
+  .gsearch input::placeholder{color:transparent}
+  .top .right{flex:0 0 auto}
+  .top .right > #btnScanTop{display:none}
+  .top.more-open{flex-wrap:wrap}
+  .top.more-open .right{flex-basis:100%}
+  .top.more-open .right > #btnScanTop{display:inline-flex}
+}
+
 /* ===== Scan drift ("Changed since the previous scan") =====
    Grouped by direction rather than interleaved, because the question
    a practitioner opens this card with is "did anything get worse",
@@ -2089,6 +2108,13 @@ tr.asset-retired td { opacity: .85; }
 .sh-guides{list-style:none;padding:0;margin:0 0 12px;display:grid;gap:6px}
 .next-step-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:8px 0 0;padding:4px 6px 4px 12px;border:1px solid var(--gold-light,#F0A97F);border-radius:8px;max-width:820px;font-size:var(--fs-2,13px)}
 .next-step-bar .btn.sm{padding:4px 10px}
+/* Folded help: no box, one line; the intro moves inside About. */
+.vh-folded > p{display:none}
+.page-guide.pg-folded{border:none;padding:0;margin-top:6px}
+.page-guide.pg-folded .pg-foot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.pg-about > summary{cursor:pointer;color:var(--paper-dim);font-size:var(--fs-1)}
+.pg-about[open]{flex-basis:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.pg-folded .next-step-bar{margin:0;padding:2px 4px 2px 10px;border-color:rgba(var(--paper-rgb),.16)}
 .nsb-t{flex:1 1 260px;color:var(--paper);font-weight:600}
 .nsb-t .src{font-weight:400}
 .nsb-b{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -2404,3 +2430,36 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 /* A line's draft from a pasted interview recap: held for the auditor. */
 .aw-iv{margin-top:6px;padding:8px 10px;border:1px dashed rgba(var(--paper-rgb),.25);border-radius:6px;font-size:12px}
 .aw-iv p{margin:4px 0 6px;line-height:1.5}
+
+/* Toolbar Export / More menus (groupToolbarMenus in app.js). */
+.btn-menu{position:relative;display:inline-block}
+.btn-menu > summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn-menu > summary::-webkit-details-marker{display:none}
+.btn-menu-list{position:absolute;top:calc(100% + 4px);left:0;z-index:30;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--elev-3)}
+.btn-menu-list .btn{justify-content:flex-start;text-align:left;border:none;width:100%}
+
+/* SoA: evidence check and exclusions as one compact strip. */
+.soa-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:12px;align-items:start}
+.soa-strip > div:empty{display:none}
+.soa-strip .card{margin:0!important;padding:12px 16px}
+.soa-strip .excl-q{flex-wrap:wrap}
+
+/* Phones: register rows as stacked cards (labelStackTables in app.js
+   adds .stack-tbl and each cell's data-label). */
+@media(max-width:600px){
+  .stack-tbl, .stack-tbl tbody, .stack-tbl tr, .stack-tbl td{display:block;width:100%}
+  .stack-tbl thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .card:has(> .stack-tbl){padding:0!important;background:none;border:none;box-shadow:none;overflow:visible}
+  .stack-tbl tbody tr{margin:0 0 10px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+  .stack-tbl td{display:flex;gap:12px;align-items:baseline;justify-content:space-between;padding:4px 0;border:none;text-align:right}
+  .stack-tbl td[data-label]::before{content:attr(data-label);flex:0 0 38%;text-align:left;color:var(--paper-faint);font-size:var(--fs-1)}
+  .stack-tbl td:not([data-label]){justify-content:flex-start;text-align:left}
+  .stack-tbl td:empty{display:none}
+}
+
+/* My tasks: settings menu and Overdue / This week / Later groups. */
+.my-settings-row{display:flex;justify-content:flex-end;margin:0 0 10px}
+.my-settings .btn-menu-list{left:auto;right:0;min-width:280px;padding:10px 12px;gap:8px}
+.my-settings-list p{margin:0!important}
+.my-group{margin:14px 0 2px;font-size:var(--fs-2);font-weight:700;color:var(--paper)}
+.card .my-group.my-group-od{color:var(--fail)}

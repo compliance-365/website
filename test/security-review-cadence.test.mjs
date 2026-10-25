@@ -187,7 +187,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForTimeout(200);
     let drawer = await page.locator('#drawer').innerText();
     assert.match(drawer, /AOB: penetration test scope/);
-    assert.ok(!/Security posture/.test(drawer.split("Agenda")[1] || ""));
+    assert.ok(!/Security posture/.test(drawer.split(/^Agenda$/im)[1] || ""));
     // Risks come before Actions by default; a meeting can still move an item.
     let order = await page.$$eval('#drawer .sr-item b', (els) => els.map((e) => e.textContent));
     assert.ok(order.indexOf('Risks') < order.indexOf('Actions'));

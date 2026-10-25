@@ -429,7 +429,7 @@
         <span class="modenote" id="modeNote"></span>
       </div>
       <div class="gsearch" id="gsearchWrap">
-        <input type="text" id="gsearchInput" readonly placeholder="Search or run a command…  (Ctrl/⌘ K)" autocomplete="off" data-action="App.openPalette">
+        <input type="text" id="gsearchInput" readonly aria-label="Search or run a command" placeholder="Search or run a command…  (Ctrl/⌘ K)" autocomplete="off" data-action="App.openPalette">
       </div>
       <div class="right">
         <button class="btn ghost sm" id="btnReset" data-action="App.reset">Reset demo</button>
@@ -1012,12 +1012,16 @@
     <!-- SOA -->
     <section class="view" id="v-soa">
       <div class="vhead"><div class="rule"></div><h1>Statement of Applicability</h1><p>One control set per purchased framework, cross-mapped to the others so shared evidence is never duplicated. Essential Eight is assessed by maturity level (ML1-ML3) per strategy against your target level, set in Frameworks — every other framework's full published control set ships ready to use.</p></div>
-      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="controls">Export CSV — every framework</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="controls">Excel — every framework</button><button class="btn ghost sm" data-action="App.exportRegisterWord" data-id="controls">Word — this framework</button></div>
-      <p class="src" id="soaEvidenceFolders" style="margin:-6px 0 14px;font-size:12px"></p>
-      <div id="soaEvidenceCheck"></div>
-      <div id="soaExclusions"></div>
       <div class="filters" id="soaFwTabs" role="group" aria-label="Framework"></div>
       <div class="filters" id="soaCatFilters" style="margin-top:6px" role="group" aria-label="Filter by category"></div>
+      <!-- The framework switcher leads; the evidence check and exclusions
+           sit side by side as one compact strip under the toolbar. -->
+      <div style="margin:14px 0"><button class="btn ghost sm" data-action="App.exportCsv" data-id="controls">Export CSV — every framework</button><button class="btn ghost sm" data-action="App.exportXlsx" data-id="controls">Excel — every framework</button><button class="btn ghost sm" data-action="App.exportRegisterWord" data-id="controls">Word — this framework</button></div>
+      <div class="soa-strip">
+        <div id="soaEvidenceCheck"></div>
+        <div id="soaExclusions"></div>
+      </div>
+      <p class="src" id="soaEvidenceFolders" style="margin:0 0 14px;font-size:12px"></p>
       <div id="soaE8How"></div>
       <div id="soaSoc2Pack"></div>
       <div id="soaE8Suggestions"></div>
