@@ -1359,6 +1359,44 @@ function showModal(opts) {
     var xy = pts.map(function (p, i) { return (i / (pts.length - 1) * w).toFixed(1) + ',' + (h - p[key] / 100 * h).toFixed(1); }).join(' ');
     return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true" style="vertical-align:middle;margin-left:6px"><polyline points="' + xy + '" fill="none" stroke="var(--gold)" stroke-width="1.5"/></svg>';
   }
+  /* The month across the portfolio, for the partner: headline counts,
+     one line per client, then each client's status note with a link
+     that opens it as an email draft. Nothing is sent from here. */
+  function portfolioReportHtml(rows, today) {
+    var e = esc, month = new Date(today + 'T00:00:00').toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
+    var count = function (f) { return rows.filter(f).length; };
+    var red = count(function (r) { return r.flags.some(function (f) { return f.level === 'red'; }); });
+    var behind = count(function (r) { return r.d.plan && r.d.plan.behind > 0; });
+    var cert = count(function (r) { return r.stage === 'Certified'; });
+    var in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    var iaDue = count(function (r) { var nx = r.d.audit && r.d.audit.next; return !!(nx && nx.planned && nx.planned <= in30); });
+    var pct = function (v) { return typeof v === 'number' ? v + '%' : '—'; };
+    var kpi = function (n, label) { return '<div class="k"><b>' + n + '</b><span>' + label + '</span></div>'; };
+    var sorted = rows.slice().sort(function (a, b) { return a.rank - b.rank || a.c.name.localeCompare(b.c.name); });
+    return '<!doctype html><html lang="en-AU"><head><meta charset="utf-8"><title>Portfolio report ' + e(month) + '</title><style>' +
+      'body{font-family:Manrope,Segoe UI,Arial,sans-serif;color:#0B0B0C;background:#FAF7F1;margin:0;padding:32px;font-size:13px;line-height:1.5}' +
+      'h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 10px}.sub{color:#6B6860;margin:0 0 20px}' +
+      '.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.k{background:#fff;border:1px solid #E9E3D9;border-radius:10px;padding:12px}.k b{display:block;font-size:22px;color:#A63A12}.k span{color:#6B6860;font-size:12px}' +
+      'table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #E9E3D9}th{background:#BE4A1E;color:#fff;text-align:left;padding:7px 9px;font-size:12px}td{padding:7px 9px;border-top:1px solid #EFEAE2;vertical-align:top}' +
+      '.flag{display:block;font-size:12px}.red{color:#9B1C2E}.amber{color:#A63A12}.note{background:#fff;border:1px solid #E9E3D9;border-radius:10px;padding:14px;margin:0 0 12px;break-inside:avoid}.note h3{margin:0 0 6px;font-size:14px}.note pre{white-space:pre-wrap;font:inherit;margin:0 0 8px}' +
+      'a.btn{display:inline-block;background:#BE4A1E;color:#fff;text-decoration:none;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700}.muted{color:#6B6860;font-size:12px}' +
+      '@media print{body{padding:0}a.btn,.noprint{display:none}}</style></head><body>' +
+      '<p class="noprint" style="text-align:right"><a class="btn" href="#" onclick="window.print();return false">Print or save as PDF</a></p>' +
+      '<h1>Portfolio report: ' + e(month) + '</h1><p class="sub">' + rows.length + ' active client' + (rows.length === 1 ? '' : 's') + ', from each client’s last sync. Generated ' + e(today) + '.</p>' +
+      '<div class="kpis">' + kpi(rows.length, 'Active clients') + kpi(cert, 'Certified') + kpi(behind, 'Behind plan') + kpi(red, 'Need attention now') + kpi(iaDue, 'Internal audits in 30 days') + '</div>' +
+      '<h2>Clients</h2><table><thead><tr><th>Client</th><th>Stage</th><th>Path</th><th>Annex A</th><th>Last sync</th><th>Needs attention</th></tr></thead><tbody>' +
+      sorted.map(function (r) {
+        return '<tr><td><b>' + e(r.c.name) + '</b></td><td>' + e(r.stage) + '</td><td>' + pct(r.head && r.head.path) + '</td><td>' + pct(r.head && r.head.annexA) + '</td><td>' + e(r.c.lastSynced ? String(r.c.lastSynced).slice(0, 10) : 'Never') + '</td><td>' +
+          (r.flags.length ? r.flags.slice(0, 4).map(function (f) { return '<span class="flag ' + (f.level === 'red' ? 'red' : f.level === 'amber' ? 'amber' : '') + '">' + e(f.text) + '</span>'; }).join('') : '<span class="muted">Nothing</span>') + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<h2>Status notes to send</h2><p class="muted noprint">Drafted from each client’s records. Read each one before sending: the link opens it as an email draft in your mail app.</p>' +
+      sorted.map(function (r) {
+        var note = window.CheckpointLib.clientStatusNote(r.c, today);
+        var mail = r.c.contactEmail ? 'mailto:' + encodeURIComponent(r.c.contactEmail) + '?subject=' + encodeURIComponent('Your ISMS status: ' + month) + '&body=' + encodeURIComponent(note) : '';
+        return '<div class="note"><h3>' + e(r.c.name) + (r.c.contactName ? ' <span class="muted">to ' + e(r.c.contactName) + '</span>' : '') + '</h3><pre>' + e(note) + '</pre>' +
+          (mail ? '<a class="btn noprint" href="' + e(mail) + '">Open as email draft</a>' : '<span class="muted noprint">No contact email recorded for this client.</span>') + '</div>';
+      }).join('') + '</body></html>';
+  }
   var _deliveryFilter = 'all', _deliverySort = 'attention';
   /* The client's ISMS health (lib ismsHealthScore), from its last sync. */
   function ismsScore(r) { var h = r.d && r.d.health; return h && typeof h.score === 'number' ? h.score : 101; }
@@ -1394,6 +1432,7 @@ function showModal(opts) {
       '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">' +
       '<label class="src">Show <select class="mini" id="deliveryFilter" data-change-action="OwnerApp.setDeliveryFilter">' + opt('all', 'All clients', _deliveryFilter) + opt('attention', 'Needs attention', _deliveryFilter) + opt('upsell', 'ISO 42001 opportunities', _deliveryFilter) + '</select></label>' +
       '<label class="src">Sort by <select class="mini" id="deliverySort" data-change-action="OwnerApp.setDeliverySort">' + opt('attention', 'Most urgent first', _deliverySort) + opt('progress', 'Most progress first', _deliverySort) + opt('health', 'Lowest ISMS health first', _deliverySort) + opt('name', 'Name', _deliverySort) + '</select></label>' +
+      '<button class="btn sm" style="margin-left:auto" data-action="OwnerApp.partnerMonthlyReport">Monthly report</button>' +
       '</div>' +
       (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">Internal audit</th><th scope="col">ISMS health</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
         shown.map(function (r) {
@@ -2603,6 +2642,15 @@ function showModal(opts) {
     setDeliverySort: function (v) { _deliverySort = v || 'attention'; renderDeliveryBoard(); },
     /* A plain-English progress note for the client contact, to review,
        copy and send from the partner's own mailbox. Never sent from here. */
+    /* The month's portfolio report in a new tab, ready to print. */
+    partnerMonthlyReport: function () {
+      var rows = deliveryRows();
+      if (!rows.length) { toast('No active clients to report on yet.'); return; }
+      var w = window.open('', '_blank');
+      if (!w) { toast('Allow pop-ups for this site to open the report.'); return; }
+      w.opener = null;
+      w.document.open(); w.document.write(portfolioReportHtml(rows, todayStr())); w.document.close();
+    },
     partnerStatusNote: async function (id) {
       var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
       if (!c) return;

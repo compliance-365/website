@@ -2090,6 +2090,45 @@ window.Graph = (function () {
     return out;
   }
 
+  /* The latest completed Defender attack simulation and, per targeted
+     person, whether they were compromised (clicked or entered
+     credentials) or reported it. AttackSimulation.Read.All, read-only.
+     null when no simulation has completed. */
+  async function phishingSimulationResults() {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var sims = await gAll('/security/attackSimulation/simulations?$select=id,displayName,status,launchDateTime,completionDateTime', opts);
+    var done = sims.filter(function (x) { return String(x.status || '').toLowerCase() === 'succeeded' || x.completionDateTime; })
+      .sort(function (a, b) { return String(b.completionDateTime || '').localeCompare(String(a.completionDateTime || '')); });
+    if (!done.length) return null;
+    var sim = done[0];
+    var users = await gAll('/security/attackSimulation/simulations/' + encodeURIComponent(sim.id) + '/report/simulationUsers', opts);
+    return {
+      sim: { id: sim.id, name: sim.displayName || 'Simulation', launched: String(sim.launchDateTime || '').slice(0, 10), completed: String(sim.completionDateTime || '').slice(0, 10) },
+      users: users.map(function (u) {
+        var su = u.simulationUser || {};
+        return { name: su.displayName || su.email || '', email: su.email || '', compromised: !!(u.isCompromised || u.compromisedDateTime), reported: !!u.reportedPhishDateTime };
+      })
+    };
+  }
+
+  /* Owners and direct members of the chosen groups, for the access
+     review's group lines. Read-only (Directory.Read.All). */
+  async function groupAccess(groupIds) {
+    var opts = { scopes: CONFIG.scopesReadOnly }, out = [];
+    for (var i = 0; i < (groupIds || []).length; i++) {
+      var id = groupIds[i];
+      try {
+        var grp = await g('/groups/' + encodeURIComponent(id) + '?$select=id,displayName', opts);
+        var owners = await gAll('/groups/' + encodeURIComponent(id) + '/owners/microsoft.graph.user?$select=displayName,mail,userPrincipalName', opts);
+        var members = await gAll('/groups/' + encodeURIComponent(id) + '/members/microsoft.graph.user?$select=displayName,mail,userPrincipalName,userType&$top=999', opts);
+        out.push({ id: grp.id, name: grp.displayName || id,
+          owners: owners.map(function (o) { return { name: o.displayName || '', mail: o.mail || o.userPrincipalName || '' }; }),
+          members: members.filter(function (m) { return m.userPrincipalName; }).map(function (m) { return { upn: m.userPrincipalName, name: m.displayName || m.userPrincipalName, mail: m.mail || '', type: m.userType === 'Guest' ? 'Guest' : 'Member' }; }) });
+      } catch (e) { /* a group that cannot be read is left out, not guessed */ }
+    }
+    return out;
+  }
+
   async function listTenantGroups() {
     var opts = { scopes: CONFIG.scopesReadOnly };
     var groups = await gAll('/groups?$select=id,displayName,mailNickname&$top=999', opts);
@@ -2334,7 +2373,7 @@ window.Graph = (function () {
     uploadSmallFile: uploadSmallFile, uploadSmallFileTo: uploadSmallFileTo, uploadFileToPath: uploadFileToPath, listDriveFiles: listDriveFiles,
     batch: graphBatch, grantedScopes: grantedScopes, ensureFolderPath: ensureFolderPath, listChildFolders: listChildFolders, createChildFolders: createChildFolders, listChildrenMany: listChildrenMany,
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
-    listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, accountInventory: accountInventory, getSchedules: getSchedules, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
+    listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, accountInventory: accountInventory, getSchedules: getSchedules, phishingSimulationResults: phishingSimulationResults, groupAccess: groupAccess, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop

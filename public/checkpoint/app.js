@@ -899,7 +899,7 @@ function showModal(opts) {
        policy they have just been sent. Launching and chasing campaigns
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'checkAccounts', 'expectAccount', 'startAccessReview', 'decideAccess', 'acceptAccessSuggestions', 'confirmAccessAll', 'sendAccessReview', 'finishAccessReview', 'cancelAccessReview', 'recordRestoreTest', 'editRestoreSets', 'fileChangeSample', 'auditInterviewRecap', 'useInterviewNote', 'dismissInterviewDraft', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'acceptAuditSuggestion', 'acceptAuditConforms', 'requestAuditEvidence', 'sendAuditInvites', 'useRetestAsEffectiveness', 'checkAccounts', 'expectAccount', 'startAccessReview', 'decideAccess', 'acceptAccessSuggestions', 'confirmAccessAll', 'sendAccessReview', 'finishAccessReview', 'cancelAccessReview', 'recordRestoreTest', 'editRestoreSets', 'fileChangeSample', 'removeCopiedEvidence', 'phishFollowUp', 'chooseReviewGroups', 'planIntegratedAudit', 'auditInterviewRecap', 'useInterviewNote', 'dismissInterviewDraft', 'recordReview', 'mrSave', 'mrField', 'mrVerdict', 'mrAddAction', 'mrRemoveAction', 'mrToggleSignOff', 'mrSaveDraft', 'mrDiscard', 'signOffReview',
     'recordCertificate', 'recordCertAudit', 'raiseCertFinding', 'planInternalAudits',
     'addManualObjective', 'editObjective', 'addLibraryObjectives',
     /* Approving writes to the Answer library; AI drafting is gated for
@@ -1891,7 +1891,7 @@ function showModal(opts) {
          point of a shared control — but only onto a target with nothing
          of its own already attached. A practitioner's own link is never
          overwritten, same rule captureAutoEvidence() follows. */
-      if (!target.evidenceUrl && source.evidenceUrl) target.evidenceUrl = source.evidenceUrl;
+      if (!target.evidenceUrl && source.evidenceUrl) { target.evidenceUrl = source.evidenceUrl; audit('Evidence link changed', 'Control', p.fw + '|' + p.code, '(none)', source.evidenceUrl + ' (cross-framework from ' + p.viaFw + '|' + p.viaCode + ')'); }
       try { await Store.updateControl(target); } catch (e) { warn(e); continue; }
       audit('Control status changed', 'Control', p.fw + '|' + p.code, prev, p.to + ' (cross-framework from ' + p.viaFw + '|' + p.viaCode + ', practitioner-confirmed)');
       applied++;
@@ -3522,17 +3522,32 @@ function showModal(opts) {
         sections: [{ heading: 'The sample', pageBreak: false, html: changeSampleTableHtml(cs, 'rpt-table') }]
       };
     },
+    /* A phishing simulation and the follow-up training it triggered,
+       as filed for A.6.3. */
+    phishFollowUp: function () {
+      var f = phishFollowUpReportFor();
+      if (!f) { toast('No phishing simulation follow-up recorded yet.'); return null; }
+      var rows = (S.training || []).filter(function (t) { return t.campaign === f.campaign; });
+      var done = rows.filter(function (t) { return t.status === 'Completed'; }).length;
+      return {
+        title: 'Phishing simulation follow-up',
+        frameworkAgnostic: true,
+        dashboard: { intro: 'Microsoft Defender attack simulation "' + f.name + '", completed ' + fmtDateY(f.completed) + ': ' + f.compromised + ' of ' + f.total + ' people targeted were compromised (' + f.pct + '%), and ' + f.reported + ' reported it. Each person compromised was assigned the security awareness course on ' + fmtDateY(f.date) + ' (' + f.campaign + '): ' + done + ' of ' + rows.length + ' completed so far. Evidence for ISO/IEC 27001 A.6.3.' },
+        sections: [{ heading: 'Follow-up training', pageBreak: false, html: rows.length ? '<table class="rpt-table"><thead><tr><th>Person</th><th>Assigned</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
+          rows.map(function (t) { return '<tr><td class="rpt-idc">' + esc(t.userName || t.upn) + '</td><td>' + esc(fmtDateY(t.assigned)) + '</td><td>' + esc(t.due ? fmtDateY(t.due) : '') + '</td><td>' + esc(t.status + (t.completed ? ', ' + fmtDateY(t.completed) : '')) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>Nobody needed follow-up training.</p>' }]
+      };
+    },
     /* The quarterly access review as filed for A.5.18: who was
        reviewed, by whom, what was decided and the actions raised. */
     accessReview: function () {
       var r = accessReviewForReport(), L = window.CheckpointLib;
       if (!r || !r.items) { toast('No access review to report on yet.'); return null; }
-      var p = L.accessReviewProgress(r), KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff' };
+      var p = L.accessReviewProgress(r), KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff', group: 'Group' };
       var ex = accountExceptions();
       var row = function (i) {
         return '<tr><td class="rpt-idc">' + esc(i.n) + '<div class="rpt-just">' + esc(i.e || i.u) + '</div></td><td>' + KIND[i.k] + (i.r ? '<div class="rpt-just">' + esc(i.r) + '</div>' : '') + '</td><td>' + (i.ls ? esc(fmtDateY(i.ls)) : (r.signInKnown ? 'Never' : '—')) + '</td>' +
           '<td>' + (i.s === 'remove' ? 'Remove' : i.s === 'check' ? 'Check' : 'Keep') + (i.why ? '<div class="rpt-just">' + esc(i.why) + '</div>' : '') + '</td>' +
-          '<td><b>' + (i.d === 'remove' ? 'Remove' : i.d === 'keep' ? 'Keep' : 'Not confirmed') + '</b>' + (i.d ? '<div class="rpt-just">' + esc(i.by) + ', ' + esc(fmtDateY(i.at)) + '</div>' : '') + ((r.actioned || {})[String(i.u).toLowerCase()] ? '<div class="rpt-just">Action ' + esc(r.actioned[String(i.u).toLowerCase()]) + '</div>' : '') + '</td></tr>';
+          '<td><b>' + (i.d === 'remove' ? 'Remove' : i.d === 'keep' ? 'Keep' : 'Not confirmed') + '</b>' + (i.d ? '<div class="rpt-just">' + esc(i.by) + ', ' + esc(fmtDateY(i.at)) + '</div>' : '') + ((r.actioned || {})[L.accessItemKey(i).toLowerCase()] ? '<div class="rpt-just">Action ' + esc(r.actioned[L.accessItemKey(i).toLowerCase()]) + '</div>' : '') + '</td></tr>';
       };
       var exKeys = Object.keys(ex);
       return {
@@ -9471,6 +9486,23 @@ function showModal(opts) {
     var sc = accountScan(), ex = accountExceptions(), today = new Date().toISOString().slice(0, 10);
     return ((sc && sc.findings) || []).filter(function (f) { return !window.CheckpointLib.accountExceptionLive(ex, f.upn, today); });
   }
+  /* Groups chosen for the access review (Settings accessReviewGroups:
+     [{ id, name }]): sensitive security groups, or Teams and Microsoft
+     365 groups whose sites hold confidential information. */
+  function accessReviewGroups() { var a = settingJson('accessReviewGroups', []); return Array.isArray(a) ? a : []; }
+  var DEMO_GROUPS = [
+    { id: 'g-finance', name: 'Finance team', owners: [{ name: 'Jordan Chen', mail: 'j.chen@meridianhealth.example' }],
+      members: [{ upn: 's.patel@meridianhealth.example', name: 'Sam Patel' }, { upn: 'a.nguyen@meridianhealth.example', name: 'Alex Nguyen' }, { upn: 'consultant_partner.example#EXT#@meridianhealth.example', name: 'Pat (Contoso Consulting)', type: 'Guest' }] },
+    { id: 'g-clinical', name: 'Clinical records access', owners: [],
+      members: [{ upn: 'k.obrien@meridianhealth.example', name: 'Kate O\u2019Brien' }, { upn: 'j.chen@meridianhealth.example', name: 'Jordan Chen' }] }
+  ];
+  async function loadReviewGroups() {
+    var chosen = accessReviewGroups();
+    if (!chosen.length) return [];
+    if (Store.kind === 'demo') return DEMO_GROUPS.filter(function (g) { return chosen.some(function (c) { return c.id === g.id; }); });
+    if (Store.kind !== 'sharepoint' || !Graph.groupAccess) return [];
+    return Graph.groupAccess(chosen.map(function (c) { return c.id; }));
+  }
   function accessReviews() { var a = settingJson('accessReviews', []); return Array.isArray(a) ? a : []; }
   function openAccessReview() { return accessReviews().filter(function (r) { return r && r.status === 'open'; }).pop() || null; }
   async function saveAccessReview(rec) {
@@ -9528,7 +9560,7 @@ function showModal(opts) {
       return p.decided < p.total ? { kind: 'Access review', ref: r.id, arg: r.id + '|' + k, title: 'Confirm ' + (p.total - p.decided) + ' account' + (p.total - p.decided === 1 ? '' : 's') + ' still need access', due: r.due || '', overdue: !!(r.due && r.due < new Date().toISOString().slice(0, 10)) } : null;
     }).filter(Boolean);
   }
-  var AR_KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff' };
+  var AR_KIND = { admin: 'Admin', guest: 'Guest', member: 'Staff', group: 'Group' };
   var _arFilter = 'open', _arReviewer = '', _arMine = false;
   function accountFindingsHtml(findings, sc) {
     var L = window.CheckpointLib;
@@ -9551,7 +9583,7 @@ function showModal(opts) {
       return true;
     });
     var shown = items.slice(0, 150);
-    var btn = function (i, d, label) { return '<button class="btn sm' + (i.d === d ? '' : ' ghost') + '" data-action="App.decideAccess" data-id="' + esc(i.u + '|' + d) + '" aria-pressed="' + (i.d === d) + '">' + label + '</button>'; };
+    var btn = function (i, d, label) { return '<button class="btn sm' + (i.d === d ? '' : ' ghost') + '" data-action="App.decideAccess" data-id="' + esc(window.CheckpointLib.accessItemKey(i) + '|' + d) + '" aria-pressed="' + (i.d === d) + '">' + label + '</button>'; };
     return '<table class="ar-table"><thead><tr><th scope="col">Account</th><th scope="col">Access</th><th scope="col">Last sign-in</th><th scope="col">Suggested</th><th scope="col">Decision</th></tr></thead><tbody>' +
       (shown.length ? shown.map(function (i) {
         return '<tr><td><b>' + esc(i.n) + '</b><div class="src">' + esc(i.e || i.u) + '</div></td><td>' + esc(AR_KIND[i.k]) + (i.r ? '<div class="src">' + esc(i.r) + '</div>' : '') + '</td>' +
@@ -9579,7 +9611,7 @@ function showModal(opts) {
       var p = L.accessReviewProgress(r);
       var mineOnly = _arReviewer && r.reviewers[_arReviewer] ? _arReviewer : '';
       body += '<div class="d-sec"><h4>Review ' + esc(r.id) + ' · answers due ' + esc(fmtDate(r.due)) + '</h4>' +
-        '<div class="aw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + p.total + '" aria-valuenow="' + p.decided + '" aria-label="Accounts decided"><i style="width:' + p.pct + '%"></i></div><div class="aw-progress-text"><span><b>' + p.decided + ' of ' + p.total + '</b> decided, ' + p.remove + ' to remove</span><span>' + p.byKind.admin + ' admin \u00b7 ' + p.byKind.guest + ' guest \u00b7 ' + p.byKind.member + ' staff</span></div>' +
+        '<div class="aw-progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + p.total + '" aria-valuenow="' + p.decided + '" aria-label="Accounts decided"><i style="width:' + p.pct + '%"></i></div><div class="aw-progress-text"><span><b>' + p.decided + ' of ' + p.total + '</b> decided, ' + p.remove + ' to remove</span><span>' + p.byKind.admin + ' admin \u00b7 ' + p.byKind.guest + ' guest \u00b7 ' + p.byKind.member + ' staff' + (p.byKind.group ? ' \u00b7 ' + p.byKind.group + ' group memberships' : '') + '</span></div>' +
         '<table class="ar-table" style="margin-top:10px"><thead><tr><th scope="col">Reviewer</th><th scope="col">Accounts</th><th scope="col">Asked</th><th scope="col"></th></tr></thead><tbody>' +
         Object.keys(r.reviewers).map(function (k) {
           var rv = r.reviewers[k], bp = p.byReviewer[k] || { total: 0, decided: 0, remove: 0 };
@@ -9601,6 +9633,7 @@ function showModal(opts) {
         }).join('') + '</div>' + accessReviewRowsHtml(r, mineOnly) + '</div>';
     } else {
       body += '<div class="d-sec"><h4>Quarterly access review</h4><p style="font-size:13px;line-height:1.6">Checkpoint lists every account from Microsoft 365: admins and guests for you to confirm, and staff for their manager. Each comes with a suggestion from its sign-in record. You email the reviewers, record their answers, and finishing files the record as evidence.</p>' +
+        '<p class="src" style="margin:0 0 8px">Groups reviewed too: ' + (accessReviewGroups().length ? esc(accessReviewGroups().map(function (g) { return g.name; }).join(', ')) : 'none chosen') + '. ' + (READONLY ? '' : '<button class="lnk" data-action="App.chooseReviewGroups">Choose groups</button>') + '</p>' +
         (READONLY ? '' : '<button class="btn sm" data-action="App.startAccessReview">Start the access review</button>') +
         (last ? '<p class="src" style="margin-top:8px">Last review ' + esc(last.id) + ', finished ' + esc(fmtDate(last.done)) + ': ' + (last.summary ? last.summary.total + ' accounts, ' + last.summary.removed : L.accessReviewProgress(last).total + ' accounts, ' + L.accessReviewProgress(last).remove) + ' marked for removal' + '.</p>' : '') + '</div>';
     }
@@ -9683,6 +9716,26 @@ function showModal(opts) {
     document.getElementById('drawer').innerHTML = '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
       '<div class="id-t">A.8.32 Change management</div><h2>Change sample</h2>' +
       '<p style="font-size:12.5px;color:var(--paper-dim);line-height:1.6">The sample an auditor draws: merged pull requests, each checked for an approval by someone other than its author, passing checks, and a link to the request behind it. From the GitHub collector, read-only.</p>' + body;
+  }
+
+  /* ===== Phishing simulation follow-up (A.6.3) =====
+     Settings row phishFollowUps { simId: { name, completed, total,
+     compromised, reported, assigned, campaign, date } }. */
+  var PHISH_COURSE = 'security-awareness';
+  function phishFollowUps() { var o = settingJson('phishFollowUps', {}); return o && typeof o === 'object' ? o : {}; }
+  async function loadPhishResults() {
+    if (Store.kind === 'demo') {
+      var names = ['Alex Nguyen', 'Kate O\u2019Brien', 'Sam Patel', 'Jordan Chen', 'Riley Morgan', 'Pat Lee', 'Chris Wu', 'Dana Ivers'];
+      return { sim: { id: 'demo-sim-q3', name: 'Q3 credential harvest', launched: daysFrom(-45), completed: daysFrom(-41) },
+        users: names.map(function (n, i) { var e = n.toLowerCase().replace(/[^a-z ]/g, '').replace(' ', '.') + '@meridianhealth.example'; return { name: n, email: e, compromised: i < 2, reported: i >= 5 }; }) };
+    }
+    if (Store.kind !== 'sharepoint' || !Graph.phishingSimulationResults) return null;
+    return Graph.phishingSimulationResults();
+  }
+  function phishFollowUpReportFor() {
+    var all = phishFollowUps(), id = window._phishSimId;
+    var key = id && all[id] ? id : Object.keys(all).sort(function (a, b) { return String(all[a].date).localeCompare(String(all[b].date)); }).pop();
+    return key ? Object.assign({ id: key }, all[key]) : null;
   }
 
   /* ===== Backup restore tests (A.8.13) =====
@@ -13173,6 +13226,37 @@ function showModal(opts) {
     audit('Interview times fitted to calendars', 'Audit', a.id, '', readable + ' of ' + people.length + ' calendars read (free/busy only)');
     return { found: readable, total: people.length };
   }
+  /* Integrated audits (Settings integratedAudits: [[id, id, ...]]): one
+     audit per ISO standard, planned together, with the shared clauses
+     (lib LINKED_CLAUSES) recorded once and carried to the others. */
+  function integratedGroups() { var a = settingJson('integratedAudits', []); return Array.isArray(a) ? a : []; }
+  function auditSiblings(id) {
+    var g = integratedGroups().filter(function (x) { return Array.isArray(x) && x.indexOf(id) !== -1; })[0] || [];
+    return g.filter(function (x) { return x !== id; }).map(function (x) { return (S.audits || []).find(function (a) { return a.id === x; }); }).filter(Boolean);
+  }
+  function integratedCandidates(a) {
+    var L = window.CheckpointLib, ent = S.entitlements || {};
+    if (!a || a.status === 'Completed' || ['iso27001', 'iso42001', 'iso27701'].indexOf(a.fw || 'iso27001') === -1) return [];
+    var have = [a.fw || 'iso27001'].concat(auditSiblings(a.id).map(function (x) { return x.fw; }));
+    return ['iso27001', 'iso42001', 'iso27701'].filter(function (fw) { return (fw === 'iso27001' || ent[fw]) && have.indexOf(fw) === -1; });
+  }
+  /* A shared clause recorded in one audit is carried to its siblings
+     that have not recorded it, with the same finding reference. */
+  async function shareIntegratedResult(a, key) {
+    var r = (a.results || {})[key];
+    var id = key.split('|').slice(1).join('|');
+    if (!r || !r.r || key.indexOf('clause|') !== 0 || window.CheckpointLib.LINKED_CLAUSES.indexOf(id) === -1) return 0;
+    var n = 0, sibs = auditSiblings(a.id);
+    for (var i = 0; i < sibs.length; i++) {
+      var b = sibs[i];
+      if (b.status === 'Completed') continue;
+      b.results = b.results || {};
+      if ((b.results[key] || {}).r) continue;
+      b.results[key] = Object.assign({}, b.results[key] || {}, { r: r.r, note: r.note || '', by: r.by || '', date: r.date || '', ref: r.ref || '', shared: a.id });
+      try { await Store.updateAudit(b); n++; } catch (e) { warn(e); }
+    }
+    return n;
+  }
   function auditInvitesMap() {
     try { var o = JSON.parse((S.settings && S.settings.auditInvites) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
   }
@@ -13340,9 +13424,22 @@ function showModal(opts) {
       reviewCadenceDays: S.settings && S.settings.controlReviewCadenceDays
     });
   }
+  /* ISO 42001 controls still holding evidence copied across from a
+     related ISO 27001 control: offered for removal, one click. */
+  function copiedEvidenceNotice(fw) {
+    if (fw !== 'iso42001' || READONLY) return '';
+    var list = window.CheckpointLib.copiedAcrossEvidence(S.controls || []).filter(function (x) { return x.control.app !== false; });
+    if (!list.length) return '';
+    return '<div class="card" style="padding:14px 16px;margin:12px 0;border-color:var(--warn)">' +
+      '<h3 style="margin:0 0 4px">' + list.length + ' AI control' + (list.length === 1 ? ' holds' : 's hold') + ' evidence copied from ISO 27001</h3>' +
+      '<p class="src" style="margin:0 0 8px">' + esc(list.map(function (x) { return x.control.id.replace(/^AI\./, 'A.') + ' from ' + x.from.id; }).join(', ')) +
+      '. ISO 42001 needs its own evidence: the information security policy is not an AI policy. Removing the copied link puts each control back to where it was before it was copied, so you can link its own evidence.</p>' +
+      '<button class="btn sm" data-action="App.removeCopiedEvidence">Remove the copied evidence</button></div>';
+  }
   function renderAnnexPlan(fw) {
     var el = document.getElementById('soaAnnexPlan');
     if (!el) return;
+    var copied = copiedEvidenceNotice(fw);
     var app = (S.controls || []).filter(function (c) { return c.fw === fw && c.app; });
     var isIso = fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701';
     var name = isIso ? 'Annex A' : fwName(fw) + ' controls';
@@ -13350,13 +13447,13 @@ function showModal(opts) {
     var pending = groups.reduce(function (n, g) { return n + g.controls.length; }, 0);
     var done = app.filter(function (c) { return c.st === 'Implemented' && c.evidenceUrl; }).length;
     if (!groups.length) {
-      el.innerHTML = app.length ? '<div class="card" style="padding:14px 16px;margin:12px 0">' + icon('check') + ' <b>Every applicable control is Implemented with evidence.</b> <span class="src">Keep the operating rhythm running and re-verify each control when its review falls due.</span></div>' : '';
+      el.innerHTML = copied + (app.length ? '<div class="card" style="padding:14px 16px;margin:12px 0">' + icon('check') + ' <b>Every applicable control is Implemented with evidence.</b> <span class="src">Keep the operating rhythm running and re-verify each control when its review falls due.</span></div>' : '');
       return;
     }
     var heads = { checkpoint: 'Checkpoint does it', meeting: 'Scheduled for you', you: 'Needs you' };
     var open = window._annexOpen || '';
     var ro = !!READONLY;
-    el.innerHTML = '<div class="card" style="padding:14px 16px;margin:12px 0">' +
+    el.innerHTML = copied + '<div class="card" style="padding:14px 16px;margin:12px 0">' +
       '<h3 style="margin:0 0 4px">Getting ' + esc(name) + ' to 100%</h3>' +
       '<p class="src" style="margin:0 0 8px">' + done + ' of ' + app.length + ' applicable controls Implemented with evidence. ' + pending + ' control' + (pending === 1 ? '' : 's') + ' with a next step, one each:</p>' +
       groups.map(function (g) {
@@ -15743,6 +15840,38 @@ function showModal(opts) {
      linked before 42001 rows existed) resolves to ISO 27001, the only
      framework whose clauses existed then. */
   function clauseKey(c) { return c.fw + '|' + c.id; }
+  /* The same clause in the other ISO management system standards this
+     tenant holds (lib LINKED_CLAUSES): offered once the source is
+     Implemented with evidence. The evidence link is shared; each target
+     becomes Implemented only if its own requirement checklist is met,
+     otherwise In progress. Never offered with one standard. */
+  async function offerLinkedClauses(source) {
+    if (READONLY) return 0;
+    var targets = window.CheckpointLib.linkedClauseSuggestions(source, S.clauses || [], S.entitlements || {});
+    if (!targets.length) return 0;
+    var ok = await showModal({
+      title: 'Same clause in ' + (targets.length === 1 ? fwName(targets[0].fw || 'iso27001') : targets.length + ' other standards'),
+      message: 'Clause ' + source.id + ' reads the same in ' + targets.map(function (t) { return fwName(t.fw || 'iso27001'); }).join(' and ') + '. Use the same evidence there too?' +
+        (/^9\./.test(source.id) ? '\n\nOnly if the ' + (source.id === '9.2' ? 'internal audit' : 'management review') + ' covered every standard: the record must show it.' : '') +
+        '\n\nEach one becomes Implemented if its own requirements are met, otherwise In progress.',
+      confirmText: 'Use it for ' + targets.length, cancelText: 'Not now'
+    });
+    if (!ok) return 0;
+    var n = 0;
+    for (var i = 0; i < targets.length; i++) {
+      var t = targets[i], prevSt = t.st, prevUrl = t.evidenceUrl;
+      t.evidenceUrl = source.evidenceUrl;
+      var gate = clauseGateFor(t);
+      t.st = gate.ok ? 'Implemented' : 'In progress';
+      try { await Store.updateClause(t); } catch (e) { warn(e); continue; }
+      if (prevUrl !== t.evidenceUrl) audit('Evidence link changed', 'Clause', clauseLabel(t), prevUrl || '(none)', t.evidenceUrl + ' (shared with ' + clauseLabel(source) + ')');
+      if (prevSt !== t.st) audit('Clause status changed', 'Clause', clauseLabel(t), prevSt, t.st + ' (shared clause, from ' + clauseLabel(source) + ')');
+      n++;
+    }
+    toast(n + ' clause' + (n === 1 ? '' : 's') + ' updated from ' + esc(clauseLabel(source)));
+    renderClauses(); renderDash(); renderNavCounts();
+    return n;
+  }
   function findClause(key) {
     var parts = String(key).split('|');
     var fw = parts.length > 1 ? parts[0] : 'iso27001', code = parts.length > 1 ? parts[1] : parts[0];
@@ -20561,6 +20690,34 @@ function showModal(opts) {
        new tab's ability to reach back into this one, the standard
        substitute for `noopener` when the caller needs to keep its own
        handle to later set `.location`. */
+    /* Takes ISO 27001 evidence back off ISO 42001 controls it was copied
+       onto, and puts each control back to its status before the copy
+       (from the audit log), or In progress if that is not recorded. */
+    removeCopiedEvidence: async function () {
+      var list = window.CheckpointLib.copiedAcrossEvidence(S.controls || []);
+      if (!list.length) return;
+      var ok = await showModal({ title: 'Remove copied evidence from ' + list.length + ' AI control' + (list.length === 1 ? '' : 's') + '?',
+        message: list.map(function (x) { return '\u2022 ' + x.control.id.replace(/^AI\./, 'A.') + ' ' + (x.control.t || '') + ': evidence copied from ISO 27001 ' + x.from.id; }).join('\n') +
+          '\n\nThe ISO 27001 controls keep their evidence. Each AI control goes back to its status before the copy, ready for its own evidence.',
+        confirmText: 'Remove', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      var n = 0;
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i].control, key = c.fw + '|' + c.id, url = c.evidenceUrl, prev = c.st;
+        var copy = (S.auditLog || []).filter(function (e) { return e.targetType === 'Control' && e.targetId === key && e.action === 'Control status changed' && /cross-framework/.test(e.after || ''); }).pop();
+        var back = copy && copy.before ? copy.before : (c.st === 'Implemented' ? 'In progress' : c.st);
+        c.evidenceUrl = '';
+        if (c.st === 'Implemented') { c.st = back === 'Implemented' ? 'In progress' : back; c.verified = ''; c.verifiedBy = ''; }
+        try { await Store.updateControl(c); } catch (e) { warn(e); continue; }
+        audit('Evidence link changed', 'Control', key, url, '(none): copied from ISO 27001 ' + list[i].from.id + ', not ISO 42001 evidence');
+        if (c.st !== prev) audit('Control status changed', 'Control', key, prev, c.st + ' (copied ISO 27001 evidence removed)');
+        n++;
+      }
+      busy(false);
+      toast(n + ' AI control' + (n === 1 ? '' : 's') + ' cleared. Link each one\u2019s own evidence.');
+      renderSoa(); renderNavCounts(); renderDash();
+    },
     openEvidenceDoc: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c || !c.evidenceUrl || !isSafeUrl(c.evidenceUrl)) return;
@@ -22923,6 +23080,7 @@ function showModal(opts) {
       try { await Store.updateClause(c); } catch (e) { warn(e); }
       audit('Clause status changed', 'Clause', clauseLabel(c), prevSt, v);
       renderClauses(); renderDash(); renderNavCounts();
+      if (v === 'Implemented') await offerLinkedClauses(c);
     },
 
     /* The last step of Finish this clause. setClauseStatus applies the
@@ -25796,7 +25954,11 @@ function showModal(opts) {
       if (!inv) { toast('Could not read the accounts from Microsoft 365.'); return; }
       var today = new Date().toISOString().slice(0, 10);
       var cal = accessReviewCal();
-      var rec = window.CheckpointLib.accessReviewBuild(inv, { today: today, owner: { name: v.name, mail: v.mail }, exceptions: accountExceptions(), cal: cal ? cal.id : '', days: 14 });
+      busy(true);
+      var groups = [];
+      try { groups = await loadReviewGroups(); } catch (e) { warn(e); }
+      busy(false);
+      var rec = window.CheckpointLib.accessReviewBuild(inv, { today: today, owner: { name: v.name, mail: v.mail }, exceptions: accountExceptions(), cal: cal ? cal.id : '', days: 14, groups: groups });
       rec.due = v.due || rec.due;
       if (accessReviews().some(function (x) { return x.id === rec.id; })) rec.id += '-' + (accessReviews().length + 1);
       try { await saveAccessReview(rec); } catch (e) { warn(e); toast('Could not save the review.'); return; }
@@ -25806,13 +25968,38 @@ function showModal(opts) {
       toast('<b>' + esc(rec.id) + '</b>: ' + p.total + ' accounts, ' + p.suggestedRemove + ' suggested for removal');
       renderAccessReview(); renderNavCounts();
     },
+    /* Pick the groups whose membership the access review covers. */
+    chooseReviewGroups: async function () {
+      var all = [];
+      busy(true);
+      try { all = Store.kind === 'demo' ? DEMO_GROUPS.map(function (g) { return { id: g.id, name: g.name }; }) : await Graph.listTenantGroups(); } catch (e) { warn(e); }
+      busy(false);
+      if (!all.length) { toast('No groups could be read from Microsoft 365.'); return; }
+      var chosen = accessReviewGroups().map(function (g) { return g.name; });
+      var v = await showModal({
+        title: 'Groups to include in the access review',
+        message: 'Name the groups that grant access to sensitive information: security groups for confidential systems, and Teams or Microsoft 365 groups whose sites hold confidential data. Each group\u2019s owner confirms its members; a group with no owner goes to the review owner.\n\nSome of your groups: ' + all.slice(0, 25).map(function (g) { return g.name; }).join(', ') + (all.length > 25 ? ' and ' + (all.length - 25) + ' more' : '') + '.',
+        fields: [{ id: 'names', label: 'Group names, one per line', type: 'textarea', value: chosen.join('\n') }],
+        confirmText: 'Save',
+        validate: function (x) {
+          var bad = String(x.names || '').split(/\r?\n/).map(function (n) { return n.trim(); }).filter(Boolean).filter(function (n) { return !all.some(function (g) { return g.name.toLowerCase() === n.toLowerCase(); }); });
+          return bad.length ? 'Not found in Microsoft 365: ' + bad.slice(0, 3).join(', ') : null;
+        }
+      });
+      if (!v) return;
+      var names = String(v.names || '').split(/\r?\n/).map(function (n) { return n.trim().toLowerCase(); }).filter(Boolean);
+      var pick = all.filter(function (g) { return names.indexOf(g.name.toLowerCase()) !== -1; }).slice(0, 30).map(function (g) { return { id: g.id, name: g.name }; });
+      try { await saveSettingJson('accessReviewGroups', pick); } catch (e) { warn(e); return; }
+      audit('Access review groups chosen', 'Access review', 'groups', chosen.join(', ') || '(none)', pick.map(function (g) { return g.name; }).join(', ') || '(none)');
+      renderAccessReview();
+    },
     setAccessFilter: function (f) { _arFilter = f || 'open'; renderAccessReview(); },
     accessReviewer: function (k) { _arReviewer = _arReviewer === k ? '' : (k || ''); renderAccessReview(); },
     decideAccess: async function (id) {
       var r = openAccessReview();
       if (!r) return;
-      var p = String(id).split('|'), upn = p[0], d = p[1];
-      var item = r.items.find(function (i) { return i.u === upn; });
+      var cut = String(id).lastIndexOf('|'), upn = String(id).slice(0, cut), d = String(id).slice(cut + 1);
+      var item = r.items.find(function (i) { return window.CheckpointLib.accessItemKey(i) === upn; });
       if (!item) return;
       if (item.d === d) d = '';
       var rv = r.reviewers[item.rv] || {}, me = myDisplayName();
@@ -25895,6 +26082,45 @@ function showModal(opts) {
       try { await saveSettingJson('accessReviews', accessReviews().filter(function (x) { return x.id !== r.id; })); } catch (e) { warn(e); return; }
       audit('Access review discarded', 'Access review', r.id, window.CheckpointLib.accessReviewProgress(r).decided + ' decided', '');
       renderAccessReview(); renderNavCounts();
+    },
+
+    /* ---------- Phishing simulation follow-up (A.6.3) ---------- */
+    phishFollowUp: async function () {
+      var c = courseById(PHISH_COURSE);
+      if (!c) { toast('The security awareness course is not available for this tenant.'); return; }
+      busy(true);
+      var res = null;
+      try { res = await loadPhishResults(); } catch (e) { warn(e); }
+      busy(false);
+      if (!res) { toast('No completed Microsoft Defender attack simulation to follow up. It needs Defender for Office 365 Plan 2.'); return; }
+      var f = window.CheckpointLib.phishFollowUp(res, S.training || [], PHISH_COURSE);
+      var v = await showModal({
+        title: 'Follow up "' + res.sim.name + '"',
+        message: 'Completed ' + fmtDate(res.sim.completed) + ': ' + f.compromised + ' of ' + f.total + ' people were compromised (' + f.pct + '%) and ' + f.reported + ' reported it.' +
+          (f.toAssign.length ? '\n\nAssign "' + c.title + '" to the ' + f.toAssign.length + ' ' + (f.toAssign.length === 1 ? 'person' : 'people') + ' who were compromised and do not already have it open? Checkpoint tracks their completion and files the follow-up as A.6.3 evidence.' : '\n\nEveryone compromised already has the course open or has completed it since. The result is filed as A.6.3 evidence.'),
+        fields: f.toAssign.length ? [{ id: 'due', label: 'Due', type: 'date', value: daysFrom(14) }, { id: 'notify', label: 'Email each person their course', type: 'checkbox', value: Store.kind === 'sharepoint' }] : [],
+        confirmText: f.toAssign.length ? 'Assign and file' : 'File the result'
+      });
+      if (!v) return;
+      busy(true);
+      var campaign = '';
+      if (f.toAssign.length) {
+        campaign = nextTrainingCampaignId();
+        var rows = buildTrainingRows(c, f.toAssign, campaign, v.due || daysFrom(14), 'phishing');
+        try { await Store.addTrainingAssignments(rows); } catch (e) { warn(e); busy(false); toast('Could not create the training records.'); return; }
+        audit('Training assigned', 'Training', campaign, '(none)', c.title + ' v' + c.version + ' → ' + rows.length + ' people compromised in "' + res.sim.name + '"');
+        if (v.notify && Store.kind === 'sharepoint') { try { await sendTrainingMail(rows, c, 'assigned'); } catch (e) { warn(e); } }
+      }
+      var all = phishFollowUps();
+      all[res.sim.id] = { name: res.sim.name, completed: res.sim.completed, total: f.total, compromised: f.compromised, reported: f.reported, pct: f.pct, assigned: f.toAssign.length, campaign: campaign || (all[res.sim.id] || {}).campaign || '', date: new Date().toISOString().slice(0, 10) };
+      try { await saveSettingJson('phishFollowUps', all); } catch (e) { warn(e); }
+      window._phishSimId = res.sim.id;
+      var url = null;
+      try { url = await fileControlReport('phishFollowUp', 'A.6.3', 'Phishing simulation follow-up ' + res.sim.name, { _phishSimId: res.sim.id }); } catch (e) { warn(e); }
+      busy(false);
+      toast((f.toAssign.length ? f.toAssign.length + ' refresher' + (f.toAssign.length === 1 ? '' : 's') + ' assigned' : 'Result recorded') + (url !== null ? ', filed as A.6.3 evidence' : ''));
+      if (url === null) App.report('phishFollowUp');
+      renderTraining(); renderNavCounts();
     },
 
     /* ---------- A.8.32 change sample ---------- */
@@ -26372,6 +26598,7 @@ function showModal(opts) {
           (cf && !r.r ? '<div class="aw-carry">' + icon('check') + ' ' + esc(cf.note) + '</div>' : '') +
           (function () { var q = reqMap[(a.fw || 'iso27001') + '|' + l.id]; return q && q.audit === a.id && !r.r ? '<div class="aw-asked">Evidence requested from ' + esc(q.owner) + ' on ' + esc(fmtDate(q.date)) + (q.due ? ', due ' + esc(fmtDate(q.due)) : '') + '.</div>' : ''; })() +
           (r.auto && r.auto.carried ? '<div class="src">Re-confirmed from ' + esc(r.auto.carried) + '.</div>' : '') +
+          (r.shared ? '<div class="src">Recorded once in the integrated audit ' + esc(r.shared) + '.</div>' : '') +
           (r.iv && !r.r ? '<div class="aw-iv"><div class="audit-auto-head">From the interview with ' + esc(r.iv.who) + (r.iv.s ? ': suggests <span class="chip ' + AUTO_CHIP[r.iv.s] + '">' + esc(resultLabel[r.iv.s] || r.iv.s) + '</span>' : ': not settled by the recap') + ' <span class="src">drafted with AI, ' + esc(fmtDate(r.iv.at)) + '</span></div><p>' + esc(r.iv.note) + '</p>' +
             (ro ? '' : '<button class="btn quiet sm" data-action="App.useInterviewNote" data-id="' + ref + '">Use as the note</button> <button class="btn quiet sm" data-action="App.dismissInterviewDraft" data-id="' + ref + '">Dismiss</button>') + '</div>' : '') +
           auditAutoLineHtml(a, l, t, r, ro, resultLabel) +
@@ -26407,6 +26634,8 @@ function showModal(opts) {
         '<button class="btn ghost sm" data-action="App.auditWorkpack" data-id="' + esc(a.id) + '">' + (a.status === 'Completed' ? 'Audit report' : 'Workpack') + '</button>' +
         (a.status !== 'Completed' ? '<button class="btn ghost sm" data-action="App.auditPlan" data-id="' + esc(a.id) + '">Interview plan</button>' +
           (!ro ? '<button class="btn ghost sm" data-action="App.sendAuditInvites" data-id="' + esc(a.id) + '">Send interview invites</button><button class="btn ghost sm" data-action="App.auditInterviewRecap" data-id="' + esc(a.id) + '">Paste an interview recap</button>' : '') : '') +
+        (!ro && integratedCandidates(a).length ? '<button class="btn ghost sm" data-action="App.planIntegratedAudit" data-id="' + esc(a.id) + '">Audit ' + esc(integratedCandidates(a).map(fwName).join(' and ')) + ' together</button>' : '') +
+        (auditSiblings(a.id).length ? '<span class="src" style="align-self:center">Integrated with ' + esc(auditSiblings(a.id).map(function (x) { return x.id + ' (' + fwName(x.fw) + ')'; }).join(', ')) + ': shared clauses are recorded once.</span>' : '') +
         (sum.assessed ? '<button class="btn ghost sm" data-action="App.auditClosingPack" data-id="' + esc(a.id) + '">Closing meeting pack</button>' : '') +
         (a.status === 'Completed' && !READONLY ? '<button class="btn ghost sm" data-action="App.fileAuditReport" data-id="' + esc(a.id) + '">Save report as Clause 9.2 evidence</button>' : '') + '</div>' +
         (auto.tested ? '<p class="aw-note-9-2">Results marked with ? are Checkpoint’s suggestions. Nothing is recorded until you accept or choose a result: Clause 9.2 needs the auditor’s judgement. A nonconformity or improvement raises its finding in Actions.</p>' : '') +
@@ -26669,6 +26898,32 @@ function showModal(opts) {
       try { await Store.updateAudit(a); } catch (e) { warn(e); }
       App.conductAudit(a.id);
     },
+    /* Plan the other ISO standards' audits alongside this one: same
+       date, auditor and scope, linked so shared clauses are recorded once. */
+    planIntegratedAudit: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      var fws = integratedCandidates(a);
+      if (!a || !fws.length) return;
+      var ok = await showModal({ title: 'Audit ' + fws.map(fwName).join(' and ') + ' with ' + a.id + '?',
+        message: 'Plans ' + (fws.length === 1 ? 'an audit' : fws.length + ' audits') + ' on ' + fmtDate(a.planned) + ' with ' + (a.auditor || 'the same auditor') + ' and the same scope. Clauses the standards share (7.1 to 7.5, 9.2, 9.3, 10.1 and 10.2) are recorded once and carried across. Each audit keeps its own Annex A lines, report and Clause 9.2 evidence.',
+        confirmText: 'Plan ' + (fws.length === 1 ? 'it' : 'them'), cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      var ids = [a.id].concat(auditSiblings(a.id).map(function (x) { return x.id; }));
+      for (var i = 0; i < fws.length; i++) {
+        var maxA = (S.audits || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+        var b = { id: 'AUD-' + String(maxA + 1).padStart(3, '0'), fw: fws[i], scope: a.scope, auditor: a.auditor, planned: a.planned, completed: '', status: 'Planned', summary: '', findingRefs: [] };
+        try { await Store.addAudit(b); ids.push(b.id); audit('Internal audit scheduled', 'Audit', b.id, '', b.scope + ' \u2014 planned ' + b.planned + ', integrated with ' + a.id); } catch (e) { warn(e); }
+      }
+      var groups = integratedGroups().filter(function (g) { return !g.some(function (x) { return ids.indexOf(x) !== -1; }); }).concat([ids]);
+      try { await saveSettingJson('integratedAudits', groups); } catch (e) { warn(e); }
+      /* Carry anything already recorded on the shared clauses. */
+      var keys = Object.keys(a.results || {});
+      for (var k = 0; k < keys.length; k++) await shareIntegratedResult(a, keys[k]);
+      busy(false);
+      toast('Integrated audit planned: ' + ids.join(', '));
+      renderAudits(); App.conductAudit(a.id);
+    },
     setAuditResult: async function (ref, value) {
       var parts = String(ref).split('#'), a = (S.audits || []).find(function (x) { return x.id === parts[0]; });
       if (!a) return;
@@ -26693,6 +26948,7 @@ function showModal(opts) {
         else { delete r.r; delete r.auto; }
       }
       try { await Store.updateAudit(a); } catch (e) { warn(e); }
+      if (value) { var shared = await shareIntegratedResult(a, key); if (shared) toast('Clause ' + key.split('|')[1] + ' recorded in ' + shared + ' integrated audit' + (shared === 1 ? '' : 's') + ' too'); }
       App.conductAudit(a.id);
     },
 
