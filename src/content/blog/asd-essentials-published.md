@@ -34,7 +34,7 @@ image: "/assets/illus-essential-eight.svg"
 4. **Organise evidence by area.** Reporting is now area by area with evidence-backed effectiveness ratings, so group your evidence (identity, internet-facing systems and so on) and show the control works, not just that it is configured.
 5. **List who names the Essential Eight.** Note which contracts, panels and insurers reference it, so you know who to talk to when they move.
 
-Our [provisional Essential Eight to Essentials mapping](/resources/essential-eight-to-essentials-mapping/) shows where each strategy is likely to land and the evidence that shows it working. Our guide, [ASD has published the Essentials: what it means for your Essential Eight work](/resources/asd-essentials-framework/), has the detail, and you can sign up there for one email when ASD's chapter references are added to the mapping. For an assessment against the current Essential Eight, see our [Essential Eight service](/services/essential-eight/).
+Our [Essential Eight to Essentials mapping](/resources/essential-eight-to-essentials-mapping/) shows where ASD maps each strategy, the 23 actions the Essential Eight does not cover, and the evidence that shows each one working. Our guide, [ASD has published the Essentials: what it means for your Essential Eight work](/resources/asd-essentials-framework/), has the detail, and you can sign up there for one email when we add the cloud and OT chapters. For an assessment against the current Essential Eight, see our [Essential Eight service](/services/essential-eight/).
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />
 
