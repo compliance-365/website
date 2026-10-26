@@ -1,6 +1,6 @@
 ---
-// A one-off email when Compliance365 publishes its Essential Eight to
-// Essentials mapping, for the Essential Eight pages. Uses the same sign-up
+// A one-off email when Compliance365 adds the cloud and OT chapters to its
+// Essential Eight to Essentials mapping, for the Essential Eight pages. Uses the same sign-up
 // endpoint as the digest; the topic tells Compliance365 which list the
 // person asked for.
 import DigestSignup from './DigestSignup.astro';
@@ -10,9 +10,9 @@ const { source } = Astro.props;
 <section class="container" style="padding-bottom:0;">
   <DigestSignup
     label="Essentials mapping alert"
-    heading="Get one email when we complete the Essential Eight to Essentials mapping"
-    subtext="ASD published the Essentials on 15 October 2026. Our provisional mapping is out; we'll email you once when we add ASD's chapter references to it. One email, not a newsletter."
-    button="Email me the mapping"
+    heading="Get one email when we add the cloud and OT chapters"
+    subtext="ASD published the Essentials on 15 October 2026, and our Essential Eight to Essentials mapping now carries ASD's own references for enterprise IT. We'll email you once when we add the cloud and operational technology chapters. One email, not a newsletter."
+    button="Email me when they are added"
     successTitle="You're on the list."
     successText="We'll email you once when the mapping is completed with ASD's chapter references."
     topic="Essentials mapping alert"
