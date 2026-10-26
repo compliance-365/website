@@ -868,7 +868,7 @@ function showModal(opts) {
      something a Viewer needs — SharePoint's own permissions are the
      backstop either way. */
   var MUTATING_ACTIONS = new Set([
-    'saveEssentialsRating', 'saveEssentialsRatingNext',
+    'saveEssentialsRating', 'saveEssentialsRatingNext', 'essRaiseAction', 'essScheduleReassessment', 'setEssReviewMonths',
     'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk', 'addOpportunity', 'editOpportunity', 'reviewOpportunity', 'deleteOpportunity', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
@@ -3567,7 +3567,7 @@ function showModal(opts) {
       var sum = '<table class="rpt-table"><thead><tr><th>Domain</th><th>Phase</th><th>% effective</th><th>Fully</th><th>Partially</th><th>Not effective</th><th>Not assessed</th></tr></thead><tbody>' +
         sc.domains.map(function (d) { return '<tr><td class="rpt-idc">' + esc(d.name) + '</td><td>' + essPhase(d.phase) + '</td><td>' + pct(d.score) + '</td><td>' + d.counts.FE + '</td><td>' + d.counts.PE + '</td><td>' + d.counts.NE + '</td><td>' + d.counts.NA + '</td></tr>'; }).join('') + '</tbody></table>' +
         '<p class="rpt-just">Principle ratings take the lowest rating of their actions in the domain, as in ASD’s Assessment Workbook. Counts are principles.</p>';
-      var sections = [{ heading: 'Domain summary', pageBreak: false, html: sum }];
+      var sections = [{ heading: 'Domain summary', pageBreak: false, html: sum }, { heading: 'Principle heatmap', pageBreak: false, html: essHeatmapHtml(m, ratings, false, true) }];
       m.domains.forEach(function (d) {
         sections.push({ heading: d.name + ' (' + essPhase(d.phase) + ')', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Principle and action</th><th>Rating</th><th>Reasoning and evidence</th></tr></thead><tbody>' +
           d.principles.map(function (p) {
@@ -7543,6 +7543,7 @@ function showModal(opts) {
     el.style.display = 'none'; el.innerHTML = '';
   }
   function renderDash() {
+    try { renderEssentialsDash(); } catch (e) { warn(e); }
     renderDashHeadline();
     renderNextForYou();
     renderDashForYou();
@@ -13213,6 +13214,37 @@ function showModal(opts) {
   function essModel() { return window.ASD_ESSENTIALS || null; }
   function essOn() { return !!(S && S.entitlements && S.entitlements.asdessentials); }
   function essRatings() { var o = settingJson('essentialsRatings', {}); return o && typeof o === 'object' ? o : {}; }
+  /* How often each rating is reviewed (months, default 12). */
+  function essReviewMonths() { var n = parseInt((S.settings || {}).essentialsReviewMonths, 10); return [6, 12, 24].indexOf(n) !== -1 ? n : 12; }
+  var ESS_CAL_CATEGORY = 'ASD Essentials re-assessment';
+  function essCalItem() { return (S.calendar || []).find(function (c) { return c.category === ESS_CAL_CATEGORY && window.CheckpointLib.calendarItemLive(c); }) || null; }
+  function essTodayIso() { return new Date().toISOString().slice(0, 10); }
+  function essActionChips(rec) {
+    return ((rec && rec.act) || []).map(function (id) {
+      var a = (S.actions || []).find(function (x) { return x.id === id; });
+      if (!a) return '';
+      var done = ['Done', 'Closed', 'Cancelled', 'Completed'].indexOf(a.status) !== -1;
+      return '<button class="chip ' + (done ? 'st-Implemented' : 'st-Inprogress') + ' ess-actchip" data-action="App.openAction" data-id="' + esc(a.id) + '" title="' + esc(a.title) + '">' + esc(a.id) + ' ' + esc(a.status) + '</button>';
+    }).join(' ');
+  }
+  /* The principle heatmap (the workbook's Principle Summary): technical
+     principles against the six technical domains, then the capability
+     domains' principles. A cell opens its domain. */
+  var ESS_PRINT_COLOURS = { NA: '#ececec', NE: '#f6cdc8', PE: '#fbe3b0', FE: '#cfe9cf' };
+  function essHeatmapHtml(m, ratings, interactive, forPrint) {
+    var h = window.CheckpointLib.essentialsHeatmap(m, ratings), N = window.CheckpointLib.ESS_RATING_NAMES;
+    var tag = function (r) { return '<span class="ess-hm ess-hm-' + r + '" title="' + esc(N[r]) + '"' + (forPrint ? ' style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;color:#1c1b22;background:' + ESS_PRINT_COLOURS[r] + '"' : '') + '>' + esc(N[r]) + '</span>'; };
+    var cell = function (r, dom) {
+      if (r == null) return '<td class="ess-hm-na" aria-label="Does not apply">—</td>';
+      var inner = tag(r);
+      return '<td>' + (interactive ? '<button class="ess-hm-btn" data-action="App.essDomain" data-id="' + esc(dom) + '">' + inner + '</button>' : inner) + '</td>';
+    };
+    return '<table class="ess-hmt"><thead><tr><th scope="col">Principle</th>' + h.domains.map(function (d) { return '<th scope="col">' + esc(d.name) + '<div class="src">' + essPhase(d.phase) + '</div></th>'; }).join('') + '</tr></thead><tbody>' +
+      h.rows.map(function (r) { return '<tr><th scope="row"><b>' + esc(r.id) + '</b> ' + esc(r.name) + '</th>' + h.domains.map(function (d) { return cell(r.cells[d.id], d.id); }).join('') + '</tr>'; }).join('') + '</tbody></table>' +
+      '<div class="ess-hm-cap">' + h.capability.map(function (c) {
+        return '<div><h4>' + esc(c.name) + ' <span class="src">all phases</span></h4><ul>' + c.principles.map(function (p) { return '<li>' + tag(p.rating) + ' <b>' + esc(p.id) + '</b> ' + esc(p.name) + '</li>'; }).join('') + '</ul></div>';
+      }).join('') + '</div>';
+  }
   var ESS_CHIP = { NA: 'st-Notstarted', NE: 'sev-High', PE: 'st-Inprogress', FE: 'st-Implemented' };
   function essChip(r) { return '<span class="chip ' + ESS_CHIP[r] + '">' + esc(window.CheckpointLib.ESS_RATING_NAMES[r]) + '</span>'; }
   function essPhase(p) { return p === 'all' ? 'All phases' : 'Phase ' + p; }
@@ -13235,8 +13267,17 @@ function showModal(opts) {
     var ratings = essRatings(), sc = L.essentialsScore(m, ratings), ev = essScanEvidence();
     if (!window._essDom || !essDomain(window._essDom)) window._essDom = (L.essentialsNext(m, ratings, 1)[0] || {}).domain || 'gov';
     var pct = function (x) { return Math.round(x * 100) + '%'; };
-    var summary = '<div class="card ess-summary"><div class="ess-head"><div><h3>Domain summary</h3><p class="src">' + sc.assessed + ' of ' + sc.cells + ' action ratings done. % effective counts fully effective principles once and partially effective ones as half, out of all the domain’s principles.</p></div>' +
-      (READONLY ? '' : '<button class="btn sm" data-action="App.essNext">Rate the next action</button>') + '</div>' +
+    var months = essReviewMonths(), today = essTodayIso();
+    var stale = L.essentialsStale(m, ratings, today, months), staleKeys = {};
+    stale.forEach(function (x) { staleKeys[L.essKey(x.action, x.domain)] = x.due; });
+    var ov = L.essentialsOverview(m, ratings, today, months), cal = essCalItem();
+    var summary = '<div class="card ess-summary"><div class="ess-head"><div><h3>Domain summary</h3><p class="src">' + sc.assessed + ' of ' + sc.cells + ' action ratings done' +
+      (ov.gaps ? ' · ' + ov.gaps + ' rated not or partially effective' : '') + (stale.length ? ' · <b class="ess-due">' + stale.length + ' due for review</b>' : '') +
+      '. % effective counts fully effective principles once and partially effective ones as half, out of all the domain’s principles.</p></div>' +
+      (READONLY ? '' : '<div class="ess-head-b"><button class="btn sm" data-action="App.essNext">' + (sc.assessed < sc.cells || !stale.length ? 'Rate the next action' : 'Review the next rating') + '</button></div>') + '</div>' +
+      '<div class="ess-review src">Ratings are reviewed every <select class="mini" aria-label="Review ratings every" data-change-action="App.setEssReviewMonths"' + (READONLY ? ' disabled' : '') + '>' +
+        [6, 12, 24].map(function (n) { return '<option value="' + n + '"' + (n === months ? ' selected' : '') + '>' + n + ' months</option>'; }).join('') + '</select>. ' +
+        (cal ? 'Re-assessment on the compliance calendar: ' + esc(cal.id) + ', next ' + esc(fmtDateY(cal.nextDue)) + '.' : (READONLY ? '' : '<button class="lnk" data-action="App.essScheduleReassessment">Put the yearly re-assessment on the compliance calendar</button>')) + '</div>' +
       '<table class="ess-table"><thead><tr><th scope="col">Domain</th><th scope="col">Phase</th><th scope="col">% effective</th><th scope="col">Principles</th><th scope="col">Actions to rate</th></tr></thead><tbody>' +
       sc.domains.map(function (d) {
         return '<tr class="' + (d.id === window._essDom ? 'ess-on' : '') + '" data-action="App.essDomain" data-id="' + esc(d.id) + '" tabindex="0"><td><b>' + esc(d.name) + '</b></td><td>' + essPhase(d.phase) + '</td>' +
@@ -13244,6 +13285,7 @@ function showModal(opts) {
           '<td class="ess-counts"><span title="Fully effective">' + d.counts.FE + ' full</span> · <span title="Partially effective">' + d.counts.PE + ' partial</span> · <span title="Not effective">' + d.counts.NE + ' not</span> · <span title="Not assessed">' + d.counts.NA + ' not assessed</span></td>' +
           '<td>' + d.remaining + ' of ' + d.actions + '</td></tr>';
       }).join('') + '</tbody></table></div>';
+    var heat = '<details class="card ess-heat"' + (window._essHeatOpen === false ? '' : ' open') + ' data-toggle-key="_essHeatOpen"><summary><h3>Principle heatmap</h3><span class="src">Each principle in each domain, rated by its weakest action. Select a cell to open its domain.</span></summary>' + essHeatmapHtml(m, ratings, true) + '</details>';
     var d = essDomain(window._essDom), byP = sc.principles[d.id];
     var detail = '<div class="card ess-domain"><div class="id-t">' + essPhase(d.phase) + '</div><h3>' + esc(d.name) + '</h3>' +
       '<p class="src">' + esc(d.description) + ' <b>Risk:</b> ' + esc(d.risk) + '</p>' +
@@ -13253,11 +13295,31 @@ function showModal(opts) {
           p.actions.map(function (a) {
             var act = m.actions[a] || {}, key = L.essKey(a, d.id), r = ratings[key] || {};
             return '<div class="ess-act"><div class="ess-act-t"><span class="id-t">' + esc(a) + '</span> ' + esc(act.text || '') +
-              (r.why ? '<div class="src">' + esc(r.why) + '</div>' : '') + (ev[key] ? '<div class="ess-ev">' + essScanChips(ev[key]) + '</div>' : '') + '</div>' +
+              (r.why ? '<div class="src">' + esc(r.why) + '</div>' : '') +
+              ((ev[key] || staleKeys[key] || (r.act || []).length) ? '<div class="ess-ev">' + (staleKeys[key] ? '<span class="chip sev-Medium" title="Review was due ' + esc(fmtDate(staleKeys[key])) + '">Review due</span> ' : '') + essScanChips(ev[key]) + ' ' + essActionChips(r) + '</div>' : '') + '</div>' +
               '<div class="ess-act-b">' + essChip(L.essRatingOf(ratings, a, d.id)) + '<button class="btn ghost sm" data-action="App.openEssentialsCell" data-id="' + esc(key) + '">' + (READONLY ? 'View' : 'Rate') + '</button></div></div>';
           }).join('') + '</div>';
       }).join('') + '</div>';
-    el.innerHTML = summary + detail + '<p class="src ess-credit">ASD Essentials for enterprise IT and its Assessment Workbook, © Commonwealth of Australia 2026, used under CC BY 4.0. ' + (m.demo ? 'The demo carries the indicators of good practice for the actions it has rated; the full module carries them for every action.' : '') + '</p>';
+    el.innerHTML = summary + heat + detail + '<p class="src ess-credit">ASD Essentials for enterprise IT and its Assessment Workbook, © Commonwealth of Australia 2026, used under CC BY 4.0. ' + (m.demo ? 'The demo carries the indicators of good practice for the actions it has rated; the full module carries them for every action.' : '') + '</p>';
+  }
+  /* The dashboard card: % effective per domain in ASD's order, what is
+     left to rate, what is due for review and the open gaps. */
+  function renderEssentialsDash() {
+    var el = document.getElementById('dashEssentials');
+    if (!el) return;
+    var m = essModel();
+    if (!essOn() || !m) { el.style.display = 'none'; return; }
+    var ov = window.CheckpointLib.essentialsOverview(m, essRatings(), essTodayIso(), essReviewMonths());
+    var open = Object.keys(essRatings()).reduce(function (n, k) {
+      return n + ((essRatings()[k].act || []).filter(function (id) { var a = (S.actions || []).find(function (x) { return x.id === id; }); return a && ['Done', 'Closed', 'Cancelled', 'Completed'].indexOf(a.status) === -1; }).length);
+    }, 0);
+    el.style.display = '';
+    el.innerHTML = '<div class="ess-head"><div><h3>ASD Essentials</h3><p class="src">' + ov.pct + '% effective overall · ' + ov.assessed + ' of ' + ov.cells + ' ratings done' +
+      (ov.reviewsDue ? ' · <b class="ess-due">' + ov.reviewsDue + ' due for review</b>' : '') + (open ? ' · ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</p></div>' +
+      '<button class="btn ghost sm" data-action="App.go" data-id="essentials">Open ASD Essentials</button></div>' +
+      '<div class="ess-dash">' + ov.domains.map(function (d) {
+        return '<div class="ess-dash-row"><span>' + esc(d.name) + ' <span class="src">' + (d.phase === 'all' ? 'all phases' : 'phase ' + d.phase) + '</span></span><span class="ess-bar" aria-hidden="true"><i style="width:' + d.pct + '%"></i></span><b>' + d.pct + '%</b></div>';
+      }).join('') + '</div>';
   }
   function essDrawer(key) {
     var m = essModel(), L = window.CheckpointLib;
@@ -13274,6 +13336,15 @@ function showModal(opts) {
       }).join('') + '</div>';
     };
     var hasIgp = a.igp && (a.igp.NE || []).length;
+    var all = essRatings(), others = L.essentialsOtherDomains(m, a.id, d.id);
+    var also = ro || !others.length ? '' : '<div class="d-sec"><h4>Apply this rating to other domains</h4><p class="src">' + esc(a.id) + ' also applies in these domains. Tick any where the same rating, reasoning and evidence hold; each can be changed later on its own.</p>' +
+      others.map(function (o) {
+        var cur = L.essRatingOf(all, a.id, o.id);
+        return '<label class="ess-tick"><input type="checkbox" data-ess-also="' + esc(o.id) + '"' + (window._essAlsoUnrated && cur === 'NA' ? ' checked' : '') + '> ' + esc(o.name) + ' ' + essChip(cur) + '</label>';
+      }).join('') + '<button class="lnk" data-action="App.essAlsoUnrated">Tick every domain not yet rated</button></div>';
+    var due = L.essentialsReviewDue(r, essReviewMonths());
+    var acts = '<div class="d-sec"><h4>Actions</h4>' + ((r.act || []).length ? '<div class="ess-ev">' + essActionChips(r) + '</div>' : '<p class="src">No action raised for this rating yet.</p>') +
+      (ro ? '' : '<button class="btn ghost sm" data-action="App.essRaiseAction" data-id="' + esc(key) + '">Raise an action to close the gap</button><p class="src">Saves this rating, then adds an action to the Actions register with an owner and due date, linked back here.</p>') + '</div>';
     document.getElementById('drawer').innerHTML =
       '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
       '<div class="id-t">' + esc(a.id) + ' · ' + esc(d.name) + ' · ' + essPhase(d.phase) + '</div><h2>' + esc(a.principle + ' ' + (pr.name || '')) + '</h2>' +
@@ -13287,25 +13358,45 @@ function showModal(opts) {
       '<label>Assessed rating<select class="mini" id="essRating"' + (ro ? ' disabled' : '') + '>' + L.ESS_RATINGS.map(function (k) { return '<option value="' + k + '"' + ((r.r || 'NA') === k ? ' selected' : '') + '>' + esc(L.ESS_RATING_NAMES[k]) + '</option>'; }).join('') + '</select></label>' +
       '<label class="wide">Assessor reasoning<textarea class="mini" id="essWhy"' + (ro ? ' readonly' : '') + '>' + esc(r.why || '') + '</textarea></label>' +
       '<label class="wide">Evidence gathered<textarea class="mini" id="essEv"' + (ro ? ' readonly' : '') + '>' + esc(r.ev || '') + '</textarea></label></div>' +
-      (r.on ? '<p class="src">Last rated by ' + esc(r.by || '') + ' on ' + esc(fmtDateY(r.on)) + '.</p>' : '') + '</div>' +
+      (r.on ? '<p class="src">Last rated by ' + esc(r.by || '') + ' on ' + esc(fmtDateY(r.on)) + (r.copiedFrom ? ', applied from ' + esc((essDomain(r.copiedFrom.split('|')[1]) || {}).name || r.copiedFrom) : '') + '.' + (due ? ' Review ' + (due < essTodayIso() ? '<b class="ess-due">was due ' + esc(fmtDateY(due)) + '</b>' : 'by ' + esc(fmtDateY(due))) + '.' : '') + '</p>' : '') + '</div>' +
+      also + acts +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' + (ro ? '' : '<button class="btn sm" data-action="App.saveEssentialsRating" data-id="' + esc(key) + '">Save</button><button class="btn ghost sm" data-action="App.saveEssentialsRatingNext" data-id="' + esc(key) + '">Save and rate the next</button>') +
       '<button class="btn ghost sm" data-action="App.closeDrawer">Close</button></div>';
     window._essKey = key;
     essUpdateSuggestion();
     openDrawerUi('Rate ' + a.id + ' in ' + d.name, { wide: true });
   }
-  async function essSave(key, next) {
+  /* Saves the drawer's rating, and copies it to any other domains
+     ticked under "Apply this rating to other domains". Actions already
+     linked to a rating stay linked. opts.stay keeps the drawer open. */
+  async function essSave(key, next, opts) {
     var all = essRatings(), prev = all[key] || {};
     var v = function (id) { var x = document.getElementById(id); return x ? x.value : ''; };
-    var rec = { r: v('essRating') || 'NA', why: v('essWhy').trim(), ev: v('essEv').trim(), ticks: essReadTicks(), by: myDisplayName() || myUpn() || '', on: new Date().toISOString().slice(0, 10) };
+    var rec = { r: v('essRating') || 'NA', why: v('essWhy').trim(), ev: v('essEv').trim(), ticks: essReadTicks(), by: myDisplayName() || myUpn() || '', on: essTodayIso() };
     ['NE', 'PE', 'FE'].forEach(function (k) { if (!rec.ticks[k].length) delete rec.ticks[k]; });
-    if (rec.r === 'NA' && !rec.why && !rec.ev && !Object.keys(rec.ticks).length) delete all[key]; else all[key] = rec;
+    if (prev.act && prev.act.length) rec.act = prev.act.slice();
+    var empty = rec.r === 'NA' && !rec.why && !rec.ev && !Object.keys(rec.ticks).length && !rec.act;
+    if (empty) delete all[key]; else all[key] = rec;
+    var names = window.CheckpointLib.ESS_RATING_NAMES, aid = key.split('|')[0];
+    var copies = [];
+    document.querySelectorAll('#drawer [data-ess-also]').forEach(function (c) {
+      if (!c.checked || empty) return;
+      var k2 = window.CheckpointLib.essKey(aid, c.getAttribute('data-ess-also')), was = all[k2] || {};
+      var copy = Object.assign({}, rec, { copiedFrom: key });
+      delete copy.act;
+      if (was.act && was.act.length) copy.act = was.act.slice();
+      all[k2] = copy;
+      copies.push({ key: k2, prev: was.r || 'NA' });
+    });
+    window._essAlsoUnrated = false;
     await saveSettingJson('essentialsRatings', all);
-    var names = window.CheckpointLib.ESS_RATING_NAMES;
     audit('ASD Essentials rating', 'Essentials', key, names[prev.r || 'NA'], names[rec.r]);
-    toast(esc(key.split('|')[0]) + ' rated <b>' + esc(names[rec.r]) + '</b>');
-    renderEssentials();
+    copies.forEach(function (c) { audit('ASD Essentials rating', 'Essentials', c.key, names[c.prev], names[rec.r] + ' (applied from ' + key + ')'); });
+    toast(esc(aid) + ' rated <b>' + esc(names[rec.r]) + '</b>' + (copies.length ? ' in ' + (copies.length + 1) + ' domains' : ''));
+    renderEssentials(); renderEssentialsDash();
+    if (opts && opts.stay) return all[key] || null;
     if (next) App.essNext(); else App.closeDrawer();
+    return all[key] || null;
   }
   function essReadTicks() {
     var t = { NE: [], PE: [], FE: [] };
@@ -17209,13 +17300,32 @@ function showModal(opts) {
      either way — that IS the "graceful fallback to a maximised
      overlay" this feature asks for, not a separate code path. */
   var BD_SLIDE_MS = 12000;
-  var BD_COUNT = 6;
+  /* The slide count follows the builders: ASD Essentials adds one when
+     the tenant has it. */
+  function bdCount() { return boardroomSlideBuilders().length; }
 
   function boardroomSlideBuilders() {
     return [
       boardroomSlideFingerprint, boardroomSlideTrend, boardroomSlideJourney,
       boardroomSlideRisks, boardroomSlideActions, boardroomSlideMilestones
-    ];
+    ].concat(essOn() && essModel() ? [boardroomSlideEssentials] : []);
+  }
+  /* Compact for the board slide: a coloured square per principle and
+     domain, with a legend, so the whole grid fits one screen. */
+  function essHeatmapCompact(m, ratings) {
+    var L = window.CheckpointLib, h = L.essentialsHeatmap(m, ratings), N = L.ESS_RATING_NAMES;
+    var sq = function (r, label) { return r == null ? '<span class="ess-sq ess-sq-none" aria-hidden="true"></span>' : '<span class="ess-sq ess-hm-' + r + '" title="' + esc(label + ': ' + N[r]) + '"></span>'; };
+    var cap = h.capability.map(function (c) { return { name: c.name, cells: c.principles.map(function (p) { return { id: p.id, r: p.rating }; }) }; });
+    return '<div class="ess-bdgrid"><table><thead><tr><th></th>' + h.domains.map(function (d) { return '<th scope="col">' + esc(d.name) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      h.rows.map(function (r) { return '<tr><th scope="row">' + esc(r.id) + ' ' + esc(r.name) + '</th>' + h.domains.map(function (d) { return '<td>' + sq(r.cells[d.id], r.id + ' in ' + d.name) + '</td>'; }).join('') + '</tr>'; }).join('') +
+      '</tbody></table><div class="ess-bdcap">' + cap.map(function (c) { return '<div><b>' + esc(c.name) + '</b><div>' + c.cells.map(function (x) { return '<span class="ess-bdcell">' + sq(x.r, x.id) + esc(x.id) + '</span>'; }).join('') + '</div></div>'; }).join('') +
+      '<div class="ess-bdleg">' + L.ESS_RATINGS.map(function (k) { return '<span class="ess-bdcell">' + sq(k, N[k]) + esc(N[k]) + '</span>'; }).join('') + '</div></div></div>';
+  }
+  function boardroomSlideEssentials() {
+    var m = essModel(), ov = window.CheckpointLib.essentialsOverview(m, essRatings(), essTodayIso(), essReviewMonths());
+    return '<h2>ASD Essentials: ' + ov.pct + '% effective</h2>' +
+      '<div class="bd-chart ess-bd">' + essHeatmapCompact(m, essRatings()) + '</div>' +
+      '<p class="bd-sub">' + ov.assessed + ' of ' + ov.cells + ' ratings done' + (ov.reviewsDue ? ', ' + ov.reviewsDue + ' due for review' : '') + '. Each principle is rated by its weakest action.</p>';
   }
 
   function boardroomSlideFingerprint() {
@@ -17344,7 +17454,7 @@ function showModal(opts) {
   function boardroomShowSlide(i) {
     var bd = window._bd;
     if (!bd || !bd.active) return;
-    bd.index = ((i % BD_COUNT) + BD_COUNT) % BD_COUNT;
+    bd.index = ((i % bdCount()) + bdCount()) % bdCount();
     boardroomBuildSlide(bd.index);
     var dotsEl = document.getElementById('bdDots');
     if (dotsEl) {
@@ -17396,7 +17506,7 @@ function showModal(opts) {
     var dotsEl = document.getElementById('bdDots');
     if (dotsEl) {
       dotsEl.innerHTML = '';
-      for (var i = 0; i < BD_COUNT; i++) {
+      for (var i = 0; i < bdCount(); i++) {
         var dot = document.createElement('button');
         dot.type = 'button';
         dot.className = 'bd-dot' + (i === 0 ? ' on' : '');
@@ -18885,6 +18995,12 @@ function showModal(opts) {
      last activity and AI use. Each part fails soft. */
   function progressDelivery(today) {
     var L = window.CheckpointLib, out = {};
+    try {
+      if (essOn() && essModel()) {
+        var eo = L.essentialsOverview(essModel(), essRatings(), today, essReviewMonths());
+        out.essentials = { pct: eo.pct, assessed: eo.assessed, cells: eo.cells, gaps: eo.gaps, reviewsDue: eo.reviewsDue, domains: eo.domains.map(function (d) { return { id: d.id, pct: d.pct }; }) };
+      }
+    } catch (e) { warn(e); }
     try {
       var cp = certPlan(), plan = cp.plan;
       out.plan = { week: plan.week, behind: plan.behind.length, readyBy: plan.steps.length ? plan.steps[plan.steps.length - 1].target : '',
@@ -26299,12 +26415,62 @@ function showModal(opts) {
     /* ASD Essentials: pick a domain, open an action to rate, save. */
     essDomain: function (id) { window._essDom = id; renderEssentials(); },
     essNext: function () {
-      var n = window.CheckpointLib.essentialsNext(essModel(), essRatings(), 1)[0];
-      if (!n) { toast('Every action is rated.'); return; }
+      var L = window.CheckpointLib;
+      var n = L.essentialsNext(essModel(), essRatings(), 1)[0] || L.essentialsStale(essModel(), essRatings(), essTodayIso(), essReviewMonths())[0];
+      if (!n) { toast('Every action is rated, and none is due for review.'); return; }
       window._essDom = n.domain; renderEssentials();
       essDrawer(window.CheckpointLib.essKey(n.action, n.domain));
     },
     openEssentialsCell: function (key) { if (essModel()) essDrawer(key); },
+    essAlsoUnrated: function () {
+      var all = essRatings(), aid = (window._essKey || '').split('|')[0];
+      document.querySelectorAll('#drawer [data-ess-also]').forEach(function (c) { c.checked = window.CheckpointLib.essRatingOf(all, aid, c.getAttribute('data-ess-also')) === 'NA'; });
+    },
+    setEssReviewMonths: async function (v) {
+      var n = parseInt(v, 10);
+      if ([6, 12, 24].indexOf(n) === -1) return;
+      var prev = (S.settings || {}).essentialsReviewMonths || '12';
+      S.settings.essentialsReviewMonths = String(n);
+      await Store.setSetting('essentialsReviewMonths', String(n));
+      audit('Setting changed', 'Settings', 'essentialsReviewMonths', prev, String(n));
+      renderEssentials(); renderEssentialsDash();
+    },
+    /* The yearly re-assessment as a compliance calendar item, owned by
+       whoever schedules it. Due a year out, or sooner when ratings are
+       already due for review. */
+    essScheduleReassessment: async function () {
+      if (essCalItem()) { toast('The re-assessment is already on the calendar.'); return; }
+      var L = window.CheckpointLib, stale = L.essentialsStale(essModel(), essRatings(), essTodayIso(), essReviewMonths());
+      var nextDue = stale.length ? daysFrom(30) : L.addDaysIso(essTodayIso(), 365);
+      var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var item = { id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: 'ASD Essentials re-assessment', category: ESS_CAL_CATEGORY, freq: 'Annual', nextDue: nextDue,
+        lastCompleted: '', owner: myDisplayName() || '', notes: 'Review every ASD Essentials rating that is due, starting with phase 1.', status: 'Active' };
+      try { await Store.addCalendarItem(item); } catch (e) { warn(e); toast('Could not add the calendar item.'); return; }
+      audit('Calendar item added', 'Calendar', item.id, '', item.title + ' due ' + nextDue);
+      toast('<b>' + esc(item.id) + '</b> added to the compliance calendar for ' + esc(fmtDateY(nextDue)));
+      renderEssentials();
+    },
+    /* Raise an action from a rating: saved first, then an action in the
+       Actions register (not effective: High priority, otherwise Medium),
+       linked both ways. */
+    essRaiseAction: async function (key) {
+      var rec = await essSave(key, false, { stay: true });
+      var L = window.CheckpointLib, parts = key.split('|'), a = essModel().actions[parts[0]] || {}, d = essDomain(parts[1]) || {};
+      var pr = rec && rec.r === 'NE' ? 'High' : 'Medium';
+      var me = myDisplayName() || '', u = directoryUser(me);
+      var act = { id: nextRegId(S.actions, 'ACT-'), title: 'ASD Essentials ' + parts[0] + ' (' + d.name + '): ' + String(a.text || '').replace(/\.$/, ''), type: 'Action', risk: '', control: '', pr: pr,
+        owner: me || 'Unassigned', ownerEmail: u ? (u.mail || u.upn || '') : '', due: dueForPriority(pr), status: 'Open', evidenceUrl: '',
+        src: 'ASD Essentials ' + key + (rec && rec.r ? ': rated ' + L.ESS_RATING_NAMES[rec.r].toLowerCase() : '') };
+      try { await Store.addAction(act); } catch (e) { warn(e); toast('Could not add the action.'); return; }
+      var all = essRatings(), cur = all[key] || { r: 'NA', by: me, on: essTodayIso() };
+      cur.act = (cur.act || []).concat(act.id);
+      all[key] = cur;
+      await saveSettingJson('essentialsRatings', all);
+      audit('Action raised', 'Action', act.id, '', 'From ASD Essentials ' + key + ': ' + act.title);
+      toast('<b>' + esc(act.id) + '</b> added to the Actions register, due ' + esc(fmtDate(act.due)));
+      renderEssentials(); renderEssentialsDash();
+      essDrawer(key);
+    },
     essTicked: function () { essUpdateSuggestion(); },
     essUseSuggestion: function (r) { var el = document.getElementById('essRating'); if (el) el.value = r; },
     saveEssentialsRating: function (key) { return essSave(key, false); },

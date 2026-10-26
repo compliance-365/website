@@ -9225,6 +9225,74 @@
     return n ? out.slice(0, n) : out;
   }
 
+  /* The other domains an action applies in, for "apply this rating to
+     other domains" (the same action is rated per domain). */
+  function essentialsOtherDomains(model, actionId, domainId) {
+    return ((model && model.domains) || []).filter(function (d) {
+      return d.id !== domainId && d.principles.some(function (p) { return p.actions.indexOf(actionId) !== -1; });
+    }).map(function (d) { return { id: d.id, name: d.name, phase: d.phase }; });
+  }
+  /* When a rating is next due for review: rated on + the re-assessment
+     interval (months). ASD weighs how current evidence is, so a rating
+     past this date is flagged. */
+  function essentialsReviewDue(rec, months) {
+    if (!rec || !rec.on || ESS_RATINGS.indexOf(rec.r) < 1) return '';
+    var d = new Date(String(rec.on).slice(0, 10) + 'T00:00:00Z');
+    if (isNaN(d)) return '';
+    d.setUTCMonth(d.getUTCMonth() + (Number(months) || 12));
+    return d.toISOString().slice(0, 10);
+  }
+  function essentialsStale(model, ratings, today, months) {
+    var out = [];
+    ((model && model.domains) || []).forEach(function (d) {
+      d.principles.forEach(function (p) {
+        p.actions.forEach(function (a) {
+          var due = essentialsReviewDue((ratings || {})[essKey(a, d.id)], months);
+          if (due && today && due < today) out.push({ action: a, domain: d.id, domainName: d.name, due: due });
+        });
+      });
+    });
+    return out;
+  }
+  /* The principle heatmap, as on the workbook's Principle Summary sheet:
+     each technical principle against the six technical domains (null
+     where it does not apply), and the capability domains' principles. */
+  function essentialsHeatmap(model, ratings) {
+    var sc = essentialsScore(model, ratings);
+    var doms = (model && model.domains) || [];
+    var tech = doms.filter(function (d) { return d.phase !== 'all'; });
+    var order = [], rows = {};
+    tech.forEach(function (d) {
+      d.principles.forEach(function (p) {
+        if (!rows[p.id]) { rows[p.id] = { id: p.id, name: ((model.principles || {})[p.id] || {}).name || '', cells: {} }; order.push(p.id); }
+        rows[p.id].cells[d.id] = sc.principles[d.id][p.id];
+      });
+    });
+    return {
+      domains: tech.map(function (d) { return { id: d.id, name: d.name, phase: d.phase }; }),
+      rows: order.map(function (id) { tech.forEach(function (d) { if (!(d.id in rows[id].cells)) rows[id].cells[d.id] = null; }); return rows[id]; }),
+      capability: doms.filter(function (d) { return d.phase === 'all'; }).map(function (d) {
+        return { id: d.id, name: d.name, principles: d.principles.map(function (p) { return { id: p.id, name: ((model.principles || {})[p.id] || {}).name || '', rating: sc.principles[d.id][p.id] }; }) };
+      })
+    };
+  }
+  /* The headline numbers for the dashboard, the board slides and the
+     partner console. pct is % effective across every principle of every
+     domain, counted the same way as each domain's own score. */
+  function essentialsOverview(model, ratings, today, months) {
+    var sc = essentialsScore(model, ratings);
+    var all = sc.domains.reduce(function (o, d) { o.total += d.total; o.fe += d.counts.FE; o.pe += d.counts.PE; return o; }, { total: 0, fe: 0, pe: 0 });
+    var gaps = 0;
+    Object.keys(ratings || {}).forEach(function (k) { var r = ratings[k] && ratings[k].r; if (r === 'NE' || r === 'PE') gaps++; });
+    return {
+      cells: sc.cells, assessed: sc.assessed,
+      pct: all.total ? Math.round((all.fe + 0.5 * all.pe) / all.total * 100) : 0,
+      gaps: gaps,
+      reviewsDue: essentialsStale(model, ratings, today, months).length,
+      domains: sc.domains.map(function (d) { return { id: d.id, name: d.name, phase: d.phase, pct: Math.round(d.score * 100), remaining: d.remaining }; })
+    };
+  }
+
   /* EU AI Act risk classification — Article 5 prohibited practices,
      Annex III high-risk categories, Article 50 transparency triggers.
      Every question maps to one specific published clause rather than a
@@ -12945,7 +13013,8 @@
         stage1Ready: !!s.delivery.stage1Ready, stage2Ready: !!s.delivery.stage2Ready,
         auditorOverdue: s.delivery.auditorOverdue || 0,
         health: s.delivery.health ? { score: s.delivery.health.score, band: s.delivery.health.band, factors: (s.delivery.health.factors || []).slice(0, 4) } : null,
-        audit: s.delivery.audit || null
+        audit: s.delivery.audit || null,
+        essentials: s.delivery.essentials || null
       } : null
     };
   }
@@ -14770,7 +14839,7 @@
     evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
-    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, ESS_RATINGS: ESS_RATINGS, ESS_RATING_NAMES: ESS_RATING_NAMES, essKey: essKey, essRatingOf: essRatingOf, essentialsScore: essentialsScore, essentialsSuggest: essentialsSuggest, essentialsScanEvidence: essentialsScanEvidence, essentialsRows: essentialsRows, essentialsNext: essentialsNext, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
+    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, ESS_RATINGS: ESS_RATINGS, ESS_RATING_NAMES: ESS_RATING_NAMES, essKey: essKey, essRatingOf: essRatingOf, essentialsScore: essentialsScore, essentialsSuggest: essentialsSuggest, essentialsScanEvidence: essentialsScanEvidence, essentialsRows: essentialsRows, essentialsNext: essentialsNext, essentialsOtherDomains: essentialsOtherDomains, essentialsReviewDue: essentialsReviewDue, essentialsStale: essentialsStale, essentialsHeatmap: essentialsHeatmap, essentialsOverview: essentialsOverview, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS, AI_ACT_OBLIGATIONS: AI_ACT_OBLIGATIONS, AI_ACT_TIER_ORDER: AI_ACT_TIER_ORDER,
     VENDOR_QUESTIONNAIRE: VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS: VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers: vendorAiActAnswers,

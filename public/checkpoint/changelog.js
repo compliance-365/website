@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.183.0',
+    date: '2026-10-26',
+    entries: [
+      'ASD Essentials: rate an action once and apply it to the other domains it covers. Tick the domains where the same rating, reasoning and evidence hold; each one can still be changed on its own later.',
+      'Raise an action from any rating: it goes to the Actions register with an owner, a due date (sooner for not effective) and a link back, and shows on the rating until it is done.',
+      'Ratings now have a review date, every 6, 12 or 24 months. Ratings past it are flagged, Rate the next action moves on to them once everything is rated, and the yearly re-assessment can be put on the compliance calendar in one click.',
+      'The principle heatmap, as in ASD\u2019s Assessment Workbook: every principle in every domain at a glance, in the app, in the report and on a new ASD Essentials board slide.',
+      'An ASD Essentials card on the Dashboard shows % effective by domain, ratings due for review and open actions. Partners see each client\u2019s Essentials progress in the owner console and the monthly portfolio report.'
+    ]
+  },
+  {
     version: '1.182.0',
     date: '2026-10-26',
     entries: [

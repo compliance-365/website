@@ -74,6 +74,51 @@ describe('scoring, as in ASD’s Assessment Workbook', () => {
   });
 });
 
+describe('1.183.0: apply to other domains, review dates, heatmap, overview', () => {
+  test('the other domains an action applies in', () => {
+    const m2 = { domains: [
+      { id: 'bnd', name: 'Boundary', phase: 1, principles: [{ id: 'P', actions: ['X', 'Y'] }] },
+      { id: 'idn', name: 'Identity', phase: 1, principles: [{ id: 'P', actions: ['X'] }] },
+      { id: 'usr', name: 'Users', phase: 3, principles: [{ id: 'Q', actions: ['Y'] }] }] };
+    assert.deepEqual(L.essentialsOtherDomains(m2, 'X', 'bnd').map((d) => d.id), ['idn']);
+    assert.deepEqual(L.essentialsOtherDomains(m2, 'Y', 'usr').map((d) => d.id), ['bnd']);
+  });
+  test('a rating is due for review the set number of months after it was made', () => {
+    assert.equal(L.essentialsReviewDue({ r: 'PE', on: '2026-01-31' }, 12), '2027-01-31');
+    assert.equal(L.essentialsReviewDue({ r: 'FE', on: '2026-03-15' }, 6), '2026-09-15');
+    assert.equal(L.essentialsReviewDue({ r: 'NA', on: '2026-03-15' }, 6), '', 'not assessed has nothing to review');
+    const stale = L.essentialsStale(model, { 'A1|gov': { r: 'FE', on: '2025-01-01' }, 'A4|idn': { r: 'PE', on: '2026-10-01' } }, '2026-10-26', 12);
+    assert.deepEqual(stale.map((x) => x.action + '|' + x.domain + '|' + x.due), ['A1|gov|2026-01-01']);
+  });
+  test('the heatmap: technical principles by technical domain, null where not applicable', () => {
+    const h = L.essentialsHeatmap(model, { 'A4|idn': { r: 'FE' }, 'A5|idn': { r: 'PE' } });
+    assert.deepEqual(h.domains.map((d) => d.id), ['idn', 'usr']);
+    const pro13 = h.rows.find((r) => r.id === 'PRO-13');
+    assert.deepEqual(pro13.cells, { idn: 'PE', usr: null });
+    assert.deepEqual(h.capability.map((c) => c.id), ['gov']);
+    assert.equal(h.capability[0].principles.length, 2);
+  });
+  test('the overview: % effective across every principle, gaps and reviews due', () => {
+    const o = L.essentialsOverview(model, { 'A1|gov': { r: 'FE', on: '2026-10-01' }, 'A6|idn': { r: 'NE', on: '2024-01-01' }, 'A7|usr': { r: 'PE', on: '2026-10-01' } }, '2026-10-26', 12);
+    // 5 principles: GOV-01 FE, PRO-12 NE, PRO-04 PE, the rest not assessed -> (1 + 0.5) / 5
+    assert.equal(o.pct, 30);
+    assert.equal(o.gaps, 2);
+    assert.equal(o.reviewsDue, 1);
+    assert.deepEqual(o.domains.map((d) => d.id + ':' + d.pct), ['gov:50', 'idn:0', 'usr:50']);
+  });
+  test('the partner snapshot carries the Essentials headline', () => {
+    const snap = L.buildProgressSnapshot({ pathSteps: [], delivery: { essentials: { pct: 30, assessed: 3, cells: 7, gaps: 2, reviewsDue: 1, domains: [] } } });
+    assert.equal(snap.delivery.essentials.pct, 30);
+  });
+  test('wiring: actions, the calendar, the board slide and the partner console', () => {
+    assert.match(app, /essRaiseAction: async function \(key\)/);
+    assert.match(app, /category: ESS_CAL_CATEGORY, freq: 'Annual'/);
+    assert.match(app, /\]\.concat\(essOn\(\) && essModel\(\) \? \[boardroomSlideEssentials\] : \[\]\)/);
+    const owner = read('../public/owner/owner.js');
+    assert.match(owner, /anyEss \? '<th scope="col">ASD Essentials<\/th>'/);
+  });
+});
+
 describe('content pack', { skip: pack ? false : 'checkpoint-content is not checked out' }, () => {
   const m = pack && pack.extra.essentials;
   test('ASD’s structure: 8 domains in phase order, 28 principles, 58 actions, 212 ratings', () => {
@@ -187,6 +232,31 @@ describe('in the demo', { skip: skipReason || false }, () => {
     await page.click('#essBody [data-id="IT.PRO-13.4|idn"]');
     await page.locator('#drawer [data-ess-tick="NE"]').nth(1).check();
     assert.match(await page.locator('#essSugg').innerText(), /Not effective/);
+    // Apply the rating to the domains not yet rated, then raise an action.
+    await page.locator('#drawer [data-ess-tick="NE"]').nth(1).uncheck();
+    await page.click('#drawer [data-action="App.essAlsoUnrated"]');
+    const ticked = await page.locator('#drawer [data-ess-also]:checked').count();
+    assert.equal(ticked, 4, 'boundary, critical, business and user devices; privileged is already rated');
+    await page.click('#drawer [data-action="App.essRaiseAction"]');
+    await page.waitForFunction(() => /ACT-\d+ Open/.test(document.getElementById('drawer').innerText));
+    const st = await page.evaluate(() => {
+      const d = JSON.parse(localStorage.getItem('checkpoint-demo-v8'));
+      const r = JSON.parse(d.settings.essentialsRatings);
+      const a = d.actions.find((x) => x.id === r['IT.PRO-13.4|idn'].act[0]);
+      return { usr: r['IT.PRO-13.4|usr'], prv: r['IT.PRO-13.4|prv'].r, act: a && a.src, pr: a && a.pr };
+    });
+    assert.equal(st.usr.r, 'PE');
+    assert.equal(st.usr.copiedFrom, 'IT.PRO-13.4|idn');
+    assert.equal(st.prv, 'PE');
+    assert.match(st.act, /^ASD Essentials IT\.PRO-13\.4\|idn: rated partially effective/);
+    assert.equal(st.pr, 'Medium');
+    await page.click('#drawer [data-action="App.closeDrawer"]');
+    // The heatmap, the re-assessment on the calendar, and the dashboard card.
+    assert.equal(await page.locator('#essBody .ess-hmt tbody tr').count(), 16);
+    await page.click('#essBody [data-action="App.essScheduleReassessment"]');
+    await page.waitForFunction(() => /Re-assessment on the compliance calendar: CAL-/.test(document.querySelector('.ess-review').innerText));
+    await page.evaluate(() => window.App.go('dash'));
+    assert.match(await page.locator('#dashEssentials').innerText(), /% effective overall/);
     assert.deepEqual(errors, []);
     await ctx.close();
   });
