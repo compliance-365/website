@@ -57,8 +57,11 @@ export const SELF_SERVE = {
     iso42001_growth: 'pri_01kyvvqgapg42pkc7frxd3nqy5',
     soc2_micro: 'pri_01kyvvafz0rjmx93fknmh5shqe',
     soc2_growth: 'pri_01kyvvbwjk49d86sv92paytdrk',
-    essential8_micro: 'pri_01kyvvedm0at83vabz57dax7q4',
-    essential8_growth: 'pri_01kyvvjpbzmm31ypek8gxgcw0s',
+    // ASD Essentials took over the Essential Eight's two Paddle prices
+    // (October 2026): same amounts, and lambda/provision.js and
+    // lambda/webhook.js now grant 'asdessentials' for them.
+    asdessentials_micro: 'pri_01kyvvedm0at83vabz57dax7q4',
+    asdessentials_growth: 'pri_01kyvvjpbzmm31ypek8gxgcw0s',
     nistcsf_micro: 'pri_01kyvvxxq9bxpacjnav5d3j7ec',
     nistcsf_growth: 'pri_01kyvvzxfr78bx69grc818jt99',
     ai: 'pri_01kyvw1edqna8qn220c4rpkafg'
@@ -100,7 +103,12 @@ export const TIERS = [
 export const MODULES = [
   { id: 'iso27001', name: 'ISO 27001',      tag: 'Information security', prices: { micro: 7000, growth: 9999, enterprise: null } },
   { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 8999, growth: 12999, enterprise: null } },
-  { id: 'essential8', name: 'Essential Eight', tag: 'ACSC maturity',      prices: { micro: 7000, growth: 9999, enterprise: null } },
+  { id: 'asdessentials', name: 'ASD Essentials', tag: 'ASD framework (enterprise IT)', prices: { micro: 7000, growth: 9999, enterprise: null } },
+  // Replaced in the price list by ASD Essentials, its successor. Kept
+  // (unlisted, no Paddle price) so pages that still describe the Essential
+  // Eight can quote its licence, and so it can be granted by hand where a
+  // contract or insurer still names it.
+  { id: 'essential8', name: 'Essential Eight', tag: 'ACSC maturity', listed: false, prices: { micro: 7000, growth: 9999, enterprise: null } },
   { id: 'iso42001', name: 'ISO 42001',      tag: 'AI governance',         prices: { micro: 7000, growth: 9999, enterprise: null } },
   { id: 'iso27701', name: 'ISO 27701',      tag: 'Privacy (PIMS)',        prices: { micro: 7000, growth: 9999, enterprise: null } },
   { id: 'nistcsf',  name: 'NIST CSF',       tag: 'Cyber risk framework',  prices: { micro: 7000, growth: 9999, enterprise: null } },
@@ -113,6 +121,9 @@ export const MODULES = [
   // same as any module without a price id.
   { id: 'privacyact', name: 'Privacy Act', tag: 'Australian Privacy Principles', prices: { micro: 4999, growth: 6999, enterprise: null } }
 ];
+
+// The modules shown on /pricing/ and offered at checkout.
+export const LISTED_MODULES = MODULES.filter((m) => m.listed !== false);
 
 // Optional add-on, flat price regardless of headcount tier.
 export const ADDONS = [

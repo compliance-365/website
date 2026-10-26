@@ -88,7 +88,7 @@ jobs:
         run: |
           set -e
           missing=""
-          for f in ai.json cps234.json dispirap.json essential8.json is18.json iso27701.json iso42001.json nistcsf.json privacyact.json rffr.json soc2.json; do
+          for f in ai.json asdessentials.json cps234.json dispirap.json essential8.json is18.json iso27701.json iso42001.json nistcsf.json privacyact.json rffr.json soc2.json; do
             if [ ! -s "checkpoint-content/$f" ]; then
               missing="$missing $f"
             fi

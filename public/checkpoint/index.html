@@ -369,6 +369,7 @@
       <details class="nav-group" data-group="controls" open>
         <summary class="nav-label">Controls</summary>
         <button class="nav-item" data-v="soa">Statement of Applicability <span class="n" id="nSoa"></span></button>
+        <button class="nav-item" data-v="essentials" style="display:none">ASD Essentials</button>
         <button class="nav-item" data-v="clauses">Management system clauses <span class="n" id="nClauses"></span></button>
         <button class="nav-item nav-full" data-v="frameworks">Frameworks</button>
         <button class="nav-item nav-full" data-v="sharedevidence">Shared evidence</button>
@@ -1080,6 +1081,13 @@
       <div class="vhead"><div class="rule"></div><h1>My tasks</h1><p>Everything assigned to you in the information security management system, with the one button that does each. Nothing else to learn.</p></div>
       <div class="card" id="myNextForYou" style="margin-bottom:16px"></div>
       <div id="myTasksBody"></div>
+    </section>
+
+    <!-- ASD ESSENTIALS (enterprise IT): rated per action and domain; see renderEssentials() -->
+    <section class="view" id="v-essentials">
+      <div class="vhead"><div class="rule"></div><h1>ASD Essentials</h1><p>ASD Essentials for enterprise IT, the successor to the Essential Eight: 58 actions under 28 principles, each rated in the domains it applies to as not assessed, not effective, partially effective or fully effective. Work through the capability domains and phase 1 first, as ASD recommends.</p></div>
+      <div style="margin:0 0 14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn ghost sm" data-action="App.exportCsv" data-id="essentials">Export CSV</button><button class="btn ghost sm" data-action="App.report" data-id="essentials">Open as a document</button></div>
+      <div id="essBody"></div>
     </section>
 
     <!-- MANAGEMENT SYSTEM CLAUSES -->

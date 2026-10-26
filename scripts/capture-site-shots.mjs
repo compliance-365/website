@@ -39,6 +39,7 @@ const SHOTS = [
   ['soa-nistcsf', 'soa', 'nistcsf', ...SOA],
   ['soa-dispirap', 'soa', 'dispirap', ...SOA],
   ['soa-soc2', 'soa', 'soc2', ...SOA],
+  ['asd-essentials', 'essentials', null, '#essBody .ess-summary', '#essBody .ess-summary', 720],
   ['posture-scan', 'scan', null, '#v-scan .scan-summary', '#scanChecksCard', 470],
 ];
 

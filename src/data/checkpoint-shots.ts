@@ -33,6 +33,8 @@ export const SHOTS = {
     'Checkpoint DISP and IRAP view: ISM-aligned controls with scope, status, cross-framework mappings, owner, assurance and evidence', 'dispirap'),
   soaSoc2: shot('soa-soc2', 'soa',
     'Checkpoint SOC 2 view: Trust Services Criteria with scope, status, the ISO 27001 controls they map to, owner, assurance and evidence', 'soc2'),
+  asdEssentials: shot('asd-essentials', 'essentials',
+    'Checkpoint ASD Essentials assessment: the eight domains in ASD priority order, each with its % effective, principle ratings and actions still to rate'),
   postureScan: shot('posture-scan', 'scan',
     'Checkpoint Microsoft 365 posture scan: an overall score, counts of checks needing attention, to review and clear, and the failing checks to fix first'),
 };

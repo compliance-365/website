@@ -1,7 +1,7 @@
 {
   "risk-register": {
     "width": 1600,
-    "height": 902
+    "height": 810
   },
   "soa-iso27001": {
     "width": 1600,
@@ -9,11 +9,11 @@
   },
   "soa-iso27701": {
     "width": 1600,
-    "height": 726
+    "height": 698
   },
   "soa-iso42001": {
     "width": 1600,
-    "height": 737
+    "height": 698
   },
   "soa-essential8": {
     "width": 1600,
@@ -21,15 +21,19 @@
   },
   "soa-nistcsf": {
     "width": 1600,
-    "height": 732
+    "height": 701
   },
   "soa-dispirap": {
     "width": 1600,
-    "height": 884
+    "height": 832
   },
   "soa-soc2": {
     "width": 1600,
-    "height": 726
+    "height": 695
+  },
+  "asd-essentials": {
+    "width": 1600,
+    "height": 675
   },
   "posture-scan": {
     "width": 1600,

@@ -155,7 +155,10 @@ const FRAMEWORK_BUNDLES = {
    the same --frameworks flag and payload.frameworks array, checked in
    the app as S.entitlements.<id> — see public/checkpoint/store.js's
    window.ADDON_MODULES comment. 'ai' unlocks the AI assistant. */
-const ADDON_MODULES = ['ai'];
+/* 'asdessentials' (ASD Essentials for enterprise IT) is a framework,
+   but has its own assessment screen instead of SoA rows, so the app
+   treats it as an add-on module too (window.ADDON_MODULES). */
+const ADDON_MODULES = ['ai', 'asdessentials'];
 /* The full set of ids --frameworks/--type partner|demo will accept —
    compliance frameworks plus add-on modules, one namespace. */
 const GRANTABLE_IDS = VALID_FRAMEWORKS.concat(ADDON_MODULES);

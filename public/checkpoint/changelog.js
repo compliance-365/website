@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.182.0',
+    date: '2026-10-26',
+    entries: [
+      'ASD Essentials for enterprise IT, the successor to the Essential Eight, is a new module with its own screen: the eight domains in ASD\u2019s priority order, each of the 58 actions rated in the domains it applies to as not assessed, not effective, partially effective or fully effective.',
+      'Scores follow ASD\u2019s Assessment Workbook: a principle takes the rating of its weakest action, and each domain shows its % effective, counting partially effective principles as half.',
+      'Rating an action shows ASD\u2019s indicators of good practice for each rating. Tick what you observe and Checkpoint suggests a rating; you decide, and record your reasoning and evidence. Posture scan results that bear on the action are shown as evidence.',
+      'Rate the next action takes you through the capability domains and phase 1 first, as ASD recommends. Export CSV gives the workbook\u2019s columns, and Open as a document gives the domain summary and every rating.',
+      'ASD Essentials replaces the Essential Eight in the price list at the same price. The Essential Eight stays available where a contract or insurer still names it.'
+    ]
+  },
+  {
     version: '1.181.0',
     date: '2026-10-25',
     entries: [

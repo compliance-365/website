@@ -187,7 +187,7 @@ const live = isSelfServeLive();
   const checkoutBtn = document.getElementById('startCheckout');
   const fallbackEl = document.getElementById('startFallback');
 
-  const validMods = mods.filter((m) => MODULES.some((x) => x.id === m));
+  const validMods = mods.filter((m) => MODULES.some((x) => x.id === m && x.listed !== false));
 
   // Every selected module + add-on must resolve to a real Paddle price for
   // this exact tier — not just "some price exists somewhere in the

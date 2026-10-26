@@ -48,7 +48,7 @@ const PRICE_TO_MODULE = {
   'pri_01kyvvt4z6xymmk3327byyj60z': 'iso27701', 'pri_01kyvvvthspye2gcc2k4c8mkrz': 'iso27701',
   'pri_01kyvvngp1t2w23csct3jthk9p': 'iso42001', 'pri_01kyvvqgapg42pkc7frxd3nqy5': 'iso42001',
   'pri_01kyvvafz0rjmx93fknmh5shqe': 'soc2', 'pri_01kyvvbwjk49d86sv92paytdrk': 'soc2',
-  'pri_01kyvvedm0at83vabz57dax7q4': 'essential8', 'pri_01kyvvjpbzmm31ypek8gxgcw0s': 'essential8',
+  'pri_01kyvvedm0at83vabz57dax7q4': 'asdessentials', 'pri_01kyvvjpbzmm31ypek8gxgcw0s': 'asdessentials', // former Essential Eight prices
   'pri_01kyvvxxq9bxpacjnav5d3j7ec': 'nistcsf', 'pri_01kyvvzxfr78bx69grc818jt99': 'nistcsf',
   'pri_01kyvw1edqna8qn220c4rpkafg': 'ai',
   /* SANDBOX catalogue. Kept here PERMANENTLY, alongside production,
@@ -73,8 +73,8 @@ const PRICE_TO_MODULE = {
   'pri_01ky244htj7qexa370250f3hfp': 'iso42001',
   'pri_01ky253bfd3xtnd81y4sv7vw4x': 'soc2',
   'pri_01ky251skf7qxjdtbnqxgw8thd': 'soc2',
-  'pri_01ky250323b6yve29w3fpm6eby': 'essential8',
-  'pri_01ky24yrnfzjqtzfc8zhdwv1vk': 'essential8',
+  'pri_01ky250323b6yve29w3fpm6eby': 'asdessentials',
+  'pri_01ky24yrnfzjqtzfc8zhdwv1vk': 'asdessentials',
   'pri_01ky24x1mc2tgaf5dp9e6qv74b': 'nistcsf',
   'pri_01ky24vq2nyh4y9hd2kth79fdf': 'nistcsf',
   'pri_01ky25w0y4m7zeas4p5ksvwex3': 'ai'
