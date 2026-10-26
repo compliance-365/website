@@ -25,6 +25,7 @@ Checkpoint is Compliance365's compliance software. It runs in the customer's own
 - [Checkpoint overview](https://www.compliance365.com.au/checkpoint-console/)
 - [Live demo, no sign-up](https://www.compliance365.com.au/checkpoint-console/demo/)
 - [ISO 27001 software](https://www.compliance365.com.au/checkpoint-console/iso-27001-software/)
+- [ASD Essentials software](https://www.compliance365.com.au/checkpoint-console/asd-essentials-software/)
 - [Essential Eight software](https://www.compliance365.com.au/checkpoint-console/essential-eight-software/)
 - [SOC 2 software](https://www.compliance365.com.au/checkpoint-console/soc-2-software/)
 - [ISO 42001 software](https://www.compliance365.com.au/checkpoint-console/iso-42001-software/)

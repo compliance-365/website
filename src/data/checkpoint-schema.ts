@@ -1,7 +1,7 @@
 // schema.org SoftwareApplication for Checkpoint, priced from pricing.js so
 // search results can show the real price. Used on the Checkpoint page
 // (every self-serve module) and on each framework page (that module only).
-import { MODULES, TIERS, CURRENCY, TRIAL_DAYS } from './pricing.js';
+import { MODULES, LISTED_MODULES, TIERS, CURRENCY, TRIAL_DAYS } from './pricing.js';
 
 const SITE = 'https://www.compliance365.com.au';
 
@@ -30,7 +30,7 @@ function offersFor(moduleIds: string[]) {
 }
 
 export function checkpointSoftwareSchema(opts: { moduleIds?: string[]; url?: string; name?: string; description?: string } = {}) {
-  const ids = opts.moduleIds || MODULES.map((m: any) => m.id);
+  const ids = opts.moduleIds || LISTED_MODULES.map((m: any) => m.id);
   const offers = offersFor(ids);
   const prices = offers.map((o) => Number(o.price));
   return {

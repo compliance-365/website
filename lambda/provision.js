@@ -101,8 +101,10 @@ const PRICE_TO_MODULE = {
   'pri_01kyvvqgapg42pkc7frxd3nqy5': { moduleId: 'iso42001', tier: 'growth' },
   'pri_01kyvvafz0rjmx93fknmh5shqe': { moduleId: 'soc2', tier: 'micro' },
   'pri_01kyvvbwjk49d86sv92paytdrk': { moduleId: 'soc2', tier: 'growth' },
-  'pri_01kyvvedm0at83vabz57dax7q4': { moduleId: 'essential8', tier: 'micro' },
-  'pri_01kyvvjpbzmm31ypek8gxgcw0s': { moduleId: 'essential8', tier: 'growth' },
+  /* The former Essential Eight prices: since October 2026 they sell ASD
+     Essentials, its successor (see src/data/pricing.js). */
+  'pri_01kyvvedm0at83vabz57dax7q4': { moduleId: 'asdessentials', tier: 'micro' },
+  'pri_01kyvvjpbzmm31ypek8gxgcw0s': { moduleId: 'asdessentials', tier: 'growth' },
   'pri_01kyvvxxq9bxpacjnav5d3j7ec': { moduleId: 'nistcsf', tier: 'micro' },
   'pri_01kyvvzxfr78bx69grc818jt99': { moduleId: 'nistcsf', tier: 'growth' },
   'pri_01kyvw1edqna8qn220c4rpkafg': { moduleId: 'ai', tier: null },
@@ -128,8 +130,8 @@ const PRICE_TO_MODULE = {
   'pri_01ky244htj7qexa370250f3hfp': { moduleId: 'iso42001', tier: 'growth' },
   'pri_01ky253bfd3xtnd81y4sv7vw4x': { moduleId: 'soc2', tier: 'micro' },
   'pri_01ky251skf7qxjdtbnqxgw8thd': { moduleId: 'soc2', tier: 'growth' },
-  'pri_01ky250323b6yve29w3fpm6eby': { moduleId: 'essential8', tier: 'micro' },
-  'pri_01ky24yrnfzjqtzfc8zhdwv1vk': { moduleId: 'essential8', tier: 'growth' },
+  'pri_01ky250323b6yve29w3fpm6eby': { moduleId: 'asdessentials', tier: 'micro' },
+  'pri_01ky24yrnfzjqtzfc8zhdwv1vk': { moduleId: 'asdessentials', tier: 'growth' },
   'pri_01ky24x1mc2tgaf5dp9e6qv74b': { moduleId: 'nistcsf', tier: 'micro' },
   'pri_01ky24vq2nyh4y9hd2kth79fdf': { moduleId: 'nistcsf', tier: 'growth' },
   'pri_01ky25w0y4m7zeas4p5ksvwex3': { moduleId: 'ai', tier: null }

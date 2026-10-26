@@ -199,7 +199,7 @@ export const SCREEN_NAMES = {
   'v-objectives': 'Objectives register', 'v-assets': 'Asset register', 'v-legal': 'Legal & regulatory register', 'v-privacy': 'Privacy registers',
   'v-questionnaires': 'Security questionnaires', 'v-calendar': 'Compliance calendar', 'v-auditlog': 'Audit log',
   'v-reports': 'Audit reports', 'v-selftest': 'Self-test', 'v-trustcenter': 'Trust Center', 'v-auditorpack': 'Auditor pack',
-  'v-aitools': 'AI tools'
+  'v-aitools': 'AI tools', 'v-essentials': 'ASD Essentials'
 };
 export function screenName(context) {
   let view = '';

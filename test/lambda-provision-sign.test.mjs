@@ -74,7 +74,9 @@ describe('lambda/sign.js\'s framework list stays in sync with tools/issue-entitl
     // framework, and CLI issuance of it goes through a different flag
     // entirely (see issue-entitlement.mjs's own ADDON_MODULES-shaped
     // handling) — excluded here rather than failing on a false positive.
-    const extra = signValidFrameworks.filter((f) => f !== 'ai' && !cliFrameworks.includes(f));
+    // Likewise every other id in the CLI's ADDON_MODULES (asdessentials).
+    const cliAddons = extractArrayLiteral(CLI_SRC, 'ADDON_MODULES');
+    const extra = signValidFrameworks.filter((f) => f !== 'ai' && !cliFrameworks.includes(f) && !cliAddons.includes(f));
     assert.deepEqual(extra, []);
   });
 

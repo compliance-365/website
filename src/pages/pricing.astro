@@ -4,7 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
 import {
-  MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, ENTERPRISE,
+  MODULES, LISTED_MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, ENTERPRISE,
   TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive, CONSULTING_DAY_RATE,
   BUNDLE_MIN_MODULES, BUNDLE_RATE_PCT, computeQuote
 } from '../data/pricing.js';
@@ -27,7 +27,7 @@ const consultingPaths = [
 ---
 <Base
   title="Pricing — Checkpoint self-serve compliance | Compliance365"
-  description={`Transparent per-framework pricing for Checkpoint — ISO 27001, SOC 2, Essential Eight and more, inside your own tenant. From ${fmtAud(MODULES.find((m) => m.id === 'iso27001').prices.micro)}/year, ${TRIAL_DAYS}-day free trial.`}
+  description={`Transparent per-framework pricing for Checkpoint — ISO 27001, SOC 2, ASD Essentials and more, inside your own tenant. From ${fmtAud(MODULES.find((m) => m.id === 'iso27001').prices.micro)}/year, ${TRIAL_DAYS}-day free trial.`}
 >
 
 <Header />
@@ -63,7 +63,7 @@ const consultingPaths = [
     </p>
 
     <div class="price-grid">
-      {MODULES.map((m) => (
+      {LISTED_MODULES.map((m) => (
         <div class={`price-card${m.premium ? ' price-card-premium' : ''}`}>
           {m.premium && <span class="price-flag">Most in demand</span>}
           <h3>{m.name}</h3>
@@ -158,7 +158,7 @@ const consultingPaths = [
         <div class="cfg-block">
           <label class="cfg-label">Frameworks</label>
           <div class="cfg-modules">
-            {MODULES.map((m) => (
+            {LISTED_MODULES.map((m) => (
               <label class="cfg-mod">
                 <input type="checkbox" class="cfg-mod-input" data-module={m.id} />
                 <span class="cfg-mod-name">{m.name}</span>

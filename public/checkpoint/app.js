@@ -868,6 +868,7 @@ function showModal(opts) {
      something a Viewer needs — SharePoint's own permissions are the
      backstop either way. */
   var MUTATING_ACTIONS = new Set([
+    'saveEssentialsRating', 'saveEssentialsRatingNext',
     'approve', 'dismiss', 'complete', 'addActionUpdate', 'addManualAction', 'setActionEvidence',
     'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk', 'addOpportunity', 'editOpportunity', 'reviewOpportunity', 'deleteOpportunity', 'editRiskFinancials', 'markRiskReviewed', 'recordAssessedResidual',
@@ -1214,6 +1215,14 @@ function showModal(opts) {
      exportCsv/exportAllZip; see the READONLY comment near the top of
      this file). */
   var EXPORT_REGISTERS = [
+    {
+      key: 'essentials', label: 'ASD Essentials', filename: 'asd-essentials.csv',
+      header: ['Domain', 'Priority phase', 'Principle', 'Action ID', 'Action', 'Assessed rating', 'Assessor reasoning', 'Evidence gathered', 'Rated by', 'Rated on'],
+      rows: function () {
+        if (!essOn() || !essModel()) return [];
+        return window.CheckpointLib.essentialsRows(essModel(), essRatings()).map(function (r) { return [r.domain, r.phase, r.principle, r.action, r.text, r.rating, r.reasoning, r.evidence, r.by, r.on]; });
+      }
+    },
     {
       key: 'risks', label: 'Risks', filename: 'risks.csv',
       header: ['ID', 'Risk', 'Category', 'CIA', 'Source', 'Inherent score', 'Inherent band', 'Residual score', 'Residual band', 'Residual basis', 'Last reviewed', 'Reviewed by', 'Owner', 'Status'],
@@ -3548,6 +3557,35 @@ function showModal(opts) {
     },
     /* A phishing simulation and the follow-up training it triggered,
        as filed for A.6.3. */
+    /* ASD Essentials assessment: the domain summary, then each domain's
+       action ratings with reasoning and evidence. */
+    essentials: function () {
+      var m = essModel(), L = window.CheckpointLib;
+      if (!m) { toast('ASD Essentials is not loaded.'); return null; }
+      var ratings = essRatings(), sc = L.essentialsScore(m, ratings);
+      var pct = function (x) { return Math.round(x * 100) + '%'; };
+      var sum = '<table class="rpt-table"><thead><tr><th>Domain</th><th>Phase</th><th>% effective</th><th>Fully</th><th>Partially</th><th>Not effective</th><th>Not assessed</th></tr></thead><tbody>' +
+        sc.domains.map(function (d) { return '<tr><td class="rpt-idc">' + esc(d.name) + '</td><td>' + essPhase(d.phase) + '</td><td>' + pct(d.score) + '</td><td>' + d.counts.FE + '</td><td>' + d.counts.PE + '</td><td>' + d.counts.NE + '</td><td>' + d.counts.NA + '</td></tr>'; }).join('') + '</tbody></table>' +
+        '<p class="rpt-just">Principle ratings take the lowest rating of their actions in the domain, as in ASD’s Assessment Workbook. Counts are principles.</p>';
+      var sections = [{ heading: 'Domain summary', pageBreak: false, html: sum }];
+      m.domains.forEach(function (d) {
+        sections.push({ heading: d.name + ' (' + essPhase(d.phase) + ')', pageBreak: false, html: '<table class="rpt-table"><thead><tr><th>Principle and action</th><th>Rating</th><th>Reasoning and evidence</th></tr></thead><tbody>' +
+          d.principles.map(function (p) {
+            return '<tr><td colspan="3"><b>' + esc(p.id + ' ' + ((m.principles[p.id] || {}).name || '')) + '</b>: ' + esc(L.ESS_RATING_NAMES[sc.principles[d.id][p.id]]) + '</td></tr>' +
+              p.actions.map(function (a) {
+                var r = ratings[L.essKey(a, d.id)] || {};
+                return '<tr><td class="rpt-idc">' + esc(a) + '<div class="rpt-just">' + esc((m.actions[a] || {}).text || '') + '</div></td><td>' + esc(L.ESS_RATING_NAMES[L.essRatingOf(ratings, a, d.id)]) + '</td><td>' + esc(r.why || '') + (r.ev ? '<div class="rpt-just">Evidence: ' + esc(r.ev) + '</div>' : '') + (r.on ? '<div class="rpt-just">' + esc(r.by || '') + ', ' + esc(fmtDateY(r.on)) + '</div>' : '') + '</td></tr>';
+              }).join('');
+          }).join('') + '</tbody></table>' });
+      });
+      sections.push({ heading: 'Source', pageBreak: false, html: '<p class="rpt-just">ASD Essentials for enterprise IT and its Assessment Workbook, © Commonwealth of Australia 2026, Australian Signals Directorate, used under a Creative Commons Attribution 4.0 International licence.</p>' });
+      return {
+        title: 'ASD Essentials assessment: enterprise IT',
+        frameworkAgnostic: true,
+        dashboard: { intro: sc.assessed + ' of ' + sc.cells + ' action ratings recorded across the eight domains.' },
+        sections: sections
+      };
+    },
     phishFollowUp: function () {
       var f = phishFollowUpReportFor();
       if (!f) { toast('No phishing simulation follow-up recorded yet.'); return null; }
@@ -13164,6 +13202,124 @@ function showModal(opts) {
     el.innerHTML = notice + guide + (me && me.state === 'expired' ? '' : auditRequestsHtml()) + admin;
   }
 
+  /* ================= ASD Essentials (enterprise IT) =================
+     Rated per action and domain on its own screen, the way ASD's
+     Assessment Workbook does it, rather than as Statement of
+     Applicability rows: ASD Essentials has no applicable/not applicable
+     and no single status per action. Ratings live in the
+     essentialsRatings setting, keyed 'IT.PRO-13.4|idn'. The model comes
+     from the asdessentials pack (window.ASD_ESSENTIALS) or, in the demo,
+     window.DEMO_ESSENTIALS. */
+  function essModel() { return window.ASD_ESSENTIALS || null; }
+  function essOn() { return !!(S && S.entitlements && S.entitlements.asdessentials); }
+  function essRatings() { var o = settingJson('essentialsRatings', {}); return o && typeof o === 'object' ? o : {}; }
+  var ESS_CHIP = { NA: 'st-Notstarted', NE: 'sev-High', PE: 'st-Inprogress', FE: 'st-Implemented' };
+  function essChip(r) { return '<span class="chip ' + ESS_CHIP[r] + '">' + esc(window.CheckpointLib.ESS_RATING_NAMES[r]) + '</span>'; }
+  function essPhase(p) { return p === 'all' ? 'All phases' : 'Phase ' + p; }
+  function essDomain(id) { return ((essModel() || {}).domains || []).find(function (d) { return d.id === id; }) || null; }
+  function essScanEvidence() {
+    var bag = scanEvidenceBag();
+    return window.CheckpointLib.essentialsScanEvidence(window.CHECK_ESSENTIALS || {}, bag.lastResults, bag.checkLabels);
+  }
+  function essScanChips(list) {
+    return (list || []).map(function (x) {
+      var cls = x.result === 'pass' ? 'st-Implemented' : x.result === 'fail' ? 'sev-High' : 'st-Notstarted';
+      return '<span class="chip ' + cls + '" title="Posture scan: ' + esc(x.label) + '">Scan: ' + esc(x.result) + '</span>';
+    }).join(' ');
+  }
+  function renderEssentials() {
+    var el = document.getElementById('essBody');
+    if (!el) return;
+    var m = essModel(), L = window.CheckpointLib;
+    if (!m) { el.innerHTML = '<div class="card"><p>ASD Essentials content is not loaded for this organisation' + (PACK_ERRORS.asdessentials ? ': ' + esc(PACK_ERRORS.asdessentials) : '') + '.</p></div>'; return; }
+    var ratings = essRatings(), sc = L.essentialsScore(m, ratings), ev = essScanEvidence();
+    if (!window._essDom || !essDomain(window._essDom)) window._essDom = (L.essentialsNext(m, ratings, 1)[0] || {}).domain || 'gov';
+    var pct = function (x) { return Math.round(x * 100) + '%'; };
+    var summary = '<div class="card ess-summary"><div class="ess-head"><div><h3>Domain summary</h3><p class="src">' + sc.assessed + ' of ' + sc.cells + ' action ratings done. % effective counts fully effective principles once and partially effective ones as half, out of all the domain’s principles.</p></div>' +
+      (READONLY ? '' : '<button class="btn sm" data-action="App.essNext">Rate the next action</button>') + '</div>' +
+      '<table class="ess-table"><thead><tr><th scope="col">Domain</th><th scope="col">Phase</th><th scope="col">% effective</th><th scope="col">Principles</th><th scope="col">Actions to rate</th></tr></thead><tbody>' +
+      sc.domains.map(function (d) {
+        return '<tr class="' + (d.id === window._essDom ? 'ess-on' : '') + '" data-action="App.essDomain" data-id="' + esc(d.id) + '" tabindex="0"><td><b>' + esc(d.name) + '</b></td><td>' + essPhase(d.phase) + '</td>' +
+          '<td><div class="ess-bar" aria-hidden="true"><i style="width:' + pct(d.score) + '"></i></div>' + pct(d.score) + '</td>' +
+          '<td class="ess-counts"><span title="Fully effective">' + d.counts.FE + ' full</span> · <span title="Partially effective">' + d.counts.PE + ' partial</span> · <span title="Not effective">' + d.counts.NE + ' not</span> · <span title="Not assessed">' + d.counts.NA + ' not assessed</span></td>' +
+          '<td>' + d.remaining + ' of ' + d.actions + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    var d = essDomain(window._essDom), byP = sc.principles[d.id];
+    var detail = '<div class="card ess-domain"><div class="id-t">' + essPhase(d.phase) + '</div><h3>' + esc(d.name) + '</h3>' +
+      '<p class="src">' + esc(d.description) + ' <b>Risk:</b> ' + esc(d.risk) + '</p>' +
+      d.principles.map(function (p) {
+        var pr = m.principles[p.id] || {};
+        return '<div class="ess-pr"><div class="ess-pr-h"><div><b>' + esc(p.id + ' ' + (pr.name || '')) + '</b><div class="src">' + esc(pr.statement || '') + '</div></div>' + essChip(byP[p.id]) + '</div>' +
+          p.actions.map(function (a) {
+            var act = m.actions[a] || {}, key = L.essKey(a, d.id), r = ratings[key] || {};
+            return '<div class="ess-act"><div class="ess-act-t"><span class="id-t">' + esc(a) + '</span> ' + esc(act.text || '') +
+              (r.why ? '<div class="src">' + esc(r.why) + '</div>' : '') + (ev[key] ? '<div class="ess-ev">' + essScanChips(ev[key]) + '</div>' : '') + '</div>' +
+              '<div class="ess-act-b">' + essChip(L.essRatingOf(ratings, a, d.id)) + '<button class="btn ghost sm" data-action="App.openEssentialsCell" data-id="' + esc(key) + '">' + (READONLY ? 'View' : 'Rate') + '</button></div></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div>';
+    el.innerHTML = summary + detail + '<p class="src ess-credit">ASD Essentials for enterprise IT and its Assessment Workbook, © Commonwealth of Australia 2026, used under CC BY 4.0. ' + (m.demo ? 'The demo carries the indicators of good practice for the actions it has rated; the full module carries them for every action.' : '') + '</p>';
+  }
+  function essDrawer(key) {
+    var m = essModel(), L = window.CheckpointLib;
+    var parts = String(key).split('|'), a = m.actions[parts[0]], d = essDomain(parts[1]);
+    if (!a || !d) return;
+    var r = essRatings()[key] || {}, ticks = r.ticks || {}, ev = essScanEvidence()[key] || [];
+    var pr = m.principles[a.principle] || {}, ro = READONLY;
+    var igpGroup = function (k, label) {
+      var list = (a.igp || {})[k] || [];
+      if (!list.length) return '';
+      return '<div class="ess-igp"><h4>' + label + '</h4>' + list.map(function (t, i) {
+        var on = (ticks[k] || []).indexOf(i) !== -1;
+        return '<label class="ess-tick"><input type="checkbox" data-ess-tick="' + k + '" value="' + i + '"' + (on ? ' checked' : '') + (ro ? ' disabled' : '') + ' data-change-action="App.essTicked"> ' + esc(t) + '</label>';
+      }).join('') + '</div>';
+    };
+    var hasIgp = a.igp && (a.igp.NE || []).length;
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+      '<div class="id-t">' + esc(a.id) + ' · ' + esc(d.name) + ' · ' + essPhase(d.phase) + '</div><h2>' + esc(a.principle + ' ' + (pr.name || '')) + '</h2>' +
+      '<p style="margin-top:6px">' + esc(a.text) + '</p>' +
+      (a.workbookText ? '<p class="src">ASD’s Assessment Workbook words this: “' + esc(a.workbookText) + '”</p>' : '') +
+      (ev.length ? '<div class="d-sec"><h4>From the posture scan</h4><ul class="ess-evl">' + ev.map(function (x) { return '<li>' + essScanChips([x]) + ' ' + esc(x.label) + '</li>'; }).join('') + '</ul><p class="src">Evidence to weigh, not a rating: a setting that passes shows it is configured, and ASD rates how effective it is across the domain.</p></div>' : '') +
+      '<div class="d-sec"><h4>Indicators of good practice</h4>' + (hasIgp ? '<p class="src">Tick what you observe. ASD’s indicators inform your judgement; they do not replace it.</p>' +
+        igpGroup('NE', 'Not effective') + igpGroup('PE', 'Partially effective') + igpGroup('FE', 'Fully effective') + '<p class="ess-sugg" id="essSugg"></p>'
+        : '<p class="src">The indicators for this action come with the full ASD Essentials module.</p>') + '</div>' +
+      '<div class="d-sec"><h4>Rating</h4><div class="ai-ia-grid">' +
+      '<label>Assessed rating<select class="mini" id="essRating"' + (ro ? ' disabled' : '') + '>' + L.ESS_RATINGS.map(function (k) { return '<option value="' + k + '"' + ((r.r || 'NA') === k ? ' selected' : '') + '>' + esc(L.ESS_RATING_NAMES[k]) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="wide">Assessor reasoning<textarea class="mini" id="essWhy"' + (ro ? ' readonly' : '') + '>' + esc(r.why || '') + '</textarea></label>' +
+      '<label class="wide">Evidence gathered<textarea class="mini" id="essEv"' + (ro ? ' readonly' : '') + '>' + esc(r.ev || '') + '</textarea></label></div>' +
+      (r.on ? '<p class="src">Last rated by ' + esc(r.by || '') + ' on ' + esc(fmtDateY(r.on)) + '.</p>' : '') + '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' + (ro ? '' : '<button class="btn sm" data-action="App.saveEssentialsRating" data-id="' + esc(key) + '">Save</button><button class="btn ghost sm" data-action="App.saveEssentialsRatingNext" data-id="' + esc(key) + '">Save and rate the next</button>') +
+      '<button class="btn ghost sm" data-action="App.closeDrawer">Close</button></div>';
+    window._essKey = key;
+    essUpdateSuggestion();
+    openDrawerUi('Rate ' + a.id + ' in ' + d.name, { wide: true });
+  }
+  async function essSave(key, next) {
+    var all = essRatings(), prev = all[key] || {};
+    var v = function (id) { var x = document.getElementById(id); return x ? x.value : ''; };
+    var rec = { r: v('essRating') || 'NA', why: v('essWhy').trim(), ev: v('essEv').trim(), ticks: essReadTicks(), by: myDisplayName() || myUpn() || '', on: new Date().toISOString().slice(0, 10) };
+    ['NE', 'PE', 'FE'].forEach(function (k) { if (!rec.ticks[k].length) delete rec.ticks[k]; });
+    if (rec.r === 'NA' && !rec.why && !rec.ev && !Object.keys(rec.ticks).length) delete all[key]; else all[key] = rec;
+    await saveSettingJson('essentialsRatings', all);
+    var names = window.CheckpointLib.ESS_RATING_NAMES;
+    audit('ASD Essentials rating', 'Essentials', key, names[prev.r || 'NA'], names[rec.r]);
+    toast(esc(key.split('|')[0]) + ' rated <b>' + esc(names[rec.r]) + '</b>');
+    renderEssentials();
+    if (next) App.essNext(); else App.closeDrawer();
+  }
+  function essReadTicks() {
+    var t = { NE: [], PE: [], FE: [] };
+    document.querySelectorAll('#drawer [data-ess-tick]').forEach(function (c) { if (c.checked) t[c.getAttribute('data-ess-tick')].push(+c.value); });
+    return t;
+  }
+  function essUpdateSuggestion() {
+    var el = document.getElementById('essSugg');
+    if (!el || !window._essKey) return;
+    var a = essModel().actions[window._essKey.split('|')[0]];
+    var s = window.CheckpointLib.essentialsSuggest(a, essReadTicks());
+    el.innerHTML = s ? 'From the indicators ticked: <b>' + esc(window.CheckpointLib.ESS_RATING_NAMES[s]) + '</b>' + (READONLY ? '' : ' <button class="lnk" data-action="App.essUseSuggestion" data-id="' + s + '">Use this rating</button>') : '';
+  }
+
   /* The auditor's requests during an audit: logged and answered by a
      practitioner, read by the auditor here. */
   function auditRequestsHtml() {
@@ -18292,7 +18448,7 @@ function showModal(opts) {
        (currently just 'ai') alongside the real frameworks — same
        toggle/status UI, since S.entitlements.<id> is checked the exact
        same way regardless of which list an id came from. */
-    var ADDON_MODULE_INFO = { ai: { name: 'AI assistant', tag: 'Add-on', blurb: 'A drafting aid (policy language, evidence descriptions, risk notes, report commentary) grounded in your own registers — runs against your own Azure OpenAI resource, never a third party. See the AI assistant nav item once entitled.' } };
+    var ADDON_MODULE_INFO = { ai: { name: 'AI assistant', tag: 'Add-on', blurb: 'A drafting aid (policy language, evidence descriptions, risk notes, report commentary) grounded in your own registers — runs against your own Azure OpenAI resource, never a third party. See the AI assistant nav item once entitled.' } , asdessentials: { name: 'ASD Essentials', tag: 'ASD framework', blurb: 'ASD Essentials for enterprise IT, the successor to the Essential Eight: 58 actions under 28 principles across eight domains, each rated as not assessed, not effective, partially effective or fully effective, with ASD\u2019s indicators of good practice and posture scan evidence.' } };
     wrap.innerHTML = window.FRAMEWORK_ORDER.concat(window.ADDON_MODULES || []).map(function (fw) {
       var f = window.FRAMEWORKS[fw] || ADDON_MODULE_INFO[fw];
       var on = !!(S.entitlements && S.entitlements[fw]);
@@ -18565,6 +18721,12 @@ function showModal(opts) {
       privNav.style.display = privOn ? '' : 'none';
       if (!privOn && privNav.classList.contains('on')) App.go('dash');
     }
+    var essNav = document.querySelector('.nav-item[data-v="essentials"]');
+    if (essNav) {
+      var essShow = essOn();
+      essNav.style.display = essShow ? '' : 'none';
+      if (!essShow && essNav.classList.contains('on')) App.go('dash');
+    }
     var aiGovNav = document.querySelector('.nav-item[data-v="aisystems"]');
     if (aiGovNav) {
       var aiGovOn = !!(S.entitlements && S.entitlements.iso42001);
@@ -18654,6 +18816,7 @@ function showModal(opts) {
      absent, which is the same distinction .kpi-empty draws between "no
      data" and "not wired up". */
   var VIEW_RENDERERS = {
+    essentials: renderEssentials,
     mytasks: renderMyTasks,
     auditor: renderAuditorGuide,
     dash: renderDash,
@@ -26133,6 +26296,19 @@ function showModal(opts) {
     },
 
     /* ---------- Phishing simulation follow-up (A.6.3) ---------- */
+    /* ASD Essentials: pick a domain, open an action to rate, save. */
+    essDomain: function (id) { window._essDom = id; renderEssentials(); },
+    essNext: function () {
+      var n = window.CheckpointLib.essentialsNext(essModel(), essRatings(), 1)[0];
+      if (!n) { toast('Every action is rated.'); return; }
+      window._essDom = n.domain; renderEssentials();
+      essDrawer(window.CheckpointLib.essKey(n.action, n.domain));
+    },
+    openEssentialsCell: function (key) { if (essModel()) essDrawer(key); },
+    essTicked: function () { essUpdateSuggestion(); },
+    essUseSuggestion: function (r) { var el = document.getElementById('essRating'); if (el) el.value = r; },
+    saveEssentialsRating: function (key) { return essSave(key, false); },
+    saveEssentialsRatingNext: function (key) { return essSave(key, true); },
     phishFollowUp: async function () {
       var c = courseById(PHISH_COURSE);
       if (!c) { toast('The security awareness course is not available for this tenant.'); return; }
@@ -31040,6 +31216,13 @@ function showModal(opts) {
            module either way. */
         if (moduleId === 'ai') {
           window.CHECKPOINT_AI_PACK = content.extra || {};
+          PACKS_MERGED[moduleId] = true;
+          continue;
+        }
+        /* ASD Essentials: a rating model, not SoA rows (see essModel()). */
+        if (moduleId === 'asdessentials') {
+          window.ASD_ESSENTIALS = (content.extra || {}).essentials || null;
+          window.CHECK_ESSENTIALS = (content.extra || {}).checkEssentials || {};
           PACKS_MERGED[moduleId] = true;
           continue;
         }

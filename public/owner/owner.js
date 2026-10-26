@@ -186,7 +186,7 @@ function showModal(opts) {
     iso27001: 'ISO 27001', soc2: 'SOC 2', essential8: 'Essential Eight', is18: 'IS18 (QGEA)',
     iso42001: 'ISO 42001', iso27701: 'ISO 27701', dispirap: 'DISP / IRAP', nistcsf: 'NIST CSF',
     rffr: 'RFFR (ISM SoA)', cps234: 'CPS 234', privacyact: 'Privacy Act (APPs)',
-    ai: 'AI assistant'
+    asdessentials: 'ASD Essentials', ai: 'AI assistant'
   };
   /* Must match store.js's window.FRAMEWORK_ORDER exactly — enforced by
      test/owner-framework-list.test.mjs, since this copy once fell three
@@ -1908,7 +1908,7 @@ function showModal(opts) {
      SAME form (not a separate one) also handles "prepare renewal" (task
      7.4/7.5) — partnerPrepareRenewal() below just pre-fills it and sets
      NEW_CLIENT_PREFILL.renewsEntitlementId before switching to this tab. */
-  var NEW_CLIENT_MODULE_IDS = FRAMEWORK_ORDER.concat(['ai']);
+  var NEW_CLIENT_MODULE_IDS = FRAMEWORK_ORDER.concat(['asdessentials', 'ai']);
   /* { renewsEntitlementId, tenantId, modules, type, termMonths,
      clientName, previousIssuedAt } while preparing a renewal; null for a
      brand-new client. */
@@ -3534,7 +3534,7 @@ function showModal(opts) {
       var v = await showModal({
         title: 'Add a module price',
         fields: [
-          { id: 'moduleId', label: 'Module id', placeholder: 'iso27001, soc2, essential8, is18, iso42001, iso27701, dispirap, nistcsf, or ai' },
+          { id: 'moduleId', label: 'Module id', placeholder: 'iso27001, soc2, asdessentials, essential8, is18, iso42001, iso27701, dispirap, nistcsf, or ai' },
           { id: 'annualPrice', label: 'Annual price', type: 'number', placeholder: '5000' },
           { id: 'currency', label: 'Currency', value: 'AUD' },
           { id: 'notes', label: 'Notes (optional)', type: 'textarea' }

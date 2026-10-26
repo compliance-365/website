@@ -8110,7 +8110,7 @@
      for the steps reached so far: Start here and My tasks always, then
      each stage's screens from stage 1 up to the current one. A screen
      opened by a button is still reachable; Show full menu lists all. */
-  var GUIDED_ALWAYS = ['start', 'mytasks', 'dash', 'build', 'settings'];
+  var GUIDED_ALWAYS = ['start', 'mytasks', 'dash', 'build', 'settings', 'essentials'];
   var GUIDED_STAGE_VIEWS = {
     context: ['legal', 'frameworks'],
     leadership: ['documents', 'whodoes'],
@@ -8227,6 +8227,7 @@
     'Objective': 'A measurable security goal for the year, with an owner and a due date.'
   };
   var PAGE_GUIDE = {
+    essentials: { what: 'ASD Essentials for enterprise IT: 58 actions under 28 principles, rated in each domain they apply to. ASD scores each principle by its weakest action.', you: 'Rate the next action, starting with the capability domains and phase 1. Tick the indicators of good practice you see, then record your reasoning and evidence.', top: 'The domain summary shows how effective each area is. ASD recommends phase 1 (boundary and identity services) first.', terms: [] },
     dash: { what: 'The overview: how ready you are for certification, what needs attention and what to do next.', you: 'Start with Do next.', top: 'Read Next for you and the month in brief. Everything else is for the ISMS owner.', staff: 'Next for you shows anything waiting on you.', terms: ['ISMS', 'ISO 27001'] },
     mytasks: { what: 'Everything assigned to you by name, each with the one button that does it.', you: 'Work down the list. Checkpoint emails you when something new arrives.', terms: [] },
     scan: { what: 'The automatic check of your Microsoft 365 security settings, with what passes, what fails and how to fix it.', you: 'Fix what fails, starting at the top. Each failure becomes a risk or an action.', top: 'Nothing for you to do here: the score is reported to you each month.', terms: ['Posture scan', 'Control'] },
@@ -9120,6 +9121,108 @@
     if (!Array.isArray(content.framework.controls)) return 'framework.controls is not an array';
     if (content.guidance && typeof content.guidance !== 'object') return 'guidance is not an object';
     return null;
+  }
+
+  /* ===== ASD Essentials (enterprise IT) =====
+     The model comes from the asdessentials content pack (or the demo
+     slice): domains in ASD's order, each listing its principles and the
+     action ids that apply there, plus principles and actions by id.
+     Ratings are kept per action and domain, keyed 'IT.PRO-13.4|idn'.
+     Scoring follows ASD's Assessment Workbook exactly:
+       - an action rating counts 0 (not assessed), 1 (not effective),
+         2 (partially effective) or 3 (fully effective);
+       - a principle in a domain takes its LOWEST action rating, so one
+         unassessed action leaves the principle not assessed;
+       - a domain's % effective is (fully + 0.5 x partially effective
+         principles) / all of the domain's principles. */
+  var ESS_RATINGS = ['NA', 'NE', 'PE', 'FE'];
+  var ESS_RATING_NAMES = { NA: 'Not assessed', NE: 'Not effective', PE: 'Partially effective', FE: 'Fully effective' };
+  function essKey(actionId, domainId) { return actionId + '|' + domainId; }
+  function essRatingOf(ratings, actionId, domainId) {
+    var r = ratings && ratings[essKey(actionId, domainId)];
+    return r && ESS_RATINGS.indexOf(r.r) > 0 ? r.r : 'NA';
+  }
+  function essentialsScore(model, ratings) {
+    var out = { domains: [], principles: {}, cells: 0, assessed: 0 };
+    ((model && model.domains) || []).forEach(function (d) {
+      var counts = { NA: 0, NE: 0, PE: 0, FE: 0 }, remaining = 0, byP = {};
+      d.principles.forEach(function (p) {
+        var low = 3;
+        p.actions.forEach(function (a) {
+          var n = ESS_RATINGS.indexOf(essRatingOf(ratings, a, d.id));
+          out.cells++;
+          if (n === 0) remaining++; else out.assessed++;
+          if (n < low) low = n;
+        });
+        var pr = p.actions.length ? ESS_RATINGS[low] : 'NA';
+        byP[p.id] = pr;
+        counts[pr]++;
+      });
+      var total = d.principles.length;
+      out.principles[d.id] = byP;
+      out.domains.push({ id: d.id, name: d.name, phase: d.phase, counts: counts, total: total, remaining: remaining,
+        actions: d.principles.reduce(function (n, p) { return n + p.actions.length; }, 0),
+        score: total ? (counts.FE + 0.5 * counts.PE) / total : 0 });
+    });
+    return out;
+  }
+  /* A rating suggested from the indicators of good practice an assessor
+     ticked. ASD says the indicators inform judgement and do not replace
+     it, so this is only ever offered, never saved on its own: any
+     not-effective indicator -> not effective; every fully-effective
+     indicator and nothing else -> fully effective; otherwise anything
+     ticked -> partially effective. */
+  function essentialsSuggest(action, ticks) {
+    var t = ticks || {}, igp = (action && action.igp) || {};
+    var n = function (k) { return (t[k] || []).length; };
+    if (!n('NE') && !n('PE') && !n('FE')) return null;
+    if (n('NE')) return 'NE';
+    if (!n('PE') && (igp.FE || []).length && n('FE') >= igp.FE.length) return 'FE';
+    return 'PE';
+  }
+  /* Posture scan results as evidence for each action and domain: the
+     pack maps check ids to cells. A result is evidence an assessor
+     weighs, not a rating. */
+  function essentialsScanEvidence(checkMap, results, labels) {
+    var out = {};
+    Object.keys(checkMap || {}).forEach(function (id) {
+      var r = results && results[id];
+      if (!r) return;
+      (checkMap[id] || []).forEach(function (cell) {
+        (out[cell] = out[cell] || []).push({ id: id, label: (labels && labels[id]) || id, result: r });
+      });
+    });
+    return out;
+  }
+  /* One row per action and domain, in the Assessment Workbook's order and
+     columns, for the CSV export. */
+  function essentialsRows(model, ratings) {
+    var rows = [];
+    ((model && model.domains) || []).forEach(function (d) {
+      d.principles.forEach(function (p) {
+        var pr = (model.principles || {})[p.id] || {};
+        p.actions.forEach(function (a) {
+          var r = (ratings || {})[essKey(a, d.id)] || {};
+          rows.push({ domain: d.name, phase: d.phase === 'all' ? 'All' : String(d.phase), principle: p.id + ' - ' + (pr.name || ''), action: a,
+            text: ((model.actions || {})[a] || {}).text || '', rating: ESS_RATING_NAMES[essRatingOf(ratings, a, d.id)],
+            reasoning: r.why || '', evidence: r.ev || '', by: r.by || '', on: r.on || '' });
+        });
+      });
+    });
+    return rows;
+  }
+  /* The next actions to rate, in ASD's priority order: the capability
+     domains and phase 1 first, then phase 2, then phase 3. */
+  function essentialsNext(model, ratings, n) {
+    var order = function (d) { return d.phase === 'all' ? 0 : d.phase; };
+    var doms = ((model && model.domains) || []).slice().sort(function (a, b) { return order(a) - order(b); });
+    var out = [];
+    doms.forEach(function (d) {
+      d.principles.forEach(function (p) {
+        p.actions.forEach(function (a) { if (essRatingOf(ratings, a, d.id) === 'NA') out.push({ action: a, domain: d.id, domainName: d.name, principle: p.id }); });
+      });
+    });
+    return n ? out.slice(0, n) : out;
   }
 
   /* EU AI Act risk classification — Article 5 prohibited practices,
@@ -14667,7 +14770,7 @@
     evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
-    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
+    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, ESS_RATINGS: ESS_RATINGS, ESS_RATING_NAMES: ESS_RATING_NAMES, essKey: essKey, essRatingOf: essRatingOf, essentialsScore: essentialsScore, essentialsSuggest: essentialsSuggest, essentialsScanEvidence: essentialsScanEvidence, essentialsRows: essentialsRows, essentialsNext: essentialsNext, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS, AI_ACT_OBLIGATIONS: AI_ACT_OBLIGATIONS, AI_ACT_TIER_ORDER: AI_ACT_TIER_ORDER,
     VENDOR_QUESTIONNAIRE: VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS: VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers: vendorAiActAnswers,
