@@ -37,7 +37,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import { join } from 'node:path';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { encryptPack } = CheckpointLib;
+const { encryptPack, moduleKeyFor } = CheckpointLib;
 
 const CONTENT_DIR = join(process.cwd(), 'checkpoint-content');
 const MODULE_KEYS_PATH = join(process.cwd(), 'tools', 'module-keys.json');
@@ -79,7 +79,7 @@ async function main() {
 
   for (const file of contentFiles) {
     const moduleId = file.replace(/\.json$/, '');
-    const key = moduleKeys[moduleId];
+    const key = moduleKeyFor(moduleKeys, moduleId);
     if (!key) {
       skipped.push(moduleId);
       continue;

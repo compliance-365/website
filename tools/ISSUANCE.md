@@ -277,6 +277,12 @@ compliance framework at all — `--frameworks`/`keygen-modules` treat it as
 just another premium module id (see `ADDON_MODULES` near the top of
 `issue-entitlement.mjs`).
 
+**ASD Essentials (`asdessentials`) has no key of its own.** It uses the
+Essential Eight's key (`MODULE_KEY_FALLBACK` in `lib.js` and each
+Lambda), so it works with the existing `MODULE_KEYS_JSON` and needs no new
+secret. If you ever give it its own key, add it to every copy of
+`MODULE_KEYS_JSON` at once; an own key takes precedence.
+
 **Generating module keys (once per module, same "do this once for the
 whole product" rule as §1's signing keypair):**
 

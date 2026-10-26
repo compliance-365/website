@@ -9115,6 +9115,17 @@
     return { text: await resp.text(), entry: entry, manifest: manifest };
   }
 
+  /* A module with no key of its own uses another module's key. ASD
+     Essentials uses the Essential Eight's, so it works with the key set
+     that already exists (MODULE_KEYS_JSON) and needs no new secret; a key
+     of its own, if one is ever added, takes precedence. The Lambdas are
+     single files and repeat this table: keep them in step
+     (test/asd-essentials.test.mjs checks). */
+  var MODULE_KEY_FALLBACK = { asdessentials: 'essential8' };
+  function moduleKeyFor(keys, moduleId) {
+    keys = keys || {};
+    return keys[moduleId] || (MODULE_KEY_FALLBACK[moduleId] ? keys[MODULE_KEY_FALLBACK[moduleId]] : undefined) || null;
+  }
   function validatePackShape(moduleId, content) {
     if (!content || typeof content !== 'object') return 'decrypted content is not an object';
     if (!content.framework || content.framework.id !== moduleId) return 'framework.id does not match the expected module';
@@ -14839,7 +14850,7 @@
     evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
-    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, ESS_RATINGS: ESS_RATINGS, ESS_RATING_NAMES: ESS_RATING_NAMES, essKey: essKey, essRatingOf: essRatingOf, essentialsScore: essentialsScore, essentialsSuggest: essentialsSuggest, essentialsScanEvidence: essentialsScanEvidence, essentialsRows: essentialsRows, essentialsNext: essentialsNext, essentialsOtherDomains: essentialsOtherDomains, essentialsReviewDue: essentialsReviewDue, essentialsStale: essentialsStale, essentialsHeatmap: essentialsHeatmap, essentialsOverview: essentialsOverview, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
+    encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, MODULE_KEY_FALLBACK: MODULE_KEY_FALLBACK, moduleKeyFor: moduleKeyFor, ESS_RATINGS: ESS_RATINGS, ESS_RATING_NAMES: ESS_RATING_NAMES, essKey: essKey, essRatingOf: essRatingOf, essentialsScore: essentialsScore, essentialsSuggest: essentialsSuggest, essentialsScanEvidence: essentialsScanEvidence, essentialsRows: essentialsRows, essentialsNext: essentialsNext, essentialsOtherDomains: essentialsOtherDomains, essentialsReviewDue: essentialsReviewDue, essentialsStale: essentialsStale, essentialsHeatmap: essentialsHeatmap, essentialsOverview: essentialsOverview, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS, AI_ACT_OBLIGATIONS: AI_ACT_OBLIGATIONS, AI_ACT_TIER_ORDER: AI_ACT_TIER_ORDER,
     VENDOR_QUESTIONNAIRE: VENDOR_QUESTIONNAIRE, VENDOR_QUESTIONNAIRE_SECTIONS: VENDOR_QUESTIONNAIRE_SECTIONS, vendorAiActAnswers: vendorAiActAnswers,

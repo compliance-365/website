@@ -203,6 +203,42 @@ if (!skipReason) {
 }
 after(async () => { if (browser) await browser.close(); if (server) server.close(); });
 
+describe('uses the Essential Eight key until it has its own', () => {
+  test('moduleKeyFor falls back, and an own key wins', () => {
+    assert.equal(L.moduleKeyFor({ essential8: 'K8' }, 'asdessentials'), 'K8');
+    assert.equal(L.moduleKeyFor({ essential8: 'K8', asdessentials: 'KA' }, 'asdessentials'), 'KA');
+    assert.equal(L.moduleKeyFor({ essential8: 'K8' }, 'soc2'), null);
+  });
+  test('the Lambdas carry the same fallback table and use it', () => {
+    for (const f of ['../lambda/sign.js', '../lambda/provision.js', '../lambda/marketplace-fulfillment.js']) {
+      const src = read(f);
+      assert.match(src, /const MODULE_KEY_FALLBACK = \{ asdessentials: 'essential8' \};/, f);
+      assert.match(src, /moduleKeyFor\(moduleKeysAll, f\)/, f);
+    }
+    assert.deepEqual(L.MODULE_KEY_FALLBACK, { asdessentials: 'essential8' });
+  });
+  test('the build encrypts the pack with the Essential Eight key, and it decrypts', { skip: pack ? false : 'checkpoint-content is not checked out' }, async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, readFileSync: rf } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { execFileSync } = await import('node:child_process');
+    const { webcrypto } = await import('node:crypto');
+    const dir = mkdtempSync(join(tmpdir(), 'packs-'));
+    mkdirSync(join(dir, 'checkpoint-content'));
+    symlinkSync(fileURLToPath(PACK_PATH), join(dir, 'checkpoint-content', 'asdessentials.json'));
+    mkdirSync(join(dir, 'tools')); mkdirSync(join(dir, 'dist', 'checkpoint'), { recursive: true });
+    const key = Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
+    writeFileSync(join(dir, 'tools', 'module-keys.json'), JSON.stringify({ essential8: key }));
+    execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/build-content-packs.mjs', import.meta.url))], { cwd: dir, stdio: 'pipe' });
+    const manifest = JSON.parse(rf(join(dir, 'dist', 'checkpoint', 'packs', 'manifest.json'), 'utf8'));
+    assert.ok(manifest.asdessentials, 'pack built');
+    const file = manifest.asdessentials.file || manifest.asdessentials.path || Object.values(manifest.asdessentials).find((v) => /\.pack\.json$/.test(String(v)));
+    const packed = JSON.parse(rf(join(dir, 'dist', 'checkpoint', 'packs', String(file).replace(/^.*\//, '')), 'utf8'));
+    const content = await L.decryptPack(webcrypto.subtle, key, packed);
+    assert.equal(L.validatePackShape('asdessentials', content), null);
+    assert.equal(Object.keys(content.extra.essentials.actions).length, 58);
+  });
+});
+
 describe('in the demo', { skip: skipReason || false }, () => {
   test('rate an action: the rating, reasoning and indicators are saved and the domain score moves', async () => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });

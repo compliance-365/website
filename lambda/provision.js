@@ -373,6 +373,11 @@ async function resolveManySubscriptions(subscriptionIds) {
 }
 
 /* ============== Entitlement payload ============== */
+/* A module with no key of its own uses another module's key (ASD
+   Essentials uses the Essential Eight's). Same table as lib.js's
+   MODULE_KEY_FALLBACK; test/asd-essentials.test.mjs keeps them in step. */
+const MODULE_KEY_FALLBACK = { asdessentials: 'essential8' };
+const moduleKeyFor = (all, f) => all[f] || (MODULE_KEY_FALLBACK[f] ? all[MODULE_KEY_FALLBACK[f]] : undefined);
 async function buildSignedActivation(tenantId, purchase) {
   const privJwk = JSON.parse(process.env.ENTITLEMENT_PRIVATE_KEY_JWK);
   const moduleKeysAll = JSON.parse(process.env.MODULE_KEYS_JSON || '{}');
@@ -380,7 +385,7 @@ async function buildSignedActivation(tenantId, purchase) {
 
   const premiumRequested = purchase.frameworks.filter((f) => f !== 'iso27001');
   const moduleKeys = {};
-  premiumRequested.forEach((f) => { if (moduleKeysAll[f]) moduleKeys[f] = moduleKeysAll[f]; });
+  premiumRequested.forEach((f) => { const k = moduleKeyFor(moduleKeysAll, f); if (k) moduleKeys[f] = k; });
 
   const payload = {
     tenantId,
