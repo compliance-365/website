@@ -1371,6 +1371,7 @@ function showModal(opts) {
     var in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
     var iaDue = count(function (r) { var nx = r.d.audit && r.d.audit.next; return !!(nx && nx.planned && nx.planned <= in30); });
     var pct = function (v) { return typeof v === 'number' ? v + '%' : '—'; };
+    var anyEss = rows.some(function (r) { return !!essOf(r.c); });
     var kpi = function (n, label) { return '<div class="k"><b>' + n + '</b><span>' + label + '</span></div>'; };
     var sorted = rows.slice().sort(function (a, b) { return a.rank - b.rank || a.c.name.localeCompare(b.c.name); });
     return '<!doctype html><html lang="en-AU"><head><meta charset="utf-8"><title>Portfolio report ' + e(month) + '</title><style>' +
@@ -1384,9 +1385,9 @@ function showModal(opts) {
       '<p class="noprint" style="text-align:right"><a class="btn" href="#" onclick="window.print();return false">Print or save as PDF</a></p>' +
       '<h1>Portfolio report: ' + e(month) + '</h1><p class="sub">' + rows.length + ' active client' + (rows.length === 1 ? '' : 's') + ', from each client’s last sync. Generated ' + e(today) + '.</p>' +
       '<div class="kpis">' + kpi(rows.length, 'Active clients') + kpi(cert, 'Certified') + kpi(behind, 'Behind plan') + kpi(red, 'Need attention now') + kpi(iaDue, 'Internal audits in 30 days') + '</div>' +
-      '<h2>Clients</h2><table><thead><tr><th>Client</th><th>Stage</th><th>Path</th><th>Annex A</th><th>Last sync</th><th>Needs attention</th></tr></thead><tbody>' +
+      '<h2>Clients</h2><table><thead><tr><th>Client</th><th>Stage</th><th>Path</th><th>Annex A</th>' + (anyEss ? '<th>ASD Essentials</th>' : '') + '<th>Last sync</th><th>Needs attention</th></tr></thead><tbody>' +
       sorted.map(function (r) {
-        return '<tr><td><b>' + e(r.c.name) + '</b></td><td>' + e(r.stage) + '</td><td>' + pct(r.head && r.head.path) + '</td><td>' + pct(r.head && r.head.annexA) + '</td><td>' + e(r.c.lastSynced ? String(r.c.lastSynced).slice(0, 10) : 'Never') + '</td><td>' +
+        return '<tr><td><b>' + e(r.c.name) + '</b></td><td>' + e(r.stage) + '</td><td>' + pct(r.head && r.head.path) + '</td><td>' + pct(r.head && r.head.annexA) + '</td>' + (anyEss ? '<td>' + (essOf(r.c) ? e(essOf(r.c).pct + '% effective, ' + essOf(r.c).assessed + ' of ' + essOf(r.c).cells + ' rated') : '\u2014') + '</td>' : '') + '<td>' + e(r.c.lastSynced ? String(r.c.lastSynced).slice(0, 10) : 'Never') + '</td><td>' +
           (r.flags.length ? r.flags.slice(0, 4).map(function (f) { return '<span class="flag ' + (f.level === 'red' ? 'red' : f.level === 'amber' ? 'amber' : '') + '">' + e(f.text) + '</span>'; }).join('') : '<span class="muted">Nothing</span>') + '</td></tr>';
       }).join('') + '</tbody></table>' +
       '<h2>Status notes to send</h2><p class="muted noprint">Drafted from each client’s records. Read each one before sending: the link opens it as an email draft in your mail app.</p>' +
@@ -1421,6 +1422,7 @@ function showModal(opts) {
     });
     var count = function (pred) { return rows.filter(pred).length; };
     var opt = function (v, label, cur) { return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + label + '</option>'; };
+    var anyEss = rows.some(function (r) { return !!essOf(r.c); });
     var pct = function (n) { return n == null ? '<span style="color:var(--paper-faint)">—</span>' : '<b>' + n + '%</b>'; };
     el.innerHTML =
       '<div class="grid kpis" style="margin-bottom:20px">' +
@@ -1434,7 +1436,7 @@ function showModal(opts) {
       '<label class="src">Sort by <select class="mini" id="deliverySort" data-change-action="OwnerApp.setDeliverySort">' + opt('attention', 'Most urgent first', _deliverySort) + opt('progress', 'Most progress first', _deliverySort) + opt('health', 'Lowest ISMS health first', _deliverySort) + opt('name', 'Name', _deliverySort) + '</select></label>' +
       '<button class="btn sm" style="margin-left:auto" data-action="OwnerApp.partnerMonthlyReport">Monthly report</button>' +
       '</div>' +
-      (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">Internal audit</th><th scope="col">ISMS health</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
+      (shown.length ? '<div class="card" style="padding:0 10px"><table id="deliveryTable"><thead><tr><th scope="col">Client</th><th scope="col">Stage</th><th scope="col">Path</th><th scope="col">Clauses 4–10</th><th scope="col">Annex A</th><th scope="col">Plan</th><th scope="col">Audits</th><th scope="col">Internal audit</th>' + (anyEss ? '<th scope="col">ASD Essentials</th>' : '') + '<th scope="col">ISMS health</th><th scope="col">Attention</th><th scope="col"></th></tr></thead><tbody>' +
         shown.map(function (r) {
           var d = r.d, plan = d.plan, b = d.bookings || {};
           var moved = (r.c.progressHistory || []).length ? r.c.progressHistory[r.c.progressHistory.length - 1].d : '';
@@ -1447,6 +1449,7 @@ function showModal(opts) {
             '<td style="font-size:12.5px">' + (plan ? 'Week ' + esc(String(plan.week)) + (plan.behind ? ', <span style="color:var(--warn)">' + esc(String(plan.behind)) + ' behind</span>' : ', on plan') + (plan.target && r.stage !== 'Certified' ? '<div class="src">' + (plan.atRisk ? '<span style="color:var(--fail)">Stage 1 target ' + esc(fmtDate(plan.target)) + ' at risk</span>' : 'Stage 1 target ' + esc(fmtDate(plan.target))) + '</div>' : plan.readyBy && r.stage !== 'Certified' ? '<div class="src">ready ' + esc(fmtDate(plan.readyBy)) + '</div>' : '') : '—') + '</td>' +
             '<td style="font-size:12.5px">' + ([b.stage1 ? 'S1 ' + esc(fmtDate(b.stage1)) : '', b.stage2 ? 'S2 ' + esc(fmtDate(b.stage2)) : ''].filter(Boolean).join('<br>') || '—') + '</td>' +
             '<td style="font-size:12.5px">' + internalAuditCell(r) + '</td>' +
+            (anyEss ? '<td style="font-size:12.5px">' + essentialsCell(r.c) + '</td>' : '') +
             '<td style="font-size:12.5px">' + ismsHealthCell(r) + '</td>' +
             '<td>' + flagList(r.flags) + '</td>' +
             '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerStatusNote" data-id="' + esc(r.c._sp) + '">Status note</button></td>' +
@@ -1461,6 +1464,13 @@ function showModal(opts) {
     if (!rd) return '';
     return [['major', 'sev-Critical', 'major'], ['minor', 'sev-High', 'minor']].filter(function (k) { return rd[k[0]]; })
       .map(function (k) { return '<span class="chip ' + k[1] + '" style="margin-right:4px">' + rd[k[0]] + ' ' + k[2] + '</span>'; }).join('');
+  }
+  /* ASD Essentials, from clients on Checkpoint 1.183.0 or later. */
+  function essOf(c) { var p = c && c.progress; return (p && p.delivery && p.delivery.essentials) || null; }
+  function essentialsCell(c) {
+    var es = essOf(c);
+    if (!es) return '<span style="color:var(--paper-faint)">\u2014</span>';
+    return '<b>' + es.pct + '%</b> effective<div class="src">' + es.assessed + ' of ' + es.cells + ' rated' + (es.reviewsDue ? ', <span style="color:var(--warn)">' + es.reviewsDue + ' due for review</span>' : '') + '</div>';
   }
   function internalAuditCell(r) {
     var au = r.d && r.d.audit;
