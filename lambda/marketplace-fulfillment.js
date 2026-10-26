@@ -234,13 +234,19 @@ export function mergeMarketplaceSubscriptions(results) {
   return { results, subscriptionIds: results.map((r) => r.subscriptionId), frameworks, type, expiry, customerEmail };
 }
 
+/* A module with no key of its own uses another module's key (ASD
+   Essentials uses the Essential Eight's). Same table as lib.js's
+   MODULE_KEY_FALLBACK; test/asd-essentials.test.mjs keeps them in step. */
+const MODULE_KEY_FALLBACK = { asdessentials: 'essential8' };
+const moduleKeyFor = (all, f) => all[f] || (MODULE_KEY_FALLBACK[f] ? all[MODULE_KEY_FALLBACK[f]] : undefined);
 async function buildSignedActivation(tenantId, purchase) {
   const privJwk = JSON.parse(process.env.ENTITLEMENT_PRIVATE_KEY_JWK);
   const moduleKeysAll = JSON.parse(process.env.MODULE_KEYS_JSON || '{}');
   const privateKey = await webcrypto.subtle.importKey('jwk', privJwk, { name: 'Ed25519' }, false, ['sign']);
   const moduleKeys = {};
   purchase.frameworks.filter((f) => f !== 'iso27001').forEach((f) => {
-    if (moduleKeysAll[f]) moduleKeys[f] = moduleKeysAll[f];
+    const k = moduleKeyFor(moduleKeysAll, f);
+    if (k) moduleKeys[f] = k;
   });
   const payload = {
     tenantId,

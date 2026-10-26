@@ -78,6 +78,11 @@ const GRACE_DAYS = 14; // same standard as tools/issue-entitlement.mjs
    drifted out of sync with the CLI's once before (rffr was missing here
    entirely, silently blocking the owner console's "sign via endpoint"
    fast path for it with no clear error) — keep both in sync. */
+/* A module with no key of its own uses another module's key (ASD
+   Essentials uses the Essential Eight's). Same table as lib.js's
+   MODULE_KEY_FALLBACK; test/asd-essentials.test.mjs keeps them in step. */
+const MODULE_KEY_FALLBACK = { asdessentials: 'essential8' };
+const moduleKeyFor = (all, f) => all[f] || (MODULE_KEY_FALLBACK[f] ? all[MODULE_KEY_FALLBACK[f]] : undefined);
 export const FRAMEWORK_BUNDLES = { is18: ['iso27001', 'essential8'], rffr: ['iso27001', 'essential8'] };
 export const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'is18', 'rffr', 'cps234', 'privacyact', 'asdessentials', 'ai'];
 const ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
@@ -223,7 +228,7 @@ async function buildSignedActivation(tenantId, frameworks, type, expiry) {
   const premiumRequested = resolvedFrameworks.filter((f) => f !== 'iso27001');
   const moduleKeys = {};
   const missingKeys = [];
-  premiumRequested.forEach((f) => { if (moduleKeysAll[f]) moduleKeys[f] = moduleKeysAll[f]; else missingKeys.push(f); });
+  premiumRequested.forEach((f) => { const k = moduleKeyFor(moduleKeysAll, f); if (k) moduleKeys[f] = k; else missingKeys.push(f); });
   if (missingKeys.length) {
     throw new Error('Module key(s) missing for: ' + missingKeys.join(', ') + ' — run "keygen-modules" and redeploy this Lambda\'s MODULE_KEYS_JSON before issuing these frameworks.');
   }

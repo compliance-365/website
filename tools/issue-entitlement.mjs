@@ -409,9 +409,9 @@ async function cmdIssue(args) {
     const moduleKeysPath = args['module-keys'] || join(HERE, 'module-keys.json');
     if (!existsSync(moduleKeysPath)) fail('No module keys file found at ' + moduleKeysPath + ' — run "keygen-modules" first (needed to embed decryption keys for: ' + premiumRequested.join(', ') + ').');
     const allModuleKeys = JSON.parse(readFileSync(moduleKeysPath, 'utf8'));
-    const missingKeys = premiumRequested.filter(function (f) { return !allModuleKeys[f]; });
+    const missingKeys = premiumRequested.filter(function (f) { return !CheckpointLib.moduleKeyFor(allModuleKeys, f); });
     if (missingKeys.length) fail('Module key(s) missing from ' + moduleKeysPath + ' for: ' + missingKeys.join(', ') + ' — run "keygen-modules' + (type === 'partner' || type === 'demo' ? '' : ' --modules ' + missingKeys.join(',')) + '" first.');
-    premiumRequested.forEach(function (f) { moduleKeys[f] = allModuleKeys[f]; });
+    premiumRequested.forEach(function (f) { moduleKeys[f] = CheckpointLib.moduleKeyFor(allModuleKeys, f); });
   }
 
   const privateKey = await loadPrivateKey(keyPath);
