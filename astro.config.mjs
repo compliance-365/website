@@ -16,6 +16,8 @@ const SITEMAP_EXCLUDE = [
   'https://www.compliance365.com.au/thank-you/',
   'https://www.compliance365.com.au/404/',
   'https://www.compliance365.com.au/search/',
+  // checkout page: noindex (src/pages/start/index.astro), so not in the sitemap either
+  'https://www.compliance365.com.au/start/',
   // old redirect source slugs
   'https://www.compliance365.com.au/blog/iso27001-vs-iso27701/',
   'https://www.compliance365.com.au/blog/iso42001-ai-governance/',

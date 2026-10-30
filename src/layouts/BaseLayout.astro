@@ -713,7 +713,9 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   el.removeAttribute('data-hidden');
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', function () { update(); updateBottomInset(); }, { passive: true });
-  update();
+  /* First check after the first paint: reading scrollHeight mid-load
+     forces an early layout of the whole page (Lighthouse "forced reflow"). */
+  requestAnimationFrame(function () { setTimeout(update, 0); });
 })();
 </script>
 
@@ -729,7 +731,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     bar.style.width = Math.min(100, window.scrollY / h * 100) + '%';
   }
   window.addEventListener('scroll', updateBar, {passive:true});
-  updateBar();
+  requestAnimationFrame(function () { setTimeout(updateBar, 0); });
 })();
 </script>
 
