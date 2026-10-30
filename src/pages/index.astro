@@ -847,7 +847,8 @@ const faqLd = {
     font-weight: 500; font-family: Bricolage Grotesque,system-ui,sans-serif;
     pointer-events: none; transition: opacity .5s var(--ease);
   }
-  .ring-stage.touched .stage-hint { opacity: 0; }
+  .ring-stage.touched .stage-hint,
+  .ring-stage:not(.ready) .stage-hint { opacity: 0; }
 
   /* Scroll cue */
   .hdk-cue {
@@ -1136,6 +1137,12 @@ const faqLd = {
   var cyclePath = document.getElementById('cyclePath');
   if (flow && cyclePath) {
     flow.classList.add('js-flow');
+    /* Set up after the first paint: getTotalLength() below forces a
+       layout, which mid-load meant laying out the whole page early
+       (Lighthouse "forced reflow", ~180 ms). */
+    requestAnimationFrame(function () { setTimeout(initFlow, 0); });
+  }
+  function initFlow() {
     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var prog = document.getElementById('cycleProg');
     var dot = document.getElementById('cycleDot');
@@ -1290,12 +1297,18 @@ const faqLd = {
 
   // Fetching and parsing three.js (~600KB) plus building the scene (nine
   // canvas-drawn badge sprites, geometry, a raycaster) is real main-thread
-  // work. The static SVG ring + crawlable framework links already render
-  // immediately and cover no-JS/slow-JS visitors, so there's nothing lost
-  // by letting the initial paint (headline, proof ledger) land first and
-  // starting the 3D upgrade once the browser reports idle time — capped at
-  // 2s so it still shows up promptly even on a busy main thread.
+  // work, and once running it renders every frame: on a throttled CPU
+  // most frames became long tasks (PageSpeed desktop: Speed Index 5.6 s).
+  // The static SVG ring + crawlable framework links already render
+  // immediately and cover no-JS/slow-JS visitors, so, like the cinematic
+  // background, the 3D upgrade waits until the visitor does something
+  // (moves the pointer, scrolls, touches, types).
+  var ringLoaded = false;
+  var WAKE = ['pointermove', 'pointerdown', 'scroll', 'wheel', 'keydown', 'touchstart'];
   function loadRing(){
+    if (ringLoaded) return;
+    ringLoaded = true;
+    WAKE.forEach(function(ev){ window.removeEventListener(ev, wake, true); });
     var s = document.createElement('script');
     s.crossOrigin = 'anonymous';
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
@@ -1303,11 +1316,11 @@ const faqLd = {
     s.onerror = function(){ stage.classList.add('no3d'); };
     document.head.appendChild(s);
   }
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(loadRing, { timeout: 2000 });
-  } else {
-    setTimeout(loadRing, 200);
+  function wake(){
+    if ('requestIdleCallback' in window) requestIdleCallback(loadRing, { timeout: 500 });
+    else setTimeout(loadRing, 50);
   }
+  WAKE.forEach(function(ev){ window.addEventListener(ev, wake, { capture: true, passive: true }); });
 
   function init3D(){
     if (typeof THREE === 'undefined') return;
