@@ -282,6 +282,41 @@ function showModal(opts) {
   var READONLY = null;
   var VIEWER_READONLY = null;
   var RESTRICTED_ACCESS = null;
+
+  /* Links into a live tenant (?view=actions&item=ACT-012), from Teams
+     cards and digests. Captured now, before sign-in can redirect away
+     and drop the query string, and applied once the console has
+     loaded (applyDeepLink). Demo links keep their own handling. */
+  var DEEP_LINK_KEY = 'cpDeepLink';
+  (function () {
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.get('view') && !/[?&]demo/.test(location.search)) {
+        sessionStorage.setItem(DEEP_LINK_KEY, JSON.stringify({ view: q.get('view'), item: q.get('item') || '' }));
+      }
+    } catch (e) { /* storage blocked: the link just opens the Dashboard */ }
+  })();
+  /* Only a screen with a menu item, and an item opened through the same
+     action its own row uses, so a link can reach nothing the person
+     could not reach by clicking. */
+  var DEEP_LINK_OPENERS = { actions: 'openAction', risks: 'openRisk', vendors: 'openVendor', scan: 'openCheck' };
+  function applyDeepLink() {
+    var raw = null;
+    try { raw = sessionStorage.getItem(DEEP_LINK_KEY); sessionStorage.removeItem(DEEP_LINK_KEY); } catch (e) { return; }
+    if (!raw) return;
+    var link;
+    try { link = JSON.parse(raw); } catch (e) { return; }
+    var view = String(link.view || '').replace(/[^a-z0-9-]/gi, '');
+    var item = String(link.item || '').replace(/[^A-Za-z0-9|._-]/g, '').slice(0, 80);
+    if (view === 'accessreview') { if (!READONLY) App.openAccessReview(); return; }
+    if (!view || !document.querySelector('.nav-item[data-v="' + view + '"]') || !document.getElementById('v-' + view)) return;
+    App.go(view);
+    var opener = DEEP_LINK_OPENERS[view];
+    if (item && opener && typeof App[opener] === 'function') {
+      try { App[opener](item); } catch (e) { warn(e); }
+    }
+    try { history.replaceState(null, '', location.pathname); } catch (e) { /* cosmetic */ }
+  }
   /* Hidden diagnostics view (see renderSelfTest()) — demo-mode-only by
      design (the checks it runs are pure-logic and never touch a real
      tenant, but there's no reason to expose it outside demo, and
@@ -8800,6 +8835,91 @@ function showModal(opts) {
   }
   /* The five most important things to fix, each one click from its
      detail. */
+  /* ===== Microsoft 365 Copilot =====
+     Opt-in (setting copilotEnabled). Checkpoint writes a dated briefing
+     (lib copilotBriefingSections / buildBriefingDocx) into
+     Documents/Copilot briefing/, refreshed after each scan and at most
+     daily when someone opens Checkpoint, and offers the agent package
+     (lib buildCopilotAgentPackage) for an admin to upload. */
+  function copilotOn() { return !!(S.settings && S.settings.copilotEnabled === 'true'); }
+  function briefingData() {
+    var today = new Date().toISOString().slice(0, 10);
+    var in14 = window.CheckpointLib.addDaysIso ? window.CheckpointLib.addDaysIso(today, 14) : today;
+    var open = (S.actions || []).filter(function (a) { return a.status !== 'Done' && a.due; });
+    var last = (S.scans || [])[(S.scans || []).length - 1];
+    var labels = {};
+    (window.CHECK_DEFS || []).forEach(function (c) { labels[c.id] = c.label; });
+    var docs = window._docs || S.documents || [];
+    var certs = certifiedFrameworks().map(function (fw) {
+      var c = certRecords()[fw], cyc = window.CheckpointLib.certificationCycle(c, today);
+      return { name: fwName(fw), body: c.body || '', next: cyc.next ? cyc.next.label.toLowerCase() : '', nextDue: cyc.next ? cyc.next.dueBy : '', expires: cyc.expires || '' };
+    });
+    return {
+      client: clientDisplayLabel('This organisation'), today: today,
+      score: last ? last.score : null, scanDate: last ? String(last.date || '').slice(0, 10) : '',
+      frameworks: entitledFrameworks().filter(function (fw) { return fw !== 'essential8'; }).map(function (fw) {
+        var rows = (S.controls || []).filter(function (c) { return c.fw === fw && c.app; });
+        return { name: fwName(fw), applicable: rows.length, implemented: rows.filter(function (c) { return c.st === 'Implemented'; }).length };
+      }).filter(function (f) { return f.applicable; }),
+      overdue: open.filter(function (a) { return a.due < today; }).slice(0, 15).map(function (a) { return { id: a.id, title: a.title, owner: a.owner || '', due: a.due }; }),
+      dueSoon: open.filter(function (a) { return a.due >= today && a.due <= in14; }).slice(0, 15).map(function (a) { return { id: a.id, title: a.title, owner: a.owner || '', due: a.due }; }),
+      approvals: docs.filter(function (d) { return d && docStatusOf(d) === 'In review'; }).map(function (d) { return String(d.name || '').replace(/\.(html?|docx?)$/i, ''); }).slice(0, 15),
+      certs: certs,
+      activities: (S.calendar || []).filter(function (c) { return window.CheckpointLib.calendarItemLive(c) && c.nextDue; })
+        .sort(function (a, b) { return a.nextDue.localeCompare(b.nextDue); }).slice(0, 10)
+        .map(function (c) { return { title: c.title, due: c.nextDue, overdue: c.nextDue < today }; }),
+      risks: (S.risks || []).filter(function (r) { return r.status !== 'Closed'; })
+        .map(function (r) { var q = residual(r); return { id: r.id, title: r.title, sc: q.L * q.I }; })
+        .sort(function (a, b) { return b.sc - a.sc; }).slice(0, 5).map(function (r) { return { id: r.id, title: r.title, band: band(r.sc) }; }),
+      paths: attackPathModel() || { paths: [], fixFirst: null }, checkLabels: labels
+    };
+  }
+  function briefingBytes() {
+    var L = window.CheckpointLib, d = briefingData();
+    return L.buildBriefingDocx({ client: d.client, date: d.today }, L.copilotBriefingSections(d));
+  }
+  /* Writes the briefing to SharePoint. auto: only when on, live, not
+     read-only, and the last one is a day old; failures stay quiet. */
+  async function refreshCopilotBriefing(auto) {
+    if (Store.kind !== 'sharepoint' || READONLY || !copilotOn()) return false;
+    var last = (S.settings && S.settings.copilotBriefingAt) || '';
+    if (auto && last && Date.now() - new Date(last).getTime() < 20 * 3600 * 1000) return false;
+    var blob = new Blob([briefingBytes()], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    var saved = await Store.uploadCopilotBriefing(window.CheckpointLib.COPILOT_BRIEFING_FILE, blob);
+    var now = new Date().toISOString();
+    try { await Store.setSetting('copilotBriefingAt', now); } catch (e) { warn(e); }
+    if (saved && saved.url) { try { await Store.setSetting('copilotBriefingUrl', saved.url); } catch (e) { warn(e); } }
+    return true;
+  }
+  /* Teams app icons, drawn here so nothing extra ships: the colour icon
+     192x192 on the accent, the outline 32x32 white on transparent. */
+  function agentIcon(size, filled) {
+    return new Promise(function (resolve) {
+      var c = document.createElement('canvas'); c.width = c.height = size;
+      var g = c.getContext('2d');
+      if (filled) { g.fillStyle = '#BE4A1E'; g.fillRect(0, 0, size, size); }
+      g.strokeStyle = '#FFFFFF'; g.lineWidth = size * 0.12; g.lineCap = 'round';
+      g.beginPath(); g.arc(size / 2, size / 2, size * 0.3, Math.PI * 0.25, Math.PI * 1.75); g.stroke();
+      c.toBlob(function (b) { b.arrayBuffer().then(function (ab) { resolve(new Uint8Array(ab)); }); }, 'image/png');
+    });
+  }
+  function renderCopilotRow() {
+    var el = document.getElementById('copilotRow');
+    if (!el) return;
+    var st = S.settings || {}, on = copilotOn();
+    var when = st.copilotBriefingAt ? fmtDate(String(st.copilotBriefingAt).slice(0, 10)) : '';
+    el.innerHTML = '<div class="fw-admin-row"><div><b>Microsoft 365 Copilot</b><p>Ask Copilot about your compliance position: what is overdue, when the next audit is, what to fix first. ' +
+      'Checkpoint keeps a dated briefing in its SharePoint site, and a Checkpoint agent in Copilot answers from it and from your policies. Copilot only shows each person what they can already open.</p></div>' +
+      (READONLY ? '' : '<button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" aria-label="Keep the Copilot briefing" data-action="App.toggleCopilot"></button>') + '</div>' +
+      (on ? '<p class="src" style="margin-top:8px">' + (when ? 'Briefing last written ' + when + (st.copilotBriefingUrl && isSafeUrl(st.copilotBriefingUrl) ? ' (<a href="' + esc(st.copilotBriefingUrl) + '" target="_blank" rel="noopener">open</a>)' : '') + '. It refreshes after each scan, and daily when Checkpoint is opened.' : 'No briefing written yet.') + '</p>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">' +
+        (READONLY ? '' : '<button class="btn ghost sm" data-action="App.refreshCopilotBriefingNow">Refresh briefing now</button>') +
+        '<button class="btn ghost sm" data-action="App.downloadCopilotAgent">Download the Checkpoint agent</button></div>' +
+        '<ol class="src" style="margin:10px 0 0;padding-left:18px"><li>Download the agent package (a .zip).</li>' +
+        '<li>A Teams administrator uploads it: Teams admin center → Manage apps → Upload new app, then makes it available to the people who should use it.</li>' +
+        '<li>In Microsoft 365 Copilot, they pick Checkpoint from the agents and ask. Each person needs a Microsoft 365 Copilot licence.</li></ol>' : '');
+  }
+
   /* "How an attacker could get in" (lib attackPaths): the scan's
      failing and partial checks read as the routes they open. */
   function attackPathModel() {
@@ -18845,6 +18965,8 @@ function showModal(opts) {
         '<p class="src" style="margin-top:8px">Want Checkpoint in Outlook or Planner too? <a href="POWER-AUTOMATE.md" target="_blank" rel="noopener">POWER-AUTOMATE.md</a> has four ready-to-build flows that read Checkpoint\'s lists: owner alerts, privacy breach escalation, a weekly due list and Planner tasks.</p>';
     }
 
+    renderCopilotRow();
+
     var orgProfEl = document.getElementById('orgProfileRow');
     if (orgProfEl) {
       /* The ISO 42001 fields only count for a tenant that can answer them. */
@@ -20040,6 +20162,9 @@ function showModal(opts) {
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
+      /* A new scan changes the posture and attack paths the Copilot
+         briefing reports: rewrite it now rather than tomorrow. */
+      refreshCopilotBriefing(false).catch(warn);
       setTimeout(function () {
         renderProposed(); renderResolvable(); renderNavCounts(); renderDash(); renderSoa();
         renderScanDrift();
@@ -25649,6 +25774,42 @@ function showModal(opts) {
       }
     },
 
+    toggleCopilot: async function () {
+      var next = copilotOn() ? 'false' : 'true';
+      try { await Store.setSetting('copilotEnabled', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'copilotEnabled', next === 'true' ? 'false' : 'true', next);
+      renderCopilotRow();
+      if (next === 'true') await App.refreshCopilotBriefingNow();
+    },
+    refreshCopilotBriefingNow: async function () {
+      if (Store.kind !== 'sharepoint') {
+        downloadBlob(window.CheckpointLib.COPILOT_BRIEFING_FILE, new Blob([briefingBytes()], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+        toast('Demo: the briefing is downloaded. In your tenant it is saved to Documents › ' + esc(window.CheckpointLib.COPILOT_ROOT) + '.');
+        return;
+      }
+      busy(true);
+      try {
+        if (await refreshCopilotBriefing(false)) toast('Copilot briefing saved to Documents › ' + esc(window.CheckpointLib.COPILOT_ROOT));
+      } catch (e) { warn(e); toast('Could not save the briefing: ' + esc(e.message || String(e))); }
+      busy(false);
+      renderCopilotRow();
+    },
+    downloadCopilotAgent: async function () {
+      var L = window.CheckpointLib;
+      var id = (S.settings && S.settings.copilotAgentId) || '';
+      if (!/^[0-9a-f-]{36}$/i.test(id)) {
+        id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, function () { return (Math.random() * 16 | 0).toString(16); });
+        if (Store.kind === 'sharepoint' && !READONLY) { try { await Store.setSetting('copilotAgentId', id); } catch (e) { warn(e); } }
+      }
+      var siteUrl = Store.kind === 'sharepoint' ? await Store.siteWebUrl().catch(function () { return ''; }) : 'https://contoso.sharepoint.com/sites/Checkpoint';
+      if (!siteUrl) { toast('Could not read the Checkpoint site address. Try again in a moment.'); return; }
+      var icons = { color: await agentIcon(192, true), outline: await agentIcon(32, false) };
+      var bytes = L.buildCopilotAgentPackage({ id: id, client: clientDisplayLabel('This organisation'), siteUrl: siteUrl }, icons);
+      downloadBlob('Checkpoint-Copilot-agent.zip', new Blob([bytes], { type: 'application/zip' }));
+      audit('Copilot agent package downloaded', 'Settings', 'copilotAgentId', '', id);
+      if (Store.kind !== 'sharepoint') toast('Demo: an example package, grounded on an example site address.');
+    },
+
     setIsmsStart: async function (mode) {
       if (['existing', 'new', 'done'].indexOf(mode) === -1) return;
       try { await Store.setSetting('ismsStart', mode); } catch (e) { warn(e); }
@@ -30860,6 +31021,9 @@ function showModal(opts) {
       if (startFw && window.FRAMEWORKS && window.FRAMEWORKS[startFw]) window._soaFw = startFw;
       if (startView && document.querySelector('.nav-item[data-v="' + startView + '"]') && document.getElementById('v-' + startView)) App.go(startView);
     }
+    else if (Store.kind === 'sharepoint' && !RESTRICTED_ACCESS) applyDeepLink();
+    /* The Copilot briefing, at most daily, in the background. */
+    setTimeout(function () { refreshCopilotBriefing(true).catch(function (e) { console.error(e); }); }, 8000);
     applyReadOnlyUi();
     startReadOnlyObserver();
     applyRestrictedUi();

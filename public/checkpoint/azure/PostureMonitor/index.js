@@ -1464,7 +1464,8 @@ function buildTeamsCard(title, opts) {
         type: 'AdaptiveCard',
         version: '1.4',
         body: body,
-        actions: [{ type: 'Action.OpenUrl', title: 'Open Checkpoint', url: o.url || CHECKPOINT_APP_URL }]
+        actions: (o.actions && o.actions.length ? o.actions : [{ title: 'Open Checkpoint', url: o.url || CHECKPOINT_APP_URL }])
+          .map(a => ({ type: 'Action.OpenUrl', title: a.title, url: a.url }))
       }
     }]
   };
@@ -2037,6 +2038,15 @@ async function setSetting(g, siteId, settingsListId, key, value) {
 
 /* The digest as a Teams card — the same figures as the email, laid out
    for a channel: headline facts, then the lists people act on. */
+/* A link that opens Checkpoint on a screen, and on one item where
+   given (app.js applyDeepLink: ?view=actions&item=ACT-012). */
+function checkpointLink(view, item) {
+  return CHECKPOINT_APP_URL + (CHECKPOINT_APP_URL.indexOf('?') === -1 ? '?' : '&') + 'view=' + encodeURIComponent(view) +
+    (item ? '&item=' + encodeURIComponent(item) : '');
+}
+/* Markdown link text for a Teams TextBlock: brackets would end it early. */
+function mdLinkText(t) { return String(t || '').replace(/[\[\]]/g, ''); }
+
 function buildDigestTeamsCard(d, today, settings) {
   const next = digestNextStep(settings);
   const scoreFact = d.score + '/100' +
@@ -2054,9 +2064,15 @@ function buildDigestTeamsCard(d, today, settings) {
     ],
     sections: [
       ...(next ? [{ heading: 'Your next step', lines: ['Step ' + next.n + ' of ' + next.of + ': ' + next.label] }] : []),
-      { heading: 'Overdue', lines: top(d.overdueActions, a => '**' + a.ref + '** ' + a.title + ' — ' + a.days + ' days overdue' + (a.owner ? ', ' + a.owner : '')) },
-      { heading: 'Due soon', lines: top(d.dueSoonActions, a => '**' + a.ref + '** ' + a.title + ' — due ' + a.due + (a.owner ? ', ' + a.owner : '')) },
-      { heading: 'Waiting for approval', lines: top(d.awaitingApproval, n => n) }
+      { heading: 'Overdue', lines: top(d.overdueActions, a => (a.ref ? '[**' + mdLinkText(a.ref) + '**](' + checkpointLink('actions', a.ref) + ') ' : '') + a.title + ' — ' + a.days + ' days overdue' + (a.owner ? ', ' + a.owner : '')) },
+      { heading: 'Due soon', lines: top(d.dueSoonActions, a => (a.ref ? '[**' + mdLinkText(a.ref) + '**](' + checkpointLink('actions', a.ref) + ') ' : '') + a.title + ' — due ' + a.due + (a.owner ? ', ' + a.owner : '')) },
+      { heading: 'Waiting for approval', lines: top(d.awaitingApproval, n => '[' + mdLinkText(n) + '](' + checkpointLink('documents') + ')') }
+    ],
+    /* Each button goes straight to the screen that needs attention. */
+    actions: [
+      ...((d.overdueActions || []).length || (d.dueSoonActions || []).length ? [{ title: 'Open actions', url: checkpointLink('actions') }] : []),
+      ...((d.awaitingApproval || []).length ? [{ title: 'Approve documents', url: checkpointLink('documents') }] : []),
+      { title: 'Open Checkpoint', url: CHECKPOINT_APP_URL }
     ]
   });
 }
@@ -2622,7 +2638,7 @@ module.exports = async function (context, myTimer) {
 module.exports.__test = {
   ownerRemindersDue, sendOwnerReminders, runSecurityReview, buildScheduledReviewPack,
   digestDue, buildDigestHtml, digestNextStep, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep,
-  configureTeams, buildTeamsCard, buildDigestTeamsCard, notifyTeams, sendDigest, announceTeamsConnection, recordTeamsStatus, teamsUrlFingerprint,
+  configureTeams, buildTeamsCard, buildDigestTeamsCard, checkpointLink, notifyTeams, sendDigest, announceTeamsConnection, recordTeamsStatus, teamsUrlFingerprint,
   runPostureChecks, runRegisterChecks, readDocumentRegister,
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,
