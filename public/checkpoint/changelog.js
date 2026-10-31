@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.185.0',
+    date: '2026-10-31',
+    entries: [
+      'Import your existing Statement of Applicability from a spreadsheet (SoA, Export menu, Import SoA): applicability, reasons for inclusion and exclusion, status, owner and evidence link for each control. Codes are found however they are written, you see every change before it is made, and rows Checkpoint cannot place (such as 2013 codes) are listed rather than guessed.',
+      'A written reason for including a control is now kept with it and leads its justification for inclusion in the SoA, separate from the exclusion reason.',
+      'Already certified? The Dashboard asks once. Yes records your certificate, schedules the surveillance audits and replaces the path to certification with a checklist for bringing your ISMS across: SoA, risks, suppliers, actions and findings, policies and the first scan.'
+    ]
+  },
+  {
     version: '1.184.0',
     date: '2026-10-31',
     entries: [

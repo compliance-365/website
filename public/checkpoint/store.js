@@ -2508,7 +2508,10 @@ window.SpStore = (function () {
     Controls: [
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
       { name: 'Owner', text: {} }, { name: 'MapsTo', text: {} }, { name: 'Justification', text: { allowMultipleLines: true } },
-      { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} }, { name: 'VerifiedBy', text: {} }
+      { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} }, { name: 'VerifiedBy', text: {} },
+      /* A written justification for INCLUSION (an imported SoA's), kept
+         apart from Justification, which is the exclusion reason. */
+      { name: 'InclusionNote', text: { allowMultipleLines: true } }
     ],
     /* Deliberately its own list, not more rows in Controls — see
        window.CLAUSE_DEFS's comment for why a clause and an Annex A
@@ -3281,7 +3284,7 @@ window.SpStore = (function () {
        console.warn'd, never surfaced) on a tenant missing 'Applicable'
        specifically. Now the full column list from Controls' own DEFS
        above, not a hand-picked subset. */
-    Controls: ['Code', 'Framework', 'Applicable', 'Status', 'Owner', 'MapsTo', 'Justification', 'LastVerified', 'EvidenceUrl', 'VerifiedBy'],
+    Controls: ['Code', 'Framework', 'Applicable', 'Status', 'Owner', 'MapsTo', 'Justification', 'LastVerified', 'EvidenceUrl', 'VerifiedBy', 'InclusionNote'],
     /* Same bug, caught before it shipped rather than live: AiActAnswers
        was added to AISystems' DEFS for the EU AI Act classifier without
        remembering this table too. Any tenant with an AI Systems
@@ -3742,7 +3745,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
+          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '', incl: f.InclusionNote || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         clauses: clauseItems.map(function (i) {
           var f = i.fields;
@@ -4063,7 +4066,7 @@ window.SpStore = (function () {
       S.actionUpdates.push(u);
     },
     updateControl: async function (c) {
-      await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
+      await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', InclusionNote: c.incl || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
     },
     updateClause: async function (c) {
       await patchItem('Clauses', c._sp, { Status: c.st, Owner: c.own, LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '', Requirements: JSON.stringify(c.reqs || {}) });

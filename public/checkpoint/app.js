@@ -893,7 +893,7 @@ function showModal(opts) {
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
     /* importCsv IS gated (unlike exportCsv, which is read-only): it is
        the largest single bulk write in the app. */
-    'importCsv',
+    'importCsv', 'importSoa', 'setIsmsStart',
     /* 'acknowledgeAttestation' is deliberately absent — see the note on
        that action: it is an employee's own act about themselves, and a
        read-only Viewer who cannot record it cannot comply with the
@@ -6711,9 +6711,50 @@ function showModal(opts) {
      practitioner and the client alike. The next step is always shown
      with a button that does it; the full list sits underneath. The card
      disappears once every step is genuinely complete. */
+  /* "Already certified?" on the Dashboard. Asked once, while no
+     certificate is recorded: yes turns the card into the checklist for
+     bringing the existing ISMS across (lib ismsTransferSteps) and hides
+     the build-from-scratch path below; no hides the card for good. */
+  function ismsStart() { return (S.settings && S.settings.ismsStart) || ''; }
+  function renderIsmsTransfer() {
+    var el = document.getElementById('ismsTransferCard');
+    if (!el) return;
+    var mode = ismsStart();
+    var certified = certifiedFrameworks().length > 0;
+    if (mode === 'new' || mode === 'done' || (!mode && certified)) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
+    if (!mode) {
+      el.innerHTML = '<h3>Already running a certified ISMS?</h3>' +
+        '<p class="src" style="margin:0 0 12px">Bring what you have across instead of starting again: your certificate, Statement of Applicability, registers and policies.</p>' +
+        (READONLY ? '' : '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-action="App.setIsmsStart" data-id="existing">Yes, bring it across</button>' +
+          '<button class="btn ghost sm" data-action="App.setIsmsStart" data-id="new">No, we are starting fresh</button></div>');
+      return;
+    }
+    var docs = window._docs || S.documents || [];
+    var steps = window.CheckpointLib.ismsTransferSteps({
+      certIssued: certified, soaImported: !!(S.settings && S.settings.soaImportedAt),
+      risks: (S.risks || []).length, vendors: (S.vendors || []).length, actions: (S.actions || []).length,
+      approvedDocs: docs.filter(function (d) { return d && /approved/i.test(d.status || ''); }).length,
+      scans: (S.scans || []).length
+    });
+    var left = steps.filter(function (x) { return !x.done; }).length;
+    el.innerHTML = '<h3>Bring your ISMS across</h3>' +
+      '<p class="src" style="margin:0 0 10px">' + (left ? left + ' of ' + steps.length + ' steps to go. Each one takes what you already have; nothing has to be rebuilt.' : 'Everything is across. Your next surveillance audit is on the calendar.') + '</p>' +
+      steps.map(function (x) {
+        return '<div class="gs-row' + (x.done ? ' done' : '') + '"><span class="gs-check">' + (x.done ? icon('check') : '') + '</span>' +
+          '<div class="gs-text"><b>' + esc(x.label) + '</b><span>' + esc(x.why) + '</span></div>' +
+          (x.done || READONLY ? '' : '<button class="btn ghost sm" data-action="' + x.action + '"' + (x.arg ? ' data-id="' + esc(x.arg) + '"' : '') + '>' + esc(x.cta) + '</button>') + '</div>';
+      }).join('') +
+      (READONLY ? '' : '<div style="margin-top:10px"><button class="btn ghost sm" data-action="App.setIsmsStart" data-id="done">' + (left ? 'Hide this checklist' : 'Done') + '</button></div>');
+  }
+
   function renderGettingStarted() {
+    renderIsmsTransfer();
     var el = document.getElementById('gettingStartedCard');
     if (!el) return;
+    /* An organisation bringing a certified ISMS across is not on the
+       path to its first Stage 1. */
+    if (ismsStart() === 'existing') { el.style.display = 'none'; return; }
     var steps = gettingStartedSteps();
     var doneCount = steps.filter(function (s) { return s.done; }).length;
     if (doneCount === steps.length) { el.style.display = 'none'; return; }
@@ -25560,6 +25601,14 @@ function showModal(opts) {
       }
     },
 
+    setIsmsStart: async function (mode) {
+      if (['existing', 'new', 'done'].indexOf(mode) === -1) return;
+      try { await Store.setSetting('ismsStart', mode); } catch (e) { warn(e); }
+      audit('Setup path chosen', 'Settings', 'ismsStart', '', mode === 'existing' ? 'Bringing an existing ISMS across' : mode === 'new' ? 'Starting fresh' : 'Transfer checklist closed');
+      renderGettingStarted();
+      if (mode === 'existing' && !certifiedFrameworks().length) await App.recordCertificate('iso27001');
+    },
+
     /* ===== Certification lifecycle actions (see renderCertification) ===== */
     recordCertificate: async function (fw) {
       if (CERT_FRAMEWORKS.indexOf(fw) === -1) return;
@@ -30259,6 +30308,75 @@ function showModal(opts) {
        happened, good and bad, is reported honestly at the end and
        written to the audit log -- an import that half-succeeded must
        never look like one that fully succeeded. */
+    /* An existing ISMS's Statement of Applicability, from a spreadsheet:
+       updates the framework's controls (applicability, exclusion and
+       inclusion reasons, status, owner, evidence link). Shows exactly
+       what will change first; never adds or removes a control. */
+    importSoa: async function () {
+      var L = window.CheckpointLib;
+      var ent = entitledFrameworks();
+      var fw = (window._soaFw && ent.indexOf(window._soaFw) > -1) ? window._soaFw : (ent[0] || 'iso27001');
+      if (fw === 'essential8') { toast('Essential Eight is rated by maturity level, not imported from a SoA'); return; }
+      var text = await pickTextFile('.csv,text/csv');
+      if (text == null) return;
+      var plan = L.planSoaImport(text, S.controls || [], fw);
+      /* Headings that don't match, or a code column that matched no
+         control: let the person say which column is which. */
+      if (plan.headers && plan.headers.length && ((plan.error && plan.missingRequired && plan.missingRequired.length) || (!plan.error && plan.totalRows && !plan.matched))) {
+        var spec = L.SOA_IMPORT_SPEC;
+        var guess = L.guessImportMapping(plan.headers, spec);
+        var colOpts = [{ value: '-1', label: '— not in this file —' }].concat(plan.headers.map(function (h, i) { return { value: String(i), label: h || ('Column ' + (i + 1)) }; }));
+        var mapped = await showModal({
+          title: 'Match the columns in your file',
+          message: (plan.error ? 'Your file\'s headings don\'t all match a Statement of Applicability.' : 'No row\'s control code matched a ' + fwName(fw) + ' control.') +
+            ' Pick which column holds each field. Control is the column with the control codes (e.g. A.5.1).',
+          fields: spec.columns.map(function (c) { return { id: c.key, label: c.key + (c.required ? ' *' : ''), type: 'select', options: colOpts, value: String(guess[c.key]) }; }),
+          confirmText: 'Continue',
+          validate: function (v) { return v.Control === '-1' ? 'Choose the column that holds the control codes' : null; }
+        });
+        if (!mapped) return;
+        plan = L.planSoaImport(text, S.controls || [], fw, { mapping: mapped });
+      }
+      if (plan.error) { await showModal({ title: 'Import Statement of Applicability', message: plan.error, confirmText: 'Close', cancelText: 'Close' }); return; }
+      var lines = [];
+      lines.push(plan.changes.length + ' ' + fwName(fw) + ' control' + (plan.changes.length === 1 ? '' : 's') + ' will be updated' + (plan.unchanged ? '; ' + plan.unchanged + ' already match' : '') + '.');
+      var count = function (k) { return plan.changes.filter(function (c) { return Object.prototype.hasOwnProperty.call(c.set, k); }).length; };
+      var parts = [['app', 'applicability'], ['st', 'status'], ['just', 'exclusion reason'], ['incl', 'inclusion reason'], ['own', 'owner'], ['evidenceUrl', 'evidence link']]
+        .map(function (x) { var n = count(x[0]); return n ? n + ' ' + x[1] : ''; }).filter(Boolean);
+      if (parts.length) lines.push('Changes: ' + parts.join(', ') + '.');
+      lines.push('Only the fields in your file change; nothing is added or removed.');
+      if (plan.unknown.length) lines.push('\n' + plan.unknown.length + ' row' + (plan.unknown.length === 1 ? '' : 's') + ' with no matching ' + fwName(fw) + ' control (left out): ' +
+        plan.unknown.slice(0, 8).map(function (u) { return u.code; }).join(', ') + (plan.unknown.length > 8 ? '…' : '') +
+        (fw === 'iso27001' ? '. Codes like A.9.2.1 are the 2013 numbering: map them to the 2022 controls first.' : '.'));
+      if (plan.skipped.length) lines.push('\n' + plan.skipped.length + ' row' + (plan.skipped.length === 1 ? '' : 's') + ' skipped: ' + plan.skipped.slice(0, 4).map(function (x) { return 'line ' + x.line + ' (' + x.reason + ')'; }).join('; ') + (plan.skipped.length > 4 ? '…' : ''));
+      if (plan.excludedNoReason.length) lines.push('\n' + plan.excludedNoReason.length + ' excluded control' + (plan.excludedNoReason.length === 1 ? ' has' : 's have') + ' no reason in the file (' + plan.excludedNoReason.slice(0, 6).join(', ') + '): an auditor will ask for one (Clause 6.1.3 d).');
+      if (plan.evidenceNotLink) lines.push('\n' + plan.evidenceNotLink + ' evidence entr' + (plan.evidenceNotLink === 1 ? 'y is' : 'ies are') + ' not a https link and ' + (plan.evidenceNotLink === 1 ? 'was' : 'were') + ' left out.');
+      if (plan.unknownColumns.length) lines.push('\nIgnored column' + (plan.unknownColumns.length === 1 ? '' : 's') + ': ' + plan.unknownColumns.join(', ') + '.');
+      if (!plan.changes.length) { await showModal({ title: 'Import Statement of Applicability', message: lines.join('\n'), confirmText: 'Close', cancelText: 'Close' }); return; }
+      var ok = await showModal({ title: 'Import ' + fwName(fw) + ' Statement of Applicability', message: lines.join('\n'), confirmText: 'Update ' + plan.changes.length + ' control' + (plan.changes.length === 1 ? '' : 's') });
+      if (!ok) return;
+      var LABEL = { app: 'Applicable', st: 'Status', just: 'Exclusion justification', incl: 'Inclusion justification', own: 'Owner', evidenceUrl: 'Evidence' };
+      busy(true);
+      var done = 0;
+      try {
+        for (var i = 0; i < plan.changes.length; i++) {
+          var ch = plan.changes[i], c = ch.control, key = c.fw + '|' + c.id;
+          var before = {};
+          Object.keys(ch.set).forEach(function (k) { before[k] = c[k]; });
+          Object.assign(c, ch.set);
+          try { await Store.updateControl(c); done++; } catch (e) { warn(e); continue; }
+          Object.keys(ch.set).forEach(function (k) {
+            var fmt = function (v) { return k === 'app' ? (v ? 'Yes' : 'No') : (v || '(none)'); };
+            audit('SoA imported: ' + LABEL[k], 'Control', key, fmt(before[k]), fmt(ch.set[k]));
+          });
+        }
+      } finally { busy(false); }
+      if (done) { try { await Store.setSetting('soaImportedAt', new Date().toISOString().slice(0, 10)); } catch (e) { warn(e); } }
+      log('Statement of Applicability imported: <b>' + done + '</b> ' + esc(fwName(fw)) + ' control' + (done === 1 ? '' : 's') + ' updated.');
+      toast('<b>' + done + '</b> control' + (done === 1 ? '' : 's') + ' updated from your SoA');
+      renderSoa(); renderDash(); renderGettingStarted();
+    },
+
     importCsv: async function (key) {
       var reg = IMPORT_REGISTERS.find(function (r) { return r.key === key; });
       if (!reg) return;
@@ -30602,7 +30720,7 @@ function showModal(opts) {
      left beside the primary action, they fold into More. The buttons are
      moved, not copied, so their data-action wiring, read-only locking and
      any test selectors are unchanged. Runs once, on the static toolbars. */
-  var EXPORT_ACTIONS = ['App.exportCsv', 'App.exportXlsx', 'App.exportRegisterWord', 'App.importCsv'];
+  var EXPORT_ACTIONS = ['App.exportCsv', 'App.exportXlsx', 'App.exportRegisterWord', 'App.importCsv', 'App.importSoa'];
   function toolbarMenu(label, buttons) {
     var d = document.createElement('details');
     d.className = 'btn-menu';
