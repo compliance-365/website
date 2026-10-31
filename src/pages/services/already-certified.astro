@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import { MODULES, fmtAud } from '../../data/pricing.js';
@@ -97,6 +98,9 @@ const faqLd = {
           <a href={`${base}pricing/`} class="btn-hdk-ghost">See pricing →</a>
         </div>
       </div>
+      <div class="svc-hero-image">
+        <img src={`${base}assets/illus-already-certified.svg`} alt="Illustration of an existing ISMS — risk register, Statement of Applicability, policies and audit findings — moving into Checkpoint" width="720" height="470" loading="eager" />
+      </div>
     </div>
   </section>
 
@@ -113,6 +117,8 @@ const faqLd = {
           </div>
         ))}
       </div>
+      <CheckpointShot id="soaIso27001" label="Your Statement of Applicability, once it is across" caption="Each Annex A control keeps the status and justification you already had, now with an owner, a verification date and a link to its evidence." />
+      <CheckpointShot id="riskRegister" label="Your risk register, once it is across" />
     </div>
   </section>
 

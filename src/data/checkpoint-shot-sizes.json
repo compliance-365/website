@@ -38,5 +38,13 @@
   "posture-scan": {
     "width": 1600,
     "height": 606
+  },
+  "internal-audits": {
+    "width": 1600,
+    "height": 1160
+  },
+  "incident-register": {
+    "width": 1600,
+    "height": 612
   }
 }

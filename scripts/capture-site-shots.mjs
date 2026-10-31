@@ -9,13 +9,14 @@
  *
  *   npm run build && npx http-server dist -p 4321 --silent &
  *   node scripts/capture-site-shots.mjs
+ *   SHOT_ONLY=incident-register node scripts/capture-site-shots.mjs   (one screen)
  *
  * Writes WebP at two widths into public/assets/checkpoint-shots/, and
  * each image's size into src/data/checkpoint-shot-sizes.json.
  */
 import { chromium } from 'playwright-core';
 import sharp from 'sharp';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const SIZES_FILE = 'src/data/checkpoint-shot-sizes.json';
 const sizes = {};
@@ -41,7 +42,13 @@ const SHOTS = [
   ['soa-soc2', 'soa', 'soc2', ...SOA],
   ['asd-essentials', 'essentials', null, '#essBody .ess-summary', '#essBody .ess-summary', 720],
   ['posture-scan', 'scan', null, '#v-scan .scan-summary', '#scanChecksCard', 470],
+  ['internal-audits', 'audits', null, '#auditRadar', '#auditTable', 900],
+  ['incident-register', 'incidents', null, '#incidentKpiRow', '#v-incidents .card:has(table)', 720],
 ];
+/* SHOT_ONLY=name,name re-captures just those screens and keeps the
+   recorded sizes of the rest. */
+const ONLY = (process.env.SHOT_ONLY || '').split(',').filter(Boolean);
+if (ONLY.length) Object.assign(sizes, JSON.parse(readFileSync(SIZES_FILE, 'utf8')));
 
 mkdirSync(OUT, { recursive: true });
 
@@ -53,6 +60,7 @@ await page.getByRole('button', { name: 'Explore the demo' }).first().click();
 await page.waitForTimeout(2500);
 
 for (const [name, view, fw, from, to, maxH] of SHOTS) {
+  if (ONLY.length && !ONLY.includes(name)) continue;
   await page.evaluate(([v, f]) => { if (f) window._soaFw = f; window.App.go(v); }, [view, fw]);
   await page.waitForTimeout(1200);
   const box = await page.evaluate(([a, b, h]) => {
