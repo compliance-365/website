@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.188.0',
+    date: '2026-10-31',
+    entries: [
+      'Regulatory updates on the Dashboard: changes from ASD, the OAIC and standards bodies that affect your frameworks, each with what changed, the controls it touches, what to do and its source. Raise any step as an action (due before an obligation starts), and mark the update reviewed: the review is recorded and audited.',
+      'The first updates: the ASD Essentials (15 October 2026), the September 2026 ISM (app consent, AI agents, threat hunting), Privacy Act automated-decision transparency from 10 December 2026, and ISO/IEC 27701:2025.'
+    ]
+  },
+  {
     version: '1.187.0',
     date: '2026-10-31',
     entries: [
