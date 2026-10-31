@@ -4273,6 +4273,147 @@
     return out;
   }
 
+  /* ============================================================
+     Bringing an existing ISMS across
+     ------------------------------------------------------------
+     For an organisation that is already certified: its certificate,
+     its Statement of Applicability and its registers come in from what
+     it already has, instead of the build-from-scratch path. Each step's
+     done-state is read from the tenant's own data.
+     d = { certIssued, soaImported, risks, vendors, actions, approvedDocs, scans } */
+  function ismsTransferSteps(d) {
+    d = d || {};
+    var n = function (x) { return (x || 0) > 0; };
+    return [
+      { id: 'cert', label: 'Record your certificate', why: 'The certification body, number and dates. Your surveillance audits and recertification go on the calendar from them.', done: !!d.certIssued,
+        action: 'App.recordCertificate', arg: 'iso27001', cta: 'Record certificate' },
+      { id: 'soa', label: 'Import your Statement of Applicability', why: 'From your existing spreadsheet: applicability, reasons, status, owners and evidence links for each control.', done: !!d.soaImported,
+        action: 'App.importSoa', cta: 'Import SoA' },
+      { id: 'risks', label: 'Import your risk register', why: 'Each risk with its likelihood, impact, owner and treatment.', done: n(d.risks),
+        action: 'App.importCsv', arg: 'risks', cta: 'Import risks' },
+      { id: 'vendors', label: 'Import your suppliers', why: 'Your supplier register, with criticality and certificate expiry dates.', done: n(d.vendors),
+        action: 'App.importCsv', arg: 'vendors', cta: 'Import suppliers' },
+      { id: 'actions', label: 'Import open actions and audit findings', why: 'Corrective actions and findings from your last audits, so they are tracked to closure.', done: n(d.actions),
+        action: 'App.importCsv', arg: 'actions', cta: 'Import actions' },
+      { id: 'docs', label: 'Upload your policies', why: 'Your approved policies and procedures, as they are. Review dates are tracked from here.', done: n(d.approvedDocs),
+        action: 'App.go', arg: 'documents', cta: 'Open documents' },
+      { id: 'scan', label: 'Run the first posture scan', why: 'Checks your Microsoft 365 against the controls and captures evidence for your next surveillance audit.', done: n(d.scans),
+        action: 'App.go', arg: 'scan', cta: 'Open the scan' }
+    ];
+  }
+
+  /* ============================================================
+     Statement of Applicability import
+     ------------------------------------------------------------
+     For an organisation that already runs an ISMS: its existing SoA
+     (exported from a spreadsheet or another platform) sets the
+     applicability, exclusion reason, recorded inclusion reason,
+     status, owner and evidence link of the controls Checkpoint
+     already holds. It never adds or removes a control; a row whose
+     code is not a control of the chosen framework is reported, and
+     a field the file does not carry is left as it is. */
+  var SOA_YES = ['yes', 'y', 'true', '1', 'applicable', 'included', 'include', 'in scope', 'inscope', 'selected', 'x'];
+  var SOA_NO = ['no', 'n', 'false', '0', 'not applicable', 'notapplicable', 'n a', 'na', 'excluded', 'exclude', 'out of scope', 'outofscope'];
+  var SOA_STATUS_WORDS = [
+    ['Implemented', ['implemented', 'fully implemented', 'complete', 'completed', 'done', 'yes', 'in place', 'operational', 'effective', 'operating']],
+    ['In progress', ['in progress', 'partial', 'partially implemented', 'partly implemented', 'partly', 'ongoing', 'planned', 'started', 'in development']],
+    ['Not started', ['not started', 'not implemented', 'no', 'none', 'open', 'to do', 'todo', 'not yet', 'missing']],
+    ['Not applicable', ['not applicable', 'n a', 'na', 'excluded']]
+  ];
+  function soaWord(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function soaYesNo(v) {
+    var w = soaWord(v);
+    if (SOA_YES.indexOf(w) !== -1) return true;
+    if (SOA_NO.indexOf(w) !== -1) return false;
+    return null;
+  }
+  function soaStatusOf(v) {
+    var w = soaWord(v);
+    for (var i = 0; i < SOA_STATUS_WORDS.length; i++) if (SOA_STATUS_WORDS[i][1].indexOf(w) !== -1) return SOA_STATUS_WORDS[i][0];
+    return null;
+  }
+  var SOA_IMPORT_SPEC = {
+    label: 'Statement of Applicability',
+    columns: [
+      { key: 'Control', aliases: ['Control ID', 'Control ref', 'Control reference', 'Control number', 'Control no', 'Reference', 'Ref', 'Code', 'ID', 'Annex A', 'Annex A control', 'Clause'], required: true },
+      { key: 'Applicable', aliases: ['Applicability', 'Applies', 'Included', 'Include', 'In scope', 'Selected', 'Applicable Y/N'],
+        validate: function (v) { return soaYesNo(v) === null ? 'Applicable "' + v + '" is not yes or no' : null; } },
+      { key: 'Justification', aliases: ['Justification for exclusion', 'Exclusion justification', 'Reason for exclusion', 'Exclusion reason', 'Reason', 'Rationale', 'Justification for inclusion/exclusion'] },
+      { key: 'Justification for inclusion', aliases: ['Inclusion justification', 'Reason for inclusion', 'Reason for selection', 'Inclusion reason'] },
+      { key: 'Status', aliases: ['Implementation status', 'Implementation', 'Implemented', 'Control status', 'State'],
+        validate: function (v) { return soaStatusOf(v) === null ? 'Status "' + v + '" is not recognised (use Implemented, In progress, Not started or Not applicable)' : null; } },
+      { key: 'Owner', aliases: ['Control owner', 'Responsible', 'Responsibility', 'Accountable'] },
+      { key: 'Evidence', aliases: ['Evidence link', 'Evidence URL', 'Evidence location', 'Evidence reference', 'Link'] }
+    ]
+  };
+  /* The control a cell names: the code itself in any case or spacing
+     ("a.5.1", "A 5.1"), or the code leading a title ("A.5.1 Policies
+     for information security"). ISO 27001 also accepts the 2022 Annex A
+     number without its "A." ("5.1"). Longest code wins, so A.5.1 never
+     claims a row for A.5.15. */
+  function soaControlFor(cell, controls, fw) {
+    var raw = String(cell || '').trim();
+    if (!raw) return null;
+    var squash = function (x) { return String(x).toUpperCase().replace(/\s+/g, ''); };
+    var byCode = {};
+    (controls || []).forEach(function (c) { if ((c.fw || 'iso27001') === fw) byCode[squash(c.id)] = c; });
+    if (byCode[squash(raw)]) return byCode[squash(raw)];
+    if (fw === 'iso27001') {
+      var m = /^(?:A\s*\.?\s*)?([5-8])\s*\.\s*0*(\d{1,2})(?!\d|\s*\.\s*\d)/i.exec(raw);
+      if (m && byCode['A.' + m[1] + '.' + m[2]]) return byCode['A.' + m[1] + '.' + m[2]];
+    }
+    var best = null;
+    Object.keys(byCode).forEach(function (k) {
+      var up = squash(raw.split(/\s/)[0]);
+      if (up === k || (squash(raw).indexOf(k) === 0 && /^[\s\-–—:)]/.test(raw.slice(byCode[k].id.length)))) {
+        if (!best || k.length > squash(best.id).length) best = byCode[k];
+      }
+    });
+    return best;
+  }
+  function planSoaImport(text, controls, fw, opts) {
+    opts = opts || {};
+    var plan = planCsvImport(text, SOA_IMPORT_SPEC, { mapping: opts.mapping });
+    var out = { label: SOA_IMPORT_SPEC.label, headers: plan.headers, columns: plan.columns, unknownColumns: plan.unknownColumns,
+      missingRequired: plan.missingRequired, error: plan.error, totalRows: plan.totalRows, skipped: plan.skipped.slice(),
+      changes: [], unchanged: 0, unknown: [], excludedNoReason: [], evidenceNotLink: 0, matched: 0 };
+    if (plan.error) return out;
+    var has = function (k) { return plan.columns.indexOf(k) !== -1; };
+    var seen = {};
+    plan.ready.forEach(function (row) {
+      var rec = row.rec;
+      var c = soaControlFor(rec.Control, controls, fw);
+      if (!c) { out.unknown.push({ line: row.line, code: rec.Control }); return; }
+      out.matched++;
+      var key = c.fw + '|' + c.id;
+      if (seen[key]) { out.skipped.push({ line: row.line, reason: c.id + ' repeats line ' + seen[key], raw: rec }); return; }
+      seen[key] = row.line;
+      var st = rec.Status ? soaStatusOf(rec.Status) : null;
+      var app = rec.Applicable ? soaYesNo(rec.Applicable) : (st === 'Not applicable' ? false : (st ? true : !!c.app));
+      var next = { app: app };
+      if (!app) {
+        next.st = 'Not applicable';
+        next.just = rec.Justification || (c.app ? '' : c.just || '');
+        if (!next.just) out.excludedNoReason.push(c.id);
+      } else {
+        next.st = st && st !== 'Not applicable' ? st : (c.app ? c.st : 'Not started');
+        next.just = '';
+        var inc = rec['Justification for inclusion'] || (has('Justification for inclusion') ? '' : rec.Justification || '');
+        if (inc) next.incl = inc;
+      }
+      if (rec.Owner) next.own = rec.Owner;
+      if (rec.Evidence) {
+        if (/^https:\/\/\S+$/i.test(rec.Evidence)) next.evidenceUrl = rec.Evidence;
+        else out.evidenceNotLink++;
+      }
+      var set = {};
+      Object.keys(next).forEach(function (k) { if ((c[k] === undefined ? '' : c[k]) !== next[k]) set[k] = next[k]; });
+      if (!Object.keys(set).length) { out.unchanged++; return; }
+      out.changes.push({ line: row.line, control: c, set: set });
+    });
+    return out;
+  }
+
   /* Best guess for each column the file did not name exactly: the file
      heading that contains the column's name or one of its aliases.
      Used to pre-select the mapping dropdowns, never applied silently. */
@@ -10533,6 +10674,10 @@
     if (obs.length) out.push('Legal / contractual: ' + obs.slice(0, 3).map(function (o) { return o.id + ' ' + o.title.split(' — ')[0]; }).join('; '));
     var checks = (ctx.checkLabelsByControl || {})[code] || [];
     if (checks.length) out.push('Monitored by posture check: ' + checks.slice(0, 2).join('; ') + (checks.length > 2 ? ' +' + (checks.length - 2) : ''));
+    /* A reason written for this control (InclusionNote: an imported SoA's
+       justification for inclusion) leads; it is separate from the
+       exclusion Justification above. */
+    if (control.incl) out.unshift('Recorded: ' + control.incl);
     if (!out.length) out.push('Baseline: adopted as good practice (ISO/IEC 27002) — no specific risk or requirement recorded yet');
     return out;
   }
@@ -14972,6 +15117,8 @@
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
     OPERATING_RHYTHM: OPERATING_RHYTHM, rhythmKeyOf: rhythmKeyOf, rhythmDef: rhythmDef, rhythmDefFor: rhythmDefFor, CALENDAR_STATUSES: CALENDAR_STATUSES, calendarItemLive: calendarItemLive, rhythmNotesText: rhythmNotesText, rhythmLastEvidence: rhythmLastEvidence,
     planOperatingRhythm: planOperatingRhythm, rhythmCompletionUpdates: rhythmCompletionUpdates,
+    planSoaImport: planSoaImport, soaControlFor: soaControlFor, SOA_IMPORT_SPEC: SOA_IMPORT_SPEC,
+    ismsTransferSteps: ismsTransferSteps,
     rhythmControlFw: rhythmControlFw, operatingRhythmFor: operatingRhythmFor, rhythmControlsFor: rhythmControlsFor,
     aiInventoryCheckResult: aiInventoryCheckResult, aiImpactCheckResult: aiImpactCheckResult,
     CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,
