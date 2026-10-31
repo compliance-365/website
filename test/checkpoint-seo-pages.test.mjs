@@ -44,8 +44,11 @@ test('the counts the pages quote match Checkpoint', () => {
   const fn = new Function('window', 'localStorage', store + '\n;return window;');
   let w; try { w = fn(vm.window, { getItem() { return null; }, setItem() {} }); } catch (e) { w = vm.window; }
   const defs = w.CHECK_DEFS;
-  const m365 = defs.filter((c) => !/^(aws|gh)-/.test(c.id)).length;
+  // "52 checks" is the scan every tenant runs; checks tied to a module
+  // (requiresModule) run only with it and are described on its page.
+  const m365 = defs.filter((c) => !/^(aws|gh)-/.test(c.id) && !c.requiresModule).length;
   assert.equal(m365, 52);
+  assert.deepEqual(defs.filter((c) => c.requiresModule).map((c) => c.id), ['ai-inventory', 'ai-impact']);
   assert.equal(defs.filter((c) => /^aws-/.test(c.id)).length, 10);
   assert.equal(defs.filter((c) => /^gh-/.test(c.id)).length, 8);
   assert.equal(w.FRAMEWORKS.iso27001.controls.length, 93);

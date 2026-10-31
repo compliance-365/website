@@ -95,8 +95,10 @@
                           // those exact codes (e.g. a control mapped
                           // "SOC2 CC6.1" earns 'soc2'). ISO 27701 is
                           // included on every non-AI, non-privacy-only
-                          // document because 27701 extends ISO 27001 and
-                          // needs the same base ISMS documents. A doc can
+                          // document: a PIMS needs the same base
+                          // management-system documents, whether it runs
+                          // alongside ISO 27001 or (2025 edition) on its
+                          // own. A doc can
                           // belong to several frameworks; the picker
                           // shows it once, under the first of its tagged
                           // frameworks in FRAMEWORK_ORDER that the client

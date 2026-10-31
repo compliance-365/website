@@ -783,6 +783,12 @@ window.CHECK_DEFS = [
   { id: 'supplier',   area: 'Supplier',   label: 'Supplier security assessments current',      tpl: 'supplier',  scored: true },
   /* Governance (2) */
   { id: 'policy',     area: 'Governance', label: 'Information security policy published & reviewed', tpl: 'policy', scored: true },
+  /* ISO 42001 only (requiresModule): hidden, and 'manual' so outside
+     the score, for a tenant without the AI governance module.
+     ai-inventory compares the scan's AI app discovery with the AI
+     systems register; ai-impact reads the register itself. */
+  { id: 'ai-inventory', area: 'Governance', label: 'AI apps in use are recorded in the AI systems register', tpl: null, scored: true, requiresModule: 'iso42001' },
+  { id: 'ai-impact',    area: 'Governance', label: 'AI systems have current impact assessments', tpl: null, scored: true, requiresModule: 'iso42001' },
   /* scored:true since the Training register exists — app.js's
      applyTrainingCheckResult() computes this from real completion data
      at scan time rather than from a Graph signal (there isn't one).
@@ -1587,7 +1593,7 @@ window.CHECK_PRIVACYACT = {};
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
-window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'Log and alert review', 'Vulnerability review', 'Threat intelligence review', 'Asset register review', 'Incident response exercise', 'Legal register review', 'External surveillance audit', 'Certificate expiry', 'Management review', 'Other'];
+window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'Log and alert review', 'Vulnerability review', 'Threat intelligence review', 'Asset register review', 'Incident response exercise', 'Legal register review', 'ROPA review', 'Privacy impact assessment review', 'Privacy requests review', 'PII retention review', 'Privacy transfers and processors review', 'AI systems register review', 'AI impact assessment review', 'AI policy review', 'AI system monitoring review', 'External surveillance audit', 'Certificate expiry', 'Management review', 'Other'];
 window.CALENDAR_FREQUENCIES = ['Annual', 'Biannual', 'Quarterly', 'Monthly', 'One-off'];
 
 /* Vendor data-access classification — a fixed taxonomy so "what data
@@ -1649,7 +1655,8 @@ window.DemoStore = (function () {
         'device': 'pass', 'compliance-policy': 'pass', 'device-checkin': 'review', 'device-config': 'pass', 'patch': 'review', 'patch-apps': 'review', 'patch-os': 'review', 'asr': 'review', 'device-encryption': 'review', 'device-jailbroken': 'fail',
         'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'oauth-consent': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review', 'xdr-incidents': 'fail', 'edr-coverage': 'review', 'phish-sim': 'pass',
-        'privacy-srr': 'fail', 'retention': 'review'
+        'privacy-srr': 'fail', 'retention': 'review',
+        'ai-inventory': 'review'
       };
     /* Each older set is expressed as a DIFF from the one after it.
        Spelling out three near-identical 33-key literals would make a
@@ -1693,6 +1700,7 @@ window.DemoStore = (function () {
       lastResults: resultsNow,
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
+        'ai-inventory': '1 of 3 AI app(s) connected to Microsoft 365 not in the AI systems register: ChatGPT.',
         'device-encryption': '97% of 203 device(s) reporting encryption state are encrypted (target ≥100%, review ≥95%) — 6 UNENCRYPTED. 11 further device(s) do not report the field and are excluded rather than counted against you.',
         'device-jailbroken': '1 of 38 mobile device(s) report as JAILBROKEN/ROOTED: MERIDIAN-IPHONE-114 — the compliance state these devices report cannot be trusted, because the controls asserting it can be defeated locally.',
         'dormant-accounts': '17 of 186 enabled account(s) have not signed in for over 90 days (2 never have — break-glass accounts legitimately sit here, so check yours before acting); 4 of them are guests. Oldest: contractor.dpatel@meridianhealth.example (never), breakglass01@meridianhealth.example (never), r.whitfield@meridianhealth.example (2025-11-02), locum.temp3@meridianhealth.example (2025-12-18), audit.guest@partner.example (2026-01-09). Confirm each is deliberate rather than an unfinished offboarding.',

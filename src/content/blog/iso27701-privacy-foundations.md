@@ -3,7 +3,7 @@ title: "ISO 27701 in Australia: Building a PIMS That Satisfies the Privacy Act"
 seoTitle: "ISO 27701 in Australia: Building a PIMS"
 description: "Extending ISO 27001 into a Privacy Information Management System under Australian law — the 13 APPs, ROPA, DPIAs and the Notifiable Data Breaches scheme."
 date: 2025-10-02
-lastModified: 2026-05-24
+lastModified: 2026-10-31
 author: "Compliance365"
 tags: ["ISO 27701", "Privacy", "PIMS", "Australia", "Privacy Act"]
 image: "/assets/blog-iso27701.svg"
@@ -17,9 +17,9 @@ This guide is practical. It covers what auditors check, how to build your PIMS i
 
 ## What ISO 27701 Actually Is
 
-ISO 27701 is not a standalone standard. It is an **extension** to ISO 27001 — published as a Privacy Information Management System specification that layers onto your existing ISMS.
+Under its 2019 edition, ISO 27701 was an **extension** to ISO 27001: a Privacy Information Management System specification that layered onto an existing ISMS and could only be certified with it. The 2025 edition made it a standalone management system standard, so it can now be certified on its own (see [ISO 27701:2025](/blog/iso27701-2025/)).
 
-That matters for implementation. You don't build a PIMS separately. You extend your existing risk assessment, control set, and evidence structure to cover privacy-specific requirements. Organisations pursuing both certifications from a single engagement typically reach dual certification for 30–40% less than running sequential separate programmes.
+Most organisations still build their PIMS on their ISMS, and that matters for implementation. You don't build a PIMS separately. You extend your existing risk assessment, control set, and evidence structure to cover privacy-specific requirements. Organisations pursuing both certifications from a single engagement typically reach dual certification for 30–40% less than running sequential separate programmes.
 
 The standard distinguishes between two roles:
 - **PII Controller** — decides the purpose and means of processing personal information (most Australian businesses)
