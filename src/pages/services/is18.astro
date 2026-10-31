@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
@@ -125,8 +126,8 @@ const faqLd = {
 
       <div class="svc-hero-image">
         <img
-          src={`${base}assets/illus-disp-ism-irap.svg`}
-          alt="Illustration of a government security compliance programme spanning governance, controls and reporting"
+          src={`${base}assets/illus-is18.svg`}
+          alt="Illustration of IS18 as four pillars — ISMS, Essential Eight, QGISCF classification and the annual return — under one Queensland Government security framework"
           loading="eager"
         />
       </div>
@@ -291,6 +292,11 @@ const faqLd = {
             The IS18 module is licensed as a bundle: full ISO 27001 and Essential Eight registers are included because IS18 is built on both. One cross-mapped control set — implement once, evidence once, report three ways.
           </p>
         </div>
+      </div>
+
+      <div style="max-width:1060px;margin:0 auto;">
+        <CheckpointShot id="soaEssential8" label="Pillar 2 — Essential Eight maturity, by strategy" />
+        <CheckpointShot id="postureScan" label="The posture checks behind it" />
       </div>
     </div>
   </section>

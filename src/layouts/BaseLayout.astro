@@ -232,10 +232,6 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="dns-prefetch" href="https://*.clarity.ms" />
     <link rel="dns-prefetch" href="https://assets.apollo.io" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <!-- cdnjs: hero 3D ring (three.js) — loaded lazily well after first
-         paint (see index.astro), so dns-prefetch only, not a full preconnect
-         that would compete with connections the critical path needs. -->
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
     <!-- Fonts are self-hosted (see src/styles/fonts.css for why). Preloading
          the woff2 directly starts the fetch at parse time; the previous
          Google Fonts stylesheet needed a round-trip before the browser even

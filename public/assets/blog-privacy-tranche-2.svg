@@ -1,0 +1,19 @@
+<!-- Cover: Privacy Act tranche 2 exposure draft — not law yet -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" font-family="Manrope, Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".12"/><stop offset="1" stop-color="#F0A97F" stop-opacity=".10"/></linearGradient></defs><rect width="960" height="420" rx="20" fill="url(#bg)"/>
+  <g transform="translate(80,40) rotate(-2)">
+    <rect width="330" height="340" rx="10" fill="#fff" stroke="#EDE6DA"/>
+    <text x="28" y="48" font-size="12" font-weight="800" fill="#6B6860" letter-spacing="2">PRIVACY ACT 1988</text>
+    <text x="28" y="76" font-size="20" font-weight="800" fill="#0B0B0C">Tranche 2</text>
+    <g fill="#F5F0E8"><rect x="28" y="100" width="274" height="9" rx="4.5"/><rect x="28" y="120" width="250" height="9" rx="4.5"/><rect x="28" y="140" width="264" height="9" rx="4.5"/><rect x="28" y="170" width="274" height="9" rx="4.5"/><rect x="28" y="190" width="200" height="9" rx="4.5"/><rect x="28" y="220" width="260" height="9" rx="4.5"/><rect x="28" y="240" width="230" height="9" rx="4.5"/><rect x="28" y="270" width="274" height="9" rx="4.5"/><rect x="28" y="290" width="180" height="9" rx="4.5"/></g>
+    <g transform="translate(150,200) rotate(-14)"><rect x="-110" y="-30" width="220" height="60" rx="8" fill="none" stroke="#BE4A1E" stroke-width="5"/><text x="0" y="10" text-anchor="middle" font-size="22" font-weight="900" fill="#BE4A1E" letter-spacing="2">EXPOSURE DRAFT</text></g>
+  </g>
+  <g transform="translate(470,70)">
+    <text x="0" y="0" font-size="13" font-weight="800" fill="#A63A12" letter-spacing="2">WHAT TO PREPARE FOR</text>
+    <g font-size="15" font-weight="800" fill="#0B0B0C">
+      <g transform="translate(0,22)"><rect width="410" height="76" rx="14" fill="#fff" stroke="#EDE6DA"/><rect x="18" y="18" width="40" height="40" rx="10" fill="#FBEFE8"/><text x="38" y="44" text-anchor="middle" fill="#A63A12">⚖</text><text x="76" y="34">Fair and reasonable test</text><text x="76" y="56" font-size="12" font-weight="600" fill="#6B6860">for all handling of personal information</text></g>
+      <g transform="translate(0,112)"><rect width="410" height="76" rx="14" fill="#fff" stroke="#EDE6DA"/><rect x="18" y="18" width="40" height="40" rx="10" fill="#FBEFE8"/><text x="38" y="44" text-anchor="middle" fill="#A63A12">✓</text><text x="76" y="34">Tighter consent</text><text x="76" y="56" font-size="12" font-weight="600" fill="#6B6860">voluntary, informed, specific, current</text></g>
+      <g transform="translate(0,202)"><rect width="410" height="76" rx="14" fill="#fff" stroke="#EDE6DA"/><rect x="18" y="18" width="40" height="40" rx="10" fill="#FBEFE8"/><text x="38" y="45" text-anchor="middle" font-size="13" fill="#A63A12">72h</text><text x="76" y="34">Breach statements</text><text x="76" y="56" font-size="12" font-weight="600" fill="#6B6860">proposed 72-hour timeframe</text></g>
+    </g>
+  </g>
+</svg>

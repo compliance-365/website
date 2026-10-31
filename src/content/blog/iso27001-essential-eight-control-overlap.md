@@ -5,6 +5,7 @@ description: "Already certified to ISO 27001 or assessed against Essential Eight
 date: 2026-08-22
 author: "Compliance365"
 tags: ["ISO 27001", "Essential Eight", "Risk Management", "Governance", "Australia"]
+image: "/assets/blog-iso27001-e8-overlap.svg"
 ---
 
 <div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">

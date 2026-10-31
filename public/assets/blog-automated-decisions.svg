@@ -1,0 +1,25 @@
+<!-- Cover: privacy policies must explain automated decisions from 10 December 2026 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" font-family="Manrope, Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".12"/><stop offset="1" stop-color="#F0A97F" stop-opacity=".10"/></linearGradient></defs><rect width="960" height="420" rx="20" fill="url(#bg)"/>
+  <g transform="translate(70,40)">
+    <rect width="470" height="340" rx="14" fill="#fff" stroke="#EDE6DA"/>
+    <text x="30" y="46" font-size="18" font-weight="800" fill="#0B0B0C">Privacy policy</text>
+    <g fill="#F5F0E8"><rect x="30" y="66" width="400" height="9" rx="4.5"/><rect x="30" y="84" width="360" height="9" rx="4.5"/><rect x="30" y="102" width="380" height="9" rx="4.5"/></g>
+    <g transform="translate(18,128)">
+      <rect width="434" height="132" rx="12" fill="#FBEFE8" stroke="#BE4A1E" stroke-width="2"/>
+      <text x="18" y="30" font-size="12" font-weight="800" fill="#A63A12" letter-spacing="1.5">NEW SECTION · APP 1</text>
+      <text x="18" y="56" font-size="16" font-weight="800" fill="#0B0B0C">Automated decisions</text>
+      <g font-size="12" fill="#2A2724"><text x="18" y="80">• Which decisions software makes or substantially informs</text><text x="18" y="100">• The kinds of personal information it uses</text><text x="18" y="120">• Where the decision significantly affects a person</text></g>
+    </g>
+    <g fill="#F5F0E8"><rect x="30" y="282" width="400" height="9" rx="4.5"/><rect x="30" y="300" width="300" height="9" rx="4.5"/></g>
+  </g>
+  <!-- calendar -->
+  <g transform="translate(610,70)">
+    <rect width="280" height="280" rx="18" fill="#fff" stroke="#EDE6DA"/>
+    <rect width="280" height="70" rx="18" fill="#BE4A1E"/><rect y="50" width="280" height="20" fill="#BE4A1E"/>
+    <text x="140" y="46" text-anchor="middle" font-size="20" font-weight="800" fill="#FAF7F1" letter-spacing="3">DECEMBER</text>
+    <text x="140" y="190" text-anchor="middle" font-size="110" font-weight="800" fill="#0B0B0C">10</text>
+    <text x="140" y="240" text-anchor="middle" font-size="22" font-weight="700" fill="#6B6860">2026</text>
+    <circle cx="44" cy="35" r="0"/>
+  </g>
+</svg>

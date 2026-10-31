@@ -1,0 +1,32 @@
+<!-- Cover: compliant vs findable — frameworks make you eligible, panels are the door -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" font-family="Manrope, Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".12"/><stop offset="1" stop-color="#F0A97F" stop-opacity=".10"/></linearGradient></defs><rect width="960" height="420" rx="20" fill="url(#bg)"/>
+  <g transform="translate(60,70)">
+    <text x="0" y="0" font-size="13" font-weight="800" fill="#A63A12" letter-spacing="2">1 · ELIGIBLE</text>
+    <g transform="translate(0,22)">
+      <rect width="250" height="270" rx="16" fill="#fff" stroke="#EDE6DA"/>
+      <g font-size="15" font-weight="800" fill="#0B0B0C">
+        <g transform="translate(20,24)"><rect width="210" height="60" rx="12" fill="#FAF7F1"/><text x="16" y="36">IS18</text><circle cx="186" cy="30" r="10" fill="#10B981"/><path d="M181 30l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <g transform="translate(20,98)"><rect width="210" height="60" rx="12" fill="#FAF7F1"/><text x="16" y="36">DISP</text><circle cx="186" cy="30" r="10" fill="#10B981"/><path d="M181 30l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <g transform="translate(20,172)"><rect width="210" height="60" rx="12" fill="#FAF7F1"/><text x="16" y="36">RFFR</text><circle cx="186" cy="30" r="10" fill="#10B981"/><path d="M181 30l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      </g>
+    </g>
+  </g>
+  <g transform="translate(330,206)"><path d="M0 0h70" stroke="#BE4A1E" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 10"/><path d="M62 -12l16 12-16 12" fill="none" stroke="#BE4A1E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(430,70)">
+    <text x="0" y="0" font-size="13" font-weight="800" fill="#A63A12" letter-spacing="2">2 · FINDABLE</text>
+    <g transform="translate(0,22)">
+      <rect width="470" height="270" rx="16" fill="#fff" stroke="#EDE6DA"/>
+      <!-- door -->
+      <rect x="30" y="40" width="120" height="200" rx="10" fill="#0B0B0C"/>
+      <rect x="44" y="54" width="92" height="172" rx="6" fill="#BE4A1E" opacity=".9"/>
+      <circle cx="122" cy="144" r="6" fill="#FAF7F1"/>
+      <g font-size="13" fill="#0B0B0C">
+        <text x="180" y="62" font-weight="800" font-size="15">Procurement panels</text>
+        <g transform="translate(180,82)"><rect width="260" height="40" rx="10" fill="#FBEFE8"/><text x="14" y="25" font-weight="700">BuyICT (Commonwealth)</text></g>
+        <g transform="translate(180,132)"><rect width="260" height="40" rx="10" fill="#FBEFE8"/><text x="14" y="25" font-weight="700">State supplier lists</text></g>
+        <g transform="translate(180,182)"><rect width="260" height="40" rx="10" fill="#FAF7F1" stroke="#EDE6DA" stroke-dasharray="4 4"/><text x="14" y="25" font-weight="700" fill="#6B6860">Your listing, kept current</text></g>
+      </g>
+    </g>
+  </g>
+</svg>

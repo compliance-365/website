@@ -1,0 +1,33 @@
+<!-- public/assets/illus-already-certified.svg — an existing ISMS moved across into Checkpoint -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/><stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/></linearGradient></defs><rect width="720" height="470" rx="26" fill="url(#g)"/>
+  <!-- Existing scattered records -->
+  <g transform="translate(40,60)">
+    <text x="0" y="0" font-size="12" font-weight="700" fill="#F0A97F" letter-spacing="1.5">WHAT YOU HAVE TODAY</text>
+    <g transform="translate(0,20) rotate(-3)"><rect width="230" height="70" rx="12" fill="#fff"/><rect x="16" y="16" width="30" height="38" rx="4" fill="#10B981" opacity=".85"/><text x="58" y="34" font-size="13" font-weight="700" fill="#0B0B0C">Risk register.xlsx</text><rect x="58" y="44" width="120" height="8" rx="4" fill="#F5F0E8"/></g>
+    <g transform="translate(14,104) rotate(2)"><rect width="230" height="70" rx="12" fill="#fff"/><rect x="16" y="16" width="30" height="38" rx="4" fill="#2563EB" opacity=".8"/><text x="58" y="34" font-size="13" font-weight="700" fill="#0B0B0C">SoA v7 FINAL.docx</text><rect x="58" y="44" width="140" height="8" rx="4" fill="#F5F0E8"/></g>
+    <g transform="translate(0,188) rotate(-2)"><rect width="230" height="70" rx="12" fill="#fff"/><rect x="16" y="16" width="30" height="38" rx="4" fill="#BE4A1E" opacity=".8"/><text x="58" y="34" font-size="13" font-weight="700" fill="#0B0B0C">Policies (32 files)</text><rect x="58" y="44" width="100" height="8" rx="4" fill="#F5F0E8"/></g>
+    <g transform="translate(18,272) rotate(3)"><rect width="230" height="70" rx="12" fill="#fff"/><rect x="16" y="16" width="30" height="38" rx="4" fill="#6B6860" opacity=".6"/><text x="58" y="34" font-size="13" font-weight="700" fill="#0B0B0C">Audit findings 2025</text><rect x="58" y="44" width="130" height="8" rx="4" fill="#F5F0E8"/></g>
+  </g>
+  <!-- Arrow -->
+  <g transform="translate(296,228)">
+    <path d="M0 0h70" stroke="#F0A97F" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 10"/>
+    <path d="M62 -12l16 12-16 12" fill="none" stroke="#F0A97F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- Checkpoint consolidated -->
+  <g transform="translate(400,40)">
+    <rect width="280" height="390" rx="18" fill="#fff"/>
+    <rect width="280" height="54" rx="18" fill="#0B0B0C"/><rect y="36" width="280" height="18" fill="#0B0B0C"/>
+    <circle cx="28" cy="27" r="9" fill="none" stroke="#BE4A1E" stroke-width="4"/>
+    <text x="46" y="32" font-size="14" font-weight="800" fill="#FAF7F1">Checkpoint</text>
+    <g font-size="13" font-weight="700" fill="#0B0B0C">
+      <g transform="translate(20,74)"><rect width="240" height="44" rx="10" fill="#FAF7F1"/><text x="14" y="27">Risk register</text><circle cx="218" cy="22" r="10" fill="#10B981"/><path d="M213 22l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(20,126)"><rect width="240" height="44" rx="10" fill="#FAF7F1"/><text x="14" y="27">Statement of Applicability</text><circle cx="218" cy="22" r="10" fill="#10B981"/><path d="M213 22l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(20,178)"><rect width="240" height="44" rx="10" fill="#FAF7F1"/><text x="14" y="27">Policies, versioned</text><circle cx="218" cy="22" r="10" fill="#10B981"/><path d="M213 22l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(20,230)"><rect width="240" height="44" rx="10" fill="#FAF7F1"/><text x="14" y="27">Open findings</text><circle cx="218" cy="22" r="10" fill="#10B981"/><path d="M213 22l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </g>
+    <rect x="20" y="294" width="240" height="76" rx="12" fill="#FBEFE8"/>
+    <text x="36" y="322" font-size="11" font-weight="700" fill="#A63A12" letter-spacing="1.2">NEXT SURVEILLANCE AUDIT</text>
+    <text x="36" y="350" font-size="18" font-weight="800" fill="#0B0B0C">Everything in one place</text>
+  </g>
+</svg>

@@ -51,7 +51,7 @@ export default defineConfig({
   // Content Security Policy, emitted as a <meta> on every page (static
   // hosting has no response headers). Astro fingerprints the scripts it
   // bundles; scripts/csp-inline-hashes.mjs adds the is:inline ones after
-  // the build. Origins: cdnjs (hero 3D ring); jsdelivr (jsPDF, Fuse.js);
+  // the build. Origins: jsdelivr (jsPDF, Fuse.js);
   // *.clarity.ms (Clarity: the loader fetches its engine and sends data
   // across several subdomains, after cookie consent); assets.apollo.io +
   // aplo-evnt.com (Apollo company identification); googletagmanager.com /
@@ -75,7 +75,7 @@ export default defineConfig({
         "form-action 'self' https://formspree.io",
       ],
       scriptDirective: {
-        resources: ["'self'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://*.clarity.ms', 'https://assets.apollo.io', 'https://www.googletagmanager.com', 'https://cdn.paddle.com'],
+        resources: ["'self'", 'https://cdn.jsdelivr.net', 'https://*.clarity.ms', 'https://assets.apollo.io', 'https://www.googletagmanager.com', 'https://cdn.paddle.com'],
       },
       styleDirective: {
         resources: ["'self'", "'unsafe-inline'", 'https://*.paddle.com'],

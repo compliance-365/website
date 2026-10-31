@@ -56,6 +56,12 @@ const cases = entries.map((entry) => {
   };
 });
 
+// Sector icons from the shared sprite (src/components/Icons.astro).
+const SECTOR_ICON = { government: 'ic-government', healthcare: 'ic-pulse', 'healthcare technology': 'ic-pulse', technology: 'ic-globe', fintech: 'ic-chart' };
+const sectorIcon = (sector) => SECTOR_ICON[String(sector).split(',')[0].trim().toLowerCase()] || 'ic-briefcase';
+// Weeks-to-delivery bars share one scale, rounded up to the next 4 weeks.
+const maxWeeks = Math.ceil(Math.max(4, ...cases.map(c => c.readinessWeeks ?? 0)) / 4) * 4;
+
 // Collect all unique sectors for the filter bar
 const allSectors = [...new Set(cases.flatMap(c =>
   c.sector ? [c.sector.split(',')[0].trim()] : []
@@ -171,6 +177,21 @@ const reviewsLd = [
         <div class="sl-cs-item"><b>{passCount > 0 ? '100%' : '—'}</b><span>First-time pass rate</span></div>
         <div class="sl-cs-item"><b>{totalDealsUnblocked}+</b><span>Enterprise deals unblocked</span></div>
       </div>
+      <figure class="weeks-plot" aria-labelledby="weeks-plot-cap">
+        <div class="wp-axis" aria-hidden="true">
+          {Array.from({ length: maxWeeks / 4 + 1 }, (_, i) => <span style={`left:${(i * 4 / maxWeeks) * 100}%`}>{i * 4}</span>)}
+        </div>
+        <div class="wp-track">
+          {medianWeeks != null && <span class="wp-median" style={`left:${(medianWeeks / maxWeeks) * 100}%`}><em>median {medianWeeks}</em></span>}
+          {cases.filter(c => c.readinessWeeks != null).sort((a, b) => a.readinessWeeks - b.readinessWeeks).map((c, i) => (
+            <a class="wp-dot" href={c.href} style={`left:${(c.readinessWeeks / maxWeeks) * 100}%;--row:${i % 2}`} title={`${c.title} — ${c.readinessWeeks} weeks`}>
+              <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><use href={`#${sectorIcon(c.sector)}`}/></svg>
+              <span class="wp-label">{c.sector.split(',')[0].trim()} · {c.readinessWeeks}w</span>
+            </a>
+          ))}
+        </div>
+        <figcaption id="weeks-plot-cap">Weeks to delivery, one dot per engagement. Each dot links to its case study.</figcaption>
+      </figure>
       <p class="results-footnote">
         Computed from the {engagementCount} case studies published below. Median weeks is the middle value of each engagement's weeks-to-delivery figure. The first-time pass rate is measured only across the {passCount} engagement{passCount === 1 ? '' : 's'} that involved an external certification or attestation audit with a pass/fail (or clean/qualified opinion) outcome — {engagementCount - passCount} of the {engagementCount} were assurance reports or maturity-uplift engagements without that kind of audit outcome, and aren't counted in this specific figure. Every number here is documented in the case study it comes from — click through and check.
       </p>
@@ -222,6 +243,32 @@ const reviewsLd = [
     .sl-cs-item b{display:block;font-family:Bricolage Grotesque,system-ui;font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#F0A97F;line-height:1}
     .sl-cs-item span{display:block;margin-top:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:500;font-family:Bricolage Grotesque,system-ui}
     @media(max-width:640px){.sl-cs-item{flex:1 1 50%}}
+    .weeks-plot{margin:2.5rem auto 0;max-width:900px}
+    .wp-axis{position:relative;height:16px;margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(250,247,241,.6);font-family:Bricolage Grotesque,system-ui}
+    .wp-axis span{position:absolute;transform:translateX(-50%)}
+    .wp-track{position:relative;height:96px;border-top:1px solid rgba(255,255,255,.18)}
+    .wp-median{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed rgba(240,169,127,.7)}
+    .wp-median em{position:absolute;bottom:-2px;left:6px;font-style:normal;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#F0A97F;white-space:nowrap;font-weight:700}
+    .wp-dot{position:absolute;top:calc(14px + var(--row) * 34px);transform:translateX(-50%);display:flex;align-items:center;gap:6px;text-decoration:none;color:#FAF7F1}
+    .wp-dot .ic{width:26px;height:26px;padding:5px;border-radius:50%;background:#BE4A1E;color:#fff;flex:none}
+    .wp-dot:hover .ic,.wp-dot:focus-visible .ic{background:#F0A97F;color:#0B0B0C}
+    .wp-label{font-size:11px;font-weight:700;white-space:nowrap;color:rgba(250,247,241,.8)}
+    .weeks-plot figcaption{font-size:.78rem;color:rgba(250,247,241,.62);text-align:center;margin-top:.5rem}
+    @media(max-width:640px){.weeks-plot{padding:0 16px}.wp-label{display:none}.wp-track{height:100px}}
+    .cs-sector{display:inline-flex;align-items:center;gap:6px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-ink);background:rgba(190,74,30,0.06);padding:3px 10px 3px 6px;border-radius:12px}
+    .cs-sector .ic{width:16px;height:16px}
+    .cs-weeks{display:flex;align-items:center;gap:.6rem;margin:0 0 1.25rem}
+    .cs-weeks-bar{flex:1;height:8px;border-radius:4px;background:#F0EAE0;overflow:hidden}
+    .cs-weeks-bar span{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#BE4A1E,#F0A97F)}
+    .cs-weeks-k{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#6B6860}
+    /* Tags inside a card are labels, not tap targets: the card is the link. */
+    .case-card span.pill{min-height:0;line-height:1.4;padding:3px 9px}
+    .cs-weeks-n{font-size:.75rem;font-weight:800;color:#4A4740;white-space:nowrap}
+    .case-card-next{text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.75rem;border:2px dashed rgba(190,74,30,.35);background:#FAF7F1;box-shadow:none}
+    .case-card-next .cs-sector{align-self:flex-start}
+    .case-card-next h3{margin:0;font-size:1.1rem}
+    .case-card-next p{margin:0;flex:1;line-height:1.6}
+    .case-card-next-cta{color:var(--accent-ink);font-weight:600;font-size:.875rem}
     .pull-quotes{display:grid;gap:44px;max-width:820px;margin:0 auto}
     .pull-rule{width:26px;height:1px;background:#BE4A1E;margin-bottom:18px}
     .pull-quote blockquote{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:clamp(1.2rem,2.2vw,1.6rem);line-height:1.5;color:#0B0B0C;margin:0}
@@ -279,7 +326,8 @@ const reviewsLd = [
                 <!-- Sector + timeline badges -->
                 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
                   {c.sector && (
-                    <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-ink);background:rgba(190, 74, 30,0.06);padding:3px 10px;border-radius:12px;">
+                    <span class="cs-sector">
+                      <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><use href={`#${sectorIcon(c.sector)}`}/></svg>
                       {c.sector.split(',')[0].trim()}
                     </span>
                   )}
@@ -293,6 +341,14 @@ const reviewsLd = [
                 <!-- Title & summary -->
                 <h3 style="margin:0 0 0.75rem;font-size:1.1rem;line-height:1.4;">{c.title}</h3>
                 <p class="muted small" style="flex:1;margin:0 0 1.25rem;line-height:1.6;">{c.summary}</p>
+
+                {c.readinessWeeks != null && (
+                  <div class="cs-weeks" aria-label={`${c.readinessWeeks} weeks to delivery`}>
+                    <span class="cs-weeks-k">Delivery</span>
+                    <div class="cs-weeks-bar"><span style={`width:${(c.readinessWeeks / maxWeeks) * 100}%`}></span></div>
+                    <span class="cs-weeks-n">{c.readinessWeeks} wk</span>
+                  </div>
+                )}
 
                 <!-- Outcome metrics (if present in frontmatter) -->
                 {c.outcomes.length > 0 && (
@@ -317,6 +373,14 @@ const reviewsLd = [
                 <span style="color:var(--accent-ink);font-weight:600;font-size:0.875rem;margin-top:auto;">Read case study →</span>
               </a>
             ))}
+            {cases.length % 2 === 1 && (
+              <a href={ctaUrl} class="card case-card case-card-next" data-sector="all">
+                <span class="cs-sector"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-compass"/></svg>Your sector</span>
+                <h3>Don't see your situation here?</h3>
+                <p class="muted small">We work across Australian industries well beyond these five. A 30-minute call will tell you whether we've done something similar, what a realistic timeline looks like, and whether we're the right fit.</p>
+                <span class="case-card-next-cta">Book a free call →</span>
+              </a>
+            )}
           </div>
 
           <!-- Empty state if JS filter hides everything -->
@@ -327,22 +391,6 @@ const reviewsLd = [
       )}
     </div>
   </section>
-
-  <!-- DON'T SEE YOUR SECTOR -->
-  {cases.length > 0 && (
-    <section class="section" style="background:#FAF7F1;">
-      <div class="container center">
-        <h2>Don't see your sector?</h2>
-        <p class="muted" style="max-width:640px;margin:1rem auto 2rem;">
-          We work across a wide range of Australian industries. If you don't see a case study that matches your situation, a 30-minute call will tell you whether we've done something similar — and whether we're the right fit.
-        </p>
-        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-          <a href={ctaUrl} class="btn btn-primary">Book a free call</a>
-          <a href={`${base}services/`} class="btn btn-outline">Browse services</a>
-        </div>
-      </div>
-    </section>
-  )}
 
   <!-- FINAL CTA -->
   <section class="svc-final-cta">
@@ -386,9 +434,9 @@ const reviewsLd = [
           // Show / hide cards
           let visible = 0;
           cards.forEach(card => {
-            const match = filter === 'all' || card.dataset.sector === filter;
+            const match = filter === 'all' || card.dataset.sector === filter || card.dataset.sector === 'all';
             card.style.display = match ? '' : 'none';
-            if (match) visible++;
+            if (match && card.dataset.sector !== 'all') visible++;
           });
 
           // Toggle empty state

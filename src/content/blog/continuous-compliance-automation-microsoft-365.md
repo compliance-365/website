@@ -5,6 +5,7 @@ description: "Most 'continuous compliance' claims are marketing. Here's the lite
 date: 2026-08-22
 author: "Compliance365"
 tags: ["Automation", "Microsoft 365", "ISMS", "Governance", "Continuous Monitoring"]
+image: "/assets/blog-continuous-compliance.svg"
 ---
 
 <div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">

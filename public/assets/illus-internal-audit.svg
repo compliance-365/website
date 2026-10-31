@@ -1,0 +1,40 @@
+<!-- public/assets/illus-internal-audit.svg — clause 9.2 audit programme, findings, closure -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/><stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/></linearGradient></defs><rect width="720" height="470" rx="26" fill="url(#g)"/>
+  <!-- Programme -->
+  <g transform="translate(40,36)">
+    <rect width="380" height="398" rx="16" fill="#fff"/>
+    <text x="22" y="34" font-size="12" font-weight="700" fill="#A63A12" letter-spacing="1.5">AUDIT PROGRAMME · CLAUSE 9.2</text>
+    <g font-size="13" fill="#0B0B0C">
+      <g transform="translate(22,60)"><rect width="336" height="40" rx="10" fill="#FAF7F1"/><text x="14" y="25" font-weight="700">4  Context</text><circle cx="312" cy="20" r="10" fill="#10B981"/><path d="M307 20l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(22,106)"><rect width="336" height="40" rx="10" fill="#FAF7F1"/><text x="14" y="25" font-weight="700">5  Leadership</text><circle cx="312" cy="20" r="10" fill="#10B981"/><path d="M307 20l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(22,152)"><rect width="336" height="40" rx="10" fill="#FAF7F1"/><text x="14" y="25" font-weight="700">6  Planning &amp; risk</text><circle cx="312" cy="20" r="10" fill="#10B981"/><path d="M307 20l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(22,198)"><rect width="336" height="40" rx="10" fill="#FBEFE8"/><text x="14" y="25" font-weight="700">7  Support</text><rect x="252" y="11" width="70" height="18" rx="9" fill="#F59E0B"/><text x="287" y="24" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">MINOR</text></g>
+      <g transform="translate(22,244)"><rect width="336" height="40" rx="10" fill="#FAF7F1"/><text x="14" y="25" font-weight="700">8  Operation</text><circle cx="312" cy="20" r="10" fill="#10B981"/><path d="M307 20l4 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(22,290)"><rect width="336" height="40" rx="10" fill="#FBEFE8"/><text x="14" y="25" font-weight="700">9  Performance evaluation</text><rect x="268" y="11" width="54" height="18" rx="9" fill="#BE4A1E"/><text x="295" y="24" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">OFI</text></g>
+      <g transform="translate(22,336)"><rect width="336" height="40" rx="10" fill="#FAF7F1"/><text x="14" y="25" font-weight="700">10  Improvement</text><circle cx="312" cy="20" r="10" fill="#F5F0E8" stroke="#D9D2C5"/></g>
+    </g>
+  </g>
+  <!-- Independence badge -->
+  <g transform="translate(440,36)">
+    <rect width="240" height="150" rx="16" fill="#fff"/>
+    <circle cx="56" cy="62" r="26" fill="#FBEFE8"/>
+    <circle cx="56" cy="54" r="9" fill="#BE4A1E"/><path d="M38 78c3-11 10-15 18-15s15 4 18 15" fill="#BE4A1E"/>
+    <text x="96" y="56" font-size="14" font-weight="800" fill="#0B0B0C">Independent</text>
+    <text x="96" y="74" font-size="12" fill="#6B6860">auditor, not your team</text>
+    <rect x="22" y="108" width="196" height="9" rx="4.5" fill="#F5F0E8"/>
+    <rect x="22" y="124" width="150" height="9" rx="4.5" fill="#F5F0E8"/>
+  </g>
+  <!-- Findings to closure -->
+  <g transform="translate(440,204)">
+    <rect width="240" height="230" rx="16" fill="#fff"/>
+    <text x="22" y="34" font-size="12" font-weight="700" fill="#A63A12" letter-spacing="1.5">FINDINGS</text>
+    <g font-size="12" fill="#0B0B0C" font-weight="700">
+      <text x="22" y="68">Raised</text><rect x="100" y="58" width="118" height="12" rx="6" fill="#BE4A1E"/>
+      <text x="22" y="100">Actioned</text><rect x="100" y="90" width="118" height="12" rx="6" fill="#F5F0E8"/><rect x="100" y="90" width="88" height="12" rx="6" fill="#F59E0B"/>
+      <text x="22" y="132">Closed</text><rect x="100" y="122" width="118" height="12" rx="6" fill="#F5F0E8"/><rect x="100" y="122" width="60" height="12" rx="6" fill="#10B981"/>
+    </g>
+    <rect x="22" y="160" width="196" height="46" rx="10" fill="#ecfdf5"/>
+    <text x="120" y="188" text-anchor="middle" font-size="13" font-weight="800" fill="#047857">Ready for Stage 2</text>
+  </g>
+</svg>

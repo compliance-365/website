@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CheckpointShot from '../../components/CheckpointShot.astro';
 import RelatedResources from '../../components/RelatedResources.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import { CONSULTING_DAY_RATE, fmtAud } from '../../data/pricing.js';
@@ -120,6 +121,9 @@ const faqLd = {
           <a href={`${base}pricing/`} class="btn-hdk-ghost">See pricing →</a>
         </div>
       </div>
+      <div class="svc-hero-image">
+        <img src={`${base}assets/illus-internal-audit.svg`} alt="Illustration of an internal audit programme across ISO clauses 4 to 10, with findings tracked from raised to closed" width="720" height="470" loading="eager" />
+      </div>
     </div>
   </section>
 
@@ -162,6 +166,7 @@ const faqLd = {
           </div>
         ))}
       </div>
+      <CheckpointShot id="internalAudits" label="The audit programme in Checkpoint" caption="Before fieldwork starts, the audit radar cross-checks your registers, scan results and records for what an auditor would raise. The programme underneath is your clause 9.2 record." />
     </div>
   </section>
 

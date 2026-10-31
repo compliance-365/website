@@ -37,6 +37,10 @@ export const SHOTS = {
     'Checkpoint ASD Essentials assessment: the eight domains in ASD priority order, each with its % effective, principle ratings and actions still to rate'),
   postureScan: shot('posture-scan', 'scan',
     'Checkpoint Microsoft 365 posture scan: an overall score, counts of checks needing attention, to review and clear, and the failing checks to fix first'),
+  internalAudits: shot('internal-audits', 'audits',
+    'Checkpoint internal audits: an audit radar listing what an auditor would raise today, each finding with its clause and a link to fix it, then the clause 9.2 audit programme with planned and completed audits'),
+  incidentRegister: shot('incident-register', 'incidents',
+    'Checkpoint incident register: counts of incidents logged, still open, high or critical and awaiting a privacy assessment, then each incident with its category, severity, date detected, status and assessment deadline'),
 };
 
 export type ShotId = keyof typeof SHOTS;
