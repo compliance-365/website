@@ -2216,10 +2216,10 @@
      staggers the first round so it does not all land in one week. */
   var OPERATING_RHYTHM = [
     { key: 'access-review', title: 'Access review: user, guest and admin accounts', category: 'Access control review', freq: 'Quarterly', firstDueDays: 30,
-      controls: ['A.5.15', 'A.5.18', 'A.8.2'],
+      controls: ['A.5.15', 'A.5.18', 'A.8.2', 'A.3.8', 'A.3.9'],
       evidence: 'An export of users, guests and admin role holders (Entra ID), each account confirmed or removed, signed off by the reviewer.' },
     { key: 'log-review', title: 'Security log and alert review', category: 'Log and alert review', freq: 'Monthly', firstDueDays: 14,
-      controls: ['A.8.15', 'A.8.16'],
+      controls: ['A.8.15', 'A.8.16', 'A.3.25'],
       evidence: 'The month’s risky sign-ins, Defender alerts and audit-log anomalies reviewed, with anything notable raised as an incident or action.' },
     { key: 'vuln-review', title: 'Vulnerability and patch review', category: 'Vulnerability review', freq: 'Monthly', firstDueDays: 21,
       controls: ['A.8.7', 'A.8.8'],
@@ -2228,27 +2228,83 @@
       controls: ['A.5.6', 'A.5.7'],
       evidence: 'A summary of the quarter’s advisories (ACSC, Microsoft, key suppliers) and the actions raised from them, and the special interest group memberships confirmed current.' },
     { key: 'backup-restore', title: 'Backup restore test', category: 'Backup restore test', freq: 'Biannual', firstDueDays: 45,
-      controls: ['A.8.13'],
+      controls: ['A.8.13', 'A.3.24'],
       evidence: 'A record of data restored from backup: what was restored, when, how long it took, and that it was intact.' },
     { key: 'asset-review', title: 'Asset register review', category: 'Asset register review', freq: 'Biannual', firstDueDays: 60,
       controls: ['A.5.9', 'A.5.11'],
       evidence: 'The asset register checked against Intune and Entra, owners confirmed, and leavers’ devices returned.' },
     { key: 'supplier-review', title: 'Supplier security review', category: 'Supplier security review', freq: 'Annual', firstDueDays: 60,
-      controls: ['A.5.19', 'A.5.22'],
+      controls: ['A.5.19', 'A.5.22', 'A.3.10'],
       evidence: 'For each critical supplier: its certification or assurance report reviewed, contract security terms checked, and subprocessor changes noted.' },
     { key: 'awareness', title: 'Security awareness training refresher', category: 'Security awareness training', freq: 'Annual', firstDueDays: 30,
-      controls: ['A.6.3'],
+      controls: ['A.6.3', 'A.3.17'],
       evidence: 'Completion records for everyone in scope, from Checkpoint’s Training register.' },
     { key: 'ir-exercise', title: 'Incident response exercise', category: 'Incident response exercise', freq: 'Annual', firstDueDays: 75,
-      controls: ['A.5.24', 'A.5.26', 'A.5.27'],
+      controls: ['A.5.24', 'A.5.26', 'A.5.27', 'A.3.11', 'A.3.12'],
       evidence: 'The tabletop exercise record: scenario, who took part, decisions made, and lessons learned fed back into the plan.' },
     { key: 'bcp-test', title: 'Business continuity and disaster recovery test', category: 'BCP/DR test', freq: 'Annual', firstDueDays: 90,
       controls: ['A.5.29', 'A.5.30'],
       evidence: 'The exercise record: scenario, who took part, recovery times achieved against the targets, and actions raised.' },
     { key: 'legal-review', title: 'Legal and contractual requirements review', category: 'Legal register review', freq: 'Annual', firstDueDays: 90,
-      controls: ['A.5.31'],
-      evidence: 'The legal register reviewed: new laws and contract obligations added, owners confirmed.' }
+      controls: ['A.5.31', 'A.3.13'],
+      evidence: 'The legal register reviewed: new laws and contract obligations added, owners confirmed.' },
+    /* ISO 27701 (privacy): offered only while that module is licensed. */
+    { key: 'ropa-review', fw: 'iso27701', title: 'Record of processing activities review', category: 'ROPA review', freq: 'Annual', firstDueDays: 60,
+      controls: ['A.1.2.2', 'A.1.2.3', 'A.1.2.9', 'A.2.2.7'],
+      evidence: 'The record of processing activities reviewed: each activity’s purpose, lawful basis, recipients and retention confirmed, new processing added and stopped processing closed.' },
+    { key: 'pia-review', fw: 'iso27701', title: 'Privacy impact assessment review', category: 'Privacy impact assessment review', freq: 'Annual', firstDueDays: 75,
+      controls: ['A.1.2.6'],
+      evidence: 'Each privacy impact assessment checked against how the processing works today, and any new or changed processing assessed before it starts.' },
+    { key: 'privacy-requests', fw: 'iso27701', title: 'Privacy requests and complaints review', category: 'Privacy requests review', freq: 'Quarterly', firstDueDays: 30,
+      controls: ['A.1.3.2', 'A.1.3.7', 'A.1.3.9', 'A.1.3.10', 'A.2.3.2'],
+      evidence: 'The quarter’s requests from individuals (access, correction, deletion, objection) and privacy complaints, each logged with the date received and answered within the required time.' },
+    { key: 'pii-retention', fw: 'iso27701', title: 'Personal information retention and disposal review', category: 'PII retention review', freq: 'Biannual', firstDueDays: 90,
+      controls: ['A.1.4.6', 'A.1.4.8', 'A.1.4.9', 'A.2.4.3'],
+      evidence: 'Personal information held past its retention period identified and deleted or de-identified, with the disposal recorded.' },
+    { key: 'privacy-transfers', fw: 'iso27701', title: 'Processors and overseas transfers review', category: 'Privacy transfers and processors review', freq: 'Annual', firstDueDays: 90,
+      controls: ['A.1.2.7', 'A.1.5.2', 'A.1.5.3', 'A.2.5.7', 'A.2.5.9'],
+      evidence: 'Contracts with processors checked for privacy terms, each overseas disclosure listed with its country and legal basis, and subprocessor changes recorded and notified.' },
+    /* ISO 42001 (AI): offered only while that module is licensed. */
+    { key: 'ai-register-review', fw: 'iso42001', title: 'AI systems register review', category: 'AI systems register review', freq: 'Biannual', firstDueDays: 45,
+      controls: ['AI.4.2', 'AI.4.3', 'AI.4.4', 'AI.4.5', 'AI.9.4'],
+      evidence: 'The AI systems register checked against the AI tools actually in use (the posture scan lists AI apps connected to Microsoft 365): owner, intended use, data and supplier confirmed for each, and new systems added.' },
+    { key: 'ai-impact-review', fw: 'iso42001', title: 'AI impact assessment review', category: 'AI impact assessment review', freq: 'Annual', firstDueDays: 60,
+      controls: ['AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5'],
+      evidence: 'Each AI system’s impact assessment reviewed and updated, and any new or changed system assessed before use, with the decision recorded.' },
+    { key: 'ai-policy-review', fw: 'iso42001', title: 'AI policy review', category: 'AI policy review', freq: 'Annual', firstDueDays: 90,
+      controls: ['AI.2.2', 'AI.2.3', 'AI.2.4'],
+      evidence: 'The AI policy reviewed against the year’s AI incidents, new systems and changes in law, checked for consistency with the other policies, and approved by top management.' },
+    { key: 'ai-monitoring', fw: 'iso42001', title: 'AI system monitoring review', category: 'AI system monitoring review', freq: 'Quarterly', firstDueDays: 30,
+      controls: ['AI.6.2.6', 'AI.6.2.8', 'AI.3.3', 'AI.8.4'],
+      evidence: 'For each AI system in use: a sample of its outputs and logs checked against its intended use, concerns and incidents raised by staff or users reviewed, and actions recorded.' }
   ];
+
+  /* Which framework a rhythm control code belongs to. The three Annex
+     A sets never overlap: ISO 27001 is A.5–A.8, ISO 27701 A.1–A.3,
+     ISO 42001 AI.x. */
+  function rhythmControlFw(code) {
+    if (/^AI\./.test(code)) return 'iso42001';
+    if (/^A\.[123]\./.test(code)) return 'iso27701';
+    return 'iso27001';
+  }
+  /* The activities a tenant with these licensed frameworks runs. The
+     shared ones apply under ISO 27001 or ISO 27701 (they operate
+     controls in both); an activity marked fw only under its framework.
+     No list given means ISO 27001 alone, as before. */
+  function rhythmApplies(r, frameworks) {
+    var fws = frameworks || ['iso27001'];
+    if (r.fw) return fws.indexOf(r.fw) !== -1;
+    return fws.indexOf('iso27001') !== -1 || fws.indexOf('iso27701') !== -1;
+  }
+  function operatingRhythmFor(frameworks) {
+    return OPERATING_RHYTHM.filter(function (r) { return rhythmApplies(r, frameworks); });
+  }
+  /* An activity's controls in the licensed frameworks only, so a
+     tenant without ISO 27701 is never shown its codes. */
+  function rhythmControlsFor(def, frameworks) {
+    var fws = frameworks || ['iso27001'];
+    return ((def && def.controls) || []).filter(function (code) { return fws.indexOf(rhythmControlFw(code)) !== -1; });
+  }
 
   function rhythmKeyOf(cal) {
     var m = /\[rhythm:([a-z0-9-]+)\]/.exec((cal && cal.notes) || '');
@@ -2446,18 +2502,18 @@
      item in the same calendar category (a backup restore test someone
      added by hand counts). Returns the calendar items to add, with
      first due dates from `today`. */
-  function planOperatingRhythm(calendar, today) {
+  function planOperatingRhythm(calendar, today, frameworks) {
     var active = (calendar || []).filter(calendarItemLive);
-    return OPERATING_RHYTHM.filter(function (r) {
+    return operatingRhythmFor(frameworks).filter(function (r) {
       return !active.some(function (c) { return rhythmKeyOf(c) === r.key || c.category === r.category; });
     }).map(function (r) {
       return { key: r.key, title: r.title, category: r.category, freq: r.freq, nextDue: addDaysToDateStr(today, r.firstDueDays),
-        notes: '[rhythm:' + r.key + '] Evidence: ' + r.evidence, controls: r.controls.slice() };
+        notes: '[rhythm:' + r.key + '] Evidence: ' + r.evidence, controls: rhythmControlsFor(r, frameworks) };
     });
   }
 
   /* What completing a rhythm activity does to its linked controls
-     (ISO 27001 rows, applicable only). With evidence: the evidence is
+     (ISO 27001, ISO 27701 and ISO 42001 rows, applicable only). With evidence: the evidence is
      linked where the control has none, the control is verified today
      by the attester, and its status moves to In progress, or to
      Implemented when markImplemented (the activity IS the control
@@ -2467,7 +2523,8 @@
     if (!def || !evidenceUrl) return [];
     var out = [];
     (def.controls || []).forEach(function (code) {
-      var c = (controls || []).find(function (x) { return x.fw === 'iso27001' && x.id === code; });
+      var fw = rhythmControlFw(code);
+      var c = (controls || []).find(function (x) { return (x.fw || 'iso27001') === fw && x.id === code; });
       if (!c || !c.app) return;
       var set = { verified: today, verifiedBy: attester || 'Practitioner' };
       if (!c.evidenceUrl) set.evidenceUrl = evidenceUrl;
@@ -2567,6 +2624,48 @@
       return { result: 'review', note: (overdue.length || neverReviewed.length) + ' lower-criticality supplier(s) ' + (overdue.length ? 'overdue for review' : 'never reviewed') + ', of ' + list.length + ' recorded.' };
     }
     return { result: 'pass', note: 'All ' + list.length + ' recorded supplier(s) reviewed within cadence.' };
+  }
+
+  /* ISO 42001 AI.4.2/AI.4.4: the AI tools staff have connected to
+     Microsoft 365 are in the AI systems register. found is the scan's
+     AI app discovery (name-matched service principals holding OAuth
+     grants); an app counts as recorded when a register entry carries
+     its service principal id or the same name. dismissed holds ids the
+     practitioner set aside as not AI. Name matching finds known AI
+     products only, so this is never a fail: it says what to record. */
+  function aiInventoryCheckResult(found, aiSystems, dismissed) {
+    var gone = dismissed || {};
+    var norm = function (x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+    var reg = (aiSystems || []).filter(Boolean);
+    var apps = (found || []).filter(function (a) { return a && !gone[a.id]; });
+    var missing = apps.filter(function (a) {
+      var n = norm(a.name);
+      return !reg.some(function (r) { return (r.spId && r.spId === a.id) || (n && norm(r.name) === n); });
+    });
+    if (!apps.length) return { result: 'pass', note: 'No AI apps found with permissions in Microsoft 365; ' + reg.length + ' AI system(s) in the register.' };
+    if (!missing.length) return { result: 'pass', note: 'All ' + apps.length + ' AI app(s) connected to Microsoft 365 are in the AI systems register.' };
+    return { result: 'review', note: missing.length + ' of ' + apps.length + ' AI app(s) connected to Microsoft 365 not in the AI systems register: ' +
+      missing.map(function (a) { return a.name; }).join(', ') + '.' };
+  }
+
+  /* ISO 42001 AI.5.2/AI.5.3: every AI system in the register has a
+     completed impact assessment that is not past its next review
+     (the assessment's own next-due date, else a year after the system
+     was last reviewed). A high-risk system without one is a fail. */
+  function aiImpactCheckResult(aiSystems, today) {
+    var list = (aiSystems || []).filter(Boolean);
+    if (!list.length) return { result: 'manual', note: 'No AI systems recorded in the AI systems register yet.' };
+    var high = function (a) { return /high|prohibit|unaccept/i.test(a.riskTier || ''); };
+    var gaps = list.filter(function (a) {
+      if (a.impactAssessmentStatus !== 'Completed') return true;
+      var due = (a.impactAssessment && a.impactAssessment.nextDue) || (a.lastReviewed ? addDaysToDateStr(String(a.lastReviewed).slice(0, 10), 365) : '');
+      return !!(due && due < today);
+    });
+    var label = function (xs) { return xs.map(function (a) { return a.name; }).join(', '); };
+    var keyGaps = gaps.filter(high);
+    if (keyGaps.length) return { result: 'fail', note: keyGaps.length + ' high-risk AI system(s) without a current, completed impact assessment: ' + label(keyGaps) + '.' };
+    if (gaps.length) return { result: 'review', note: gaps.length + ' of ' + list.length + ' AI system(s) without a current, completed impact assessment: ' + label(gaps) + '.' };
+    return { result: 'pass', note: 'All ' + list.length + ' AI system(s) have a completed impact assessment within its review date.' };
   }
 
   /* A.5.1 and Clause 7.5 — the policy set exists, is approved, and is
@@ -13441,12 +13540,12 @@
     if (iso) {
       var as = s.assets || {}, lg = s.legal || {};
       /* Before risk treatment: the risk assessment draws on both. */
-      var rhythmMissing = planOperatingRhythm(s.calendar || [], today || '1970-01-01').length;
+      var rhythmMissing = planOperatingRhythm(s.calendar || [], today || '1970-01-01', s.entitled).length;
       steps.splice(steps.findIndex(function (x) { return x.id === 'suppliers'; }) + 1, 0,
         { id: 'rhythm', phase: 'Operate', label: 'Set up the operating rhythm',
           why: 'The recurring checks an auditor samples to see controls working: access reviews, log reviews, restore tests and more, each completed with its evidence.',
           done: rhythmMissing === 0,
-          detail: rhythmMissing && rhythmMissing < OPERATING_RHYTHM.length ? rhythmMissing + ' activit' + (rhythmMissing === 1 ? 'y' : 'ies') + ' not yet scheduled' : '' });
+          detail: rhythmMissing && rhythmMissing < operatingRhythmFor(s.entitled).length ? rhythmMissing + ' activit' + (rhythmMissing === 1 ? 'y' : 'ies') + ' not yet scheduled' : '' });
       steps.splice(steps.findIndex(function (x) { return x.id === 'risks'; }), 0,
         { id: 'assets', phase: 'Assess', label: 'Build the asset register',
           why: 'Sync devices, applications and sites from Microsoft 365, then add the information assets themselves, each with an owner (A.5.9).',
@@ -14873,6 +14972,8 @@
     createWriteGuard: createWriteGuard, certificationPathSteps: certificationPathSteps,
     OPERATING_RHYTHM: OPERATING_RHYTHM, rhythmKeyOf: rhythmKeyOf, rhythmDef: rhythmDef, rhythmDefFor: rhythmDefFor, CALENDAR_STATUSES: CALENDAR_STATUSES, calendarItemLive: calendarItemLive, rhythmNotesText: rhythmNotesText, rhythmLastEvidence: rhythmLastEvidence,
     planOperatingRhythm: planOperatingRhythm, rhythmCompletionUpdates: rhythmCompletionUpdates,
+    rhythmControlFw: rhythmControlFw, operatingRhythmFor: operatingRhythmFor, rhythmControlsFor: rhythmControlsFor,
+    aiInventoryCheckResult: aiInventoryCheckResult, aiImpactCheckResult: aiImpactCheckResult,
     CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,
     CADENCES: CADENCES, cadenceCurrent: cadenceCurrent, resolveCadenceTokens: resolveCadenceTokens, cadenceKeysIn: cadenceKeysIn, cadenceSnapshot: cadenceSnapshot, statementApplies: statementApplies, policyPracticeGaps: policyPracticeGaps,
     addMonthsIso: addMonthsIso, certificationCycle: certificationCycle, certificationPrepSteps: certificationPrepSteps, ONBOARDING_DAYS: ONBOARDING_DAYS, onboardingSchedule: onboardingSchedule, internalAuditCoverage: internalAuditCoverage, internalAuditProgramme: internalAuditProgramme

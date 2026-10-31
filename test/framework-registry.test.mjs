@@ -589,7 +589,9 @@ describe('content packs — checks no pack maps', { skip: SKIP }, () => {
     // 14 -> 6 when ISO 27701:2025's Table A.3 shared security controls
     // took the same checks as their ISO 27001 counterparts (A.3.23
     // Secure authentication, A.3.25 Logging, and so on).
-    assert.equal(unmapped.length, 6, 'unmapped checks:\n  ' + unmapped.join('\n  '));
+    // 6 -> 5 when ISO 42001 mapped 'oauth-consent' (in part) to AI.4.4:
+    // users cannot add an AI tool to Microsoft 365 without admin review.
+    assert.equal(unmapped.length, 5, 'unmapped checks:\n  ' + unmapped.join('\n  '));
   });
 });
 
@@ -654,10 +656,16 @@ describe('CHECK_DEFS — posture-check definitions', () => {
     // three use ThreatHunting.Read.All, with a Secure Score fallback for
     // the two patch checks. 69 -> 70 when 'gh-change-sample' was added
     // (A.8.32): the GitHub collector's sample of merged pull requests.
-    assert.equal(CHECK_DEFS.length, 70);
+    // 70 -> 72 with the ISO 42001 pair (requiresModule: 'iso42001'):
+    // 'ai-inventory' compares the scan's existing AI app discovery with
+    // the AI systems register, 'ai-impact' reads the register. No new
+    // Graph call or scope; hidden and 'manual' without the module, so
+    // the 52 every tenant runs is unchanged.
+    assert.equal(CHECK_DEFS.length, 72);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'aws').length, 10);
     assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability === 'github').length, 8);
-    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws' && c.requiresCapability !== 'github').length, 52);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresModule === 'iso42001').length, 2);
+    assert.equal(CHECK_DEFS.filter((c) => c.requiresCapability !== 'aws' && c.requiresCapability !== 'github' && !c.requiresModule).length, 52);
   });
 
   test('every AWS check id is namespaced, so it can never collide with a Microsoft check', () => {

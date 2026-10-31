@@ -2410,6 +2410,7 @@ function showModal(opts) {
   async function discoverAiSystemsFromScan(raw) {
     var grants = (raw && raw.riskyapps && raw.riskyapps.oauthGrants) || [];
     var candidates = await Graph.discoverAiSystems(grants);
+    S.aiFound = candidates;
     var known = {};
     (S.aiSystems || []).forEach(function (a) { if (a.spId) known[a.spId] = true; });
     var dismissed = window._aiDismissedThisSession || {};
@@ -10992,6 +10993,9 @@ function showModal(opts) {
   }
 
   function renderAiSystems() {
+    /* Every register change lands here: keep the ISO 42001 checks
+       (ai-inventory, ai-impact) in step with it. */
+    applyRegisterCheckResults();
     var wrap = document.getElementById('aiRows');
     if (!wrap) return;
     renderAiSystemsDashboard();
@@ -15479,6 +15483,14 @@ function showModal(opts) {
       'audit-review': L.independentReviewResult(S.audits || [], today),
       'incident-lessons': L.incidentLessonsResult(S.incidents || [])
     };
+    /* The ISO 42001 checks: 'manual' (outside the score) without the
+       module. ai-inventory needs this session's scan discovery, so
+       until a scan runs the stored result stands. */
+    var aiOn = !!(S.entitlements && S.entitlements.iso42001);
+    var aiOff = { result: 'manual', note: 'Measured when the ISO 42001 module is licensed.' };
+    out['ai-impact'] = aiOn ? L.aiImpactCheckResult(S.aiSystems || [], today) : aiOff;
+    if (!aiOn) out['ai-inventory'] = aiOff;
+    else if (S.aiFound) out['ai-inventory'] = L.aiInventoryCheckResult(S.aiFound, S.aiSystems || [], window._aiDismissedThisSession);
     Object.keys(out).forEach(function (k) {
       S.lastResults[k] = out[k].result;
       S.lastNotes[k] = out[k].note;
@@ -17214,15 +17226,15 @@ function showModal(opts) {
   }
 
   /* The operating-rhythm prompt above the calendar: shown only while
-     some recommended activity is not yet scheduled, and only for a
-     tenant running ISO 27001 (the activities evidence its controls). */
+     some recommended activity for the licensed frameworks (ISO 27001,
+     ISO 27701, ISO 42001) is not yet scheduled. */
   function renderRhythmCard() {
     var card = document.getElementById('calRhythmCard');
     if (!card) return;
-    var missing = entitledFrameworks().indexOf('iso27001') > -1
-      ? window.CheckpointLib.planOperatingRhythm(S.calendar || [], new Date().toISOString().slice(0, 10)) : [];
+    var ent = entitledFrameworks();
+    var missing = window.CheckpointLib.planOperatingRhythm(S.calendar || [], new Date().toISOString().slice(0, 10), ent);
     if (!missing.length) { card.style.display = 'none'; card.innerHTML = ''; return; }
-    var total = window.CheckpointLib.OPERATING_RHYTHM.length;
+    var total = window.CheckpointLib.operatingRhythmFor(ent).length;
     card.style.display = '';
     card.innerHTML = '<h3>Operating rhythm</h3><p style="font-size:12.5px;color:var(--paper-dim);line-height:1.7;margin:0 0 10px">' +
       (missing.length === total ? 'Auditors check that controls are working by sampling the records of recurring activities. ' : '') +
@@ -17255,7 +17267,7 @@ function showModal(opts) {
       var L = window.CheckpointLib, rdef = L.rhythmDefFor(c);
       var noteText = rdef ? L.rhythmNotesText(c.notes) : c.notes;
       var lastEv = rdef ? L.rhythmLastEvidence(c.notes) : '';
-      var ctlLine = rdef ? '<div class="fw-chips" style="margin-top:6px">' + rdef.controls.map(function (code) { return '<span>' + esc(code) + '</span>'; }).join('') + '</div>' : '';
+      var ctlLine = rdef ? '<div class="fw-chips" style="margin-top:6px">' + L.rhythmControlsFor(rdef, entitledFrameworks()).map(function (code) { return '<span>' + esc(code) + '</span>'; }).join('') + '</div>' : '';
       var evLine = lastEv && isSafeUrl(lastEv) ? '<div class="src" style="margin-top:4px"><a class="evidence-link" href="' + esc(lastEv) + '" target="_blank" rel="noopener">Last evidence ' + icon('external') + '</a></div>' : '';
       var live = window.CheckpointLib.calendarItemLive(c);
       var stLabel = (window.CheckpointLib.CALENDAR_STATUSES.find(function (x) { return x.value === c.status; }) || {}).label || '';
@@ -28771,7 +28783,7 @@ function showModal(opts) {
        covered by an item in its category is skipped. */
     setupOperatingRhythm: async function () {
       var L = window.CheckpointLib;
-      var plan = L.planOperatingRhythm(S.calendar || [], new Date().toISOString().slice(0, 10));
+      var plan = L.planOperatingRhythm(S.calendar || [], new Date().toISOString().slice(0, 10), entitledFrameworks());
       if (!plan.length) { toast('The operating rhythm is already scheduled.'); return; }
       var vals = await showModal({
         title: 'Schedule the operating rhythm',
@@ -28845,7 +28857,7 @@ function showModal(opts) {
       if (rdef) {
         var cv = await showModal({
           title: 'Complete: ' + c.title,
-          message: 'Evidence to keep: ' + rdef.evidence + '\n\nControls this verifies: ' + rdef.controls.join(', ') + '.',
+          message: 'Evidence to keep: ' + rdef.evidence + '\n\nControls this verifies: ' + L.rhythmControlsFor(rdef, entitledFrameworks()).join(', ') + '.',
           fields: [
             { id: 'url', label: 'Link to the evidence (SharePoint or OneDrive)', value: '', placeholder: 'https://…' },
             { id: 'mark', label: 'What this shows', type: 'select', value: 'implemented', options: [
@@ -31647,6 +31659,7 @@ function showModal(opts) {
     var awsOn = awsResultsPresent();
     var ghOn = githubResultsPresent();
     return window.CHECK_DEFS.filter(function (c) {
+      if (c.requiresModule) return !!(S.entitlements && S.entitlements[c.requiresModule]);
       if (c.requiresCapability === 'aws') return awsOn;
       if (c.requiresCapability === 'github') return ghOn;
       if (!c.requiresCapability) return true;

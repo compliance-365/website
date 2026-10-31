@@ -3,7 +3,7 @@
    answers. */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import Lib from '../public/checkpoint/lib.js';
 
@@ -13,6 +13,18 @@ window.CHECKPOINT_CONFIG = window.CHECKPOINT_CONFIG || { scopesProvision: [] };
 require('../public/checkpoint/store.js');
 const ANNEX_A = new Set();
 for (const [t, n] of [[5, 37], [6, 8], [7, 14], [8, 34]]) for (let i = 1; i <= n; i++) ANNEX_A.add(`A.${t}.${i}`);
+/* ISO 27701 and ISO 42001 codes come from their content packs (the
+   private checkpoint-content repo); without it, the code's shape. */
+const packCodes = (id) => {
+  const u = new URL(`../checkpoint-content/${id}.json`, import.meta.url);
+  return existsSync(u) ? new Set(JSON.parse(readFileSync(u)).framework.controls.map((c) => c.code)) : null;
+};
+const CODES = { iso27701: packCodes('iso27701'), iso42001: packCodes('iso42001') };
+const realCode = (c) => {
+  const fw = Lib.rhythmControlFw(c);
+  if (fw === 'iso27001') return ANNEX_A.has(c);
+  return CODES[fw] ? CODES[fw].has(c) : (fw === 'iso42001' ? /^AI\.\d+(\.\d+)+$/ : /^A\.[123](\.\d+)+$/).test(c);
+};
 const app = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
 const today = '2026-10-04';
 
@@ -20,7 +32,10 @@ describe('operating rhythm', () => {
   test('every activity names real Annex A controls, a calendar category and the evidence to keep', () => {
     assert.ok(Lib.OPERATING_RHYTHM.length >= 10);
     for (const r of Lib.OPERATING_RHYTHM) {
-      assert.ok(r.controls.length && r.controls.every((c) => ANNEX_A.has(c)), r.key);
+      assert.ok(r.controls.length && r.controls.every(realCode), r.key);
+      // An activity marked for a framework only names that framework's controls.
+      if (r.fw) assert.ok(r.controls.every((c) => Lib.rhythmControlFw(c) === r.fw), r.key + ' fw');
+      else assert.ok(Lib.rhythmControlFw(r.controls[0]) === 'iso27001', r.key + ' leads with its ISO 27001 control');
       assert.ok(window.CALENDAR_CATEGORIES.includes(r.category), r.key + ' category');
       assert.ok(window.CALENDAR_FREQUENCIES.includes(r.freq), r.key + ' freq');
       assert.ok(r.evidence.length > 40, r.key + ' evidence');
@@ -29,7 +44,7 @@ describe('operating rhythm', () => {
 
   test('plans only what is missing, and never duplicates a category already scheduled', () => {
     const all = Lib.planOperatingRhythm([], today);
-    assert.equal(all.length, Lib.OPERATING_RHYTHM.length);
+    assert.equal(all.length, Lib.OPERATING_RHYTHM.filter((r) => !r.fw).length);
     assert.ok(all.every((p) => p.nextDue > today && /^\[rhythm:[a-z-]+\]/.test(p.notes)));
     const some = Lib.planOperatingRhythm([{ category: 'Backup restore test', status: 'Active', notes: '' }, { category: 'Other', notes: '[rhythm:log-review]', status: 'Active' }], today);
     assert.ok(!some.find((p) => p.key === 'backup-restore'), 'hand-added restore test counts');
@@ -51,6 +66,33 @@ describe('operating rhythm', () => {
     const impl = Lib.rhythmCompletionUpdates(def, controls, 'https://x/review', today, 'Ekin', true);
     assert.deepEqual(impl.map((u) => u.set.st), ['Implemented', 'Implemented']);
     assert.deepEqual(Lib.rhythmCompletionUpdates(def, controls, '', today, 'Ekin', true), []);
+  });
+
+  test('privacy and AI activities follow the licensed frameworks', () => {
+    const keys = (fws) => Lib.planOperatingRhythm([], today, fws).map((p) => p.key);
+    assert.equal(keys(['iso27001']).length, 11);
+    assert.ok(!keys(['iso27001']).some((k) => /^(ropa|pia|privacy|pii|ai)-/.test(k)), 'ISO 27001 alone: no privacy or AI activities');
+    assert.equal(keys(['iso27001', 'iso27701']).length, 16);
+    assert.deepEqual(keys(['iso42001']), ['ai-register-review', 'ai-impact-review', 'ai-policy-review', 'ai-monitoring']);
+    assert.equal(keys(['iso27701']).length, 16, 'a standalone ISO 27701 tenant runs the shared activities too');
+    assert.equal(keys(['iso27001', 'iso27701', 'iso42001']).length, Lib.OPERATING_RHYTHM.length);
+    // Codes from a framework the tenant does not have are never shown.
+    const access = (fws) => Lib.planOperatingRhythm([], today, fws).find((p) => p.key === 'access-review').controls;
+    assert.deepEqual(access(['iso27001']), ['A.5.15', 'A.5.18', 'A.8.2']);
+    assert.deepEqual(access(['iso27001', 'iso27701']), ['A.5.15', 'A.5.18', 'A.8.2', 'A.3.8', 'A.3.9']);
+    assert.deepEqual(Lib.rhythmControlsFor(Lib.rhythmDef('access-review'), ['iso27701']), ['A.3.8', 'A.3.9']);
+  });
+
+  test('completing verifies the controls in each framework the activity covers', () => {
+    const controls = [
+      { fw: 'iso27001', id: 'A.5.15', app: true, st: 'Not started' },
+      { fw: 'iso27701', id: 'A.3.8', app: true, st: 'Not started' },
+      { fw: 'iso42001', id: 'AI.5.3', app: true, st: 'Not started' }];
+    const shared = Lib.rhythmCompletionUpdates(Lib.rhythmDef('access-review'), controls, 'https://x/r', today, 'Ekin', true);
+    assert.deepEqual(shared.map((u) => [u.control.fw, u.control.id, u.set.st]), [['iso27001', 'A.5.15', 'Implemented'], ['iso27701', 'A.3.8', 'Implemented']]);
+    const ai = Lib.rhythmCompletionUpdates(Lib.rhythmDef('ai-impact-review'), controls, 'https://x/r', today, 'Ekin', false);
+    assert.deepEqual(ai.map((u) => [u.control.fw, u.control.id, u.set.st]), [['iso42001', 'AI.5.3', 'In progress']]);
+    assert.equal(Lib.rhythmDefFor({ category: 'ROPA review', notes: '' }).key, 'ropa-review');
   });
 
   test('notes keep the guidance readable and the last evidence recoverable', () => {
@@ -77,6 +119,7 @@ describe('operating rhythm', () => {
     assert.match(app, /'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm'/);
     assert.match(app, /rhythmCompletionUpdates\(rdef, S\.controls, evidenceUrl, c\.lastCompleted, attester, markImplemented\)/);
     assert.match(app, /rhythm: \{ action: 'App\.setupOperatingRhythm'/);
+    assert.match(app, /planOperatingRhythm\(S\.calendar \|\| \[\], new Date\(\)\.toISOString\(\)\.slice\(0, 10\), entitledFrameworks\(\)\)/);
   });
 });
 

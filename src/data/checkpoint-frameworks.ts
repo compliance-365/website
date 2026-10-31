@@ -142,8 +142,9 @@ export const frameworkPages: FrameworkPage[] = [
       'Clauses 4–10 as requirement checklists, on the same clause register as ISO 27001.',
       'An AI systems register and an AI impact assessment procedure.',
       'AI-specific policies, kept separate from your information security documents.',
+      'Recurring AI activities on the compliance calendar (register review, impact assessment review, AI policy review and monitoring review), each completed with its evidence.',
     ],
-    scan: 'The scan flags high-privilege app grants in Microsoft Entra that nobody has reviewed, a common route for unapproved AI tools to reach your data.',
+    scan: 'The scan lists AI apps connected to Microsoft 365 and flags any not yet in the AI systems register, checks that every AI system has a current impact assessment, and flags high-privilege app grants that nobody has reviewed.',
     faq: [
       { q: 'Do we need ISO 27001 first?', a: 'No, but most organisations pair them. Checkpoint runs both on one clause register and one risk register, so shared work is done once.' },
       { q: 'Is ISO 42001 certifiable?', a: 'Yes. ISO/IEC 42001 is a certifiable management system standard, audited by an accredited certification body.' },
@@ -166,6 +167,7 @@ export const frameworkPages: FrameworkPage[] = [
       'Privacy documents kept separate from your information security ones.',
       'The Australian Privacy Principles and Notifiable Data Breaches duties are also available as their own framework, mapped to ISO 27001.',
       'Breach notification drafts for the OAIC and affected individuals, from the incident record.',
+      'Recurring privacy activities on the compliance calendar (ROPA review, privacy impact assessment review, privacy requests, retention and disposal, processors and overseas transfers), each completed with its evidence.',
     ],
     scan: 'The scan checks that subject rights requests are answered within the statutory deadline (with Microsoft Priva), and that retention and disposal labels are published.',
     faq: [

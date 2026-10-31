@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.184.0',
+    date: '2026-10-31',
+    entries: [
+      'ISO 27701 and ISO 42001 now have their own recurring activities on the compliance calendar. Privacy: ROPA review, privacy impact assessment review, privacy requests and complaints, retention and disposal, and processors and overseas transfers. AI: AI systems register review, impact assessment review, AI policy review and AI system monitoring. Each is offered only while its module is licensed.',
+      'Completing a recurring activity now verifies the matching controls in every framework it covers: the access review, log review, restore test, supplier review, awareness training, incident response exercise and legal review also verify their ISO 27701 Annex A.3 counterparts.',
+      'Two new posture checks with the ISO 42001 module: AI apps connected to Microsoft 365 that are not in the AI systems register, and AI systems without a current, completed impact assessment (a fail for a high-risk system). Both update as the register changes, and suggest the status of the ISO 42001 controls they evidence.'
+    ]
+  },
+  {
     version: '1.183.0',
     date: '2026-10-26',
     entries: [
