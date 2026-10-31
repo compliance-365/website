@@ -8796,9 +8796,45 @@ function showModal(opts) {
       cov.innerHTML = keys.length ? '<button class="lnk" data-action="App.toggleCoverage" data-id="open">' + avail + ' of ' + keys.length + ' data sources available</button>' + (avail < keys.length ? ' <span style="color:var(--warn)">· ' + (keys.length - avail) + ' missing</span>' : '') : '';
     }
     renderScanFixFirst();
+    renderAttackPaths();
   }
   /* The five most important things to fix, each one click from its
      detail. */
+  /* "How an attacker could get in" (lib attackPaths): the scan's
+     failing and partial checks read as the routes they open. */
+  function attackPathModel() {
+    return S.lastResults ? window.CheckpointLib.attackPaths(allCheckResultsById()) : null;
+  }
+  function andList(xs) { return xs.length < 2 ? (xs[0] || '') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1]; }
+  function checkLabel(id) { var d = (window.CHECK_DEFS || []).find(function (c) { return c.id === id; }); return d ? d.label : id; }
+  function attackFixFirstText(f, total) {
+    if (!f) return '';
+    return f.breaks.length
+      ? 'Fixing this one check breaks ' + f.breaks.length + ' of the ' + total + ' path' + (total === 1 ? '' : 's') + '.'
+      : 'It is a weak link in ' + f.appearsIn.length + ' of the ' + total + ' path' + (total === 1 ? '' : 's') + '.';
+  }
+  function renderAttackPaths() {
+    var el = document.getElementById('scanAttackPaths');
+    if (!el) return;
+    var m = attackPathModel();
+    if (!m) { el.innerHTML = ''; return; }
+    var head = '<h3>How an attacker could get in</h3><p class="src" style="margin:0 0 10px">Common routes into a Microsoft 365 organisation, built from this scan. A path shows when every link in it has a failing or partial check: a likely route, not evidence of a compromise. Technique IDs are from MITRE ATT&amp;CK.</p>';
+    if (!m.paths.length) { el.innerHTML = '<div class="card">' + head + '<p style="margin:0">No complete path in this scan: each one has at least one link your settings already break.</p></div>'; return; }
+    var chk = function (id) { return '<button class="chip st-Intreatment" style="cursor:pointer;background:transparent" data-action="App.openCheck" data-id="' + esc(id) + '">' + esc(checkLabel(id)) + '</button>'; };
+    var fix = m.fixFirst ? '<div class="gs-row" style="border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:10px"><div class="gs-text"><b>Fix first: ' + esc(checkLabel(m.fixFirst.check)) + '</b><span>' + esc(attackFixFirstText(m.fixFirst, m.paths.length)) + '</span></div>' +
+      '<button class="btn sm" data-action="App.openCheck" data-id="' + esc(m.fixFirst.check) + '">Open the check</button></div>' : '';
+    el.innerHTML = '<div class="card">' + head + fix + m.paths.map(function (p) {
+      return '<details style="border-top:1px solid var(--line);padding:8px 0"><summary style="cursor:pointer"><span class="chip sev-' + (p.severity === 'High' ? 'High' : 'Medium') + '">' + p.severity + '</span> <b>' + esc(p.title) + '</b></summary>' +
+        '<p class="src" style="margin:6px 0">' + esc(p.impact) + '</p>' +
+        '<ol style="margin:0 0 6px;padding-left:20px">' + p.links.map(function (l) {
+          return '<li style="margin:4px 0"><b>' + esc(l.role) + (l.optional ? ' (makes it worse)' : '') + ':</b> ' + esc(l.text) +
+            (l.open.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">' + l.open.map(chk).join('') + '</div>' : '<div class="src">Your settings already cover this link.</div>') + '</li>';
+        }).join('') + '</ol>' +
+        '<p style="margin:4px 0"><b>Break it at "' + esc(p.breakWith.role) + '":</b> ' + (p.breakWith.checks.length === 1 ? 'fix ' : 'fix all of ') + esc(andList(p.breakWith.checks.map(checkLabel))) + '.</p>' +
+        '<p class="src" style="margin:0">' + esc(p.techniques.join(' · ')) + '</p></details>';
+    }).join('') + '</div>';
+  }
+
   function renderScanFixFirst() {
     var el = document.getElementById('scanFixFirst');
     if (!el) return;
@@ -17361,7 +17397,19 @@ function showModal(opts) {
     return [
       boardroomSlideFingerprint, boardroomSlideTrend, boardroomSlideJourney,
       boardroomSlideRisks, boardroomSlideActions, boardroomSlideMilestones
-    ].concat(essOn() && essModel() ? [boardroomSlideEssentials] : []);
+    ].concat(essOn() && essModel() ? [boardroomSlideEssentials] : [])
+      .concat(attackPathModel() && attackPathModel().paths.length ? [boardroomSlideAttackPaths] : []);
+  }
+  /* The attack paths for a board: each route in one line, and the one
+     fix that breaks the most of them. */
+  function boardroomSlideAttackPaths() {
+    var m = attackPathModel();
+    return '<h2>How an attacker could get in</h2>' +
+      '<div class="bd-sub" style="text-align:left;max-width:820px;margin:0 auto">' + m.paths.slice(0, 5).map(function (p) {
+        return '<div class="d-kv"><span>' + esc(p.title) + '</span><b><span class="chip sev-' + p.severity + '">' + p.severity + '</span></b></div>';
+      }).join('') + '</div>' +
+      (m.fixFirst ? '<p class="bd-sub"><b>Fix first:</b> ' + esc(checkLabel(m.fixFirst.check)) + '. ' + esc(attackFixFirstText(m.fixFirst, m.paths.length)) + '</p>' : '') +
+      '<p class="bd-sub" style="font-size:12px">Likely routes from the latest posture scan, not evidence of a compromise.</p>';
   }
   /* Compact for the board slide: a coloured square per principle and
      domain, with a legend, so the whole grid fits one screen. */
