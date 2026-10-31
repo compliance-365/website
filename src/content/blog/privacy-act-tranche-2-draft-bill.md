@@ -5,6 +5,7 @@ description: "The tranche 2 Privacy Act exposure draft brings a fair and reasona
 date: 2026-10-10
 author: "Compliance365"
 tags: ["Privacy Act", "APPs", "Data Breach", "ISO 27701", "Australia"]
+image: "/assets/blog-privacy-tranche-2.svg"
 ---
 
 <div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">

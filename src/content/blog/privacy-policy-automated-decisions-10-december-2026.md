@@ -5,6 +5,7 @@ description: "From 10 December 2026, privacy policies must explain when software
 date: 2026-10-10
 author: "Compliance365"
 tags: ["Privacy Act", "APP 1", "AI Governance", "Automated Decision-Making", "Australia"]
+image: "/assets/blog-automated-decisions.svg"
 ---
 
 <div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">

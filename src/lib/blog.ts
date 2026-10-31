@@ -24,3 +24,12 @@ export function coverUrl(img: string | undefined, base = import.meta.env.BASE_UR
   if (/^https?:\/\//i.test(img)) return img;
   return `${base}${String(img).replace(/^\/+/, '')}`;
 }
+
+/** Image for a post's card in lists ("Keep reading", the blog index). A
+ *  post without its own cover falls back to its generated link-preview
+ *  card (src/pages/og/[slug].png.ts), so no card is ever text-only. The
+ *  post page itself only shows a cover the author chose, because the
+ *  preview card repeats the headline printed under it. */
+export function cardImageUrl(post: Post, base = import.meta.env.BASE_URL || '/'): string {
+  return coverUrl(post.data.image, base) ?? `${base}og/og-blog-${post.id}.png`;
+}

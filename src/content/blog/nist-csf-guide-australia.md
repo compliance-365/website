@@ -5,6 +5,7 @@ description: "NIST CSF 2.0 keeps showing up in Australian procurement and insure
 date: 2026-08-22
 author: "Compliance365"
 tags: ["NIST CSF", "Cyber Security", "Risk Management", "Governance", "Australia"]
+image: "/assets/blog-nist-csf.svg"
 ---
 
 <div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
@@ -17,6 +18,17 @@ tags: ["NIST CSF", "Cyber Security", "Risk Management", "Governance", "Australia
 ## What NIST CSF actually is
 
 The NIST Cybersecurity Framework, now in its 2.0 revision (February 2024), is a voluntary framework published by the US National Institute of Standards and Technology. It organises cyber risk management into six functions:
+
+<figure style="margin:20px auto 8px;max-width:420px;text-align:center">
+  <svg viewBox="0 0 400 400" role="img" aria-labelledby="csf-wheel-t" style="width:100%;height:auto;font-family:inherit">
+    <title id="csf-wheel-t">The six NIST CSF 2.0 functions: Govern at the centre, surrounded by Identify, Protect, Detect, Respond and Recover</title>
+    <path d="M206.3 20.1 A180 180 0 0 1 369.1 138.4 L292.1 166.5 A98 98 0 0 0 203.4 102.1Z" fill="#BE4A1E"/><text x="282.3" y="91.7" text-anchor="middle" font-size="15" font-weight="800" fill="#FAF7F1">Identify</text><path d="M373.0 150.4 A180 180 0 0 1 310.8 341.8 L260.3 277.2 A98 98 0 0 0 294.2 173.0Z" fill="#D2693C"/><text x="333.1" y="248.3" text-anchor="middle" font-size="15" font-weight="800" fill="#FAF7F1">Protect</text><path d="M300.7 349.2 A180 180 0 0 1 99.3 349.2 L145.2 281.2 A98 98 0 0 0 254.8 281.2Z" fill="#E08A5E"/><text x="200.0" y="345.0" text-anchor="middle" font-size="15" font-weight="800" fill="#FAF7F1">Detect</text><path d="M89.2 341.8 A180 180 0 0 1 27.0 150.4 L105.8 173.0 A98 98 0 0 0 139.7 277.2Z" fill="#A63A12"/><text x="66.9" y="248.3" text-anchor="middle" font-size="15" font-weight="800" fill="#FAF7F1">Respond</text><path d="M30.9 138.4 A180 180 0 0 1 193.7 20.1 L196.6 102.1 A98 98 0 0 0 107.9 166.5Z" fill="#8B2F0E"/><text x="117.7" y="91.7" text-anchor="middle" font-size="15" font-weight="800" fill="#FAF7F1">Recover</text>
+    <circle cx="200" cy="200" r="92" fill="#0B0B0C"/>
+    <text x="200" y="196" text-anchor="middle" font-size="22" font-weight="800" fill="#FAF7F1">Govern</text>
+    <text x="200" y="218" text-anchor="middle" font-size="11" font-weight="700" fill="#F0A97F" letter-spacing="1.5">NEW IN 2.0</text>
+  </svg>
+  <figcaption style="font-size:.85rem;color:#6B6860;margin-top:6px">Govern sits at the centre in CSF 2.0: it directs how the other five are run.</figcaption>
+</figure>
 
 <div style="background:#FAF7F1;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
