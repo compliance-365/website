@@ -1982,6 +1982,9 @@ window.Graph = (function () {
       if (f.name === window.CheckpointLib.EVIDENCE_ROOT) continue;
       /* Checkpoint backups/ holds dated zips, not controlled documents. */
       if (f.name === window.CheckpointLib.BACKUP_ROOT) continue;
+      /* Copilot briefing/ holds the briefing Checkpoint writes for the
+         Microsoft 365 Copilot agent, not a controlled document. */
+      if (f.name === window.CheckpointLib.COPILOT_ROOT) continue;
       var base = '/drives/' + driveId + '/items/' + f.id + '/children?' + select;
       var files;
       try {

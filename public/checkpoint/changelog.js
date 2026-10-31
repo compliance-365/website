@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.187.0',
+    date: '2026-10-31',
+    entries: [
+      'Microsoft 365 Copilot (Settings \u203a Notifications): turn it on and Checkpoint keeps a dated briefing in your SharePoint site, covering overdue and upcoming actions, audits and certificates, approvals, recurring activities, top risks and attack paths, refreshed after each scan and daily. Download the Checkpoint agent for your Teams administrator to upload, and ask Copilot what is overdue, when the next audit is or what to fix first. Copilot only shows each person what they can already open.',
+      'The Teams digest now links each overdue or upcoming action straight to it in Checkpoint, and each document waiting for approval to the Documents screen, with Open actions and Approve documents buttons.',
+      'Links into Checkpoint (from Teams, email or anywhere) open the screen and item they point to, even when you need to sign in first.'
+    ]
+  },
+  {
     version: '1.186.0',
     date: '2026-10-31',
     entries: [

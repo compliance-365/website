@@ -4274,6 +4274,115 @@
   }
 
   /* ============================================================
+     Microsoft 365 Copilot: the Checkpoint briefing and agent
+     ------------------------------------------------------------
+     Checkpoint's registers are SharePoint lists, which Copilot does
+     not read reliably as knowledge. So Checkpoint writes a dated
+     briefing, a Word document of plain sentences, into its own
+     library (COPILOT_ROOT), and a declarative agent grounded on the
+     Checkpoint site answers from it and from the policies there.
+     Copilot only ever shows a person what they can already open. */
+  var COPILOT_ROOT = 'Copilot briefing';
+  var COPILOT_BRIEFING_FILE = 'Checkpoint briefing.docx';
+  /* d = { client, today, score, scanDate, frameworks:[{name, applicable, implemented}],
+     overdue:[{id,title,owner,due}], dueSoon:[..], approvals:[name], paths:{paths, fixFirst},
+     checkLabels:{id:label}, certs:[{name, body, next, nextDue, expires}], activities:[{title, due, overdue}],
+     risks:[{id,title,band}] } */
+  function copilotBriefingSections(d) {
+    d = d || {};
+    var out = [], list = function (xs, f, none) { return xs && xs.length ? xs.map(f) : [none]; };
+    var lbl = function (id) { return (d.checkLabels && d.checkLabels[id]) || id; };
+    out.push({ heading: 'About this briefing', lines: [
+      'Written by Checkpoint for ' + (d.client || 'this organisation') + ' on ' + (d.today || '') + ', from its compliance registers. It is replaced each time it is refreshed; Checkpoint itself always has the current position.'] });
+    out.push({ heading: 'Security posture', lines: [
+      d.scanDate ? 'The latest Microsoft 365 posture scan, on ' + d.scanDate + ', scored ' + d.score + ' out of 100.' : 'No posture scan has been run yet.'] });
+    out.push({ heading: 'Frameworks', lines: list(d.frameworks, function (f) {
+      return f.name + ': ' + f.implemented + ' of ' + f.applicable + ' applicable controls implemented.'; }, 'No frameworks are set up yet.') });
+    out.push({ heading: 'Certificates and audits', lines: list(d.certs, function (c) {
+      return c.name + ' is certified' + (c.body ? ' by ' + c.body : '') + (c.next ? '; the next audit is the ' + c.next + (c.nextDue ? ', due by ' + c.nextDue : '') : '') + (c.expires ? '; the certificate expires on ' + c.expires : '') + '.'; }, 'No certificate is recorded in Checkpoint.') });
+    out.push({ heading: 'Overdue actions', lines: list(d.overdue, function (a) {
+      return a.id + ' ' + a.title + ' was due on ' + a.due + (a.owner ? ' (owner ' + a.owner + ')' : '') + '.'; }, 'No actions are overdue.') });
+    out.push({ heading: 'Actions due in the next 14 days', lines: list(d.dueSoon, function (a) {
+      return a.id + ' ' + a.title + ' is due on ' + a.due + (a.owner ? ' (owner ' + a.owner + ')' : '') + '.'; }, 'None.') });
+    out.push({ heading: 'Documents waiting for approval', lines: list(d.approvals, function (n) { return n + '.'; }, 'None.') });
+    out.push({ heading: 'Recurring activities', lines: list(d.activities, function (a) {
+      return a.title + (a.overdue ? ' is overdue, due ' : ' is next due on ') + a.due + '.'; }, 'No recurring activities are scheduled.') });
+    out.push({ heading: 'Highest risks', lines: list(d.risks, function (r) { return r.id + ' ' + r.title + ' (' + r.band + ').'; }, 'No open risks.') });
+    var pp = d.paths || { paths: [] };
+    out.push({ heading: 'How an attacker could get in', lines: pp.paths.length
+      ? pp.paths.map(function (p) { return p.title + ' (' + p.severity + '): break it by fixing ' + p.breakWith.checks.map(lbl).join(' and ') + '.'; })
+        .concat(pp.fixFirst ? ['Fix first: ' + lbl(pp.fixFirst.check) + '.'] : [])
+      : ['No complete attack path in the latest scan.'] });
+    return out;
+  }
+  function buildBriefingDocx(opts, sections) {
+    opts = opts || {};
+    var parts = [];
+    parts.push(docxP(opts.client || 'This organisation', { style: 'ClientName', after: 120 }));
+    parts.push(docxP('Checkpoint briefing', { style: 'Title', after: 80 }));
+    parts.push(docxP('As at ' + (opts.date || ''), { after: 240 }, { color: '4A5568' }));
+    (sections || []).forEach(function (sec) {
+      parts.push(docxHeadingBase(sec.heading));
+      (sec.lines || []).forEach(function (l) { parts.push(docxP(l, { after: 80 })); });
+    });
+    var body = parts.join('') + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1200" w:right="1200" w:bottom="1200" w:left="1200" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr>';
+    var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' + body + '</w:body></w:document>';
+    return buildZip([
+      { name: '[Content_Types].xml', content: DOCX_CONTENT_TYPES_XML },
+      { name: '_rels/.rels', content: DOCX_RELS_XML },
+      { name: 'word/document.xml', content: documentXml },
+      { name: 'word/_rels/document.xml.rels', content: DOCX_DOCUMENT_RELS_XML },
+      { name: 'word/styles.xml', content: buildDocxStylesXml('BE4A1E', 'enterprise') },
+      { name: 'docProps/core.xml', content: buildDocxCoreXml({ title: 'Checkpoint briefing' }, { owner: 'Checkpoint', version: '' }) }
+    ]);
+  }
+  /* The Teams app package for a declarative agent (Teams manifest 1.19,
+     declarative agent schema 1.3), grounded on the Checkpoint site.
+     opts = { id (GUID), client, siteUrl, appUrl }; icons = { color, outline } PNG bytes. */
+  function buildCopilotAgentPackage(opts, icons) {
+    opts = opts || {};
+    var client = String(opts.client || 'this organisation').slice(0, 60);
+    var manifest = {
+      $schema: 'https://developer.microsoft.com/en-us/json-schemas/teams/v1.19/MicrosoftTeams.schema.json',
+      manifestVersion: '1.19', version: '1.0.0', id: opts.id,
+      developer: { name: 'Compliance365', websiteUrl: 'https://www.compliance365.com.au/', privacyUrl: 'https://www.compliance365.com.au/privacy/', termsOfUseUrl: 'https://www.compliance365.com.au/terms/' },
+      icons: { color: 'color.png', outline: 'outline.png' },
+      name: { short: 'Checkpoint', full: 'Checkpoint compliance agent' },
+      description: { short: 'Ask about your compliance position, from Checkpoint.',
+        full: 'Answers questions about ' + client + '’s compliance programme (overdue actions, audits, approvals, risks and what to fix first) from the briefing Checkpoint keeps in its SharePoint site, and from the policies stored there.' },
+      accentColor: '#BE4A1E',
+      copilotAgents: { declarativeAgents: [{ id: 'checkpointAgent', file: 'declarativeAgent.json' }] }
+    };
+    var agent = {
+      $schema: 'https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.3/schema.json',
+      version: 'v1.3',
+      name: 'Checkpoint',
+      description: 'Answers questions about ' + client + '’s compliance position from Checkpoint.',
+      instructions: [
+        'You answer questions about ' + client + '’s information security, privacy and AI compliance programme.',
+        'Use the document named "Checkpoint briefing" in the "' + COPILOT_ROOT + '" folder as the source for the current position: overdue and upcoming actions, audits and certificates, documents waiting for approval, recurring activities, the highest risks, the posture scan and attack paths.',
+        'Use the policies and procedures in the same site to answer questions about what the organisation’s rules say, and name the document you used.',
+        'Always say the date the briefing was written, and say that Checkpoint has the current position. If the briefing does not cover a question, say so; never guess a status, date or owner.',
+        'Keep answers short and practical. When something needs doing, say who owns it and when it is due, as the briefing records it.'
+      ].join('\n'),
+      capabilities: [{ name: 'OneDriveAndSharePoint', items_by_url: [{ url: opts.siteUrl }] }],
+      conversation_starters: [
+        { title: 'What is overdue?', text: 'What compliance actions are overdue, and who owns them?' },
+        { title: 'Next audit', text: 'When is our next audit, and what should we do before it?' },
+        { title: 'Fix first', text: 'What should we fix first to reduce our risk?' },
+        { title: 'Approvals', text: 'Which documents are waiting for approval?' }
+      ]
+    };
+    return buildZip([
+      { name: 'manifest.json', content: JSON.stringify(manifest, null, 2) },
+      { name: 'declarativeAgent.json', content: JSON.stringify(agent, null, 2) },
+      { name: 'color.png', bytes: icons && icons.color },
+      { name: 'outline.png', bytes: icons && icons.outline }
+    ]);
+  }
+
+  /* ============================================================
      Attack paths: how an attacker could get in
      ------------------------------------------------------------
      Common intrusion routes into a Microsoft 365 organisation, each a
@@ -15223,6 +15332,8 @@
     planSoaImport: planSoaImport, soaControlFor: soaControlFor, SOA_IMPORT_SPEC: SOA_IMPORT_SPEC,
     ismsTransferSteps: ismsTransferSteps,
     ATTACK_PATHS: ATTACK_PATHS, attackPaths: attackPaths,
+    COPILOT_ROOT: COPILOT_ROOT, COPILOT_BRIEFING_FILE: COPILOT_BRIEFING_FILE, copilotBriefingSections: copilotBriefingSections,
+    buildBriefingDocx: buildBriefingDocx, buildCopilotAgentPackage: buildCopilotAgentPackage,
     rhythmControlFw: rhythmControlFw, operatingRhythmFor: operatingRhythmFor, rhythmControlsFor: rhythmControlsFor,
     aiInventoryCheckResult: aiInventoryCheckResult, aiImpactCheckResult: aiImpactCheckResult,
     CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,

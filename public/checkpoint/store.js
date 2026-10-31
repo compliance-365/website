@@ -4214,6 +4214,18 @@ window.SpStore = (function () {
        never loses the upload: the returned object carries `metaError`
        instead, and the caller decides how loudly to say "saved, but
        its details didn't stick". */
+    /* The Microsoft 365 Copilot briefing, into Documents/Copilot briefing/,
+       replacing the last one. */
+    uploadCopilotBriefing: async function (filename, blob) {
+      if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
+      var item = await Graph.uploadFileToPath(docDriveId, [window.CheckpointLib.COPILOT_ROOT], filename, blob);
+      return { name: item.name || filename, url: item.webUrl || '' };
+    },
+    /* The Checkpoint site's address, for the Copilot agent's knowledge. */
+    siteWebUrl: async function () {
+      if (!siteId) await resolveSiteFresh();
+      return (await Graph.g('/sites/' + siteId + '?$select=webUrl', provisionOpts)).webUrl || '';
+    },
     /* A backup zip into Documents/Checkpoint backups/. */
     uploadBackup: async function (filename, blob) {
       if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
