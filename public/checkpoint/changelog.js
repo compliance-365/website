@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.186.0',
+    date: '2026-10-31',
+    entries: [
+      'How an attacker could get in: the Scan screen now reads your failing and partial checks as the routes they open. Six common routes into Microsoft 365 (password guessing to tenant takeover, phishing to ransomware, a malicious app consent, a stolen session, a leaver\u2019s account, files shared out), each shown only when every link in it is weak, with where to break it and its MITRE ATT&CK techniques.',
+      'Fix first names the one check whose fix alone breaks the most of those paths. The paths also get their own board slide.'
+    ]
+  },
+  {
     version: '1.185.0',
     date: '2026-10-31',
     entries: [

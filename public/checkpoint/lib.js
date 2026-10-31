@@ -4274,6 +4274,109 @@
   }
 
   /* ============================================================
+     Attack paths: how an attacker could get in
+     ------------------------------------------------------------
+     Common intrusion routes into a Microsoft 365 organisation, each a
+     chain of links, and each link the posture checks that would break
+     it. A path is shown only when every required link has a check
+     that is failing or partial: it is a likely route given the scan,
+     not proof of compromise. The optional link (detection or
+     recovery) raises it to High when that is weak too. Technique IDs
+     are MITRE ATT&CK (attack.mitre.org). */
+  var ATTACK_PATHS = [
+    { id: 'spray', title: 'Password guessing to full tenant takeover',
+      impact: 'Control of every mailbox, file and setting in Microsoft 365.',
+      techniques: ['T1110.003 Password Spraying', 'T1078.004 Valid Accounts: Cloud Accounts', 'T1098 Account Manipulation'],
+      links: [
+        { role: 'Get in', checks: ['legacy', 'legacy-auth-observed', 'mfa-all', 'mfa-registration'], text: 'A guessed or reused password works, because legacy sign-in or a gap in MFA lets it through.' },
+        { role: 'Take control', checks: ['mfa-priv', 'admins', 'pim', 'ca-sif'], text: 'An admin account is reachable without phishing-resistant MFA, or admin rights are always on rather than granted when needed.' },
+        { role: 'Go unnoticed', optional: true, checks: ['alerts', 'riskyusers', 'ca-risk', 'logging', 'xdr-incidents'], text: 'Risky sign-ins are not blocked, or the alerts they raise are not triaged.' }
+      ] },
+    { id: 'ransomware', title: 'A phishing email to ransomware',
+      impact: 'Devices and files encrypted; work stops until they are restored.',
+      techniques: ['T1566.001 Phishing: Spearphishing Attachment', 'T1204.002 User Execution: Malicious File', 'T1486 Data Encrypted for Impact'],
+      links: [
+        { role: 'Get in', checks: ['macro', 'asr', 'phish-sim', 'training'], text: 'Someone opens a malicious attachment, and its macro or script is allowed to run.' },
+        { role: 'Run and spread', checks: ['edr-coverage', 'wdac', 'patch-os', 'patch-apps'], text: 'The malware runs on a device without endpoint protection or application control, or exploits software that is not patched.' },
+        { role: 'Make recovery hard', optional: true, checks: ['backup', 'bcp'], text: 'Backups have not been restore-tested, so recovery is uncertain.' }
+      ] },
+    { id: 'consent', title: 'A malicious app given access to mail and files',
+      impact: 'An app reads and sends mail or files as your staff, and keeps that access after a password reset.',
+      techniques: ['T1528 Steal Application Access Token', 'T1114 Email Collection'],
+      links: [
+        { role: 'Get in', checks: ['oauth-consent', 'riskyapps'], text: 'An app is granted, or already holds, high-privilege access to mail or files without an admin reviewing it.' },
+        { role: 'Go unnoticed', optional: true, checks: ['alerts', 'logging', 'ca-cas'], text: 'App activity is not logged, governed or alerted on.' }
+      ] },
+    { id: 'session', title: 'A stolen sign-in session',
+      impact: 'The attacker works inside a signed-in session, with MFA already satisfied.',
+      techniques: ['T1557 Adversary-in-the-Middle', 'T1539 Steal Web Session Cookie'],
+      links: [
+        { role: 'Get in', checks: ['mfa-priv', 'ca-device'], text: 'Without phishing-resistant MFA or a managed-device requirement, a fake sign-in page can relay the MFA prompt and capture the session.' },
+        { role: 'Keep using it', checks: ['ca-risk', 'riskyusers', 'ca-sif'], text: 'Risky sessions are not challenged, and sessions do not have to sign in again.' },
+        { role: 'Go unnoticed', optional: true, checks: ['alerts', 'xdr-incidents'], text: 'Alerts and incidents are not triaged in time.' }
+      ] },
+    { id: 'leaver', title: 'A former employee\u2019s account still works',
+      impact: 'Data reached with credentials nobody is watching.',
+      techniques: ['T1078 Valid Accounts'],
+      links: [
+        { role: 'Get in', checks: ['leaver', 'dormant-accounts', 'lifecycle-workflows'], text: 'Accounts of people who have left, or that nobody uses, are still enabled.' },
+        { role: 'Reach data', checks: ['access-review', 'guests'], text: 'Access is not reviewed, so the account still holds the rights it had.' },
+        { role: 'Go unnoticed', optional: true, checks: ['alerts', 'riskyusers'], text: 'Unusual sign-ins are not flagged or acted on.' }
+      ] },
+    { id: 'leak', title: 'Sensitive files shared out',
+      impact: 'Personal or sensitive information leaves the organisation, possibly a notifiable data breach.',
+      techniques: ['T1567 Exfiltration Over Web Service', 'T1530 Data from Cloud Storage'],
+      links: [
+        { role: 'Get out', checks: ['sharing', 'guests'], text: 'Files can be shared outside the organisation, or many guests hold access.' },
+        { role: 'Nothing stops it', checks: ['dlp', 'labels', 'encryption'], text: 'Sensitive content is not labelled, encrypted or covered by data loss prevention.' },
+        { role: 'Go unnoticed', optional: true, checks: ['logging', 'alerts'], text: 'Sharing and downloads are not logged or alerted on.' }
+      ] }
+  ];
+  /* results: { checkId: 'pass'|'review'|'fail'|'manual' }. Returns the
+     active paths, worst first, and the one check whose fix breaks the
+     most of them. */
+  function attackPaths(results) {
+    var r = results || {};
+    var weak = function (id) { return r[id] === 'fail' || r[id] === 'review'; };
+    var paths = [];
+    ATTACK_PATHS.forEach(function (p) {
+      var links = p.links.map(function (l) {
+        return { role: l.role, text: l.text, optional: !!l.optional, open: l.checks.filter(weak), checks: l.checks.slice() };
+      });
+      var req = links.filter(function (l) { return !l.optional; });
+      if (!req.every(function (l) { return l.open.length; })) return;
+      var opt = links.filter(function (l) { return l.optional; });
+      var high = !opt.length || opt.some(function (l) { return l.open.length; });
+      /* Breaking any required link breaks the path: the one with the
+         fewest weak checks is the least work. */
+      var cut = req.slice().sort(function (a, b) { return a.open.length - b.open.length; })[0];
+      paths.push({ id: p.id, title: p.title, impact: p.impact, techniques: p.techniques.slice(), links: links,
+        severity: high ? 'High' : 'Medium', breakWith: { role: cut.role, checks: cut.open.slice() } });
+    });
+    paths.sort(function (a, b) { return (a.severity === b.severity ? 0 : a.severity === 'High' ? -1 : 1); });
+    /* The single fix that breaks the most paths. Fixing a check closes
+       a link only when it is that link's only weak check, so "breaks"
+       counts exactly those; "appearsIn" is the wider count, the
+       tie-break and the fallback when no single fix breaks a path. */
+    var breaks = {}, appears = {}, order = [];
+    paths.forEach(function (p) {
+      p.links.forEach(function (l) {
+        if (l.optional) return;
+        l.open.forEach(function (id) {
+          if (!appears[id]) { appears[id] = []; breaks[id] = []; order.push(id); }
+          if (appears[id].indexOf(p.id) === -1) appears[id].push(p.id);
+          if (l.open.length === 1 && breaks[id].indexOf(p.id) === -1) breaks[id].push(p.id);
+        });
+      });
+    });
+    var best = null;
+    order.forEach(function (id) {
+      if (!best || breaks[id].length > breaks[best].length || (breaks[id].length === breaks[best].length && appears[id].length > appears[best].length)) best = id;
+    });
+    return { paths: paths, fixFirst: best ? { check: best, breaks: breaks[best], appearsIn: appears[best] } : null };
+  }
+
+  /* ============================================================
      Bringing an existing ISMS across
      ------------------------------------------------------------
      For an organisation that is already certified: its certificate,
@@ -15119,6 +15222,7 @@
     planOperatingRhythm: planOperatingRhythm, rhythmCompletionUpdates: rhythmCompletionUpdates,
     planSoaImport: planSoaImport, soaControlFor: soaControlFor, SOA_IMPORT_SPEC: SOA_IMPORT_SPEC,
     ismsTransferSteps: ismsTransferSteps,
+    ATTACK_PATHS: ATTACK_PATHS, attackPaths: attackPaths,
     rhythmControlFw: rhythmControlFw, operatingRhythmFor: operatingRhythmFor, rhythmControlsFor: rhythmControlsFor,
     aiInventoryCheckResult: aiInventoryCheckResult, aiImpactCheckResult: aiImpactCheckResult,
     CONTEXT_RISKS: CONTEXT_RISKS, contextRiskSuggestions: contextRiskSuggestions,
