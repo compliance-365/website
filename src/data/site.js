@@ -22,8 +22,9 @@
 export const AU_ORIGIN = 'https://www.compliance365.com.au';
 export const INTL_ORIGIN = 'https://www.compliance365.io';
 
-// Flip to true in the same PR as the DNS switch for www.compliance365.io.
-export const INTL_LIVE = false;
+// True since 1 Nov 2026, when www.compliance365.io began serving the
+// international build (GitHub Pages, compliance-365/website-intl).
+export const INTL_LIVE = true;
 
 const env = (typeof process !== 'undefined' && process.env) || {};
 export const VARIANT = env.SITE_VARIANT === 'intl' ? 'intl' : 'au';

@@ -22,6 +22,13 @@ test('the .com.au build is unchanged until the .io site is live', () => {
   if (!au.INTL_LIVE) assert.deepEqual(au.hreflangFor('/'), [], 'no hreflang pointing at a domain that only forwards');
 });
 
+test('once .io is live, the .com.au home page carries the same hreflang cluster, and only the home page', () => {
+  assert.equal(au.INTL_LIVE, true);
+  assert.deepEqual(au.hreflangFor('/').map((h) => h.hreflang), ['en-AU', 'en-US', 'en-GB', 'en-AE', 'x-default']);
+  assert.deepEqual(au.hreflangFor('/').map((h) => h.href), intl.hreflangFor('/us/').map((h) => h.href), 'both sites describe the same cluster');
+  assert.deepEqual(au.hreflangFor('/services/iso27001/'), []);
+});
+
 test('on .io, country pages are canonical to themselves and carry the hreflang cluster', () => {
   assert.equal(intl.VARIANT, 'intl');
   assert.equal(intl.canonicalFor('/us/'), 'https://www.compliance365.io/us/');
