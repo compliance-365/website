@@ -3,6 +3,7 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
+import CheckpointClip from '../../components/CheckpointClip.astro';
 import { frameworkPages } from '../../data/checkpoint-frameworks';
 import { comparisons } from '../../data/checkpoint-comparisons';
 import { checkpointSoftwareSchema } from '../../data/checkpoint-schema';
@@ -268,6 +269,10 @@ const tourPhases = [
       <div class="ckpt-demo-visual" aria-hidden="true">
         <Fragment set:html={fpSvg} />
       </div>
+    </div>
+    <div class="ckpt-clips">
+      <CheckpointClip id="posture-scan" dark demoView="scan" label="Checkpoint running a Microsoft 365 posture scan: the score updates and failing checks become proposed risks" caption="A posture scan: failing checks become proposed risks and Statement of Applicability suggestions, waiting for your approval." />
+      <CheckpointClip id="soa-frameworks" dark demoView="soa" label="Checkpoint's Statement of Applicability switching between ISO 27001, Essential Eight, SOC 2 and ISO 42001" caption="One console, every framework: each keeps its own controls and next steps, cross-mapped to the others." />
     </div>
   </div>
 </section>
@@ -660,5 +665,7 @@ const tourPhases = [
     @keyframes boardProgress { from { width: 6%; } to { width: 92%; } }
     .board-progress i { animation: boardProgress 5s cubic-bezier(.4,0,.2,1) infinite alternate; }
   }
+  .ckpt-clips { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 3rem; align-items: start; }
+  @media (max-width: 860px) { .ckpt-clips { grid-template-columns: 1fr; } }
 </style>
 </Base>

@@ -1,0 +1,12 @@
+{
+  "posture-scan": {
+    "width": 1280,
+    "height": 800,
+    "seconds": 5.4
+  },
+  "soa-frameworks": {
+    "width": 1280,
+    "height": 1180,
+    "seconds": 7.1
+  }
+}

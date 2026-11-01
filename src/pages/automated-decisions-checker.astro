@@ -1,0 +1,272 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CinematicBackground from '../components/CinematicBackground.astro';
+import { ENTITY_OPTIONS, SYSTEM_PRESETS, daysUntilDeadline } from '../data/automated-decisions.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+const buildDays = daysUntilDeadline();
+
+const pageTitle = 'Automated Decisions Privacy Policy Checker | Compliance365';
+const pageDesc = 'From 10 December 2026 your privacy policy must describe automated decisions. Check which of your systems are caught and get draft wording, in about 5 minutes.';
+
+const appLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Automated Decisions Privacy Policy Checker',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Any',
+  description: pageDesc,
+  url: 'https://www.compliance365.com.au/automated-decisions-checker/',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'AUD' }
+};
+---
+
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  schema={[appLd]}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Automated Decisions Checker', url: 'https://www.compliance365.com.au/automated-decisions-checker/' }
+  ]}
+>
+  <Header />
+
+  <main id="main-content" tabindex="-1">
+
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:860px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Free tool · Privacy Act APP 1.7–1.9 · nothing leaves your browser</p>
+        <h1>Does your privacy policy need to describe <em>automated decisions?</em></h1>
+        <p class="section-lead">
+          From 10 December 2026, if software makes or substantially and directly informs decisions that could significantly affect people, your privacy policy has to say so. Pick the systems you use, answer three questions for each, and get draft wording.
+        </p>
+        <p class="ad-count" id="ad-count" data-days={buildDays}>{buildDays > 0 ? `${buildDays} days until 10 December 2026` : 'In force since 10 December 2026'}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container" style="max-width:900px;">
+
+      <div class="ad-step">
+        <p class="ad-k">Step 1</p>
+        <h2>Which describes your organisation?</h2>
+        <div class="ad-entity" role="radiogroup" aria-label="Your organisation">
+          {ENTITY_OPTIONS.map((o) => (
+            <label class="ad-pill"><input type="radio" name="entity" value={o.value} /><span>{o.label}</span></label>
+          ))}
+        </div>
+        <p class="ad-entity-note" id="ad-entity-note" hidden></p>
+      </div>
+
+      <div class="ad-step">
+        <p class="ad-k">Step 2</p>
+        <h2>Where does software decide things about people?</h2>
+        <p class="muted">Tick each that applies, then answer three questions about it. "Computer program" includes rule-based workflows and spreadsheet formulas, not only AI.</p>
+        <div class="ad-presets">
+          {SYSTEM_PRESETS.map((p) => (
+            <label class="ad-preset"><input type="checkbox" value={p.id} data-name={p.name} /><span><b>{p.name}</b><small>For example, {p.example}.</small></span></label>
+          ))}
+        </div>
+        <form class="ad-add" id="ad-add">
+          <label for="ad-custom">Something else</label>
+          <input id="ad-custom" type="text" placeholder="e.g. Tenancy application scoring" maxlength="80" />
+          <button type="submit" class="btn-hdk-ghost ad-add-btn">Add</button>
+        </form>
+        <div id="ad-systems"></div>
+      </div>
+
+      <div class="ad-step ad-result" id="ad-result" hidden aria-live="polite">
+        <p class="ad-k">Result</p>
+        <h2 id="ad-headline"></h2>
+        <ul class="ad-summary" id="ad-summary"></ul>
+        <div id="ad-draft-wrap" hidden>
+          <h3>Draft wording for your privacy policy</h3>
+          <p class="muted small">A starting point built from your answers. The OAIC expects specifics, so name the decisions in your own terms and have it reviewed before it goes live.</p>
+          <pre class="ad-draft" id="ad-draft"></pre>
+          <button type="button" class="btn-hdk-primary" id="ad-copy">Copy wording</button>
+        </div>
+        <div class="ad-todo">
+          <h3>Before 10 December</h3>
+          <ol>
+            <li>Keep this list as an inventory, with an owner, and record why each system is or is not caught.</li>
+            <li>Check vendor contracts, so you know what each system actually decides.</li>
+            <li>Review it whenever you add or change a system. A new AI feature in an existing product counts.</li>
+          </ol>
+          <p class="small">More detail: <a href={`${base}blog/privacy-policy-automated-decisions-10-december-2026/`}>Automated decisions and your privacy policy</a> · <a href={`${base}resources/privacy-act-2024-readiness/`}>Privacy Act readiness guide</a> · <a href={`${base}services/iso42001/`}>ISO 42001 AI governance</a></p>
+        </div>
+      </div>
+
+      <div class="ad-next">
+        <div>
+          <h3>Want this done properly, with the inventory kept current?</h3>
+          <p class="small">We build the AI and automated-decision inventory in your own Microsoft 365, map it to the privacy policy, and keep both reviewed. A 30-minute call tells you how much of it you already have.</p>
+        </div>
+        <a class="btn-hdk-primary" href={ctaUrl} target="_blank" rel="noopener">Book a 30-min call</a>
+      </div>
+
+      <p class="ad-disclaimer">General information, not legal advice. Based on APP 1.7 to 1.9 and the OAIC's guidance of 30 September 2026. Whether a decision "significantly affects" someone, and whether software "substantially and directly" informs it, are judgements to make and record for your own systems.</p>
+    </div>
+  </section>
+
+  </main>
+
+  <Footer />
+
+  <script>
+    import { ENTITY_OPTIONS, ROLE_OPTIONS, INFO_KINDS, assess, draftPolicy, daysUntilDeadline } from '../data/automated-decisions.js';
+
+    type Sys = { id: string; name: string; role?: string; significant?: string; info: string[] };
+    const systems: Sys[] = [];
+    const listEl = document.getElementById('ad-systems') as HTMLElement;
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+
+    const days = daysUntilDeadline();
+    (document.getElementById('ad-count') as HTMLElement).textContent = days > 0 ? `${days} day${days === 1 ? '' : 's'} until 10 December 2026` : 'In force since 10 December 2026';
+
+    function card(s: Sys) {
+      const radios = (name: string, opts: { value: string; label: string }[], cur?: string) =>
+        opts.map((o) => `<label class="ad-pill"><input type="radio" name="${name}-${s.id}" value="${o.value}"${cur === o.value ? ' checked' : ''}><span>${o.label}</span></label>`).join('');
+      return `<fieldset class="ad-sys" data-id="${s.id}">
+        <legend>${esc(s.name)} <button type="button" class="ad-remove" data-remove="${s.id}" aria-label="Remove ${esc(s.name)}">Remove</button></legend>
+        <p class="ad-q"><span>1</span>What does the software do in this decision?</p>
+        <div class="ad-opts">${radios('role', ROLE_OPTIONS, s.role)}</div>
+        <p class="ad-q"><span>2</span>Could the decision reasonably be expected to significantly affect someone's rights or interests?</p>
+        <div class="ad-opts">${radios('sig', [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'unsure', label: 'Not sure' }], s.significant)}</div>
+        <p class="ad-q"><span>3</span>Which personal information about the person does it use?</p>
+        <div class="ad-opts">${INFO_KINDS.map((k) => `<label class="ad-pill ad-chk"><input type="checkbox" name="info-${s.id}" value="${k}"${s.info.includes(k) ? ' checked' : ''}><span>${k}</span></label>`).join('')}</div>
+      </fieldset>`;
+    }
+    function draw() { listEl.innerHTML = systems.map(card).join(''); render(); }
+
+    function render() {
+      const entity = (document.querySelector('input[name="entity"]:checked') as HTMLInputElement | null)?.value;
+      const opt = ENTITY_OPTIONS.find((o) => o.value === entity);
+      const note = document.getElementById('ad-entity-note') as HTMLElement;
+      note.hidden = !opt || opt.covered === true;
+      note.textContent = opt?.covered === false
+        ? 'APP 1.7 to 1.9 apply to APP entities, so this may not apply to you. Larger customers may still ask how you make automated decisions, so the inventory below is worth keeping.'
+        : opt?.covered === null ? 'Most organisations with turnover over $3 million, Australian Government agencies and health service providers are APP entities. If you are not sure, assume it applies until you have checked.' : '';
+
+      const res = document.getElementById('ad-result') as HTMLElement;
+      res.hidden = !systems.length;
+      if (!systems.length) return;
+      const rows = systems.map((s) => ({ s, a: assess(s), done: !!(s.role && s.significant) }));
+      const caught = rows.filter((r) => r.done && r.a.caught);
+      const open = rows.filter((r) => !r.done).length;
+      (document.getElementById('ad-headline') as HTMLElement).textContent = caught.length
+        ? `${caught.length} of ${systems.length} system${systems.length === 1 ? '' : 's'} need${caught.length === 1 ? 's' : ''} describing in your privacy policy${open ? ` (${open} still to answer)` : ''}.`
+        : open ? `Answer the questions for ${open} system${open === 1 ? '' : 's'} to see the result.` : 'None of these systems are caught on your answers. Record why, and recheck when they change.';
+      (document.getElementById('ad-summary') as HTMLElement).innerHTML = rows.map(({ s, a, done }) =>
+        `<li><span class="ad-tag ${!done ? 'is-open' : a.caught ? 'is-caught' : 'is-clear'}">${!done ? 'To answer' : a.caught ? (a.certain ? 'Caught' : 'Treat as caught') : 'Not caught'}</span><div><b>${esc(s.name)}</b>${done && a.reasons.length ? `<p>${a.reasons.map(esc).join(' ')}</p>` : ''}</div></li>`).join('');
+      const draft = draftPolicy(rows.filter((r) => r.done).map((r) => r.s));
+      (document.getElementById('ad-draft-wrap') as HTMLElement).hidden = !draft;
+      (document.getElementById('ad-draft') as HTMLElement).textContent = draft || '';
+    }
+
+    function addSystem(id: string, name: string) {
+      if (systems.some((s) => s.id === id)) return;
+      systems.push({ id, name, info: [] });
+      draw();
+    }
+    function removeSystem(id: string) {
+      const i = systems.findIndex((s) => s.id === id);
+      if (i >= 0) systems.splice(i, 1);
+      const box = document.querySelector(`.ad-preset input[value="${id}"]`) as HTMLInputElement | null;
+      if (box) box.checked = false;
+      draw();
+    }
+
+    document.querySelectorAll('.ad-preset input').forEach((el) => el.addEventListener('change', (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.checked) addSystem(t.value, t.dataset.name || t.value); else removeSystem(t.value);
+    }));
+    let n = 0;
+    document.getElementById('ad-add')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('ad-custom') as HTMLInputElement;
+      const name = input.value.trim();
+      if (!name) return;
+      addSystem(`custom${++n}`, name);
+      input.value = '';
+    });
+    listEl.addEventListener('click', (e) => {
+      const id = (e.target as HTMLElement).dataset.remove;
+      if (id) removeSystem(id);
+    });
+    listEl.addEventListener('change', (e) => {
+      const t = e.target as HTMLInputElement;
+      const id = (t.closest('.ad-sys') as HTMLElement)?.dataset.id;
+      const s = systems.find((x) => x.id === id);
+      if (!s) return;
+      if (t.name.startsWith('role-')) s.role = t.value;
+      else if (t.name.startsWith('sig-')) s.significant = t.value;
+      else if (t.name.startsWith('info-')) s.info = Array.from(listEl.querySelectorAll(`input[name="info-${id}"]:checked`)).map((x) => (x as HTMLInputElement).value);
+      render();
+    });
+    document.querySelectorAll('input[name="entity"]').forEach((el) => el.addEventListener('change', render));
+    document.getElementById('ad-copy')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      try { await navigator.clipboard.writeText((document.getElementById('ad-draft') as HTMLElement).textContent || ''); btn.textContent = 'Copied'; }
+      catch { btn.textContent = 'Select the text above to copy it'; }
+      setTimeout(() => { btn.textContent = 'Copy wording'; }, 2500);
+    });
+  </script>
+
+  <style is:global>
+    .ad-count { display: inline-block; margin-top: .5rem !important; padding: .4rem .9rem; border-radius: 999px; border: 1px solid rgba(240,169,127,.4); color: #F0A97F !important; font-weight: 800; font-size: .85rem !important; }
+    .ad-step { background: #fff; border: 1px solid #E8E1D5; border-radius: 16px; padding: 1.5rem 1.6rem; margin-bottom: 1.25rem; }
+    .ad-step h2 { margin: .2rem 0 .75rem; font-size: 1.3rem; }
+    .ad-k { margin: 0; font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #A63A12; }
+    .ad-entity, .ad-opts { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .ad-pill { position: relative; cursor: pointer; }
+    .ad-pill input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+    .ad-pill span { display: inline-block; padding: .5rem .9rem; border-radius: 999px; border: 1.5px solid #DDD8CF; font-size: .85rem; font-weight: 700; color: #4A4740; background: #fff; }
+    .ad-pill:hover span { border-color: #BE4A1E; }
+    .ad-pill input:focus-visible + span { outline: 3px solid #BE4A1E; outline-offset: 2px; }
+    .ad-pill input:checked + span { background: #0B0B0C; border-color: #0B0B0C; color: #FAF7F1; }
+    .ad-chk input:checked + span { background: #BE4A1E; border-color: #BE4A1E; }
+    .ad-entity-note { margin: .9rem 0 0; font-size: .88rem; color: #A63A12; line-height: 1.55; }
+    .ad-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: .6rem; margin: 1rem 0; }
+    .ad-preset { position: relative; display: block; cursor: pointer; }
+    .ad-preset input { position: absolute; opacity: 0; }
+    .ad-preset span { display: block; height: 100%; border: 1.5px solid #DDD8CF; border-radius: 12px; padding: .8rem .95rem; background: #FAF7F1; }
+    .ad-preset b { display: block; font-size: .92rem; }
+    .ad-preset small { display: block; margin-top: .25rem; font-size: .78rem; color: #6B6860; line-height: 1.45; }
+    .ad-preset input:checked + span { border-color: #BE4A1E; background: #FBEFE8; box-shadow: inset 0 0 0 1px #BE4A1E; }
+    .ad-preset input:focus-visible + span { outline: 3px solid #BE4A1E; outline-offset: 2px; }
+    .ad-add { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+    .ad-add label { font-weight: 800; font-size: .88rem; }
+    .ad-add input { flex: 1; min-width: 200px; font: inherit; padding: .6rem .8rem; border: 1.5px solid #DDD8CF; border-radius: 10px; min-height: 44px; }
+    .ad-add-btn { color: #A63A12 !important; border-color: #BE4A1E !important; }
+    .ad-sys { border: 1px solid #E8E1D5; border-left: 4px solid #BE4A1E; border-radius: 12px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 .9rem; background: #FFFCF8; }
+    .ad-sys legend { font-weight: 800; font-size: 1rem; padding: 0 .4rem; display: flex; align-items: center; gap: .75rem; }
+    .ad-remove { background: none; border: none; padding: 0; font-size: .78rem; color: #6B6860; text-decoration: underline; cursor: pointer; font-weight: 600; }
+    .ad-q { margin: .9rem 0 .5rem; font-size: .9rem; font-weight: 700; color: #2A2724; display: flex; gap: .5rem; align-items: baseline; }
+    .ad-q span { flex: none; width: 20px; height: 20px; border-radius: 50%; background: #FBEFE8; color: #A63A12; font-size: .72rem; display: inline-flex; align-items: center; justify-content: center; }
+    .ad-result { border: 2px solid #0B0B0C; }
+    .ad-summary { list-style: none; margin: 0 0 1.25rem; padding: 0; display: grid; gap: .5rem; }
+    .ad-summary li { display: flex; gap: .8rem; align-items: flex-start; padding: .7rem .9rem; background: #FAF7F1; border-radius: 10px; }
+    .ad-summary p { margin: .2rem 0 0; font-size: .82rem; color: #6B6860; line-height: 1.5; }
+    .ad-tag { flex: none; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding: .25rem .55rem; border-radius: 6px; min-width: 96px; text-align: center; }
+    .ad-tag.is-caught { background: #A63A12; color: #fff; }
+    .ad-tag.is-clear { background: #047857; color: #fff; }
+    .ad-tag.is-open { background: #F0EAE0; color: #6B6860; }
+    .ad-draft { white-space: pre-wrap; font-family: inherit; font-size: .92rem; line-height: 1.65; background: #FAF7F1; border: 1px dashed #BE4A1E; border-radius: 12px; padding: 1rem 1.2rem; margin: .75rem 0 1rem; color: #2A2724; }
+    .ad-todo { margin-top: 1.5rem; border-top: 1px solid #F0EAE0; padding-top: 1.25rem; }
+    .ad-todo h3 { margin: 0 0 .5rem; }
+    .ad-todo ol { margin: 0 0 1rem; padding-left: 1.2rem; line-height: 1.7; font-size: .92rem; }
+    .ad-todo a { color: var(--accent-ink, #A63A12); }
+    .ad-next { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.5rem 1.75rem; margin-top: 1.5rem; }
+    .ad-next h3 { margin: 0 0 .3rem; color: #FAF7F1; }
+    .ad-next p { margin: 0; color: rgba(250,247,241,.72); }
+    .ad-disclaimer { font-size: .8rem; color: #6B6860; line-height: 1.6; margin-top: 1.5rem; }
+    @media (max-width: 680px) { .ad-next { grid-template-columns: 1fr; } }
+  </style>
+</Base>

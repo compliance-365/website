@@ -1,0 +1,189 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CinematicBackground from '../components/CinematicBackground.astro';
+import DigestSignup from '../components/DigestSignup.astro';
+import { EVENTS, RECURRING, FRAMEWORKS } from '../data/compliance-calendar.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const sorted = [...EVENTS].sort((a, b) => a.date.localeCompare(b.date));
+const years = [...new Set(sorted.map((e) => e.date.slice(0, 4)))];
+const fmt = (e) => {
+  const d = new Date(e.date + 'T00:00:00Z');
+  return e.precision === 'month'
+    ? d.toLocaleDateString('en-AU', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    : d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+};
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+const pageTitle = 'Australian Cyber & Privacy Compliance Calendar | Compliance365';
+const pageDesc = 'Key Australian compliance dates in one place: Privacy Act automated decisions (10 Dec 2026), ASD Essentials, ISM releases, ransomware reporting, CPS 234 and IS18.';
+---
+
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Resources', url: 'https://www.compliance365.com.au/resources/' },
+    { name: 'Compliance calendar', url: 'https://www.compliance365.com.au/compliance-calendar/' }
+  ]}
+>
+  <Header />
+  <main id="main-content" tabindex="-1">
+
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:900px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Free resource · updated as things change</p>
+        <h1>The Australian compliance <em>calendar.</em></h1>
+        <p class="section-lead">The dates that change what Australian organisations have to do on cyber security and privacy: what has started, what is coming, and what repeats every year.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container" style="max-width:1000px;">
+
+      <h2 class="cc-h2">Coming up</h2>
+      <div class="cc-next" id="cc-next">
+        {sorted.map((e) => (
+          <a class="cc-soon" href={`${base}${e.href}`} data-date={e.date} hidden>
+            <span class="cc-days" data-countdown></span>
+            <span class="cc-fw">{e.fw}</span>
+            <b>{e.title}</b>
+            <span class="cc-when">{fmt(e)}</span>
+          </a>
+        ))}
+      </div>
+
+      <div class="cc-filter" role="group" aria-label="Filter by framework">
+        <button type="button" class="cc-chip is-on" data-fw="all" aria-pressed="true">All</button>
+        {FRAMEWORKS.map((f) => <button type="button" class="cc-chip" data-fw={slug(f)} aria-pressed="false">{f}</button>)}
+      </div>
+
+      <h2 class="cc-h2">Timeline</h2>
+      <ol class="cc-timeline" id="cc-timeline">
+        {years.map((y) => (
+          <li class="cc-year" data-year={y}>
+            <h3>{y}</h3>
+            <ol>
+              {sorted.filter((e) => e.date.startsWith(y)).map((e) => (
+                <li class="cc-ev" data-date={e.date} data-fw={slug(e.fw)}>
+                  <span class="cc-dot" aria-hidden="true"></span>
+                  <div class="cc-body">
+                    <p class="cc-meta"><time datetime={e.date}>{fmt(e)}</time> · <span>{e.fw}</span><span class="cc-state"></span></p>
+                    <a href={`${base}${e.href}`}>{e.title}</a>
+                    {e.detail && <p class="cc-detail">{e.detail}</p>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </li>
+        ))}
+      </ol>
+
+      <h2 class="cc-h2">Every time, every year</h2>
+      <div class="cc-recur">
+        {RECURRING.map((r) => (
+          <a class="cc-rc" href={`${base}${r.href}`} data-fw={slug(r.fw)}>
+            <span class="cc-fw">{r.fw}</span>
+            <b>{r.title}</b>
+            <span>{r.detail}</span>
+          </a>
+        ))}
+      </div>
+
+      <div style="margin-top:2.5rem;">
+        <DigestSignup heading="Get these dates before they arrive" subtext="One email a month with what changed and what is coming up in Australian cyber security and privacy compliance. No spam, unsubscribe any time." source="compliance-calendar" topic="Monthly digest" />
+      </div>
+      <p class="cc-note">General information, not legal advice. Each entry links to the page or post it comes from, which lists its sources.</p>
+    </div>
+  </section>
+
+  </main>
+  <Footer />
+
+  <script>
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const days = (iso: string) => Math.round((new Date(iso + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000);
+
+    // Next three upcoming events, with a countdown.
+    const soon = Array.from(document.querySelectorAll('.cc-soon')) as HTMLElement[];
+    soon.filter((el) => (el.dataset.date as string) >= today).slice(0, 3).forEach((el) => {
+      el.hidden = false;
+      const n = days(el.dataset.date as string);
+      (el.querySelector('[data-countdown]') as HTMLElement).textContent = n === 0 ? 'Today' : `${n} day${n === 1 ? '' : 's'}`;
+    });
+    if (!soon.some((el) => !el.hidden)) (document.getElementById('cc-next') as HTMLElement).innerHTML = '<p>Nothing dated is coming up. See the recurring obligations below.</p>';
+
+    // Mark past and upcoming; put a "today" marker before the first upcoming event.
+    const evs = Array.from(document.querySelectorAll('.cc-ev')) as HTMLElement[];
+    let marked = false;
+    evs.forEach((el) => {
+      const past = (el.dataset.date as string) < today;
+      el.classList.add(past ? 'is-past' : 'is-next');
+      (el.querySelector('.cc-state') as HTMLElement).textContent = past ? '' : ` · in ${days(el.dataset.date as string)} days`;
+      if (!past && !marked) {
+        marked = true;
+        const m = document.createElement('li');
+        m.className = 'cc-today';
+        m.innerHTML = '<span>Today</span>';
+        el.before(m);
+      }
+    });
+
+    // Framework filter.
+    const chips = Array.from(document.querySelectorAll('.cc-chip')) as HTMLButtonElement[];
+    chips.forEach((c) => c.addEventListener('click', () => {
+      const fw = c.dataset.fw;
+      chips.forEach((x) => { const on = x === c; x.classList.toggle('is-on', on); x.setAttribute('aria-pressed', String(on)); });
+      document.querySelectorAll('.cc-ev, .cc-rc').forEach((el) => { (el as HTMLElement).hidden = fw !== 'all' && (el as HTMLElement).dataset.fw !== fw; });
+      document.querySelectorAll('.cc-year').forEach((y) => { (y as HTMLElement).hidden = !y.querySelector('.cc-ev:not([hidden])'); });
+    }));
+  </script>
+
+  <style is:global>
+    .cc-h2 { margin: 2.5rem 0 1rem; }
+    .cc-h2:first-child { margin-top: 0; }
+    .cc-next { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+    .cc-soon { display: flex; flex-direction: column; gap: .3rem; background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.25rem 1.35rem; text-decoration: none; }
+    .cc-soon[hidden] { display: none; }
+    .cc-soon:hover { background: #1B1B1D; }
+    .cc-soon b { font-size: 1.02rem; line-height: 1.35; }
+    .cc-days { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 2rem; font-weight: 700; color: #F0A97F; line-height: 1; margin-bottom: .35rem; }
+    .cc-fw { font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #F0A97F; }
+    .cc-when { font-size: .82rem; color: rgba(250,247,241,.7); }
+    .cc-filter { display: flex; flex-wrap: wrap; gap: .4rem; margin: 2rem 0 0; }
+    .cc-chip { font: inherit; font-size: .82rem; font-weight: 700; padding: .45rem .9rem; border-radius: 999px; border: 1.5px solid #DDD8CF; background: #fff; color: #4A4740; cursor: pointer; }
+    .cc-chip.is-on { background: #BE4A1E; border-color: #BE4A1E; color: #fff; }
+    .cc-chip:focus-visible { outline: 3px solid #BE4A1E; outline-offset: 2px; }
+    .cc-timeline, .cc-timeline ol { list-style: none; margin: 0; padding: 0; }
+    .cc-year { display: grid; grid-template-columns: 90px 1fr; gap: 1rem; }
+    .cc-year h3 { margin: .2rem 0 0; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.5rem; color: #A63A12; position: sticky; top: 90px; align-self: start; }
+    .cc-year[hidden] { display: none; }
+    .cc-year > ol { border-left: 2px solid #E8E1D5; padding: 0 0 1.5rem 1.5rem !important; }
+    .cc-ev { position: relative; padding: .6rem 0 .9rem; }
+    .cc-dot { position: absolute; left: calc(-1.5rem - 7px); top: 1rem; width: 12px; height: 12px; border-radius: 50%; background: #BE4A1E; border: 3px solid #FAF7F1; }
+    .cc-ev.is-past .cc-dot { background: #C9C0B2; }
+    .cc-ev.is-past .cc-body > a { color: #4A4740; }
+    .cc-meta { margin: 0; font-size: .75rem; font-weight: 800; color: #6B6860; text-transform: uppercase; letter-spacing: .06em; }
+    .cc-ev.is-next .cc-meta { color: #A63A12; }
+    .cc-body > a { font-size: 1.02rem; font-weight: 700; color: #0B0B0C; text-decoration: none; }
+    .cc-body > a:hover { color: #A63A12; text-decoration: underline; }
+    .cc-detail { margin: .25rem 0 0; font-size: .88rem; color: #4A4740; line-height: 1.55; }
+    .cc-today { position: relative; margin: .4rem 0 .4rem calc(-1.5rem - 1px); border-top: 2px dashed #BE4A1E; }
+    .cc-today span { position: relative; top: -.75rem; margin-left: 1.5rem; background: #BE4A1E; color: #fff; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: .2rem .6rem; border-radius: 6px; }
+    .cc-recur { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .9rem; }
+    .cc-rc { display: flex; flex-direction: column; gap: .25rem; background: #fff; border: 1px solid #E8E1D5; border-left: 4px solid #BE4A1E; border-radius: 12px; padding: 1rem 1.15rem; text-decoration: none; color: #2A2724; }
+    .cc-rc[hidden] { display: none; }
+    .cc-rc .cc-fw { color: #A63A12; }
+    .cc-rc b { font-size: 1rem; color: #0B0B0C; }
+    .cc-rc span:last-child { font-size: .88rem; line-height: 1.5; color: #4A4740; }
+    .cc-rc:hover { border-color: #BE4A1E; }
+    .cc-note { font-size: .8rem; color: #6B6860; margin-top: 1.25rem; }
+    @media (max-width: 640px) { .cc-year { grid-template-columns: 1fr; gap: .25rem; } .cc-year h3 { position: static; } }
+  </style>
+</Base>
