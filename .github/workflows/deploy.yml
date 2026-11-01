@@ -258,3 +258,45 @@ jobs:
           timeout: 600000
           error_count: 10
           reporting_interval: 15000
+
+  # The international site, www.compliance365.io: the same code built with
+  # SITE_VARIANT=intl (see src/data/site.js and scripts/finalize-intl.mjs),
+  # published to the gh-pages branch of compliance-365/website-intl, which
+  # serves it on GitHub Pages. GitHub Pages allows one custom domain per
+  # repository, which is why it is a second repository.
+  #
+  # Needs the INTL_DEPLOY_TOKEN secret: a fine-grained token with
+  # "Contents: read and write" on compliance-365/website-intl only. Until
+  # it exists this job builds the site and skips publishing, so it can
+  # never fail the .com.au deploy (it runs after it, in its own job).
+  intl:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install deps
+        run: npm ci --include=dev
+
+      - name: Build the international site
+        run: npm run build:intl
+
+      - name: Publish to compliance-365/website-intl
+        env:
+          TOKEN: ${{ secrets.INTL_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "No INTL_DEPLOY_TOKEN secret yet: built the international site but did not publish it."
+            exit 0
+          fi
+          cd dist
+          git init -q -b gh-pages
+          git -c user.name="compliance365-deploy" -c user.email="info@compliance365.com.au" add -A
+          git -c user.name="compliance365-deploy" -c user.email="info@compliance365.com.au" commit -qm "Deploy ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${TOKEN}@github.com/compliance-365/website-intl.git" gh-pages

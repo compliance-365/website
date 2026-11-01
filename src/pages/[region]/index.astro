@@ -1,0 +1,196 @@
+---
+/*
+  International country pages, built only for www.compliance365.io
+  (SITE_VARIANT=intl; see src/data/site.js). On the .com.au build
+  getStaticPaths returns nothing, so these URLs don't exist there.
+  "world" is the region chooser: built at /world/, it becomes the .io
+  home page in scripts/finalize-intl.mjs.
+*/
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
+import { VARIANT, AU_ORIGIN, INTL_ORIGIN, REGIONS } from '../../data/site.js';
+import { REGION_COPY, HOW } from '../../data/regions.js';
+import { MODULES, fmtAud } from '../../data/pricing.js';
+
+export function getStaticPaths() {
+  if (VARIANT !== 'intl') return [];
+  return [...Object.keys(REGIONS), 'world'].map((region) => ({ params: { region } }));
+}
+
+const { region } = Astro.params;
+const isWorld = region === 'world';
+const copy = isWorld ? null : REGION_COPY[region];
+const info = isWorld ? null : REGIONS[region];
+const au = (p) => `${AU_ORIGIN}/${p}`;
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+const fromPrice = `A${fmtAud(MODULES.find((m) => m.id === 'iso27001').prices.micro)}`;
+
+const title = isWorld ? 'Compliance365 | ISO 27001, SOC 2 & AI Governance' : copy.title;
+const description = isWorld
+  ? 'ISO 27001, SOC 2 readiness, ISO 27701 and ISO 42001, delivered remotely in the US, UK, UAE and Australia inside your own Microsoft 365.'
+  : copy.description;
+const pageUrl = isWorld ? `${INTL_ORIGIN}/` : `${INTL_ORIGIN}/${region}/`;
+const serviceLd = isWorld ? null : {
+  '@type': 'Service',
+  name: `Compliance consulting in the ${info.name}`,
+  provider: { '@id': `${AU_ORIGIN}/#org` },
+  areaServed: { '@type': 'Country', name: info.name },
+  url: pageUrl,
+  serviceType: copy.services.map((s) => s.name),
+};
+---
+
+<Base
+  title={title}
+  description={description}
+  schema={serviceLd ? [serviceLd] : []}
+  breadcrumbs={isWorld ? [] : [
+    { name: 'Compliance365', url: `${INTL_ORIGIN}/` },
+    { name: info.name, url: pageUrl },
+  ]}
+>
+  <Header />
+  <main id="main-content" tabindex="-1">
+
+  {isWorld ? (
+    <>
+      <section class="svc-hero">
+        <CinematicBackground static />
+        <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:900px;">
+          <div class="svc-hero-copy">
+            <p class="eyebrow">ISO 27001 · SOC 2 · ISO 27701 · ISO 42001</p>
+            <h1>Compliance you own. <em>Wherever you operate.</em></h1>
+            <p class="section-lead">We deliver ISO 27001, SOC 2 readiness, privacy and AI governance remotely, inside the Microsoft 365 you already use. Choose your region.</p>
+          </div>
+        </div>
+      </section>
+      <section class="section" style="background:#FAF7F1;">
+        <div class="container rg-choose">
+          {Object.entries(REGIONS).map(([k, r]) => (
+            <a class="rg-card" href={`/${k}/`} hreflang={r.hreflang}>
+              <span class="rg-code">{r.short}</span>
+              <b>{r.name}</b>
+              <span>{REGION_COPY[k].services.map((s) => s.name).join(' · ')}</span>
+              <span class="rg-go">Continue →</span>
+            </a>
+          ))}
+          <a class="rg-card" href={`${AU_ORIGIN}/`} hreflang="en-AU">
+            <span class="rg-code">AU</span>
+            <b>Australia</b>
+            <span>ISO 27001 · Essential Eight · SOC 2 · IS18 · CPS 234 and more</span>
+            <span class="rg-go">compliance365.com.au →</span>
+          </a>
+        </div>
+      </section>
+    </>
+  ) : (
+    <>
+      <section class="svc-hero">
+        <CinematicBackground static />
+        <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:920px;">
+          <div class="svc-hero-copy">
+            <p class="eyebrow">{copy.eyebrow}</p>
+            <h1>{copy.h1} <em>{copy.h1em}</em></h1>
+            <p class="section-lead">{copy.lead}</p>
+            <ul class="trust-signals">
+              <li>Delivered remotely</li>
+              <li>Fixed price, agreed up front</li>
+              <li>Data stays in your tenant</li>
+              <li>No GRC platform licence</li>
+            </ul>
+            <div class="hero-ctas">
+              <a href={ctaUrl} class="btn-hdk-primary" target="_blank" rel="noopener">Book a 30-min call</a>
+              <a href={au('checkpoint/?demo=1')} class="btn-hdk-ghost">Try the live demo</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" style="background:#FAF7F1;">
+        <div class="container" style="max-width:1080px;">
+          <h2 class="rg-h2">What buyers in the {info.short} ask for</h2>
+          <div class="rg-asks">
+            {copy.asks.map((a) => (<div class="rg-ask"><h3>{a.h}</h3><p>{a.p}</p></div>))}
+          </div>
+
+          <h2 class="rg-h2">What we deliver</h2>
+          <div class="rg-services">
+            {copy.services.map((s) => (
+              <a class="rg-svc" href={au(s.href)}>
+                <b>{s.name}</b>
+                <span>{s.p}</span>
+                <span class="rg-go">Details →</span>
+              </a>
+            ))}
+          </div>
+
+          <h2 class="rg-h2">How it works from Australia</h2>
+          <div class="rg-how">
+            {HOW.map((h, i) => (<div><span>{i + 1}</span><h3>{h.h}</h3><p>{h.p}</p></div>))}
+          </div>
+
+          <div class="rg-ckpt">
+            <div>
+              <p class="rg-k">Checkpoint</p>
+              <h3>Prefer to run it yourself?</h3>
+              <p>Checkpoint, our compliance software, runs inside your own Microsoft 365. It is included in every engagement and stays yours, or you can use it on its own from {fromPrice} a year per framework.</p>
+            </div>
+            <div class="rg-ckpt-actions">
+              <a class="btn-hdk-primary" href={au('checkpoint-console/')}>See Checkpoint</a>
+              <a class="rg-link" href={au('pricing/')}>Pricing (AUD) →</a>
+            </div>
+          </div>
+
+          <p class="rg-note">Compliance365 is based in Brisbane, Australia, and works with clients remotely. Prices on our site are in Australian dollars; your fixed price is agreed before any work starts.</p>
+        </div>
+      </section>
+
+      <section class="svc-final-cta">
+        <CinematicBackground static />
+        <div class="container">
+          <h2>Talk to a senior practitioner</h2>
+          <p>A free 30-minute call: what your customers are actually asking for, what you already have, and a fixed price for the rest.</p>
+          <div class="final-buttons">
+            <a href={ctaUrl} class="btn-hdk-primary" target="_blank" rel="noopener">Book a call</a>
+            <a href="/" class="btn-hdk-ghost">Other regions</a>
+          </div>
+        </div>
+      </section>
+    </>
+  )}
+
+  </main>
+  <Footer />
+
+  <style>
+    .rg-choose { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; max-width: 1080px; }
+    .rg-card, .rg-svc { display: flex; flex-direction: column; gap: .4rem; background: #fff; border: 1px solid #E8E1D5; border-top: 4px solid #BE4A1E; border-radius: 14px; padding: 1.4rem; text-decoration: none; color: #2A2724; }
+    .rg-card:hover, .rg-svc:hover { border-color: #BE4A1E; }
+    .rg-code { font-size: .75rem; font-weight: 800; letter-spacing: .16em; color: #A63A12; }
+    .rg-card b, .rg-svc b { font-size: 1.15rem; color: #0B0B0C; }
+    .rg-card span:not(.rg-code):not(.rg-go), .rg-svc span:not(.rg-go) { font-size: .88rem; line-height: 1.55; color: #4A4740; flex: 1; }
+    .rg-go { font-size: .85rem; font-weight: 700; color: var(--accent-ink, #A63A12); }
+    .rg-h2 { margin: 2.5rem 0 1rem; }
+    .rg-h2:first-child { margin-top: 0; }
+    .rg-asks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+    .rg-ask { background: #fff; border: 1px solid #E8E1D5; border-radius: 14px; padding: 1.25rem; }
+    .rg-ask h3 { margin: 0 0 .4rem; font-size: 1.02rem; }
+    .rg-ask p { margin: 0; font-size: .9rem; line-height: 1.6; color: #4A4740; }
+    .rg-services { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
+    .rg-how { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+    .rg-how div { background: #fff; border: 1px solid #E8E1D5; border-radius: 14px; padding: 1.25rem; }
+    .rg-how span { display: inline-flex; width: 30px; height: 30px; border-radius: 9px; background: #FBEFE8; color: #A63A12; font-weight: 800; align-items: center; justify-content: center; }
+    .rg-how h3 { margin: .7rem 0 .35rem; font-size: 1.02rem; }
+    .rg-how p { margin: 0; font-size: .9rem; line-height: 1.6; color: #4A4740; }
+    .rg-ckpt { margin-top: 2.5rem; display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.5rem 1.75rem; }
+    .rg-ckpt h3 { margin: .2rem 0 .35rem; color: #FAF7F1; }
+    .rg-ckpt p { margin: 0; color: rgba(250,247,241,.75); font-size: .92rem; line-height: 1.6; }
+    .rg-k { font-size: .72rem !important; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #F0A97F !important; }
+    .rg-ckpt-actions { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+    .rg-link { color: #F0A97F; font-weight: 700; font-size: .85rem; }
+    .rg-note { font-size: .82rem; color: #6B6860; margin-top: 1.25rem; }
+    @media (max-width: 720px) { .rg-ckpt { grid-template-columns: 1fr; } .rg-ckpt-actions { align-items: flex-start; } }
+  </style>
+</Base>

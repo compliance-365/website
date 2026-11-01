@@ -11,7 +11,8 @@
     "onboarding-shots": "node scripts/capture-onboarding-shots.mjs && node scripts/inline-onboarding-shots.mjs",
     "check:cors": "node scripts/check-endpoint-cors.mjs",
     "check:deploy": "node scripts/check-lambda-deployed.mjs",
-    "check:headers": "node scripts/check-security-headers.mjs"
+    "check:headers": "node scripts/check-security-headers.mjs",
+    "build:intl": "SITE_VARIANT=intl astro build && node scripts/csp-inline-hashes.mjs dist && node scripts/finalize-intl.mjs dist"
   },
   "devDependencies": {
     "@astrojs/sitemap": "3.7.4",

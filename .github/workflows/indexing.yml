@@ -41,3 +41,24 @@ jobs:
             '{host:$host, key:$key, keyLocation:$keyLocation, urlList:$urlList}')
 
           curl -fsS -H "Content-Type: application/json" -d "$JSON" https://api.indexnow.org/indexnow || true
+
+      - name: IndexNow for the international site (www.compliance365.io)
+        # Only once .io serves the international build: until then it
+        # forwards to .com.au, and submitting its URLs would be noise.
+        # The same key file is published on both sites.
+        env:
+          SITE: https://www.compliance365.io
+          INDEXNOW_KEY: e3b2b2f8b1e94b2bb94a62d02ad6e8b7
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/us/" || true)
+          if [ "$code" != "200" ]; then
+            echo "$SITE/us/ returned $code: the international site isn't live yet, skipping."
+            exit 0
+          fi
+          JSON=$(jq -n \
+            --arg host "${SITE#https://}" \
+            --arg key "$INDEXNOW_KEY" \
+            --arg keyLocation "$SITE/$INDEXNOW_KEY.txt" \
+            --argjson urlList "[\"$SITE/\",\"$SITE/us/\",\"$SITE/uk/\",\"$SITE/ae/\",\"$SITE/sitemap-index.xml\"]" \
+            '{host:$host, key:$key, keyLocation:$keyLocation, urlList:$urlList}')
+          curl -fsS -H "Content-Type: application/json" -d "$JSON" https://api.indexnow.org/indexnow || true
