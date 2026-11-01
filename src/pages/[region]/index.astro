@@ -126,6 +126,15 @@ const serviceLd = isWorld ? null : {
             ))}
           </div>
 
+          {copy.guides && (
+            <>
+              <h2 class="rg-h2">Guides people here read</h2>
+              <ul class="rg-guides">
+                {copy.guides.map((g) => (<li><a href={au(g.href)}>{g.name} →</a></li>))}
+              </ul>
+            </>
+          )}
+
           <h2 class="rg-h2">How it works from Australia</h2>
           <div class="rg-how">
             {HOW.map((h, i) => (<div><span>{i + 1}</span><h3>{h.h}</h3><p>{h.p}</p></div>))}
@@ -179,6 +188,9 @@ const serviceLd = isWorld ? null : {
     .rg-ask h3 { margin: 0 0 .4rem; font-size: 1.02rem; }
     .rg-ask p { margin: 0; font-size: .9rem; line-height: 1.6; color: #4A4740; }
     .rg-services { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
+    .rg-guides { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .6rem; }
+    .rg-guides a { display: inline-block; background: #fff; border: 1px solid #E8E1D5; border-radius: 999px; padding: .55rem 1rem; font-size: .9rem; font-weight: 700; color: var(--accent-ink, #A63A12); text-decoration: none; }
+    .rg-guides a:hover { border-color: #BE4A1E; }
     .rg-how { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
     .rg-how div { background: #fff; border: 1px solid #E8E1D5; border-radius: 14px; padding: 1.25rem; }
     .rg-how span { display: inline-flex; width: 30px; height: 30px; border-radius: 9px; background: #FBEFE8; color: #A63A12; font-weight: 800; align-items: center; justify-content: center; }
