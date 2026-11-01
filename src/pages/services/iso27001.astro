@@ -7,6 +7,7 @@ import CostEstimator from '../../components/CostEstimator.astro';
 import CheckpointShot from '../../components/CheckpointShot.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
 import HeroShot from '../../components/HeroShot.astro';
+import CheckpointClip from '../../components/CheckpointClip.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
 
@@ -267,6 +268,10 @@ const faqLd = {
 
       <div style="margin-top:2.5rem;">
         <CheckpointShot id="riskRegister" label="Risk register" />
+      </div>
+
+      <div style="margin-top:2rem;">
+        <CheckpointClip id="posture-scan" demoView="scan" label="Checkpoint running a Microsoft 365 posture scan" caption="Where most of the evidence comes from: a scan of your own tenant, with each failing check proposed as a risk for you to approve." />
       </div>
 
       <div style="margin-top:2rem;">

@@ -54,3 +54,15 @@ test('new pages exist and are linked from the resources index', () => {
     assert.ok(idx.includes(p.replace('resources/', '')), `resources index links ${p}`);
   }
 });
+
+test('demo clips exist with a poster, and respect reduced motion', async () => {
+  const sizes = JSON.parse(read('src/data/checkpoint-clip-sizes.json'));
+  for (const name of Object.keys(sizes)) {
+    for (const ext of ['mp4', 'webp']) assert.ok(existsSync(new URL(`../public/assets/checkpoint-clips/${name}.${ext}`, import.meta.url)), `${name}.${ext}`);
+    assert.ok(sizes[name].seconds > 2 && sizes[name].seconds < 15, `${name} is a short loop`);
+  }
+  const c = read('src/components/CheckpointClip.astro');
+  assert.match(c, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(c, /<video[^>]*\sautoplay/, 'never autoplays from markup; the script decides');
+  assert.match(c, /muted loop playsinline/);
+});

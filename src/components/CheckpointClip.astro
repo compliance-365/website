@@ -1,0 +1,55 @@
+---
+/*
+  CheckpointClip — a short silent loop recorded from the Checkpoint demo
+  tenant by scripts/capture-demo-clips.mjs. Plays on its own only when
+  the visitor hasn't asked for reduced motion; otherwise it shows the
+  poster (the clip's last frame) with controls.
+  Usage: <CheckpointClip id="posture-scan" caption="..." />
+*/
+import sizes from '../data/checkpoint-clip-sizes.json';
+interface Props { id: keyof typeof sizes; label: string; caption?: string; dark?: boolean; demoView?: string }
+const { id, label, caption, dark, demoView } = Astro.props;
+const s = sizes[id];
+const base = import.meta.env.BASE_URL || '/';
+const src = `${base}assets/checkpoint-clips/${id}`;
+const demo = `${base}checkpoint/?demo=1${demoView ? `&view=${demoView}` : ''}`;
+---
+<figure class={`cpc${dark ? ' cpc-dark' : ''}`}>
+  <div class="cpc-frame">
+    <video class="cpc-video" muted loop playsinline preload="metadata" poster={`${src}.webp`} width={s.width} height={s.height} aria-label={label} data-cpc>
+      <source src={`${src}.mp4`} type="video/mp4" />
+    </video>
+  </div>
+  <figcaption>
+    {caption && <span>{caption} </span>}
+    <span class="cpc-src">Recorded in the Checkpoint demo, sample data. <a href={demo} target="_blank" rel="noopener">Try it yourself</a></span>
+  </figcaption>
+</figure>
+
+<script>
+  /* Autoplay only without a reduced-motion preference, and only while on
+     screen, so off-screen clips cost nothing. */
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const vids = Array.from(document.querySelectorAll('video[data-cpc]')) as HTMLVideoElement[];
+  if (reduce.matches || !('IntersectionObserver' in window)) {
+    vids.forEach((v) => { v.controls = true; });
+  } else {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      const v = e.target as HTMLVideoElement;
+      if (e.isIntersecting) v.play().catch(() => { v.controls = true; }); else v.pause();
+    }), { threshold: 0.35 });
+    vids.forEach((v) => io.observe(v));
+  }
+</script>
+
+<style>
+  .cpc { margin: 2rem 0 0; }
+  .cpc-frame { border-radius: 12px; overflow: hidden; border: 1px solid #2A2724; background: #0E0D0C; box-shadow: 0 10px 30px rgba(20, 16, 12, .18); }
+  .cpc-video { display: block; width: 100%; height: auto; }
+  .cpc figcaption { font-size: .85rem; color: #6B6860; margin-top: .7rem; line-height: 1.55; }
+  .cpc figcaption span:first-child:not(.cpc-src) { color: #4A4740; }
+  .cpc-src a { color: var(--accent-ink, #A63A12); }
+  .cpc-dark .cpc-frame { border-color: rgba(250,247,241,.14); box-shadow: 0 30px 60px rgba(0,0,0,.5); }
+  .cpc-dark figcaption, .cpc-dark figcaption span:first-child:not(.cpc-src) { color: rgba(250,247,241,.68); }
+  .cpc-dark .cpc-src a { color: #F0A97F; }
+</style>
