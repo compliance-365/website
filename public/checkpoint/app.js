@@ -928,7 +928,7 @@ function showModal(opts) {
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
     /* importCsv IS gated (unlike exportCsv, which is read-only): it is
        the largest single bulk write in the app. */
-    'importCsv', 'importSoa', 'setIsmsStart',
+    'importCsv', 'importSoa', 'setIsmsStart', 'regReview', 'regRaiseAction',
     /* 'acknowledgeAttestation' is deliberately absent — see the note on
        that action: it is an employee's own act about themselves, and a
        read-only Viewer who cannot record it cannot comply with the
@@ -6746,6 +6746,51 @@ function showModal(opts) {
      practitioner and the client alike. The next step is always shown
      with a button that does it; the full list sits underneath. The card
      disappears once every step is genuinely complete. */
+  /* Australian regulatory updates (lib REG_UPDATES) on the Dashboard:
+     those for this tenant's frameworks not yet reviewed, each with what
+     to do, the controls it touches, and its source. Reviewing one is
+     recorded (setting regReviewed) and audited. */
+  function regReviewed() {
+    try { var o = JSON.parse((S.settings && S.settings.regReviewed) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+  }
+  function regUpdatesHere() {
+    return window.CheckpointLib.regUpdatesFor(window.CheckpointLib.REG_UPDATES, entitledFrameworks(), regReviewed(), new Date().toISOString().slice(0, 10));
+  }
+  function renderRegUpdates() {
+    var el = document.getElementById('regUpdatesCard');
+    if (!el) return;
+    var all = regUpdatesHere(), open = all.filter(function (u) { return !u.reviewed; }), done = all.filter(function (u) { return u.reviewed; });
+    if (!all.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
+    var ent = entitledFrameworks();
+    var ctl = function (u) {
+      var out = [];
+      Object.keys(u.controls || {}).forEach(function (fw) {
+        if (ent.indexOf(fw) === -1) return;
+        u.controls[fw].forEach(function (code) {
+          var c = (S.controls || []).find(function (x) { return x.fw === fw && x.id === code; });
+          out.push('<span class="chip">' + esc(fwName(fw) + ' ' + code) + (c ? ': ' + esc(c.app ? c.st : 'Not applicable') : '') + '</span>');
+        });
+      });
+      return out.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0">' + out.join('') + '</div>' : '';
+    };
+    el.innerHTML = '<h3>Regulatory updates</h3><p class="src" style="margin:0 0 8px">Changes from ASD, the OAIC and standards bodies that affect your frameworks, written by Compliance365 with their sources. ' +
+      (open.length ? open.length + ' to review.' : 'All reviewed.') + '</p>' +
+      open.map(function (u) {
+        return '<details style="border-top:1px solid var(--line);padding:8px 0"><summary style="cursor:pointer"><span class="chip">' + esc(u.source) + '</span> <b>' + esc(u.title) + '</b> <span class="src">' + esc(u.when || fmtDate(u.date)) + '</span>' +
+          (u.upcoming ? ' <span class="chip sev-Medium">Coming up</span>' : '') + '</summary>' +
+          '<p style="margin:6px 0">' + esc(u.summary) + '</p>' + ctl(u) +
+          (u.actions.length ? '<p style="margin:6px 0 2px"><b>What to do</b></p>' + u.actions.map(function (a, i) {
+            return '<div class="gs-row"><div class="gs-text"><span>' + esc(a.t) + '</span></div>' + (READONLY ? '' : '<button class="btn ghost sm" data-action="App.regRaiseAction" data-id="' + esc(u.id + '|' + i) + '">Raise action</button>') + '</div>';
+          }).join('') : '') +
+          '<p class="src" style="margin:6px 0">Source: ' + (isSafeUrl(u.url) ? '<a class="evidence-link" href="' + esc(u.url) + '" target="_blank" rel="noopener">' + esc(u.source) + '</a>' : esc(u.source)) + '</p>' +
+          (READONLY ? '' : '<button class="btn sm" data-action="App.regReview" data-id="' + esc(u.id) + '">Mark as reviewed</button>') + '</details>';
+      }).join('') +
+      (done.length ? '<details style="margin-top:6px"><summary class="src" style="cursor:pointer">' + done.length + ' reviewed</summary>' + done.map(function (u) {
+        return '<div class="src" style="margin:4px 0">' + esc(u.title) + ': reviewed ' + esc(fmtDate(u.reviewed.date)) + (u.reviewed.by ? ' by ' + esc(u.reviewed.by) : '') + '</div>';
+      }).join('') + '</details>' : '');
+  }
+
   /* "Already certified?" on the Dashboard. Asked once, while no
      certificate is recorded: yes turns the card into the checklist for
      bringing the existing ISMS across (lib ismsTransferSteps) and hides
@@ -6785,6 +6830,7 @@ function showModal(opts) {
 
   function renderGettingStarted() {
     renderIsmsTransfer();
+    renderRegUpdates();
     var el = document.getElementById('gettingStartedCard');
     if (!el) return;
     /* An organisation bringing a certified ISMS across is not on the
@@ -25808,6 +25854,34 @@ function showModal(opts) {
       downloadBlob('Checkpoint-Copilot-agent.zip', new Blob([bytes], { type: 'application/zip' }));
       audit('Copilot agent package downloaded', 'Settings', 'copilotAgentId', '', id);
       if (Store.kind !== 'sharepoint') toast('Demo: an example package, grounded on an example site address.');
+    },
+
+    regReview: async function (id) {
+      var u = regUpdatesHere().find(function (x) { return x.id === id; });
+      if (!u) return;
+      var all = regReviewed();
+      var acct = (typeof Graph !== 'undefined' && Graph.getAccount && Graph.getAccount()) || null;
+      all[id] = { date: new Date().toISOString().slice(0, 10), by: (acct && acct.name) || '' };
+      S.settings.regReviewed = JSON.stringify(all);
+      try { await Store.setSetting('regReviewed', S.settings.regReviewed); } catch (e) { warn(e); }
+      audit('Regulatory update reviewed', 'Regulation', id, '', u.title);
+      toast('Marked as reviewed');
+      renderRegUpdates();
+    },
+    regRaiseAction: async function (key) {
+      var parts = String(key || '').split('|'), u = regUpdatesHere().find(function (x) { return x.id === parts[0]; });
+      var a = u && u.actions[+parts[1]];
+      if (!a) return;
+      var acct = (typeof Graph !== 'undefined' && Graph.getAccount && Graph.getAccount()) || null;
+      var due = dueForPriority('Medium');
+      /* An obligation with a start date: due before it starts. */
+      if (u.effective && u.effective < due) due = u.effective;
+      var act = { id: nextRegId(S.actions, 'ACT-'), title: a.t, type: 'Action', risk: '', control: a.control || '', pr: 'Medium',
+        owner: (acct && acct.name) || 'Unassigned', ownerEmail: '', due: due, status: 'Open', evidenceUrl: '', src: 'Regulatory update: ' + u.title };
+      try { await Store.addAction(act); } catch (e) { warn(e); toast('Could not add the action.'); return; }
+      audit('Action created', 'Action', act.id, '', act.title + ' (from regulatory update ' + u.id + ')');
+      toast('<b>' + esc(act.id) + '</b> added to Actions, due ' + esc(fmtDate(due)));
+      renderNavCounts();
     },
 
     setIsmsStart: async function (mode) {

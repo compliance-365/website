@@ -4274,6 +4274,68 @@
   }
 
   /* ============================================================
+     Australian regulatory updates
+     ------------------------------------------------------------
+     Changes from ASD, the OAIC and standards bodies that affect a
+     client's controls, written by Compliance365 and approved before
+     release (a release is the approval). Each names its source, the
+     frameworks it concerns (empty: every tenant), the controls it
+     touches and what to do. A tenant sees those for its licensed
+     frameworks; reviewing one is recorded, which is evidence that
+     legal and regulatory requirements are kept up to date. Dates are
+     ISO strings; effective is when an obligation starts applying. */
+  var REG_UPDATES = [
+    { id: '2026-10-asd-essentials', date: '2026-10-15', when: 'Published 15 October 2026', source: 'ASD', title: 'ASD publishes the Essentials, the successor to the Essential Eight',
+      url: 'https://www.cyber.gov.au/essentials', frameworks: ['essential8', 'asdessentials'],
+      summary: 'ASD published the Essentials on 15 October 2026, with chapters for enterprise IT, cloud and operational technology. Both frameworks run in parallel until regulators change their requirements, and ASD has said existing Essential Eight work counts rather than resetting.',
+      controls: {},
+      actions: [
+        { t: 'Decide when to assess against the ASD Essentials, and tell whoever relies on your Essential Eight maturity (board, customers, contracts)' },
+        { t: 'Run the ASD Essentials assessment for enterprise IT, starting from your Essential Eight evidence' }
+      ] },
+    { id: '2026-09-ism', date: '2026-09-01', when: 'September 2026 release', source: 'ASD', title: 'ISM September 2026: app consent, AI agents and threat hunting',
+      url: 'https://www.cyber.gov.au/sites/default/files/2026-08/ISM%20September%202026%20changes%20%28September%202026%29.pdf', frameworks: [],
+      summary: 'The September 2026 Information Security Manual says staff should be prevented from consenting to third-party apps, with consents reviewed at least every six months; the OAuth device code flow disabled unless needed; each AI agent given its own identity and recorded in a register; and threat hunting at least every three months.',
+      controls: { iso27001: ['A.5.15', 'A.5.18', 'A.8.5', 'A.8.16'], iso42001: ['AI.4.2'] },
+      checks: ['oauth-consent', 'riskyapps'],
+      actions: [
+        { t: 'Set user consent for applications to not allowed in Entra ID, and turn on the admin consent workflow', control: 'A.5.15' },
+        { t: 'Review third-party app consents and permissions, and diarise the review every six months', control: 'A.5.18' },
+        { t: 'Block the OAuth device code flow with Conditional Access unless it is needed', control: 'A.8.5' },
+        { t: 'Run and record a threat hunt at least every three months, informed by current threat intelligence', control: 'A.8.16' },
+        { t: 'Give each AI agent its own identity and record it in the AI systems register', control: 'AI.4.2', fw: 'iso42001' }
+      ] },
+    { id: '2026-12-privacy-adm', date: '2024-12-10', effective: '2026-12-10', when: 'Applies from 10 December 2026', source: 'OAIC', title: 'Privacy policies must explain substantially automated decisions from 10 December 2026',
+      url: 'https://www.oaic.gov.au/news/media-centre/new-resources-on-transparency-for-use-of-ai-and-automated-decision-making', frameworks: ['privacyact', 'iso27701', 'iso42001'],
+      summary: 'Under the Privacy and Other Legislation Amendment Act 2024, where a computer program uses personal information to make, or substantially assist in making, a decision that could significantly affect someone’s rights or interests, the privacy policy must describe the kinds of personal information used and the kinds of decisions made. This applies from 10 December 2026.',
+      controls: { privacyact: ['APP1.7'], iso27701: ['A.1.3.11'] },
+      actions: [
+        { t: 'List the decisions made or substantially assisted by a computer program using personal information (the AI systems register is the place to start)', control: 'APP1.7', fw: 'privacyact' },
+        { t: 'Update the privacy policy to describe those decisions and the personal information they use, before 10 December 2026', control: 'APP1.7', fw: 'privacyact' }
+      ] },
+    { id: '2025-10-iso27701', date: '2025-10-01', when: '2025 edition', source: 'ISO (our summary)', title: 'ISO/IEC 27701:2025 is a standalone privacy management standard',
+      url: 'https://www.compliance365.com.au/blog/iso27701-2025/', frameworks: ['iso27701'],
+      summary: 'The 2025 edition of ISO/IEC 27701 can be certified on its own, without ISO 27001. Its Annex A has 78 controls: 31 for PII controllers, 18 for PII processors and 29 shared information security controls.',
+      controls: {},
+      actions: [
+        { t: 'Check which edition your ISO 27701 certificate (or plan) is to, and ask your certification body about its transition arrangements' }
+      ] }
+  ];
+  /* The updates for a tenant: those with no frameworks, or sharing one
+     with `entitled`, newest first, each with its review record and
+     whether its obligation is still to start. */
+  function regUpdatesFor(updates, entitled, reviewed, today) {
+    var ent = entitled || [], rev = reviewed || {};
+    return (updates || []).filter(function (u) {
+      return !u.frameworks || !u.frameworks.length || u.frameworks.some(function (f) { return ent.indexOf(f) !== -1; });
+    }).map(function (u) {
+      var upcoming = !!(u.effective && today && u.effective > today);
+      return Object.assign({}, u, { reviewed: rev[u.id] || null, upcoming: upcoming,
+        actions: (u.actions || []).filter(function (a) { return !a.fw || ent.indexOf(a.fw) !== -1; }) });
+    }).sort(function (a, b) { return (b.effective || b.date).localeCompare(a.effective || a.date); });
+  }
+
+  /* ============================================================
      Microsoft 365 Copilot: the Checkpoint briefing and agent
      ------------------------------------------------------------
      Checkpoint's registers are SharePoint lists, which Copilot does
@@ -15333,6 +15395,7 @@
     ismsTransferSteps: ismsTransferSteps,
     ATTACK_PATHS: ATTACK_PATHS, attackPaths: attackPaths,
     COPILOT_ROOT: COPILOT_ROOT, COPILOT_BRIEFING_FILE: COPILOT_BRIEFING_FILE, copilotBriefingSections: copilotBriefingSections,
+    REG_UPDATES: REG_UPDATES, regUpdatesFor: regUpdatesFor,
     buildBriefingDocx: buildBriefingDocx, buildCopilotAgentPackage: buildCopilotAgentPackage,
     rhythmControlFw: rhythmControlFw, operatingRhythmFor: operatingRhythmFor, rhythmControlsFor: rhythmControlsFor,
     aiInventoryCheckResult: aiInventoryCheckResult, aiImpactCheckResult: aiImpactCheckResult,
