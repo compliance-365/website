@@ -7092,6 +7092,38 @@ function showModal(opts) {
     return d;
   }
   var AWS_IAM_POLICY = JSON.stringify({ Version: '2012-10-17', Statement: [{ Effect: 'Allow', Action: ['iam:GetAccountSummary', 'iam:ListUsers', 'iam:ListMFADevices', 'iam:ListAccessKeys', 'iam:GetLoginProfile', 'cloudtrail:DescribeTrails', 'cloudtrail:GetTrailStatus', 'config:DescribeConfigurationRecorderStatus', 'guardduty:ListDetectors', 'guardduty:GetDetector', 's3:GetAccountPublicAccessBlock', 'ec2:GetEbsEncryptionByDefault', 'ec2:DescribeSecurityGroups', 'rds:DescribeDBInstances', 'sts:GetCallerIdentity'], Resource: '*' }] }, null, 2);
+  /* GitHub collector set-up, guided: the read-only App created from a
+     pre-filled GitHub link, the SharePoint grant written out (or the
+     nightly monitor's app reused), and the collector downloaded with
+     this tenant's settings already in its workflow. The values typed
+     here stay in this browser (they are not secrets, but nor are they
+     anyone else's business). */
+  function githubSetupKey() { return 'cpGithubSetup:' + ((Graph.getAccount && Graph.getAccount() || {}).tenantId || 'demo'); }
+  function githubSetup() { try { return JSON.parse(localStorage.getItem(githubSetupKey()) || '{}') || {}; } catch (e) { return {}; } }
+  function githubSetupHtml(tenantId, host, path) {
+    var L = window.CheckpointLib, g = githubSetup(), mon = loadMonitorSetupState();
+    var clientId = g.clientId || mon.clientId || '';
+    var siteId = (Store.getSiteId && Store.getSiteId()) || '';
+    var input = function (field, val, ph, label) {
+      return '<input type="text" class="mini" value="' + esc(val || '') + '" placeholder="' + esc(ph) + '" aria-label="' + esc(label) + '" data-change-action="App.setGithubSetup" data-id="' + field + '" style="min-width:240px">';
+    };
+    var createUrl = L.githubAppCreateUrl(g.org);
+    var missingVars = [g.appId ? '' : 'CHECKPOINT_GH_APP_ID', clientId ? '' : 'CHECKPOINT_CLIENT_ID'].filter(Boolean);
+    var perms = '<details style="margin-top:6px"><summary class="src" style="cursor:pointer">The ' + L.GITHUB_APP_PERMISSIONS.length + ' read-only permissions it asks for</summary><ul class="src" style="margin:4px 0 0;padding-left:18px">' +
+      L.GITHUB_APP_PERMISSIONS.map(function (p) { return '<li>' + esc(p.label) + ': Read</li>'; }).join('') + '</ul></details>';
+    return '<ol class="integ-steps">' +
+      '<li><b>Create the read-only GitHub App.</b> Your GitHub organisation name: ' + input('org', g.org, 'e.g. mineguard', 'GitHub organisation') +
+        '<div style="margin:8px 0">' + (createUrl ? '<a class="btn sm" style="text-decoration:none" href="' + esc(createUrl) + '" target="_blank" rel="noopener">Create the GitHub App on GitHub →</a>' : '<span class="src">Enter the organisation name to get the link.</span>') + '</div>' +
+        '<span class="src">GitHub opens with the name and permissions filled in, all read-only, no webhook. Click <b>Create GitHub App</b>, then <b>Generate a private key</b> (a .pem file downloads) and <b>Install App</b> on the organisation (all repositories, or just those in scope). Note the App ID at the top of its settings page.</span>' + perms + '</li>' +
+      '<li><b>Let it write results to Checkpoint.</b> <span class="src">If you run Checkpoint’s nightly monitor, reuse its app registration: it already has write access to this site, so enter its client ID and skip the rest of this step. Otherwise, in Entra admin centre → App registrations, register a new app, create a client secret, add the Microsoft Graph application permission <b>Sites.Selected</b> and grant admin consent; then a SharePoint or Global admin sends the request below once, from <a class="evidence-link" href="https://developer.microsoft.com/graph/graph-explorer" target="_blank" rel="noopener">Graph Explorer</a>. It grants that app write access to this one site only.</span>' +
+        '<div style="margin:8px 0">Client ID: ' + input('clientId', clientId, 'Application (client) ID', 'App registration client ID') + '</div>' +
+        '<pre id="ghGrant" class="integ-code">' + esc(L.monitorGrantSnippet(siteId || '<your Checkpoint site ID, filled in when signed in to your tenant>', clientId, 'Checkpoint GitHub Collector')) + '</pre><button class="btn ghost sm" data-action="App.copyEl" data-id="ghGrant">Copy request</button></li>' +
+      '<li><b>Add the collector to a private repository.</b> GitHub App ID (optional, so it is written in for you): ' + input('appId', g.appId, 'e.g. 1234567', 'GitHub App ID') +
+        '<div style="margin:8px 0"><button class="btn sm" data-action="App.downloadGithubCollector">Download the collector (.zip)</button></div>' +
+        '<span class="src">Its workflow already holds this tenant’s settings. Unzip it into a new private repository in the organisation (for example <code>checkpoint-collector</code>) and push. Then add two repository secrets (Settings → Secrets and variables → Actions): <code>CHECKPOINT_GH_APP_PRIVATE_KEY</code> (the whole .pem file) and <code>CHECKPOINT_CLIENT_SECRET</code> (the app registration’s secret)' + (missingVars.length ? ', and repository variable' + (missingVars.length > 1 ? 's ' : ' ') + missingVars.map(function (v) { return '<code>' + v + '</code>'; }).join(' and ') + ' (enter ' + (missingVars.length > 1 ? 'them' : 'it') + ' above to have ' + (missingVars.length > 1 ? 'them' : 'it') + ' written in instead)' : '') + '.</span></li>' +
+      '<li><b>Run it once.</b> <span class="src">Actions tab → Checkpoint GitHub collector → Run workflow. It then runs daily, and this card turns to Reporting after the next refresh.</span></li></ol>';
+  }
+
   function renderIntegrations() {
     var el = document.getElementById('integrationsBody');
     if (!el) return;
@@ -7130,11 +7162,7 @@ function showModal(opts) {
           '<li><b>Check it.</b> Run the function once. It returns <code>{ "merged": true, "checks": 10 }</code>, and this card turns to Reporting after the next refresh.</li></ol>' +
           (demo ? '<p class="src">In a real tenant the tenant ID and SharePoint values above are filled in for you.</p>' : '') }) +
       card({ name: 'GitHub', what: 'A scheduled GitHub Actions workflow in your own organisation: branch reviews, required checks, secret scanning, Dependabot, code scanning, organisation 2FA, and a sample of merged changes for A.8.32.', st: status(gh, 7), meta: checks('gh-') + ' checks · read-only GitHub App · results merge into the day\u2019s posture scan',
-        body: '<ol class="integ-steps">' +
-          '<li><b>GitHub App.</b> Create a private GitHub App with read-only access to administration, code scanning alerts, Dependabot alerts, secret scanning alerts, pull requests, checks, commit statuses and members; install it on the organisation.</li>' +
-          '<li><b>Workflow.</b> Add <code>public/checkpoint/github/checkpoint-github-collector.yml</code> and its <code>collector/</code> folder to a repository in the organisation.</li>' +
-          '<li><b>Settings for the workflow.</b>' + envTable([['vars.CHECKPOINT_GH_APP_ID', '', 'The GitHub App\u2019s ID'], ['secrets.CHECKPOINT_GH_APP_PRIVATE_KEY', '', 'The GitHub App\u2019s private key'], ['vars.CHECKPOINT_TENANT_ID', tenantId, 'Your Entra tenant ID'], ['vars.CHECKPOINT_CLIENT_ID', '', 'The app registration\u2019s client ID'], ['secrets.CHECKPOINT_CLIENT_SECRET', '', 'Its client secret'], ['vars.CHECKPOINT_SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['vars.CHECKPOINT_SP_SITE_PATH', path, 'Leave out for the root site']]) + '</li>' +
-          '<li><b>Check it.</b> Run the workflow once from the Actions tab; this card turns to Reporting after the next refresh.</li></ol>' +
+        body: githubSetupHtml(tenantId, host, path) +
           (latestChangeSample() ? '<p style="margin-top:10px"><button class="btn ghost sm" data-action="App.openChangeSample">Change sample (A.8.32)</button></p>' : '') }) +
       card({ name: 'Planner, Jira and ServiceNow', what: 'Actions worked as tickets: a Power Automate flow in your own tenant creates the ticket and records its status in the Ticket Links list; Checkpoint shows it on the action and offers to complete the action when the ticket is done.',
         st: ticketsLast ? status(ticketsLast, 30) : { cls: 'off', text: 'Not set up' },
@@ -29730,6 +29758,43 @@ function showModal(opts) {
       var state = loadMonitorSetupState();
       state[stepKey] = el.checked;
       saveMonitorSetupState(state);
+    },
+
+    setGithubSetup: function (field, val) {
+      if (['org', 'appId', 'clientId'].indexOf(field) === -1) return;
+      var g = githubSetup();
+      g[field] = String(val || '').trim().replace(field === 'org' ? /[^A-Za-z0-9-]/g : /[^A-Za-z0-9-]/g, '').slice(0, 64);
+      try { localStorage.setItem(githubSetupKey(), JSON.stringify(g)); } catch (e) { /* the link still works this session */ }
+      renderIntegrations();
+    },
+    downloadGithubCollector: async function () {
+      var L = window.CheckpointLib, g = githubSetup(), mon = loadMonitorSetupState();
+      var names = ['collector/index.mjs', 'collector/checks.mjs', 'collector/scan-merge.mjs', 'package.json', 'README.md', 'checkpoint-github-collector.yml'];
+      var files = {};
+      try {
+        for (var i = 0; i < names.length; i++) {
+          var r = await fetch('github/' + names[i], { cache: 'no-cache' });
+          if (!r.ok) throw new Error(names[i] + ': ' + r.status);
+          files[names[i]] = await r.text();
+        }
+      } catch (e) { warn(e); toast('Could not fetch the collector files: ' + esc(e.message || String(e))); return; }
+      var acc = Graph.getAccount && Graph.getAccount();
+      var yml = L.githubWorkflowYml(files['checkpoint-github-collector.yml'], {
+        appId: g.appId || '', tenantId: (acc && acc.tenantId) || '', clientId: g.clientId || mon.clientId || '',
+        hostname: (Store.getSiteHostname && Store.getSiteHostname()) || '',
+        sitePath: typeof CONFIG !== 'undefined' && CONFIG.site && CONFIG.site !== 'root' ? CONFIG.site : '',
+        listPrefix: (typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint'
+      });
+      var bytes = L.buildZip([
+        { name: 'collector/index.mjs', content: files['collector/index.mjs'] },
+        { name: 'collector/checks.mjs', content: files['collector/checks.mjs'] },
+        { name: 'collector/scan-merge.mjs', content: files['collector/scan-merge.mjs'] },
+        { name: 'package.json', content: files['package.json'] },
+        { name: 'README.md', content: files['README.md'] },
+        { name: '.github/workflows/checkpoint-github-collector.yml', content: yml }
+      ]);
+      downloadBlob('checkpoint-collector.zip', new Blob([bytes], { type: 'application/zip' }));
+      audit('GitHub collector downloaded', 'Integration', 'github', '', g.org ? 'for ' + g.org : '');
     },
 
     setMonitorClientId: function (val) {

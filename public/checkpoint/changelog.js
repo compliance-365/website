@@ -12,6 +12,14 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.189.0',
+    date: '2026-11-01',
+    entries: [
+      'Guided GitHub set-up (Integrations \u203a GitHub): enter your organisation name and Checkpoint opens GitHub\u2019s new-app form with the read-only permissions already filled in; the SharePoint grant request is written out with this site\u2019s ID (or reuse the nightly monitor\u2019s app, which already has access); and the collector downloads as a zip with your tenant\u2019s settings already in its workflow. What is left is two secrets and one run.',
+      'The GitHub permission list in Checkpoint now matches the set-up guide exactly, including organisation Administration (read) for the two-factor check.'
+    ]
+  },
+  {
     version: '1.188.0',
     date: '2026-10-31',
     entries: [
