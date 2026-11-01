@@ -6766,6 +6766,56 @@
      hand-assembling this from a markdown snippet. Falls back to a
      placeholder for whichever value isn't known yet, so the snippet is
      always valid to display (never throws on missing input). */
+  /* ===== GitHub collector set-up =====
+     The read-only GitHub App's permissions, in one place: the in-app
+     list, the create-app link and github/README.md all follow it (a
+     test holds the README to it). key is GitHub's permission name as
+     its URL-parameter registration takes it. */
+  var GITHUB_APP_PERMISSIONS = [
+    { key: 'metadata', label: 'Repository → Metadata', why: 'List repositories and read branch rulesets' },
+    { key: 'administration', label: 'Repository → Administration', why: 'Classic branch protection, and the secret scanning / push protection settings' },
+    { key: 'secret_scanning_alerts', label: 'Repository → Secret scanning alerts', why: 'gh-secret-alerts' },
+    { key: 'vulnerability_alerts', label: 'Repository → Dependabot alerts', why: 'gh-dependabot' },
+    { key: 'security_events', label: 'Repository → Code scanning alerts', why: 'gh-code-scanning' },
+    { key: 'pull_requests', label: 'Repository → Pull requests', why: 'gh-change-sample' },
+    { key: 'checks', label: 'Repository → Checks', why: 'gh-change-sample' },
+    { key: 'statuses', label: 'Repository → Commit statuses', why: 'gh-change-sample' },
+    { key: 'organization_administration', label: 'Organization → Administration', why: 'gh-org-2fa' }
+  ];
+  /* GitHub's "register a GitHub App using URL parameters": the new-app
+     form for the organisation, with the name and every permission
+     already filled in, read-only, private, no webhook. Nothing is
+     created until the person clicks Create on GitHub. */
+  function githubAppCreateUrl(org, homepage) {
+    var o = String(org || '').trim().replace(/[^A-Za-z0-9-]/g, '');
+    if (!o) return '';
+    var q = ['name=' + encodeURIComponent('Checkpoint Collector'),
+      'description=' + encodeURIComponent('Read-only: collects secure development evidence for Checkpoint, in this organisation.'),
+      'url=' + encodeURIComponent(homepage || 'https://www.compliance365.com.au/checkpoint/'),
+      'public=false', 'webhook_active=false']
+      .concat(GITHUB_APP_PERMISSIONS.map(function (p) { return p.key + '=read'; }));
+    return 'https://github.com/organizations/' + o + '/settings/apps/new?' + q.join('&');
+  }
+  /* The collector workflow with this tenant's non-secret settings
+     written in, so only the two secrets (and the App ID, if not given)
+     are left to add in GitHub. v = { appId, tenantId, clientId,
+     hostname, sitePath, listPrefix }. */
+  function githubWorkflowYml(template, v) {
+    v = v || {};
+    var lit = function (x) { return "'" + String(x).replace(/'/g, "''") + "'"; };
+    var out = String(template || '');
+    var put = function (expr, val) { if (val) out = out.split('${{ ' + expr + ' }}').join(lit(val)); };
+    put('vars.CHECKPOINT_GH_APP_ID', v.appId);
+    put('vars.CHECKPOINT_TENANT_ID', v.tenantId);
+    put('vars.CHECKPOINT_CLIENT_ID', v.clientId);
+    put('vars.CHECKPOINT_SP_HOSTNAME', v.hostname);
+    put('vars.CHECKPOINT_SP_SITE_PATH', v.sitePath);
+    if (v.listPrefix && v.listPrefix !== 'Checkpoint') {
+      out = out.replace(/(\n(\s+)SP_SITE_PATH:[^\n]*)/, '$1\n$2LIST_PREFIX: ' + lit(v.listPrefix));
+    }
+    return out;
+  }
+
   function monitorGrantSnippet(siteId, clientId, appDisplayName) {
     var body = {
       roles: ['write'],
@@ -15394,6 +15444,7 @@
     planSoaImport: planSoaImport, soaControlFor: soaControlFor, SOA_IMPORT_SPEC: SOA_IMPORT_SPEC,
     ismsTransferSteps: ismsTransferSteps,
     ATTACK_PATHS: ATTACK_PATHS, attackPaths: attackPaths,
+    GITHUB_APP_PERMISSIONS: GITHUB_APP_PERMISSIONS, githubAppCreateUrl: githubAppCreateUrl, githubWorkflowYml: githubWorkflowYml,
     COPILOT_ROOT: COPILOT_ROOT, COPILOT_BRIEFING_FILE: COPILOT_BRIEFING_FILE, copilotBriefingSections: copilotBriefingSections,
     REG_UPDATES: REG_UPDATES, regUpdatesFor: regUpdatesFor,
     buildBriefingDocx: buildBriefingDocx, buildCopilotAgentPackage: buildCopilotAgentPackage,

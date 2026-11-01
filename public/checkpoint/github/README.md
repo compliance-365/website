@@ -64,6 +64,16 @@ Use `REPOS` to limit the collector to the repositories that are actually
 in your ISMS scope. That also keeps sandboxes and experiments out of the
 numbers.
 
+## The quick way: Checkpoint's guided set-up
+
+Checkpoint → **Integrations → GitHub** walks through the three steps
+below. It opens GitHub's new-app form with the name and every
+permission already filled in (all read-only, no webhook), writes out
+the SharePoint grant request with this site's ID, and downloads the
+collector as a zip with the tenant's settings already in its workflow.
+What is left: create and install the App on GitHub, add two repository
+secrets, and run it once. The manual steps follow for reference.
+
 ## 1. Create the read-only GitHub App (client's organisation)
 
 **Organisation settings → Developer settings → GitHub Apps → New GitHub
