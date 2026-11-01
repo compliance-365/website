@@ -9,7 +9,8 @@
  * buyers here ask for" and how the ISO work maps onto them), never as a
  * service we certify against.
  *
- * Each region page links to the existing .com.au service pages.
+ * Each region page links to the existing .com.au service pages. Guide
+ * hrefs starting with / are pages on .io itself (src/data/site.js INTL_GUIDES).
  * US spelling on the US page, British spelling on the UK and UAE pages.
  */
 
@@ -39,6 +40,7 @@ export const REGION_COPY = {
       { name: 'ISO 27701', href: 'services/iso27701/', p: 'Privacy management on the same evidence base as your ISMS.' },
     ],
     guides: [
+      { name: 'ISO 42001 on Microsoft 365 and Azure', href: '/us/iso-42001-microsoft/' },
       { name: 'Inside a Statement of Applicability', href: 'resources/inside-statement-of-applicability/' },
       { name: 'Automating compliance in Microsoft 365, Azure and AWS', href: 'resources/automating-compliance/' },
       { name: 'ISO 42001 vs NIST AI RMF vs the EU AI Act', href: 'resources/iso42001-vs-nist-ai-rmf-eu-ai-act/' },
@@ -64,7 +66,8 @@ export const REGION_COPY = {
       { name: 'ISO 42001', href: 'services/iso42001/', p: 'AI management system: inventory, impact assessments and oversight.' },
     ],
     guides: [
-      { name: 'Cyber Essentials readiness in Microsoft 365', href: 'resources/cyber-essentials-readiness/' },
+      { name: 'Cyber Essentials on Microsoft 365, control by control', href: '/uk/cyber-essentials-microsoft-365/' },
+      { name: 'Free Cyber Essentials readiness checker', href: '/uk/cyber-essentials-checker/' },
       { name: 'ISO 27001 vs ISO 27701: the difference', href: 'blog/iso-27001-vs-iso-27701-australia/' },
       { name: 'Free readiness checklists', href: 'checklist/' },
     ],
