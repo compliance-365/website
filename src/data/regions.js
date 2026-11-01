@@ -14,44 +14,59 @@
  */
 
 export const REGION_COPY = {
+  /* US and UK copy tuned to Search Console queries (3 months to
+     1 Nov 2026): US impressions came from ISO 42001 on Microsoft, ISO
+     27001 SoA how-tos and automating Azure/AVD compliance checks, not
+     SOC 2; UK impressions from automating Cyber Essentials in Microsoft
+     365 and "ISO 27001 vs 27701". */
   us: {
-    title: 'SOC 2 & ISO 27001 for US Companies | Compliance365',
-    description: 'SOC 2 readiness, ISO 27001 and ISO 42001 for US companies, delivered remotely inside your own Microsoft 365. Fixed price, no GRC platform licence.',
+    title: 'ISO 42001, 27001 & SOC 2 on Microsoft 365 | Compliance365',
+    description: 'Implement ISO 42001 and ISO 27001 on Microsoft 365, and get SOC 2 ready, without a GRC platform. Delivered remotely for US companies, at a fixed price.',
     eyebrow: 'United States · Delivered remotely',
-    h1: 'SOC 2, ISO 27001 and AI governance,',
-    h1em: 'inside the Microsoft 365 you already run.',
-    lead: 'We get US companies through SOC 2 and ISO 27001 without another platform to buy: the controls, the evidence and the reports live in your own Microsoft 365 tenant, on Checkpoint, our compliance software.',
+    h1: 'ISO 42001, ISO 27001 and SOC 2,',
+    h1em: 'implemented on the Microsoft 365 you already run.',
+    lead: 'We implement AI governance and information security for US companies inside their own Microsoft 365 tenant: the controls, the evidence and the reports live in SharePoint, on Checkpoint, our compliance software. No GRC platform to buy.',
     asks: [
+      { h: 'ISO 42001, implemented on Microsoft', p: 'Your AI inventory, impact assessments and oversight records sit next to the Microsoft 365, Entra and Defender data they describe, so the AI management system is evidenced from the tenant rather than rebuilt in a separate tool.' },
+      { h: 'An ISO 27001 Statement of Applicability you can defend', p: 'Every Annex A control with its justification, owner, status and a link to its evidence, with the technical controls checked against your live tenant configuration.' },
       { h: 'SOC 2 from enterprise buyers', p: 'US enterprise security reviews usually ask for a SOC 2 report. We get you ready for Type I and the Type II observation period. The report itself is issued by an independent CPA firm, which you engage directly.' },
-      { h: 'ISO 27001 from global customers', p: 'Customers outside the US, and many inside it, ask for ISO 27001 instead. One control set can evidence both, so the second costs a fraction of the first.' },
-      { h: 'AI governance in vendor questionnaires', p: 'Questionnaires now ask how you govern AI features and the data behind them. ISO 42001 gives you a certifiable answer on top of the same management system.' },
-      { h: 'NIST CSF as the common language', p: 'Boards, investors and cyber insurers often describe maturity in NIST CSF terms. It is a profile, not a certificate, and maps onto ISO 27001 work you already have.' },
+      { h: 'Compliance checks that run themselves', p: 'Posture checks read your Microsoft 365 and Azure configuration, and an optional scheduled monitor flags drift, so evidence stays current between audits instead of being gathered the week before.' },
     ],
     services: [
-      { name: 'SOC 2 readiness', href: 'services/soc2/', p: 'Scope, controls and evidence for Type I and Type II, coordinated with your CPA firm.' },
-      { name: 'ISO 27001', href: 'services/iso27001/', p: 'A certifiable information security management system, built in your tenant.' },
       { name: 'ISO 42001', href: 'services/iso42001/', p: 'AI management system: inventory, impact assessments and oversight.' },
+      { name: 'ISO 27001', href: 'services/iso27001/', p: 'A certifiable information security management system, built in your tenant.' },
+      { name: 'SOC 2 readiness', href: 'services/soc2/', p: 'Scope, controls and evidence for Type I and Type II, coordinated with your CPA firm.' },
       { name: 'ISO 27701', href: 'services/iso27701/', p: 'Privacy management on the same evidence base as your ISMS.' },
+    ],
+    guides: [
+      { name: 'Inside a Statement of Applicability', href: 'resources/inside-statement-of-applicability/' },
+      { name: 'Automating compliance in Microsoft 365, Azure and AWS', href: 'resources/automating-compliance/' },
+      { name: 'ISO 42001 vs NIST AI RMF vs the EU AI Act', href: 'resources/iso42001-vs-nist-ai-rmf-eu-ai-act/' },
     ],
   },
   uk: {
-    title: 'ISO 27001 & Cyber Essentials in the UK | Compliance365',
-    description: 'ISO 27001, Cyber Essentials readiness and ISO 27701 for UK organisations, delivered remotely inside your own Microsoft 365. Fixed price, no GRC licence.',
+    title: 'Automate Cyber Essentials & ISO 27001 on Microsoft 365',
+    description: 'Cyber Essentials readiness and ISO 27001 automated from your own Microsoft 365, plus ISO 27701 for UK GDPR. Delivered remotely, at a fixed price.',
     eyebrow: 'United Kingdom · Delivered remotely',
-    h1: 'ISO 27001 and Cyber Essentials,',
-    h1em: 'evidenced from your own Microsoft 365.',
-    lead: 'We prepare UK organisations for ISO 27001 and Cyber Essentials using the Microsoft 365 you already run. Controls, evidence and audit reports stay in your tenant, on Checkpoint, our compliance software.',
+    h1: 'Cyber Essentials and ISO 27001,',
+    h1em: 'checked automatically in your own Microsoft 365.',
+    lead: 'Most Cyber Essentials and ISO 27001 controls are settings in Microsoft 365. We check them against your live tenant, fix what fails, and keep the evidence in your SharePoint, on Checkpoint, our compliance software.',
     asks: [
-      { h: 'Cyber Essentials for public sector work', p: 'The NCSC-backed scheme is required for many UK government contracts. We prepare you from your live Microsoft 365 configuration; certification is issued by an IASME-licensed Certification Body you choose.' },
+      { h: 'Cyber Essentials, checked from your tenant', p: 'Posture checks read your Microsoft 365 and Intune configuration against the scheme\u2019s technical controls, so you know what passes before you submit. Certification is issued by an IASME-licensed Certification Body you choose.' },
       { h: 'ISO 27001 from enterprise and public sector buyers', p: 'Larger customers ask for ISO 27001, and public sector buyers on frameworks such as G-Cloud often look for it. The Cyber Essentials controls are largely covered by the same work, so one programme serves both.' },
-      { h: 'UK GDPR and the Data Protection Act 2018', p: 'ISO 27701 documents how you handle personal data, on the same evidence as the ISMS, and maps closely onto UK GDPR accountability requirements.' },
+      { h: 'ISO 27001 or ISO 27701?', p: 'ISO 27001 is the information security management system. ISO 27701 adds privacy management on top, and can be certified on its own since its 2025 edition. Most organisations build ISO 27701 on an ISO 27001 ISMS, because the management system and many records are shared, and together they cover UK GDPR accountability.' },
       { h: 'AI governance in procurement', p: 'Buyers increasingly ask how AI features are governed. ISO 42001 gives you a certifiable answer that sits on the same management system.' },
     ],
     services: [
-      { name: 'ISO 27001', href: 'services/iso27001/', p: 'A certifiable information security management system, built in your tenant.' },
       { name: 'Cyber Essentials readiness', href: 'resources/cyber-essentials-readiness/', p: 'Readiness evidenced from your Microsoft 365 configuration, for Cyber Essentials or Plus.' },
+      { name: 'ISO 27001', href: 'services/iso27001/', p: 'A certifiable information security management system, built in your tenant.' },
       { name: 'ISO 27701', href: 'services/iso27701/', p: 'Privacy information management aligned to UK GDPR.' },
       { name: 'ISO 42001', href: 'services/iso42001/', p: 'AI management system: inventory, impact assessments and oversight.' },
+    ],
+    guides: [
+      { name: 'Cyber Essentials readiness in Microsoft 365', href: 'resources/cyber-essentials-readiness/' },
+      { name: 'ISO 27001 vs ISO 27701: the difference', href: 'blog/iso-27001-vs-iso-27701-australia/' },
+      { name: 'Free readiness checklists', href: 'checklist/' },
     ],
   },
   ae: {

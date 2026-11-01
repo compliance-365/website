@@ -45,13 +45,14 @@ test('every region has copy, and its service links are real .com.au pages', () =
     const c = REGION_COPY[r];
     assert.ok(c && c.title.length <= 60, `${r} title fits a search result`);
     assert.ok(c.description.length <= 160, `${r} description fits a search result`);
-    for (const s of c.services) {
+    for (const s of [...c.services, ...(c.guides || [])]) {
       const h = s.href.replace(/\/$/, '');
-      assert.ok(existsSync(new URL(`../src/pages/${h}.astro`, import.meta.url)) || existsSync(new URL(`../src/pages/${h}/index.astro`, import.meta.url)), `${r}: ${s.href}`);
+      const blog = h.startsWith('blog/') && existsSync(new URL(`../src/content/blog/${h.slice(5)}.md`, import.meta.url));
+      assert.ok(blog || existsSync(new URL(`../src/pages/${h}.astro`, import.meta.url)) || existsSync(new URL(`../src/pages/${h}/index.astro`, import.meta.url)), `${r}: ${s.href}`);
     }
   }
-  assert.match(REGION_COPY.us.asks[0].p, /CPA firm/, 'SOC 2 reports come from a CPA firm, not us');
-  assert.match(REGION_COPY.uk.asks[0].p, /IASME-licensed/, 'Cyber Essentials is certified by an IASME body, not us');
+  assert.ok(REGION_COPY.us.asks.some((a) => /SOC 2/.test(a.h) && /CPA firm/.test(a.p)), 'SOC 2 reports come from a CPA firm, not us');
+  assert.ok(REGION_COPY.uk.asks.some((a) => /Cyber Essentials/.test(a.h) && /IASME-licensed/.test(a.p)), 'Cyber Essentials is certified by an IASME body, not us');
 });
 
 test('finalize-intl keeps only the country pages and redirects the rest', async () => {
