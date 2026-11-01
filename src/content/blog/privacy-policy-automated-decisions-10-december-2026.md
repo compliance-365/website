@@ -10,7 +10,7 @@ image: "/assets/blog-automated-decisions.svg"
 
 <div style="background:#FAF7F1;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p>From <strong>10 December 2026</strong>, organisations covered by the Privacy Act must say in their privacy policy when they use computer programs to make, or substantially and directly inform, decisions that could significantly affect people. This came from the 2024 amendments and is already law.</p>
-  <p>The OAIC published its guidance on 30 September 2026. This post covers who is caught, what "computer program" means (it is wider than AI), and what to put in the policy.</p>
+  <p>The OAIC published its guidance on 30 September 2026. This post covers who is caught, what "computer program" means (it is wider than AI), and what to put in the policy. To check your own systems and get draft wording, use the <a href="/automated-decisions-checker/">automated decisions checker</a>.</p>
 </div>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #DDD8CF" />

@@ -1,0 +1,167 @@
+---
+/*
+  ComparisonPage — a side-by-side comparison of two frameworks, used by
+  /resources/cps234-vs-iso27001/ and /resources/is18-vs-essential-eight/.
+  Each row says how the two compare on one topic: 'both' (they cover it
+  in a comparable way), 'a' or 'b' (only that one asks for it, or asks
+  for much more). The overlap bar is computed from those rows.
+*/
+import Base from '../layouts/BaseLayout.astro';
+import Header from './Header.astro';
+import Footer from './Footer.astro';
+import CinematicBackground from './CinematicBackground.astro';
+
+interface Side { name: string; kind: string; facts: { k: string; v: string }[]; href: string }
+interface Row { topic: string; a: string; b: string; who: 'both' | 'a' | 'b' }
+interface Props {
+  slug: string; title: string; description: string; eyebrow: string; h1: string; h1em: string; lead: string;
+  a: Side; b: Side; rows: Row[]; together: { h: string; p: string }[]; related: { label: string; href: string }[];
+  ctaTitle: string; ctaText: string; published: string; modified: string;
+}
+const p = Astro.props;
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+const url = `https://www.compliance365.com.au/resources/${p.slug}/`;
+const count = (w: Row['who']) => p.rows.filter((r) => r.who === w).length;
+const n = { both: count('both'), a: count('a'), b: count('b') };
+const total = p.rows.length;
+const articleLd = {
+  '@context': 'https://schema.org', '@type': 'Article', headline: p.h1 + ' ' + p.h1em, description: p.description,
+  datePublished: p.published, dateModified: p.modified, url,
+  author: { '@id': 'https://www.compliance365.com.au/#org' }, publisher: { '@id': 'https://www.compliance365.com.au/#org' },
+  about: [{ '@type': 'Thing', name: p.a.name }, { '@type': 'Thing', name: p.b.name }],
+};
+---
+<Base
+  title={p.title}
+  description={p.description}
+  schema={[articleLd]}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Resources', url: 'https://www.compliance365.com.au/resources/' },
+    { name: `${p.a.name} vs ${p.b.name}`, url }
+  ]}
+>
+  <Header />
+  <main id="main-content" tabindex="-1">
+
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:900px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">{p.eyebrow}</p>
+        <h1>{p.h1} <em>{p.h1em}</em></h1>
+        <p class="section-lead">{p.lead}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container" style="max-width:1080px;">
+      <div class="cmp-glance">
+        {[p.a, p.b].map((s, i) => (
+          <article class={`cmp-side cmp-side-${i ? 'b' : 'a'}`}>
+            <p class="cmp-kind">{s.kind}</p>
+            <h2>{s.name}</h2>
+            <dl>
+              {s.facts.map((f) => (<div><dt>{f.k}</dt><dd>{f.v}</dd></div>))}
+            </dl>
+            <a class="cmp-more" href={`${base}${s.href}`}>{s.name} in detail →</a>
+          </article>
+        ))}
+      </div>
+
+      <figure class="cmp-overlap" aria-labelledby="cmp-ov-cap">
+        <div class="cmp-ov-bar" aria-hidden="true">
+          <span class="cmp-ov-a" style={`flex:${n.a}`}>{n.a > 0 && <b>{n.a}</b>}</span>
+          <span class="cmp-ov-both" style={`flex:${n.both}`}><b>{n.both}</b></span>
+          <span class="cmp-ov-b" style={`flex:${n.b}`}>{n.b > 0 && <b>{n.b}</b>}</span>
+        </div>
+        <figcaption id="cmp-ov-cap">Of the {total} topics compared below, <strong>{n.both}</strong> are covered by both, <strong>{n.a}</strong> mainly by {p.a.name} and <strong>{n.b}</strong> mainly by {p.b.name}.</figcaption>
+      </figure>
+
+      <h2 class="cmp-h2">Topic by topic</h2>
+      <div class="cmp-table" role="table" aria-label={`${p.a.name} compared with ${p.b.name}`}>
+        <div class="cmp-row cmp-head" role="row">
+          <div role="columnheader">Topic</div>
+          <div role="columnheader">{p.a.name}</div>
+          <div role="columnheader">{p.b.name}</div>
+        </div>
+        {p.rows.map((r) => (
+          <div class={`cmp-row cmp-who-${r.who}`} role="row">
+            <div role="rowheader" class="cmp-topic">{r.topic}<span class="cmp-badge">{r.who === 'both' ? 'Both' : r.who === 'a' ? `Mainly ${p.a.name}` : `Mainly ${p.b.name}`}</span></div>
+            <div role="cell" class="cmp-a"><span class="cmp-m">{p.a.name}</span>{r.a}</div>
+            <div role="cell" class="cmp-b"><span class="cmp-m">{p.b.name}</span>{r.b}</div>
+          </div>
+        ))}
+      </div>
+
+      <h2 class="cmp-h2">Running them together</h2>
+      <div class="cmp-together">
+        {p.together.map((t, i) => (<div><span>{i + 1}</span><h3>{t.h}</h3><p>{t.p}</p></div>))}
+      </div>
+
+      <div class="cmp-next">
+        <div>
+          <h3>{p.ctaTitle}</h3>
+          <p>{p.ctaText}</p>
+          <p class="cmp-rel">{p.related.map((r, i) => (<>{i > 0 && ' · '}<a href={`${base}${r.href}`}>{r.label}</a></>))}</p>
+        </div>
+        <a class="btn-hdk-primary" href={ctaUrl} target="_blank" rel="noopener">Book a 30-min call</a>
+      </div>
+      <p class="cmp-note">General guidance, not legal advice. Last reviewed {new Date(p.modified).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}.</p>
+    </div>
+  </section>
+
+  </main>
+  <Footer />
+
+  <style>
+    .cmp-glance { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .cmp-side { background: #fff; border: 1px solid #E8E1D5; border-radius: 16px; padding: 1.5rem 1.6rem; }
+    .cmp-side-a { border-top: 5px solid #BE4A1E; }
+    .cmp-side-b { border-top: 5px solid #0B0B0C; }
+    .cmp-kind { margin: 0; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #A63A12; }
+    .cmp-side h2 { margin: .25rem 0 1rem; }
+    .cmp-side dl { margin: 0; display: grid; gap: .6rem; }
+    .cmp-side dl div { display: grid; grid-template-columns: 120px 1fr; gap: .75rem; padding-bottom: .6rem; border-bottom: 1px solid #F0EAE0; }
+    .cmp-side dt { font-size: .78rem; font-weight: 800; color: #6B6860; }
+    .cmp-side dd { margin: 0; font-size: .9rem; color: #2A2724; line-height: 1.5; }
+    .cmp-more { display: inline-block; margin-top: 1rem; font-weight: 700; font-size: .88rem; color: var(--accent-ink, #A63A12); }
+    .cmp-overlap { margin: 1.5rem 0 0; background: #fff; border: 1px solid #E8E1D5; border-radius: 16px; padding: 1.25rem 1.5rem; }
+    .cmp-ov-bar { display: flex; height: 38px; border-radius: 10px; overflow: hidden; }
+    .cmp-ov-bar span { display: flex; align-items: center; justify-content: center; color: #fff; font-size: .9rem; min-width: 0; }
+    .cmp-ov-a { background: #BE4A1E; }
+    .cmp-ov-both { background: repeating-linear-gradient(135deg, #8B3A1C 0 10px, #2A2724 10px 20px); }
+    .cmp-ov-b { background: #0B0B0C; }
+    .cmp-overlap figcaption { margin-top: .75rem; font-size: .88rem; color: #4A4740; }
+    .cmp-h2 { margin: 2.75rem 0 1rem; }
+    .cmp-table { background: #fff; border: 1px solid #E8E1D5; border-radius: 16px; overflow: hidden; }
+    .cmp-row { display: grid; grid-template-columns: 220px 1fr 1fr; gap: 1.25rem; padding: 1rem 1.25rem; border-top: 1px solid #F0EAE0; font-size: .9rem; line-height: 1.55; color: #2A2724; }
+    .cmp-head { border-top: none; background: #0B0B0C; color: #FAF7F1; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .cmp-topic { font-weight: 800; color: #0B0B0C; }
+    .cmp-badge { display: block; width: fit-content; margin-top: .4rem; font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: .15rem .5rem; border-radius: 6px; background: #F0EAE0; color: #4A4740; }
+    .cmp-who-a .cmp-badge { background: #BE4A1E; color: #fff; }
+    .cmp-who-b .cmp-badge { background: #0B0B0C; color: #fff; }
+    .cmp-who-a .cmp-a, .cmp-who-b .cmp-b { font-weight: 600; }
+    .cmp-m { display: none; }
+    .cmp-together { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+    .cmp-together div { background: #fff; border: 1px solid #E8E1D5; border-radius: 14px; padding: 1.25rem; }
+    .cmp-together span { display: inline-flex; width: 30px; height: 30px; border-radius: 9px; background: #FBEFE8; color: #A63A12; font-weight: 800; align-items: center; justify-content: center; }
+    .cmp-together h3 { margin: .7rem 0 .35rem; font-size: 1.02rem; }
+    .cmp-together p { margin: 0; font-size: .9rem; line-height: 1.6; color: #4A4740; }
+    .cmp-next { margin-top: 2.5rem; display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.5rem 1.75rem; }
+    .cmp-next h3 { margin: 0 0 .3rem; color: #FAF7F1; }
+    .cmp-next p { margin: 0; color: rgba(250,247,241,.75); font-size: .92rem; }
+    .cmp-rel { margin-top: .6rem !important; font-size: .85rem !important; }
+    .cmp-rel a { color: #F0A97F; }
+    .cmp-note { font-size: .8rem; color: #6B6860; margin-top: 1.25rem; }
+    @media (max-width: 820px) {
+      .cmp-glance, .cmp-next { grid-template-columns: 1fr; }
+      .cmp-head { display: none; }
+      .cmp-row { grid-template-columns: 1fr; gap: .5rem; }
+      .cmp-m { display: block; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #6B6860; }
+      .cmp-side dl div { grid-template-columns: 1fr; gap: .15rem; }
+    }
+  </style>
+</Base>

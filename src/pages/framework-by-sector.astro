@@ -1,0 +1,185 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CinematicBackground from '../components/CinematicBackground.astro';
+import { FRAMEWORKS, SECTORS } from '../data/framework-by-sector.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+const pageTitle = 'Which Compliance Framework Does Your Sector Need? | Compliance365';
+const pageDesc = 'A sector-by-sector matrix of the frameworks Australian buyers ask for: ISO 27001, SOC 2, Essential Eight, ISO 27701, ISO 42001, DISP, IS18, RFFR, CPS 234 and NIST CSF.';
+---
+
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Resources', url: 'https://www.compliance365.com.au/resources/' },
+    { name: 'Frameworks by sector', url: 'https://www.compliance365.com.au/framework-by-sector/' }
+  ]}
+>
+  <Header />
+  <main id="main-content" tabindex="-1">
+
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:860px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Free guide · {SECTORS.length} sectors · {FRAMEWORKS.length} frameworks</p>
+        <h1>Which framework does <em>your buyer</em> ask for?</h1>
+        <p class="section-lead">The right certification is decided by whoever signs your contract. Tick the buyers you sell to and see what they usually ask for, and where one piece of work covers several.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container" style="max-width:1180px;">
+      <div class="fs-wrap">
+        <table class="fs-table">
+          <caption class="sr-only">Frameworks usually asked for, by sector</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="fs-corner">Who you sell to</th>
+              {FRAMEWORKS.map((f) => <th scope="col" data-fw={f.id}><a href={`${base}${f.href}`}>{f.name}</a></th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {SECTORS.map((s) => (
+              <tr data-sector={s.id}>
+                <th scope="row">
+                  <label class="fs-pick"><input type="checkbox" value={s.id} /><span>{s.name}</span></label>
+                </th>
+                {FRAMEWORKS.map((f) => (
+                  <td data-fw={f.id}>
+                    {s.cells[f.id] === 'core' && <span class="fs-dot fs-core" title={`${f.name}: usually asked for`}><span class="sr-only">Usually asked for</span></span>}
+                    {s.cells[f.id] === 'often' && <span class="fs-dot fs-often" title={`${f.name}: often asked for alongside`}><span class="sr-only">Often asked for alongside</span></span>}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="fs-key"><span class="fs-dot fs-core"></span> Usually asked for <span class="fs-dot fs-often"></span> Often asked for alongside</p>
+
+      <div class="fs-result" id="fs-result" aria-live="polite" data-base={base}>
+        <p class="fs-hint" id="fs-hint">Tick one or more sectors in the first column.</p>
+        <div id="fs-out" hidden>
+          <div class="fs-cols">
+            <div><h3>Start with</h3><ul id="fs-core"></ul></div>
+            <div><h3>Worth considering</h3><ul id="fs-often"></ul></div>
+          </div>
+          <p class="fs-overlap" id="fs-overlap"></p>
+          <div class="fs-actions">
+            <a class="btn-hdk-primary" id="fs-estimate" href={`${base}cost-estimator/`}>Estimate the cost</a>
+            <a class="fs-link" href={`${base}framework-overlap-calculator/`}>See how much they overlap →</a>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="fs-h2">Why each sector asks for what it does</h2>
+      <div class="fs-cards">
+        {SECTORS.map((s) => (
+          <article class="fs-card" id={`s-${s.id}`}>
+            <h3>{s.name}</h3>
+            <p class="fs-who">Who asks: {s.who}</p>
+            <p>{s.why}</p>
+            <p class="fs-tags">
+              {FRAMEWORKS.filter((f) => s.cells[f.id]).map((f) => <a class={`fs-tag fs-tag-${s.cells[f.id]}`} href={`${base}${f.href}`}>{f.name}</a>)}
+            </p>
+          </article>
+        ))}
+      </div>
+
+      <div class="fs-next">
+        <div>
+          <h3>Selling into more than one of these?</h3>
+          <p>Most of the controls overlap, so we build one control set and one evidence base that covers each framework you need. A 30-minute call tells you which ones your contracts actually require.</p>
+        </div>
+        <a class="btn-hdk-primary" href={ctaUrl} target="_blank" rel="noopener">Book a 30-min call</a>
+      </div>
+      <p class="fs-note">This is what buyers in each sector usually ask for in our experience, not a legal requirement. Always check the contract, tender or regulator's own wording.</p>
+    </div>
+  </section>
+
+  </main>
+  <Footer />
+
+  <script>
+    import { FRAMEWORKS, SECTORS } from '../data/framework-by-sector.js';
+    const base = (document.getElementById('fs-result') as HTMLElement).dataset.base || '/';
+    const picks = Array.from(document.querySelectorAll('.fs-pick input')) as HTMLInputElement[];
+    function render() {
+      const chosen = SECTORS.filter((s) => picks.find((p) => p.value === s.id)?.checked);
+      document.querySelectorAll('.fs-table tbody tr').forEach((tr) => tr.classList.toggle('is-picked', chosen.some((s) => s.id === (tr as HTMLElement).dataset.sector)));
+      const core = FRAMEWORKS.filter((f) => chosen.some((s) => s.cells[f.id] === 'core'));
+      const often = FRAMEWORKS.filter((f) => !core.includes(f) && chosen.some((s) => s.cells[f.id] === 'often'));
+      document.querySelectorAll('.fs-table [data-fw]').forEach((el) => {
+        const id = (el as HTMLElement).dataset.fw;
+        el.classList.toggle('is-core', core.some((f) => f.id === id));
+      });
+      (document.getElementById('fs-hint') as HTMLElement).hidden = chosen.length > 0;
+      (document.getElementById('fs-out') as HTMLElement).hidden = !chosen.length;
+      const li = (f: typeof FRAMEWORKS[number]) => `<li><a href="${base}${f.href}">${f.name}</a> <small>${chosen.filter((s) => s.cells[f.id]).map((s) => s.name).join(' · ')}</small></li>`;
+      (document.getElementById('fs-core') as HTMLElement).innerHTML = core.map(li).join('') || '<li>None</li>';
+      (document.getElementById('fs-often') as HTMLElement).innerHTML = often.map(li).join('') || '<li>None</li>';
+      (document.getElementById('fs-overlap') as HTMLElement).textContent = core.length > 1
+        ? `${core.length} frameworks to start with. They share most of their controls, so this is one programme with ${core.length} outputs, not ${core.length} separate projects.`
+        : '';
+    }
+    picks.forEach((p) => p.addEventListener('change', render));
+    render();
+  </script>
+
+  <style is:global>
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .fs-wrap { position: relative; overflow-x: auto; background: #fff; border: 1px solid #E8E1D5; border-radius: 16px; -webkit-overflow-scrolling: touch; }
+    .fs-table { width: 100%; border-collapse: collapse; min-width: 880px; }
+    .fs-table th, .fs-table td { padding: .7rem .5rem; border-bottom: 1px solid #F0EAE0; text-align: center; font-size: .82rem; }
+    .fs-table thead th { font-size: .72rem; font-weight: 800; color: #4A4740; vertical-align: bottom; line-height: 1.3; }
+    .fs-table thead th a { color: inherit; text-decoration: none; }
+    .fs-table thead th a:hover { color: #A63A12; }
+    .fs-table tbody th { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 230px; }
+    .fs-corner { text-align: left !important; position: sticky; left: 0; background: #fff; z-index: 2; }
+    .fs-table tbody tr:last-child th, .fs-table tbody tr:last-child td { border-bottom: none; }
+    .fs-table tbody tr.is-picked th, .fs-table tbody tr.is-picked td { background: #FBEFE8; }
+    .fs-table th.is-core, .fs-table td.is-core { box-shadow: inset 0 0 0 9999px rgba(190,74,30,.05); }
+    .fs-table thead th.is-core { color: #A63A12; }
+    .fs-pick { display: flex; align-items: center; gap: .6rem; cursor: pointer; font-weight: 700; font-size: .88rem; color: #0B0B0C; }
+    .fs-pick input { width: 18px; height: 18px; accent-color: #BE4A1E; flex: none; }
+    .fs-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; vertical-align: middle; }
+    .fs-core { background: #BE4A1E; }
+    .fs-often { background: transparent; border: 3px solid #E0A07E; }
+    .fs-key { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: #6B6860; margin: .75rem 0 0; }
+    .fs-key .fs-dot { width: 12px; height: 12px; margin-left: .75rem; }
+    .fs-key .fs-dot:first-child { margin-left: 0; }
+    .fs-result { margin-top: 1.5rem; background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.5rem 1.75rem; }
+    .fs-hint { margin: 0; color: rgba(250,247,241,.72); }
+    .fs-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .fs-cols h3 { margin: 0 0 .6rem; color: #F0A97F; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; }
+    .fs-cols ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+    .fs-cols li { font-size: .95rem; }
+    .fs-cols li a { color: #FAF7F1; font-weight: 800; }
+    .fs-cols li small { display: block; color: rgba(250,247,241,.6); font-size: .75rem; }
+    .fs-overlap { margin: 1.25rem 0 0; color: rgba(250,247,241,.85); font-size: .92rem; }
+    .fs-actions { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1.25rem; }
+    .fs-link { color: #F0A97F; font-weight: 700; font-size: .88rem; }
+    .fs-h2 { margin: 3rem 0 1.25rem; }
+    .fs-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+    .fs-card { background: #fff; border: 1px solid #E8E1D5; border-radius: 14px; padding: 1.25rem 1.35rem; }
+    .fs-card h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+    .fs-who { font-size: .78rem; font-weight: 700; color: #6B6860; margin: 0 0 .6rem; }
+    .fs-card p { font-size: .9rem; line-height: 1.6; color: #4A4740; }
+    .fs-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin: .75rem 0 0; }
+    .fs-tag { font-size: .72rem; font-weight: 800; padding: .2rem .55rem; border-radius: 999px; text-decoration: none; }
+    .fs-tag-core { background: #BE4A1E; color: #fff; }
+    .fs-tag-often { border: 1.5px solid #E0A07E; color: #A63A12; }
+    .fs-next { margin-top: 2rem; display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; background: #fff; border: 1px solid #E8E1D5; border-left: 4px solid #BE4A1E; border-radius: 14px; padding: 1.5rem 1.75rem; }
+    .fs-next h3 { margin: 0 0 .3rem; }
+    .fs-next p { margin: 0; font-size: .9rem; color: #4A4740; }
+    .fs-note { font-size: .8rem; color: #6B6860; margin-top: 1.25rem; }
+    @media (max-width: 700px) { .fs-cols, .fs-next { grid-template-columns: 1fr; } .fs-table tbody th { min-width: 170px; } }
+  </style>
+</Base>

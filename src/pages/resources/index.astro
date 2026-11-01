@@ -10,6 +10,22 @@ const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com
 // ── Featured guides ───────────────────────────────────────
 const GUIDES = [
   {
+    slug: 'cps234-vs-iso27001',
+    title: 'CPS 234 vs ISO 27001: What Overlaps and What Doesn\'t',
+    desc: 'Topic by topic: what an ISO 27001 ISMS already gives an APRA-regulated entity, and what CPS 234 adds on top — the notification clocks, independent testing and third-party assurance.',
+    img: `${base}assets/illus-cps234.svg`,
+    badge: 'APRA · CPS 234 · ISO 27001',
+    readTime: '6 min read',
+  },
+  {
+    slug: 'is18-vs-essential-eight',
+    title: 'IS18 vs Essential Eight: How They Fit Together',
+    desc: 'Essential Eight is one of IS18\'s four pillars. What IS18 adds on top: an ISO 27001-aligned ISMS, QGISCF classification, incident reporting and the 30 September annual return.',
+    img: `${base}assets/illus-is18.svg`,
+    badge: 'IS18 · Essential Eight',
+    readTime: '5 min read',
+  },
+  {
     slug: 'iso42001-reports',
     title: 'ISO 42001 Reports — Audit-Ready AI Governance Reporting',
     desc: 'The six reports an AI management system actually needs — internal audit report, management review, AI risk & impact assessment summary, Statement of Applicability, board report, and auditor evidence pack.',
@@ -155,6 +171,22 @@ const GUIDES = [
   },
 ];
 
+// ── Free tools ────────────────────────────────────────────
+const TOOLS = [
+  { title: 'CPS 234 Self-Assessment', target: `${base}cps234-self-assessment/`, badge: 'APRA · CPS 234', meta: '24 questions · ~10 min',
+    desc: 'Score your position against all 24 CPS 234 requirements, see your weakest domains, and get the gaps to close first.' },
+  { title: 'CPS 234 Notification Deadline Calculator', target: `${base}cps234-notification-calculator/`, badge: 'APRA · CPS 234', meta: 'Under a minute',
+    desc: 'Enter when you became aware and see both deadlines: 72 hours for a material incident and 10 business days for a control weakness.' },
+  { title: 'Automated Decisions Privacy Policy Checker', target: `${base}automated-decisions-checker/`, badge: 'Privacy Act · APP 1', meta: '~5 min',
+    desc: 'From 10 December 2026 your privacy policy must describe automated decisions. Find which systems are caught and get draft wording.' },
+  { title: 'Frameworks by Sector', target: `${base}framework-by-sector/`, badge: 'All frameworks', meta: '9 sectors',
+    desc: 'Tick the buyers you sell to and see which frameworks they usually ask for, and where one piece of work covers several.' },
+  { title: 'Australian Compliance Calendar', target: `${base}compliance-calendar/`, badge: 'Privacy Act · Essential Eight · ISM · IS18 · CPS 234', meta: 'Timeline',
+    desc: 'The dates that change what you have to do: what has started, what is coming, and what repeats every year.' },
+  { title: 'Ransomware Payment Reporting Checker', target: `${base}ransomware-payment-reporting-checker/`, badge: 'Cyber Security Act', meta: 'Under a minute',
+    desc: 'Check whether you must report a ransomware or cyber extortion payment, and who to report it to.' },
+];
+
 // ── Readiness checklists ──────────────────────────────────
 const CHECKLISTS = [
   {
@@ -259,6 +291,7 @@ const FRAMEWORK_TAGS = [
   { label: 'RFFR',            match: /RFFR/i },
   { label: 'DISP / ISM / IRAP', match: /DISP|IRAP|\bISM\b/i },
   { label: 'NIST CSF',        match: /NIST ?CSF|NIST Cybersecurity/i },
+  { label: 'CPS 234',         match: /CPS ?234/i },
   { label: 'Cyber Essentials', match: /Cyber Essentials/i },
 ];
 
@@ -274,6 +307,7 @@ function tagsFor(...parts) {
 /* One flat list of everything filterable, so the pills can be built from
    what actually exists rather than from a hardcoded menu that drifts. */
 const TAGGED = [
+  ...TOOLS.map(t => ({ type: 'tool', tags: tagsFor(t.badge, t.title) })),
   ...CHECKLISTS.map(c => ({ type: 'checklist', tags: tagsFor(c.badge, c.title) })),
   ...GUIDES.map(g => ({ type: 'guide', tags: tagsFor(g.badge, g.title) })),
   ...POSTS.map(p => ({ type: 'insight', tags: tagsFor(p.tag, p.title) })),
@@ -286,6 +320,7 @@ const ACTIVE_FRAMEWORKS = FRAMEWORK_TAGS
   .filter(f => f.count > 0);
 
 const TYPE_FILTERS = [
+  { id: 'tool',      label: 'Free tools', count: TOOLS.length },
   { id: 'checklist', label: 'Checklists', count: CHECKLISTS.length },
   { id: 'guide',     label: 'Guides',     count: GUIDES.length },
   { id: 'insight',   label: 'Insights',   count: POSTS.length },
@@ -335,6 +370,7 @@ const pageLd = {
       </p>
       <div class="pill-row" style="margin-top:1.5rem;">
         <a href={`${base}training/`} class="pill" style="text-decoration:none;">Training: ISMS, AIMS &amp; PIMS</a>
+        <a href="#tools" class="pill" style="text-decoration:none;">Free tools</a>
         <a href="#checklists" class="pill" style="text-decoration:none;">Readiness checklists</a>
         <a href="#guides" class="pill" style="text-decoration:none;">Deep-dive guides</a>
         <a href="#insights" class="pill" style="text-decoration:none;">Insights & articles</a>
@@ -405,6 +441,26 @@ const pageLd = {
         </div>
 
         <p class="rf-status" id="rf-status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FREE TOOLS -->
+  <section class="section" id="tools" data-rf-section="tool" style="padding-bottom:0;">
+    <div class="container">
+      <div style="margin-bottom:2rem;">
+        <h2 style="margin:0 0 0.5rem;">Free tools</h2>
+        <p class="muted" style="margin:0;max-width:700px;">Quick answers to specific questions. Everything runs in your browser: nothing you enter is sent anywhere.</p>
+      </div>
+      <div class="rs-tools">
+        {TOOLS.map(t => (
+          <a href={t.target} class="card rs-tool" data-rf-item data-rf-type="tool" data-rf-tags={tagsFor(t.badge, t.title).join('|')}>
+            <div class="rs-tool-top"><span class="pill rs-tool-pill">{t.badge}</span><span class="muted rs-tool-meta">{t.meta}</span></div>
+            <h3>{t.title}</h3>
+            <p class="muted">{t.desc}</p>
+            <span class="rs-tool-cta">Open the tool →</span>
+          </a>
+        ))}
       </div>
     </div>
   </section>
@@ -620,6 +676,16 @@ const pageLd = {
   <Footer />
 
   <script type="application/ld+json" set:html={JSON.stringify(pageLd)} />
+<style>
+  .rs-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+  .rs-tool { text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: .5rem; border-top: 4px solid #BE4A1E; }
+  .rs-tool-top { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .rs-tool .rs-tool-pill { font-size: .65rem; padding: 2px 7px; min-height: 0; line-height: 1.4; }
+  .rs-tool-meta { font-size: .75rem; }
+  .rs-tool h3 { margin: .2rem 0 0; font-size: 1.02rem; color: #0B0B0C; }
+  .rs-tool p { margin: 0; font-size: .875rem; line-height: 1.55; flex: 1; }
+  .rs-tool-cta { color: var(--accent-ink); font-weight: 600; font-size: .85rem; }
+</style>
 </Base>
 
 <style>

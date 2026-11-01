@@ -1,0 +1,58 @@
+---
+import ComparisonPage from '../../components/ComparisonPage.astro';
+
+/* Facts follow /services/cps234/ (paragraphs 13-36, the two notification
+   clocks) and /services/iso27001/. ISO 27001 references are to the 2022
+   edition: clauses 4-10 and the 93 Annex A controls. */
+const rows = [
+  { who: 'both', topic: 'Leadership and accountability', a: 'The Board is ultimately responsible for information security (¶13), with roles for the Board, senior management, governing bodies and individuals defined (¶14).', b: 'Top management must demonstrate leadership and commitment, set policy and assign roles (clause 5).' },
+  { who: 'both', topic: 'Policy', a: 'A policy framework sized to vulnerabilities and threats, giving direction to everyone with an obligation (¶18–19).', b: 'An information security policy (clause 5.2) and topic-specific policies (A.5.1).' },
+  { who: 'both', topic: 'Assets and classification', a: 'Information assets classified by criticality and sensitivity, including those managed by third parties (¶20).', b: 'An inventory of information and assets (A.5.9) and classification (A.5.12).' },
+  { who: 'both', topic: 'Risk and controls', a: 'Controls commensurate with threats, criticality and sensitivity, life-cycle stage and consequence (¶21).', b: 'A risk assessment and treatment process (clause 6.1, 8.2–8.3) and a Statement of Applicability against Annex A.' },
+  { who: 'a', topic: 'Third parties', a: 'Assess the capability of related and third parties (¶16), evaluate the design of their controls (¶22), assess their testing (¶28) and have internal audit assess their assurance (¶34).', b: 'Supplier relationship controls (A.5.19–A.5.22) and cloud services (A.5.23), at a lighter level of prescription.' },
+  { who: 'both', topic: 'Incident management', a: 'Robust detection and response (¶23), response plans for plausible incidents (¶24–25) reviewed and tested every year (¶26).', b: 'Incident management planning, assessment, response and learning (A.5.24–A.5.28).' },
+  { who: 'a', topic: 'Control testing', a: 'A systematic testing program set by five named factors (¶27), by functionally independent specialists (¶30), with its sufficiency reviewed annually (¶31).', b: 'Monitoring and measurement (clause 9.1), technical vulnerability management (A.8.8) and security testing in development (A.8.29). No independence requirement for testers.' },
+  { who: 'both', topic: 'Internal audit', a: 'Internal audit reviews control design and operating effectiveness (¶32), by appropriately skilled people (¶33).', b: 'Internal audits at planned intervals, by auditors who are objective and impartial (clause 9.2).' },
+  { who: 'a', topic: 'Regulator notification', a: 'Notify APRA within 72 hours of a material incident (¶35), and within 10 business days of a material control weakness you cannot remediate in time (¶36).', b: 'No regulator notification requirement. Contact with authorities is a control (A.5.5).' },
+  { who: 'b', topic: 'Certification', a: 'None. There is no certificate and no completion date; APRA supervises against it continuously.', b: 'Certified by an accredited body after a Stage 1 and Stage 2 audit, with surveillance audits and recertification on a three-year cycle.' },
+  { who: 'b', topic: 'Management review and improvement', a: 'Not prescribed as a separate step.', b: 'Management review (clause 9.3), nonconformity, corrective action and continual improvement (clause 10).' },
+];
+---
+<ComparisonPage
+  slug="cps234-vs-iso27001"
+  title="CPS 234 vs ISO 27001: What Overlaps and What Doesn't | Compliance365"
+  description="APRA CPS 234 and ISO 27001 compared topic by topic: what an ISO 27001 ISMS already gives you, and what CPS 234 adds — notification clocks, independent testing and third-party assurance."
+  eyebrow="APRA CPS 234 · ISO 27001 · Comparison"
+  h1="CPS 234 and ISO 27001:"
+  h1em="one obligation, one certificate."
+  lead="An ISO 27001 ISMS does much of the underlying work CPS 234 asks for. It does not cover the notification clocks, the independence of control testing, or the depth of third-party assurance. Here is where each one stops."
+  a={{ name: 'CPS 234', kind: 'Prudential standard', href: 'services/cps234/', facts: [
+    { k: 'Set by', v: 'APRA (Australian Prudential Regulation Authority)' },
+    { k: 'Status', v: 'Binding on APRA-regulated entities since 1 July 2019' },
+    { k: 'Applies to', v: 'ADIs, general and life insurers, private health insurers, RSE licensees. Reaches their service providers through third-party assessment.' },
+    { k: 'Outcome', v: 'No certificate. Continuous compliance, supervised by APRA and tested by internal audit.' },
+    { k: 'Size', v: '24 requirements, paragraphs 13 to 36' },
+  ] }}
+  b={{ name: 'ISO 27001', kind: 'International standard', href: 'services/iso27001/', facts: [
+    { k: 'Set by', v: 'ISO and IEC (current edition 2022)' },
+    { k: 'Status', v: 'Voluntary, often required by contract' },
+    { k: 'Applies to', v: 'Any organisation, any sector, any size' },
+    { k: 'Outcome', v: 'A certificate from an accredited body, on a three-year cycle' },
+    { k: 'Size', v: 'Clauses 4 to 10, plus 93 Annex A controls' },
+  ] }}
+  rows={rows}
+  together={[
+    { h: 'Map once', p: 'Map every CPS 234 paragraph to its ISO 27001 clause or Annex A control, so evidence is produced once and reported twice.' },
+    { h: 'Add what ISO does not ask for', p: 'Build the notification process for both clocks, an independent testing program, and third-party capability and assurance reviews on top of the ISMS.' },
+    { h: 'Let internal audit test both', p: 'One internal audit programme can cover clause 9.2 and paragraphs 32 to 34, if its scope and auditors are set up for both from the start.' },
+  ]}
+  related={[
+    { label: 'CPS 234 self-assessment', href: 'cps234-self-assessment/' },
+    { label: 'Notification deadline calculator', href: 'cps234-notification-calculator/' },
+    { label: 'CPS 234 service', href: 'services/cps234/' },
+  ]}
+  ctaTitle="Already ISO 27001 certified and APRA-regulated?"
+  ctaText="We map your existing ISMS to all 24 CPS 234 requirements, so only the gaps get built. A 30-minute call tells you how big they are."
+  published="2026-11-01"
+  modified="2026-11-01"
+/>

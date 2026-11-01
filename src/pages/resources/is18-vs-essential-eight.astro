@@ -1,0 +1,54 @@
+---
+import ComparisonPage from '../../components/ComparisonPage.astro';
+
+/* Facts follow /services/is18/ (the four pillars, the 30 September annual
+   return, ML2 as the usual agency target) and /services/essential-eight/.
+   IS18 contains Essential Eight as one of its pillars, so most rows are
+   'a': IS18 asks for more than Essential Eight on its own. */
+const rows = [
+  { who: 'a', topic: 'Management system', a: 'An information security management system aligned to ISO 27001: scope, policy, risk methodology, Statement of Applicability and management review.', b: 'Not required. Essential Eight is a set of technical mitigation strategies, not a management system.' },
+  { who: 'both', topic: 'Technical baseline', a: 'Essential Eight implementation and maturity reporting is one of the four pillars, against a target level endorsed by the accountable officer (typically ML2).', b: 'Eight mitigation strategies: application control, patching applications, Office macro settings, user application hardening, restricting admin privileges, patching operating systems, multi-factor authentication and regular backups.' },
+  { who: 'both', topic: 'Maturity levels', a: 'Reports Essential Eight maturity per strategy, against the endorsed target.', b: 'Maturity Level Zero to Three per strategy, assessed against the ASD maturity model.' },
+  { who: 'a', topic: 'Information classification', a: 'Information assets classified under the Queensland Government Information Security Classification Framework (QGISCF), with handling enforced.', b: 'Not covered.' },
+  { who: 'a', topic: 'Incidents and breaches', a: 'Incident reporting to the Queensland Government Cyber Security Unit, and breach handling under the Information Privacy Act’s mandatory notification scheme.', b: 'Backups and hardening limit the impact of an incident, but there is no incident or reporting requirement.' },
+  { who: 'a', topic: 'Annual attestation', a: 'An annual return, signed by the accountable officer, by 30 September.', b: 'No attestation of its own. Maturity is assessed when someone asks for it.' },
+  { who: 'a', topic: 'Who it applies to', a: 'Queensland Government agencies, and their suppliers through contract schedules and panel deeds.', b: 'Published by ASD as guidance for any organisation; required by many government buyers and contracts.' },
+  { who: 'b', topic: 'Successor framework', a: 'IS18’s Essential Eight pillar has not changed yet.', b: 'ASD published the Essentials, its successor, on 15 October 2026. ASD says existing Essential Eight work counts, and both run in parallel until regulators change their requirements.' },
+];
+---
+<ComparisonPage
+  slug="is18-vs-essential-eight"
+  title="IS18 vs Essential Eight: How They Fit Together | Compliance365"
+  description="Queensland's IS18 and ASD's Essential Eight compared: Essential Eight is one of IS18's four pillars. What IS18 adds on top — an ISO 27001 ISMS, QGISCF classification, incident reporting and the annual return."
+  eyebrow="IS18 · Essential Eight · Queensland Government"
+  h1="IS18 and the Essential Eight:"
+  h1em="one contains the other."
+  lead="Essential Eight is a technical baseline. IS18 is Queensland Government's whole information security policy, and Essential Eight is one of its four pillars. If you only do Essential Eight, three pillars and the annual return are still to come."
+  a={{ name: 'IS18', kind: 'Queensland Government policy', href: 'services/is18/', facts: [
+    { k: 'Set by', v: 'Queensland Government, as part of the QGEA' },
+    { k: 'Status', v: 'Mandatory for agencies; flows to suppliers by contract' },
+    { k: 'Made of', v: 'Four pillars: ISMS, Essential Eight, QGISCF classification, incidents and the annual return' },
+    { k: 'Outcome', v: 'An annual return signed by the accountable officer by 30 September' },
+  ] }}
+  b={{ name: 'Essential Eight', kind: 'ASD mitigation strategies', href: 'services/essential-eight/', facts: [
+    { k: 'Set by', v: 'Australian Signals Directorate (ASD)' },
+    { k: 'Status', v: 'Guidance, widely required by government buyers' },
+    { k: 'Made of', v: 'Eight technical mitigation strategies, each with Maturity Levels Zero to Three' },
+    { k: 'Outcome', v: 'A maturity level per strategy' },
+  ] }}
+  rows={rows}
+  together={[
+    { h: 'Build the ISMS first', p: 'The ISO 27001-aligned ISMS is the frame the other three pillars sit in, and the same work carries you to ISO 27001 certification later if you want it.' },
+    { h: 'Uplift Essential Eight inside it', p: 'Treat each strategy as controls in the ISMS, so maturity evidence lives in the same registers as everything else.' },
+    { h: 'Assemble the return from live registers', p: 'If posture, maturity, incidents and risks are kept current, the 30 September annual return is a report of what the registers already show.' },
+  ]}
+  related={[
+    { label: 'IS18 guide', href: 'resources/is18-guide/' },
+    { label: 'IS18 service', href: 'services/is18/' },
+    { label: 'Essential Eight readiness checklist', href: 'checklist/essential-eight/' },
+  ]}
+  ctaTitle="Have Essential Eight in place and need IS18?"
+  ctaText="We map what you already have to the four pillars, so only the Queensland-specific layer gets built. A 30-minute call tells you how much is left."
+  published="2026-11-01"
+  modified="2026-11-01"
+/>

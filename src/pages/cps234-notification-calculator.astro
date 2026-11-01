@@ -1,0 +1,210 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CinematicBackground from '../components/CinematicBackground.astro';
+import { INCIDENT_HOURS, WEAKNESS_BUSINESS_DAYS } from '../data/apra-notification-clock.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+
+const pageTitle = 'APRA CPS 234 Notification Deadline Calculator | Compliance365';
+const pageDesc = 'Enter when you became aware. Get your CPS 234 deadlines: 72 hours for a material incident (¶35) and 10 business days for an unremediable control weakness (¶36).';
+
+const appLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'APRA CPS 234 Notification Deadline Calculator',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Any',
+  description: pageDesc,
+  url: 'https://www.compliance365.com.au/cps234-notification-calculator/',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'AUD' }
+};
+---
+
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  schema={[appLd]}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'APRA CPS 234', url: 'https://www.compliance365.com.au/services/cps234/' },
+    { name: 'Notification Deadline Calculator', url: 'https://www.compliance365.com.au/cps234-notification-calculator/' }
+  ]}
+>
+  <Header />
+
+  <main id="main-content" tabindex="-1">
+
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:860px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Free tool · APRA CPS 234 ¶35 and ¶36</p>
+        <h1>When do you have to <em>tell APRA?</em></h1>
+        <p class="section-lead">
+          CPS 234 has two notification clocks with different triggers and different deadlines. Enter the moment you became aware and see both.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container" style="max-width:960px;">
+      <form class="nc-form" id="nc-form">
+        <label class="nc-field">
+          <span>When did you become aware?</span>
+          <input type="datetime-local" id="nc-aware" required />
+        </label>
+        <label class="nc-check">
+          <input type="checkbox" id="nc-hol" />
+          <span>Also skip national public holidays for the 10-day clock <small>Off by default: state holidays differ, and skipping a day that is a business day where you are would show a later deadline than the real one.</small></span>
+        </label>
+      </form>
+
+      <div class="nc-grid">
+        <article class="nc-card nc-incident">
+          <p class="nc-k">¶35 · Material incident</p>
+          <h2>{INCIDENT_HOURS} hours</h2>
+          <p class="nc-when" id="nc-inc">–</p>
+          <p class="nc-left" id="nc-inc-left"></p>
+          <p class="nc-what">An information security incident that materially affected, or had the potential to materially affect, the entity or its depositors, policyholders, beneficiaries or other customers. Or any incident notified to another regulator, in Australia or elsewhere.</p>
+        </article>
+        <article class="nc-card nc-weakness">
+          <p class="nc-k">¶36 · Material control weakness</p>
+          <h2>{WEAKNESS_BUSINESS_DAYS} business days</h2>
+          <p class="nc-when" id="nc-weak">–</p>
+          <p class="nc-left" id="nc-weak-left"></p>
+          <p class="nc-what">A material information security control weakness you expect you will not be able to remediate in a timely manner. <strong>No incident is needed</strong> for this clock to start.</p>
+        </article>
+      </div>
+
+      <figure class="nc-timeline" aria-labelledby="nc-tl-cap">
+        <div class="nc-days" id="nc-days"></div>
+        <figcaption id="nc-tl-cap">Day 0 is the day you became aware. <span class="nc-key nc-key-inc"></span> 72-hour window <span class="nc-key nc-key-bd"></span> business day counted <span class="nc-key nc-key-off"></span> not counted</figcaption>
+      </figure>
+      <p class="nc-hols" id="nc-hols" hidden></p>
+
+      <div class="nc-note">
+        <h3>Both clocks say "as soon as possible"</h3>
+        <p>The 72 hours and 10 business days are the latest you can notify, not a target. Both run from when you <em>become aware</em>, not from when the incident started or the investigation finished, so the awareness time you record is the one APRA will ask about.</p>
+      </div>
+
+      <div class="nc-next">
+        <div>
+          <h3>Would your process hit these?</h3>
+          <p class="muted small">Score all 24 CPS 234 requirements, including both notification obligations, in about 10 minutes.</p>
+        </div>
+        <div class="nc-next-actions">
+          <a class="btn-hdk-primary" href={`${base}cps234-self-assessment/`}>Take the self-assessment</a>
+          <a class="nc-link" href={ctaUrl} target="_blank" rel="noopener">or book a 30-minute call</a>
+        </div>
+      </div>
+
+      <p class="nc-disclaimer">General guidance, not legal advice. Deadlines follow APRA Prudential Standard CPS 234 Information Security, paragraphs 35 and 36, and are shown in your device's time zone. Only Saturdays and Sundays are skipped unless you tick the box; state public holidays and substitute days are never skipped. Confirm the position for your entity with your compliance or legal team.</p>
+    </div>
+  </section>
+
+  </main>
+
+  <Footer />
+
+  <script>
+    import { deadlines, ymd } from '../data/apra-notification-clock.js';
+    const aware = document.getElementById('nc-aware') as HTMLInputElement;
+    const hol = document.getElementById('nc-hol') as HTMLInputElement;
+    const fmt = new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const fmtDay = new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const short = new Intl.DateTimeFormat('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    aware.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    function left(target: Date) {
+      const ms = target.getTime() - Date.now();
+      if (ms <= 0) return 'This deadline has passed.';
+      const h = Math.floor(ms / 3600000);
+      return h >= 48 ? `${Math.floor(h / 24)} days ${h % 24} hours from now` : `${h} hours ${Math.floor((ms % 3600000) / 60000)} minutes from now`;
+    }
+    function render() {
+      if (!aware.value) return;
+      const a = new Date(aware.value);
+      if (isNaN(a.getTime())) return;
+      const r = deadlines(a, { skipNationalHolidays: hol.checked });
+      (document.getElementById('nc-inc') as HTMLElement).textContent = fmt.format(r.incident);
+      (document.getElementById('nc-inc-left') as HTMLElement).textContent = left(r.incident);
+      (document.getElementById('nc-weak') as HTMLElement).textContent = `End of ${fmtDay.format(r.weakness)}`;
+      (document.getElementById('nc-weak-left') as HTMLElement).textContent = left(r.weakness);
+
+      const start = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+      const bd = new Set(r.businessDays);
+      const hols = new Map(r.holidaysInWindow.map((h) => [h.date, h.name]));
+      const incEnd = r.incident.getTime();
+      let html = '';
+      for (let i = 0; i <= r.calendarDays; i++) {
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        const key = ymd(d);
+        const inInc = d.getTime() < incEnd;
+        const cls = ['nc-day', bd.has(key) ? 'is-bd' : i === 0 ? 'is-aware' : 'is-off', inInc ? 'is-inc' : '', i === r.calendarDays ? 'is-last' : ''].join(' ');
+        const label = hols.get(key) ? hols.get(key) : '';
+        html += `<div class="${cls}" title="${short.format(d)}${label ? ' · ' + label : ''}"><span class="nc-dn">${i}</span><span class="nc-dd">${short.format(d)}</span>${label ? '<span class="nc-dh">hol.</span>' : ''}</div>`;
+      }
+      (document.getElementById('nc-days') as HTMLElement).innerHTML = html;
+      const hEl = document.getElementById('nc-hols') as HTMLElement;
+      hEl.hidden = !r.holidaysInWindow.length;
+      hEl.textContent = r.holidaysInWindow.length
+        ? `National public holidays in this window: ${r.holidaysInWindow.map((h) => `${h.name} (${short.format(new Date(h.date + 'T00:00'))})`).join(', ')}. ${hol.checked ? 'Skipped, as you asked.' : 'Counted as business days. Tick the box above if they are not business days for you.'}`
+        : '';
+    }
+    document.getElementById('nc-form')?.addEventListener('submit', (e) => e.preventDefault());
+    aware.addEventListener('input', render);
+    hol.addEventListener('change', render);
+    render();
+  </script>
+
+  <style is:global>
+    .nc-form { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: flex-end; background: #fff; border: 1px solid #E8E1D5; border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+    .nc-field { display: flex; flex-direction: column; gap: .4rem; font-weight: 800; font-size: .9rem; }
+    .nc-field input { font: inherit; font-weight: 600; padding: .6rem .8rem; border: 1.5px solid #DDD8CF; border-radius: 10px; min-height: 44px; }
+    .nc-field input:focus-visible { outline: 3px solid #BE4A1E; outline-offset: 2px; }
+    .nc-check { display: flex; gap: .6rem; align-items: flex-start; max-width: 460px; font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .nc-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: #BE4A1E; flex: none; }
+    .nc-check small { display: block; font-weight: 400; color: #6B6860; font-size: .78rem; line-height: 1.5; margin-top: .2rem; }
+    .nc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .nc-card { border-radius: 16px; padding: 1.5rem; border: 1px solid #E8E1D5; background: #fff; }
+    .nc-incident { border-top: 5px solid #BE4A1E; }
+    .nc-weakness { border-top: 5px solid #0B0B0C; }
+    .nc-k { margin: 0; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #A63A12; }
+    .nc-card h2 { margin: .3rem 0 .6rem; font-size: 1.6rem; }
+    .nc-when { margin: 0; font-size: 1.1rem; font-weight: 800; color: #0B0B0C; }
+    .nc-left { margin: .25rem 0 0; font-size: .85rem; color: #6B6860; min-height: 1.3em; }
+    .nc-what { margin: 1rem 0 0; font-size: .88rem; line-height: 1.6; color: #4A4740; border-top: 1px solid #F0EAE0; padding-top: .9rem; }
+    .nc-timeline { margin: 1.5rem 0 0; background: #fff; border: 1px solid #E8E1D5; border-radius: 16px; padding: 1.25rem; }
+    .nc-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+    .nc-day { position: relative; border-radius: 8px; padding: .45rem .4rem .5rem; background: #F5F0E8; color: #6B6860; text-align: center; overflow: hidden; }
+    .nc-day.is-bd { background: #0B0B0C; color: #FAF7F1; }
+    .nc-day.is-aware { background: #FBEFE8; color: #A63A12; }
+    .nc-day.is-inc::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: #BE4A1E; }
+    .nc-day.is-last { outline: 3px solid #BE4A1E; outline-offset: 1px; }
+    .nc-dn { display: block; font-size: 1rem; font-weight: 800; }
+    .nc-dd { display: block; font-size: .66rem; font-weight: 600; white-space: nowrap; }
+    .nc-dh { display: block; font-size: .6rem; font-weight: 800; text-transform: uppercase; color: #F0A97F; }
+    .nc-timeline figcaption { margin-top: .9rem; font-size: .8rem; color: #6B6860; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; }
+    .nc-key { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-left: .5rem; }
+    .nc-key-inc { background: #BE4A1E; }
+    .nc-key-bd { background: #0B0B0C; }
+    .nc-key-off { background: #F5F0E8; border: 1px solid #DDD8CF; }
+    .nc-hols { margin: .75rem 0 0; font-size: .85rem; color: #A63A12; font-weight: 600; }
+    .nc-note { margin-top: 1.5rem; padding: 1.25rem 1.5rem; border-left: 4px solid #BE4A1E; background: #fff; border-radius: 0 12px 12px 0; }
+    .nc-note h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+    .nc-note p { margin: 0; font-size: .92rem; line-height: 1.65; color: #4A4740; }
+    .nc-next { margin-top: 2rem; display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.5rem 1.75rem; }
+    .nc-next h3 { margin: 0 0 .3rem; color: #FAF7F1; }
+    .nc-next .muted { color: rgba(250,247,241,.72) !important; margin: 0; }
+    .nc-next-actions { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+    .nc-link { font-size: .85rem; font-weight: 700; color: #F0A97F; }
+    .nc-disclaimer { font-size: .8rem; color: #6B6860; line-height: 1.6; margin-top: 1.5rem; }
+    @media (max-width: 720px) { .nc-grid, .nc-next { grid-template-columns: 1fr; } .nc-next-actions { align-items: flex-start; } }
+  </style>
+</Base>
