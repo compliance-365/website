@@ -40,8 +40,18 @@ export const REGIONS = {
 };
 
 /* Paths that are real pages on .io. The "choose your region" page is
-   built at /world/ and moved to / by scripts/finalize-intl.mjs. */
-export const INTL_PATHS = ['/', ...Object.keys(REGIONS).map((r) => `/${r}/`)];
+   built at /world/ and moved to / by scripts/finalize-intl.mjs.
+   HUB_PATHS are the home page and the three country pages, which share
+   an hreflang cluster. INTL_GUIDES are country-specific guides and tools
+   (src/pages/[region]/[page].astro); each has no equivalent elsewhere,
+   so it is canonical to itself and carries no hreflang. */
+export const HUB_PATHS = ['/', ...Object.keys(REGIONS).map((r) => `/${r}/`)];
+export const INTL_GUIDES = [
+  { region: 'uk', page: 'cyber-essentials-microsoft-365' },
+  { region: 'uk', page: 'cyber-essentials-checker' },
+  { region: 'us', page: 'iso-42001-microsoft' },
+];
+export const INTL_PATHS = [...HUB_PATHS, ...INTL_GUIDES.map((g) => `/${g.region}/${g.page}/`)];
 export const isIntlPath = (path) => INTL_PATHS.includes(path);
 
 /** Canonical URL for a path in the site being built. */
@@ -63,7 +73,7 @@ export function hreflangCluster() {
 /** hreflang links a page should carry (empty for most pages). */
 export function hreflangFor(path) {
   const p = path === '/world/' ? '/' : path;
-  if (VARIANT === 'intl') return isIntlPath(p) ? hreflangCluster() : [];
+  if (VARIANT === 'intl') return HUB_PATHS.includes(p) ? hreflangCluster() : [];
   return INTL_LIVE && p === '/' ? hreflangCluster() : [];
 }
 

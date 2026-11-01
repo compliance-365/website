@@ -1,0 +1,214 @@
+---
+/* /uk/cyber-essentials-checker/ on www.compliance365.io: a readiness
+   self-check across the five controls. Questions and the pass/fail
+   logic: src/data/cyber-essentials.js. Answers stay in the browser. */
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../Header.astro';
+import Footer from '../Footer.astro';
+import CinematicBackground from '../CinematicBackground.astro';
+import { CONTROLS, QUESTIONS, ANSWERS } from '../../data/cyber-essentials.js';
+import { AU_ORIGIN, INTL_ORIGIN } from '../../data/site.js';
+
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+const url = `${INTL_ORIGIN}/uk/cyber-essentials-checker/`;
+const title = 'Cyber Essentials Readiness Checker (Free) | Compliance365';
+const description = `Are you ready for Cyber Essentials? ${QUESTIONS.length} questions across the five controls, with the blockers to fix first in Microsoft 365. Free, nothing leaves your browser.`;
+const appLd = {
+  '@type': 'WebApplication', name: 'Cyber Essentials Readiness Checker', applicationCategory: 'BusinessApplication', operatingSystem: 'Any',
+  description, url, inLanguage: 'en-GB', offers: { '@type': 'Offer', price: '0', priceCurrency: 'GBP' },
+  provider: { '@id': `${AU_ORIGIN}/#org` },
+};
+---
+<Base title={title} description={description} schema={[appLd]}
+  breadcrumbs={[
+    { name: 'Compliance365', url: `${INTL_ORIGIN}/` },
+    { name: 'United Kingdom', url: `${INTL_ORIGIN}/uk/` },
+    { name: 'Cyber Essentials Readiness Checker', url },
+  ]}>
+  <Header />
+  <main id="main-content" tabindex="-1">
+
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:900px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Free tool · United Kingdom · nothing leaves your browser</p>
+        <h1>Are you ready for <em>Cyber Essentials?</em></h1>
+        <p class="section-lead">{QUESTIONS.length} questions across the five technical controls. Cyber Essentials is pass or fail on each requirement, so anything you answer "No" to is listed as a blocker, with where to fix it in Microsoft 365.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container ck-layout">
+      <form class="ck-form" id="ck-form" aria-label="Cyber Essentials readiness questions">
+        {CONTROLS.map((c, ci) => (
+          <fieldset class="ck-ctl" id={`c-${c.id}`}>
+            <legend><span class="ck-n" aria-hidden="true">{ci + 1}</span>{c.name}</legend>
+            {QUESTIONS.filter((q) => q.control === c.id).map((q) => (
+              <div class="ck-q" role="radiogroup" aria-labelledby={`${q.id}-t`}>
+                <p class="ck-qt" id={`${q.id}-t`}>{q.q}</p>
+                <div class="ck-opts">
+                  {ANSWERS.map((a) => (
+                    <label class={`ck-opt ck-${a.value}`}><input type="radio" name={q.id} value={a.value} /><span>{a.label}</span></label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </fieldset>
+        ))}
+        <p class="ck-reset"><button type="button" id="ck-reset">Clear my answers</button></p>
+      </form>
+
+      <aside class="ck-result" aria-live="polite">
+        <div class="ck-result-inner">
+          <p class="ck-k">Your readiness</p>
+          <p class="ck-verdict" id="ck-verdict">Answer the questions to see where you stand.</p>
+          <p class="ck-progress"><span id="ck-answered">0</span> of {QUESTIONS.length} answered</p>
+          <ul class="ck-ctls">
+            {CONTROLS.map((c) => (
+              <li data-control={c.id} data-status="open"><a href={`#c-${c.id}`}>{c.name}</a><span class="ck-status">To answer</span></li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <div class="container" style="max-width:900px;">
+      <div class="ck-out" id="ck-out" hidden>
+        <div id="ck-blockers-wrap">
+          <h2>Blockers to fix before you submit</h2>
+          <ol id="ck-blockers"></ol>
+        </div>
+        <div id="ck-check-wrap">
+          <h2>Worth checking</h2>
+          <ol id="ck-check"></ol>
+        </div>
+        <div class="ck-next">
+          <div>
+            <h3>Want this checked against your real tenant?</h3>
+            <p>Checkpoint reads four of the five controls straight from your Microsoft 365 and turns every failure into a fix list. A 30-minute call tells you how far you are from submitting.</p>
+          </div>
+          <div class="ck-next-actions">
+            <a class="btn-hdk-primary" href={ctaUrl} target="_blank" rel="noopener">Book a 30-min call</a>
+            <a class="ck-link" href="/uk/cyber-essentials-microsoft-365/">How each control works in Microsoft 365 →</a>
+          </div>
+        </div>
+      </div>
+      <p class="ck-note">A self-check, not a certification. It reflects your answers against our plain-language summary of the Cyber Essentials requirements for IT infrastructure. Certificates are issued by an IASME-licensed Certification Body.</p>
+    </div>
+  </section>
+
+  </main>
+  <Footer />
+
+  <script>
+    import { CONTROLS, QUESTIONS, assess } from '../../data/cyber-essentials.js';
+    const KEY = 'c365-ce-check';
+    const form = document.getElementById('ck-form') as HTMLFormElement;
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+    const where = Object.fromEntries(CONTROLS.map((c) => [c.id, c.microsoft]));
+    const STATUS: Record<string, string> = { open: 'To answer', blocked: 'Blocker', check: 'Check', ready: 'Ready' };
+    const VERDICT: Record<string, string> = {
+      start: 'Answer the questions to see where you stand.',
+      'not-ready': 'Not ready yet: fix the blockers below first.',
+      'so-far': 'No blockers so far. Keep going.',
+      nearly: 'Nearly there: confirm the items worth checking.',
+      ready: 'On your answers, you look ready to submit.',
+    };
+    const read = () => { const a: Record<string, string> = {}; new FormData(form).forEach((v, k) => { a[k] = String(v); }); return a; };
+    const item = (q: { q: string; controlName: string; control: string }) =>
+      `<li><p class="ck-i-c">${esc(q.controlName)}</p><p class="ck-i-q">${esc(q.q)}</p><p class="ck-i-w"><b>In Microsoft 365:</b> ${esc(where[q.control])}</p></li>`;
+    function render() {
+      const answers = read();
+      try { localStorage.setItem(KEY, JSON.stringify(answers)); } catch (e) { /* private mode */ }
+      const r = assess(answers);
+      (document.getElementById('ck-verdict') as HTMLElement).textContent = VERDICT[r.verdict];
+      (document.getElementById('ck-verdict') as HTMLElement).dataset.verdict = r.verdict;
+      (document.getElementById('ck-answered') as HTMLElement).textContent = String(r.answered);
+      r.controls.forEach((c) => {
+        const li = document.querySelector(`.ck-ctls li[data-control="${c.id}"]`) as HTMLElement;
+        li.dataset.status = c.status;
+        (li.querySelector('.ck-status') as HTMLElement).textContent = STATUS[c.status];
+      });
+      (document.getElementById('ck-out') as HTMLElement).hidden = !r.answered;
+      (document.getElementById('ck-blockers-wrap') as HTMLElement).hidden = !r.blockers.length;
+      (document.getElementById('ck-check-wrap') as HTMLElement).hidden = !r.toCheck.length;
+      (document.getElementById('ck-blockers') as HTMLElement).innerHTML = r.blockers.map(item).join('');
+      (document.getElementById('ck-check') as HTMLElement).innerHTML = r.toCheck.map(item).join('');
+    }
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+      Object.entries(saved).forEach(([k, v]) => {
+        if (!QUESTIONS.some((q) => q.id === k)) return;
+        const input = form.querySelector(`input[name="${k}"][value="${v}"]`) as HTMLInputElement | null;
+        if (input) input.checked = true;
+      });
+    } catch (e) { /* nothing saved */ }
+    form.addEventListener('change', render);
+    document.getElementById('ck-reset')?.addEventListener('click', () => {
+      form.reset();
+      try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+      render();
+    });
+    render();
+  </script>
+
+  <style is:global>
+    .ck-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 2rem; align-items: start; max-width: 1120px; }
+    .ck-ctl { border: 1px solid #E8E1D5; background: #fff; border-radius: 14px; padding: 1.25rem 1.4rem .5rem; margin: 0 0 1.25rem; }
+    .ck-ctl legend { display: flex; align-items: center; gap: .6rem; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-weight: 600; font-size: 1.1rem; color: #0B0B0C; padding: 0 .4rem; }
+    .ck-n { width: 28px; height: 28px; border-radius: 8px; background: #FBEFE8; color: #A63A12; font-weight: 800; font-size: .85rem; display: inline-flex; align-items: center; justify-content: center; }
+    .ck-q { padding: .9rem 0; border-top: 1px solid #F0EAE0; }
+    .ck-q:first-of-type { border-top: none; }
+    .ck-qt { margin: 0 0 .65rem; font-size: .95rem; line-height: 1.55; color: #2A2724; }
+    .ck-opts { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .ck-opt { position: relative; cursor: pointer; }
+    .ck-opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+    .ck-opt span { display: inline-block; padding: .45rem .95rem; border-radius: 999px; border: 1.5px solid #DDD8CF; font-size: .85rem; font-weight: 700; color: #4A4740; background: #fff; }
+    .ck-opt:hover span { border-color: #BE4A1E; }
+    .ck-opt input:focus-visible + span { outline: 3px solid #BE4A1E; outline-offset: 2px; }
+    .ck-yes input:checked + span { background: #047857; border-color: #047857; color: #fff; }
+    .ck-partly input:checked + span, .ck-unsure input:checked + span { background: #B45309; border-color: #B45309; color: #fff; }
+    .ck-no input:checked + span { background: #A63A12; border-color: #A63A12; color: #fff; }
+    .ck-reset button { background: none; border: none; padding: 0; color: #6B6860; text-decoration: underline; cursor: pointer; font-size: .85rem; }
+    .ck-result { position: sticky; top: 90px; }
+    .ck-result-inner { background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.5rem; }
+    .ck-k { margin: 0 0 .6rem; font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #F0A97F; }
+    .ck-verdict { margin: 0; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.15rem; line-height: 1.35; }
+    .ck-verdict[data-verdict="not-ready"] { color: #FCA5A5; }
+    .ck-verdict[data-verdict="ready"] { color: #6EE7B7; }
+    .ck-progress { font-size: .8rem; color: rgba(250,247,241,.68); margin: .6rem 0 1rem; }
+    .ck-ctls { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+    .ck-ctls li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-size: .82rem; }
+    .ck-ctls a { color: rgba(250,247,241,.85); text-decoration: none; }
+    .ck-status { font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: .2rem .45rem; border-radius: 6px; background: rgba(250,247,241,.1); color: rgba(250,247,241,.7); white-space: nowrap; }
+    .ck-ctls li[data-status="blocked"] .ck-status { background: #A63A12; color: #fff; }
+    .ck-ctls li[data-status="check"] .ck-status { background: #B45309; color: #fff; }
+    .ck-ctls li[data-status="ready"] .ck-status { background: #047857; color: #fff; }
+    .ck-out { margin-top: 2.5rem; background: #fff; border: 1px solid #E8E1D5; border-radius: 16px; padding: 1.75rem; }
+    .ck-out h2 { margin: 0 0 1rem; font-size: 1.3rem; }
+    .ck-out ol { list-style: none; margin: 0 0 1.75rem; padding: 0; display: grid; gap: .7rem; }
+    .ck-out li { padding: .9rem 1rem; border-radius: 12px; background: #FAF7F1; border-left: 4px solid #A63A12; }
+    #ck-check li { border-left-color: #B45309; }
+    .ck-i-c { margin: 0; font-size: .72rem; font-weight: 800; color: #6B6860; text-transform: uppercase; letter-spacing: .06em; }
+    .ck-i-q { margin: .2rem 0 .4rem; font-size: .95rem; color: #0B0B0C; font-weight: 700; line-height: 1.45; }
+    .ck-i-w { margin: 0; font-size: .85rem; color: #4A4740; line-height: 1.55; }
+    .ck-next { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; border-top: 1px solid #F0EAE0; padding-top: 1.5rem; }
+    .ck-next h3 { margin: 0 0 .35rem; }
+    .ck-next p { margin: 0; font-size: .9rem; color: #4A4740; }
+    .ck-next-actions { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+    .ck-link { font-size: .85rem; font-weight: 700; color: var(--accent-ink, #A63A12); }
+    .ck-note { font-size: .8rem; color: #6B6860; line-height: 1.6; margin-top: 1.5rem; }
+    @media (max-width: 960px) {
+      .ck-layout { grid-template-columns: 1fr; }
+      .ck-result { position: sticky; top: 64px; order: -1; z-index: 5; }
+      .ck-result-inner { padding: .8rem 1rem; border-radius: 12px; }
+      .ck-k, .ck-ctls { display: none; }
+      .ck-verdict { font-size: .95rem; }
+      .ck-progress { margin: .25rem 0 0; }
+      .ck-next { grid-template-columns: 1fr; }
+      .ck-next-actions { align-items: flex-start; }
+    }
+  </style>
+</Base>

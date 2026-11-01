@@ -1,0 +1,28 @@
+---
+/*
+  Country-specific guides and tools on www.compliance365.io only
+  (SITE_VARIANT=intl). The list lives in src/data/site.js INTL_GUIDES so
+  canonical URLs, the sitemap and scripts/finalize-intl.mjs all agree on
+  which paths are real pages. The .com.au build emits none of them.
+*/
+import { VARIANT, INTL_GUIDES } from '../../data/site.js';
+import CyberEssentialsGuide from '../../components/intl/CyberEssentialsGuide.astro';
+import CyberEssentialsChecker from '../../components/intl/CyberEssentialsChecker.astro';
+import Iso42001Microsoft from '../../components/intl/Iso42001Microsoft.astro';
+
+const PAGES = {
+  'uk/cyber-essentials-microsoft-365': CyberEssentialsGuide,
+  'uk/cyber-essentials-checker': CyberEssentialsChecker,
+  'us/iso-42001-microsoft': Iso42001Microsoft,
+};
+
+export function getStaticPaths() {
+  if (VARIANT !== 'intl') return [];
+  return INTL_GUIDES.map(({ region, page }) => ({ params: { region, page } }));
+}
+
+const { region, page } = Astro.params;
+const Page = PAGES[`${region}/${page}`];
+if (!Page) throw new Error(`No component for /${region}/${page}/: add it to PAGES in src/pages/[region]/[page].astro`);
+---
+<Page />

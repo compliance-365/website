@@ -130,7 +130,7 @@ const serviceLd = isWorld ? null : {
             <>
               <h2 class="rg-h2">Guides people here read</h2>
               <ul class="rg-guides">
-                {copy.guides.map((g) => (<li><a href={au(g.href)}>{g.name} →</a></li>))}
+                {copy.guides.map((g) => (<li><a href={g.href.startsWith('/') ? g.href : au(g.href)}>{g.name} →</a></li>))}
               </ul>
             </>
           )}

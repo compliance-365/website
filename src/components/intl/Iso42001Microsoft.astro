@@ -1,0 +1,146 @@
+---
+/* /us/iso-42001-microsoft/ on www.compliance365.io. Matches the top US
+   query "iso 42001 microsoft implementation". US spelling. Every
+   Checkpoint check named here exists in public/checkpoint/store.js. */
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../Header.astro';
+import Footer from '../Footer.astro';
+import CinematicBackground from '../CinematicBackground.astro';
+import { AU_ORIGIN, INTL_ORIGIN } from '../../data/site.js';
+
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+const url = `${INTL_ORIGIN}/us/iso-42001-microsoft/`;
+const title = 'ISO 42001 Implementation on Microsoft 365 and Azure';
+const description = 'Implement ISO 42001 on Microsoft: AI inventory from Defender for Cloud Apps, data controls in Purview, access in Entra, audit evidence from your own tenant.';
+
+const MAP = [
+  { asks: 'Know which AI systems you use', clause: 'AI system inventory',
+    microsoft: 'Defender for Cloud Apps discovers generative AI apps in use across the organization. Entra ID shows which AI apps have been granted access to mail, files or other data. Microsoft 365 Copilot is licensed and governed in the admin center.',
+    checks: ['AI apps in use are recorded in the AI systems register', 'No high-privilege, unreviewed OAuth app grants', 'No high-privilege app grant consented by an end user'] },
+  { asks: 'Control the data AI can reach', clause: 'Data for AI systems',
+    microsoft: 'Copilot works within each user’s existing permissions, so oversharing in SharePoint and OneDrive becomes AI exposure. Purview sensitivity labels and data loss prevention set what content can be used and where it can go.',
+    checks: ['Sensitivity labels published & enabled', 'Data loss prevention policy coverage', 'External sharing restricted (SharePoint/OneDrive)'] },
+  { asks: 'Assess impact before and during use', clause: 'AI system impact assessment',
+    microsoft: 'Impact assessments are records, not settings: who is affected, what could go wrong, what oversight is in place. They live in SharePoint in your own tenant, linked to the AI system they describe.',
+    checks: ['AI systems have current impact assessments'] },
+  { asks: 'Limit who can change AI systems', clause: 'Roles, responsibilities and access',
+    microsoft: 'Entra ID roles and Privileged Identity Management keep admin rights over Copilot, Azure AI resources and connected apps time-limited and reviewed, with MFA on every account.',
+    checks: ['Privileged roles use eligible (PIM) assignment', 'MFA enforced — all users', 'Periodic access-rights review configured'] },
+  { asks: 'Keep a record of AI use', clause: 'Monitoring and logging',
+    microsoft: 'Microsoft Purview Audit records user interactions with Microsoft 365 Copilot alongside the rest of your audit log, so monitoring evidence comes from the same place auditors already sample.',
+    checks: ['Unified audit logging enabled'] },
+  { asks: 'Govern unapproved AI', clause: 'Third-party and supplier AI',
+    microsoft: 'Defender for Cloud Apps can block or warn on unapproved AI sites, and session controls govern how approved cloud apps are used. Supplier AI is assessed in the same register as your own.',
+    checks: ['Cloud app usage governed by Defender for Cloud Apps session control'] },
+];
+const faq = [
+  { q: 'Is ISO 42001 certifiable?', a: 'Yes. ISO/IEC 42001 is a management system standard, certified by an accredited certification body in the same way as ISO 27001. It has clauses 4 to 10 plus 38 Annex A controls.' },
+  { q: 'Does Microsoft’s own compliance cover us?', a: 'No. Microsoft’s certifications cover how Microsoft runs its services. ISO 42001 certifies how your organization governs the AI it builds, buys and uses, which only you can evidence.' },
+  { q: 'Do we need ISO 27001 first?', a: 'No, but it helps. ISO 42001 has the same management system structure, so an existing ISMS gives you the risk process, internal audit and management review to build on.' },
+  { q: 'How does this relate to the NIST AI RMF?', a: 'The NIST AI Risk Management Framework is voluntary guidance with no certificate. ISO 42001 is certifiable and maps closely to it, so one ISO 42001 program can answer questions framed in NIST AI RMF terms too.' },
+];
+const articleLd = {
+  '@type': 'Article', headline: title, description, url, inLanguage: 'en-US',
+  author: { '@id': `${AU_ORIGIN}/#org` }, publisher: { '@id': `${AU_ORIGIN}/#org` },
+  datePublished: '2026-11-01', dateModified: '2026-11-01',
+  about: [{ '@type': 'Thing', name: 'ISO/IEC 42001' }, { '@type': 'Thing', name: 'Microsoft 365 Copilot' }, { '@type': 'Thing', name: 'Microsoft Azure' }],
+};
+const faqLd = { '@type': 'FAQPage', mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
+---
+<Base title={title} description={description} schema={[articleLd, faqLd]}
+  breadcrumbs={[
+    { name: 'Compliance365', url: `${INTL_ORIGIN}/` },
+    { name: 'United States', url: `${INTL_ORIGIN}/us/` },
+    { name: 'ISO 42001 on Microsoft', url },
+  ]}>
+  <Header />
+  <main id="main-content" tabindex="-1">
+
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:920px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">United States · ISO/IEC 42001 · Microsoft 365 and Azure</p>
+        <h1>ISO 42001 on Microsoft: <em>evidence your AI governance from your own tenant.</em></h1>
+        <p class="section-lead">If your organization runs on Microsoft 365, most of what ISO 42001 asks about AI (what you use, what data it touches, who controls it, and what it did) is already recorded in Defender, Purview and Entra. The work is turning that into a management system an auditor can test.</p>
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary" target="_blank" rel="noopener">Book a 30-min call</a>
+          <a href={`${AU_ORIGIN}/checkpoint/?demo=1`} class="btn-hdk-ghost">See it in the live demo</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container" style="max-width:1040px;">
+      <h2 class="iso-h2">What ISO 42001 asks, and where it lives on Microsoft</h2>
+      <div class="iso-map">
+        {MAP.map((m, i) => (
+          <article class="iso-row">
+            <div class="iso-ask"><span class="iso-n">{i + 1}</span><div><h3>{m.asks}</h3><p class="iso-clause">{m.clause}</p></div></div>
+            <div class="iso-ms"><p>{m.microsoft}</p></div>
+            <div class="iso-ck">
+              <p class="iso-ck-k">Checkpoint checks</p>
+              <ul>{m.checks.map((c) => <li>{c}</li>)}</ul>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <h2 class="iso-h2">What stays human</h2>
+      <div class="iso-human">
+        <div><h3>AI policy and objectives</h3><p>Top management sets the AI policy and the objectives it is measured against. Templates help; the decisions are yours.</p></div>
+        <div><h3>Risk and impact judgments</h3><p>Tools show what AI is in use and what it can reach. Whether that is acceptable for the people affected is a judgment the management system records.</p></div>
+        <div><h3>Internal audit and review</h3><p>An impartial internal audit and a management review, both required before certification, test that the system works as written.</p></div>
+      </div>
+
+      <h2 class="iso-h2">Common questions</h2>
+      <div class="iso-faq">
+        {faq.map((f, i) => (<details open={i === 0}><summary>{f.q}</summary><p>{f.a}</p></details>))}
+      </div>
+
+      <div class="iso-next">
+        <div>
+          <h3>Running Copilot or Azure AI already?</h3>
+          <p>We implement ISO 42001 inside your own Microsoft 365, on Checkpoint, our compliance software, with the AI register, impact assessments and evidence kept in your tenant. A 30-minute call tells you how much of it you already have.</p>
+          <p class="iso-rel"><a href="/us/">Compliance365 in the US</a> · <a href={`${AU_ORIGIN}/services/iso42001/`}>ISO 42001 service</a> · <a href={`${AU_ORIGIN}/resources/iso42001-vs-nist-ai-rmf-eu-ai-act/`}>ISO 42001 vs NIST AI RMF vs the EU AI Act</a></p>
+        </div>
+        <a class="btn-hdk-primary" href={ctaUrl} target="_blank" rel="noopener">Book a 30-min call</a>
+      </div>
+      <p class="iso-note">General guidance, not legal advice. Microsoft product names as of November 2026; features vary by license. Last reviewed 1 November 2026.</p>
+    </div>
+  </section>
+
+  </main>
+  <Footer />
+
+  <style>
+    .iso-h2 { margin: 2.5rem 0 1rem; }
+    .iso-h2:first-child { margin-top: 0; }
+    .iso-map { display: grid; gap: .8rem; }
+    .iso-row { display: grid; grid-template-columns: 260px 1fr 260px; gap: 1.25rem; background: #fff; border: 1px solid #E8E1D5; border-radius: 14px; padding: 1.2rem 1.3rem; }
+    .iso-ask { display: flex; gap: .7rem; align-items: flex-start; }
+    .iso-n { flex: none; width: 30px; height: 30px; border-radius: 9px; background: #FBEFE8; color: #A63A12; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+    .iso-ask h3 { margin: 0; font-size: 1rem; line-height: 1.35; }
+    .iso-clause { margin: .25rem 0 0; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6B6860; }
+    .iso-ms p { margin: 0; font-size: .9rem; line-height: 1.65; color: #2A2724; }
+    .iso-ck { background: #FAF7F1; border-radius: 10px; padding: .75rem .9rem; }
+    .iso-ck-k { margin: 0 0 .35rem; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #047857; }
+    .iso-ck ul { margin: 0; padding-left: 1rem; font-size: .8rem; line-height: 1.5; color: #4A4740; }
+    .iso-human { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .iso-human div { background: #fff; border: 1px solid #E8E1D5; border-left: 4px solid #BE4A1E; border-radius: 12px; padding: 1.1rem 1.2rem; }
+    .iso-human h3 { margin: 0 0 .35rem; font-size: 1rem; }
+    .iso-human p { margin: 0; font-size: .88rem; line-height: 1.6; color: #4A4740; }
+    .iso-faq { display: grid; gap: .6rem; }
+    .iso-faq details { background: #fff; border: 1px solid #E8E1D5; border-radius: 12px; padding: 1rem 1.2rem; }
+    .iso-faq summary { cursor: pointer; font-weight: 800; }
+    .iso-faq p { margin: .6rem 0 0; font-size: .92rem; line-height: 1.65; color: #4A4740; }
+    .iso-next { margin-top: 2rem; display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; background: #0B0B0C; color: #FAF7F1; border-radius: 16px; padding: 1.5rem 1.75rem; }
+    .iso-next h3 { margin: 0 0 .3rem; color: #FAF7F1; }
+    .iso-next p { margin: 0; color: rgba(250,247,241,.75); font-size: .92rem; line-height: 1.6; }
+    .iso-rel { margin-top: .6rem !important; font-size: .85rem !important; }
+    .iso-rel a { color: #F0A97F; }
+    .iso-note { font-size: .8rem; color: #6B6860; margin-top: 1.25rem; }
+    @media (max-width: 900px) { .iso-row { grid-template-columns: 1fr; gap: .75rem; } .iso-human, .iso-next { grid-template-columns: 1fr; } }
+  </style>
+</Base>

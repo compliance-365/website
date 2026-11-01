@@ -43,6 +43,9 @@ test('on .io, country pages are canonical to themselves and carry the hreflang c
     'x-default https://www.compliance365.io/',
   ]);
   assert.deepEqual(intl.hreflangFor('/blog/'), []);
+  assert.deepEqual(intl.hreflangFor('/uk/cyber-essentials-checker/'), [], 'guides have no equivalents, so no hreflang');
+  assert.equal(intl.canonicalFor('/us/iso-42001-microsoft/'), 'https://www.compliance365.io/us/iso-42001-microsoft/');
+  assert.equal(intl.localeFor('/uk/cyber-essentials-microsoft-365/').lang, 'en-GB');
   assert.equal(intl.localeFor('/ae/').lang, 'en-AE');
   assert.equal(intl.localeFor('/us/').og, 'en_US');
 });
@@ -53,6 +56,7 @@ test('every region has copy, and its service links are real .com.au pages', () =
     assert.ok(c && c.title.length <= 60, `${r} title fits a search result`);
     assert.ok(c.description.length <= 160, `${r} description fits a search result`);
     for (const s of [...c.services, ...(c.guides || [])]) {
+      if (s.href.startsWith('/')) { assert.ok(au.INTL_PATHS.includes(s.href), `${r}: ${s.href} is a real .io page`); continue; }
       const h = s.href.replace(/\/$/, '');
       const blog = h.startsWith('blog/') && existsSync(new URL(`../src/content/blog/${h.slice(5)}.md`, import.meta.url));
       assert.ok(blog || existsSync(new URL(`../src/pages/${h}.astro`, import.meta.url)) || existsSync(new URL(`../src/pages/${h}/index.astro`, import.meta.url)), `${r}: ${s.href}`);
@@ -80,5 +84,5 @@ test('finalize-intl keeps only the country pages and redirects the rest', async 
   assert.match(read('404.html'), /location\.replace/);
   assert.equal(read('CNAME').trim(), 'www.compliance365.io');
   assert.match(read('robots.txt'), /Sitemap: https:\/\/www\.compliance365\.io\/sitemap-index\.xml/);
-  assert.equal((read('sitemap-0.xml').match(/<loc>/g) || []).length, 4);
+  assert.equal((read('sitemap-0.xml').match(/<loc>/g) || []).length, intl.INTL_PATHS.length);
 });
