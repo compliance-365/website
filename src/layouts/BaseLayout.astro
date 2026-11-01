@@ -10,6 +10,7 @@ import '../styles/print.css';
 import AIChat from "../components/AIChat.astro";
 import CookieBanner from "../components/CookieBanner.astro";
 import Icons from "../components/Icons.astro";
+import { VARIANT, SITE_ORIGIN, canonicalFor, hreflangFor, localeFor } from "../data/site.js";
 
 const {
   title = 'Compliance365 — Cyber, Privacy & AI Governance',
@@ -29,7 +30,12 @@ const {
   articleTags = []
 } = Astro.props ?? {};
 const base = import.meta.env.BASE_URL || '/';
-const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
+/* Canonical, language and hreflang depend on which site is being built
+   (src/data/site.js). On .com.au every page is canonical to itself, as
+   before; on .io only the country pages are. */
+const canonical = canonicalFor(Astro.url?.pathname || '/');
+const LOCALE = localeFor(Astro.url?.pathname || '/');
+const HREFLANG = hreflangFor(Astro.url?.pathname || '/');
 const LOGO_512 = 'https://www.compliance365.com.au/assets/logo.svg';
 const LOGO_192 = 'https://www.compliance365.com.au/assets/logo-192.png';
 
@@ -72,12 +78,14 @@ const ORG = {
     "contactType": "customer service",
     "email": "info@compliance365.com.au",
     "telephone": "+61468752243",
-    "areaServed": "AU",
+    "areaServed": ["AU", "US", "GB", "AE"],
     "availableLanguage": "English"
   },
   "sameAs": [
     "https://www.linkedin.com/company/compliance-365/",
-    "https://www.facebook.com/compliance365AU"
+    "https://www.facebook.com/compliance365AU",
+    // Microsoft Marketplace partner profile (content/globals/footer.json).
+    "https://marketplace.microsoft.com/en-us/partners/b95b2fc2-e58d-46e9-926a-eac4df30b9bc/overview"
   ],
   "serviceArea": [
     { "@type": "Country", "name": "Australia" },
@@ -88,8 +96,13 @@ const ORG = {
     { "@type": "City", "name": "Perth" },
     { "@type": "City", "name": "Adelaide" }
   ],
+  /* Delivered remotely beyond Australia: the US, UK and UAE pages on
+     www.compliance365.io (src/pages/[region]/index.astro). */
   "areaServed": [
     { "@type": "Country", "name": "Australia" },
+    { "@type": "Country", "name": "United States" },
+    { "@type": "Country", "name": "United Kingdom" },
+    { "@type": "Country", "name": "United Arab Emirates" },
     { "@type": "City", "name": "Brisbane" },
     { "@type": "City", "name": "Melbourne" },
     { "@type": "City", "name": "Sydney" },
@@ -121,10 +134,10 @@ const ORG = {
 };
 const WEBSITE = {
   "@type": "WebSite",
-  "@id": "https://www.compliance365.com.au/#website",
-  "url": "https://www.compliance365.com.au",
+  "@id": SITE_ORIGIN + "/#website",
+  "url": SITE_ORIGIN,
   "name": "Compliance365",
-  "inLanguage": "en-AU",
+  "inLanguage": VARIANT === 'intl' ? "en" : "en-AU",
   "publisher": { "@id": "https://www.compliance365.com.au/#org" },
   "potentialAction": {
     "@type": "SearchAction",
@@ -135,6 +148,8 @@ const WEBSITE = {
     "query-input": "required name=search_term_string"
   }
 };
+// Site search only exists on .com.au.
+if (VARIANT === 'intl') delete WEBSITE.potentialAction;
 // Breadcrumb Schema if breadcrumbs provided
 const BREADCRUMB_SCHEMA = breadcrumbs.length
   ? {
@@ -166,8 +181,8 @@ fullGraph.push(Object.assign({
   "url": canonical,
   "name": title,
   "description": description,
-  "inLanguage": "en-AU",
-  "isPartOf": { "@id": "https://www.compliance365.com.au/#website" }
+  "inLanguage": LOCALE.lang,
+  "isPartOf": { "@id": SITE_ORIGIN + "/#website" }
 }, pathname === '/' ? {
   "about": [
     "Cybersecurity compliance", "Privacy management", "AI governance",
@@ -179,7 +194,7 @@ fullGraph.push(Object.assign({
 } : {}));
 const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": fullGraph });
 ---
-<html lang="en-AU">
+<html lang={LOCALE.lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -204,12 +219,13 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          list and why each origin is there: astro.config.mjs. -->
     <!-- Discovery -->
     <link rel="canonical" href={canonical} />
-    <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
+    {HREFLANG.map((h) => <link rel="alternate" hreflang={h.hreflang} href={h.href} />)}
+    <link rel="sitemap" type="application/xml" href={`${SITE_ORIGIN}/sitemap-index.xml`} />
     <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
     <!-- OG / Twitter -->
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content="Compliance365" />
-    <meta property="og:locale" content="en_AU" />
+    <meta property="og:locale" content={LOCALE.og} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -559,7 +575,8 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <slot name="faq" />
 
     <!-- AI Chat Widget -->
-    <AIChat />
+    {/* The chat backend only accepts requests from .com.au. */}
+    {VARIANT === 'au' && <AIChat />}
 
 <script is:inline>
   document.addEventListener('DOMContentLoaded', () => {

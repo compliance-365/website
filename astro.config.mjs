@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import { lastmodFor } from './scripts/page-lastmod.mjs';
+import { SITE_ORIGIN, VARIANT, INTL_PATHS } from './src/data/site.js';
 
 // Pages excluded from the sitemap:
 // - noindex pages (legal, utility) — submitting them wastes crawl budget
@@ -35,7 +36,8 @@ const SITEMAP_EXCLUDE = [
 ];
 
 export default defineConfig({
-  site: 'https://www.compliance365.com.au',
+  // Which site is being built: src/data/site.js (SITE_VARIANT=intl builds .io).
+  site: SITE_ORIGIN,
   trailingSlash: 'always',
   outDir: 'dist',
   output: 'static',
@@ -107,7 +109,11 @@ export default defineConfig({
   integrations: [
     sitemap({
       // /lp/ pages are Google Ads landing pages: noindex, so kept out too.
-      filter: (page) => !SITEMAP_EXCLUDE.includes(page) && !page.includes('/lp/'),
+      // The international build only lists its own country pages; every
+      // other path there redirects to .com.au (scripts/finalize-intl.mjs).
+      filter: (page) => VARIANT === 'intl'
+        ? INTL_PATHS.includes(new URL(page).pathname) || new URL(page).pathname === '/world/'
+        : !SITEMAP_EXCLUDE.includes(page) && !page.includes('/lp/'),
       // <lastmod> from the last git commit that touched each page's source, so
       // Google can tell a genuinely updated page from an untouched one.
       serialize: (item) => {
