@@ -30,5 +30,11 @@ Disallow: /resources/ai-governance-readiness$
 Disallow: /case-studies$
 Disallow: /checklist/iso27001$
 
+# Checkpoint's internal documentation (setup, release and acceptance
+# notes) is served as raw Markdown beside the app so the app can link to
+# it. It is not written for search, and Search Console listed
+# /checkpoint/AI-SETUP.md as "Crawled - currently not indexed".
+Disallow: /checkpoint/*.md$
+
 # Point crawlers to your sitemap
 Sitemap: https://www.compliance365.com.au/sitemap-index.xml
