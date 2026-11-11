@@ -737,18 +737,25 @@ tbody tr{transition:background .15s var(--ease)}
 tbody tr:hover{background:var(--surface-hover);cursor:pointer}
 tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;background:var(--surface-hover)}
 .chip{display:inline-block;font-size:var(--fs-1);letter-spacing:.02em;font-weight:700;white-space:nowrap;padding:4px 10px;border-radius:3px;border:1px solid}
-.sev-Critical{color:var(--critical);border-color:rgba(224,144,143,.45)}
+/* Critical and High are close in hue, so Critical also carries a solid
+   edge: the worst rows stand out when scanning a column. A shape cue
+   rather than a tinted fill, which would take the text under 4.5:1 on
+   the light theme (4.84:1 plain, 3.87:1 on a 16% tint). */
+.sev-Critical{color:var(--critical);border-color:var(--critical);border-left-width:4px}
 .sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
 .sev-Medium{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
-.sev-Prohibited{color:var(--critical);border-color:rgba(224,144,143,.45)}
+.sev-Prohibited{color:var(--critical);border-color:var(--critical);border-left-width:4px}
 .sev-Limited{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .sev-Minimal{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
 .st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(240, 169, 127,.4)}
 .st-Done,.st-Closed,.st-Implemented,.st-Monitored,.st-Reviewed,.st-Completed{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
-.src{font-size:var(--fs-1);color:var(--paper-faint);letter-spacing:.06em}
+/* .02em, not the .06em this had: .src carries whole sentences under
+   titles and in table cells, and wide tracking on small faint text made
+   those the hardest lines on the page to read. */
+.src{font-size:var(--fs-1);color:var(--paper-faint);letter-spacing:.02em}
 .gold-t{color:var(--gold-light);font-weight:700}
 .id-t{font-size:var(--fs-1);color:var(--paper-faint);font-weight:700;letter-spacing:.04em;white-space:nowrap}
 /* Unscoped from .id-t (its only home until now) so the SoA's title
@@ -2454,6 +2461,10 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
   .stack-tbl td{display:flex;gap:12px;align-items:baseline;justify-content:space-between;padding:4px 0;border:none;text-align:right}
   .stack-tbl td[data-label]::before{content:attr(data-label);flex:0 0 38%;text-align:left;color:var(--paper-faint);font-size:var(--fs-1)}
   .stack-tbl td:not([data-label]){justify-content:flex-start;text-align:left}
+  /* A row's buttons wrap onto a second line; in one line they ran past
+     the edge of the card and made the whole page scroll sideways. */
+  .stack-tbl td{flex-wrap:wrap}
+  .stack-tbl td:not([data-label]){gap:8px}
   .stack-tbl td:empty{display:none}
 }
 
@@ -2534,3 +2545,27 @@ body.nav-simple .nav-item.nav-later,body.nav-simple .nav-group.nav-later-group{d
 .ess-bdcap > div > div{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:6px}
 .ess-bdcell{display:inline-flex;gap:5px;align-items:center}
 .ess-bdleg{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--paper-dim);padding-top:8px;border-top:1px solid var(--line)}
+
+/* A record's reference in the first column (R-002, O-001) stays on one
+   line: split across two it reads as two values. */
+td.src:first-child{white-space:nowrap}
+
+/* Phones. The framework tabs run as one row that scrolls sideways
+   rather than wrapping to five rows above the page's content, and a
+   toolbar menu opens as a sheet along the bottom edge, where it cannot
+   run off the side of the screen. */
+@media (max-width:700px){
+  #soaFwTabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-16px;margin-right:-16px;padding:0 16px 2px;-webkit-overflow-scrolling:touch}
+  #soaFwTabs::-webkit-scrollbar{display:none}
+  #soaFwTabs > *{flex:0 0 auto}
+  .btn-menu-list,.my-settings .btn-menu-list{position:fixed;left:12px;right:12px;top:auto;bottom:12px;min-width:0;max-height:70vh;overflow-y:auto;padding:10px;gap:4px}
+}
+/* Touch screens: menu items and buttons get a comfortable height. The
+   24px rule above is the accessibility minimum; these are the controls
+   people press most. */
+@media (pointer:coarse){
+  .nav-item{padding-top:11px;padding-bottom:11px}
+  .btn{min-height:40px}
+  .btn.sm,.btn.quiet{min-height:36px}
+  .btn-menu-list .btn{min-height:44px}
+}

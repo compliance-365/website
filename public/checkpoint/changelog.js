@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.190.0',
+    date: '2026-11-11',
+    entries: [
+      'The browser\u2019s Back and Forward buttons now move between Checkpoint\u2019s screens instead of leaving Checkpoint. With a side panel open, Back closes the panel first.',
+      'On a phone: the framework tabs on the Statement of Applicability run as one row you swipe, Export and More menus open along the bottom of the screen, a row\u2019s buttons wrap instead of pushing the page sideways, and menu items and buttons are taller and easier to press.',
+      'Easier to scan: Critical ratings carry a solid edge so they stand out from High, record references such as R-002 stay on one line, the small grey text under titles is set tighter and reads more easily, and table rows no longer show through above the column headings while scrolling.'
+    ]
+  },
+  {
     version: '1.189.0',
     date: '2026-11-01',
     entries: [
