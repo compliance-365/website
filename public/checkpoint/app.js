@@ -19538,10 +19538,63 @@ function showModal(opts) {
     return scalarHtml + structuredHtml;
   }
 
+  /* Back and Forward between screens. The first screen replaces the
+     page's own history entry and every later one adds an entry; going
+     to the screen already showing adds nothing, so Back never appears
+     stuck. A history entry only ever names a screen, and popstate only
+     opens one whose menu item the person can see. */
+  /* Sticky table headings sit --topbar-h below the top of the window.
+     The stylesheet's 71px is right for the fonts as designed, but a
+     browser that lays the bar out a pixel or two shorter left a strip
+     of table rows showing between the bar and the headings. Measured
+     here so the two always meet. */
+  function syncTopbarHeight() {
+    var bar = document.querySelector('.top');
+    if (bar && bar.offsetHeight) document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
+  }
+  window.addEventListener('resize', syncTopbarHeight);
+  var _historyStarted = false;
+  function recordViewInHistory(v) {
+    try {
+      var cur = history.state && history.state.cpView;
+      if (!_historyStarted || cur == null) {
+        /* Runs before the switch, so the screen showing now (the
+           Dashboard, on a normal start) is the one to go back to. */
+        cur = currentView() || v;
+        history.replaceState({ cpView: cur }, '');
+        _historyStarted = true;
+      }
+      if (cur !== v) history.pushState({ cpView: v }, '');
+    } catch (e) { /* history unavailable (sandboxed frame): navigation still works */ }
+  }
+  function viewReachable(v) {
+    if (!v || !/^[a-z0-9-]+$/i.test(v) || !document.getElementById('v-' + v)) return false;
+    var item = document.querySelector('.nav-item[data-v="' + v + '"]');
+    return !!item && item.style.display !== 'none';
+  }
+  window.addEventListener('popstate', function (e) {
+    var v = e.state && e.state.cpView;
+    if (!viewReachable(v) || !document.querySelector('.view.on')) return;
+    /* With a side panel open, Back closes the panel and stays on the
+       screen, which is what Back does in a phone app. */
+    var panel = document.getElementById('drawer');
+    if (panel && panel.classList.contains('open')) {
+      App.closeDrawer();
+      try { history.pushState({ cpView: currentView() }, ''); } catch (err) { /* history unavailable */ }
+      return;
+    }
+    if (v !== currentView()) App.go(v, true);
+  });
+
   /* ================= app actions ================= */
   window.App = {
-    go: function (v) {
+    go: function (v, fromHistory) {
       if (Store && Store.kind === 'demo') noteDemoView(v);
+      /* Each screen is a step in the browser's history, so Back and
+         Forward move between screens instead of leaving Checkpoint. The
+         address itself never changes: sign-in and the links into
+         Checkpoint depend on it. */
+      if (fromHistory !== true) recordViewInHistory(v);
       document.querySelectorAll('.view').forEach(function (x) { x.classList.remove('on'); });
       document.getElementById('v-' + v).classList.add('on');
       document.querySelectorAll('.nav-item').forEach(function (n) {
@@ -19559,6 +19612,7 @@ function showModal(opts) {
       renderNextStepBar(v);
       applyGuidedNav();
       scheduleScrollRegions();
+      syncTopbarHeight();
     },
 
     /* How-to guides: one in the side panel, or the list of all of them. */

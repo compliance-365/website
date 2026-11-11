@@ -1,0 +1,180 @@
+---
+// Checkpoint's help centre, as a public page.
+//
+// Everything here is read at build time from the app itself: the how-to
+// guides and the "what this page is / what you do here / words used"
+// notes are CheckpointLib.HOW_TOS and CheckpointLib.pageGuide() in
+// public/checkpoint/lib.js, and each screen's name is its menu label in
+// public/checkpoint/index.html. One source, so this page cannot say
+// something different from the help inside the console. A guide or a
+// screen added to the app appears here on the next build.
+// test/checkpoint-help-page.test.mjs covers the wiring.
+import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const demo = (v: string) => `${base}checkpoint/?demo=1&view=${v}`;
+
+const L = createRequire(process.cwd() + '/')('./public/checkpoint/lib.js');
+const appHtml = readFileSync(process.cwd() + '/public/checkpoint/index.html', 'utf8');
+
+/* Menu order and labels, straight from the console's own menu. The
+   label is the button's text up to its counter badge. */
+const menu: { v: string; label: string }[] = [];
+for (const m of appHtml.matchAll(/<button class="nav-item[^"]*" data-v="([a-z0-9-]+)"[^>]*>([^<]+)/g)) {
+  if (!menu.some((x) => x.v === m[1])) menu.push({ v: m[1], label: m[2].trim() });
+}
+const labelOf = (v: string) => (menu.find((x) => x.v === v) || { label: v }).label;
+
+type HowTo = { id: string; title: string; view: string; when: string; steps: string[] };
+const howTos: HowTo[] = L.HOW_TOS;
+
+type Guide = { what: string; you: string; terms: { term: string; def: string }[] };
+const screens = menu
+  .map((x) => ({ ...x, guide: L.pageGuide(x.v, 'practitioner') as Guide | null }))
+  .filter((x) => x.guide) as { v: string; label: string; guide: Guide }[];
+
+const url = 'https://www.compliance365.com.au/checkpoint-console/help/';
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Checkpoint', url: 'https://www.compliance365.com.au/checkpoint-console/' },
+  { name: 'Help', url },
+];
+const howToSchema = howTos.map((g) => ({
+  '@type': 'HowTo',
+  name: g.title + ' in Checkpoint',
+  description: g.when,
+  step: g.steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, text: s })),
+}));
+---
+<Base
+  title="Checkpoint Help: How-to Guides for Every Screen"
+  description="Step-by-step guides for Checkpoint: run the posture scan, add a risk, link evidence, approve a policy, run an internal audit and give your auditor access."
+  ogImage="https://www.compliance365.com.au/og/og-checkpoint.png"
+  schema={howToSchema}
+  breadcrumbs={breadcrumbs}
+>
+<Header />
+<main id="main-content" tabindex="-1">
+
+<section class="section hp-hero">
+  <div class="container">
+    <p class="hp-eyebrow"><a href={base + 'checkpoint-console/'}>Checkpoint</a> · Help</p>
+    <h1>Checkpoint help</h1>
+    <p class="hp-lead">Short guides for the things people do most, and a plain description of every screen. The same help is inside Checkpoint: press <b>Help</b> at the top of any screen.</p>
+    <label class="hp-search">
+      <span class="hp-search-label">Search the help</span>
+      <input id="hpSearch" type="search" placeholder="e.g. evidence, auditor, risk appetite" autocomplete="off" />
+    </label>
+    <p id="hpCount" class="hp-count" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<section class="section hp-body">
+  <div class="container">
+
+    <h2 id="how-to">How do I…?</h2>
+    <ul class="hp-toc">
+      {howTos.map((g) => (<li><a href={'#how-' + g.id}>{g.title}</a></li>))}
+    </ul>
+    <div class="hp-list">
+      {howTos.map((g) => (
+        <article class="hp-card" id={'how-' + g.id} data-hp>
+          <h3>{g.title}</h3>
+          <p class="hp-when">{g.when}</p>
+          <ol>{g.steps.map((s) => (<li>{s}</li>))}</ol>
+          <p class="hp-try"><a href={demo(g.view)} target="_blank" rel="noopener">Try it in the demo: {labelOf(g.view)}</a></p>
+        </article>
+      ))}
+    </div>
+
+    <h2 id="screens">Screen by screen</h2>
+    <p class="hp-note">What each screen is for and what you do there, in the order they appear in the menu.</p>
+    <div class="hp-list">
+      {screens.map((s) => (
+        <article class="hp-card" id={'screen-' + s.v} data-hp>
+          <h3>{s.label}</h3>
+          <p><b>What it is.</b> {s.guide.what}</p>
+          <p><b>What you do here.</b> {s.guide.you}</p>
+          {s.guide.terms.length > 0 && (
+            <details>
+              <summary>Words used on this screen</summary>
+              <dl>{s.guide.terms.map((t) => (<><dt>{t.term}</dt><dd>{t.def}</dd></>))}</dl>
+            </details>
+          )}
+          <p class="hp-try"><a href={demo(s.v)} target="_blank" rel="noopener">Open {s.label} in the demo</a></p>
+        </article>
+      ))}
+    </div>
+    <p id="hpNone" class="hp-none" hidden>Nothing matches that. Try a shorter word, or <a href={base + 'contact/'}>ask us</a>.</p>
+
+    <div class="hp-more">
+      <h2>Still stuck?</h2>
+      <p>Inside Checkpoint, <b>Help</b> has a "Tell Compliance365" button that sends us what you were trying to do and the screen you were on. Or <a href={base + 'contact/'}>contact us</a> directly. Setting Checkpoint up for the first time? <a href={base + 'checkpoint-console/how-it-works/'}>How Checkpoint works</a> walks through sign-in, set-up and the first scan.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+</Base>
+
+<script>
+  /* Filters the guides as you type. With JavaScript off the box does
+     nothing and the whole page is there to read. */
+  const input = document.getElementById('hpSearch') as HTMLInputElement | null;
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-hp]'));
+  const none = document.getElementById('hpNone');
+  const count = document.getElementById('hpCount');
+  const text = cards.map((c) => (c.textContent || '').toLowerCase());
+  function apply() {
+    const words = (input?.value || '').toLowerCase().split(/\s+/).filter(Boolean);
+    let shown = 0;
+    cards.forEach((c, i) => {
+      const hit = words.every((w) => text[i].includes(w));
+      c.hidden = !hit;
+      if (hit) shown++;
+    });
+    document.querySelectorAll<HTMLElement>('.hp-toc, .hp-note').forEach((el) => { el.hidden = words.length > 0; });
+    if (none) none.hidden = shown > 0;
+    if (count) count.textContent = words.length ? shown + (shown === 1 ? ' result' : ' results') : '';
+  }
+  input?.addEventListener('input', apply);
+</script>
+
+<style>
+  .hp-hero { padding-top: 3rem; padding-bottom: 1rem; }
+  .hp-eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink, #A63A12); margin: 0 0 .8rem; }
+  .hp-eyebrow a { color: inherit; }
+  .hp-lead { max-width: 68ch; font-size: 1.1rem; line-height: 1.7; }
+  .hp-search { display: grid; gap: .4rem; max-width: 34rem; margin-top: 1.5rem; }
+  .hp-search-label { font-weight: 700; font-size: .92rem; }
+  .hp-search input { font: inherit; padding: .8rem 1rem; border: 1px solid #B9B3A7; border-radius: 10px; background: #fff; color: inherit; }
+  .hp-search input:focus-visible { outline: 2px solid #BE4A1E; outline-offset: 2px; }
+  .hp-count { min-height: 1.4em; margin: .5rem 0 0; color: #4A4740; font-size: .92rem; }
+  .hp-body { padding-top: 0; }
+  .hp-body h2 { font-size: 1.45rem; margin-top: 2.25rem; border-bottom: 2px solid #DDD8CF; padding-bottom: .5rem; }
+  .hp-toc { list-style: none; padding: 0; margin: 1rem 0 1.25rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+  .hp-toc a { display: inline-block; padding: .45rem .8rem; border: 1px solid #DDD8CF; border-radius: 99px; background: #fff; text-decoration: none; color: inherit; font-size: .92rem; }
+  .hp-toc a:hover { border-color: #BE4A1E; }
+  .hp-note { color: #4A4740; }
+  .hp-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 1rem; }
+  .hp-card { padding: 1.2rem 1.3rem; border: 1px solid #DDD8CF; border-radius: 12px; background: #fff; scroll-margin-top: 6rem; }
+  .hp-card h3 { margin: 0 0 .4rem; font-size: 1.1rem; }
+  .hp-card p, .hp-card li, .hp-card dd { line-height: 1.6; font-size: .95rem; }
+  .hp-card p { margin: .5rem 0; }
+  .hp-when { color: #4A4740; }
+  .hp-card ol { margin: .6rem 0; padding-left: 1.25rem; display: grid; gap: .35rem; }
+  .hp-card summary { cursor: pointer; font-weight: 700; font-size: .92rem; color: var(--accent-ink, #A63A12); margin-top: .6rem; }
+  .hp-card dl { margin: .6rem 0 0; }
+  .hp-card dt { font-weight: 700; margin-top: .5rem; }
+  .hp-card dd { margin: 0; color: #4A4740; }
+  .hp-try { margin-top: .8rem !important; }
+  .hp-try a { font-weight: 700; font-size: .92rem; }
+  .hp-none { margin-top: 1.5rem; }
+  .hp-more { max-width: 72ch; }
+  .hp-more p { line-height: 1.7; }
+</style>
