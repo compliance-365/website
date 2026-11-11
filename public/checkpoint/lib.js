@@ -8666,6 +8666,75 @@
   ];
   function howTo(id) { return HOW_TOS.find(function (h) { return h.id === id; }) || null; }
   function howTosFor(view) { return HOW_TOS.filter(function (h) { return h.views.indexOf(view) !== -1; }); }
+
+  /* Two letters for a person's badge in a table: first and last word of
+     a name ("S. Okafor" -> SO), or the first two letters of a single
+     word. An email address is read as its local part. Returns '' for a
+     blank or a dash, so an unowned row shows no badge at all. */
+  function personInitials(name) {
+    var s = String(name == null ? '' : name).trim();
+    if (s.indexOf('@') > 0) s = s.split('@')[0].replace(/[._-]+/g, ' ');
+    var words = s.split(/\s+/).map(function (w) { return w.replace(/[^A-Za-z0-9À-ɏ]/g, ''); }).filter(Boolean);
+    if (!words.length) return '';
+    var second = words.length > 1 ? words[words.length - 1].charAt(0) : words[0].charAt(1);
+    return (words[0].charAt(0) + (second || '')).toUpperCase();
+  }
+
+  /* Saved views: a named set of filter choices on one screen, kept per
+     person in their browser. A pick is { g: the filter group's element
+     id, id: the pressed pill's data-id }. Nothing here names a function
+     to call: applying a view presses the pill that is already on the
+     screen, so a stored value can do nothing a click could not. Every
+     value read back from storage goes through savedViewsParse(), which
+     drops anything that is not the expected shape. */
+  var SAVED_VIEW_MAX = 8;
+  function savedViewClean(v) {
+    if (!v || typeof v !== 'object') return null;
+    var name = String(v.name == null ? '' : v.name).replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (!name || !Array.isArray(v.picks)) return null;
+    var seen = {}, picks = [];
+    v.picks.forEach(function (p) {
+      if (!p || typeof p.g !== 'string' || !/^[A-Za-z][\w-]{0,40}$/.test(p.g)) return;
+      var id = String(p.id == null ? '' : p.id);
+      if (!id || id.length > 80 || seen[p.g]) return;
+      seen[p.g] = true;
+      picks.push({ g: p.g, id: id });
+    });
+    if (!picks.length) return null;
+    return { name: name, picks: picks, isDefault: v.isDefault === true };
+  }
+  function savedViewsParse(raw) {
+    var out = {}, data;
+    try { data = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { return out; }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return out;
+    Object.keys(data).forEach(function (view) {
+      if (!/^[a-z0-9-]{1,30}$/.test(view) || !Array.isArray(data[view])) return;
+      var list = data[view].map(savedViewClean).filter(Boolean).slice(0, SAVED_VIEW_MAX);
+      /* One default per screen: the first one marked wins. */
+      var hasDefault = false;
+      list.forEach(function (v) { if (v.isDefault) { if (hasDefault) v.isDefault = false; hasDefault = true; } });
+      if (list.length) out[view] = list;
+    });
+    return out;
+  }
+  /* The same choices, whatever order the groups were read in. */
+  function savedViewsSame(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    var key = function (p) { return p.g + '\u0001' + p.id; };
+    var left = a.map(key).sort(), right = b.map(key).sort();
+    return left.every(function (k, i) { return k === right[i]; });
+  }
+  /* Adds a view, or replaces the one with the same name (any case).
+     Returns { list } or { error } and never changes the list passed in. */
+  function savedViewsUpsert(list, view) {
+    var clean = savedViewClean(view);
+    if (!clean) return { error: 'Give the view a name.' };
+    var next = (list || []).filter(function (v) { return v.name.toLowerCase() !== clean.name.toLowerCase(); });
+    if (next.length >= SAVED_VIEW_MAX) return { error: 'You can keep ' + SAVED_VIEW_MAX + ' saved views on a screen. Delete one first.' };
+    if (clean.isDefault) next = next.map(function (v) { return { name: v.name, picks: v.picks, isDefault: false }; });
+    next.push(clean);
+    return { list: next };
+  }
   function howTosForStage(key) { return HOW_TOS.filter(function (h) { return h.stages.indexOf(key) !== -1; }); }
 
   /* ---- Guided menu ----
@@ -15393,7 +15462,7 @@
     CERT_MILESTONES: CERT_MILESTONES, certificationMilestones: certificationMilestones,
     clauseFinishSteps: clauseFinishSteps, CLAUSE_EVIDENCE_EXPECT: CLAUSE_EVIDENCE_EXPECT, clauseEvidenceFit: clauseEvidenceFit,
     TOP_MGMT_QUESTIONS: TOP_MGMT_QUESTIONS, topManagementInterview: topManagementInterview,
-    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild, HOW_TOS: HOW_TOS, howTo: howTo, GUIDED_STAGE_VIEWS: GUIDED_STAGE_VIEWS, GUIDED_ALWAYS: GUIDED_ALWAYS, guidedNavViews: guidedNavViews, nextStepRecord: nextStepRecord, howTosFor: howTosFor, howTosForStage: howTosForStage, startHere: startHere,
+    NEXT_KIND_GUIDE: NEXT_KIND_GUIDE, nextForYou: nextForYou, welcomeScreens: welcomeScreens, GLOSSARY: GLOSSARY, PAGE_GUIDE: PAGE_GUIDE, pageGuide: pageGuide, WHO_AREAS: WHO_AREAS, whoDoesWhat: whoDoesWhat, whoAreaText: whoAreaText, BUILD_STAGES: BUILD_STAGES, BUILD_TOP_ITEMS: BUILD_TOP_ITEMS, guidedBuild: guidedBuild, HOW_TOS: HOW_TOS, howTo: howTo, GUIDED_STAGE_VIEWS: GUIDED_STAGE_VIEWS, GUIDED_ALWAYS: GUIDED_ALWAYS, guidedNavViews: guidedNavViews, nextStepRecord: nextStepRecord, howTosFor: howTosFor, personInitials: personInitials, SAVED_VIEW_MAX: SAVED_VIEW_MAX, savedViewsParse: savedViewsParse, savedViewsSame: savedViewsSame, savedViewsUpsert: savedViewsUpsert, howTosForStage: howTosForStage, startHere: startHere,
     srDate: srDate, threatIntelPackSummary: threatIntelPackSummary,
     buildXlsx: buildXlsx, buildRegisterDocx: buildRegisterDocx,
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,

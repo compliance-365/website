@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.191.0',
+    date: '2026-11-11',
+    entries: [
+      'Saved views: on any register, set the filters the way you like them and choose Save this view. One click brings them back, and you can pick one for the screen to open with. Saved for you, in the browser you are using.',
+      'In-between states (In progress, In treatment, Medium) are now amber, so they no longer look like buttons and links. Orange is kept for things you can press.',
+      'Owners in the registers show an initials badge with the name on one line.',
+      'The summary tiles are the same compact size on every screen, so tables start higher up the page.',
+      'On a wide screen the Dashboard\u2019s cards sit in two columns instead of one long stack.'
+    ]
+  },
+  {
     version: '1.190.0',
     date: '2026-11-11',
     entries: [

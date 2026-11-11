@@ -2535,6 +2535,15 @@ function showModal(opts) {
   }
   function toastError(msg) { toast(msg, 'error'); }
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  /* An owner in an on-screen table: initials in a badge, then the name
+     on one line. The badge is decoration (aria-hidden), the name is the
+     text. Reports keep the plain name. */
+  function ownerCell(name) {
+    var n = String(name == null ? '' : name).trim();
+    if (!n) return '\u2014';
+    var ini = window.CheckpointLib.personInitials(n);
+    return '<span class="who">' + (ini ? '<i class="who-av" aria-hidden="true">' + esc(ini) + '</i>' : '') + '<span class="who-n">' + esc(n) + '</span></span>';
+  }
   /* AI response text is untrusted the exact same way any other dynamic
      string is — escaped FIRST via esc(), then given minimal paragraph/
      line-break structure (never markdown, never raw HTML) so a
@@ -9601,7 +9610,7 @@ function showModal(opts) {
         '<td>' + o.L + ' × ' + o.I + ' = <b>' + lv.score + '</b><div class="src">' + lv.band + '</div></td>' +
         '<td>' + esc(o.treat || '—') + '</td>' +
         '<td>' + riskReviewChip(o) + '</td>' +
-        '<td>' + esc(o.owner || '—') + '</td>' +
+        '<td>' + ownerCell(o.owner) + '</td>' +
         '<td><span class="chip st-' + esc(String(o.status).replace(/ /g, '')) + '">' + esc(o.status) + '</span></td>' +
         '<td style="white-space:nowrap">' + (READONLY ? '' : '<button class="btn ghost sm" data-action="App.editOpportunity" data-id="' + esc(o.id) + '">Edit</button> <button class="btn ghost sm" data-action="App.reviewOpportunity" data-id="' + esc(o.id) + '">Review</button>') + '</td></tr>';
     }).join('');
@@ -10341,7 +10350,7 @@ function showModal(opts) {
         '<td><span class="chip sev-' + rb + '" title="' + esc(resTitle) + '">' + (q.L * q.I) + ' ' + rb + (q.derived ? '' : ' \u2713') + '</span></td>' +
         '<td>' + riskReviewChip(r) + '</td>' +
         '<td>' + treatmentCell(r) + '</td>' +
-        '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
+        '<td>' + ownerCell(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
     var riskRowsEl = document.getElementById('riskRows');
     var emptyText = cellFilter ? 'No open risks scored exactly this way. Try a nearby cell, or clear the filter above.' : 'No risks in this band. The register builds as scans are approved and workshops are captured.';
@@ -10450,7 +10459,7 @@ function showModal(opts) {
   function actionInlineCells(a, od, days) {
     var live = a.status !== 'Done' && a.status !== 'Cancelled';
     if (READONLY || !live) {
-      return '<td>' + esc(a.owner) + '</td>' +
+      return '<td>' + ownerCell(a.owner) + '</td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + esc(actionStatusLabel(a.status)) + '</span></td>';
     }
@@ -11015,7 +11024,7 @@ function showModal(opts) {
         '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ' + icon('flag') : '') + '</td>' +
-        '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
+        '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + ownerCell(v.owner) + '</td>' +
         '<td>' + (!READONLY && (!v.questionnaireStatus || v.questionnaireStatus === 'Not sent')
           ? '<button class="btn ghost sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>'
           : '<span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span>') + '</td></tr>';
@@ -11288,7 +11297,7 @@ function showModal(opts) {
       return '<tr data-id="' + a.id + '" data-action="App.openAiSystem"><td class="id-t"><button class="lnk" data-action="App.openAiSystem" data-id="' + a.id + '">' + esc(a.id) + '</button></td><td style="color:var(--paper)">' + esc(a.name) + (a.spId ? '<div class="src">Discovered from Entra enterprise apps</div>' : '') + '</td>' +
         '<td><span class="chip sev-' + a.riskTier + '">' + esc(a.riskTier) + '</span></td>' +
         '<td><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></td>' +
-        '<td class="src">' + esc(a.vendor || '—') + '</td><td>' + esc(a.owner) + '</td>' +
+        '<td class="src">' + esc(a.vendor || '—') + '</td><td>' + ownerCell(a.owner) + '</td>' +
         '<td>' + (a.lastReviewed ? fmtDate(a.lastReviewed) : '—') + '</td></tr>';
     }).join('') : emptyState({
       kind: 'shield', asRow: true, colspan: 7,
@@ -19543,6 +19552,114 @@ function showModal(opts) {
      to the screen already showing adds nothing, so Back never appears
      stuck. A history entry only ever names a screen, and popstate only
      opens one whose menu item the person can see. */
+  /* ================= saved views =================
+     A named set of filter choices on a screen ("My overdue actions"),
+     kept per person in this browser. It works on any screen whose
+     filters are .f-pill buttons in a labelled .filters group, which is
+     every register, so no screen has code of its own for it. Applying a
+     view presses the pills that are already on the screen: a value read
+     back from storage can do nothing a click could not. One view per
+     screen can be the default, applied the first time the screen is
+     opened after loading Checkpoint. */
+  var SAVED_VIEWS_KEY = 'cpSavedViews';
+  var _svDefaultTried = {};
+  function savedViewsKey() { return SAVED_VIEWS_KEY + ':' + ((Store && Store.kind) || '') + ':' + String(myUpn() || 'me').toLowerCase(); }
+  function savedViewsLoad() {
+    try { return window.CheckpointLib.savedViewsParse(localStorage.getItem(savedViewsKey()) || '{}'); } catch (e) { return {}; }
+  }
+  function savedViewsStore(all) {
+    try { localStorage.setItem(savedViewsKey(), JSON.stringify(all)); return true; } catch (e) { return false; }
+  }
+  /* The filter groups on a screen: labelled Filter…, Group… or
+     Framework, showing, and part of the page itself (the supplier form's
+     data-category toggles are .filters too, and are not filters). */
+  function filterGroupsIn(v) {
+    var sec = document.getElementById('v-' + v);
+    if (!sec) return [];
+    return Array.prototype.filter.call(sec.querySelectorAll('.filters[role="group"][id]'), function (g) {
+      /* Not a group inside a card: those switch what one chart shows
+         (the Dashboard's fingerprint and risk view), not a register. */
+      return /^(Filter|Group|Framework)/.test(g.getAttribute('aria-label') || '') && !g.closest('.card') && g.offsetParent !== null && g.querySelector('.f-pill[data-id]');
+    });
+  }
+  function currentFilterPicks(v) {
+    var picks = [];
+    filterGroupsIn(v).forEach(function (g) {
+      var on = g.querySelectorAll('.f-pill.on[data-id]');
+      if (on.length === 1) picks.push({ g: g.id, id: on[0].getAttribute('data-id') });
+    });
+    return picks;
+  }
+  function renderSavedViews(v) {
+    v = v || currentView();
+    var sec = document.getElementById('v-' + v);
+    if (!sec) return;
+    var groups = filterGroupsIn(v);
+    var bar = sec.querySelector('.saved-views');
+    if (!groups.length) { if (bar) bar.remove(); return; }
+    var last = groups[groups.length - 1];
+    if (!bar) { bar = document.createElement('div'); bar.className = 'saved-views'; }
+    if (bar.previousElementSibling !== last) last.insertAdjacentElement('afterend', bar);
+    var list = savedViewsLoad()[v] || [];
+    var now = currentFilterPicks(v);
+    var active = -1;
+    list.forEach(function (sv, i) { if (active < 0 && window.CheckpointLib.savedViewsSame(sv.picks, now)) active = i; });
+    bar.innerHTML = (list.length ? '<span class="sv-label">Saved views</span>' : '') +
+      list.map(function (sv, i) {
+        return '<span class="sv-chip' + (i === active ? ' on' : '') + '">' +
+          '<button type="button" class="sv-apply" aria-pressed="' + (i === active ? 'true' : 'false') + '" data-action="App.applySavedView" data-id="' + i + '"' +
+            (sv.isDefault ? ' title="This screen opens with this view"' : '') + '>' + esc(sv.name) + (sv.isDefault ? ' <span class="sv-default">opens first</span>' : '') + '</button>' +
+          '<button type="button" class="sv-del" data-action="App.deleteSavedView" data-id="' + i + '" aria-label="Delete saved view ' + esc(sv.name) + '">' + icon('close') + '</button></span>';
+      }).join('') +
+      (active < 0 && now.length ? '<button type="button" class="btn quiet sm sv-save" data-action="App.saveCurrentView">Save this view</button>' : '');
+  }
+  /* Presses each saved pill in turn, in the order the groups appear on
+     the screen (the framework tabs come first and redraw the groups
+     below them). A pill that is no longer there is skipped. */
+  async function applyFilterPicks(v, picks) {
+    var order = filterGroupsIn(v).map(function (g) { return g.id; });
+    var sorted = picks.slice().sort(function (a, b) { return order.indexOf(a.g) - order.indexOf(b.g); });
+    var missed = 0;
+    for (var i = 0; i < sorted.length; i++) {
+      var g = document.getElementById(sorted[i].g);
+      var pill = g && Array.prototype.filter.call(g.querySelectorAll('.f-pill[data-id]'), function (b) { return b.getAttribute('data-id') === sorted[i].id; })[0];
+      if (!pill || pill.disabled) { missed++; continue; }
+      if (!pill.classList.contains('on')) {
+        pill.click();
+        await new Promise(function (r) { setTimeout(r, 0); });
+      }
+    }
+    renderSavedViews(v);
+    return missed;
+  }
+  function maybeApplyDefaultView(v) {
+    if (_svDefaultTried[v]) return;
+    _svDefaultTried[v] = true;
+    var def = (savedViewsLoad()[v] || []).filter(function (sv) { return sv.isDefault; })[0];
+    if (def) applyFilterPicks(v, def.picks).catch(function (e) { warn(e); });
+  }
+  /* A pill pressed by hand changes which saved view, if any, is showing. */
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('.f-pill')) setTimeout(function () { renderSavedViews(); }, 60);
+  });
+
+  /* The Dashboard's card stack goes to two columns only while two or
+     more of its cards are showing (see .dash-stack in styles.css). Each
+     card is shown and hidden by its own render function, so this
+     watches the stack rather than being called from all of them. */
+  function layoutDashStack() {
+    var stack = document.getElementById('dashStack');
+    if (!stack) return;
+    var showing = Array.prototype.filter.call(stack.children, function (c) { return c.style.display !== 'none'; }).length;
+    stack.classList.toggle('two', showing >= 2);
+  }
+  (function () {
+    var stack = document.getElementById('dashStack');
+    if (!stack || !window.MutationObserver) return;
+    new MutationObserver(layoutDashStack).observe(stack, { attributes: true, attributeFilter: ['style'], subtree: true });
+    layoutDashStack();
+  })();
+
   /* Sticky table headings sit --topbar-h below the top of the window.
      The stylesheet's 71px is right for the fonts as designed, but a
      browser that lays the bar out a pixel or two shorter left a strip
@@ -19613,6 +19730,52 @@ function showModal(opts) {
       applyGuidedNav();
       scheduleScrollRegions();
       syncTopbarHeight();
+      renderSavedViews(v);
+      maybeApplyDefaultView(v);
+    },
+
+    /* Saved views (see renderSavedViews above). */
+    saveCurrentView: async function () {
+      var v = currentView();
+      var picks = currentFilterPicks(v);
+      if (!picks.length) return;
+      var res = await showModal({
+        title: 'Save this view',
+        message: 'Keeps the filters showing now under a name, so one click brings them back. Saved for you, in this browser.',
+        fields: [
+          { id: 'name', label: 'Name', type: 'text', placeholder: 'e.g. My overdue actions' },
+          { id: 'isDefault', type: 'checkbox', value: false, label: 'Open this screen with this view' }
+        ],
+        confirmText: 'Save view'
+      });
+      if (!res) return;
+      var all = savedViewsLoad();
+      var out = window.CheckpointLib.savedViewsUpsert(all[v] || [], { name: res.name, picks: picks, isDefault: res.isDefault === 'yes' });
+      if (out.error) { toastError(esc(out.error)); return; }
+      all[v] = out.list;
+      if (!savedViewsStore(all)) { toastError('This browser would not keep the view (its storage is blocked or full).'); return; }
+      renderSavedViews(v);
+      toast('Saved view <b>' + esc(out.list[out.list.length - 1].name) + '</b>');
+    },
+    applySavedView: async function (i) {
+      var v = currentView();
+      var sv = (savedViewsLoad()[v] || [])[Number(i)];
+      if (!sv) return;
+      var missed = await applyFilterPicks(v, sv.picks);
+      if (missed) toast('Part of <b>' + esc(sv.name) + '</b> no longer exists on this screen, so the rest was applied.');
+    },
+    deleteSavedView: async function (i) {
+      var v = currentView();
+      var all = savedViewsLoad();
+      var list = all[v] || [];
+      var sv = list[Number(i)];
+      if (!sv) return;
+      var ok = await showModal({ title: 'Delete saved view', message: 'Delete \u201c' + sv.name + '\u201d? The records it shows are not affected.', confirmText: 'Delete view' });
+      if (!ok) return;
+      list.splice(Number(i), 1);
+      if (list.length) all[v] = list; else delete all[v];
+      savedViewsStore(all);
+      renderSavedViews(v);
     },
 
     /* How-to guides: one in the side panel, or the list of all of them. */

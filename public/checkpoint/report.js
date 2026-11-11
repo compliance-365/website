@@ -125,7 +125,7 @@
      they are not trying to pass as categorical hues in either palette. */
   var PAL_APP = {
     good: '#8fbf9a',
-    warn: '#F0A97F',
+    warn: '#E6B84C',
     high: '#dda07a',
     bad: '#e0908f',
     neutral: '#9a958c',
