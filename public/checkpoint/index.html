@@ -459,6 +459,10 @@
       <div class="vhead"><div class="rule"></div><h1>Dashboard</h1><p>Live assurance position for this tenant. Every figure below is computed from the registers — nothing is typed into a slide the night before an audit.</p></div>
       <div class="dash-headline" id="dashHeadline"></div>
       <div class="card" id="nextForYou" style="display:none;margin-bottom:16px"></div>
+      <!-- On a wide screen these cards sit in two columns (see .dash-stack
+           in styles.css and layoutDashStack in app.js), so the tiles and
+           charts below them start higher up the page. -->
+      <div class="dash-stack" id="dashStack">
       <div class="card" id="dashForYou" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="certDashCard" style="display:none;margin-bottom:16px"></div>
       <div class="card" id="ismsTransferCard" style="display:none;margin-bottom:16px"></div>
@@ -467,6 +471,7 @@
       <div class="card" id="clauseGapsCard" style="display:none;margin-bottom:16px"></div>
       <!-- ASD Essentials at a glance (renderEssentialsDash) -->
       <div class="card" id="dashEssentials" style="display:none;margin-bottom:16px"></div>
+      </div>
       <div class="appetite-banner" id="appetiteBanner" style="display:none"></div>
       <div class="appetite-banner" id="scanDueBanner" style="display:none"></div>
       <div class="appetite-banner" id="digestDueBanner" style="display:none"></div>
@@ -708,7 +713,7 @@
     <!-- FINANCIAL RISK ANALYSIS (Monte Carlo) -->
     <section class="view" id="v-quantrisk">
       <div class="vhead"><div class="rule"></div><h1>Financial risk analysis</h1><p>Every open risk's likelihood/impact score, translated into a simulated annual loss distribution — 10,000-trial Monte Carlo, re-run automatically whenever the risk register changes. Loss frequency and magnitude ranges are derived directly from each risk's own residual score (documented, editable assumptions below) — no separate data entry required. Treat this as a defensible order-of-magnitude view, not a measured figure: refine a risk's own numbers by hand wherever real loss history or insurance/actuarial data exists.</p>
-      <div class="grid kpis" id="qrKpiRow"></div>
+      <div class="grid kpis reg-strip" id="qrKpiRow"></div>
       <div class="grid dash-2" style="margin-top:16px">
         <div class="card">
           <h3>Loss exceedance curve</h3>
@@ -841,7 +846,7 @@
     <!-- AI SYSTEMS (ISO 42001) -->
     <section class="view" id="v-aisystems">
       <div class="vhead"><div class="rule"></div><h1>AI systems</h1><p>Every AI system in use, its impact assessment status, and the ISO 42001 controls it evidences — the register ISO 42001 certification is actually built on, not a slide deck assembled the week before audit. EU AI Act risk tiers (Prohibited/High/Limited/Minimal) drive how much scrutiny each system gets.</p></div>
-      <div class="grid kpis" id="aiKpiRow" style="margin-bottom:16px"></div>
+      <div class="grid kpis reg-strip" id="aiKpiRow" style="margin-bottom:16px"></div>
       <div id="aiAuPractices"></div>
       <div class="card" style="margin-bottom:16px">
         <h3>Impact assessment status by risk tier</h3>
@@ -1033,7 +1038,7 @@
       <div id="soaSoc2Pack"></div>
       <div id="soaE8Suggestions"></div>
       <div id="soaAnnexPlan"></div>
-      <div class="grid kpis" id="soaKpiRow" style="margin:16px 0 8px"></div>
+      <div class="grid kpis reg-strip" id="soaKpiRow" style="margin:16px 0 8px"></div>
       <!-- The rest of the status distribution, as filters at the weight of a
            sentence rather than as three more tiles (see 1.57.0). Outside
            #soaKpiRow because each entry is a <button> and the Implemented
@@ -1102,7 +1107,7 @@
       <div style="margin-bottom:14px;display:flex;gap:8px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="clauses">Export CSV</button><button class="btn ghost sm" data-action="App.report" data-id="clauses">Evidence pack</button><button class="btn ghost sm" data-action="App.stage1Pack">Stage 1 pack</button></div>
       <p class="src" id="clauseEvidenceFolders" style="margin:-6px 0 14px;font-size:12px"></p>
       <div id="clauseEvidenceCheck"></div>
-      <div class="grid kpis" id="clauseKpiRow" style="margin:0 0 16px"></div>
+      <div class="grid kpis reg-strip" id="clauseKpiRow" style="margin:0 0 16px"></div>
       <div id="clauseAutopilot"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Clause</th><th scope="col">Title</th><th scope="col">Status</th><th scope="col">Owner</th><th scope="col">Verified</th><th scope="col">Evidence</th></tr></thead><tbody id="clauseRows"></tbody></table></div>
     </section>
@@ -1199,7 +1204,7 @@
            Training, Actions, Suppliers, AI systems and Documents all lead
            with one. Tiles filter the records table below, same as
            Training's. -->
-      <div class="grid kpis" id="attestKpiRow" style="margin:0 0 18px"></div>
+      <div class="grid kpis reg-strip" id="attestKpiRow" style="margin:0 0 18px"></div>
 
       <div class="card" id="myAttestCard" style="margin-bottom:18px">
         <h3>My attestations</h3>
@@ -1274,7 +1279,7 @@
              this view was missing entirely: the Statement of Applicability,
              Actions, Suppliers, AI systems and Documents all lead with one.
              Tiles filter the records table below, same as the SoA's. -->
-        <div class="grid kpis" id="trainingKpiRow" style="margin:0 0 18px"></div>
+        <div class="grid kpis reg-strip" id="trainingKpiRow" style="margin:0 0 18px"></div>
 
         <div class="card" id="myTrainingCard" style="margin-bottom:18px">
           <h3>My training</h3>
@@ -1352,7 +1357,7 @@
       </div>
       <div id="auditStart" style="display:none;margin:0 0 16px"></div>
       <div id="auditRadar" style="margin:0 0 16px"></div>
-      <div class="grid kpis" id="auditKpiRow" style="margin:0 0 16px"></div>
+      <div class="grid kpis reg-strip" id="auditKpiRow" style="margin:0 0 16px"></div>
       <div class="card" id="auditTable" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Framework</th><th scope="col">Scope</th><th scope="col">Auditor</th><th scope="col">Planned</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="auditRows"></tbody></table></div>
     </section>
 
@@ -1387,7 +1392,7 @@
           <button class="btn ghost sm" data-action="App.toggleAddIncident">Cancel</button>
         </div>
       </div>
-      <div class="grid kpis" id="incidentKpiRow" style="margin:0 0 16px"></div>
+      <div class="grid kpis reg-strip" id="incidentKpiRow" style="margin:0 0 16px"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Detected</th><th scope="col">Status</th><th scope="col">Privacy assessment</th><th scope="col"></th></tr></thead><tbody id="incidentRows"></tbody></table></div>
     </section>
 
@@ -1400,7 +1405,7 @@
         <h3>Management review</h3>
         <div id="mrWizard"></div>
       </div>
-      <div class="grid kpis" id="reviewKpiRow" style="margin:0 0 16px"></div>
+      <div class="grid kpis reg-strip" id="reviewKpiRow" style="margin:0 0 16px"></div>
       <h3 class="mr-records-h">Management review records</h3>
       <div class="card" style="padding:0 10px;margin-bottom:20px"><table><thead><tr><th scope="col">ID</th><th scope="col">Held</th><th scope="col">Chair</th><th scope="col">Conclusion</th><th scope="col">Actions</th><th scope="col">Minutes</th><th scope="col">Next due</th></tr></thead><tbody id="reviewRows"></tbody></table></div>
     </section>
@@ -1430,7 +1435,7 @@
           <button class="btn ghost sm" data-action="App.toggleAddObjective">Cancel</button>
         </div>
       </div>
-      <div class="grid kpis" id="objKpiRow" style="margin:0 0 16px"></div>
+      <div class="grid kpis reg-strip" id="objKpiRow" style="margin:0 0 16px"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">Objective</th><th scope="col">Owner</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Progress notes</th><th scope="col"></th></tr></thead><tbody id="objRows"></tbody></table></div>
     </section>
 
@@ -1537,7 +1542,7 @@
         </div>
       </div>
       <div class="card" id="calRhythmCard" style="margin-bottom:16px;display:none"></div>
-      <div class="grid kpis" id="calKpiRow" style="margin:0 0 16px"></div>
+      <div class="grid kpis reg-strip" id="calKpiRow" style="margin:0 0 16px"></div>
       <div id="calShowFinished" style="margin:0 0 10px"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Activity</th><th scope="col">Category</th><th scope="col">Frequency</th><th scope="col">Owner</th><th scope="col">Next due</th><th scope="col">Last completed</th><th scope="col"></th></tr></thead><tbody id="calRows"></tbody></table></div>
     </section>
