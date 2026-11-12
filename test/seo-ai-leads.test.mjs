@@ -52,3 +52,17 @@ test('time-sensitive regulatory notes cite sources and a review date', () => {
   assert.match(priv, /hsfkramer\.com/);
   assert.match(read('src/pages/services/disp-ism-irap.astro'), /What changed in the ISM, September 2026[\s\S]*cyber\.gov\.au/);
 });
+
+test('an enquiry from a Google ad carries the click ID for an offline conversion upload', () => {
+  const base = read('src/layouts/BaseLayout.astro');
+  assert.match(base, /\['gclid', 'gbraid', 'wbraid'\]/, 'all three Google click IDs');
+  assert.match(base, /sessionStorage\.setItem\(AD_KEY/, 'kept for this tab only');
+  assert.ok(!/localStorage\.setItem\(AD_KEY/.test(base) && !/document\.cookie[\s\S]{0,80}gclid/.test(base), 'never a cookie or localStorage');
+  assert.match(base, /lines\.concat\(adClickLines\(\)\)/, 'in the enquiry email');
+  assert.match(base, /var ac = adClickLines\(\);/, 'and in the HubSpot note');
+  assert.match(base, /Conversion time \(for upload\)/);
+  const privacy = read('src/pages/privacy.astro');
+  assert.match(privacy, /report these enquiries to Google Ads/);
+  assert.match(privacy, /<strong>Google Ads:<\/strong>/);
+  assert.match(read('tools/google-ads-conversion-upload-template.csv'), /^Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency/);
+});
