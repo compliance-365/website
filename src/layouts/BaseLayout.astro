@@ -824,6 +824,40 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     } catch (e) { /* storage blocked: the enquiry still says which page it came from */ }
   };
   window.c365RememberFirstTouch();
+  /* A Google Ads click ID (gclid, or gbraid/wbraid from iOS), so an
+     enquiry that came from an ad can be uploaded to Google Ads as an
+     offline conversion (GOOGLE-ADS.md). Consent doesn't gate it: it is
+     no cookie, only sessionStorage for this tab (so a visitor who
+     clicks through to another page before enquiring keeps it), and it
+     leaves the browser only inside an enquiry the visitor chooses to
+     send. The privacy policy says so under "How you found us". */
+  var AD_KEY = 'c365AdClick';
+  try {
+    var q0 = new URLSearchParams(location.search);
+    ['gclid', 'gbraid', 'wbraid'].some(function (k) {
+      var v = q0.get(k);
+      if (!v || !/^[\w-]{10,200}$/.test(v)) return false;
+      sessionStorage.setItem(AD_KEY, JSON.stringify({ type: k, id: v }));
+      return true;
+    });
+  } catch (e) { /* storage blocked: an enquiry from the landing page still has the URL */ }
+  window.c365AdClick = function () {
+    try { return JSON.parse(sessionStorage.getItem(AD_KEY) || 'null'); } catch (e) { return null; }
+  };
+  /* Google Ads' upload format, in the visitor's own time zone:
+     yyyy-mm-dd hh:mm:ss+hh:mm. */
+  function uploadTime(d) {
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var off = -d.getTimezoneOffset(), a = Math.abs(off);
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) +
+      (off < 0 ? '-' : '+') + p(Math.floor(a / 60)) + ':' + p(a % 60);
+  }
+  /* The lines that go into the enquiry email and the HubSpot note. */
+  function adClickLines() {
+    var c = window.c365AdClick();
+    if (!c) return [];
+    return ['Google Ads ' + c.type + ': ' + c.id, 'Conversion time (for upload): ' + uploadTime(new Date())];
+  }
   window.c365LeadSource = function () {
     var first = null;
     try { if (consented()) first = JSON.parse(localStorage.getItem(FT_KEY) || 'null'); } catch (e) { first = null; }
@@ -836,7 +870,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     } else {
       lines.push('Referred by: ' + (refHost() || 'direct or not shown') + ' (no analytics consent, so the first visit is not known)');
     }
-    return lines.join('\n');
+    return lines.concat(adClickLines()).join('\n');
   };
   /* The first visit, only with analytics consent (null otherwise), for
      the sign-up endpoint to store on the HubSpot contact. */
@@ -853,10 +887,12 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     try {
       var email = String((lead && lead.email) || '').trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || /@compliance365\.com\.au$/i.test(email)) return;
+      var ac = adClickLines();
       var body = { type: 'lead', lead: {
         email: email, name: String(lead.name || '').slice(0, 120), company: String(lead.company || '').slice(0, 160),
         form: String(lead.form || '').slice(0, 60), subject: String(lead.subject || '').slice(0, 200),
-        message: String(lead.message || '').slice(0, 4000), page: location.pathname, ref: refHost(), touch: window.c365LeadTouch()
+        message: [String(lead.message || '').slice(0, 3800)].concat(ac.length ? [''].concat(ac) : []).join('\n'),
+        page: location.pathname, ref: refHost(), touch: window.c365LeadTouch()
       } };
       fetch('https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/subscribe', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true

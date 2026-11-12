@@ -44,6 +44,59 @@ That means Google Ads will under-count conversions. For a true count, check
 the enquiries in HubSpot, where every lead from these pages has the form
 `Ad landing: <framework>`.
 
+### Counting every enquiry: uploading them to Google Ads
+
+Most ad visitors never accept cookies, so the GA4 import misses most
+enquiries. To count all of them, every enquiry from an ad click carries the
+click ID and is uploaded to Google Ads by hand.
+
+**How the site captures it.** When a visitor lands from an ad, Google adds
+`gclid` (or `gbraid`/`wbraid` from some iOS apps) to the URL. BaseLayout
+keeps it in sessionStorage for that tab only; no cookie is set. When the
+visitor sends any enquiry form (landing page, contact, book, checklists,
+posture scan), two lines are added to the enquiry email and the HubSpot
+note:
+
+```
+Google Ads gclid: Cj0KCQiA...
+Conversion time (for upload): 2026-11-20 10:42:07+11:00
+```
+
+The privacy policy (Section 3, "How you found us", and Section 16) says
+this is reported to Google Ads.
+
+**One-off setup in Google Ads**
+
+1. **Goals → Conversions → + Create conversion action → Import → CRMs,
+   files or other data sources → Track conversions from clicks.**
+2. Name it exactly **`Enquiry (uploaded)`**. Category: **Submit lead form**.
+   Value: $300. Count: **One**. Click-through window: 90 days. Set it to
+   **Primary**.
+3. Set the GA4 conversion **`generate_lead`** to **Secondary**, so the
+   few enquiries GA4 does see aren't counted twice.
+4. Wait a few hours after creating the action before the first upload.
+
+**Each week (about 2 minutes)**
+
+1. Open `tools/google-ads-conversion-upload-template.csv`.
+2. For every enquiry that week whose email or HubSpot note has a
+   "Google Ads gclid" line, add a row:
+   - Google Click ID: the gclid
+   - Conversion Name: `Enquiry (uploaded)`
+   - Conversion Time: the "Conversion time (for upload)" value, as is
+   - Conversion Value: `300`
+   - Conversion Currency: `AUD`
+3. **Google Ads → Goals → Conversions → Uploads → + → Upload file**,
+   choose the CSV, then **Apply**.
+4. Check the upload's results after a few hours. Uploaded conversions
+   appear in the campaigns within about a day.
+
+Only gclid rows can be uploaded with this template. An enquiry showing
+`gbraid` or `wbraid` instead is rare on the web; note it, but don't upload it.
+
+Rules: upload within 90 days of the click, never upload the same gclid
+twice, and leave out spam or test enquiries.
+
 ## 2. Starting structure
 
 - One **Search** campaign per page. Turn off the Display Network and Search
