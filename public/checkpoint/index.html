@@ -42,6 +42,21 @@
 </head>
 <body>
 
+<!-- Loading screen: shown from the first paint, before any script has
+     arrived, and removed by app.js (watchBootSplash) as soon as the first
+     real screen is put up. Without it a slow connection saw a blank
+     page for several seconds, and a script that failed to load left it
+     blank for good. Its inline styles make it render before styles.css
+     arrives; the spinner and the "taking longer" line (shown after 20
+     seconds, by CSS alone) come with styles.css. -->
+<div class="boot-splash" id="bootSplash" role="status" style="position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:#06060A;color:#FAF7F1;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;text-align:center">
+  <svg width="44" height="44" viewBox="0 0 200 200" fill="none" aria-hidden="true"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="#BE4A1E"/></svg>
+  <p style="margin:0;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:#F0A97F;font-weight:700">Checkpoint</p>
+  <div class="boot-ring" aria-hidden="true"></div>
+  <p class="boot-msg" style="margin:0;font-size:13px;color:rgba(250,247,241,.7)">Loading…</p>
+  <p class="boot-slow" style="margin:0;font-size:13px;color:rgba(250,247,241,.7);max-width:40ch;line-height:1.6;visibility:hidden">Taking longer than usual. Check your connection, then <a href="" style="color:#F0A97F">reload the page</a>.</p>
+</div>
+
 <!-- SIGN-IN GATE -->
 <div class="gate" id="gate">
   <div class="lockup">

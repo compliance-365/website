@@ -2616,3 +2616,11 @@ td.src:first-child{white-space:nowrap}
   .dash-stack.two{column-count:2;column-gap:16px}
   .dash-stack.two > .card{break-inside:avoid}
 }
+
+/* The loading screen in index.html (#bootSplash). Its layout is inline
+   so it shows before this file arrives; this adds the spinner and, after
+   20 seconds with no screen up, the line offering a reload. */
+.boot-ring{width:28px;height:28px;border-radius:50%;border:2px solid rgba(250,247,241,.15);border-top-color:#BE4A1E;animation:spin 1s linear infinite}
+.boot-slow{animation:bootSlow 0s linear 20s forwards}
+@keyframes bootSlow{to{visibility:visible}}
+@media (prefers-reduced-motion:reduce){.boot-ring{animation:none;border-top-color:rgba(250,247,241,.15)}}

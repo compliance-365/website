@@ -186,6 +186,25 @@ function showModal(opts) {
    (DemoStore or SpStore — same interface).
    ============================================================ */
 (function () {
+  /* Removes the loading screen (#bootSplash in index.html) the moment any
+     top-level screen is shown: the sign-in page, the set-up wizard, the
+     console, the busy overlay or one of the access screens. Each is shown
+     by setting its style, from many places and after async sign-in
+     steps, so this watches them rather than being called from each. */
+  (function watchBootSplash() {
+    var splash = document.getElementById('bootSplash');
+    if (!splash || !window.MutationObserver) { if (splash) splash.remove(); return; }
+    var ids = ['gate', 'wizard', 'appShell', 'notActivated', 'accessRevoked', 'busy'];
+    var obs;
+    function check() {
+      var up = ids.some(function (id) { var el = document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; });
+      if (up) { splash.remove(); obs.disconnect(); }
+    }
+    obs = new MutationObserver(check);
+    ids.forEach(function (id) { var el = document.getElementById(id); if (el) obs.observe(el, { attributes: true, attributeFilter: ['style', 'class'] }); });
+    check();
+  })();
+
   var S = null;          /* in-memory state, loaded from Store */
   var Store = null;      /* active store */
   var CONFIG = window.CHECKPOINT_CONFIG;
