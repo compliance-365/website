@@ -12,6 +12,15 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.192.0',
+    date: '2026-11-13',
+    entries: [
+      'Guided AWS set-up (Integrations \u203a AWS): enter the app registration\u2019s client ID, pick a region and download the collector with your settings already in it. In AWS CloudShell one command sets up the read-only role, the function and a daily schedule, keeps the client secret in AWS Secrets Manager, and runs the first check.',
+      'Slack (Settings \u203a Slack): paste a Slack incoming webhook and the scheduled monitor posts the same alerts and compliance digest it sends to Teams, with links back into Checkpoint.',
+      'Checkpoint opens faster: its files now download together rather than one after another, about a quarter quicker on a slow mobile connection and twice as quick on a fast one. A loading screen shows straight away instead of a blank page, with a reload prompt if loading stalls.'
+    ]
+  },
+  {
     version: '1.191.0',
     date: '2026-11-11',
     entries: [

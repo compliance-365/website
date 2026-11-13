@@ -186,6 +186,25 @@ function showModal(opts) {
    (DemoStore or SpStore — same interface).
    ============================================================ */
 (function () {
+  /* Removes the loading screen (#bootSplash in index.html) the moment any
+     top-level screen is shown: the sign-in page, the set-up wizard, the
+     console, the busy overlay or one of the access screens. Each is shown
+     by setting its style, from many places and after async sign-in
+     steps, so this watches them rather than being called from each. */
+  (function watchBootSplash() {
+    var splash = document.getElementById('bootSplash');
+    if (!splash || !window.MutationObserver) { if (splash) splash.remove(); return; }
+    var ids = ['gate', 'wizard', 'appShell', 'notActivated', 'accessRevoked', 'busy'];
+    var obs;
+    function check() {
+      var up = ids.some(function (id) { var el = document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; });
+      if (up) { splash.remove(); obs.disconnect(); }
+    }
+    obs = new MutationObserver(check);
+    ids.forEach(function (id) { var el = document.getElementById(id); if (el) obs.observe(el, { attributes: true, attributeFilter: ['style', 'class'] }); });
+    check();
+  })();
+
   var S = null;          /* in-memory state, loaded from Store */
   var Store = null;      /* active store */
   var CONFIG = window.CHECKPOINT_CONFIG;
@@ -924,7 +943,7 @@ function showModal(opts) {
     'bulkDocStatus', 'bulkDocOwner',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter', 'addTrustDoc', 'removeTrustDoc', 'addApprovedPoliciesToTrust',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
-    'generateDocumentSet', 'approveDraftSet', 'saveTeamsWebhook', 'clearTeamsWebhook', 'toggleTeamsSetting',
+    'generateDocumentSet', 'approveDraftSet', 'saveTeamsWebhook', 'clearTeamsWebhook', 'toggleTeamsSetting', 'saveSlackWebhook', 'clearSlackWebhook', 'toggleSlackSetting',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
     /* importCsv IS gated (unlike exportCsv, which is read-only): it is
        the largest single bulk write in the app. */
@@ -7133,6 +7152,37 @@ function showModal(opts) {
       '<li><b>Run it once.</b> <span class="src">Actions tab → Checkpoint GitHub collector → Run workflow. It then runs daily, and this card turns to Reporting after the next refresh.</span></li></ol>';
   }
 
+  /* The AWS card's guided set-up, the same shape as GitHub's: the
+     SharePoint grant written out (or the monitor's app reused), then a
+     download with this tenant's settings already in it and a script
+     that sets everything up from AWS CloudShell. The hand steps stay,
+     folded, for anyone who would rather not run a script. */
+  function awsSetupKey() { return 'cpAwsSetup:' + ((Graph.getAccount && Graph.getAccount() || {}).tenantId || 'demo'); }
+  function awsSetup() { try { return JSON.parse(localStorage.getItem(awsSetupKey()) || '{}') || {}; } catch (e) { return {}; } }
+  function awsSetupHtml(tenantId, host, path, code, envTable) {
+    var L = window.CheckpointLib, a = awsSetup(), mon = loadMonitorSetupState();
+    var clientId = a.clientId || mon.clientId || '';
+    var region = L.AWS_REGIONS.indexOf(a.region) !== -1 ? a.region : L.AWS_REGIONS[0];
+    var siteId = (Store.getSiteId && Store.getSiteId()) || '';
+    var regionPick = '<select class="mini" aria-label="AWS region" data-change-action="App.setAwsSetup" data-id="region">' +
+      L.AWS_REGIONS.map(function (r) { return '<option value="' + r + '"' + (r === region ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select>';
+    return '<ol class="integ-steps">' +
+      '<li><b>Let it write results to Checkpoint.</b> <span class="src">If you run Checkpoint’s nightly monitor, reuse its app registration: it already has write access to this site, so enter its client ID and skip the rest of this step. Otherwise, in Entra admin centre → App registrations, register a new app, create a client secret, add the Microsoft Graph application permission <b>Sites.Selected</b> and grant admin consent; then a SharePoint or Global admin sends the request below once, from <a class="evidence-link" href="https://developer.microsoft.com/graph/graph-explorer" target="_blank" rel="noopener">Graph Explorer</a>. It grants that app write access to this one site only.</span>' +
+        '<div style="margin:8px 0">Client ID: <input type="text" class="mini" value="' + esc(clientId) + '" placeholder="Application (client) ID" aria-label="App registration client ID" data-change-action="App.setAwsSetup" data-id="clientId" style="min-width:240px"></div>' +
+        '<pre id="awsGrant" class="integ-code">' + esc(L.monitorGrantSnippet(siteId || '<your Checkpoint site ID, filled in when signed in to your tenant>', clientId, 'Checkpoint AWS Collector')) + '</pre><button class="btn ghost sm" data-action="App.copyEl" data-id="awsGrant">Copy request</button></li>' +
+      '<li><b>Download the collector.</b> AWS region to run it in: ' + regionPick +
+        '<div style="margin:8px 0"><button class="btn sm" data-action="App.downloadAwsCollector"' + (clientId ? '' : ' disabled title="Enter the client ID in step 1 first"') + '>Download the collector (.zip)</button></div>' +
+        '<span class="src">It holds this tenant’s settings, the read-only IAM policy, and a set-up script. No secret is in it.</span></li>' +
+      '<li><b>Run the set-up in AWS CloudShell.</b> <span class="src">Sign in to the AWS account as someone who can create IAM roles and Lambda functions, and open <a class="evidence-link" href="' + esc(L.awsCloudShellUrl(region)) + '" target="_blank" rel="noopener">CloudShell in ' + esc(region) + '</a>. Choose <b>Actions → Upload file</b>, upload the zip, then run:</span>' +
+        code('awsDeployCmd', 'unzip -o checkpoint-aws-collector.zip -d checkpoint-aws && bash checkpoint-aws/deploy.sh') +
+        '<span class="src">It shows what it will create and asks before doing anything, then asks for the app registration’s client secret (stored in AWS Secrets Manager, never shown and never sent to Checkpoint). It creates a read-only IAM role, the function and a daily schedule, runs the collector once and prints the result. Running it again updates what is there.</span></li>' +
+      '<li><b>Check it.</b> <span class="src">The last line of the output reads <code>"merged": true</code> or <code>false</code> with <code>"checks": 10</code>, and this card turns to Reporting after the next refresh.</span></li></ol>' +
+      '<details style="margin-top:8px"><summary class="src" style="cursor:pointer">Set it up by hand instead</summary><ol class="integ-steps">' +
+        '<li><b>IAM policy for the Lambda.</b> Read-only; drop any action you do not want to grant and that check reports as not measured instead.' + code('integAwsPolicy', AWS_IAM_POLICY) + '</li>' +
+        '<li><b>Lambda.</b> Node.js 22, handler <code>index.handler</code>, timeout 120 seconds, the three files in the zip’s <code>collector</code> folder, triggered daily by EventBridge (e.g. <code>cron(0 17 * * ? *)</code>). Environment variables:' +
+          envTable([['TENANT_ID', tenantId, 'Your Entra tenant ID'], ['CLIENT_ID', clientId, 'The app registration’s client ID'], ['CLIENT_SECRET_ARN', '', 'A Secrets Manager secret holding the client secret (the role needs secretsmanager:GetSecretValue on it)'], ['SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['SP_SITE_PATH', path, 'Leave out for the root site'], ['MAX_KEY_AGE_DAYS', '', 'Optional, default 90']]) + '</li></ol></details>';
+  }
+
   function renderIntegrations() {
     var el = document.getElementById('integrationsBody');
     if (!el) return;
@@ -7163,13 +7213,7 @@ function showModal(opts) {
       card({ name: 'Microsoft 365', what: 'Entra ID, Intune, Defender, Purview, Exchange and SharePoint, read through Microsoft Graph when a posture scan runs.', st: ms ? status(ms, 45) : { cls: 'off', text: 'No scan yet' }, meta: checks('') + ' checks · runs when someone clicks Run posture scan, or on a schedule with the monitor below', body: '' }) +
       card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the leadership security meeting and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: lastAuto ? '<p class="src">Reporting: an automated scan was recorded on ' + fmtDate(lastAuto) + '. Deployment steps are in azure/README.md.</p>' : '<div id="monitorSetupPanel"></div>' }) +
       card({ name: 'AWS', what: 'An AWS Lambda in your own AWS account that checks root and user MFA, access key age, CloudTrail, Config, GuardDuty, S3 public access, EBS and RDS encryption and open admin ports.', st: status(aws, 7), meta: checks('aws-') + ' checks · read-only IAM policy · results merge into the day\u2019s posture scan',
-        body: '<ol class="integ-steps">' +
-          '<li><b>App registration.</b> In Entra admin centre, register an app (or reuse the scheduled monitor\u2019s), add the Microsoft Graph application permission <code>Sites.Selected</code>, grant admin consent, create a client secret, and give the app write access to this Checkpoint site only (the same grant request as the monitor\u2019s step 3).</li>' +
-          '<li><b>IAM policy for the Lambda.</b> Read-only; drop any action you do not want to grant and that check reports as not measured instead.' + code('integAwsPolicy', AWS_IAM_POLICY) + '</li>' +
-          '<li><b>Lambda.</b> Node.js 20, handler <code>index.handler</code>, timeout 60 seconds, the code from <code>public/checkpoint/aws/collector/</code>, triggered daily by EventBridge Scheduler (e.g. <code>cron(0 17 * * ? *)</code>). Environment variables:' +
-            envTable([['TENANT_ID', tenantId, 'Your Entra tenant ID'], ['CLIENT_ID', '', 'The app registration\u2019s client ID'], ['CLIENT_SECRET', '', 'Keep it in AWS Secrets Manager'], ['SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['SP_SITE_PATH', path, 'Leave out for the root site'], ['MAX_KEY_AGE_DAYS', '', 'Optional, default 90']]) + '</li>' +
-          '<li><b>Check it.</b> Run the function once. It returns <code>{ "merged": true, "checks": 10 }</code>, and this card turns to Reporting after the next refresh.</li></ol>' +
-          (demo ? '<p class="src">In a real tenant the tenant ID and SharePoint values above are filled in for you.</p>' : '') }) +
+        body: awsSetupHtml(tenantId, host, path, code, envTable) + (demo ? '<p class="src">In a real tenant the tenant ID and SharePoint values are filled in for you.</p>' : '') }) +
       card({ name: 'GitHub', what: 'A scheduled GitHub Actions workflow in your own organisation: branch reviews, required checks, secret scanning, Dependabot, code scanning, organisation 2FA, and a sample of merged changes for A.8.32.', st: status(gh, 7), meta: checks('gh-') + ' checks · read-only GitHub App · results merge into the day\u2019s posture scan',
         body: githubSetupHtml(tenantId, host, path) +
           (latestChangeSample() ? '<p style="margin-top:10px"><button class="btn ghost sm" data-action="App.openChangeSample">Change sample (A.8.32)</button></p>' : '') }) +
@@ -19048,6 +19092,36 @@ function showModal(opts) {
         '<p class="src" style="margin-top:8px">Want Checkpoint in Outlook or Planner too? <a href="POWER-AUTOMATE.md" target="_blank" rel="noopener">POWER-AUTOMATE.md</a> has four ready-to-build flows that read Checkpoint\'s lists: owner alerts, privacy breach escalation, a weekly due list and Planner tasks.</p>';
     }
 
+    /* Slack — the same arrangement as Teams above: the scheduled monitor
+       posts through a Slack incoming webhook, and this card configures
+       it and reports what the monitor last recorded. */
+    var slackEl = document.getElementById('slackRow');
+    if (slackEl) {
+      var ss = S.settings || {};
+      var sUrl = ss.slackWebhookUrl || '';
+      var sStatus = !sUrl
+        ? 'Not connected.'
+        : ss.slackLastError
+          ? '<b style="color:var(--fail)">Last post failed</b> — ' + esc(ss.slackLastError) + '. Check the webhook still exists in the Slack app, then save it again.'
+          : ss.slackConnectedAt
+            ? 'Connected — confirmation posted ' + fmtDate(ss.slackConnectedAt) + '.'
+            : 'Saved. The scheduled monitor posts a confirmation to the channel on its next run.';
+      var sOn = function (k) { return ss[k] !== 'false'; };
+      slackEl.innerHTML =
+        '<div class="fw-admin-row"><div><b>Slack</b><p>Post the same alerts and compliance digest to a Slack channel, instead of or as well as Teams. ' +
+        'At api.slack.com/apps, create an app in your workspace, turn on <b>Incoming Webhooks</b>, choose <i>Add New Webhook to Workspace</i> and pick the channel, then paste the URL here (it starts https://hooks.slack.com/services/). Sent by the scheduled monitor, so it works with Checkpoint closed.</p></div></div>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
+        '<input class="mini" id="slackWebhookInput" type="url" aria-label="Slack incoming webhook URL" placeholder="' + (sUrl ? 'Webhook saved — paste a new URL to replace it' : 'https://hooks.slack.com/services/…') + '" style="flex:1;min-width:260px">' +
+        '<button class="btn ghost sm" data-action="App.saveSlackWebhook">Save webhook</button>' +
+        (sUrl ? '<button class="btn ghost sm" data-action="App.clearSlackWebhook">Disconnect</button>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:12px">' +
+        '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (sOn('slackAlerts') ? ' on' : '') + '" role="switch" aria-checked="' + sOn('slackAlerts') + '" aria-label="Post alerts to Slack" data-action="App.toggleSlackSetting" data-id="slackAlerts"></button> Alerts as they are raised</label>' +
+        '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (sOn('slackDigest') ? ' on' : '') + '" role="switch" aria-checked="' + sOn('slackDigest') + '" aria-label="Post the digest to Slack" data-action="App.toggleSlackSetting" data-id="slackDigest"></button> The compliance digest (needs the digest switched on above)</label>' +
+        '</div>' +
+        '<p class="src" style="margin-top:8px">' + sStatus + ' The webhook URL is the only credential for the channel, and anyone who can read this tenant\'s Checkpoint Settings list can see it, so remove it here (and in the Slack app) if it is ever exposed. Owner reminders stay email.</p>';
+    }
+
     renderCopilotRow();
 
     var orgProfEl = document.getElementById('orgProfileRow');
@@ -29523,6 +29597,40 @@ function showModal(opts) {
       renderFrameworksAdmin();
     },
 
+    saveSlackWebhook: async function () {
+      var input = document.getElementById('slackWebhookInput');
+      var url = ((input && input.value) || '').trim();
+      if (!url) { toast('Paste the incoming webhook URL from the Slack app first.'); return; }
+      if (!window.CheckpointLib.slackWebhookOk(url)) { toast('That is not a Slack incoming webhook URL. It should start https://hooks.slack.com/services/'); return; }
+      S.settings.slackWebhookUrl = url;
+      S.settings.slackLastError = '';
+      try {
+        await Store.setSetting('slackWebhookUrl', url);
+        await Store.setSetting('slackLastError', '');
+      } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'slackWebhookUrl', '(hidden)', 'Slack webhook saved');
+      toast('Slack webhook saved — the scheduled monitor posts a confirmation to the channel on its next run.');
+      renderFrameworksAdmin();
+    },
+    clearSlackWebhook: async function () {
+      var ok = await showModal({ title: 'Disconnect Slack?', message: 'Checkpoint stops posting to the channel. Remove the webhook in the Slack app too if it should never be used again.', confirmText: 'Disconnect', cancelText: 'Cancel' });
+      if (!ok) return;
+      var keys = ['slackWebhookUrl', 'slackConnectedAt', 'slackConnectedUrl', 'slackLastError'];
+      keys.forEach(function (k) { S.settings[k] = ''; });
+      try { for (var i = 0; i < keys.length; i++) await Store.setSetting(keys[i], ''); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'slackWebhookUrl', '(hidden)', 'Slack disconnected');
+      toast('Slack disconnected.');
+      renderFrameworksAdmin();
+    },
+    toggleSlackSetting: async function (key) {
+      if (key !== 'slackAlerts' && key !== 'slackDigest') return;
+      var next = S.settings[key] === 'false' ? 'true' : 'false';
+      S.settings[key] = next;
+      try { await Store.setSetting(key, next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', key, next === 'true' ? 'false' : 'true', next);
+      renderFrameworksAdmin();
+    },
+
     toggleTeamsSetting: async function (key) {
       if (key !== 'teamsAlerts' && key !== 'teamsDigest') return;
       var next = S.settings[key] === 'false' ? 'true' : 'false';
@@ -29977,6 +30085,42 @@ function showModal(opts) {
       saveMonitorSetupState(state);
     },
 
+    setAwsSetup: function (field, val) {
+      var a = awsSetup();
+      if (field === 'clientId') a.clientId = String(val || '').trim().replace(/[^A-Za-z0-9-]/g, '').slice(0, 64);
+      else if (field === 'region' && window.CheckpointLib.AWS_REGIONS.indexOf(val) !== -1) a.region = val;
+      else return;
+      try { localStorage.setItem(awsSetupKey(), JSON.stringify(a)); } catch (e) { /* the download still works this session */ }
+      renderIntegrations();
+    },
+    downloadAwsCollector: async function () {
+      var L = window.CheckpointLib, a = awsSetup(), mon = loadMonitorSetupState();
+      var clientId = a.clientId || mon.clientId || '';
+      if (!clientId) { toast('Enter the app registration’s client ID in step 1 first.'); return; }
+      var names = ['collector/index.mjs', 'collector/checks.mjs', 'collector/scan-merge.mjs', 'deploy.sh', 'README.md', 'package.json'];
+      var files = {};
+      try {
+        for (var i = 0; i < names.length; i++) {
+          var r = await fetch('aws/' + names[i], { cache: 'no-cache' });
+          if (!r.ok) throw new Error(names[i] + ': ' + r.status);
+          files[names[i]] = await r.text();
+        }
+      } catch (e) { warn(e); toast('Could not fetch the collector files: ' + esc(e.message || String(e))); return; }
+      var acc = Graph.getAccount && Graph.getAccount();
+      var env = L.awsCollectorEnv({
+        tenantId: (acc && acc.tenantId) || '', clientId: clientId,
+        hostname: (Store.getSiteHostname && Store.getSiteHostname()) || '',
+        sitePath: typeof CONFIG !== 'undefined' && CONFIG.site && CONFIG.site !== 'root' ? CONFIG.site : '',
+        listPrefix: (typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint',
+        region: a.region
+      });
+      var bytes = L.buildZip(names.map(function (n) { return { name: n, content: files[n] }; }).concat([
+        { name: 'checkpoint.env', content: env },
+        { name: 'iam-policy.json', content: AWS_IAM_POLICY + '\n' }
+      ]));
+      downloadBlob('checkpoint-aws-collector.zip', new Blob([bytes], { type: 'application/zip' }));
+      audit('AWS collector downloaded', 'Integration', 'aws', '', a.region || L.AWS_REGIONS[0]);
+    },
     setGithubSetup: function (field, val) {
       if (['org', 'appId', 'clientId'].indexOf(field) === -1) return;
       var g = githubSetup();

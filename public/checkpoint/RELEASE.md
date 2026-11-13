@@ -51,6 +51,15 @@ can't find the `<script>` tag or `@font-face` rule it expects to rewrite,
 rather than silently leaving a stale, unhashed reference in the shipped
 HTML.
 
+The same script then adds a `<link rel="preload">` to `<head>` for every
+start-up script (copying its hashed `src`, `integrity` and `crossorigin`)
+and for both fonts (`addPreloadHints()`). Both pages carry their CSP in
+a `<meta>` tag, and Chromium switches its look-ahead preload scanner off
+for such a page, so without these hints the scripts were requested one
+after another; with them they download together (about 25% faster on a
+slow mobile connection). The build fails if the page head is not CSP
+`<meta>`, then stylesheet, as the hints expect.
+
 `msal-browser.min.js` is **not** touched by this script — it's a pinned
 third-party vendored file with its own manually-verified SRI hash (see §2
 for how that one gets updated on a deliberate MSAL version bump, which is

@@ -212,6 +212,42 @@ export function rewriteSiteReferences(hashedByRel, root = DIST_ROOT) {
   return { rewritten, pagesTouched };
 }
 
+/* Preload hints for every script and font the page needs at start-up.
+
+   Both pages carry their Content-Security-Policy in a <meta> tag
+   (GitHub Pages cannot send headers), and Chromium switches its
+   look-ahead preload scanner off for a document with a CSP <meta>. So
+   the scripts at the end of <body> were found one at a time by the
+   parser, each requested only when the one before it had arrived:
+   fourteen round trips in a row before the sign-in page worked
+   (measured on emulated slow 4G: 7.1s for the scripts, the fonts after
+   them). A <link rel="preload"> in <head> is acted on by the parser as
+   it reads the head, scanner or not, so every request goes out at once.
+
+   Each hint copies its <script>'s src, integrity and crossorigin
+   exactly, so the browser reuses the preloaded response instead of
+   fetching twice, and the CSP still governs it (script-src and
+   font-src 'self'). Scripts inside a <template> (loaded on demand) get
+   no hint. Inserted after the stylesheet <link> (so the stylesheet is
+   still requested first), which itself sits after the CSP <meta> that
+   must stay ahead of every fetch it governs; throws if either is
+   missing or out of that order. */
+export function addPreloadHints(html, fontHrefs) {
+  const body = html.slice(html.indexOf('<body'));
+  const live = body.replace(/<template[\s\S]*?<\/template>/g, '');
+  const hints = [];
+  for (const m of live.matchAll(/<script\s+src="([^"]+)"\s+integrity="([^"]+)"\s+crossorigin="anonymous"\s*><\/script>/g)) {
+    hints.push('<link rel="preload" as="script" href="' + m[1] + '" integrity="' + m[2] + '" crossorigin="anonymous">');
+  }
+  for (const href of fontHrefs || []) hints.push('<link rel="preload" as="font" type="font/woff2" href="' + href + '" crossorigin>');
+  const csp = html.match(/<meta http-equiv="Content-Security-Policy"[^>]*>/);
+  const css = html.match(/<link rel="stylesheet" href="[^"]+">/);
+  if (!csp || !css || css.index < csp.index) throw new Error('hash-checkpoint-assets: expected the CSP <meta> and then the stylesheet <link> in the page head, to place the preload hints after — has the head changed?');
+  if (!hints.length) throw new Error('hash-checkpoint-assets: found no SRI-pinned <script> tags to preload — has the markup changed?');
+  const at = css.index + css[0].length;
+  return { html: html.slice(0, at) + '\n<!-- Preload hints: added by scripts/hash-checkpoint-assets.mjs (addPreloadHints). -->\n' + hints.join('\n') + html.slice(at), count: hints.length };
+}
+
 function main() {
   if (!existsSync(INDEX_PATH)) {
     console.log('hash-checkpoint-assets: dist/checkpoint/index.html not found — skipping (did `astro build` run first?)');
@@ -315,11 +351,13 @@ function main() {
   // source).
   const stylesPath = join(DIST_DIR, SHARED_CSS);
   let stylesCss = readFileSync(stylesPath, 'utf8');
+  const fontNames = [];
   for (const rel of FONT_FILES) {
     const srcPath = join(DIST_DIR, rel);
     const buf = readFileSync(srcPath);
     const newName = hashedName(rel, shortHash(buf));
     renameSync(srcPath, join(DIST_DIR, newName));
+    fontNames.push(newName);
     const before = stylesCss;
     stylesCss = stylesCss.split("url('" + rel + "')").join("url('" + newName + "')");
     if (stylesCss === before) {
@@ -347,12 +385,16 @@ function main() {
     }
   }
 
+  const pre = addPreloadHints(html, fontNames);
+  html = pre.html;
+  if (hasOwnerIndex) ownerHtml = addPreloadHints(ownerHtml, fontNames.map((n) => '../checkpoint/' + n)).html;
+
   writeFileSync(INDEX_PATH, html);
   if (hasOwnerIndex) writeFileSync(OWNER_INDEX_PATH, ownerHtml);
 
   const site = rewriteSiteReferences(hashedByRel);
 
-  console.log('hash-checkpoint-assets: content-hashed ' + hashedCount + ' script(s), 1 stylesheet + ' + FONT_FILES.length + ' font(s), injected version ' + version + ', refreshed SRI, rewrote index.html' + (hasOwnerIndex ? ' + owner/index.html' : '') +
+  console.log('hash-checkpoint-assets: content-hashed ' + hashedCount + ' script(s), 1 stylesheet + ' + FONT_FILES.length + ' font(s), injected version ' + version + ', refreshed SRI, ' + pre.count + ' preload hints, rewrote index.html' + (hasOwnerIndex ? ' + owner/index.html' : '') +
     (site.rewritten ? ' + ' + site.rewritten + ' site reference(s) across ' + site.pagesTouched + ' page(s)' : ''));
 }
 

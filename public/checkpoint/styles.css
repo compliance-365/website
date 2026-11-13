@@ -1401,6 +1401,9 @@ select.mini.st-Notstarted{color:var(--paper-faint);border-color:var(--line);back
 /* ===== frameworks admin ===== */
 .fw-admin-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
 .fw-admin-row b{font-family:'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:var(--fs-3)}
+/* Bold words inside a row's description are emphasis, not a second
+   heading: they keep the paragraph's face and size. */
+.fw-admin-row p b{font-family:inherit;font-size:inherit;font-weight:700}
 .fw-admin-tag{margin-left:10px;font-size:var(--fs-eyebrow);letter-spacing:.12em;color:var(--accent-ink);border:1px solid rgba(190, 74, 30,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
 .fw-admin-row p{margin-top:6px;font-size:var(--fs-2);color:var(--paper-dim);line-height:1.65;max-width:56ch}
 .fw-admin-row .toggle{flex:none}
@@ -2613,3 +2616,11 @@ td.src:first-child{white-space:nowrap}
   .dash-stack.two{column-count:2;column-gap:16px}
   .dash-stack.two > .card{break-inside:avoid}
 }
+
+/* The loading screen in index.html (#bootSplash). Its layout is inline
+   so it shows before this file arrives; this adds the spinner and, after
+   20 seconds with no screen up, the line offering a reload. */
+.boot-ring{width:28px;height:28px;border-radius:50%;border:2px solid rgba(250,247,241,.15);border-top-color:#BE4A1E;animation:spin 1s linear infinite}
+.boot-slow{animation:bootSlow 0s linear 20s forwards}
+@keyframes bootSlow{to{visibility:visible}}
+@media (prefers-reduced-motion:reduce){.boot-ring{animation:none;border-top-color:rgba(250,247,241,.15)}}
