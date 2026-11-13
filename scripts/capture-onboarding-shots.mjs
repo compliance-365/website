@@ -113,7 +113,9 @@ await page.getByRole('button', { name: 'Explore the demo' }).first().click();
 await page.waitForTimeout(2400);
 await save(await page.screenshot(), 'dashboard');
 
-await page.locator('.nav-item[data-v="documents"]').first().click();
+/* Opened directly, as the other capture scripts do: the menu item sits
+   in a group the simple menu keeps folded, so it is not clickable. */
+await page.evaluate(() => window.App.go('documents'));
 await page.waitForTimeout(1200);
 await page.evaluate(() => {
   const t = document.querySelector('#docRows');

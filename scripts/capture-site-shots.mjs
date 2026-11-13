@@ -75,6 +75,9 @@ for (const [name, view, fw, from, to, maxH] of SHOTS) {
       height: Math.min(h, Math.round(e.bottom + pad - y), Math.round(window.innerHeight - y)) };
   }, [from, to, maxH]);
   if (!box) throw new Error(`${name}: ${from} or ${to} not found`);
+  /* The pointer is left where the last click was; park it off the
+     screen so no row is shown in its hover state. */
+  await page.mouse.move(0, 0);
   await page.waitForTimeout(300);
   const png = await page.screenshot({ clip: box });
   for (const w of WIDTHS) {
