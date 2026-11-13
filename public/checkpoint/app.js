@@ -7133,6 +7133,37 @@ function showModal(opts) {
       '<li><b>Run it once.</b> <span class="src">Actions tab → Checkpoint GitHub collector → Run workflow. It then runs daily, and this card turns to Reporting after the next refresh.</span></li></ol>';
   }
 
+  /* The AWS card's guided set-up, the same shape as GitHub's: the
+     SharePoint grant written out (or the monitor's app reused), then a
+     download with this tenant's settings already in it and a script
+     that sets everything up from AWS CloudShell. The hand steps stay,
+     folded, for anyone who would rather not run a script. */
+  function awsSetupKey() { return 'cpAwsSetup:' + ((Graph.getAccount && Graph.getAccount() || {}).tenantId || 'demo'); }
+  function awsSetup() { try { return JSON.parse(localStorage.getItem(awsSetupKey()) || '{}') || {}; } catch (e) { return {}; } }
+  function awsSetupHtml(tenantId, host, path, code, envTable) {
+    var L = window.CheckpointLib, a = awsSetup(), mon = loadMonitorSetupState();
+    var clientId = a.clientId || mon.clientId || '';
+    var region = L.AWS_REGIONS.indexOf(a.region) !== -1 ? a.region : L.AWS_REGIONS[0];
+    var siteId = (Store.getSiteId && Store.getSiteId()) || '';
+    var regionPick = '<select class="mini" aria-label="AWS region" data-change-action="App.setAwsSetup" data-id="region">' +
+      L.AWS_REGIONS.map(function (r) { return '<option value="' + r + '"' + (r === region ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select>';
+    return '<ol class="integ-steps">' +
+      '<li><b>Let it write results to Checkpoint.</b> <span class="src">If you run Checkpoint’s nightly monitor, reuse its app registration: it already has write access to this site, so enter its client ID and skip the rest of this step. Otherwise, in Entra admin centre → App registrations, register a new app, create a client secret, add the Microsoft Graph application permission <b>Sites.Selected</b> and grant admin consent; then a SharePoint or Global admin sends the request below once, from <a class="evidence-link" href="https://developer.microsoft.com/graph/graph-explorer" target="_blank" rel="noopener">Graph Explorer</a>. It grants that app write access to this one site only.</span>' +
+        '<div style="margin:8px 0">Client ID: <input type="text" class="mini" value="' + esc(clientId) + '" placeholder="Application (client) ID" aria-label="App registration client ID" data-change-action="App.setAwsSetup" data-id="clientId" style="min-width:240px"></div>' +
+        '<pre id="awsGrant" class="integ-code">' + esc(L.monitorGrantSnippet(siteId || '<your Checkpoint site ID, filled in when signed in to your tenant>', clientId, 'Checkpoint AWS Collector')) + '</pre><button class="btn ghost sm" data-action="App.copyEl" data-id="awsGrant">Copy request</button></li>' +
+      '<li><b>Download the collector.</b> AWS region to run it in: ' + regionPick +
+        '<div style="margin:8px 0"><button class="btn sm" data-action="App.downloadAwsCollector"' + (clientId ? '' : ' disabled title="Enter the client ID in step 1 first"') + '>Download the collector (.zip)</button></div>' +
+        '<span class="src">It holds this tenant’s settings, the read-only IAM policy, and a set-up script. No secret is in it.</span></li>' +
+      '<li><b>Run the set-up in AWS CloudShell.</b> <span class="src">Sign in to the AWS account as someone who can create IAM roles and Lambda functions, and open <a class="evidence-link" href="' + esc(L.awsCloudShellUrl(region)) + '" target="_blank" rel="noopener">CloudShell in ' + esc(region) + '</a>. Choose <b>Actions → Upload file</b>, upload the zip, then run:</span>' +
+        code('awsDeployCmd', 'unzip -o checkpoint-aws-collector.zip -d checkpoint-aws && bash checkpoint-aws/deploy.sh') +
+        '<span class="src">It shows what it will create and asks before doing anything, then asks for the app registration’s client secret (stored in AWS Secrets Manager, never shown and never sent to Checkpoint). It creates a read-only IAM role, the function and a daily schedule, runs the collector once and prints the result. Running it again updates what is there.</span></li>' +
+      '<li><b>Check it.</b> <span class="src">The last line of the output reads <code>"merged": true</code> or <code>false</code> with <code>"checks": 10</code>, and this card turns to Reporting after the next refresh.</span></li></ol>' +
+      '<details style="margin-top:8px"><summary class="src" style="cursor:pointer">Set it up by hand instead</summary><ol class="integ-steps">' +
+        '<li><b>IAM policy for the Lambda.</b> Read-only; drop any action you do not want to grant and that check reports as not measured instead.' + code('integAwsPolicy', AWS_IAM_POLICY) + '</li>' +
+        '<li><b>Lambda.</b> Node.js 22, handler <code>index.handler</code>, timeout 120 seconds, the three files in the zip’s <code>collector</code> folder, triggered daily by EventBridge (e.g. <code>cron(0 17 * * ? *)</code>). Environment variables:' +
+          envTable([['TENANT_ID', tenantId, 'Your Entra tenant ID'], ['CLIENT_ID', clientId, 'The app registration’s client ID'], ['CLIENT_SECRET_ARN', '', 'A Secrets Manager secret holding the client secret (the role needs secretsmanager:GetSecretValue on it)'], ['SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['SP_SITE_PATH', path, 'Leave out for the root site'], ['MAX_KEY_AGE_DAYS', '', 'Optional, default 90']]) + '</li></ol></details>';
+  }
+
   function renderIntegrations() {
     var el = document.getElementById('integrationsBody');
     if (!el) return;
@@ -7163,13 +7194,7 @@ function showModal(opts) {
       card({ name: 'Microsoft 365', what: 'Entra ID, Intune, Defender, Purview, Exchange and SharePoint, read through Microsoft Graph when a posture scan runs.', st: ms ? status(ms, 45) : { cls: 'off', text: 'No scan yet' }, meta: checks('') + ' checks · runs when someone clicks Run posture scan, or on a schedule with the monitor below', body: '' }) +
       card({ name: 'Scheduled monitor (Azure)', what: 'An Azure Function in your own subscription: posture scans, drift alerts, owner reminders, the leadership security meeting and supplier renewals, with nobody signed in.', st: status(lastAuto, 45), meta: 'Daily, in your Azure subscription', body: lastAuto ? '<p class="src">Reporting: an automated scan was recorded on ' + fmtDate(lastAuto) + '. Deployment steps are in azure/README.md.</p>' : '<div id="monitorSetupPanel"></div>' }) +
       card({ name: 'AWS', what: 'An AWS Lambda in your own AWS account that checks root and user MFA, access key age, CloudTrail, Config, GuardDuty, S3 public access, EBS and RDS encryption and open admin ports.', st: status(aws, 7), meta: checks('aws-') + ' checks · read-only IAM policy · results merge into the day\u2019s posture scan',
-        body: '<ol class="integ-steps">' +
-          '<li><b>App registration.</b> In Entra admin centre, register an app (or reuse the scheduled monitor\u2019s), add the Microsoft Graph application permission <code>Sites.Selected</code>, grant admin consent, create a client secret, and give the app write access to this Checkpoint site only (the same grant request as the monitor\u2019s step 3).</li>' +
-          '<li><b>IAM policy for the Lambda.</b> Read-only; drop any action you do not want to grant and that check reports as not measured instead.' + code('integAwsPolicy', AWS_IAM_POLICY) + '</li>' +
-          '<li><b>Lambda.</b> Node.js 20, handler <code>index.handler</code>, timeout 60 seconds, the code from <code>public/checkpoint/aws/collector/</code>, triggered daily by EventBridge Scheduler (e.g. <code>cron(0 17 * * ? *)</code>). Environment variables:' +
-            envTable([['TENANT_ID', tenantId, 'Your Entra tenant ID'], ['CLIENT_ID', '', 'The app registration\u2019s client ID'], ['CLIENT_SECRET', '', 'Keep it in AWS Secrets Manager'], ['SP_HOSTNAME', host, 'e.g. contoso.sharepoint.com'], ['SP_SITE_PATH', path, 'Leave out for the root site'], ['MAX_KEY_AGE_DAYS', '', 'Optional, default 90']]) + '</li>' +
-          '<li><b>Check it.</b> Run the function once. It returns <code>{ "merged": true, "checks": 10 }</code>, and this card turns to Reporting after the next refresh.</li></ol>' +
-          (demo ? '<p class="src">In a real tenant the tenant ID and SharePoint values above are filled in for you.</p>' : '') }) +
+        body: awsSetupHtml(tenantId, host, path, code, envTable) + (demo ? '<p class="src">In a real tenant the tenant ID and SharePoint values are filled in for you.</p>' : '') }) +
       card({ name: 'GitHub', what: 'A scheduled GitHub Actions workflow in your own organisation: branch reviews, required checks, secret scanning, Dependabot, code scanning, organisation 2FA, and a sample of merged changes for A.8.32.', st: status(gh, 7), meta: checks('gh-') + ' checks · read-only GitHub App · results merge into the day\u2019s posture scan',
         body: githubSetupHtml(tenantId, host, path) +
           (latestChangeSample() ? '<p style="margin-top:10px"><button class="btn ghost sm" data-action="App.openChangeSample">Change sample (A.8.32)</button></p>' : '') }) +
@@ -29977,6 +30002,42 @@ function showModal(opts) {
       saveMonitorSetupState(state);
     },
 
+    setAwsSetup: function (field, val) {
+      var a = awsSetup();
+      if (field === 'clientId') a.clientId = String(val || '').trim().replace(/[^A-Za-z0-9-]/g, '').slice(0, 64);
+      else if (field === 'region' && window.CheckpointLib.AWS_REGIONS.indexOf(val) !== -1) a.region = val;
+      else return;
+      try { localStorage.setItem(awsSetupKey(), JSON.stringify(a)); } catch (e) { /* the download still works this session */ }
+      renderIntegrations();
+    },
+    downloadAwsCollector: async function () {
+      var L = window.CheckpointLib, a = awsSetup(), mon = loadMonitorSetupState();
+      var clientId = a.clientId || mon.clientId || '';
+      if (!clientId) { toast('Enter the app registration’s client ID in step 1 first.'); return; }
+      var names = ['collector/index.mjs', 'collector/checks.mjs', 'collector/scan-merge.mjs', 'deploy.sh', 'README.md', 'package.json'];
+      var files = {};
+      try {
+        for (var i = 0; i < names.length; i++) {
+          var r = await fetch('aws/' + names[i], { cache: 'no-cache' });
+          if (!r.ok) throw new Error(names[i] + ': ' + r.status);
+          files[names[i]] = await r.text();
+        }
+      } catch (e) { warn(e); toast('Could not fetch the collector files: ' + esc(e.message || String(e))); return; }
+      var acc = Graph.getAccount && Graph.getAccount();
+      var env = L.awsCollectorEnv({
+        tenantId: (acc && acc.tenantId) || '', clientId: clientId,
+        hostname: (Store.getSiteHostname && Store.getSiteHostname()) || '',
+        sitePath: typeof CONFIG !== 'undefined' && CONFIG.site && CONFIG.site !== 'root' ? CONFIG.site : '',
+        listPrefix: (typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint',
+        region: a.region
+      });
+      var bytes = L.buildZip(names.map(function (n) { return { name: n, content: files[n] }; }).concat([
+        { name: 'checkpoint.env', content: env },
+        { name: 'iam-policy.json', content: AWS_IAM_POLICY + '\n' }
+      ]));
+      downloadBlob('checkpoint-aws-collector.zip', new Blob([bytes], { type: 'application/zip' }));
+      audit('AWS collector downloaded', 'Integration', 'aws', '', a.region || L.AWS_REGIONS[0]);
+    },
     setGithubSetup: function (field, val) {
       if (['org', 'appId', 'clientId'].indexOf(field) === -1) return;
       var g = githubSetup();

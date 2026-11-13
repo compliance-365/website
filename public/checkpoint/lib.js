@@ -6816,6 +6816,33 @@
     return out;
   }
 
+  /* checkpoint.env for the AWS collector's deploy.sh, which sources it.
+     Only non-secret settings, and each one cut down to the characters
+     its kind of value can contain, then single-quoted, so nothing typed
+     into Checkpoint can become a shell command. v = { tenantId,
+     clientId, hostname, sitePath, listPrefix, region }. */
+  var AWS_REGIONS = ['ap-southeast-2', 'ap-southeast-4', 'ap-southeast-1', 'ap-northeast-1', 'us-east-1', 'us-east-2', 'us-west-2', 'ca-central-1', 'eu-west-1', 'eu-west-2', 'eu-central-1'];
+  function awsCollectorEnv(v) {
+    v = v || {};
+    var guid = function (x) { return String(x || '').toLowerCase().replace(/[^0-9a-f-]/g, '').slice(0, 36); };
+    var region = AWS_REGIONS.indexOf(v.region) !== -1 ? v.region : AWS_REGIONS[0];
+    var rows = [
+      ['TENANT_ID', guid(v.tenantId)],
+      ['CLIENT_ID', guid(v.clientId)],
+      ['SP_HOSTNAME', String(v.hostname || '').toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 120)],
+      ['SP_SITE_PATH', String(v.sitePath || '').replace(/[^A-Za-z0-9/_.-]/g, '').slice(0, 120)],
+      ['LIST_PREFIX', v.listPrefix && v.listPrefix !== 'Checkpoint' ? String(v.listPrefix).replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 40) : ''],
+      ['REGION', region]
+    ];
+    return '# Written by Checkpoint for deploy.sh. Settings only: the client secret is\n' +
+      '# typed into deploy.sh when it runs and kept in AWS Secrets Manager.\n' +
+      rows.map(function (r) { return r[0] + "='" + r[1] + "'"; }).join('\n') + '\n';
+  }
+  function awsCloudShellUrl(region) {
+    var r = AWS_REGIONS.indexOf(region) !== -1 ? region : AWS_REGIONS[0];
+    return 'https://' + r + '.console.aws.amazon.com/cloudshell/home?region=' + r;
+  }
+
   function monitorGrantSnippet(siteId, clientId, appDisplayName) {
     var body = {
       roles: ['write'],
@@ -15513,7 +15540,7 @@
     planSoaImport: planSoaImport, soaControlFor: soaControlFor, SOA_IMPORT_SPEC: SOA_IMPORT_SPEC,
     ismsTransferSteps: ismsTransferSteps,
     ATTACK_PATHS: ATTACK_PATHS, attackPaths: attackPaths,
-    GITHUB_APP_PERMISSIONS: GITHUB_APP_PERMISSIONS, githubAppCreateUrl: githubAppCreateUrl, githubWorkflowYml: githubWorkflowYml,
+    GITHUB_APP_PERMISSIONS: GITHUB_APP_PERMISSIONS, githubAppCreateUrl: githubAppCreateUrl, githubWorkflowYml: githubWorkflowYml, AWS_REGIONS: AWS_REGIONS, awsCollectorEnv: awsCollectorEnv, awsCloudShellUrl: awsCloudShellUrl,
     COPILOT_ROOT: COPILOT_ROOT, COPILOT_BRIEFING_FILE: COPILOT_BRIEFING_FILE, copilotBriefingSections: copilotBriefingSections,
     REG_UPDATES: REG_UPDATES, regUpdatesFor: regUpdatesFor,
     buildBriefingDocx: buildBriefingDocx, buildCopilotAgentPackage: buildCopilotAgentPackage,

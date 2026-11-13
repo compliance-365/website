@@ -71,6 +71,30 @@ passed on the previous scan and fails on this one raises one alert in
 `Checkpoint Alerts`, deduplicated by check id so it is raised once and
 acknowledged once.
 
+## The quick way: Checkpoint's guided set-up
+
+Checkpoint → **Integrations → AWS** walks through it:
+
+1. Enter the client ID of the app registration that writes to
+   SharePoint (the nightly monitor's, or a new one; step 1 below), and
+   send the site grant request it writes out.
+2. Pick the AWS region and download the collector. The zip holds the
+   collector, `iam-policy.json`, `checkpoint.env` with this tenant's
+   settings (no secret), and `deploy.sh`.
+3. In AWS CloudShell, upload the zip and run
+   `unzip -o checkpoint-aws-collector.zip -d checkpoint-aws && bash checkpoint-aws/deploy.sh`.
+
+`deploy.sh` shows the account, region and site and asks before changing
+anything. It asks for the client secret (read without echo) and keeps it
+in Secrets Manager as `checkpoint/aws-collector/client-secret`; the
+function gets only its ARN (`CLIENT_SECRET_ARN`). It then creates the
+read-only role `checkpoint-aws-collector`, the function, and the daily
+EventBridge rule `checkpoint-aws-collector-daily`, runs the collector
+once and prints the summary. Running it again updates all of it;
+`ROTATE_SECRET=1` replaces the stored secret.
+
+The sections below are the same set-up by hand.
+
 ## 1. Register the Graph app (client's Entra tenant)
 
 The collector writes to SharePoint, so it needs an app-only Graph
@@ -127,13 +151,13 @@ a legitimate way to run this.
 
 ## 3. Lambda configuration
 
-Node 20 runtime. The AWS SDK v3 clients used are provided by the
+Node 22 runtime (`nodejs22.x`). The AWS SDK v3 clients used are provided by the
 runtime, so there is nothing to bundle — upload `collector/` as-is.
 
 | Setting | Value |
 | --- | --- |
 | Handler | `index.handler` |
-| Runtime | Node.js 20+ |
+| Runtime | Node.js 22 |
 | Timeout | 60 seconds is comfortable; large accounts may want 120 |
 | Trigger | EventBridge Scheduler, e.g. `cron(0 17 * * ? *)` for daily |
 
@@ -143,15 +167,16 @@ Environment variables:
 | --- | --- |
 | `TENANT_ID` | The client's Entra tenant ID |
 | `CLIENT_ID` | App registration (client) ID from step 1 |
-| `CLIENT_SECRET` | The secret value from step 1 |
+| `CLIENT_SECRET_ARN` | A Secrets Manager secret holding the secret value from step 1 (the role needs `secretsmanager:GetSecretValue` on it) |
+| `CLIENT_SECRET` | Alternatively, the secret value itself |
 | `SP_HOSTNAME` | e.g. `contoso.sharepoint.com` |
 | `SP_SITE_PATH` | e.g. `/sites/compliance` (omit for the root site) |
 | `LIST_PREFIX` | Optional, defaults to `Checkpoint` |
 | `MAX_KEY_AGE_DAYS` | Optional, defaults to `90` |
 
-**Put `CLIENT_SECRET` in AWS Secrets Manager** and reference it, rather
-than pasting it into a plain Lambda environment variable, on any
-account where more than one person has console access.
+**Prefer `CLIENT_SECRET_ARN`** over a plain `CLIENT_SECRET` on any
+account where more than one person has console access: the function's
+settings then hold only a reference, not the secret.
 
 ## 4. Verify
 

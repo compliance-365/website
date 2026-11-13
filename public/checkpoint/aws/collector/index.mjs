@@ -149,12 +149,28 @@ async function collectAws(region, log) {
 
 /* ---------- Microsoft Graph (write side) --------------------------- */
 
+/* The app registration's secret. deploy.sh keeps it in AWS Secrets
+   Manager and passes only its ARN (CLIENT_SECRET_ARN), so the secret
+   never sits in the function's configuration. A plain CLIENT_SECRET
+   still works, for a function set up by hand. The Secrets Manager
+   client comes with the Lambda runtime; it is imported only when
+   needed, so the tests (and a hand set-up) never load it. */
+async function clientSecret() {
+  if (process.env.CLIENT_SECRET) return process.env.CLIENT_SECRET;
+  const arn = process.env.CLIENT_SECRET_ARN;
+  if (!arn) throw new Error('Set CLIENT_SECRET_ARN (deploy.sh does this) or CLIENT_SECRET.');
+  const { SecretsManagerClient, GetSecretValueCommand } = await import('@aws-sdk/client-secrets-manager');
+  const out = await new SecretsManagerClient({}).send(new GetSecretValueCommand({ SecretId: arn }));
+  if (!out.SecretString) throw new Error('The secret ' + arn + ' has no string value.');
+  return out.SecretString;
+}
+
 async function graphToken() {
   const res = await fetch(`https://login.microsoftonline.com/${process.env.TENANT_ID}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: process.env.CLIENT_ID, client_secret: process.env.CLIENT_SECRET,
+      client_id: process.env.CLIENT_ID, client_secret: await clientSecret(),
       scope: 'https://graph.microsoft.com/.default', grant_type: 'client_credentials'
     })
   });
