@@ -1402,6 +1402,7 @@ async function notify(g, context, subject, htmlBody) {
     }
   }
   if (await notifyTeams(context, subject, htmlBody)) sent = true;
+  if (await notifySlack(context, subject, htmlBody)) sent = true;
   return sent;
 }
 
@@ -1512,6 +1513,89 @@ function htmlToTeamsText(html) {
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+/* Slack notifications: the same alerts and digest as Teams, posted to a
+   channel through a Slack incoming webhook (a Slack app with Incoming
+   Webhooks turned on, added to the channel). The URL comes from the
+   SLACK_WEBHOOK_URL app setting, then the slackWebhookUrl Checkpoint
+   setting, and is the only credential, as for Teams. Unlike a Teams
+   Workflows URL, whose host varies by tenant, a Slack incoming webhook
+   is always https://hooks.slack.com/services/..., so anything else is
+   refused: this function never posts a setting's contents to an
+   arbitrary address. slackAlerts and slackDigest (on unless 'false')
+   choose what is sent. */
+let SLACK = { url: '', alerts: true, digest: true };
+
+function slackWebhookOk(url) {
+  try {
+    const u = new URL(String(url || '').trim());
+    return u.protocol === 'https:' && u.hostname === 'hooks.slack.com' && /^\/services\/[A-Za-z0-9/_-]+$/.test(u.pathname) && !u.search && !u.username;
+  } catch (e) { return false; }
+}
+function configureSlack(settings) {
+  const s = settings || {};
+  const url = (process.env.SLACK_WEBHOOK_URL || s.slackWebhookUrl || '').trim();
+  SLACK = { url: slackWebhookOk(url) ? url : '', alerts: s.slackAlerts !== 'false', digest: s.slackDigest !== 'false' };
+  return SLACK;
+}
+
+/* Slack mrkdwn from the small markdown the Teams cards use: &, < and >
+   escaped as Slack requires, [text](url) as <url|text>, **bold** as
+   *bold*. */
+function slackText(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\[([^\]]*)\]\((https:\/\/[^)\s|]+)\)/g, (m, txt, url) => '<' + url + '|' + txt.replace(/\|/g, '/') + '>')
+    .replace(/\*\*([^*]+)\*\*/g, '*$1*');
+}
+const clip = (t, n) => { const x = String(t); return x.length > n ? x.slice(0, n - 1) + '…' : x; };
+
+/* The same opts as buildTeamsCard(), as a Slack Block Kit message, with
+   Slack's limits applied (header 150 characters, a text block 3,000,
+   ten fields, button labels 75). `text` is the notification fallback. */
+function buildSlackMessage(title, opts) {
+  const o = opts || {};
+  const blocks = [{ type: 'header', text: { type: 'plain_text', text: clip(title, 150), emoji: false } }];
+  if (o.subtitle) blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: clip(slackText(o.subtitle), 3000) }] });
+  if (o.facts && o.facts.length) {
+    blocks.push({ type: 'section', fields: o.facts.slice(0, 10).map(f => ({ type: 'mrkdwn', text: clip('*' + slackText(f[0]) + '*\n' + slackText(f[1]), 2000) })) });
+  }
+  if (typeof o.text === 'string' && o.text) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: clip(slackText(o.text), 3000) } });
+  (o.sections || []).forEach(sec => {
+    const lines = sec.lines && sec.lines.length ? sec.lines : ['None.'];
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: clip('*' + slackText(sec.heading) + '*\n' + lines.map(l => '• ' + slackText(l)).join('\n'), 3000) } });
+  });
+  const actions = o.actions && o.actions.length ? o.actions : [{ title: 'Open Checkpoint', url: o.url || CHECKPOINT_APP_URL }];
+  blocks.push({ type: 'actions', elements: actions.slice(0, 5).map((a, i) => ({ type: 'button', text: { type: 'plain_text', text: clip(a.title, 75) }, url: a.url, action_id: 'open_' + i })) });
+  return { text: clip(title, 300), blocks: blocks };
+}
+
+/* POSTs one message. Never throws, for the same reason as postTeams().
+   Slack answers 200 "ok", or an error status with a short reason
+   (no_service, invalid_payload, channel_is_archived) that is kept as
+   slackLastError. */
+async function postSlack(context, msg) {
+  if (!SLACK.url) return 'no webhook configured';
+  try {
+    const res = await fetch(SLACK.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(msg) });
+    if (!res.ok) {
+      let why = '';
+      try { why = String(await res.text()).slice(0, 80); } catch (e) { /* status alone */ }
+      throw new Error('Slack webhook returned ' + res.status + (why ? ' (' + why + ')' : ''));
+    }
+    SLACK.lastError = '';
+    return '';
+  } catch (e) {
+    const msg2 = (e && e.message) ? e.message : String(e);
+    context.log.error('Checkpoint: Slack notification failed: ' + msg2);
+    SLACK.lastError = msg2;
+    return msg2;
+  }
+}
+async function notifySlack(context, subject, htmlBody) {
+  if (!SLACK.url || !SLACK.alerts) return false;
+  return (await postSlack(context, buildSlackMessage(subject, { text: htmlToTeamsText(htmlBody) }))) === '';
 }
 
 async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, settings, today) {
@@ -1972,11 +2056,11 @@ async function notifyOwner(g, context, to, subject, htmlBody) {
    ============================================================ */
 const DIGEST_FREQ_DAYS = { Weekly: 7, Monthly: 30 };
 
-function digestDue(settings, today, teamsAvailable) {
+function digestDue(settings, today, channelAvailable) {
   if ((settings.digestEnabled || '') !== 'true') return false;
   const to = (settings.digestRecipients || '').trim();
-  /* Needs somewhere to go: email recipients, or a Teams channel. */
-  if (!to && !teamsAvailable) return false;
+  /* Needs somewhere to go: email recipients, or a Teams or Slack channel. */
+  if (!to && !channelAvailable) return false;
   const every = DIGEST_FREQ_DAYS[settings.digestFrequency] || DIGEST_FREQ_DAYS.Weekly;
   const last = settings.digestLastSent;
   if (!last) return true;
@@ -2047,12 +2131,14 @@ function checkpointLink(view, item) {
 /* Markdown link text for a Teams TextBlock: brackets would end it early. */
 function mdLinkText(t) { return String(t || '').replace(/[\[\]]/g, ''); }
 
-function buildDigestTeamsCard(d, today, settings) {
+/* The digest's title and content, shared by the Teams card and the
+   Slack message so the two channels always say the same thing. */
+function digestMessage(d, today, settings) {
   const next = digestNextStep(settings);
   const scoreFact = d.score + '/100' +
     (typeof d.prevScore === 'number' ? ' (' + (d.score >= d.prevScore ? '+' : '') + (d.score - d.prevScore) + ')' : '');
   const top = (arr, fmt) => (arr || []).slice(0, 8).map(fmt);
-  return buildTeamsCard('Checkpoint compliance digest — ' + today, {
+  return { title: 'Checkpoint compliance digest — ' + today, opts: {
     subtitle: 'Generated by the scheduled monitor running in your own tenant.',
     facts: [
       ['Posture score', scoreFact],
@@ -2074,7 +2160,15 @@ function buildDigestTeamsCard(d, today, settings) {
       ...((d.awaitingApproval || []).length ? [{ title: 'Approve documents', url: checkpointLink('documents') }] : []),
       { title: 'Open Checkpoint', url: CHECKPOINT_APP_URL }
     ]
-  });
+  } };
+}
+function buildDigestTeamsCard(d, today, settings) {
+  const m = digestMessage(d, today, settings);
+  return buildTeamsCard(m.title, m.opts);
+}
+function buildDigestSlackMessage(d, today, settings) {
+  const m = digestMessage(d, today, settings);
+  return buildSlackMessage(m.title, m.opts);
 }
 
 /* Sends the digest by email (NOTIFY_FROM + digestRecipients) and/or to
@@ -2110,6 +2204,9 @@ async function sendDigest(g, context, siteId, lists, settings, digestData, today
   if (TEAMS.url && TEAMS.digest) {
     if ((await postTeams(context, buildDigestTeamsCard(digestData, today, settings))) === '') ok = true;
   }
+  if (SLACK.url && SLACK.digest) {
+    if ((await postSlack(context, buildDigestSlackMessage(digestData, today, settings))) === '') ok = true;
+  }
   if (!ok) return false;
   /* Only stamped after a successful send — a failed send must be
      retried next run, not silently counted as done. */
@@ -2140,6 +2237,30 @@ async function announceTeamsConnection(g, context, siteId, lists, settings, toda
     await setSetting(g, siteId, lists.Settings, 'teamsConnectedUrl', fp);
     await setSetting(g, siteId, lists.Settings, 'teamsConnectedAt', today);
   } catch (e) { context.log.error('Checkpoint: Teams connected but the confirmation could not be recorded: ' + (e && e.message ? e.message : e)); }
+}
+/* The Slack counterparts: a confirmation the first time a webhook is
+   seen (slackConnectedAt / slackConnectedUrl, a hash of the URL), and
+   slackLastError recorded at the end of the run. */
+async function announceSlackConnection(g, context, siteId, lists, settings, today) {
+  if (!SLACK.url) return;
+  const fp = teamsUrlFingerprint(SLACK.url);
+  if (settings.slackConnectedUrl === fp) return;
+  const err = await postSlack(context, buildSlackMessage('Checkpoint is connected to this channel', {
+    text: 'This channel will receive ' + [SLACK.alerts ? 'compliance alerts as they are raised' : '', SLACK.digest ? 'the periodic compliance digest' : ''].filter(Boolean).join(' and ') +
+      ' from the Checkpoint monitor running in your Microsoft 365 tenant. Change this in Checkpoint → Settings → Slack.'
+  }));
+  if (err) return;
+  try {
+    await setSetting(g, siteId, lists.Settings, 'slackConnectedUrl', fp);
+    await setSetting(g, siteId, lists.Settings, 'slackConnectedAt', today);
+  } catch (e) { context.log.error('Checkpoint: Slack connected but the confirmation could not be recorded: ' + (e && e.message ? e.message : e)); }
+}
+async function recordSlackStatus(g, context, siteId, lists, settings) {
+  if (!SLACK.url || SLACK.lastError === undefined) return;
+  const value = SLACK.lastError ? new Date().toISOString().slice(0, 10) + ': ' + SLACK.lastError : '';
+  if ((settings.slackLastError || '') === value) return;
+  try { await setSetting(g, siteId, lists.Settings, 'slackLastError', value); }
+  catch (e) { context.log.error('Checkpoint: could not record the Slack delivery status: ' + (e && e.message ? e.message : e)); }
 }
 async function recordTeamsStatus(g, context, siteId, lists, settings) {
   if (!TEAMS.url || TEAMS.lastError === undefined) return;
@@ -2465,6 +2586,8 @@ module.exports = async function (context, myTimer) {
     const settings = await readSettings(g, siteId, lists.Settings);
     configureTeams(settings);
     await announceTeamsConnection(g, context, siteId, lists, settings, today);
+    configureSlack(settings);
+    await announceSlackConnection(g, context, siteId, lists, settings, today);
     /* Resolved once, up front, and shared by the training check and the
        governance sweep below — both need the same lenient lookup, and
        resolving it here means the training result lands in `results`
@@ -2571,7 +2694,7 @@ module.exports = async function (context, myTimer) {
        failed execution because a mailbox was briefly unavailable. */
     let digestSent = false;
     try {
-      if (digestData && digestDue(settings, today, !!(TEAMS.url && TEAMS.digest))) {
+      if (digestData && digestDue(settings, today, !!((TEAMS.url && TEAMS.digest) || (SLACK.url && SLACK.digest)))) {
         const openAlertLabels = [];
         try {
           const alertItems = await g(`/sites/${siteId}/lists/${lists.Alerts}/items?$expand=fields&$top=999`);
@@ -2622,6 +2745,7 @@ module.exports = async function (context, myTimer) {
     }
 
     await recordTeamsStatus(g, context, siteId, lists, settings);
+    await recordSlackStatus(g, context, siteId, lists, settings);
     context.log(`Checkpoint posture monitor: scored ${score}, ${alertsWritten} drift alert(s) and ${governanceAlerts} governance alert(s) written${digestSent ? ', digest sent' : ''}.`);
   } catch (e) {
     context.log.error('Checkpoint posture monitor failed: ' + (e && e.message ? e.message : e));
@@ -2639,6 +2763,7 @@ module.exports.__test = {
   ownerRemindersDue, sendOwnerReminders, runSecurityReview, buildScheduledReviewPack,
   digestDue, buildDigestHtml, digestNextStep, esc, daysBetween, computeScore, DIGEST_FREQ_DAYS, htmlToTeamsText, runGovernanceSweep,
   configureTeams, buildTeamsCard, buildDigestTeamsCard, checkpointLink, notifyTeams, sendDigest, announceTeamsConnection, recordTeamsStatus, teamsUrlFingerprint,
+  configureSlack, slackWebhookOk, slackText, buildSlackMessage, buildDigestSlackMessage, notifySlack, announceSlackConnection, recordSlackStatus,
   runPostureChecks, runRegisterChecks, readDocumentRegister,
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,

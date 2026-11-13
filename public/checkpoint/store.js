@@ -1076,6 +1076,15 @@ window.DEFAULT_SETTINGS = {
   teamsConnectedAt: '',
   teamsConnectedUrl: '',
   teamsLastError: '',
+  /* Slack, the same way: posted by the scheduled monitor through a Slack
+     incoming webhook (hooks.slack.com/services/ only). slackConnectedAt /
+     slackConnectedUrl / slackLastError are written by the monitor. */
+  slackWebhookUrl: '',
+  slackAlerts: 'true',
+  slackDigest: 'true',
+  slackConnectedAt: '',
+  slackConnectedUrl: '',
+  slackLastError: '',
   /* Organisation profile — the Clause 4.2/4.3 facts generated policy
      documents fill themselves in from (see ORG_PROFILE_FIELDS in
      templates.js and resolveOrgTokens() in app.js). Empty by default:

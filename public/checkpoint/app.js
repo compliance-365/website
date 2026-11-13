@@ -924,7 +924,7 @@ function showModal(opts) {
     'bulkDocStatus', 'bulkDocOwner',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter', 'addTrustDoc', 'removeTrustDoc', 'addApprovedPoliciesToTrust',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
-    'generateDocumentSet', 'approveDraftSet', 'saveTeamsWebhook', 'clearTeamsWebhook', 'toggleTeamsSetting',
+    'generateDocumentSet', 'approveDraftSet', 'saveTeamsWebhook', 'clearTeamsWebhook', 'toggleTeamsSetting', 'saveSlackWebhook', 'clearSlackWebhook', 'toggleSlackSetting',
     'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent', 'orgProfileWizard',
     /* importCsv IS gated (unlike exportCsv, which is read-only): it is
        the largest single bulk write in the app. */
@@ -19073,6 +19073,36 @@ function showModal(opts) {
         '<p class="src" style="margin-top:8px">Want Checkpoint in Outlook or Planner too? <a href="POWER-AUTOMATE.md" target="_blank" rel="noopener">POWER-AUTOMATE.md</a> has four ready-to-build flows that read Checkpoint\'s lists: owner alerts, privacy breach escalation, a weekly due list and Planner tasks.</p>';
     }
 
+    /* Slack — the same arrangement as Teams above: the scheduled monitor
+       posts through a Slack incoming webhook, and this card configures
+       it and reports what the monitor last recorded. */
+    var slackEl = document.getElementById('slackRow');
+    if (slackEl) {
+      var ss = S.settings || {};
+      var sUrl = ss.slackWebhookUrl || '';
+      var sStatus = !sUrl
+        ? 'Not connected.'
+        : ss.slackLastError
+          ? '<b style="color:var(--fail)">Last post failed</b> — ' + esc(ss.slackLastError) + '. Check the webhook still exists in the Slack app, then save it again.'
+          : ss.slackConnectedAt
+            ? 'Connected — confirmation posted ' + fmtDate(ss.slackConnectedAt) + '.'
+            : 'Saved. The scheduled monitor posts a confirmation to the channel on its next run.';
+      var sOn = function (k) { return ss[k] !== 'false'; };
+      slackEl.innerHTML =
+        '<div class="fw-admin-row"><div><b>Slack</b><p>Post the same alerts and compliance digest to a Slack channel, instead of or as well as Teams. ' +
+        'At api.slack.com/apps, create an app in your workspace, turn on <b>Incoming Webhooks</b>, choose <i>Add New Webhook to Workspace</i> and pick the channel, then paste the URL here (it starts https://hooks.slack.com/services/). Sent by the scheduled monitor, so it works with Checkpoint closed.</p></div></div>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
+        '<input class="mini" id="slackWebhookInput" type="url" aria-label="Slack incoming webhook URL" placeholder="' + (sUrl ? 'Webhook saved — paste a new URL to replace it' : 'https://hooks.slack.com/services/…') + '" style="flex:1;min-width:260px">' +
+        '<button class="btn ghost sm" data-action="App.saveSlackWebhook">Save webhook</button>' +
+        (sUrl ? '<button class="btn ghost sm" data-action="App.clearSlackWebhook">Disconnect</button>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:12px">' +
+        '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (sOn('slackAlerts') ? ' on' : '') + '" role="switch" aria-checked="' + sOn('slackAlerts') + '" aria-label="Post alerts to Slack" data-action="App.toggleSlackSetting" data-id="slackAlerts"></button> Alerts as they are raised</label>' +
+        '<label class="src" style="display:flex;gap:8px;align-items:center"><button class="toggle' + (sOn('slackDigest') ? ' on' : '') + '" role="switch" aria-checked="' + sOn('slackDigest') + '" aria-label="Post the digest to Slack" data-action="App.toggleSlackSetting" data-id="slackDigest"></button> The compliance digest (needs the digest switched on above)</label>' +
+        '</div>' +
+        '<p class="src" style="margin-top:8px">' + sStatus + ' The webhook URL is the only credential for the channel, and anyone who can read this tenant\'s Checkpoint Settings list can see it, so remove it here (and in the Slack app) if it is ever exposed. Owner reminders stay email.</p>';
+    }
+
     renderCopilotRow();
 
     var orgProfEl = document.getElementById('orgProfileRow');
@@ -29545,6 +29575,40 @@ function showModal(opts) {
       } catch (e) { warn(e); }
       audit('Setting changed', 'Setting', 'teamsWebhookUrl', '(hidden)', 'Teams disconnected');
       toast('Microsoft Teams disconnected.');
+      renderFrameworksAdmin();
+    },
+
+    saveSlackWebhook: async function () {
+      var input = document.getElementById('slackWebhookInput');
+      var url = ((input && input.value) || '').trim();
+      if (!url) { toast('Paste the incoming webhook URL from the Slack app first.'); return; }
+      if (!window.CheckpointLib.slackWebhookOk(url)) { toast('That is not a Slack incoming webhook URL. It should start https://hooks.slack.com/services/'); return; }
+      S.settings.slackWebhookUrl = url;
+      S.settings.slackLastError = '';
+      try {
+        await Store.setSetting('slackWebhookUrl', url);
+        await Store.setSetting('slackLastError', '');
+      } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'slackWebhookUrl', '(hidden)', 'Slack webhook saved');
+      toast('Slack webhook saved — the scheduled monitor posts a confirmation to the channel on its next run.');
+      renderFrameworksAdmin();
+    },
+    clearSlackWebhook: async function () {
+      var ok = await showModal({ title: 'Disconnect Slack?', message: 'Checkpoint stops posting to the channel. Remove the webhook in the Slack app too if it should never be used again.', confirmText: 'Disconnect', cancelText: 'Cancel' });
+      if (!ok) return;
+      var keys = ['slackWebhookUrl', 'slackConnectedAt', 'slackConnectedUrl', 'slackLastError'];
+      keys.forEach(function (k) { S.settings[k] = ''; });
+      try { for (var i = 0; i < keys.length; i++) await Store.setSetting(keys[i], ''); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'slackWebhookUrl', '(hidden)', 'Slack disconnected');
+      toast('Slack disconnected.');
+      renderFrameworksAdmin();
+    },
+    toggleSlackSetting: async function (key) {
+      if (key !== 'slackAlerts' && key !== 'slackDigest') return;
+      var next = S.settings[key] === 'false' ? 'true' : 'false';
+      S.settings[key] = next;
+      try { await Store.setSetting(key, next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', key, next === 'true' ? 'false' : 'true', next);
       renderFrameworksAdmin();
     },
 

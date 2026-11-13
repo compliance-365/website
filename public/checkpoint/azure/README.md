@@ -544,6 +544,34 @@ the only credential, so keep it private and delete the workflow if it is
 ever exposed. A Teams failure never rolls back an alert already written
 to SharePoint.
 
+### Optional: Slack notifications
+
+The same alerts and digest as Teams, posted to a Slack channel instead
+of, or as well as, Teams. Off by default; each post has an *Open
+Checkpoint* button, and the digest's lists link to the items they name.
+
+**Connecting a channel.**
+
+1. At api.slack.com/apps, create an app in your Slack workspace (*From
+   scratch*), open **Incoming Webhooks**, turn it on and choose **Add New
+   Webhook to Workspace**, then pick the channel.
+2. Copy the webhook URL (it starts `https://hooks.slack.com/services/`).
+3. In Checkpoint, go to **Settings → Slack**, paste the URL and save.
+
+On its next run the monitor posts a "Checkpoint is connected" message,
+and Settings shows when; a later failure (the app was removed, the
+channel archived) shows there too. Only `hooks.slack.com/services/`
+URLs are accepted: the monitor never posts to any other address from
+this setting.
+
+`SLACK_WEBHOOK_URL` as an app setting on the Function App takes
+precedence over the one saved in Checkpoint. Like the Teams URL, the
+webhook URL is the only credential: keep it private, and remove the
+webhook in the Slack app if it is ever exposed.
+
+Slack gets channel posts only. Owner reminders, which go to each owner
+separately, stay email.
+
 ## 5. Deploy the function code
 
 The template above provisions infrastructure only — Azure Resource

@@ -6843,6 +6843,16 @@
     return 'https://' + r + '.console.aws.amazon.com/cloudshell/home?region=' + r;
   }
 
+  /* A Slack incoming webhook URL, as the scheduled monitor accepts it
+     (azure/PostureMonitor slackWebhookOk(), kept in step by hand):
+     https://hooks.slack.com/services/..., nothing else. */
+  function slackWebhookOk(url) {
+    try {
+      var u = new URL(String(url || '').trim());
+      return u.protocol === 'https:' && u.hostname === 'hooks.slack.com' && /^\/services\/[A-Za-z0-9\/_-]+$/.test(u.pathname) && !u.search && !u.username;
+    } catch (e) { return false; }
+  }
+
   function monitorGrantSnippet(siteId, clientId, appDisplayName) {
     var body = {
       roles: ['write'],
@@ -15540,7 +15550,7 @@
     planSoaImport: planSoaImport, soaControlFor: soaControlFor, SOA_IMPORT_SPEC: SOA_IMPORT_SPEC,
     ismsTransferSteps: ismsTransferSteps,
     ATTACK_PATHS: ATTACK_PATHS, attackPaths: attackPaths,
-    GITHUB_APP_PERMISSIONS: GITHUB_APP_PERMISSIONS, githubAppCreateUrl: githubAppCreateUrl, githubWorkflowYml: githubWorkflowYml, AWS_REGIONS: AWS_REGIONS, awsCollectorEnv: awsCollectorEnv, awsCloudShellUrl: awsCloudShellUrl,
+    GITHUB_APP_PERMISSIONS: GITHUB_APP_PERMISSIONS, githubAppCreateUrl: githubAppCreateUrl, githubWorkflowYml: githubWorkflowYml, slackWebhookOk: slackWebhookOk, AWS_REGIONS: AWS_REGIONS, awsCollectorEnv: awsCollectorEnv, awsCloudShellUrl: awsCloudShellUrl,
     COPILOT_ROOT: COPILOT_ROOT, COPILOT_BRIEFING_FILE: COPILOT_BRIEFING_FILE, copilotBriefingSections: copilotBriefingSections,
     REG_UPDATES: REG_UPDATES, regUpdatesFor: regUpdatesFor,
     buildBriefingDocx: buildBriefingDocx, buildCopilotAgentPackage: buildCopilotAgentPackage,
