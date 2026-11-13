@@ -98,8 +98,14 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.waitForSelector('#integrationsBody .integ-card');
     const integ = await page.locator('#integrationsBody').innerText();
     assert.match(integ, /Microsoft 365[\s\S]*Scheduled monitor[\s\S]*AWS[\s\S]*Not set up[\s\S]*GitHub/i);
-    assert.match(integ, /cloudtrail:DescribeTrails/);
-    assert.match(integ, /SP_HOSTNAME/);
+    // AWS: the guided set-up shows first; the IAM policy and environment
+    // variables are in the folded "Set it up by hand instead".
+    assert.match(integ, /Download the collector[\s\S]*Run the set-up in AWS CloudShell/);
+    const awsCard = page.locator('#integrationsBody .integ-card').filter({ hasText: 'An AWS Lambda' });
+    await awsCard.locator('summary', { hasText: 'Set it up by hand instead' }).click();
+    const awsText = await awsCard.innerText();
+    assert.match(awsText, /cloudtrail:DescribeTrails/);
+    assert.match(awsText, /SP_HOSTNAME/);
     // The scheduled monitor's setup guide is inside its own card, not a separate card further down.
     // The demo has an automated scan, so its card says it is reporting.
     const azureCard = page.locator('#integrationsBody .integ-card').filter({ hasText: 'Scheduled monitor (Azure)' });
