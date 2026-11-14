@@ -69,5 +69,5 @@ If you already hold one of these two and have just been asked for the other, the
 
 <div style="background:#FAF7F1;border:1px solid #DDD8CF;border-radius:8px;padding:20px 24px;margin:32px 0;">
 <strong style="display:block;margin-bottom:8px;color:#0B0B0C;">About Compliance365</strong>
-<p style="margin:0;color:#6B6860;font-size:0.9rem;">We deliver ISO 27001, Essential Eight, SOC 2, ISO 42001 and ISO 27701 for Australian mid-market organisations — fixed-price, inside your existing Microsoft 365 environment, with one evidence base across every framework you carry. <a href="https://www.compliance365.com.au/services" style="color:#A63A12;font-weight:600;">Explore our services →</a></p>
+<p style="margin:0;color:#6B6860;font-size:0.9rem;">We deliver ISO 27001, Essential Eight, SOC 2, ISO 42001 and ISO 27701 for Australian mid-market organisations — fixed-price, inside your existing Microsoft 365 environment, with one evidence base across every framework you carry. <a href="https://www.compliance365.com.au/services/" style="color:#A63A12;font-weight:600;">Explore our services →</a></p>
 </div>
